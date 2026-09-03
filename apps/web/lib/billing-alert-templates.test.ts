@@ -205,3 +205,23 @@ describe('the failed-renewal alert', () => {
     }
   });
 });
+
+// ── The UrgAns embedded-actions guard alert ─────────────────────────────────
+//
+// One team hit the daily cap on actions run inside a product function. The
+// note is where the count and the cap actually live — the headline states the
+// policy (raise the cap for real usage, look otherwise) once, not per-team.
+describe('the UrgAns guard-tripped alert', () => {
+  it('names the cap, states the two possible causes, and carries the count in the note', () => {
+    const email = buildFounderBillingAlertEmail('urgans_guard_tripped', {
+      ...context,
+      note: '103 embedded actions in the last 24h (cap: 100).',
+    });
+    expect(email.subject).toBe('UrgAns usage cap: Midnight Records');
+    for (const body of [email.text, email.html]) {
+      expect(body).toContain('Midnight Records');
+      expect(body).toMatch(/raise the cap/i);
+      expect(body).toContain('103 embedded actions in the last 24h (cap: 100).');
+    }
+  });
+});

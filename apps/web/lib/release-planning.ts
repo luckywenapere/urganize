@@ -28,6 +28,7 @@
  */
 
 import type { Template, TaskRole } from './release-templates/types';
+import type { ProposedOwner } from './task-owners';
 
 // ---------------------------------------------------------------------------
 // Feature flag
@@ -63,15 +64,23 @@ export type PlanReleaseType = 'single' | 'ep' | 'album';
 /** What the manager already has in hand. 'none' is exclusive of the others. */
 export type ReadyItem = 'master' | 'artwork' | 'visualizer' | 'distributor' | 'none';
 
+/**
+ * 'unknown' is a valid PARSED value (parseReleasePlanIntake accepts it) but
+ * deliberately never a RADIO CHOICE — absent from GOAL_OPTIONS below, so the
+ * seven-question modal can never offer it. It is what a one-tap "Draft the
+ * plan" (buildAutoIntake) writes when nobody has answered this question yet.
+ */
 export type PlanGoal =
   | 'new_listeners'
   | 'playlist_adds'
   | 'press'
   | 'fan_moment'
-  | 'catalog';
+  | 'catalog'
+  | 'unknown';
 
-/** Rollout budget in naira. Display labels live in BUDGET_OPTIONS. */
-export type PlanBudget = 'none' | 'under_100k' | '100k_500k' | 'over_500k';
+/** Rollout budget in naira. Display labels live in BUDGET_OPTIONS. 'unknown'
+ *  carries the same never-a-radio-choice contract as PlanGoal above. */
+export type PlanBudget = 'none' | 'under_100k' | '100k_500k' | 'over_500k' | 'unknown';
 
 /**
  * The seven intake answers.
@@ -101,6 +110,13 @@ export type ReleasePlanIntake = {
   budget: PlanBudget;
   /** Q7 — free text, prefilled from a note when the flow starts from one. */
   extra_notes?: string;
+  /** Absent means 'answered' — every producer before 2026-09-03 (the modal,
+   *  the Chappi tool, every existing test) writes no such field and must keep
+   *  meaning "someone answered these questions". 'auto' marks an intake
+   *  buildAutoIntake derived with no questions asked, for the "UrgAns drafted
+   *  this from the release facts alone" notice and the guidance this feeds
+   *  buildGuidance. */
+  intake_source?: 'auto' | 'answered';
 };
 
 export const RELEASE_TYPE_OPTIONS: Array<{ value: PlanReleaseType; label: string }> = [
@@ -136,6 +152,13 @@ const RELEASE_TYPES = RELEASE_TYPE_OPTIONS.map((o) => o.value);
 const READY_ITEMS = READY_TODAY_OPTIONS.map((o) => o.value);
 const GOALS = GOAL_OPTIONS.map((o) => o.value);
 const BUDGETS = BUDGET_OPTIONS.map((o) => o.value);
+/** What parseReleasePlanIntake actually ACCEPTS for goal/budget — the visible
+ *  options plus 'unknown'. Kept separate from GOALS/BUDGETS above because
+ *  those two feed the validation error strings, and 'unknown' must never
+ *  appear there: a Chappi-relayed "goal must be one of: ..., unknown" would
+ *  teach the model to answer with the word instead of asking the manager. */
+const GOALS_ACCEPTED: PlanGoal[] = [...GOALS, 'unknown'];
+const BUDGETS_ACCEPTED: PlanBudget[] = [...BUDGETS, 'unknown'];
 
 export const MAX_ARTIST_NAME_LENGTH = 120;
 export const MAX_GOAL_TEXT_LENGTH = 300;
@@ -165,10 +188,10 @@ export function parseReleasePlanIntake(
   if (record.date_mode !== 'fixed' && record.date_mode !== 'suggested') {
     return { ok: false, error: 'date_mode must be "fixed" or "suggested".' };
   }
-  if (!GOALS.includes(record.goal as PlanGoal)) {
+  if (!GOALS_ACCEPTED.includes(record.goal as PlanGoal)) {
     return { ok: false, error: `goal must be one of: ${GOALS.join(', ')}.` };
   }
-  if (!BUDGETS.includes(record.budget as PlanBudget)) {
+  if (!BUDGETS_ACCEPTED.includes(record.budget as PlanBudget)) {
     return { ok: false, error: `budget must be one of: ${BUDGETS.join(', ')}.` };
   }
 
@@ -221,8 +244,46 @@ export function parseReleasePlanIntake(
   if (typeof record.extra_notes === 'string' && record.extra_notes.trim()) {
     intake.extra_notes = record.extra_notes.trim().slice(0, MAX_EXTRA_NOTES_LENGTH);
   }
+  if (record.intake_source === 'auto' || record.intake_source === 'answered') {
+    intake.intake_source = record.intake_source;
+  }
 
   return { ok: true, intake };
+}
+
+/**
+ * The intake for a one-tap "Draft the plan": derived entirely from what the
+ * release row already knows, with no questions asked.
+ *
+ * `goal`/`budget` are 'unknown' rather than a guessed real value —
+ * pretending to know either would be worse than admitting we don't, and
+ * {@link buildGuidance} tells the model so in plain words. This is a direct
+ * TypeScript construction, not an untrusted payload, so it never goes through
+ * {@link parseReleasePlanIntake}; 'unknown' only has to be a value that
+ * validator can later ACCEPT when this intake round-trips through
+ * `releases.release_context`.
+ */
+export function buildAutoIntake(release: {
+  release_type?: string | null;
+  artist_name?: string | null;
+  release_date?: string | null;
+}): ReleasePlanIntake {
+  const releaseType: PlanReleaseType =
+    release.release_type === 'ep' || release.release_type === 'album'
+      ? release.release_type
+      : 'single';
+
+  return {
+    version: 2,
+    release_type: releaseType,
+    artist_name: (release.artist_name || '').trim(),
+    date_mode: release.release_date ? 'fixed' : 'suggested',
+    release_date: release.release_date || null,
+    ready_today: [],
+    goal: 'unknown',
+    budget: 'unknown',
+    intake_source: 'auto',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -368,6 +429,17 @@ export const MAX_DRAFT_WHY_LENGTH = 600;
 /** What the model may write. Shorter than a manager's own edit on purpose. */
 export const MAX_AI_WHY_LENGTH = 160;
 export const MAX_RATIONALE_LENGTH = 600;
+/** A drop is a bigger claim than a reword, but it is still a one-liner shown
+ *  next to a chip in the review scene, not a paragraph. */
+export const MAX_DROP_REASON_LENGTH = 160;
+/** A schedule/assumption note for the manager, not data that reaches a task
+ *  row — same length budget as a rewrite for the same reason. */
+export const MAX_WARNING_LENGTH = 160;
+/** However many things are worth flagging, five is the most a manager will
+ *  actually read before approving. Enforced by truncation, not rejection: a
+ *  sixth warning is a reason to trim the list, never to throw away an
+ *  otherwise-good delta. */
+export const MAX_DELTA_WARNINGS = 5;
 
 const MIN_TASK_OFFSET = -120;
 const MAX_TASK_OFFSET = 60;
@@ -409,6 +481,26 @@ export type DraftTask = {
   /** Soft removal, so a drop can be explained and undone before approval. */
   removed: boolean;
   removed_by: 'ai' | 'user' | null;
+  /** UrgAns's one-line reason for dropping this task, shown beside the
+   *  dropped chip in the review scene. Null when removed_by is 'user' (a
+   *  manager removing their own row needs no explanation) or when the task
+   *  has never been dropped. Required by validatePlannerDelta whenever
+   *  removed_by is 'ai'. */
+  removed_reason: string | null;
+  /** UrgAns's one-line reason for moving this task's date, shown as "Moved:
+   *  {change_reason}" in the review scene. Optional even from the model — a
+   *  small date shift often needs no explanation — so this stays null far
+   *  more often than removed_reason does. */
+  change_reason: string | null;
+  /** Where the current assignee came from, for the small provenance label
+   *  next to the picker: 'history' (proposeTaskOwners found a past
+   *  assignee for this exact template step), 'role' (proposeTaskOwners
+   *  matched the role archetype instead), 'ai' (the model's own
+   *  role_assignments delta set it), 'user' (the manager picked someone by
+   *  hand), or null (still the plain owner default, nothing to explain).
+   *  'history' is the one basis applyDeltaToDraft will never overwrite —
+   *  see that function's own comment. */
+  assignee_basis: 'history' | 'role' | 'ai' | 'user' | null;
   /** The manager touched this row. Regenerating a phase leaves it alone. */
   edited: boolean;
 };
@@ -437,6 +529,10 @@ export type PlanDraftAiState = {
   applied: boolean;
   rationale: string | null;
   failure: PlanDraftFailure | null;
+  /** Optional so every existing `{ applied, rationale, failure }` literal in
+   *  this codebase keeps compiling unchanged. Absent means the same thing as
+   *  empty — read via `doc.ai.warnings ?? []`, never assume the key exists. */
+  warnings?: string[];
 };
 
 export type ReleasePlanDraftDoc = {
@@ -493,6 +589,9 @@ export function buildDraftFromTemplate(params: {
     depends_on: [...(task.depends_on ?? [])],
     removed: false,
     removed_by: null,
+    removed_reason: null,
+    change_reason: null,
+    assignee_basis: null,
     edited: false,
   }));
 
@@ -504,7 +603,7 @@ export function buildDraftFromTemplate(params: {
     generated_at: generatedAt,
     generated_for_release_date: intake.release_date,
     intake,
-    ai: { applied: false, rationale: null, failure: null },
+    ai: { applied: false, rationale: null, failure: null, warnings: [] },
     tasks,
   };
 }
@@ -513,14 +612,20 @@ export function buildDraftFromTemplate(params: {
 // The model delta
 // ---------------------------------------------------------------------------
 
+/** One task to drop, with the one-line reason the review scene shows next to
+ *  its chip. Optional tasks only — enforced by {@link validatePlannerDelta}. */
+export type PlannerAiDrop = {
+  id: string;
+  reason: string;
+};
+
 /**
  * The only thing the model is allowed to return: adjustments to a draft we
  * already built. There is no "add task" operation, by design.
  */
 export type PlannerAiDelta = {
-  /** Template task ids to drop. Optional tasks only. */
-  drop_task_ids: string[];
-  adjust_offsets: Array<{ id: string; offset_days: number }>;
+  drops: PlannerAiDrop[];
+  adjust_offsets: Array<{ id: string; offset_days: number; reason?: string | null }>;
   /**
    * Role archetype to real person. Role level rather than per task: six roles
    * instead of sixty-four rows keeps the response small and its blast radius
@@ -528,8 +633,59 @@ export type PlannerAiDelta = {
    */
   role_assignments: Array<{ role: TaskRole; member_user_id: string }>;
   rewrite_why: Array<{ id: string; why: string }>;
+  /** Things worth the manager's attention before approving — a schedule risk,
+   *  an assumption the model made. Never a reason to change a task by itself;
+   *  the review scene shows these beside the deterministic warnings from
+   *  {@link deriveScheduleWarnings}. Truncated at parse time, not rejected: a
+   *  sixth or over-length warning is not worth discarding an otherwise-good
+   *  delta over. */
+  warnings: string[];
   rationale: string;
 };
+
+/**
+ * Parse the drops array, tolerating the shape this replaced.
+ *
+ * The new shape is `drops: [{ id, reason }]`. A model that reverts to the old
+ * bare `drop_task_ids: string[]` (a stale cached prompt, a lagging retry) is
+ * mapped into `drops` with an empty reason rather than failing to parse at
+ * all — the rest of a response is not worth discarding over one field's
+ * shape, and {@link validatePlannerDelta} will reject the empty reason with a
+ * specific, auditable error instead of this generic parse returning null.
+ */
+function parseDrops(record: Record<string, unknown>): PlannerAiDrop[] | null {
+  if (Array.isArray(record.drops)) {
+    const drops: PlannerAiDrop[] = [];
+    for (const entry of record.drops) {
+      if (!entry || typeof entry !== 'object') return null;
+      const e = entry as Record<string, unknown>;
+      if (typeof e.id !== 'string' || !e.id.trim()) return null;
+      if (typeof e.reason !== 'string') return null;
+      drops.push({ id: e.id, reason: e.reason.trim() });
+    }
+    return drops;
+  }
+
+  if (Array.isArray(record.drop_task_ids)) {
+    if (!record.drop_task_ids.every((id) => typeof id === 'string' && id.trim())) return null;
+    return (record.drop_task_ids as string[]).map((id) => ({ id, reason: '' }));
+  }
+
+  return null;
+}
+
+function parseWarnings(value: unknown): string[] | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) return null;
+  const warnings: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'string') return null;
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+    warnings.push(trimmed.slice(0, MAX_WARNING_LENGTH));
+  }
+  return warnings.slice(0, MAX_DELTA_WARNINGS);
+}
 
 /**
  * Shape-only parse of raw model output. Returns null on any structural
@@ -546,8 +702,8 @@ export function parsePlannerAiDelta(raw: string): PlannerAiDelta | null {
   if (!parsed || typeof parsed !== 'object') return null;
   const record = parsed as Record<string, unknown>;
 
-  if (!Array.isArray(record.drop_task_ids)) return null;
-  if (!record.drop_task_ids.every((id) => typeof id === 'string' && id.trim())) return null;
+  const drops = parseDrops(record);
+  if (drops === null) return null;
 
   if (!Array.isArray(record.adjust_offsets)) return null;
   const adjustOffsets: PlannerAiDelta['adjust_offsets'] = [];
@@ -556,7 +712,8 @@ export function parsePlannerAiDelta(raw: string): PlannerAiDelta | null {
     const e = entry as Record<string, unknown>;
     if (typeof e.id !== 'string' || !e.id.trim()) return null;
     if (typeof e.offset_days !== 'number' || !Number.isFinite(e.offset_days)) return null;
-    adjustOffsets.push({ id: e.id, offset_days: Math.round(e.offset_days) });
+    const reason = typeof e.reason === 'string' && e.reason.trim() ? e.reason.trim() : null;
+    adjustOffsets.push({ id: e.id, offset_days: Math.round(e.offset_days), reason });
   }
 
   if (!Array.isArray(record.role_assignments)) return null;
@@ -579,13 +736,17 @@ export function parsePlannerAiDelta(raw: string): PlannerAiDelta | null {
     rewriteWhy.push({ id: e.id, why: e.why.trim() });
   }
 
+  const warnings = parseWarnings(record.warnings);
+  if (warnings === null) return null;
+
   const rationale = typeof record.rationale === 'string' ? record.rationale.trim() : '';
 
   return {
-    drop_task_ids: record.drop_task_ids as string[],
+    drops,
     adjust_offsets: adjustOffsets,
     role_assignments: roleAssignments,
     rewrite_why: rewriteWhy,
+    warnings,
     rationale: rationale.slice(0, MAX_RATIONALE_LENGTH),
   };
 }
@@ -614,13 +775,19 @@ export function validatePlannerDelta(
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const members = new Set(memberUserIds);
 
-  for (const id of delta.drop_task_ids) {
-    const task = byId.get(id);
+  for (const drop of delta.drops) {
+    const task = byId.get(drop.id);
     if (!task) {
-      return { ok: false, error: `drop_task_ids references unknown task: ${id}` };
+      return { ok: false, error: `drops references unknown task: ${drop.id}` };
     }
     if (!task.optional) {
-      return { ok: false, error: `drop_task_ids references a required task: ${id}` };
+      return { ok: false, error: `drops references a required task: ${drop.id}` };
+    }
+    if (!drop.reason.trim()) {
+      return { ok: false, error: `drops entry needs a reason: ${drop.id}` };
+    }
+    if (drop.reason.length > MAX_DROP_REASON_LENGTH) {
+      return { ok: false, error: `drops reason is too long for task ${drop.id}` };
     }
   }
 
@@ -672,8 +839,8 @@ export function applyDeltaToDraft(
 ): ReleasePlanDraftDoc {
   const { phaseScope } = options;
 
-  const dropped = new Set(delta.drop_task_ids);
-  const offsets = new Map(delta.adjust_offsets.map((a) => [a.id, a.offset_days]));
+  const dropReasons = new Map(delta.drops.map((d) => [d.id, d.reason]));
+  const offsets = new Map(delta.adjust_offsets.map((a) => [a.id, a]));
   const whys = new Map(delta.rewrite_why.map((r) => [r.id, r.why]));
   const roleToMember = new Map(delta.role_assignments.map((a) => [a.role, a.member_user_id]));
 
@@ -683,15 +850,18 @@ export function applyDeltaToDraft(
 
     const next: DraftTask = { ...task };
 
-    if (dropped.has(task.id)) {
+    const dropReason = dropReasons.get(task.id);
+    if (dropReason !== undefined) {
       next.removed = true;
       next.removed_by = 'ai';
+      next.removed_reason = dropReason || null;
     }
 
     const offset = offsets.get(task.id);
-    if (typeof offset === 'number') {
-      next.offset_days = offset;
-      next.phase = derivePlanPhase(offset);
+    if (offset) {
+      next.offset_days = offset.offset_days;
+      next.phase = derivePlanPhase(offset.offset_days);
+      next.change_reason = offset.reason ?? next.change_reason;
     }
 
     const why = whys.get(task.id);
@@ -699,10 +869,15 @@ export function applyDeltaToDraft(
       next.why = why;
     }
 
-    if (task.role) {
+    // The deterministic history/role heuristic (proposeTaskOwners, run before
+    // the model is ever called) outranks a model role-archetype guess — a
+    // specific person who has actually done this before is worth more than a
+    // role match against a live team roster the model cannot fully see.
+    if (task.role && task.assignee_basis !== 'history') {
       const member = roleToMember.get(task.role);
       if (member) {
         next.assignee_user_id = member;
+        next.assignee_basis = 'ai';
       }
     }
 
@@ -711,9 +886,37 @@ export function applyDeltaToDraft(
 
   return {
     ...doc,
-    ai: { applied: true, rationale: delta.rationale || null, failure: null },
+    ai: { applied: true, rationale: delta.rationale || null, failure: null, warnings: delta.warnings },
     tasks,
   };
+}
+
+/**
+ * Stamp lib/task-owners.ts's per-task owner proposals onto a fresh draft,
+ * before the model is ever called (see generatePlanDraft in
+ * lib/release-planning-actions-server.ts). Deterministic, and independent of
+ * whether AI is configured at all — this is another layer of template
+ * refinement, not tailoring.
+ *
+ * A 'creator' proposal changes nothing: buildDraftFromTemplate already
+ * defaults every task's assignee to the release owner with assignee_basis
+ * null, and a 'creator' proposal is exactly that same answer. Leaving it
+ * untouched is what keeps "nobody has done this before" reading as the plain,
+ * unlabelled default rather than a provenance claim with nothing behind it.
+ */
+export function applyOwnerProposals(
+  doc: ReleasePlanDraftDoc,
+  proposals: ProposedOwner[]
+): ReleasePlanDraftDoc {
+  const byTaskId = new Map(proposals.map((proposal) => [proposal.taskId, proposal]));
+
+  const tasks = doc.tasks.map((task) => {
+    const proposal = byTaskId.get(task.id);
+    if (!proposal || proposal.basis === 'creator') return task;
+    return { ...task, assignee_user_id: proposal.userId, assignee_basis: proposal.basis };
+  });
+
+  return { ...doc, tasks };
 }
 
 /**
@@ -751,6 +954,9 @@ export function resetPhaseToTemplate(
       tags: source.tags ?? [],
       removed: false,
       removed_by: null,
+      removed_reason: null,
+      change_reason: null,
+      assignee_basis: null,
     } satisfies DraftTask;
   });
 
@@ -763,6 +969,15 @@ export function resetPhaseToTemplate(
 
 const DRAFT_ORIGINS: DraftTaskOrigin[] = ['template', 'user'];
 const DRAFT_TASK_TYPES: Array<DraftTask['task_type']> = ['task', 'event_milestone'];
+
+/** Reads an untrusted assignee_basis value, the removed_by precedent exactly:
+ *  a chain of `===` checks narrows the type through control flow, so nothing
+ *  outside the closed set can survive the parse. */
+function readAssigneeBasis(value: unknown): DraftTask['assignee_basis'] {
+  return value === 'history' || value === 'role' || value === 'ai' || value === 'user'
+    ? value
+    : null;
+}
 
 /**
  * Validate a whole draft document arriving from the client autosave. The
@@ -886,6 +1101,15 @@ export function parseDraftDoc(
       depends_on: dependsOn,
       removed: t.removed === true,
       removed_by: t.removed_by === 'ai' || t.removed_by === 'user' ? t.removed_by : null,
+      removed_reason:
+        typeof t.removed_reason === 'string' && t.removed_reason.trim()
+          ? t.removed_reason.trim().slice(0, MAX_DROP_REASON_LENGTH)
+          : null,
+      change_reason:
+        typeof t.change_reason === 'string' && t.change_reason.trim()
+          ? t.change_reason.trim().slice(0, MAX_WARNING_LENGTH)
+          : null,
+      assignee_basis: readAssigneeBasis(t.assignee_basis),
       edited: t.edited === true,
     });
   }
@@ -920,6 +1144,12 @@ export function parseDraftDoc(
       failure: PLAN_DRAFT_FAILURES.includes(aiRecord.failure as PlanDraftFailure)
         ? (aiRecord.failure as PlanDraftFailure)
         : null,
+      warnings: Array.isArray(aiRecord.warnings)
+        ? aiRecord.warnings
+            .filter((w): w is string => typeof w === 'string' && Boolean(w.trim()))
+            .map((w) => w.trim().slice(0, MAX_WARNING_LENGTH))
+            .slice(0, MAX_DELTA_WARNINGS)
+        : [],
     },
     tasks,
   };
@@ -935,6 +1165,42 @@ export function activeDraftTasks(doc: ReleasePlanDraftDoc): DraftTask[] {
 /** Active tasks in one phase, in draft order. */
 export function draftTasksByPhase(doc: ReleasePlanDraftDoc, phase: PlanPhase): DraftTask[] {
   return activeDraftTasks(doc).filter((task) => task.phase === phase);
+}
+
+/**
+ * Warnings computed at RENDER time, never stored — they describe the plan as
+ * it stands right now against today's date, so a stored copy would go stale
+ * the moment a day passed or the manager moved the release date. These are
+ * distinct from `delta.warnings` (a model's one-off assumptions about a
+ * single generation), and the review scene shows both together.
+ *
+ * At most one of the two warnings below fires: "before today" is meaningless
+ * without a release date to compute absolute dates from, so a missing date
+ * short-circuits straight to that warning instead.
+ */
+export function deriveScheduleWarnings(
+  doc: ReleasePlanDraftDoc,
+  releaseDate: string | null,
+  todayYmd: string
+): string[] {
+  if (!releaseDate) {
+    return ['No release date is set yet, so these dates are relative to release day only.'];
+  }
+
+  const todayEpoch = parseYmd(todayYmd);
+  if (todayEpoch === null) return [];
+
+  let beforeToday = 0;
+  for (const task of activeDraftTasks(doc)) {
+    const taskYmd = computeTaskYmd(releaseDate, task.offset_days);
+    const taskEpoch = taskYmd ? parseYmd(taskYmd) : null;
+    if (taskEpoch !== null && taskEpoch < todayEpoch) beforeToday += 1;
+  }
+
+  if (beforeToday === 0) return [];
+
+  const verb = beforeToday === 1 ? 'task lands' : 'tasks land';
+  return [`${beforeToday} ${verb} before today. They stay in the plan under Catch up.`];
 }
 
 // ---------------------------------------------------------------------------
@@ -998,10 +1264,11 @@ function describeIntake(intake: ReleasePlanIntake): string[] {
 const OUTPUT_SCHEMA_BLOCK = [
   'Output schema:',
   '{',
-  '  "drop_task_ids": ["<task id>", ...],',
-  '  "adjust_offsets": [{ "id": "<task id>", "offset_days": <integer> }],',
+  '  "drops": [{ "id": "<task id>", "reason": "<one short line>" }],',
+  '  "adjust_offsets": [{ "id": "<task id>", "offset_days": <integer>, "reason": "<one short line, optional>" }],',
   '  "role_assignments": [{ "role": "<role>", "member_user_id": "<member user_id>" }],',
   '  "rewrite_why": [{ "id": "<task id>", "why": "<one short line>" }],',
+  '  "warnings": ["<one short line for the manager, at most 5>"],',
   '  "rationale": "<2-3 sentences for the manager>"',
   '}',
 ].join('\n');
@@ -1013,11 +1280,14 @@ function buildSystemPrompt(scope: { phaseLabel?: string }): string {
     'Rules:',
     '- You cannot add tasks. There is no operation for it. The manager adds anything the playbook is missing.',
     '- Only drop a task when its "optional" field is true. NEVER drop a task whose "optional" is false.',
+    '- Every drop needs a "reason": one short line explaining why, shown to the manager next to it. Never drop a task with no reason.',
     '- Be conservative. When in doubt, keep the task and leave its date alone.',
+    '- A task landing before today is never by itself a reason to drop it or move it. It stays in the plan; the product shows it under "Catch up".',
     '- Every id you return MUST be copied verbatim from the task list provided. Never invent an id.',
     '- Only assign people from the team list provided, using their exact member_user_id.',
     '- Rewrite a "why" line only when this release\'s context genuinely changes it. Keep each rewrite under 160 characters, plain and specific. Leave the rest alone.',
     '- offset_days is days relative to release day. Negative is before, 0 is release day, positive is after.',
+    '- Use "warnings" for anything worth the manager\'s attention before approving — a real schedule risk, an assumption you made. Not a reason to change a task by itself. At most 5, each one short line.',
     scope.phaseLabel
       ? `- You are only adjusting the "${scope.phaseLabel}" phase. Every id you return must come from the list below, which is that phase only.`
       : '- Adjust across the whole plan.',
@@ -1031,13 +1301,25 @@ function buildGuidance(
   intake: ReleasePlanIntake,
   options?: { fallbackToSingle?: boolean }
 ): string {
-  const lines = [
-    'Guidance for common cases:',
-    '- No budget: drop the optional paid promotion tasks and say so in the rationale.',
+  const lines = ['Guidance for common cases:'];
+
+  // A one-tap "Draft the plan" (buildAutoIntake) leaves both of these
+  // 'unknown' rather than asking. Telling the model "no budget: drop paid
+  // promo" here would otherwise fire on every such draft, since 'unknown'
+  // reads the same as 'none' to a model that is not told the difference.
+  if (intake.goal === 'unknown' && intake.budget === 'unknown') {
+    lines.push(
+      '- The manager has not stated a goal or a budget for this release. Do not assume either: never drop the paid-promotion tasks for a budget that was not stated, and never assume this release has more or less budget than the playbook already assumes.'
+    );
+  } else {
+    lines.push('- No budget: drop the optional paid promotion tasks and say so in the rationale.');
+  }
+
+  lines.push(
     '- The distributor is already set up: the setup tasks can move later or drop if they are optional.',
     '- Nothing is ready yet: leave the asset production runway exactly as the playbook has it.',
-    '- A tight window between today and release day: pull the essential tasks earlier rather than dropping required work.',
-  ];
+    '- A tight window between today and release day: pull the essential tasks earlier rather than dropping required work.'
+  );
 
   if (intake.release_type !== 'single') {
     const formatLabel = intake.release_type === 'ep' ? 'an EP' : 'an album';

@@ -51,7 +51,12 @@ export type FounderAlertKind =
   /** A renewal charge failed while the team still has access. An ACTION, like
    *  plan_change_requested: reach the customer before the period lapses, because
    *  after that they drop into read-only and the recovery gets much harder. */
-  | 'payment_failed';
+  | 'payment_failed'
+  /** A team hit EMBEDDED_ACTIONS_DAILY_CAP (lib/urgans-actions/guard.ts) on
+   *  UrgAns actions run inside a product function. At most one of these per
+   *  team per 24h (shouldAlertGuardTrip) so a busy team cannot spam the inbox
+   *  it is telling us about. */
+  | 'urgans_guard_tripped';
 
 export type FounderAlertContext = {
   teamName: string | null;
@@ -82,6 +87,7 @@ const SUBJECT_PREFIX: Record<FounderAlertKind, string> = {
   manually_marked_paid: 'Marked paid',
   plan_change_requested: 'SWAP NEEDED',
   payment_failed: 'CARD FAILED',
+  urgans_guard_tripped: 'UrgAns usage cap',
 };
 
 const HEADLINE: Record<FounderAlertKind, string> = {
@@ -95,6 +101,8 @@ const HEADLINE: Record<FounderAlertKind, string> = {
     'This team changed plan. Their Paystack subscription still needs swapping by hand.',
   payment_failed:
     'A renewal charge failed for this team. They still have access while Paystack retries, and they drop to read only if the period ends unpaid.',
+  urgans_guard_tripped:
+    'This team hit the daily cap on UrgAns actions run inside the product. If this is real usage, raise the cap. If it does not look right, take a look.',
 };
 
 const formatCount = (value: number | null): string =>

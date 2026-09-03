@@ -25,6 +25,7 @@ import {
   checkLimit,
   isApproachingLimit,
   resolveTeamTier,
+  minimumTierWith,
 } from './entitlements';
 
 // The tiers a visitor SEES. Copy and ordering rules apply to these.
@@ -130,6 +131,15 @@ describe('the tier table matches what is published', () => {
     expect(getEntitlement('manager', 'concierge_onboarding')).toBe(false);
     expect(getEntitlement('label', 'concierge_onboarding')).toBe(true);
     expect(getEntitlement('enterprise', 'concierge_onboarding')).toBe(true);
+  });
+
+  // UrgAns embedded actions (2026-09-03): the first feature-by-tier gate in
+  // this map that is not a countable ceiling. Solo keeps chat only.
+  it('gates UrgAns embedded actions to Manager and above', () => {
+    expect(getEntitlement('solo', 'urgans_embedded_actions')).toBe(false);
+    expect(getEntitlement('manager', 'urgans_embedded_actions')).toBe(true);
+    expect(getEntitlement('label', 'urgans_embedded_actions')).toBe(true);
+    expect(getEntitlement('enterprise', 'urgans_embedded_actions')).toBe(true);
   });
 
   it('declares an entitlement for every tier, with no gaps', () => {
@@ -270,6 +280,25 @@ describe('limit helpers', () => {
     expect(isUnlimited(UNLIMITED)).toBe(true);
     expect(isUnlimited(0)).toBe(false);
     expect(isUnlimited(4)).toBe(false);
+  });
+});
+
+describe('minimumTierWith', () => {
+  it('finds the cheapest displayed tier that grants a boolean entitlement', () => {
+    expect(minimumTierWith('urgans_embedded_actions')).toBe('manager');
+    expect(minimumTierWith('concierge_onboarding')).toBe('label');
+  });
+
+  it('returns null when no tier grants it', () => {
+    expect(minimumTierWith('sso')).toBeNull();
+  });
+
+  it('never returns a sales-led tier a visitor cannot self-serve into', () => {
+    // sso is enterprise-only, and enterprise is off PRICING_TIER_ORDER, so this
+    // exercises the same path minimumTierWith('sso') already covers above —
+    // asserted again here against data_export (true everywhere) to confirm the
+    // search only ever walks the displayed order, never past it.
+    expect(minimumTierWith('data_export')).toBe(PRICING_TIER_ORDER[0]);
   });
 });
 

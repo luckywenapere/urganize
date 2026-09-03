@@ -21,7 +21,7 @@
 // withheld to manufacture an upsell, because the founder is personally in the
 // room when a buyer asks why.
 
-import { PRICING_TIERS, isPricingTierId } from '@urganize/pricing';
+import { PRICING_TIERS, PRICING_TIER_ORDER, isPricingTierId } from '@urganize/pricing';
 import type { PricingTierId } from '@urganize/pricing';
 
 /** Feature switch for the tier model. Function form (the isHardPaywallEnabled /
@@ -62,6 +62,12 @@ export type Entitlements = {
   support_channel: SupportChannel;
   sso: boolean;
   sub_teams: boolean;
+  /** UrgAns drafts a change, edits it, taps Apply — inside a product function
+   *  rather than in chat. Manager, Label and Group get it; Solo keeps chat
+   *  only. The first feature-by-tier gate in this map that is NOT a countable
+   *  ceiling: it fits the module's own gating philosophy above (a run costs a
+   *  real model call to deliver) exactly as cleanly as the countable ones do. */
+  urgans_embedded_actions: boolean;
 };
 
 // ── Three keys need a caveat before anyone builds against them ───────────────
@@ -153,6 +159,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     support_channel: 'email',
     sso: false,
     sub_teams: false,
+    urgans_embedded_actions: false,
   },
   manager: {
     artists: limitsOf('manager').artists,
@@ -168,6 +175,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     support_channel: 'email',
     sso: false,
     sub_teams: false,
+    urgans_embedded_actions: true,
   },
   label: {
     artists: limitsOf('label').artists,
@@ -183,6 +191,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     support_channel: 'whatsapp_24h',
     sso: false,
     sub_teams: false,
+    urgans_embedded_actions: true,
   },
   enterprise: {
     artists: limitsOf('enterprise').artists,
@@ -198,8 +207,26 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     support_channel: 'sla',
     sso: true,
     sub_teams: true,
+    urgans_embedded_actions: true,
   },
 };
+
+/** A boolean-valued entitlement key — the subset `minimumTierWith` can search. */
+export type BooleanEntitlementKey = {
+  [K in keyof Entitlements]: Entitlements[K] extends boolean ? K : never;
+}[keyof Entitlements];
+
+/** The cheapest DISPLAYED tier that grants a boolean entitlement, or null if
+ *  none does. Reads PRICING_TIER_ORDER (the tiers a visitor sees) rather than
+ *  every stored tier, so a sales-led id never becomes an upgrade target no
+ *  ordinary team can self-serve into. Exists so a refusal copy never
+ *  hardcodes a tier name that a later re-cut would leave lying. */
+export function minimumTierWith<K extends BooleanEntitlementKey>(key: K): PricingTierId | null {
+  for (const tier of PRICING_TIER_ORDER) {
+    if (ENTITLEMENTS[tier][key]) return tier;
+  }
+  return null;
+}
 
 /** The tier a team on trial is treated as. The shipped trial is a 14-day
  * FULL-ACCESS team trial, so it resolves to the flagship rather than to the

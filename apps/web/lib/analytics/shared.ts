@@ -146,6 +146,9 @@ export interface AnalyticsEventPropertiesMap {
    * closure or restarting the timer on every keystroke. */
   planner_review_prompt_shown: EmptyAnalyticsProperties;
   planner_review_prompt_dismissed: EmptyAnalyticsProperties;
+  /** A manager threw away a draft plan before approving it (2026-09-03, the
+   * embedded-actions review scene's new Discard control). */
+  planner_draft_discarded: EmptyAnalyticsProperties;
   // UrgAns reply action row (2026-08-12): copy / retry / thumbs under each
   // assistant reply. Thumbs are the first structured feedback signal on
   // assistant quality — worth watching once the agent model is wired.

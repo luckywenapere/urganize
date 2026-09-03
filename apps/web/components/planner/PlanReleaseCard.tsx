@@ -10,6 +10,14 @@ import { Button } from '@urganize/ui';
  * Rendered through the workspace's activity-banner slot with
  * `bannerReplacesEmptyState`, so it IS the panel body rather than a card above
  * one. That is what makes it unmissable: there is nothing else there.
+ *
+ * ONE TAP IS THE PRIMARY PATH (spec 6.1, Decision B, 2026-09-03): the button
+ * drafts immediately from what the release row already knows — no questions
+ * asked first (buildAutoIntake derives release type, artist and date
+ * server-side). The seven-question modal survives as a SECONDARY "Answer a
+ * few questions first" link, for a manager who wants to steer the draft (a
+ * real budget, a real goal, which tracks are ready) before UrgAns ever calls
+ * a model, rather than as the only door in.
  */
 
 type PlanReleaseCardProps = {
@@ -17,7 +25,10 @@ type PlanReleaseCardProps = {
   hasDraft: boolean;
   /** UrgAns is drafting right now. */
   isGenerating: boolean;
-  onPlan: () => void;
+  /** One tap: draft immediately from what the release row already knows. */
+  onDraftNow: () => void;
+  /** The seven-question refine path — steer the draft before it exists. */
+  onRefine: () => void;
   onReview: () => void;
   onAddActivity: () => void;
 };
@@ -25,7 +36,8 @@ type PlanReleaseCardProps = {
 export function PlanReleaseCard({
   hasDraft,
   isGenerating,
-  onPlan,
+  onDraftNow,
+  onRefine,
   onReview,
   onAddActivity,
 }: PlanReleaseCardProps) {
@@ -34,8 +46,8 @@ export function PlanReleaseCard({
   const copy = {
     fresh: {
       headline: "Let's plan this release.",
-      body: 'Answer a few questions and UrgAns drafts your rollout from the playbook that ships releases. You approve every task before anything is scheduled.',
-      cta: 'Plan this release with UrgAns',
+      body: 'UrgAns drafts your rollout from the playbook that ships releases, using what this release already tells us. You approve every task before anything is scheduled.',
+      cta: 'Draft the plan',
     },
     draft: {
       headline: 'Your draft plan is waiting.',
@@ -67,11 +79,24 @@ export function PlanReleaseCard({
 
       <Button
         type="button"
-        onClick={state === 'fresh' ? onPlan : onReview}
+        onClick={state === 'fresh' ? onDraftNow : onReview}
         className="mt-5 h-11 w-full justify-center sm:w-auto"
       >
         {copy.cta}
       </Button>
+
+      {state === 'fresh' ? (
+        <p className="mt-3 text-xs leading-5 text-content-secondary">
+          <button
+            type="button"
+            onClick={onRefine}
+            className="motion-focus font-medium text-content-primary underline decoration-stroke-strong underline-offset-2 transition-colors hover:decoration-brand"
+          >
+            Answer a few questions first
+          </button>{' '}
+          to steer the draft.
+        </p>
+      ) : null}
 
       <div className="mt-5 border-t border-brand/20 pt-4">
         <p className="text-xs leading-5 text-content-secondary">

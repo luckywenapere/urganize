@@ -70,6 +70,27 @@ export const BILLING_EVENT_TYPES = [
    *  exists for the MCP surface, which has no rate limit — see the known gap in
    *  CLAUDE.md. */
   'mcp_tool_call',
+  /** One UrgAns embedded-action run (draft/apply/discard inside a product
+   *  function — see lib/urgans-actions/). DELIBERATELY a different string
+   *  from 'urgans_action': that one feeds the 40/150 monthly chat ceiling in
+   *  lib/urgans-usage.ts, and an embedded action must never count against it —
+   *  they are gated on plan tier instead (urgans_embedded_actions), not
+   *  metered by volume. lib/urgans-actions/registry-guard.test.ts scans the
+   *  source of every action route for the literal string 'urgans_action' and
+   *  fails the build if it appears, so this split cannot regress silently. */
+  'urgans_embedded_action',
+  /** A team hit the daily embedded-actions cap (EMBEDDED_ACTIONS_DAILY_CAP in
+   *  lib/urgans-actions/guard.ts). Drives a founder alert, at most one per
+   *  team per 24h — see shouldAlertGuardTrip. */
+  'urgans_guard_tripped',
+  /** A Solo team's caller was shown the "upgrade to draft this" sheet after an
+   *  entitlement check refused an embedded-action run. The upgrade funnel's
+   *  first moment, mirroring paywall_hit's role in the trial funnel above. */
+  'upgrade_prompt_shown',
+  /** They tapped Upgrade on that sheet. A softer signal than
+   *  plan_change_requested (which records an actual purchase decision), so
+   *  this is ledger-only — no founder alert. */
+  'upgrade_clicked',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];
@@ -81,14 +102,14 @@ export function isBillingEventType(value: unknown): value is BillingEventType {
   );
 }
 
-/** What the wall UI is allowed to report. Deliberately NOT the full event
- * union: the client says what happened ("someone looked at the wall") and the
- * server decides which event that is, so a client cannot forge a
- * `checkout_completed` or a `comped`. */
-export type BillingTrackRequest = 'paywall_view' | 'talk_to_us';
+/** What the wall UI — and, since 2026-09-03, the UrgAns upgrade sheet — is
+ * allowed to report. Deliberately NOT the full event union: the client says
+ * what happened and the server decides which event that is, so a client
+ * cannot forge a `checkout_completed` or a `comped`. */
+export type BillingTrackRequest = 'paywall_view' | 'talk_to_us' | 'upgrade_clicked';
 
 export function isBillingTrackRequest(value: unknown): value is BillingTrackRequest {
-  return value === 'paywall_view' || value === 'talk_to_us';
+  return value === 'paywall_view' || value === 'talk_to_us' || value === 'upgrade_clicked';
 }
 
 /** Same UTC day? Return visits are deduped per day so one person reloading the
@@ -103,13 +124,17 @@ function isSameUtcDay(a: Date, b: Date): boolean {
   );
 }
 
-/** What a wall interaction can turn into. A strict subset of the event union:
- * the wall can only ever produce these three, and saying so in the type is
- * what lets the founder-alert path accept the result without a cast. */
+/** What a wall — or upgrade-sheet — interaction can turn into. A strict subset
+ * of the event union, and saying so in the type is what lets the
+ * founder-alert path accept a wall result without a cast.
+ * 'upgrade_clicked' is handled separately by its caller (logBillingEvent
+ * only, no founder alert — a softer signal than a real purchase decision), so
+ * it is not read by buildFounderBillingAlertEmail's FounderAlertKind. */
 export type TrackOutcome =
   | 'paywall_hit'
   | 'paywall_return_visit'
-  | 'talk_to_us_clicked';
+  | 'talk_to_us_clicked'
+  | 'upgrade_clicked';
 
 /**
  * Decide what a wall interaction should be recorded as.
@@ -119,8 +144,9 @@ export type TrackOutcome =
  * about, since a team coming back to the wall days later is a live sales
  * signal. Return visits collapse to one per UTC day.
  *
- * 'talk_to_us' always records: a second click means they tried again, which is
- * information, and there is no email storm risk (one click, one intent).
+ * 'talk_to_us' and 'upgrade_clicked' always record: a second click means they
+ * tried again, which is information, and there is no email storm risk (one
+ * click, one intent, and the latter sends no email at all).
  *
  * Returns null when nothing should be written (a same-day repeat view).
  */
@@ -131,6 +157,7 @@ export function resolveTrackOutcome(input: {
   now?: Date;
 }): TrackOutcome | null {
   if (input.requested === 'talk_to_us') return 'talk_to_us_clicked';
+  if (input.requested === 'upgrade_clicked') return 'upgrade_clicked';
 
   if (!input.hasPriorPaywallHit) return 'paywall_hit';
 

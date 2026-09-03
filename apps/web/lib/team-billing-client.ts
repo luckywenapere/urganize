@@ -33,6 +33,13 @@ export type TeamAccessClientSnapshot = {
   isOwnerOrAdmin: boolean;
   ownerUserId: string | null;
   ownerName: string | null;
+  /** The primary workspace's resolved plan tier, when the server sent one.
+   *  Client-side use is a courtesy lock glyph only (e.g. dimming a button
+   *  before a round trip) — the actual gate is enforced server-side on every
+   *  write, keyed off the OBJECT's owning team's tier, not this one. Absent
+   *  means an older server or a resolution failure; treat as "don't know",
+   *  never as "ungated". */
+  tier?: PricingTierId;
   /** Which tiers this deployment can actually charge, in pricing-page order.
    *
    *  A SERVER FACT, and that is the point: whether a tier's Paystack Plan has
@@ -113,6 +120,9 @@ async function fetchTeamAccess(): Promise<TeamAccessClientSnapshot | null> {
       isOwnerOrAdmin: Boolean(team.isOwnerOrAdmin),
       ownerUserId: team.ownerUserId ?? null,
       ownerName: team.ownerName ?? null,
+      // Validated the same way as purchasableTiers: an unrecognised string
+      // crossing the wire must not be trusted as a real tier id.
+      ...(isPricingTierId(team.tier) ? { tier: team.tier } : {}),
       // Omitted rather than sent as [] when we learned nothing, so the wall can
       // tell "no tier is chargeable" from "an older server did not say".
       ...(purchasable.length > 0 ? { purchasableTiers: purchasable } : {}),

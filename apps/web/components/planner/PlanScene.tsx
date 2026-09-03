@@ -12,6 +12,7 @@ import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
 import {
   PLAN_PHASE_ORDER,
   activeDraftTasks,
+  deriveScheduleWarnings,
   type DraftTask,
   type PlanPhase,
 } from '@/lib/release-planning';
@@ -47,6 +48,8 @@ type PlanSceneProps = {
 // while". Counted from the moment a plan is actually on screen and approvable,
 // not from mount.
 const REVIEW_PROMPT_AFTER_MS = 20_000;
+
+const todayYmd = (): string => new Date().toISOString().slice(0, 10);
 
 const noticeClass =
   'flex items-start gap-2 rounded-lg border px-3 py-2 text-xs leading-5';
@@ -98,6 +101,7 @@ export function PlanScene({
   const [reviewPrompt, setReviewPrompt] = useState<'pending' | 'shown' | 'dismissed'>(
     'pending'
   );
+  const [discardState, setDiscardState] = useState<'idle' | 'confirming' | 'discarding'>('idle');
 
   useEffect(() => {
     let cancelled = false;
@@ -210,18 +214,60 @@ export function PlanScene({
     captureAnalyticsEvent(createPostHogEvent('planner_phase_regenerated', { phase, ok }));
   };
 
+  const handleDiscard = async () => {
+    setDiscardState('discarding');
+    const ok = await draft.discard();
+    if (!ok) {
+      setDiscardState('idle');
+      onToast('Could not discard the plan. Try again.', 'error');
+      return;
+    }
+    captureAnalyticsEvent(createPostHogEvent('planner_draft_discarded', {}));
+    onToast('Draft discarded.', 'success');
+    onClose();
+  };
+
+  // Decide-before-you-approve: the model's own one-off assumptions
+  // (doc.ai.warnings) plus the deterministic schedule check computed fresh
+  // against today's date and the release's current date — two different
+  // kinds of "worth knowing before you approve", shown together.
+  //
+  // The dateless case is filtered out here: it already has its own actionable
+  // notice further down ("Set a release date before approving"), and
+  // deriveScheduleWarnings' own contract is that its dateless message is the
+  // ONLY thing it returns when there is no date — so nothing is lost by
+  // excluding it, and the two boxes never say the same thing twice.
+  const combinedWarnings = useMemo(() => {
+    if (!doc) return [];
+    const scheduleWarnings = release.releaseDate
+      ? deriveScheduleWarnings(doc, release.releaseDate, todayYmd())
+      : [];
+    return [...(doc.ai.warnings ?? []), ...scheduleWarnings];
+  }, [doc, release.releaseDate]);
+
   // --- Header -----------------------------------------------------------------
 
   const header = (
     <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle pb-3">
       <h2 className="font-display text-lg font-semibold text-content-primary">Plan</h2>
-      <button
-        type="button"
-        onClick={onClose}
-        className="motion-focus inline-flex items-center gap-1 text-xs text-content-tertiary transition-colors hover:text-content-primary"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Activities
-      </button>
+      <div className="flex items-center gap-4">
+        {draft.phase === 'ready' && discardState === 'idle' ? (
+          <button
+            type="button"
+            onClick={() => setDiscardState('confirming')}
+            className="motion-focus text-xs text-content-tertiary transition-colors hover:text-status-error"
+          >
+            Discard draft
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onClose}
+          className="motion-focus inline-flex items-center gap-1 text-xs text-content-tertiary transition-colors hover:text-content-primary"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Activities
+        </button>
+      </div>
     </div>
   );
 
@@ -352,6 +398,47 @@ export function PlanScene({
       </div>
 
       <div className="mt-4 space-y-3">
+        {discardState !== 'idle' ? (
+          <div
+            role="alertdialog"
+            aria-label="Discard this draft plan?"
+            className="flex flex-col gap-3 rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p className="text-sm leading-6 text-content-primary">
+              <span className="font-semibold">Discard this draft plan?</span>{' '}
+              <span className="text-content-secondary">
+                Every task and edit here goes away. Nothing else changes.
+              </span>
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setDiscardState('idle')}
+                disabled={discardState === 'discarding'}
+                className="shrink-0 justify-center"
+              >
+                Keep it
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleDiscard()}
+                disabled={discardState === 'discarding'}
+                className="shrink-0 justify-center"
+              >
+                {discardState === 'discarding' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    Discarding
+                  </>
+                ) : (
+                  'Discard draft'
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         {!doc.ai.applied ? (
           <p className={`${noticeClass} border-stroke-default bg-bg-elevated text-content-secondary`}>
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
@@ -366,6 +453,36 @@ export function PlanScene({
             <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />
             <span>{doc.ai.rationale}</span>
           </p>
+        ) : null}
+
+        {doc.intake.intake_source === 'auto' ? (
+          <p className={`${noticeClass} border-brand/30 bg-brand/5 text-content-secondary`}>
+            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />
+            <span>
+              UrgAns drafted this from the release facts alone.{' '}
+              <button
+                type="button"
+                onClick={onStartIntake}
+                className="motion-focus font-medium text-content-primary underline decoration-stroke-strong underline-offset-2 transition-colors hover:decoration-brand"
+              >
+                Tell UrgAns more
+              </button>
+            </span>
+          </p>
+        ) : null}
+
+        {combinedWarnings.length > 0 ? (
+          <div className={`${warningNoticeClass} flex-col items-start`}>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-status-warning" aria-hidden="true" />
+              <span className="font-semibold">Decide before you approve</span>
+            </div>
+            <ul className="ml-6 mt-1.5 list-disc space-y-1">
+              {combinedWarnings.map((warning, index) => (
+                <li key={index}>{warning}</li>
+              ))}
+            </ul>
+          </div>
         ) : null}
 
         {dateMoved ? (

@@ -431,17 +431,28 @@ const readTaskType = (metadata: unknown): 'task' | 'event_milestone' => {
   return 'task';
 };
 
-// Reads the playbook task id out of metadata.template.template_task_id.
+// Reads the playbook task id out of metadata.template.task_id.
 // Null for a manager-added or planner-added activity, which has no template
 // origin to name. Surfaced to the client (unlike the rest of metadata.template)
 // so a completion can tell WHICH playbook step was just ticked — see
 // lib/cover-art-tasks.ts, which uses it to decide whether to ask for the
 // cover art file.
+//
+// BUG FIXED 2026-09-03: both writers (instantiate.ts,
+// release-planning-server.ts) have always stored this under `task_id`, but
+// this reader looked for `template_task_id` — a key nothing ever wrote — so
+// the field has resolved to null on every activity in the product since it
+// was added. Fixed here because the past-release owner heuristic
+// (lib/task-owners.ts) depends on reading it correctly; `template_task_id` is
+// still accepted defensively in case any row was ever written under that
+// name by a since-removed code path. See the Timeline and cover-art sections
+// of CLAUDE.md for the consequences this had while it was broken.
 const readTemplateTaskId = (metadata: unknown): string | null => {
   if (metadata && typeof metadata === 'object') {
     const template = (metadata as { template?: unknown }).template;
     if (template && typeof template === 'object') {
-      const id = (template as { template_task_id?: unknown }).template_task_id;
+      const record = template as { task_id?: unknown; template_task_id?: unknown };
+      const id = record.task_id ?? record.template_task_id;
       if (typeof id === 'string' && id.trim()) return id.trim();
     }
   }

@@ -19,6 +19,7 @@ import {
 } from '@/lib/analytics';
 import { getTemplateStats } from '@/lib/release-templates/loader';
 import { suggestReleaseDate, type ReleasePlanIntake } from '@/lib/release-planning';
+import { draftReleasePlan } from '@/lib/urgans-actions/client';
 import {
   EMPTY_PLANNER_INTAKE_DRAFT,
   clearPlannerIntakeDraft,
@@ -79,6 +80,7 @@ export function PlannerIntakeModal() {
   const intakePayload = usePlannerStore((state) => state.intake);
   const closeIntake = usePlannerStore((state) => state.closeIntake);
   const setGenerating = usePlannerStore((state) => state.setGenerating);
+  const setLockedRefusal = usePlannerStore((state) => state.setLockedRefusal);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const profile = useAuthStore((state) => state.user);
   const identityArtist = useWorkspaceIdentityStore((state) => state.artist?.name);
@@ -299,19 +301,31 @@ export function PlannerIntakeModal() {
         ...(draft.goalText.trim() ? { goal_text: draft.goalText.trim() } : {}),
         budget: draft.budget || 'none',
         ...(draft.extraNotes.trim() ? { extra_notes: draft.extraNotes.trim() } : {}),
+        // Real answers, not the one-tap card's derived guess — see
+        // buildAutoIntake's own 'auto' value and PlanScene's notice for it.
+        intake_source: 'answered',
       };
 
       // 4. Fire the draft and hand the wait to the review scene. Deliberately
       //    not awaited: the model can take twenty-five seconds and nobody
-      //    should watch a modal for that.
+      //    should watch a modal for that. Goes through draftReleasePlan (the
+      //    gated action, falling back to this same /plan/generate route when
+      //    the flag is off) rather than a raw fetch, so a refined submission
+      //    reaches the exact same entitlement gate the one-tap card does — a
+      //    manager cannot dodge the Solo refusal by taking the longer way in.
       setGenerating(releaseId, true);
-      void fetch(`/api/releases/${releaseId}/plan/generate`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ intake }),
+      void draftReleasePlan({
+        releaseId,
+        release: {
+          releaseType: draft.releaseType,
+          artistName: draft.artistName,
+          releaseDate: draft.releaseDate,
+        },
+        intake,
+        replace: true,
       })
-        .then(async (response) => {
-          if (response.ok) {
+        .then((result) => {
+          if (result.ok) {
             clearPlannerIntakeDraft();
             captureAnalyticsEvent(
               createPostHogEvent('planner_draft_generated', {
@@ -319,9 +333,19 @@ export function PlannerIntakeModal() {
                 release_type: intake.release_type,
               })
             );
+            return;
+          }
+          // The modal has already closed and navigated to the review scene by
+          // now (see below) — there is nothing local left to show an error
+          // in. A plan_required refusal goes to the shared store so
+          // WorkspaceView's one UrgansLockedSheet can render it regardless of
+          // which entry point triggered it; anything else just leaves the
+          // release back at PlanReleaseCard's fresh state, same as any other
+          // failed generation.
+          if (result.reason === 'plan_required') {
+            setLockedRefusal({ releaseId, message: result.error, actionType: 'release.draft_plan' });
           }
         })
-        .catch(() => undefined)
         .finally(() => {
           setGenerating(releaseId, false);
           void loadCommandCenter({ force: true });
