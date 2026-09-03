@@ -180,7 +180,7 @@ export function PricingTierCards() {
                   }`}
                 >
                   {selfServe
-                    ? "Start free trial"
+                    ? "Start free"
                     : tier.contactSales
                       ? "Let's talk"
                       : "Book a demo"}
