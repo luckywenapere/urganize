@@ -3,9 +3,11 @@
 import { useEffect } from "react";
 import { trackEvent } from "@/lib/analytics";
 
-// The homepage's funnel events, from one place (2026-09-02). Every section on
-// the page is a server component; this renders nothing and listens at the
-// document for the two interactions worth counting:
+// The marketing site's funnel events, from one place (2026-09-02). Mounted
+// ONCE, in app/layout.tsx, so the trial buttons on every page are counted by
+// one listener; mount it in a page as well and each click reports twice.
+// Every section stays a server component; this renders nothing and listens
+// at the document for the two interactions worth counting:
 //
 // - a click on any `a[data-track="start_trial_click"]` (the TrialButton
 //   mounts), reported with its `data-location` so the four asks can be

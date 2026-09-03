@@ -9,7 +9,9 @@ import { trackEvent } from "@/lib/analytics";
 // 2026-08-30, the homepage's primary ask is the free trial (TrialButton) and
 // this form survives there only behind WaitlistDisclosure under the final
 // CTA. The homepage_hero source is retired; homepage_final_cta lives on.
-// /features, /pricing and the persona pages still mount it directly.
+// /features and the three self-serve persona pages fold it behind the same
+// disclosure; /pricing and /for-curators (invite-only accounts, so a queue is
+// the honest ask there) still mount it directly.
 // Progressive two-step so the first touch stays light:
 // step 1 is just email + "Join now"; step 2 asks for name + phone (the
 // founder's manual WhatsApp outreach needs a reachable number) plus ONE

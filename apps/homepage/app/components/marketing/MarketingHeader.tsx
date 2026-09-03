@@ -73,6 +73,8 @@ export function MarketingHeader() {
                 is login-only — see lib/app-urls.ts. */}
             <a
               href={APP_SIGNUP_URL}
+              data-track="start_trial_click"
+              data-location="header"
               className="inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--marketing-primary)] px-4 py-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)] sm:px-5 sm:py-2.5"
             >
               Start free trial

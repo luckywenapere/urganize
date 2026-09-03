@@ -1,10 +1,26 @@
 import { APP_SIGNUP_URL } from "@/lib/app-urls";
 
-export type TrialButtonLocation = "hero" | "roster" | "pricing" | "final";
+export type TrialButtonLocation =
+  | "hero"
+  | "roster"
+  | "pricing"
+  | "final"
+  | "features_hero"
+  | "features_cta"
+  | "for_managers_hero"
+  | "for_managers_cta"
+  | "for_executives_hero"
+  | "for_executives_cta"
+  | "for_ai_artists_hero"
+  | "for_ai_artists_cta";
 
-// The homepage's one primary ask (2026-09-02). Four mounts, one component, so
-// the label, the destination and the tracking attribute cannot drift between
-// them the way the three hand-rolled pill variants on this site already had.
+// The site's one primary ask (2026-09-02). Four mounts on the homepage, then
+// /features and the three self-serve persona pages in the same day's
+// follow-up: one component, so the label, the destination and the tracking
+// attribute cannot drift between them the way the three hand-rolled pill
+// variants on this site already had. The header pill and the pricing cards
+// keep their own sizing and carry the same data-track attributes by hand, so
+// LandingAnalytics counts every trial click on the site under one event.
 //
 // A plain <a>, not next/link: APP_SIGNUP_URL leaves the marketing domain for
 // the product app. It is /onboarding, NOT /auth — /auth is login-only and a

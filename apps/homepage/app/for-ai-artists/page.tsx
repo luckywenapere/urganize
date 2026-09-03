@@ -6,7 +6,8 @@ import {
 } from "../components/landing/PersonaValueBlocks";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
-import { WaitlistForm } from "../components/landing/WaitlistForm";
+import { TrialButton } from "../components/landing/TrialButton";
+import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
@@ -110,8 +111,14 @@ export default function ForAiArtistsPage() {
               tell. Urganize gives every drop the same plan, so putting out
               more music does not mean putting it out worse.
             </p>
-            <div className="mt-8 flex w-full flex-col items-center gap-3">
-              <WaitlistForm source="for_ai_artists_hero" />
+            {/* Since the 2026-09-02 homepage overhaul the ask is the free
+                trial, the same TrialButton the homepage mounts; the waitlist
+                survives as a disclosure under the final CTA. */}
+            <div className="mt-8 flex w-full flex-col items-center gap-4">
+              <TrialButton location="for_ai_artists_hero" size="lg" className="w-full sm:w-auto" />
+              <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
+                14 days free. No card.
+              </p>
             </div>
           </div>
         </SectionShell>
@@ -201,8 +208,14 @@ export default function ForAiArtistsPage() {
                 </Link>
                 .
               </p>
-              <div className="mt-10 flex w-full flex-col items-center gap-3">
-                <WaitlistForm source="for_ai_artists_cta" />
+              <div className="mt-10 flex w-full flex-col items-center gap-4">
+                <TrialButton location="for_ai_artists_cta" size="lg" className="w-full sm:w-auto" />
+                <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
+                  14 days free. No card.
+                </p>
+                <div className="mt-6 w-full">
+                  <WaitlistDisclosure source="for_ai_artists_cta" />
+                </div>
               </div>
             </div>
           </SectionShell>
