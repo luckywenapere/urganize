@@ -113,9 +113,15 @@ export default function ShowPageClient() {
     setActiveSetlistId(body.setlist.id);
   };
 
+  // Select-all ONCE, when editing begins, so typing a fresh name replaces the
+  // old one in a single stroke. The dependency is the boolean transition, not
+  // the draft string: keyed on the string this ran on every keystroke and
+  // re-selected the whole field, so each character replaced the last
+  // (founder report, 2026-09-02). Do not "tidy" it back to renameDraft.
+  const isRenaming = renameDraft !== null;
   useEffect(() => {
-    if (renameDraft !== null) renameInputRef.current?.select();
-  }, [renameDraft]);
+    if (isRenaming) renameInputRef.current?.select();
+  }, [isRenaming]);
 
   /** PATCH the active set's name. Empty keeps the old name (the route would
    *  400 anyway); a failure lands in the page's existing error slot. */
