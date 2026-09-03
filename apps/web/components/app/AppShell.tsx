@@ -81,6 +81,14 @@ const WhatsNewModal = dynamic(
   () => import('@/components/app/WhatsNewModal').then((m) => m.WhatsNewModal),
   { ssr: false }
 );
+// Report a bug or a request. Mounted once for the same reason the planner
+// intake is: its entry points (the `?` HelpMenu, and a section in
+// Settings → Account) live in different ownership islands, so they open it
+// through useReportIssueStore rather than each owning an instance.
+const ReportIssueDialog = dynamic(
+  () => import('@/components/support/ReportIssueDialog').then((m) => m.ReportIssueDialog),
+  { ssr: false }
+);
 // The first-login push ask. Dynamic + flag-gated for the same reason the
 // planner modal is: while the flag is off its chunk is never requested, and
 // this one pulls in the Web Push + Capacitor push clients behind it.
@@ -108,6 +116,11 @@ const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTIC
 // flag off there is no launcher at all — the founder WhatsApp chat feature
 // was removed outright rather than kept as a flag-off fallback.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// In-app issue reporting. Gates the dialog here and the two entry points that
+// open it; the API route checks the same flag itself, so a direct call cannot
+// reach the feature while the UI is dark.
+const REPORT_ISSUE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_REPORT_ISSUE === 'true';
 
 // Bottom tab bar, below lg only — see MobileNavBar.tsx. Moves the topbar's
 // nav icons + create CTA down to where a thumb reaches on a phone, and
@@ -555,6 +568,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       {MOBILE_NAV_ENABLED && showWorkspaceChrome && !requiresArtistNameGate ? (
         <MobileNavBar onNewRelease={openCreateRelease} />
       ) : null}
+      {/* Gated on the same showHelpMenu the `?` launcher uses — signed in, not
+          mid-auth, not on a public page, not a curator. It opens from the help
+          menu and from Settings, both of which live inside that same set. */}
+      {REPORT_ISSUE_ENABLED && showHelpMenu ? <ReportIssueDialog /> : null}
       {/* Deliberately NO onStartTestRelease on this instance, unlike the two
           the first-release prompt opens (WorkspaceView, ChappiPageClient).
           Two reasons: this modal only opens from deliberate "+ New release"

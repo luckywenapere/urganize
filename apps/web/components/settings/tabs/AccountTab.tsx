@@ -8,6 +8,7 @@ import { SecuritySection } from '../SecuritySection';
 import { AdminSection } from '../AdminSection';
 import { SessionSection } from '../SessionSection';
 import { DataExportSection } from '../DataExportSection';
+import { ReportIssueSection } from '../ReportIssueSection';
 import { McpConnectionsSection } from '@/components/mcp/McpConnectionsSection';
 import { DeleteAccountSection } from '../DeleteAccountSection';
 
@@ -51,6 +52,13 @@ import { DeleteAccountSection } from '../DeleteAccountSection';
  * "connect" button, and cannot — a connection only ever begins at the app doing
  * the connecting, which sends the user to /oauth/authorize.
  *
+ * ReportIssueSection (2026-09-03) sits mid-tab rather than in the tail, and it
+ * is here for the same structural reason AdminSection is: this is the ONLY
+ * surface it is reachable from on a phone. Its sibling entry point, the `?`
+ * HelpMenu, is `hidden md:block`. Reporting that something is broken is not a
+ * rare high-consequence account action, so it does not belong with the
+ * password/sign-out/delete tail.
+ *
  * DataExportSection (2026-08-23) sits directly above DeleteAccountSection, and
  * that adjacency is the point: they are the same conversation in the right
  * order. The export covers the same scope deletion destroys, so a user standing
@@ -65,6 +73,7 @@ export function AccountTab() {
       <ArtistProfileSection />
       <AppearanceSection />
       <SecuritySection />
+      <ReportIssueSection />
       <AdminSection />
       <SessionSection />
       <McpConnectionsSection />

@@ -18,6 +18,7 @@ const WORKSPACE_FEATURE_ENABLED =
 const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' && WORKSPACE_FEATURE_ENABLED;
 const DATA_EXPORT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DATA_EXPORT === 'true';
+const REPORT_ISSUE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_REPORT_ISSUE === 'true';
 const MCP_CONNECT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MCP_CONNECT === 'true';
 
 // The "After tasks" check-in row, same gate the real row reads.
@@ -113,6 +114,11 @@ export function SettingsPageSkeleton({
               // Notifications tab.
               { key: 'appearance', height: 'h-24', show: true },
               { key: 'security', height: 'h-40', show: true },
+              // Flag-known, so reservable. Two lines of copy plus a row of two
+              // buttons — the same shape as data-export below, hence the same
+              // height. Admin sits between this and session on the real page
+              // and is deliberately NOT reserved (it renders for almost nobody).
+              { key: 'report-issue', height: 'h-28', show: REPORT_ISSUE_ENABLED },
               { key: 'session', height: 'h-20', show: true },
               // Flag-known and so reservable, but the HEIGHT is a guess: most
               // accounts resolve to a one-line empty state, and one with two
