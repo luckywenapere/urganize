@@ -26,6 +26,18 @@
 // follows. Team RESOLUTION (who may be assigned) is different: that is
 // genuinely release-scoped rather than storage-scoped, so it uses the real
 // caller.
+//
+// ACCESS IS 'owner_write', NOT 'team_write' — even though the release itself
+// is visible to the whole team. release_plan_drafts and every legacy
+// /plan/* route (GET/PUT/DELETE, approve, regenerate-phase) are still
+// owner-keyed in eight places, a deliberate, RECORDED deferral (see
+// lib/release-access-guard.test.ts's own header: "plan is deferred"). A
+// team-write teammate could tap this button, clear the entitlement gate, and
+// then hit a 404 loading the very draft they just created, from the
+// still-owner-only GET /plan. See ../types.ts's UrgansActionAccessLevel
+// comment for the full reasoning and what a non-owner team member sees
+// instead — the same 404 a stranger would, never a 403 that would confirm
+// ownership.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -118,7 +130,7 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
   id: 'release.draft_plan',
   label: 'Draft the rollout plan',
   objectTypes: ['release'],
-  access: 'team_write',
+  access: 'owner_write',
   promptVersion: 'release.draft_plan.v1',
 
   async execute({ admin, objectId, actor, ownerUserId, input }) {

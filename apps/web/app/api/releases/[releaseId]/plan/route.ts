@@ -12,6 +12,7 @@ import {
 } from './_shared';
 import { parseDraftDoc, parseReleasePlanIntake } from '@/lib/release-planning';
 import { discardPlanDraft } from '@/lib/release-planning-actions-server';
+import { findLatestDraftedActionId } from '@/lib/urgans-actions/server';
 
 /**
  * The plan draft itself: read it, autosave the manager's edits into it, or
@@ -58,10 +59,26 @@ export async function GET(
 
   const savedIntake = parseReleasePlanIntake(loaded.release.release_context);
 
+  // Re-derived on every load rather than threaded through client state, so a
+  // reload, a deep link, or a draft started on another device all resolve the
+  // same answer. Only looked up for a live draft — an approved one has
+  // nothing left to apply/discard, and findLatestDraftedActionId itself
+  // fails to null on every error (flag off, migration not yet applied), so
+  // this can never break loading the draft it accompanies.
+  const actionId =
+    draftResult.draft && draftResult.draft.status === 'draft'
+      ? await findLatestDraftedActionId(adminClient, {
+          objectType: 'release',
+          objectId: releaseId,
+          actionType: 'release.draft_plan',
+        })
+      : null;
+
   return NextResponse.json({
     draft: draftResult.draft ? toPlanDraftResponse(draftResult.draft) : null,
     intake: savedIntake.ok ? savedIntake.intake : null,
     releaseDate: loaded.release.release_date,
+    actionId,
   });
 }
 

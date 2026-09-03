@@ -25,12 +25,23 @@ import type { PricingTierId } from '@urganize/pricing';
  *  so a route can refuse a mismatched pairing before it ever loads context. */
 export type UrgansActionObjectType = 'release';
 
-/** 'team_write' is the only level this pass needs: a member may draft, edit,
- *  apply and discard; a guest is refused at the write step (read access is
- *  never exercised by an action that mutates on Apply, so there is no
- *  'team_read' consumer yet — declared for the same reason a second object
- *  type is). */
-export type UrgansActionAccessLevel = 'team_write' | 'team_read';
+/**
+ * - 'team_write': any team member may run/apply/discard; a guest is refused
+ *   at the write step; a non-member gets the visibility-preserving 404.
+ * - 'team_read': read-only visibility is enough (declared for a future
+ *   read-shaped action; nothing uses it yet).
+ * - 'owner_write': ONLY the release owner, even though the release is
+ *   visible to the whole team. This is release.draft_plan's actual level —
+ *   see that action's own comment for why 'team_write' would be a lie here:
+ *   release_plan_drafts and every legacy /plan/* route are still owner-keyed
+ *   in eight places (a deliberate, recorded deferral — see
+ *   lib/release-access-guard.test.ts's own header), so a non-owner teammate
+ *   allowed to RUN this action would tap a working button and then hit a 404
+ *   loading the very draft they just created. A non-owner member gets the
+ *   SAME 404 a stranger would (never a 403 that would confirm ownership),
+ *   matching the legacy route group's own loadOwnedRelease behaviour exactly.
+ */
+export type UrgansActionAccessLevel = 'team_write' | 'team_read' | 'owner_write';
 
 /** What the caller is, once access has already been checked — the tier is the
  *  RELEASE OWNER's, never the acting teammate's (see resolveActionScope in

@@ -129,14 +129,26 @@ export async function resolveActionScope(
   objectId: string,
   user: User
 ): Promise<ResolveActionScopeResult> {
+  // 'owner_write' resolves through READ access, not write — the ownership
+  // check right below is the real gate, and routing it through write access
+  // first would 403 a read-only guest before we ever got to that check,
+  // leaking "you have SOME access here" to someone who should see nothing
+  // but a plain 404. Team read access is also what makes the 404 itself
+  // visibility-preserving: a non-member gets exactly the same refusal a
+  // non-owner MEMBER gets, and neither can be told apart from "does not
+  // exist" — see the access-level comment in ./types.ts.
   const access =
-    action.access === 'team_read'
-      ? await ensureReleaseTeamReadAccess(admin, objectId, user)
-      : await ensureReleaseTeamWriteAccess(admin, objectId, user);
+    action.access === 'team_write'
+      ? await ensureReleaseTeamWriteAccess(admin, objectId, user)
+      : await ensureReleaseTeamReadAccess(admin, objectId, user);
 
   if ('error' in access) {
     const unwrapped = await unwrapAccessError(access.error);
     return { ok: false, ...unwrapped };
+  }
+
+  if (action.access === 'owner_write' && access.release.ownerUserId !== user.id) {
+    return { ok: false, status: 404, error: 'Release not found.' };
   }
 
   const release = access.release;
@@ -435,6 +447,46 @@ export async function applyUrgansAction(
   }
 
   return { ok: true, result: applyOutcome.result };
+}
+
+/**
+ * The actionId a review scene should call apply/discard against for this
+ * release's current draft, or null when there is none (the flag is off, the
+ * migration is not applied yet, the draft predates this feature, or it came
+ * from Chappi's own approve_release_plan tool, which never touches this
+ * table at all).
+ *
+ * Re-derived from the database on every GET /plan rather than threaded
+ * through client state — a page reload, a deep link, or a draft started on
+ * another device must all resolve the same answer.
+ *
+ * FAILS to null on ANY error, including "relation does not exist": this is
+ * read from inside the pre-existing, unconditionally-required GET /plan
+ * route, which is gated only on NEXT_PUBLIC_FEATURE_RELEASE_PLANNER — a
+ * deployment can have that flag on with the urgans_actions migration not yet
+ * applied, and that must never break loading the draft itself.
+ */
+export async function findLatestDraftedActionId(
+  admin: SupabaseClient,
+  input: { objectType: string; objectId: string; actionType: string }
+): Promise<string | null> {
+  if (!isUrgansActionsEnabled()) return null;
+  try {
+    const { data, error } = await admin
+      .from(URGANS_ACTIONS_TABLE)
+      .select('id')
+      .eq('object_type', input.objectType)
+      .eq('object_id', input.objectId)
+      .eq('action_type', input.actionType)
+      .eq('status', 'drafted')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return null;
+    return String((data as { id: string }).id) || null;
+  } catch {
+    return null;
+  }
 }
 
 export type DiscardActionParams = { actionId: string; actor: User };
