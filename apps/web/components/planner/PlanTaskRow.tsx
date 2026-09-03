@@ -41,6 +41,23 @@ function offsetLabel(offsetDays: number): string {
   return `D+${offsetDays}`;
 }
 
+/** The small label next to the assignee picker explaining where that pick
+ *  came from — 'user' and null (the plain owner default) get nothing, since
+ *  there is nothing to explain about a manager's own choice or the absence
+ *  of one. */
+function assigneeProvenanceLabel(basis: DraftTask['assignee_basis']): string | null {
+  switch (basis) {
+    case 'history':
+      return 'From past releases';
+    case 'role':
+      return 'Role match';
+    case 'ai':
+      return 'UrgAns pick';
+    default:
+      return null;
+  }
+}
+
 export function PlanTaskRow({
   task,
   releaseDate,
@@ -53,18 +70,26 @@ export function PlanTaskRow({
   const dateYmd = releaseDate ? computeTaskYmd(releaseDate, task.offset_days) : null;
   const selectedMember =
     members.find((member) => member.userId && member.userId === task.assignee_user_id) || null;
+  const assigneeProvenance = assigneeProvenanceLabel(task.assignee_basis);
 
   if (task.removed) {
     return (
-      <div className="flex items-center gap-3 border-b border-stroke-subtle px-2 py-2.5 last:border-b-0">
-        <p className="min-w-0 flex-1 truncate text-sm text-content-tertiary line-through">
-          {task.title || 'Untitled task'}
-        </p>
-        {task.removed_by === 'ai' ? (
-          <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-content-tertiary">
-            Dropped
-          </span>
-        ) : null}
+      <div className="flex items-start gap-3 border-b border-stroke-subtle px-2 py-2.5 last:border-b-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="min-w-0 flex-1 truncate text-sm text-content-tertiary line-through">
+              {task.title || 'Untitled task'}
+            </p>
+            {task.removed_by === 'ai' ? (
+              <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-content-tertiary">
+                Dropped
+              </span>
+            ) : null}
+          </div>
+          {task.removed_by === 'ai' && task.removed_reason ? (
+            <p className="mt-0.5 text-xs leading-5 text-content-tertiary">{task.removed_reason}</p>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={onRestore}
@@ -149,11 +174,18 @@ export function PlanTaskRow({
           <TaskMemberSelect
             members={members}
             selectedMember={selectedMember}
-            onSelectMember={(member) => onChange({ assignee_user_id: member?.userId || null })}
+            onSelectMember={(member) =>
+              onChange({ assignee_user_id: member?.userId || null, assignee_basis: 'user' })
+            }
             label="Assign someone"
             placeholder="Nobody yet"
             density="compact"
           />
+          {assigneeProvenance ? (
+            <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wide text-content-tertiary">
+              {assigneeProvenance}
+            </p>
+          ) : null}
         </div>
 
         {task.task_type === 'event_milestone' ? (
@@ -176,6 +208,12 @@ export function PlanTaskRow({
           </span>
         ) : null}
       </div>
+
+      {task.change_reason ? (
+        <p className="mt-1 px-2 text-xs leading-5 text-content-tertiary">
+          <span className="font-medium text-content-secondary">Moved:</span> {task.change_reason}
+        </p>
+      ) : null}
     </div>
   );
 }

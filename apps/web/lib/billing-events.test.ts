@@ -29,9 +29,26 @@ describe('billing event types', () => {
       // recoverable churn moment in the system, and the signal that a team is
       // heading for read-only rather than the wall.
       'payment_failed',
+      // UrgAns embedded actions (2026-09-03): a run, a guard trip, and the two
+      // halves of the upgrade funnel a Solo team's refusal can produce.
+      'urgans_embedded_action',
+      'urgans_guard_tripped',
+      'upgrade_prompt_shown',
+      'upgrade_clicked',
     ]) {
       expect(BILLING_EVENT_TYPES).toContain(required);
     }
+  });
+
+  it('meters embedded actions on a different event type than chat, on purpose', () => {
+    // urgans_action feeds the 40/150 monthly chat ceiling (lib/urgans-usage.ts).
+    // An embedded action is gated on plan tier, not metered by volume, and must
+    // never touch that count — this is the first line of defense; the
+    // structural guard in lib/urgans-actions/registry-guard.test.ts is the one
+    // that can't be edited around.
+    expect(BILLING_EVENT_TYPES).toContain('urgans_action');
+    expect(BILLING_EVENT_TYPES).toContain('urgans_embedded_action');
+    expect('urgans_embedded_action' as string).not.toBe('urgans_action' as string);
   });
 
   it('guards unknown values', () => {
@@ -40,9 +57,10 @@ describe('billing event types', () => {
     expect(isBillingEventType(null)).toBe(false);
   });
 
-  it('the client may only ask for the two neutral requests, never a paid state', () => {
+  it('the client may only ask for the three neutral requests, never a paid state', () => {
     expect(isBillingTrackRequest('paywall_view')).toBe(true);
     expect(isBillingTrackRequest('talk_to_us')).toBe(true);
+    expect(isBillingTrackRequest('upgrade_clicked')).toBe(true);
     expect(isBillingTrackRequest('checkout_completed')).toBe(false);
     expect(isBillingTrackRequest('comped')).toBe(false);
   });
@@ -113,6 +131,25 @@ describe('resolveTrackOutcome', () => {
         now: NOW,
       })
     ).toBe('talk_to_us_clicked');
+  });
+
+  it('upgrade-clicked always records too, whatever the wall-hit history says', () => {
+    expect(
+      resolveTrackOutcome({
+        requested: 'upgrade_clicked',
+        hasPriorPaywallHit: false,
+        lastReturnVisitAt: null,
+        now: NOW,
+      })
+    ).toBe('upgrade_clicked');
+    expect(
+      resolveTrackOutcome({
+        requested: 'upgrade_clicked',
+        hasPriorPaywallHit: true,
+        lastReturnVisitAt: at(-1 * HOUR),
+        now: NOW,
+      })
+    ).toBe('upgrade_clicked');
   });
 });
 

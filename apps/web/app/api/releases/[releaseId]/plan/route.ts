@@ -11,6 +11,8 @@ import {
   toPlanDraftResponse,
 } from './_shared';
 import { parseDraftDoc, parseReleasePlanIntake } from '@/lib/release-planning';
+import { discardPlanDraft } from '@/lib/release-planning-actions-server';
+import { findLatestDraftedActionId } from '@/lib/urgans-actions/server';
 
 /**
  * The plan draft itself: read it, autosave the manager's edits into it, or
@@ -57,10 +59,26 @@ export async function GET(
 
   const savedIntake = parseReleasePlanIntake(loaded.release.release_context);
 
+  // Re-derived on every load rather than threaded through client state, so a
+  // reload, a deep link, or a draft started on another device all resolve the
+  // same answer. Only looked up for a live draft — an approved one has
+  // nothing left to apply/discard, and findLatestDraftedActionId itself
+  // fails to null on every error (flag off, migration not yet applied), so
+  // this can never break loading the draft it accompanies.
+  const actionId =
+    draftResult.draft && draftResult.draft.status === 'draft'
+      ? await findLatestDraftedActionId(adminClient, {
+          objectType: 'release',
+          objectId: releaseId,
+          actionType: 'release.draft_plan',
+        })
+      : null;
+
   return NextResponse.json({
     draft: draftResult.draft ? toPlanDraftResponse(draftResult.draft) : null,
     intake: savedIntake.ok ? savedIntake.intake : null,
     releaseDate: loaded.release.release_date,
+    actionId,
   });
 }
 
@@ -157,6 +175,10 @@ export async function PUT(
  * DELETE — discard a draft the manager never approved. Idempotent, and refuses
  * to touch an approved one (deleting that would erase the provenance of tasks
  * that already exist).
+ *
+ * A thin wrapper around lib/release-planning-actions-server.ts's
+ * discardPlanDraft, the one implementation the new release.draft_plan
+ * embedded action's discard step also calls.
  */
 export async function DELETE(
   request: NextRequest,
@@ -182,18 +204,9 @@ export async function DELETE(
   const loaded = await loadOwnedRelease(adminClient, releaseId, auth.user.id);
   if ('error' in loaded) return loaded.error;
 
-  const { error } = await adminClient
-    .from(PLAN_DRAFTS_TABLE)
-    .delete()
-    .eq('release_id', releaseId)
-    .eq('owner_user_id', auth.user.id)
-    .eq('status', 'draft');
-
-  if (error) {
-    return NextResponse.json(
-      { error: error.message || 'Could not discard the plan.' },
-      { status: 500 }
-    );
+  const result = await discardPlanDraft(adminClient, { releaseId, ownerUserId: auth.user.id });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
   return NextResponse.json({ ok: true });

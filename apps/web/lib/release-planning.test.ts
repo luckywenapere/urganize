@@ -6,10 +6,14 @@ import { SINGLE_RELEASE_TEMPLATE } from './release-templates/single';
 import { getTemplateLeadTimeDays } from './release-templates/loader';
 import {
   applyDeltaToDraft,
+  applyOwnerProposals,
+  buildAutoIntake,
   buildDraftFromTemplate,
   buildPlannerMessages,
   computeTaskYmd,
   derivePlanPhase,
+  deriveScheduleWarnings,
+  formatYmd,
   offsetFromTaskYmd,
   parseDraftDoc,
   parsePlannerAiDelta,
@@ -51,10 +55,11 @@ const buildBaseDraft = () =>
   });
 
 const emptyDelta = (): PlannerAiDelta => ({
-  drop_task_ids: [],
+  drops: [],
   adjust_offsets: [],
   role_assignments: [],
   rewrite_why: [],
+  warnings: [],
   rationale: '',
 });
 
@@ -126,6 +131,75 @@ describe('parseReleasePlanIntake', () => {
       expect(result.intake.goal_text).toHaveLength(300);
       expect(result.intake.extra_notes).toHaveLength(2000);
     }
+  });
+
+  it('accepts "unknown" for goal and budget, the one-tap draft leaves both this way', () => {
+    const result = parseReleasePlanIntake({ ...baseIntake, goal: 'unknown', budget: 'unknown' });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.intake.goal).toBe('unknown');
+      expect(result.intake.budget).toBe('unknown');
+    }
+  });
+
+  it('never mentions "unknown" in a validation error, so a Chappi-relayed error cannot teach the model to answer with the word', () => {
+    const goalError = parseReleasePlanIntake({ ...baseIntake, goal: 'nonsense' });
+    expect(goalError.ok).toBe(false);
+    if (!goalError.ok) expect(goalError.error).not.toContain('unknown');
+
+    const budgetError = parseReleasePlanIntake({ ...baseIntake, budget: 'nonsense' });
+    expect(budgetError.ok).toBe(false);
+    if (!budgetError.ok) expect(budgetError.error).not.toContain('unknown');
+  });
+
+  it('reads intake_source, defaulting to nothing (which every existing caller treats as "answered")', () => {
+    const withSource = parseReleasePlanIntake({ ...baseIntake, intake_source: 'auto' });
+    expect(withSource.ok).toBe(true);
+    if (withSource.ok) expect(withSource.intake.intake_source).toBe('auto');
+
+    const withoutSource = parseReleasePlanIntake(baseIntake);
+    expect(withoutSource.ok).toBe(true);
+    if (withoutSource.ok) expect(withoutSource.intake.intake_source).toBeUndefined();
+
+    const garbageSource = parseReleasePlanIntake({ ...baseIntake, intake_source: 'nonsense' });
+    expect(garbageSource.ok).toBe(true);
+    if (garbageSource.ok) expect(garbageSource.intake.intake_source).toBeUndefined();
+  });
+});
+
+describe('buildAutoIntake', () => {
+  it('derives every field from the release row with no questions asked', () => {
+    const intake = buildAutoIntake({
+      release_type: 'ep',
+      artist_name: 'Tola',
+      release_date: '2026-10-02',
+    });
+    expect(intake).toEqual({
+      version: 2,
+      release_type: 'ep',
+      artist_name: 'Tola',
+      date_mode: 'fixed',
+      release_date: '2026-10-02',
+      ready_today: [],
+      goal: 'unknown',
+      budget: 'unknown',
+      intake_source: 'auto',
+    });
+  });
+
+  it('falls back to single for a release type the planner has no format for', () => {
+    expect(buildAutoIntake({ release_type: 'music_video' }).release_type).toBe('single');
+    expect(buildAutoIntake({ release_type: null }).release_type).toBe('single');
+  });
+
+  it('suggests a date only when the release has none yet', () => {
+    expect(buildAutoIntake({ release_date: null }).date_mode).toBe('suggested');
+    expect(buildAutoIntake({ release_date: '2026-12-01' }).date_mode).toBe('fixed');
+  });
+
+  it('produces an intake parseReleasePlanIntake accepts, so it round-trips through release_context', () => {
+    const intake = buildAutoIntake({ release_type: 'single', artist_name: 'Tola', release_date: null });
+    expect(parseReleasePlanIntake(intake).ok).toBe(true);
   });
 });
 
@@ -248,7 +322,7 @@ describe('buildDraftFromTemplate', () => {
 
     expect(doc.tasks).toHaveLength(SINGLE_RELEASE_TEMPLATE.tasks.length);
     expect(doc.template_id).toBe(SINGLE_RELEASE_TEMPLATE.id);
-    expect(doc.ai).toEqual({ applied: false, rationale: null, failure: null });
+    expect(doc.ai).toEqual({ applied: false, rationale: null, failure: null, warnings: [] });
 
     const first = SINGLE_RELEASE_TEMPLATE.tasks[0];
     const drafted = doc.tasks[0];
@@ -259,6 +333,9 @@ describe('buildDraftFromTemplate', () => {
     expect(drafted.assignee_user_id).toBe(OWNER);
     expect(drafted.removed).toBe(false);
     expect(drafted.edited).toBe(false);
+    expect(drafted.removed_reason).toBeNull();
+    expect(drafted.change_reason).toBeNull();
+    expect(drafted.assignee_basis).toBeNull();
   });
 
   it('keeps dependency edges pointing at ids that exist in the draft', () => {
@@ -288,30 +365,109 @@ describe('parsePlannerAiDelta', () => {
   it('parses a well-formed delta', () => {
     const parsed = parsePlannerAiDelta(
       JSON.stringify({
-        drop_task_ids: ['a'],
-        adjust_offsets: [{ id: 'b', offset_days: -30.4 }],
+        drops: [{ id: 'a', reason: 'No marketing budget for this one.' }],
+        adjust_offsets: [{ id: 'b', offset_days: -30.4, reason: 'Distributor is already set up.' }],
         role_assignments: [{ role: 'designer', member_user_id: TEAMMATE }],
         rewrite_why: [{ id: 'c', why: '  Keep it weekly.  ' }],
+        warnings: ['  Release date is close to a holiday.  '],
         rationale: 'Trimmed the paid promo.',
       })
     );
     expect(parsed).not.toBeNull();
+    expect(parsed?.drops).toEqual([{ id: 'a', reason: 'No marketing budget for this one.' }]);
     expect(parsed?.adjust_offsets[0].offset_days).toBe(-30);
+    expect(parsed?.adjust_offsets[0].reason).toBe('Distributor is already set up.');
     expect(parsed?.rewrite_why[0].why).toBe('Keep it weekly.');
+    expect(parsed?.warnings).toEqual(['Release date is close to a holiday.']);
+  });
+
+  it('tolerates the legacy drop_task_ids shape, mapping each id to an empty reason', () => {
+    const parsed = parsePlannerAiDelta(
+      JSON.stringify({
+        drop_task_ids: ['a', 'b'],
+        adjust_offsets: [],
+        role_assignments: [],
+        rewrite_why: [],
+        rationale: '',
+      })
+    );
+    expect(parsed).not.toBeNull();
+    expect(parsed?.drops).toEqual([
+      { id: 'a', reason: '' },
+      { id: 'b', reason: '' },
+    ]);
+  });
+
+  it('an absent warnings key parses as an empty list rather than failing', () => {
+    const parsed = parsePlannerAiDelta(
+      JSON.stringify({
+        drops: [],
+        adjust_offsets: [],
+        role_assignments: [],
+        rewrite_why: [],
+        rationale: '',
+      })
+    );
+    expect(parsed?.warnings).toEqual([]);
+  });
+
+  it('an absent adjust_offsets reason parses as null', () => {
+    const parsed = parsePlannerAiDelta(
+      JSON.stringify({
+        drops: [],
+        adjust_offsets: [{ id: 'a', offset_days: 3 }],
+        role_assignments: [],
+        rewrite_why: [],
+        rationale: '',
+      })
+    );
+    expect(parsed?.adjust_offsets[0].reason).toBeNull();
+  });
+
+  it('truncates warnings to at most 5 entries of at most 160 characters, dropping blanks', () => {
+    const warnings = [...Array(7)].map((_, i) => `Warning number ${i}`);
+    warnings.push('   '); // a blank entry, dropped rather than counted
+    const parsed = parsePlannerAiDelta(
+      JSON.stringify({
+        drops: [],
+        adjust_offsets: [],
+        role_assignments: [],
+        rewrite_why: [],
+        warnings: [...warnings, 'x'.repeat(300)],
+        rationale: '',
+      })
+    );
+    expect(parsed?.warnings).toHaveLength(5);
+    expect(parsed?.warnings.every((w) => w.length <= 160)).toBe(true);
   });
 
   it.each([
     ['not json at all', 'sorry, here is your plan!'],
     ['a bare array', '[]'],
-    ['a missing key', '{"drop_task_ids":[]}'],
-    ['a non-string id', '{"drop_task_ids":[7],"adjust_offsets":[],"role_assignments":[],"rewrite_why":[]}'],
+    ['a missing key', '{"drops":[]}'],
+    [
+      'a non-string id in the current drops shape',
+      '{"drops":[{"id":7,"reason":"x"}],"adjust_offsets":[],"role_assignments":[],"rewrite_why":[]}',
+    ],
+    [
+      'a non-string reason in the current drops shape',
+      '{"drops":[{"id":"a","reason":7}],"adjust_offsets":[],"role_assignments":[],"rewrite_why":[]}',
+    ],
+    [
+      'a non-string id in the legacy drop_task_ids shape',
+      '{"drop_task_ids":[7],"adjust_offsets":[],"role_assignments":[],"rewrite_why":[]}',
+    ],
     [
       'a non-numeric offset',
-      '{"drop_task_ids":[],"adjust_offsets":[{"id":"a","offset_days":"soon"}],"role_assignments":[],"rewrite_why":[]}',
+      '{"drops":[],"adjust_offsets":[{"id":"a","offset_days":"soon"}],"role_assignments":[],"rewrite_why":[]}',
     ],
     [
       'an empty rewrite',
-      '{"drop_task_ids":[],"adjust_offsets":[],"role_assignments":[],"rewrite_why":[{"id":"a","why":"  "}]}',
+      '{"drops":[],"adjust_offsets":[],"role_assignments":[],"rewrite_why":[{"id":"a","why":"  "}]}',
+    ],
+    [
+      'a non-array warnings',
+      '{"drops":[],"adjust_offsets":[],"role_assignments":[],"rewrite_why":[],"warnings":"not an array"}',
     ],
   ])('returns null for %s', (_label, raw) => {
     expect(parsePlannerAiDelta(raw)).toBeNull();
@@ -320,10 +476,11 @@ describe('parsePlannerAiDelta', () => {
   it('has no way to express an added task', () => {
     const parsed = parsePlannerAiDelta(
       JSON.stringify({
-        drop_task_ids: [],
+        drops: [],
         adjust_offsets: [],
         role_assignments: [],
         rewrite_why: [],
+        warnings: [],
         rationale: '',
         add_tasks: [{ title: 'Invented task' }],
       })
@@ -344,24 +501,47 @@ describe('validatePlannerDelta', () => {
   it('accepts a delta that stays inside what it was given', () => {
     const delta: PlannerAiDelta = {
       ...emptyDelta(),
-      drop_task_ids: ['optional_task'],
-      adjust_offsets: [{ id: 'required_task', offset_days: -30 }],
+      drops: [{ id: 'optional_task', reason: 'No marketing budget for this one.' }],
+      adjust_offsets: [{ id: 'required_task', offset_days: -30, reason: 'Distributor is ready.' }],
       role_assignments: [{ role: 'designer', member_user_id: TEAMMATE }],
       rewrite_why: [{ id: 'required_task', why: 'Because the master gates everything else.' }],
     };
     expect(validatePlannerDelta(delta, tasks, [OWNER, TEAMMATE]).ok).toBe(true);
   });
 
+  it('accepts adjust_offsets with no reason at all — a reason there is optional', () => {
+    const delta = {
+      ...emptyDelta(),
+      adjust_offsets: [{ id: 'required_task', offset_days: -10, reason: null }],
+    };
+    expect(validatePlannerDelta(delta, tasks, [OWNER]).ok).toBe(true);
+  });
+
   it('rejects a fabricated task id', () => {
-    const delta = { ...emptyDelta(), drop_task_ids: ['task_that_never_existed'] };
+    const delta = {
+      ...emptyDelta(),
+      drops: [{ id: 'task_that_never_existed', reason: 'Not needed.' }],
+    };
     expect(validatePlannerDelta(delta, tasks, [OWNER]).ok).toBe(false);
   });
 
   it('refuses to drop a required task', () => {
-    const delta = { ...emptyDelta(), drop_task_ids: ['required_task'] };
+    const delta = { ...emptyDelta(), drops: [{ id: 'required_task', reason: 'Not needed.' }] };
     const result = validatePlannerDelta(delta, tasks, [OWNER]);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain('required');
+  });
+
+  it('refuses a drop with no reason', () => {
+    const delta = { ...emptyDelta(), drops: [{ id: 'optional_task', reason: '   ' }] };
+    const result = validatePlannerDelta(delta, tasks, [OWNER]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('reason');
+  });
+
+  it('refuses a drop reason longer than a manager can read at a glance', () => {
+    const delta = { ...emptyDelta(), drops: [{ id: 'optional_task', reason: 'x'.repeat(200) }] };
+    expect(validatePlannerDelta(delta, tasks, [OWNER]).ok).toBe(false);
   });
 
   it('rejects an offset outside the plannable window', () => {
@@ -387,7 +567,7 @@ describe('validatePlannerDelta', () => {
 });
 
 describe('applyDeltaToDraft', () => {
-  it('folds drops, offsets, why lines and role assignments into the draft', () => {
+  it('folds drops, offsets, why lines, role assignments and warnings into the draft', () => {
     const doc = buildBaseDraft();
     const optional = doc.tasks.find((task) => task.optional);
     const designerTask = doc.tasks.find((task) => task.role === 'designer');
@@ -395,30 +575,68 @@ describe('applyDeltaToDraft', () => {
     expect(designerTask).toBeDefined();
 
     const next = applyDeltaToDraft(doc, {
-      drop_task_ids: [optional!.id],
-      adjust_offsets: [{ id: designerTask!.id, offset_days: -10 }],
+      drops: [{ id: optional!.id, reason: 'No budget for paid promo this time.' }],
+      adjust_offsets: [
+        { id: designerTask!.id, offset_days: -10, reason: 'Distributor confirmed early.' },
+      ],
       role_assignments: [{ role: 'designer', member_user_id: TEAMMATE }],
       rewrite_why: [{ id: designerTask!.id, why: 'Artwork gates the distributor upload.' }],
+      warnings: ['Release date lands during a public holiday week.'],
       rationale: 'Tightened the art pass.',
     });
 
     const droppedAfter = next.tasks.find((task) => task.id === optional!.id);
     expect(droppedAfter?.removed).toBe(true);
     expect(droppedAfter?.removed_by).toBe('ai');
+    expect(droppedAfter?.removed_reason).toBe('No budget for paid promo this time.');
 
     const designerAfter = next.tasks.find((task) => task.id === designerTask!.id);
     expect(designerAfter?.offset_days).toBe(-10);
     expect(designerAfter?.phase).toBe('pre_release');
     expect(designerAfter?.assignee_user_id).toBe(TEAMMATE);
+    expect(designerAfter?.assignee_basis).toBe('ai');
     expect(designerAfter?.why).toBe('Artwork gates the distributor upload.');
+    expect(designerAfter?.change_reason).toBe('Distributor confirmed early.');
 
     expect(next.ai).toEqual({
       applied: true,
       rationale: 'Tightened the art pass.',
       failure: null,
+      warnings: ['Release date lands during a public holiday week.'],
     });
     // Nothing was created or destroyed: the plan is the same length.
     expect(next.tasks).toHaveLength(doc.tasks.length);
+  });
+
+  it('never overwrites a history-based assignee with a model role assignment', () => {
+    const doc = buildBaseDraft();
+    const designerTask = doc.tasks.find((task) => task.role === 'designer')!;
+    const withHistory = {
+      ...doc,
+      tasks: doc.tasks.map((task) =>
+        task.id === designerTask.id
+          ? { ...task, assignee_user_id: 'past-designer', assignee_basis: 'history' as const }
+          : task
+      ),
+    };
+
+    const next = applyDeltaToDraft(withHistory, {
+      ...emptyDelta(),
+      role_assignments: [{ role: 'designer', member_user_id: TEAMMATE }],
+    });
+
+    const after = next.tasks.find((task) => task.id === designerTask.id);
+    expect(after?.assignee_user_id).toBe('past-designer');
+    expect(after?.assignee_basis).toBe('history');
+  });
+
+  it('does not stamp a reason onto a drop that never happened', () => {
+    const doc = buildBaseDraft();
+    const untouched = doc.tasks[0];
+    const next = applyDeltaToDraft(doc, emptyDelta());
+    const after = next.tasks.find((task) => task.id === untouched.id);
+    expect(after?.removed_reason).toBeNull();
+    expect(after?.change_reason).toBeNull();
   });
 
   it('leaves rows the manager edited alone', () => {
@@ -463,6 +681,45 @@ describe('applyDeltaToDraft', () => {
 
     expect(next.tasks.find((task) => task.id === setupTask!.id)?.why).toBe('In scope.');
     expect(next.tasks.find((task) => task.id === postTask!.id)?.why).toBe(postTask!.why);
+  });
+});
+
+describe('applyOwnerProposals', () => {
+  it('stamps a history proposal onto its task', () => {
+    const doc = buildBaseDraft();
+    const target = doc.tasks[0];
+    const next = applyOwnerProposals(doc, [
+      { taskId: target.id, userId: TEAMMATE, basis: 'history', reason: 'Handled it before.' },
+    ]);
+    const after = next.tasks.find((task) => task.id === target.id);
+    expect(after?.assignee_user_id).toBe(TEAMMATE);
+    expect(after?.assignee_basis).toBe('history');
+  });
+
+  it('stamps a role proposal the same way', () => {
+    const doc = buildBaseDraft();
+    const target = doc.tasks[0];
+    const next = applyOwnerProposals(doc, [
+      { taskId: target.id, userId: TEAMMATE, basis: 'role', reason: 'Usually takes this role.' },
+    ]);
+    expect(next.tasks.find((task) => task.id === target.id)?.assignee_basis).toBe('role');
+  });
+
+  it('a creator proposal changes nothing — it is already the template default', () => {
+    const doc = buildBaseDraft();
+    const target = doc.tasks[0];
+    const next = applyOwnerProposals(doc, [
+      { taskId: target.id, userId: OWNER, basis: 'creator', reason: 'Nobody has done this before.' },
+    ]);
+    const after = next.tasks.find((task) => task.id === target.id);
+    expect(after?.assignee_user_id).toBe(OWNER);
+    expect(after?.assignee_basis).toBeNull();
+  });
+
+  it('leaves a task with no matching proposal untouched', () => {
+    const doc = buildBaseDraft();
+    const next = applyOwnerProposals(doc, []);
+    expect(next.tasks).toEqual(doc.tasks);
   });
 });
 
@@ -511,6 +768,53 @@ describe('resetPhaseToTemplate', () => {
     const mine = reset.tasks.find((task) => task.id === 'user_abc');
     expect(mine?.title).toBe('Call the plugger');
     expect(mine?.why).toBe('Mine.');
+  });
+});
+
+describe('deriveScheduleWarnings', () => {
+  it('warns when no release date is set, and returns only that warning', () => {
+    const doc = buildBaseDraft();
+    expect(deriveScheduleWarnings(doc, null, '2026-08-10')).toEqual([
+      'No release date is set yet, so these dates are relative to release day only.',
+    ]);
+  });
+
+  it('returns no warnings when the release is 12 weeks out — comfortably ahead of every task', () => {
+    const doc = buildBaseDraft();
+    const today = '2026-06-01';
+    const releaseDate = formatYmd(
+      Date.parse(`${today}T00:00:00.000Z`) + 84 * 24 * 60 * 60 * 1000
+    );
+    expect(deriveScheduleWarnings(doc, releaseDate, today)).toEqual([]);
+  });
+
+  it('counts tasks landing before today, worded in the plural for more than one', () => {
+    const doc = buildBaseDraft();
+    // The earliest single-template task lands 2026-08-07 (release date minus
+    // 56 days, per the date-math test above). A week later than that leaves
+    // more than one task behind.
+    const warnings = deriveScheduleWarnings(doc, '2026-10-02', '2026-08-14');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatch(/^\d+ tasks land before today\. They stay in the plan under Catch up\.$/);
+  });
+
+  it('says "task lands", singular, for exactly one', () => {
+    const doc = buildBaseDraft();
+    const onlyOneTask = { ...doc, tasks: [{ ...doc.tasks[0], offset_days: -56 }] };
+    expect(deriveScheduleWarnings(onlyOneTask, '2026-10-02', '2026-08-10')).toEqual([
+      '1 task lands before today. They stay in the plan under Catch up.',
+    ]);
+  });
+
+  it('ignores a task that has been dropped', () => {
+    const doc = buildBaseDraft();
+    const allRemoved = { ...doc, tasks: doc.tasks.map((task) => ({ ...task, removed: true })) };
+    expect(deriveScheduleWarnings(allRemoved, '2026-10-02', '2026-08-14')).toEqual([]);
+  });
+
+  it('returns no warnings for an unparseable "today"', () => {
+    const doc = buildBaseDraft();
+    expect(deriveScheduleWarnings(doc, '2026-10-02', 'not-a-date')).toEqual([]);
   });
 });
 
@@ -636,6 +940,23 @@ describe('buildPlannerMessages', () => {
     expect(user.content).toContain(OWNER);
   });
 
+  it('requires a reason for every drop and never treats a before-today task as one', () => {
+    const messages = buildPlannerMessages({
+      release: { title: 'Free', artistName: 'Tola', releaseDate: '2026-10-02' },
+      intake: baseIntake,
+      tasks: [],
+      members: [],
+      todayYmd: '2026-08-10',
+    });
+    const [system] = messages;
+    expect(system.content).toContain('Every drop needs a "reason"');
+    expect(system.content).toContain(
+      'A task landing before today is never by itself a reason to drop it or move it.'
+    );
+    expect(system.content).toContain('"drops"');
+    expect(system.content).toContain('"warnings"');
+  });
+
   // The guidance line has to describe the playbook the draft ACTUALLY came
   // from. Telling the model to "stretch the asset work to cover more tracks"
   // when it is already looking at the EP playbook would make it duplicate work
@@ -702,6 +1023,33 @@ describe('buildPlannerMessages', () => {
       phase: 'post_release',
     });
     expect(messages[0].content).toContain('only adjusting the "Post-release" phase');
+  });
+
+  it('tells the model plainly when goal and budget were never stated, and never assumes the paid-promo-cut case', () => {
+    const messages = buildPlannerMessages({
+      release: { title: 'Free', artistName: 'Tola', releaseDate: '2026-10-02' },
+      intake: buildAutoIntake({ release_type: 'single', artist_name: 'Tola', release_date: '2026-10-02' }),
+      tasks: [],
+      members: [],
+      todayYmd: '2026-08-10',
+    });
+    expect(messages[1].content).toContain('not stated');
+    expect(messages[1].content).not.toContain(
+      'No budget: drop the optional paid promotion tasks and say so in the rationale.'
+    );
+  });
+
+  it('keeps the ordinary no-budget guidance for a real answered "none"', () => {
+    const messages = buildPlannerMessages({
+      release: { title: 'Free', artistName: 'Tola', releaseDate: '2026-10-02' },
+      intake: { ...baseIntake, budget: 'none' },
+      tasks: [],
+      members: [],
+      todayYmd: '2026-08-10',
+    });
+    expect(messages[1].content).toContain(
+      'No budget: drop the optional paid promotion tasks and say so in the rationale.'
+    );
   });
 
   it('never names a model or a provider', () => {

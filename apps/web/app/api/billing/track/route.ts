@@ -3,7 +3,7 @@ import { getAuthenticatedUser, createAdminClient } from '@/app/api/releases/_sha
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { isBillingTrackRequest, resolveTrackOutcome } from '@/lib/billing-events';
-import { latestBillingEventAt, hasBillingEvent } from '@/lib/billing-events-server';
+import { latestBillingEventAt, hasBillingEvent, logBillingEvent } from '@/lib/billing-events-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 
 // POST /api/billing/track — the wall reporting that a human interacted with it.
@@ -32,16 +32,16 @@ export async function POST(request: NextRequest) {
   const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
-  let body: { event?: unknown; planViewed?: unknown } = {};
+  let body: { event?: unknown; planViewed?: unknown; actionType?: unknown } = {};
   try {
-    body = (await request.json()) as { event?: unknown; planViewed?: unknown };
+    body = (await request.json()) as { event?: unknown; planViewed?: unknown; actionType?: unknown };
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
   }
 
   if (!isBillingTrackRequest(body.event)) {
     return NextResponse.json(
-      { error: 'event must be "paywall_view" or "talk_to_us".' },
+      { error: 'event must be "paywall_view", "talk_to_us" or "upgrade_clicked".' },
       { status: 400 }
     );
   }
@@ -67,6 +67,21 @@ export async function POST(request: NextRequest) {
 
   // Null means a same-day repeat view: nothing to record, and nothing wrong.
   if (!outcome) return OPEN_RESPONSE;
+
+  // A softer signal than a real purchase decision (plan_change_requested):
+  // ledger-only, never a founder interrupt. Also the one outcome that is not a
+  // FounderAlertKind, so it must never reach notifyFounder.
+  if (outcome === 'upgrade_clicked') {
+    const actionType = typeof body.actionType === 'string' ? body.actionType : null;
+    await logBillingEvent(admin, {
+      workspaceId: team.primaryWorkspaceId,
+      ownerUserId: team.ownerUserId,
+      actorUserId: auth.user.id,
+      type: 'upgrade_clicked',
+      metadata: { actionType },
+    });
+    return OPEN_RESPONSE;
+  }
 
   const planViewed = typeof body.planViewed === 'string' ? body.planViewed : null;
 

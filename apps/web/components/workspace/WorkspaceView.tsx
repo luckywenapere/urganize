@@ -40,6 +40,8 @@ import { useReleaseScope } from './useReleaseScope';
 import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
+import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
+import { draftReleasePlan } from '@/lib/urgans-actions/client';
 import { ArchiveReleaseDialog } from '@/components/workspace/ArchiveReleaseDialog';
 import { ChangeReleaseArtistDialog } from '@/components/workspace/ChangeReleaseArtistDialog';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
@@ -179,11 +181,19 @@ export function WorkspaceView() {
   const isRailOpen = useChappiStore((state) => state.railOpen);
   // The intake modal is mounted once by AppShell; this opens it.
   const openIntake = usePlannerStore((state) => state.openIntake);
+  const setPlanGenerating = usePlannerStore((state) => state.setGenerating);
   // True between firing the generate call and it returning, so the card and the
   // scene can both say UrgAns is working rather than showing an empty plan.
   const isPlanGenerating = usePlannerStore((state) =>
     scopedReleaseId ? state.generatingReleaseIds.includes(scopedReleaseId) : false
   );
+  // Set when a Solo team's release.draft_plan run refuses with
+  // reason: 'plan_required' — fired from either entry point (the one-tap
+  // handler below, or the refine modal's own fire-and-forget submit), and
+  // rendered as the ONE UrgansLockedSheet mount at the bottom of this
+  // component regardless of which one it was.
+  const lockedRefusal = usePlannerStore((state) => state.lockedRefusal);
+  const setLockedRefusal = usePlannerStore((state) => state.setLockedRefusal);
   // Task detail renders as a global pop-up mounted by TaskUIProvider
   // (2026-07-23) — this view no longer swaps its layout when a task opens.
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -688,10 +698,45 @@ export function WorkspaceView() {
       />
     ) : undefined;
 
-  /** Open the intake for the scoped release. */
+  /** Open the seven-question intake for the scoped release — the SECONDARY
+   *  "Answer a few questions first" refine path. */
   const openPlanIntake = () => {
     if (!scopedReleaseId) return;
     openIntake({ source: 'empty_state', releaseId: scopedReleaseId });
+  };
+
+  /** The PRIMARY, one-tap path (spec 6.1, Decision B): draft immediately from
+   *  what the release row already knows, no questions asked. Fires the
+   *  request and opens the review scene without waiting for it — the scene's
+   *  own skeleton is what shows the wait (PlanScene's isGeneratingElsewhere
+   *  branch) — matching the refine modal's fire-and-forget pattern exactly,
+   *  down to the plan_required handoff into the shared locked-sheet state. */
+  const handleDraftPlanNow = () => {
+    if (!scopedReleaseId || !scopedReleaseSlim) return;
+    const releaseId = scopedReleaseId;
+    setPlanGenerating(releaseId, true);
+    void draftReleasePlan({
+      releaseId,
+      release: {
+        releaseType: scopedReleaseSlim.releaseType,
+        artistName: scopedReleaseSlim.artistName,
+        releaseDate: scopedReleaseSlim.releaseDate,
+      },
+    })
+      .then((result) => {
+        if (!result.ok && result.reason === 'plan_required') {
+          setLockedRefusal({
+            releaseId,
+            message: result.error,
+            actionType: 'release.draft_plan',
+          });
+        }
+      })
+      .finally(() => {
+        setPlanGenerating(releaseId, false);
+        void loadCommandCenter({ force: true });
+      });
+    openScene('plan', releaseId);
   };
 
   // The open release scene's body, handed to TasksPanel so it replaces the
@@ -820,8 +865,17 @@ export function WorkspaceView() {
   // The Plan pill only exists while there is something to open: no activities
   // yet, or a draft already waiting. Once a plan is approved it disappears,
   // because from then on the activity list IS the plan.
+  //
+  // Owner-only, matching release.draft_plan's own 'owner_write' access level
+  // (see lib/urgans-actions/types.ts): the legacy /plan/* route group this
+  // pill opens is still owner-keyed in eight places, a deliberate, recorded
+  // deferral, so a non-owner teammate offered this pill would tap a working
+  // control that 404s the instant it tried to load or save a draft.
   const showPlanPill = Boolean(
-    PLANNER_ENABLED && scopedReleaseId && (scopedTasks.length === 0 || hasPlanDraft)
+    PLANNER_ENABLED &&
+      scopedReleaseId &&
+      scopedReleaseIsOwn &&
+      (scopedTasks.length === 0 || hasPlanDraft)
   );
 
   // With the planner on, a scoped release with no activities shows the planner
@@ -850,12 +904,15 @@ export function WorkspaceView() {
       />
     ) : null;
 
+  // Same owner-only gate as showPlanPill above, for the same reason: this
+  // card's "Draft the plan" button reaches the identical owner_write action.
   const planBanner =
-    PLANNER_ENABLED && scopedReleaseSlim && scopedTasks.length === 0 ? (
+    PLANNER_ENABLED && scopedReleaseSlim && scopedReleaseIsOwn && scopedTasks.length === 0 ? (
       <PlanReleaseCard
         hasDraft={hasPlanDraft}
         isGenerating={isPlanGenerating}
-        onPlan={() => openPlanIntake()}
+        onDraftNow={handleDraftPlanNow}
+        onRefine={() => openPlanIntake()}
         onReview={() => openScene('plan', scopedReleaseSlim.id)}
         onAddActivity={() =>
           openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })
@@ -1514,6 +1571,18 @@ export function WorkspaceView() {
           onToast={(message, tone) => setToast({ message, tone })}
         />
       ) : null}
+
+      {/* One mount for BOTH entry points into release.draft_plan — the
+          one-tap card above and the refine modal's own fire-and-forget
+          submit (mounted separately by AppShell) both write to the same
+          store field on a plan_required refusal. See PlannerLockedRefusal's
+          own comment for why this can't just be local state. */}
+      <UrgansLockedSheet
+        open={Boolean(lockedRefusal)}
+        message={lockedRefusal?.message || ''}
+        actionType={lockedRefusal?.actionType || 'release.draft_plan'}
+        onClose={() => setLockedRefusal(null)}
+      />
     </main>
   );
 }

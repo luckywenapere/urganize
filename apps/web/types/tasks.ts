@@ -150,8 +150,8 @@ export interface Task {
    * defaults to 'task' for rows that predate the template flow. */
   taskType: 'task' | 'event_milestone';
   /** The playbook step this task came from (e.g. 'w5_cover_art_final_approved'),
-   * from metadata.template.template_task_id. Null for a manager-added or
-   * planner-added activity, which has no template origin.
+   * from metadata.template.task_id. Null for a manager-added or planner-added
+   * activity, which has no template origin.
    *
    * The one other piece of metadata.template surfaced to the client, alongside
    * taskType and compressedRunway: completing a task needs to know WHICH

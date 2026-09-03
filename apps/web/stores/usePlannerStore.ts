@@ -39,6 +39,24 @@ export type PlannerIntakePayload = {
   prefill?: PlannerIntakePrefill;
 };
 
+/**
+ * A Solo team's release.draft_plan run refused with `reason: 'plan_required'`
+ * — the entitlement gate's own answer, verbatim (see UrgansLockedSheet).
+ *
+ * Lives here rather than as local state in whichever component fired the
+ * request, for the same reason the intake itself does: the one-tap card and
+ * the seven-question modal's fire-and-forget submit are two different
+ * ownership islands, and the modal in particular has already closed and
+ * navigated away by the time its background request can resolve — there is
+ * nowhere local left to hold the answer. One shared field means one
+ * UrgansLockedSheet mount (in WorkspaceView) serves both entry points.
+ */
+export type PlannerLockedRefusal = {
+  releaseId: string;
+  message: string;
+  actionType: string;
+};
+
 type PlannerStore = {
   intake: PlannerIntakePayload | null;
   /**
@@ -47,15 +65,18 @@ type PlannerStore = {
    * spinner, so the scene needs to know a draft is coming before one exists.
    */
   generatingReleaseIds: string[];
+  lockedRefusal: PlannerLockedRefusal | null;
   openIntake: (payload: PlannerIntakePayload) => void;
   closeIntake: () => void;
   setGenerating: (releaseId: string, generating: boolean) => void;
   isGenerating: (releaseId: string) => boolean;
+  setLockedRefusal: (refusal: PlannerLockedRefusal | null) => void;
 };
 
 export const usePlannerStore = create<PlannerStore>((set, get) => ({
   intake: null,
   generatingReleaseIds: [],
+  lockedRefusal: null,
 
   openIntake: (payload) => set({ intake: payload }),
   closeIntake: () => set({ intake: null }),
@@ -67,4 +88,6 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
     }),
 
   isGenerating: (releaseId) => get().generatingReleaseIds.includes(releaseId),
+
+  setLockedRefusal: (refusal) => set({ lockedRefusal: refusal }),
 }));
