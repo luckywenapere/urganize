@@ -44,34 +44,6 @@
   --space-21: calc(var(--space-unit) * 21);
   --space-34: calc(var(--space-unit) * 34);
   --space-55: calc(var(--space-unit) * 55);
-
-  /* ─── Landing Page Design Tokens (v2) ─── */
-  /* Background */
-  --lp-bg: #050505;
-  --lp-bg-elevated: #0a0a0a;
-  --lp-bg-surface: #111111;
-
-  /* Borders */
-  --lp-border-color: rgba(255, 255, 255, 0.1);
-  --lp-border: 1px solid var(--lp-border-color);
-  --lp-border-strong: rgba(255, 255, 255, 0.18);
-
-  /* Text */
-  --lp-text: #f0f0f0;
-  --lp-text-muted: rgba(255, 255, 255, 0.6);
-  --lp-text-subtle: rgba(255, 255, 255, 0.4);
-
-  /* Heading typography */
-  --lp-heading-font: var(--font-sans);
-  --lp-heading-weight: 700;
-  --lp-heading-tracking: -0.035em;
-  --lp-heading-leading: 1.05;
-
-  /* Data / UI typography (monospace) */
-  --lp-data-font: "Roboto Mono", var(--font-mono);
-  --lp-data-weight: 400;
-  --lp-data-tracking: -0.01em;
-  --lp-data-size: 0.8125rem;
 }
 
 @theme inline {
@@ -231,13 +203,6 @@ html[data-marketing-theme="dark"] .theme-shot-light {
   text-transform: uppercase;
 }
 
-/* Landing page data/UI monospace utility */
-.lp-data {
-  font-family: var(--lp-data-font);
-  font-weight: var(--lp-data-weight);
-  letter-spacing: var(--lp-data-tracking);
-  font-size: var(--lp-data-size);
-}
 
 .scroll-reveal {
   opacity: 0;
