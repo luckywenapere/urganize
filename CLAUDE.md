@@ -372,7 +372,7 @@ These are real but not blockers:
 - ~~**`getAuthenticatedUser` drift.**~~ Resolved 2026-06-11: consolidated into `app/api/_shared/auth.ts` (see the dead-code sweep block in Working notes). The `plans/*` and `organization/*` route groups that held inline copies were dead and deleted outright.
 - ~~**Dead code from the old card-on-file trial flow.**~~ Resolved: `lib/trial-checkout.ts` and the `trial_claim` machinery were deleted in earlier cleanups. The only remaining reference is a vestigial `.neq('plan', 'trial_claim')` filter in `account/delete-now` — harmless.
 - ~~**`app_settings.global_paywall` toggle row remains in DB.**~~ Resolved 2026-06-11: `POST /api/admin/paywall` and `GET /api/paywall-status` (both caller-less) were deleted along with `lib/paywall-config.ts`; migration `20260611_drop_global_paywall_setting.sql` removes the orphaned row. **Needs applying to production.**
-- **There are no React error boundaries anywhere in `apps/web`** (no `error.tsx`, no `global-error.tsx`). Any client-side exception during hydration therefore leaves the user staring at whatever the server rendered, with nothing surfacing the failure and no retry. This is the root enabler of the front-door dead end fixed 2026-08-13 (see "The front door is server-rendered"), and the reason that bug presented as an eternal loading screen rather than an error. The fix there was to make the pages useful without JS rather than to add boundaries — adding them app-wide is still open, and is the general answer for every other page.
+- ~~**There are no React error boundaries anywhere in `apps/web`** (no `error.tsx`, no `global-error.tsx`).~~ **Stale, corrected 2026-09-03 — there are three**: `app/error.tsx`, `app/global-error.tsx`, and `components/app/ErrorBoundary.tsx`, the last wrapping four floating surfaces in `AppShell` (`android-app-banner`, `identity-panel`, `urgans-rail`, `support-launcher`) so a throwing widget cannot take the application down with it. All of them report through `lib/report-boundary-error.ts` as `app_error_shown`. The original entry's REASONING still stands for anything they do not wrap: a client-side exception during hydration on a page with no boundary above it still leaves the user staring at whatever the server rendered, which is what made the 2026-08-13 front-door dead end present as an eternal loading screen (see "The front door is server-rendered" — the fix there was to make the pages useful without JS rather than to add boundaries). Wrapping every page is still open.
 - **Snapshot fallback is fail-CLOSED.** If `getSubscriptionSnapshot` errors out (DB down, network blip), `hasAccess` returns false → user is locked. Trade-off: a hiccup locks users instead of letting them through. Existing paying users are protected by the `is_subscribed` back-compat branch which fires before the network error path; this should be safe in practice but flag it if you see lockout reports without an obvious cause.
 
 ---
@@ -2003,6 +2003,23 @@ sends to PostHog and otherwise only appends to the USER'S OWN localStorage
 been recording nothing for as long as it has existed, and `asset_upload_failed`
 shipped inert. Do not treat either as a diagnostic channel until that env var is
 set on the `Web` project.
+
+**SUPERSEDED 2026-09-03: the key IS set now** (founder, at the same time as the
+Linear reporting flip), so `app_error_shown` and `asset_upload_failed` finally
+go somewhere and both ARE diagnostic channels again. The paragraph above is kept
+as the record of why they were dead for the ten days between. Two things landed
+with the flip: `capture_exceptions: true` in `lib/analytics/client.ts`, so
+unhandled exceptions are captured as `$exception` events and grouped into
+PostHog issues rather than only the ones our own boundaries catch; and
+`turbo.json`'s stale `NEXT_PUBLIC_POSTHOG_TOKEN` declaration was replaced with
+the two names the code actually reads (`NEXT_PUBLIC_POSTHOG_KEY` /
+`NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`). **That mismatch was NOT what kept PostHog
+dark, and it is worth recording why the obvious theory was wrong:** a build with
+a marker key proved `NEXT_PUBLIC_*` reaches the client bundle whether or not
+turbo declares it, because Next.js framework inference covers the prefix. The
+declaration only ever affected hashing and documentation. The on-screen failure
+code below is unaffected and stays — it needs no configuration and survives
+PostHog being switched off again.
 
 What replaced it, and why this shape: **the failure code goes ON SCREEN**
 (`formatUploadFailureCode` in `lib/upload-failure-report.ts`), appended to the

@@ -125,6 +125,21 @@ function loadBrowserPostHog(): Promise<PostHog | null> {
               maskInputAttributes: ['password', 'card', 'cvv', 'ssn'],
             },
             autocapture: true,
+            // Error Tracking (2026-09-03). Unhandled exceptions and promise
+            // rejections are captured as $exception events and grouped into
+            // issues in PostHog, which is where a Linear ticket is raised from.
+            //
+            // Set EXPLICITLY rather than left to `defaults`: it is the one
+            // capture behaviour here whose absence is invisible — nothing in
+            // the app looks different, the crashes just go unrecorded — so it
+            // should not depend on what a dated defaults bundle happens to
+            // include. Typed through the cast below; `capture_exceptions` is
+            // honoured at runtime (see posthog-js's startExceptionAutocapture).
+            //
+            // This is the half the app cannot do for itself: the report dialog
+            // catches bugs a user notices AND bothers to report, this catches
+            // the ones nobody mentions.
+            capture_exceptions: true,
             persistence: 'localStorage+cookie',
           } as Parameters<PostHog['init']>[1]
         );
