@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
     ];
   },
   serverExternalPackages: ["@libsql/client", "libsql"],
+  // @urganize/ui ships TypeScript source (its exports map points at
+  // src/index.ts), so it must be transpiled here exactly as apps/web does.
+  // The homepage imports only the Chappi mascot from it.
+  transpilePackages: ["@urganize/ui"],
   turbopack: {
     // Empty config to silence the warning
   },

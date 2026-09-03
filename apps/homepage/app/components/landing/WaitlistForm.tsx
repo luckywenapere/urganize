@@ -3,9 +3,14 @@
 import { useState, type FormEvent } from "react";
 import { trackEvent } from "@/lib/analytics";
 
-// Inline waitlist capture — the landing page's primary CTA (reverted from
-// direct app signup 2026-07-15: visitors weren't converting to sign-ups from
-// the site alone). Progressive two-step so the first touch stays light:
+// Inline waitlist capture. It WAS the landing page's primary CTA from
+// 2026-07-15 (visitors weren't converting to sign-ups from the site alone)
+// until the 2026-09-02 overhaul: with the two lowest tiers self-serve since
+// 2026-08-30, the homepage's primary ask is the free trial (TrialButton) and
+// this form survives there only behind WaitlistDisclosure under the final
+// CTA. The homepage_hero source is retired; homepage_final_cta lives on.
+// /features, /pricing and the persona pages still mount it directly.
+// Progressive two-step so the first touch stays light:
 // step 1 is just email + "Join now"; step 2 asks for name + phone (the
 // founder's manual WhatsApp outreach needs a reachable number) plus ONE
 // optional role select. Slimmed 2026-08-13 (founder call): step 2 used to
@@ -14,9 +19,9 @@ import { trackEvent } from "@/lib/analytics";
 // point. The teamSize/releaseVolume/primaryNeed selects were dropped from
 // the UI entirely (POST /api/signup accepts them as optional now; the Neon
 // columns were always nullable), and role stays as the one optional
-// segmenting field the admin growth dashboard uses most. The header now
-// carries a "Join the waitlist" CTA anchoring to this form on the homepage
-// (see MarketingHeader.tsx); its Log in link is untouched.
+// segmenting field the admin growth dashboard uses most. The header's
+// primary button has pointed at the free trial since 2026-08-30 (see
+// MarketingHeader.tsx); nothing links to /#waitlist any more.
 
 const ROLE_OPTIONS = [
   { value: "artist_manager", label: "Artist manager" },

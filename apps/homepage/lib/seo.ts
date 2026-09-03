@@ -11,11 +11,11 @@ const SITE_NAME = "Urganize";
 // the one page brand queries land on.
 //
 // TITLE: names the audience rather than a generic "for Teams" — the searcher
-// should see themselves in the result. Kept ≤60 characters (currently 51),
-// so Google renders it whole instead of truncating mid-phrase. Query intent
-// lives in the title ("label teams" is what buyers actually search); the
-// locked positioning line ("AI workspace for music executives") lives in
-// the description.
+// should see themselves in the result. Kept ≤60 characters (currently 58),
+// so Google renders it whole instead of truncating mid-phrase. Since the
+// 2026-09-02 homepage overhaul the audience named is the one that converts:
+// managers and labels running releases (founder call; executives keep their
+// own /for-executives page and their keywords).
 //
 // DESCRIPTION: written at ~150-160 characters on purpose. A shorter one was
 // 106 characters and opened with "How", and Google was ignoring it entirely —
@@ -25,9 +25,9 @@ const SITE_NAME = "Urganize";
 // description full-length: a short or weak one invites Google to substitute
 // any other page text (the /community page still carries group-chat copy).
 export const LANDING_TITLE =
-  "Urganize | Music Release Workspace for Label Teams";
+  "Urganize | Music Release Planning for Managers and Labels";
 export const LANDING_DESCRIPTION =
-  "Urganize is the AI workspace for music executives. Run each release on a full rollout plan, put an owner on every task and see status without chasing anyone.";
+  "Urganize is release planning software for music managers and labels: a full rollout plan per release, an owner on every activity and status for every artist.";
 
 // Absolute, canonical share image. Served as a static asset from public/
 // (NOT the app/opengraph-image.png file convention), so the URL is stable

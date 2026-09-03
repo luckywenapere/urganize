@@ -7,7 +7,11 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const baseUrl = process.env.WAITLIST_SMOKE_URL ?? "http://127.0.0.1:3000";
-const dialogSelector = '[role="dialog"][aria-label="Join the Urganize waitlist"]';
+// The waitlist lives behind a disclosure under the final CTA since the
+// 2026-09-02 homepage overhaul (WaitlistDisclosure.tsx): the smoke test opens
+// it and checks the form appears. The hero string below is the current h1.
+const disclosureLabel = "Not ready yet? Join the waitlist";
+const heroText = "runs to plan.";
 const waitTimeoutMs = 10_000;
 const strictConsole = process.env.WAITLIST_SMOKE_STRICT_CONSOLE === "1";
 
@@ -286,7 +290,7 @@ function createCdpClient(webSocketUrl) {
 async function navigateAndWait(client) {
   await client.send("Page.navigate", { url: baseUrl });
   await client.waitFor(
-    `document.readyState === "complete" && document.body.innerText.includes("Your release deserves a process.")`,
+    `document.readyState === "complete" && document.body.innerText.includes(${JSON.stringify(heroText)})`,
     "homepage content",
   );
   await client.waitFor(
@@ -300,7 +304,7 @@ function buttonRectExpression(scopeExpression) {
     const scope = ${scopeExpression};
     if (!scope) return null;
     const button = [...scope.querySelectorAll("button")]
-      .find((item) => item.innerText.trim() === "Join the waitlist");
+      .find((item) => item.innerText.trim() === ${JSON.stringify(disclosureLabel)});
     if (!button) return null;
     button.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
     const rect = button.getBoundingClientRect();
@@ -316,11 +320,11 @@ function buttonRectExpression(scopeExpression) {
   })()`;
 }
 
-async function assertButtonOpensDialog(client, scopeExpression, label) {
+async function assertDisclosureOpensForm(client, scopeExpression, label) {
   await client.clickExpression(buttonRectExpression(scopeExpression), label);
-  await client.waitFor(`Boolean(document.querySelector(${JSON.stringify(dialogSelector)}))`, `${label} dialog`);
+  await client.waitFor(`Boolean(document.querySelector('input[type="email"]'))`, `${label} form`);
   await client.assertNoRuntimeExceptions();
-  console.log(`PASS: ${label} opens the waitlist dialog.`);
+  console.log(`PASS: ${label} reveals the waitlist form.`);
 }
 
 async function main() {
@@ -355,14 +359,7 @@ async function main() {
     await client.send("Runtime.enable");
 
     await navigateAndWait(client);
-    await assertButtonOpensDialog(client, "document", "hero Join the waitlist button");
-
-    await navigateAndWait(client);
-    await assertButtonOpensDialog(
-      client,
-      'document.querySelector("#waitlist")',
-      "final Join the waitlist button",
-    );
+    await assertDisclosureOpensForm(client, "document", "final-CTA waitlist disclosure");
   } finally {
     client?.close();
     chrome.kill();

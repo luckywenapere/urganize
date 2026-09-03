@@ -15,6 +15,18 @@ import { TESTIMONIALS, type TestimonialId } from "@/content/testimonials";
 //                                      verifiable one — max credibility
 //                                      per pixel, right where the primary
 //                                      CTA lives)
+//   homepage_roster    → antoine     (2026-09-02: the plan payoff — "the
+//                                      whole rollout was already laid out,
+//                                      week by week" — beside the mid-page
+//                                      trial button in RosterSection. One
+//                                      quote per CTA, so this is that CTA's
+//                                      only proof.)
+//   homepage (proof)   → tamuno      (2026-09-02: NOT a ProofLine mount —
+//                                      the single large blockquote in
+//                                      ProofSection. Listed so the "each
+//                                      voice once per page" accounting is
+//                                      visible: zaddyfunds hero, antoine
+//                                      roster, tamuno proof, adenaiye final.)
 //   homepage_final_cta → adenaiye    (sharpest ICP-match sentence; swapped
 //                                      off tamuno 2026-08-13 to avoid
 //                                      repeating his then-on-page full

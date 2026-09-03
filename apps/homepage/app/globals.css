@@ -30,6 +30,11 @@
   --marketing-screen-border: #ddd3c7;
   --marketing-logo-card-bg: rgba(255, 255, 255, 0.82);
   --marketing-accent: #3f7e5c;
+  /* The surface behind the Chappi mascot (UrgAnsSection). Nothing in light —
+     his ink hood reads on cream — and the model sheet's stage wash in dark,
+     so the hood separates from the canvas. Mirrors CHAPPI_GLOW in
+     packages/ui/src/chappi-constants.ts; change both or neither. */
+  --marketing-chappi-stage: none;
   /* Golden Ratio Constants */
   --phi: 1.618;
   /* Base spacing unit (8px) */
@@ -101,6 +106,7 @@ html[data-marketing-theme="dark"] {
   --marketing-screen-border: #2a322e;
   --marketing-logo-card-bg: #f6f0e6;
   --marketing-accent: #6ee99b;
+  --marketing-chappi-stage: radial-gradient(120% 90% at 50% 28%, #1c2a20 0%, #0f160f 62%, #0b100c 100%);
 }
 
 .marketing-wordmark {

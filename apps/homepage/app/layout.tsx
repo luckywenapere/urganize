@@ -19,12 +19,12 @@ const LEGAL_NAME = "The Urganization Ltd";
 // "artist manager software" stays — managers remain a real search segment
 // and the ecosystem entry point, they're just no longer the hero.
 const LANDING_KEYWORDS = [
+  "artist manager software",
+  "music release planning",
+  "release rollout plan",
   "music release management",
   "label management software",
   "record label software",
-  "music release planning",
-  "release rollout plan",
-  "artist manager software",
   "A&R software",
 ] as const;
 

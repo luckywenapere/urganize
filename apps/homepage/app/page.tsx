@@ -1,18 +1,24 @@
 import type { Metadata } from "next";
-import { MarketingFooter } from "./components/marketing/MarketingFooter";
-import { MarketingHeader } from "./components/marketing/MarketingHeader";
+import { FAQ_ITEMS } from "@/content/faq";
 import {
   buildPageMetadata,
   LANDING_DESCRIPTION,
   LANDING_TITLE,
 } from "@/lib/seo";
+import { LandingAnalytics } from "./components/landing/LandingAnalytics";
 import {
+  FaqSection,
+  FeatureGridSection,
   FinalCTASection,
   HeroSection,
-  StatsSection,
-  ThreeFeaturesSection,
-  WorkspaceShotSection,
+  PricingStripSection,
+  ProofSection,
+  RosterSection,
+  StorySection,
+  UrgAnsSection,
 } from "./components/landing/Sections";
+import { MarketingFooter } from "./components/marketing/MarketingFooter";
+import { MarketingHeader } from "./components/marketing/MarketingHeader";
 
 // This title/description render verbatim (the home page sits at the same
 // route segment as the root layout, so layout.tsx's "%s | Urganize"
@@ -26,6 +32,22 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/",
 });
 
+// FAQPage structured data, built from the SAME array FaqSection renders, so
+// the markup and the schema cannot disagree. It lives here and not in
+// layout.tsx on purpose: the layout wraps every route, and a FAQPage stamped
+// on /pricing or /terms would describe questions those pages do not carry.
+// Google shows FAQ rich results to few sites since 2023; the value here is
+// semantic, not a promised SERP feature.
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: { "@type": "Answer", text: item.answer },
+  })),
+};
+
 export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]">
@@ -33,44 +55,36 @@ export default function Home() {
         <MarketingHeader />
 
         <main>
-          {/* The page is five beats (2026-08-25 trim): hero + video, the
-              offer (stats), the product (screenshot), three features, the
-              final ask. Proof rides as one-line ProofLines under the hero
-              and final forms rather than as sections of its own. Removal
-              history: MirrorSection and AskAISection cut 2026-08-13
-              (founder call: the page was overwhelming — one repeated the
-              hero's argument a third time, the other sent visitors
-              off-site one scroll before the final CTA). Rebuild any of
-              these from git history if a beat is ever wanted back. */}
-          {/* CommunitySection was REMOVED 2026-08-19 (founder call: nobody
-              clicked it) — the page now ends on the final waitlist CTA, the
-              journey's one terminal ask. The /community page and the
-              footer's Community link survive; only the landing beat is
-              gone. Rebuild from git history if it's ever wanted back. */}
+          {/* Nine beats (2026-09-02 overhaul, URG-240), one ask repeated four
+              times (hero, roster, pricing, final): the hero names the buyer
+              and shows the product; the story opens each of three steps with
+              how the work runs today; the roster beat states the position
+              nobody else owns and carries the mid-page ask; UrgAns is the
+              differentiator; one large quote; six tiles for everything else;
+              the price, rendered from the pricing package; the objections;
+              the final ask with the waitlist folded behind a link.
+
+              Removal history lives in components/landing/Sections.tsx. The
+              2026-08-25 five-beat page (hero + video, stats, screenshot,
+              three features, final form) is in git history under that date. */}
           <HeroSection />
-          {/* Stats added 2026-08-25 (founder-supplied figures — the same-day
-              removals in WorkspaceShot/FinalCTA asked for exactly these before
-              any stat beat returns): the offer in three cards, right under
-              the demo video. */}
-          <StatsSection />
-          {/* TransformationSection (the before/after quote rows) was REMOVED
-              2026-08-25, founder call: too bulky for a skimming visitor, and
-              every quoted voice survives elsewhere (hero + final-CTA
-              ProofLines here; full quotes on /for-managers, /for-executives
-              and /why-urganize). Rebuild from git history if the beat is
-              ever wanted back. */}
-          <WorkspaceShotSection />
-          {/* TemplatePlanSection (the playbook excerpt) was REMOVED
-              2026-08-25, founder call, in the same trim as the
-              before/after rows above. The rollout-plan claim it carried
-              still leads the hero ("Urganize plans the rollout...") and
-              is spelled out in full on /features, /why-urganize and the
-              persona pages. Rebuild from git history if wanted back. */}
-          <ThreeFeaturesSection />
+          <StorySection />
+          <RosterSection />
+          <UrgAnsSection />
+          <ProofSection />
+          <FeatureGridSection />
+          <PricingStripSection />
+          <FaqSection />
           <FinalCTASection />
         </main>
 
         <MarketingFooter />
+        <LandingAnalytics />
+        <script
+          type="application/ld+json"
+          // JSON.stringify output of our own constants; nothing user-supplied.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
       </div>
     </div>
   );
