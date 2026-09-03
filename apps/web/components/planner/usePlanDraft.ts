@@ -285,6 +285,9 @@ export function usePlanDraft(releaseId: string): UsePlanDraft {
           depends_on: [],
           removed: false,
           removed_by: null,
+          removed_reason: null,
+          change_reason: null,
+          assignee_basis: null,
           edited: true,
         };
         return { ...doc, tasks: [...doc.tasks, task] };
