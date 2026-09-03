@@ -7,6 +7,7 @@ import { getTemplateLeadTimeDays } from './release-templates/loader';
 import {
   applyDeltaToDraft,
   applyOwnerProposals,
+  buildAutoIntake,
   buildDraftFromTemplate,
   buildPlannerMessages,
   computeTaskYmd,
@@ -130,6 +131,75 @@ describe('parseReleasePlanIntake', () => {
       expect(result.intake.goal_text).toHaveLength(300);
       expect(result.intake.extra_notes).toHaveLength(2000);
     }
+  });
+
+  it('accepts "unknown" for goal and budget, the one-tap draft leaves both this way', () => {
+    const result = parseReleasePlanIntake({ ...baseIntake, goal: 'unknown', budget: 'unknown' });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.intake.goal).toBe('unknown');
+      expect(result.intake.budget).toBe('unknown');
+    }
+  });
+
+  it('never mentions "unknown" in a validation error, so a Chappi-relayed error cannot teach the model to answer with the word', () => {
+    const goalError = parseReleasePlanIntake({ ...baseIntake, goal: 'nonsense' });
+    expect(goalError.ok).toBe(false);
+    if (!goalError.ok) expect(goalError.error).not.toContain('unknown');
+
+    const budgetError = parseReleasePlanIntake({ ...baseIntake, budget: 'nonsense' });
+    expect(budgetError.ok).toBe(false);
+    if (!budgetError.ok) expect(budgetError.error).not.toContain('unknown');
+  });
+
+  it('reads intake_source, defaulting to nothing (which every existing caller treats as "answered")', () => {
+    const withSource = parseReleasePlanIntake({ ...baseIntake, intake_source: 'auto' });
+    expect(withSource.ok).toBe(true);
+    if (withSource.ok) expect(withSource.intake.intake_source).toBe('auto');
+
+    const withoutSource = parseReleasePlanIntake(baseIntake);
+    expect(withoutSource.ok).toBe(true);
+    if (withoutSource.ok) expect(withoutSource.intake.intake_source).toBeUndefined();
+
+    const garbageSource = parseReleasePlanIntake({ ...baseIntake, intake_source: 'nonsense' });
+    expect(garbageSource.ok).toBe(true);
+    if (garbageSource.ok) expect(garbageSource.intake.intake_source).toBeUndefined();
+  });
+});
+
+describe('buildAutoIntake', () => {
+  it('derives every field from the release row with no questions asked', () => {
+    const intake = buildAutoIntake({
+      release_type: 'ep',
+      artist_name: 'Tola',
+      release_date: '2026-10-02',
+    });
+    expect(intake).toEqual({
+      version: 2,
+      release_type: 'ep',
+      artist_name: 'Tola',
+      date_mode: 'fixed',
+      release_date: '2026-10-02',
+      ready_today: [],
+      goal: 'unknown',
+      budget: 'unknown',
+      intake_source: 'auto',
+    });
+  });
+
+  it('falls back to single for a release type the planner has no format for', () => {
+    expect(buildAutoIntake({ release_type: 'music_video' }).release_type).toBe('single');
+    expect(buildAutoIntake({ release_type: null }).release_type).toBe('single');
+  });
+
+  it('suggests a date only when the release has none yet', () => {
+    expect(buildAutoIntake({ release_date: null }).date_mode).toBe('suggested');
+    expect(buildAutoIntake({ release_date: '2026-12-01' }).date_mode).toBe('fixed');
+  });
+
+  it('produces an intake parseReleasePlanIntake accepts, so it round-trips through release_context', () => {
+    const intake = buildAutoIntake({ release_type: 'single', artist_name: 'Tola', release_date: null });
+    expect(parseReleasePlanIntake(intake).ok).toBe(true);
   });
 });
 
@@ -953,6 +1023,33 @@ describe('buildPlannerMessages', () => {
       phase: 'post_release',
     });
     expect(messages[0].content).toContain('only adjusting the "Post-release" phase');
+  });
+
+  it('tells the model plainly when goal and budget were never stated, and never assumes the paid-promo-cut case', () => {
+    const messages = buildPlannerMessages({
+      release: { title: 'Free', artistName: 'Tola', releaseDate: '2026-10-02' },
+      intake: buildAutoIntake({ release_type: 'single', artist_name: 'Tola', release_date: '2026-10-02' }),
+      tasks: [],
+      members: [],
+      todayYmd: '2026-08-10',
+    });
+    expect(messages[1].content).toContain('not stated');
+    expect(messages[1].content).not.toContain(
+      'No budget: drop the optional paid promotion tasks and say so in the rationale.'
+    );
+  });
+
+  it('keeps the ordinary no-budget guidance for a real answered "none"', () => {
+    const messages = buildPlannerMessages({
+      release: { title: 'Free', artistName: 'Tola', releaseDate: '2026-10-02' },
+      intake: { ...baseIntake, budget: 'none' },
+      tasks: [],
+      members: [],
+      todayYmd: '2026-08-10',
+    });
+    expect(messages[1].content).toContain(
+      'No budget: drop the optional paid promotion tasks and say so in the rationale.'
+    );
   });
 
   it('never names a model or a provider', () => {

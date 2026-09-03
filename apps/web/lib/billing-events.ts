@@ -102,14 +102,14 @@ export function isBillingEventType(value: unknown): value is BillingEventType {
   );
 }
 
-/** What the wall UI is allowed to report. Deliberately NOT the full event
- * union: the client says what happened ("someone looked at the wall") and the
- * server decides which event that is, so a client cannot forge a
- * `checkout_completed` or a `comped`. */
-export type BillingTrackRequest = 'paywall_view' | 'talk_to_us';
+/** What the wall UI — and, since 2026-09-03, the UrgAns upgrade sheet — is
+ * allowed to report. Deliberately NOT the full event union: the client says
+ * what happened and the server decides which event that is, so a client
+ * cannot forge a `checkout_completed` or a `comped`. */
+export type BillingTrackRequest = 'paywall_view' | 'talk_to_us' | 'upgrade_clicked';
 
 export function isBillingTrackRequest(value: unknown): value is BillingTrackRequest {
-  return value === 'paywall_view' || value === 'talk_to_us';
+  return value === 'paywall_view' || value === 'talk_to_us' || value === 'upgrade_clicked';
 }
 
 /** Same UTC day? Return visits are deduped per day so one person reloading the
@@ -124,13 +124,17 @@ function isSameUtcDay(a: Date, b: Date): boolean {
   );
 }
 
-/** What a wall interaction can turn into. A strict subset of the event union:
- * the wall can only ever produce these three, and saying so in the type is
- * what lets the founder-alert path accept the result without a cast. */
+/** What a wall — or upgrade-sheet — interaction can turn into. A strict subset
+ * of the event union, and saying so in the type is what lets the
+ * founder-alert path accept a wall result without a cast.
+ * 'upgrade_clicked' is handled separately by its caller (logBillingEvent
+ * only, no founder alert — a softer signal than a real purchase decision), so
+ * it is not read by buildFounderBillingAlertEmail's FounderAlertKind. */
 export type TrackOutcome =
   | 'paywall_hit'
   | 'paywall_return_visit'
-  | 'talk_to_us_clicked';
+  | 'talk_to_us_clicked'
+  | 'upgrade_clicked';
 
 /**
  * Decide what a wall interaction should be recorded as.
@@ -140,8 +144,9 @@ export type TrackOutcome =
  * about, since a team coming back to the wall days later is a live sales
  * signal. Return visits collapse to one per UTC day.
  *
- * 'talk_to_us' always records: a second click means they tried again, which is
- * information, and there is no email storm risk (one click, one intent).
+ * 'talk_to_us' and 'upgrade_clicked' always record: a second click means they
+ * tried again, which is information, and there is no email storm risk (one
+ * click, one intent, and the latter sends no email at all).
  *
  * Returns null when nothing should be written (a same-day repeat view).
  */
@@ -152,6 +157,7 @@ export function resolveTrackOutcome(input: {
   now?: Date;
 }): TrackOutcome | null {
   if (input.requested === 'talk_to_us') return 'talk_to_us_clicked';
+  if (input.requested === 'upgrade_clicked') return 'upgrade_clicked';
 
   if (!input.hasPriorPaywallHit) return 'paywall_hit';
 

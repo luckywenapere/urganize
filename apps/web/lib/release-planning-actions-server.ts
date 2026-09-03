@@ -41,7 +41,8 @@ import {
   type ReleasePlanDraftDoc,
   type ReleasePlanIntake,
 } from './release-planning';
-import { generateStructuredAiOutput, isAiConfigured } from './ai/provider';
+import { generateStructuredAiOutput, isAiConfigured, type AiUsage } from './ai/provider';
+import { getAuthoredTemplate, getTemplate } from './release-templates/loader';
 import type { Template } from './release-templates/types';
 import { instantiateDraftPlan, PlanApprovalError } from './release-planning-server';
 import { writePlannerPending } from './release-planner-pending';
@@ -59,6 +60,57 @@ const PLAN_DRAFT_COLUMNS = 'id,status,doc,updated_at,approved_at,approved_task_c
 /** Same budget the routes have always used for one tailoring call. */
 export const PLANNER_TIMEOUT_MS = 25_000;
 export const PLANNER_MAX_RETRIES = 2;
+
+/**
+ * The playbook a NEW draft is built from, chosen by the intake's release type.
+ *
+ * Moved here from the plan route group's _shared.ts (2026-09-03) so the
+ * release.draft_plan embedded action can resolve a template without a lib
+ * module reaching into an app/api route group's helpers — the direction that
+ * import would otherwise run. _shared.ts re-exports this so the four routes
+ * that already import it from there are unaffected.
+ *
+ * EP and album have their own playbooks now, but they sit behind
+ * NEXT_PUBLIC_FEATURE_EP_ALBUM_TEMPLATES, so getTemplate throws for them while
+ * the flag is off. That is not an error here: the single playbook is a valid
+ * plan for any release, so the fallback is silent to the user except for one
+ * honest line in the prompt guidance — which is why `fallbackToSingle` is
+ * returned rather than swallowed.
+ *
+ * music_video reaches this as neither ('single' | 'ep' | 'album' is the intake's
+ * whole vocabulary), so it cannot get here at all.
+ */
+export function getPlannerTemplate(releaseType?: string | null): {
+  template: Template;
+  fallbackToSingle: boolean;
+} {
+  if (releaseType === 'ep' || releaseType === 'album') {
+    try {
+      return { template: getTemplate(releaseType), fallbackToSingle: false };
+    } catch {
+      // TemplateNotAvailableError — the flag is off. Fall through.
+    }
+    return { template: getTemplate('single'), fallbackToSingle: true };
+  }
+  return { template: getTemplate('single'), fallbackToSingle: false };
+}
+
+/**
+ * The playbook an EXISTING draft was built from, resolved flag-BLIND from the
+ * type recorded in the draft itself. See getPlannerTemplate's own comment for
+ * why this moved here.
+ *
+ * Used where the template only supplies the set of legitimate template task ids
+ * for validating a draft the manager is editing. If the flag were consulted
+ * here, rolling it back mid-draft would make an EP draft's own task ids look
+ * forged and every autosave would 400, losing the manager's edits.
+ */
+export function getDraftTemplate(draftReleaseType?: string | null): Template {
+  if (draftReleaseType === 'ep' || draftReleaseType === 'album') {
+    return getAuthoredTemplate(draftReleaseType) ?? getTemplate('single');
+  }
+  return getTemplate('single');
+}
 
 export type PlannerReleaseRow = {
   id: string;
@@ -198,9 +250,14 @@ export async function generatePlanDraft(
     fallbackToSingle: boolean;
     loadTeam: () => Promise<{ ok: true; workspaceId: string; members: WorkspaceMember[] } | { ok: false }>;
     plannerModel?: string;
+    /** Reports token usage for the tailoring call, once per attempt that
+     *  returned a payload (see lib/ai/provider.ts's own contract) — added for
+     *  release.draft_plan's urgans_actions logging. Optional and unused by
+     *  the two legacy HTTP routes, so their behaviour is unchanged. */
+    onUsage?: (usage: AiUsage) => void;
   }
 ): Promise<GeneratePlanDraftResult> {
-  const { release, actor, intake, replace, todayYmd, template, fallbackToSingle, loadTeam, plannerModel } =
+  const { release, actor, intake, replace, todayYmd, template, fallbackToSingle, loadTeam, plannerModel, onUsage } =
     params;
   const releaseId = release.id;
 
@@ -301,6 +358,7 @@ export async function generatePlanDraft(
         model: plannerModel || undefined,
         parse: parsePlannerAiDelta,
         invalidFormatMessage: 'The response was not the expected JSON.',
+        onUsage,
       });
     } catch (error) {
       const failure = classifyPlannerFailure(error);

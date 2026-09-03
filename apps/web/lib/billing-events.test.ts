@@ -57,9 +57,10 @@ describe('billing event types', () => {
     expect(isBillingEventType(null)).toBe(false);
   });
 
-  it('the client may only ask for the two neutral requests, never a paid state', () => {
+  it('the client may only ask for the three neutral requests, never a paid state', () => {
     expect(isBillingTrackRequest('paywall_view')).toBe(true);
     expect(isBillingTrackRequest('talk_to_us')).toBe(true);
+    expect(isBillingTrackRequest('upgrade_clicked')).toBe(true);
     expect(isBillingTrackRequest('checkout_completed')).toBe(false);
     expect(isBillingTrackRequest('comped')).toBe(false);
   });
@@ -130,6 +131,25 @@ describe('resolveTrackOutcome', () => {
         now: NOW,
       })
     ).toBe('talk_to_us_clicked');
+  });
+
+  it('upgrade-clicked always records too, whatever the wall-hit history says', () => {
+    expect(
+      resolveTrackOutcome({
+        requested: 'upgrade_clicked',
+        hasPriorPaywallHit: false,
+        lastReturnVisitAt: null,
+        now: NOW,
+      })
+    ).toBe('upgrade_clicked');
+    expect(
+      resolveTrackOutcome({
+        requested: 'upgrade_clicked',
+        hasPriorPaywallHit: true,
+        lastReturnVisitAt: at(-1 * HOUR),
+        now: NOW,
+      })
+    ).toBe('upgrade_clicked');
   });
 });
 

@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/app/api/_shared/auth';
-import { getAuthoredTemplate, getTemplate } from '@/lib/release-templates/loader';
-import type { Template } from '@/lib/release-templates/types';
 import { resolveReleaseTaskWorkspace } from '@/lib/tasks-server';
 import type { WorkspaceMember } from '@/types/auth';
 import {
@@ -44,49 +42,14 @@ export const PLANNER_MAX_RETRIES = 2;
 // because release creation needs the same check.
 export { isReleasePlannerEnabled } from '@/lib/release-planning';
 
-/**
- * The playbook a NEW draft is built from, chosen by the intake's release type.
- *
- * EP and album have their own playbooks now, but they sit behind
- * NEXT_PUBLIC_FEATURE_EP_ALBUM_TEMPLATES, so getTemplate throws for them while
- * the flag is off. That is not an error here: the single playbook is a valid
- * plan for any release, so the fallback is silent to the user except for one
- * honest line in the prompt guidance — which is why `fallbackToSingle` is
- * returned rather than swallowed.
- *
- * music_video reaches this as neither ('single' | 'ep' | 'album' is the intake's
- * whole vocabulary), so it cannot get here at all.
- */
-export function getPlannerTemplate(releaseType?: string | null): {
-  template: Template;
-  fallbackToSingle: boolean;
-} {
-  if (releaseType === 'ep' || releaseType === 'album') {
-    try {
-      return { template: getTemplate(releaseType), fallbackToSingle: false };
-    } catch {
-      // TemplateNotAvailableError — the flag is off. Fall through.
-    }
-    return { template: getTemplate('single'), fallbackToSingle: true };
-  }
-  return { template: getTemplate('single'), fallbackToSingle: false };
-}
-
-/**
- * The playbook an EXISTING draft was built from, resolved flag-BLIND from the
- * type recorded in the draft itself.
- *
- * Used where the template only supplies the set of legitimate template task ids
- * for validating a draft the manager is editing. If the flag were consulted
- * here, rolling it back mid-draft would make an EP draft's own task ids look
- * forged and every autosave would 400, losing the manager's edits.
- */
-export function getDraftTemplate(draftReleaseType?: string | null): Template {
-  if (draftReleaseType === 'ep' || draftReleaseType === 'album') {
-    return getAuthoredTemplate(draftReleaseType) ?? getTemplate('single');
-  }
-  return getTemplate('single');
-}
+// getPlannerTemplate / getDraftTemplate moved to
+// lib/release-planning-actions-server.ts on 2026-09-03, so the
+// release.draft_plan embedded action (a lib module) can resolve a template
+// without reaching into an app/api route group's own helpers — the direction
+// that dependency would otherwise run. Re-exported here so this group's four
+// existing import sites (`from '../_shared'` / `from './_shared'`) stay
+// stable; see that function's own comment for the "why here" reasoning.
+export { getPlannerTemplate, getDraftTemplate } from '@/lib/release-planning-actions-server';
 
 export type PlannerReleaseRow = {
   id: string;

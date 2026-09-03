@@ -64,15 +64,23 @@ export type PlanReleaseType = 'single' | 'ep' | 'album';
 /** What the manager already has in hand. 'none' is exclusive of the others. */
 export type ReadyItem = 'master' | 'artwork' | 'visualizer' | 'distributor' | 'none';
 
+/**
+ * 'unknown' is a valid PARSED value (parseReleasePlanIntake accepts it) but
+ * deliberately never a RADIO CHOICE — absent from GOAL_OPTIONS below, so the
+ * seven-question modal can never offer it. It is what a one-tap "Draft the
+ * plan" (buildAutoIntake) writes when nobody has answered this question yet.
+ */
 export type PlanGoal =
   | 'new_listeners'
   | 'playlist_adds'
   | 'press'
   | 'fan_moment'
-  | 'catalog';
+  | 'catalog'
+  | 'unknown';
 
-/** Rollout budget in naira. Display labels live in BUDGET_OPTIONS. */
-export type PlanBudget = 'none' | 'under_100k' | '100k_500k' | 'over_500k';
+/** Rollout budget in naira. Display labels live in BUDGET_OPTIONS. 'unknown'
+ *  carries the same never-a-radio-choice contract as PlanGoal above. */
+export type PlanBudget = 'none' | 'under_100k' | '100k_500k' | 'over_500k' | 'unknown';
 
 /**
  * The seven intake answers.
@@ -102,6 +110,13 @@ export type ReleasePlanIntake = {
   budget: PlanBudget;
   /** Q7 — free text, prefilled from a note when the flow starts from one. */
   extra_notes?: string;
+  /** Absent means 'answered' — every producer before 2026-09-03 (the modal,
+   *  the Chappi tool, every existing test) writes no such field and must keep
+   *  meaning "someone answered these questions". 'auto' marks an intake
+   *  buildAutoIntake derived with no questions asked, for the "UrgAns drafted
+   *  this from the release facts alone" notice and the guidance this feeds
+   *  buildGuidance. */
+  intake_source?: 'auto' | 'answered';
 };
 
 export const RELEASE_TYPE_OPTIONS: Array<{ value: PlanReleaseType; label: string }> = [
@@ -137,6 +152,13 @@ const RELEASE_TYPES = RELEASE_TYPE_OPTIONS.map((o) => o.value);
 const READY_ITEMS = READY_TODAY_OPTIONS.map((o) => o.value);
 const GOALS = GOAL_OPTIONS.map((o) => o.value);
 const BUDGETS = BUDGET_OPTIONS.map((o) => o.value);
+/** What parseReleasePlanIntake actually ACCEPTS for goal/budget — the visible
+ *  options plus 'unknown'. Kept separate from GOALS/BUDGETS above because
+ *  those two feed the validation error strings, and 'unknown' must never
+ *  appear there: a Chappi-relayed "goal must be one of: ..., unknown" would
+ *  teach the model to answer with the word instead of asking the manager. */
+const GOALS_ACCEPTED: PlanGoal[] = [...GOALS, 'unknown'];
+const BUDGETS_ACCEPTED: PlanBudget[] = [...BUDGETS, 'unknown'];
 
 export const MAX_ARTIST_NAME_LENGTH = 120;
 export const MAX_GOAL_TEXT_LENGTH = 300;
@@ -166,10 +188,10 @@ export function parseReleasePlanIntake(
   if (record.date_mode !== 'fixed' && record.date_mode !== 'suggested') {
     return { ok: false, error: 'date_mode must be "fixed" or "suggested".' };
   }
-  if (!GOALS.includes(record.goal as PlanGoal)) {
+  if (!GOALS_ACCEPTED.includes(record.goal as PlanGoal)) {
     return { ok: false, error: `goal must be one of: ${GOALS.join(', ')}.` };
   }
-  if (!BUDGETS.includes(record.budget as PlanBudget)) {
+  if (!BUDGETS_ACCEPTED.includes(record.budget as PlanBudget)) {
     return { ok: false, error: `budget must be one of: ${BUDGETS.join(', ')}.` };
   }
 
@@ -222,8 +244,46 @@ export function parseReleasePlanIntake(
   if (typeof record.extra_notes === 'string' && record.extra_notes.trim()) {
     intake.extra_notes = record.extra_notes.trim().slice(0, MAX_EXTRA_NOTES_LENGTH);
   }
+  if (record.intake_source === 'auto' || record.intake_source === 'answered') {
+    intake.intake_source = record.intake_source;
+  }
 
   return { ok: true, intake };
+}
+
+/**
+ * The intake for a one-tap "Draft the plan": derived entirely from what the
+ * release row already knows, with no questions asked.
+ *
+ * `goal`/`budget` are 'unknown' rather than a guessed real value —
+ * pretending to know either would be worse than admitting we don't, and
+ * {@link buildGuidance} tells the model so in plain words. This is a direct
+ * TypeScript construction, not an untrusted payload, so it never goes through
+ * {@link parseReleasePlanIntake}; 'unknown' only has to be a value that
+ * validator can later ACCEPT when this intake round-trips through
+ * `releases.release_context`.
+ */
+export function buildAutoIntake(release: {
+  release_type?: string | null;
+  artist_name?: string | null;
+  release_date?: string | null;
+}): ReleasePlanIntake {
+  const releaseType: PlanReleaseType =
+    release.release_type === 'ep' || release.release_type === 'album'
+      ? release.release_type
+      : 'single';
+
+  return {
+    version: 2,
+    release_type: releaseType,
+    artist_name: (release.artist_name || '').trim(),
+    date_mode: release.release_date ? 'fixed' : 'suggested',
+    release_date: release.release_date || null,
+    ready_today: [],
+    goal: 'unknown',
+    budget: 'unknown',
+    intake_source: 'auto',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1241,13 +1301,25 @@ function buildGuidance(
   intake: ReleasePlanIntake,
   options?: { fallbackToSingle?: boolean }
 ): string {
-  const lines = [
-    'Guidance for common cases:',
-    '- No budget: drop the optional paid promotion tasks and say so in the rationale.',
+  const lines = ['Guidance for common cases:'];
+
+  // A one-tap "Draft the plan" (buildAutoIntake) leaves both of these
+  // 'unknown' rather than asking. Telling the model "no budget: drop paid
+  // promo" here would otherwise fire on every such draft, since 'unknown'
+  // reads the same as 'none' to a model that is not told the difference.
+  if (intake.goal === 'unknown' && intake.budget === 'unknown') {
+    lines.push(
+      '- The manager has not stated a goal or a budget for this release. Do not assume either: never drop the paid-promotion tasks for a budget that was not stated, and never assume this release has more or less budget than the playbook already assumes.'
+    );
+  } else {
+    lines.push('- No budget: drop the optional paid promotion tasks and say so in the rationale.');
+  }
+
+  lines.push(
     '- The distributor is already set up: the setup tasks can move later or drop if they are optional.',
     '- Nothing is ready yet: leave the asset production runway exactly as the playbook has it.',
-    '- A tight window between today and release day: pull the essential tasks earlier rather than dropping required work.',
-  ];
+    '- A tight window between today and release day: pull the essential tasks earlier rather than dropping required work.'
+  );
 
   if (intake.release_type !== 'single') {
     const formatLabel = intake.release_type === 'ep' ? 'an EP' : 'an album';
