@@ -1,5 +1,6 @@
 import { PostHog } from 'posthog-node';
 import { getPostHogProjectKey, type AnalyticsEvent } from './shared';
+import { resolvePostHogIngestHost } from './posthog-proxy';
 
 let hasWarnedMissingServerConfig = false;
 
@@ -22,7 +23,12 @@ export function createServerPostHogClient(): PostHog | null {
   }
 
   return new PostHog(apiKey, {
-    host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com',
+    // The REAL host, deliberately not the browser's proxy path: this runs on
+    // the server, where nothing blocks it, and pointing it at /urg-relay would
+    // make the app call itself. Resolved through the shared helper so "the real
+    // host" has one definition — and so the stale app.posthog.com default is
+    // upgraded to the regional ingest host.
+    host: resolvePostHogIngestHost(process.env.NEXT_PUBLIC_POSTHOG_HOST),
   });
 }
 

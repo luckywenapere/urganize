@@ -1,4 +1,5 @@
 import type { PostHog } from 'posthog-js';
+import { POSTHOG_PROXY_PATH, resolvePostHogUiHost } from './posthog-proxy';
 import {
   type AnalyticsEvent,
   type AnalyticsIdentity,
@@ -116,7 +117,15 @@ function loadBrowserPostHog(): Promise<PostHog | null> {
         client.init(
           key,
           {
-            api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com',
+            // First-party path, rewritten to PostHog by next.config.js. NOT the
+            // real host: tracking protection blocks us-assets.i.posthog.com
+            // before the request leaves the browser, which is how this app ran
+            // with analytics silently dead. See lib/analytics/posthog-proxy.ts.
+            api_host: POSTHOG_PROXY_PATH,
+            // Where in-app links should point, since api_host no longer names
+            // PostHog. Without this the toolbar and its links resolve against
+            // our own domain.
+            ui_host: resolvePostHogUiHost(process.env.NEXT_PUBLIC_POSTHOG_HOST),
             defaults: '2026-01-30',
             capture_pageviews: false,
             capture_pageleave: true,
