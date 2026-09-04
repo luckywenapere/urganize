@@ -112,19 +112,15 @@ function loadBrowserPostHog(): Promise<PostHog | null> {
   }
 
   if (!posthogClientPromise) {
-    posthogClientPromise = Promise.all([
-      import('posthog-js'),
-      // Bundled rather than fetched: the SDK would otherwise pull
-      // /static/exception-autocapture.js, and content blockers match that
-      // filename even through our own proxy — so exception capture was on in
-      // config and dead in practice. Self-registers on evaluation; a failed
-      // import falls back to the network copy. See ./posthog-extensions.ts.
-      import('posthog-js/dist/exception-autocapture.js').catch(() => null),
-    ])
-      .then(([mod]) => {
+    posthogClientPromise = import('posthog-js')
+      .then((mod) => {
         const client = mod.default;
-        // After both imports, before init: the core reads the extension bag the
-        // moment capture starts.
+        // After the import, before init. Exception capture, session replay and
+        // dead-click autocapture are all fetched by the SDK from
+        // /static/<name>.js, and content blockers refuse those filenames even
+        // through our own proxy — so this swaps the fetch for an import of our
+        // own chunk, at the same moment and with the same laziness. See
+        // ./posthog-extensions.ts.
         installBundledExtensionGuard(window);
         client.init(
           key,
