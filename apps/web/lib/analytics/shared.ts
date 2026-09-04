@@ -220,13 +220,95 @@ export type AnalyticsIdentity = Pick<Profile, 'id' | 'email' | 'name' | 'role' |
   onboarding_role?: Profile['onboarding_role'];
 };
 
-export function getPostHogProjectKey(): string {
-  const preferredKey = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
-  if (preferredKey) {
-    return preferredKey;
+/**
+ * PostHog key prefixes. `phc_` is the PROJECT key — public by design, meant to
+ * ship in the browser bundle. `phx_` is a PERSONAL API key — a secret that
+ * grants API access to the account.
+ */
+const PROJECT_KEY_PREFIX = 'phc_';
+const PERSONAL_KEY_PREFIX = 'phx_';
+
+export type PostHogKeyProblem = {
+  /** True when the key must NOT be used at all. */
+  fatal: boolean;
+  message: string;
+};
+
+/**
+ * Whether this key is safe and plausible to use as the project token.
+ *
+ * WHY THIS EXISTS (2026-09-03). `NEXT_PUBLIC_POSTHOG_KEY` was set to a personal
+ * API key rather than the project key. Two things went wrong at once, and only
+ * the first was visible: posthog-js's `/array/<token>/config` request 404'd so
+ * the SDK never initialised and not one event was ever recorded — and, much
+ * worse, a secret was compiled into the public client bundle and served to
+ * every visitor of the app, as well as being sent to PostHog in a URL query
+ * string. It took a Network-tab trace to find, because a dead analytics SDK
+ * looks exactly like an analytics SDK with nothing to report.
+ *
+ * A personal key is therefore REFUSED outright rather than warned about: the
+ * whole point is to stop the secret leaving the browser. Anything else that is
+ * merely unrecognised is warned about and allowed, because blocking every
+ * unknown prefix would silently switch analytics off the day PostHog adds a
+ * valid one.
+ *
+ * The key itself is never included in the message — a warning that prints the
+ * secret to the console defeats its own purpose.
+ */
+export function describePostHogKeyProblem(key: string): PostHogKeyProblem | null {
+  const trimmed = key.trim();
+  // An absent key is not a problem to report here: both callers already have a
+  // "not configured" path that says so more usefully.
+  if (!trimmed) return null;
+
+  const lower = trimmed.toLowerCase();
+
+  if (lower.startsWith(PERSONAL_KEY_PREFIX)) {
+    return {
+      fatal: true,
+      message:
+        `PostHog is misconfigured: the key starts with "${PERSONAL_KEY_PREFIX}", which is a PERSONAL API key. ` +
+        'That is a secret and must never be a NEXT_PUBLIC_ value — it is compiled into the browser bundle and ' +
+        'served to every visitor. Revoke it in PostHog now, then set the PROJECT API key ' +
+        `(it starts with "${PROJECT_KEY_PREFIX}", from Settings -> Project). Analytics stays off until then.`,
+    };
   }
 
-  return process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN?.trim() || '';
+  if (!lower.startsWith(PROJECT_KEY_PREFIX)) {
+    return {
+      fatal: false,
+      message:
+        `PostHog key does not start with "${PROJECT_KEY_PREFIX}", which is what a project API key looks like. ` +
+        'Continuing anyway, but if no events arrive, check Settings -> Project for the right value.',
+    };
+  }
+
+  return null;
+}
+
+let hasReportedKeyProblem = false;
+
+export function getPostHogProjectKey(): string {
+  const configured =
+    process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN?.trim() ||
+    '';
+
+  const problem = describePostHogKeyProblem(configured);
+  if (problem) {
+    // Once per process: this is called on every capture.
+    if (!hasReportedKeyProblem) {
+      hasReportedKeyProblem = true;
+      if (problem.fatal) {
+        console.error(problem.message);
+      } else {
+        console.warn(problem.message);
+      }
+    }
+    if (problem.fatal) return '';
+  }
+
+  return configured;
 }
 
 export function createPostHogEvent<Name extends AnalyticsEventName>(
