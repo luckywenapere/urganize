@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronDown, UserCircle2 } from 'lucide-react';
 import { getInitials, type WorkspaceMember } from '@/lib/tasks';
 
@@ -20,6 +20,17 @@ type TaskMemberSelectProps = {
    * density prop.
    */
   density?: 'comfortable' | 'compact';
+  /**
+   * Rendered at the base of the open menu, BELOW and OUTSIDE the listbox.
+   * TaskDetailView passes its invite-a-teammate form here (2026-09-05): the
+   * moment you want someone who is not on the list is the moment you are
+   * looking at the list, so the form belongs here rather than sitting
+   * permanently in the activity body.
+   *
+   * Outside the listbox is not a style choice — a role="listbox" may only
+   * contain role="option" children, so a form inside it is invalid markup.
+   */
+  footer?: ReactNode;
 };
 
 // Replaces the old TaskMemberCombobox, which was a text input doubling as a
@@ -75,6 +86,7 @@ export function TaskMemberSelect({
   placeholder = 'Unassigned',
   isLoading = false,
   density = 'comfortable',
+  footer,
 }: TaskMemberSelectProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -160,69 +172,80 @@ export function TaskMemberSelect({
       </button>
 
       {open ? (
-        <div
-          role="listbox"
-          aria-label={label}
-          className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-50 max-h-[16rem] overflow-y-auto overscroll-contain rounded-[18px] border border-stroke-default bg-bg-surface py-1 shadow-[0_28px_70px_-40px_rgb(var(--shadow-ink)/calc(0.78*var(--shadow-alpha-scale)))]"
-        >
-          {isLoading && visibleMembers.length === 0 ? (
-            <p className="px-3 py-2.5 text-sm text-content-secondary">Loading teammates…</p>
-          ) : null}
-
-          <button
-            type="button"
-            role="option"
-            aria-selected={!selectedMember}
-            onClick={() => choose(null)}
-            className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-bg-hover ${
-              !selectedMember ? 'text-content-primary' : 'text-content-secondary'
-            }`}
+        // The scroll lives on the LIST, not on this wrapper, so an expanded
+        // footer squeezes the list instead of being pushed off the bottom of
+        // the menu (the WorkspaceNavList move). The cap is viewport-relative
+        // because the invite form grows this panel and a fixed rem cap can
+        // outrun a short phone.
+        <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-50 flex max-h-[min(24rem,60dvh)] flex-col overflow-hidden rounded-[18px] border border-stroke-default bg-bg-surface shadow-[0_28px_70px_-40px_rgb(var(--shadow-ink)/calc(0.78*var(--shadow-alpha-scale)))]">
+          <div
+            role="listbox"
+            aria-label={label}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1"
           >
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-dashed border-stroke-default text-[10px] text-content-tertiary">
-              --
-            </span>
-            Unassigned
-          </button>
+            {isLoading && visibleMembers.length === 0 ? (
+              <p className="px-3 py-2.5 text-sm text-content-secondary">Loading teammates…</p>
+            ) : null}
 
-          {visibleMembers.map((member) => {
-            const selectable = isSelectable(member);
-            const selected = selectedMember?.id === member.id;
-            return (
-              <button
-                key={member.id}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                aria-disabled={!selectable || undefined}
-                onClick={() => choose(member)}
-                className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
-                  selectable
-                    ? 'hover:bg-bg-hover'
-                    : 'cursor-not-allowed opacity-60'
-                }`}
-              >
-                <MemberAvatar member={member} />
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={`block truncate text-sm ${
-                      selected ? 'font-semibold text-content-primary' : 'text-content-primary'
-                    }`}
-                  >
-                    {member.name}
+            <button
+              type="button"
+              role="option"
+              aria-selected={!selectedMember}
+              onClick={() => choose(null)}
+              className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-bg-hover ${
+                !selectedMember ? 'text-content-primary' : 'text-content-secondary'
+              }`}
+            >
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-dashed border-stroke-default text-[10px] text-content-tertiary">
+                --
+              </span>
+              Unassigned
+            </button>
+
+            {visibleMembers.map((member) => {
+              const selectable = isSelectable(member);
+              const selected = selectedMember?.id === member.id;
+              return (
+                <button
+                  key={member.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  aria-disabled={!selectable || undefined}
+                  onClick={() => choose(member)}
+                  className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
+                    selectable
+                      ? 'hover:bg-bg-hover'
+                      : 'cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <MemberAvatar member={member} />
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={`block truncate text-sm ${
+                        selected ? 'font-semibold text-content-primary' : 'text-content-primary'
+                      }`}
+                    >
+                      {member.name}
+                    </span>
+                    {!selectable ? (
+                      <span className="mt-0.5 block truncate text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
+                        Pending invite — can&apos;t assign yet
+                      </span>
+                    ) : (
+                      <span className="mt-0.5 block truncate text-xs text-content-secondary">
+                        {member.email}
+                      </span>
+                    )}
                   </span>
-                  {!selectable ? (
-                    <span className="mt-0.5 block truncate text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
-                      Pending invite — can&apos;t assign yet
-                    </span>
-                  ) : (
-                    <span className="mt-0.5 block truncate text-xs text-content-secondary">
-                      {member.email}
-                    </span>
-                  )}
-                </span>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
+
+          {footer ? (
+            <div className="shrink-0 border-t border-stroke-subtle">{footer}</div>
+          ) : null}
         </div>
       ) : null}
     </div>
