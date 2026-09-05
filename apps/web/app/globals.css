@@ -2193,6 +2193,17 @@ body:focus-within .keyboard-hint,
     padding-left: clamp(24px, 3vw, 56px);
     padding-right: clamp(24px, 3vw, 56px);
   }
+
+  /* Public token pages render full bleed. The gutter above is chrome padding
+     for an authenticated page; around a press kit, a DJ pack, a credits form
+     or a capture page it drew the viewer's own body colour as a border, which
+     on a light theme desktop is a cream frame around a dark locked artifact.
+     AppShell adds this class for exactly the routes it already treats as
+     chrome-less. */
+  .app-layout-full-bleed {
+    padding-left: 0;
+    padding-right: 0;
+  }
 }
 
 /* Pre-hydration session gate for /auth. Paired with the session-probe script

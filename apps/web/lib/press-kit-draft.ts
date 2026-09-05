@@ -1,3 +1,4 @@
+import { bannedCopyInstruction } from '@/lib/press-kits';
 import type { PressKitSection, PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
 
 /**
@@ -223,7 +224,7 @@ export function buildDraftMessages(
         'Use ONLY the facts you are given. Do not invent a fact, a number, a chart position, a quote, a review or a place.',
         'If you do not know something, write around it rather than guessing.',
         'Write plainly, the way music press write. No hype, no slogans, no closing motivational line.',
-        'Do not use em dashes. Do not use the word "ship".',
+        bannedCopyInstruction(),
         'Reply with JSON only, no other text.',
       ].join(' '),
     },

@@ -283,3 +283,25 @@ export function shouldCoalesceVersion(
 export function versionPruneCutoffIso(now: Date = new Date()): string {
   return new Date(now.getTime() - VERSION_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
 }
+
+/**
+ * Words that never appear in press kit copy, ours or a model's.
+ *
+ * One list, read by two things that would otherwise drift: the system message
+ * that tells UrgAns how to write, and `press-kit-copy-guard.test.ts`, which
+ * holds every string in the feature to the same rule. A house rule stated in
+ * two places is a house rule that ends up meaning two things.
+ *
+ * "Ship" is out because a release is DELIVERED. The em dash is out because it
+ * is the one punctuation mark that makes a sentence read as written by a
+ * machine.
+ */
+export const BANNED_COPY_WORDS: readonly string[] = ['ship', 'shipped', 'ships', 'shipping'];
+
+export const BANNED_COPY_CHARS: readonly string[] = ['\u2014'];
+
+/** The instruction handed to a model, built from the lists above so it cannot
+ *  disagree with what the guard enforces. */
+export function bannedCopyInstruction(): string {
+  return `Do not use em dashes. Do not use the word "${BANNED_COPY_WORDS[0]}".`;
+}
