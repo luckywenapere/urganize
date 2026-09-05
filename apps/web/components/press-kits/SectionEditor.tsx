@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Check, Copy, Plus, Trash2 } from 'lucide-react';
 import { PRESS_KIT_SECTION_HINTS } from '@/lib/press-kits';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
@@ -11,6 +11,10 @@ type Props = {
   readOnly: boolean;
   setField: (key: string, value: unknown) => void;
   onBlur: () => void;
+  /** The photo grid, for the Assets section only. Handed in rather than built
+   *  here because photos are their own table, with their own upload flow and
+   *  their own loading state, none of which the autosave draft knows about. */
+  photos?: ReactNode;
 };
 
 const inputClass =
@@ -207,7 +211,7 @@ function FedFromElsewhere({ source }: { source: string }) {
   );
 }
 
-export function SectionEditor({ section, draft, readOnly, setField, onBlur }: Props) {
+export function SectionEditor({ section, draft, readOnly, setField, onBlur, photos }: Props) {
   const text = (key: string, label: string, placeholder?: string, hint?: string) => (
     <Field label={label} hint={hint}>
       <input
@@ -358,11 +362,30 @@ export function SectionEditor({ section, draft, readOnly, setField, onBlur }: Pr
       ) : null}
 
       {section === 'assets' ? (
-        <FedFromElsewhere source="Photos and artwork land here once uploads are switched on." />
+        // Photos live in their own table rather than in this section's
+        // content, so the grid is handed in by the page rather than driven by
+        // the autosave draft every other section uses.
+        photos || (
+          <FedFromElsewhere source="Photos land here once the kit has been saved." />
+        )
       ) : null}
 
       {section === 'video' ? (
-        <FedFromElsewhere source="Video links land here once uploads are switched on." />
+        // Links, not uploads. A music video does not fit under the per file
+        // storage ceiling, and it already lives on a platform: a journalist
+        // wants to watch it, not hold the master.
+        <RepeatableList
+          itemKey="videos"
+          columns={[
+            { key: 'title', label: 'What it is', placeholder: 'Official video' },
+            { key: 'url', label: 'Link', placeholder: 'https://', type: 'url' },
+          ]}
+          addLabel="Add a video"
+          draft={draft}
+          setField={setField}
+          onBlur={onBlur}
+          readOnly={readOnly}
+        />
       ) : null}
     </div>
   );

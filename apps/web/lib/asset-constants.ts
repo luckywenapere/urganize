@@ -80,6 +80,20 @@ export const ASSET_SIZE_LIMITS: Record<AssetCategory, number> = {
  */
 export const MAX_WORKSPACE_LOGO_BYTES = 5 * MIB;
 
+/**
+ * Size ceiling for a press photo on a standing press kit.
+ *
+ * Its OWN literal, and never `ASSET_SIZE_LIMITS.cover_art` — that alias has
+ * already widened two features by accident (see the comment above), and this
+ * would have been the third. It is deliberately NOT `promo_image` either: a
+ * promo image is a thumbnail, while a press photo is a deliverable a magazine
+ * runs at 3000px, so 5 MiB rejects exactly the files this feature asks for.
+ *
+ * 10 MiB sits above promo_image and well under cover art. The tests either
+ * side of it assert both halves of that.
+ */
+export const MAX_PRESS_PHOTO_BYTES = 10 * MIB;
+
 const AUDIO_MIMES = ['audio/wav', 'audio/mpeg', 'audio/flac', 'audio/x-wav'];
 const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 const VIDEO_MIMES = ['video/mp4', 'video/quicktime', 'video/webm'];

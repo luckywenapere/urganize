@@ -1,8 +1,17 @@
+import { randomUUID } from 'crypto';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import {
+  ASSET_SIGNED_URL_TTL_SECONDS,
+  RELEASE_ASSETS_BUCKET,
+  generateSignedUrl,
+  sanitizeFileName,
+} from '@/lib/asset-helpers';
 import { deriveSectionStatus } from '@/lib/press-kits';
 import {
   PRESS_KIT_SECTIONS,
   type PressKit,
+  type PressKitAsset,
   type PressKitSection,
   type PressKitSectionKey,
   type PressKitSectionSource,
@@ -37,6 +46,22 @@ export const PRESS_KIT_SECTION_COLUMNS =
 
 export const PRESS_KIT_SECTION_VERSION_COLUMNS =
   'id,section_id,content,saved_by,created_at';
+
+export const PRESS_KIT_ASSET_COLUMNS =
+  'id,kit_id,kind,file_name,file_size,mime_type,storage_bucket,storage_path,width,height,photographer_credit,usage_rights,position,created_at';
+
+/**
+ * Where a kit's files live in the shared release-assets bucket.
+ *
+ * The prefix is deliberately its own: every release asset path starts with a
+ * release UUID, so `press-kit/` cannot collide with one, and the record route
+ * checks a reported path against this prefix before trusting it. Same reasoning
+ * as the workspace logo's `workspace/` prefix.
+ */
+export const buildPressKitStoragePath = (kitId: string, fileName: string): string =>
+  `press-kit/${kitId}/${randomUUID()}-${sanitizeFileName(fileName)}`;
+
+export const pressKitStoragePrefix = (kitId: string): string => `press-kit/${kitId}/`;
 
 /**
  * The whole press kit surface stays dark until NEXT_PUBLIC_FEATURE_PRESS_KITS
@@ -93,6 +118,67 @@ export const toPressKitSection = (row: Record<string, unknown>): PressKitSection
   updatedBy: row.updated_by ? String(row.updated_by) : null,
   updatedAt: String(row.updated_at || ''),
 });
+
+export const toPressKitAsset = (
+  row: Record<string, unknown>,
+  url: string | null
+): PressKitAsset => ({
+  id: String(row.id || ''),
+  kind: (row.kind as PressKitAsset['kind']) || 'press_photo',
+  fileName: String(row.file_name || ''),
+  fileSize: Number(row.file_size) || 0,
+  mimeType: row.mime_type ? String(row.mime_type) : null,
+  url,
+  width: typeof row.width === 'number' ? row.width : null,
+  height: typeof row.height === 'number' ? row.height : null,
+  photographerCredit: String(row.photographer_credit || ''),
+  usageRights: String(row.usage_rights || ''),
+  position: typeof row.position === 'number' ? row.position : 0,
+  createdAt: String(row.created_at || ''),
+});
+
+/**
+ * Every file on a kit, in display order, each with a signed URL for the
+ * thumbnail.
+ *
+ * Signing is per row through `generateSignedUrl`, which returns null rather
+ * than throwing and caches until 80% of the TTL has elapsed. That cache is what
+ * keeps the URL string stable between requests, so a browser can actually cache
+ * the image instead of re-downloading it on every load. One unsignable photo
+ * costs that photo, never the list.
+ *
+ * Never `next/image` on the other end of these: the URLs expire, and the
+ * optimizer's proxying and caching would outlive them.
+ */
+export const loadPressKitAssets = async (
+  adminClient: SupabaseClient,
+  kitId: string
+): Promise<{ assets: PressKitAsset[] } | { error: string }> => {
+  const { data, error } = await adminClient
+    .from(PRESS_KIT_ASSETS_TABLE)
+    .select(PRESS_KIT_ASSET_COLUMNS)
+    .eq('kit_id', kitId)
+    .order('position', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    return { error: error.message || 'Could not load the photos.' };
+  }
+
+  const rows = (data || []).map((row) => asRow(row));
+  const urls = await Promise.all(
+    rows.map((row) =>
+      generateSignedUrl(
+        adminClient,
+        String(row.storage_bucket || RELEASE_ASSETS_BUCKET),
+        String(row.storage_path || ''),
+        ASSET_SIGNED_URL_TTL_SECONDS
+      )
+    )
+  );
+
+  return { assets: rows.map((row, index) => toPressKitAsset(row, urls[index])) };
+};
 
 export const isPressKitSectionKey = (value: unknown): value is PressKitSectionKey =>
   typeof value === 'string' && (PRESS_KIT_SECTIONS as readonly string[]).includes(value);

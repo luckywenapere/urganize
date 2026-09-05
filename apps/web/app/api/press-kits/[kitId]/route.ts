@@ -7,6 +7,7 @@ import {
   createAdminClient,
   ensurePressKitAccess,
   isPressKitsFeatureEnabled,
+  loadPressKitAssets,
   PRESS_KITS_TABLE,
   PRESS_KIT_COLUMNS,
   PRESS_KIT_SECTIONS_TABLE,
@@ -63,9 +64,16 @@ export async function GET(request: NextRequest, context: Context) {
 
   const artistName = await loadArtistName(adminClient, access.artistId);
 
+  // Photos live in their own table, not in the Assets section's content, so
+  // deriveSectionStatus needs the count handed to it. Loading them here rather
+  // than from a second request keeps the rail's chips honest on first paint.
+  const assetResult = await loadPressKitAssets(adminClient!, kitId);
+  const assets = 'assets' in assetResult ? assetResult.assets : [];
+
   return NextResponse.json({
     kit: toPressKit(access.kit, artistName),
     sections: (data || []).map((row) => toPressKitSection(asRow(row))),
+    assets,
     // Whether to OFFER the drafting button at all. A control that is always
     // going to refuse is worse than no control (the repo's own rule, recorded
     // for the iOS install card), and with no model configured the honest path

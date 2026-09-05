@@ -18,7 +18,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
 import { usePressKitSection } from '@/components/press-kits/usePressKitSection';
 import { SectionEditor } from '@/components/press-kits/SectionEditor';
-import { PRESS_KIT_SECTION_LABELS } from '@/lib/press-kits';
+import { PRESS_KIT_SECTION_LABELS, deriveSectionStatus } from '@/lib/press-kits';
 import { countInterviewGaps } from '@/lib/press-kit-interview';
 import type { AutofillSummary as AutofillCounts } from '@/lib/press-kit-autofill';
 import { AutofillSummary } from '@/components/press-kits/AutofillSummary';
@@ -28,8 +28,10 @@ import { applyRunAction, discardRunAction } from '@/lib/urgans-actions/client';
 import { isDraftableSection } from '@/lib/press-kit-draft';
 import { supabase } from '@/lib/supabase/client';
 import { PressKitInterviewModal } from '@/components/press-kits/PressKitInterviewModal';
+import { PhotoGrid } from '@/components/press-kits/PhotoGrid';
 import type {
   PressKit,
+  PressKitAsset,
   PressKitSection,
   PressKitSectionContent,
   PressKitSectionKey,
@@ -71,6 +73,7 @@ export default function PressKitPageClient() {
   const [artistName, setArtistName] = useState('');
   const [kit, setKit] = useState<PressKit | null>(null);
   const [sections, setSections] = useState<PressKitSection[]>([]);
+  const [assets, setAssets] = useState<PressKitAsset[]>([]);
   const [activeKey, setActiveKey] = useState<PressKitSection['section']>('header');
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -107,6 +110,20 @@ export default function PressKitPageClient() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  /**
+   * Photos are their own table, so the Assets row's stored status was decided
+   * when the kit was created and never moves. Recomputing it here from the
+   * count keeps the rail's chip honest the moment a photo lands, through the
+   * SAME definition the server writes with rather than a second one.
+   */
+  const statusFor = useCallback(
+    (section: PressKitSection): PressKitSectionStatus =>
+      section.section === 'assets'
+        ? deriveSectionStatus('assets', section.content, { photoCount: assets.length })
+        : section.status,
+    [assets.length]
+  );
+
   const active = useMemo(
     () => sections.find((section) => section.section === activeKey) || null,
     [sections, activeKey]
@@ -124,6 +141,7 @@ export default function PressKitPageClient() {
     setKit(body.kit || null);
     setArtistName(String(body.kit?.artistName || ''));
     setSections(Array.isArray(body.sections) ? body.sections : []);
+    setAssets(Array.isArray(body.assets) ? body.assets : []);
     setAiAvailable(body.aiAvailable === true);
   }, []);
 
@@ -490,10 +508,10 @@ export default function PressKitPageClient() {
                       </span>
                       <span
                         className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] uppercase ${statusChipClass(
-                          section.status
+                          statusFor(section)
                         )}`}
                       >
-                        {STATUS_COPY[section.status]}
+                        {STATUS_COPY[statusFor(section)]}
                       </span>
                     </button>
                   </li>
@@ -516,10 +534,10 @@ export default function PressKitPageClient() {
                   {active ? (
                     <span
                       className={`rounded px-1.5 py-0.5 font-mono text-[10px] uppercase ${statusChipClass(
-                        active.status
+                        statusFor(active)
                       )}`}
                     >
-                      {STATUS_COPY[active.status]}
+                      {STATUS_COPY[statusFor(active)]}
                     </span>
                   ) : null}
                   <ChevronDown className="h-4 w-4 text-content-tertiary" aria-hidden />
@@ -585,6 +603,15 @@ export default function PressKitPageClient() {
                     readOnly={false}
                     setField={autosave.setField}
                     onBlur={autosave.flush}
+                    photos={
+                      kit ? (
+                        <PhotoGrid
+                          kitId={kit.id}
+                          assets={assets}
+                          onAssetsChange={setAssets}
+                        />
+                      ) : null
+                    }
                   />
                 </section>
               ) : null}
@@ -632,10 +659,10 @@ export default function PressKitPageClient() {
                         <span>{PRESS_KIT_SECTION_LABELS[section.section]}</span>
                         <span
                           className={`rounded px-1.5 py-0.5 font-mono text-[10px] uppercase ${statusChipClass(
-                            section.status
+                            statusFor(section)
                           )}`}
                         >
-                          {STATUS_COPY[section.status]}
+                          {STATUS_COPY[statusFor(section)]}
                         </span>
                       </button>
                     </li>

@@ -98,3 +98,28 @@ export interface PressKitCoverage {
   url: string;
   publishedOn: string;
 }
+
+/**
+ * A file on the kit. Today always a press photo; `kind` exists because the
+ * database already allows a logo and the brief's Assets section names both.
+ *
+ * `downloadUrl` is deliberately absent: a download URL is minted on click with
+ * a five minute life, so a page left open overnight is not a wallet of live
+ * URLs. `url` is the one hour signed URL the thumbnail renders from.
+ */
+export interface PressKitAsset {
+  id: string;
+  kind: 'press_photo' | 'logo';
+  fileName: string;
+  fileSize: number;
+  mimeType: string | null;
+  /** Signed, one hour, for display only. Null when signing failed, in which
+   *  case the grid shows the photo as unavailable rather than dropping it. */
+  url: string | null;
+  width: number | null;
+  height: number | null;
+  photographerCredit: string;
+  usageRights: string;
+  position: number;
+  createdAt: string;
+}

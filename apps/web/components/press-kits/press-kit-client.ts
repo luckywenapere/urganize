@@ -27,3 +27,15 @@ export async function readError(response: Response, fallback: string): Promise<s
   }
   return fallback;
 }
+
+/**
+ * The raw token, for the upload module, which builds its own headers because
+ * step 2 PUTs to Supabase with a different Content-Type than the two JSON
+ * calls either side of it.
+ */
+export async function accessToken(): Promise<string> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token || '';
+}
