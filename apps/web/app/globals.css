@@ -177,6 +177,40 @@
      re-introduction later. */
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+
+  /* ---- Textile ornament tokens (NEXT_PUBLIC_FEATURE_TEXTILE) ----------------
+     The Brand Bible palette and the founder's textile reference are already the
+     same family — ink ground, cream thread, sage/forest, gold embroidery
+     (--status-warning), oxblood (--status-error). What was missing is MATERIAL:
+     weave, pattern, edge treatment, instead of flat digital fill.
+
+     Every value below derives from an EXISTING token — --color-stroke and
+     --color-status-warning — at low alpha. No new hue enters the palette, so
+     ornament can never be mistaken for state, and both themes are covered for
+     free by the same cascade that flips those tokens.
+
+     Alphas are NOT shared between themes: ink-on-cream reads visibly heavier
+     than cream-on-ink at equal opacity, so html[data-theme='light'] carries its
+     own (roughly 0.55-0.7x) set. Tuned against both real grounds, not derived.
+
+     These are declared unconditionally (cheap — a few custom properties) but
+     only ever CONSUMED under .urg-textile, so the flag-off render is
+     byte-identical to the pre-textile app. */
+
+  /* Warp/weft/twill — the three thread passes of the ambient cloth grain. */
+  --urg-thread-weft: rgb(var(--color-stroke) / 0.030);
+  --urg-thread-warp: rgb(var(--color-stroke) / 0.022);
+  --urg-thread-twill: rgb(var(--color-stroke) / 0.012);
+
+  /* Structural rules: the cartouche keyline and the Adinkra tooth border. */
+  --urg-keyline: rgb(var(--color-stroke) / 0.045);
+  --urg-rule: rgb(var(--color-stroke) / 0.10);
+
+  /* Gold embroidery thread. --color-status-warning is #f0b95c on ink and
+     #7e480a on cream, which is exactly the metallic-thread-vs-umber pair the
+     reference board runs. Used ONLY in decorative grounds, never as state. */
+  --urg-thread-gold: rgb(var(--color-status-warning) / 0.055);
+  --urg-thread-gold-strong: rgb(var(--color-status-warning) / 0.10);
 }
 
 html[data-theme='dark'] { color-scheme: dark; }
@@ -291,6 +325,30 @@ html[data-theme='light'] {
 
   --shadow-ink: 26 22 17;
   --shadow-alpha-scale: 0.25;
+
+  /* Textile ornament, paper mode. Deliberately NOT the same alphas as :root.
+     --color-stroke flips from cream (245 240 230) to paper ink (26 22 17), and
+     a dark thread on a light ground reads far heavier than the reverse at
+     equal opacity — the same asymmetry --shadow-alpha-scale already encodes by
+     dropping to 0.25 here. Held to roughly 0.55-0.7x of the dark values, tuned
+     against the real cream ground rather than computed.
+
+     This also fixes a latent bug: before this, the app's ONLY ambient texture
+     (body::after's 36px grid) hardcoded rgba(255,255,255,...) — white lines on
+     cream — so paper mode had no texture at all. Routing every thread through
+     --color-stroke means both themes are covered by construction. */
+  --urg-thread-weft: rgb(var(--color-stroke) / 0.020);
+  --urg-thread-warp: rgb(var(--color-stroke) / 0.014);
+  --urg-thread-twill: rgb(var(--color-stroke) / 0.008);
+
+  --urg-keyline: rgb(var(--color-stroke) / 0.055);
+  --urg-rule: rgb(var(--color-stroke) / 0.12);
+
+  /* Gold becomes umber (#7e480a) here, which is a far darker, denser pigment
+     than screen mode's #f0b95c — so the alpha drops harder than the threads do
+     to keep the ray fan at the same perceived weight. */
+  --urg-thread-gold: rgb(var(--color-status-warning) / 0.030);
+  --urg-thread-gold-strong: rgb(var(--color-status-warning) / 0.055);
 }
 
 /* The wordmark PNG and the square icon mark (packages/ui/src/Logo.tsx) are
@@ -739,6 +797,120 @@ body::after {
   opacity: 0.18;
   pointer-events: none;
   z-index: 0;
+  /* NOTE: hardcoded white, so this grid is effectively invisible in paper mode.
+     Left exactly as-is because it is the flag-OFF baseline and must not change;
+     .urg-textile below overrides it with a theme-aware weave. */
+}
+
+/* ===========================================================================
+   TEXTILE CHARACTER LAYER — .urg-textile
+   ===========================================================================
+
+   Gated by NEXT_PUBLIC_FEATURE_TEXTILE, applied as a class on <html> in
+   app/layout.tsx. Everything in this section is scoped under .urg-textile, so
+   with the flag off the app renders exactly as it did before.
+
+   WHY IT LIVES ON body's PSEUDO-ELEMENTS: `.app-layout` is
+   `position: relative; z-index: 1` with no background of its own, so a
+   z-index-0 fixed layer on body sits BEHIND every piece of app content while
+   still showing through transparent regions, and is occluded by any opaque
+   card. Ornament therefore can never render on top of text — the contrast
+   budget documented per-token in :root is preserved by construction.
+
+   WHY `position: fixed`: the grain reads as the surface the app is printed
+   ON, rather than a pattern that scrolls with the content. Same reason the
+   grid it replaces was fixed.
+
+   THE ONE TECHNIQUE WORTH KNOWING: an SVG data: URI in `background-image`
+   cannot read CSS custom properties, so it can never be theme-aware. Where a
+   motif is too complex for gradients (the tooth border, the Kuba glyph), the
+   SHAPE comes from an SVG data: URI used as `mask-image` and the COLOR comes
+   from a token via `background-color`. Both -webkit- and unprefixed
+   properties are required; the app's floor is iOS 15.4 (Next 16 ships
+   Object.hasOwn), which supports both.
+
+   Nothing here animates, so the prefers-reduced-motion clamp further down
+   needs no additions.
+   =========================================================================== */
+
+/* Ambient cloth grain. Three thread passes rather than the two perfect
+   perpendicular lines of graph paper, because that difference IS the
+   difference between "spreadsheet" and "woven":
+
+     weft  — horizontal, 3px pitch, heaviest
+     warp  — vertical, 4px pitch, lighter (a coprime-ish pitch keeps the two
+             from locking into a visible checkerboard the way 36px/36px did)
+     twill — 45deg, 6px pitch, faintest: the diagonal "hand" of the cloth
+
+   The 5px-square dye-slub layer on top breaks up the regularity so it reads
+   as dyed thread rather than a printed screen — the ikat quality of the
+   reference board. Kept at fractional alpha; it is felt, not seen. */
+.urg-textile body::after {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      var(--urg-thread-weft) 0 1px,
+      transparent 1px 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      var(--urg-thread-warp) 0 1px,
+      transparent 1px 4px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      var(--urg-thread-twill) 0 1px,
+      transparent 1px 6px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      var(--urg-thread-twill) 0 1px,
+      transparent 1px 5px
+    );
+  background-size: auto;
+  /* Higher than the grid's 0.18 because the thread alphas themselves are far
+     lower (0.030 vs 0.018 at full strength) and there are four passes; the
+     product lands at roughly 2-3% actual ink, which is the Balanced tier. */
+  opacity: 0.85;
+}
+
+/* Cartouche frame. body::before is ALREADY a fixed inset hairline — the
+   framed-panel motif of the reference board's left column, hiding in plain
+   sight. It gains a second, inner rule (outline with a NEGATIVE offset draws
+   inward) plus corner ticks, which is what turns a plain box into something
+   that reads as a made object.
+
+   `outline` rather than a second pseudo-element because body has only ::before
+   and ::after and both are spoken for; and rather than `box-shadow: inset`
+   because an inset shadow fills a band from the edge, it cannot draw a
+   hairline at an offset. */
+.urg-textile body::before {
+  border-color: var(--urg-keyline);
+  outline: 1px solid var(--urg-keyline);
+  outline-offset: -6px;
+  /* Corner ticks — four short rules set in from each corner, drawn as sized,
+     non-repeating gradients. Deliberately not full-length: the reference
+     board's frames are hand-cut, and a tick reads as a registration mark
+     where a continuous third rule would just read as a busier border. */
+  background-image:
+    linear-gradient(90deg, var(--urg-rule) 0 100%),
+    linear-gradient(0deg, var(--urg-rule) 0 100%),
+    linear-gradient(90deg, var(--urg-rule) 0 100%),
+    linear-gradient(0deg, var(--urg-rule) 0 100%);
+  background-size: 14px 1px, 1px 14px, 14px 1px, 1px 14px;
+  background-position: 12px 12px, 12px 12px, right 12px bottom 12px, right 12px bottom 12px;
+  background-repeat: no-repeat;
+}
+
+/* The frame tightens to inset:10px below 768px (see the media query at the end
+   of this file), so the inner rule and the ticks have to come in with it or
+   they collide with the border on a phone. */
+@media (max-width: 768px) {
+  .urg-textile body::before {
+    outline-offset: -4px;
+    background-size: 10px 1px, 1px 10px, 10px 1px, 1px 10px;
+    background-position: 8px 8px, 8px 8px, right 8px bottom 8px, right 8px bottom 8px;
+  }
 }
 
 ::selection {
@@ -1636,6 +1808,289 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
   border-radius: 0;
   padding: clamp(24px, 4vw, 32px);
   text-align: center;
+}
+
+/* ---- Textile structural motifs -------------------------------------------
+   Tier 2 of the .urg-textile layer (Tier 1, the ambient grain, is up beside
+   body::after). These are opt-in utilities applied through the app's shared
+   className constants rather than per component, so a handful of edits reach
+   most surfaces — see components/settings/panelClass.ts (15 consumers),
+   components/shared/EmptyState.tsx, and TasksPanel's pill factory.
+
+   Everything is scoped under .urg-textile and every colour comes from
+   --urg-* , so flag-off is a no-op and both themes are covered.
+   -------------------------------------------------------------------------- */
+
+/* Cartouche: the framed-panel motif of the reference board's left column — a
+   border with a second rule set in from it. `outline` with a NEGATIVE offset
+   draws inward without affecting layout, costs no pseudo-element (so it never
+   fights a component that already uses ::before/::after) and inherits the
+   element's own corner radius. */
+.urg-textile .urg-cartouche {
+  outline: 1px solid var(--urg-keyline);
+  outline-offset: -5px;
+}
+
+/* Adinkra/Kuba tooth border. The one motif in this system that genuinely needs
+   a mask: a row of triangles is not expressible as a gradient without the
+   seams showing. Shape from the SVG data: URI, colour from the token — see the
+   note in the ambient section for why the shape can't carry the colour itself.
+
+   The viewBox is deliberately drawn on a 12x6 grid with the apex at 6,0 so the
+   repeat tiles seamlessly at any width. -webkit- prefix first for iOS 15.4. */
+.urg-textile .urg-rule-teeth {
+  position: relative;
+}
+
+.urg-textile .urg-rule-teeth::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 5px;
+  background-color: var(--urg-rule);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 6'%3E%3Cpath d='M0 0h12L6 6z' fill='%23000'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 6'%3E%3Cpath d='M0 0h12L6 6z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask-size: 12px 5px;
+  mask-size: 12px 5px;
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  pointer-events: none;
+}
+
+/* Selvedge: the frayed cut edge of a woven swatch. A shallow irregular notch
+   run along the bottom of a panel. Same mask technique, wider tile (24px) and
+   an uneven path so it does not read as a pattern. */
+.urg-textile .urg-selvedge {
+  position: relative;
+}
+
+.urg-textile .urg-selvedge::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background-color: var(--urg-rule);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 4'%3E%3Cpath d='M0 0h3v3H0zM5 0h2v4H5zM9 0h4v2H9zM15 0h2v3h-2zM19 0h3v4h-3z' fill='%23000'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 4'%3E%3Cpath d='M0 0h3v3H0zM5 0h2v4H5zM9 0h4v2H9zM15 0h2v3h-2zM19 0h3v4h-3z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask-size: 24px 4px;
+  mask-size: 24px 4px;
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  pointer-events: none;
+}
+
+/* The app's only dashed surface becomes a woven one. A dashed border is the
+   universal "nothing here yet" placeholder; teeth on all four sides read as a
+   deliberately finished edge, which is the right note for an empty state that
+   is inviting the first action rather than apologising for a gap. */
+.urg-textile .empty-shell {
+  border-style: solid;
+  border-color: var(--urg-keyline);
+  position: relative;
+}
+
+/* Teeth along the top edge, pointing down into the panel. ::after is used
+   rather than ::before because EmptyState's own markup uses neither, and
+   ::after keeps it above the background in paint order without a z-index. */
+.urg-textile .empty-shell::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 5px;
+  background-color: var(--urg-rule);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 6'%3E%3Cpath d='M0 0h12L6 6z' fill='%23000'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 6'%3E%3Cpath d='M0 0h12L6 6z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask-size: 12px 5px;
+  mask-size: 12px 5px;
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  pointer-events: none;
+}
+
+/* ---- Textile moment grounds (Tier 3) -------------------------------------
+   The loud tier, reserved for surfaces where there is no dense content to
+   compete with: the entrances (auth, onboarding, locked), the public share
+   pages, and the celebration moments.
+
+   Applied to a `pointer-events: none` absolutely-positioned child rather than
+   to the page element itself, so nothing here can ever sit between a user and
+   a control, and no stacking context is created around form content.
+   -------------------------------------------------------------------------- */
+
+/* Sunburst — the gold embroidery at the centre of the reference board. A ray
+   fan struck from a point below the fold so the rays read as rising through
+   the page rather than radiating from a visible sun.
+   `repeating-conic-gradient` draws the whole fan in one paint; 1.2deg of
+   thread against 2.8deg of ground gives roughly the reference's thread
+   density. The radial mask fades it out before the rays reach the top of the
+   viewport, where they would otherwise cross body text. */
+.urg-textile .urg-ground-sunburst {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  background-image: repeating-conic-gradient(
+    from 0deg at 50% 118%,
+    var(--urg-thread-gold) 0deg 1.2deg,
+    transparent 1.2deg 4deg
+  );
+  -webkit-mask-image: radial-gradient(
+    120% 78% at 50% 118%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 45%,
+    transparent 78%
+  );
+  mask-image: radial-gradient(
+    120% 78% at 50% 118%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 45%,
+    transparent 78%
+  );
+}
+
+/* Ikat — warp-dyed cloth, where the thread is dyed before weaving so every
+   colour boundary feathers instead of cutting clean. Reproduced as a stack of
+   vertical bands at deliberately uneven widths and alphas: a regular repeat
+   would read as corduroy, and it is the irregularity that makes it ikat.
+   The horizontal pass is the weft holding the bleed together. */
+.urg-textile .urg-ground-ikat {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--urg-thread-gold) 3%,
+      transparent 7%,
+      transparent 14%,
+      var(--urg-rule) 17%,
+      transparent 23%,
+      var(--urg-thread-gold) 29%,
+      transparent 34%,
+      transparent 46%,
+      var(--urg-rule) 51%,
+      transparent 58%,
+      var(--urg-thread-gold) 66%,
+      transparent 71%,
+      transparent 82%,
+      var(--urg-rule) 86%,
+      transparent 93%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      var(--urg-thread-weft) 0 1px,
+      transparent 1px 3px
+    );
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 62%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 62%);
+}
+
+/* Kuba glyph — the concentric squares of the reference board's mudcloth
+   panels, hand-drawn so the rings do not sit perfectly inside one another.
+   Sized as a background rather than an <img> so it inherits the token colour;
+   used behind empty states and the first-run reveal. */
+.urg-textile .urg-glyph-kuba {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-color: var(--urg-rule);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23000' stroke-width='1.6'%3E%3Crect x='4' y='5' width='56' height='54'/%3E%3Crect x='12' y='12' width='41' height='40'/%3E%3Crect x='20' y='19' width='25' height='26'/%3E%3Crect x='28' y='27' width='9' height='10'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23000' stroke-width='1.6'%3E%3Crect x='4' y='5' width='56' height='54'/%3E%3Crect x='12' y='12' width='41' height='40'/%3E%3Crect x='20' y='19' width='25' height='26'/%3E%3Crect x='28' y='27' width='9' height='10'/%3E%3C/svg%3E");
+  -webkit-mask-size: 64px 64px;
+  mask-size: 64px 64px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+/* The ornament this layer replaces. Before the textile work, the app's only
+   recurring decoration was a pair of large blurred brand/info circles,
+   copy-pasted across eight files (redeem, invite accept, payment callback,
+   settings, curator join, artist-name gate, and the two password pages). Soft
+   glowing gradients are the opposite aesthetic to woven cloth, and running
+   both at once reads as two unrelated design systems sharing a page.
+
+   They are HIDDEN here rather than deleted from the markup, deliberately: with
+   the flag off those pages must render exactly as they always have. One CSS
+   rule keeps that promise and keeps the revert to a single env var. If the
+   textile layer is ever made permanent, that is the moment to delete the ~15
+   blob divs and this rule together. */
+.urg-textile .urg-blob {
+  display: none;
+}
+
+/* Lifts real content above a Tier 3 ground. Scoped under .urg-textile rather
+   than written as Tailwind `relative z-[1]` on the element, deliberately: a
+   z-index establishes a stacking context, and with the flag OFF these pages
+   must keep exactly the stacking they have on main today. This way the
+   marker class is completely inert until the layer is switched on. */
+.urg-textile .urg-above {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- Textile on the public islands ---------------------------------------
+   The EPK, credits and capture pages are dark-locked artifacts sent outside
+   the product — a press contact judges the company by them, and they render
+   identically for every recipient regardless of the visitor's theme. That
+   makes them the right place for the richest treatment in the app: a press kit
+   is a printed object, and printed objects have a stock.
+
+   Two things differ from the rest of this layer, both following how the
+   islands themselves are already built:
+
+   1. The thread colours are HARDCODED cream rather than routed through
+      --color-stroke. These islands deliberately do not participate in the
+      theme cascade (no html[data-theme='light'] counterpart exists for them),
+      so a themed token would be the one thing here that could flip.
+   2. The texture goes on `background-image` of the island element itself, not
+      a pseudo-element. Each page sets only `backgroundColor` via inline style,
+      so a background-image on the class composites over it cleanly — and
+      ::before/::after stay free for the page components.
+
+   The first layer is a woven header band: a broad gold wash across the top,
+   the brocade selvedge a bolt of cloth carries. The rest is the same
+   warp/weft/twill grain the app ground uses. */
+.urg-textile .epk-island,
+.urg-textile .credits-island,
+.urg-textile .capture-island {
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(240, 185, 92, 0.05) 0%,
+      rgba(240, 185, 92, 0.018) 38%,
+      transparent 100%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(245, 240, 230, 0.026) 0 1px,
+      transparent 1px 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(245, 240, 230, 0.019) 0 1px,
+      transparent 1px 4px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgba(245, 240, 230, 0.010) 0 1px,
+      transparent 1px 6px
+    );
+  background-size: 100% 320px, auto, auto, auto;
+  background-repeat: no-repeat, repeat, repeat, repeat;
+  background-attachment: scroll, fixed, fixed, fixed;
 }
 
 .field-label {

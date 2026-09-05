@@ -235,8 +235,11 @@ export default function PaymentCallbackPage() {
   return (
     <main className="min-h-screen bg-bg-base text-content-primary">
       <div className="relative mx-auto flex min-h-screen w-full max-w-[720px] items-center justify-center px-6 py-12">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand/15 blur-3xl" />
-        <div className="pointer-events-none absolute -left-20 bottom-0 h-60 w-60 rounded-full bg-status-info/12 blur-3xl" />
+        {/* Gold-thread ray fan (NEXT_PUBLIC_FEATURE_TEXTILE). Replaces the
+            blurred brand blobs below, which the same flag hides. Inert off. */}
+        <div className="urg-ground-sunburst" aria-hidden="true" />
+        <div className="urg-blob pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-brand/15 blur-3xl" />
+        <div className="urg-blob pointer-events-none absolute -left-20 bottom-0 h-60 w-60 rounded-full bg-status-info/12 blur-3xl" />
         <Suspense
           fallback={
             <div className="w-full">
