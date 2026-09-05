@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { listWorkspaceArtists } from '@/lib/artists-server';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { normalizeKitSlug } from '@/lib/press-kits';
+import { applyAutofill } from '@/lib/press-kit-autofill-server';
+import { PRESS_KIT_SECTIONS, type PressKitSection } from '@/types/press-kits';
 import {
   asRow,
   PRESS_KITS_TABLE,
@@ -213,5 +215,37 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ kit: toPressKit(created, artist.name) }, { status: 201 });
+  // Fill what the product already knows before anyone sees the kit, so it is
+  // never shown as twelve empty boxes. The rows were just inserted untouched,
+  // so their state is known without reading them back.
+  //
+  // Deliberately cannot fail the create: a kit with empty sections is a working
+  // kit, and applyAutofill never throws (see lib/press-kit-autofill-server.ts).
+  const freshSections = PRESS_KIT_SECTIONS.map(
+    (section, index): PressKitSection => ({
+      id: '',
+      section,
+      content: {},
+      publishedContent: null,
+      status: 'empty',
+      source: 'autofill',
+      position: index + 1,
+      hidden: false,
+      updatedBy: null,
+      updatedAt: '',
+    })
+  );
+
+  const autofill = await applyAutofill(adminClient, {
+    kitId,
+    artistId: artist.id,
+    workspaceId: access.primaryWorkspaceId,
+    ownerUserId,
+    sections: freshSections,
+  });
+
+  return NextResponse.json(
+    { kit: toPressKit(created, artist.name), autofill },
+    { status: 201 }
+  );
 }

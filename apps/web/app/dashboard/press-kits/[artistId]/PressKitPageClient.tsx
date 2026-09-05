@@ -18,10 +18,15 @@ import { authHeaders, readError } from '@/components/press-kits/press-kit-client
 import { usePressKitSection } from '@/components/press-kits/usePressKitSection';
 import { SectionEditor } from '@/components/press-kits/SectionEditor';
 import { PRESS_KIT_SECTION_LABELS } from '@/lib/press-kits';
+import { countInterviewGaps } from '@/lib/press-kit-interview';
+import type { AutofillSummary as AutofillCounts } from '@/lib/press-kit-autofill';
+import { AutofillSummary } from '@/components/press-kits/AutofillSummary';
+import { PressKitInterviewModal } from '@/components/press-kits/PressKitInterviewModal';
 import type {
   PressKit,
   PressKitSection,
   PressKitSectionContent,
+  PressKitSectionKey,
   PressKitSectionStatus,
   PressKitSectionVersion,
 } from '@/types/press-kits';
@@ -64,6 +69,12 @@ export default function PressKitPageClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Only known in the response that created the kit. Absent on every later
+  // visit, which the card handles.
+  const [autofillCounts, setAutofillCounts] = useState<AutofillCounts | null>(null);
+  const [autofillFilled, setAutofillFilled] = useState<PressKitSectionKey[]>([]);
+  const [interviewOpen, setInterviewOpen] = useState(false);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -149,6 +160,12 @@ export default function PressKitPageClient() {
         return;
       }
       const body = await response.json();
+      if (body.autofill) {
+        setAutofillCounts(body.autofill.summary || null);
+        setAutofillFilled(
+          Array.isArray(body.autofill.filled) ? body.autofill.filled : []
+        );
+      }
       if (body.kit?.id) await loadDetail(body.kit.id);
     } catch {
       setError('Could not start this press kit. Check your connection and try again.');
@@ -181,6 +198,29 @@ export default function PressKitPageClient() {
       }
     },
     [kit, sections]
+  );
+
+  const saveSectionByKey = useCallback(
+    async (key: PressKitSection['section'], content: PressKitSectionContent) => {
+      if (!kit) throw new Error('no kit');
+      const headers = await authHeaders();
+      if (!headers) throw new Error('no session');
+
+      const response = await fetch(`/api/press-kits/${kit.id}/sections/${key}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) throw new Error(await readError(response, 'Could not save.'));
+
+      const body = await response.json();
+      if (body.section) {
+        setSections((current) =>
+          current.map((section) => (section.id === body.section.id ? body.section : section))
+        );
+      }
+    },
+    [kit]
   );
 
   const autosave = usePressKitSection({
@@ -313,6 +353,13 @@ export default function PressKitPageClient() {
             </p>
           </header>
 
+          <AutofillSummary
+            counts={autofillCounts}
+            filled={autofillFilled}
+            gapCount={countInterviewGaps(sections)}
+            onStart={() => setInterviewOpen(true)}
+          />
+
           <div className="lg:flex lg:gap-8">
             {/* The rail: every section, and how far along each one is. */}
             <nav className="hidden w-52 shrink-0 lg:block" aria-label="Press kit sections">
@@ -405,6 +452,14 @@ export default function PressKitPageClient() {
           </div>
         </>
       )}
+
+      {interviewOpen ? (
+        <PressKitInterviewModal
+          sections={sections}
+          onSave={saveSectionByKey}
+          onClose={() => setInterviewOpen(false)}
+        />
+      ) : null}
 
       {mounted && sheetOpen
         ? createPortal(
