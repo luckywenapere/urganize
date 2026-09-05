@@ -60,7 +60,7 @@ const compactBlocks = [
   {
     kicker: "Press kit",
     title: "One link, ready whenever press asks.",
-    body: "Urganize builds a press kit from the release, keeps it up to date and works the same for any artist you run.",
+    body: "Urganize builds each artist a press kit from the work you already put in, and tells you when a new release is missing from it. It works the same for any artist you run.",
   },
   {
     kicker: "Status",

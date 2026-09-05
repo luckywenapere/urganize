@@ -62,6 +62,13 @@ describe('every registered UrgAns action carries a prompt version', () => {
       expect(action.promptVersion.trim().length).toBeGreaterThan(0);
     });
 
+    it(`${id} declares exactly one object type`, () => {
+      // resolveActionScope has to pick a single access check for an action, so
+      // a list of two would make that choice arbitrary. Grow the resolver
+      // first if an action ever genuinely needs both.
+      expect(action.objectTypes).toHaveLength(1);
+    });
+
     it(`${id}'s id matches its registry key`, () => {
       expect(action.id).toBe(id);
     });

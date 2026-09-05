@@ -20,6 +20,7 @@ import {
 } from '@/lib/asset-helpers';
 import { loadCoverArtUrlMap } from '@/lib/cover-art';
 import { loadWorkspaceLogoFallbackUrl } from '@/lib/workspace-logo';
+import { successorPathForKit } from '@/lib/press-kit-public';
 
 const RELEASE_EPKS_TABLE = 'release_epks';
 
@@ -46,6 +47,55 @@ function createServiceClient(): SupabaseClient | null {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!supabaseUrl || !serviceRoleKey) return null;
   return createClient(supabaseUrl, serviceRoleKey);
+}
+
+/**
+ * Where an old EPK link should send its reader, or null to render the EPK.
+ *
+ * The release-scoped EPK is retired in favour of the standing per-artist press
+ * kit, but this page is the one surface a stranger may already hold a link to,
+ * so nothing here breaks a link. The chain is token -> release -> artist ->
+ * kit, and the answer is a path only when that kit is PUBLISHED.
+ *
+ * Never throws, and every uncertainty answers null. That direction is
+ * deliberate: null means "render the EPK", which is what the reader had
+ * yesterday, so a database blip costs nobody their page.
+ */
+export async function resolveEpkSuccessorPath(token: string): Promise<string | null> {
+  if (!isEpkFeatureEnabled()) return null;
+  const normalizedToken = token.trim();
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(normalizedToken)) return null;
+
+  const client = createServiceClient();
+  if (!client) return null;
+
+  try {
+    const { data: epk } = await client
+      .from(RELEASE_EPKS_TABLE)
+      .select('release_id')
+      .eq('share_token', normalizedToken)
+      .maybeSingle();
+    if (!epk?.release_id) return null;
+
+    const { data: release } = await client
+      .from('releases')
+      .select('artist_id')
+      .eq('id', String(epk.release_id))
+      .maybeSingle();
+    if (!release?.artist_id) return null;
+
+    const { data: kit } = await client
+      .from('press_kits')
+      .select('slug,published_at')
+      .eq('artist_id', String(release.artist_id))
+      .maybeSingle();
+
+    return successorPathForKit(
+      kit ? { slug: String(kit.slug || ''), publishedAt: kit.published_at ? String(kit.published_at) : null } : null
+    );
+  } catch {
+    return null;
+  }
 }
 
 /**

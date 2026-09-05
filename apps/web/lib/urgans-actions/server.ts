@@ -32,10 +32,11 @@ import {
   ensureReleaseTeamWriteAccess,
   type ReleaseAccessSummary,
 } from '../release-access-server';
+import { ensurePressKitAccess } from '../press-kit-access-server';
 import { checkEmbeddedActionsGuard } from './guard-server';
 import { decideApplyClaim, type UrgansActionRowForClaim } from './claim';
 import { getUrgansAction } from './registry';
-import type { UrgansActionAccessLevel } from './types';
+import type { UrgansActionAccessLevel, UrgansActionObjectType } from './types';
 
 export const URGANS_ACTIONS_TABLE = 'urgans_actions';
 
@@ -54,7 +55,12 @@ export function isUrgansActionsEnabled(): boolean {
 // ── Scope: who is this, acting on what, at what tier ────────────────────────
 
 export type ActionScope = {
-  release: ReleaseAccessSummary;
+  objectType: UrgansActionObjectType;
+  /** Present only for a release action. Nothing downstream reads it today —
+   *  an action's execute() gets the objectId and re-reads whatever it needs —
+   *  but it costs nothing to carry and a release action that wants the summary
+   *  should take it from here rather than reading the row a second time. */
+  release: ReleaseAccessSummary | null;
   ownerUserId: string;
   workspaceId: string | null;
   tier: PricingTierId;
@@ -112,10 +118,16 @@ async function unwrapAccessError(
  * this function needs none of the three, so accepting the whole thing would
  * just invite an unnecessary generic-inference fight at every call site.
  *
- * This pass supports exactly one object type ('release'); a definition's
- * `objectTypes` is declared per-action for when a second one arrives, and the
- * release path below is what that addition would branch on rather than
- * replace.
+ * TWO object types now. Each resolves through its own access check, and both
+ * checks answer the same question the same way: a member of the owning team
+ * may act, a guest is read-only, and a non-member gets a 404 that does not
+ * confirm the thing exists. ensurePressKitAccess reuses decideReleaseAccess
+ * for exactly that reason — one rule, several object types — so adding this
+ * branch did not add a second access model, only a second way in.
+ *
+ * An action declares ONE object type today. registry-guard.test.ts asserts
+ * that, because this function has to pick a single access check and a list of
+ * two would make that choice arbitrary.
  *
  * Tier resolution FAILS OPEN, matching every other tier check in this
  * codebase (lib/release-cap-server.ts, lib/seats-server.ts): an unresolvable
@@ -125,10 +137,15 @@ async function unwrapAccessError(
  */
 export async function resolveActionScope(
   admin: SupabaseClient,
-  action: { access: UrgansActionAccessLevel },
+  action: { access: UrgansActionAccessLevel; objectTypes: UrgansActionObjectType[] },
   objectId: string,
   user: User
 ): Promise<ResolveActionScopeResult> {
+  // One object type per action — see the note above, and the registry-guard
+  // test that holds it. Defaulting to 'release' keeps a malformed definition
+  // on the path that has always existed rather than silently reaching a
+  // different access check.
+  const objectType: UrgansActionObjectType = action.objectTypes[0] || 'release';
   // 'owner_write' resolves through READ access, not write — the ownership
   // check right below is the real gate, and routing it through write access
   // first would 403 a read-only guest before we ever got to that check,
@@ -137,10 +154,36 @@ export async function resolveActionScope(
   // visibility-preserving: a non-member gets exactly the same refusal a
   // non-owner MEMBER gets, and neither can be told apart from "does not
   // exist" — see the access-level comment in ./types.ts.
-  const access =
-    action.access === 'team_write'
-      ? await ensureReleaseTeamWriteAccess(admin, objectId, user)
-      : await ensureReleaseTeamReadAccess(admin, objectId, user);
+  const write = action.access === 'team_write';
+
+  if (objectType === 'press_kit') {
+    const kitAccess = await ensurePressKitAccess(admin, objectId, user, write);
+    if ('error' in kitAccess) {
+      const unwrapped = await unwrapAccessError(kitAccess.error);
+      return { ok: false, ...unwrapped };
+    }
+    if (action.access === 'owner_write' && kitAccess.ownerUserId !== user.id) {
+      return { ok: false, status: 404, error: 'Press kit not found.' };
+    }
+
+    const kitWorkspaceId = await findOwnedWorkspaceId(admin, kitAccess.ownerUserId);
+    const kitTier = kitWorkspaceId ? await getWorkspaceTier(kitWorkspaceId) : null;
+
+    return {
+      ok: true,
+      scope: {
+        objectType,
+        release: null,
+        ownerUserId: kitAccess.ownerUserId,
+        workspaceId: kitWorkspaceId,
+        tier: kitTier ?? 'label',
+      },
+    };
+  }
+
+  const access = write
+    ? await ensureReleaseTeamWriteAccess(admin, objectId, user)
+    : await ensureReleaseTeamReadAccess(admin, objectId, user);
 
   if ('error' in access) {
     const unwrapped = await unwrapAccessError(access.error);
@@ -157,7 +200,13 @@ export async function resolveActionScope(
 
   return {
     ok: true,
-    scope: { release, ownerUserId: release.ownerUserId, workspaceId, tier: tier ?? 'label' },
+    scope: {
+      objectType,
+      release,
+      ownerUserId: release.ownerUserId,
+      workspaceId,
+      tier: tier ?? 'label',
+    },
   };
 }
 

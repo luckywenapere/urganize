@@ -20,7 +20,7 @@ const SCOPE_PARAM = 'release';
 // Same build-time flags TasksPanel reads for its scoped-header pills. The
 // skeleton renders one placeholder pill per REAL pill so the row doesn't
 // change width when content swaps in: New activity is always present; Files /
-// Press kit appear per flag, in that order (2026-08-04 — the release detail
+// Fan capture appear per flag, in that order (2026-08-04 — the release detail
 // page and its "Overview" pill were removed; Calendar left this row entirely
 // on 2026-08-13, see the sticky-pill placeholder further down). Metadata
 // (2026-08-12) moved to the identity panel's left-hand nav at `lg`+ (see
@@ -30,7 +30,6 @@ const SCOPE_PARAM = 'release';
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
-const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 // The Song pill sits between Metadata and Pitch in the real row.
@@ -334,11 +333,13 @@ function TasksPanelSkeleton() {
   const extraActionPillBlocks = STATUS_UPDATE_ENABLED ? (
     <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
   ) : null;
-  // Calendar / Press kit / Fan capture — the panel's outbound group, a
+  // Content / Fan capture — the panel's outbound group, a
   // desktop-only footer row at lg+. It used to describe itself as also being
   // "the tail of the mobile dock"; the dock has carried no pills since
-  // 2026-08-17 and, since 2026-08-31, these three reach a phone only through
-  // the release menu, which reserves nothing per entry.
+  // 2026-08-17 and, since 2026-08-31, these reach a phone only through
+  // the release menu, which reserves nothing per entry. Press kit left this
+  // row entirely on 2026-09-05, when the release-scoped EPK was retired for
+  // the standing per-artist kit.
   // NO pill in this row carries a Beta tag any more (Calendar lost its stamp
   // 2026-08-15, the other two on 2026-08-16), so each width is now just its
   // label: px-3 + a 14px icon + gap-1.5 + the text at 12px semibold. Widths
@@ -347,14 +348,13 @@ function TasksPanelSkeleton() {
   // when the labels arrive, where a narrower one shifts them right, which is
   // the tolerated direction.
   //
-  // Content (was "Calendar" until 2026-08-31) is the shortest of the three at
+  // Content (was "Calendar" until 2026-08-31) is the shorter of the two at
   // seven characters and steps down to w-20 accordingly — at w-24 it would
   // have been the one case this row forbids, a placeholder wider than the pill
-  // it stands in for. Press kit keeps w-24, Fan capture w-28 as the longest.
+  // it stands in for. Fan capture keeps w-28 as the longer.
   const outboundPillBlocks = (
     <>
       {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" /> : null}
-      {EPK_ENABLED ? <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" /> : null}
       {CAPTURE_ENABLED ? <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" /> : null}
     </>
   );
@@ -392,14 +392,14 @@ function TasksPanelSkeleton() {
           </div>
         ))}
       </div>
-      {/* Desktop footer placeholders — Calendar (2026-08-13), Press kit and
-          Fan capture (both 2026-08-14); see the real block's comment in
+      {/* Desktop footer placeholders — Calendar (2026-08-13) and
+          Fan capture (2026-08-14); see the real block's comment in
           TasksPanel.tsx for the full history of those moves out of the header
           pill row. A sibling
           AFTER the flex-1 body, matching the real row's wrapper classes
           exactly, so the reserved footprint sits pinned at the panel's base
           and doesn't shift when content resolves. */}
-      {CONTENT_CALENDAR_ENABLED || EPK_ENABLED || CAPTURE_ENABLED ? (
+      {CONTENT_CALENDAR_ENABLED || CAPTURE_ENABLED ? (
         <div className="hidden shrink-0 items-center gap-2 pb-2 pt-3 lg:flex">
           {outboundPillBlocks}
         </div>
@@ -452,7 +452,6 @@ function TasksPanelSkeleton() {
           SONG_UPLOAD_ENABLED ||
           FILES_ENABLED ||
           STATUS_UPDATE_ENABLED ||
-          EPK_ENABLED ||
           CAPTURE_ENABLED ? (
             <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
           ) : null}

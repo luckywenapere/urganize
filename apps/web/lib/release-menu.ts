@@ -78,7 +78,6 @@ export const RELEASE_MENU_ORDER = [
   // kit "isn't reached often enough to earn a permanent tab". Fan capture sits
   // with it as the other "send this outward" item — his pairing, kept from the
   // desktop footer row.
-  'epk',
   'capture',
   // Once, after release day.
   'recap',

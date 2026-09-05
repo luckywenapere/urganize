@@ -21,6 +21,7 @@
  * be a dead end. */
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
+const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
 export type AppPage = {
@@ -93,6 +94,17 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       label: 'Notes',
       href: '/dashboard/notes',
       keywords: ['note', 'idea', 'capture'],
+    });
+  }
+
+  if (PRESS_KITS_ENABLED) {
+    pages.push({
+      key: 'press-kits',
+      label: 'Press kits',
+      href: '/dashboard/press-kits',
+      // Nobody types "press kit" when they are hunting for a bio or a photo
+      // to send a journalist, so the words they DO type are what carry this.
+      keywords: ['epk', 'bio', 'biography', 'press', 'media kit', 'one sheet', 'photos'],
     });
   }
 

@@ -41,7 +41,6 @@ const TEAM_ACCESS_GROUPS = [
   'assets',
   'song',
   'cover-art',
-  'epk',
   'capture',
   'recap',
   'generate-status',

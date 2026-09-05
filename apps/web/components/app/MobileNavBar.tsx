@@ -3,7 +3,7 @@
 import { Suspense, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Inbox, MicVocal, Music, Plus } from 'lucide-react';
+import { Inbox, MicVocal, Music, Newspaper, Plus } from 'lucide-react';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
@@ -17,6 +17,7 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
+const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 // Same flag that gates the `?scene=song` URL param, the Song pill in
 // TasksPanel and the /song API routes — so this tab cannot offer a surface
 // that does not exist.
@@ -296,6 +297,7 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   const isUrgAns = pathname === '/dashboard/urgans';
   const isNotes = pathname === '/dashboard/notes';
   const isShows = pathname?.startsWith('/dashboard/shows') ?? false;
+  const isPressKits = pathname?.startsWith('/dashboard/press-kits') ?? false;
   const isSettings = pathname?.startsWith('/settings') ?? false;
   // Tri-state — `null` means the probe is still in flight, and it is null on
   // every fresh load (never persisted). TWO tabs read it, in opposite
@@ -401,6 +403,22 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
               Icon={ChappiIcon}
               isActive={isUrgAns}
               onClick={handleUrgAnsClick}
+            />
+          ) : null}
+
+          {/* THE SIXTH TAB, and it is on the LEFT deliberately. The width note
+              above allows a sixth as a considered decision; what it does not
+              say is that the two regions are each `flex-1`, so they split the
+              same width whatever they hold. A fourth tab on the right would be
+              155.5 / 4 = ~39px, under the ~44px touch target, while the left
+              was carrying only two. Three and three is ~52px on both sides:
+              the same sixth tab, and every tab wider than the widest is today. */}
+          {PRESS_KITS_ENABLED ? (
+            <NavTab
+              href="/dashboard/press-kits"
+              label="Press kits"
+              Icon={Newspaper}
+              isActive={isPressKits}
             />
           ) : null}
         </ul>
