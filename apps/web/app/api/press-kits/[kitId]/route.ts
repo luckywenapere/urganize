@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isValidKitSlug } from '@/lib/press-kits';
+import { isAiConfigured } from '@/lib/ai/provider';
+import { isUrgansActionsEnabled } from '@/lib/urgans-actions/server';
 import {
   asRow,
   createAdminClient,
@@ -64,6 +66,13 @@ export async function GET(request: NextRequest, context: Context) {
   return NextResponse.json({
     kit: toPressKit(access.kit, artistName),
     sections: (data || []).map((row) => toPressKitSection(asRow(row))),
+    // Whether to OFFER the drafting button at all. A control that is always
+    // going to refuse is worse than no control (the repo's own rule, recorded
+    // for the iOS install card), and with no model configured the honest path
+    // is the manual builder this feature already ships. Entitlement is NOT
+    // checked here: a Solo team is shown the button and told plainly what it
+    // costs, which is what the locked sheet is for.
+    aiAvailable: isUrgansActionsEnabled() && isAiConfigured(),
   });
 }
 

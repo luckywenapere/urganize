@@ -12,6 +12,7 @@ import {
   Loader2,
   Newspaper,
   RotateCcw,
+  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth-store';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
@@ -21,6 +22,11 @@ import { PRESS_KIT_SECTION_LABELS } from '@/lib/press-kits';
 import { countInterviewGaps } from '@/lib/press-kit-interview';
 import type { AutofillSummary as AutofillCounts } from '@/lib/press-kit-autofill';
 import { AutofillSummary } from '@/components/press-kits/AutofillSummary';
+import { SectionDraftCard } from '@/components/press-kits/SectionDraftCard';
+import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
+import { applyRunAction, discardRunAction } from '@/lib/urgans-actions/client';
+import { isDraftableSection } from '@/lib/press-kit-draft';
+import { supabase } from '@/lib/supabase/client';
 import { PressKitInterviewModal } from '@/components/press-kits/PressKitInterviewModal';
 import type {
   PressKit,
@@ -76,6 +82,19 @@ export default function PressKitPageClient() {
   const [autofillFilled, setAutofillFilled] = useState<PressKitSectionKey[]>([]);
   const [interviewOpen, setInterviewOpen] = useState(false);
 
+  // Whether to OFFER the drafting button. The server answers it, because the
+  // client cannot see whether a model is configured, and a button that always
+  // refuses is worse than no button.
+  const [aiAvailable, setAiAvailable] = useState(false);
+  const [draft, setDraft] = useState<{
+    actionId: string;
+    section: PressKitSectionKey;
+    content: PressKitSectionContent;
+  } | null>(null);
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [draftError, setDraftError] = useState('');
+  const [lockedMessage, setLockedMessage] = useState('');
+
   const [sheetOpen, setSheetOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [versions, setVersions] = useState<PressKitSectionVersion[]>([]);
@@ -105,6 +124,7 @@ export default function PressKitPageClient() {
     setKit(body.kit || null);
     setArtistName(String(body.kit?.artistName || ''));
     setSections(Array.isArray(body.sections) ? body.sections : []);
+    setAiAvailable(body.aiAvailable === true);
   }, []);
 
   const load = useCallback(async () => {
@@ -221,6 +241,92 @@ export default function PressKitPageClient() {
       }
     },
     [kit]
+  );
+
+  const accessToken = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session?.access_token || '';
+  }, []);
+
+  const runDraft = useCallback(
+    async (sectionKey: PressKitSectionKey, notes: string) => {
+      if (!kit) return;
+      const headers = await authHeaders();
+      if (!headers) return;
+      setDraftBusy(true);
+      setDraftError('');
+      try {
+        const response = await fetch('/api/urgans/actions', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            actionType: 'presskit.draft_section',
+            objectId: kit.id,
+            input: { section: sectionKey, notes },
+          }),
+        });
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          // A team below the plan this needs gets the sheet, carrying the
+          // server's own sentence: it names the action and the real minimum
+          // plan, so it cannot go stale against a re-cut tier.
+          if (body?.reason === 'plan_required') {
+            setLockedMessage(String(body.error || ''));
+            return;
+          }
+          setDraftError(String(body?.error || 'UrgAns could not write that just now.'));
+          return;
+        }
+
+        setDraft({
+          actionId: String(body.actionId || ''),
+          section: sectionKey,
+          content: (body.output?.content || {}) as PressKitSectionContent,
+        });
+      } catch {
+        setDraftError('Could not reach UrgAns. Check your connection and try again.');
+      } finally {
+        setDraftBusy(false);
+      }
+    },
+    [kit]
+  );
+
+  const acceptDraft = useCallback(async () => {
+    if (!draft || !kit) return;
+    setDraftBusy(true);
+    setDraftError('');
+    const result = await applyRunAction(draft.actionId, await accessToken());
+    setDraftBusy(false);
+    if (!result.ok) {
+      setDraftError(result.error);
+      return;
+    }
+    setDraft(null);
+    await loadDetail(kit.id);
+  }, [draft, kit, accessToken, loadDetail]);
+
+  const discardDraft = useCallback(async () => {
+    if (!draft) return;
+    const current = draft;
+    setDraft(null);
+    setDraftError('');
+    // Fire and forget: the row is bookkeeping and nothing was written, so a
+    // failed discard costs a stale log line rather than the person's time.
+    void discardRunAction(current.actionId, await accessToken());
+  }, [draft, accessToken]);
+
+  const retryDraft = useCallback(
+    async (notes: string) => {
+      if (!draft) return;
+      const sectionKey = draft.section;
+      await discardDraft();
+      await runDraft(sectionKey, notes);
+    },
+    [draft, discardDraft, runDraft]
   );
 
   const autosave = usePressKitSection({
@@ -368,7 +474,10 @@ export default function PressKitPageClient() {
                   <li key={section.id}>
                     <button
                       type="button"
-                      onClick={() => setActiveKey(section.section)}
+                      onClick={() => {
+                        setActiveKey(section.section);
+                        void discardDraft();
+                      }}
                       aria-current={section.section === activeKey ? 'true' : undefined}
                       className={`motion-focus flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                         section.section === activeKey
@@ -439,6 +548,37 @@ export default function PressKitPageClient() {
                     </div>
                   </div>
 
+                  {draft && draft.section === active.section ? (
+                    <SectionDraftCard
+                      section={draft.section}
+                      content={draft.content}
+                      isBusy={draftBusy}
+                      error={draftError}
+                      onAccept={() => void acceptDraft()}
+                      onRetry={(notes) => void retryDraft(notes)}
+                      onDiscard={() => void discardDraft()}
+                    />
+                  ) : aiAvailable && isDraftableSection(active.section) ? (
+                    <div className="mb-5">
+                      <button
+                        type="button"
+                        onClick={() => void runDraft(active.section, '')}
+                        disabled={draftBusy}
+                        className="motion-focus inline-flex items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm font-semibold text-brand disabled:opacity-60"
+                      >
+                        {draftBusy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        ) : (
+                          <Sparkles className="h-4 w-4" aria-hidden />
+                        )}
+                        {draftBusy ? 'UrgAns is writing' : 'Ask UrgAns to write this'}
+                      </button>
+                      {draftError ? (
+                        <p className="mt-2 text-sm text-status-error">{draftError}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
                   <SectionEditor
                     section={active.section}
                     draft={autosave.draft}
@@ -452,6 +592,13 @@ export default function PressKitPageClient() {
           </div>
         </>
       )}
+
+      <UrgansLockedSheet
+        open={Boolean(lockedMessage)}
+        message={lockedMessage}
+        actionType="presskit.draft_section"
+        onClose={() => setLockedMessage('')}
+      />
 
       {interviewOpen ? (
         <PressKitInterviewModal

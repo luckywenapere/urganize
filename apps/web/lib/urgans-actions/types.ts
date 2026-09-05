@@ -20,10 +20,16 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { PricingTierId } from '@urganize/pricing';
 
-/** The only object type this pass supports. A second one is a real extension
- *  point, not a speculative one — every action names the types it can act on
- *  so a route can refuse a mismatched pairing before it ever loads context. */
-export type UrgansActionObjectType = 'release';
+/**
+ * What an action can act on. 'press_kit' is the second, added when the press
+ * kit's section drafting arrived — the extension point this comment always
+ * described rather than a speculative one.
+ *
+ * An action declares exactly ONE of these. resolveActionScope has to pick a
+ * single access check, and a list of two would make that choice arbitrary;
+ * registry-guard.test.ts asserts it.
+ */
+export type UrgansActionObjectType = 'release' | 'press_kit';
 
 /**
  * - 'team_write': any team member may run/apply/discard; a guest is refused

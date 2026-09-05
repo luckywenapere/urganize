@@ -3,6 +3,7 @@
 // an action file directly — so a route/actionType string is always resolved
 // against the same set.
 
+import { pressKitDraftSectionAction } from './actions/press-kit-draft-section';
 import { releaseDraftPlanAction } from './actions/release-draft-plan';
 import type { UrgansActionDefinition } from './types';
 
@@ -15,6 +16,7 @@ import type { UrgansActionDefinition } from './types';
  */
 export const URGANS_ACTIONS: Record<string, UrgansActionDefinition<unknown, unknown, unknown>> = {
   [releaseDraftPlanAction.id]: releaseDraftPlanAction,
+  [pressKitDraftSectionAction.id]: pressKitDraftSectionAction,
 };
 
 export function getUrgansAction(
