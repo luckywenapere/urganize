@@ -1,19 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Newspaper } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
-import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
+import { usePressKitsStore } from '@/stores/usePressKitsStore';
 import type { PressKit } from '@/types/press-kits';
 
 // Same flag the API routes read. A direct link followed while the flag is off
 // bounces to the catalog — the route has no server-side gate, since the flag is
 // inlined at build time (the notes and shows precedent).
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
-
-type Entry = { artistId: string; artistName: string; kit: PressKit | null };
 
 const STATE_COPY: Record<PressKit['state'], string> = {
   incomplete: 'Not finished',
@@ -31,28 +29,14 @@ export default function PressKitsPageClient() {
   const router = useRouter();
   const authLoading = useAuthStore((state) => state.isLoading);
 
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const headers = await authHeaders();
-    if (!headers) return;
-    setError(null);
-    try {
-      const response = await fetch('/api/press-kits', { headers, cache: 'no-store' });
-      if (!response.ok) {
-        setError(await readError(response, 'Could not load press kits.'));
-        return;
-      }
-      const body = await response.json();
-      setEntries(Array.isArray(body.entries) ? body.entries : []);
-    } catch {
-      setError('Could not load press kits. Check your connection and try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // The roster lives in a cache-first store rather than in this component, so
+  // returning to the tab paints the last known list instead of three pulsing
+  // cards and a round trip (founder report, 2026-09-05). The store's own
+  // recency guard decides whether this call reaches the network at all.
+  const entries = usePressKitsStore((state) => state.entries);
+  const isInitialLoading = usePressKitsStore((state) => state.isInitialLoading);
+  const error = usePressKitsStore((state) => state.error);
+  const load = usePressKitsStore((state) => state.load);
 
   useEffect(() => {
     if (!PRESS_KITS_ENABLED) {
@@ -64,7 +48,9 @@ export default function PressKitsPageClient() {
 
   if (!PRESS_KITS_ENABLED) return null;
 
-  const loading = authLoading || isLoading;
+  // Only ever a first-ever visit now. A revalidate behind a painted list is
+  // silent, which is the whole point of the cache.
+  const loading = (authLoading && entries.length === 0) || isInitialLoading;
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -80,10 +66,19 @@ export default function PressKitsPageClient() {
         </p>
       </header>
 
+      {/* A failed load over an already-painted roster is a banner, not a wall:
+          the cached rows are still usable and still true a moment ago. With
+          nothing on screen it is the same box doing its original job. The
+          CuratorLoadError split, and the fix MetadataSection needed for the
+          same reason. */}
       {error ? (
         <div className="mb-4 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
           {error}{' '}
-          <button type="button" onClick={() => void load()} className="underline">
+          <button
+            type="button"
+            onClick={() => void load({ force: true })}
+            className="underline"
+          >
             Try again
           </button>
         </div>

@@ -12,6 +12,7 @@ import { isNativePlatform } from './platform';
 import { resetSceneData } from '@/stores/useSceneDataStore';
 import { resetSceneMemory } from '@/lib/scene-memory';
 import { resetCatalogIntent } from '@/lib/catalog-intent';
+import { resetPressKitsStore } from '@/stores/usePressKitsStore';
 import {
   classifyAuthFailure,
   isProfileReadTransientError,
@@ -1078,6 +1079,11 @@ if (typeof window !== 'undefined') {
       // arrival, so it gets its one lone-release auto-scope back rather than
       // inheriting "the catalog was asked for" from the session that ended.
       resetCatalogIntent();
+      // The cached press kit roster is artist NAMES, so the resetSceneData
+      // reasoning above applies to it verbatim: its disk copy is keyed by user
+      // id and would miss, but the in-memory copy would survive a same-tab
+      // account switch and show account B a frame of account A's roster.
+      resetPressKitsStore();
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,

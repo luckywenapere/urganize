@@ -1326,8 +1326,19 @@ export function TasksPanel({
         className={`sticky z-20 -mx-4 flex flex-col gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         <div className="flex flex-wrap items-center gap-2">
+          {/* CENTRED, not pinned to the right edge (founder call,
+              2026-09-05). This row sits directly above MobileNavBar's centred
+              "+", so a right-aligned pair read as an afterthought tucked into
+              a corner rather than as the panel's own controls. Centred, the
+              pair's midpoint lines up with that button, and on a release with
+              no activities — where the search trigger does not render at all —
+              the hamburger lands dead centre under it.
+
+              `mx-auto` on the GROUP rather than `justify-center` on the row:
+              it keeps the intent with the thing being centred, so the row
+              stays a plain flex container if it ever holds something else. */}
           {hasMobileDockControls ? (
-            <div className="ml-auto flex shrink-0 items-center gap-2">
+            <div className="mx-auto flex shrink-0 items-center gap-2">
               {/* touch-manipulation on both: disables the browser's own
                   double-tap-to-zoom gesture on these specific buttons
                   (independent of the search field's font-size fix below —
