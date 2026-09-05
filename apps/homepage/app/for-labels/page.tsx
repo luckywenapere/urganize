@@ -49,7 +49,7 @@ const valueBlocks = [
   {
     kicker: "Press kit",
     title: "One link per release, across the whole roster.",
-    body: "Urganize builds a press kit from any release: cover art, details and photos. It updates itself when the release changes. Send one link to press, curators and bookers. It works the same for every artist.",
+    body: "Urganize builds each artist a press kit from the work you already put in: bio, photos, credits, shows. When a new release lands it tells you what is missing and you take the parts you want. One link for press, curators and bookers, and it works the same for every artist.",
     points: [
       "Built for you from the release",
       "Always up to date. No rebuilding by hand",

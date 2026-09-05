@@ -7,7 +7,6 @@ import type { Task } from '@/types/tasks';
 import type { SceneName } from '@/components/workspace/useSceneOverlay';
 import { captureFeatureDiscoveryByName } from '@/lib/analytics';
 import { MetadataSection } from '@/components/releases/MetadataSection';
-import { EpkSection } from '@/components/releases/EpkSection';
 import { CaptureSection } from '@/components/releases/CaptureSection';
 import { AssetSection } from '@/components/releases/AssetSection';
 import { SongSection } from '@/components/releases/SongSection';
@@ -47,7 +46,6 @@ import { calendarFontVariables } from '@/components/content-calendar/calendar-fo
 const SCENE_LABELS: Record<SceneName, string> = {
   metadata: 'Metadata',
   files: 'Files',
-  epk: 'Press kit',
   // "Content", not "Content calendar" (founder call, 2026-08-31). Shortened
   // so it stops reading as a second calendar next to Shows, which used the
   // same icon until that icon became a microphone in the same pass.
@@ -206,7 +204,6 @@ export function ReleaseScenePanel({
       {scene === 'song' ? <SongSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'coverart' ? <CoverArtSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
-      {scene === 'epk' ? <EpkSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitch' ? <PitchScene release={release} onToast={onToast} /> : null}
       {scene === 'capture' ? <CaptureSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'timeline' ? (

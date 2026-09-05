@@ -1,10 +1,12 @@
-// Promotion tools (SERVER-ONLY): playlist pitching, the public press kit, and
-// the release recap card.
+// Promotion tools (SERVER-ONLY): playlist pitching and the release recap card.
 //
-// Two of these leave the workspace, and both are gated for that reason rather
-// than because they delete anything: `pitch_song` puts a message in a real
-// curator's inbox, and `revoke_epk_link` breaks a URL that may already be in
-// somebody's email.
+// `pitch_song` is gated for a reason unlike the deletes: it does not destroy
+// anything, it puts a message in a real curator's inbox and cannot be unsent.
+//
+// The three press kit tools that used to live here were removed 2026-09-05
+// with the release-scoped EPK. The standing per-artist kit has no per-release
+// link to hand out, so there was no rename available; giving UrgAns tools for
+// it is its own piece of work.
 
 import { MAX_PITCH_NOTE_LENGTH, PITCH_PLATFORMS } from '@/lib/pitching';
 import {
@@ -17,7 +19,6 @@ import {
 } from './shared';
 
 const PITCHING_OFF = "Playlist pitching isn't enabled yet.";
-const EPK_OFF = "Press kits aren't enabled yet.";
 const RECAP_OFF = "Release recaps aren't enabled yet.";
 
 /** Bound the browse payload — the route returns up to 200 playlists. */
@@ -192,98 +193,6 @@ export const PROMO_TOOLS: ChappiTool[] = [
       }
       if (!res.ok) return fail(apiError(res, 'Could not send the pitch.'));
       return { ok: true, summary: `Pitched "${songTitle}".` };
-    },
-  },
-  {
-    name: 'get_epk',
-    kind: 'read',
-    description: "Check whether a release has a public press kit link, and what it is.",
-    inputSchema: {
-      type: 'object',
-      properties: { releaseId: { type: 'string' } },
-      required: ['releaseId'],
-    },
-    execute: async (ctx, args) => {
-      const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return fail('releaseId is required.');
-      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/epk`, { method: 'GET' });
-      if (isFlagGateOff(res)) return fail(EPK_OFF);
-      if (!res.ok) return fail(apiError(res, 'Could not check the press kit.'));
-
-      const epk = res.body.epk as Record<string, unknown> | null;
-      const token = epk ? String(epk.shareToken ?? epk.share_token ?? '') : '';
-      return {
-        ok: true,
-        summary: token ? 'This release has a press kit link.' : 'No press kit link yet.',
-        data: { hasLink: Boolean(token), path: token ? `/epk/${token}` : null },
-      };
-    },
-  },
-  {
-    name: 'create_epk_link',
-    kind: 'mutate',
-    description:
-      "Create the public press kit link for a release. Safe to call twice — it returns the existing link rather than making a second one.",
-    inputSchema: {
-      type: 'object',
-      properties: { releaseId: { type: 'string' } },
-      required: ['releaseId'],
-    },
-    execute: async (ctx, args) => {
-      const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return fail('releaseId is required.');
-      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/epk`, {
-        method: 'POST',
-        body: {},
-      });
-      if (isFlagGateOff(res)) return fail(EPK_OFF);
-      if (!res.ok) return fail(apiError(res, 'Could not create the press kit link.'));
-
-      const epk = (res.body.epk ?? {}) as Record<string, unknown>;
-      const token = String(epk.shareToken ?? epk.share_token ?? '');
-      return {
-        ok: true,
-        summary: 'The press kit link is ready. Open the press kit page to copy it.',
-        data: { path: token ? `/epk/${token}` : null },
-      };
-    },
-  },
-  {
-    name: 'revoke_epk_link',
-    kind: 'mutate',
-    description:
-      'Kill the public press kit link so it stops working for anyone holding it. Requires the user to approve a confirmation card — calling this only proposes it.',
-    inputSchema: {
-      type: 'object',
-      properties: { releaseId: { type: 'string' } },
-      required: ['releaseId'],
-    },
-    confirm: async (ctx, args) => {
-      const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return { ok: false, summary: 'releaseId is required.' };
-      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/epk`, { method: 'GET' });
-      if (isFlagGateOff(res)) return { ok: false, summary: EPK_OFF };
-      if (!res.ok) return { ok: false, summary: apiError(res, 'Could not check the press kit.') };
-      if (!res.body.epk) {
-        return { ok: false, summary: 'There is no press kit link to revoke.' };
-      }
-      return {
-        ok: true,
-        title: 'Revoke this press kit link?',
-        detail:
-          'Anyone you have already sent it to will get a "not found" page. Making a new link later gives a different address.',
-        confirmLabel: 'Revoke link',
-      };
-    },
-    execute: async (ctx, args) => {
-      const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return fail('releaseId is required.');
-      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/epk`, {
-        method: 'DELETE',
-      });
-      if (isFlagGateOff(res)) return fail(EPK_OFF);
-      if (!res.ok) return fail(apiError(res, 'Could not revoke the link.'));
-      return { ok: true, summary: 'Revoked the press kit link.' };
     },
   },
   {

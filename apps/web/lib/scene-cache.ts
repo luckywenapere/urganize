@@ -14,7 +14,6 @@
 export type SceneName =
   | 'metadata'
   | 'files'
-  | 'epk'
   | 'calendar'
   | 'pitch'
   | 'plan'
@@ -26,7 +25,6 @@ export type SceneName =
 export const SCENE_NAMES: readonly SceneName[] = [
   'metadata',
   'files',
-  'epk',
   'calendar',
   'pitch',
   'plan',
@@ -68,7 +66,6 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   ...(COVER_ART_ENABLED ? (['coverart'] as const) : []),
   ...(SONG_UPLOAD_ENABLED ? (['song'] as const) : []),
   'files',
-  'epk',
   ...(CONTENT_CALENDAR_ENABLED ? (['calendar'] as const) : []),
   'pitch',
   ...(CAPTURE_ENABLED ? (['capture'] as const) : []),
@@ -91,7 +88,7 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
  * and a layout decision computed two ways is the bug class this consolidation
  * exists to end.
  *
- * DELIBERATELY ONLY FIVE FLAGS. metadata / files / epk / pitch / plan are NOT
+ * DELIBERATELY ONLY FOUR FLAGS. metadata / files / pitch / plan are NOT
  * gated here, matching the behaviour this replaces exactly: those scenes gate
  * themselves inside ReleaseScenePanel and their own pills, and adding them here
  * would change which scenes render rather than just consolidating the check.
@@ -195,7 +192,6 @@ export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName 
 export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   metadata: true,
   files: false,
-  epk: true,
   calendar: true,
   // Plain JSON: pitch rows carry a song link the pitcher typed, not a signed
   // one, so nothing here expires on disk.

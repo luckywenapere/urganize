@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { loadPublicEpk } from '@/lib/epk-server';
+import { notFound, redirect } from 'next/navigation';
+import { loadPublicEpk, resolveEpkSuccessorPath } from '@/lib/epk-server';
 
 // The public press kit (URG-196). Server component, no auth: the unguessable
 // share token is the access control, resolved by loadPublicEpk with the
@@ -74,6 +74,21 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 
 export default async function PublicEpkPage({ params }: PageProps) {
   const { token } = await params;
+
+  // The EPK is retired in favour of the standing per-artist press kit, but this
+  // is the one page in the product a stranger may already hold a link to, so
+  // nothing here breaks a link. Once that artist's kit is PUBLISHED the same
+  // old link hands over to it; until then this keeps rendering exactly what it
+  // rendered yesterday.
+  //
+  // A TEMPORARY redirect, deliberately, and NOT permanentRedirect's 308. A kit
+  // can be taken back down, and a browser holding a cached 308 would keep
+  // sending a journalist to a page that has gone back to a 404 with nothing we
+  // could do about it. Same reasoning the release detail stub records for its
+  // own 307.
+  const successor = await resolveEpkSuccessorPath(token);
+  if (successor) redirect(successor);
+
   const epk = await loadPublicEpk(token);
   if (!epk) notFound();
 

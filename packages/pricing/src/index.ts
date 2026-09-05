@@ -329,7 +329,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     },
     limits: { artists: 1, seats: 2, activeReleases: 1, urgansMonthlyActions: 40 },
     perks: [
-      'Files, credits and press kits on every release',
+      'Files and credits on every release, and a press kit for every artist',
       'Export everything you put in, any time',
       'Email support',
     ],
@@ -345,7 +345,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     limits: { artists: 5, seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
     perks: [
       'A full rollout plan, written by real managers',
-      'Files, credits and press kits on every release',
+      'Files and credits on every release, and a press kit for every artist',
       'Export everything you put in, any time',
       'Email support',
     ],

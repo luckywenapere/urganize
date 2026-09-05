@@ -221,6 +221,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/credits/') ||
     pathname?.startsWith('/listen/') ||
     pathname?.startsWith('/epk/') ||
+    // A standing press kit, opened by an editor who has no account.
+    pathname?.startsWith('/k/') ||
     pathname?.startsWith('/capture/') ||
     // A DJ pack link, opened by someone with no account at all.
     pathname?.startsWith('/pack/') ||
@@ -554,7 +556,22 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       ) : (
-        <div className="app-layout lazy-fade lazy-fade-in">{children}</div>
+        // A public token page renders full bleed. `.app-layout` carries a
+        // horizontal gutter at lg+, which is chrome padding for an
+        // AUTHENTICATED page and has no business around a press kit, a DJ
+        // pack, a credits form or a capture page: all four are dark locked
+        // artifacts with their own background, so the gutter showed the
+        // viewer's own body colour as a border around them. On a light theme
+        // desktop that is a cream frame around an ink page, on the one surface
+        // an editor judges the artist by. Found 2026-09-05 by rendering the
+        // press kit; it affected all four and had done since each shipped.
+        <div
+          className={`app-layout lazy-fade lazy-fade-in${
+            isPublicStandaloneRoute ? ' app-layout-full-bleed' : ''
+          }`}
+        >
+          {children}
+        </div>
       )}
       {/* HelpMenu moved into AppTopbar's right cluster (2026-07-23). */}
       {/* Same reasoning as the side columns above: losing the dock silently is

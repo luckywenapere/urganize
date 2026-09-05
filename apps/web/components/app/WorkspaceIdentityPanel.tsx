@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, ClipboardList, Inbox, PanelLeftClose, PanelLeftOpen, ShieldCheck } from '@/components/icons';
+import { ChevronDown, ClipboardList, Inbox, Newspaper, PanelLeftClose, PanelLeftOpen, ShieldCheck } from '@/components/icons';
 import { SiInstagram, SiX } from "react-icons/si";
 import { openExternalUrl } from "@/lib/external-link";
 import { useAuthStore } from "@/lib/auth-store";
@@ -93,6 +93,10 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === "true";
 // disagree about whether the surface exists.
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === "true";
 
+// Press kits. Same flag AppTopbar and MobileNavBar read for their own entry
+// points, so the three cannot disagree about whether the surface exists.
+const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === "true";
+
 // One account can be both a team running releases and a playlist owner, so this
 // card is where a dual account crosses back to its pitch inbox. Shown only when
 // the account actually owns a curator profile (auth store's hasCuratorProfile);
@@ -114,6 +118,10 @@ function MetadataIcon({ className }: { className?: string }) {
 // deprecated alias of this same icon — do not reach for it.
 function ShowsIcon({ className }: { className?: string }) {
   return <MicVocal className={className} aria-hidden="true" />;
+}
+
+function PressKitsIcon({ className }: { className?: string }) {
+  return <Newspaper className={className} aria-hidden="true" />;
 }
 
 function AdminIcon({ className }: { className?: string }) {
@@ -219,6 +227,19 @@ function buildNavItems(
             label: "Shows",
             Icon: ShowsIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/shows"),
+            beta: true,
+          },
+        ]
+      : []),
+    // Beside Shows, as the other standing surface that is not a release.
+    // Prefix match, because one artist's kit lives a level deeper.
+    ...(PRESS_KITS_ENABLED
+      ? [
+          {
+            href: "/dashboard/press-kits",
+            label: "Press kits",
+            Icon: PressKitsIcon,
+            isActive: (pathname: string) => pathname.startsWith("/dashboard/press-kits"),
             beta: true,
           },
         ]

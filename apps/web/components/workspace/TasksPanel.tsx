@@ -15,7 +15,6 @@ import {
   Mail,
   Menu,
   Music,
-  Newspaper,
   NotebookPen,
   Archive,
   PartyPopper,
@@ -112,10 +111,10 @@ const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'tru
 // though both share the same assets table and release-assets bucket.
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 
-// Press kit entry point (URG-198): the EPK shipped (URG-196) reachable only
-// from the release detail page's side menu — invisible from the workspace
-// users actually land on. Same flag that gates the EPK page and API routes.
-const EPK_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EPK === 'true';
+// The release-scoped press kit (EPK) was retired 2026-09-05 in favour of the
+// standing per-artist one, which is reached from the topbar and the side menu
+// rather than from a release. No pill here any more; NEXT_PUBLIC_FEATURE_EPK
+// now only decides whether an old /epk/[token] link still resolves.
 
 // Fan capture entry point (2026-08-14). On mobile this lives in the folded
 // "more" menu rather than the top tabs — see the 2026-08-16 mobile redesign
@@ -704,18 +703,6 @@ export function TasksPanel({
     </button>
   ) : null;
 
-  const epkButton = EPK_ENABLED ? (
-    <button
-      type="button"
-      onClick={() => scopedRelease && toggleScene('epk', scopedRelease.id)}
-      aria-pressed={activeScene === 'epk'}
-      className={pillClass('epk')}
-    >
-      <Newspaper className="h-3.5 w-3.5" aria-hidden="true" />
-      Press kit
-    </button>
-  ) : null;
-
   const captureButton = CAPTURE_ENABLED ? (
     <button
       type="button"
@@ -731,7 +718,6 @@ export function TasksPanel({
   const outboundPills = (
     <>
       {calendarButton}
-      {epkButton}
       {captureButton}
     </>
   );
@@ -744,7 +730,7 @@ export function TasksPanel({
    * do NOT carry this restriction (see their own comments for why).
    */
   const showOutboundPills =
-    (CONTENT_CALENDAR_ENABLED || EPK_ENABLED || CAPTURE_ENABLED) &&
+    (CONTENT_CALENDAR_ENABLED || CAPTURE_ENABLED) &&
     Boolean(scopedRelease) &&
     !sceneContent;
 
@@ -913,15 +899,6 @@ export function TasksPanel({
           icon: Sparkles,
           onClick: statusUpdateAction.onClick,
           disabled: statusUpdateAction.disabled,
-        }
-      : null,
-    EPK_ENABLED && scopedRelease
-      ? {
-          key: 'epk',
-          label: 'Press kit',
-          icon: Newspaper,
-          onClick: () => toggleScene('epk', scopedRelease.id),
-          isActive: activeScene === 'epk',
         }
       : null,
     CAPTURE_ENABLED && scopedRelease

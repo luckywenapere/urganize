@@ -66,7 +66,7 @@ describe('resolveActionScope', () => {
   it("'team_write' resolves through write access, never read", async () => {
     ensureReleaseTeamWriteAccess.mockResolvedValueOnce(writeOk(OWNER.id));
 
-    const result = await resolveActionScope(fakeAdmin(), { access: 'team_write' }, 'release-1', TEAMMATE);
+    const result = await resolveActionScope(fakeAdmin(), { access: 'team_write', objectTypes: ['release'] }, 'release-1', TEAMMATE);
 
     expect(result.ok).toBe(true);
     expect(ensureReleaseTeamWriteAccess).toHaveBeenCalledTimes(1);
@@ -76,7 +76,7 @@ describe('resolveActionScope', () => {
   it("'team_read' resolves through read access, never write", async () => {
     ensureReleaseTeamReadAccess.mockResolvedValueOnce(readOk(OWNER.id));
 
-    const result = await resolveActionScope(fakeAdmin(), { access: 'team_read' }, 'release-1', TEAMMATE);
+    const result = await resolveActionScope(fakeAdmin(), { access: 'team_read', objectTypes: ['release'] }, 'release-1', TEAMMATE);
 
     expect(result.ok).toBe(true);
     expect(ensureReleaseTeamReadAccess).toHaveBeenCalledTimes(1);
@@ -86,7 +86,7 @@ describe('resolveActionScope', () => {
   it("'owner_write' resolves through read access too — write access is never consulted", async () => {
     ensureReleaseTeamReadAccess.mockResolvedValueOnce(readOk(OWNER.id));
 
-    await resolveActionScope(fakeAdmin(), { access: 'owner_write' }, 'release-1', OWNER);
+    await resolveActionScope(fakeAdmin(), { access: 'owner_write', objectTypes: ['release'] }, 'release-1', OWNER);
 
     expect(ensureReleaseTeamReadAccess).toHaveBeenCalledTimes(1);
     expect(ensureReleaseTeamWriteAccess).not.toHaveBeenCalled();
@@ -95,7 +95,7 @@ describe('resolveActionScope', () => {
   it("'owner_write' succeeds when the caller IS the release owner", async () => {
     ensureReleaseTeamReadAccess.mockResolvedValueOnce(readOk(OWNER.id));
 
-    const result = await resolveActionScope(fakeAdmin(), { access: 'owner_write' }, 'release-1', OWNER);
+    const result = await resolveActionScope(fakeAdmin(), { access: 'owner_write', objectTypes: ['release'] }, 'release-1', OWNER);
 
     expect(result).toMatchObject({ ok: true });
   });
@@ -106,7 +106,7 @@ describe('resolveActionScope', () => {
   it("'owner_write' refuses a visible non-owner teammate with a plain 404, not a 403", async () => {
     ensureReleaseTeamReadAccess.mockResolvedValueOnce(readOk(OWNER.id));
 
-    const result = await resolveActionScope(fakeAdmin(), { access: 'owner_write' }, 'release-1', TEAMMATE);
+    const result = await resolveActionScope(fakeAdmin(), { access: 'owner_write', objectTypes: ['release'] }, 'release-1', TEAMMATE);
 
     expect(result).toEqual({ ok: false, status: 404, error: 'Release not found.' });
   });
@@ -118,7 +118,12 @@ describe('resolveActionScope', () => {
       const check = access === 'team_write' ? ensureReleaseTeamWriteAccess : ensureReleaseTeamReadAccess;
       check.mockResolvedValueOnce(refused(404, 'Release not found.'));
 
-      const result = await resolveActionScope(fakeAdmin(), { access }, 'release-1', TEAMMATE);
+      const result = await resolveActionScope(
+        fakeAdmin(),
+        { access, objectTypes: ['release'] },
+        'release-1',
+        TEAMMATE
+      );
 
       expect(result).toEqual({ ok: false, status: 404, error: 'Release not found.' });
     }
@@ -131,8 +136,8 @@ describe('resolveActionScope', () => {
   it('mutation guard: the ownership compare is the only thing standing between team_write-shaped access and owner_write', async () => {
     ensureReleaseTeamReadAccess.mockImplementation(async () => readOk(OWNER.id));
 
-    const asOwner = await resolveActionScope(fakeAdmin(), { access: 'owner_write' }, 'release-1', OWNER);
-    const asTeammate = await resolveActionScope(fakeAdmin(), { access: 'owner_write' }, 'release-1', TEAMMATE);
+    const asOwner = await resolveActionScope(fakeAdmin(), { access: 'owner_write', objectTypes: ['release'] }, 'release-1', OWNER);
+    const asTeammate = await resolveActionScope(fakeAdmin(), { access: 'owner_write', objectTypes: ['release'] }, 'release-1', TEAMMATE);
 
     expect(asOwner.ok).toBe(true);
     expect(asTeammate.ok).toBe(false);

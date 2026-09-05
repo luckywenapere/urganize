@@ -25,6 +25,7 @@ import { FirstReleaseWin } from './FirstReleaseWin';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
 import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { TestReleaseBanner } from './TestReleaseBanner';
+import { PostPlanKitPrompt } from '@/components/press-kits/PostPlanKitPrompt';
 import { DeleteReleaseDialog } from './DeleteReleaseDialog';
 import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
@@ -80,6 +81,7 @@ const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 
 // until a plan is approved. Supersedes the immediate-apply tailor-plan feature,
 // which mutated real task rows the moment the model answered.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
+const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 
 // The four flag-gated scene params (calendar / capture / song / coverart) used
 // to be read here as local consts and compared inline. They now live behind
@@ -213,6 +215,7 @@ export function WorkspaceView() {
   // The test release the standing banner's delete button is asking about;
   // null = dialog closed. Only ever set for the SCOPED release, and only when
   // it carries the test marker and the viewer owns it (the banner's own gate).
+  const [kitPromptFor, setKitPromptFor] = useState<string | null>(null);
   const [testReleaseToDelete, setTestReleaseToDelete] = useState<Pick<
     Release,
     'id' | 'title'
@@ -760,6 +763,11 @@ export function WorkspaceView() {
           setHasPlanDraft(false);
           closeScene();
           void loadCommandCenter({ force: true });
+          // Approving a plan is the one moment a manager has the whole release
+          // in front of them, so it is when the kit still pointing at the last
+          // one is worth mentioning. The prompt decides for itself whether
+          // there is anything to say and renders nothing when there is not.
+          setKitPromptFor(scopedReleaseSlim?.id ?? null);
         }}
         onStartPlanIntake={() => openPlanIntake()}
       />
@@ -906,6 +914,21 @@ export function WorkspaceView() {
 
   // Same owner-only gate as showPlanPill above, for the same reason: this
   // card's "Draft the plan" button reaches the identical owner_write action.
+  // The post-plan press kit offer. Held as the release id it was raised for,
+  // not a boolean, so scoping to a different release clears it by construction
+  // rather than by remembering to.
+  const kitPromptBanner =
+    PRESS_KITS_ENABLED &&
+    scopedReleaseSlim &&
+    kitPromptFor === scopedReleaseSlim.id &&
+    scopedReleaseSlim.artistId ? (
+      <PostPlanKitPrompt
+        artistId={scopedReleaseSlim.artistId}
+        artistName={scopedReleaseSlim.artistName || 'This artist'}
+        onDismiss={() => setKitPromptFor(null)}
+      />
+    ) : null;
+
   const planBanner =
     PLANNER_ENABLED && scopedReleaseSlim && scopedReleaseIsOwn && scopedTasks.length === 0 ? (
       <PlanReleaseCard
@@ -1293,7 +1316,7 @@ export function WorkspaceView() {
                   archiveAction={archiveAction}
                   changeArtistAction={changeArtistAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
-                  activitiesBanner={testReleaseBanner ?? planBanner ?? setReleaseDateBanner}
+                  activitiesBanner={kitPromptBanner ?? testReleaseBanner ?? planBanner ?? setReleaseDateBanner}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
                   showPlanPill={showPlanPill}
                 />
@@ -1340,7 +1363,7 @@ export function WorkspaceView() {
                 panelArchiveAction={archiveAction}
                 panelChangeArtistAction={changeArtistAction}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
-                panelActivitiesBanner={testReleaseBanner ?? planBanner ?? setReleaseDateBanner}
+                panelActivitiesBanner={kitPromptBanner ?? testReleaseBanner ?? planBanner ?? setReleaseDateBanner}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
                 panelShowPlanPill={showPlanPill}
               />

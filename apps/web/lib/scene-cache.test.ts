@@ -56,8 +56,11 @@ describe('persist policy', () => {
 
   it('persists the three credential-free scenes', () => {
     expect(shouldPersistScene('metadata')).toBe(true);
-    expect(shouldPersistScene('epk')).toBe(true);
     expect(shouldPersistScene('calendar')).toBe(true);
+    // Was 'epk' until that scene was retired. Pitch is the third: its rows
+    // carry a song link the pitcher typed, not a signed one, so nothing in it
+    // expires on disk.
+    expect(shouldPersistScene('pitch')).toBe(true);
   });
 
   it('covers every scene name', () => {
@@ -155,15 +158,15 @@ describe('isSceneRenderable', () => {
   it('paints the credential-free scenes at any age (they revalidate behind)', () => {
     const ancient = now - 30 * 24 * 60 * 60 * 1000;
     expect(isSceneRenderable('metadata', ancient, now)).toBe(true);
-    expect(isSceneRenderable('epk', ancient, now)).toBe(true);
     expect(isSceneRenderable('calendar', ancient, now)).toBe(true);
+    expect(isSceneRenderable('pitch', ancient, now)).toBe(true);
   });
 });
 
 describe('isSceneCachePayload', () => {
   it('accepts a well-formed payload', () => {
     expect(
-      isSceneCachePayload({ userId: 'u1', entries: { 'r1:epk': entry(5) } })
+      isSceneCachePayload({ userId: 'u1', entries: { 'r1:files': entry(5) } })
     ).toBe(true);
   });
 
@@ -177,12 +180,12 @@ describe('isSceneCachePayload', () => {
   });
 
   it('rejects malformed entries', () => {
-    expect(isSceneCachePayload({ userId: 'u1', entries: { 'r1:epk': null } })).toBe(false);
+    expect(isSceneCachePayload({ userId: 'u1', entries: { 'r1:files': null } })).toBe(false);
     expect(
-      isSceneCachePayload({ userId: 'u1', entries: { 'r1:epk': { data: 1 } } })
+      isSceneCachePayload({ userId: 'u1', entries: { 'r1:files': { data: 1 } } })
     ).toBe(false);
     expect(
-      isSceneCachePayload({ userId: 'u1', entries: { 'r1:epk': { savedAt: 'soon' } } })
+      isSceneCachePayload({ userId: 'u1', entries: { 'r1:files': { savedAt: 'soon' } } })
     ).toBe(false);
   });
 
@@ -195,43 +198,43 @@ describe('isSceneCachePayload', () => {
 
 describe('trimSceneCacheEntries', () => {
   it('leaves a payload under the limit untouched', () => {
-    const entries = { 'r1:epk': entry(1), 'r1:metadata': entry(2), 'r2:epk': entry(3) };
+    const entries = { 'r1:files': entry(1), 'r1:metadata': entry(2), 'r2:files': entry(3) };
     expect(trimSceneCacheEntries(entries, 4)).toBe(entries);
   });
 
   it('evicts the least-recently-saved releases', () => {
     const entries = {
-      'old:epk': entry(1),
-      'mid:epk': entry(50),
-      'new:epk': entry(100),
+      'old:files': entry(1),
+      'mid:files': entry(50),
+      'new:files': entry(100),
     };
     const trimmed = trimSceneCacheEntries(entries, 2);
-    expect(Object.keys(trimmed).sort()).toEqual(['mid:epk', 'new:epk']);
+    expect(Object.keys(trimmed).sort()).toEqual(['mid:files', 'new:files']);
   });
 
   it('keeps a surviving release WHOLE — never half its scenes', () => {
     const entries = {
-      'keep:epk': entry(90),
+      'keep:files': entry(90),
       'keep:metadata': entry(10),
       'keep:calendar': entry(20),
-      'drop:epk': entry(5),
+      'drop:files': entry(5),
     };
     const trimmed = trimSceneCacheEntries(entries, 1);
-    expect(Object.keys(trimmed).sort()).toEqual(['keep:calendar', 'keep:epk', 'keep:metadata']);
+    expect(Object.keys(trimmed).sort()).toEqual(['keep:calendar', 'keep:files', 'keep:metadata']);
   });
 
   it('ranks a release by its NEWEST entry, not its oldest', () => {
     const entries = {
-      'a:epk': entry(1),
+      'a:files': entry(1),
       'a:metadata': entry(999),
-      'b:epk': entry(500),
+      'b:files': entry(500),
     };
     const trimmed = trimSceneCacheEntries(entries, 1);
-    expect(Object.keys(trimmed).sort()).toEqual(['a:epk', 'a:metadata']);
+    expect(Object.keys(trimmed).sort()).toEqual(['a:files', 'a:metadata']);
   });
 
   it('drops malformed keys instead of keeping them forever', () => {
-    const entries = { garbage: entry(1000), 'r1:epk': entry(5), 'r2:epk': entry(6) };
+    const entries = { garbage: entry(1000), 'r1:files': entry(5), 'r2:files': entry(6) };
     const trimmed = trimSceneCacheEntries(entries, 1);
     expect(Object.keys(trimmed)).not.toContain('garbage');
   });
@@ -239,7 +242,7 @@ describe('trimSceneCacheEntries', () => {
   it('defaults to the configured release ceiling', () => {
     const entries: Record<string, SceneCacheEntry> = {};
     for (let i = 0; i < SCENE_CACHE_MAX_RELEASES + 3; i += 1) {
-      entries[`r${i}:epk`] = entry(i);
+      entries[`r${i}:files`] = entry(i);
     }
     expect(Object.keys(trimSceneCacheEntries(entries))).toHaveLength(SCENE_CACHE_MAX_RELEASES);
   });
@@ -311,13 +314,13 @@ describe('resolveActiveScene', () => {
 
   it('leaves the five ungated scenes open with those flags off', async () => {
     // Deliberate, and the reason this is asserted rather than left implicit:
-    // metadata / files / epk / pitch / plan gate themselves inside
+    // metadata / files / pitch / plan gate themselves inside
     // ReleaseScenePanel and their own pills, and gating them here would change
     // which scenes RENDER rather than just consolidating the check. A future
     // change that adds one of them to the resolver has to break this test on
     // purpose.
     const { resolveActiveScene } = await loadResolver(false);
-    for (const scene of ['metadata', 'files', 'epk', 'pitch', 'plan']) {
+    for (const scene of ['metadata', 'files', 'pitch', 'plan']) {
       expect(resolveActiveScene(scene)).toBe(scene);
     }
   });
