@@ -95,8 +95,11 @@ export default function RedeemPageClient() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-bg-base p-4">
-      <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand/15 blur-3xl" />
-      <div className="pointer-events-none absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-status-info/15 blur-3xl" />
+      {/* Gold-thread ray fan (NEXT_PUBLIC_FEATURE_TEXTILE). Replaces the
+          blurred brand blobs below, which the same flag hides. Inert off. */}
+      <div className="urg-ground-sunburst" aria-hidden="true" />
+      <div className="urg-blob pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand/15 blur-3xl" />
+      <div className="urg-blob pointer-events-none absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-status-info/15 blur-3xl" />
 
       <div className="mx-auto flex min-h-screen w-full max-w-md items-center justify-center">
         <div className="relative z-10 w-full max-w-md">

@@ -25,7 +25,7 @@ type NotesListProps = {
 };
 
 const sectionSurface =
-  'overflow-hidden rounded-xl border border-stroke-default bg-bg-surface divide-y divide-stroke-subtle';
+  'urg-cartouche overflow-hidden rounded-xl border border-stroke-default bg-bg-surface divide-y divide-stroke-subtle';
 
 const eyebrow =
   'flex items-center gap-1.5 px-1 pb-2 pt-1 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary';

@@ -109,13 +109,23 @@ export const viewport: Viewport = {
   themeColor: '#0d120e',
 };
 
+// Textile character layer (NEXT_PUBLIC_FEATURE_TEXTILE). Read at module scope
+// because this is a server component and the value is inlined at build time —
+// the same reason a flag flip needs a deploy that actually rebuilds apps/web.
+//
+// It is applied as a class rather than a data attribute so it survives the
+// pre-hydration theme script below, which calls
+// `classList.remove('dark', 'light')` — it names those two classes explicitly
+// and touches nothing else. Verified before relying on it.
+const TEXTILE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEXTILE === 'true';
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
       suppressHydrationWarning
       data-theme="dark"
-      className={`dark ${spaceGrotesk.variable} ${fraunces.variable} ${spaceMono.variable}`}
+      className={`dark ${TEXTILE_ENABLED ? 'urg-textile ' : ''}${spaceGrotesk.variable} ${fraunces.variable} ${spaceMono.variable}`}
     >
       <head>
         <script

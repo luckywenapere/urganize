@@ -34,8 +34,11 @@ export function ArtistNameGate() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-bg-base text-content-primary">
-      <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-brand/15 blur-3xl" />
-      <div className="pointer-events-none absolute -left-20 bottom-0 h-48 w-48 rounded-full bg-status-info/12 blur-3xl" />
+      {/* Gold-thread ray fan (NEXT_PUBLIC_FEATURE_TEXTILE). Replaces the
+          blurred brand blobs below, which the same flag hides. Inert off. */}
+      <div className="urg-ground-sunburst" aria-hidden="true" />
+      <div className="urg-blob pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-brand/15 blur-3xl" />
+      <div className="urg-blob pointer-events-none absolute -left-20 bottom-0 h-48 w-48 rounded-full bg-status-info/12 blur-3xl" />
       <div className="mx-auto flex min-h-screen w-full max-w-[620px] items-center px-6 py-12">
         <section className="w-full rounded-3xl border border-stroke-default bg-bg-surface/95 p-6 shadow-[0_20px_80px_-46px_rgb(var(--shadow-ink)/calc(0.62*var(--shadow-alpha-scale)))] backdrop-blur-xl sm:p-8">
           <p className="text-xs uppercase tracking-[0.15em] text-content-tertiary">Profile setup required</p>

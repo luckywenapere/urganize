@@ -948,8 +948,12 @@ export default function OnboardingPage() {
   const stepKicker = `Step ${visibleStepNumber} of ${visibleTotalSteps}`;
 
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary">
-      <div className="mx-auto w-full max-w-xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12 md:max-w-2xl">
+    <main className="relative min-h-screen bg-bg-base text-content-primary">
+      {/* Ikat bleed (NEXT_PUBLIC_FEATURE_TEXTILE) — warp-dyed vertical bands
+          fading out before they reach the wizard's own content. Inert with the
+          flag off; this page is `○ Static` and nothing here changes that. */}
+      <div className="urg-ground-ikat" aria-hidden="true" />
+      <div className="urg-above mx-auto w-full max-w-xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12 md:max-w-2xl">
         {/* Brand / title. Chappi introduces himself here and nowhere else in
             the flow (mascot brief, 2026-08-30) — he sits beside the greeting
             on the first screen and does not follow the user through the

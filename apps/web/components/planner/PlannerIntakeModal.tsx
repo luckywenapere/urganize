@@ -384,7 +384,7 @@ export function PlannerIntakeModal() {
         tabIndex={-1}
       />
 
-      <div className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] sm:max-h-[calc(100dvh-4rem)]">
+      <div className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] sm:max-h-[calc(100dvh-4rem)]">
         <div className="shrink-0 border-b border-stroke-subtle p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
