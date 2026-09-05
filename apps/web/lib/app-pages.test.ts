@@ -19,6 +19,7 @@ async function loadPages(env: Record<string, string | undefined> = {}) {
   vi.stubEnv('NEXT_PUBLIC_FEATURE_NOTES', env.NEXT_PUBLIC_FEATURE_NOTES ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_EVENTS', env.NEXT_PUBLIC_FEATURE_EVENTS ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCHING', env.NEXT_PUBLIC_FEATURE_PITCHING ?? '');
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_PRESS_KITS', env.NEXT_PUBLIC_FEATURE_PRESS_KITS ?? '');
   return (await import('./app-pages')) as PagesModule;
 }
 
@@ -26,6 +27,7 @@ const ALL_ON = {
   NEXT_PUBLIC_FEATURE_NOTES: 'true',
   NEXT_PUBLIC_FEATURE_EVENTS: 'true',
   NEXT_PUBLIC_FEATURE_PITCHING: 'true',
+  NEXT_PUBLIC_FEATURE_PRESS_KITS: 'true',
 };
 
 afterEach(() => {
@@ -80,6 +82,23 @@ describe('buildAppPages — flag gates', () => {
     );
     const on = await loadPages({ NEXT_PUBLIC_FEATURE_EVENTS: 'true' });
     expect(on.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'shows')).toBe(true);
+  });
+
+  it('adds Press kits only when the press kits flag is on', async () => {
+    const off = await loadPages();
+    expect(
+      off.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'press-kits')
+    ).toBe(false);
+    const on = await loadPages({ NEXT_PUBLIC_FEATURE_PRESS_KITS: 'true' });
+    expect(
+      on.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'press-kits')
+    ).toBe(true);
+  });
+
+  it('finds the press kit by the words a manager would actually type', async () => {
+    const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_PRESS_KITS: 'true' });
+    const page = buildAppPages({ hasCuratorProfile: false }).find((p) => p.key === 'press-kits');
+    expect(page?.keywords).toEqual(expect.arrayContaining(['epk', 'bio', 'photos']));
   });
 
   it('needs BOTH the pitching flag and a real curator profile for the crossing', async () => {
