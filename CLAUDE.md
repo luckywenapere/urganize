@@ -53,6 +53,8 @@ The six features that constitute v1:
 
 **Scope expansion (2026-08-30):** an eighteenth surface, the **Timeline view**, was consciously sanctioned by the founder ("Go ahead", after the two blocking engineering questions on the spec were answered). It is the lightest expansion on this list and arguably not one at all: it adds **no object, no table, no migration and no API route**, and the v1 hard list already uses the word — item 5 describes event milestones as "dated points on the release timeline". What it adds is a second way to LOOK at activities the workspace already holds: every activity on a week axis anchored to release day, phases collapsible, a today line, and drag to reschedule. It moves nothing off the out-of-scope list; the nearest line, "analytics dashboards", is not crossed, because it reports nothing and computes no metric — it positions rows on a date axis. It honors the release-spine principle by construction (an activity exists only for a release). Internally this is the Gantt view; **in product it is called Timeline**, and every user-visible string says so. Flag-gated behind `NEXT_PUBLIC_FEATURE_TIMELINE` (default off; with it off the pill never renders and `?scene=timeline` reads as no-scene). Phase 1 only — the roster view across releases and UrgAns rescheduling are Phase 2, deliberately not built. This is the twelfth sanctioned expansion — the "do not exceed" rule still holds for everything else.
 
+**Scope expansion (2026-09-05):** a nineteenth surface, the **Urganize Directory**, was consciously sanctioned by the founder. It DOES move a line off the out-of-scope list below — "Collaborators directory as a standalone feature" — the sixth sanctioned exception. It is the second deliberately GLOBAL surface after Notes, and for a sharper reason: a directory scoped to your own team is a list of people you already know. A `person_profiles` row is per USER, defaults to `private`, and nobody is listed without opting in; `delivery_records` is DERIVED from task history and **has no insert, update or delete policy for any role**, which is the whole asset — the moment somebody can type "mixed 40 records" it is worth nothing. It also adds the schema's SECOND cross-tenant read (the first was `playlist_pitches`). Full detail in "Urganize Directory" under Working notes, and the load-bearing schema decisions in the header of `supabase/migrations/20260905200000_person_directory.sql`. Flag-gated behind `NEXT_PUBLIC_FEATURE_DIRECTORY` (default off). This is the thirteenth sanctioned expansion — the "do not exceed" rule still holds for everything else.
+
 **Out of scope for v1, no exceptions:**
 
 - Standalone events (events not tied to a release) — **EXCEPTION (2026-08-30): now built as the events surface.** The founder consciously moved this line; a show hangs off the artist, not off a release. This is the fifth sanctioned exception to this list, and one of three moved by the same decision (see "Scope expansion (2026-08-30)" above) — do not read it as license to add other items from this list.
@@ -72,7 +74,7 @@ The six features that constitute v1:
 - Credit submissions / shareable credit links — **EXCEPTION (2026-07-31): now being built as the release metadata hub's collaborator credit capture.** The founder consciously moved this line; one shareable, no-login link per release lets collaborators submit publishing/distribution credits through a public form, landing on the in-app Metadata page (see "Scope expansion (2026-07-31)" above). Storage and display only — no automation, no signing. This is the second sanctioned exception to THIS list (Chappi below was the first; native mobile apps below is the third, Notes above the fourth) — do not read it as license to add other items from this list.
 - AI chat / general-purpose AI assistant — **EXCEPTION (2026-07-13): now being built as Chappi.** The founder consciously moved this line; Chappi is the conversational AI front door, at its own dedicated page (`/dashboard/urgans`, see "Chappi — conversational AI front door" under AI integration). This was the first sanctioned exception to this list — the metadata hub above is the second, native mobile apps above is the third, Notes above is the fourth; do not read any of these as license to add other items from this list.
 - Track / song library as separate entities (assets cover this for v1) — **EXCEPTION (2026-08-30): `songs` and `song_versions` are now real tables.** Assets genuinely could not cover it: `assets_scope_check` requires every row to belong to a release or a task, and a back-catalog song belongs to neither, so serving the event side through `assets` would have meant weakening that constraint for every existing asset. Nothing about a song is duplicated from the release side — it is the join between the two.
-- Collaborators directory as a standalone feature (assignees on tasks is enough)
+- Collaborators directory as a standalone feature (assignees on tasks is enough) — **EXCEPTION (2026-09-05): now being built as the Urganize Directory.** The founder consciously moved this line; see "Scope expansion (2026-09-05)" above. Assignees on tasks turned out to be exactly the raw material rather than the substitute: a person's record is COMPUTED from which template step they were assigned on a release that came out, and there is no write path from any client to that table. This is the sixth sanctioned exception to this list — do not read it as license to add other items from it.
 
 When a feature request lands that's on this "out of scope" list — even if it's a small ask, even if a user wants it — the answer is *v2*. Do not add it to v1 to be helpful. The discipline of saying no is the product strategy.
 
@@ -8006,6 +8008,13 @@ persists, then drag one with the network throttled to see the snap-back.
 
 ### Adjacent defect found, deliberately NOT fixed here
 
+**RESOLVED 2026-09-03, and this section is left as the record of what it cost
+while it lasted.** The UrgAns embedded-actions work fixed the key mismatch
+because `lib/task-owners.ts` depends on reading it correctly; the reader now
+accepts both keys, and `lib/tasks-server.ts` carries the fix note. The
+directory's role map (`lib/directory-roles.ts`, 2026-09-05) is the second
+feature to depend on it. The original finding follows.
+
 **`templateTaskId` is null on every activity in the product.** Both writers store
 `metadata.template.task_id` (`instantiate.ts`, `release-planning-server.ts`) and
 `readTemplateTaskId` in `lib/tasks-server.ts` reads
@@ -9667,6 +9676,106 @@ went 119 → 61 and the header 56 → 33.
 
 ---
 
+
+## Urganize Directory — Phase 1 (2026-09-05, flag-off)
+
+The nineteenth sanctioned expansion (see the 2026-09-05 note in "v1 scope"). An
+in-app record of the people who do the work on a release. Phase 1 only: schema,
+the role map, the backfill. **No UI, no profile screen, no search.** Behind
+`NEXT_PUBLIC_FEATURE_DIRECTORY`, default `false`; migration
+`20260905200000_person_directory.sql` **not applied anywhere yet.**
+
+Founder brief answered four blocking questions before any code: listing is free
+on every tier and SEARCH is Manager and above; there is **no verified
+threshold** (the count is the badge); person slugs get their own namespace at
+`/p/{slug}`; and delivery records **survive leaving a team**.
+
+**Four things the brief assumed that the code did not, all measured:**
+
+1. **The verification rule as written verified nobody, ever.** It asked for a
+   release whose status is `released`, and nothing in this product has ever
+   written that value — `GET /api/releases/[id]` additionally overwrites the
+   stored status with a computed one that cannot be it. The backfill would have
+   returned zero rows. Founder call: reuse `lib/recap-eligibility.ts`, which is
+   already the product's honest answer to "has this happened" (date passed, or
+   every task done). One definition, two features.
+2. **The role vocabulary had almost no source data.** The brief lists sixteen
+   roles; tasks carry six ARCHETYPES, distributed across single_v0.3's 62 tasks
+   as manager 34, marketing_lead 22, artist 6, team 1, designer 1,
+   distributor_contact 0. An archetype-driven directory would say almost
+   everyone is a manager and eleven roles could never hold a record. The map is
+   keyed on TASK IDS instead (`lib/directory-roles.ts`), the
+   `lib/cover-art-tasks.ts` pattern, asserted against the live playbooks.
+3. **Five roles reach the honest bar, not sixteen**, and that is the finding
+   rather than a shortfall. The playbooks are written from the MANAGER'S point
+   of view: "Brief designer on cover art" is the manager writing a brief, not a
+   designer delivering. Only steps where work ARRIVES can credit their
+   assignee — graphic designer, master engineer, videographer, PR, digital
+   marketer. The other eleven stay claimable and unverifiable, and the UI has to
+   say so rather than hide it. `*_content_shoot` is deliberately unmapped: it is
+   a photographer or a videographer depending on the release and nothing in the
+   row says which, so crediting both would inflate two records off one job.
+4. **Backfilling from `assigned_to_user_id` would have manufactured
+   credentials.** Template instantiation assigns EVERY task to the release
+   owner, so a naive backfill hands one person all 60-plus tasks of every
+   release they own — the invented credential the brief's own section 4 forbids,
+   reached by a different route than self-typing. The filter is
+   `lib/task-owners-server.ts`'s: only a task assigned to someone OTHER than the
+   owner is evidence of anything.
+
+**Five things worth knowing before editing this:**
+
+- **`delivery_records` has no write policy for any role.** Not an oversight, the
+  entire asset. `lib/directory-schema-guard.test.ts` asserts the table's only
+  policy is a SELECT, mutation-tested, so adding one is a build failure.
+- **One row per person per role per RELEASE**, enforced by two partial unique
+  indexes rather than by whoever writes next (a null never equals a null, so one
+  index over both scope columns would let duplicates through). A designer who
+  delivered a draft and then the final artwork delivered one release's artwork.
+- **Second cross-tenant read in the schema.** `person_profiles` carries two
+  SELECT policies: your own row whatever its visibility, and anybody else's only
+  once they have opted in. `delivery_records` has NO policy for other people on
+  purpose — section 10's rule (a release title is visible only where that
+  release is public) depends on state RLS cannot see, so serving somebody else's
+  records is a service-role read behind a route that applies the rule once.
+- **Records outlive membership**, so there is no `workspace_id` on the table and
+  nothing cascades from `workspace_members`. They die with the user's own
+  account or with the release, and nothing else. Verified against real rows.
+- **The backfill is DRY RUN by default.** `GET /api/admin/directory-backfill`
+  reports counts per role and writes nothing; POST writes. The report's SHAPE is
+  the check: if one role holds every record or one person holds dozens, the
+  not-the-owner filter has regressed and it must not write. Deliberately not
+  flag-gated (the `/api/admin/teams` precedent) so the founder can see what it
+  would do before the feature is switched on.
+
+**Verified:** 2582 tests (22 new across `directory-roles.test.ts`,
+`delivery-records.test.ts`, plus 5 in the schema guard), `eslint .` at the exact
+3-error / 79-warning baseline, `next build` green by exit code in both flag
+states with `/auth`, `/onboarding` and `/settings` still `○ Static`. **Seven
+mutations, each killing exactly its own test:** crediting the release owner,
+dropping the delivered check, one row per task instead of per release, ignoring
+task status, crediting a briefing step, a typo'd task id, and a hand-written
+verifiable-role set. The migration was applied to a scratch Postgres 16 and
+every documented rule exercised with real rows — the private default, both
+uniqueness rules, the scope check refusing zero and two, an out-of-vocabulary
+role, the release cascade leaving the profile, the user cascade taking both, and
+a clean re-apply.
+
+**A verification lesson worth keeping:** the delivered-check mutation first
+appeared to SURVIVE. It had not — the `sed` used six leading spaces where the
+line has four, so the mutation never applied. Applied properly it kills two
+tests. **Confirm a mutation actually landed before believing a survivor.**
+
+**Not verified:** nothing has run against a real database. No backfill has
+executed, no record exists, and the dry run has never reported real numbers.
+`show_id` is in the schema and nothing writes it yet — shows verify the same way
+once a show date has passed, which is a later phase.
+
+**Next:** Phase 2 is profile screens, opt in and visibility controls, and it has
+to resolve one thing this phase deliberately left open — `curator_profiles`
+already holds a display name, bio and photo for a non-team account, and
+"Playlist curator" is in this vocabulary. Decide whether those are one row, two
+linked rows, or deliberately separate, before two profile surfaces drift.
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:

@@ -11,8 +11,8 @@ import { BANNED_COPY_CHARS, BANNED_COPY_WORDS, bannedCopyInstruction } from './p
  * at least once during the eight phases that built this feature and was caught
  * by reading; this is what stops the ninth.
  *
- * Scope is the press kit surface only. The rest of the product predates these
- * rules and is not in scope for a retrofit.
+ * Scope is the press kit and directory surfaces only. The rest of the product
+ * predates these rules and is not in scope for a retrofit.
  */
 
 const WEB = join(__dirname, '..');
@@ -25,11 +25,15 @@ function walk(dir: string): string[] {
 }
 
 const FILES = [
-  ...walk(join(WEB, 'lib')).filter((path) => /press-kit|press-photo/.test(path)),
+  // The directory joined this guard rather than growing a second one: same
+  // house rules, same brief, and two guards would drift the moment one of them
+  // gained a rule.
+  ...walk(join(WEB, 'lib')).filter((path) => /press-kit|press-photo|directory-|delivery-records/.test(path)),
   ...walk(join(WEB, 'components', 'press-kits')),
   ...walk(join(WEB, 'app', 'k')),
   ...walk(join(WEB, 'app', 'api', 'press-kits')),
   ...walk(join(WEB, 'app', 'dashboard', 'press-kits')),
+  ...walk(join(WEB, 'app', 'api', 'admin', 'directory-backfill')),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 /**
