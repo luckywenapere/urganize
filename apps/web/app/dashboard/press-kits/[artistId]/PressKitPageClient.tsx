@@ -30,6 +30,7 @@ import { supabase } from '@/lib/supabase/client';
 import { PressKitInterviewModal } from '@/components/press-kits/PressKitInterviewModal';
 import { PhotoGrid } from '@/components/press-kits/PhotoGrid';
 import { PublishPanel } from '@/components/press-kits/PublishPanel';
+import { RolloutBanner } from '@/components/press-kits/RolloutBanner';
 import type {
   PressKit,
   PressKitAsset,
@@ -474,6 +475,8 @@ export default function PressKitPageClient() {
               {artistName}
             </h1>
           </header>
+
+          <RolloutBanner kitId={kit.id} onAccepted={() => loadDetail(kit.id)} />
 
           <PublishPanel kit={kit} sections={sections} onKitChange={setKit} />
 

@@ -215,6 +215,24 @@ const BUILDERS: Record<
 };
 
 /**
+ * What one section would say, built from what the product holds.
+ *
+ * Exported so the roll in (lib/press-kit-rollout.ts) can propose the same
+ * content this writes, from ONE set of builders. A second copy over there
+ * would drift within a month, and the two would then disagree about what a
+ * release puts on a kit.
+ *
+ * Returns null when there is nothing to say, which is what stops a section
+ * being written as an empty object and reading as answered.
+ */
+export function buildSectionContent(
+  section: PressKitSectionKey,
+  sources: AutofillSources
+): PressKitSectionContent | null {
+  return BUILDERS[section]?.(sources) ?? null;
+}
+
+/**
  * What autofill may write, given what was found and what the kit already holds.
  *
  * Returns only sections that are still untouched AND have something to say. A
@@ -232,7 +250,7 @@ export function buildAutofillPatch(
     if (!existing) continue;
     if (existing.source !== 'autofill') continue;
 
-    const content = BUILDERS[key]?.(sources) ?? null;
+    const content = buildSectionContent(key, sources);
     if (!content) continue;
 
     patches.push({ section: key, content });

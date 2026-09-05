@@ -142,3 +142,49 @@ describe('publishing', () => {
     expect(source.slice(deleteAt)).not.toContain('published_content');
   });
 });
+
+describe('rolling a release in', () => {
+  const ROLLOUT_ROUTE = join(
+    WEB,
+    'app',
+    'api',
+    'press-kits',
+    '[kitId]',
+    'rollout',
+    'route.ts'
+  );
+
+  it('is read only, with no write of any kind', () => {
+    // THE PROPERTY OF THAT WHOLE FEATURE. Autofill writes; a roll in proposes,
+    // and a person accepts each one. A write here would be a silent overwrite
+    // of somebody's hand written section, which is exactly what the module was
+    // built to make impossible.
+    const source = read(ROLLOUT_ROUTE);
+    expect(source).not.toMatch(/\.update\(/);
+    expect(source).not.toMatch(/\.insert\(/);
+    expect(source).not.toMatch(/\.upsert\(/);
+    expect(source).not.toMatch(/\.delete\(/);
+  });
+
+  it('exposes no method other than GET', () => {
+    const source = read(ROLLOUT_ROUTE);
+    expect(source).toContain('export async function GET');
+    for (const method of ['POST', 'PATCH', 'PUT', 'DELETE']) {
+      expect(source, method).not.toContain(`export async function ${method}`);
+    }
+  });
+
+  it('checks the flag and resolves access', () => {
+    const source = read(ROLLOUT_ROUTE);
+    expect(source).toContain('isPressKitsFeatureEnabled()');
+    expect(source).toContain('ensurePressKitAccess');
+  });
+
+  it('reads sources against the kit owner, not the caller', () => {
+    // A teammate looking at somebody else's kit has to see the same releases
+    // and the same team the owner would.
+    const source = read(ROLLOUT_ROUTE);
+    expect(source).toContain('ownerUserId: access.ownerUserId');
+    expect(source).not.toContain('ownerUserId: auth.user');
+  });
+});
