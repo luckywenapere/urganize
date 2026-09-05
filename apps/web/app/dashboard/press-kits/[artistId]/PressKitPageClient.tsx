@@ -29,6 +29,7 @@ import { isDraftableSection } from '@/lib/press-kit-draft';
 import { supabase } from '@/lib/supabase/client';
 import { PressKitInterviewModal } from '@/components/press-kits/PressKitInterviewModal';
 import { PhotoGrid } from '@/components/press-kits/PhotoGrid';
+import { PublishPanel } from '@/components/press-kits/PublishPanel';
 import type {
   PressKit,
   PressKitAsset,
@@ -472,10 +473,9 @@ export default function PressKitPageClient() {
             <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">
               {artistName}
             </h1>
-            <p className="mt-1 font-mono text-xs text-content-secondary">
-              urganize.app/k/{kit.slug}
-            </p>
           </header>
+
+          <PublishPanel kit={kit} sections={sections} onKitChange={setKit} />
 
           <AutofillSummary
             counts={autofillCounts}

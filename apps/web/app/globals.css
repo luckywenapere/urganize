@@ -477,6 +477,74 @@ html[data-theme='light'] .cc-island {
   --capture-border: rgba(245, 240, 230, 0.12);
 }
 
+/* Public press kit island (2026-09-05). Fourth instance of the pattern above,
+   duplicated for the same reason .capture-island duplicates .credits-island: a
+   distinct public surface with its own lifetime that wants the same
+   dark-locked Bible screen-mode treatment. Dark-locked matters here because a
+   press kit is the artifact an editor judges the artist by, and it has to look
+   the same to every one of them. */
+.kit-island {
+  color-scheme: dark;
+  --kit-ground: #0d120e;
+  --kit-surface: #181d19;
+  --kit-fill: #14643a;
+  --kit-accent: #7fd99a;
+  --kit-text: #f5f0e6;
+  --kit-text-muted: rgba(245, 240, 230, 0.64);
+  --kit-text-faint: rgba(245, 240, 230, 0.4);
+  --kit-border: rgba(245, 240, 230, 0.12);
+}
+
+/* The press kit in print.
+ *
+ * A journalist saving the page as a PDF is the whole of the "one sheet" this
+ * feature offers, so there is no PDF generator and no dependency. That works
+ * only if the page stops being an ink coloured screen: printing a dark ground
+ * empties a cartridge and renders cream text as nearly nothing.
+ *
+ * So the island's own variables are redefined for print rather than the rules
+ * that consume them, which means every colour on the page follows without a
+ * single print specific override anywhere in the component.
+ *
+ * There is deliberately no Print button on the page. Every browser and phone
+ * already has one, and a control that only duplicates the browser's own is
+ * chrome a press kit does not need. */
+@media print {
+  .kit-island {
+    color-scheme: light;
+    --kit-ground: #ffffff;
+    --kit-surface: #ffffff;
+    --kit-fill: #14643a;
+    --kit-accent: #14643a;
+    --kit-text: #0d120e;
+    --kit-text-muted: #3f4a42;
+    --kit-text-faint: #5d675f;
+    --kit-border: rgba(13, 18, 14, 0.24);
+  }
+
+  /* Anything that only makes sense on a screen. A download link prints as a
+     word nobody can click, and a photo grid four wide prints as thumbnails. */
+  .kit-print-hide {
+    display: none !important;
+  }
+
+  /* A heading stranded at the foot of a page, or a contact split across two,
+     is what makes a printed kit look careless. */
+  .kit-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .kit-section h2 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  @page {
+    margin: 18mm 16mm;
+  }
+}
+
 html[data-theme='dark'] {
   --color-bg-base: 13 18 14;
   --color-bg-sidebar: 18 23 19;
