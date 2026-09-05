@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, createDueDateNotificationsForAllUsers } from '@/lib/tasks-server';
 import { sendWeeklyMotivationalNudges } from '@/lib/motivation-server';
 import { runTrialEndingSweep } from '@/lib/billing-alerts-server';
+import { runDeliveryReconcile } from '@/lib/delivery-records-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -46,5 +47,23 @@ export async function GET(request: NextRequest) {
   // deduped per team so repeated runs cannot re-announce the same trial.
   const trialSweep = await runTrialEndingSweep(adminClient);
 
-  return NextResponse.json({ ok: true, trialSweep });
+  // The directory's delivery records (2026-09-05). The third passenger on this
+  // cron, for the reason the two above give: both schedule slots are taken and
+  // the Hobby plan caps them at one a day.
+  //
+  // It rides HERE rather than hooking task completion, and that is a decision
+  // rather than convenience. A task reaches 'done' through two divergent
+  // server paths whose only shared column is `status`, so a completion hook
+  // would mean two hook points on the hottest write path — and it would still
+  // miss the case that needs it most, a release DATE passing, where no write
+  // happens at all. This sweep covers both.
+  //
+  // Reconciles rather than only adding: a reassigned or reopened task makes an
+  // old record untrue, and a derived table has to match its derivation. It
+  // never throws, so a bad sweep cannot take the notifications above down with
+  // it, and it no-ops harmlessly while the directory flag is off since nothing
+  // reads what it writes.
+  const directorySweep = await runDeliveryReconcile(adminClient);
+
+  return NextResponse.json({ ok: true, trialSweep, directorySweep });
 }

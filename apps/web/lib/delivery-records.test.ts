@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildDeliveryRecords, summarizeByRole, type DeliverySourceRelease } from './delivery-records';
+import {
+  buildDeliveryRecords,
+  planReconcile,
+  summarizeByRole,
+  type DeliveryRecord,
+  type DeliverySourceRelease,
+} from './delivery-records';
 
 /**
  * What the product is willing to assert about a person.
@@ -198,5 +204,107 @@ describe('delivery records', () => {
       { role: 'graphic_designer', records: 2, people: 1 },
       { role: 'master_engineer', records: 1, people: 1 },
     ]);
+  });
+});
+
+describe('reconcile', () => {
+  const record = (userId: string, role: string, releaseId: string) =>
+    ({ userId, role, releaseId, completedAt: null }) as DeliveryRecord;
+
+  const stored = (id: string, userId: string, role: string, releaseId: string) => ({
+    id,
+    userId,
+    role: role as DeliveryRecord['role'],
+    releaseId,
+  });
+
+  it('keeps a record that is still true', () => {
+    const plan = planReconcile({
+      computed: [record('ada', 'pr', 'r1')],
+      stored: [stored('row-1', 'ada', 'pr', 'r1')],
+      scannedReleaseIds: ['r1'],
+      truncated: false,
+    });
+    expect(plan.deleteIds).toEqual([]);
+  });
+
+  it('deletes a record that stopped being true', () => {
+    // The task was reassigned, or reopened, or the release date moved back
+    // into the future. A derived table has to match its derivation.
+    const plan = planReconcile({
+      computed: [],
+      stored: [stored('row-1', 'ada', 'pr', 'r1')],
+      scannedReleaseIds: ['r1'],
+      truncated: false,
+    });
+    expect(plan.deleteIds).toEqual(['row-1']);
+  });
+
+  it('NEVER deletes a record for a release it did not scan', () => {
+    // The one way this could quietly destroy somebody's history. A row for a
+    // release outside the scan is not evidence of anything either way.
+    const plan = planReconcile({
+      computed: [],
+      stored: [stored('row-1', 'ada', 'pr', 'r-unscanned')],
+      scannedReleaseIds: ['r1'],
+      truncated: false,
+    });
+    expect(plan.deleteIds).toEqual([]);
+  });
+
+  it('deletes NOTHING when the scan was truncated', () => {
+    // A truncated scan saw an arbitrary slice, so absence from `computed`
+    // means "not looked at" rather than "no longer true". Adding is still
+    // safe; removing is not.
+    const plan = planReconcile({
+      computed: [],
+      stored: [stored('row-1', 'ada', 'pr', 'r1')],
+      scannedReleaseIds: ['r1'],
+      truncated: true,
+    });
+    expect(plan.deleteIds).toEqual([]);
+  });
+
+  it('still upserts everything computed when truncated', () => {
+    const plan = planReconcile({
+      computed: [record('ada', 'pr', 'r1')],
+      stored: [],
+      scannedReleaseIds: ['r1'],
+      truncated: true,
+    });
+    expect(plan.upsert).toHaveLength(1);
+  });
+
+  it('deletes only the role that stopped being true', () => {
+    const plan = planReconcile({
+      computed: [record('ada', 'pr', 'r1')],
+      stored: [
+        stored('row-1', 'ada', 'pr', 'r1'),
+        stored('row-2', 'ada', 'graphic_designer', 'r1'),
+      ],
+      scannedReleaseIds: ['r1'],
+      truncated: false,
+    });
+    expect(plan.deleteIds).toEqual(['row-2']);
+  });
+
+  it('keeps two people apart', () => {
+    const plan = planReconcile({
+      computed: [record('ada', 'pr', 'r1')],
+      stored: [stored('row-1', 'ada', 'pr', 'r1'), stored('row-2', 'chidi', 'pr', 'r1')],
+      scannedReleaseIds: ['r1'],
+      truncated: false,
+    });
+    expect(plan.deleteIds).toEqual(['row-2']);
+  });
+
+  it('ignores a stored row with no release, since shows are not swept yet', () => {
+    const plan = planReconcile({
+      computed: [],
+      stored: [{ id: 'row-1', userId: 'ada', role: 'pr' as DeliveryRecord['role'], releaseId: null }],
+      scannedReleaseIds: ['r1'],
+      truncated: false,
+    });
+    expect(plan.deleteIds).toEqual([]);
   });
 });

@@ -9825,8 +9825,81 @@ delivered roles.
 been created — no session is mintable in this sandbox and the migration is still
 unapplied.
 
-**Next:** Phase 3 is the verified computation and how claimed and verified are
-shown apart on a page other people read.
+### Phase 3 (2026-09-05): the sweep, and the page other people read
+
+Two gaps closed. Records now recompute on their own, and there is somewhere a
+stranger can read one.
+
+**The sweep is a passenger on `/api/cron/due-date-notifications`, and it cannot
+be anything else.** `/vercel.json` holds exactly two schedules and the Hobby
+plan caps them at one a day — the weekly motivational nudges and the trial
+sweep already ride that same route for the same reason, each saying so in a
+comment. `runDeliveryReconcile` is the fourth step.
+
+**There is deliberately NO completion hook**, and that is the finding rather
+than a shortcut. A task reaches `done` through two divergent server paths (the
+PATCH route, which does not set `completed_at`, and
+`completeTaskWithCascade`, which does and cascades) whose only shared column is
+`status`. Hooking recomputation onto completion would mean two hook points on
+the hottest write path in the product — and would still miss the case that
+needs it most: a release DATE passing, where no write happens at all. One sweep
+covers both. A record appearing within a day is not a cost for a credential
+nobody is waiting on.
+
+**The sweep RECONCILES rather than only adding.** A reassigned or reopened
+task, or a release date moved back into the future, makes an old record untrue,
+and a derived table has to match its derivation. `planReconcile` is pure and
+carries two guards, both because deleting somebody's credential is not
+undoable: it only ever deletes within the releases it actually scanned, and it
+deletes NOTHING when the scan was truncated (absence then means "not looked at",
+not "no longer true"). Both mutation-tested.
+
+**Records accrue for people who never opted in.** Deliberate, and it looks like
+a bug until you see why: the profile controls who can SEE a record, not whether
+it exists, so somebody opting in six months from now finds their real history
+waiting rather than starting at zero.
+
+**`/p/{slug}` shows COUNTS ONLY (founder call).** Section 10 allowed release
+titles where the release is public, and the honest test for that turned out to
+be a join through `press_kits.published_at` into a section's
+`published_content` JSON — real work carrying the entire cross-team privacy
+surface for very little more than the count already says. The count is the
+product. Titles can be added later; a leak cannot be taken back.
+
+**Only `visibility === 'public'` opens that page**, never `directory`, which
+means findable by signed-in users and nothing more. That split is what the
+Settings copy already promises, and `isPubliclyReadable` has its own test
+because widening it to `isListed` is the tidy-up somebody would make by
+mistake. Claimed and verified render as two lists under two headings; merging
+them would put the record back at the mercy of self-reporting.
+
+It reuses the dark-locked `.kit-island` palette rather than adding a fifth
+near-identical CSS block — that class is now the shared public-artifact palette
+rather than the press kit's alone. `noindex`, unlike a kit, which the founder
+deliberately made findable.
+
+**Not added to `sw-offline.js`'s `PUBLIC_ONLY_PREFIXES`**, on purpose: that
+list only matters for paths that would otherwise match `APP_CHROME_PREFIXES`,
+and anything in neither already falls through to the same offline page. `/k/`
+and `/pack/` are absent for the same reason and are not bugs.
+
+**Verified:** 2613 tests (14 new), lint at the exact 3-error / 79-warning
+baseline, `next build` green by exit code in both flag states with `/auth`,
+`/onboarding` and `/settings` still `○ Static` and `/p/[slug]` dynamic. Runtime
+probes: flag off, `/api/directory/profile` 404s while the ungated control 401s;
+both states render the 404 body for an unknown slug. Note `/p/{slug}` answers
+that body with HTTP **200**, the same pre-existing `force-dynamic` quirk this
+file already records for `/epk/`, `/credits/` and `/capture/` — the shell
+flushes before the data resolves. Three reconcile mutations each killed their
+own tests.
+
+**Not verified:** the sweep has never run and the page has never rendered a
+real profile — no database here. The cron's 500 in this sandbox is its
+pre-existing unset-`CRON_SECRET` guard, which sits before the new step.
+
+**Next:** Phase 4 is directory search and filters, with the empty states
+designed first. Note there is no text search anywhere in this repo today, so
+that phase makes the search decision.
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:

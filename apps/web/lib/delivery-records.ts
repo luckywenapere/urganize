@@ -131,3 +131,66 @@ export function summarizeByRole(records: DeliveryRecord[]): RoleSummary[] {
     .map(([role, count]) => ({ role, records: count, people: byRole.get(role)?.size ?? 0 }))
     .sort((a, b) => a.role.localeCompare(b.role));
 }
+
+export type StoredDeliveryRecord = {
+  id: string;
+  userId: string;
+  role: DirectoryRole;
+  /** Null for a show record. Shows are not swept yet, so those are left
+   *  alone — see the guard in planReconcile. */
+  releaseId: string | null;
+};
+
+export type ReconcilePlan = {
+  upsert: DeliveryRecord[];
+  deleteIds: string[];
+};
+
+/**
+ * What a repeating sweep should write, and what it should take away.
+ *
+ * A backfill only ever adds, which is right the first time and wrong every time
+ * after: if a task is reassigned, or reopened, or a release date moves back
+ * into the future, the old record stops being true and would otherwise sit
+ * there for good. A derived table has to match its derivation, and a directory
+ * that keeps asserting something false is worth less than one that says
+ * nothing.
+ *
+ * TWO GUARDS, AND BOTH EXIST BECAUSE DELETING SOMEBODY'S CREDENTIAL IS NOT
+ * UNDOABLE:
+ *
+ * 1. ONLY WITHIN THE SCANNED RELEASES. A stored row for a release the scan did
+ *    not look at is not evidence either way, so it is left alone. Without this
+ *    an owner-scoped run would delete every record in the product.
+ *
+ * 2. NOTHING AT ALL WHEN THE SCAN WAS TRUNCATED. A truncated scan saw an
+ *    arbitrary slice, so absence from `computed` means "not looked at" rather
+ *    than "no longer true". Adding is still safe in that state; removing is
+ *    not.
+ *
+ * Show records are skipped for now on the same reasoning as guard 1: nothing
+ * computes them yet, so every one of them would look stale.
+ */
+export function planReconcile(input: {
+  computed: DeliveryRecord[];
+  stored: StoredDeliveryRecord[];
+  scannedReleaseIds: string[];
+  truncated: boolean;
+}): ReconcilePlan {
+  const upsert = input.computed;
+
+  if (input.truncated) return { upsert, deleteIds: [] };
+
+  const scanned = new Set(input.scannedReleaseIds);
+  const keep = new Set(
+    input.computed.map((record) => `${record.userId}:${record.role}:${record.releaseId}`)
+  );
+
+  const deleteIds = input.stored
+    .filter((row) => row.releaseId !== null)
+    .filter((row) => scanned.has(row.releaseId as string))
+    .filter((row) => !keep.has(`${row.userId}:${row.role}:${row.releaseId}`))
+    .map((row) => row.id);
+
+  return { upsert, deleteIds };
+}

@@ -1,11 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   buildDeliveryRecords,
+  planReconcile,
   summarizeByRole,
   type DeliveryRecord,
   type DeliverySourceRelease,
   type DeliverySourceTask,
   type RoleSummary,
+  type StoredDeliveryRecord,
 } from './delivery-records';
 
 /**
@@ -31,6 +33,10 @@ const DELIVERY_RECORDS_TABLE = 'delivery_records';
  *  Generous at current volume, and the dry run reports when it is reached. */
 const RELEASE_SCAN_LIMIT = 2000;
 const TASK_SCAN_LIMIT = 100000;
+
+function asRowValue(row: unknown, key: string): unknown {
+  return row && typeof row === 'object' ? (row as Record<string, unknown>)[key] : undefined;
+}
 
 function readTemplateTaskId(metadata: unknown): string | null {
   if (!metadata || typeof metadata !== 'object') return null;
@@ -190,4 +196,95 @@ export async function runDeliveryBackfill(
 
   if (error) throw new Error(error.message || 'Could not write delivery records.');
   return report(scan, records, count ?? records.length);
+}
+
+export type DeliveryReconcileResult = {
+  scanned: number;
+  written: number;
+  removed: number;
+  truncated: boolean;
+};
+
+/**
+ * The daily sweep: bring delivery_records back in line with what is true.
+ *
+ * NOT A NEW CRON, and it cannot be one. `/vercel.json` holds exactly two
+ * schedules and the Hobby plan caps them at one a day, so this runs as a step
+ * inside /api/cron/due-date-notifications — the same piggyback the weekly
+ * motivational nudges already make, recorded in that route.
+ *
+ * NO COMPLETION HOOK EITHER, deliberately. A task reaches `done` through two
+ * divergent server paths (the PATCH route and completeTaskWithCascade) whose
+ * only shared column is `status`, so hooking recomputation onto completion
+ * would mean two hook points on the hottest write path in the product — and it
+ * would still miss the case that needs it most, a release DATE passing, where
+ * no write happens at all. One sweep covers both. A record appearing within a
+ * day rather than within a second is not a cost for a credential nobody is
+ * waiting on.
+ *
+ * Never throws. A sweep that fails must not take the notification cron down
+ * with it, so the caller gets zeroes and the next run tries again.
+ */
+export async function runDeliveryReconcile(
+  admin: SupabaseClient,
+  options: { now?: Date } = {}
+): Promise<DeliveryReconcileResult> {
+  try {
+    const scan = await loadDeliveryScan(admin);
+    if (scan.releases.length === 0) {
+      return { scanned: 0, written: 0, removed: 0, truncated: scan.truncated };
+    }
+
+    const computed = buildDeliveryRecords(scan.releases, options.now ?? new Date());
+    const scannedReleaseIds = scan.releases.map((release) => release.id);
+
+    const { data: storedRows } = await admin
+      .from(DELIVERY_RECORDS_TABLE)
+      .select('id, user_id, role, release_id')
+      .in('release_id', scannedReleaseIds);
+
+    const stored: StoredDeliveryRecord[] = (storedRows || []).map((row) => ({
+      id: String(asRowValue(row, 'id')),
+      userId: String(asRowValue(row, 'user_id')),
+      role: String(asRowValue(row, 'role')) as DeliveryRecord['role'],
+      releaseId: asRowValue(row, 'release_id') ? String(asRowValue(row, 'release_id')) : null,
+    }));
+
+    const plan = planReconcile({
+      computed,
+      stored,
+      scannedReleaseIds,
+      truncated: scan.truncated,
+    });
+
+    let written = 0;
+    if (plan.upsert.length > 0) {
+      const { error, count } = await admin
+        .from(DELIVERY_RECORDS_TABLE)
+        .upsert(
+          plan.upsert.map((record) => ({
+            user_id: record.userId,
+            role: record.role,
+            release_id: record.releaseId,
+            completed_at: record.completedAt,
+            computed_at: new Date().toISOString(),
+          })),
+          { onConflict: 'user_id,role,release_id', ignoreDuplicates: false, count: 'exact' }
+        );
+      if (!error) written = count ?? plan.upsert.length;
+    }
+
+    let removed = 0;
+    if (plan.deleteIds.length > 0) {
+      const { error } = await admin
+        .from(DELIVERY_RECORDS_TABLE)
+        .delete()
+        .in('id', plan.deleteIds);
+      if (!error) removed = plan.deleteIds.length;
+    }
+
+    return { scanned: scan.releases.length, written, removed, truncated: scan.truncated };
+  } catch {
+    return { scanned: 0, written: 0, removed: 0, truncated: false };
+  }
 }
