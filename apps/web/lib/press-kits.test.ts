@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PRESS_KIT_SECTION_LABELS,
+  applyKitToRoster,
   PRESS_KIT_SECTION_ORDER,
   VERSION_COALESCE_WINDOW_MS,
   VERSION_RETENTION_DAYS,
@@ -15,7 +16,12 @@ import {
   shouldCoalesceVersion,
   versionPruneCutoffIso,
 } from './press-kits';
-import { PRESS_KIT_SECTIONS, type PressKitSection } from '@/types/press-kits';
+import {
+  PRESS_KIT_SECTIONS,
+  type PressKit,
+  type PressKitRosterEntry,
+  type PressKitSection,
+} from '@/types/press-kits';
 
 const section = (over: Partial<PressKitSection> & { section: PressKitSection['section'] }): PressKitSection => ({
   id: `section-${over.section}`,
@@ -327,5 +333,80 @@ describe('versionPruneCutoffIso', () => {
     expect(versionPruneCutoffIso(new Date('2026-09-05T12:00:00.000Z'))).toBe(
       '2026-08-06T12:00:00.000Z'
     );
+  });
+});
+
+/**
+ * The roster cache's merge rule (2026-09-05).
+ *
+ * The press kits tab paints from a cached roster and revalidates behind it, so
+ * a kit created or published on the detail page has to reach that roster
+ * without a second round trip. These pin the merge that does it.
+ */
+describe('applyKitToRoster', () => {
+  const entry = (
+    artistId: string,
+    kit: PressKitRosterEntry['kit'] = null
+  ): PressKitRosterEntry => ({
+    artistId,
+    artistName: `Artist ${artistId}`,
+    kit,
+  });
+
+  const kitFor = (artistId: string, over: Partial<PressKit> = {}): PressKit => ({
+    id: `kit-${artistId}`,
+    artistId,
+    artistName: `Artist ${artistId}`,
+    slug: `artist-${artistId}`,
+    state: 'incomplete',
+    visibility: 'public',
+    embargoDate: null,
+    availableForInterview: false,
+    publishedAt: null,
+    createdAt: '2026-09-01T00:00:00.000Z',
+    updatedAt: '2026-09-01T00:00:00.000Z',
+    ...over,
+  });
+
+  it('attaches a newly created kit to its artist', () => {
+    const roster = [entry('a'), entry('b')];
+    const next = applyKitToRoster(roster, kitFor('b'));
+    expect(next[1].kit?.id).toBe('kit-b');
+    expect(next[0].kit).toBeNull();
+  });
+
+  it('replaces the kit already on that artist, so a publish shows as live', () => {
+    const roster = [entry('a', kitFor('a'))];
+    const next = applyKitToRoster(roster, kitFor('a', { state: 'published' }));
+    expect(next[0].kit?.state).toBe('published');
+  });
+
+  it('normalises the kit onto the roster name, which is the authority', () => {
+    const roster = [entry('a')];
+    const next = applyKitToRoster(roster, kitFor('a', { artistName: 'Stale copy' }));
+    // Both halves: the row's own name, and the kit's copy of it — the single
+    // kit screen reads the second one for its heading, so a rename that has
+    // not reached the kit row must not travel back onto the tab.
+    expect(next[0].artistName).toBe('Artist a');
+    expect(next[0].kit?.artistName).toBe('Artist a');
+  });
+
+  it('never invents a row for an artist the roster does not carry', () => {
+    const roster = [entry('a')];
+    const next = applyKitToRoster(roster, kitFor('ghost'));
+    expect(next).toHaveLength(1);
+    expect(next[0].artistId).toBe('a');
+  });
+
+  it('returns the same array when nothing changed, so the tab does not repaint', () => {
+    const roster = [entry('a')];
+    expect(applyKitToRoster(roster, kitFor('ghost'))).toBe(roster);
+  });
+
+  it('leaves every other artist untouched', () => {
+    const roster = [entry('a', kitFor('a')), entry('b'), entry('c', kitFor('c'))];
+    const next = applyKitToRoster(roster, kitFor('b'));
+    expect(next[0]).toBe(roster[0]);
+    expect(next[2]).toBe(roster[2]);
   });
 });

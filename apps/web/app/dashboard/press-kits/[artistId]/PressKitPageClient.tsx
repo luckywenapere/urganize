@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
+import { usePressKitsStore } from '@/stores/usePressKitsStore';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
 import { usePressKitSection } from '@/components/press-kits/usePressKitSection';
 import { SectionEditor } from '@/components/press-kits/SectionEditor';
@@ -71,6 +72,15 @@ export default function PressKitPageClient() {
   const artistId = String(params?.artistId || '');
   const router = useRouter();
   const authLoading = useAuthStore((state) => state.isLoading);
+
+  // Seeded from the shared roster so the heading is right on the first frame,
+  // then confirmed by the two loads below. The roster is cache-first, so
+  // arriving from the tab this is already known.
+  const rosterName = usePressKitsStore(
+    (state) => state.entries.find((entry) => entry.artistId === artistId)?.artistName || ''
+  );
+  const loadRoster = usePressKitsStore((state) => state.load);
+  const syncKit = usePressKitsStore((state) => state.syncKit);
 
   const [artistName, setArtistName] = useState('');
   const [kit, setKit] = useState<PressKit | null>(null);
@@ -145,22 +155,28 @@ export default function PressKitPageClient() {
     setSections(Array.isArray(body.sections) ? body.sections : []);
     setAssets(Array.isArray(body.assets) ? body.assets : []);
     setAiAvailable(body.aiAvailable === true);
-  }, []);
+    // Keep the tab in step without a second round trip: a kit created or
+    // published here shows its new state the moment you go back.
+    if (body.kit) syncKit(body.kit);
+  }, [syncKit]);
 
   const load = useCallback(async () => {
-    const headers = await authHeaders();
-    if (!headers) return;
     setError(null);
     try {
-      const response = await fetch('/api/press-kits', { headers, cache: 'no-store' });
-      if (!response.ok) {
-        setError(await readError(response, 'Could not load this press kit.'));
-        return;
-      }
-      const body = await response.json();
-      const entry = (body.entries || []).find(
-        (candidate: { artistId: string }) => candidate.artistId === artistId
-      );
+      // The roster comes from the shared store, which is cache-first and
+      // recency-guarded. This used to fetch the WHOLE roster over the network
+      // before it could even learn which kit to open — two round trips in a
+      // waterfall on every visit, for a mapping the tab you just came from
+      // already had.
+      await loadRoster();
+
+      // Read the store fresh rather than the subscribed value above: that one
+      // is from this callback's render closure and is stale the instant the
+      // load resolves.
+      const entry = usePressKitsStore
+        .getState()
+        .entries.find((candidate) => candidate.artistId === artistId);
+
       if (!entry) {
         setError('That artist is not on your roster.');
         return;
@@ -174,7 +190,7 @@ export default function PressKitPageClient() {
     } finally {
       setIsLoading(false);
     }
-  }, [artistId, loadDetail]);
+  }, [artistId, loadDetail, loadRoster]);
 
   useEffect(() => {
     if (!PRESS_KITS_ENABLED) {
@@ -450,7 +466,9 @@ export default function PressKitPageClient() {
         <div className="rounded-xl border border-dashed border-stroke-default p-8 text-center">
           <Newspaper className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden />
           <p className="mt-3 text-sm font-semibold text-content-primary">
-            {artistName ? `${artistName} has no press kit yet` : 'No press kit yet'}
+            {artistName || rosterName
+              ? `${artistName || rosterName} has no press kit yet`
+              : 'No press kit yet'}
           </p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-content-secondary">
             One kit, one link, kept current. Start it now and fill it in as you go.
@@ -472,7 +490,7 @@ export default function PressKitPageClient() {
               Press kit
             </p>
             <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">
-              {artistName}
+              {artistName || rosterName}
             </h1>
           </header>
 

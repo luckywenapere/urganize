@@ -64,6 +64,18 @@ export interface PressKit {
   updatedAt: string;
 }
 
+/**
+ * One row of the press kits tab: an artist, and their kit if they have started
+ * one. Declared here rather than inline in the page because three places read
+ * it — the tab, the single-kit screen and the roster cache — and the two pages
+ * had already grown their own private copies of the same shape.
+ */
+export interface PressKitRosterEntry {
+  artistId: string;
+  artistName: string;
+  kit: PressKit | null;
+}
+
 export interface PressKitDetail extends PressKit {
   sections: PressKitSection[];
 }
