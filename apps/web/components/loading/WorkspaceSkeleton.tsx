@@ -442,7 +442,10 @@ function TasksPanelSkeleton() {
       <div
         className={`sticky z-20 -mx-4 flex items-center gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        {/* `mx-auto`, matching the real row's centring (founder call,
+            2026-09-05) — a right-aligned placeholder pair would slide to the
+            middle the instant the real controls arrived. */}
+        <div className="mx-auto flex shrink-0 items-center gap-2">
           <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
           {TIMELINE_ENABLED ||
           CONTENT_CALENDAR_ENABLED ||
