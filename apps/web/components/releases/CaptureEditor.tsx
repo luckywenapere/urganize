@@ -1,6 +1,6 @@
 'use client';
 
-import { ImageIcon, Loader2 } from 'lucide-react';
+import { ImageIcon, Loader2 } from '@/components/icons';
 import {
   CAPTURE_BUTTON_LABEL_MAX,
   CAPTURE_CONSENT_NOTE_MAX,

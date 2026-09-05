@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, X } from '@/components/icons';
 import { getTemplateStats } from '@/lib/release-templates/loader';
 import type { DbReleaseType } from '@/types/releases';
 

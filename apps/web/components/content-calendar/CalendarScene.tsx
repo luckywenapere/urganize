@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X } from '@/components/icons';
 import { formatArtistName } from '@/lib/release-execution';
 import { getClientTodayIso, getPlatformLabel, resolveMonth } from '@/lib/content-calendar';
 import { getAccessToken } from '@/components/content-calendar/get-access-token';

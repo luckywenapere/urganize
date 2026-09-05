@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, Loader2, X } from 'lucide-react';
+import { AlertCircle, Loader2, X } from '@/components/icons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { getAccessToken } from './get-access-token';
 import { calendarFontVariables } from './calendar-fonts';

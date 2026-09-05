@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, FileText, Trash2 } from 'lucide-react';
+import { Download, FileText, Trash2 } from '@/components/icons';
 import { type AssetCategory, formatFileSize } from '@/lib/asset-constants';
 import { supabase } from '@/lib/supabase/client';
 import { isNativePlatform } from '@/lib/platform';

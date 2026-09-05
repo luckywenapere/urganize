@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from '@/components/icons';
 import { validateSubmissionSplits } from '@/lib/credit-submissions';
 import {
   applyCreditPrefill,

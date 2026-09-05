@@ -13,7 +13,7 @@ import {
   type BillingInterval,
   type PricingTierId,
 } from '@urganize/pricing';
-import { AlertTriangle, CheckCircle2, MessageCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, MessageCircle } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';

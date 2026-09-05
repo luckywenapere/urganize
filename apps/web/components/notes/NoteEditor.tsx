@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, Loader2, Pin, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, Pin, Sparkles, Trash2 } from '@/components/icons';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { NoteReleasePicker } from './NoteReleasePicker';
 import type { NoteSaveState } from './useNoteAutosave';

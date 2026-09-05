@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X } from '@/components/icons';
 import {
   buildMonthGrid,
   bucketPostsByDay,

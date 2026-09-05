@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Music, Upload, X } from 'lucide-react';
+import { Loader2, Music, Upload, X } from '@/components/icons';
 import { formatFileSize } from '@/lib/asset-constants';
 import { SONG_FILE_ACCEPT, SONG_FORMATS_LABEL, SONG_MAX_BYTES } from '@/lib/song';
 import { useSongUpload } from '@/components/releases/useSongUpload';

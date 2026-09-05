@@ -7,7 +7,7 @@ import { Button } from '@urganize/ui';
 import { Input } from '@urganize/ui';
 import { Card } from '@urganize/ui';
 import { Logo } from '@urganize/ui';
-import { ArrowLeft, Lock, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Lock, CheckCircle, AlertCircle } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from "@/lib/errors";
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, Plus, Trash2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import {
   SONG_VERSION_LABEL_COPY,

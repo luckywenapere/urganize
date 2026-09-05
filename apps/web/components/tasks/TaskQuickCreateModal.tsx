@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle } from '@/components/icons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { ReleaseCombobox } from '@/components/shared/ReleaseCombobox';
 import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';

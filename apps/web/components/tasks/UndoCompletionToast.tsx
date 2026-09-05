@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, X } from 'lucide-react';
+import { CheckCircle2, X } from '@/components/icons';
 import { useTaskStore } from '@/stores/useTaskStore';
 
 // Same reasoning as ToastProvider — raise this above MobileNavBar below lg

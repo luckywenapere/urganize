@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { Camera, Check } from 'lucide-react';
+import { Camera, Check } from '@/components/icons';
 import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
 import { useCuratorStore } from '@/stores/useCuratorStore';

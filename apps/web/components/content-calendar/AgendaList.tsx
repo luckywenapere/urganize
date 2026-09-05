@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus } from '@/components/icons';
 import { buildMonthGrid, bucketPostsByDay, getWeekLabel } from '@/lib/content-calendar';
 import type { ContentPost } from '@/types/content-calendar';
 import { PostChip } from './PostChip';

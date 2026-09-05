@@ -27,7 +27,7 @@ import {
   X,
   type LucideProps,
   ListChecks,
-} from 'lucide-react';
+} from '@/components/icons';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,

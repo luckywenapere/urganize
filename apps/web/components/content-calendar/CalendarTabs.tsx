@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { Globe, Loader2, Plus } from 'lucide-react';
+import { Globe, Loader2, Plus } from '@/components/icons';
 import type { IconType } from 'react-icons';
 import {
   SiFacebook,

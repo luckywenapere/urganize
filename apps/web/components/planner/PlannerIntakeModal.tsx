@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Loader2, Sparkles, X } from 'lucide-react';
+import { Loader2, Sparkles, X } from '@/components/icons';
 import { Button, IconButton } from '@urganize/ui';
 
 import { lockBodyScroll } from '@/lib/body-scroll-lock';

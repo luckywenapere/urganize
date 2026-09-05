@@ -1,6 +1,6 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Check } from '@/components/icons';
 import { TASK_DONE_STATUS, TASK_LOCKED_STATUS } from '@/lib/execution-types';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { type TaskStatus } from '@/lib/tasks';

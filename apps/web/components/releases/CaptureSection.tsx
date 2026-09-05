@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Copy, Download, ExternalLink, Loader2, Mail, RefreshCw, Trash2 } from 'lucide-react';
+import { Check, Copy, Download, ExternalLink, Loader2, Mail, RefreshCw, Trash2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { evaluateCapturePage } from '@/lib/capture-playbook';
 import {

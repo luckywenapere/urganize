@@ -17,7 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button, Card, Input, Logo } from '@urganize/ui';
-import { AlertTriangle, CheckCircle2, ListMusic, Lock, Mail, UserCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ListMusic, Lock, Mail, UserCircle } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';

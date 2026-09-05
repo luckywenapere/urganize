@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Copy, Loader2, RefreshCw, Sparkles, X } from 'lucide-react';
+import { Check, Copy, Loader2, RefreshCw, Sparkles, X } from '@/components/icons';
 import { Button, IconButton } from '@urganize/ui';
 import { StatTiles } from '@/components/shared/StatTiles';
 import { buildStatusTiles, type StatusFacts } from '@/lib/release-status';

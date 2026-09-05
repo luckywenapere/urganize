@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, Copy, ExternalLink, Loader2, Newspaper } from 'lucide-react';
+import { Check, Copy, ExternalLink, Loader2, Newspaper } from '@/components/icons';
 import type { ReleaseEpk } from '@/types/epk';
 import { supabase } from '@/lib/supabase/client';
 import { ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';

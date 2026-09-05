@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, Check, Loader2 } from 'lucide-react';
+import { AlertCircle, Check, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { getAccessToken } from '@/components/settings/getAccessToken';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowLeft, Info, Loader2, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Info, Loader2, Sparkles } from '@/components/icons';
 import { Button } from '@urganize/ui';
 
 import type { Release } from '@/types/releases';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { getRolePermissions } from '@/lib/role-permissions';

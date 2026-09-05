@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from '@/components/icons';
 
 /**
  * Why a curator surface could not load, plus a way to try again.

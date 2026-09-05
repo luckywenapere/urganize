@@ -5,7 +5,7 @@
 // follower count, link.
 
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, ListMusic, Plus, Trash2 } from 'lucide-react';
+import { ExternalLink, ListMusic, Plus, Trash2 } from '@/components/icons';
 import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorPlaylistsSkeleton } from '@/components/loading/CuratorSkeleton';
 import { CuratorLoadError } from '@/components/curator/CuratorLoadError';

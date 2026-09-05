@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, Layers, MapPin, Plus } from 'lucide-react';
+import { CalendarDays, Layers, MapPin, Plus } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useEventsStore } from '@/stores/useEventsStore';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';

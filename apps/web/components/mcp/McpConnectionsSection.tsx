@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Plug } from 'lucide-react';
+import { Loader2, Plug } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { panelClass } from '@/components/settings/panelClass';
 import {

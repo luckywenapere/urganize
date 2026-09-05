@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '@/components/icons';
 import { readPreviousLocation } from '@/lib/nav-history';
 import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';

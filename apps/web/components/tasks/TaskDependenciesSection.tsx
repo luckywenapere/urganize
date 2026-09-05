@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Link2 } from 'lucide-react';
+import { Check, Link2 } from '@/components/icons';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { getTaskStatusLabel, getTaskStatusTone, type TaskStatus } from '@/lib/tasks';
 import { TASK_DONE_STATUS } from '@/lib/execution-types';

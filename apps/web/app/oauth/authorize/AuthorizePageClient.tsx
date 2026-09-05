@@ -19,7 +19,7 @@
 // with a `next` that brings them straight back here.
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, ShieldCheck } from 'lucide-react';
+import { Loader2, ShieldCheck } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { getAccessToken } from '@/components/settings/getAccessToken';

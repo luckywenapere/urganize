@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, MoreHorizontal } from 'lucide-react';
+import { Loader2, MoreHorizontal } from '@/components/icons';
 import { getAccessToken } from './get-access-token';
 import type { ContentCalendar } from '@/types/content-calendar';
 

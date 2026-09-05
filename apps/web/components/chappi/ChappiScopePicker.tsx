@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronDown, Disc3 } from 'lucide-react';
+import { ChevronDown, Disc3 } from '@/components/icons';
 import type { ExecutionRelease } from '@/lib/execution-types';
 
 type ChappiScopePickerProps = {

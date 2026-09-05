@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2 } from '@/components/icons';
 
 type PackDownloadsProps = {
   token: string;

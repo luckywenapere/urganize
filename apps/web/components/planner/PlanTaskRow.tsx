@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarClock, RotateCcw, Trash2, Undo2 } from 'lucide-react';
+import { CalendarClock, RotateCcw, Trash2, Undo2 } from '@/components/icons';
 
 import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import type { WorkspaceMember } from '@/lib/tasks';

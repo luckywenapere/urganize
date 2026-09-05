@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, ArrowLeft, CalendarDays, Loader2, X } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CalendarDays, Loader2, X } from '@/components/icons';
 import { Button, IconButton } from '@urganize/ui';
 import { BlankSheetIllustration, PlanIllustration } from '@/components/app/BrandIcons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';

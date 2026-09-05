@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Download, Loader2, Music, Trash2, Upload } from 'lucide-react';
+import { Download, Loader2, Music, Trash2, Upload } from '@/components/icons';
 import { formatFileSize } from '@/lib/asset-constants';
 import { SONG_FILE_ACCEPT, SONG_FORMATS_LABEL, SONG_MAX_BYTES } from '@/lib/song';
 import { supabase } from '@/lib/supabase/client';

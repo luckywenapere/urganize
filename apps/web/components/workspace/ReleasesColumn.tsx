@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';

@@ -2,7 +2,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image as ImageIcon, Loader2, Upload, X } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Upload, X } from '@/components/icons';
 
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { formatFileSize } from '@/lib/asset-constants';

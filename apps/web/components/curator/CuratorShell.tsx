@@ -22,7 +22,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@urganize/ui';
-import { Inbox, ListMusic, LayoutGrid, LogOut, UserCircle } from 'lucide-react';
+import { Inbox, ListMusic, LayoutGrid, LogOut, UserCircle } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { HOME_PATH } from '@/lib/home-path';

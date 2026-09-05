@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Lock, X } from 'lucide-react';
+import { Lock, X } from '@/components/icons';
 import { Button } from '@urganize/ui';
 
 import { lockBodyScroll } from '@/lib/body-scroll-lock';

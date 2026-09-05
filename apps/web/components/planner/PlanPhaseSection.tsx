@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Plus, Sparkles } from 'lucide-react';
+import { Loader2, Plus, Sparkles } from '@/components/icons';
 
 import type { WorkspaceMember } from '@/lib/tasks';
 import {
