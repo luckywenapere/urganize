@@ -28,7 +28,6 @@ describe('RELEASE_MENU_ORDER', () => {
       'song',
       'files',
       'status-update',
-      'epk',
       'capture',
       'recap',
       'change-artist',
@@ -50,9 +49,9 @@ describe('RELEASE_MENU_ORDER', () => {
     expect(position('calendar')).toBeLessThan(position('coverart'));
     expect(position('pitch')).toBeLessThan(position('song'));
     // Working surfaces before the things you send outward.
-    expect(position('metadata')).toBeLessThan(position('epk'));
+    expect(position('metadata')).toBeLessThan(position('capture'));
     // Everything before the end-of-release and corrective actions.
-    expect(position('epk')).toBeLessThan(position('recap'));
+    expect(position('capture')).toBeLessThan(position('recap'));
     expect(position('recap')).toBeLessThan(position('archive'));
     expect(position('change-artist')).toBeLessThan(position('archive'));
   });
@@ -60,13 +59,13 @@ describe('RELEASE_MENU_ORDER', () => {
 
 describe('orderReleaseMenu', () => {
   it('sorts entries into the canonical order regardless of how they arrive', () => {
-    const scrambled = entriesFor(['archive', 'plan', 'epk', 'timeline', 'song']);
+    const scrambled = entriesFor(['archive', 'plan', 'capture', 'timeline', 'song']);
 
     expect(keys(orderReleaseMenu(scrambled))).toEqual([
       'plan',
       'timeline',
       'song',
-      'epk',
+      'capture',
       'archive',
     ]);
   });

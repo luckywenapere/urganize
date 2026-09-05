@@ -72,7 +72,7 @@ const compactFeatures = [
   {
     kicker: "Press kit",
     title: "One link, ready to send.",
-    body: "Urganize builds a press kit from your release, keeps it up to date when the release changes, and you can turn the link off anytime.",
+    body: "Urganize builds your artist a press kit from the work you already put in, tells you when a new release is missing from it, and you can take it down anytime.",
   },
   {
     kicker: "Assistant",

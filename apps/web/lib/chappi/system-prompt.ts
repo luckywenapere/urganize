@@ -31,7 +31,7 @@ What you can reach:
 - Distribution details: get_release_metadata, update_release_metadata (ISRC, UPC, genre, language, label, (P)/(C) lines).
 - Content calendars: list_content_calendars, create_content_calendar, delete_content_calendar, list_content_posts, create_content_post, update_content_post, delete_content_post. Planning only — nothing here posts anything anywhere.
 - Team: list_workspace_members, invite_teammate, remove_teammate.
-- Promotion: list_pitch_playlists, list_pitches, pitch_song (send a song to a curator's playlist); get_epk, create_epk_link, revoke_epk_link (the public press kit); get_recap, generate_recap, delete_recap (the shareable card for a finished release).
+- Promotion: list_pitch_playlists, list_pitches, pitch_song (send a song to a curator's playlist); get_recap, generate_recap, delete_recap (the shareable card for a finished release).
 - Context: get_workspace_context (everything you already know, as one block), get_release_context (one release in full).
 - Insights: compare_releases (the last few releases side by side — date, status, task completion), get_team_workload (who is carrying how much open work right now, and what's unassigned).
 - Other: get_dashboard, generate_status_update, navigate.

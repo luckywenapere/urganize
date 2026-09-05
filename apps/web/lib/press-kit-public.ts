@@ -153,3 +153,26 @@ export function kitDescription(
   if (tagline) return `${artistName}. ${tagline}`;
   return `Press kit for ${artistName}.`;
 }
+
+/**
+ * Where an old EPK link should send its reader, or null to leave it alone.
+ *
+ * The release-scoped EPK is retired, but links to it may already be sitting in
+ * press inboxes, and each one renders a working page today. So an old link is
+ * never broken: it keeps rendering the EPK until the artist's standing kit is
+ * PUBLISHED, and only then hands over. The old page retires itself artist by
+ * artist as kits go live.
+ *
+ * Both halves are required. A kit with no slug has nowhere to send anyone, and
+ * an unpublished kit is a 404 the reader could not get out of, which would be
+ * strictly worse than the page they already had.
+ */
+export function successorPathForKit(
+  kit: { slug: string | null | undefined; publishedAt: string | null | undefined } | null
+): string | null {
+  if (!kit) return null;
+  const slug = typeof kit.slug === 'string' ? kit.slug.trim() : '';
+  if (!slug) return null;
+  if (!isKitLive(kit.publishedAt)) return null;
+  return `/k/${slug}`;
+}

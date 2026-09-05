@@ -82,6 +82,13 @@ export function FeatureGridSection() {
           <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[1.5rem] border border-[color:var(--marketing-border)]">
             <ThemedProductShot
               {...PRODUCT_SHOTS.epkPhone}
+              // STALE (2026-09-05): this shot is the retired release-scoped
+              // EPK, and the alt text describes it accurately. The press kit is
+              // per ARTIST now, at /k/[slug], with a bio, photos, credits and
+              // shows on it. Retaking it needs a published kit, which needs
+              // NEXT_PUBLIC_FEATURE_PRESS_KITS on, so it is on that flag's
+              // activation checklist rather than faked here: `pnpm --filter
+              // @urganize/homepage shots`.
               alt="A press kit made in Urganize, open on a phone: cover art, the artist, the release and its date on one public page."
               sizes="260px"
             />

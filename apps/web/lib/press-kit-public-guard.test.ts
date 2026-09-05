@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 
@@ -186,5 +186,62 @@ describe('rolling a release in', () => {
     const source = read(ROLLOUT_ROUTE);
     expect(source).toContain('ownerUserId: access.ownerUserId');
     expect(source).not.toContain('ownerUserId: auth.user');
+  });
+});
+
+describe('the retired EPK', () => {
+  const EPK_PAGE = join(WEB, 'app', 'epk', '[token]', 'page.tsx');
+  const EPK_SERVER = join(WEB, 'lib', 'epk-server.ts');
+
+  it('still resolves, because links to it are already in press inboxes', () => {
+    // The one page in this product a stranger may already hold a link to. It is
+    // kept as a compatibility shim rather than deleted or stubbed, so nothing
+    // anyone was ever sent stops working.
+    expect(existsSync(EPK_PAGE)).toBe(true);
+    expect(existsSync(EPK_SERVER)).toBe(true);
+    expect(read(EPK_PAGE)).toContain('loadPublicEpk');
+  });
+
+  it('hands over with a TEMPORARY redirect, never a permanent one', () => {
+    // A kit can be taken back down. A browser holding a cached 308 would keep
+    // sending a journalist to a page that has gone back to a 404, with nothing
+    // we could do about it.
+    const source = read(EPK_PAGE);
+    expect(source).toContain('resolveEpkSuccessorPath');
+    expect(source).toMatch(/\bredirect\(/);
+    expect(source).not.toContain('permanentRedirect');
+  });
+
+  it('keeps its loading state', () => {
+    // Not a redirect stub, so this still earns its keep. It exists because of a
+    // recorded incident: the public EPK and credits pages had zero loading
+    // state, which is a blank tab on the surface a press contact judges the
+    // product by.
+    expect(existsSync(join(WEB, 'app', 'epk', '[token]', 'loading.tsx'))).toBe(true);
+  });
+
+  it('can only produce a path through the pure decision', () => {
+    // The resolver does four database reads and every one of them can fail.
+    // Each failure has to answer null, which means "render the EPK" — the page
+    // the reader had yesterday — rather than sending them somewhere invented.
+    // Asserted structurally because the reads cannot be reached from a unit
+    // test: a hand written path anywhere in this file would be a way for a
+    // failure to strand somebody on a 404.
+    const source = read(EPK_SERVER);
+    expect(source).toContain('successorPathForKit(');
+    expect(source).not.toMatch(/['"`]\/k\//);
+  });
+
+  it('has no authoring surface left', () => {
+    // Everything that MINTS a link is gone: the scene, the API routes, the
+    // type, and the three UrgAns tools.
+    expect(existsSync(join(WEB, 'components', 'releases', 'EpkSection.tsx'))).toBe(false);
+    expect(existsSync(join(WEB, 'types', 'epk.ts'))).toBe(false);
+    expect(existsSync(join(WEB, 'app', 'api', 'releases', '[releaseId]', 'epk'))).toBe(false);
+
+    const promo = read(join(WEB, 'lib', 'chappi', 'tool-families', 'promo.ts'));
+    for (const tool of ['get_epk', 'create_epk_link', 'revoke_epk_link']) {
+      expect(promo, tool).not.toContain(`name: '${tool}'`);
+    }
   });
 });

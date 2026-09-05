@@ -1,16 +1,17 @@
 import { redirect } from 'next/navigation';
 
-// The press kit manager stopped being its own page (2026-08-04) — it now opens
-// as an overlay window over the workspace via `?scene=epk`. See the metadata
-// stub next door for the full rationale; this route only forwards deep links.
+// The release-scoped press kit is retired (2026-09-05). It was a scene on the
+// workspace (`?scene=epk`), and before that its own page, so a manager's
+// bookmark or a stale in-app link can still point here.
 //
-// NOTE: this is the OWNER-FACING management surface. The public kit itself
-// still lives at its own standalone route (/epk/[token]) and is untouched.
-export default async function EpkRedirectPage({
-  params,
-}: {
-  params: Promise<{ releaseId: string }>;
-}) {
-  const { releaseId } = await params;
-  redirect(`/dashboard?release=${releaseId}&scene=epk`);
+// Forwarded to the standing press kits list rather than deleted, and NOT to a
+// release, because the kit is per artist now: there is no release-shaped
+// destination left to send this to. The list names every artist, so whoever
+// followed the old link lands one tap from the kit they were looking for.
+//
+// This is the OWNER-facing stub. The public link a journalist may hold lives at
+// /epk/[token] and is deliberately still alive, handing over to /k/[slug] once
+// that artist's kit is published.
+export default function EpkRedirectPage() {
+  redirect('/dashboard/press-kits');
 }

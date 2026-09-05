@@ -21,7 +21,6 @@ import {
 import { shouldBackgroundPrefetch } from '@/lib/connection';
 import type { ReleaseMetadataSnapshot } from '@/lib/release-ops';
 import type { ReleaseCreditLink, ReleaseCreditSubmission } from '@/types/credits';
-import type { ReleaseEpk } from '@/types/epk';
 import type { ContentCalendar } from '@/types/content-calendar';
 import type { SentPitch } from '@/types/pitching';
 import type { ReleaseCaptureLead, ReleaseCapturePage } from '@/types/capture';
@@ -53,7 +52,6 @@ export type MetadataScenePayload = {
 };
 
 export type FilesScenePayload = { assets: Asset[] };
-export type EpkScenePayload = { epk: ReleaseEpk | null };
 export type CalendarScenePayload = { calendars: ContentCalendar[] };
 export type PitchScenePayload = { pitches: SentPitch[] };
 export type CaptureScenePayload = {
@@ -80,7 +78,6 @@ export type ScenePayloadMap = {
   files: FilesScenePayload;
   song: SongScenePayload;
   coverart: CoverArtScenePayload;
-  epk: EpkScenePayload;
   calendar: CalendarScenePayload;
   pitch: PitchScenePayload;
   capture: CaptureScenePayload;
@@ -266,12 +263,6 @@ const FETCHERS: Record<CacheableSceneName, SceneFetcher> = {
     return {
       coverArt: (data.coverArt as ReleaseCoverArt | null) ?? null,
     } satisfies CoverArtScenePayload;
-  },
-  epk: async (releaseId, token, prefetch) => {
-    const data = await readJson(
-      await fetch(`/api/releases/${releaseId}/epk`, requestInit(token, prefetch))
-    );
-    return { epk: (data.epk as ReleaseEpk | null) ?? null } satisfies EpkScenePayload;
   },
   calendar: async (releaseId, token, prefetch) => {
     const data = await readJson(

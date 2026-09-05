@@ -6,6 +6,7 @@ import {
   kitDescription,
   kitTagline,
   publicSections,
+  successorPathForKit,
 } from './press-kit-public';
 import type { PressKitSectionKey } from '@/types/press-kits';
 
@@ -153,5 +154,28 @@ describe('kitDescription', () => {
     // description names the page and stops.
     const result = kitDescription('Dorian', {}, {});
     expect(result).not.toMatch(/rising|acclaimed|breakout|award/i);
+  });
+});
+
+describe('successorPathForKit', () => {
+  const live = { slug: 'dorian', publishedAt: '2026-09-01T00:00:00Z' };
+
+  it('hands over to a published kit', () => {
+    expect(successorPathForKit(live)).toBe('/k/dorian');
+  });
+
+  it('leaves an old link alone when the kit is not published', () => {
+    // The whole point of the shim. An unpublished kit is a 404, so redirecting
+    // to it would take away the page a journalist can read right now.
+    expect(successorPathForKit({ slug: 'dorian', publishedAt: null })).toBeNull();
+  });
+
+  it('leaves an old link alone when there is no kit at all', () => {
+    expect(successorPathForKit(null)).toBeNull();
+  });
+
+  it('leaves an old link alone when the kit has no slug', () => {
+    expect(successorPathForKit({ slug: '', publishedAt: '2026-09-01T00:00:00Z' })).toBeNull();
+    expect(successorPathForKit({ slug: '   ', publishedAt: '2026-09-01T00:00:00Z' })).toBeNull();
   });
 });
