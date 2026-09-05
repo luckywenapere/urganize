@@ -1,9 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { CalendarDays, X } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import {
+  AlignLeft,
+  CalendarDays,
+  ChevronDown,
+  CircleDot,
+  Trash2,
+  UserCircle2,
+  X,
+} from 'lucide-react';
 import { useReleaseStore } from '@/stores/useReleaseStore';
-import { StatusBadge } from '@/components/shared/StatusBadge';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import { ShareLoginActions } from '@/components/team/ShareLoginActions';
@@ -17,7 +24,6 @@ import {
   formatFileSize,
   getRelativeDueLabel,
   getTaskStatusLabel,
-  getTaskStatusTone,
   isEventMilestone,
   isTypingTarget,
   TASK_STATUS_OPTIONS,
@@ -26,6 +32,7 @@ import {
   type WorkspaceMember,
 } from '@/lib/tasks';
 import { TASK_OUTCOME_LABELS } from '@/lib/task-outcomes';
+import { buildTaskDetailSubtitle } from '@/lib/task-detail-summary';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
@@ -47,16 +54,32 @@ const TASK_OUTCOMES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TASK_OUTCOMES === 
 // from this surface; the per-task activity feed (the task_activity audit
 // trail) is no longer rendered. Restore any of them from git history.
 
-// Linear-style property rows (Status / Assignee / Due date):
-// a slim tertiary label column + a ghost control that only reveals its bounds
-// on hover/focus. Replaces the stacked full-width form boxes that dominated
-// the viewport on mobile. Native selects keep the dark-popup treatment
-// documented on AssetUploadControl (solid dark tokens + [color-scheme:dark]
-// instead of .input's transparent white background).
-const PROPERTY_ROW_CLASS = 'grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-x-3';
-const PROPERTY_LABEL_CLASS = 'text-xs font-medium text-content-tertiary';
+// Bare icon + value rows (2026-09-05, founder call: emulate Google Calendar's
+// event pop-up). This replaced a labelled two-column grid whose 6.5rem label
+// column read Status / Assignee / Due date. The icon now carries what the label
+// used to say, which buys back real width on a phone.
+//
+// The controls stay inline-editable and keep autosaving — only their CHROME
+// went. A read-only view with a pencil that opens an editor was offered and
+// rejected: it costs a click on every edit, and the noise was coming from the
+// labels and boxes, not from the fields being live.
+//
+// `group` is load-bearing: each row's chevron, and the date input's own picker
+// indicator, are invisible at rest and revealed by group-hover/focus-within, so
+// a row reads as plain text until you approach it.
+const DETAIL_ROW_CLASS = 'group flex items-center gap-3';
+const DETAIL_ICON_CLASS = 'h-4 w-4 shrink-0 text-content-tertiary';
+// The control column: capped so the hover box does not span the whole modal.
+const DETAIL_FIELD_CLASS = 'min-w-0 flex-1 sm:max-w-[320px]';
+// appearance-none is what lets a native <select> read as plain text — without
+// it the OS arrow shows at rest and no amount of border removal helps.
+//
+// The old class hardcoded [color-scheme:dark], which forced a dark native popup
+// onto a cream page in light mode. globals.css already sets color-scheme per
+// theme, so dropping it is the fix. (AssetUploadControl keeps that hardcode
+// deliberately for a boxed dark control; this is not that.)
 const PROPERTY_CONTROL_CLASS =
-  'motion-focus h-9 w-full border border-transparent bg-transparent px-2 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-default hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated md:max-w-[300px]';
+  'motion-focus h-9 w-full appearance-none rounded-lg border border-transparent bg-transparent px-2 text-sm text-content-primary transition-colors hover:border-stroke-default hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated';
 
 // A task's release is set at creation and fixed thereafter — the inline view is
 // the edit surface, and re-homing tasks across releases is intentionally not a
@@ -115,8 +138,11 @@ function toDateTimeLocalValue(value: string | null): string {
  * Task detail body. Since 2026-07-23 this renders inside the pop-up shell
  * (`TaskDetailModal` in TaskUIProvider) — the modal owns the overlay, scrim,
  * entrance animation, and scroll containment; this component owns the fields:
- * Title, Status, Assignee, Due date, Dependencies, Description, Attachments,
- * Comments, Delete. `onBack` closes the modal (the header X + Escape).
+ * Title, Status, Assignee, Due date, Dependencies, Notes, Attachments,
+ * Delete. `onBack` closes the modal (the header X + Escape).
+ *
+ * (Comments were cut from this view on 2026-07-23; this line claimed otherwise
+ * until 2026-09-05.)
  */
 export function TaskDetailView({
   isLoading,
@@ -151,6 +177,11 @@ export function TaskDetailView({
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteError, setInviteError] = useState('');
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  // The invite form is collapsed behind a link in the assignee menu's footer,
+  // so the resting menu is a clean list of people.
+  const [inviteOpen, setInviteOpen] = useState(false);
+  // Notes stay collapsed until they have content or the user asks for them.
+  const [notesOpen, setNotesOpen] = useState(false);
 
   // The release this activity belongs to, for the header. The fetched detail
   // carries `task.release`; the optimistic store-seeded task may not, so fall
@@ -196,6 +227,10 @@ export function TaskDetailView({
     setInviteMessage('');
     setInviteError('');
     setInviteUrl(null);
+    // Collapse both disclosures too, or the next activity opens with the
+    // previous one's invite form expanded and its notes field already open.
+    setInviteOpen(false);
+    setNotesOpen(false);
   }, [task?.id]);
 
   // Escape closes the pop-up. Typing-target guard prevents Escape from
@@ -260,59 +295,120 @@ export function TaskDetailView({
 
   const due = task ? getRelativeDueLabel(task) : { label: 'No due date', isOverdue: false };
 
+  const subtitleSegments = task
+    ? buildTaskDetailSubtitle({
+        statusLabel: getTaskStatusLabel(task.status),
+        isEventMilestone: isEventMilestone(task),
+        releaseTitle,
+        dueLabel: due.label,
+        isOverdue: due.isOverdue,
+      })
+    : [];
+
+  // Invite a teammate without leaving for Settings. Same result you would get
+  // there: a link the teammate opens to choose their own password — see the
+  // Team logins Working note in CLAUDE.md.
+  //
+  // Since 2026-09-05 this renders inside the assignee menu rather than as a
+  // permanent row in the body. The moment you want someone who is not on the
+  // list is the moment you are looking at the list, and a form that is only
+  // occasionally wanted should not hold a line of the pop-up at all times.
+  const inviteFooter = (
+    <div className="p-2">
+      {inviteUrl ? (
+        <div className="space-y-2 p-1">
+          <p className="text-xs text-content-secondary">{inviteMessage}</p>
+          <ShareLoginActions url={inviteUrl} releaseTitle={releaseTitle} variant="inline" />
+          <button
+            type="button"
+            onClick={() => {
+              setInviteUrl(null);
+              setInviteMessage('');
+            }}
+            className="motion-focus text-[11px] font-medium text-content-tertiary underline-offset-2 hover:text-content-primary hover:underline"
+          >
+            Invite someone else
+          </button>
+        </div>
+      ) : inviteOpen ? (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleInviteTeammate();
+          }}
+          className="flex items-center gap-2"
+        >
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">Teammate&apos;s email</span>
+            <input
+              type="email"
+              autoFocus
+              value={inviteEmail}
+              onChange={(event) => setInviteEmail(event.target.value)}
+              placeholder="teammate@email.com"
+              className="motion-focus h-9 w-full rounded-lg border border-stroke-default bg-bg-elevated px-2 text-sm text-content-primary transition-colors focus:border-brand"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={isInviting || !inviteEmail.trim()}
+            className="motion-focus motion-press h-9 shrink-0 rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isInviting ? 'Inviting…' : 'Invite'}
+          </button>
+        </form>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setInviteOpen(true)}
+          className="motion-focus flex w-full items-center gap-2.5 rounded-lg px-1 py-1.5 text-left text-sm text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        >
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-dashed border-stroke-default text-content-tertiary">
+            +
+          </span>
+          Invite someone new…
+        </button>
+      )}
+      {inviteError ? (
+        <p role="alert" className="mt-1 px-1 text-xs text-status-error">
+          {inviteError}
+        </p>
+      ) : !inviteUrl && inviteMessage ? (
+        <p className="mt-1 px-1 text-xs text-content-secondary">{inviteMessage}</p>
+      ) : null}
+    </div>
+  );
+
   return (
     <section aria-label="Activity detail" className="min-w-0">
-      {/* Pop-up header — at-a-glance status pill / event pill / due label on
-          the left, a single X close on the right. The modal shell already
-          separates this surface from the page; no back-button framing. */}
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div className="flex min-h-8 flex-wrap items-center gap-2">
-          {task ? (
-            <>
-              <StatusBadge
-                label={getTaskStatusLabel(task.status)}
-                tone={getTaskStatusTone(task.status)}
-                size="sm"
-              />
-              {isEventMilestone(task) ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-status-info/40 bg-status-info/10 px-2 py-0.5 text-[11px] font-semibold text-status-info">
-                  <CalendarDays className="h-3 w-3" />
-                  Event
-                </span>
-              ) : null}
-              {/* The release this activity belongs to — between the status
-                  pill and the due label, so the header reads
-                  "To do · <release> · Due in 11 days". */}
-              {releaseTitle ? (
-                <>
-                  <span
-                    className="min-w-0 max-w-[12rem] truncate text-sm text-content-secondary"
-                    title={releaseTitle}
-                  >
-                    {releaseTitle}
-                  </span>
-                  <span aria-hidden="true" className="text-content-tertiary">
-                    ·
-                  </span>
-                </>
-              ) : null}
-              <span
-                className={
-                  due.isOverdue
-                    ? 'text-sm font-semibold text-status-error'
-                    : 'text-sm text-content-secondary'
-                }
-              >
-                {due.label}
-              </span>
-            </>
-          ) : null}
-        </div>
+      {/* Icon-only action bar (2026-09-05, founder call: emulate Google
+          Calendar's event pop-up). Delete moved up here from a full-width red
+          button at the bottom — it keeps its confirm, it just stopped being
+          the loudest thing on screen. The status / release / due facts that
+          used to sit here moved BELOW the title, so the pop-up now leads with
+          the name of the thing rather than with its metadata. */}
+      <div className="mb-3 flex items-center justify-end gap-1">
+        {task ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('Delete this activity? This cannot be undone.')) {
+                void onDeleteTask();
+              }
+            }}
+            aria-label="Delete activity"
+            title="Delete activity"
+            className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors hover:bg-status-error/10 hover:text-status-error"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ) : null}
 
         <button
           type="button"
           onClick={onBack}
           aria-label="Close activity"
+          title="Close"
           className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors hover:border-stroke-default hover:bg-bg-hover hover:text-content-primary"
         >
           <X className="h-4 w-4" aria-hidden="true" />
@@ -337,82 +433,113 @@ export function TaskDetailView({
               {error}
             </div>
           ) : null}
-          {/* Title — the page heading, not a boxed form field. Borderless
-              until focus; blur saves, same as before. The completion
-              checkbox sits to its left, mirroring the row layout
-              ([checkbox] [title]) from TaskRow. */}
-          {/* items-start (not center) + a small top offset on the checkbox:
-              a long title wraps to multiple lines on narrow screens, and the
-              checkbox should hold the first line, not float mid-block. */}
-          <div className="flex items-start gap-3">
-            <TaskCompletionCheckbox
-              taskId={task.id}
-              status={task.status}
-              taskTitle={task.title}
-              onToggle={() =>
-                onSavePatch({ status: task.status === 'done' ? 'todo' : 'done' })
-              }
-              className="mt-0.5 sm:mt-1"
-            />
-            {/* A textarea, not an input: single-line inputs CROP long titles
-                on mobile. rows=1 + the auto-grow effect above keep it looking
-                like a heading while letting the text fold onto more lines.
-                Enter commits (blur-saves) instead of inserting a newline —
-                titles are one logical line that merely wraps visually. */}
-            <textarea
-              ref={titleRef}
-              rows={1}
-              value={title}
-              onChange={(event) => setTitle(event.target.value.replace(/\n/g, ' '))}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  event.currentTarget.blur();
+          {/* Title and subtitle are ONE child of the space-y-6 stack: as
+              siblings the stack would put 24px between a heading and its own
+              subtitle. */}
+          <div>
+            {/* Title — the page heading, not a boxed form field. Borderless
+                until focus; blur saves, same as before. The completion
+                checkbox sits to its left, mirroring the row layout
+                ([checkbox] [title]) from TaskRow. */}
+            {/* items-start (not center) + a small top offset on the checkbox:
+                a long title wraps to multiple lines on narrow screens, and the
+                checkbox should hold the first line, not float mid-block. */}
+            <div className="flex items-start gap-3">
+              <TaskCompletionCheckbox
+                taskId={task.id}
+                status={task.status}
+                taskTitle={task.title}
+                onToggle={() =>
+                  onSavePatch({ status: task.status === 'done' ? 'todo' : 'done' })
                 }
-              }}
-              onBlur={() => {
-                if (title.trim() && title.trim() !== task.title) {
-                  void onSavePatch({ title: title.trim() });
-                }
-              }}
-              aria-label="Title"
-              placeholder="Activity title"
-              className="motion-focus min-w-0 flex-1 resize-none overflow-hidden border-b border-transparent bg-transparent pb-1 font-display text-xl font-semibold leading-snug text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-stroke-strong sm:text-2xl"
-            />
+                className="mt-0.5 sm:mt-1"
+              />
+              {/* A textarea, not an input: single-line inputs CROP long titles
+                  on mobile. rows=1 + the auto-grow effect above keep it looking
+                  like a heading while letting the text fold onto more lines.
+                  Enter commits (blur-saves) instead of inserting a newline —
+                  titles are one logical line that merely wraps visually. */}
+              <textarea
+                ref={titleRef}
+                rows={1}
+                value={title}
+                onChange={(event) => setTitle(event.target.value.replace(/\n/g, ' '))}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    event.currentTarget.blur();
+                  }
+                }}
+                onBlur={() => {
+                  if (title.trim() && title.trim() !== task.title) {
+                    void onSavePatch({ title: title.trim() });
+                  }
+                }}
+                aria-label="Title"
+                placeholder="Activity title"
+                className="motion-focus min-w-0 flex-1 resize-none overflow-hidden border-b border-transparent bg-transparent pb-1 font-display text-xl font-semibold leading-snug text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-stroke-strong sm:text-2xl"
+              />
+            </div>
+
+            {/* One quiet line under the title, holding the facts that used to
+                sit as pills ABOVE it. pl-9 lines it up with the title text, past
+                the completion circle (h-6 + gap-3). */}
+            {subtitleSegments.length > 0 ? (
+              <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 pl-9 text-sm text-content-secondary">
+                {subtitleSegments.map((segment, index) => (
+                  <Fragment key={`${segment.text}-${index}`}>
+                    {index > 0 ? (
+                      <span aria-hidden="true" className="text-content-quaternary">
+                        ·
+                      </span>
+                    ) : null}
+                    <span
+                      className={
+                        segment.tone === 'overdue' ? 'font-semibold text-status-error' : undefined
+                      }
+                    >
+                      {segment.text}
+                    </span>
+                  </Fragment>
+                ))}
+              </p>
+            ) : null}
           </div>
 
-          <div className="space-y-1.5">
-            <label className={PROPERTY_ROW_CLASS}>
-              <span className={PROPERTY_LABEL_CLASS}>Status</span>
-              <select
-                value={task.status}
-                onChange={(event) => void onSavePatch({ status: event.target.value as TaskStatus })}
-                className={PROPERTY_CONTROL_CLASS}
-              >
-                {TASK_STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status} className="bg-bg-elevated text-content-primary">
-                    {getTaskStatusLabel(status)}
-                  </option>
-                ))}
-              </select>
+          <div className="space-y-0.5">
+            <label className={DETAIL_ROW_CLASS}>
+              <CircleDot className={DETAIL_ICON_CLASS} aria-hidden="true" />
+              <span className="sr-only">Status</span>
+              <span className={`relative ${DETAIL_FIELD_CLASS}`}>
+                <select
+                  value={task.status}
+                  onChange={(event) => void onSavePatch({ status: event.target.value as TaskStatus })}
+                  className={`${PROPERTY_CONTROL_CLASS} pr-8`}
+                >
+                  {TASK_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status} className="bg-bg-elevated text-content-primary">
+                      {getTaskStatusLabel(status)}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" aria-hidden="true" />
+              </span>
             </label>
             {statusBlockerMessage ? (
-              <div className={PROPERTY_ROW_CLASS}>
-                <span aria-hidden="true" />
-                <p
-                  role="alert"
-                  className="rounded-[14px] border border-status-warning/35 bg-status-warning/10 px-3 py-2 text-xs text-status-warning md:max-w-[300px]"
-                >
-                  {statusBlockerMessage}
-                </p>
-              </div>
+              <p
+                role="alert"
+                className="ml-7 rounded-lg border border-status-warning/35 bg-status-warning/10 px-3 py-2 text-xs text-status-warning"
+              >
+                {statusBlockerMessage}
+              </p>
             ) : null}
 
-            {/* The visible row label lives here; the combobox keeps its own
-                sr-only "Assignee" label for the input's accessible name. */}
-            <div className={PROPERTY_ROW_CLASS}>
-              <span className={PROPERTY_LABEL_CLASS}>Assignee</span>
-              <div className="md:max-w-[300px]">
+            {/* The icon is the label now; the picker keeps its own aria-label
+                for the trigger's accessible name. Its menu carries the invite
+                form in a footer — see inviteFooter above. */}
+            <div className={DETAIL_ROW_CLASS}>
+              <UserCircle2 className={DETAIL_ICON_CLASS} aria-hidden="true" />
+              <div className={DETAIL_FIELD_CLASS}>
                 <TaskMemberSelect
                   density="compact"
                   members={members}
@@ -422,83 +549,23 @@ export function TaskDetailView({
                     setSelectedAssignee(member);
                     void onSavePatch({ assignedToUserId: member?.userId || null });
                   }}
+                  footer={inviteFooter}
                 />
               </div>
             </div>
 
-            {/* Invite a teammate directly from this task, without leaving
-                for Settings. Same result the moment you'd get there: a
-                link the teammate opens to choose their own password —
-                see the Team logins Working note in CLAUDE.md. */}
-            <div className={PROPERTY_ROW_CLASS}>
-              <span className={PROPERTY_LABEL_CLASS}>Invite</span>
-              <div className="md:max-w-[300px]">
-                {inviteUrl ? (
-                  <div className="space-y-2 rounded-[14px] border border-stroke-default bg-bg-elevated/60 p-3">
-                    <p className="text-xs text-content-secondary">{inviteMessage}</p>
-                    <ShareLoginActions
-                      url={inviteUrl}
-                      releaseTitle={releaseTitle}
-                      variant="inline"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setInviteUrl(null);
-                        setInviteMessage('');
-                      }}
-                      className="motion-focus text-[11px] font-medium text-content-tertiary underline-offset-2 hover:text-content-primary hover:underline"
-                    >
-                      Invite someone else
-                    </button>
-                  </div>
-                ) : (
-                  <form
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void handleInviteTeammate();
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <label className="flex-1">
-                      <span className="sr-only">Teammate&apos;s email</span>
-                      <input
-                        type="email"
-                        value={inviteEmail}
-                        onChange={(event) => setInviteEmail(event.target.value)}
-                        placeholder="teammate@email.com"
-                        className={PROPERTY_CONTROL_CLASS.replace('md:max-w-[300px]', '')}
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      disabled={isInviting || !inviteEmail.trim()}
-                      className="motion-focus motion-press h-9 shrink-0 rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isInviting ? 'Inviting…' : 'Invite'}
-                    </button>
-                  </form>
-                )}
-                {inviteError ? (
-                  <p role="alert" className="mt-1 text-xs text-status-error">
-                    {inviteError}
-                  </p>
-                ) : !inviteUrl && inviteMessage ? (
-                  <p className="mt-1 text-xs text-content-secondary">{inviteMessage}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <label className={PROPERTY_ROW_CLASS}>
-              <span className={PROPERTY_LABEL_CLASS}>Due date</span>
+            {/* The date input hides its own picker indicator until the row is
+                approached, so the value reads as plain text at rest. */}
+            <label className={DETAIL_ROW_CLASS}>
+              <CalendarDays className={DETAIL_ICON_CLASS} aria-hidden="true" />
+              <span className="sr-only">Due date</span>
               <input
                 type="datetime-local"
                 value={toDateTimeLocalValue(task.dueDate)}
                 onChange={(event) => void onSavePatch({ dueDate: event.target.value || null })}
-                className={PROPERTY_CONTROL_CLASS}
+                className={`${PROPERTY_CONTROL_CLASS} ${DETAIL_FIELD_CLASS} [&::-webkit-calendar-picker-indicator]:opacity-0 group-hover:[&::-webkit-calendar-picker-indicator]:opacity-100 group-focus-within:[&::-webkit-calendar-picker-indicator]:opacity-100`}
               />
             </label>
-
           </div>
 
           <TaskDependenciesSection
@@ -507,20 +574,39 @@ export function TaskDetailView({
             onOpenPrerequisite={onOpenPrerequisite}
           />
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-content-primary">Description</span>
-            <textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              onBlur={() => {
-                if ((task.description || '') !== description) {
-                  void onSavePatch({ description: description || null });
-                }
-              }}
-              className="input min-h-[120px] rounded-[18px] py-3"
-              placeholder="Add notes, context, links, or markdown-style bullets."
-            />
-          </label>
+          {/* Notes stay out of the way until they exist (2026-09-05). This was
+              a 120px box that rendered even when empty, which is most of the
+              time; Depends-on already hid itself when empty and this now
+              matches. autoFocus is keyed on notesOpen so it fires only when the
+              user asked for the field, never on an activity that already has
+              notes. */}
+          {notesOpen || description ? (
+            <label className="flex gap-3">
+              <AlignLeft className={`${DETAIL_ICON_CLASS} mt-2.5`} aria-hidden="true" />
+              <span className="sr-only">Notes</span>
+              <textarea
+                autoFocus={notesOpen}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                onBlur={() => {
+                  if ((task.description || '') !== description) {
+                    void onSavePatch({ description: description || null });
+                  }
+                }}
+                className="motion-focus min-h-[76px] w-full resize-y rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm leading-relaxed text-content-primary transition-colors placeholder:text-content-tertiary hover:border-stroke-default focus:border-brand focus:bg-bg-elevated"
+                placeholder="Add notes, context, links, or markdown-style bullets."
+              />
+            </label>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNotesOpen(true)}
+              className="motion-focus flex w-full items-center gap-3 rounded-lg py-1.5 text-left text-sm text-content-tertiary transition-colors hover:text-content-primary"
+            >
+              <AlignLeft className={DETAIL_ICON_CLASS} aria-hidden="true" />
+              Add notes
+            </button>
+          )}
 
           {/* How the last completion went, captured by the check-in sheet.
               Read-only and kept even after a reopen: it is the record of
@@ -614,39 +700,31 @@ export function TaskDetailView({
             </section>
           ) : null}
 
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Delete this activity? This cannot be undone.')) {
-                  void onDeleteTask();
-                }
-              }}
-              className="rounded-[16px] border border-status-error/35 bg-status-error/10 px-4 py-3 text-sm font-semibold text-status-error"
-            >
-              Delete activity
-            </button>
-          </div>
+          {/* Delete moved into the header icon bar on 2026-09-05. */}
         </div>
       ) : isLoading ? (
         // Mirrors the loaded pop-up's real layout — checkbox+title row, the
-        // three property rows (Status / Assignee / Due date), then the
-        // description block — so content lands where the skeleton stood
-        // instead of reflowing (same convention as the page skeletons).
+        // subtitle line, three icon rows, then the notes affordance — so
+        // content lands where the skeleton stood instead of reflowing (same
+        // convention as the page skeletons).
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="h-5 w-5 shrink-0 rounded-full skeleton-shimmer" />
             <div className="h-7 w-2/3 skeleton-shimmer" />
           </div>
-          <div className="space-y-3">
+          <div className="ml-9 h-4 w-1/2 skeleton-shimmer" />
+          <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div key={`task-prop-${index}`} className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-x-3">
-                <div className="h-3 w-16 skeleton-shimmer" />
-                <div className="h-9 w-full max-w-[300px] skeleton-shimmer" />
+              <div key={`task-prop-${index}`} className="flex items-center gap-3">
+                <div className="h-4 w-4 shrink-0 rounded skeleton-shimmer" />
+                <div className="h-6 w-full max-w-[220px] skeleton-shimmer" />
               </div>
             ))}
           </div>
-          <div className="h-[120px] rounded-[18px] skeleton-shimmer" />
+          <div className="flex items-center gap-3">
+            <div className="h-4 w-4 shrink-0 rounded skeleton-shimmer" />
+            <div className="h-5 w-24 skeleton-shimmer" />
+          </div>
         </div>
       ) : (
         <p className="text-sm text-content-secondary">Select an activity to inspect the full context.</p>
