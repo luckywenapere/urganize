@@ -409,8 +409,14 @@ export default function AuthPage() {
         <LoadingScreen variant="shell" title="Opening Urganize" asPage={false} />
       </div>
 
-      <div className="auth-form-shell flex min-h-screen flex-col bg-bg-base px-6 pt-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center">
+      <div className="auth-form-shell relative flex min-h-screen flex-col bg-bg-base px-6 pt-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+        {/* Gold-thread ray fan (NEXT_PUBLIC_FEATURE_TEXTILE). Renders nothing
+            unless <html> carries `urg-textile`, and is aria-hidden and
+            pointer-events-none either way, so the entrance is unchanged for
+            assistive tech and for the flag-off build. Kept as a plain div with
+            no client state — this page is `○ Static` and must stay that way. */}
+        <div className="urg-ground-sunburst" aria-hidden="true" />
+        <div className="urg-above mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center">
           <LogoIcon size={64} priority />
 
           {/* One h1, two renderings: phones read the reference layout's

@@ -144,7 +144,7 @@ export function ChangeReleaseArtistDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="change-release-artist-title"
-        className="relative w-full max-w-md rounded-2xl border border-stroke-default bg-bg-surface p-6 shadow-2xl"
+        className="relative w-full max-w-md urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface p-6 shadow-2xl"
       >
         <h2
           id="change-release-artist-title"

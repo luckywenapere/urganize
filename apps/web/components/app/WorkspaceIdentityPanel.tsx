@@ -435,7 +435,7 @@ export function WorkspaceIdentityPanel() {
         collapsed ? "w-16" : "w-[240px]"
       } ${railIsCompeting && !collapsed ? "xl:block" : "lg:block"}`}
     >
-      <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
+      <div className="flex h-full flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface">
         <Link
           href="/settings"
           title={collapsed ? name || "Your workspace" : undefined}

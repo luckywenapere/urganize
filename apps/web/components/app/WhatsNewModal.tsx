@@ -91,7 +91,7 @@ export function WhatsNewModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="whats-new-title"
-        className="relative flex max-h-[min(40rem,calc(100dvh-3rem))] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))]"
+        className="relative flex max-h-[min(40rem,calc(100dvh-3rem))] w-full max-w-lg flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))]"
       >
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle p-5">
           <div className="min-w-0">

@@ -135,8 +135,8 @@ export default function SettingsPage() {
           `relative` is here so the decorative blobs can anchor to the
           full outer width (not the narrower inner form column). */}
       <div className="relative pb-24 pt-6 sm:px-6">
-        <div className="pointer-events-none absolute -right-16 -top-12 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
-        <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
+        <div className="urg-blob pointer-events-none absolute -right-16 -top-12 h-52 w-52 rounded-full bg-brand/15 blur-3xl" />
+        <div className="urg-blob pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-status-info/12 blur-3xl" />
 
         {/* Inner form wrapper. Redesigned 2026-07-23 (founder call): the
             boxed two-column card collage read as plastic. Sections are flat —

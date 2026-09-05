@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.23.1",
+    date: "September 5, 2026",
+    highlights: [
+      "Opening an activity is calmer. Its name comes first now, with the status, release and due date on one quiet line underneath.",
+      "The fields lost their labels and boxes. Tap any of them to change it, exactly as before.",
+      "Notes stay hidden until you add some, and you can now invite a teammate from inside the assignee list.",
+    ],
+  },
+  {
     version: "1.23.0",
     date: "September 3, 2026",
     highlights: [

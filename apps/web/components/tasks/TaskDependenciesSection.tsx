@@ -46,16 +46,19 @@ export function TaskDependenciesSection({
   const byId = new Map(prerequisites.map((task) => [task.id, task]));
 
   return (
-    <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
-      <div className="flex items-center gap-2">
-        <Link2 className="h-3.5 w-3.5 text-content-tertiary" />
-        <h3 className="text-sm font-semibold text-content-primary">Depends on</h3>
+    // De-boxed 2026-09-05: the activity pop-up went boxless, and a bordered
+    // card here was the one thing left drawing a rectangle. The icon column
+    // (h-4 + gap-3) lines this heading up with the rows above it.
+    <section>
+      <div className="flex items-center gap-3">
+        <Link2 className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
+        <h3 className="text-sm text-content-primary">Depends on</h3>
       </div>
-      <p className="mt-1 text-xs text-content-secondary">
+      <p className="ml-7 mt-0.5 text-xs text-content-secondary">
         Finish each prerequisite before this task can be marked done.
       </p>
 
-      <ul className="mt-3 space-y-2">
+      <ul className="ml-7 mt-2 space-y-2">
         {dependencyIds.map((id) => {
           const task = byId.get(id);
 

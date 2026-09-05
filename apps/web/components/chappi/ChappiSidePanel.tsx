@@ -78,7 +78,7 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
       style={open ? { width: PANEL_WIDTH } : undefined}
     >
       <div
-        className="flex h-full flex-col overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface"
+        className="flex h-full flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface"
         style={{ width: PANEL_WIDTH }}
       >
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stroke-subtle px-3 py-2">
