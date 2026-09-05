@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.24.0",
+    date: "September 5, 2026",
+    highlights: [
+      "Every artist has a press kit now. It lives at one link you keep, instead of making a new one for each release.",
+      "Urganize fills in what it already knows about the artist and asks you for the rest. Add photos, a bio and who to contact, then publish when you are ready.",
+      "Press kit links you have already sent still work. They start pointing at the new kit once you publish it.",
+    ],
+  },
+  {
     version: "1.23.1",
     date: "September 5, 2026",
     highlights: [
