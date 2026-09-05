@@ -9,6 +9,7 @@ import { AdminSection } from '../AdminSection';
 import { SessionSection } from '../SessionSection';
 import { DataExportSection } from '../DataExportSection';
 import { ReportIssueSection } from '../ReportIssueSection';
+import { DirectoryProfileSection } from '../DirectoryProfileSection';
 import { McpConnectionsSection } from '@/components/mcp/McpConnectionsSection';
 import { DeleteAccountSection } from '../DeleteAccountSection';
 
@@ -59,6 +60,14 @@ import { DeleteAccountSection } from '../DeleteAccountSection';
  * rare high-consequence account action, so it does not belong with the
  * password/sign-out/delete tail.
  *
+ * DirectoryProfileSection (2026-09-05) sits with the personal-identity
+ * sections rather than the tail, above the password box, because opting into
+ * the directory is an ordinary thing somebody might do on purpose rather than
+ * a rare high-consequence action. It is in Account and not Workspace for a
+ * reason worth keeping: the profile belongs to the PERSON and follows them if
+ * they leave the team, which is the whole point of a record that outlives a
+ * job. Renders nothing when NEXT_PUBLIC_FEATURE_DIRECTORY is off.
+ *
  * DataExportSection (2026-08-23) sits directly above DeleteAccountSection, and
  * that adjacency is the point: they are the same conversation in the right
  * order. The export covers the same scope deletion destroys, so a user standing
@@ -72,6 +81,7 @@ export function AccountTab() {
       <ProfileSection />
       <ArtistProfileSection />
       <AppearanceSection />
+      <DirectoryProfileSection />
       <SecuritySection />
       <ReportIssueSection />
       <AdminSection />

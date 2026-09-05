@@ -34,6 +34,8 @@ const FILES = [
   ...walk(join(WEB, 'app', 'api', 'press-kits')),
   ...walk(join(WEB, 'app', 'dashboard', 'press-kits')),
   ...walk(join(WEB, 'app', 'api', 'admin', 'directory-backfill')),
+  ...walk(join(WEB, 'app', 'api', 'directory')),
+  join(WEB, 'components', 'settings', 'DirectoryProfileSection.tsx'),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 /**

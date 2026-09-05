@@ -9771,11 +9771,62 @@ executed, no record exists, and the dry run has never reported real numbers.
 `show_id` is in the schema and nothing writes it yet — shows verify the same way
 once a show date has passed, which is a later phase.
 
-**Next:** Phase 2 is profile screens, opt in and visibility controls, and it has
-to resolve one thing this phase deliberately left open — `curator_profiles`
-already holds a display name, bio and photo for a non-team account, and
-"Playlist curator" is in this vocabulary. Decide whether those are one row, two
-linked rows, or deliberately separate, before two profile surfaces drift.
+### Phase 2 (2026-09-05): opt in, the editor, the controls
+
+Your own profile only. `GET/PATCH /api/directory/profile`, and a "Your
+directory record" section in Settings -> Account. **No public profile page and
+no search yet** — reading somebody ELSE'S profile has to apply section 10's
+field rules, which depend on state RLS cannot see, so it belongs with the
+directory read rather than bolted onto this.
+
+Four things worth knowing:
+
+- **What you type and what you delivered are rendered APART**, deliberately.
+  The role chips are a claim you can toggle; the counts below them come from
+  `delivery_records` and nothing on that page can change them. Blurring the two
+  would put the record back at the mercy of self-reporting.
+- **A delivered role you never claimed still shows** (`profileRoles` in
+  `lib/person-profile.ts`, mutation-tested). Somebody who delivered artwork and
+  never ticked "graphic designer" has the record either way.
+- **Absent and null mean different things in the PATCH.** The editor saves one
+  field at a time, so an omitted key leaves the stored value alone while an
+  explicit null clears it. Treating absent as null would wipe a bio the moment
+  somebody edited their city — the trap the credits route and the curator
+  profile each had to fix. Mutation-tested.
+- **The handle is suggested once, on the first save, and never regenerated.**
+  It is a URL somebody may already have shared, so a later rename must be an
+  explicit edit rather than a side effect of changing your name.
+
+**The curator overlap, decided.** `person_profiles` and `curator_profiles` stay
+SEPARATE rows, and the directory is a team-side surface in v1: the profile route
+uses `requireActiveAuthenticatedUser`, which `blockCuratorAccount` refuses, so a
+curator-ONLY account cannot opt in yet. Chosen because it touches the curator
+containment model not at all, and because widening it is additive later while
+narrowing it would not be. Note "Playlist curator" still makes sense in the
+vocabulary — a team user can claim it; it is not reserved for curator accounts.
+**Reversing this is a founder call**, and the thing to decide then is whether a
+curator's display name and bio are one row with this or two.
+
+**Also fixed in passing:** `DirectoryProfileSection` imported `Loader2` from
+`lucide-react` directly, which `lib/icons-registry.test.ts` (landed on main the
+same day) correctly failed. Routed through `@/components/icons` rather than
+exempted.
+
+**Verified:** 2599 tests (17 new in `person-profile.test.ts`), lint at the exact
+3-error / 79-warning baseline, `next build` green by exit code in both flag
+states with `/auth`, `/onboarding` and `/settings` still `○ Static`, and a
+runtime probe showing `/api/directory/profile` 404s with the body exactly
+`{"error":"Not found."}` when off and 401s when on, against an ungated control
+that 401s either way. Three mutations killed their own tests: treating an absent
+field as null, allowing any url scheme on a link, and dropping unclaimed
+delivered roles.
+
+**Not verified:** the section has never rendered in a browser and no profile has
+been created — no session is mintable in this sandbox and the migration is still
+unapplied.
+
+**Next:** Phase 3 is the verified computation and how claimed and verified are
+shown apart on a page other people read.
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
