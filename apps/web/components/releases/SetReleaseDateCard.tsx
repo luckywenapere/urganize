@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, type FormEvent } from 'react';
-import { CalendarPlus, Loader2 } from 'lucide-react';
+import { CalendarPlus, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { scheduleRelease } from '@/lib/schedule-release-client';
 import { getTemplateStats } from '@/lib/release-templates/loader';

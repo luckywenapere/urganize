@@ -2,7 +2,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { ImageOff, Loader2, Trash2, Upload } from 'lucide-react';
+import { ImageOff, Loader2, Trash2, Upload } from '@/components/icons';
 import { formatFileSize } from '@/lib/asset-constants';
 import { COVER_ART_FILE_ACCEPT, COVER_ART_MAX_BYTES } from '@/lib/cover-art-upload';
 import { DSP_REQUIREMENT_LABEL, formatDimensions, gradeCoverArt } from '@/lib/cover-art-dsp';

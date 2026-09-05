@@ -7,7 +7,7 @@
 // decision is made, because that is the only moment a reply means anything.
 
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Inbox } from 'lucide-react';
+import { ExternalLink, Inbox } from '@/components/icons';
 import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorInboxSkeleton } from '@/components/loading/CuratorSkeleton';
 import { CuratorLoadError } from '@/components/curator/CuratorLoadError';

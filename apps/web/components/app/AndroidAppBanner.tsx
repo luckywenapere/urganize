@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Smartphone, X } from 'lucide-react';
+import { Smartphone, X } from '@/components/icons';
 import { isAndroidBrowser } from '@/lib/platform';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 

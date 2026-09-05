@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Maximize2, MessageCircle, RotateCcw, X } from 'lucide-react';
+import { Maximize2, MessageCircle, RotateCcw, X } from '@/components/icons';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { ChappiConversation } from './ChappiConversation';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';

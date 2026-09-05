@@ -8,7 +8,7 @@
 // loads on demand rather than through the per-release scene cache.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Send } from 'lucide-react';
+import { ExternalLink, Send } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import type { BrowsablePlaylist, PitchStatus, SentPitch } from '@/types/pitching';
 import { supabase } from '@/lib/supabase/client';

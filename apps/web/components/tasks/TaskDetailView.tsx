@@ -9,7 +9,7 @@ import {
   Trash2,
   UserCircle2,
   X,
-} from 'lucide-react';
+} from '@/components/icons';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';

@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Check, Info } from 'lucide-react';
+import { AlertTriangle, Check, Info } from '@/components/icons';
 import type { CaptureReadiness } from '@/lib/capture-playbook';
 
 /**

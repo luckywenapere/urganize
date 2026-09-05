@@ -20,7 +20,7 @@ import {
   ThumbsDown,
   ThumbsUp,
   type LucideIcon,
-} from 'lucide-react';
+} from '@/components/icons';
 import { TeamBriefNudge } from './TeamBriefNudge';
 import { BriefAttribution } from './BriefAttribution';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';

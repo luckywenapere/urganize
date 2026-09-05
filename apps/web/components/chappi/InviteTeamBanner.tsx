@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserPlus, X } from 'lucide-react';
+import { UserPlus, X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';

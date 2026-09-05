@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Newspaper, X } from 'lucide-react';
+import { Newspaper, X } from '@/components/icons';
 import { authHeaders } from './press-kit-client';
 
 /**

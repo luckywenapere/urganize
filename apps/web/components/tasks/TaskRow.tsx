@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarDays, Lock } from 'lucide-react';
+import { CalendarDays, Lock } from '@/components/icons';
 import {
   formatMilestoneDate,
   getRelativeDueLabel,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight } from '@/components/icons';
 import {
   TEAM_BRIEF_SECTION_META,
   isTeamBriefSection,

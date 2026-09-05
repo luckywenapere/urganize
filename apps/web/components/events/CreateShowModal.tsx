@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X } from '@/components/icons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useEventsStore } from '@/stores/useEventsStore';
 import {

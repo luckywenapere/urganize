@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { KeyRound, Loader2 } from 'lucide-react';
+import { KeyRound, Loader2 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { getRolePermissions } from '@/lib/role-permissions';

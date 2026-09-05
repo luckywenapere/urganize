@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle } from '@/components/icons';
 
 import { useAuthStore } from '@/lib/auth-store';
 import { SettingRow, settingRowButtonClass } from './SettingRow';

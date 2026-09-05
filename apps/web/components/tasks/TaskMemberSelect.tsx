@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ChevronDown, UserCircle2 } from 'lucide-react';
+import { ChevronDown, UserCircle2 } from '@/components/icons';
 import { getInitials, type WorkspaceMember } from '@/lib/tasks';
 
 type TaskMemberSelectProps = {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from '@/components/icons';
 import type { InterviewQuestion } from '@/lib/press-kit-interview';
 import type { PressKitSectionContent } from '@/types/press-kits';
 

@@ -10,7 +10,7 @@ import { openExternalUrl } from '@/lib/external-link';
 import { Input } from '@urganize/ui';
 import { LogoIcon } from '@urganize/ui';
 import { LoadingScreen } from '@urganize/ui';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock } from '@/components/icons';
 import { errorMessage } from "@/lib/errors";
 
 // /auth is the single front door for BOTH sides of the account line, in the

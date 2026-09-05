@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2 } from '@/components/icons';
 import type { CoverArtGrade } from '@/lib/cover-art-dsp';
 
 /**

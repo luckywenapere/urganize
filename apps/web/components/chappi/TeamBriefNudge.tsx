@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { X } from 'lucide-react';
+import { X } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { isTeamBriefEmpty, isTeamBriefEnabled, type TeamBrief } from '@/lib/team-brief';
 import {

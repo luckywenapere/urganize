@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles } from '@/components/icons';
 
 import { useAuthStore } from '@/lib/auth-store';
 import { SettingRow, settingRowButtonClass } from './SettingRow';

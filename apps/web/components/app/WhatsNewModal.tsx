@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X } from '@/components/icons';
 import { changelog, CURRENT_VERSION } from '@urganize/changelog';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';

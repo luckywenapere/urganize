@@ -12,7 +12,7 @@ import {
   type BillingPlanId,
   type PricingCurrencyCode,
 } from '@urganize/pricing';
-import { Lock, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Lock, CheckCircle2, AlertTriangle } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';

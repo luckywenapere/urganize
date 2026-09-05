@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Sparkles,
   Trash2,
-} from 'lucide-react';
+} from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { MetadataFieldsSkeleton, ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';

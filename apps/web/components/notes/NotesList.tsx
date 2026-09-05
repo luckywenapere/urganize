@@ -1,6 +1,6 @@
 'use client';
 
-import { Pin, Plus, X } from 'lucide-react';
+import { Pin, Plus, X } from '@/components/icons';
 import Image from 'next/image';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { NoteListRow } from './NoteListRow';

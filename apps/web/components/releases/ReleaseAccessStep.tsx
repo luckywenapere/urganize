@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, KeyRound, Loader2 } from 'lucide-react';
+import { AlertCircle, KeyRound, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useAuthStore } from '@/lib/auth-store';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { CalendarClock, ChevronDown, Flag } from 'lucide-react';
+import { CalendarClock, ChevronDown, Flag } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
 import {

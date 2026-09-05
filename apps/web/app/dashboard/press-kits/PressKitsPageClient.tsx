@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Newspaper } from 'lucide-react';
+import { ArrowRight, Newspaper } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
 import type { PressKit } from '@/types/press-kits';

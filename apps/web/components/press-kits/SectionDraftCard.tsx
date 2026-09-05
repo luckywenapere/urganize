@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, RotateCcw, Sparkles } from 'lucide-react';
+import { Loader2, RotateCcw, Sparkles } from '@/components/icons';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
 import { DRAFT_ALLOWED_FIELDS } from '@/lib/press-kit-draft';
 

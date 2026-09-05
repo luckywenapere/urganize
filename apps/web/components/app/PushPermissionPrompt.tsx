@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { BellRing, X } from 'lucide-react';
+import { BellRing, X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useToast } from '@/components/shared/ToastProvider';
 import { errorMessage } from '@/lib/errors';

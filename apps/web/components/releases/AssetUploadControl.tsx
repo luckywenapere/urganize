@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type ChangeEvent } from 'react';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload } from '@/components/icons';
 import {
   ASSET_CATEGORIES,
   ASSET_MIME_ALLOWLIST,

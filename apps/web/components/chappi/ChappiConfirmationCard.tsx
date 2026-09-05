@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import type { ChappiPendingConfirmation } from '@/lib/chappi/types';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw } from '@/components/icons';
 import { describeProposal, type RolloutProposal } from '@/lib/press-kit-rollout';
 import { authHeaders, readError } from './press-kit-client';
 import type { PressKitSectionKey } from '@/types/press-kits';

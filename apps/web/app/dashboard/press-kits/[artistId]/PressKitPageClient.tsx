@@ -13,7 +13,7 @@ import {
   Newspaper,
   RotateCcw,
   Sparkles,
-} from 'lucide-react';
+} from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
 import { usePressKitSection } from '@/components/press-kits/usePressKitSection';

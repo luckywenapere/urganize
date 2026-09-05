@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CalendarDays, MapPin, Pencil, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, MapPin, Pencil, Plus } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { EVENT_STATUS_COPY, formatShowDateTime, shortTimezoneLabel } from '@/lib/events';
 import { MAX_SETLIST_NAME_LENGTH } from '@/lib/setlist';

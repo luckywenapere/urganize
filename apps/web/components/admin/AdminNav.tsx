@@ -17,7 +17,7 @@ import {
   TrendingUp,
   Users,
   Building2,
-} from 'lucide-react';
+} from '@/components/icons';
 
 // The admin hub's left menu — one place linking every internal dashboard
 // (founder request, 2026-07-30). Visual pattern inherited from the former

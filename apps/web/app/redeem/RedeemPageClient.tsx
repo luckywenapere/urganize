@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, Input, Logo } from '@urganize/ui';
-import { Gift, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Gift, CheckCircle2, AlertTriangle } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';

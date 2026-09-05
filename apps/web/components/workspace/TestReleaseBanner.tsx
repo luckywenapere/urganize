@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
+import { Trash2 } from '@/components/icons';
 
 /**
  * The standing exit of the test path (NEXT_PUBLIC_FEATURE_TEST_RELEASE).

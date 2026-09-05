@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRight, Check, Loader2, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, Loader2, Sparkles } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';

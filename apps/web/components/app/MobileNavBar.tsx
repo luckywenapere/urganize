@@ -3,7 +3,7 @@
 import { Suspense, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Inbox, MicVocal, Music, Newspaper, Plus } from 'lucide-react';
+import { Inbox, MicVocal, Music, Newspaper, Plus } from '@/components/icons';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';

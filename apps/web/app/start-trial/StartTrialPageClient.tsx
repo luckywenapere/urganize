@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, Logo } from '@urganize/ui';
 import { formatPlanCyclePrice, getPlan } from '@urganize/pricing';
-import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { CURATOR_HOME_PATH, HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';

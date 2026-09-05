@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check, Copy, ExternalLink, Loader2 } from 'lucide-react';
+import { Check, Copy, ExternalLink, Loader2 } from '@/components/icons';
 import {
   PRESS_KIT_SECTION_LABELS,
   canPublishKit,

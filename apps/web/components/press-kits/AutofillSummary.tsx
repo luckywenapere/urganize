@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
+import { Sparkles } from '@/components/icons';
 import { PRESS_KIT_SECTION_LABELS } from '@/lib/press-kits';
 import type { AutofillSummary as Counts } from '@/lib/press-kit-autofill';
 import type { PressKitSectionKey } from '@/types/press-kits';

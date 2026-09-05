@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { CalendarPlus, X } from 'lucide-react';
+import { CalendarPlus, X } from '@/components/icons';
 
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { scheduleRelease } from '@/lib/schedule-release-client';

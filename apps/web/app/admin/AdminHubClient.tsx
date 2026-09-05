@@ -18,7 +18,7 @@ import {
   TrendingUp,
   Users,
   Building2,
-} from 'lucide-react';
+} from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';

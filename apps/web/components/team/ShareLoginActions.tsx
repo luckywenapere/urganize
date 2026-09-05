@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Check, Copy, Mail, MessageCircle } from 'lucide-react';
+import { Check, Copy, Mail, MessageCircle } from '@/components/icons';
 import {
   buildEmailShareUrl,
   buildLoginShareMessage,

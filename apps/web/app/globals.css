@@ -998,6 +998,31 @@ h1, h2, h3, h4 {
   font-style: italic;
   letter-spacing: -0.02em;
 }
+/* Pull every remaining lucide glyph to the house stroke weight.
+ *
+ * components/icons/ replaces the 30 icons a user actually sees daily with
+ * Urganize's own marks; the other 66 are still lucide, on surfaces almost
+ * nobody opens. Left alone the two sets read as different families, because
+ * lucide draws at stroke-width 2 and the house set at 1.6 structural / 1.8
+ * gesture.
+ *
+ * One rule closes that gap for all 66 at once. It works because lucide emits
+ * stroke-width as a PRESENTATION ATTRIBUTE (verified in node_modules —
+ * defaultAttributes carries strokeWidth: 2), and CSS beats presentation
+ * attributes in the cascade regardless of specificity. It also emits
+ * class="lucide lucide-<name>", which is the hook.
+ *
+ * NOT scoped under .urg-textile: the house icons ship unflagged, so the
+ * normalizer has to as well, or the long tail would mismatch until that flag
+ * flips.
+ *
+ * A call site passing strokeWidth arrives as an attribute too, so this rule
+ * would override it. If a per-icon override is ever genuinely needed, use a
+ * Tailwind arbitrary class ([stroke-width:2.4]) rather than the prop. */
+.lucide {
+  stroke-width: 1.7;
+}
+
 
 :focus-visible {
   outline: 2px solid var(--brand-primary);
@@ -2110,8 +2135,8 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
 }
 
 /* ---- Textile on the public islands ---------------------------------------
-   The EPK, credits and capture pages are dark-locked artifacts sent outside
-   the product — a press contact judges the company by them, and they render
+   The press-kit, credits and capture pages are dark-locked artifacts sent
+   outside the product — a press contact judges the company by them, and they render
    identically for every recipient regardless of the visitor's theme. That
    makes them the right place for the richest treatment in the app: a press kit
    is a printed object, and printed objects have a stock.
@@ -2133,7 +2158,8 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
    warp/weft/twill grain the app ground uses. */
 .urg-textile .epk-island,
 .urg-textile .credits-island,
-.urg-textile .capture-island {
+.urg-textile .capture-island,
+.urg-textile .kit-island {
   background-image:
     linear-gradient(
       180deg,

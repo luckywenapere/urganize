@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Download, Loader2, Trash2, Upload } from 'lucide-react';
+import { ArrowDown, ArrowUp, Download, Loader2, Trash2, Upload } from '@/components/icons';
 import { readImageDimensions } from '@/lib/cover-art-image';
 import {
   PRESS_PHOTO_FILE_ACCEPT,

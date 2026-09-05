@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Copy, Loader2, MessageCircle, Plus, X } from 'lucide-react';
+import { Check, Copy, Loader2, MessageCircle, Plus, X } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import {
   COMMON_RECIPIENT_ROLES,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BellRing } from 'lucide-react';
+import { BellRing } from '@/components/icons';
 import { errorMessage } from '@/lib/errors';
 import {
   disablePush,

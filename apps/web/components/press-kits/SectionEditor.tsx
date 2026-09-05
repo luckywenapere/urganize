@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Check, Copy, Plus, Trash2 } from 'lucide-react';
+import { Check, Copy, Plus, Trash2 } from '@/components/icons';
 import { PRESS_KIT_SECTION_HINTS } from '@/lib/press-kits';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
 

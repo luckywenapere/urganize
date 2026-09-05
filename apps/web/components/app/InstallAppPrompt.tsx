@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MonitorDown, Share, Smartphone, X } from 'lucide-react';
+import { MonitorDown, Share, Smartphone, X } from '@/components/icons';
 import {
   INSTALL_PROMPT_DELAY_MS,
   armInstallPrompt,

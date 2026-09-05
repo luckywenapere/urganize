@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Loader2, RefreshCw, Share2, Sparkles, X } from 'lucide-react';
+import { Download, Loader2, RefreshCw, Share2, Sparkles, X } from '@/components/icons';
 import { Button, IconButton } from '@urganize/ui';
 import { StatTiles, type StatTile } from '@/components/shared/StatTiles';
 import { supabase } from '@/lib/supabase/client';
