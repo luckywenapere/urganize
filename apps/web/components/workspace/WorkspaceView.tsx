@@ -31,10 +31,11 @@ import { ReleasesColumn, type ReleaseCardData } from './ReleasesColumn';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
-import { resolveActiveScene } from '@/lib/scene-cache';
+import { resolveActiveScene, resolvePanelBody } from '@/lib/scene-cache';
 import { useScenePrefetch } from './useScenePrefetch';
 import { useIsDesktopViewport } from './useIsDesktopViewport';
 import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
+import { TimelineScene } from '@/components/releases/TimelineScene';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
@@ -169,6 +170,20 @@ export function WorkspaceView() {
   // WorkspaceSkeleton have to agree with this exactly, and the three
   // hand-rolled copies this replaces had already drifted once.
   const activeScene = resolveActiveScene(urlScene);
+
+  /**
+   * What the panel actually shows: a named scene, or the release's MAIN VIEW.
+   *
+   * `activeScene` answers "is a scene open"; this answers "what is on screen",
+   * and since 2026-09-06 those differ — with the timeline flag on, a release
+   * with no `?scene=` lands on the timeline rather than the activity buckets
+   * (founder call: the buckets ship collapsed, so a 63-activity release opened
+   * onto five closed drawers). One resolver, shared with TasksPanel and
+   * WorkspaceSkeleton, so the body, the lit pill and the reserved layout
+   * cannot disagree.
+   */
+  const panelBody = resolvePanelBody(urlScene);
+  const bodyIsMainView = panelBody === 'activities' || panelBody === 'timeline';
   // Which of the two always-in-the-DOM layout branches (mobile drill-down /
   // desktop focused) should receive side-effectful children — see the hook.
   const isDesktopViewport = useIsDesktopViewport();
@@ -742,36 +757,6 @@ export function WorkspaceView() {
     openScene('plan', releaseId);
   };
 
-  // The open release scene's body, handed to TasksPanel so it replaces the
-  // activity buckets in place while the pill row above stays put. Null unless
-  // the URL names a scene AND the release resolved — same guard the panels use.
-  // Handed to ONE branch only (isDesktopViewport below): both layout branches
-  // are always in the DOM, and giving this node to both mounted every scene
-  // twice — the calendar double-fetched everything on every open.
-  const scenePanel =
-    activeScene && scopedReleaseSlim ? (
-      <ReleaseScenePanel
-        scene={activeScene}
-        release={scopedReleaseSlim}
-        onClose={closeScene}
-        onToast={(message, tone) => setToast({ message, tone })}
-        existingTaskCount={scopedTasks.length}
-        tasks={scopedTasks}
-        onOpenTask={openTask}
-        onTaskRescheduled={() => void loadCommandCenter({ force: true })}
-        onPlanApproved={() => {
-          setHasPlanDraft(false);
-          closeScene();
-          void loadCommandCenter({ force: true });
-          // Approving a plan is the one moment a manager has the whole release
-          // in front of them, so it is when the kit still pointing at the last
-          // one is worth mentioning. The prompt decides for itself whether
-          // there is anything to say and renders nothing when there is not.
-          setKitPromptFor(scopedReleaseSlim?.id ?? null);
-        }}
-        onStartPlanIntake={() => openPlanIntake()}
-      />
-    ) : undefined;
 
   // ANY open scene gets the release rails out of the way — the same treatment
   // the UrgAns rail already triggers.
@@ -797,7 +782,16 @@ export function WorkspaceView() {
   // Boolean(activeScene) and not `!== null` on the raw URL param on purpose:
   // `activeScene` is already flag-gated above, so a stale `?scene=capture` URL
   // with that flag off correctly counts as no scene and keeps the rails.
-  const hideRailsForLayout = (CHAPPI_ENABLED && isRailOpen) || Boolean(activeScene);
+  //
+  // `panelBody !== 'activities'` rather than `Boolean(activeScene)` since
+  // 2026-09-06: with the timeline as the main view there is no scene param, but
+  // it needs the width MORE than any form does, not less. Its grid/list swap is
+  // a container query at 34rem — leave the rails in and a 1280px desktop hands
+  // the timeline ~450px, which silently degrades the week grid to the phone's
+  // vertical list. Flag off, `panelBody` can only be 'activities' or a real
+  // scene, so this is byte-identical to the line it replaces.
+  const hideRailsForLayout =
+    (CHAPPI_ENABLED && isRailOpen) || panelBody !== 'activities';
 
   // A recap is only worth offering once the release has actually happened, and
   // this now calls the SAME lib/recap-eligibility.ts predicate the recap route
@@ -967,6 +961,53 @@ export function WorkspaceView() {
   const bannerReplacesEmptyState = Boolean(
     planBanner || (setReleaseDateBanner && scopedReleaseSlim?.templatePending)
   );
+
+  // The open release scene's body, handed to TasksPanel so it replaces the
+  // activity buckets in place while the pill row above stays put. Null unless
+  // the URL names a scene AND the release resolved — same guard the panels use.
+  // Handed to ONE branch only (isDesktopViewport below): both layout branches
+  // are always in the DOM, and giving this node to both mounted every scene
+  // twice — the calendar double-fetched everything on every open.
+  //
+  // The timeline is the exception, and deliberately: it renders BARE, without
+  // ReleaseScenePanel's header. That header carries a "Timeline for <release>"
+  // title and a "Back to Activities" control, both of which are wrong on the
+  // view a release LANDS on — there is nothing to go back from, and the
+  // release header directly above already names the release. The buckets have
+  // always rendered chromeless for the same reason.
+  const scenePanel =
+    panelBody === 'timeline' && scopedReleaseSlim ? (
+      <TimelineScene
+        release={scopedReleaseSlim}
+        tasks={scopedTasks}
+        onOpenTask={openTask}
+        onToast={(message, tone) => setToast({ message, tone })}
+        onRescheduled={() => void loadCommandCenter({ force: true })}
+        suppressEmptyState={bannerReplacesEmptyState}
+      />
+    ) : panelBody !== 'activities' && scopedReleaseSlim ? (
+      <ReleaseScenePanel
+        scene={panelBody}
+        release={scopedReleaseSlim}
+        onClose={closeScene}
+        onToast={(message, tone) => setToast({ message, tone })}
+        existingTaskCount={scopedTasks.length}
+        tasks={scopedTasks}
+        onOpenTask={openTask}
+        onTaskRescheduled={() => void loadCommandCenter({ force: true })}
+        onPlanApproved={() => {
+          setHasPlanDraft(false);
+          closeScene();
+          void loadCommandCenter({ force: true });
+          // Approving a plan is the one moment a manager has the whole release
+          // in front of them, so it is when the kit still pointing at the last
+          // one is worth mentioning. The prompt decides for itself whether
+          // there is anything to say and renders nothing when there is not.
+          setKitPromptFor(scopedReleaseSlim?.id ?? null);
+        }}
+        onStartPlanIntake={() => openPlanIntake()}
+      />
+    ) : undefined;
 
   // Suppressed while the release has no date: this guide opens with "Your
   // release is set up" and describes a rollout that, for a dateless
@@ -1276,7 +1317,7 @@ export function WorkspaceView() {
                     the ACTIVITY list, not the scene body that replaced it,
                     and on a phone it was one of ~250px of stacked chrome
                     between the topbar and the scene's own content. */}
-                {activeScene ? null : (
+                {!bodyIsMainView ? null : (
                   <div className="mb-4 flex items-center gap-3">
                     <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
                       Motion

@@ -20,7 +20,7 @@ describe('RELEASE_MENU_ORDER', () => {
   it('is the documented sequence', () => {
     expect([...RELEASE_MENU_ORDER]).toEqual([
       'plan',
-      'timeline',
+      'activities',
       'calendar',
       'pitch',
       'metadata',
@@ -59,11 +59,11 @@ describe('RELEASE_MENU_ORDER', () => {
 
 describe('orderReleaseMenu', () => {
   it('sorts entries into the canonical order regardless of how they arrive', () => {
-    const scrambled = entriesFor(['archive', 'plan', 'capture', 'timeline', 'song']);
+    const scrambled = entriesFor(['archive', 'plan', 'capture', 'activities', 'song']);
 
     expect(keys(orderReleaseMenu(scrambled))).toEqual([
       'plan',
-      'timeline',
+      'activities',
       'song',
       'capture',
       'archive',

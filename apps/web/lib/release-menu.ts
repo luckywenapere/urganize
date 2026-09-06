@@ -49,10 +49,15 @@ export const RELEASE_MENU_ORDER = [
   // a draft is waiting), so it costs the list nothing to put it first: "A
   // release with no activities has exactly one job, and this is it."
   'plan',
-  // The activity list seen a different way, so it reads as a view switch
-  // rather than another surface — his stated reason for placing it "closest to
-  // Activities", and it leads both existing rows.
-  'timeline',
+  // The OTHER main view, whichever one is not currently showing. Until
+  // 2026-09-06 this slot was 'timeline' — the same activities seen a different
+  // way, "closest to Activities", leading both rows. It swapped when the
+  // timeline became what a release LANDS on: a row pointing at the view you
+  // are already looking at is noise, and the buckets are what now needs a
+  // door. Same rank, same reasoning, opposite direction — and it is gated on
+  // the timeline flag either way, because with that flag off the timeline is
+  // unavailable AND the buckets are already the default, so neither belongs.
+  'activities',
   // Marketing is 37 of the playbook's 64 activities, the largest block by a
   // wide margin, and the content calendar is where that work gets planned.
   // Promoted to a permanent tab 2026-08-16.
