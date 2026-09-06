@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Inbox, MicVocal, Newspaper, Plus } from '@/components/icons';
+import { Inbox, MicVocal, Newspaper, Plus, Users } from '@/components/icons';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
@@ -18,6 +18,7 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
+const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 
 type MobileNavBarProps = {
   /** Opens the CreateReleaseModal AppShell owns — the same instance the
@@ -168,6 +169,14 @@ function NavTab({
  * make a fourth for exactly that account. A seventh tab needs a different
  * shape for this bar — an overflow sheet, not another `flex-1`.
  *
+ * DIRECTORY (2026-09-06) is what made that ceiling bite. It takes the third
+ * right-hand slot for every account EXCEPT a dual one, which already holds
+ * three there. So the right side is Shows · Pitches · Press kits for a dual
+ * account and Shows · Directory · Press kits for everybody else — three
+ * either way, and never the four that would drop under the touch target. The
+ * bar is now genuinely full: the next surface that wants a slot is the one
+ * that has to build the overflow sheet.
+ *
  * A region holding two tabs (the common, non-dual case on the right) spaces
  * them more airily than a region holding three. That is the honest cost of an
  * odd tab count around a centred button: five tabs cannot split evenly. Every
@@ -193,6 +202,9 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
   const isNotes = pathname === '/dashboard/notes';
   const isShows = pathname?.startsWith('/dashboard/shows') ?? false;
   const isPressKits = pathname?.startsWith('/dashboard/press-kits') ?? false;
+  // Exact, unlike Shows and Press kits: a person's page lives at /p/{slug},
+  // not under this path, so there is no deeper route to keep lit.
+  const isDirectory = pathname === '/dashboard/directory';
   // Tri-state — `null` means the probe is still in flight, and it is null on
   // every fresh load (never persisted). Only a CONFIRMED positive adds the
   // Pitches tab, so while the answer is unknown the bar settles on the
@@ -350,6 +362,35 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
               label="Pitches"
               Icon={Inbox}
               isActive={pathname?.startsWith('/curator') ?? false}
+            />
+          ) : null}
+
+          {/* Directory (founder call, 2026-09-06). It is the ONE surface a
+              phone could not reach at all: the identity card that carries it
+              on desktop is `lg:block`, and the only other way in is the page
+              search inside a scoped release's dock — so with no release
+              scoped there was no path. The founder found it by accident,
+              through the role gaps panel on a release.
+
+              NOT SHOWN TO A DUAL ACCOUNT, and that is a width rule rather
+              than a judgement about the feature. This side holds three at
+              most (see the header), a dual account already fills it with
+              Shows · Pitches · Press kits, and a fourth is ~39px — under the
+              touch target. Presence here depends on ACCOUNT TYPE, which is
+              fixed for a session, so nothing shifts under a thumb mid-use;
+              that is the same rule Pitches itself follows and is different in
+              kind from the URL-dependent tab that was removed.
+
+              A dual account keeps the paths everyone had before this: the
+              page search in a scoped release's dock, and the role gaps panel.
+              Thin, and the reason the overflow sheet the header calls for is
+              the real fix whenever a seventh tab is genuinely wanted. */}
+          {DIRECTORY_ENABLED && !(PITCHING_ENABLED && hasCuratorProfile === true) ? (
+            <NavTab
+              href="/dashboard/directory"
+              label="Directory"
+              Icon={Users}
+              isActive={isDirectory}
             />
           ) : null}
 

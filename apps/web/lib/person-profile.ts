@@ -46,6 +46,17 @@ export const PERSON_AVAILABILITY_COPY: Record<PersonAvailability, { label: strin
   closed: { label: 'Not taking work', hint: 'You stay findable. People know not to ask yet.' },
 };
 
+/**
+ * The one addressable spot in the Settings section, so a link and its target
+ * cannot drift apart.
+ *
+ * It lives HERE rather than beside the component for a bundling reason: the
+ * directory page and the settings page both need it, and importing it from a
+ * 'use client' component would pull that whole section — and everything it
+ * imports — into pages that only wanted a string.
+ */
+export const DIRECTORY_SETTINGS_ANCHOR = 'directory';
+
 /** A profile is listed once it is anything but private. */
 export function isListed(visibility: PersonVisibility): boolean {
   return visibility !== 'private';
@@ -72,6 +83,24 @@ export function suggestSlug(displayName: string): string | null {
   // The CHECK requires at least two characters, so a one-letter result is not
   // a valid handle even though it is not empty.
   return slug.length >= 2 ? slug : null;
+}
+
+/**
+ * Whether a unique-handle collision is on a handle WE generated rather than one
+ * the person chose.
+ *
+ * It matters because the two need opposite answers. A handle somebody typed is
+ * theirs to change, so "that handle is taken" is useful. But on a first save
+ * there is no handle field on screen at all — they typed a name and pressed
+ * "List me" — so the same message names a thing they never chose and cannot
+ * see, which turns the one action this whole feature depends on into a dead
+ * end. The caller retries without a handle instead; a profile with no handle is
+ * a valid profile (the column is nullable), and they can pick one afterwards.
+ */
+export function slugConflictIsOurs(input: PersonProfileInput, profileExisted: boolean): boolean {
+  // Only a first write suggests one, and only when the caller named none. An
+  // explicit null is a choice, not a suggestion, and cannot collide anyway.
+  return !profileExisted && input.slug === undefined;
 }
 
 export type PersonProfileInput = {

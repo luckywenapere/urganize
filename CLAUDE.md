@@ -10165,6 +10165,58 @@ filter (`metadata->>role`) in particular has never run against real PostgREST.
 revisit "then, and only then" — is deliberately not built: it wants real demand
 rows to rank against, and there are none yet.
 
+### First live report: a phone could not reach it, and "Add yourself" led nowhere (2026-09-06)
+
+The founder, minutes after the flag went on: *"Add yourself is not working I'm
+trying on mobile and I can't even find it on mobile it just showed your release
+needs a digital marketer and that's the only way I found it."* Three separate
+faults, and the first two were predicted in writing.
+
+1. **A PHONE COULD NOT REACH THE DIRECTORY AT ALL**, which Phase 4 recorded as
+   a known gap and closed on the founder's own answer, "search plus the Phase 5
+   panel". That answer turned out to be half a path: the identity card carrying
+   it is `lg:block`, and the page search that indexes it lives in `TasksPanel`'s
+   mobile dock, which only renders on a SCOPED RELEASE. So with no release
+   scoped there was no entry point, and the role gaps panel — the accident he
+   describes — was the only way in.
+
+   **It is a tab in the bottom bar now (founder call), and it fills that bar.**
+   The right side holds three at most; a dual account already holds three there
+   (Shows · Pitches · Press kits), so Directory takes that third slot for
+   everybody EXCEPT a dual account. Presence therefore depends on ACCOUNT TYPE,
+   which is fixed for a session and never shifts under a thumb — the rule
+   Pitches itself follows, and different in kind from the URL-dependent Song tab
+   that was removed for moving about. A dual account keeps the paths everyone
+   had before this. The next surface that wants a slot is the one that has to
+   build the overflow sheet the bar's own header calls for.
+
+2. **"Add yourself" pushed a bare `/settings`.** The section is fifth of twelve
+   in the Account tab, and a client-side push does not scroll to a hash the way
+   a document load does — so on a phone the button appeared to do nothing, which
+   is exactly how it was reported. It links to `/settings#directory` now, and
+   the page scrolls to it. `DIRECTORY_SETTINGS_ANCHOR` lives in
+   `lib/person-profile.ts` rather than beside the component, so the link and its
+   target cannot drift and neither page pulls a whole settings section in for a
+   string. No tab redirect is needed, unlike the `#teammates` precedent: Account
+   is the default tab.
+
+3. **A collision on a handle WE suggested failed the opt in**, found while
+   reading rather than reported. On a first save there is no handle field on
+   screen — you type a name and press "List me" — so "That handle is taken. Try
+   another." named a thing the person never chose and could not change, on the
+   one action the whole feature depends on. The insert is retried without a
+   handle instead: the column is nullable, a profile with no handle is a valid
+   profile, and they can pick one afterwards. A handle somebody TYPED still gets
+   the honest refusal, because that one is theirs to change
+   (`slugConflictIsOurs`, unit-tested).
+
+**Verified:** 2685 tests (4 new), `eslint .` at the exact 3-error / 80-warning
+baseline with zero new findings, and `next build` green by exit code in both
+flag states with `/auth`, `/onboarding`, `/settings` and `/dashboard/directory`
+all still `○ Static` — `/settings` in particular, since this added an effect to
+it. **Not verified:** nothing has rendered on a phone from here, and the
+collision retry has never run against a real database.
+
 ---
 
 ## The timeline becomes the release's main view (2026-09-06, flag-off)

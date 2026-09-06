@@ -13,9 +13,14 @@ import {
   type DirectoryFilters,
 } from '@/lib/directory-search';
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
-import { PERSON_AVAILABILITIES, PERSON_AVAILABILITY_COPY } from '@/lib/person-profile';
+import {
+  DIRECTORY_SETTINGS_ANCHOR,
+  PERSON_AVAILABILITIES,
+  PERSON_AVAILABILITY_COPY,
+} from '@/lib/person-profile';
 import type { PersonAvailability } from '@/types/directory';
 import { DirectoryEmptyState } from '@/components/directory/DirectoryEmptyState';
+
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { bucketResultCount, type DirectoryDemandSource } from '@/lib/directory-demand';
 
@@ -283,7 +288,7 @@ function DirectoryBody() {
               onDropRole={() => patch({ role: null })}
               onDropCity={() => patch({ city: null })}
               onShowOpen={() => setFilters({ ...NO_FILTERS, availability: 'open' })}
-              onListMe={() => router.push('/settings')}
+              onListMe={() => router.push(`/settings#${DIRECTORY_SETTINGS_ANCHOR}`)}
             />
           ) : (
             <ul className="space-y-3">

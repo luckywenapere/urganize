@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { parsePersonProfileInput, suggestSlug } from '@/lib/person-profile';
+import { parsePersonProfileInput, slugConflictIsOurs, suggestSlug } from '@/lib/person-profile';
 import {
   PERSON_PROFILES_TABLE,
   PERSON_PROFILE_COLUMNS,
@@ -116,22 +116,36 @@ export async function PATCH(request: NextRequest) {
     patch.slug = suggestSlug(String(displayName || input.displayName || ''));
   }
 
-  const { data, error } = existing
-    ? await adminClient
-        .from(PERSON_PROFILES_TABLE)
-        .update(patch)
-        .eq('user_id', auth.user.id)
-        .select(PERSON_PROFILE_COLUMNS)
-        .maybeSingle()
-    : await adminClient
-        .from(PERSON_PROFILES_TABLE)
-        .insert({ user_id: auth.user.id, ...patch })
-        .select(PERSON_PROFILE_COLUMNS)
-        .maybeSingle();
+  const write = (body: Record<string, unknown>) =>
+    existing
+      ? adminClient
+          .from(PERSON_PROFILES_TABLE)
+          .update(body)
+          .eq('user_id', auth.user.id)
+          .select(PERSON_PROFILE_COLUMNS)
+          .maybeSingle()
+      : adminClient
+          .from(PERSON_PROFILES_TABLE)
+          .insert({ user_id: auth.user.id, ...body })
+          .select(PERSON_PROFILE_COLUMNS)
+          .maybeSingle();
+
+  let { data, error } = await write(patch);
+
+  // A collision on a handle WE suggested must not fail somebody's opt in.
+  // There is no handle field on screen at that point — they typed a name and
+  // pressed "List me" — so answering "that handle is taken" names a thing they
+  // never chose and cannot change, which is a dead end on the one action this
+  // feature depends on. Retry without one instead: the column is nullable, a
+  // profile with no handle is a valid profile, and they can pick one after.
+  if (error?.code === '23505' && slugConflictIsOurs(input, Boolean(existing))) {
+    const { slug: _dropped, ...withoutSlug } = patch;
+    ({ data, error } = await write(withoutSlug));
+  }
 
   if (error) {
-    // The one collision a person can actually hit, answered in words they can
-    // act on rather than as a constraint name.
+    // The one collision a person can actually hit and act on: a handle they
+    // typed themselves.
     if (error.code === '23505') {
       return NextResponse.json({ error: 'That handle is taken. Try another.' }, { status: 409 });
     }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  slugConflictIsOurs,
   PERSON_BIO_MAX_CHARS,
   PERSON_LINKS_MAX,
   PERSON_ROLES_MAX,
@@ -155,5 +156,30 @@ describe('profile roles', () => {
   it('puts delivered roles first, then claimed, each alphabetical', () => {
     const roles = profileRoles(['manager', 'a_and_r'], [{ role: 'pr' }]);
     expect(roles.map((entry) => entry.role)).toEqual(['pr', 'a_and_r', 'manager']);
+  });
+});
+
+describe('slugConflictIsOurs', () => {
+  it('is true when the handle was suggested on a first save', () => {
+    // The user typed a name and pressed "List me". There is no handle field on
+    // screen at that point, so telling them "that handle is taken" names a
+    // thing they never chose and cannot change — a dead end on the one action
+    // the whole feature depends on.
+    expect(slugConflictIsOurs({ displayName: 'Ada Obi', visibility: 'directory' }, false)).toBe(true);
+  });
+
+  it('is false when the user supplied the handle', () => {
+    expect(slugConflictIsOurs({ slug: 'ada-obi' }, false)).toBe(false);
+  });
+
+  it('is false when the profile already existed', () => {
+    // Nothing auto-suggests on an update, so a collision there can only be one
+    // the user asked for.
+    expect(slugConflictIsOurs({ displayName: 'Ada Obi' }, true)).toBe(false);
+  });
+
+  it('is false when the user deliberately cleared the handle', () => {
+    // An explicit null is a choice, and it cannot collide anyway.
+    expect(slugConflictIsOurs({ slug: null }, false)).toBe(false);
   });
 });
