@@ -76,6 +76,18 @@ type TimelineSceneProps = {
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
   /** Re-read the workspace after a reschedule lands. */
   onRescheduled: () => void;
+  /**
+   * Drop this scene's own empty states because a standing banner above it
+   * already says the same thing AND offers the button to act on it.
+   *
+   * Only ever true when the timeline is the release's MAIN VIEW: the banner
+   * slot (SetReleaseDateCard / PlanReleaseCard) renders above the body there,
+   * and stacking "Set a release date first" under a form that sets the release
+   * date is two blocks of chrome for one job — the thing a phone can least
+   * afford. Opened as a scene, the banner is not there and these states are
+   * the only thing that would explain an empty screen, so they stay.
+   */
+  suppressEmptyState?: boolean;
 };
 
 export function TimelineScene({
@@ -84,7 +96,15 @@ export function TimelineScene({
   onOpenTask,
   onToast,
   onRescheduled,
+  suppressEmptyState = false,
 }: TimelineSceneProps) {
+  // Phases default OPEN (`?? false` at the two call sites below). They shipped
+  // collapsed in 2026-08, which was defensible while this was a scene you chose
+  // to open — and is exactly wrong now that it is what a release lands on: the
+  // whole reason the buckets were retired as the main view is that they ship
+  // collapsed, so a release with 63 activities opened onto five closed drawers
+  // and five counts. Replacing that with four closed drawers would answer
+  // nothing. The narrow week list has always rendered everything expanded.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   // Day offsets applied locally while a reschedule is in flight, so the bar
   // stays where the user dropped it instead of snapping back for a round trip
@@ -142,6 +162,7 @@ export function TimelineScene({
   );
 
   if (!release.releaseDate) {
+    if (suppressEmptyState) return null;
     return (
       <TimelineEmptyState
         title="Set a release date first"
@@ -151,6 +172,7 @@ export function TimelineScene({
   }
 
   if (!timeline || (timeline.placedCount === 0 && timeline.unscheduled.length === 0)) {
+    if (suppressEmptyState) return null;
     return (
       <TimelineEmptyState
         title="No activities yet"
@@ -195,7 +217,7 @@ export function TimelineScene({
               <PhaseLabels
                 key={phase.phase}
                 phase={phase}
-                isCollapsed={collapsed[phase.phase] ?? true}
+                isCollapsed={collapsed[phase.phase] ?? false}
                 onToggle={() =>
                   setCollapsed((current) => ({
                     ...current,
@@ -263,7 +285,7 @@ export function TimelineScene({
                 key={phase.phase}
                 phase={phase}
                 weeks={weeks}
-                isCollapsed={collapsed[phase.phase] ?? true}
+                isCollapsed={collapsed[phase.phase] ?? false}
                 axisRef={axisRef}
                 draggingTaskId={dragging?.taskId ?? null}
                 withLocalMove={withLocalMove}

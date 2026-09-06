@@ -6,6 +6,7 @@ import { Button } from '@urganize/ui';
 
 import type { Release } from '@/types/releases';
 import type { WorkspaceMember } from '@/lib/tasks';
+import { resolveMainView } from '@/lib/scene-cache';
 import { supabase } from '@/lib/supabase/client';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
@@ -265,7 +266,13 @@ export function PlanScene({
           onClick={onClose}
           className="motion-focus inline-flex items-center gap-1 text-xs text-content-tertiary transition-colors hover:text-content-primary"
         >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Activities
+          {/* Derived, not the literal "Activities" it was until 2026-09-06:
+              closing lands on the release's main view, which is the timeline
+              once its flag is on. PlanScene carries its own copy of this
+              control rather than ReleaseScenePanel's BackToMainView because it
+              renders its own header; the two must say the same thing. */}
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />{' '}
+          {resolveMainView() === 'timeline' ? 'Timeline' : 'Activities'}
         </button>
       </div>
     </div>

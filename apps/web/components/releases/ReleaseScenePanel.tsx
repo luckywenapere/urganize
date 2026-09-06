@@ -6,6 +6,7 @@ import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
 import type { SceneName } from '@/components/workspace/useSceneOverlay';
 import { captureFeatureDiscoveryByName } from '@/lib/analytics';
+import { resolveMainView } from '@/lib/scene-cache';
 import { MetadataSection } from '@/components/releases/MetadataSection';
 import { CaptureSection } from '@/components/releases/CaptureSection';
 import { AssetSection } from '@/components/releases/AssetSection';
@@ -44,6 +45,10 @@ import { calendarFontVariables } from '@/components/content-calendar/calendar-fo
  */
 
 const SCENE_LABELS: Record<SceneName, string> = {
+  // Present for completeness only. The activity buckets never render through
+  // this panel — they are chromeless, the way the timeline is when it is the
+  // main view — so this string has no on-screen home today.
+  activities: 'Activities',
   metadata: 'Metadata',
   files: 'Files',
   // "Content", not "Content calendar" (founder call, 2026-08-31). Shortened
@@ -83,17 +88,26 @@ type ReleaseScenePanelProps = {
 
 /** Shared "get me back to the activity list" control. Reads as a return
  * affordance rather than a modal dismissal, because that is what it is. */
-function BackToActivities({ onClose }: { onClose: () => void }) {
+/**
+ * The way out of a scene: back to whatever the release's main view is.
+ *
+ * The label is derived rather than the literal "Activities" it was until
+ * 2026-09-06, because closing a scene lands on the main view and that is the
+ * timeline once its flag is on — a control promising "Activities" that hands
+ * you a week grid is a control that lies about where it goes.
+ */
+function BackToMainView({ onClose }: { onClose: () => void }) {
+  const label = resolveMainView() === 'timeline' ? 'Timeline' : 'Activities';
   return (
     <button
       type="button"
       onClick={onClose}
       // shrink-0 because the heading block beside this can now carry a long
-      // release title; without it a wide title squeezes "Activities" into a
+      // release title; without it a wide title squeezes the label into a
       // wrap. The title truncates instead (min-w-0 + truncate over there).
       className="motion-focus inline-flex shrink-0 items-center gap-1 text-xs text-content-tertiary transition-colors hover:text-content-primary"
     >
-      <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Activities
+      <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> {label}
     </button>
   );
 }
@@ -190,7 +204,7 @@ export function ReleaseScenePanel({
             {release.artistName ? ` · ${release.artistName}` : ''}
           </p>
         </div>
-        <BackToActivities onClose={onClose} />
+        <BackToMainView onClose={onClose} />
       </div>
 
       {/* Each section fetches its own data and renders its own internal
