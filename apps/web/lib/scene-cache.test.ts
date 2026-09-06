@@ -325,3 +325,80 @@ describe('resolveActiveScene', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// The main view
+// ---------------------------------------------------------------------------
+
+describe('resolveMainView', () => {
+  it('is the timeline when the flag is on', async () => {
+    const { resolveMainView } = await loadResolver(true);
+    expect(resolveMainView()).toBe('timeline');
+  });
+
+  it('is the activity list when the flag is off', async () => {
+    const { resolveMainView } = await loadResolver(false);
+    expect(resolveMainView()).toBe('activities');
+  });
+});
+
+describe('resolvePanelBody', () => {
+  it('falls back to the main view when no scene is asked for', async () => {
+    const on = await loadResolver(true);
+    expect(on.resolvePanelBody(null)).toBe('timeline');
+    const off = await loadResolver(false);
+    expect(off.resolvePanelBody(null)).toBe('activities');
+  });
+
+  // The whole point of the change: with the flag on, the buckets are still
+  // reachable — they just stop being what you land on.
+  it('opens the activity list on request, in either flag state', async () => {
+    const on = await loadResolver(true);
+    expect(on.resolvePanelBody('activities')).toBe('activities');
+    const off = await loadResolver(false);
+    expect(off.resolvePanelBody('activities')).toBe('activities');
+  });
+
+  it('passes a real scene through untouched', async () => {
+    const { resolvePanelBody } = await loadResolver(true);
+    expect(resolvePanelBody('metadata')).toBe('metadata');
+    expect(resolvePanelBody('calendar')).toBe('calendar');
+  });
+
+  // A stale bookmark to ?scene=timeline after a rollback must not render a
+  // blank panel: an unresolvable scene means "no scene", which means the main
+  // view — which with the flag off is the bucket list.
+  it('lands a rolled-back timeline URL on the activity list', async () => {
+    const { resolvePanelBody } = await loadResolver(false);
+    expect(resolvePanelBody('timeline')).toBe('activities');
+  });
+
+  it('lands a hand-typed nonsense scene on the main view', async () => {
+    const on = await loadResolver(true);
+    expect(on.resolvePanelBody('bogus')).toBe('timeline');
+    const off = await loadResolver(false);
+    expect(off.resolvePanelBody('bogus')).toBe('activities');
+  });
+
+  // With the flag on, ?scene=timeline and no param are the same screen. Both
+  // resolving to 'timeline' is what lets one body switch handle either.
+  it('treats an explicit timeline param and no param alike when it is the main view', async () => {
+    const { resolvePanelBody } = await loadResolver(true);
+    expect(resolvePanelBody('timeline')).toBe(resolvePanelBody(null));
+  });
+});
+
+describe('the activity list as a scene', () => {
+  it('is never cached or persisted: it renders from props already in hand', async () => {
+    const { isCacheableScene, shouldPersistScene, SCENE_PREFETCH_ORDER: order } =
+      await loadResolver(true);
+    expect(isCacheableScene('activities')).toBe(false);
+    expect(shouldPersistScene('activities')).toBe(false);
+    expect(order as readonly string[]).not.toContain('activities');
+  });
+
+  it('is not flag-gated — it is the fallback, so it must always resolve', async () => {
+    const { resolveActiveScene } = await loadResolver(false);
+    expect(resolveActiveScene('activities')).toBe('activities');
+  });
+});
