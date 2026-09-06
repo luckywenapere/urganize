@@ -1,0 +1,84 @@
+import { NextRequest, NextResponse } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { verifyAdmin } from '../_shared';
+import { summarizeDirectory } from '@/lib/directory-admin-summary';
+import { DIRECTORY_DEMAND_SOURCES, type DirectoryDemandSource } from '@/lib/directory-demand';
+
+/**
+ * GET /api/admin/directory — supply against demand, one row per role.
+ *
+ * The one table that answers a cold-start marketplace's only question: which
+ * roles are managers asking for that nobody has delivered. That is `recruit`,
+ * and it is the reason the demand signal is a durable row rather than an
+ * analytics event alone (lib/directory-demand.ts).
+ *
+ * NOT flag-gated, the /admin/teams and /admin/urgans precedent: with
+ * NEXT_PUBLIC_FEATURE_DIRECTORY off every table simply reads empty, and the
+ * founder should be able to watch it fill from the day it is switched on.
+ */
+
+const LOOKBACK_DAYS = 90;
+const QUERY_LIMIT = 5000;
+
+type DemandQueryRow = { metadata: Record<string, unknown> | null };
+
+export async function GET(request: NextRequest) {
+  const admin = await verifyAdmin(request);
+  if (!admin.ok) return admin.response;
+
+  const client = admin.supabaseAdmin as SupabaseClient;
+  const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  const [profilesResult, recordsResult, demandResult] = await Promise.all([
+    client.from('person_profiles').select('roles').neq('visibility', 'private').limit(QUERY_LIMIT),
+    client.from('delivery_records').select('user_id, role').limit(QUERY_LIMIT),
+    client
+      .from('billing_events')
+      .select('metadata')
+      .eq('type', 'directory_role_wanted')
+      .gte('created_at', since)
+      .limit(QUERY_LIMIT),
+  ]);
+
+  // Reported separately rather than collapsed into one message: a directory
+  // with no migration applied answers three different errors, and knowing
+  // which table is missing is the difference between a two minute fix and a
+  // hunt.
+  for (const [table, result] of [
+    ['person_profiles', profilesResult],
+    ['delivery_records', recordsResult],
+    ['billing_events', demandResult],
+  ] as const) {
+    if (result.error) {
+      return NextResponse.json(
+        { error: `Could not read ${table}: ${result.error.message}` },
+        { status: 500 }
+      );
+    }
+  }
+
+  const profiles = ((profilesResult.data || []) as { roles: string[] | null }[]).map((row) => ({
+    roles: Array.isArray(row.roles) ? row.roles.map(String) : [],
+  }));
+
+  const records = ((recordsResult.data || []) as { user_id: string; role: string }[]).map((row) => ({
+    userId: String(row.user_id || ''),
+    role: String(row.role || ''),
+  }));
+
+  const demand = ((demandResult.data || []) as DemandQueryRow[])
+    .map((row) => row.metadata || {})
+    .filter(
+      (meta): meta is { role: string; matched: boolean; source: DirectoryDemandSource } =>
+        typeof meta.role === 'string' &&
+        typeof meta.matched === 'boolean' &&
+        typeof meta.source === 'string' &&
+        (DIRECTORY_DEMAND_SOURCES as readonly string[]).includes(meta.source)
+    )
+    .map((meta) => ({ role: meta.role, matched: meta.matched, source: meta.source }));
+
+  return NextResponse.json({
+    lookbackDays: LOOKBACK_DAYS,
+    ...summarizeDirectory({ profiles, records, demand }),
+  });
+}

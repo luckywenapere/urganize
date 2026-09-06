@@ -223,6 +223,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/epk/') ||
     // A standing press kit, opened by an editor who has no account.
     pathname?.startsWith('/k/') ||
+    // A person's public record, opened by a manager deciding who to hire.
+    pathname?.startsWith('/p/') ||
     pathname?.startsWith('/capture/') ||
     // A DJ pack link, opened by someone with no account at all.
     pathname?.startsWith('/pack/') ||

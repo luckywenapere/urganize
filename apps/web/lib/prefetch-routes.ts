@@ -33,6 +33,7 @@
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
+const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
 /** The three destinations every signed-in team account has. */
@@ -63,6 +64,7 @@ export function buildPrefetchRoutes({ hasCuratorProfile }: PrefetchAudience): st
   if (NOTES_ENABLED) routes.push('/dashboard/notes');
   if (EVENTS_ENABLED) routes.push('/dashboard/shows');
   if (PRESS_KITS_ENABLED) routes.push('/dashboard/press-kits');
+  if (DIRECTORY_ENABLED) routes.push('/dashboard/directory');
   // Both halves required: the feature has to be on AND this account has to
   // actually be a playlist owner. Everyone else has no such nav entry.
   if (PITCHING_ENABLED && hasCuratorProfile === true) routes.push('/curator');

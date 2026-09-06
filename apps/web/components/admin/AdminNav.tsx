@@ -16,6 +16,7 @@ import {
   Sparkles,
   TrendingUp,
   Users,
+  UserPlus,
   Building2,
 } from '@/components/icons';
 
@@ -54,6 +55,7 @@ const ITEMS: Array<{
   { key: 'teams', label: 'Teams', icon: Building2, href: '/admin/teams' },
   { key: 'issue-reports', label: 'Reports', icon: Bug, href: '/admin/issue-reports' },
   { key: 'urgans', label: 'UrgAns actions', icon: Sparkles, href: '/admin/urgans' },
+  { key: 'directory', label: 'Directory', icon: UserPlus, href: '/admin/directory' },
   { key: 'waitlist', label: 'Waitlist', icon: Users, href: '/admin/waitlist' },
   { key: 'growth', label: 'Growth', icon: TrendingUp, href: '/admin/growth' },
   { key: 'interviews', label: 'Interviews', icon: Mic, href: '/admin/interviews' },

@@ -309,6 +309,19 @@ type TasksPanelProps = {
    */
   activitiesBanner?: ReactNode;
   /**
+   * Rendered BELOW the main view, inside the scroll body.
+   *
+   * Deliberately NOT the banner slot above, which is a single slot with four
+   * claimants already. A list of rows is not a banner and should not fight one
+   * for the space; and unlike the footer pill row below, this scrolls with the
+   * content rather than taking pinned height from it.
+   *
+   * Gated on `bodyIsMainView`, not on the buckets branch: since 2026-09-06 the
+   * main view can be the timeline, and a footer left inside the buckets would
+   * be invisible in what is now the default state.
+   */
+  activitiesFooter?: ReactNode;
+  /**
    * Set when `activitiesBanner` already explains the empty list AND offers a
    * way to act on it — the plan-waiting SetReleaseDateCard does both, so the
    * generic empty state below would just repeat it (URG-233).
@@ -361,6 +374,7 @@ export function TasksPanel({
   changeArtistAction,
   sceneContent,
   activitiesBanner,
+  activitiesFooter,
   bannerReplacesEmptyState = false,
   showPlanPill = false,
 }: TasksPanelProps) {
@@ -1280,6 +1294,16 @@ export function TasksPanel({
         })}
       </div>
       )}
+
+      {/* The role gaps panel, below whichever MAIN VIEW rendered.
+          `bodyIsMainView` and not the buckets branch, for exactly the reason
+          the banner above carries: the timeline became what a release lands
+          on (2026-09-06), so a footer left inside the buckets would have gone
+          dark the moment that flag went on — invisible in the one state that
+          is now the default. It belongs to the main view, not to the list. */}
+      {bodyIsMainView && activitiesFooter ? (
+        <div className="mt-3">{activitiesFooter}</div>
+      ) : null}
       </div>
 
       {/* Desktop footer row (lg+ ONLY) — Calendar, then Press kit beside it.

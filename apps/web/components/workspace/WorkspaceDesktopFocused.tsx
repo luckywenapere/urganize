@@ -69,6 +69,7 @@ type WorkspaceDesktopFocusedProps = {
    * SetReleaseDateCard, shown at the top of the activity list when the
    * scoped release has no release date (2026-08-06, URG-230). */
   panelActivitiesBanner?: ReactNode;
+  panelActivitiesFooter?: ReactNode;
   /** Forwarded verbatim to TasksPanel's `bannerReplacesEmptyState`
    * (2026-08-06, URG-233). */
   panelBannerReplacesEmptyState?: boolean;
@@ -108,6 +109,7 @@ export function WorkspaceDesktopFocused({
   panelChangeArtistAction,
   panelSceneContent,
   panelActivitiesBanner,
+  panelActivitiesFooter,
   panelBannerReplacesEmptyState,
   panelShowPlanPill,
 }: WorkspaceDesktopFocusedProps) {
@@ -223,6 +225,7 @@ export function WorkspaceDesktopFocused({
             changeArtistAction={panelChangeArtistAction}
             sceneContent={panelSceneContent}
             activitiesBanner={panelActivitiesBanner}
+            activitiesFooter={panelActivitiesFooter}
             bannerReplacesEmptyState={panelBannerReplacesEmptyState}
             showPlanPill={panelShowPlanPill}
           />
