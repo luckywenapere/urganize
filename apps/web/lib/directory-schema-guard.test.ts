@@ -23,6 +23,16 @@ const MIGRATION = join(
   '20260905200000_person_directory.sql'
 );
 
+const REQUESTS_MIGRATION = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'supabase',
+  'migrations',
+  '20260906120000_work_requests.sql'
+);
+
 function checkConstraintValues(sql: string, constraintName: string): string[] {
   const start = sql.indexOf(constraintName);
   if (start < 0) return [];
@@ -73,5 +83,45 @@ describe('directory schema', () => {
 
   it('scopes a record to exactly one release or show', () => {
     expect(sql).toContain('num_nonnulls(release_id, show_id) = 1');
+  });
+});
+
+describe('work requests schema', () => {
+  const sql = readFileSync(REQUESTS_MIGRATION, 'utf8');
+
+  it('lists the same roles as TypeScript, like the other two tables', () => {
+    const inSql = checkConstraintValues(sql, 'work_requests_role_check');
+    expect(inSql.length).toBeGreaterThan(0);
+    expect([...inSql].sort()).toEqual([...DIRECTORY_ROLES].sort());
+  });
+
+  it('gives the table no write policy of any kind', () => {
+    // Every write carries an invariant RLS cannot express — the open-request
+    // cap, honest denormalised fields, and the rule that only the recipient
+    // moves a status. One `for all` or `for insert` policy would undo all of
+    // it, the same property delivery_records depends on above.
+    const policies = sql.match(/create policy[\s\S]*?on public\.work_requests for (\w+)/g) || [];
+    const kinds = policies.map((line) => line.slice(line.lastIndexOf(' ') + 1));
+    expect(kinds).toEqual(['select', 'select']);
+  });
+
+  it('reads from both sides, which is what makes it cross-tenant', () => {
+    expect(sql).toContain('auth.uid() = recipient_user_id');
+    expect(sql).toContain('auth.uid() = sender_user_id');
+  });
+
+  it('keeps row level security on', () => {
+    expect(sql).toContain('alter table public.work_requests enable row level security');
+  });
+
+  it('allows only ONE open request per team per person per role', () => {
+    // Partial, so a team can ask again once the last one was answered — a no
+    // on one single is not a no forever — while nobody can queue five
+    // identical asks at somebody.
+    expect(sql).toMatch(/unique index[\s\S]*?work_requests_open_key[\s\S]*?where status = 'new'/);
+  });
+
+  it('starts a request as new', () => {
+    expect(sql).toMatch(/status text not null default 'new'/);
   });
 });

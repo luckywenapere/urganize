@@ -466,3 +466,132 @@ ${escapeHtml(`${assigner} assigned you ${taskTitle}${release ? ` for ${release}`
 
   return { subject, html, text };
 }
+
+type WorkRequestEmailInput = {
+  recipientName: string;
+  senderName: string;
+  roleLabel: string;
+  note: string;
+  settingsUrl: string;
+};
+
+/**
+ * Somebody in the directory has been asked to work on a release.
+ *
+ * The founder-note register, like the assignment email above and for the same
+ * reason: this is one person approaching another, and a card with a product
+ * banner on it would read as an advert rather than an approach.
+ *
+ * IT CARRIES NO RELEASE. The recipient has not said yes yet, and an
+ * unannounced title must not travel to somebody who is about to say no — the
+ * same rule RECIPIENT_REQUEST_FIELDS enforces on the read path. What goes in
+ * the mail is who asked, which job, and the note they wrote.
+ */
+export function buildWorkRequestEmail(input: WorkRequestEmailInput): BuiltEmail {
+  const sender = input.senderName.trim() || 'Someone on Urganize';
+  const role = input.roleLabel.trim() || 'some work';
+  const note = input.note.trim();
+  const firstName = firstNameFrom(input.recipientName);
+  const greeting = firstName ? `Hey ${firstName},` : 'Hey,';
+
+  const subject = `${sender} is looking for a ${role.toLowerCase()}`;
+
+  const text = [
+    greeting,
+    '',
+    `${sender} found you in the Urganize directory and is asking about ${role.toLowerCase()} work:`,
+    '',
+    ...(note ? [`  "${note}"`] : []),
+    '',
+    'You can say you are interested, or pass, in a tap. Passing is quiet:',
+    'nothing is sent to them beyond your answer.',
+    '',
+    'Answer here:',
+    input.settingsUrl,
+    '',
+    'You are getting this because you listed yourself in the Urganize',
+    'directory. You can close your record any time in Settings.',
+  ].join('\n');
+
+  const p = `margin:0 0 18px;color:#1e2621;font-size:15px;line-height:1.65;`;
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;">
+<div style="display:none;font-size:0;line-height:0;max-height:0;overflow:hidden;">
+${escapeHtml(`${sender} is asking about ${role.toLowerCase()} work.`)}
+</div>
+<div style="max-width:560px;margin:0 auto;padding:36px 24px;font-family:${FONT_STACK};">
+<p style="${p}">${escapeHtml(greeting)}</p>
+<p style="${p}">${escapeHtml(`${sender} found you in the Urganize directory and is asking about ${role.toLowerCase()} work.`)}</p>
+${note ? `<div style="margin:0 0 18px;padding:14px 16px;border-left:3px solid #7fd99a;background-color:#f6faf7;"><p style="margin:0;color:#1e2621;font-size:15px;line-height:1.6;">${escapeHtml(note)}</p></div>` : ''}
+<p style="${p}">You can say you are interested, or pass, in a tap. Passing is quiet.</p>
+<p style="${p}"><a href="${escapeHtml(input.settingsUrl)}" style="color:#0d120e;font-weight:600;">Answer it here</a></p>
+<p style="margin:28px 0 0;color:#6b7770;font-size:13px;line-height:1.6;">You are getting this because you listed yourself in the Urganize directory. You can close your record any time in Settings.</p>
+</div>
+</body>
+</html>`;
+
+  return { subject, html, text };
+}
+
+type WorkRequestAnswerEmailInput = {
+  recipientName: string;
+  answererName: string;
+  roleLabel: string;
+  interested: boolean;
+  reply: string;
+  directoryUrl: string;
+};
+
+/** The answer coming back to whoever asked. */
+export function buildWorkRequestAnswerEmail(input: WorkRequestAnswerEmailInput): BuiltEmail {
+  const answerer = input.answererName.trim() || 'They';
+  const role = input.roleLabel.trim().toLowerCase() || 'the work';
+  const reply = input.reply.trim();
+  const firstName = firstNameFrom(input.recipientName);
+  const greeting = firstName ? `Hey ${firstName},` : 'Hey,';
+
+  const subject = input.interested
+    ? `${answerer} is interested`
+    : `${answerer} passed on the ${role}`;
+
+  const lead = input.interested
+    ? `${answerer} is interested in the ${role} you asked about.`
+    : `${answerer} passed on the ${role} you asked about.`;
+
+  const text = [
+    greeting,
+    '',
+    lead,
+    ...(reply ? ['', `  "${reply}"`] : []),
+    '',
+    ...(input.interested ? ['Their contact details are on their profile:', input.directoryUrl, ''] : []),
+    'You are getting this because you asked them through the Urganize directory.',
+  ].join('\n');
+
+  const p = `margin:0 0 18px;color:#1e2621;font-size:15px;line-height:1.65;`;
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;">
+<div style="max-width:560px;margin:0 auto;padding:36px 24px;font-family:${FONT_STACK};">
+<p style="${p}">${escapeHtml(greeting)}</p>
+<p style="${p}">${escapeHtml(lead)}</p>
+${reply ? `<div style="margin:0 0 18px;padding:14px 16px;border-left:3px solid #7fd99a;background-color:#f6faf7;"><p style="margin:0;color:#1e2621;font-size:15px;line-height:1.6;">${escapeHtml(reply)}</p></div>` : ''}
+${input.interested ? `<p style="${p}"><a href="${escapeHtml(input.directoryUrl)}" style="color:#0d120e;font-weight:600;">Their profile</a></p>` : ''}
+<p style="margin:28px 0 0;color:#6b7770;font-size:13px;line-height:1.6;">You are getting this because you asked them through the Urganize directory.</p>
+</div>
+</body>
+</html>`;
+
+  return { subject, html, text };
+}

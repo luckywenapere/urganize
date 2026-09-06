@@ -15,9 +15,12 @@ import {
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
 import type { PersonProfile, ProfileRole } from '@/types/directory';
 import { panelClass } from './panelClass';
+import { WorkRequestsInbox } from './WorkRequestsInbox';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
+const REQUESTS_ENABLED =
+  DIRECTORY_ENABLED && process.env.NEXT_PUBLIC_FEATURE_DIRECTORY_REQUESTS === 'true';
 
 
 /**
@@ -146,9 +149,16 @@ export function DirectoryProfileSection() {
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Your directory record
       </h2>
+      {/* OPTING IN OPENS THE PAGE (founder call, 2026-09-06). "List me" used to
+          save `directory` — findable, page closed — and the in-app card only
+          links to /p/{slug} for a PUBLIC profile, so the default opt-in state
+          produced somebody a manager could find and had no way to reach. A
+          directory whose people cannot be contacted is a lookup table.
+          Closing the page again is one control below. */}
       <p className="mb-4 text-sm text-content-secondary">
         Managers use the directory to find people who have delivered the work a release needs. You
-        are not listed until you say so.
+        are not listed until you say so. Listing yourself opens your page so they can read it and
+        reach you; you can close it again below.
       </p>
 
       {!loaded ? (
@@ -167,7 +177,7 @@ export function DirectoryProfileSection() {
           <button
             type="button"
             disabled={busy || !name.trim()}
-            onClick={() => void save({ displayName: name.trim(), visibility: 'directory' })}
+            onClick={() => void save({ displayName: name.trim(), visibility: 'public' })}
             className="motion-focus inline-flex h-11 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-content-inverse disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
@@ -301,6 +311,11 @@ export function DirectoryProfileSection() {
       )}
 
       {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
+
+      {/* Requests waiting for you. Rendered only once you have a record —
+          nobody can ask somebody who is not listed — and the inbox itself
+          renders nothing until there is something in it. */}
+      {REQUESTS_ENABLED && profile ? <WorkRequestsInbox /> : null}
     </section>
   );
 }
