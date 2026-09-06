@@ -784,3 +784,32 @@ describe('public tier copy tells the truth', () => {
     }
   });
 });
+
+describe('directory search', () => {
+  it('is off on solo and on above it', () => {
+    // Listing is free on every tier; SEARCHING is Manager and up (founder
+    // call, 2026-09-05). Supply free, demand paid.
+    expect(getEntitlement('solo', 'directory_search')).toBe(false);
+    expect(getEntitlement('manager', 'directory_search')).toBe(true);
+    expect(getEntitlement('label', 'directory_search')).toBe(true);
+    expect(getEntitlement('enterprise', 'directory_search')).toBe(true);
+  });
+
+  it('names a real tier in refusal copy rather than a hardcoded string', () => {
+    expect(minimumTierWith('directory_search')).toBe('manager');
+  });
+
+  it('gates nobody who exists today', () => {
+    // Inert until Solo is sellable: resolveTeamTier fails open to the uncapped
+    // tier for every unknown, legacy, trial and comped plan, so no real team
+    // resolves to solo right now. If this ever fails, the gate has started
+    // biting real customers and that is a decision, not an accident.
+    // A legacy plan, a trial, a comped team and an unknown plan are the four
+    // states every real team is in right now. None resolves to solo.
+    expect(resolveTeamTier({ state: 'paid', ownerPlan: 'monthly' })).not.toBe('solo');
+    expect(resolveTeamTier({ state: 'paid', ownerPlan: 'annual' })).not.toBe('solo');
+    expect(resolveTeamTier({ state: 'trial' })).not.toBe('solo');
+    expect(resolveTeamTier({ state: 'comped' })).not.toBe('solo');
+    expect(resolveTeamTier({ state: 'paid', ownerPlan: null })).not.toBe('solo');
+  });
+});

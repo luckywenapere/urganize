@@ -23,6 +23,7 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 
 export type AppPage = {
   key: string;
@@ -105,6 +106,29 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       // Nobody types "press kit" when they are hunting for a bio or a photo
       // to send a journalist, so the words they DO type are what carry this.
       keywords: ['epk', 'bio', 'biography', 'press', 'media kit', 'one sheet', 'photos'],
+    });
+  }
+
+  if (DIRECTORY_ENABLED) {
+    pages.push({
+      key: 'directory',
+      label: 'Directory',
+      href: '/dashboard/directory',
+      // Nobody opens this thinking the word "directory". They think of the JOB
+      // they need doing, which is why the roles carry it — and "find" and
+      // "hire", which is what the manager is actually trying to do.
+      keywords: [
+        'find',
+        'hire',
+        'people',
+        'producer',
+        'engineer',
+        'mix',
+        'designer',
+        'photographer',
+        'videographer',
+        'pr',
+      ],
     });
   }
 

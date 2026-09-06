@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, ClipboardList, Inbox, Newspaper, PanelLeftClose, PanelLeftOpen, ShieldCheck } from '@/components/icons';
+import { ChevronDown, ClipboardList, Inbox, Newspaper, PanelLeftClose, PanelLeftOpen, ShieldCheck, Users } from '@/components/icons';
 import { SiInstagram, SiX } from "react-icons/si";
 import { openExternalUrl } from "@/lib/external-link";
 import { useAuthStore } from "@/lib/auth-store";
@@ -96,6 +96,7 @@ const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === "true";
 // Press kits. Same flag AppTopbar and MobileNavBar read for their own entry
 // points, so the three cannot disagree about whether the surface exists.
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === "true";
+const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === "true";
 
 // One account can be both a team running releases and a playlist owner, so this
 // card is where a dual account crosses back to its pitch inbox. Shown only when
@@ -122,6 +123,10 @@ function ShowsIcon({ className }: { className?: string }) {
 
 function PressKitsIcon({ className }: { className?: string }) {
   return <Newspaper className={className} aria-hidden="true" />;
+}
+
+function DirectoryIcon({ className }: { className?: string }) {
+  return <Users className={className} aria-hidden="true" />;
 }
 
 function AdminIcon({ className }: { className?: string }) {
@@ -240,6 +245,24 @@ function buildNavItems(
             label: "Press kits",
             Icon: PressKitsIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/press-kits"),
+            beta: true,
+          },
+        ]
+      : []),
+    // Beside Press kits, as the other standing surface that belongs to nobody's
+    // release. Prefix match so a person's page keeps the row lit.
+    //
+    // DESKTOP ONLY, and that is a known gap rather than an oversight: the
+    // mobile tab bar is at its seven-slot ceiling, so a phone reaches this
+    // through the search surface (lib/app-pages.ts carries the keywords) until
+    // the role gaps panel gives it a better path in.
+    ...(DIRECTORY_ENABLED
+      ? [
+          {
+            href: "/dashboard/directory",
+            label: "Directory",
+            Icon: DirectoryIcon,
+            isActive: (pathname: string) => pathname.startsWith("/dashboard/directory"),
             beta: true,
           },
         ]

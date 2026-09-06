@@ -62,6 +62,11 @@ export type Entitlements = {
   support_channel: SupportChannel;
   sso: boolean;
   sub_teams: boolean;
+  /** Search the directory for somebody who has delivered the role a rollout
+   *  needs. BEING LISTED IS FREE ON EVERY TIER and deliberately not in this
+   *  map: listing is supply and we want all of it, while searching is demand
+   *  and demand is what pays. Solo keeps its own profile and its own record. */
+  directory_search: boolean;
   /** UrgAns drafts a change, edits it, taps Apply — inside a product function
    *  rather than in chat. Manager, Label and Group get it; Solo keeps chat
    *  only. The first feature-by-tier gate in this map that is NOT a countable
@@ -160,6 +165,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: false,
     sub_teams: false,
     urgans_embedded_actions: false,
+    directory_search: false,
   },
   manager: {
     artists: limitsOf('manager').artists,
@@ -176,6 +182,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: false,
     sub_teams: false,
     urgans_embedded_actions: true,
+    directory_search: true,
   },
   label: {
     artists: limitsOf('label').artists,
@@ -192,6 +199,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: false,
     sub_teams: false,
     urgans_embedded_actions: true,
+    directory_search: true,
   },
   enterprise: {
     artists: limitsOf('enterprise').artists,
@@ -208,6 +216,7 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: true,
     sub_teams: true,
     urgans_embedded_actions: true,
+    directory_search: true,
   },
 };
 

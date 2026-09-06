@@ -9897,9 +9897,78 @@ own tests.
 real profile — no database here. The cron's 500 in this sandbox is its
 pre-existing unset-`CRON_SECRET` guard, which sits before the new step.
 
-**Next:** Phase 4 is directory search and filters, with the empty states
-designed first. Note there is no text search anywhere in this repo today, so
-that phase makes the search decision.
+### Phase 4 (2026-09-05): search, filters, and the empty states
+
+`/dashboard/directory` — a search field, three filters, result cards. The thing
+the feature is named after.
+
+**THE SEARCH DECISION: filter a fetched list, do not query for it.** There is no
+text search anywhere in this repo — no `ilike`, no `to_tsvector`, no trigram
+index — so this phase had to pick one. `GET /api/directory` returns the listed
+profiles once and the browser filters them. Three reasons, in order of weight:
+
+1. **The empty states demand it.** The brief requires that an empty result names
+   what exists NEARBY. With the whole set in hand those counts are free;
+   querying per filter needs a round trip per suggestion.
+2. **It is what this codebase already does three times** — `lib/task-search.ts`,
+   `lib/release-search.ts` and `useNotesStore`, which says so outright.
+3. **`ILIKE` treats `_` as a wildcard**, which has already caused a real bug
+   here: the credits route had to stop using it for email matching.
+
+Bounded at 200 with a `truncated` flag, so the page is honest rather than
+silently partial. The day that binds is where paging or a real index goes.
+
+**Four things worth knowing:**
+
+- **An empty query returns EVERYONE**, the same as `searchReleases` and the
+  opposite of `searchTasks`. This bar filters a list already on screen, so an
+  empty box means "no filter"; the activity palette appears on demand, so there
+  it means "nothing asked for yet". Copying the wrong sibling would leave the
+  directory blank on arrival. Mutation-tested.
+- **Fallback counts are computed from the WHOLE set, never the filtered one.**
+  From the filtered list every suggestion reads zero, and an empty state
+  offering "0 more if you drop the city" is worse than one that says nothing.
+  Mutation-tested, as is not suggesting you drop a filter you never set.
+- **A card links to `/p/{slug}` only for a `public` profile.** Somebody listed
+  as `directory` is findable here and their page is not open, so the link would
+  be a 404. The card renders plain instead.
+- **`applyDirectoryFilters` is generic over the entry shape** rather than taking
+  it directly, so the page's cards keep their slug and visibility fields through
+  the filter. The alternative was a cast at the call site, which is exactly
+  where a wrong assumption stops being checked.
+
+**The Manager gate** is a new boolean entitlement, `directory_search`, false on
+Solo and true above, enforced on `GET /api/directory` only — listing stays free
+on every tier, which is the founder's supply-free/demand-paid call. It resolves
+through `getTeamAccessForUser`, which already carries the tier and is cached;
+`getWorkspaceTier` is for the invite-redemption case where the actor is not who
+pays. **Inert today** and a test pins that: every state a real team is in
+(paid on a legacy plan, trial, comped, unknown) resolves to something other than
+solo. If that test ever fails the gate has started biting real customers, which
+is a decision rather than an accident. A gated team gets the page with a plain
+line and an upgrade link, not a 404.
+
+**Entry points, and the known gap.** The identity card's nav at `lg`+,
+`lib/app-pages.ts` with keywords that are JOBS rather than the word "directory"
+(find, hire, producer, engineer, designer, photographer), and
+`lib/prefetch-routes.ts`. **No mobile tab** (founder call): the bar is at its
+seven-slot ceiling and an eighth needs a different shape for it. So a phone
+reaches this through the search surface until Phase 5's role gaps panel gives it
+a better path in — which is the brief's own sequencing rather than an omission.
+
+**Verified:** 2627 tests (14 new), lint at the exact 3-error / 79-warning
+baseline, `next build` green by exit code in both flag states with `/auth`,
+`/onboarding` and `/settings` still `○ Static`, and a runtime probe showing
+`GET /api/directory` 404s with the exact flag body when off and 401s when on,
+against an ungated control that 401s either way. Three search mutations each
+killed their own tests.
+
+**Not verified:** no search has ever returned a real person and no empty state
+has rendered — no database and no session here. The plan-gate refusal has never
+been triggered by a real team, and cannot be until Solo is sellable.
+
+**Next:** Phase 5, the role gaps panel on the scoped workspace view — the
+retention mechanic, and what makes the directory reachable on a phone.
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
