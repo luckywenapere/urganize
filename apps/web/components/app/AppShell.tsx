@@ -585,7 +585,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </ErrorBoundary>
       ) : null}
       {MOBILE_NAV_ENABLED && showWorkspaceChrome && !requiresArtistNameGate ? (
-        <MobileNavBar onNewRelease={openCreateRelease} />
+        <MobileNavBar />
       ) : null}
       {/* Gated on the same showHelpMenu the `?` launcher uses — signed in, not
           mid-auth, not on a public page, not a curator. It opens from the help
