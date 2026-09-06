@@ -1,5 +1,7 @@
 import {
   PRESS_KIT_SECTIONS,
+  type PressKit,
+  type PressKitRosterEntry,
   type PressKitSection,
   type PressKitSectionContent,
   type PressKitSectionKey,
@@ -304,4 +306,34 @@ export const BANNED_COPY_CHARS: readonly string[] = ['\u2014'];
  *  disagree with what the guard enforces. */
 export function bannedCopyInstruction(): string {
   return `Do not use em dashes. Do not use the word "${BANNED_COPY_WORDS[0]}".`;
+}
+
+/**
+ * Fold a kit the single-kit screen just loaded back into the cached roster.
+ *
+ * The tab paints from a cached roster, so without this a kit you created or
+ * published stays absent or stale on the tab until the next revalidate — the
+ * user watching the very state they just changed fail to appear. Merging costs
+ * nothing and needs no round trip, because the single-kit screen has the
+ * server's own answer in hand.
+ *
+ * Two rules worth keeping. The ROSTER decides who is on it: a kit whose artist
+ * is not listed is ignored rather than added, since a roster row can only come
+ * from the roster endpoint and inventing one would put an artist on screen that
+ * the workspace may not carry. And the roster's NAME wins over the kit's copy
+ * of it, for the same reason.
+ *
+ * Returns the original array when nothing matched, so a no-op cannot repaint
+ * the tab.
+ */
+export function applyKitToRoster(
+  entries: readonly PressKitRosterEntry[],
+  kit: PressKit
+): PressKitRosterEntry[] {
+  const index = entries.findIndex((entry) => entry.artistId === kit.artistId);
+  if (index === -1) return entries as PressKitRosterEntry[];
+
+  const next = entries.slice();
+  next[index] = { ...entries[index], kit: { ...kit, artistName: entries[index].artistName } };
+  return next;
 }

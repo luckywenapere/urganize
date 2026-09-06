@@ -7,7 +7,6 @@ import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
   ArrowRight,
   CalendarDays,
-  ChartNoAxesGantt,
   ChevronDown,
   ClipboardList,
   FolderOpen,
@@ -45,7 +44,7 @@ import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useSceneOverlay, type SceneName } from './useSceneOverlay';
-import { resolveActiveScene } from '@/lib/scene-cache';
+import { resolveActiveScene, resolvePanelBody } from '@/lib/scene-cache';
 
 // Metadata entry point (URG-108). This flag also gates the identity panel's
 // "Metadata" nav item (WorkspaceIdentityPanel) — the two must never
@@ -310,12 +309,16 @@ type TasksPanelProps = {
    */
   activitiesBanner?: ReactNode;
   /**
-   * Rendered at the END of the activity list, inside the scroll body.
+   * Rendered BELOW the main view, inside the scroll body.
    *
    * Deliberately NOT the banner slot above, which is a single slot with four
    * claimants already. A list of rows is not a banner and should not fight one
    * for the space; and unlike the footer pill row below, this scrolls with the
-   * activities rather than taking pinned height from them.
+   * content rather than taking pinned height from it.
+   *
+   * Gated on `bodyIsMainView`, not on the buckets branch: since 2026-09-06 the
+   * main view can be the timeline, and a footer left inside the buckets would
+   * be invisible in what is now the default state.
    */
   activitiesFooter?: ReactNode;
   /**
@@ -404,6 +407,25 @@ export function TasksPanel({
   // were missing from it for a while — which is exactly why it now lives in
   // lib/scene-cache.ts.
   const activeScene = resolveActiveScene(urlScene);
+
+  /**
+   * Whether the panel body is the release's MAIN VIEW — the timeline, or the
+   * activity buckets when the timeline flag is off — rather than one of the
+   * named scenes.
+   *
+   * This exists for one reason: the standing banners below belong to the main
+   * view, not to the bucket list specifically. Until 2026-09-06 those were the
+   * same thing, so `activitiesBanner` lived inside the buckets branch — and
+   * leaving it there would have silently dropped SetReleaseDateCard,
+   * PlanReleaseCard and TestReleaseBanner the moment the timeline became what a
+   * release lands on. Each of those is the ONLY path to the thing it offers,
+   * and the timeline's own empty states are text with no button, so a dateless
+   * release would have read "Set a release date first" with nothing to tap.
+   */
+  const bodyIsMainView = (() => {
+    const body = resolvePanelBody(urlScene);
+    return body === 'activities' || body === 'timeline';
+  })();
 
   /**
    * Pill classes, lit when that scene is the open one. `shrink-0
@@ -519,7 +541,13 @@ export function TasksPanel({
    * scene on mobile works by re-tapping its own top-tab/folded-menu entry
    * (every scene entry point is already a toggle).
    */
-  const activitiesToggleButton = activeScene ? null : (
+  //
+  // `bodyIsMainView` and not `!activeScene` since 2026-09-06: the activity
+  // buckets are a scene of their own now (`?scene=activities`), and "New
+  // activity" is exactly as useful standing over the list as it is over the
+  // timeline. Gating on activeScene would have hidden it on the one view it
+  // most obviously belongs to.
+  const activitiesToggleButton = !bodyIsMainView ? null : (
     <button
       type="button"
       onClick={() =>
@@ -567,18 +595,21 @@ export function TasksPanel({
   // mobile row and is inert in the menu entry too; what keeps Metadata
   // reachable on a phone now is the menu, not this button.
   //
-  // Timeline leads the row for the same reason it leads the menu: it is the
-  // same activities seen a different way, so it reads as a view switch rather
-  // than another release surface.
-  const timelineButton =
+  // "Activities" leads the row for the reason "Timeline" used to until
+  // 2026-09-06: it is the same work seen a different way, so it reads as a view
+  // switch rather than another release surface. The label flipped when the
+  // timeline became the main view — this pill has always pointed at whichever
+  // of the two you are NOT looking at, and re-tapping it while lit closes back
+  // to the other one.
+  const activitiesButton =
     TIMELINE_ENABLED && scopedRelease ? (
       <button
         type="button"
-        onClick={() => toggleScene('timeline', scopedRelease.id)}
-        aria-pressed={activeScene === 'timeline'}
-        className={pillClass('timeline')}
+        onClick={() => toggleScene('activities', scopedRelease.id)}
+        aria-pressed={activeScene === 'activities'}
+        className={pillClass('activities')}
       >
-        Timeline
+        Activities
       </button>
     ) : null;
 
@@ -828,17 +859,15 @@ export function TasksPanel({
     // and a laptop sees the same names in the same order.
     TIMELINE_ENABLED && scopedRelease
       ? {
-          key: 'timeline',
-          label: 'Timeline',
+          key: 'activities',
+          label: 'Activities',
           // The desktop pill has no icon (it is the only one in that row
-          // without one, pre-dating this change); a menu row needs one, and a
-          // Gantt mark is what this scene actually draws. Deliberately not a
-          // calendar glyph even though it is a date axis — Content already
-          // holds that one two rows down, and two calendar icons side by side
-          // is the exact collision the Shows microphone fixed the day before.
-          icon: ChartNoAxesGantt,
-          onClick: () => toggleScene('timeline', scopedRelease.id),
-          isActive: activeScene === 'timeline',
+          // without one); a menu row needs one, and a checklist is what the
+          // buckets are. This slot held a Gantt mark while it pointed at the
+          // timeline — see RELEASE_MENU_ORDER for why the two swapped.
+          icon: ListChecks,
+          onClick: () => toggleScene('activities', scopedRelease.id),
+          isActive: activeScene === 'activities',
         }
       : null,
     CONTENT_CALENDAR_ENABLED && scopedRelease
@@ -1059,7 +1088,7 @@ export function TasksPanel({
       <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
         {activitiesToggleButton}
         {planButton}
-        {timelineButton}
+        {activitiesButton}
         {metadataButton}
         {coverArtButton}
         {songButton}
@@ -1119,11 +1148,17 @@ export function TasksPanel({
           header row above, the mobile rows above and below — so the scene
           switcher never disappears (founder call, 2026-08-05). */}
       <div className="min-h-0 flex-1 pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+      {/* Above the body rather than inside the buckets, so it survives the
+          timeline taking the main view — see `bodyIsMainView`. Deliberately
+          NOT shown over the named scenes: a "Draft the plan" card on top of
+          the Metadata scene is noise, and that is the behaviour this keeps. */}
+      {bodyIsMainView && activitiesBanner ? (
+        <div className="mb-3">{activitiesBanner}</div>
+      ) : null}
       {sceneContent ? (
         sceneContent
       ) : (
       <div className="space-y-3">
-        {activitiesBanner}
         {/* Every bucket empty: the buckets below have all suppressed
             themselves, so this stands in for the whole list.
             Actionable rather than a muted line (URG-233) — an empty panel
@@ -1257,9 +1292,18 @@ export function TasksPanel({
             </div>
           );
         })}
-        {activitiesFooter}
       </div>
       )}
+
+      {/* The role gaps panel, below whichever MAIN VIEW rendered.
+          `bodyIsMainView` and not the buckets branch, for exactly the reason
+          the banner above carries: the timeline became what a release lands
+          on (2026-09-06), so a footer left inside the buckets would have gone
+          dark the moment that flag went on — invisible in the one state that
+          is now the default. It belongs to the main view, not to the list. */}
+      {bodyIsMainView && activitiesFooter ? (
+        <div className="mt-3">{activitiesFooter}</div>
+      ) : null}
       </div>
 
       {/* Desktop footer row (lg+ ONLY) — Calendar, then Press kit beside it.
@@ -1337,8 +1381,19 @@ export function TasksPanel({
         className={`sticky z-20 -mx-4 flex flex-col gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         <div className="flex flex-wrap items-center gap-2">
+          {/* CENTRED, not pinned to the right edge (founder call,
+              2026-09-05). This row sits directly above MobileNavBar's centred
+              "+", so a right-aligned pair read as an afterthought tucked into
+              a corner rather than as the panel's own controls. Centred, the
+              pair's midpoint lines up with that button, and on a release with
+              no activities — where the search trigger does not render at all —
+              the hamburger lands dead centre under it.
+
+              `mx-auto` on the GROUP rather than `justify-center` on the row:
+              it keeps the intent with the thing being centred, so the row
+              stays a plain flex container if it ever holds something else. */}
           {hasMobileDockControls ? (
-            <div className="ml-auto flex shrink-0 items-center gap-2">
+            <div className="mx-auto flex shrink-0 items-center gap-2">
               {/* touch-manipulation on both: disables the browser's own
                   double-tap-to-zoom gesture on these specific buttons
                   (independent of the search field's font-size fix below —

@@ -12,6 +12,13 @@
 /** The release scenes. Canonical here (not in the URL hook) because both
  * the URL layer and the data layer need the list, and lib is the shared floor. */
 export type SceneName =
+  // Not a scene in the original sense — it is the activity buckets, which used
+  // to BE the panel and had no name because it was whatever rendered when no
+  // scene was open. It became nameable when the timeline took over as the main
+  // view (2026-09-06) and the buckets needed a URL of their own to switch to.
+  // Deliberately ungated: it is resolveMainView's fallback, so it has to
+  // resolve in every flag state or a rollback leaves the panel blank.
+  | 'activities'
   | 'metadata'
   | 'files'
   | 'calendar'
@@ -23,6 +30,7 @@ export type SceneName =
   | 'timeline';
 
 export const SCENE_NAMES: readonly SceneName[] = [
+  'activities',
   'metadata',
   'files',
   'calendar',
@@ -106,6 +114,46 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   return scene;
 }
 
+/**
+ * The two views that can own the release panel when no particular scene is
+ * asked for. One of them is always what a scoped release lands on.
+ */
+export type ReleaseMainView = 'timeline' | 'activities';
+
+/**
+ * Which view a scoped release lands on.
+ *
+ * Until 2026-09-06 this was not a question: the panel showed the activity
+ * buckets whenever no scene was open. The founder's call is that the timeline
+ * is the better landing surface — *"it represents how creatives think and is
+ * better and more peaceful"* — because the buckets ship COLLAPSED, so a release
+ * with 63 activities opened onto five closed drawers and five counts.
+ *
+ * `NEXT_PUBLIC_FEATURE_TIMELINE` decides it, which is deliberate rather than a
+ * second flag: the timeline being available and the timeline being the main
+ * view are the same question, and a release cannot land on a view its own flag
+ * has switched off. Flag off, every path here is byte-identical to before.
+ */
+export function resolveMainView(): ReleaseMainView {
+  return TIMELINE_ENABLED ? 'timeline' : 'activities';
+}
+
+/**
+ * What the release panel should actually render for a given `?scene=` param.
+ *
+ * The one place that answers it, so the body (WorkspaceView), the lit pill
+ * (TasksPanel) and the reserved layout (WorkspaceSkeleton) cannot disagree —
+ * the same drift this module already exists to end for `resolveActiveScene`.
+ *
+ * Never returns null: an absent, unknown or flag-gated-off param all mean "no
+ * particular scene", which means the main view. That is what keeps a bookmark
+ * to `?scene=timeline` useful after a rollback — it lands on the bucket list
+ * rather than on a blank panel.
+ */
+export function resolvePanelBody(rawParam: string | null): SceneName | ReleaseMainView {
+  return resolveActiveScene(rawParam) ?? resolveMainView();
+}
+
 /** Within this window a cached scene is served with NO network call at all.
  * Matches useWorkspaceIdentityStore's 30s — long enough that the tap-around-
  * the-scenes loop is free, short enough that a teammate's edit shows up fast. */
@@ -177,10 +225,10 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
  * payload to cache, no route to prefetch, and a fetcher for it would have to
  * invent a request that does not exist.
  */
-export type CacheableSceneName = Exclude<SceneName, 'plan' | 'timeline'>;
+export type CacheableSceneName = Exclude<SceneName, 'plan' | 'timeline' | 'activities'>;
 
 export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName =>
-  scene !== 'plan' && scene !== 'timeline';
+  scene !== 'plan' && scene !== 'timeline' && scene !== 'activities';
 
 /**
  * Which scenes may touch localStorage.
@@ -190,6 +238,9 @@ export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName 
  * the next visit. Nothing with a credential in it goes to disk.
  */
 export const SCENE_PERSISTED: Record<SceneName, boolean> = {
+  // Same reason as the timeline below: the buckets are grouped from the
+  // activities TasksPanel already holds, so there is no payload of its own.
+  activities: false,
   metadata: true,
   files: false,
   calendar: true,

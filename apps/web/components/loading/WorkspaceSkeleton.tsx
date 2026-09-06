@@ -8,7 +8,7 @@ import {
 } from '@/components/workspace/TasksPanel';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
-import { resolveActiveScene } from '@/lib/scene-cache';
+import { resolveMainView, resolvePanelBody } from '@/lib/scene-cache';
 
 // Same URL param useReleaseScope reads (`?release=`). Knowing this at
 // skeleton-render time (before release data has loaded) lets the skeleton
@@ -109,10 +109,20 @@ export function WorkspaceSkeleton() {
   // ANY scene is open, and a refresh on a `?scene=…` URL used to paint
   // 3-column rails here that vanished the moment data resolved. Widened from
   // calendar-only alongside the real view (2026-08-25) — the two read the same
-  // `resolveActiveScene`, so they cannot disagree about whether a stale
-  // flag-off param counts as an open scene.
+  // the same `resolvePanelBody`, so they cannot disagree about whether a
+  // stale flag-off param counts as an open scene — the expression is now
+  // literally the same one, which is what closes the `?scene=activities`
+  // case where a `resolveMainView()`-only check would have hidden the rails
+  // here and shown them there.
+  // Since 2026-09-06 this also covers the timeline being the MAIN view: there
+  // is no scene param then, but WorkspaceView hides the rails for it anyway
+  // (it needs the width more than a form does — its grid/list swap is a 34rem
+  // container query). Expressed as "the body is not the buckets" so the two
+  // read the same way. Flag off, `resolveMainView()` is 'activities' and this
+  // is byte-identical to the line it replaces.
   const hideRails =
-    (CHAPPI_ENABLED && isRailOpen) || resolveActiveScene(searchParams.get('scene')) !== null;
+    (CHAPPI_ENABLED && isRailOpen) ||
+    resolvePanelBody(searchParams.get('scene')) !== 'activities';
   const knownCount = useKnownReleaseCount();
   // `?release=` is the normal signal, but a single-release workspace scopes
   // itself in an effect, so the URL is still bare while WorkspaceView holds
@@ -370,27 +380,14 @@ function TasksPanelSkeleton() {
         {extraActionPillBlocks}
       </div>
       <div className="min-h-0 flex-1 space-y-3 pb-4 lg:overflow-hidden">
-        {/* Collapsed bucket-header rows — every real bucket starts closed
-            (founder call, 2026-06-11 default), so this is what the panel
-            actually shows on first paint, not an arbitrary placeholder.
-            Back to THREE (2026-08-15): empty groups don't render again, so the
-            count depends on the data. Three is the typical occupied-group
-            count for a release in flight, and under-reserving grows the list
-            downward rather than shifting anything already placed. */}
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div
-            key={`bucket-${index}`}
-            className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface"
-          >
-            <div className="flex items-center justify-between gap-3 px-4 py-3">
-              <SkeletonBlock className="h-3.5 w-24 shrink-0" />
-              {/* Started-share bar placeholder — mirrors the real header's
-                  flex-1 Motion-pattern bar (TasksPanel, 2026-08-14). */}
-              <SkeletonBlock className="h-1.5 min-w-0 flex-1 rounded-full" />
-              <SkeletonBlock className="h-4 w-4 shrink-0 rounded-sm" />
-            </div>
-          </div>
-        ))}
+        {/* Which body is coming. The timeline paints a legend strip and then
+            week groups, nothing like the bucket cards, so reserving the wrong
+            one is a guaranteed shift on first data. */}
+        {resolveMainView() === 'timeline' ? (
+          <TimelineBodySkeleton />
+        ) : (
+          <BucketBodySkeleton />
+        )}
       </div>
       {/* Desktop footer placeholders — Calendar (2026-08-13) and
           Fan capture (2026-08-14); see the real block's comment in
@@ -442,7 +439,10 @@ function TasksPanelSkeleton() {
       <div
         className={`sticky z-20 -mx-4 flex items-center gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        {/* `mx-auto`, matching the real row's centring (founder call,
+            2026-09-05) — a right-aligned placeholder pair would slide to the
+            middle the instant the real controls arrived. */}
+        <div className="mx-auto flex shrink-0 items-center gap-2">
           <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
           {TIMELINE_ENABLED ||
           CONTENT_CALENDAR_ENABLED ||
@@ -568,5 +568,70 @@ function DesktopFocusedSkeleton({
         )}
       </div>
     </div>
+  );
+}
+
+
+/** Collapsed bucket-header rows — every real bucket starts closed (founder
+ * call, 2026-06-11 default), so this is what the panel actually shows on first
+ * paint, not an arbitrary placeholder. THREE (2026-08-15): empty groups don't
+ * render, so the count depends on data. Three is the typical occupied-group
+ * count for a release in flight, and under-reserving grows the list downward
+ * rather than shifting anything already placed. */
+function BucketBodySkeleton() {
+  return (
+    <>
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={`bucket-${index}`}
+            className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface"
+          >
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <SkeletonBlock className="h-3.5 w-24 shrink-0" />
+              {/* Started-share bar placeholder — mirrors the real header's
+                  flex-1 Motion-pattern bar (TasksPanel, 2026-08-14). */}
+              <SkeletonBlock className="h-1.5 min-w-0 flex-1 rounded-full" />
+              <SkeletonBlock className="h-4 w-4 shrink-0 rounded-sm" />
+            </div>
+          </div>
+        ))}
+    </>
+  );
+}
+
+/** The timeline's first paint: a legend strip, then week groups.
+ *
+ * Deliberately shaped after the NARROW week list rather than the wide grid.
+ * The grid needs a measured axis to mean anything, and a fake one would be a
+ * bigger lie than a slightly short list — and under-reserving grows downward,
+ * which is the direction this file already prefers. Phases render EXPANDED as
+ * of 2026-09-06, so this reserves real rows rather than collapsed headers. */
+function TimelineBodySkeleton() {
+  return (
+    <>
+      {/* Literal class strings, not interpolated: Tailwind extracts by static
+          scan, so a `w-${n}` template produces a class that exists nowhere in
+          the compiled stylesheet and silently renders at zero width. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <SkeletonBlock className="h-2.5 w-16 shrink-0 rounded-full" />
+        <SkeletonBlock className="h-2.5 w-20 shrink-0 rounded-full" />
+        <SkeletonBlock className="h-2.5 w-16 shrink-0 rounded-full" />
+        <SkeletonBlock className="h-2.5 w-14 shrink-0 rounded-full" />
+      </div>
+      {Array.from({ length: 3 }).map((_, group) => (
+        <div key={`tl-week-${group}`} className="space-y-2 pt-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <SkeletonBlock className="h-3 w-28 shrink-0" />
+            <SkeletonBlock className="h-2.5 w-16 shrink-0" />
+          </div>
+          {Array.from({ length: 3 }).map((__, row) => (
+            <div key={`tl-row-${group}-${row}`} className="flex items-center gap-2 px-2 py-1.5">
+              <SkeletonBlock className="h-2.5 w-2.5 shrink-0 rounded-full" />
+              <SkeletonBlock className="h-3 min-w-0 flex-1" />
+            </div>
+          ))}
+        </div>
+      ))}
+    </>
   );
 }
