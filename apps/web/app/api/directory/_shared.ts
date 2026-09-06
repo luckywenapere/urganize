@@ -34,6 +34,18 @@ export const PERSON_PROFILE_COLUMNS =
 export const isDirectoryFeatureEnabled = (): boolean =>
   process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 
+export const WORK_REQUESTS_TABLE = 'work_requests';
+
+/**
+ * Work requests are gated on their OWN flag, not on the directory's.
+ *
+ * NEXT_PUBLIC_FEATURE_DIRECTORY is on in production with real people in it, so
+ * folding an in-app inbox in behind it would put that inbox live at merge.
+ */
+export const isWorkRequestsFeatureEnabled = (): boolean =>
+  isDirectoryFeatureEnabled() &&
+  process.env.NEXT_PUBLIC_FEATURE_DIRECTORY_REQUESTS === 'true';
+
 export const directoryDisabledResponse = () =>
   NextResponse.json({ error: 'Not found.' }, { status: 404 });
 

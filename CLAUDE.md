@@ -10217,6 +10217,104 @@ all still `○ Static` — `/settings` in particular, since this added an effect
 it. **Not verified:** nothing has rendered on a phone from here, and the
 collision retry has never run against a real database.
 
+### Connecting the two sides: work requests (2026-09-06, flag-off)
+
+Founder, once the directory was live and he had added and viewed a profile:
+*"nothing happens from there how can Urganize now connect those two people"*.
+
+**The brief never specified this step**, so the feature was built to a spec
+that ended one move early. Two things were wrong, and the first was a plain
+defect.
+
+1. **"List me" set `visibility: 'directory'`** — findable, page NOT open. The
+   in-app card links to `/p/{slug}` only for a `public` profile, and the card's
+   payload carries neither `bio` nor `links`. So the DEFAULT opt-in state
+   produced somebody a manager could find and had **no way to reach**: a name,
+   a city, an availability label and some counts. **"List me" opens the page
+   now** (founder call), and closing it again is one control below.
+2. Even a public profile was reachable only through the person's own links, and
+   only by leaving the app. Nothing was recorded, so nothing fed back.
+
+**The connection is a reach-out inside Urganize** (founder call, chosen over a
+mailto and over a team invite). It is a sanctioned scope expansion: it moves
+"in-app inbox is v2" off the out-of-scope list for the second time, playlist
+pitching having been the first. Behind
+`NEXT_PUBLIC_FEATURE_DIRECTORY_REQUESTS`, default off — deliberately NOT the
+directory's own flag, which is on in production with real people in it.
+
+**Why not the other two, recorded so they are not re-litigated:** a team invite
+costs a permanent seat, and Solo has two (the manager and the artist), so there
+is literally no room for a freelancer hired for one release. A bare mailto
+records nothing and leaves the directory a lookup table.
+
+**Six things worth knowing before editing this:**
+
+1. **THE RECIPIENT NEVER SEES THE RELEASE.** `release_id` is stored so a request
+   can show on the SENDER's release and is absent from
+   `RECIPIENT_REQUEST_FIELDS` — the `CURATOR_PITCH_COLUMNS` rule verbatim. An
+   unannounced title must not reach somebody who is about to say no. The email
+   carries no release either. Mutation-tested.
+2. **`sender_name` and `sender_team` are denormalised** so the recipient's read
+   path cannot touch `workspaces`, `releases` or `profiles` even by mistake.
+   Written server-side, never accepted from the client, or a sender could forge
+   who they are.
+3. **Only the recipient moves a status, and only once.** `canAnswerWorkRequest`
+   is the pure rule and the route is its only caller; the UPDATE is additionally
+   conditional on `status = 'new'`, so two taps cannot both land — the row is
+   the lock, the call the curator invite and the plan claim both make.
+   Mutation-tested.
+4. **One OPEN request per team per person per role**, by partial unique index,
+   plus ten open requests per team. This is a cold-start marketplace and the
+   failure mode is one manager approaching every designer at once, which would
+   empty the directory of people faster than it fills. Answered requests do not
+   count, so following up is never blocked, and the cap FAILS OPEN on an
+   unreadable count like every other counter here. Mutation-tested.
+5. **Neither side is behind the Manager gate** that `/api/directory` carries.
+   Searching is Manager and up; being listed and answering are free on every
+   tier, which is the supply-free/demand-paid rule. A Solo person who is listed
+   has to be able to read their own inbox.
+6. **THERE IS NO NEW ACCOUNT TYPE**, unlike pitching. Everybody in the directory
+   is already a signed-in team-side user, and a curator-only account cannot opt
+   in, so none of `blockCuratorAccount`'s containment machinery has an analogue
+   here. That is most of why this is one table rather than four.
+
+- **The inbox lives inside "Your directory record" in Settings**, not in its own
+  nav entry: that is where somebody already manages being listed, it is
+  reachable on a phone through the one route to Settings, and **the mobile bar
+  is full** — an inbox most accounts never receive anything in should not be
+  the thing that forces the overflow sheet. It renders nothing until there is
+  something in it.
+- **The email is what actually reaches a person.** Founder-note register and a
+  "<name> via Urganize" From line, the assignment email's rules, for the same
+  reason: this is one person approaching another. Both directions are best
+  effort and never throw — the row is the durable record.
+- **Not built, deliberately:** no threading (one ask, one answer; a conversation
+  is the inbox the scope line warns about), no attachments or rates, no
+  responsiveness ranking, and no team invite from an accepted request. That last
+  one is the natural next step and is cheap on top of the existing invite routes.
+
+**Verified:** 2712 tests (27 new), `eslint .` at 3 errors / **81** warnings
+against the 80 baseline — the one new finding is `WorkRequestSheet`'s portal
+mount guard, byte-identical in shape to `DeleteReleaseDialog`'s and
+`ArchiveReleaseDialog`'s. `next build` green by exit code in both flag states
+with `/auth`, `/onboarding`, `/settings` and `/dashboard/directory` still
+`○ Static`. Runtime probes: requests off, both new routes **404** with body
+exactly `{"error":"Not found."}` while `/api/directory` still **401**s — which
+also proves the new flag is independent of the directory's; requests on, all
+three **401**. The migration was applied to a scratch Postgres 16 and every
+documented rule exercised with real rows: the duplicate-open refusal, asking
+again after an answer, the note and status CHECKs, a deleted release leaving
+the request with a null, a deleted recipient taking their requests, two SELECT
+policies and no others, and RLS on.
+
+**Not verified:** nothing has run against the production database or in a
+browser. No request sent, no answer given, no email delivered.
+
+**Activation:** apply `20260906120000_work_requests.sql`, set
+`NEXT_PUBLIC_FEATURE_DIRECTORY_REQUESTS=true` with a deploy that rebuilds
+`apps/web`, then changelog entry and version bump at the flip (the EPK
+precedent).
+
 ---
 
 ## The "+" moved to the topbar, and the mobile bar went flat (2026-09-06)

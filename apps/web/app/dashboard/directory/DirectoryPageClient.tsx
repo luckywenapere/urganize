@@ -20,11 +20,14 @@ import {
 } from '@/lib/person-profile';
 import type { PersonAvailability } from '@/types/directory';
 import { DirectoryEmptyState } from '@/components/directory/DirectoryEmptyState';
+import { WorkRequestSheet } from '@/components/directory/WorkRequestSheet';
 
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { bucketResultCount, type DirectoryDemandSource } from '@/lib/directory-demand';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
+const REQUESTS_ENABLED =
+  DIRECTORY_ENABLED && process.env.NEXT_PUBLIC_FEATURE_DIRECTORY_REQUESTS === 'true';
 
 /**
  * Find somebody who has delivered the work a release needs.
@@ -102,6 +105,8 @@ function DirectoryBody() {
   const [error, setError] = useState('');
   const [locked, setLocked] = useState('');
   const [truncated, setTruncated] = useState(false);
+  const [asking, setAsking] = useState<Person | null>(null);
+  const [sent, setSent] = useState('');
 
   useEffect(() => {
     if (!DIRECTORY_ENABLED) {
@@ -294,11 +299,20 @@ function DirectoryBody() {
             <ul className="space-y-3">
               {results.map((person) => (
                 <li key={person.userId}>
-                  <PersonCard person={person} />
+                  <PersonCard
+                    person={person}
+                    onAsk={REQUESTS_ENABLED ? () => setAsking(person) : null}
+                  />
                 </li>
               ))}
             </ul>
           )}
+
+          {sent ? (
+            <p className="mt-4 rounded-lg border border-brand/30 bg-brand/10 px-3 py-2 text-sm text-content-primary">
+              {sent}
+            </p>
+          ) : null}
 
           {truncated ? (
             <p className="mt-4 text-xs text-content-tertiary">
@@ -307,6 +321,18 @@ function DirectoryBody() {
           ) : null}
         </>
       )}
+
+      {asking ? (
+        <WorkRequestSheet
+          person={asking}
+          // Prefilled when the manager arrived from the role gaps panel, which
+          // is the whole point of that link: the plan already knows the job.
+          defaultRole={filters.role}
+          releaseId={arrivedFromRoleGaps ? searchParams.get('release') : null}
+          onClose={() => setAsking(null)}
+          onSent={setSent}
+        />
+      ) : null}
     </div>
   );
 }
@@ -334,7 +360,7 @@ async function reportRoleDemand(demand: {
   }
 }
 
-function PersonCard({ person }: { person: Person }) {
+function PersonCard({ person, onAsk }: { person: Person; onAsk: (() => void) | null }) {
   const delivered = person.roles.filter((entry) => entry.delivered > 0);
   const claimed = person.roles.filter((entry) => entry.delivered === 0);
 
@@ -373,20 +399,37 @@ function PersonCard({ person }: { person: Person }) {
     </div>
   );
 
-  return person.isPublic && person.slug ? (
-    <Link
-      href={`/p/${person.slug}`}
-      className="motion-focus block"
-      onClick={() =>
-        captureAnalyticsEvent({
-          name: 'directory_profile_opened',
-          properties: { role: delivered[0]?.role ?? claimed[0]?.role ?? null },
-        })
-      }
-    >
-      {body}
-    </Link>
-  ) : (
-    body
+  // The Ask button is a SIBLING of the card, never inside it. The card body is
+  // wrapped in a Link for a public profile, and a button inside an anchor is
+  // invalid markup whose click would navigate instead of opening the sheet.
+  return (
+    <div>
+      {person.isPublic && person.slug ? (
+        <Link
+          href={`/p/${person.slug}`}
+          className="motion-focus block"
+          onClick={() =>
+            captureAnalyticsEvent({
+              name: 'directory_profile_opened',
+              properties: { role: delivered[0]?.role ?? claimed[0]?.role ?? null },
+            })
+          }
+        >
+          {body}
+        </Link>
+      ) : (
+        body
+      )}
+
+      {onAsk ? (
+        <button
+          type="button"
+          onClick={onAsk}
+          className="motion-focus mt-2 h-10 w-full rounded-lg border border-stroke-default text-sm font-medium text-content-primary hover:border-brand"
+        >
+          Ask {person.displayName.split(' ')[0] || 'them'} about work
+        </button>
+      ) : null}
+    </div>
   );
 }
