@@ -3,11 +3,10 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Inbox, MicVocal, Newspaper, Plus, Users } from '@/components/icons';
+import { Inbox, MicVocal, Newspaper, Users } from '@/components/icons';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
-import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { CatalogIcon, ChappiIcon, NotesIcon } from '@/components/app/BrandIcons';
 
@@ -19,12 +18,6 @@ const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
-
-type MobileNavBarProps = {
-  /** Opens the CreateReleaseModal AppShell owns — the same instance the
-   * topbar's "New release" button and the ChappiDock's card use. */
-  onNewRelease: () => void;
-};
 
 /**
  * One tab's look, shared by every destination in the bar (2026-08-31). It used
@@ -136,52 +129,40 @@ function NavTab({
  * (founder call). That link is the only route to Settings on a phone; see
  * AppTopbar.
  *
- * The center button is contextual as of 2026-08-17: when a release is scoped
- * (`/dashboard?release=<id>`), it opens the task quick-create modal for that
- * release instead of "New release" — the same action TasksPanel's former
- * mobile "New activity" pill performed, which this button now supersedes on
- * mobile (that pill is gone; see TasksPanel.tsx's base-dock comment).
- * Everywhere else — catalog view, or any other route — it keeps opening "New
- * release" exactly as before. See `handleFabClick` below.
+ * THE "+" IS NOT HERE ANY MORE (founder call, 2026-09-06). It moved to the
+ * topbar's top-RIGHT corner, opposite the account link that already sits
+ * top-left. Its contextual behaviour went with it — quick-create for a scoped
+ * release, New release everywhere else, which is the job TasksPanel's retired
+ * mobile "New activity" pill left behind — so `handleCreateClick` in
+ * AppTopbar.tsx is now the one implementation. Nothing here creates anything;
+ * this bar is destinations only, which is what it always claimed to be.
  *
  * Pitches appears only for a dual account (team + playlist owner) — a state
- * currently held by a single partner. It earns the crowding because this bar
- * is the only navigation a phone has: the topbar's own icons are
- * `hidden lg:grid` under this flag and the identity card never renders below
- * `lg`, so without it a dual account had to open a second tab to reach its own
- * inbox.
+ * currently held by a single partner. This bar is the only navigation a phone
+ * has: the topbar's own icons are `hidden lg:grid` under this flag and the
+ * identity card never renders below `lg`, so without it a dual account had to
+ * open a second tab to reach its own inbox.
  *
- * LAYOUT, and it answers two separate questions — do not collapse them.
+ * LAYOUT. One row of equal `flex-1` slots, which is what it was before the
+ * centred "+" arrived and what it is again now that the "+" has left.
  *
- * Where the BUTTON sits: two `flex-1` regions flank a fixed-width centre, so
- * it lands on the bar's exact midpoint, `(W - 64) / 2 + 32`, on every view
- * whatever each side holds. This replaced a single row of equal slots, which
- * only centred it when the tabs happened to split evenly around it. It sat at
- * ~42% on the assistant page.
+ * THE WIDTH BUDGET IS MUCH LOOSER THAN IT WAS, and the arithmetic is the
+ * reason two rules above it were deleted rather than adjusted. With the 64px
+ * centre gone the whole 375px is divisible: six tabs are ~62px each and seven
+ * — the dual-account maximum, with Pitches — are ~54px, both comfortably over
+ * the ~44px touch target. The old "three per side" ceiling, and the
+ * dual-account exclusion Directory carried for one day because of it, were
+ * both artefacts of that fixed centre and are gone with it.
  *
- * WHICH SIDE a tab sits on is a WIDTH decision, not an ordering one. The two
- * regions are each `flex-1`, so they split the same width whatever they hold:
- * on a 375px phone with the 64px centre, each side is ~155px, which is ~52px
- * per tab at three and ~39px at four. Four is under the ~44px touch target, so
- * THREE PER SIDE IS THE CEILING — and the only account that can reach it on
- * both sides at once is a dual one (Shows · Pitches · Press kits). That is why
- * Notes sits on the left rather than trailing the FAB: on the right it would
- * make a fourth for exactly that account. A seventh tab needs a different
- * shape for this bar — an overflow sheet, not another `flex-1`.
+ * WHICH SIDE a tab sat on used to be a width decision. It is now an ORDERING
+ * one, and the order is left to right: Home, UrgAns, Notes, Shows, Directory,
+ * Pitches, Press kits — working surfaces first, the outward-facing one last.
+ * Notes no longer sits where it does for a width reason; it sits there
+ * because that is where it reads.
  *
- * DIRECTORY (2026-09-06) is what made that ceiling bite. It takes the third
- * right-hand slot for every account EXCEPT a dual one, which already holds
- * three there. So the right side is Shows · Pitches · Press kits for a dual
- * account and Shows · Directory · Press kits for everybody else — three
- * either way, and never the four that would drop under the touch target. The
- * bar is now genuinely full: the next surface that wants a slot is the one
- * that has to build the overflow sheet.
- *
- * A region holding two tabs (the common, non-dual case on the right) spaces
- * them more airily than a region holding three. That is the honest cost of an
- * odd tab count around a centred button: five tabs cannot split evenly. Every
- * tab still clears the touch target, and the spacing is identical on every
- * view, so it reads as spacing rather than as something shifting.
+ * The ceiling now is about eight tabs at 375px (~47px each), so there is real
+ * headroom, but an overflow sheet is still the honest answer past that rather
+ * than another `flex-1`.
  *
  * The bar shows on every route AppShell mounts it on, /dashboard/urgans
  * included — hiding it there would leave the assistant page with no way out
@@ -192,10 +173,9 @@ function NavTab({
  * viewport when the keyboard opens, and a `fixed bottom-0` bar would otherwise
  * ride up and sit on top of it.
  */
-export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
+export function MobileNavBar() {
   const pathname = usePathname();
   const keyboardOpen = useKeyboardOpen();
-  const { openQuickCreate } = useTaskUI();
 
   const isHome = pathname === '/dashboard';
   const isUrgAns = pathname === '/dashboard/urgans';
@@ -255,30 +235,6 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
     }
   };
 
-  // Center "+" button (2026-08-17): "New activity" when a release is scoped,
-  // "New release" everywhere else. Reads `?release=` fresh at click time —
-  // the same deliberate `handleUrgAnsClick` pattern above, and for the same
-  // reason: staying Suspense-free by not subscribing via `useSearchParams()`.
-  // This also guarantees the ACTION is always correct regardless of whether
-  // this component re-rendered since the URL last changed (scoping a release
-  // via `router.replace` on the same `/dashboard` pathname doesn't itself
-  // trigger a re-render here) — unlike a label, a wrong button action would
-  // be a real bug, so it can't be allowed to go stale. The aria-label/title
-  // stay "New release" rather than trying to mirror this dynamically for the
-  // same reason: a render-time read of the same URL could lag on exactly
-  // that transition, and a label that's sometimes wrong is worse than one
-  // that's honestly generic.
-  const handleFabClick = () => {
-    if (typeof window !== 'undefined' && isHome) {
-      const releaseId = new URLSearchParams(window.location.search).get('release');
-      if (releaseId) {
-        openQuickCreate({ releaseId, source: 'inline' });
-        return;
-      }
-    }
-    onNewRelease();
-  };
-
   return (
     <nav
       aria-label="Primary"
@@ -287,14 +243,12 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
       }`}
     >
       <div className="flex h-16 w-full items-stretch">
-        {/* LEFT REGION. `flex-1`, and its twin on the right is too, so the
-            fixed-width centre between them lands on the bar's exact midpoint
-            whatever each side happens to hold. That is what makes the centring
-            structural instead of an accident of counting: before this, every
-            tab was one `flex-1` slot in a single row, so the button was only
-            centred when the tabs happened to split evenly around it. On the
-            assistant page it sat at ~42%. */}
-        <ul className="flex flex-1 items-stretch">
+        {/* ONE ROW OF EQUAL SLOTS (2026-09-06). It used to be two `flex-1`
+            regions flanking a fixed 64px centre, which existed only to put the
+            "+" on the bar's exact midpoint. That button moved to the topbar's
+            top-right corner (founder call), so there is nothing to centre and
+            nothing to flank: every tab is one `flex-1` slot again. */}
+        <ul className="flex w-full items-stretch">
           <NavTab
             href="/dashboard"
             label="Home"
@@ -325,25 +279,6 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
               isActive={isNotes}
             />
           ) : null}
-        </ul>
-
-        {/* CENTRE. Deliberately outside both lists: it is an ACTION, not a
-            destination, so it never belonged among a list of nav links. Fixed
-            width is what the two regions measure against. */}
-        <div className="flex w-16 shrink-0 items-center justify-center">
-          <button
-            type="button"
-            onClick={handleFabClick}
-            aria-label="New release"
-            title="New release"
-            className="motion-focus motion-press grid h-12 w-12 place-items-center rounded-full border border-brand/25 bg-brand text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* RIGHT REGION. Three at most, and only a dual account reaches three. */}
-        <ul className="flex flex-1 items-stretch">
           {/* Shows — a plain destination, no search params. Prefix match,
               because a show's own page lives one level deeper and should keep
               this lit. */}
@@ -372,20 +307,14 @@ export function MobileNavBar({ onNewRelease }: MobileNavBarProps) {
               scoped there was no path. The founder found it by accident,
               through the role gaps panel on a release.
 
-              NOT SHOWN TO A DUAL ACCOUNT, and that is a width rule rather
-              than a judgement about the feature. This side holds three at
-              most (see the header), a dual account already fills it with
-              Shows · Pitches · Press kits, and a fourth is ~39px — under the
-              touch target. Presence here depends on ACCOUNT TYPE, which is
-              fixed for a session, so nothing shifts under a thumb mid-use;
-              that is the same rule Pitches itself follows and is different in
-              kind from the URL-dependent tab that was removed.
-
-              A dual account keeps the paths everyone had before this: the
-              page search in a scoped release's dock, and the role gaps panel.
-              Thin, and the reason the overflow sheet the header calls for is
-              the real fix whenever a seventh tab is genuinely wanted. */}
-          {DIRECTORY_ENABLED && !(PITCHING_ENABLED && hasCuratorProfile === true) ? (
+              It was withheld from a DUAL account for one day (2026-09-06),
+              because the right-hand region held three at most and a dual
+              account already filled it. That constraint came from the centred
+              "+", which the founder moved to the topbar hours later — with
+              the bar a single row, seven tabs are ~54px each at 375px, over
+              the touch target, so the exclusion had no reason left and is
+              gone. Everybody sees this tab now. */}
+          {DIRECTORY_ENABLED ? (
             <NavTab
               href="/dashboard/directory"
               label="Directory"

@@ -14,6 +14,7 @@ import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
 import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
+import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 
 // Same flag ChappiPageClient reads. Inlined at build time (NEXT_PUBLIC_
 // prefix) so the icon only appears once Chappi's own dedicated page is
@@ -47,6 +48,17 @@ const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 // before.
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
 const NAV_ICON_DISPLAY = MOBILE_NAV_ENABLED ? 'hidden lg:grid' : 'grid';
+
+// The mobile create button, and it is the exact complement of the labelled
+// pill below: that one is `lg:inline-flex` under this flag, so this fills
+// everything under lg and the two can never both be on screen.
+//
+// Flag OFF it renders nowhere, deliberately. Without the flag the pill shows
+// from `sm` and MobileNavBar is not mounted at all, so an `lg:hidden` icon
+// would double the CTA across the whole sm-to-lg range — and below `sm` there
+// was no topbar create button before this and adding one is not what moving
+// the "+" was asked to do. Flag off, this file behaves exactly as it did.
+const MOBILE_CREATE_DISPLAY = MOBILE_NAV_ENABLED ? 'grid lg:hidden' : 'hidden';
 
 type AppTopbarProps = {
   /** Opens the release creation modal. Lifted to AppShell so this universal
@@ -366,11 +378,41 @@ function ChappiTopbarAction() {
 export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
   const pathname = usePathname();
   const routeTitle = getRouteTitle(pathname);
+  const { openQuickCreate } = useTaskUI();
   // Tri-state: null means the capability probe is still in flight, so the
   // control stays out rather than flashing in and out. Only ever true for an
   // account that holds a curator_profiles row.
   const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
   const showCuratorLink = PITCHING_ENABLED && hasCuratorProfile === true;
+
+  /**
+   * The mobile create button, moved here from MobileNavBar's centre (founder
+   * call, 2026-09-06).
+   *
+   * Contextual, exactly as it was in the bar: on the workspace with a release
+   * scoped it opens that release's quick-create, everywhere else it opens New
+   * release. That behaviour was introduced when TasksPanel's own mobile "New
+   * activity" pill was retired, so it has to travel with the button or that
+   * pill's job goes unowned.
+   *
+   * Reads `window.location.search` at CLICK time rather than through
+   * useSearchParams. The ACTION is then always right, including on the one
+   * transition a render-time read would lag — scoping a release while already
+   * on /dashboard, which is a same-pathname replace. The aria-label stays a
+   * static "New release" for the same reason inverted: a label that is
+   * sometimes wrong is worse than one that is honestly generic.
+   */
+  const isWorkspace = pathname === '/dashboard';
+  const handleCreateClick = () => {
+    if (typeof window !== 'undefined' && isWorkspace) {
+      const releaseId = new URLSearchParams(window.location.search).get('release');
+      if (releaseId) {
+        openQuickCreate({ releaseId, source: 'inline' });
+        return;
+      }
+    }
+    onNewRelease?.();
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-stroke-subtle bg-bg-base/88 backdrop-blur-xl">
@@ -621,6 +663,29 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           userName={userName}
           className={MOBILE_NAV_ENABLED ? 'hidden lg:block' : undefined}
         />
+
+        {/* Mobile create, top-RIGHT (founder call, 2026-09-06). It was the
+            centred "+" in MobileNavBar; moving it up here is what lets that
+            bar be a plain row of tabs.
+
+            LAST in this cluster on purpose, so it is the rightmost control at
+            every width below lg. Everything above it here is `lg:` or `md:`
+            gated, so on a phone this is the only thing on this side and it
+            balances the account link anchored top-LEFT.
+
+            The labelled pill above stays lg-only and keeps plain
+            onNewRelease: on desktop TasksPanel still has its own New activity
+            button, so making that one contextual would change a behaviour
+            nobody asked to change. The two never render together. */}
+        <button
+          type="button"
+          onClick={handleCreateClick}
+          aria-label="New release"
+          title="New release"
+          className={`motion-focus motion-press ${MOBILE_CREATE_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full border border-brand/25 bg-brand text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover`}
+        >
+          <Plus className="h-5 w-5" />
+        </button>
       </div>
     </header>
   );
