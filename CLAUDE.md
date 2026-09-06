@@ -9967,8 +9967,101 @@ killed their own tests.
 has rendered — no database and no session here. The plan-gate refusal has never
 been triggered by a real team, and cannot be until Solo is sellable.
 
-**Next:** Phase 5, the role gaps panel on the scoped workspace view — the
-retention mechanic, and what makes the directory reachable on a phone.
+### Phase 5 (2026-09-05): the role gaps panel
+
+The phase the brief is built around — section 8 calls it "the whole retention
+mechanic". The rollout plan already knows which jobs a release needs, so the
+plan writes the job posts and nobody seeds demand by hand. It is also, per the
+Phase 4 founder call, **how the directory becomes reachable on a phone**: the
+tab bar is at its seven-slot ceiling, so a link from the release the manager is
+already looking at is the path in.
+
+**Two things section 8 assumed that the code does not support as written**, the
+same class of finding as Phase 1's verification rule:
+
+1. **"Role tasks with nobody assigned" matches nothing, ever.** Template
+   instantiation assigns EVERY task to the release owner, and
+   `lib/task-owners-server.ts` already names the consequence: a row still
+   sitting on the owner "is not evidence of anything — it is just the unmoved
+   default". A panel keyed on unassigned would be permanently empty. **A gap is
+   therefore a role task still sitting on the owner**, which is the same filter
+   that module already trusts and is exactly the thing the panel means to
+   surface: nobody has been brought in yet.
+2. **"Pre-filtered to that city" has no source.** Nothing in the schema knows
+   where a team is — the only `city` in the product is on `person_profiles`,
+   which is the person being HIRED. The rows pre-filter **role and
+   availability, not city**. Deriving a location from the manager's own profile
+   would apply a guess to somebody else's search, and most managers are not
+   listed at all.
+
+**The design decision worth reading: two maps, not one.** `DELIVERY_TASK_ROLE`
+answers "who did this?" and deliberately covers only steps where work ARRIVES.
+A hiring gap is a different question, and the COMMISSIONING steps answer it
+better because they come earlier — "Brief designer on cover art" is week 7,
+"Cover art first draft delivered" is week 6, so briefing gives a week of warning
+where delivery is telling them late. `HIRING_TASK_ROLE` holds those steps across
+all three playbooks, and `roleNeededForTask` reads hiring first, then delivery,
+so roles with no commissioning step (master engineer, videographer, digital
+marketer) still surface at their delivery step, the earliest signal they have.
+
+**THE TWO MAPS MUST STAY DISJOINT, and a test enforces it.** An earlier comment
+here claimed the lookup ORDER was load-bearing; a mutation reversing it survived
+every test, which is what proved the claim wrong — with disjoint maps the order
+is unobservable. The disjointness is the real invariant, so that is what is
+pinned. `*_plan_content_shoot` stays unmapped for the reason it is unmapped in
+the delivery map too: a shoot is a photographer or a videographer depending on
+the release, and a link cannot pre-filter to a role nothing in the row names.
+
+**Four smaller decisions:**
+
+- **A new `activitiesFooter` slot on `TasksPanel`**, at the end of the
+  `space-y-3` stack inside the scroll body — below the buckets, scrolling with
+  them. NOT `activitiesBanner`, a single slot with four claimants where the
+  press kit prompt wins; NOT the desktop footer pill row, which is pinned,
+  scarce and shared with Content and Press kit. A list of role rows is not a
+  banner and should not fight one for space.
+- **Dismissal is per RELEASE**, through `lib/persisted-state.ts` like the task
+  buckets. Each release is a new hiring moment, so a dismissal on one must not
+  silence the next. Capped at 50 ids; a dismissal that could not be written
+  still closes the panel for the session.
+- **Not coupled to the press kit.** Section 8 sequences this after a kit is
+  published, which describes the journey rather than a precondition — gating on
+  `NEXT_PUBLIC_FEATURE_PRESS_KITS` would hide the panel behind a different
+  feature's switch.
+- **Owner-only, and nothing renders unless there is something to say** (the
+  `PostPlanKitPrompt` rule verbatim). Reassigning is the action this leads to,
+  and offering it to a teammate who cannot take it is a control that fails on
+  press.
+
+**The directory now accepts the link.** `?role=…&availability=open` is read
+ONCE into the initial filter state, validated against `DIRECTORY_ROLES` /
+`PERSON_AVAILABILITIES`, never mirrored — keeping filters in sync with the URL
+would make every keystroke fight a param nobody set. The page stays `○ Static`
+because that read sits inside the existing Suspense boundary.
+
+**Verified:** 2641 tests (14 new across `directory-roles.test.ts` and
+`role-gaps.test.ts`), `eslint .` at 3 errors / **80** warnings against the
+79-warning baseline — the one new finding is `RoleGapsPanel`'s localStorage
+hydration effect, the documented React-19 `set-state-in-effect` downgrade,
+matching `TasksPanel`'s own bucket-state effect in shape. `next build` green by
+exit code in both flag states with `/auth`, `/onboarding`, `/settings` and
+`/dashboard/directory` all still `○ Static` in each.
+
+**Four mutations, and TWO GENUINELY SURVIVED — both were real test weaknesses
+rather than failed applications, which is the part worth keeping.** Crediting a
+task assigned to somebody other than the owner, and treating a done task as a
+gap, each killed their own tests immediately. But "last wins instead of
+earliest" survived because the fixture listed the LATE task first, so last-wins
+accidentally picked the right one; the fixture is reordered with a comment
+saying why. And reversing the map lookup order survived because the maps are
+disjoint, which is what corrected the prose above. Both kill their tests now.
+**Separately, remember Phase 1's lesson: confirm a mutation actually applied
+before believing a survivor** — one there was a `sed` indentation miss.
+
+**Not verified:** no panel has rendered and no gap has been computed from real
+tasks. No database, no session, no route to app.urganize.app.
+
+**Next:** Phase 6, instrumentation — and only then revisit ranking.
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:

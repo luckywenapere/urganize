@@ -48,6 +48,8 @@ import { ChangeReleaseArtistDialog } from '@/components/workspace/ChangeReleaseA
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { isReleaseActive } from '@/lib/release-activity';
 import { isRecapEligible as isRecapEligibleForRelease } from '@/lib/recap-eligibility';
+import { findRoleGaps } from '@/lib/role-gaps';
+import { RoleGapsPanel } from '@/components/directory/RoleGapsPanel';
 import { searchReleases } from '@/lib/release-search';
 import { ReleaseSearchBar } from './ReleaseSearchBar';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -82,6 +84,7 @@ const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 
 // which mutated real task rows the moment the model answered.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
+const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 
 // The four flag-gated scene params (calendar / capture / song / coverart) used
 // to be read here as local consts and compared inline. They now live behind
@@ -632,6 +635,39 @@ export function WorkspaceView() {
     if (!scopedReleaseId) return taskList;
     return taskList.filter((task) => task.releaseId === scopedReleaseId);
   }, [scopedReleaseId, taskList]);
+
+  // The jobs on this release nobody is on yet (the directory's role gaps,
+  // 2026-09-05). Owner-only, like the other release-row affordances here:
+  // reassigning is the action this leads to, and offering it to a teammate who
+  // cannot take it is a control that fails on press.
+  //
+  // NOT gated on the press kit. The brief sequences this after the kit is
+  // published, which describes the journey rather than a precondition —
+  // reading that as a hard gate would make the panel invisible whenever a
+  // different feature's flag is off.
+  const roleGaps = useMemo(() => {
+    if (!DIRECTORY_ENABLED || !scopedReleaseSlim || !scopedReleaseIsOwn) return [];
+    const ownerUserId = scopedReleaseSlim.ownerUserId || user?.id || '';
+    if (!ownerUserId) return [];
+    return findRoleGaps(
+      scopedTasks.map((task) => ({
+        id: task.id,
+        templateTaskId: task.templateTaskId,
+        assignedToUserId: task.assignedToUserId,
+        status: task.status,
+        dueDate: task.dueDate,
+        title: task.title,
+      })),
+      ownerUserId
+    );
+  }, [scopedReleaseSlim, scopedReleaseIsOwn, scopedTasks, user?.id]);
+
+  // Renders nothing unless there is genuinely something to say, the
+  // PostPlanKitPrompt rule verbatim.
+  const roleGapsFooter =
+    scopedReleaseSlim && roleGaps.length > 0 ? (
+      <RoleGapsPanel releaseId={scopedReleaseSlim.id} gaps={roleGaps} />
+    ) : null;
 
   // Centered-focus split: take the non-selected releases in grid order and
   // slice them into left + right rails. Ceiling on the left, floor on the
@@ -1317,6 +1353,7 @@ export function WorkspaceView() {
                   changeArtistAction={changeArtistAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
                   activitiesBanner={kitPromptBanner ?? testReleaseBanner ?? planBanner ?? setReleaseDateBanner}
+                  activitiesFooter={roleGapsFooter}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
                   showPlanPill={showPlanPill}
                 />
@@ -1364,6 +1401,7 @@ export function WorkspaceView() {
                 panelChangeArtistAction={changeArtistAction}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
                 panelActivitiesBanner={kitPromptBanner ?? testReleaseBanner ?? planBanner ?? setReleaseDateBanner}
+                panelActivitiesFooter={roleGapsFooter}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
                 panelShowPlanPill={showPlanPill}
               />

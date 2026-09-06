@@ -5,7 +5,9 @@ import {
   DIRECTORY_ROLE_LABELS,
   VERIFIABLE_ROLES,
   DELIVERY_TASK_ROLE,
+  HIRING_TASK_ROLE,
   roleForTemplateTask,
+  roleNeededForTask,
 } from './directory-roles';
 
 /**
@@ -96,5 +98,39 @@ describe('directory roles', () => {
     expect(roleForTemplateTask('w6_cover_art_first_draft')).toBe('graphic_designer');
     expect(roleForTemplateTask('w10_ep_art_draft')).toBe('graphic_designer');
     expect(roleForTemplateTask('w14_album_art_draft')).toBe('graphic_designer');
+  });
+});
+
+describe('hiring map', () => {
+  it('maps only task ids that exist in a live playbook', () => {
+    const unknown = Object.keys(HIRING_TASK_ROLE).filter((id) => !PLAYBOOK_TASK_IDS.has(id));
+    expect(unknown).toEqual([]);
+  });
+
+  it('stays disjoint from the delivery map', () => {
+    // While these two share no id, roleNeededForTask's lookup order cannot
+    // matter. The day an id appears in both, that order starts deciding
+    // whether a gap surfaces at the briefing step or a week later at delivery
+    // — so the guard is disjointness rather than a comment about order.
+    const overlap = Object.keys(HIRING_TASK_ROLE).filter((id) => id in DELIVERY_TASK_ROLE);
+    expect(overlap).toEqual([]);
+  });
+
+  it('covers the designer and PR briefings in all three playbooks', () => {
+    for (const role of ['graphic_designer', 'pr'] as const) {
+      for (const type of ['single', 'ep', 'album'] as const) {
+        const ids = new Set(getAuthoredTemplate(type)!.tasks.map((task) => task.id));
+        const covered = Object.entries(HIRING_TASK_ROLE).some(
+          ([id, mapped]) => mapped === role && ids.has(id)
+        );
+        expect(covered, `${role} has no ${type} briefing step`).toBe(true);
+      }
+    }
+  });
+
+  it('prefers the hiring signal, which is the earlier one', () => {
+    expect(roleNeededForTask('w7_brief_designer')).toBe('graphic_designer');
+    expect(roleNeededForTask('w6_cover_art_first_draft')).toBe('graphic_designer');
+    expect(roleNeededForTask('w8_set_rollout_budget')).toBeNull();
   });
 });

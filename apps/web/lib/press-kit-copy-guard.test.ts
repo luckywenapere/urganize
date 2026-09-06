@@ -28,7 +28,7 @@ const FILES = [
   // The directory joined this guard rather than growing a second one: same
   // house rules, same brief, and two guards would drift the moment one of them
   // gained a rule.
-  ...walk(join(WEB, 'lib')).filter((path) => /press-kit|press-photo|directory-|delivery-records/.test(path)),
+  ...walk(join(WEB, 'lib')).filter((path) => /press-kit|press-photo|directory-|delivery-records|role-gaps/.test(path)),
   ...walk(join(WEB, 'components', 'press-kits')),
   ...walk(join(WEB, 'app', 'k')),
   ...walk(join(WEB, 'app', 'api', 'press-kits')),

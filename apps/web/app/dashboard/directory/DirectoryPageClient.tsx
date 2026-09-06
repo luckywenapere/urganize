@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import {
@@ -40,9 +40,53 @@ const controlClass =
   'h-11 rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none';
 
 export function DirectoryPageClient() {
+  return (
+    <Suspense fallback={<DirectoryFrame />}>
+      <DirectoryBody />
+    </Suspense>
+  );
+}
+
+/** The header alone, so the Suspense boundary below shows something real
+ *  rather than nothing while the params resolve. */
+function DirectoryFrame() {
+  return (
+    <div className="mx-auto w-full max-w-3xl">
+      <header className="mb-6">
+        <h1 className="font-display text-2xl text-content-primary">Directory</h1>
+        <p className="mt-1 text-sm text-content-secondary">
+          Find people who have delivered the work your release needs.
+        </p>
+      </header>
+    </div>
+  );
+}
+
+function DirectoryBody() {
   const router = useRouter();
+  // Read ONCE, into the initial state, never mirrored. The role gaps panel
+  // links here pre-filtered (?role=…&availability=open), and after that the
+  // filters belong to whoever is typing — keeping them in sync with the URL
+  // would make every keystroke fight a param nobody set.
+  const searchParams = useSearchParams();
   const [people, setPeople] = useState<Person[]>([]);
-  const [filters, setFilters] = useState<DirectoryFilters>(NO_FILTERS);
+  const [filters, setFilters] = useState<DirectoryFilters>(() => {
+    const role = searchParams.get('role');
+    const availability = searchParams.get('availability');
+    return {
+      ...NO_FILTERS,
+      // Validated against the real vocabularies rather than trusted: a link
+      // carrying a role that no longer exists must filter nothing rather than
+      // filter everything out.
+      role: role && (DIRECTORY_ROLES as readonly string[]).includes(role)
+        ? (role as DirectoryRole)
+        : null,
+      availability:
+        availability && (PERSON_AVAILABILITIES as readonly string[]).includes(availability)
+          ? (availability as PersonAvailability)
+          : null,
+    };
+  });
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
   const [locked, setLocked] = useState('');

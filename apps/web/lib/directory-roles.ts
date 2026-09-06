@@ -146,3 +146,53 @@ export function roleForTemplateTask(templateTaskId: string | null | undefined): 
   if (!templateTaskId) return null;
   return DELIVERY_TASK_ROLE[templateTaskId] ?? null;
 }
+
+/**
+ * Playbook step -> the role you need somebody FOR.
+ *
+ * A different question from DELIVERY_TASK_ROLE above, and the difference is the
+ * whole reason there are two maps. That one answers "who did this?", so it
+ * covers only steps where work ARRIVES. This one answers "who do I need?", and
+ * the COMMISSIONING steps are the better answer to it because they come first:
+ *
+ *   w7_brief_designer          "Brief designer on cover art"       week 7
+ *   w6_cover_art_first_draft   "Cover art first draft delivered"   week 6
+ *
+ * Telling a manager they need a designer at the briefing step is a week of
+ * warning. Telling them at the delivery step is telling them late.
+ *
+ * Roles with no commissioning step in any playbook — master engineer,
+ * videographer, digital marketer — are not listed here and fall through to the
+ * delivery map, which is the earliest signal they have.
+ *
+ * `*_plan_content_shoot` stays unmapped for the same reason the shoot itself
+ * is: it is a photographer or a videographer depending on the release, and a
+ * link cannot pre-filter the directory to a role nothing in the row names.
+ */
+export const HIRING_TASK_ROLE: Readonly<Record<string, DirectoryRole>> = {
+  w7_brief_designer: 'graphic_designer',
+  w12_brief_single_art: 'graphic_designer',
+  w11_brief_designer_ep_art: 'graphic_designer',
+  w16_brief_designer_album_art: 'graphic_designer',
+  w15_brief_single_1_art: 'graphic_designer',
+  w10_brief_single_2_art: 'graphic_designer',
+
+  w4_brief_pr_contacts: 'pr',
+  w9_brief_pr: 'pr',
+  w11_brief_pr: 'pr',
+};
+
+/**
+ * The role a step means you need somebody for, hiring signal first.
+ *
+ * THE TWO MAPS MUST STAY DISJOINT, and a test enforces it. While they are, this
+ * lookup order is unobservable — which is the safe state, and worth saying
+ * plainly rather than claiming an order rule the code does not actually
+ * depend on. The moment one id appeared in both, the order WOULD start
+ * deciding whether a designer gap surfaces at the briefing step or a week
+ * later at delivery, and nothing on screen would look wrong.
+ */
+export function roleNeededForTask(templateTaskId: string | null | undefined): DirectoryRole | null {
+  if (!templateTaskId) return null;
+  return HIRING_TASK_ROLE[templateTaskId] ?? DELIVERY_TASK_ROLE[templateTaskId] ?? null;
+}

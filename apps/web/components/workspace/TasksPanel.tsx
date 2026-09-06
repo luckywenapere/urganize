@@ -310,6 +310,15 @@ type TasksPanelProps = {
    */
   activitiesBanner?: ReactNode;
   /**
+   * Rendered at the END of the activity list, inside the scroll body.
+   *
+   * Deliberately NOT the banner slot above, which is a single slot with four
+   * claimants already. A list of rows is not a banner and should not fight one
+   * for the space; and unlike the footer pill row below, this scrolls with the
+   * activities rather than taking pinned height from them.
+   */
+  activitiesFooter?: ReactNode;
+  /**
    * Set when `activitiesBanner` already explains the empty list AND offers a
    * way to act on it — the plan-waiting SetReleaseDateCard does both, so the
    * generic empty state below would just repeat it (URG-233).
@@ -362,6 +371,7 @@ export function TasksPanel({
   changeArtistAction,
   sceneContent,
   activitiesBanner,
+  activitiesFooter,
   bannerReplacesEmptyState = false,
   showPlanPill = false,
 }: TasksPanelProps) {
@@ -1247,6 +1257,7 @@ export function TasksPanel({
             </div>
           );
         })}
+        {activitiesFooter}
       </div>
       )}
       </div>
