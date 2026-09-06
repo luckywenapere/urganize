@@ -14,6 +14,8 @@ import {
   useSettingsTab,
   type SettingsTab,
 } from '@/components/settings/useSettingsTab';
+import { DIRECTORY_SETTINGS_ANCHOR } from '@/lib/person-profile';
+
 import { useTeammates } from '@/components/settings/useTeammates';
 import { useWorkspaceSettings } from '@/components/settings/useWorkspaceSettings';
 import { AccountTab } from '@/components/settings/tabs/AccountTab';
@@ -91,6 +93,31 @@ export default function SettingsPage() {
       router.replace('/settings?tab=team', { scroll: false });
     }
   }, [router]);
+
+  // `/settings#directory` — the directory's "Add yourself" (2026-09-06).
+  //
+  // A client-side push does not scroll to a hash the way a document load does,
+  // and this section is fifth of twelve in the Account tab, so without this the
+  // button appears to do nothing on a phone. That is how it was reported.
+  //
+  // No tab redirect needed, unlike #teammates above: the section lives in
+  // Account, which is the default tab, so a bare /settings#directory is
+  // already on the right one.
+  //
+  // Deferred a frame because the section renders a fixed-height skeleton until
+  // its own fetch resolves; scrolling in the same tick lands above where the
+  // heading settles. `block: 'start'` rather than centre so the heading is the
+  // first thing under the topbar.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.location.hash !== `#${DIRECTORY_SETTINGS_ANCHOR}`) return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById(DIRECTORY_SETTINGS_ANCHOR)
+        ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   // SSR serializes this skeleton into the HTML (auth state is client-only, so
   // the server never knows the user); hydration is a no-op reconciliation — no

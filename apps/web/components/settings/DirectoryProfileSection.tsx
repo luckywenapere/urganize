@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import {
+  DIRECTORY_SETTINGS_ANCHOR,
   PERSON_AVAILABILITIES,
   PERSON_AVAILABILITY_COPY,
   PERSON_BIO_MAX_CHARS,
@@ -17,6 +18,7 @@ import { panelClass } from './panelClass';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
+
 
 /**
  * Your record in the directory, and who is allowed to see it.
@@ -136,7 +138,11 @@ export function DirectoryProfileSection() {
   };
 
   return (
-    <section className={panelClass}>
+    // `id` is the deep-link target. The directory's "Add yourself" used to push
+    // a bare /settings, which lands at the TOP of a twelve-section tab with
+    // this one fifth down — on a phone that reads as a button that did
+    // nothing, which is exactly how it was reported (2026-09-06).
+    <section id={DIRECTORY_SETTINGS_ANCHOR} className={panelClass}>
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Your directory record
       </h2>
