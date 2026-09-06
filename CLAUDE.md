@@ -10061,7 +10061,104 @@ before believing a survivor** — one there was a `sed` indentation miss.
 **Not verified:** no panel has rendered and no gap has been computed from real
 tasks. No database, no session, no route to app.urganize.app.
 
-**Next:** Phase 6, instrumentation — and only then revisit ranking.
+### Phase 6 (2026-09-05): instrumentation
+
+The last phase in the brief, and the one that decides whether anybody can tell
+if the directory is working. Two channels, split on a rule rather than by habit.
+
+**PostHog for the funnel; a durable row for the one signal that drives a
+decision.** The funnel questions — do people opt in, do managers search, does
+the role gaps panel drive them there — are read in aggregate and can afford to
+be a bit lossy. One question cannot: **which roles are managers asking for that
+nobody has delivered.** That is the recruiting list, it has to be right every
+week, and this app has already lost months of events to a content blocker once
+(see "PostHog was never recording anything"). So it is written server-side, the
+way `limit_hit` is: a `directory_role_wanted` row in `billing_events`, read back
+by `/admin/directory`. **No migration** — that column is free text by design and
+its existing `(workspace_id, type, created_at)` index is the access path.
+
+**Six things worth knowing before editing this:**
+
+1. **NO SEARCH TEXT LEAVES THE BROWSER, in either channel.** The search box takes
+   a person's NAME, and somebody typing a name is making a private search.
+   `parseDirectoryDemand` is an allowlist of exactly three fields — role,
+   matched, source — so a future caller cannot widen the row by adding one, and
+   a payload carrying a query, a city and an email comes back with the three.
+   Mutation-tested: spreading the rest of the body through fails exactly that
+   test. The analytics event follows the same rule and reports `has_query` as a
+   boolean.
+2. **The durable row is only written when there IS a role filter.** A search with
+   no role says nothing about which job is short, which is the only question
+   that row exists to answer. The analytics event fires either way, because
+   "managers search but never by role" is itself worth knowing.
+3. **One row per team per role per UTC day.** A manager comparing two designers
+   runs the same filter a dozen times in a sitting, and a dozen rows say nothing
+   one row does not. Deduped on the metadata role rather than the type alone, so
+   looking for a designer and then an engineer is two signals. Anything
+   unreadable answers "not today" and records — a duplicate row costs nothing, a
+   lost first row loses the signal. Mutation-tested.
+4. **Demand from the role gaps panel is kept apart from demand somebody typed.**
+   The panel links with `from=role_gaps`, which rides into the row's `source`.
+   Whether the rollout plan actually drives search is a different question from
+   whether managers search at all, and folding the two together makes it
+   unanswerable — the same reason the planner's review nudge reports `via_prompt`
+   separately.
+5. **SUPPLY IS PEOPLE, NEVER RECORDS.** Somebody who delivered artwork on four
+   releases is one designer you can call, not four. `summarizeDirectory` counts
+   distinct users per role for exactly this, and a table that says "four
+   designers" when there is one would send the founder recruiting for the wrong
+   job. Mutation-tested.
+6. **The recruiting list needs DEMAND, not just absence.** A role nobody asked for
+   is not a shortage, and listing every empty role would bury the two that
+   matter. `recruit` is roles with unmet demand, worst first, tie-broken toward
+   the role with nobody who has ever delivered it. Mutation-tested.
+
+- **Result counts go to analytics bucketed** (`0`, `1-4`, `5-19`, `20+`). Zero is
+  kept exact because zero is the whole signal; above that the difference between
+  seven and nine answers nothing, and a raw count is one more way to fingerprint
+  a small team.
+- **The beacon is fire and forget and the route answers 202 whatever it makes of
+  the payload**, including one it throws away. This is a report on somebody
+  else's keystroke: there is nothing for a manager to do about a rejected one,
+  and an error here would surface as a failure of the search they were actually
+  running. It is debounced 600ms and deduped per settled filter, so typing
+  "designer" reports once rather than eight times.
+- **`/admin/directory`** is the founder's read: listed and with-a-record per role,
+  wanted and unmet per role, how much of that came from the panel, and the
+  recruiting list on top. Aggregated in TypeScript rather than SQL, the
+  `/admin/urgans` call for the same reasons. **Not flag-gated** (the
+  `/admin/teams` precedent) so it can be watched filling from day one, and its
+  three reads report their table by name — a directory with no migration applied
+  fails three different ways, and knowing which is the difference between a two
+  minute fix and a hunt.
+- **`directory_profile_listed` fires on opting IN, not on every save.** The save
+  path reads visibility before the write and reports only the private-to-listed
+  transition; every later edit is somebody already listed tidying their record.
+
+**Verified:** 2665 tests (24 new across `directory-demand.test.ts` and
+`directory-admin-summary.test.ts`), `eslint .` at 3 errors / **81** warnings
+against the 80-warning baseline — the one new finding is the admin page's
+fetch-on-mount gate effect, the documented React-19 `set-state-in-effect`
+downgrade, matching `TeamsAdminPageClient` and `UrgansAdminPageClient`
+byte-for-byte. `next build` green **by exit code** in both flag states with
+`/auth`, `/onboarding`, `/settings`, `/dashboard/directory` and
+`/admin/directory` all still `○ Static` in each. Runtime probes, rebuilding
+between them: flag off, `POST /api/directory/demand` returns **404** with body
+exactly `{"error":"Not found."}` while the ungated `/api/releases` **401**s;
+flag on it **401**s. `/api/admin/directory` answers the same
+unset-`ADMIN_EMAILS` 500 as the pre-existing `/api/admin/teams` under this
+sandbox's env, checked side by side rather than assumed. **Four mutations, each
+killing exactly its own test** (the privacy allowlist, records-not-people, the
+recruiting filter, the dedupe fallback).
+
+**Not verified:** no event has ever been captured and no row has ever been
+written. No database, no session, no PostHog project reachable from here, and
+`/admin/directory` has never rendered a real number. The dedupe's metadata
+filter (`metadata->>role`) in particular has never run against real PostgREST.
+
+**Phase 6 closes the brief's six phases.** Ranking — which the brief says to
+revisit "then, and only then" — is deliberately not built: it wants real demand
+rows to rank against, and there are none yet.
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:

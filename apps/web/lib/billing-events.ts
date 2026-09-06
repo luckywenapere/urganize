@@ -91,6 +91,18 @@ export const BILLING_EVENT_TYPES = [
    *  plan_change_requested (which records an actual purchase decision), so
    *  this is ledger-only — no founder alert. */
   'upgrade_clicked',
+  /** A manager looked for somebody who does a particular job, and whether the
+   *  directory had one. `metadata` carries the role, a matched yes/no and
+   *  whether it came from the search box or the role gaps panel — and NOTHING
+   *  else, because the search box takes a person's name and a private search
+   *  must never reach a durable row (lib/directory-demand.ts).
+   *
+   *  Ledger rather than analytics-only for the reason `limit_hit` is: the rows
+   *  where matched is false ARE the recruiting list, which is the one question
+   *  a cold-start marketplace has to answer every week. Deduped to one row per
+   *  team per role per UTC day, so a manager comparing two designers produces
+   *  one row and not a dozen. Read back by /admin/directory. */
+  'directory_role_wanted',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];

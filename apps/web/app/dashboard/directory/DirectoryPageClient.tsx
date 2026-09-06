@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from '@/components/icons';
@@ -16,6 +16,8 @@ import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/li
 import { PERSON_AVAILABILITIES, PERSON_AVAILABILITY_COPY } from '@/lib/person-profile';
 import type { PersonAvailability } from '@/types/directory';
 import { DirectoryEmptyState } from '@/components/directory/DirectoryEmptyState';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { bucketResultCount, type DirectoryDemandSource } from '@/lib/directory-demand';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 
@@ -70,6 +72,10 @@ function DirectoryBody() {
   // would make every keystroke fight a param nobody set.
   const searchParams = useSearchParams();
   const [people, setPeople] = useState<Person[]>([]);
+  // Where this visit's role filter came from. The role gaps panel links here
+  // pre-filtered, and demand it created is worth telling apart from demand
+  // somebody typed: it is the retention mechanic either working or not.
+  const arrivedFromRoleGaps = searchParams.get('from') === 'role_gaps';
   const [filters, setFilters] = useState<DirectoryFilters>(() => {
     const role = searchParams.get('role');
     const availability = searchParams.get('availability');
@@ -139,6 +145,41 @@ function DirectoryBody() {
   }, [router]);
 
   const results = useMemo(() => applyDirectoryFilters(people, filters), [people, filters]);
+
+  // One report per settled filter, not per keystroke. The delay is what keeps
+  // "designer" from also reporting d, de, des and desi.
+  //
+  // The role is reported to the SERVER only when there is a role: a search with
+  // no role filter says nothing about which job is short, which is the only
+  // question that durable row exists to answer.
+  const reportedRef = useRef('');
+  useEffect(() => {
+    if (!loaded || locked || error) return;
+
+    const timer = window.setTimeout(() => {
+      const signature = JSON.stringify([filters.query.trim(), filters.role, filters.city, filters.availability]);
+      if (reportedRef.current === signature) return;
+      reportedRef.current = signature;
+
+      captureAnalyticsEvent({
+        name: 'directory_searched',
+        properties: {
+          has_query: filters.query.trim().length > 0,
+          role: filters.role,
+          availability: filters.availability,
+          filtered_by_city: Boolean(filters.city),
+          results: bucketResultCount(results.length),
+        },
+      });
+
+      if (!filters.role) return;
+      const source: DirectoryDemandSource = arrivedFromRoleGaps ? 'role_gap' : 'search';
+      void reportRoleDemand({ role: filters.role, matched: results.length > 0, source });
+    }, 600);
+
+    return () => window.clearTimeout(timer);
+  }, [filters, results.length, loaded, locked, error, arrivedFromRoleGaps]);
+
   const counts = useMemo(() => fallbackCounts(people, filters), [people, filters]);
   const cities = useMemo(() => availableCities(people), [people]);
 
@@ -265,6 +306,29 @@ function DirectoryBody() {
   );
 }
 
+/** Fire and forget, deliberately. This is a beacon on somebody else's
+ *  keystroke: the route answers 202 whatever it makes of the payload, and a
+ *  failure here must never surface as a failure of the search being run. */
+async function reportRoleDemand(demand: {
+  role: DirectoryRole;
+  matched: boolean;
+  source: DirectoryDemandSource;
+}) {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch('/api/directory/demand', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(demand),
+      keepalive: true,
+    });
+  } catch {
+    // Nothing to do and nobody to tell.
+  }
+}
+
 function PersonCard({ person }: { person: Person }) {
   const delivered = person.roles.filter((entry) => entry.delivered > 0);
   const claimed = person.roles.filter((entry) => entry.delivered === 0);
@@ -305,7 +369,16 @@ function PersonCard({ person }: { person: Person }) {
   );
 
   return person.isPublic && person.slug ? (
-    <Link href={`/p/${person.slug}`} className="motion-focus block">
+    <Link
+      href={`/p/${person.slug}`}
+      className="motion-focus block"
+      onClick={() =>
+        captureAnalyticsEvent({
+          name: 'directory_profile_opened',
+          properties: { role: delivered[0]?.role ?? claimed[0]?.role ?? null },
+        })
+      }
+    >
       {body}
     </Link>
   ) : (

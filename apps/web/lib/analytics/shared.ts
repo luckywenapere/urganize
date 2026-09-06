@@ -191,6 +191,43 @@ export interface AnalyticsEventPropertiesMap {
    * (1 sign, 2 storage PUT, 3 record), `status` is the HTTP status when there
    * was a response at all. That is enough to act on.
    */
+  /**
+   * The directory funnel: supply, demand and the mechanic that connects them.
+   *
+   * These are the questions worth asking of a marketplace that is cold by
+   * definition, and every one of them is about a count rather than a person.
+   * NO SEARCH TEXT, EVER — the search box takes somebody's name, and a private
+   * search does not belong in an analytics payload any more than it belongs in
+   * a durable row. `results` is bucketed by bucketResultCount for the same
+   * reason: zero is the whole signal, and the difference between seven and nine
+   * answers nothing while a raw count is one more way to fingerprint a small
+   * team.
+   *
+   * The one signal that drives a decision — a role somebody wanted and nobody
+   * had — is ALSO written server-side, because this app has already lost months
+   * of events to a content blocker once. See lib/directory-demand.ts.
+   */
+  directory_profile_listed: {
+    visibility: 'directory' | 'public';
+    claimed_roles: number;
+    has_city: boolean;
+  };
+  /** Fires on a settled filter, not a keystroke. */
+  directory_searched: {
+    has_query: boolean;
+    role: string | null;
+    availability: string | null;
+    filtered_by_city: boolean;
+    results: '0' | '1-4' | '5-19' | '20+';
+  };
+  directory_profile_opened: { role: string | null };
+  /** The role gaps panel on a scoped release — the retention mechanic. `shown`
+   *  against `role_clicked` says whether the rollout plan actually drives
+   *  search; `dismissed` against a later `shown` says whether it merely
+   *  interrupts, the same pair the planner review nudge is read by. */
+  role_gaps_shown: { release_id: string; gaps: number };
+  role_gaps_role_clicked: { release_id: string; role: string };
+  role_gaps_dismissed: { release_id: string; gaps: number };
   asset_upload_failed: {
     surface: 'workspace_logo' | 'curator_photo';
     step: 1 | 2 | 3;

@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { X } from '@/components/icons';
 import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import type { RoleGap } from '@/lib/role-gaps';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
 
 /**
  * The jobs on this release that nobody is on yet.
@@ -41,10 +42,28 @@ export function RoleGapsPanel({ releaseId, gaps }: { releaseId: string; gaps: Ro
     setDismissed(stored.includes(releaseId));
   }, [releaseId]);
 
+  // Reported once per release, and only while it is genuinely on screen. The
+  // component mounts dismissed on purpose (see the effect above), so firing on
+  // mount would count a panel nobody ever saw.
+  const reportedRef = useRef('');
+  useEffect(() => {
+    if (dismissed || gaps.length === 0) return;
+    if (reportedRef.current === releaseId) return;
+    reportedRef.current = releaseId;
+    captureAnalyticsEvent({
+      name: 'role_gaps_shown',
+      properties: { release_id: releaseId, gaps: gaps.length },
+    });
+  }, [dismissed, gaps.length, releaseId]);
+
   if (dismissed || gaps.length === 0) return null;
 
   const dismiss = () => {
     setDismissed(true);
+    captureAnalyticsEvent({
+      name: 'role_gaps_dismissed',
+      properties: { release_id: releaseId, gaps: gaps.length },
+    });
     try {
       const stored = readPersistedState<string[]>(STORAGE_KEY, STORAGE_VERSION, isStringList) ?? [];
       if (!stored.includes(releaseId)) {
@@ -87,9 +106,19 @@ export function RoleGapsPanel({ releaseId, gaps }: { releaseId: string; gaps: Ro
             {/* Pre-filtered to the role and to people taking work. NOT to a
                 city: nothing in the schema knows where this team is, and
                 guessing one would apply an invented location to somebody
-                else's search. */}
+                else's search.
+
+                `from` is what lets the demand this created be told apart from
+                demand somebody typed, which is the whole question of whether
+                this panel works. */}
             <Link
-              href={`/dashboard/directory?role=${gap.role}&availability=open`}
+              href={`/dashboard/directory?role=${gap.role}&availability=open&from=role_gaps`}
+              onClick={() =>
+                captureAnalyticsEvent({
+                  name: 'role_gaps_role_clicked',
+                  properties: { release_id: releaseId, role: gap.role },
+                })
+              }
               className="motion-focus flex items-center justify-between gap-3 rounded-lg border border-stroke-subtle px-3 py-2 hover:border-brand"
             >
               <span className="min-w-0">

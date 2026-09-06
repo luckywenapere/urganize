@@ -14,6 +14,7 @@ import {
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
 import type { PersonProfile, ProfileRole } from '@/types/directory';
 import { panelClass } from './panelClass';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 
@@ -84,6 +85,10 @@ export function DirectoryProfileSection() {
   const save = async (patch: Record<string, unknown>) => {
     const headers = await authHeaders();
     if (!headers) return;
+    // Read before the write: opting in is the supply side of the directory and
+    // the only moment on this page worth counting. Every later edit is somebody
+    // already listed tidying their own record.
+    const wasListed = Boolean(profile && profile.visibility !== 'private');
     setBusy(true);
     setError('');
     try {
@@ -98,6 +103,18 @@ export function DirectoryProfileSection() {
         return;
       }
       apply(body);
+
+      const saved = body?.profile as PersonProfile | null | undefined;
+      if (saved && !wasListed && saved.visibility !== 'private') {
+        captureAnalyticsEvent({
+          name: 'directory_profile_listed',
+          properties: {
+            visibility: saved.visibility,
+            claimed_roles: saved.roles?.length ?? 0,
+            has_city: Boolean(saved.city),
+          },
+        });
+      }
     } catch {
       setError('Could not save that. Check your connection.');
     } finally {
