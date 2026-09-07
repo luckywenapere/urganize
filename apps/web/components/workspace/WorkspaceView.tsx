@@ -9,11 +9,9 @@ import { useAuthStore } from '@/lib/auth-store';
 import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
 import { isTestReleaseEnabled, readTestRelease } from '@/lib/test-release';
 import { useReleaseStore } from '@/stores/useReleaseStore';
-import { isBrowserOnline } from '@/lib/offline/status';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { type Task } from '@/lib/tasks';
-import type { StatusFacts } from '@/lib/release-status';
 import type { Release } from '@/types/releases';
 import { supabase } from '@/lib/supabase/client';
 import { Toast } from '@/components/shared/Toast';
@@ -69,13 +67,7 @@ const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 // behaviors (hideRails + the scope live-sync below).
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
-// Ported from the removed release detail page (2026-08-04, founder call):
-// stays hidden until the gateway is wired to a capable model. NEXT_PUBLIC_
-// prefix so the value is inlined at build time; the API route guards the same
-// flag server-side.
-const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
-
-// The shareable end-of-release card. Unlike the two AI actions above, this pill
+// The shareable end-of-release card. Unlike the AI action above, this pill
 // is also gated on the release actually being finished, so it appears at the
 // moment there is something to celebrate rather than sitting there all campaign.
 const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 'true';
@@ -122,13 +114,11 @@ const CreateReleaseModal = dynamic(
   { ssr: false }
 );
 
-// Dynamic + flag-gated, same rationale as the removed page: while a flag is
-// off — as both are in production today — the modal's chunk is never
-// requested at all.
-const StatusUpdateModal = dynamic(
-  () => import('@/components/releases/StatusUpdateModal').then((m) => m.StatusUpdateModal),
-  { ssr: false }
-);
+// Dynamic + flag-gated, same rationale as the removed page: while the flag is
+// off the modal's chunk is never requested at all. It said "as both are in
+// production today" until 2026-09-07, when the status update's own modal was
+// deleted — that feature moved into the UrgAns conversation, so this is the
+// one modal left here.
 const RecapModal = dynamic(
   () => import('@/components/releases/RecapModal').then((m) => m.RecapModal),
   { ssr: false }
@@ -249,7 +239,6 @@ export function WorkspaceView() {
   // fetch, the same shape the tailor-plan context load had, because both the
   // planner card's wording and the Plan pill's visibility depend on it.
   const [hasPlanDraft, setHasPlanDraft] = useState(false);
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isRecapOpen, setIsRecapOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isChangeArtistOpen, setIsChangeArtistOpen] = useState(false);
@@ -259,11 +248,6 @@ export function WorkspaceView() {
   // defaults off) and loaded once per session by the effect below.
   const rosterArtists = useArtistRosterStore((state) => state.artists);
   const loadArtistRoster = useArtistRosterStore((state) => state.load);
-  const [isGeneratingStatus, setIsGeneratingStatus] = useState(false);
-  const [statusUpdate, setStatusUpdate] = useState('');
-  // The counts behind the generated paragraph, shown as tiles above it so the
-  // narration can be checked against its own source data.
-  const [statusStats, setStatusStats] = useState<StatusFacts | null>(null);
   // One-time getting-started guide (NewReleaseGuide), triggered by ?new=1
   // alongside ?release= from the create flows. Read into state once, then
   // both params are stripped via router.replace so a refresh never
@@ -412,53 +396,6 @@ export function WorkspaceView() {
   const testReleaseEntry = TEST_RELEASE_ENABLED
     ? { start: startTestRelease, isStarting: isStartingTestRelease, error: testReleaseError }
     : undefined;
-
-  const generateStatus = async () => {
-    if (!scopedReleaseId) return;
-    // The status generator is a single AI call with no offline story — say
-    // so plainly rather than opening the modal on a fetch that can only
-    // fail after the fact.
-    if (!isBrowserOnline()) {
-      setToast({ tone: 'error', message: "You're offline — generating a status update needs a connection." });
-      return;
-    }
-    setIsStatusOpen(true);
-    setIsGeneratingStatus(true);
-    setStatusUpdate('');
-    setStatusStats(null);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error('Session expired. Please sign in again.');
-      const res = await fetch(`/api/releases/${scopedReleaseId}/generate-status`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      const payload = (await res.json().catch(() => ({}))) as {
-        status_update?: string;
-        stats?: StatusFacts;
-        error?: string;
-      };
-      if (!res.ok || !payload.status_update) {
-        throw new Error(payload.error || 'Could not generate status update.');
-      }
-      setStatusUpdate(payload.status_update);
-      // Absent on a response from a deploy that predates the stats field; the
-      // modal simply renders no tiles rather than guessing at figures.
-      setStatusStats(payload.stats ?? null);
-    } catch (err) {
-      setIsStatusOpen(false);
-      setToast({
-        tone: 'error',
-        message: err instanceof Error ? err.message : 'Could not generate status update.',
-      });
-    } finally {
-      setIsGeneratingStatus(false);
-    }
-  };
 
   // Does the scoped release have a draft plan waiting? Asked whenever the
   // scope changes, and again when a generate call finishes, so the card stops
@@ -866,23 +803,18 @@ export function WorkspaceView() {
     );
   }, [scopedReleaseSlim, scopedTasks]);
 
-  // The two AI actions, ported from the removed release detail page — only
+  // The recap action, ported from the removed release detail page — only
   // meaningful when a release is scoped. Structured (see TaskPanelAction)
-  // rather than pre-rendered JSX: TasksPanel now places each one in a
-  // different spot depending on width (desktop header row, mobile top
-  // tabs, or the mobile folded "more" menu — 2026-08-16 redesign), and the
-  // folded menu's search needs a real label to filter against. Labels stay
-  // short — one or two words, not a sentence — matching how a chip row (or a
-  // menu row) is supposed to read.
-  const statusUpdateAction =
-    scopedReleaseId && STATUS_UPDATE_ENABLED
-      ? {
-          label: isGeneratingStatus ? 'Generating…' : 'Status update',
-          onClick: () => void generateStatus(),
-          disabled: isGeneratingStatus,
-        }
-      : null;
-
+  // rather than pre-rendered JSX: TasksPanel places it differently depending
+  // on width (desktop header row, or the mobile release menu — 2026-08-16
+  // redesign), and the menu's search needs a real label to filter against.
+  // Labels stay short — one or two words, not a sentence — matching how a chip
+  // row (or a menu row) is supposed to read.
+  //
+  // It was one of TWO AI actions until 2026-09-07, when the status update's
+  // pill was removed on a founder call: that feature lives in the UrgAns
+  // conversation now (ask it, or the deterministic `status` keyword), so the
+  // route and the generate_status_update tool are the whole surface.
   const recapAction =
     scopedReleaseId && RELEASE_RECAP_ENABLED && isRecapEligible
       ? { label: 'Release recap', onClick: () => setIsRecapOpen(true) }
@@ -1403,7 +1335,6 @@ export function WorkspaceView() {
                   id={TASKS_PANEL_ID}
                   tasks={scopedTasks}
                   scopedRelease={scopedReleaseSlim}
-                  statusUpdateAction={statusUpdateAction}
                   recapAction={recapAction}
                   archiveAction={archiveAction}
                   changeArtistAction={changeArtistAction}
@@ -1451,7 +1382,6 @@ export function WorkspaceView() {
                 closeLabel={backLabel}
                 hideRails={hideRailsForLayout}
                 banner={newReleaseGuideBanner}
-                panelStatusUpdateAction={statusUpdateAction}
                 panelRecapAction={recapAction}
                 panelArchiveAction={archiveAction}
                 panelChangeArtistAction={changeArtistAction}
@@ -1601,17 +1531,6 @@ export function WorkspaceView() {
             setToast({ message, tone: 'success' });
             setupPrompt.dismiss();
           }}
-        />
-      ) : null}
-
-      {STATUS_UPDATE_ENABLED ? (
-        <StatusUpdateModal
-          open={isStatusOpen}
-          isGenerating={isGeneratingStatus}
-          statusUpdate={statusUpdate}
-          stats={statusStats}
-          onClose={() => setIsStatusOpen(false)}
-          onRegenerate={() => void generateStatus()}
         />
       ) : null}
 

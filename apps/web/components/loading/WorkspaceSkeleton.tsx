@@ -61,13 +61,13 @@ const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
-// The AI action the removed release detail page used to carry (Generate status
-// update) now renders as an extra pill at the end of this same header row
-// (WorkspaceView), so the skeleton reserves its width too when the flag is on.
-const STATUS_UPDATE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_STATUS_UPDATE === 'true';
+// The status-update pill used to be reserved at the end of this header row.
+// It was removed 2026-09-07 (founder call — the status update lives in the
+// UrgAns conversation now), so there is no placeholder for it and
+// NEXT_PUBLIC_FEATURE_STATUS_UPDATE is no longer read here at all.
 
-// The release recap pill (WorkspaceView) is deliberately NOT reserved here,
-// unlike the two AI pills above. It only appears once a release is finished,
+// The release recap pill (WorkspaceView) is deliberately NOT reserved here.
+// It only appears once a release is finished,
 // which depends on release and task data this skeleton renders BEFORE it has.
 // Reserving it unconditionally would shrink the row for every unfinished
 // release, so the jump is taken on the rarer finished case instead.
@@ -336,13 +336,6 @@ function TasksPanelSkeleton() {
   const notesPillBlock = NOTES_ENABLED ? (
     <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" />
   ) : null;
-  // WorkspaceView's `extraActions` (Status update), which BOTH containers
-  // render — so this is reserved in both, after Notes on desktop to match the
-  // real Files -> Notes -> AI actions order. The recap pill stays unreserved
-  // for the reason given above.
-  const extraActionPillBlocks = STATUS_UPDATE_ENABLED ? (
-    <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
-  ) : null;
   // Content / Fan capture — the panel's outbound group, a
   // desktop-only footer row at lg+. It used to describe itself as also being
   // "the tail of the mobile dock"; the dock has carried no pills since
@@ -377,7 +370,6 @@ function TasksPanelSkeleton() {
       <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
         {primaryPillBlocks}
         {notesPillBlock}
-        {extraActionPillBlocks}
       </div>
       <div className="min-h-0 flex-1 space-y-3 pb-4 lg:overflow-hidden">
         {/* Which body is coming. The timeline paints a legend strip and then
@@ -451,7 +443,6 @@ function TasksPanelSkeleton() {
           COVER_ART_ENABLED ||
           SONG_UPLOAD_ENABLED ||
           FILES_ENABLED ||
-          STATUS_UPDATE_ENABLED ||
           CAPTURE_ENABLED ? (
             <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
           ) : null}

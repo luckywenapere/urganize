@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
  * 2026-08-13): a headline number paired with a smaller secondary line reads
  * far faster than a sentence carrying the same figures, and it lets a reader
  * CHECK a generated paragraph against the data it was written from. That
- * verification job is the whole reason this exists — see StatusUpdateModal.
+ * verification job is the whole reason this exists.
  *
  * Deliberately app design language (theme tokens, font-display values,
  * font-mono labels), NOT the recap poster's typography: the poster is a

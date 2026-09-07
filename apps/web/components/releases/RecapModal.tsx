@@ -12,9 +12,11 @@ import type { ReleaseRecap } from '@/types/recap';
 
 // The release recap card: a shareable poster for a finished release.
 //
-// Modal shell copied from StatusUpdateModal (the sibling generate-and-show
-// surface): same z tier, same scrim, no portal and no Escape handler, since the
-// app's modal tier owns that convention.
+// Modal shell originally copied from StatusUpdateModal, the sibling
+// generate-and-show surface, which was deleted 2026-09-07 when the status
+// update moved into the UrgAns conversation — so this is now the only modal of
+// its kind: same z tier, same scrim, no portal and no Escape handler, since
+// the app's modal tier owns that convention.
 //
 // Four steps rather than one screen, because the optional input has to come
 // BEFORE the render: it is baked into the PNG.

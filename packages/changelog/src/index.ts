@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.28.0",
+    date: "September 7, 2026",
+    highlights: [
+      "Ask UrgAns for a status update instead of hunting for a button. Say \"status update\" or ask it in your own words, and the paragraph comes back in the chat with the numbers it was written from.",
+      "The old Status update button is gone. One place to ask, and you can copy the paragraph straight out of the conversation.",
+    ],
+  },
+  {
     version: "1.27.0",
     date: "September 7, 2026",
     highlights: [

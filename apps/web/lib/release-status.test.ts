@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildStatusTiles, type StatusFacts } from './release-status';
+import { buildStatusTiles, describeStatusFacts, type StatusFacts } from './release-status';
 
 // The tiles sit above a generated paragraph so a manager can check the AI's
 // narration against the data it was written from. Two properties are worth
@@ -66,5 +66,58 @@ describe('buildStatusTiles', () => {
     // as a fact on screen.
     const tiles = withOverrides({ dueThisWeekCount: 9 });
     expect(tiles.find((tile) => tile.key === 'due-this-week')?.value).toBe('9');
+  });
+});
+
+// The same figures, as one line of prose.
+//
+// The tiles' verification job (see this file's header) had one home: the
+// modal behind the "Status update" pill. That pill was removed 2026-09-07
+// (founder call — the status update belongs in the UrgAns conversation), so
+// the figures have to travel with the paragraph or the check is simply gone.
+// Two properties matter and both mirror buildStatusTiles deliberately: a zero
+// is never printed, and there is no line at all when there is nothing to say.
+describe('describeStatusFacts', () => {
+  const facts = (over: Partial<StatusFacts> = {}): StatusFacts => ({
+    totalCount: 64,
+    doneCount: 12,
+    inProgressCount: 0,
+    blockedCount: 0,
+    dueThisWeekCount: 0,
+    ...over,
+  });
+
+  it('always leads with progress against the total', () => {
+    expect(describeStatusFacts(facts())).toBe('Based on 12 of 64 done.');
+  });
+
+  it('omits every zero figure rather than printing it', () => {
+    const line = describeStatusFacts(facts());
+    expect(line).not.toContain('0 blocked');
+    expect(line).not.toContain('in progress');
+    expect(line).not.toContain('due this week');
+  });
+
+  it('includes each non-zero figure, in the tiles’ own order', () => {
+    expect(
+      describeStatusFacts(
+        facts({ inProgressCount: 3, dueThisWeekCount: 5, blockedCount: 2 })
+      )
+    ).toBe('Based on 12 of 64 done, 3 in progress, 5 due this week, 2 blocked.');
+  });
+
+  it('drops the denominator on a release with no activities', () => {
+    // "0 of 0 done" is noise; the paragraph already says there is no plan.
+    expect(describeStatusFacts(facts({ totalCount: 0, doneCount: 0 }))).toBe('');
+  });
+
+  it('says nothing when there is nothing to verify', () => {
+    // A release whose only fact is "no activities" gets no facts line, so the
+    // reply is the paragraph alone rather than a paragraph plus an empty claim.
+    expect(describeStatusFacts(facts({ totalCount: 0, doneCount: 0 }))).toBe('');
+  });
+
+  it('handles a finished release without special-casing it', () => {
+    expect(describeStatusFacts(facts({ doneCount: 64 }))).toBe('Based on 64 of 64 done.');
   });
 });
