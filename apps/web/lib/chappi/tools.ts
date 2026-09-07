@@ -28,6 +28,7 @@
 
 import { ARTIST_TOOLS } from './tool-families/artists';
 import { CALENDAR_TOOLS } from './tool-families/calendar';
+import { CAPTURE_TOOLS } from './tool-families/capture';
 import { CONTEXT_TOOLS } from './tool-families/context';
 import { CORE_TOOLS } from './tool-families/core';
 import { FILE_TOOLS } from './tool-families/files';
@@ -61,6 +62,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...PRESS_KIT_TOOLS,
   ...ARTIST_TOOLS,
   ...FILE_TOOLS,
+  ...CAPTURE_TOOLS,
 ];
 
 const TOOLS_BY_NAME = new Map<string, ChappiTool>(CHAPPI_TOOLS.map((tool) => [tool.name, tool]));

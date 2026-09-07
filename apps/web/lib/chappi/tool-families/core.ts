@@ -9,6 +9,7 @@ import { TaskService } from '@/lib/services/task-service';
 import { listVisibleReleases } from '../release-scope';
 import type { ChappiClientAction } from '../types';
 import {
+  argBoolean,
   argString,
   callInternalApi,
   compactTask,
@@ -135,6 +136,11 @@ export const CORE_TOOLS: ChappiTool[] = [
       properties: {
         title: { type: 'string', description: 'The release title.' },
         releaseDate: { type: 'string', description: 'Optional release date, YYYY-MM-DD.' },
+        isTest: {
+          type: 'boolean',
+          description:
+            'A practice release to look around with, deletable in one tap. Only when the user asks for a test or a demo — never for real work.',
+        },
       },
       required: ['title'],
     },
@@ -144,7 +150,17 @@ export const CORE_TOOLS: ChappiTool[] = [
       const releaseDate = argString(args, 'releaseDate');
       const res = await callInternalApi(ctx, '/api/releases', {
         method: 'POST',
-        body: { title, releaseDate: releaseDate || undefined, source: 'chappi' },
+        body: {
+          title,
+          releaseDate: releaseDate || undefined,
+          source: 'chappi',
+          // A test release: the canned one-tap draft, so somebody can look
+          // around without the pressure of a real rollout. The route supplies
+          // the title, type and date, and refuses isTest when the test path is
+          // switched off rather than quietly making an unmarked release with
+          // no banner and no way out.
+          isTest: argBoolean(args, 'isTest') === true ? true : undefined,
+        },
       });
       if (!res.ok) return fail(String(res.body.error || 'Could not create the release.'));
       const releaseId = String(res.body.releaseId || '');

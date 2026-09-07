@@ -183,7 +183,16 @@ export type ChappiToolName =
   // cover art and what else is attached to a release (2026-09-07)
   | 'get_cover_art'
   | 'upload_cover_art'
-  | 'list_release_files';
+  | 'list_release_files'
+  // fan email capture, collaborator credits, and archiving (2026-09-07)
+  | 'get_capture_page'
+  | 'create_capture_page'
+  | 'update_capture_page'
+  | 'list_capture_leads'
+  | 'get_release_credits'
+  | 'create_credits_link'
+  | 'close_credits_link'
+  | 'archive_release';
 
 /**
  * A side effect the CLIENT must perform after the agent turn — the agent runs
