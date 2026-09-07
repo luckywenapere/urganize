@@ -179,7 +179,11 @@ export type ChappiToolName =
   | 'create_artist'
   | 'rename_artist'
   | 'remove_artist'
-  | 'move_release_to_artist';
+  | 'move_release_to_artist'
+  // cover art and what else is attached to a release (2026-09-07)
+  | 'get_cover_art'
+  | 'upload_cover_art'
+  | 'list_release_files';
 
 /**
  * A side effect the CLIENT must perform after the agent turn — the agent runs
@@ -201,6 +205,7 @@ export type ChappiClientAction =
    * through the same signed-URL flow the workspace scene uses.
    */
   | { type: 'open_song_upload'; releaseId: string }
+  | { type: 'open_cover_art_upload'; releaseId: string }
   | { type: 'refresh' };
 
 /** Normalized outcome of a single tool execution, fed back to the model. */
