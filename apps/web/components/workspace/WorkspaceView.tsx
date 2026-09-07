@@ -51,6 +51,7 @@ import { isReleaseActive } from '@/lib/release-activity';
 import { isRecapEligible as isRecapEligibleForRelease } from '@/lib/recap-eligibility';
 import { findRoleGaps } from '@/lib/role-gaps';
 import { RoleGapsPanel } from '@/components/directory/RoleGapsPanel';
+import { SentRequestsList } from '@/components/directory/SentRequestsList';
 import { searchReleases } from '@/lib/release-search';
 import { ReleaseSearchBar } from './ReleaseSearchBar';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -86,6 +87,8 @@ const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
+const DIRECTORY_REQUESTS_ENABLED =
+  DIRECTORY_ENABLED && process.env.NEXT_PUBLIC_FEATURE_DIRECTORY_REQUESTS === 'true';
 
 // The four flag-gated scene params (calendar / capture / song / coverart) used
 // to be read here as local consts and compared inline. They now live behind
@@ -679,9 +682,21 @@ export function WorkspaceView() {
 
   // Renders nothing unless there is genuinely something to say, the
   // PostPlanKitPrompt rule verbatim.
+  //
+  // Both halves of one loop, in the order they happen: the jobs nobody is on,
+  // then what came back from the people already asked. The second is why the
+  // request row stores its release at all, and each renders nothing when it
+  // has nothing to say, so a release with neither adds no chrome.
   const roleGapsFooter =
-    scopedReleaseSlim && roleGaps.length > 0 ? (
-      <RoleGapsPanel releaseId={scopedReleaseSlim.id} gaps={roleGaps} />
+    scopedReleaseSlim && (roleGaps.length > 0 || DIRECTORY_REQUESTS_ENABLED) ? (
+      <div className="space-y-3">
+        {roleGaps.length > 0 ? (
+          <RoleGapsPanel releaseId={scopedReleaseSlim.id} gaps={roleGaps} />
+        ) : null}
+        {DIRECTORY_REQUESTS_ENABLED && scopedReleaseIsOwn ? (
+          <SentRequestsList releaseId={scopedReleaseSlim.id} variant="release" />
+        ) : null}
+      </div>
     ) : null;
 
   // Centered-focus split: take the non-selected releases in grid order and

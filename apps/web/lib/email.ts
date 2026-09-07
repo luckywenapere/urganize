@@ -46,6 +46,14 @@ export type EmailMessage = {
    *  The "X via Y" shape is the established way personal-feeling product
    *  mail signals who acted (Docs, Notion); see composeFromHeader. */
   fromLabel?: string;
+  /** Optional address overriding EMAIL_REPLY_TO for this one message.
+   *
+   *  The From address is always our verified sender, so Reply is the ONLY
+   *  thing that can put two people in touch — which is what the work-request
+   *  answer email needs once somebody has said they are interested. Validated
+   *  by composeReplyTo rather than trusted; an address that is not a plain
+   *  single mailbox falls back to the configured one. */
+  replyTo?: string;
 };
 
 export type EmailSendResult = {
@@ -95,6 +103,25 @@ export function composeFromHeader(configuredFrom: string, label?: string): strin
   return `${cleanLabel} <${address}>`;
 }
 
+/** A single, plain mailbox and nothing else. Deliberately strict: no display
+ *  name, no comma list, no angle brackets, no whitespace, and a length cap.
+ *
+ *  An override reaching this comes from an account record rather than a form,
+ *  but a mail header is not the place to discover that assumption was wrong —
+ *  a comma would add a silent second recipient and a line break would open a
+ *  header. Anything that is not obviously one address falls back. */
+const PLAIN_ADDRESS = /^[^\s<>,;:"'\\@]+@[^\s<>,;:"'\\@]+\.[^\s<>,;:"'\\@]+$/;
+
+/** Picks the Reply-To for a message. Pure and exported for tests.
+ *
+ *  The override wins when it is a plain address; otherwise the configured
+ *  mailbox stands, and null means the header is omitted entirely. */
+export function composeReplyTo(configured: string | null, override?: string): string | null {
+  const candidate = String(override || '').trim();
+  if (candidate && candidate.length <= 254 && PLAIN_ADDRESS.test(candidate)) return candidate;
+  return configured;
+}
+
 export async function sendEmail(message: EmailMessage): Promise<EmailSendResult> {
   const config = readConfig();
   if (!config) {
@@ -121,7 +148,10 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
         subject: message.subject,
         html: message.html,
         text: message.text,
-        ...(config.replyTo ? { reply_to: config.replyTo } : {}),
+        ...(() => {
+          const replyTo = composeReplyTo(config.replyTo, message.replyTo);
+          return replyTo ? { reply_to: replyTo } : {};
+        })(),
       }),
       signal: controller.signal,
     });

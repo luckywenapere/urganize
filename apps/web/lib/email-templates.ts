@@ -545,10 +545,22 @@ type WorkRequestAnswerEmailInput = {
   roleLabel: string;
   interested: boolean;
   reply: string;
-  directoryUrl: string;
+  /** Only ever passed for an interested answer, and only when there is one.
+   *  See revealsContact in lib/work-requests.ts: saying yes IS the consent. */
+  contactEmail?: string;
+  /** Their public profile, when they have one. Somebody listed as `directory`
+   *  rather than `public` has no page, so this is often absent. */
+  profileUrl?: string;
 };
 
-/** The answer coming back to whoever asked. */
+/** The answer coming back to whoever asked.
+ *
+ *  THIS EMAIL IS WHERE THE INTRODUCTION HAPPENS. Our From address is always
+ *  the verified sender, so without the contact block below an interested
+ *  answer left the asker holding a yes and no way to act on it. The route also
+ *  sets Reply-To to the same address, so hitting Reply just works.
+ *
+ *  Nothing is revealed on a pass. */
 export function buildWorkRequestAnswerEmail(input: WorkRequestAnswerEmailInput): BuiltEmail {
   const answerer = input.answererName.trim() || 'They';
   const role = input.roleLabel.trim().toLowerCase() || 'the work';
@@ -564,13 +576,20 @@ export function buildWorkRequestAnswerEmail(input: WorkRequestAnswerEmailInput):
     ? `${answerer} is interested in the ${role} you asked about.`
     : `${answerer} passed on the ${role} you asked about.`;
 
+  // Revealed on interest and never on a pass. `interested` is checked here
+  // rather than trusted from the caller, so a future caller that forgets the
+  // rule still cannot leak an address on a refusal.
+  const contact = input.interested ? (input.contactEmail || '').trim() : '';
+  const profileUrl = input.interested ? (input.profileUrl || '').trim() : '';
+
   const text = [
     greeting,
     '',
     lead,
     ...(reply ? ['', `  "${reply}"`] : []),
     '',
-    ...(input.interested ? ['Their contact details are on their profile:', input.directoryUrl, ''] : []),
+    ...(contact ? ['Reply to this email to reach them, or write to:', `  ${contact}`, ''] : []),
+    ...(profileUrl ? ['What they have delivered before:', profileUrl, ''] : []),
     'You are getting this because you asked them through the Urganize directory.',
   ].join('\n');
 
@@ -587,7 +606,8 @@ export function buildWorkRequestAnswerEmail(input: WorkRequestAnswerEmailInput):
 <p style="${p}">${escapeHtml(greeting)}</p>
 <p style="${p}">${escapeHtml(lead)}</p>
 ${reply ? `<div style="margin:0 0 18px;padding:14px 16px;border-left:3px solid #7fd99a;background-color:#f6faf7;"><p style="margin:0;color:#1e2621;font-size:15px;line-height:1.6;">${escapeHtml(reply)}</p></div>` : ''}
-${input.interested ? `<p style="${p}"><a href="${escapeHtml(input.directoryUrl)}" style="color:#0d120e;font-weight:600;">Their profile</a></p>` : ''}
+${contact ? `<p style="${p}">Reply to this email to reach them, or write to <a href="mailto:${escapeHtml(contact)}" style="color:#0d120e;font-weight:600;">${escapeHtml(contact)}</a>.</p>` : ''}
+${profileUrl ? `<p style="${p}"><a href="${escapeHtml(profileUrl)}" style="color:#0d120e;font-weight:600;">What they have delivered before</a></p>` : ''}
 <p style="margin:28px 0 0;color:#6b7770;font-size:13px;line-height:1.6;">You are getting this because you asked them through the Urganize directory.</p>
 </div>
 </body>

@@ -15,6 +15,7 @@ import {
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
 import type { PersonProfile, ProfileRole } from '@/types/directory';
 import { panelClass } from './panelClass';
+import { SentRequestsList } from '@/components/directory/SentRequestsList';
 import { WorkRequestsInbox } from './WorkRequestsInbox';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 
@@ -316,6 +317,12 @@ export function DirectoryProfileSection() {
           nobody can ask somebody who is not listed — and the inbox itself
           renders nothing until there is something in it. */}
       {REQUESTS_ENABLED && profile ? <WorkRequestsInbox /> : null}
+
+      {/* What came back from the people YOU asked. Deliberately not gated on
+          `profile` the way the inbox above is: nobody can ask somebody who is
+          not listed, but a manager who does the asking need never have opted
+          in themselves. Renders nothing until they have sent one. */}
+      {REQUESTS_ENABLED ? <SentRequestsList /> : null}
     </section>
   );
 }

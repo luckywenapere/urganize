@@ -6,6 +6,7 @@ import {
   noteExcerptForEmail,
   priorityLabelForEmail,
   buildWelcomeEmail,
+  buildWorkRequestAnswerEmail,
   buildWorkspaceInviteEmail,
 } from './email-templates';
 
@@ -356,5 +357,67 @@ describe('noteExcerptForEmail', () => {
     expect(noteExcerptForEmail('')).toBe('');
     expect(noteExcerptForEmail('   \n  ')).toBe('');
     expect(noteExcerptForEmail(null)).toBe('');
+  });
+});
+
+describe('buildWorkRequestAnswerEmail', () => {
+  const answered = {
+    recipientName: 'Lucky Wenapere',
+    answererName: 'Dami Cole',
+    roleLabel: 'Graphic designer',
+    reply: 'Send the brief over.',
+  };
+
+  it('hands over contact when they are interested, which is the whole point', () => {
+    // Before this, the answer said "yes" and gave the asker nothing to do with
+    // it: our From address, no reply-to, and a link to the search page. The
+    // loop ended at yes.
+    const built = buildWorkRequestAnswerEmail({
+      ...answered,
+      interested: true,
+      contactEmail: 'dami@example.com',
+    });
+    expect(built.text).toContain('dami@example.com');
+    expect(built.html).toContain('dami@example.com');
+    expect(built.html).toContain('mailto:dami@example.com');
+  });
+
+  it('hands over nothing when they passed', () => {
+    // Somebody who said no consented to nothing. This is the line the whole
+    // consent model rests on.
+    const built = buildWorkRequestAnswerEmail({
+      ...answered,
+      interested: false,
+      contactEmail: 'dami@example.com',
+    });
+    expect(built.text).not.toContain('dami@example.com');
+    expect(built.html).not.toContain('dami@example.com');
+  });
+
+  it('still reads sensibly when interest comes with no contact to give', () => {
+    // A profile with no reachable address is possible, and the answer must not
+    // promise contact details it does not carry.
+    const built = buildWorkRequestAnswerEmail({ ...answered, interested: true });
+    expect(built.text).not.toMatch(/contact details are on their profile/i);
+    expect(built.subject).toContain('Dami Cole');
+  });
+
+  it('carries their reply either way', () => {
+    for (const interested of [true, false]) {
+      const built = buildWorkRequestAnswerEmail({ ...answered, interested });
+      expect(built.text).toContain('Send the brief over.');
+    }
+  });
+
+  it('links a profile only when they have a public one', () => {
+    const withPage = buildWorkRequestAnswerEmail({
+      ...answered,
+      interested: true,
+      profileUrl: 'https://app.urganize.app/p/dami-cole',
+    });
+    expect(withPage.html).toContain('/p/dami-cole');
+
+    const withoutPage = buildWorkRequestAnswerEmail({ ...answered, interested: true });
+    expect(withoutPage.html).not.toContain('/p/');
   });
 });

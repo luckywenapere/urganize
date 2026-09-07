@@ -6,6 +6,7 @@ import {
   buildWorkRequestEmail,
 } from './email-templates';
 import { DIRECTORY_ROLE_LABELS, type DirectoryRole } from './directory-roles';
+import { revealsContact, type WorkRequestStatus } from './work-requests';
 import { DIRECTORY_SETTINGS_ANCHOR } from './person-profile';
 
 /**
@@ -21,6 +22,11 @@ import { DIRECTORY_SETTINGS_ANCHOR } from './person-profile';
  * swallowed, the sendEmail contract already used by every other sender here.
  */
 
+// Declared here rather than imported from app/api/directory/_shared: a lib
+// module must not depend on a route group. lib/person-public-server.ts holds
+// the same literal for the same reason.
+const PERSON_PROFILES_TABLE = 'person_profiles';
+
 const settingsUrl = () => `${APP_URL}/settings#${DIRECTORY_SETTINGS_ANCHOR}`;
 
 async function lookupPerson(
@@ -35,6 +41,30 @@ async function lookupPerson(
     return { email, name: typeof metadataName === 'string' ? metadataName : '' };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Their public profile, or nothing.
+ *
+ * Only a `public` record has a page: somebody listed as `directory` is
+ * findable inside the app and their /p/ URL would 404, so linking it would be
+ * worse than linking nothing. Never throws.
+ */
+async function lookupPublicProfileUrl(
+  admin: SupabaseClient,
+  userId: string
+): Promise<string | undefined> {
+  try {
+    const { data } = await admin
+      .from(PERSON_PROFILES_TABLE)
+      .select('slug, visibility')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const slug = typeof data?.slug === 'string' ? data.slug : '';
+    return slug && data?.visibility === 'public' ? `${APP_URL}/p/${slug}` : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -74,7 +104,7 @@ export async function notifyWorkRequestAnswer(
     senderUserId: string;
     recipientUserId: string;
     role: string;
-    status: 'interested' | 'passed';
+    status: WorkRequestStatus;
     reply: string | null;
   }
 ): Promise<void> {
@@ -87,13 +117,23 @@ export async function notifyWorkRequestAnswer(
 
     const answererName = answerer?.name || 'They';
 
+    // THE INTRODUCTION, and the reason this function exists at all rather than
+    // just confirming an answer. Our From address is always the verified
+    // sender, so without this the asker is handed a yes and no way to act on
+    // it. `revealsContact` is the consent rule and this is its only caller:
+    // interested hands over a way to reach them, a pass hands over nothing.
+    const reveal = revealsContact(input.status);
+    const contactEmail = reveal ? answerer?.email : undefined;
+    const profileUrl = reveal ? await lookupPublicProfileUrl(admin, input.recipientUserId) : undefined;
+
     const built = buildWorkRequestAnswerEmail({
       recipientName: sender.name,
       answererName,
       roleLabel: DIRECTORY_ROLE_LABELS[input.role as DirectoryRole] || input.role,
-      interested: input.status === 'interested',
+      interested: reveal,
       reply: input.reply || '',
-      directoryUrl: `${APP_URL}/dashboard/directory`,
+      contactEmail,
+      profileUrl,
     });
 
     await sendEmail({
@@ -102,6 +142,10 @@ export async function notifyWorkRequestAnswer(
       html: built.html,
       text: built.text,
       fromLabel: `${answererName} via Urganize`,
+      // So that hitting Reply just works, which is what most people will do
+      // before they read anything else in the message. Falls back to the
+      // configured mailbox on a pass or an address that fails validation.
+      replyTo: contactEmail,
     });
   } catch {
     // Same posture: the answer is already saved.
