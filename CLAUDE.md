@@ -1743,12 +1743,13 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
   database, and completing an approved task unlocks its dependents exactly as
   a template-instantiated one does. That is the parity question the field
   comparison below explicitly could not answer, and it is the half most worth
-  having. **Three steps of the pass remain unrun**, and they are the ones that
-  would catch a regression rather than confirm the happy path: that the
-  blocker gate REFUSES a still-locked task, that reopening RE-LOCKS what it
-  unlocked, and that a manager-added activity lands on Timeline as a marker
-  rather than a bar (the asymmetry two bullets down — it has to be added by
-  hand BEFORE approving, so a pass that skips that step cannot test it).
+  having. Of the three steps this bullet listed as remaining when it was
+  written, **one is now covered, one was never a step at all, and one is
+  genuinely open** — see the bullets below. The open one is that a
+  manager-added activity lands
+  on Timeline as a marker rather than a bar (the asymmetry below — it has to
+  be added by hand BEFORE approving, so a pass that skips that step cannot
+  test it).
 - **The two write paths compared, 2026-09-07: 13 of 15 columns are identical
   in shape.** `instantiate.ts` (template) against
   `release-planning-server.ts` (approval), which is the substance of the
@@ -1779,13 +1780,44 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
   exactly where "behaves the same" legitimately stops — add one by hand before
   approving and confirm it lands as a marker, or the asymmetry is untested.
 - **What the comparison canNOT settle**, since it is a read of two files: that
-  the cascade actually unlocks, that the blocker gate actually refuses, and
-  that reopening actually re-locks. Those are runtime behaviours over the
-  `dependencies` column, and the column is identically shaped on both paths —
-  which is the reason to expect parity, not evidence of it. **The first of the
-  three was answered in production hours later** (see item 5 above: a real
-  plan approved, the cascade unlocked). The other two are still nothing more
-  than two files agreeing about the shape of a column.
+  the cascade actually unlocks, and that the blocker gate actually refuses.
+  Those are runtime behaviours over the `dependencies` column, and the column
+  is identically shaped on both paths — which is the reason to expect parity,
+  not evidence of it. **Both are answered now, by different means**: the
+  cascade in production (item 5 above), the gate by the tests in the next
+  bullet. This bullet named a third until 2026-09-07, "that reopening actually
+  re-locks", which turned out not to be behaviour this product has.
+- **THE BLOCKER GATE HAS TESTS NOW, and it had NONE** —
+  `lib/release-execution.test.ts` (17 cases, 2026-09-07). Worth knowing given
+  what rested on it: `getTaskCompletionBlocker` is the rule deciding whether
+  ticking an activity is allowed at all, it is shared by
+  `useTaskStore.completeTask` and `TaskService.completeTaskWithCascade`, and
+  the PATCH route deliberately enforces nothing — so it is the only thing
+  standing between an agent completion and a stranded dependency chain.
+  Alongside the three refusal reasons and the pass case, **three cases ask the
+  planner-parity question directly**: an approved-plan row and a template row
+  produce an IDENTICAL verdict; varying all four fields the two write paths
+  disagree about (`assigned_to_user_id`, `description`, `templateTaskId`,
+  `durationDays`) changes nothing; and a mixed graph blocks in both
+  directions, which is the real shape since an approved plan holds both kinds.
+  That is the structural half of the parity claim — the gate cannot read any
+  field that differs, so it cannot treat the paths differently.
+  Mutation-tested three ways (dropping the locked guard, not filtering done
+  dependencies, treating an unresolvable dependency id as unmet), each failing
+  exactly its own tests. **It is not a production round trip**, which would
+  additionally prove `dependencies` survives approval's translation of draft
+  ids into real row ids.
+- **"Reopening re-locks its dependents" IS NOT A STEP, and this file asked for
+  it before checking.** Neither path re-locks, and both say so: the store's
+  reopen branch PATCHes the one row to `todo` and touches nothing else, and
+  `TaskService.reopenTask` carries the reason — *"Like the store's reopen
+  path, this does NOT re-lock dependents (more confusing than helpful at v1
+  scale)"*. So a manual pass looking for it would report a design decision as
+  a bug. What reopening does is put the row back to `todo` and leave anything
+  already unlocked unlocked; unticking the checkbox is the undo, which is what
+  `useTaskStore`'s own completion comments call it. **If re-locking is ever
+  wanted it is a feature, not a fix** — and it needs an answer for the
+  dependent somebody has already started work on.
 - **Asked to "flip the planner flag on" on 2026-09-07 and it was already on.**
   Recorded because the ask was reasonable — three separate lines in this file
   said Phase 5 was still gated, one of them written that same day by a session
