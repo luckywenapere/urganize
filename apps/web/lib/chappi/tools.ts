@@ -22,9 +22,9 @@
 //    NEXT_PUBLIC_* reads are inlined at build time.
 // 2. A tool with a `confirm` builder is CONFIRMATION-GATED: the model can
 //    propose it, but the runner refuses to execute it and the user has to
-//    approve a card first (see runner.ts). Every gated tool must also be in
-//    lib/mcp/tools.ts's EXCLUDED_TOOL_NAMES, because MCP has no confirmation
-//    UI — tool-registry.test.ts asserts that structurally.
+//    approve a card first (see runner.ts). A gated tool must never reach
+//    lib/mcp/tools.ts's MCP_TOOL_NAMES_ALLOWED, because MCP has no
+//    confirmation UI — tool-registry.test.ts asserts that structurally.
 
 import { CALENDAR_TOOLS } from './tool-families/calendar';
 import { CONTEXT_TOOLS } from './tool-families/context';
@@ -35,6 +35,7 @@ import { NOTE_TOOLS } from './tool-families/notes';
 import { PLANNER_TOOLS } from './tool-families/planner';
 import { PROMO_TOOLS } from './tool-families/promo';
 import { RELEASE_TOOLS } from './tool-families/releases';
+import { SHOW_TOOLS } from './tool-families/shows';
 import { SONG_TOOLS } from './tool-families/song';
 import { TEAM_TOOLS } from './tool-families/team';
 import type { ChappiTool } from './tool-families/shared';
@@ -53,6 +54,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...NOTE_TOOLS,
   ...TEAM_TOOLS,
   ...PROMO_TOOLS,
+  ...SHOW_TOOLS,
 ];
 
 const TOOLS_BY_NAME = new Map<string, ChappiTool>(CHAPPI_TOOLS.map((tool) => [tool.name, tool]));

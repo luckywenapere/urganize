@@ -93,6 +93,29 @@ export function argBoolean(args: Record<string, unknown>, key: string): boolean 
   return typeof value === 'boolean' ? value : undefined;
 }
 
+/** Reads an optional number; returns undefined when absent or unusable, so a
+ * caller can tell "not mentioned" from a real 0. Accepts a numeric string
+ * because a model will sometimes send "25" for a number field. */
+export function argNumber(args: Record<string, unknown>, key: string): number | undefined {
+  const value = args[key];
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+/** Reads an array of non-empty strings, dropping anything else. Empty array
+ * when the key is absent or holds no usable entries. */
+export function argStringArray(args: Record<string, unknown>, key: string): string[] {
+  const value = args[key];
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter((entry) => entry.length > 0);
+}
+
 export function fail(summary: string): ChappiToolResult {
   return { ok: false, summary };
 }

@@ -65,7 +65,7 @@ describe('the capability list in ROLE', () => {
   });
 
   it('mentions no tool that is not registered, so the list cannot go stale', () => {
-    const registered = new Set(CHAPPI_TOOLS.map((tool) => tool.name));
+    const registered = new Set<string>(CHAPPI_TOOLS.map((tool) => tool.name));
     // Anything shaped like a tool name in the prompt. Deliberately loose: the
     // point is to catch a name left behind by a rename or a removal, the way
     // revoke_epk_link outlived its tool in CLAUDE.md for a month.

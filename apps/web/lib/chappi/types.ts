@@ -150,7 +150,22 @@ export type ChappiToolName =
   | 'list_content_posts'
   | 'create_content_post'
   | 'update_content_post'
-  | 'delete_content_post';
+  | 'delete_content_post'
+  // shows, sets, the song catalogue and the DJ pack (2026-09-07)
+  | 'list_shows'
+  | 'get_show'
+  | 'list_songs'
+  | 'create_song'
+  | 'create_show'
+  | 'update_show'
+  | 'delete_show'
+  | 'create_setlist'
+  | 'update_setlist'
+  | 'delete_setlist'
+  | 'add_setlist_item'
+  | 'remove_setlist_item'
+  | 'reorder_setlist'
+  | 'send_dj_pack';
 
 /**
  * A side effect the CLIENT must perform after the agent turn — the agent runs
