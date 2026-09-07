@@ -149,8 +149,8 @@ export const TASKS_PILL_DOCK_OFFSET_CLASS = MOBILE_NAV_ENABLED
 /**
  * The scene-pill row's neutral (never-lit) pill treatment — hoisted to
  * module scope and exported as the one source of truth. WorkspaceView's
- * Status update / Release recap actions render through this same class
- * (via `statusUpdateAction`/`recapAction` below) rather than a hand-rolled
+ * Release recap action renders through this same class
+ * (via `recapAction` below) rather than a hand-rolled
  * copy — that copy had already drifted once (missing `shrink-0
  * whitespace-nowrap`), which is how "Get your release recap" ended up
  * wrapping across three lines inside a fixed 32px pill (2026-08-10 bug fix).
@@ -279,10 +279,9 @@ type TasksPanelProps = {
    * in the right place at each width — see the type's own doc comment.
    * `null`/undefined when the feature is off or no release is scoped.
    */
-  statusUpdateAction?: TaskPanelAction | null;
-  /** The Release recap action, alongside `statusUpdateAction` above. `null`
-   * when the flag is off, no release is scoped, or the release isn't
-   * recap-eligible yet (WorkspaceView owns that eligibility check). */
+  /** The Release recap action. `null` when the flag is off, no release is
+   * scoped, or the release isn't recap-eligible yet (WorkspaceView owns that
+   * eligibility check). */
   recapAction?: TaskPanelAction | null;
   /** Shelve a finished release, or restore an archived one. Modal-shaped like
    *  recap, so it lives in the same two places. */
@@ -368,7 +367,6 @@ export function TasksPanel({
   tasks,
   scopedRelease,
   id,
-  statusUpdateAction,
   recapAction,
   archiveAction,
   changeArtistAction,
@@ -775,22 +773,9 @@ export function TasksPanel({
     Boolean(scopedRelease) &&
     !sceneContent;
 
-  // Status update / Release recap, rendered through the shared pill class
-  // wherever they're needed (desktop row, mobile top tabs, mobile folded
-  // menu) — see TaskPanelAction's own doc comment for why these arrive as
-  // data rather than pre-rendered nodes.
-  const statusUpdateButton = statusUpdateAction ? (
-    <button
-      type="button"
-      onClick={statusUpdateAction.onClick}
-      disabled={statusUpdateAction.disabled}
-      className={`${neutralPillClass} disabled:opacity-60`}
-    >
-      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-      {statusUpdateAction.label}
-    </button>
-  ) : null;
-
+  // Release recap, rendered through the shared pill class wherever it is
+  // needed (desktop row, mobile release menu) — see TaskPanelAction's own doc
+  // comment for why it arrives as data rather than a pre-rendered node.
   const recapButton = recapAction ? (
     <button type="button" onClick={recapAction.onClick} className={neutralPillClass}>
       <PartyPopper className="h-3.5 w-3.5" aria-hidden="true" />
@@ -928,18 +913,9 @@ export function TasksPanel({
           isActive: activeScene === 'files',
         }
       : null,
-    // No `isActive` on this one or the three after it: they open a modal over
-    // the page rather than swapping this panel's body, so there is no open
-    // scene for a lit row to report.
-    statusUpdateAction
-      ? {
-          key: 'status-update',
-          label: statusUpdateAction.label,
-          icon: Sparkles,
-          onClick: statusUpdateAction.onClick,
-          disabled: statusUpdateAction.disabled,
-        }
-      : null,
+    // No `isActive` on the three modal-shaped rows below: they open over the
+    // page rather than swapping this panel's body, so there is no open scene
+    // for a lit row to report.
     CAPTURE_ENABLED && scopedRelease
       ? {
           key: 'capture',
@@ -1095,7 +1071,6 @@ export function TasksPanel({
         {pitchButton}
         {filesButton}
         {notesPill}
-        {statusUpdateButton}
         {recapButton}
         {changeArtistButton}
         {archiveButton}

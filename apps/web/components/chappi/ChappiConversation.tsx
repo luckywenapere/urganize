@@ -37,6 +37,7 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { useNotesStore } from '@/stores/useNotesStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { supabase } from '@/lib/supabase/client';
 import { CHAPPI_CHIPS, buildHelpReply, resolveIntent } from '@/lib/chappi/intent-router';
 import type {
@@ -361,16 +362,59 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           scopedRelease?.id ??
           todaysDirective?.releaseId ??
           (releases.length === 1 ? releases[0]?.id : null);
-        if (target) {
-          router.push(`/dashboard?release=${target}`);
+        if (!target) {
           appendAssistantReply(
-            'Taking you to the release — use "Generate status update" there.'
+            'Which release? Open one first, or tell me its name and ask again.'
           );
-        } else {
-          appendAssistantReply(
-            'Open a release first, then generate its status update from the release page.'
-          );
+          return;
         }
+        // Generates here rather than pointing anywhere. This branch used to
+        // navigate to the release and say 'use "Generate status update" there'
+        // — that button was removed 2026-09-07 (founder call: the status
+        // update belongs in this conversation, not on a pill), so a pointer
+        // would now aim at nothing. It calls the same route the
+        // generate_status_update tool calls, which is what keeps the answer
+        // identical whether or not a model is configured.
+        void (async () => {
+          try {
+            const token = await getAccessToken();
+            const response = await fetch(`/api/releases/${target}/generate-status`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({}),
+            });
+            const payload = (await response.json().catch(() => ({}))) as {
+              status_update?: string;
+              stats?: StatusFacts;
+              error?: string;
+            };
+            if (!response.ok) {
+              appendAssistantReply(
+                // The route answers 404 both for the flag being off and for a
+                // release that is not yours, so it must not name a switch —
+                // the same reason the tool routes this through isFlagGateOff.
+                String(payload.error || 'Could not write that status update. Try again.')
+              );
+              return;
+            }
+            const statusUpdate = String(payload.status_update || '').trim();
+            // Same facts line the tool appends, from the same builder, so the
+            // deterministic answer and the agentic one carry identical figures.
+            const facts = payload.stats ? describeStatusFacts(payload.stats) : '';
+            appendAssistantReply(
+              [statusUpdate || 'Could not write that status update. Try again.', facts]
+                .filter(Boolean)
+                .join('\n\n')
+            );
+          } catch {
+            appendAssistantReply(
+              'Could not reach the status update generator. Check your connection and try again.'
+            );
+          }
+        })();
         return;
       }
       case 'create_note': {

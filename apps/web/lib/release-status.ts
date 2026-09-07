@@ -117,6 +117,35 @@ export function buildStatusTiles(stats: StatusFacts): StatusTile[] {
   return tiles;
 }
 
+/**
+ * The same figures as one line of prose, for a surface that cannot draw tiles.
+ *
+ * The tiles above exist so a reader can CHECK a generated paragraph against
+ * the data it was written from, and until 2026-09-07 their only home was the
+ * modal behind the "Status update" pill. That pill was removed on a founder
+ * call — the status update belongs in the UrgAns conversation — so the figures
+ * had to travel with the paragraph or the verification would have gone with
+ * the button.
+ *
+ * Mirrors `buildStatusTiles` deliberately rather than inventing its own
+ * selection: same order, same "never print a zero" rule, so the chat line and
+ * the tiles can never disagree about which figures are worth showing.
+ *
+ * Returns '' when there is nothing to verify, and callers append nothing in
+ * that case — a release with no activities gets the paragraph alone rather
+ * than a paragraph plus "Based on 0 of 0 done."
+ */
+export function describeStatusFacts(stats: StatusFacts): string {
+  if (stats.totalCount <= 0) return '';
+
+  const parts = [`${stats.doneCount} of ${stats.totalCount} done`];
+  if (stats.inProgressCount > 0) parts.push(`${stats.inProgressCount} in progress`);
+  if (stats.dueThisWeekCount > 0) parts.push(`${stats.dueThisWeekCount} due this week`);
+  if (stats.blockedCount > 0) parts.push(`${stats.blockedCount} blocked`);
+
+  return `Based on ${parts.join(', ')}.`;
+}
+
 const STATUS_SYSTEM_PROMPT = [
   'You are writing a status update for a music release. The update is from a manager to someone else involved with the release (the artist, the label, a collaborator). It should be conversational and direct, written in "we" voice (as the manager speaking about their team\'s work).',
   '',

@@ -5,6 +5,7 @@
 // reimplemented — except completion/reopen, which need the dependency cascade
 // the PATCH route lacks and so go through TaskService directly.
 
+import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { TaskService } from '@/lib/services/task-service';
 import { listVisibleReleases } from '../release-scope';
 import type { ChappiClientAction } from '../types';
@@ -381,9 +382,20 @@ export const CORE_TOOLS: ChappiTool[] = [
         return fail(String(res.body.error || 'Could not generate the status update.'));
       }
       const statusUpdate = String(res.body.status_update || '');
+      // The figures travel with the paragraph. `stats` used to be read only by
+      // the modal behind the "Status update" pill (the route's own comment
+      // said so), and that pill was removed 2026-09-07 — so without this the
+      // verification the tiles existed for would have gone with the button.
+      // In agentic mode the model reads this summary, so it also gives it real
+      // numbers to quote instead of inferring them from the prose.
+      const facts = res.body.stats
+        ? describeStatusFacts(res.body.stats as StatusFacts)
+        : '';
       return {
         ok: true,
-        summary: statusUpdate || 'Generated a status update.',
+        summary: [statusUpdate || 'Generated a status update.', facts]
+          .filter(Boolean)
+          .join('\n\n'),
         data: { statusUpdate },
       };
     },

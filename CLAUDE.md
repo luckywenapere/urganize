@@ -431,7 +431,7 @@ Constraint: Supabase Free plan caps individual uploads at 50 MB. Category size l
 
 **Phase 5 — AI rollout planner.** Rebuilt 2026-08-10 as the **UrgAns planner** (`NEXT_PUBLIC_FEATURE_RELEASE_PLANNER`, default off), superseding the original "Tailor plan" build. The original was code-complete behind `NEXT_PUBLIC_FEATURE_TAILOR_PLAN` and never activated; its POST applied model output **immediately and destructively** (hard-deleting task rows) while its own modal copy promised "your full plan stays intact until you confirm." That flag, route, modal and lib module are deleted. The columns it added (`releases.release_context`, `releases.ai_tailoring_response`) are kept and reused: the intake answers live in the first as a versioned v2 shape, the raw delta is audited in the second. Full detail in the "UrgAns release planner" Working-notes entry.
 
-**Phase 6 — AI status update generator.** Code complete and gated behind `NEXT_PUBLIC_FEATURE_STATUS_UPDATE` feature flag (default off; the API route 404s when off). One-click button on the release detail page reads release state (task counts, in-progress / blocked / due-this-week task titles, event milestones in the next 14 days, attachment count + categories) and generates a one-paragraph manager-voice status update in a modal with a Copy button. Plain-text output (no JSON), 20s timeout, on whatever model the gateway resolves — `AI_STATUS_MODEL` overrides it, and the RodiumAi default is `openai/gpt-4o-mini`. Nothing is persisted — the text is ephemeral. Activation pending: set `AI_API_BASE`/`AI_API_KEY` for RodiumAi (the 2026-08-13 founder call), flip the flag, and verify with a real release. The provider gained a `generatePlainTextAiOutput` path and an `AI_STATUS_MODEL` override for this. **Whether those two env vars are set in production is recorded nowhere in this file** — UrgAns has its own `CHAPPI_API_KEY` and proves nothing about this transport, so check Vercel before assuming this surface has a model behind it. **Status re-examined 2026-09-07: "Activation pending" here is contradicted by v0.33.0, which announced this surface live on 2026-07-26**, and unlike its v0.32.0 sibling that announcement is credible — a plain-text paragraph needs no JSON contract, so the small model the gateway served then would have handled it. Nothing in the repo can settle it (this route writes nothing by design, there is no analytics event, and `AI_API_KEY` is shared with five other consumers), but the one-click check and the two failure shapes are recorded in "UrgAns release planner" above. **Corrected 2026-09-07 (URG-200):** this paragraph said "Claude Haiku via the gateway" and "Anthropic API key + Zuplo gateway routed to Claude Haiku (currently `qwen2.5:3b`)" for weeks after the RodiumAi call superseded both. It was the last of the six line ranges that issue named.
+**Phase 6 — AI status update generator.** Code complete and gated behind `NEXT_PUBLIC_FEATURE_STATUS_UPDATE` feature flag (default off; the API route 404s when off). One-click button on the release detail page reads release state (task counts, in-progress / blocked / due-this-week task titles, event milestones in the next 14 days, attachment count + categories) and generates a one-paragraph manager-voice status update in a modal with a Copy button. Plain-text output (no JSON), 20s timeout, on whatever model the gateway resolves — `AI_STATUS_MODEL` overrides it, and the RodiumAi default is `openai/gpt-4o-mini`. Nothing is persisted — the text is ephemeral. Activation pending: set `AI_API_BASE`/`AI_API_KEY` for RodiumAi (the 2026-08-13 founder call), flip the flag, and verify with a real release. The provider gained a `generatePlainTextAiOutput` path and an `AI_STATUS_MODEL` override for this. **Whether those two env vars are set in production is recorded nowhere in this file** — UrgAns has its own `CHAPPI_API_KEY` and proves nothing about this transport, so check Vercel before assuming this surface has a model behind it. **"Activation pending" here is WRONG, settled 2026-09-07: the founder pressed the button and got a paragraph, so the flag is on and `AI_API_KEY` is set.** v0.33.0 announced this surface live on 2026-07-26 and was telling the truth — unlike its v0.32.0 sibling, which needed a JSON contract the gateway's model could not hold (the asymmetry is argued in "UrgAns release planner" above). **The one-click button described here no longer exists**, removed the same day on a founder call: the status update is reached by asking UrgAns. See "The status update moved into the chat" near the end of this file. **Corrected 2026-09-07 (URG-200):** this paragraph said "Claude Haiku via the gateway" and "Anthropic API key + Zuplo gateway routed to Claude Haiku (currently `qwen2.5:3b`)" for weeks after the RodiumAi call superseded both. It was the last of the six line ranges that issue named.
 
 All six v1 scope items are now built in code. Internal use continues throughout — the founder runs his own two artists' releases through the product, and the design partners exercise the workspace flow. The two AI features come online when the provider is activated.
 
@@ -1701,7 +1701,9 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
 3. **Three guards stood between the flag and a delete**, and the middle one is the likely reason nothing happened even if the flag was on: `isAiConfigured()` (needs `AI_API_KEY`) → 503; a malformed structured-JSON response → 503; failed validation → 500 *"AI suggested invalid changes. No changes made."* The gateway at the time served `qwen2.5:3b`, and this file's own `.env.example` note for `AI_PLANNER_MODEL` says a model that small cannot hold a structured-JSON contract.
 4. **Circumstantially it was probably never set.** `.env.example` carried it commented out as `=false` for its entire life, with the flip conditioned on *"once Anthropic API key is configured and Zuplo gateway routes AI_TAILORING_MODEL to Claude Sonnet"* — a precondition never met (no Anthropic account was ever obtained; superseded 2026-08-13 by the RodiumAi call). It was also **never registered in `turbo.json`**, unlike every other flag, and no commit ever flipped it. None of that is proof, since `NEXT_PUBLIC_*` reaches the bundle whether turbo declares it or not.
 
-**The status generator, investigated 2026-09-07 — and THE TWO ANNOUNCEMENTS ARE NOT EQUALLY CREDIBLE, which is the finding worth keeping.** v0.33.0 (*"The AI status update generator is now live — read your release's current state and get a one-paragraph update ready to share"*) is a launch announcement by the same standard that settled Notes and pitching, so it should be read as strong evidence the flag was flipped on 2026-07-26. And unlike its sibling, the feature would actually have WORKED then: it calls `generatePlainTextAiOutput` with no parse and no validation gate, so a paragraph is well within the `qwen2.5:3b` the gateway served, where v0.32.0's planner needed a model that could hold a structured-JSON delta contract and would have failed validation on every call. **So the planner announcement was probably premature and the status one probably was not** — they were bundled in one sentence here until this correction, and they should not be.
+**ANSWERED 2026-09-07, by the founder pressing the button: the control is there and it returns a paragraph. So `NEXT_PUBLIC_FEATURE_STATUS_UPDATE` is ON and `AI_API_KEY` is set** — which retires Phase 6's "Activation pending", confirms v0.33.0's announcement, and means the two env unknowns below are both closed. **The button itself is gone as of the same day** (founder call — see "The status update moved into the chat" near the end of this file); the flag now gates the route and the `generate_status_update` tool, which is the whole surface. The investigation is kept because its central finding stands on its own:
+
+**THE TWO ANNOUNCEMENTS ARE NOT EQUALLY CREDIBLE, which is the part worth keeping.** v0.33.0 (*"The AI status update generator is now live — read your release's current state and get a one-paragraph update ready to share"*) is a launch announcement by the same standard that settled Notes and pitching, so it should be read as strong evidence the flag was flipped on 2026-07-26. And unlike its sibling, the feature would actually have WORKED then: it calls `generatePlainTextAiOutput` with no parse and no validation gate, so a paragraph is well within the `qwen2.5:3b` the gateway served, where v0.32.0's planner needed a model that could hold a structured-JSON delta contract and would have failed validation on every call. **So the planner announcement was probably premature and the status one probably was not** — they were bundled in one sentence here until this correction, and they should not be.
 
 **But it cannot be settled from the repo or from anywhere else, and it is worth knowing why this one is harder than the tailor-plan question:** the route **writes nothing** (the text is ephemeral by design), there is no analytics event for it anywhere, and its gateway key `AI_API_KEY` is shared with five other consumers (the planner's three files, task outcomes, the press-kit draft action), so RodiumAi usage under that key cannot single it out either. No query, no dashboard reading, no trace.
 
@@ -11675,6 +11677,73 @@ the press kit live" (expect a card), "add Victony to the roster", "archive
 Midnight EP" — then ask about something switched off, "collect credits for
 Ohema", and confirm it says that isn't switched on rather than inventing a way
 round.
+
+## The status update moved into the chat (2026-09-07, v1.28.0)
+
+Founder, immediately after confirming the feature works: *"this feature should
+be inside urgans chat not a seperate button"*.
+
+**Mostly a subtraction.** `generate_status_update` has been a Chappi tool since
+the original twelve, and it already returned the paragraph as its summary — so
+asking UrgAns for a status update worked before this change. What was wrong was
+that the same capability also had a pill, a modal and ~90 lines of duplicate
+fetch logic in `WorkspaceView`. Those are gone: the action, the modal mount, the
+dynamic import, four pieces of state, the generator function, the
+`statusUpdateAction` prop through `WorkspaceDesktopFocused` and `TasksPanel`,
+the pill, the release-menu entry, the skeleton reservation, and
+`components/releases/StatusUpdateModal.tsx` itself.
+
+**Two things had to move WITH it, and they are the whole risk in this change:**
+
+1. **The deterministic branch pointed AT the button.** `resolveIntent` has had
+   a `status` keyword branch all along, and `ChappiConversation`'s handler for
+   it navigated to the release and said *'Taking you to the release — use
+   "Generate status update" there.'* With the pill deleted that is a pointer at
+   nothing, so it **generates in the conversation now**, calling the same route
+   the tool calls. That matters because it is the no-model path: production has
+   run with `CHAPPI_MODEL` unset for long stretches, and this is what keeps the
+   feature reachable when the agent loop is unavailable.
+2. **The stat tiles were the only verification affordance**, and they died with
+   the modal. `components/shared/StatTiles.tsx`' own header says the point of
+   the tiles is that a reader can CHECK a generated paragraph against the data
+   it was written from, and the route's comment records `stats` as read by the
+   modal alone. So `describeStatusFacts` (`lib/release-status.ts`) renders the
+   same figures as one line — *"Based on 12 of 64 done, 3 in progress, 2
+   blocked."* — appended to the paragraph on BOTH chat paths. It mirrors
+   `buildStatusTiles` deliberately (same order, same never-print-a-zero rule,
+   `''` when there is nothing to verify) so the line and the tiles cannot
+   disagree about which figures are worth showing. In agentic mode this also
+   gives the model real numbers to quote instead of inferring them from prose.
+
+**What deliberately did NOT change:** the route, its flag, the tool, and
+`StatTiles` itself (still used by `RecapModal`). `NEXT_PUBLIC_FEATURE_STATUS_UPDATE`
+still gates the route, and the tool still translates that 404 into a refusal
+through `isFlagGateOff` rather than a bare 404 — the release-not-yours case must
+not read as "the feature is off".
+
+**One residual, stated rather than papered over:** the capability now depends on
+`NEXT_PUBLIC_FEATURE_CHAPPI`. The deterministic fix covers a missing MODEL, not
+a missing assistant — if UrgAns were ever switched off, the status update would
+have no entry point at all. Acceptable because UrgAns is the front door and has
+been on since 2026-08-03, but it is a coupling that did not exist before.
+
+- **Verified:** 2825 tests (11 new in `lib/release-status.test.ts`, written red
+  first), `eslint .` at the exact 3-error / 81-warning baseline, `tsc --noEmit`
+  clean apart from the documented pre-existing `confirmed-action.test.ts`
+  errors, and `next build` green **by exit code** with the status/Chappi flags
+  on and with them off, `/auth`, `/onboarding`, `/settings` and `/dashboard`
+  all still `○ Static` in each.
+- **A near-miss worth recording:** the regex that removed the modal's
+  `dynamic()` import took `RecapModal`'s declaration with it — a non-greedy
+  `(?:.*\n)*?\);\n\n` ran past the first closer because the two blocks are
+  adjacent with no blank line between them. `tsc` caught it. When deleting one
+  of several adjacent `dynamic()` blocks, match the import path, not the shape.
+- **Not verified:** nothing has rendered in a browser. Worth one pass: ask
+  UrgAns for a status update on a real release and confirm the paragraph AND the
+  facts line come back, then confirm the pill is gone from the release header
+  and from the mobile release menu.
+
+---
 
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:

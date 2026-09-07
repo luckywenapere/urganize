@@ -76,9 +76,6 @@ export const RELEASE_MENU_ORDER = [
   'song',
   // The general file cabinet — everything that is not the cover or the master.
   'files',
-  // The first of the non-scene actions: a paragraph you generate and send,
-  // repeated through the rollout rather than once at the end.
-  'status-update',
   // Outward-facing, and demoted from a permanent tab in his own words: press
   // kit "isn't reached often enough to earn a permanent tab". Fan capture sits
   // with it as the other "send this outward" item — his pairing, kept from the

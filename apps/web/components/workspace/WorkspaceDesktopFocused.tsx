@@ -55,9 +55,8 @@ type WorkspaceDesktopFocusedProps = {
    * one-time NewReleaseGuide after a template creation (2026-08-04, ported
    * from the removed release detail page). */
   banner?: ReactNode;
-  /** Forwarded verbatim to TasksPanel's `statusUpdateAction` / `recapAction` —
-   * the flag-gated AI actions ported from the removed release detail page. */
-  panelStatusUpdateAction?: TaskPanelAction | null;
+  /** Forwarded verbatim to TasksPanel's `recapAction` — the flag-gated action
+   * ported from the removed release detail page. */
   panelRecapAction?: TaskPanelAction | null;
   panelArchiveAction?: TaskPanelAction | null;
   panelChangeArtistAction?: TaskPanelAction | null;
@@ -103,7 +102,6 @@ export function WorkspaceDesktopFocused({
   closeLabel,
   hideRails = false,
   banner,
-  panelStatusUpdateAction,
   panelRecapAction,
   panelArchiveAction,
   panelChangeArtistAction,
@@ -219,7 +217,6 @@ export function WorkspaceDesktopFocused({
           <TasksPanel
             tasks={scopedTasks}
             scopedRelease={scopedRelease}
-            statusUpdateAction={panelStatusUpdateAction}
             recapAction={panelRecapAction}
             archiveAction={panelArchiveAction}
             changeArtistAction={panelChangeArtistAction}

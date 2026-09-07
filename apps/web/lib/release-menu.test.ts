@@ -27,7 +27,6 @@ describe('RELEASE_MENU_ORDER', () => {
       'coverart',
       'song',
       'files',
-      'status-update',
       'capture',
       'recap',
       'change-artist',
