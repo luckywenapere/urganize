@@ -1,6 +1,7 @@
 'use client';
 
 import { deriveNotePreview, deriveNoteTitle } from '@/lib/notes';
+import { deriveNoteSearchPreview } from '@/lib/note-search';
 import { formatRelativeTime } from '@/lib/relative-time';
 import type { Note } from '@/types/notes';
 
@@ -16,6 +17,14 @@ type NoteListRowProps = {
    * is the whole feedback loop.
    */
   draftOverride?: string;
+  /**
+   * Active search terms, when a query is filtering the list. The preview then
+   * shows the region around the match instead of the line under the title: a
+   * note runs to 20,000 characters, so a row that matched on something far
+   * down would otherwise explain itself with text that has nothing to do with
+   * why it is there.
+   */
+  searchTerms?: string[];
   onSelect: (noteId: string) => void;
 };
 
@@ -24,11 +33,15 @@ export function NoteListRow({
   releaseTitle,
   selected,
   draftOverride,
+  searchTerms,
   onSelect,
 }: NoteListRowProps) {
   const body = draftOverride ?? note.body;
   const title = deriveNoteTitle(body);
-  const preview = deriveNotePreview(body);
+  const preview =
+    searchTerms && searchTerms.length > 0
+      ? deriveNoteSearchPreview(body, searchTerms)
+      : deriveNotePreview(body);
 
   return (
     <button

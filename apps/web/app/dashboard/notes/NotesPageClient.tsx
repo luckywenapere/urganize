@@ -14,6 +14,8 @@ import { useNoteSelection } from '@/components/notes/useNoteSelection';
 import { useNoteAutosave } from '@/components/notes/useNoteAutosave';
 import { NotesPageSkeleton } from '@/components/loading/NotesPageSkeleton';
 import { deriveNoteTitle } from '@/lib/notes';
+import { searchNotes } from '@/lib/note-search';
+import { parseSearchTerms } from '@/lib/task-search';
 
 // Same flag AppTopbar and the API routes read — if a direct link is followed
 // while the flag is off, bounce to the workspace (the route has no
@@ -41,6 +43,13 @@ export default function NotesPageClient() {
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  /**
+   * Search is local state, deliberately NOT a URL param. Typing would push a
+   * history entry per keystroke, and this page already carries `?note=` and
+   * `?release=` — a third param that changes on every character would make
+   * Back unusable. The catalog's own search bar made the same call.
+   */
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Ids created in THIS mount. Only these are ever auto-reaped when left
   // empty — a note that arrived empty from the server is someone's data, not
@@ -224,10 +233,21 @@ export default function NotesPageClient() {
     [releaseFilterId, releases]
   );
 
-  const visibleNotes = useMemo(
-    () => (releaseFilterId ? notes.filter((note) => note.releaseId === releaseFilterId) : notes),
-    [notes, releaseFilterId]
-  );
+  const searchTerms = useMemo(() => parseSearchTerms(searchQuery), [searchQuery]);
+
+  /**
+   * The release filter and the search COMPOSE — both narrow, neither clears
+   * the other. Release first, then search, so "notes about this release
+   * mentioning the promoter" is expressible. Search returns the list
+   * unchanged for an empty query, so with no query this is exactly the
+   * previous behaviour.
+   */
+  const visibleNotes = useMemo(() => {
+    const scoped = releaseFilterId
+      ? notes.filter((note) => note.releaseId === releaseFilterId)
+      : notes;
+    return searchNotes(scoped, searchQuery);
+  }, [notes, releaseFilterId, searchQuery]);
 
   const pinned = useMemo(() => visibleNotes.filter((note) => note.pinned), [visibleNotes]);
   const others = useMemo(() => visibleNotes.filter((note) => !note.pinned), [visibleNotes]);
@@ -284,6 +304,9 @@ export default function NotesPageClient() {
             filterRelease={filterRelease}
             filterUnresolved={Boolean(releaseFilterId) && !filterRelease}
             isCreating={isCreating}
+            searchQuery={searchQuery}
+            searchTerms={searchTerms}
+            onSearchChange={setSearchQuery}
             onSelect={handleSelect}
             onNewNote={() => void handleNewNote()}
             onClearFilter={clearFilter}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Pin, Plus, X } from '@/components/icons';
+import { Pin, Plus, Search, X } from '@/components/icons';
 import Image from 'next/image';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { NoteListRow } from './NoteListRow';
@@ -19,6 +19,11 @@ type NotesListProps = {
   /** True when `?release=` names a release the store can't resolve. */
   filterUnresolved: boolean;
   isCreating: boolean;
+  /** Raw query behind the search box. */
+  searchQuery: string;
+  /** Parsed terms, passed to each row so a deep match previews itself. */
+  searchTerms: string[];
+  onSearchChange: (query: string) => void;
   onSelect: (noteId: string) => void;
   onNewNote: () => void;
   onClearFilter: () => void;
@@ -39,12 +44,16 @@ export function NotesList({
   filterRelease,
   filterUnresolved,
   isCreating,
+  searchQuery,
+  searchTerms,
+  onSearchChange,
   onSelect,
   onNewNote,
   onClearFilter,
 }: NotesListProps) {
   const isEmpty = pinned.length === 0 && others.length === 0;
   const isFiltering = Boolean(filterRelease) || filterUnresolved;
+  const isSearching = searchTerms.length > 0;
 
   const renderRows = (notes: Note[]) =>
     notes.map((note) => (
@@ -54,6 +63,7 @@ export function NotesList({
         releaseTitle={note.releaseId ? releaseTitlesById.get(note.releaseId) ?? null : null}
         selected={note.id === selectedNoteId}
         draftOverride={note.id === selectedNoteId ? draftOverride : undefined}
+        searchTerms={searchTerms}
         onSelect={onSelect}
       />
     ));
@@ -71,6 +81,28 @@ export function NotesList({
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           New note
         </button>
+      </div>
+
+      {/* Search sits above the release chip because it is the broader filter:
+          it narrows everything, where the chip narrows to one release. The
+          input is `text-lg` — 16px in this preset — because anything smaller
+          makes iOS zoom the page on focus, and `text-base` here is 14px. No
+          autoFocus: this is a persistent bar on a page you land on, not a
+          palette you opened, so stealing focus would put the phone keyboard
+          over the list every time Notes is opened. */}
+      <div className="relative shrink-0 pb-3">
+        <Search
+          className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-content-tertiary"
+          aria-hidden="true"
+        />
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Search notes"
+          aria-label="Search notes"
+          className="h-9 w-full rounded-full border border-stroke-default bg-bg-surface pl-9 pr-3 text-lg text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-brand"
+        />
       </div>
 
       {isFiltering ? (
@@ -118,7 +150,28 @@ export function NotesList({
       ) : null}
 
       <div className="min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
-        {isEmpty ? (
+        {isEmpty && isSearching ? (
+          // A search miss is NOT an empty notebook, and must never offer to
+          // create a note: the user is looking for one that already exists,
+          // and "New note" here would read as the only way out of a typo.
+          <EmptyState
+            title="No notes match that."
+            description={
+              isFiltering
+                ? 'Nothing here matches your search. Try fewer words, or clear the release filter to search everything.'
+                : 'Try fewer words — search matches the title and the body, in any order.'
+            }
+            action={
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                className="motion-focus motion-press inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              >
+                Clear search
+              </button>
+            }
+          />
+        ) : isEmpty ? (
           <EmptyState
             mascot="resting"
             title={
