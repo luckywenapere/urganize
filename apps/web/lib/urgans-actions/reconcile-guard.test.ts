@@ -114,7 +114,10 @@ describe('every embedded action has a decided chat counterpart', () => {
   });
 
   it('names only chat tools that actually exist', () => {
-    const registered = new Set(CHAPPI_TOOLS.map((tool) => tool.name));
+    // Set<string>, not Set<ChappiToolName>: the declaration above holds plain
+    // strings on purpose, so that a RENAMED tool shows up here as a missing
+    // counterpart rather than as a type error in a test nobody is editing.
+    const registered = new Set<string>(CHAPPI_TOOLS.map((tool) => tool.name));
     const missing: string[] = [];
     for (const [id, entry] of Object.entries(CHAT_COUNTERPARTS)) {
       for (const tool of entry.tools ?? []) {
