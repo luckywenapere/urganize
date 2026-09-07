@@ -37,7 +37,14 @@ export type ChappiChipIntent =
  * nothing to say, which is what `take_note` is for — that one opens an empty
  * editor instead.
  */
-export type ChappiIntentKind = ChappiChipIntent | 'create_note' | 'help';
+export type ChappiIntentKind =
+  | ChappiChipIntent
+  | 'create_note'
+  // Intent-only, like create_note and for a related reason: the chip row is
+  // lg-only and already carries up to six, and "take me to the shows" is a
+  // thing you type when you have one in mind, not a standing button.
+  | 'open_shows'
+  | 'help';
 
 /**
  * Answers the planner intake already knows before it asks, carried by a chip.

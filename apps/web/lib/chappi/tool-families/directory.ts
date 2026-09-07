@@ -36,7 +36,7 @@ import {
   type ChappiTool,
 } from './shared';
 
-const DIRECTORY_OFF = "The directory isn't switched on for this workspace yet.";
+const DIRECTORY_OFF = "The directory isn't switched on for this team yet.";
 const REQUESTS_OFF = "Work requests aren't switched on yet.";
 
 const AVAILABILITY = ['open', 'selective', 'closed'] as const;
@@ -46,7 +46,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
     name: 'search_directory',
     kind: 'read',
     description:
-      'Find people to hire — producers, engineers, designers, PR, photographers, tour managers. Narrow by role, city or whether they are taking work. Use this before send_work_request, which needs the person id.',
+      'Find people to hire: producers, engineers, designers, PR, photographers, tour managers. Narrow by role, city or whether they are taking work. Use this before send_work_request, which needs the person id.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -101,7 +101,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
     name: 'get_my_directory_profile',
     kind: 'read',
     description:
-      "The user's own directory listing — how other teams see them — or nothing if they have not made one.",
+      "The user's own directory listing, which is how other teams see them. Returns nothing if they have not made one.",
     inputSchema: { type: 'object', properties: {} },
     execute: async (ctx) => {
       const res = await callInternalApi(ctx, '/api/directory/profile', { method: 'GET' });
@@ -128,7 +128,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
     name: 'update_my_directory_profile',
     kind: 'mutate',
     description:
-      "Change the user's own directory listing. Send only what is changing. This is how they appear to other teams, so write it in their words, not yours — draft it in the conversation and save once they agree.",
+      "Change the user's own directory listing. Send only what is changing. This is how they appear to other teams, so write it in their words rather than yours: draft it in the conversation and save once they agree.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -177,7 +177,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
     name: 'list_work_requests',
     kind: 'read',
     description:
-      'Work requests — the ones sent to the user (received) or the ones they sent out (sent), with any answers.',
+      'Work requests, either the ones sent to the user (received) or the ones they sent out (sent), with any answers.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -254,7 +254,7 @@ export const DIRECTORY_TOOLS: ChappiTool[] = [
       return {
         ok: true,
         title: `Send this to ${person.displayName}?`,
-        detail: `"${note}" — it lands in their inbox and cannot be unsent.`,
+        detail: `"${note}". It lands in their inbox and cannot be unsent.`,
         confirmLabel: 'Send request',
       };
     },

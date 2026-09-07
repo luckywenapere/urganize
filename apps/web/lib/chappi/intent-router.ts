@@ -21,6 +21,27 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 // to reach the picker without one.
 const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 
+// Same flag the Shows page, its nav tab and the /api/events routes read.
+const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
+
+/**
+ * "what's the setlist", "send the dj pack", "my shows this month".
+ *
+ * NEVER the bare word "show", and that is the whole difficulty of this branch:
+ * "show me my releases" contains it, and routing that to the Shows page would
+ * be worse than not having the branch at all. So every phrase here is one that
+ * can only be about a live date.
+ */
+const SHOW_PHRASES: readonly RegExp[] = [
+  /\bset\s?list\b/i,
+  /\bdj\s+pack\b/i,
+  /\brun\s+of\s+show\b/i,
+  /\bmy\s+shows\b/i,
+  /\bgigs?\b/i,
+  /\bvenues?\b/i,
+  /\bsoundcheck\b/i,
+];
+
 /**
  * "upload the song", "attach the master", "replace the audio".
  *
@@ -118,6 +139,13 @@ export function resolveIntent(raw: string): ChappiIntent {
   if (SONG_UPLOAD_ENABLED && SONG_UPLOAD_PHRASES.some((pattern) => pattern.test(raw))) {
     return { kind: 'upload_song' };
   }
+  // Before the planner AND release branches. "plan the setlist" is about a
+  // set, not a rollout, and the release branch would otherwise claim it via
+  // 'plan'; the release branch also claims 'song' and 'track', which a
+  // conversation about a set is full of.
+  if (EVENTS_ENABLED && SHOW_PHRASES.some((pattern) => pattern.test(raw))) {
+    return { kind: 'open_shows' };
+  }
   // Before the 'release' branch, and only when the planner exists: "plan my
   // release" contains both words, and planning is the more specific verb.
   if (PLANNER_ENABLED && has('plan', 'rollout', 'roll out', 'campaign')) {
@@ -146,6 +174,7 @@ export function buildHelpReply(): ChappiReply {
       PLANNER_ENABLED ? 'Plan a release' : 'Create a new release',
       'Add an activity',
       ...(SONG_UPLOAD_ENABLED ? ['Upload the song'] : []),
+      ...(EVENTS_ENABLED ? ['My shows'] : []),
       ...(NOTES_ENABLED ? ['Note Call the promoter about Friday'] : []),
       'What should I focus on today?',
       'Generate a status update',

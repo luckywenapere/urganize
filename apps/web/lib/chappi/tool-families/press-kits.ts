@@ -40,7 +40,7 @@ import {
   type ChappiTool,
 } from './shared';
 
-const KITS_OFF = "Press kits aren't switched on for this workspace yet.";
+const KITS_OFF = "Press kits aren't switched on for this team yet.";
 
 const VISIBILITIES = ['link_only', 'public', 'public_listed'] as const;
 
@@ -93,7 +93,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
     name: 'get_press_kit',
     kind: 'read',
     description:
-      "Get one press kit: every section, whether each is empty, a draft or ready, and whether the kit is live. Read this before writing a section — it is what a section's current content comes from.",
+      "Get one press kit: every section, whether each is empty, a draft or ready, and whether the kit is live. Read this before writing a section, because it is what a section's current content comes from.",
     inputSchema: {
       type: 'object',
       properties: { kitId: { type: 'string', description: 'The press kit id.' } },
@@ -133,7 +133,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
     name: 'create_press_kit',
     kind: 'mutate',
     description:
-      "Start a press kit for an artist. Safe to call twice — an artist who already has one gets theirs back, since there is only ever one per artist.",
+      "Start a press kit for an artist. Safe to call twice: an artist who already has one gets theirs back, since there is only ever one per artist.",
     inputSchema: {
       type: 'object',
       properties: { artistId: { type: 'string' } },
@@ -162,7 +162,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
     name: 'update_press_kit',
     kind: 'mutate',
     description:
-      "Change a kit's settings: its web address (slug), who can see it, an embargo date, or whether the artist is available for interview. Not the content — use write_press_kit_section for that.",
+      "Change a kit's settings: its web address (slug), who can see it, an embargo date, or whether the artist is available for interview. Not the content, which is write_press_kit_section's job.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -200,7 +200,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
     name: 'write_press_kit_section',
     kind: 'mutate',
     description:
-      'Save writing into a press kit section. Only the three prose sections can be written this way: "header" (a one-line descriptor), "bios" (short, medium and long) and "latest_release" (a hook). Everything else — numbers, press quotes, contacts, links — is the manager\'s to enter, because those are facts. Draft the words in the conversation first and save once the user agrees.',
+      'Save writing into a press kit section. Only the three prose sections can be written this way: "header" (a one-line descriptor), "bios" (short, medium and long) and "latest_release" (a hook). Everything else (numbers, press quotes, contacts, links) is the manager\'s to enter, because those are facts. Draft the words in the conversation first and save once the user agrees.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -224,7 +224,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
       if (!isDraftableSection(section)) {
         const label = PRESS_KIT_SECTION_LABELS[section] ?? section;
         return fail(
-          `${label} holds facts rather than writing, so I should not fill it in — the numbers, quotes, contacts and links have to come from the manager. Open the press kit to edit it.`
+          `${label} holds facts rather than writing, so I should not fill it in. The numbers, quotes, contacts and links have to come from the manager. Open the press kit to edit it.`
         );
       }
 
@@ -274,7 +274,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
     name: 'publish_press_kit',
     kind: 'mutate',
     description:
-      "Put the press kit on the web at its public link. Publishing takes a snapshot of what is written now — later edits stay drafts until it is published again.",
+      "Put the press kit on the web at its public link. Publishing takes a snapshot of what is written now, and later edits stay drafts until it is published again.",
     inputSchema: {
       type: 'object',
       properties: { kitId: { type: 'string' } },
@@ -324,7 +324,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
     name: 'unpublish_press_kit',
     kind: 'mutate',
     description:
-      'Take the press kit back off the web. The writing is kept — only the public link stops working.',
+      'Take the press kit back off the web. The writing is kept, and only the public link stops working.',
     inputSchema: {
       type: 'object',
       properties: { kitId: { type: 'string' } },

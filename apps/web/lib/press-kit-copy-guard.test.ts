@@ -41,6 +41,14 @@ const FILES = [
   ...walk(join(WEB, 'app', 'api', 'admin', 'directory')),
   ...walk(join(WEB, 'components', 'directory')),
   join(WEB, 'components', 'settings', 'DirectoryProfileSection.tsx'),
+  // The assistant's tools for these two surfaces, named rather than walked.
+  // Every description and refusal below is read by a manager in the
+  // conversation, so they are press kit and directory copy like any other.
+  // The lib walk above reaches press-kits.ts only because its filename happens
+  // to contain the pattern, and cannot reach directory.ts at all; naming both
+  // makes the coverage a decision instead of a coincidence.
+  join(WEB, 'lib', 'chappi', 'tool-families', 'press-kits.ts'),
+  join(WEB, 'lib', 'chappi', 'tool-families', 'directory.ts'),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 /**

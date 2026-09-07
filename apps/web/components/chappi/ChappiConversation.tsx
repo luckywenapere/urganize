@@ -405,6 +405,14 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           });
         return;
       }
+      case 'open_shows':
+        // Navigation rather than a tool call, and deliberately so: with no
+        // model configured this router IS the assistant, and the shows page is
+        // where a set is actually built. Nothing to create from here.
+        router.push('/dashboard/shows');
+        appendAssistantReply('Opening your shows.');
+        break;
+
       case 'take_note':
         openBlankNote();
         return;
