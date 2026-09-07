@@ -1737,11 +1737,18 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
   without it, untailored. (3) ~~set `NEXT_PUBLIC_FEATURE_RELEASE_PLANNER=true`~~
   — flipped on or before 2026-08-14, and confirmed still on 2026-09-07 by the card being there. (4) ~~changelog entry + version bump~~ —
   **done three times over**, v0.53.0 / v0.56.2 / v0.56.3, which is why a fourth
-  entry announcing this surface would be wrong: it is not news. (5) **The only
-  thing genuinely open, and now narrowed:** nobody has walked a real release
-  through approve → complete → block → reopen. That is a manual pass, not an
-  activation step — but the CODE half of it was compared field by field on
-  2026-09-07 and is clean; see the entry below.
+  entry announcing this surface would be wrong: it is not news. (5) **PARTLY
+  DONE, 2026-09-07 — the founder approved a real plan and the completion
+  cascade works.** So approval writes into `tasks` against the production
+  database, and completing an approved task unlocks its dependents exactly as
+  a template-instantiated one does. That is the parity question the field
+  comparison below explicitly could not answer, and it is the half most worth
+  having. **Three steps of the pass remain unrun**, and they are the ones that
+  would catch a regression rather than confirm the happy path: that the
+  blocker gate REFUSES a still-locked task, that reopening RE-LOCKS what it
+  unlocked, and that a manager-added activity lands on Timeline as a marker
+  rather than a bar (the asymmetry two bullets down — it has to be added by
+  hand BEFORE approving, so a pass that skips that step cannot test it).
 - **The two write paths compared, 2026-09-07: 13 of 15 columns are identical
   in shape.** `instantiate.ts` (template) against
   `release-planning-server.ts` (approval), which is the substance of the
@@ -1775,7 +1782,10 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
   the cascade actually unlocks, that the blocker gate actually refuses, and
   that reopening actually re-locks. Those are runtime behaviours over the
   `dependencies` column, and the column is identically shaped on both paths —
-  which is the reason to expect parity, not evidence of it.
+  which is the reason to expect parity, not evidence of it. **The first of the
+  three was answered in production hours later** (see item 5 above: a real
+  plan approved, the cascade unlocked). The other two are still nothing more
+  than two files agreeing about the shape of a column.
 - **Asked to "flip the planner flag on" on 2026-09-07 and it was already on.**
   Recorded because the ask was reasonable — three separate lines in this file
   said Phase 5 was still gated, one of them written that same day by a session
