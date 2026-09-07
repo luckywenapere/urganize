@@ -11838,6 +11838,21 @@ and "safe to shelve" are the same moment. It also keeps its recap name, because
 that is what the shared predicate in `lib/recap-eligibility.ts` is — its other
 two callers are the recap route and `lib/delivery-records.ts`.
 
+**AND THE PATTERN STOPS HERE. The Plan pill stays a pill — founder call,
+2026-09-07, asked and answered the same day.** Two AI actions moved into the
+conversation on two consecutive days, which makes "so the third one goes too"
+an easy and wrong inference; taking it would be re-litigating a settled call.
+The reasons it is not the same move: the seven-question intake **already runs
+in chat** (`generate_release_plan` collects the answers, `approve_release_plan`
+commits behind a confirmation card), so the conversational half is not missing;
+what the pill opens is not a modal emitting a paragraph or an image but an
+editable ~60-task document with autosave, per-phase redraft and an Approve that
+writes the whole plan into `tasks` — a transcript is a poor place to edit sixty
+rows, and deleting the scene would leave no way to edit a draft before
+approving it; and the pill is self-removing anyway (shown only while a release
+has no activities or a draft is waiting), so it never becomes the permanent
+chrome the other two had become.
+
 - **Verified:** 2827 tests (10 new across `lib/recap-share.test.ts` and
   `lib/chappi/intent-router.test.ts`), `eslint .` at the exact 3-error /
   81-warning baseline (all three pre-existing in `WorkspaceView.tsx`),
