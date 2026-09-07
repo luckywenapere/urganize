@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.26.0",
+    date: "September 7, 2026",
+    highlights: [
+      "You can now ask anyone in the directory to work on a release. Say what the job is and send it.",
+      "They answer in one tap. If they are interested, their email comes back to you and you can reply straight from the message.",
+      "Everyone you asked, and what each of them said, shows on the release and in your settings.",
+    ],
+  },
+  {
     version: "1.25.0",
     date: "September 7, 2026",
     highlights: [
