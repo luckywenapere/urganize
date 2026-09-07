@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.29.0",
+    date: "September 7, 2026",
+    highlights: [
+      "Ask UrgAns for your release recap and the card shows up right there in the chat. Pick Story or Square and save it without leaving the conversation.",
+      "The Release recap button is gone. Ask for it in your own words, and mention anything worth remembering about the release — UrgAns will put it on the card.",
+    ],
+  },
+  {
     version: "1.28.0",
     date: "September 7, 2026",
     highlights: [

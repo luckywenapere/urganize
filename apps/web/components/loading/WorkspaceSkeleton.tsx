@@ -61,16 +61,12 @@ const IDENTITY_PANEL_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
-// The status-update pill used to be reserved at the end of this header row.
-// It was removed 2026-09-07 (founder call — the status update lives in the
-// UrgAns conversation now), so there is no placeholder for it and
-// NEXT_PUBLIC_FEATURE_STATUS_UPDATE is no longer read here at all.
-
-// The release recap pill (WorkspaceView) is deliberately NOT reserved here.
-// It only appears once a release is finished,
-// which depends on release and task data this skeleton renders BEFORE it has.
-// Reserving it unconditionally would shrink the row for every unfinished
-// release, so the jump is taken on the rarer finished case instead.
+// Two pills used to be reserved at the end of this header row, and BOTH were
+// removed on 2026-09-07 (founder calls): the status update first, then the
+// release recap. Both features live in the UrgAns conversation now — you ask
+// for them and it answers, the recap by putting the poster inline — so neither
+// has a placeholder, and neither NEXT_PUBLIC_FEATURE_STATUS_UPDATE nor
+// NEXT_PUBLIC_FEATURE_RELEASE_RECAP is read here at all.
 
 /**
  * Workspace loading state, rendered inline by `WorkspaceView` (and the
@@ -300,7 +296,7 @@ function TasksPanelSkeleton() {
     // the release's activity count and whether a draft exists — data this
     // skeleton is showing precisely because it does not have it yet. Guessing
     // would make the row jump for every release that has a plan already, which
-    // is most of them. Same trade the recap pill documents above.
+    // is most of them.
   ];
   // The header row's pills (New activity, Timeline, Metadata, then one per
   // enabled flag). DESKTOP ONLY — the real buttons these stand in for stopped

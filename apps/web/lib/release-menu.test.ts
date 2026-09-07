@@ -28,7 +28,6 @@ describe('RELEASE_MENU_ORDER', () => {
       'song',
       'files',
       'capture',
-      'recap',
       'change-artist',
       'archive',
     ]);
@@ -49,9 +48,8 @@ describe('RELEASE_MENU_ORDER', () => {
     expect(position('pitch')).toBeLessThan(position('song'));
     // Working surfaces before the things you send outward.
     expect(position('metadata')).toBeLessThan(position('capture'));
-    // Everything before the end-of-release and corrective actions.
-    expect(position('capture')).toBeLessThan(position('recap'));
-    expect(position('recap')).toBeLessThan(position('archive'));
+    // Everything before the corrective and terminal actions.
+    expect(position('capture')).toBeLessThan(position('change-artist'));
     expect(position('change-artist')).toBeLessThan(position('archive'));
   });
 });

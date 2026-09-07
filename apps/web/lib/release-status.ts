@@ -28,15 +28,15 @@ export type StatusTaskSummary = {
 
 /**
  * The counts behind a generated status update, returned beside the paragraph
- * so the modal can show the numbers it was written FROM (stat tiles,
- * 2026-08-13). Derived entirely from rows the route already loaded — this adds
- * no queries.
+ * so a reader can see the numbers it was written FROM (stat tiles, 2026-08-13;
+ * a line of prose since 2026-09-07 — see `describeStatusFacts`). Derived
+ * entirely from rows the route already loaded, so this adds no queries.
  *
  * `dueThisWeekCount` is a true count and deliberately NOT
  * `comingUpThisWeek.length`: that list is capped at five titles because it
- * feeds a prompt, so its length silently under-reports a busy week. A tile
- * reading "5 due this week" when nine are due would be a wrong number
- * presented as a fact.
+ * feeds a prompt, so its length silently under-reports a busy week. Printing
+ * "5 due this week" when nine are due would be a wrong number presented as a
+ * fact.
  */
 export type StatusFacts = {
   totalCount: number;
@@ -47,89 +47,27 @@ export type StatusFacts = {
 };
 
 /**
- * One stat tile. Structurally compatible with the `StatTile` prop of
- * components/shared/StatTiles.tsx, which is the presentational contract —
- * declared here (not imported from there) for the same reason
- * `RecapStatLine` lives in lib/recap-stats.ts: the selection logic is pure and
- * belongs where it can be unit-tested without pulling a client component and
- * its icon imports into the test process.
- */
-export type StatusTile = {
-  key: string;
-  value: string;
-  label: string;
-  detail?: string;
-  tone?: 'default' | 'alert';
-};
-
-/**
- * The tiles shown above a generated status update — the figures the paragraph
- * was written from.
+ * The figures the paragraph was written from, as one line of prose.
  *
  * The point is verification, not decoration: an AI paragraph asserting "we're
  * over halfway with two blocked" is unfalsifiable on its own, and this app's
  * AI posture is that the model narrates structured data rather than being
- * trusted for it. Showing the numbers makes the narration checkable at a
- * glance, which is what makes it safe to paste to an artist or label.
+ * trusted for it. Printing the numbers beside it makes the narration
+ * checkable at a glance, which is what makes it safe to paste to an artist or
+ * a label.
  *
- * Only Done is unconditional. The others appear when they carry signal: a zero
- * in progress, a zero due this week or a zero blocked is the absence of news,
- * and a row padded with zeroes buries the figures that matter. Blocked is the
- * exception worth its own treatment — non-zero, it is the most important
- * number on the screen, so it takes the alert tone.
- */
-export function buildStatusTiles(stats: StatusFacts): StatusTile[] {
-  const tiles: StatusTile[] = [
-    {
-      key: 'done',
-      value: String(stats.doneCount),
-      label: 'Done',
-      // Omitted rather than "of 0": a release with no activities has no
-      // denominator worth printing.
-      detail: stats.totalCount > 0 ? `of ${stats.totalCount}` : undefined,
-    },
-  ];
-
-  if (stats.inProgressCount > 0) {
-    tiles.push({
-      key: 'in-progress',
-      value: String(stats.inProgressCount),
-      label: 'In progress',
-    });
-  }
-  if (stats.dueThisWeekCount > 0) {
-    tiles.push({
-      key: 'due-this-week',
-      value: String(stats.dueThisWeekCount),
-      label: 'Due',
-      detail: 'this week',
-    });
-  }
-  if (stats.blockedCount > 0) {
-    tiles.push({
-      key: 'blocked',
-      value: String(stats.blockedCount),
-      label: 'Blocked',
-      tone: 'alert',
-    });
-  }
-
-  return tiles;
-}
-
-/**
- * The same figures as one line of prose, for a surface that cannot draw tiles.
+ * They used to be a row of tiles (`buildStatusTiles` here, rendered by
+ * components/shared/StatTiles.tsx), whose only home was the modal behind the
+ * "Status update" pill. That pill was removed on 2026-09-07 — the status
+ * update belongs in the UrgAns conversation — so the figures had to travel
+ * with the paragraph or the verification would have gone with the button.
+ * Both the builder and the tiles component are deleted; a transcript line is
+ * the whole surface now, and it also gives the model real numbers to quote
+ * rather than inferring them from its own prose.
  *
- * The tiles above exist so a reader can CHECK a generated paragraph against
- * the data it was written from, and until 2026-09-07 their only home was the
- * modal behind the "Status update" pill. That pill was removed on a founder
- * call — the status update belongs in the UrgAns conversation — so the figures
- * had to travel with the paragraph or the verification would have gone with
- * the button.
- *
- * Mirrors `buildStatusTiles` deliberately rather than inventing its own
- * selection: same order, same "never print a zero" rule, so the chat line and
- * the tiles can never disagree about which figures are worth showing.
+ * Only "done" is unconditional. The others appear when they carry signal: a
+ * zero in progress, a zero due this week or a zero blocked is the absence of
+ * news, and a line padded with zeroes buries the figures that matter.
  *
  * Returns '' when there is nothing to verify, and callers append nothing in
  * that case — a release with no activities gets the paragraph alone rather

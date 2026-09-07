@@ -16,7 +16,6 @@ import {
   Music,
   NotebookPen,
   Archive,
-  PartyPopper,
   Users,
   Plus,
   Radio,
@@ -148,11 +147,10 @@ export const TASKS_PILL_DOCK_OFFSET_CLASS = MOBILE_NAV_ENABLED
 
 /**
  * The scene-pill row's neutral (never-lit) pill treatment — hoisted to
- * module scope and exported as the one source of truth. WorkspaceView's
- * Release recap action renders through this same class
- * (via `recapAction` below) rather than a hand-rolled
- * copy — that copy had already drifted once (missing `shrink-0
- * whitespace-nowrap`), which is how "Get your release recap" ended up
+ * module scope and exported as the one source of truth. Every action
+ * WorkspaceView hands down (see `TaskPanelAction`) renders through this class
+ * rather than a hand-rolled copy — that copy had already drifted once (missing
+ * `shrink-0 whitespace-nowrap`), which is how "Get your release recap" ended up
  * wrapping across three lines inside a fixed 32px pill (2026-08-10 bug fix).
  * `shrink-0 whitespace-nowrap` still matter for the same reason in every new
  * container this pill can land in: a flex child without them compresses and
@@ -191,12 +189,17 @@ function describeDescriptionMatch(description: string | null): string | null {
 }
 
 /**
- * A flag-gated AI action ported from the removed release detail page
- * (Status update, Release recap). Structured rather than pre-rendered
- * ReactNode: this component places each one in a different spot at each
- * width (the desktop header row, the mobile top tabs, or the mobile folded
- * "more" menu), and the mobile search surface needs a real label to filter
- * against — a rendered `<button>` blob can't be introspected for its text.
+ * An action WorkspaceView owns and this panel places — modal-shaped rather
+ * than a scene toggle, so it never lights up. Structured rather than
+ * pre-rendered ReactNode: this component puts each one in a different spot at
+ * each width (the desktop header row, or the mobile release menu), and the
+ * mobile search surface needs a real label to filter against — a rendered
+ * `<button>` blob can't be introspected for its text.
+ *
+ * It carried the two flag-gated AI actions ported from the removed release
+ * detail page until 2026-09-07, when both moved into the UrgAns conversation
+ * on a founder call — the status update first, then the recap. What arrives
+ * through it now is archiving and moving a release to another artist.
  */
 export type TaskPanelAction = {
   label: string;
@@ -279,12 +282,9 @@ type TasksPanelProps = {
    * in the right place at each width — see the type's own doc comment.
    * `null`/undefined when the feature is off or no release is scoped.
    */
-  /** The Release recap action. `null` when the flag is off, no release is
-   * scoped, or the release isn't recap-eligible yet (WorkspaceView owns that
-   * eligibility check). */
-  recapAction?: TaskPanelAction | null;
-  /** Shelve a finished release, or restore an archived one. Modal-shaped like
-   *  recap, so it lives in the same two places. */
+  /** Shelve a finished release, or restore an archived one. Modal-shaped, so
+   *  it renders through the same neutral pill and the same menu row a scene
+   *  toggle would — see `TaskPanelAction`. */
   archiveAction?: TaskPanelAction | null;
   changeArtistAction?: TaskPanelAction | null;
   /**
@@ -367,7 +367,6 @@ export function TasksPanel({
   tasks,
   scopedRelease,
   id,
-  recapAction,
   archiveAction,
   changeArtistAction,
   sceneContent,
@@ -773,16 +772,6 @@ export function TasksPanel({
     Boolean(scopedRelease) &&
     !sceneContent;
 
-  // Release recap, rendered through the shared pill class wherever it is
-  // needed (desktop row, mobile release menu) — see TaskPanelAction's own doc
-  // comment for why it arrives as data rather than a pre-rendered node.
-  const recapButton = recapAction ? (
-    <button type="button" onClick={recapAction.onClick} className={neutralPillClass}>
-      <PartyPopper className="h-3.5 w-3.5" aria-hidden="true" />
-      {recapAction.label}
-    </button>
-  ) : null;
-
   const archiveButton = archiveAction ? (
     <button type="button" onClick={archiveAction.onClick} className={neutralPillClass}>
       <Archive className="h-3.5 w-3.5" aria-hidden="true" />
@@ -925,15 +914,6 @@ export function TasksPanel({
           isActive: activeScene === 'capture',
         }
       : null,
-    recapAction
-      ? {
-          key: 'recap',
-          label: recapAction.label,
-          icon: PartyPopper,
-          onClick: recapAction.onClick,
-          disabled: recapAction.disabled,
-        }
-      : null,
     changeArtistAction
       ? {
           key: 'change-artist',
@@ -1071,7 +1051,6 @@ export function TasksPanel({
         {pitchButton}
         {filesButton}
         {notesPill}
-        {recapButton}
         {changeArtistButton}
         {archiveButton}
       </div>

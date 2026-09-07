@@ -81,8 +81,6 @@ export const RELEASE_MENU_ORDER = [
   // with it as the other "send this outward" item — his pairing, kept from the
   // desktop footer row.
   'capture',
-  // Once, after release day.
-  'recap',
   // A correction, not a place to work.
   'change-artist',
   // Terminal.
