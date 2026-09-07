@@ -11942,11 +11942,17 @@ chrome the other two had become.
   also settles the deploy: the v1.29.0 build was triggered at 16:16 UTC and
   Vercel's account-wide deployment rate limit closed at 16:19 (see the note
   under Deployment), so this landed in the last window before it.
-- **Still unexercised, and it is the payload rather than a detail:** nobody has
-  pressed Download or Share, or moved the Story/Square toggle. Both are one tap
-  each and both go through `shareOrDownloadImage`, which is the pre-existing path
-  the deleted modal used — so the risk is low and it is not zero. Worth the two
-  taps next time a release finishes.
+- **Download is confirmed too, the same day: the founder pressed it and the file
+  saved.** So the payload works end to end — `shareOrDownloadImage`'s web branch
+  fetched the signed URL and `recapFileName` produced a name the browser
+  accepted, which is the whole reason that builder exists (a file called `blob`
+  or `download.png` is what it was written to prevent).
+- **Two paths remain unexercised, both narrow:** the Story/Square toggle (the
+  press was on whichever size was showing, and story is the default), and the
+  NATIVE share sheet, which cannot be reached until a store build ships —
+  `@capacitor/share` was added but the only APK on record predates it, so
+  `lib/share-file.ts`'s plugin probe degrades to opening in the system browser
+  by design. Same blocker as native push: the binary.
 
 ---
 
