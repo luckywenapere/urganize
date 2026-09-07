@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useNotesStore } from '@/stores/useNotesStore';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { NotesList } from '@/components/notes/NotesList';
 import { NoteEditor, NoteEditorEmpty } from '@/components/notes/NoteEditor';
@@ -38,6 +39,7 @@ export default function NotesPageClient() {
   const { notes, isInitialLoading, load, create, update, remove } = useNotesStore();
   const tasks = useTaskStore((state) => state.tasks);
   const openIntake = usePlannerStore((state) => state.openIntake);
+  const { openQuickCreate } = useTaskUI();
 
   const { selectedNoteId, selectNote } = useNoteSelection();
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
@@ -165,6 +167,38 @@ export default function NotesPageClient() {
       });
     };
   }, [selectedNote, tasks, openIntake, autosave.draft]);
+
+  /**
+   * Turn this note into an activity.
+   *
+   * Opens quick-create seeded with the note's derived title and its linked
+   * release. Offered unconditionally: the modal carries its own release
+   * picker and refuses to submit without one, so an unlinked note is a case
+   * it already handles — and hiding the action when unlinked would hide it
+   * exactly when it is most useful, since capture-first means most notes have
+   * no release yet.
+   *
+   * The LIVE draft is the source, not the stored body, so a thought still
+   * being typed can become work without waiting for the autosave.
+   *
+   * It deliberately does NOT mutate the note: no auto-link to the release
+   * picked in the modal, and the note is not consumed. Linking on a
+   * successful create is defensible and would need a create callback
+   * threaded through TaskUIProvider; a silent write on an action the user
+   * might still cancel is not worth it without one.
+   */
+  const makeActivityFromNote = useMemo(() => {
+    if (!selectedNote) return undefined;
+    return () => {
+      const title = deriveNoteTitle(autosave.draft);
+      if (!title) return;
+      openQuickCreate({
+        releaseId: selectedNote.releaseId ?? null,
+        title,
+        source: 'note',
+      });
+    };
+  }, [autosave.draft, openQuickCreate, selectedNote]);
 
   const handleBack = useCallback(() => {
     const outgoing = selectedNoteId;
@@ -330,6 +364,7 @@ export default function NotesPageClient() {
               onTogglePin={() => void update(selectedNote.id, { pinned: !selectedNote.pinned })}
               onRequestDelete={() => setIsDeleteOpen(true)}
               onMakePlan={planFromNote}
+              onMakeActivity={makeActivityFromNote}
               onBack={handleBack}
               autoFocus={pendingFocusId === selectedNote.id}
               onAutoFocusConsumed={() => setPendingFocusId(null)}

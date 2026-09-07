@@ -30,7 +30,7 @@ export type TaskSectionKey =
   | 'locked'
   | 'done'
   | 'cancelled';
-export type TaskCreateSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding';
+export type TaskCreateSource = 'quick_create' | 'inline' | 'detail_panel' | 'onboarding' | 'note';
 export type TaskRequirementType = 'file_upload' | 'field_completion' | 'approval' | 'external_action';
 
 export interface TaskNotification {
