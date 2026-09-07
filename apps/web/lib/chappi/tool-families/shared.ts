@@ -72,9 +72,11 @@ export type ChappiTool = {
    * builder is READ-ONLY — it validates args and fetches whatever names/counts
    * the card needs to state the blast radius honestly.
    *
-   * Every tool carrying this must also be in lib/mcp/tools.ts's
-   * EXCLUDED_TOOL_NAMES (there is no confirmation UI over MCP);
-   * tool-registry.test.ts asserts that structurally.
+   * Every tool carrying this must be kept OUT of lib/mcp/tools.ts's
+   * MCP_TOOL_NAMES_ALLOWED (there is no confirmation UI over MCP);
+   * tool-registry.test.ts asserts that structurally. That list was a deny-list
+   * named EXCLUDED_TOOL_NAMES until 2026-08-25, when per-user MCP access
+   * inverted it to an allow-list so a new tool is unreachable by default.
    */
   confirm?: (ctx: ChappiToolContext, args: Record<string, unknown>) => Promise<ChappiConfirmOutcome>;
 };
