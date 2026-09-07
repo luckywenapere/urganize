@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.27.0",
+    date: "September 7, 2026",
+    highlights: [
+      "Urganize has a look of its own now. A woven cloth texture and hand-drawn borders run through every screen you open, in light mode and dark.",
+      "Nothing moved and nothing works differently. Same app, more character.",
+    ],
+  },
+  {
     version: "1.26.1",
     date: "September 7, 2026",
     highlights: [

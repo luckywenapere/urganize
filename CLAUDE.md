@@ -9987,9 +9987,25 @@ utility's consumers rather than by trusting the list of them.)
 
 ### Status, and what was never verified
 
-**Flag-off, never flipped**, so nothing here has been in front of a user. No
-changelog entry, and that is correct rather than an oversight: the ledger entry
-lands at the flip, per the EPK precedent.
+**LIVE as of 2026-09-07 (v1.27.0)** — `NEXT_PUBLIC_FEATURE_TEXTILE=true` on the
+Vercel `Web` project, with the version bump as the commit that rebuilt
+`apps/web` and inlined it (a `NEXT_PUBLIC_*` value is read at build time, so
+setting the variable alone changes nothing until something rebuilds). The ledger
+entry landed at the flip rather than at merge, per the EPK precedent.
+
+**The order was env var first, then the rebuild**, and it matters: merged the
+other way round, the rebuild carries the flag still false and the variable then
+sits inert until the next commit — the trap recorded on the EP/album flip.
+
+**The paragraph below is the build-time record and is kept as written.** What it
+names as never verified was still never verified at the flip: this shipped on a
+green build, a measured lint baseline and a compiled-CSS check, not on anyone
+having seen the authenticated surfaces with the flag on. **Paper mode is the one
+to look at first** — the ambient ground has been invisible in light theme since
+it was written, so this is the first time it has been on screen anywhere. If it
+reads heavy, the light-mode alphas in `:root`'s `html[data-theme='light']` block
+are one edit away and are already separate numbers from dark's for exactly this
+reason.
 
 **What the pass recorded at build time**, worth trusting because it names its
 method: the eslint baseline was measured **by stashing rather than assuming**
