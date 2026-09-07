@@ -133,7 +133,7 @@ export function SettingsPageSkeleton({
             ];
 
   return (
-    <main className="bg-bg-base text-content-primary" aria-hidden="true">
+    <main className="text-content-primary" aria-hidden="true">
       <div className="relative pb-24 pt-6 sm:px-6">
         <div className="relative mx-auto w-full max-w-[760px]">
           {/* Mirrors the page's header row: the "Settings" h1 (real since

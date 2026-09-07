@@ -233,7 +233,7 @@ function PaymentCallbackContent() {
 
 export default function PaymentCallbackPage() {
   return (
-    <main className="min-h-screen bg-bg-base text-content-primary">
+    <main className="min-h-screen text-content-primary">
       <div className="relative mx-auto flex min-h-screen w-full max-w-[720px] items-center justify-center px-6 py-12">
         {/* Gold-thread ray fan (NEXT_PUBLIC_FEATURE_TEXTILE). Replaces the
             blurred brand blobs below, which the same flag hides. Inert off. */}

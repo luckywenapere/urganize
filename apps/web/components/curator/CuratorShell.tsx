@@ -103,7 +103,7 @@ export function CuratorShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-bg-base">
+    <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-stroke-default bg-bg-base/95 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-3 px-4">
           {/* The eyebrow is the first thing to go below `sm`: with a dual

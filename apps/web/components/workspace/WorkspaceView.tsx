@@ -1225,7 +1225,7 @@ export function WorkspaceView() {
   // activity list instead of letting the page grow. At lg+ every one of these
   // reverts to the block layout the desktop views have always assumed.
   return (
-    <main className="flex min-h-full flex-col bg-bg-base text-content-primary lg:block">
+    <main className="flex min-h-full flex-col text-content-primary lg:block">
       {/* Mobile gutter comes from AppShell's <main> (px-4). Layering another
           px-4 here on mobile compounded to 32px each side, eating content
           area on phones where TasksPanel fills the screen full-width. The

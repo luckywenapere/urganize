@@ -392,7 +392,7 @@ export function TeamWall() {
 
   if (isAuthLoading || isLoading) {
     return (
-      <main className="min-h-screen bg-bg-base px-4 py-12">
+      <main className="min-h-screen px-4 py-12">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
           <Logo />
           <div className="h-8 w-64 animate-pulse rounded bg-bg-elevated" />
@@ -404,7 +404,7 @@ export function TeamWall() {
 
   if (!isAuthenticated) {
     return (
-      <main className="min-h-screen bg-bg-base px-4 py-12">
+      <main className="min-h-screen px-4 py-12">
         <div className="mx-auto flex w-full max-w-md flex-col gap-6">
           <Logo />
           <h1 className="font-display text-2xl font-semibold text-content-primary">
@@ -421,7 +421,7 @@ export function TeamWall() {
   const isOwner = Boolean(team?.isOwnerOrAdmin);
 
   return (
-    <main className="min-h-screen bg-bg-base px-4 py-12">
+    <main className="min-h-screen px-4 py-12">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
         <Logo />
 

@@ -245,7 +245,7 @@ function LegacyLockedPage() {
   }, [isAuthenticated]);
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-bg-base px-4 py-12">
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-12">
       {/* Gold-thread ray fan (NEXT_PUBLIC_FEATURE_TEXTILE), inert with the flag
           off. Same entrance treatment as /auth — this is the other page a
           signed-out or lapsed user lands on. */}
