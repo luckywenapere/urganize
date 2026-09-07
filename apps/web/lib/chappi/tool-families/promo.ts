@@ -246,8 +246,14 @@ export const PROMO_TOOLS: ChappiTool[] = [
       if (!res.ok) return fail(apiError(res, 'Could not build the recap.'));
       return {
         ok: true,
-        summary: 'Built the recap card. Open the release to share or download it.',
-        clientAction: { type: 'navigate', href: `/dashboard?release=${releaseId}` },
+        summary: 'Built the recap card and put it in the conversation to save.',
+        // Hands the poster over here rather than sending anyone to the
+        // release. It used to navigate and say "open the release to share or
+        // download it", which pointed at a modal button — that modal was
+        // removed 2026-09-07 (founder call: the recap belongs in this
+        // conversation), so the pointer would now aim at nothing. The card
+        // fetches its own signed URLs, which is why only the id travels.
+        clientAction: { type: 'open_recap', releaseId },
       };
     },
   },

@@ -25,6 +25,7 @@ import { TeamBriefNudge } from './TeamBriefNudge';
 import { BriefAttribution } from './BriefAttribution';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
+import { ChappiRecapCard } from '@/components/chappi/ChappiRecapCard';
 import { ChappiSongUploadCard } from '@/components/chappi/ChappiSongUploadCard';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import type { ReleaseCoverArt } from '@/types/cover-art';
@@ -187,6 +188,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const coverArtRelease = coverArtReleaseId
     ? releases.find((release) => release.id === coverArtReleaseId) ?? null
     : null;
+  // The recap card is the same slot mechanics for the opposite direction: the
+  // two above hand a file IN, this one hands two PNGs OUT. Its own slot for the
+  // same reason — a manager can plausibly be finishing one release while
+  // uploading art for another, and one shared slot would swallow whichever
+  // card was already there.
+  const [recapReleaseId, setRecapReleaseId] = useState<string | null>(null);
+  const recapRelease = recapReleaseId
+    ? releases.find((release) => release.id === recapReleaseId) ?? null
+    : null;
   const invalidateScene = useSceneDataStore((state) => state.invalidate);
 
   // Which assistant message (if any) gets the word-by-word reveal. Only a
@@ -216,6 +226,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     if (messages.length === 0) {
       if (songUploadReleaseId) setSongUploadReleaseId(null);
       if (coverArtReleaseId) setCoverArtReleaseId(null);
+      if (recapReleaseId) setRecapReleaseId(null);
     }
   }
 
@@ -417,6 +428,59 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         })();
         return;
       }
+      case 'generate_recap': {
+        const target =
+          scopedRelease?.id ??
+          todaysDirective?.releaseId ??
+          (releases.length === 1 ? releases[0]?.id : null);
+        if (!target) {
+          appendAssistantReply(
+            'Which release? Open one first, or tell me its name and ask again.'
+          );
+          return;
+        }
+        // Builds the card here rather than pointing at a button, for the same
+        // reason the status branch above does: the recap modal was removed
+        // 2026-09-07 (founder call — the recap belongs in this conversation),
+        // so a pointer would aim at nothing. Same route the generate_recap
+        // tool calls, so the answer is identical with or without a model.
+        //
+        // No highlight in this path, deliberately: there is no model to hear
+        // "say it went platinum", and the route treats it as optional. Anyone
+        // who wants one asks in a sentence, which is the agentic path.
+        void (async () => {
+          try {
+            const token = await getAccessToken();
+            const response = await fetch(`/api/releases/${target}/recap`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({}),
+            });
+            const payload = (await response.json().catch(() => ({}))) as { error?: string };
+            if (!response.ok) {
+              appendAssistantReply(
+                // The route's own wording covers both "not finished yet" and
+                // "not yours", and it must not name a switch — the same reason
+                // the tool routes this through isFlagGateOff.
+                String(payload.error || 'Could not build that recap. Try again.')
+              );
+              return;
+            }
+            // The card fetches its own signed URLs on mount, so nothing from
+            // this response is carried into it.
+            setRecapReleaseId(target);
+            appendAssistantReply('Here is your recap card. Pick a size and save it.');
+          } catch {
+            appendAssistantReply(
+              'Could not reach the recap builder. Check your connection and try again.'
+            );
+          }
+        })();
+        return;
+      }
       case 'create_note': {
         const body = intent.noteBody?.trim() ?? '';
         // Nothing to save — treat it as the chip and open an empty editor.
@@ -499,6 +563,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         openQuickCreate({ releaseId: action.releaseId ?? undefined, source: 'quick_create' });
       else if (action.type === 'open_song_upload') setSongUploadReleaseId(action.releaseId);
       else if (action.type === 'open_cover_art_upload') setCoverArtReleaseId(action.releaseId);
+      else if (action.type === 'open_recap') setRecapReleaseId(action.releaseId);
       else if (action.type === 'refresh') void loadCommandCenter({ force: true });
     }
   };
@@ -878,6 +943,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             }
             onCoverArtUploaded={handleCoverArtUploaded}
             onDismissCoverArtUpload={() => setCoverArtReleaseId(null)}
+            recap={
+              recapRelease
+                ? { releaseId: recapRelease.id, releaseTitle: recapRelease.title }
+                : null
+            }
+            onDismissRecap={() => setRecapReleaseId(null)}
+            onReportRecap={appendAssistantReply}
           />
         </div>
       </div>
@@ -921,6 +993,10 @@ type TranscriptProps = {
   coverArtUpload: { releaseId: string; releaseTitle: string } | null;
   onCoverArtUploaded: (coverArt: ReleaseCoverArt) => void;
   onDismissCoverArtUpload: () => void;
+  /** A finished recap poster the assistant put in the log, ready to save. */
+  recap: { releaseId: string; releaseTitle: string } | null;
+  onDismissRecap: () => void;
+  onReportRecap: (message: string) => void;
 };
 
 /**
@@ -948,6 +1024,9 @@ function Transcript({
   coverArtUpload,
   onCoverArtUploaded,
   onDismissCoverArtUpload,
+  recap,
+  onDismissRecap,
+  onReportRecap,
 }: TranscriptProps) {
   return (
     <div className="space-y-5 pb-2">
@@ -1016,6 +1095,20 @@ function Transcript({
           releaseTitle={coverArtUpload.releaseTitle}
           onUploaded={onCoverArtUploaded}
           onDismiss={onDismissCoverArtUpload}
+        />
+      ) : null}
+
+      {/* The finished recap poster. Keyed by release for the same reason the
+          pickers above are: switching it to another release must reset the
+          size toggle and re-fetch that release's own images, not paint the
+          previous one's under a new title. */}
+      {recap ? (
+        <ChappiRecapCard
+          key={recap.releaseId}
+          releaseId={recap.releaseId}
+          releaseTitle={recap.releaseTitle}
+          onDismiss={onDismissRecap}
+          onReport={onReportRecap}
         />
       ) : null}
 

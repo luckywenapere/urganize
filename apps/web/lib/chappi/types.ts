@@ -44,6 +44,9 @@ export type ChappiIntentKind =
   // lg-only and already carries up to six, and "take me to the shows" is a
   // thing you type when you have one in mind, not a standing button.
   | 'open_shows'
+  // Intent-only for the same reason: the recap is a once-per-release moment,
+  // not a standing button, and it only means anything on a finished release.
+  | 'generate_recap'
   | 'help';
 
 /**
@@ -229,6 +232,21 @@ export type ChappiClientAction =
    */
   | { type: 'open_song_upload'; releaseId: string }
   | { type: 'open_cover_art_upload'; releaseId: string }
+  /**
+   * Put the finished recap poster in the transcript, ready to share or save.
+   *
+   * The mirror image of `open_song_upload`: that one exists because a tool
+   * cannot be HANDED a file, this one because a tool cannot GIVE you one. The
+   * recap's output is two PNGs behind short-lived signed URLs, and a paragraph
+   * of text cannot hand those over — so the tool builds the card and the
+   * browser does the sharing, through the same `shareOrDownloadImage` path the
+   * removed modal used.
+   *
+   * Deliberately carries only the release id: the card fetches its own signed
+   * URLs, so no credential ever reaches the model's context or goes stale
+   * sitting in the transcript.
+   */
+  | { type: 'open_recap'; releaseId: string }
   | { type: 'refresh' };
 
 /** Normalized outcome of a single tool execution, fed back to the model. */

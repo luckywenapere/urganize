@@ -110,7 +110,9 @@ export function buildCreditSubmissionsCsv(
 /** `midnight-ep-credits-2026-08-27.csv`. The release title is in the name
  * because a manager exporting three releases in one sitting would otherwise get
  * three files the browser distinguishes only by "(1)" and "(2)". Slug rule
- * copied from RecapModal's fileNameFor, the other per-release export. */
+ * copied from the recap's own filename builder (now lib/recap-share.ts), the
+ * other per-release export — two copies rather than one shared helper because
+ * the caps differ and neither wants to inherit the other's. */
 export function creditsCsvFileName(releaseTitle: string, isoDate: string): string {
   const slug =
     releaseTitle

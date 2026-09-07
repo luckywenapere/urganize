@@ -67,11 +67,6 @@ const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 // behaviors (hideRails + the scope live-sync below).
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
-// The shareable end-of-release card. Unlike the AI action above, this pill
-// is also gated on the release actually being finished, so it appears at the
-// moment there is something to celebrate rather than sitting there all campaign.
-const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 'true';
-
 // The UrgAns planner. When on, a release with no activities shows the planner
 // card as its whole empty state, and the Plan pill joins the scene switcher
 // until a plan is approved. Supersedes the immediate-apply tailor-plan feature,
@@ -111,16 +106,6 @@ const TEST_RELEASE_ENABLED = isTestReleaseEnabled();
 // most sessions never open.
 const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
-  { ssr: false }
-);
-
-// Dynamic + flag-gated, same rationale as the removed page: while the flag is
-// off the modal's chunk is never requested at all. It said "as both are in
-// production today" until 2026-09-07, when the status update's own modal was
-// deleted — that feature moved into the UrgAns conversation, so this is the
-// one modal left here.
-const RecapModal = dynamic(
-  () => import('@/components/releases/RecapModal').then((m) => m.RecapModal),
   { ssr: false }
 );
 
@@ -239,7 +224,6 @@ export function WorkspaceView() {
   // fetch, the same shape the tailor-plan context load had, because both the
   // planner card's wording and the Plan pill's visibility depend on it.
   const [hasPlanDraft, setHasPlanDraft] = useState(false);
-  const [isRecapOpen, setIsRecapOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isChangeArtistOpen, setIsChangeArtistOpen] = useState(false);
 
@@ -781,14 +765,19 @@ export function WorkspaceView() {
   const hideRailsForLayout =
     (CHAPPI_ENABLED && isRailOpen) || panelBody !== 'activities';
 
-  // A recap is only worth offering once the release has actually happened, and
-  // this now calls the SAME lib/recap-eligibility.ts predicate the recap route
-  // gates on rather than re-implementing it. It used to be a hand-rolled copy
-  // that merely "mirrored" the server — a drift hazard that got worse the
-  // moment the archive action started depending on the same answer. Release day
-  // itself counts (the share moment is the launch, not the day after), and the
+  // "Has this release actually happened", via the SAME
+  // lib/recap-eligibility.ts predicate the recap route gates on rather than a
+  // re-implementation. It used to be a hand-rolled copy that merely "mirrored"
+  // the server — a drift hazard that got worse the moment a second consumer
+  // depended on the same answer. Release day itself counts, and the
   // all-tasks-done clause is what makes "complete" real today, since nothing in
   // the product writes the released status.
+  //
+  // Its ONE consumer here is now the archive action: the recap's own button
+  // was removed 2026-09-07 (founder call — the recap is asked for in the UrgAns
+  // conversation, which hands the poster over inline). It keeps the recap name
+  // because that is what the shared predicate is, and the recap route and
+  // lib/delivery-records.ts are its other two callers.
   const isRecapEligible = useMemo(() => {
     if (!scopedReleaseSlim) return false;
     return isRecapEligibleForRelease(
@@ -802,23 +791,6 @@ export function WorkspaceView() {
       }
     );
   }, [scopedReleaseSlim, scopedTasks]);
-
-  // The recap action, ported from the removed release detail page — only
-  // meaningful when a release is scoped. Structured (see TaskPanelAction)
-  // rather than pre-rendered JSX: TasksPanel places it differently depending
-  // on width (desktop header row, or the mobile release menu — 2026-08-16
-  // redesign), and the menu's search needs a real label to filter against.
-  // Labels stay short — one or two words, not a sentence — matching how a chip
-  // row (or a menu row) is supposed to read.
-  //
-  // It was one of TWO AI actions until 2026-09-07, when the status update's
-  // pill was removed on a founder call: that feature lives in the UrgAns
-  // conversation now (ask it, or the deterministic `status` keyword), so the
-  // route and the generate_status_update tool are the whole surface.
-  const recapAction =
-    scopedReleaseId && RELEASE_RECAP_ENABLED && isRecapEligible
-      ? { label: 'Release recap', onClick: () => setIsRecapOpen(true) }
-      : null;
 
   // Archive is offered once a release reads as finished — the same eligibility
   // the recap uses, because "worth celebrating" and "safe to shelve" are the
@@ -1335,7 +1307,6 @@ export function WorkspaceView() {
                   id={TASKS_PANEL_ID}
                   tasks={scopedTasks}
                   scopedRelease={scopedReleaseSlim}
-                  recapAction={recapAction}
                   archiveAction={archiveAction}
                   changeArtistAction={changeArtistAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
@@ -1382,7 +1353,6 @@ export function WorkspaceView() {
                 closeLabel={backLabel}
                 hideRails={hideRailsForLayout}
                 banner={newReleaseGuideBanner}
-                panelRecapAction={recapAction}
                 panelArchiveAction={archiveAction}
                 panelChangeArtistAction={changeArtistAction}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
@@ -1596,17 +1566,6 @@ export function WorkspaceView() {
           void loadCommandCenter({ force: true });
         }}
       />
-
-      {/* Mounted only while open, so each open refetches and never shows a
-          signed preview URL that expired since last time. */}
-      {RELEASE_RECAP_ENABLED && isRecapOpen && scopedReleaseSlim ? (
-        <RecapModal
-          releaseId={scopedReleaseSlim.id}
-          releaseTitle={scopedReleaseSlim.title}
-          onClose={() => setIsRecapOpen(false)}
-          onToast={(message, tone) => setToast({ message, tone })}
-        />
-      ) : null}
 
       {/* One mount for BOTH entry points into release.draft_plan — the
           one-tap card above and the refine modal's own fire-and-forget

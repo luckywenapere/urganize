@@ -6,11 +6,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // explicitly rather than read from the ambient environment: vitest does not
 // load .env.local, and leaving either to chance would make these assertions
 // depend on whoever ran them.
-async function loadRouter(options: { notes: boolean; planner: boolean; events?: boolean }) {
+async function loadRouter(options: {
+  notes: boolean;
+  planner: boolean;
+  events?: boolean;
+  recap?: boolean;
+}) {
   vi.resetModules();
   vi.stubEnv('NEXT_PUBLIC_FEATURE_NOTES', options.notes ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_RELEASE_PLANNER', options.planner ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_EVENTS', options.events ? 'true' : 'false');
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_RELEASE_RECAP', options.recap ? 'true' : 'false');
   return import('./intent-router');
 }
 
@@ -145,5 +151,42 @@ describe('resolveIntent — shows', () => {
     expect(on.buildHelpReply().suggestions).toContain('My shows');
     const off = await loadRouter({ notes: false, planner: false, events: false });
     expect(off.buildHelpReply().suggestions).not.toContain('My shows');
+  });
+});
+
+// The recap keyword, reassigned 2026-09-07.
+//
+// 'recap' used to sit in the status-update branch's keyword list, which was
+// harmless while the recap card had a button of its own. That button was
+// removed on a founder call, so the word has to reach the card it names —
+// otherwise asking for a release recap silently produces a status paragraph.
+//
+// Placement is the load-bearing part: the release branch above claims
+// 'release', so a recap branch AFTER it would never see "release recap".
+describe('resolveIntent — the recap card', () => {
+  it('routes the recap keyword to the recap card, not the status update', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, recap: true });
+    for (const raw of ['recap', 'release recap', 'get me the recap card']) {
+      expect(resolveIntent(raw).kind).toBe('generate_recap');
+    }
+  });
+
+  it('leaves the status-update wording alone', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, recap: true });
+    for (const raw of ['generate a status update', 'send me a status report', 'summary please']) {
+      expect(resolveIntent(raw).kind).toBe('generate_status');
+    }
+  });
+
+  it('does not claim "release" on its own — that is still the planner', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, recap: true });
+    expect(resolveIntent('start a new release').kind).toBe('plan_release');
+  });
+
+  it('falls through when the recap flag is off', async () => {
+    // With no recap to build, "recap" must not reach a dead end OR silently
+    // become a status update. Help is the honest answer.
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, recap: false });
+    expect(resolveIntent('release recap').kind).not.toBe('generate_recap');
   });
 });

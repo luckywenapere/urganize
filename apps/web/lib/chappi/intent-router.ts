@@ -23,6 +23,7 @@ const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'tru
 
 // Same flag the Shows page, its nav tab and the /api/events routes read.
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
+const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 'true';
 
 /**
  * "what's the setlist", "send the dj pack", "my shows this month".
@@ -151,10 +152,18 @@ export function resolveIntent(raw: string): ChappiIntent {
   if (PLANNER_ENABLED && has('plan', 'rollout', 'roll out', 'campaign')) {
     return { kind: 'plan_release' };
   }
+  // BEFORE the release branch, which claims 'release' — otherwise "release
+  // recap" is read as a request to start one. 'recap' moved out of the
+  // status-update list below on 2026-09-07: harmless while the recap card had
+  // a button of its own, wrong once that button was removed and the word had
+  // to reach the card it names.
+  if (RELEASE_RECAP_ENABLED && has('recap')) {
+    return { kind: 'generate_recap' };
+  }
   if (has('release', 'single', 'album', ' ep', 'drop', 'song', 'track', 'project')) {
     return { kind: PLANNER_ENABLED ? 'plan_release' : 'new_release' };
   }
-  if (has('status', 'update', 'report', 'recap', 'summary')) {
+  if (has('status', 'update', 'report', 'summary')) {
     return { kind: 'generate_status' };
   }
   if (
