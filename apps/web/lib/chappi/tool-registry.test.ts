@@ -277,11 +277,14 @@ describe('flag-gate translation', () => {
   }
 
   /** Both halves of the contract isFlagGateOff matches: the route group reads
-   *  a feature flag AND answers with that exact body. Either alone is not this
-   *  contract — a flag can produce a 400, and a 404 can be an ownership miss. */
+   *  a feature flag AND answers with that body. Either alone is not this
+   *  contract — a flag can produce a 400, and a 404 can be an ownership miss.
+   *
+   *  Both spellings, matching isFlagGateOff itself: newer groups write
+   *  'Not found.' and thirteen older handlers write 'Not found'. */
   function isFlagGatedRoute(routeFile: string): boolean {
     const unit = routeUnit(routeFile);
-    return /NEXT_PUBLIC_FEATURE_/.test(unit) && /'Not found\.'/.test(unit);
+    return /NEXT_PUBLIC_FEATURE_/.test(unit) && /'Not found\.?'/.test(unit);
   }
 
   it('translates the flag-off 404 in every tool that proxies a gated route', () => {

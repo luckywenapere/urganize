@@ -26,6 +26,7 @@
 //    lib/mcp/tools.ts's MCP_TOOL_NAMES_ALLOWED, because MCP has no
 //    confirmation UI — tool-registry.test.ts asserts that structurally.
 
+import { ARTIST_TOOLS } from './tool-families/artists';
 import { CALENDAR_TOOLS } from './tool-families/calendar';
 import { CONTEXT_TOOLS } from './tool-families/context';
 import { CORE_TOOLS } from './tool-families/core';
@@ -57,6 +58,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...PROMO_TOOLS,
   ...SHOW_TOOLS,
   ...PRESS_KIT_TOOLS,
+  ...ARTIST_TOOLS,
 ];
 
 const TOOLS_BY_NAME = new Map<string, ChappiTool>(CHAPPI_TOOLS.map((tool) => [tool.name, tool]));

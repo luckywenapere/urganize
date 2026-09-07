@@ -146,17 +146,28 @@ export async function callInternalApi(
 
 /**
  * True when a route 404'd because ITS FEATURE FLAG is off, as opposed to the
- * thing not existing. Every flag gate in the app answers with exactly
- * `{ error: 'Not found.' }`, while ownership misses say what was missing
- * ('Release not found.', 'Note not found.') — so this stays narrow enough that
- * a genuine ownership 404 still reaches the model intact.
+ * thing not existing. A flag gate answers with a bare 'Not found', while
+ * ownership misses say what was missing ('Release not found.', 'Show not
+ * found.', 'Note not found.') — so this stays narrow enough that a genuine
+ * ownership 404 still reaches the model intact.
+ *
+ * BOTH SPELLINGS, with and without the full stop. The newer route groups
+ * (events, press kits, notes, the directory) write 'Not found.' and say so in
+ * their headers; thirteen older handlers across workspace, the workspace logo,
+ * the roster and task attachments write 'Not found'. Every one of those
+ * thirteen is a feature-flag gate — checked, not assumed — and they mean the
+ * same thing, so recognising one spelling and not the other made a
+ * switched-off feature report itself as missing. Fixing it here rather than in
+ * thirteen routes across five surfaces keeps the contract in the one place
+ * that has to read it.
  *
  * Translating per-request rather than filtering the registry is deliberate:
  * NEXT_PUBLIC_* reads are inlined at build time, so a registry-level gate would
  * bake one environment's answer into the bundle. Precedent: create_note.
  */
 export function isFlagGateOff(response: InternalApiResponse): boolean {
-  return response.status === 404 && response.body.error === 'Not found.';
+  if (response.status !== 404) return false;
+  return response.body.error === 'Not found.' || response.body.error === 'Not found';
 }
 
 /** Reads the route's own error message, falling back to a caller-supplied line. */

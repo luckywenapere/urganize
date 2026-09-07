@@ -173,7 +173,13 @@ export type ChappiToolName =
   | 'update_press_kit'
   | 'write_press_kit_section'
   | 'publish_press_kit'
-  | 'unpublish_press_kit';
+  | 'unpublish_press_kit'
+  // the artist roster (2026-09-07)
+  | 'list_artists'
+  | 'create_artist'
+  | 'rename_artist'
+  | 'remove_artist'
+  | 'move_release_to_artist';
 
 /**
  * A side effect the CLIENT must perform after the agent turn — the agent runs
