@@ -1738,9 +1738,44 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
   — flipped on or before 2026-08-14, and confirmed still on 2026-09-07 by the card being there. (4) ~~changelog entry + version bump~~ —
   **done three times over**, v0.53.0 / v0.56.2 / v0.56.3, which is why a fourth
   entry announcing this surface would be wrong: it is not news. (5) **The only
-  thing genuinely open:** nobody has walked a real release through approve →
-  complete → block → reopen and confirmed approved tasks behave exactly like
-  template ones. That is a manual pass, not an activation step.
+  thing genuinely open, and now narrowed:** nobody has walked a real release
+  through approve → complete → block → reopen. That is a manual pass, not an
+  activation step — but the CODE half of it was compared field by field on
+  2026-09-07 and is clean; see the entry below.
+- **The two write paths compared, 2026-09-07: 13 of 15 columns are identical
+  in shape.** `instantiate.ts` (template) against
+  `release-planning-server.ts` (approval), which is the substance of the
+  manual pass above and the reason it should be quick rather than exploratory.
+  Identical: `release_id`, `workspace_id`, `group_id` (null), `created_by`,
+  `assigned_to` (null), `assigned_collaborator_id` (null), `title`,
+  `status` ('todo'), `priority` ('none'), `state` ('planning'), `position`,
+  `auto_generated` (true), `due_date`, `dependencies`. Two deliberate
+  differences: `assigned_to_user_id` is always the owner on the template path
+  and the resolved `assignee` on the approval path (the owner-history
+  heuristic, falling back to the owner), and `description` comes from
+  `task.description` versus the draft's `task.why`. `metadata.planner` is
+  additive provenance. **`metadata.template` carries the same nine keys under
+  the same names**, which is what matters: the three readers that classify a
+  task — `readTaskType`, `readTemplateTaskId`, `readCompressedRunway` in
+  `lib/tasks-server.ts` — all key off that block, so bucketing, the
+  event-milestone treatment and the blocker gate have no way to tell an
+  approved row from a template one. `readTemplateTaskId`'s key mismatch is
+  confirmed fixed here too (it reads `task_id ?? template_task_id`).
+- **The ONE real asymmetry, and it is the thing to watch on the manual pass.**
+  A MANAGER-ADDED activity inside a draft (`origin !== 'template'`) gets only
+  `task_type` and `compressed_runway` — no `task_id`, `duration_days`, `role`
+  or `tags` — because it claims no template provenance it does not have. Two
+  visible consequences, both designed: `lib/cover-art-tasks.ts` falls back to
+  a title match for it, and the timeline draws it as a single-day marker
+  rather than a bar (null duration means "we do not know", and an honest dot
+  beats a wrong span). An approved plan can hold both kinds, so that is
+  exactly where "behaves the same" legitimately stops — add one by hand before
+  approving and confirm it lands as a marker, or the asymmetry is untested.
+- **What the comparison canNOT settle**, since it is a read of two files: that
+  the cascade actually unlocks, that the blocker gate actually refuses, and
+  that reopening actually re-locks. Those are runtime behaviours over the
+  `dependencies` column, and the column is identically shaped on both paths —
+  which is the reason to expect parity, not evidence of it.
 - **Asked to "flip the planner flag on" on 2026-09-07 and it was already on.**
   Recorded because the ask was reasonable — three separate lines in this file
   said Phase 5 was still gated, one of them written that same day by a session
