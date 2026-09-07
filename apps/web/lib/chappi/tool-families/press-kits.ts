@@ -16,14 +16,19 @@
  * the manager's to enter, because a plausible invented follower count in a kit
  * that goes to a booker is worse than an empty section.
  *
- * The embedded press_kit.draft_section action is the propose-then-apply
+ * The embedded presskit.draft_section action is the propose-then-apply
  * version of the same write and is untouched. This is the conversational one:
  * the model drafts in the transcript, the user says yes, and the tool saves —
- * which is the rule ROLE already sets for suggesting activities.
+ * which is the rule ROLE already sets for suggesting activities. The two share
+ * that allowlist and nothing else: the embedded one calls a model of its own
+ * and therefore owns the prompt building, the output parsing and the
+ * stale-write guard, none of which a same-turn write has any use for. Both
+ * write to urgans_actions so /admin/urgans can tell the doors apart.
  */
 
 import { DRAFT_ALLOWED_FIELDS, isDraftableSection } from '@/lib/press-kit-draft';
 import { PRESS_KIT_SECTION_LABELS } from '@/lib/press-kits';
+import { recordChatActionRun } from '@/lib/urgans-actions/chat-log-server';
 import {
   PRESS_KIT_SECTIONS,
   type PressKit,
@@ -41,6 +46,14 @@ import {
 } from './shared';
 
 const KITS_OFF = "Press kits aren't switched on for this team yet.";
+
+/**
+ * The embedded action write_press_kit_section is the chat door onto. Note the
+ * id has no underscore in "presskit" even though the object type does — an
+ * existing wart in the registry, spelled out here because the readable guess
+ * is wrong and a silently unmatched action type would log nothing.
+ */
+const KIT_DRAFT_ACTION = 'presskit.draft_section';
 
 const VISIBILITIES = ['link_only', 'public', 'public_listed'] as const;
 
@@ -261,6 +274,21 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
       });
       if (isFlagGateOff(res)) return fail(KITS_OFF);
       if (!res.ok) return fail(apiError(res, 'Could not save the section.'));
+
+      // Logged as ALREADY APPLIED, with no prior drafted row, because this is
+      // a one-shot: the words were composed in the transcript and the user
+      // asked for them to be saved, so the write IS the apply. The embedded
+      // presskit.draft_section action is the two-step version of the same job
+      // — a model drafts, a card accepts — and it is what owns the stale-write
+      // guard, which a same-turn write has no window to need.
+      await recordChatActionRun(ctx.adminClient, {
+        actionType: KIT_DRAFT_ACTION,
+        objectId: kitId,
+        actor: ctx.user,
+        status: 'applied',
+        inputSummary: { section, fields: Object.keys(incoming) },
+      });
+
       const saved = Object.keys(incoming).join(', ');
       return {
         ok: true,
