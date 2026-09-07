@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { sameContent } from '@/lib/press-kits';
+import { canAdoptServerContent, sameContent } from '@/lib/press-kits';
 import type { PressKitSectionContent } from '@/types/press-kits';
 
 export type SectionSaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
@@ -155,10 +155,45 @@ export function usePressKitSection({
     void runSave();
   }, [runSave]);
 
-  // Section change: settle what the outgoing one still owes, then reseed for
+  // Two different jobs in one effect, because both are driven by the same two
+  // inputs.
+  //
+  // SAME SECTION, NEW SERVER TRUTH — a background revalidate landed, or a save
+  // came back with the server's recomputed row. This branch is new (2026-09-05)
+  // and is what makes painting from the memory cache safe: the screen can show
+  // a body a few minutes old, and when the fetch behind it disagrees the draft
+  // has to move, or the next keystroke saves the stale copy back over it. It
+  // adopts only when there is nothing to lose; canAdoptServerContent carries
+  // the rule and the reasoning.
+  //
+  // SECTION CHANGE — settle what the outgoing one still owes, then reseed for
   // the incoming one, so no edit is attributed to the wrong section.
   useEffect(() => {
-    if (sectionIdRef.current === sectionId) return;
+    if (sectionIdRef.current === sectionId) {
+      // The common case by far: the server said what we already have, on every
+      // save round trip. Nothing to do, and no setState so no re-render.
+      if (sameContent(draftRef.current, persistedContent)) return;
+
+      if (
+        !canAdoptServerContent({
+          draft: draftRef.current,
+          lastFlushed: lastFlushedRef.current,
+          inFlight: inFlightRef.current,
+          needsResend: resendRef.current,
+        })
+      ) {
+        return;
+      }
+
+      // A pending debounce timer is deliberately left armed: when it fires,
+      // runSave finds the draft equal to lastFlushed and returns without a
+      // request. saveState is left alone too — a draft this clean can only be
+      // 'idle' or a decaying 'saved', and adopting is not a save.
+      draftRef.current = persistedContent;
+      lastFlushedRef.current = persistedContent;
+      setDraftState(persistedContent);
+      return;
+    }
 
     const outgoingId = sectionIdRef.current;
     const pending = draftRef.current;

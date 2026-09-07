@@ -10422,6 +10422,36 @@ kits tab paint from cache while it revalidates and stopped the single-kit screen
 asking the server twice. The migration is applied and the flag is on — the ledger
 entry landing at all is what says so, per the EPK precedent.
 
+**v1.26.1 (2026-09-07) cached the single-kit payload too, and the two halves are
+cached DIFFERENTLY on purpose.** The roster is metadata and lives in
+localStorage (`stores/usePressKitsStore.ts`, the `useNotesStore` mechanics). The
+single-kit payload is memory only (`lib/press-kit-detail-cache.ts`), because
+every photo in it carries a signed Supabase URL — a persisted copy would outlive
+the session and hand back URLs that 403, the trap already recorded for the files,
+song and capture scenes. **Its five-minute TTL is derived, not chosen:** the
+server re-signs only once a URL is 80% through its hour, so a URL handed to us
+can already be 2880s old, leaving a worst case of twelve minutes; five minutes
+keeps the oldest one we serve at 3180s. Redo that arithmetic before raising it.
+It is read PRE-PAINT (`useIsomorphicLayoutEffect`) because the map is empty on
+the server, so a render-time read is a hydration mismatch and a plain effect
+flashes the skeleton for a frame; and it is WRITTEN from an effect mirroring live
+state rather than from `loadDetail`, which is what covers the three mutations
+that update `sections` locally and never re-fetch.
+
+**The hazard that fix had to close, and the reason to read
+`canAdoptServerContent` before touching the autosave.**
+`usePressKitSection`'s section-change effect early-returns on an unchanged
+section id — correctly, since a changing `persistedContent` identity must not
+interrupt typing. That is exactly why the plan scene is excluded from the scene
+cache ("painting a cached copy of a document under live edits could overwrite
+newer text with older"). So a cached body the revalidate then disagreed with
+would have survived in the draft and been saved back over the server's on the
+next keystroke. That effect now adopts server truth when there is nothing to
+lose, and the rule fails toward KEEPING the draft: never while a save is in
+flight, and never while a failed save is waiting to resend — where the save
+path's own `lastFlushed` bookkeeping makes the two bodies match despite the edit
+never having landed, so matching bodies alone would adopt over it.
+
 **The build's own verification record was never written down**, and this
 back-filled section deliberately does not invent one: nothing here was re-run
 while writing it. What IS checkable from the repo today is that the feature
