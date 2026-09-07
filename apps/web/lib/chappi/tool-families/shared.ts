@@ -72,9 +72,11 @@ export type ChappiTool = {
    * builder is READ-ONLY — it validates args and fetches whatever names/counts
    * the card needs to state the blast radius honestly.
    *
-   * Every tool carrying this must also be in lib/mcp/tools.ts's
-   * EXCLUDED_TOOL_NAMES (there is no confirmation UI over MCP);
-   * tool-registry.test.ts asserts that structurally.
+   * Every tool carrying this must be kept OUT of lib/mcp/tools.ts's
+   * MCP_TOOL_NAMES_ALLOWED (there is no confirmation UI over MCP);
+   * tool-registry.test.ts asserts that structurally. That list was a deny-list
+   * named EXCLUDED_TOOL_NAMES until 2026-08-25, when per-user MCP access
+   * inverted it to an allow-list so a new tool is unreachable by default.
    */
   confirm?: (ctx: ChappiToolContext, args: Record<string, unknown>) => Promise<ChappiConfirmOutcome>;
 };
@@ -91,6 +93,29 @@ export function argString(args: Record<string, unknown>, key: string): string {
 export function argBoolean(args: Record<string, unknown>, key: string): boolean | undefined {
   const value = args[key];
   return typeof value === 'boolean' ? value : undefined;
+}
+
+/** Reads an optional number; returns undefined when absent or unusable, so a
+ * caller can tell "not mentioned" from a real 0. Accepts a numeric string
+ * because a model will sometimes send "25" for a number field. */
+export function argNumber(args: Record<string, unknown>, key: string): number | undefined {
+  const value = args[key];
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+/** Reads an array of non-empty strings, dropping anything else. Empty array
+ * when the key is absent or holds no usable entries. */
+export function argStringArray(args: Record<string, unknown>, key: string): string[] {
+  const value = args[key];
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter((entry) => entry.length > 0);
 }
 
 export function fail(summary: string): ChappiToolResult {
@@ -123,17 +148,28 @@ export async function callInternalApi(
 
 /**
  * True when a route 404'd because ITS FEATURE FLAG is off, as opposed to the
- * thing not existing. Every flag gate in the app answers with exactly
- * `{ error: 'Not found.' }`, while ownership misses say what was missing
- * ('Release not found.', 'Note not found.') — so this stays narrow enough that
- * a genuine ownership 404 still reaches the model intact.
+ * thing not existing. A flag gate answers with a bare 'Not found', while
+ * ownership misses say what was missing ('Release not found.', 'Show not
+ * found.', 'Note not found.') — so this stays narrow enough that a genuine
+ * ownership 404 still reaches the model intact.
+ *
+ * BOTH SPELLINGS, with and without the full stop. The newer route groups
+ * (events, press kits, notes, the directory) write 'Not found.' and say so in
+ * their headers; thirteen older handlers across workspace, the workspace logo,
+ * the roster and task attachments write 'Not found'. Every one of those
+ * thirteen is a feature-flag gate — checked, not assumed — and they mean the
+ * same thing, so recognising one spelling and not the other made a
+ * switched-off feature report itself as missing. Fixing it here rather than in
+ * thirteen routes across five surfaces keeps the contract in the one place
+ * that has to read it.
  *
  * Translating per-request rather than filtering the registry is deliberate:
  * NEXT_PUBLIC_* reads are inlined at build time, so a registry-level gate would
  * bake one environment's answer into the bundle. Precedent: create_note.
  */
 export function isFlagGateOff(response: InternalApiResponse): boolean {
-  return response.status === 404 && response.body.error === 'Not found.';
+  if (response.status !== 404) return false;
+  return response.body.error === 'Not found.' || response.body.error === 'Not found';
 }
 
 /** Reads the route's own error message, falling back to a caller-supplied line. */

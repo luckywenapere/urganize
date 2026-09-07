@@ -24,8 +24,10 @@ import {
 import { TeamBriefNudge } from './TeamBriefNudge';
 import { BriefAttribution } from './BriefAttribution';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
+import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
 import { ChappiSongUploadCard } from '@/components/chappi/ChappiSongUploadCard';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
+import type { ReleaseCoverArt } from '@/types/cover-art';
 import type { ReleaseSong } from '@/types/song';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { captureAnalyticsEvent } from '@/lib/analytics';
@@ -177,6 +179,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const songUploadRelease = songUploadReleaseId
     ? releases.find((release) => release.id === songUploadReleaseId) ?? null
     : null;
+  // Cover art gets its own slot rather than sharing the song's: a manager can
+  // reasonably be asked for both on one release, and one slot would silently
+  // replace whichever picker was already open.
+  const [coverArtReleaseId, setCoverArtReleaseId] = useState<string | null>(null);
+  const coverArtRelease = coverArtReleaseId
+    ? releases.find((release) => release.id === coverArtReleaseId) ?? null
+    : null;
   const invalidateScene = useSceneDataStore((state) => state.invalidate);
 
   // Which assistant message (if any) gets the word-by-word reveal. Only a
@@ -203,7 +212,10 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const [prevMessageCount, setPrevMessageCount] = useState(messages.length);
   if (messages.length !== prevMessageCount) {
     setPrevMessageCount(messages.length);
-    if (messages.length === 0 && songUploadReleaseId) setSongUploadReleaseId(null);
+    if (messages.length === 0) {
+      if (songUploadReleaseId) setSongUploadReleaseId(null);
+      if (coverArtReleaseId) setCoverArtReleaseId(null);
+    }
   }
 
   const hasMessages = messages.length > 0;
@@ -260,6 +272,22 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       releaseTitle
         ? `Uploaded "${song.fileName}" to ${releaseTitle}.`
         : `Uploaded "${song.fileName}".`
+    );
+  };
+
+  // Cover art has landed. Same shape as the song handler, plus one thing it
+  // does not need: the CATALOG has to be refreshed as well, because the
+  // release card and the topbar both show the artwork, and a stale card is the
+  // one place someone would notice nothing had happened.
+  const handleCoverArtUploaded = (coverArt: ReleaseCoverArt) => {
+    setCoverArtReleaseId(null);
+    invalidateScene(coverArt.releaseId, 'coverart');
+    void loadCommandCenter({ force: true });
+    const releaseTitle = releases.find((item) => item.id === coverArt.releaseId)?.title;
+    appendAssistantReply(
+      releaseTitle
+        ? `Set "${coverArt.fileName}" as the cover art for ${releaseTitle}.`
+        : `Set "${coverArt.fileName}" as the cover art.`
     );
   };
 
@@ -377,6 +405,14 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           });
         return;
       }
+      case 'open_shows':
+        // Navigation rather than a tool call, and deliberately so: with no
+        // model configured this router IS the assistant, and the shows page is
+        // where a set is actually built. Nothing to create from here.
+        router.push('/dashboard/shows');
+        appendAssistantReply('Opening your shows.');
+        break;
+
       case 'take_note':
         openBlankNote();
         return;
@@ -418,6 +454,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       else if (action.type === 'open_quick_create')
         openQuickCreate({ releaseId: action.releaseId ?? undefined, source: 'quick_create' });
       else if (action.type === 'open_song_upload') setSongUploadReleaseId(action.releaseId);
+      else if (action.type === 'open_cover_art_upload') setCoverArtReleaseId(action.releaseId);
       else if (action.type === 'refresh') void loadCommandCenter({ force: true });
     }
   };
@@ -790,6 +827,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             }
             onSongUploaded={handleSongUploaded}
             onDismissSongUpload={() => setSongUploadReleaseId(null)}
+            coverArtUpload={
+              coverArtRelease
+                ? { releaseId: coverArtRelease.id, releaseTitle: coverArtRelease.title }
+                : null
+            }
+            onCoverArtUploaded={handleCoverArtUploaded}
+            onDismissCoverArtUpload={() => setCoverArtReleaseId(null)}
           />
         </div>
       </div>
@@ -830,6 +874,9 @@ type TranscriptProps = {
   songUpload: { releaseId: string; releaseTitle: string } | null;
   onSongUploaded: (song: ReleaseSong) => void;
   onDismissSongUpload: () => void;
+  coverArtUpload: { releaseId: string; releaseTitle: string } | null;
+  onCoverArtUploaded: (coverArt: ReleaseCoverArt) => void;
+  onDismissCoverArtUpload: () => void;
 };
 
 /**
@@ -854,6 +901,9 @@ function Transcript({
   songUpload,
   onSongUploaded,
   onDismissSongUpload,
+  coverArtUpload,
+  onCoverArtUploaded,
+  onDismissCoverArtUpload,
 }: TranscriptProps) {
   return (
     <div className="space-y-5 pb-2">
@@ -912,6 +962,16 @@ function Transcript({
           releaseTitle={songUpload.releaseTitle}
           onUploaded={onSongUploaded}
           onDismiss={onDismissSongUpload}
+        />
+      ) : null}
+
+      {coverArtUpload ? (
+        <ChappiCoverArtUploadCard
+          key={coverArtUpload.releaseId}
+          releaseId={coverArtUpload.releaseId}
+          releaseTitle={coverArtUpload.releaseTitle}
+          onUploaded={onCoverArtUploaded}
+          onDismiss={onDismissCoverArtUpload}
         />
       ) : null}
 

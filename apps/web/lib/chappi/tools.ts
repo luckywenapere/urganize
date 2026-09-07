@@ -22,19 +22,25 @@
 //    NEXT_PUBLIC_* reads are inlined at build time.
 // 2. A tool with a `confirm` builder is CONFIRMATION-GATED: the model can
 //    propose it, but the runner refuses to execute it and the user has to
-//    approve a card first (see runner.ts). Every gated tool must also be in
-//    lib/mcp/tools.ts's EXCLUDED_TOOL_NAMES, because MCP has no confirmation
-//    UI — tool-registry.test.ts asserts that structurally.
+//    approve a card first (see runner.ts). A gated tool must never reach
+//    lib/mcp/tools.ts's MCP_TOOL_NAMES_ALLOWED, because MCP has no
+//    confirmation UI — tool-registry.test.ts asserts that structurally.
 
+import { ARTIST_TOOLS } from './tool-families/artists';
 import { CALENDAR_TOOLS } from './tool-families/calendar';
+import { CAPTURE_TOOLS } from './tool-families/capture';
 import { CONTEXT_TOOLS } from './tool-families/context';
 import { CORE_TOOLS } from './tool-families/core';
+import { DIRECTORY_TOOLS } from './tool-families/directory';
+import { FILE_TOOLS } from './tool-families/files';
 import { INSIGHTS_TOOLS } from './tool-families/insights';
 import { METADATA_TOOLS } from './tool-families/metadata';
 import { NOTE_TOOLS } from './tool-families/notes';
 import { PLANNER_TOOLS } from './tool-families/planner';
+import { PRESS_KIT_TOOLS } from './tool-families/press-kits';
 import { PROMO_TOOLS } from './tool-families/promo';
 import { RELEASE_TOOLS } from './tool-families/releases';
+import { SHOW_TOOLS } from './tool-families/shows';
 import { SONG_TOOLS } from './tool-families/song';
 import { TEAM_TOOLS } from './tool-families/team';
 import type { ChappiTool } from './tool-families/shared';
@@ -53,6 +59,12 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...NOTE_TOOLS,
   ...TEAM_TOOLS,
   ...PROMO_TOOLS,
+  ...SHOW_TOOLS,
+  ...PRESS_KIT_TOOLS,
+  ...ARTIST_TOOLS,
+  ...FILE_TOOLS,
+  ...CAPTURE_TOOLS,
+  ...DIRECTORY_TOOLS,
 ];
 
 const TOOLS_BY_NAME = new Map<string, ChappiTool>(CHAPPI_TOOLS.map((tool) => [tool.name, tool]));

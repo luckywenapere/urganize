@@ -14,6 +14,7 @@ import { TaskService } from '@/lib/services/task-service';
 import { listOwnedReleases } from '../release-scope';
 import {
   apiError,
+  argBoolean,
   argString,
   callInternalApi,
   fail,
@@ -240,6 +241,44 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       });
       if (!res.ok) return fail(apiError(res, 'Could not add the comment.'));
       return { ok: true, summary: 'Added the comment.', clientAction: { type: 'refresh' } };
+    },
+  },
+  {
+    // ONE tool with a boolean rather than archive_/restore_ as a pair. Nothing
+    // records what a release's status was before it was archived, so restoring
+    // writes 'draft' either way — two tools would imply a symmetry that does
+    // not exist. Not gated: archiving loses nothing and this same tool undoes
+    // it, which is also why the workspace's own control is not styled
+    // destructive.
+    name: 'archive_release',
+    kind: 'mutate',
+    description:
+      "Archive a finished release, or bring one back. Archiving hides it from the working catalogue and frees a slot against the plan's active-release limit; nothing is deleted. Pass archived: false to restore it, which returns it to draft.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        releaseId: { type: 'string' },
+        archived: { type: 'boolean', description: 'True archives it, false brings it back.' },
+      },
+      required: ['releaseId', 'archived'],
+    },
+    execute: async (ctx, args) => {
+      const releaseId = argString(args, 'releaseId');
+      if (!releaseId) return fail('releaseId is required.');
+      const archived = argBoolean(args, 'archived');
+      if (archived === undefined) return fail('Say whether to archive it or bring it back.');
+      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/archive`, {
+        method: 'POST',
+        body: { archived },
+      });
+      if (!res.ok) return fail(apiError(res, 'Could not change the release.'));
+      return {
+        ok: true,
+        summary: archived
+          ? 'Archived it. Nothing was deleted, and that frees a slot for a new release.'
+          : 'Brought it back, as a draft.',
+        clientAction: { type: 'refresh' },
+      };
     },
   },
 ];

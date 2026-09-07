@@ -8,6 +8,7 @@
 
 import {
   apiError,
+  argBoolean,
   argString,
   callInternalApi,
   fail,
@@ -138,6 +139,113 @@ export const METADATA_TOOLS: ChappiTool[] = [
         ok: true,
         summary: `Updated ${names.join(', ')}.`,
         clientAction: { type: 'refresh' },
+      };
+    },
+  },
+  {
+    name: 'get_release_credits',
+    kind: 'read',
+    description:
+      "The collaborator credits link for a release, and what has come back through it: legal names, roles, songwriter and master splits, PRO and publisher details. This is what a distributor handoff needs.",
+    inputSchema: {
+      type: 'object',
+      properties: { releaseId: { type: 'string' } },
+      required: ['releaseId'],
+    },
+    execute: async (ctx, args) => {
+      const releaseId = argString(args, 'releaseId');
+      if (!releaseId) return fail('releaseId is required.');
+      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/credits`, {
+        method: 'GET',
+      });
+      if (isFlagGateOff(res)) return fail(METADATA_OFF);
+      if (!res.ok) return fail(apiError(res, 'Could not load the credits.'));
+      const link = res.body.link as Record<string, unknown> | null;
+      const submissions = (res.body.submissions || []) as Array<Record<string, unknown>>;
+      return {
+        ok: true,
+        summary: link
+          ? `${submissions.length} ${
+              submissions.length === 1 ? 'answer' : 'answers'
+            } so far. The link is ${link.closedAt ? 'closed' : 'open'}.`
+          : 'No credits link on this release yet.',
+        data: {
+          shareUrl: link ? `${ctx.origin}/credits/${String(link.shareToken || '')}` : null,
+          isClosed: link ? Boolean(link.closedAt) : null,
+          submissions: submissions.map((entry) => ({
+            legalName: entry.legalName ?? null,
+            stageName: entry.stageName ?? null,
+            roles: entry.roles ?? [],
+            songwriterSplit: entry.songwriterSplit ?? null,
+            masterSplit: entry.masterSplit ?? null,
+            pro: entry.pro ?? null,
+            publisher: entry.publisher ?? null,
+          })),
+        },
+      };
+    },
+  },
+  {
+    name: 'create_credits_link',
+    kind: 'mutate',
+    description:
+      "Create the shareable, no-login link collaborators use to submit their own credits and splits. Safe to call twice — a release that already has one gets it back rather than a second link.",
+    inputSchema: {
+      type: 'object',
+      properties: { releaseId: { type: 'string' } },
+      required: ['releaseId'],
+    },
+    execute: async (ctx, args) => {
+      const releaseId = argString(args, 'releaseId');
+      if (!releaseId) return fail('releaseId is required.');
+      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/credits`, {
+        method: 'POST',
+        body: {},
+      });
+      if (isFlagGateOff(res)) return fail(METADATA_OFF);
+      if (!res.ok) return fail(apiError(res, 'Could not create the credits link.'));
+      const link = res.body.link as Record<string, unknown> | undefined;
+      const token = String(link?.shareToken || '');
+      return {
+        ok: true,
+        summary: token
+          ? `Collaborators can submit their credits at ${ctx.origin}/credits/${token}. Anyone with the link can fill it in once.`
+          : 'Created the credits link.',
+        data: { shareUrl: token ? `${ctx.origin}/credits/${token}` : null },
+      };
+    },
+  },
+  {
+    // Not gated: closing is reversible by the same tool, the link survives,
+    // and every answer already given is kept. It is the pause button, not a
+    // revoke — rotating the token is a separate, deliberate act on the page.
+    name: 'close_credits_link',
+    kind: 'mutate',
+    description:
+      'Stop or restart a credits link taking answers. Closing keeps the link and everything already submitted; it just stops accepting more. Pass open: true to reopen it.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        releaseId: { type: 'string' },
+        open: { type: 'boolean', description: 'True reopens a closed link.' },
+      },
+      required: ['releaseId'],
+    },
+    execute: async (ctx, args) => {
+      const releaseId = argString(args, 'releaseId');
+      if (!releaseId) return fail('releaseId is required.');
+      const reopen = argBoolean(args, 'open') === true;
+      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/credits`, {
+        method: 'PATCH',
+        body: { action: reopen ? 'reopen' : 'close' },
+      });
+      if (isFlagGateOff(res)) return fail(METADATA_OFF);
+      if (!res.ok) return fail(apiError(res, 'Could not change the credits link.'));
+      return {
+        ok: true,
+        summary: reopen
+          ? 'The credits link is taking answers again.'
+          : 'The credits link is closed. Anyone opening it now is told the request is closed, and nothing already submitted was lost.',
       };
     },
   },

@@ -37,7 +37,14 @@ export type ChappiChipIntent =
  * nothing to say, which is what `take_note` is for — that one opens an empty
  * editor instead.
  */
-export type ChappiIntentKind = ChappiChipIntent | 'create_note' | 'help';
+export type ChappiIntentKind =
+  | ChappiChipIntent
+  | 'create_note'
+  // Intent-only, like create_note and for a related reason: the chip row is
+  // lg-only and already carries up to six, and "take me to the shows" is a
+  // thing you type when you have one in mind, not a standing button.
+  | 'open_shows'
+  | 'help';
 
 /**
  * Answers the planner intake already knows before it asks, carried by a chip.
@@ -150,7 +157,56 @@ export type ChappiToolName =
   | 'list_content_posts'
   | 'create_content_post'
   | 'update_content_post'
-  | 'delete_content_post';
+  | 'delete_content_post'
+  // shows, sets, the song catalogue and the DJ pack (2026-09-07)
+  | 'list_shows'
+  | 'get_show'
+  | 'list_songs'
+  | 'create_song'
+  | 'create_show'
+  | 'update_show'
+  | 'delete_show'
+  | 'create_setlist'
+  | 'update_setlist'
+  | 'delete_setlist'
+  | 'add_setlist_item'
+  | 'remove_setlist_item'
+  | 'reorder_setlist'
+  | 'send_dj_pack'
+  // the standing per-artist press kit (2026-09-07)
+  | 'list_press_kits'
+  | 'get_press_kit'
+  | 'create_press_kit'
+  | 'update_press_kit'
+  | 'write_press_kit_section'
+  | 'publish_press_kit'
+  | 'unpublish_press_kit'
+  // the artist roster (2026-09-07)
+  | 'list_artists'
+  | 'create_artist'
+  | 'rename_artist'
+  | 'remove_artist'
+  | 'move_release_to_artist'
+  // cover art and what else is attached to a release (2026-09-07)
+  | 'get_cover_art'
+  | 'upload_cover_art'
+  | 'list_release_files'
+  // fan email capture, collaborator credits, and archiving (2026-09-07)
+  | 'get_capture_page'
+  | 'create_capture_page'
+  | 'update_capture_page'
+  | 'list_capture_leads'
+  | 'get_release_credits'
+  | 'create_credits_link'
+  | 'close_credits_link'
+  | 'archive_release'
+  // the Urganize Directory and work requests (2026-09-07)
+  | 'search_directory'
+  | 'get_my_directory_profile'
+  | 'update_my_directory_profile'
+  | 'list_work_requests'
+  | 'send_work_request'
+  | 'answer_work_request';
 
 /**
  * A side effect the CLIENT must perform after the agent turn — the agent runs
@@ -172,6 +228,7 @@ export type ChappiClientAction =
    * through the same signed-URL flow the workspace scene uses.
    */
   | { type: 'open_song_upload'; releaseId: string }
+  | { type: 'open_cover_art_upload'; releaseId: string }
   | { type: 'refresh' };
 
 /** Normalized outcome of a single tool execution, fed back to the model. */

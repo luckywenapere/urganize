@@ -6,10 +6,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // explicitly rather than read from the ambient environment: vitest does not
 // load .env.local, and leaving either to chance would make these assertions
 // depend on whoever ran them.
-async function loadRouter(options: { notes: boolean; planner: boolean }) {
+async function loadRouter(options: { notes: boolean; planner: boolean; events?: boolean }) {
   vi.resetModules();
   vi.stubEnv('NEXT_PUBLIC_FEATURE_NOTES', options.notes ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_RELEASE_PLANNER', options.planner ? 'true' : 'false');
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_EVENTS', options.events ? 'true' : 'false');
   return import('./intent-router');
 }
 
@@ -90,5 +91,59 @@ describe('resolveIntent — existing branches are unaffected', () => {
   it('falls back to new_release when the planner is off', async () => {
     const { resolveIntent } = await loadRouter({ notes: true, planner: false });
     expect(resolveIntent('start a new single').kind).toBe('new_release');
+  });
+});
+
+describe('resolveIntent — shows', () => {
+  it('routes the phrases that can only be about a live date', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, events: true });
+    for (const prompt of [
+      "what's the setlist for Friday",
+      'send the DJ pack to Tunde',
+      'the run of show',
+      'my shows this month',
+      'do we have a gig in December',
+      'which venue is it',
+      'when is soundcheck',
+    ]) {
+      expect(resolveIntent(prompt), prompt).toEqual({ kind: 'open_shows' });
+    }
+  });
+
+  it('NEVER claims the bare word "show"', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, events: true });
+    // The whole difficulty of this branch. Routing either of these to the
+    // shows page would be worse than not having the branch at all.
+    expect(resolveIntent('show me my releases')).toEqual({ kind: 'plan_release' });
+    expect(resolveIntent('show me what is due today')).toEqual({ kind: 'todays_focus' });
+  });
+
+  it('beats the planner branch on a set, and loses to it on a rollout', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, events: true });
+    // 'plan' is in both, and a setlist is the more specific thing.
+    expect(resolveIntent('plan the setlist')).toEqual({ kind: 'open_shows' });
+    expect(resolveIntent('plan the rollout')).toEqual({ kind: 'plan_release' });
+  });
+
+  it('still lets an activity win, so "add a task about the setlist" is a task', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, events: true });
+    expect(resolveIntent('add a task to finish the setlist')).toEqual({ kind: 'add_task' });
+  });
+
+  it('is silent when shows are switched off', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, events: false });
+    // Falls through to the branches that were there before, rather than
+    // offering a page that is not switched on. Neither of these matches any
+    // other branch — "setlist" is not a release word — so both land on help,
+    // which is exactly what they did before this branch existed.
+    expect(resolveIntent("what's the setlist for Friday")).toEqual({ kind: 'help' });
+    expect(resolveIntent('when is soundcheck')).toEqual({ kind: 'help' });
+  });
+
+  it('offers shows in the help card only where the feature exists', async () => {
+    const on = await loadRouter({ notes: false, planner: false, events: true });
+    expect(on.buildHelpReply().suggestions).toContain('My shows');
+    const off = await loadRouter({ notes: false, planner: false, events: false });
+    expect(off.buildHelpReply().suggestions).not.toContain('My shows');
   });
 });

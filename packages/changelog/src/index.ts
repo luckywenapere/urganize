@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.25.0",
+    date: "September 7, 2026",
+    highlights: [
+      "UrgAns knows about your shows now. Ask what is coming up, build a set from the artist's catalogue, check whether it will run over your slot, and send the pack to your DJ.",
+      "It can write and publish a press kit too. Talk a bio through with it, then tell it to put the kit live.",
+      "It can also add someone to your roster, move a release to a different artist, and archive a release you have finished.",
+      "And when you ask for something it is not allowed to do, it tells you where to find it instead of guessing.",
+    ],
+  },
+  {
     version: "1.24.2",
     date: "September 5, 2026",
     highlights: [
