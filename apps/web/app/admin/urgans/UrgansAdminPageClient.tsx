@@ -7,13 +7,18 @@ import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { ALL_ACTIONS_BUCKET, type TeamMonthSummary } from '@/lib/urgans-actions/admin-summary';
 
-// /admin/urgans — read-only console for embedded UrgAns actions (Phase 0 of
-// "UrgAns in every function"; today the one action is release.draft_plan).
-// One row per team, per month, per action type: how many drafts were made,
-// applied, discarded or failed, what they cost in tokens, and how often the
-// entitlement gate refused a Solo team (the guard trips and upgrade signals
-// land on a separate "(all actions)" row, since none of the three billing
-// signals names a specific action — see admin-summary.ts).
+// /admin/urgans — read-only console for embedded UrgAns actions ("UrgAns in
+// every function"; today release.draft_plan and presskit.draft_section).
+// One row per team, per month, per action type, PER DOOR: how many drafts were
+// made, applied, discarded or failed, what they cost in tokens, and how often
+// the entitlement gate refused a Solo team (the guard trips and upgrade
+// signals land on a separate "(all actions)" row, since none of the three
+// billing signals names a specific action — see admin-summary.ts).
+//
+// "Door" is the button inside the product surface versus the same job asked
+// of UrgAns in chat. They are counted separately because only one of them is
+// entitlement-gated, so a single number would answer neither "is anyone using
+// the buttons" nor "is the chat carrying this instead".
 //
 // Follows the /admin/teams gate/load pattern exactly (authLoading -> !user ->
 // redirect; the backing GET's 401/403 is the real gate); no write actions
@@ -27,6 +32,13 @@ type UrgansPayload = {
 };
 
 const numberFormat = new Intl.NumberFormat('en');
+
+/** Plain words for the two doors. An unrecognised value renders verbatim
+ *  rather than being mapped to a guess. */
+const DOOR_LABELS: Record<string, string> = {
+  button: 'Button',
+  chat: 'Chat',
+};
 
 function currentMonthKey(): string {
   return new Date().toISOString().slice(0, 7);
@@ -149,10 +161,12 @@ export default function UrgansAdminPageClient() {
         UrgAns actions
       </h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
-        Every embedded UrgAns action, drafted / applied / discarded / failed, by team and
-        month. Guard trips and upgrade signals land on their own &ldquo;
-        {ALL_ACTIONS_BUCKET}&rdquo; row, since none of the three names one specific action.
-        Last {payload?.lookbackDays ?? 90} days.
+        Every UrgAns action, drafted / applied / discarded / failed, by team and month and
+        by which door it came through &mdash; the button inside the release, or the same job
+        asked for in chat. Only the button is plan-gated, so the split is what says whether
+        the chat is carrying this instead. Guard trips and upgrade signals land on their own
+        &ldquo;{ALL_ACTIONS_BUCKET}&rdquo; row, since none of the three names one specific
+        action. Last {payload?.lookbackDays ?? 90} days.
       </p>
 
       {error ? (
@@ -211,11 +225,14 @@ export default function UrgansAdminPageClient() {
       </div>
 
       <div className="mt-5 overflow-x-auto rounded-xl border border-stroke-default">
-        <table className="w-full min-w-[760px] text-left text-sm">
+        {/* Widened with the Door column so the table scrolls inside its own
+            container rather than squeezing nine numeric columns. */}
+        <table className="w-full min-w-[860px] text-left text-sm">
           <thead>
             <tr className="border-b border-stroke-default bg-bg-elevated text-xs text-content-tertiary">
               <th className="px-3 py-2 font-medium">Team</th>
               <th className="px-3 py-2 font-medium">Action</th>
+              <th className="px-3 py-2 font-medium">Door</th>
               <th className="px-3 py-2 font-medium">Drafted</th>
               <th className="px-3 py-2 font-medium">Applied</th>
               <th className="px-3 py-2 font-medium">Discarded</th>
@@ -228,20 +245,21 @@ export default function UrgansAdminPageClient() {
           <tbody>
             {rowsForMonth.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-content-tertiary">
+                <td colSpan={10} className="px-3 py-6 text-center text-content-tertiary">
                   Nothing this month.
                 </td>
               </tr>
             ) : (
               rowsForMonth.map((row) => (
                 <tr
-                  key={`${row.workspaceId}:${row.actionType}`}
+                  key={`${row.workspaceId}:${row.actionType}:${row.source}`}
                   className="border-b border-stroke-subtle last:border-0"
                 >
                   <td className="px-3 py-2 text-content-primary">
                     {row.teamName || row.workspaceId}
                   </td>
                   <td className="px-3 py-2 text-content-secondary">{row.actionType}</td>
+                  <td className="px-3 py-2 text-content-secondary">{DOOR_LABELS[row.source] ?? row.source}</td>
                   <td className="px-3 py-2 text-content-primary">
                     {numberFormat.format(row.drafted)}
                   </td>
