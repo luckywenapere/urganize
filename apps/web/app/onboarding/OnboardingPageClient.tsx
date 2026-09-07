@@ -948,7 +948,7 @@ export default function OnboardingPage() {
   const stepKicker = `Step ${visibleStepNumber} of ${visibleTotalSteps}`;
 
   return (
-    <main className="relative min-h-screen bg-bg-base text-content-primary">
+    <main className="relative min-h-screen text-content-primary">
       {/* Ikat bleed (NEXT_PUBLIC_FEATURE_TEXTILE) — warp-dyed vertical bands
           fading out before they reach the wizard's own content. Inert with the
           flag off; this page is `○ Static` and nothing here changes that. */}

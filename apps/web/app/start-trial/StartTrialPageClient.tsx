@@ -200,7 +200,7 @@ export default function StartTrialPageClient() {
   if (!CARD_TRIAL_ENABLED) return null;
 
   return (
-    <div className="min-h-screen bg-bg-base px-4 py-12">
+    <div className="min-h-screen px-4 py-12">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
         <Logo />
 

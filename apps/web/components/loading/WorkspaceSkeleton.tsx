@@ -135,7 +135,7 @@ export function WorkspaceSkeleton() {
 
   return (
     <main
-      className="flex min-h-full flex-col bg-bg-base text-content-primary lg:block"
+      className="flex min-h-full flex-col text-content-primary lg:block"
       aria-hidden="true"
     >
       {/* lg:pt-0 (URG-224 + URG-226), lg:px-0 (URG-231), the focused-only

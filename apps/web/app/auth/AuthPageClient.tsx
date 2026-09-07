@@ -409,7 +409,7 @@ export default function AuthPage() {
         <LoadingScreen variant="shell" title="Opening Urganize" asPage={false} />
       </div>
 
-      <div className="auth-form-shell relative flex min-h-screen flex-col bg-bg-base px-6 pt-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+      <div className="auth-form-shell relative flex min-h-screen flex-col px-6 pt-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
         {/* Gold-thread ray fan (NEXT_PUBLIC_FEATURE_TEXTILE). Renders nothing
             unless <html> carries `urg-textile`, and is aria-hidden and
             pointer-events-none either way, so the entrance is unchanged for

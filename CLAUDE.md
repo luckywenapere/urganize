@@ -10035,16 +10035,51 @@ authenticated app. So the layer shipped on a green build and a compiled-CSS
 check, and was confirmed by eye immediately after — which is what closes the
 gap the paragraph below names, for dark mode.
 
-**TWO HALVES ARE STILL UNSEEN, and they are the ones worth a look.** PAPER MODE
-first: the ambient ground was hardcoded `rgba(255,255,255,…)` from the day it
-was written, so it has been invisible in light theme for as long as it has
-existed, and routing it through `--color-stroke` means flag-on light mode is its
-first appearance anywhere. If it reads heavier than dark does, the light-mode
-alphas in `:root`'s `html[data-theme='light']` block are one edit away and are
-already separate numbers from dark's for exactly this reason (ink on cream reads
-heavier than cream on ink at equal opacity). Second, the PUBLIC ISLAND PAGES
-(`/k/`, `/credits/`, `/capture/`), which need a real share token and get the
-richest treatment in the app.
+**THE AMBIENT WEAVE WAS REACHING NONE OF THE CONTENT AREA, found 2026-09-07 by
+rendering paper mode locally with the flag on.** The layer sits on `body::after`
+at `z-index: 0` and `.app-layout` sits at `1`, so anything inside it with an
+opaque background covers it entirely — and **every** page wrapper carried
+`bg-bg-base`: auth, onboarding, locked, redeem, start-trial, the `<main>` on
+dashboard/settings/admin, TeamWall, CuratorShell, ArtistNameGate and four
+skeletons, 24 sites in 21 files. Measured on `/auth` at 1280px: the wrapper
+spanned x=38.4 to 1241.6, so the grain and the frame showed only in the ~38px
+margins either side. Proved rather than inferred — cranking the weave to bright
+red at 90% still rendered a flat field, and the same 340x170 clip of empty field
+went **571 bytes (flat) to 13,142 light / 24,821 dark** once the wrappers were
+made transparent.
+
+**What was visible all along, and why "texture is showing" was true anyway:** the
+cartouche frame and corner ticks live in those margins, and every Tier 3 moment
+(the ray fans, the ikat and sunburst grounds) is a child element INSIDE the
+wrapper, so it paints above it. The two loudest parts worked; the subtlest and
+most pervasive one did not arrive.
+
+`body` already carries `bg-bg-base`, and neither `.app-body` nor `.app-layout`
+sets a background, so removing it from a wrapper **changes no colour** in either
+theme or either flag state — verified: with the flag OFF the same clip is 571
+bytes before and after, because the pre-textile grid it uncovers is
+`rgba(255,255,255,0.018)` at `opacity: 0.18`, an effective 0.3% and
+sub-perceptible. **`lib/textile-ground-guard.test.ts` holds the rule**, because
+the symptom is ornament that silently does not arrive rather than anything that
+looks broken.
+
+**That guard was wrong twice before it was right, and both mistakes are worth
+knowing.** It stripped block comments before line comments, so the line comment
+at `WorkspaceView.tsx:923` mentioning the legacy `/plan/*` route group opened a
+comment the non-greedy regex closed 300 lines later — eating 431 real lines and
+**hiding three of the 24 offenders while passing**. The counting check then
+written to catch that cried wolf on `AdminNav.tsx` and `AdminPageSkeleton.tsx`,
+whose comment BODIES mention `/admin/*`; a `/*` inside an already-open comment is
+text, and no count of the two sequences can tell the difference. Both are gone in
+favour of a single-pass scanner that also preserves newlines, so reported line
+numbers are the real ones rather than indices into a stripped copy.
+
+**ONE HALF IS STILL UNSEEN, and it is worth a look.** PAPER MODE
+has now been rendered locally in both themes and **light reads SOFTER than dark,
+not heavier** — the lower light alphas (`.02` against dark's `.03`) did their
+job, so the worry this file carried about ink on cream needs no tuning. What is
+still unseen is the PUBLIC ISLAND PAGES (`/k/`, `/credits/`, `/capture/`), which
+need a real share token and get the richest treatment in the app.
 
 **The paragraph below is the build-time record and is kept as written.**
 

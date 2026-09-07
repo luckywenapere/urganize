@@ -913,6 +913,14 @@ body::after {
    The 5px-square dye-slub layer on top breaks up the regularity so it reads
    as dyed thread rather than a printed screen — the ikat quality of the
    reference board. Kept at fractional alpha; it is felt, not seen. */
+/* NOTHING INSIDE .app-layout MAY PAINT AN OPAQUE GROUND, or this is invisible.
+   This sits at z-index 0 and .app-layout sits at 1, so any wrapper in it with a
+   background covers the whole layer. Every page carried `bg-bg-base` until
+   2026-09-07, which left the grain reaching only the ~38px margins either side
+   and never the content area — measured on /auth, where cranking the weave to
+   bright red at 90% still rendered a flat field. `body` carries the ground
+   instead, so a wrapper needs none. lib/textile-ground-guard.test.ts holds the
+   rule, since the symptom is ornament that silently does not arrive. */
 .urg-textile body::after {
   background-image:
     repeating-linear-gradient(

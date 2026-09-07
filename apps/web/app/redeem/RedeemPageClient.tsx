@@ -94,7 +94,7 @@ export default function RedeemPageClient() {
   }, [code, checkAuth, router]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-bg-base p-4">
+    <div className="relative min-h-screen overflow-hidden p-4">
       {/* Gold-thread ray fan (NEXT_PUBLIC_FEATURE_TEXTILE). Replaces the
           blurred brand blobs below, which the same flag hides. Inert off. */}
       <div className="urg-ground-sunburst" aria-hidden="true" />

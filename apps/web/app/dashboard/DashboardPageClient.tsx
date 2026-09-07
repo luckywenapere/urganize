@@ -49,7 +49,7 @@ export default function DashboardPage() {
 function LegacyDashboardSkeleton() {
   const knownCount = useKnownReleaseCount();
   return (
-    <main className="bg-bg-base text-content-primary" aria-hidden="true">
+    <main className="text-content-primary" aria-hidden="true">
       <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-10 sm:px-6">
         <div className="space-y-2">
           <SkeletonBlock className="h-7 w-56" />
@@ -118,7 +118,7 @@ function LegacyDashboard() {
     .slice(0, 5);
 
   return (
-    <main className="bg-bg-base text-content-primary">
+    <main className="text-content-primary">
       <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-10 sm:px-6">
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-content-primary sm:text-3xl">

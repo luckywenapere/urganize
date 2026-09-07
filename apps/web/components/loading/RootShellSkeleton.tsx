@@ -17,7 +17,7 @@ import { LoadingMark } from '@urganize/ui';
 export function RootShellSkeleton() {
   return (
     <main
-      className="flex min-h-screen items-center justify-center bg-bg-base text-content-primary"
+      className="flex min-h-screen items-center justify-center text-content-primary"
       role="status"
       aria-live="polite"
     >

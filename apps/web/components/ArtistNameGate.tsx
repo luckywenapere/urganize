@@ -33,7 +33,7 @@ export function ArtistNameGate() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-bg-base text-content-primary">
+    <main className="relative min-h-screen overflow-hidden text-content-primary">
       {/* Gold-thread ray fan (NEXT_PUBLIC_FEATURE_TEXTILE). Replaces the
           blurred brand blobs below, which the same flag hides. Inert off. */}
       <div className="urg-ground-sunburst" aria-hidden="true" />
