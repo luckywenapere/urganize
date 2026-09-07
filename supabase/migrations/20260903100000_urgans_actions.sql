@@ -59,6 +59,25 @@
 -- "not reported" (the gateway/model did not surface usage, or a run's own
 -- execute() chose not to record it), and 0 would read as a free run.
 --
+-- source SAYS WHICH DOOR A RUN CAME THROUGH, and it exists because there are
+-- two. The embedded button is one; asking UrgAns for the same thing in chat is
+-- the other, and the chat door is deliberately NOT entitlement-gated (see
+-- lib/urgans-actions/chat-log-server.ts, which argues that decision in full).
+-- Without this column the console cannot tell the two apart, and the only
+-- honest reading of a row would be "somebody drafted a plan somehow".
+--
+-- It defaults to 'button' rather than being required, so every pre-existing
+-- write path needs no change and a row that predates the column reads as the
+-- door that was the only one when it was written. That is also why this is an
+-- amendment to this migration rather than a second file: the table has never
+-- been applied anywhere (both NEXT_PUBLIC_FEATURE_URGANS_ACTIONS and
+-- NEXT_PUBLIC_FEATURE_RELEASE_PLANNER have never been flipped), so there is no
+-- deployed schema to alter. If that turns out to be wrong, the fix is one
+-- statement in a new file:
+--   alter table public.urgans_actions
+--     add column if not exists source text not null default 'button'
+--     check (source in ('button', 'chat'));
+--
 -- WHY RLS IS ENABLED WITH ZERO POLICIES: the scheduled_notifications /
 -- workspace_invite_links / billing_events posture. This is an internal log
 -- read only by the founder's admin panel and written only by the three
@@ -75,6 +94,8 @@ create table if not exists public.urgans_actions (
   action_type     text        not null,
   object_type     text        not null,
   object_id       uuid        not null,
+  source          text        not null default 'button'
+                    check (source in ('button', 'chat')),
   status          text        not null default 'drafted'
                     check (status in ('drafted', 'applied', 'discarded', 'failed')),
   input_summary   jsonb       not null default '{}'::jsonb,
@@ -99,6 +120,9 @@ comment on column public.urgans_actions.owner_user_id is
 
 comment on column public.urgans_actions.actor_user_id is
   'Who actually ran this — can differ from owner_user_id when a teammate acts on the release owner''s release.';
+
+comment on column public.urgans_actions.source is
+  'Which door this run came through: ''button'' for an embedded action inside a product surface, ''chat'' for the same job asked of UrgAns in conversation. The chat door is metered on the ordinary chat allowance and is not entitlement-gated; the button door is. Defaults to ''button''.';
 
 comment on column public.urgans_actions.plan_at_time is
   'The PricingTierId this run was gated on, captured at run time so a later tier re-cut cannot rewrite what a past run was actually charged against.';
