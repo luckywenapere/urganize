@@ -31,6 +31,7 @@ import { CALENDAR_TOOLS } from './tool-families/calendar';
 import { CAPTURE_TOOLS } from './tool-families/capture';
 import { CONTEXT_TOOLS } from './tool-families/context';
 import { CORE_TOOLS } from './tool-families/core';
+import { DIRECTORY_TOOLS } from './tool-families/directory';
 import { FILE_TOOLS } from './tool-families/files';
 import { INSIGHTS_TOOLS } from './tool-families/insights';
 import { METADATA_TOOLS } from './tool-families/metadata';
@@ -63,6 +64,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...ARTIST_TOOLS,
   ...FILE_TOOLS,
   ...CAPTURE_TOOLS,
+  ...DIRECTORY_TOOLS,
 ];
 
 const TOOLS_BY_NAME = new Map<string, ChappiTool>(CHAPPI_TOOLS.map((tool) => [tool.name, tool]));

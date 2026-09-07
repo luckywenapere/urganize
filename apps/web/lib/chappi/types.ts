@@ -192,7 +192,14 @@ export type ChappiToolName =
   | 'get_release_credits'
   | 'create_credits_link'
   | 'close_credits_link'
-  | 'archive_release';
+  | 'archive_release'
+  // the Urganize Directory and work requests (2026-09-07)
+  | 'search_directory'
+  | 'get_my_directory_profile'
+  | 'update_my_directory_profile'
+  | 'list_work_requests'
+  | 'send_work_request'
+  | 'answer_work_request';
 
 /**
  * A side effect the CLIENT must perform after the agent turn — the agent runs
