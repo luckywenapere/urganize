@@ -7,6 +7,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import { RAIL_OPEN_KEY, RAIL_OPEN_VERSION, useChappiStore } from '@/stores/useChappiStore';
 import { readPersistedState } from '@/lib/persisted-state';
+import { RAIL_WIDTH_KEY, RAIL_WIDTH_VERSION, parsePersistedRailWidth } from '@/lib/rail-width';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
 import { AppTopbar } from '@/components/app/AppTopbar';
@@ -316,6 +317,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
     if (persisted !== null) {
       useChappiStore.getState().setRailOpen(persisted);
+    }
+
+    // The rail's WIDTH, same read, same reason it is not read during render:
+    // a storage read at render time is the hydration mismatch this repo has
+    // had to correct before. hydrateRailWidth, not setRailWidth — the setter
+    // persists, and writing back a value we just read is pointless churn.
+    const storedWidth = readPersistedState(
+      RAIL_WIDTH_KEY,
+      RAIL_WIDTH_VERSION,
+      (value): value is number => parsePersistedRailWidth(value) !== null
+    );
+    const width = parsePersistedRailWidth(storedWidth);
+    if (width !== null) {
+      useChappiStore.getState().hydrateRailWidth(width);
     }
   }, []);
 
