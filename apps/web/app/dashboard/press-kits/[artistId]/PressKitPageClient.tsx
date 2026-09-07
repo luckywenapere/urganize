@@ -16,6 +16,11 @@ import {
 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { usePressKitsStore } from '@/stores/usePressKitsStore';
+import {
+  readCachedKitDetail,
+  writeCachedKitDetail,
+} from '@/lib/press-kit-detail-cache';
+import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
 import { usePressKitSection } from '@/components/press-kits/usePressKitSection';
 import { SectionEditor } from '@/components/press-kits/SectionEditor';
@@ -79,6 +84,14 @@ export default function PressKitPageClient() {
   const rosterName = usePressKitsStore(
     (state) => state.entries.find((entry) => entry.artistId === artistId)?.artistName || ''
   );
+  // The kit's id, known at first render whenever the roster is already in the
+  // store — which is every arrival from the tab. That is what lets the cache
+  // read below happen before the first paint. A selector returning a primitive
+  // rather than the entry object, so it does not re-render on every store
+  // change.
+  const rosterKitId = usePressKitsStore(
+    (state) => state.entries.find((entry) => entry.artistId === artistId)?.kit?.id || ''
+  );
   const loadRoster = usePressKitsStore((state) => state.load);
   const syncKit = usePressKitsStore((state) => state.syncKit);
 
@@ -121,6 +134,34 @@ export default function PressKitPageClient() {
   // rule).
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  /**
+   * Paint the last known kit BEFORE the browser does, so reopening one you were
+   * just looking at shows the kit rather than a full page skeleton (founder
+   * request, 2026-09-05).
+   *
+   * PRE-PAINT, and it has to be. The cache is memory only and therefore always
+   * empty on the server, so reading it during render would be a hydration
+   * mismatch, and reading it in a plain useEffect would paint the skeleton for
+   * one frame first — the flash the /onboarding saved-draft restore moved to
+   * this same hook to avoid.
+   *
+   * The fetch in `load` below still runs every time. This is a first paint, not
+   * a substitute for server truth: when the two disagree the sections state is
+   * replaced, and usePressKitSection's adopt branch moves the open draft with
+   * it if nothing is unsaved.
+   */
+  useIsomorphicLayoutEffect(() => {
+    if (!PRESS_KITS_ENABLED || !rosterKitId) return;
+    const cached = readCachedKitDetail(rosterKitId);
+    if (!cached) return;
+    setKit(cached.kit);
+    setArtistName(cached.artistName);
+    setSections(cached.sections);
+    setAssets(cached.assets);
+    setAiAvailable(cached.aiAvailable);
+    setIsLoading(false);
+  }, [rosterKitId]);
 
   /**
    * Photos are their own table, so the Assets row's stored status was decided
@@ -199,6 +240,25 @@ export default function PressKitPageClient() {
     }
     void load();
   }, [load, router]);
+
+  /**
+   * Keep the memory cache in step with what is on screen.
+   *
+   * Writing it HERE rather than inside loadDetail is what covers the three
+   * mutations that update `sections` locally and never re-fetch — the section
+   * autosave, a keyed save, and restoring a version. Cached at the fetch
+   * instead, reopening the kit would paint the pre-edit body and then visibly
+   * correct itself a moment later.
+   *
+   * `sections` is safe to cache because every one of those paths stores the
+   * SERVER's own returned row, not a local guess — the rail's chips depend on
+   * that already. The in-progress draft lives in usePressKitSection and is
+   * deliberately not part of this.
+   */
+  useEffect(() => {
+    if (isLoading || !kit) return;
+    writeCachedKitDetail(kit.id, { kit, artistName, sections, assets, aiAvailable });
+  }, [isLoading, kit, artistName, sections, assets, aiAvailable]);
 
   const createKit = useCallback(async () => {
     const headers = await authHeaders();

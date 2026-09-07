@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   PRESS_KIT_SECTION_LABELS,
   applyKitToRoster,
+  canAdoptServerContent,
   PRESS_KIT_SECTION_ORDER,
   VERSION_COALESCE_WINDOW_MS,
   VERSION_RETENTION_DAYS,
@@ -408,5 +409,69 @@ describe('applyKitToRoster', () => {
     const next = applyKitToRoster(roster, kitFor('b'));
     expect(next[0]).toBe(roster[0]);
     expect(next[2]).toBe(roster[2]);
+  });
+});
+
+/**
+ * When a background revalidate may replace the draft (2026-09-05).
+ *
+ * The single-kit screen paints from a memory cache now, so the body on screen
+ * can be a few minutes old while the fetch behind it brings server truth. The
+ * autosave hook's section-change effect early-returns on an unchanged section
+ * id, so without this the stale draft would survive the correction and the next
+ * keystroke would save it back over whatever the server had.
+ */
+describe('canAdoptServerContent', () => {
+  const clean = { inFlight: false, needsResend: false };
+
+  it('adopts when the draft is exactly what was last flushed', () => {
+    expect(
+      canAdoptServerContent({ ...clean, draft: { short: 'a' }, lastFlushed: { short: 'a' } })
+    ).toBe(true);
+  });
+
+  it('is key-order independent, so a re-serialised body is not an edit', () => {
+    expect(
+      canAdoptServerContent({
+        ...clean,
+        draft: { short: 'a', long: 'b' },
+        lastFlushed: { long: 'b', short: 'a' },
+      })
+    ).toBe(true);
+  });
+
+  it('refuses while there are unsaved words in the draft', () => {
+    expect(
+      canAdoptServerContent({ ...clean, draft: { short: 'ab' }, lastFlushed: { short: 'a' } })
+    ).toBe(false);
+  });
+
+  it('refuses while a save is in flight', () => {
+    expect(
+      canAdoptServerContent({
+        ...clean,
+        inFlight: true,
+        draft: { short: 'a' },
+        lastFlushed: { short: 'a' },
+      })
+    ).toBe(false);
+  });
+
+  it('refuses when a failed save is waiting to be resent', () => {
+    // The catch path deliberately does not rewind lastFlushed, so the two
+    // bodies match even though an edit has not landed. Reseeding here would
+    // drop the words the user is still trying to save.
+    expect(
+      canAdoptServerContent({
+        ...clean,
+        needsResend: true,
+        draft: { short: 'a' },
+        lastFlushed: { short: 'a' },
+      })
+    ).toBe(false);
+  });
+
+  it('adopts an empty body over an empty body', () => {
+    expect(canAdoptServerContent({ ...clean, draft: {}, lastFlushed: {} })).toBe(true);
   });
 });

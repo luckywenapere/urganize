@@ -239,6 +239,38 @@ export function sameContent(a: PressKitSectionContent, b: PressKitSectionContent
   return stableStringify(a || {}) === stableStringify(b || {});
 }
 
+/**
+ * Whether a background revalidate may replace the open section's draft.
+ *
+ * The single-kit screen paints from a memory cache, so the body on screen can
+ * be a few minutes old while a fetch behind it brings server truth. The
+ * autosave hook's section-change effect early-returns on an unchanged section
+ * id — correctly, since a changing `persistedContent` identity must not
+ * interrupt typing — so without this rule the stale draft would survive the
+ * correction and the next keystroke would save it back over whatever the
+ * server had.
+ *
+ * It fails toward KEEPING the draft on every uncertainty, because the two
+ * mistakes are not equal: adopting too eagerly loses words a person typed,
+ * declining too often leaves them looking at a body a few minutes old that
+ * their next edit will save anyway.
+ *
+ * `needsResend` is the non-obvious one. The save path sets lastFlushed BEFORE
+ * awaiting and the catch deliberately does not rewind it, so after a failed
+ * save the two bodies match even though the edit never landed — matching
+ * bodies alone would adopt over it.
+ */
+export function canAdoptServerContent(input: {
+  draft: PressKitSectionContent;
+  lastFlushed: PressKitSectionContent;
+  inFlight: boolean;
+  needsResend: boolean;
+}): boolean {
+  if (input.inFlight) return false;
+  if (input.needsResend) return false;
+  return sameContent(input.draft, input.lastFlushed);
+}
+
 /** What the publish screen lists. A section nobody has touched is not a
  *  change, so an untouched, never-published section is quiet. */
 export function hasUnpublishedChanges(section: PressKitSection): boolean {

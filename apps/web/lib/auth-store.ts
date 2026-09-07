@@ -13,6 +13,7 @@ import { resetSceneData } from '@/stores/useSceneDataStore';
 import { resetSceneMemory } from '@/lib/scene-memory';
 import { resetCatalogIntent } from '@/lib/catalog-intent';
 import { resetPressKitsStore } from '@/stores/usePressKitsStore';
+import { clearKitDetailCache } from '@/lib/press-kit-detail-cache';
 import {
   classifyAuthFailure,
   isProfileReadTransientError,
@@ -1084,6 +1085,10 @@ if (typeof window !== 'undefined') {
       // id and would miss, but the in-memory copy would survive a same-tab
       // account switch and show account B a frame of account A's roster.
       resetPressKitsStore();
+      // And the single-kit payloads behind it — one account's photos and bios,
+      // held in memory, which would otherwise survive a same-tab account
+      // switch exactly as the roster would.
+      clearKitDetailCache();
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,
