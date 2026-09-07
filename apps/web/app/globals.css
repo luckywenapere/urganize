@@ -2171,6 +2171,28 @@ html[data-theme='dark'] .btn-secondary:hover:not(:disabled) {
   background-attachment: scroll, fixed, fixed, fixed;
 }
 
+/* ...and none of it prints. The @media print block far above redefines the
+   island's own variables so every colour on the page follows without a single
+   print specific override in the component — the kit island's ground goes
+   white and its text goes ink. This rule is the one thing that cannot follow,
+   because its thread colours are hardcoded cream rather than routed through a
+   token (see the note above for why that is deliberate). On a white sheet the
+   cream grain is invisible and the gold wash is a faint yellow band across the
+   top, so printing it would waste ink to render nothing.
+
+   Mostly belt-and-braces: `print-color-adjust` is `economy` by default, so
+   browsers already drop backgrounds. What this covers is the reader who ticks
+   "Print backgrounds" in the print dialog — a standard checkbox, and a press
+   kit is the one page in this product designed to be printed. */
+@media print {
+  .urg-textile .epk-island,
+  .urg-textile .credits-island,
+  .urg-textile .capture-island,
+  .urg-textile .kit-island {
+    background-image: none;
+  }
+}
+
 .field-label {
   display: block;
   margin-bottom: 8px;
