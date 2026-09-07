@@ -357,7 +357,11 @@ export const CORE_TOOLS: ChappiTool[] = [
         body: {},
       });
       if (!res.ok) {
-        if (res.status === 404) return fail('The status update generator is not enabled yet.');
+        // isFlagGateOff, not a bare 404: this route answers 404 for a release
+        // that is not yours as well as for the flag being off, and telling
+        // someone the generator "is not enabled" when they simply named the
+        // wrong release sends them looking for a switch that is already on.
+        if (isFlagGateOff(res)) return fail('The status update generator is not enabled yet.');
         return fail(String(res.body.error || 'Could not generate the status update.'));
       }
       const statusUpdate = String(res.body.status_update || '');
