@@ -1746,8 +1746,9 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
   having. Of the three steps this bullet listed as remaining when it was
   written, **two are now covered by tests and one was never a step at all** —
   see the bullets below. What is left of the third (a manager-added activity
-  landing on Timeline as a marker rather than a bar) is the round trip and the
-  pixels: the rule itself is now pinned at all three links.
+  landing on Timeline as a marker rather than a bar) is the UI and the pixels
+  only: the rule is pinned at all three links and the jsonb round trip is
+  verified against a real Postgres.
 - **The two write paths compared, 2026-09-07: 13 of 15 columns are identical
   in shape.** `instantiate.ts` (template) against
   `release-planning-server.ts` (approval), which is the substance of the
@@ -1776,9 +1777,10 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
   rather than a bar (null duration means "we do not know", and an honest dot
   beats a wrong span). An approved plan can hold both kinds, so that is
   exactly where "behaves the same" legitimately stops — add one by hand before
-  approving and confirm it lands as a marker. **The LOGIC of that is covered
-  end to end as of 2026-09-07** — see the next bullet — so a manual pass would
-  add the round trip and the pixels, not the rule.
+  approving and confirm it lands as a marker. **The LOGIC and the jsonb round
+  trip are both covered as of 2026-09-07** — see the bullets below — so what a
+  manual pass adds now is the plan scene's UI and Timeline's pixels, not the
+  rule and not the storage.
 - **The asymmetry is a chain of THREE links, and checking it found that two
   were already covered and the join between them was not.** (1) The WRITER:
   `release-planning-server.test.ts` asserts a manager-added row's
@@ -1808,6 +1810,45 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
   `readTemplateTaskId` to the key that was broken for months now fails four
   tests.** The other two (dropping `duration_days >= 1`, flipping
   `readTaskType`'s default) each fail exactly their own.
+- **THE JSONB ROUND TRIP IS VERIFIED (2026-09-07), against a real Postgres 16
+  rather than in principle.** Probed by driving the real writer
+  (`buildTaskRowsFromDraft`, with a hand-added activity in the draft — the
+  step the manual pass asks for), inserting the metadata it produced into a
+  real `jsonb` column, selecting it back, and feeding it to the real readers.
+  All three shapes survive: a manager-added row still reads
+  `{taskType:'task', templateTaskId:null, durationDays:null,
+  compressedRunway:false}`, and a 7-day and a 1-day template row both keep
+  their duration. **Postgres confirms the keys are genuinely ABSENT rather
+  than null** on the manager-added row (`metadata->'template' ? 'duration_days'`
+  is false), which is the thing the timeline's marker depends on.
+  Three properties of the column worth knowing, none of them a defect here:
+  **jsonb REORDERS keys** (length then bytewise — a row read back has
+  `["role","tags","task_id",…]` where the writer emitted
+  `["template_id","template_version",…]`), so never write an order-dependent
+  assertion against a row that has been to the database; the readers are key
+  lookups and `release-planning-server.test.ts` sorts, so both are already
+  safe. Numeric edges all read correctly through real jsonb (`7.5`→7,
+  `"7"`→null, `0`→null, `null`→null, `7.0`→7 — jsonb keeps the trailing zero
+  in storage and JS drops it on parse). And **jsonb stores integers beyond
+  JS's safe range exactly** while `JSON.parse` rounds them
+  (`9007199254740993`→`…992`) — irrelevant for a duration of 1 or 7, and a
+  real trap for any future numeric field that could get large.
+- **The `undefined` hazard on the writer side is closed UPSTREAM, by two
+  things rather than by luck.** `JSON.stringify` DROPS a key whose value is
+  `undefined`, so a template row could in principle lose its duration
+  silently and render as a marker instead of a bar. It cannot: `DraftTask`
+  types `duration_days: number` (required, not nullable), and the draft
+  parser clamps anything non-numeric to 1 (`Math.max(1, Math.round(…))`) —
+  which is the guarantee that matters, since that parser is what runs on a
+  draft loaded back out of `release_plan_drafts`.
+- **What the round-trip probe did NOT cover, stated plainly.** It inserted
+  through `psql`, not through PostgREST — so the supabase-js hop is still
+  unexercised, though it hands the same JSON bytes to the same column type.
+  It was a scratch cluster, not the production database. And it says nothing
+  about the plan scene's UI or Timeline's rendered pixels: **no activity has
+  ever been added by hand in a browser.** Production is unreachable from the
+  sandbox (the agent proxy answers 403 to CONNECT for both urganize domains),
+  which is why this is a probe rather than the manual pass.
 - **What the comparison canNOT settle**, since it is a read of two files: that
   the cascade actually unlocks, and that the blocker gate actually refuses.
   Those are runtime behaviours over the `dependencies` column, and the column
