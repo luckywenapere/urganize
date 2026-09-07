@@ -11484,6 +11484,84 @@ so deleting the email deleted the answer.
 
 ---
 
+## The UrgAns rail is draggable (2026-09-07)
+
+Founder: make the AI window adjustable in width. The rail was a fixed
+`clamp(360px, 31vw, 460px)`, which is a thin strip on a 2560px monitor and a
+third of the screen on a 1280px laptop. Its left edge is a drag handle now,
+and the width is remembered per browser. No migration, no route, no new flag
+(the rail is already behind `NEXT_PUBLIC_FEATURE_CHAPPI`).
+
+**Six things worth knowing before editing this:**
+
+1. **THE MAXIMUM IS NOT A TASTE DECISION.** The rail is a flex SIBLING of
+   `<main>`, not an overlay, so every pixel it takes comes out of the release
+   view — and two scenes swap layout on CONTAINER queries of that centre
+   column: the content calendar at 45rem (`.cc-scene-container`) and the
+   timeline at 34rem (`.tl-scene-container`). A rail dragged too wide silently
+   degrades a week grid into the phone list on a desktop. `MAIN_MINIMUM = 560`
+   in `lib/rail-width.ts` is what keeps that off the default path. The
+   documented trap ("the rails narrow the column without narrowing the
+   viewport") is now something a user can do on purpose.
+2. **`resolveRailBounds` takes `hasIdentityPanel` from the CALLER**, because
+   `WorkspaceIdentityPanel` hides ITSELF between lg and xl while the rail is
+   open (`railIsCompeting`). Reserving its 272px in that band would compute the
+   maximum against a column that is not on screen.
+3. **The width transition is REMOVED while dragging.** The `<aside>` carries
+   `transition-[width,...]` at `duration-slow`, so every frame of a drag would
+   lag a third of a second behind the cursor. This is the single most likely
+   way for the feature to look broken, and it is one ternary.
+4. **`PANEL_WIDTH` is gone, replaced by one `--urgans-rail-width` custom
+   property.** It was a module const read in two places with a comment saying
+   the two must never drift; a variable is the version of that which cannot.
+   The drag writes that property directly and commits to React state ONCE on
+   release, so a 120Hz drag is one style write per frame rather than one
+   render per frame.
+5. **The store write happens on drag END only.** `writePersistedState` does not
+   guard `setItem`, so a per-frame write would hammer storage and throw on a
+   full quota or in Safari private mode — hence the try/catch in
+   `setRailWidth`, and `hydrateRailWidth` as a separate action for AppShell so
+   reading a value does not immediately write it back.
+6. **A stored width is validated against the ABSOLUTE range, then clamped to
+   the viewport's.** A width saved on a big monitor is legitimate; rendering it
+   on a laptop is not. The correction is written back to state as well as to
+   the screen, or the next drag would start from a number nothing agrees with.
+
+- **Pointer Events with `setPointerCapture`**, one path for mouse, touch and
+  pen. A pointer leaving the window keeps sending events; `pointercancel`
+  (an OS gesture stealing the pointer) COMMITS what the user last saw rather
+  than snapping back, because the cancel was not theirs.
+- **The handle is a `role="separator"`** with live `aria-valuenow/min/max`.
+  Arrows move 16px, shift-arrows 64px, Home and End jump to the stops, Enter
+  or Space resets to the default — the keyboard twin of the double-click
+  reset. `preventDefault` fires only once a key is known to be ours, so Escape
+  and Tab still belong to the page.
+- **The handle is withheld entirely when `bounds.resizable` is false** (below
+  lg, or a viewport too small to satisfy both minimums). A control that cannot
+  move is worse than no control.
+- **Verified:** 2864 tests (20 new in `lib/rail-width.test.ts`), `eslint .`
+  byte-identical to the measured clean-tree baseline (3 errors / 81 warnings,
+  all pre-existing) with **zero** new findings, `tsc --noEmit` clean apart from
+  the documented pre-existing `confirmed-action.test.ts` errors, and
+  `next build` green **by exit code** with the assistant flag on and off,
+  `/auth`, `/onboarding`, `/settings` and `/dashboard` all still `○ Static` in
+  each. Compiled output checked rather than trusted from source:
+  `cursor:col-resize`, `touch-action:none` and `user-select:none` are all in
+  the emitted CSS, and the custom property and the separator label are in the
+  client chunks. **Three mutations, each killing exactly its own tests:**
+  reversing the drag direction, dropping the clamp, and making the storage
+  validator accept a numeric string.
+- **NOT verified, and it is the whole risk: no drag has ever been performed.**
+  This sandbox cannot mint a session and has no route to app.urganize.app, and
+  this repo has no component tests, so the pointer handling, the transition
+  suppression and the keyboard path all rest on the pure module's tests plus
+  the build. Worth one pass at 1280px and at 2560px: drag both ways, hit both
+  stops, double-click to reset, tab to the handle and use the arrows, reload
+  and confirm the width returns, then shrink the window and confirm it
+  re-clamps rather than pushing the page sideways.
+
+---
+
 ## The "+" moved to the topbar, and the mobile bar went flat (2026-09-06)
 
 Founder, hours after the directory tab landed: *"Move the plus button to the

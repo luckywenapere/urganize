@@ -7,6 +7,7 @@ import type {
   ChappiReply,
 } from '@/lib/chappi/types';
 import { writePersistedState } from '@/lib/persisted-state';
+import { DEFAULT_RAIL_WIDTH, RAIL_WIDTH_KEY, RAIL_WIDTH_VERSION } from '@/lib/rail-width';
 
 // CONVERSATION state is transient, NOT persisted — no DB table, no
 // localStorage — so a reload starts the assistant fresh. `messages` is
@@ -25,6 +26,11 @@ import { writePersistedState } from '@/lib/persisted-state';
 export const RAIL_OPEN_KEY = 'urganize.chappi.rail-open';
 export const RAIL_OPEN_VERSION = 1;
 
+// Side-rail WIDTH, in px, persisted the same way. Bounds, clamping and the
+// storage validator all live in lib/rail-width.ts; this store only holds the
+// number. Hydrated once by AppShell, so first paint always renders the
+// default and a stored width never reaches a render-time storage read.
+
 type ChappiStore = {
   /** Current prompt-bar text. */
   input: string;
@@ -42,6 +48,9 @@ type ChappiStore = {
    * living here and reloads via localStorage; deliberately NOT part of
    * `reset` — closing a conversation shouldn't collapse the layout. */
   railOpen: boolean;
+  /** Side-rail width in px. Always a whole number inside the absolute range;
+   * the component clamps it again to whatever THIS viewport can pay for. */
+  railWidth: number;
   /** An action the model has PROPOSED and the user has not yet approved.
    * Nothing has run while this is set. Cleared by `reset`, by
    * `truncateFromMessage` (a regenerated reply must not leave a stale card
@@ -61,6 +70,13 @@ type ChappiStore = {
    * session lands on the assistant page again; see AppShell's arming
    * effect). */
   setRailOpen: (open: boolean) => void;
+  /** Sets the rail's width AND persists it. Called once when a drag ENDS,
+   * never per pointermove: writePersistedState does not guard setItem, so a
+   * per-frame write would hammer storage and throw on a full quota. */
+  setRailWidth: (width: number) => void;
+  /** Applies a stored width without writing it back. AppShell's mount effect
+   * is the only caller — writing here would re-save a value we just read. */
+  hydrateRailWidth: (width: number) => void;
   reset: () => void;
 };
 
@@ -70,6 +86,7 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   messages: [],
   scopedReleaseId: null,
   railOpen: false,
+  railWidth: DEFAULT_RAIL_WIDTH,
   pendingConfirmation: null,
   setInput: (value) => set({ input: value }),
   setReply: (reply) => set({ reply }),
@@ -90,5 +107,16 @@ export const useChappiStore = create<ChappiStore>((set) => ({
     // Actions only ever run client-side, so writing storage here is safe.
     writePersistedState(RAIL_OPEN_KEY, RAIL_OPEN_VERSION, open);
   },
+  setRailWidth: (width) => {
+    set({ railWidth: width });
+    try {
+      writePersistedState(RAIL_WIDTH_KEY, RAIL_WIDTH_VERSION, width);
+    } catch {
+      // Quota exceeded, or Safari private mode where getItem works and
+      // setItem throws. A width that could not be saved still applies for
+      // this session, which is the right way round to fail.
+    }
+  },
+  hydrateRailWidth: (width) => set({ railWidth: width }),
   reset: () => set({ input: '', reply: null, messages: [], pendingConfirmation: null }),
 }));
