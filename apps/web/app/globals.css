@@ -1001,12 +1001,12 @@ h1, h2, h3, h4 {
 /* Pull every remaining lucide glyph to the house stroke weight.
  *
  * components/icons/ replaces the 30 icons a user actually sees daily with
- * Urganize's own marks; the other 66 are still lucide, on surfaces almost
+ * Urganize's own marks; the other 68 are still lucide, on surfaces almost
  * nobody opens. Left alone the two sets read as different families, because
  * lucide draws at stroke-width 2 and the house set at 1.6 structural / 1.8
  * gesture.
  *
- * One rule closes that gap for all 66 at once. It works because lucide emits
+ * One rule closes that gap for all 68 at once. It works because lucide emits
  * stroke-width as a PRESENTATION ATTRIBUTE (verified in node_modules —
  * defaultAttributes carries strokeWidth: 2), and CSS beats presentation
  * attributes in the cascade regardless of specificity. It also emits
