@@ -1,10 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import {
   MAX_OPEN_REQUESTS_PER_TEAM,
   RECIPIENT_REQUEST_FIELDS,
+  SENDER_REQUEST_FIELDS,
   parseWorkRequestInput,
+  revealsContact,
   withinOpenRequestCap,
+  type WorkRequestStatus,
 } from '@/lib/work-requests';
 import { notifyWorkRequest } from '@/lib/work-requests-server';
 import {
@@ -30,8 +34,81 @@ import {
  * is listed has to be able to read their own inbox.
  */
 
-const SENDER_REQUEST_FIELDS =
-  'id, role, note, status, reply, recipient_user_id, release_id, created_at, answered_at';
+/**
+ * Fills in who the sender asked, and — only where they said yes — how to reach
+ * them.
+ *
+ * THE CONTACT IS RESOLVED HERE AND STORED NOWHERE. `revealsContact` is the
+ * consent rule: an interested answer is the permission to be contacted, a pass
+ * and a waiting request reveal nothing. Keeping it out of the table means the
+ * reveal cannot outlive the consent, and it is why the address lookup is
+ * filtered before it runs rather than done for every row.
+ *
+ * Never throws: a request whose recipient could not be resolved still lists,
+ * with a name of last resort. The row is the record; this is decoration on it.
+ */
+async function decorateSentRequests(
+  adminClient: SupabaseClient,
+  rows: Record<string, unknown>[]
+): Promise<Record<string, unknown>[]> {
+  const recipientIds = [
+    ...new Set(rows.map((row) => String(row.recipient_user_id || '')).filter(Boolean)),
+  ];
+  if (recipientIds.length === 0) return rows;
+
+  // One query for every name rather than one per row.
+  const profiles = new Map<string, { name: string; slug: string; isPublic: boolean }>();
+  try {
+    const { data } = await adminClient
+      .from(PERSON_PROFILES_TABLE)
+      .select('user_id, display_name, slug, visibility')
+      .in('user_id', recipientIds);
+    for (const entry of data || []) {
+      const row = asRow(entry);
+      profiles.set(String(row.user_id || ''), {
+        name: String(row.display_name || ''),
+        slug: typeof row.slug === 'string' ? row.slug : '',
+        isPublic: row.visibility === 'public',
+      });
+    }
+  } catch {
+    // A missing name is a worse list, not a broken one.
+  }
+
+  // Bounded by the consent rule, so this is a handful of lookups on a page of
+  // a hundred rows rather than a hundred.
+  const contactIds = [
+    ...new Set(
+      rows
+        .filter((row) => revealsContact(String(row.status || 'new') as WorkRequestStatus))
+        .map((row) => String(row.recipient_user_id || ''))
+        .filter(Boolean)
+    ),
+  ];
+  const contacts = new Map<string, string>();
+  await Promise.all(
+    contactIds.map(async (userId) => {
+      try {
+        const { data } = await adminClient.auth.admin.getUserById(userId);
+        const email = data?.user?.email;
+        if (email) contacts.set(userId, email);
+      } catch {
+        // Same posture: no address is a row you cannot act on yet, not an error.
+      }
+    })
+  );
+
+  return rows.map((row) => {
+    const userId = String(row.recipient_user_id || '');
+    const profile = profiles.get(userId);
+    return {
+      ...row,
+      recipient_name: profile?.name || 'Somebody in the directory',
+      recipient_slug: profile?.isPublic ? profile.slug : '',
+      contact_email: contacts.get(userId) || '',
+    };
+  });
+}
 
 export async function GET(request: NextRequest) {
   if (!isWorkRequestsFeatureEnabled()) return directoryDisabledResponse();
@@ -56,7 +133,7 @@ export async function GET(request: NextRequest) {
           .eq('recipient_user_id', auth.user.id)
       : adminClient
           .from(WORK_REQUESTS_TABLE)
-          .select(SENDER_REQUEST_FIELDS)
+          .select(SENDER_REQUEST_FIELDS.join(', '))
           .eq('sender_user_id', auth.user.id);
 
   const { data, error } = await query.order('created_at', { ascending: false }).limit(100);
@@ -68,7 +145,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ box, requests: (data || []).map(asRow) });
+  const requests = (data || []).map(asRow);
+  return NextResponse.json({
+    box,
+    requests: box === 'sent' ? await decorateSentRequests(adminClient, requests) : requests,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -139,7 +220,7 @@ export async function POST(request: NextRequest) {
       sender_name: String(senderName).slice(0, 120),
       sender_team: team.teamName ? String(team.teamName).slice(0, 120) : null,
     })
-    .select(SENDER_REQUEST_FIELDS)
+    .select(SENDER_REQUEST_FIELDS.join(', '))
     .maybeSingle();
 
   if (error) {

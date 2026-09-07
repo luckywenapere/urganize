@@ -54,6 +54,47 @@ export const RECIPIENT_REQUEST_FIELDS = [
   'answered_at',
 ] as const;
 
+/**
+ * WHAT THE SENDER'S OWN SIDE MAY SELECT.
+ *
+ * The mirror image of the list above, and deliberately not symmetrical with
+ * it: this one DOES carry `release_id`, because the sender needs to know which
+ * release they asked for, and that is exactly the field the recipient must
+ * never see.
+ *
+ * No contact column appears here, and none exists on the table. Contact is
+ * resolved at read time and only for a request that has been answered
+ * `interested` — a stored copy would outlive the consent that revealed it.
+ */
+export const SENDER_REQUEST_FIELDS = [
+  'id',
+  'role',
+  'note',
+  'status',
+  'reply',
+  'recipient_user_id',
+  'release_id',
+  'created_at',
+  'answered_at',
+] as const;
+
+/**
+ * WHETHER THIS ANSWER HANDS THE ASKER A WAY TO REACH THE PERSON.
+ *
+ * The consent model in one function. Saying you are interested in working on
+ * somebody's release IS the permission to be contacted, so there is no second
+ * opt-in question after it — a question nobody expects at that moment is a
+ * question most people ignore, and the request then dies at "yes" with no way
+ * to proceed, which is the hole this closes.
+ *
+ * Somebody who passed has agreed to nothing and reveals nothing. A request
+ * still waiting reveals nothing either, which matters because the sender's
+ * list renders every row.
+ */
+export function revealsContact(status: WorkRequestStatus): boolean {
+  return status === 'interested';
+}
+
 export type WorkRequestInput = {
   recipientUserId: string;
   role: DirectoryRole;

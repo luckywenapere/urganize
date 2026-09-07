@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   MAX_OPEN_REQUESTS_PER_TEAM,
   RECIPIENT_REQUEST_FIELDS,
+  SENDER_REQUEST_FIELDS,
   WORK_REQUEST_STATUSES,
   canAnswerWorkRequest,
   describeRequestStatus,
   parseWorkRequestAnswer,
   parseWorkRequestInput,
+  revealsContact,
   withinOpenRequestCap,
 } from './work-requests';
 
@@ -139,5 +141,52 @@ describe('describeRequestStatus', () => {
     expect(describeRequestStatus('new')).toBe('Waiting');
     expect(describeRequestStatus('interested')).toBe('Interested');
     expect(describeRequestStatus('passed')).toBe('Passed');
+  });
+});
+
+describe('revealsContact', () => {
+  it('reveals on interested, which is the consent', () => {
+    // Saying yes to working on somebody's release IS the permission to be
+    // contacted. There is no separate opt-in, because a second question after
+    // "I am interested" is a question nobody expects and most would ignore.
+    expect(revealsContact('interested')).toBe(true);
+  });
+
+  it('reveals nothing on passed', () => {
+    // Somebody who said no has agreed to nothing. This is the whole reason
+    // contact is not simply attached to every profile.
+    expect(revealsContact('passed')).toBe(false);
+  });
+
+  it('reveals nothing while a request is still waiting', () => {
+    expect(revealsContact('new')).toBe(false);
+  });
+
+  it('covers every status, so a new one cannot default to revealing', () => {
+    for (const status of WORK_REQUEST_STATUSES) {
+      expect(typeof revealsContact(status)).toBe('boolean');
+    }
+  });
+});
+
+describe('SENDER_REQUEST_FIELDS', () => {
+  it('carries the release, unlike the recipient’s list', () => {
+    // The asymmetry is the design: the sender needs to know which release they
+    // asked for, and the recipient must never see it.
+    expect(SENDER_REQUEST_FIELDS).toContain('release_id');
+    expect(RECIPIENT_REQUEST_FIELDS).not.toContain('release_id');
+  });
+
+  it('carries the recipient so their answer can be attributed', () => {
+    expect(SENDER_REQUEST_FIELDS).toContain('recipient_user_id');
+    expect(SENDER_REQUEST_FIELDS).toContain('status');
+    expect(SENDER_REQUEST_FIELDS).toContain('reply');
+  });
+
+  it('carries no contact column, because contact is not stored on the row', () => {
+    // Contact is resolved at read time and only for an answered-interested
+    // request. A column here would mean a stored copy that outlives the
+    // consent that revealed it.
+    expect(SENDER_REQUEST_FIELDS.some((field) => /email|phone|contact/.test(field))).toBe(false);
   });
 });

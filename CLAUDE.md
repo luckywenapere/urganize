@@ -10315,6 +10315,73 @@ browser. No request sent, no answer given, no email delivered.
 `apps/web`, then changelog entry and version bump at the flip (the EPK
 precedent).
 
+### Closing the loop: contact on interest, and the sender's own view (2026-09-07)
+
+Founder, after using the flow: *"if someone agrees to work or rejects where do
+I see it?"*, then *"the email how can I reach him so we proceed to work it's an
+Urganize email that sends it"*. Both were real holes rather than settings, and
+the second is the one that made the whole feature stop at "yes". Same flag, no
+migration, no new route.
+
+**What was actually wrong, traced rather than guessed.** The From address on
+every message is the verified sender on `send.urganize.app` — only the display
+name becomes "&lt;name&gt; via Urganize" — and `EMAIL_REPLY_TO` points at an
+Urganize mailbox, so Reply reached us. The answer email carried a name, a
+decision and a one-line reply and **no way to reach anybody**, while its own
+text claimed "Their contact details are on their profile" and linked the SEARCH
+page: wrong twice, because that is not their profile and `person_profiles` has
+no contact field at all. Separately, `GET …/requests?box=sent` had served the
+sender's side since the day this was built and **nothing in the UI called it**,
+so deleting the email deleted the answer.
+
+**Five things worth knowing before editing this:**
+
+1. **`revealsContact` is the consent model in one function, and it is the only
+   thing that decides.** Answering *interested* IS the permission to be
+   contacted; a pass and a still-waiting request reveal nothing. There is no
+   second opt-in question after "I am interested", because a question nobody
+   expects at that moment is one most people ignore, and the request then dies
+   at yes. Mutation-tested.
+2. **The reveal is computed at read time and stored nowhere.** No contact
+   column exists on `work_requests` and a test asserts `SENDER_REQUEST_FIELDS`
+   never grows one: a stored copy would outlive the consent that revealed it.
+   It is also why the address lookup in the sent branch is FILTERED before it
+   runs (a handful of `getUserById` calls, not one per row).
+3. **`buildWorkRequestAnswerEmail` re-checks `interested` itself** rather than
+   trusting its caller, so a future caller that forgets the rule still cannot
+   leak an address onto a refusal.
+4. **`composeReplyTo` is deliberately strict.** One plain mailbox: no display
+   name, no comma list, no angle brackets, length capped, anything else falls
+   back to the configured mailbox. The override comes from an account record
+   rather than a form, but a mail header is not the place to discover that
+   assumption was wrong — a comma adds a silent second recipient and a line
+   break opens a header. Mutation-tested.
+5. **Only a `public` record gets a profile link.** Somebody listed as
+   `directory` is findable in-app and has no page, so linking their `/p/` URL
+   would 404 — worse than linking nothing.
+
+- **`SentRequestsList` has two mounts and one implementation.** In Settings it
+  is the complete record and is gated on the flag ALONE, not on `profile` the
+  way the inbox beside it is: nobody can ask somebody who is not listed, but a
+  manager who does the asking need never have opted in. On the release it sits
+  beside `RoleGapsPanel`, filtered to that release — closing the loop where the
+  panel opened it, and the reason `release_id` is stored on the row at all.
+  Both render nothing until there is something to say.
+- **Verified:** 2729 tests (17 new), `eslint .` at the exact 3-error /
+  81-warning baseline with **zero** new findings, `tsc --noEmit` clean apart
+  from the documented pre-existing `confirmed-action.test.ts` errors, and
+  `next build` green **by exit code** in both flag states with `/auth`,
+  `/onboarding` and `/settings` still `○ Static` in each. Runtime probes,
+  rebuilding between them: flag off, both requests routes **404** with body
+  exactly `{"error":"Not found."}` while `/api/directory/profile` and
+  `/api/releases` **401** — which also proves this flag is independent of the
+  directory's own. Three mutations, each killing exactly its own test.
+- **Not verified:** no email has been sent, no answer has round tripped, and
+  neither list has rendered. No database, no session, no Resend key and no
+  route to app.urganize.app from here. The manual pass at the flip is what
+  settles it: send a request, answer it as the other account, and confirm the
+  answer email lets you press Reply and reach them.
+
 ---
 
 ## The "+" moved to the topbar, and the mobile bar went flat (2026-09-06)

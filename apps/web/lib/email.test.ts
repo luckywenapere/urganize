@@ -177,3 +177,58 @@ describe('composeFromHeader', () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe('composeReplyTo', () => {
+  it('prefers the override, so a reply reaches the person rather than us', async () => {
+    // The whole point of the work-request answer email: the From address is
+    // always our verified sender, so Reply is the only thing that can put the
+    // two people in touch.
+    const { composeReplyTo } = await loadEmail();
+    expect(composeReplyTo('hello@urganize.app', 'dami@example.com')).toBe('dami@example.com');
+  });
+
+  it('falls back to the configured mailbox with no override', async () => {
+    const { composeReplyTo } = await loadEmail();
+    expect(composeReplyTo('hello@urganize.app')).toBe('hello@urganize.app');
+    expect(composeReplyTo('hello@urganize.app', '   ')).toBe('hello@urganize.app');
+  });
+
+  it('returns null when neither is set', async () => {
+    const { composeReplyTo } = await loadEmail();
+    expect(composeReplyTo(null)).toBeNull();
+  });
+
+  it('refuses an override that is not a plain single address', async () => {
+    // An address reaching this comes from an account record, but a header is
+    // not the place to find out that assumption was wrong. Anything carrying a
+    // line break, a comma, angle brackets or no @ falls back rather than
+    // smuggling a second recipient or an extra header.
+    const { composeReplyTo } = await loadEmail();
+    for (const hostile of [
+      'a@b.com\r\nBcc: x@y.z',
+      'a@b.com, x@y.z',
+      'Evil <a@b.com>',
+      'not-an-address',
+      '"a"@b.com',
+      `${'x'.repeat(300)}@b.com`,
+    ]) {
+      expect(composeReplyTo('hello@urganize.app', hostile)).toBe('hello@urganize.app');
+    }
+  });
+
+  it('sends with the override when one is given', async () => {
+    const { sendEmail } = await loadEmail();
+    vi.stubEnv('RESEND_API_KEY', 're_key');
+    vi.stubEnv('EMAIL_FROM', 'Urganize <team@send.urganize.app>');
+    vi.stubEnv('EMAIL_REPLY_TO', 'hello@urganize.app');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, text: async () => '' } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await sendEmail({ ...message, replyTo: 'dami@example.com' });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.reply_to).toBe('dami@example.com');
+  });
+});
