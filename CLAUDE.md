@@ -11905,12 +11905,19 @@ chrome the other two had become.
   `APPLIED` before running. **Confirm a mutation landed before believing it
   survived** (the same lesson the directory's Phase 5 recorded for a `sed`
   indentation miss).
-- **Not verified:** nothing has rendered in a browser. This sandbox cannot mint
-  a session and has no route to app.urganize.app, so the card, its size toggle
-  and the share/download hand-off all rest on the build plus unit tests. Worth
-  one pass on a finished release: ask UrgAns for the recap, switch Story to
-  Square, save it, and confirm the pill is gone from the release header and from
-  the mobile release menu.
+- **CONFIRMED IN PRODUCTION the same day: the founder asked UrgAns for a recap
+  on a finished release and the card came up.** That is more than a render — the
+  card only reaches that state after its own `GET …/recap` resolves and returns
+  a row with a `storyImageUrl`, so the tool's new `open_recap` action fired, the
+  client dispatched it, the route answered and the signed URLs came back. It
+  also settles the deploy: the v1.29.0 build was triggered at 16:16 UTC and
+  Vercel's account-wide deployment rate limit closed at 16:19 (see the note
+  under Deployment), so this landed in the last window before it.
+- **Still unexercised, and it is the payload rather than a detail:** nobody has
+  pressed Download or Share, or moved the Story/Square toggle. Both are one tap
+  each and both go through `shareOrDownloadImage`, which is the pre-existing path
+  the deleted modal used — so the risk is low and it is not zero. Worth the two
+  taps next time a release finishes.
 
 ---
 
