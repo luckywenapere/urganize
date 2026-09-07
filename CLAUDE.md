@@ -1744,12 +1744,10 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
   a template-instantiated one does. That is the parity question the field
   comparison below explicitly could not answer, and it is the half most worth
   having. Of the three steps this bullet listed as remaining when it was
-  written, **one is now covered, one was never a step at all, and one is
-  genuinely open** — see the bullets below. The open one is that a
-  manager-added activity lands
-  on Timeline as a marker rather than a bar (the asymmetry below — it has to
-  be added by hand BEFORE approving, so a pass that skips that step cannot
-  test it).
+  written, **two are now covered by tests and one was never a step at all** —
+  see the bullets below. What is left of the third (a manager-added activity
+  landing on Timeline as a marker rather than a bar) is the round trip and the
+  pixels: the rule itself is now pinned at all three links.
 - **The two write paths compared, 2026-09-07: 13 of 15 columns are identical
   in shape.** `instantiate.ts` (template) against
   `release-planning-server.ts` (approval), which is the substance of the
@@ -1778,7 +1776,38 @@ The rebuild of v1 scope item 2, replacing the "Tailor plan" build this section c
   rather than a bar (null duration means "we do not know", and an honest dot
   beats a wrong span). An approved plan can hold both kinds, so that is
   exactly where "behaves the same" legitimately stops — add one by hand before
-  approving and confirm it lands as a marker, or the asymmetry is untested.
+  approving and confirm it lands as a marker. **The LOGIC of that is covered
+  end to end as of 2026-09-07** — see the next bullet — so a manual pass would
+  add the round trip and the pixels, not the rule.
+- **The asymmetry is a chain of THREE links, and checking it found that two
+  were already covered and the join between them was not.** (1) The WRITER:
+  `release-planning-server.test.ts` asserts a manager-added row's
+  `metadata.template` has **exactly** `['compressed_runway', 'task_type']`, so
+  `duration_days` being absent is proven by exhaustion rather than by a
+  matching assertion somebody could weaken. (3) The RENDERER:
+  `release-timeline.test.ts`'s *"treats an unknown duration as a single point
+  rather than inventing one"* already passes `durationDays: null` and asserts
+  `isBar` false, and its comment names this exact case. **(2) The READER was
+  the hole** — the four functions in `lib/tasks-server.ts` that turn
+  `metadata.template` into the fields everything classifies by were
+  module-private with no test file at all. That is the worst of the three
+  places to have a gap, and not hypothetically: `readTemplateTaskId` is
+  precisely one of them, and it read the wrong key for months in this same
+  metadata block while every surface downstream looked merely uninteresting
+  rather than broken.
+- **THE FOUR METADATA READERS HAVE TESTS NOW** —
+  `lib/task-metadata-readers.test.ts` (19 cases, 2026-09-07). They were
+  exported for it, which is the whole change to `tasks-server.ts`; nothing
+  else moved. Each has a designed DEFAULT (`'task'`, `null`, `false`), so a
+  broken key never throws and never renders an error — it makes every row look
+  like the least interesting case, which is why the earlier bug survived so
+  long and why a reader is worth pinning even when it looks trivial. The suite
+  reads the two real shapes an approved plan contains: a template row resolving
+  all four fields, and a manager-added one resolving to the nulls the timeline
+  depends on. **Mutation-tested, and the first one is the point: reverting
+  `readTemplateTaskId` to the key that was broken for months now fails four
+  tests.** The other two (dropping `duration_days >= 1`, flipping
+  `readTaskType`'s default) each fail exactly their own.
 - **What the comparison canNOT settle**, since it is a read of two files: that
   the cascade actually unlocks, and that the blocker gate actually refuses.
   Those are runtime behaviours over the `dependencies` column, and the column

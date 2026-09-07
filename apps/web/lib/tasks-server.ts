@@ -419,7 +419,7 @@ const normalizeTaskContext = (value: unknown): TaskContextLink => {
 // Reads the template classification out of metadata.template.task_type.
 // Defaults to 'task' for rows that predate the template flow (or any row whose
 // metadata doesn't carry the marker).
-const readTaskType = (metadata: unknown): 'task' | 'event_milestone' => {
+export const readTaskType = (metadata: unknown): 'task' | 'event_milestone' => {
   if (metadata && typeof metadata === 'object') {
     const template = (metadata as { template?: unknown }).template;
     if (template && typeof template === 'object') {
@@ -447,7 +447,7 @@ const readTaskType = (metadata: unknown): 'task' | 'event_milestone' => {
 // still accepted defensively in case any row was ever written under that
 // name by a since-removed code path. See the Timeline and cover-art sections
 // of CLAUDE.md for the consequences this had while it was broken.
-const readTemplateTaskId = (metadata: unknown): string | null => {
+export const readTemplateTaskId = (metadata: unknown): string | null => {
   if (metadata && typeof metadata === 'object') {
     const template = (metadata as { template?: unknown }).template;
     if (template && typeof template === 'object') {
@@ -473,7 +473,7 @@ const readTemplateTaskId = (metadata: unknown): string | null => {
 // draw a real bar for the ~11% of playbook activities that genuinely run over
 // several days, without a schema change: the number has been on every
 // template-generated row since instantiation was written.
-const readDurationDays = (metadata: unknown): number | null => {
+export const readDurationDays = (metadata: unknown): number | null => {
   if (metadata && typeof metadata === 'object') {
     const template = (metadata as { template?: unknown }).template;
     if (template && typeof template === 'object') {
@@ -490,7 +490,7 @@ const readDurationDays = (metadata: unknown): number | null => {
 // Defaults to false for rows that predate this flag — legacy template tasks
 // that are past-due fall through to the standard overdue treatment rather
 // than being silently retroactively reclassified as catch-up.
-const readCompressedRunway = (metadata: unknown): boolean => {
+export const readCompressedRunway = (metadata: unknown): boolean => {
   if (metadata && typeof metadata === 'object') {
     const template = (metadata as { template?: unknown }).template;
     if (template && typeof template === 'object') {
