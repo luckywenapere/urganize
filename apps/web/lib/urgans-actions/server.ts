@@ -299,7 +299,12 @@ export async function runUrgansAction(
       actor_user_id: params.actor.id,
       plan_at_time: scope.tier,
       action_type: action.id,
-      object_type: 'release',
+      // From the scope, NEVER a literal. This was hardcoded 'release' until
+      // 2026-09-07, so every embedded press-kit draft was filed as a release:
+      // wrong in the console's own object grouping, and enough to make
+      // findLatestDraftedActionId (which filters on object_type) never find a
+      // kit's own drafted run.
+      object_type: scope.objectType,
       object_id: params.objectId,
       status: outcome.ok ? 'drafted' : 'failed',
       input_summary: outcome.ok ? outcome.inputSummary : {},

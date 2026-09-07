@@ -16,12 +16,27 @@
 //
 // Approval is confirmation-gated: it writes ~60 real task rows in one batch and
 // cannot be undone from the assistant.
+//
+// THESE THREE TOOLS ARE THE CHAT DOOR ONTO release.draft_plan, the embedded
+// action a button inside the release runs. They reach the same draft through
+// the same legacy /plan/* routes the review scene uses, so they need none of
+// the action runner — but they DO log to urgans_actions, or /admin/urgans
+// would be blind to half the drafting that happens. The gate is deliberately
+// not shared: see lib/urgans-actions/chat-log-server.ts, which argues that.
+// Every log call is fire-and-forget after the tool's own success, so a failed
+// generate logs nothing and a failed log never costs the user their answer.
 
 import {
   isReleasePlannerEnabled,
   parseReleasePlanIntake,
   type ReleasePlanIntake,
 } from '@/lib/release-planning';
+import {
+  markChatActionApplied,
+  markChatActionDiscarded,
+  recordChatActionRun,
+} from '@/lib/urgans-actions/chat-log-server';
+import { findLatestDraftedActionId } from '@/lib/urgans-actions/server';
 import {
   apiError,
   argString,
@@ -32,6 +47,9 @@ import {
 } from './shared';
 
 const PLANNER_OFF = "The rollout planner isn't enabled yet.";
+
+/** The embedded action these three tools are the chat door onto. */
+const PLAN_ACTION = 'release.draft_plan';
 
 /** Phase labels in the order a rollout actually runs, for the summary. */
 const PHASE_ORDER = ['setup', 'pre_release', 'release_week', 'post_release'] as const;
@@ -272,6 +290,16 @@ export const PLANNER_TOOLS: ChappiTool[] = [
       const draft = (res.body.draft ?? {}) as Record<string, unknown>;
       const doc = (draft.doc ?? {}) as Record<string, unknown>;
       const summary = summarizeDraft(doc);
+
+      // Logged after the draft exists, never before: a run that failed is not
+      // a run the console should count.
+      await recordChatActionRun(ctx.adminClient, {
+        actionType: PLAN_ACTION,
+        objectId: releaseId,
+        actor: ctx.user,
+        inputSummary: { intakeSource: 'chat', releaseType: parsed.intake.release_type },
+        output: { totalTasks: summary.totalTasks, phases: summary.phases },
+      });
       const phaseLine = summary.phases
         .map((entry) => `${entry.phase}: ${entry.tasks}`)
         .join(', ');
@@ -339,6 +367,23 @@ export const PLANNER_TOOLS: ChappiTool[] = [
       if (!res.ok) return fail(apiError(res, 'Could not approve the plan.'));
 
       const created = Number(res.body.tasksCreated ?? 0);
+
+      // Settle whichever run drafted this plan, whichever door it came
+      // through. findLatestDraftedActionId is the same lookup the review
+      // scene uses, and re-deriving it here rather than threading an id
+      // through the conversation is deliberate: a plan drafted from the
+      // button and approved in chat is a real sequence, and the transcript
+      // would know nothing about that run.
+      await markChatActionApplied(
+        ctx.adminClient,
+        await findLatestDraftedActionId(ctx.adminClient, {
+          objectType: 'release',
+          objectId: releaseId,
+          actionType: PLAN_ACTION,
+        }),
+        { tasksCreated: created }
+      );
+
       const warnings = Array.isArray(res.body.warnings) ? (res.body.warnings as string[]) : [];
       const warningLine = warnings.length ? ` Note: ${warnings.join(' ')}` : '';
       return {
@@ -387,6 +432,16 @@ export const PLANNER_TOOLS: ChappiTool[] = [
       const res = await callInternalApi(ctx, `/api/releases/${releaseId}/plan`, { method: 'DELETE' });
       if (isFlagGateOff(res)) return fail(PLANNER_OFF);
       if (!res.ok) return fail(apiError(res, 'Could not discard the draft.'));
+
+      await markChatActionDiscarded(
+        ctx.adminClient,
+        await findLatestDraftedActionId(ctx.adminClient, {
+          objectType: 'release',
+          objectId: releaseId,
+          actionType: PLAN_ACTION,
+        })
+      );
+
       return { ok: true, summary: 'Discarded the draft plan.' };
     },
   },

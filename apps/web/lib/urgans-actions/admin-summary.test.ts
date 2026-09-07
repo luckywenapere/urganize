@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ALL_ACTIONS_BUCKET,
+  ALL_SOURCES_BUCKET,
   summarizeUrgansActions,
   type UrgansActionRow,
   type UrgansBillingSignalRow,
@@ -9,6 +11,7 @@ const action = (partial: Partial<UrgansActionRow>): UrgansActionRow => ({
   workspaceId: 'ws-1',
   actionType: 'release.draft_plan',
   status: 'drafted',
+  source: 'button',
   tokensIn: null,
   tokensOut: null,
   createdAt: '2026-09-03T12:00:00.000Z',
@@ -140,5 +143,83 @@ describe('summarizeUrgansActions', () => {
     expect(rows).toHaveLength(2);
     expect(rows.find((row) => row.workspaceId === 'ws-a')).toMatchObject({ drafted: 1, applied: 0 });
     expect(rows.find((row) => row.workspaceId === 'ws-b')).toMatchObject({ drafted: 0, applied: 1 });
+  });
+});
+
+describe('which door a run came through', () => {
+  it('splits the same action into a row per door', () => {
+    // The whole point: without this the console reports twelve drafted plans
+    // and cannot say whether anyone used the button.
+    const rows = summarizeUrgansActions(
+      [
+        action({ source: 'button' }),
+        action({ source: 'button' }),
+        action({ source: 'chat' }),
+      ],
+      []
+    );
+
+    expect(rows).toHaveLength(2);
+    expect(rows.find((row) => row.source === 'button')).toMatchObject({ drafted: 2 });
+    expect(rows.find((row) => row.source === 'chat')).toMatchObject({ drafted: 1 });
+  });
+
+  it('keeps one door\'s statuses off the other', () => {
+    const rows = summarizeUrgansActions(
+      [
+        action({ source: 'button', status: 'applied' }),
+        action({ source: 'chat', status: 'discarded' }),
+      ],
+      []
+    );
+
+    expect(rows.find((row) => row.source === 'button')).toMatchObject({ applied: 1, discarded: 0 });
+    expect(rows.find((row) => row.source === 'chat')).toMatchObject({ applied: 0, discarded: 1 });
+  });
+
+  it('reads a row with no source as the button', () => {
+    // Rows written before the column existed, and the column default itself.
+    // Treating them as an unknown door would invent a third one; the button
+    // was the only door at the time, so that is what they were.
+    const rows = summarizeUrgansActions(
+      [action({ source: undefined as never }), action({ source: 'nonsense' as never })],
+      []
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ source: 'button', drafted: 2 });
+  });
+
+  it('files a billing signal under neither door, because it names neither', () => {
+    // Same reasoning ALL_ACTIONS_BUCKET already uses for the action type: a
+    // guard trip or an upgrade prompt is not attributable to a door, and
+    // folding it onto whichever one happened to run would misreport it.
+    const rows = summarizeUrgansActions([], [signal({ type: 'upgrade_prompt_shown' })]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      actionType: ALL_ACTIONS_BUCKET,
+      source: ALL_SOURCES_BUCKET,
+      upgradePromptsShown: 1,
+    });
+  });
+
+  it('sorts the doors together under one action rather than interleaving them', () => {
+    const rows = summarizeUrgansActions(
+      [
+        action({ actionType: 'presskit.draft_section', source: 'chat' }),
+        action({ actionType: 'release.draft_plan', source: 'chat' }),
+        action({ actionType: 'release.draft_plan', source: 'button' }),
+        action({ actionType: 'presskit.draft_section', source: 'button' }),
+      ],
+      []
+    );
+
+    expect(rows.map((row) => `${row.actionType}:${row.source}`)).toEqual([
+      'presskit.draft_section:button',
+      'presskit.draft_section:chat',
+      'release.draft_plan:button',
+      'release.draft_plan:chat',
+    ]);
   });
 });

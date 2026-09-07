@@ -38,6 +38,10 @@ type ActionQueryRow = {
   workspace_id: string | null;
   action_type: string;
   status: UrgansActionRow['status'];
+  /** Nullable in the type, not in the column: a row that predates the column
+   *  reads as null here and summarizeUrgansActions normalizes it to the
+   *  button, which is the door that existed when it was written. */
+  source: UrgansActionRow['source'] | null;
   tokens_in: number | null;
   tokens_out: number | null;
   created_at: string;
@@ -64,7 +68,7 @@ export async function GET(request: NextRequest) {
   const [actionsResult, signalsResult] = await Promise.all([
     client
       .from('urgans_actions')
-      .select('workspace_id, action_type, status, tokens_in, tokens_out, created_at')
+      .select('workspace_id, action_type, status, source, tokens_in, tokens_out, created_at')
       .gte('created_at', since)
       .order('created_at', { ascending: false })
       .limit(ACTIONS_QUERY_LIMIT),
@@ -94,6 +98,7 @@ export async function GET(request: NextRequest) {
       workspaceId: row.workspace_id,
       actionType: row.action_type,
       status: row.status,
+      source: row.source ?? 'button',
       tokensIn: row.tokens_in,
       tokensOut: row.tokens_out,
       createdAt: row.created_at,
