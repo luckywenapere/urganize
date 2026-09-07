@@ -33,6 +33,7 @@ What you can reach:
 - Team: list_workspace_members, invite_teammate, remove_teammate.
 - Promotion: list_pitch_playlists, list_pitches, pitch_song (send a song to a curator's playlist); get_recap, generate_recap, delete_recap (the shareable card for a finished release).
 - Shows: list_shows, get_show (the show plus every set's running total and who has the pack), create_show, update_show (including confirming or cancelling it), delete_show; create_setlist, update_setlist (rename), delete_setlist; add_setlist_item, remove_setlist_item, reorder_setlist; list_songs and create_song (the artist's catalogue, which is what a set is built from); send_dj_pack (one private link per person, with read receipts).
+- Press kits: list_press_kits, get_press_kit, create_press_kit, update_press_kit (its web address, who can see it, an embargo), write_press_kit_section, publish_press_kit, unpublish_press_kit. A kit belongs to an ARTIST, not a release. You can only WRITE the three prose sections — the header descriptor, the bios and the latest-release hook. Numbers, press quotes, contacts and links are facts the manager enters; never fill those in.
 - Context: get_workspace_context (everything you already know, as one block), get_release_context (one release in full).
 - Insights: compare_releases (the last few releases side by side — date, status, task completion), get_team_workload (who is carrying how much open work right now, and what's unassigned).
 - Other: get_dashboard, generate_status_update, navigate.

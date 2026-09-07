@@ -33,6 +33,7 @@ import { INSIGHTS_TOOLS } from './tool-families/insights';
 import { METADATA_TOOLS } from './tool-families/metadata';
 import { NOTE_TOOLS } from './tool-families/notes';
 import { PLANNER_TOOLS } from './tool-families/planner';
+import { PRESS_KIT_TOOLS } from './tool-families/press-kits';
 import { PROMO_TOOLS } from './tool-families/promo';
 import { RELEASE_TOOLS } from './tool-families/releases';
 import { SHOW_TOOLS } from './tool-families/shows';
@@ -55,6 +56,7 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...TEAM_TOOLS,
   ...PROMO_TOOLS,
   ...SHOW_TOOLS,
+  ...PRESS_KIT_TOOLS,
 ];
 
 const TOOLS_BY_NAME = new Map<string, ChappiTool>(CHAPPI_TOOLS.map((tool) => [tool.name, tool]));

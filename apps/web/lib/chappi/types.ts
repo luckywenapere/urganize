@@ -165,7 +165,15 @@ export type ChappiToolName =
   | 'add_setlist_item'
   | 'remove_setlist_item'
   | 'reorder_setlist'
-  | 'send_dj_pack';
+  | 'send_dj_pack'
+  // the standing per-artist press kit (2026-09-07)
+  | 'list_press_kits'
+  | 'get_press_kit'
+  | 'create_press_kit'
+  | 'update_press_kit'
+  | 'write_press_kit_section'
+  | 'publish_press_kit'
+  | 'unpublish_press_kit';
 
 /**
  * A side effect the CLIENT must perform after the agent turn — the agent runs
