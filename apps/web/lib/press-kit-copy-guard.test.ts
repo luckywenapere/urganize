@@ -49,6 +49,13 @@ const FILES = [
   // makes the coverage a decision instead of a coincidence.
   join(WEB, 'lib', 'chappi', 'tool-families', 'press-kits.ts'),
   join(WEB, 'lib', 'chappi', 'tool-families', 'directory.ts'),
+  // The help pullouts (2026-09-08). Every string in that module is read by a
+  // manager, and it is a NEW surface, so it is born under the house rules
+  // rather than grandfathered out of them like the older copy this guard's
+  // header excludes. Its own guard, lib/help-copy.test.ts, adds the
+  // readability caps on top; this one supplies the em dash, the banned words
+  // and the "never says workspace" rule so there is one definition of each.
+  join(WEB, 'lib', 'help-copy.ts'),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 /**

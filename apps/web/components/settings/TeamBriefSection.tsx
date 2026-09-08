@@ -15,6 +15,7 @@ import {
   type TeamBrief,
   type TeamBriefSection as SectionKey,
 } from '@/lib/team-brief';
+import { HelpTip } from '@/components/shared/HelpTip';
 
 /**
  * The team brief editor.
@@ -162,10 +163,15 @@ export function TeamBriefSection() {
   return (
     <section className={panelClass}>
       <Heading />
+      {/* Five sentences until 2026-09-08, and the longest intro in Settings.
+          The rest moved into the pullout, which also drops the em dash the old
+          sentence carried. The read-only branch was already two short
+          sentences and is left alone. */}
       <p className="mt-2 max-w-prose text-sm text-content-secondary">
         {canEdit
-          ? 'Tell UrgAns about your team once, and it stops asking. None of this shows up in your Catalog — it only gives UrgAns a head start. Anyone here can fill this in, and everyone gets the benefit.'
-          : 'Your team lead keeps this up to date. UrgAns reads it on every question you ask.'}
+          ? 'Tell UrgAns about your team once, and it stops asking.'
+          : 'Your team lead keeps this up to date. UrgAns reads it on every question you ask.'}{' '}
+        {canEdit ? <HelpTip helpKey="settings.teamBrief" className="align-text-bottom" /> : null}
       </p>
 
       {/* Progress, always visible. The guided flow's own value is that it is

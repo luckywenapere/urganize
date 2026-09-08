@@ -1,6 +1,7 @@
 'use client';
 
 import { Trash2 } from '@/components/icons';
+import { HelpTip } from '@/components/shared/HelpTip';
 
 /**
  * The standing exit of the test path (NEXT_PUBLIC_FEATURE_TEST_RELEASE).
@@ -30,10 +31,12 @@ export function TestReleaseBanner({ onDelete }: { onDelete: () => void }) {
       <h3 className="mt-1 font-display text-base font-semibold text-content-primary">
         This is a test release
       </h3>
+      {/* Four sentences until 2026-09-08, standing permanently on a banner.
+          The fourth ("when you are done, delete it below") was already
+          redundant with the Delete button directly underneath it. */}
       <p className="mt-1 text-sm leading-6 text-content-secondary">
-        It comes with the full plan, so you can see how a real release works. Tick
-        activities off, open the tools, move things around. Nothing here is real.
-        When you are done, delete it below.
+        Nothing here is real. Tick activities off, open the tools, move things around.{' '}
+        <HelpTip helpKey="workspace.testRelease" className="align-text-bottom" />
       </p>
       <button
         type="button"

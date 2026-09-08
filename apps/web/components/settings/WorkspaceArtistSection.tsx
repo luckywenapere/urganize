@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
+import { HelpTip } from '@/components/shared/HelpTip';
 
 export type WorkspaceArtist = { id: string; name: string; slug: string };
 
@@ -140,9 +141,11 @@ export function WorkspaceArtistSection({
       {/* States its scope explicitly (2026-08-13): the sibling editor under
           Account edits the signed-in user's own profile name. Both used to say
           just "Artist name" with the same placeholder. */}
+      {/* Three sentences until 2026-09-08. The two consequences of editing
+          here moved into the pullout; what the list IS stays visible. */}
       <p className="mb-4 text-sm text-content-secondary">
-        The artists this team works on. Renaming one updates that artist&apos;s
-        releases too. You choose the artist when you create a release.
+        The artists this team works on.{' '}
+        <HelpTip helpKey="settings.artists" className="align-text-bottom" />
       </p>
 
       {isLoading && artists === undefined ? (

@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.33.0",
+    date: "September 9, 2026",
+    highlights: [
+      "Hover a row in the side menu and it tells you what that page is for, in one plain line.",
+      "The Metadata page is quieter. Every box has a small i beside it, so the explanation is there when you want it and out of the way when you don't.",
+      "Shorter wording in a few more places, with the detail tucked behind the same small i.",
+    ],
+  },
+  {
     version: "1.32.0",
     date: "September 8, 2026",
     highlights: [

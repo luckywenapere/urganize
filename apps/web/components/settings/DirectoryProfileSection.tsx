@@ -18,6 +18,7 @@ import { panelClass } from './panelClass';
 import { SentRequestsList } from '@/components/directory/SentRequestsList';
 import { WorkRequestsInbox } from './WorkRequestsInbox';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { HelpTip } from '@/components/shared/HelpTip';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const REQUESTS_ENABLED =
@@ -156,10 +157,11 @@ export function DirectoryProfileSection() {
           produced somebody a manager could find and had no way to reach. A
           directory whose people cannot be contacted is a lookup table.
           Closing the page again is one control below. */}
+      {/* Three sentences until 2026-09-08. The one that stays is the one a
+          person needs before deciding anything: nothing is public yet. */}
       <p className="mb-4 text-sm text-content-secondary">
-        Managers use the directory to find people who have delivered the work a release needs. You
-        are not listed until you say so. Listing yourself opens your page so they can read it and
-        reach you; you can close it again below.
+        You are not listed until you say so, and you can close it again below.{' '}
+        <HelpTip helpKey="settings.directory" className="align-text-bottom" />
       </p>
 
       {!loaded ? (
