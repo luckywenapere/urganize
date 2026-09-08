@@ -69,6 +69,25 @@ export const RELEASE_MENU_ORDER = [
   // the submissions that come back, so it is returned to across the whole
   // rollout rather than filled in once. Also a promoted tab.
   'metadata',
+  // Capture, and the only entry here that LEAVES the panel rather than
+  // swapping its body — it opens the notebook with this release already
+  // filtered and a blank note waiting. It exists because the phone is the
+  // one place the loop is broken: the desktop pill carries `?release=` and
+  // "New note" pre-links from that filter, so a laptop is two clicks, while
+  // MobileNavBar's Notes tab carries no release at all and leaves you
+  // hunting for it in a picker. TasksPanel's own notesPill comment already
+  // conceded that gap ("what the phone loses is the `?release=` PRE-FILTER");
+  // this closes it.
+  //
+  // Placed here rather than higher because a note is taken repeatedly across
+  // a rollout — during a call, mid-DM — so it belongs in the band you return
+  // to rather than with the assets you set once. But below the four promoted
+  // tabs, because the founder declined to promote notes (2026-08-15, kept off
+  // the mobile pills) and that is the only revealed preference there is. Note
+  // that call was about the PILL ROW, two weeks before the 2026-08-31 rework
+  // made this menu the phone's home for per-release actions — so it is not
+  // read as barring the menu, only as ranking it below what he did promote.
+  'note',
   // Asset production, 9 of 64 between them: a handful of touches each, early,
   // and then done. Kept adjacent because they are the release's core identity
   // assets and get set in the same sitting.

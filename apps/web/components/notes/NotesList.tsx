@@ -27,6 +27,13 @@ type NotesListProps = {
   onSelect: (noteId: string) => void;
   onNewNote: () => void;
   onClearFilter: () => void;
+  /** Another page exists on the server. */
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  onLoadMore: () => void;
+  /** How many notes are loaded, before the release filter and search narrow
+   *  them. Used only to be honest about what a search actually covered. */
+  loadedCount: number;
 };
 
 const sectionSurface =
@@ -50,10 +57,27 @@ export function NotesList({
   onSelect,
   onNewNote,
   onClearFilter,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
+  loadedCount,
 }: NotesListProps) {
   const isEmpty = pinned.length === 0 && others.length === 0;
   const isFiltering = Boolean(filterRelease) || filterUnresolved;
   const isSearching = searchTerms.length > 0;
+
+  // Paging is keyset, so "older" is literally what the next page holds:
+  // the list is newest-first and the cursor walks backwards through it.
+  const loadMoreButton = (
+    <button
+      type="button"
+      onClick={onLoadMore}
+      disabled={isLoadingMore}
+      className="motion-focus motion-press inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-4 text-sm font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary disabled:opacity-60"
+    >
+      {isLoadingMore ? 'Loading…' : 'Load older notes'}
+    </button>
+  );
 
   const renderRows = (notes: Note[]) =>
     notes.map((note) => (
@@ -157,11 +181,19 @@ export function NotesList({
           <EmptyState
             title="No notes match that."
             description={
-              isFiltering
-                ? 'Nothing here matches your search. Try fewer words, or clear the release filter to search everything.'
-                : 'Try fewer words — search matches the title and the body, in any order.'
+              // While a page is unloaded, a miss is genuinely inconclusive —
+              // search filters what is in memory, so saying only "no match"
+              // would be telling the reader their note is gone when we have
+              // not looked at it. That case leads.
+              hasMore
+                ? `Search only covers the ${loadedCount} notes loaded so far. Load older notes and try again.`
+                : isFiltering
+                  ? 'Nothing here matches your search. Try fewer words, or clear the release filter to search everything.'
+                  : 'Try fewer words — search matches the title and the body, in any order.'
             }
             action={
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {hasMore ? loadMoreButton : null}
               <button
                 type="button"
                 onClick={() => onSearchChange('')}
@@ -169,6 +201,7 @@ export function NotesList({
               >
                 Clear search
               </button>
+              </div>
             }
           />
         ) : isEmpty ? (
@@ -222,6 +255,20 @@ export function NotesList({
                 {pinned.length > 0 ? <p className={eyebrow}>Notes</p> : null}
                 <div className={sectionSurface}>{renderRows(others)}</div>
               </section>
+            ) : null}
+
+            {/* The 201st note used to be invisible with nothing on screen to
+                say so. Now the end of the list is either the end of the
+                notebook or a control — never a silent stop. */}
+            {hasMore ? (
+              <div className="mt-4 flex flex-col items-center gap-2 pb-2">
+                {isSearching ? (
+                  <p className="text-center text-xs text-content-tertiary">
+                    Searched the {loadedCount} notes loaded so far.
+                  </p>
+                ) : null}
+                {loadMoreButton}
+              </div>
             ) : null}
           </>
         )}

@@ -23,10 +23,12 @@ export const NOTES_TABLE = 'notes';
 
 export const NOTE_COLUMNS = 'id,release_id,body,pinned,created_at,updated_at';
 
-// A single owner's whole notebook is loaded in one request and filtered on
-// the client, so this cap is the only pagination the feature has. Well above
-// any real v1 notebook; revisit alongside a real pagination story.
-export const NOTES_LIST_LIMIT = 200;
+// Paging lives in lib/note-paging.ts (NOTES_PAGE_SIZE and the cursor).
+// NOTES_LIST_LIMIT used to sit here as a hard cap with no paging and no
+// indication, which made the 201st note invisible AND unfindable, since
+// search filters a list already fetched. Retired 2026-09-08 when that
+// pagination story arrived; the page size is deliberately the same 200, so
+// the first page is unchanged and only the 201st note onward is new.
 
 // Feature flag: the whole notes surface stays dark until
 // NEXT_PUBLIC_FEATURE_NOTES is 'true'. Every handler checks this first and

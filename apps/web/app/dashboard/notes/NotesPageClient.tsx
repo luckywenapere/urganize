@@ -36,7 +36,17 @@ export default function NotesPageClient() {
   const searchParams = useSearchParams();
   const { user, isLoading: authLoading } = useAuthStore();
   const { releases, loadCommandCenter } = useReleaseStore();
-  const { notes, isInitialLoading, load, create, update, remove } = useNotesStore();
+  const {
+    notes,
+    isInitialLoading,
+    hasMore,
+    isLoadingMore,
+    load,
+    loadMore,
+    create,
+    update,
+    remove,
+  } = useNotesStore();
   const tasks = useTaskStore((state) => state.tasks);
   const openIntake = usePlannerStore((state) => state.openIntake);
   const { openQuickCreate } = useTaskUI();
@@ -344,6 +354,13 @@ export default function NotesPageClient() {
             onSelect={handleSelect}
             onNewNote={() => void handleNewNote()}
             onClearFilter={clearFilter}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={() => void loadMore()}
+            // The loaded total, NOT the filtered one: it is used to say what
+            // a search actually covered, and the release filter narrowing the
+            // view does not change how much of the notebook is in memory.
+            loadedCount={notes.length}
           />
         </section>
 

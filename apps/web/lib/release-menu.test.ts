@@ -24,6 +24,7 @@ describe('RELEASE_MENU_ORDER', () => {
       'calendar',
       'pitch',
       'metadata',
+      'note',
       'coverart',
       'song',
       'files',
@@ -48,6 +49,13 @@ describe('RELEASE_MENU_ORDER', () => {
     expect(position('pitch')).toBeLessThan(position('song'));
     // Working surfaces before the things you send outward.
     expect(position('metadata')).toBeLessThan(position('capture'));
+    // Capture runs the whole length of a rollout — a note is taken during a
+    // call, not set once like the cover — so it sits in the band you return
+    // to, above the assets. But BELOW the four the founder promoted to tabs,
+    // because he declined to promote notes (2026-08-15, kept off the mobile
+    // pills), and that is the only revealed preference there is for it.
+    expect(position('metadata')).toBeLessThan(position('note'));
+    expect(position('note')).toBeLessThan(position('coverart'));
     // Everything before the corrective and terminal actions.
     expect(position('capture')).toBeLessThan(position('change-artist'));
     expect(position('change-artist')).toBeLessThan(position('archive'));

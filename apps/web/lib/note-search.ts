@@ -4,7 +4,7 @@ import { parseSearchTerms } from './task-search';
 
 // Search over a manager's notes, for the notes page (URG-243). Notes are the
 // one surface with no way in once there are more than a screenful: the list
-// holds up to NOTES_LIST_LIMIT (200) and offers pinning and a release filter,
+// holds a page of NOTES_PAGE_SIZE (200) and offers pinning and a release filter,
 // neither of which helps someone who remembers a phrase and not a release.
 //
 // Pure and in lib/ for the same reason lib/task-search.ts and

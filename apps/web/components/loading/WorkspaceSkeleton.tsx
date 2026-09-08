@@ -420,7 +420,8 @@ function TasksPanelSkeleton() {
             Content, Pitch and Metadata joined the list the day the top tabs
             were removed, so leaving them out of this condition would have
             un-reserved the trigger in exactly the flag combination production
-            runs (calendar + metadata on, the asset flags off). Plan and Recap
+            runs (calendar + metadata on, the asset flags off). Notes joined
+            2026-09-08 with the "Note this" entry. Plan and Recap
             stay excluded for the reason Plan is excluded from `pillWidths`
             above: whether either renders depends on release/draft/task data
             this skeleton doesn't have yet. */}
@@ -436,6 +437,7 @@ function TasksPanelSkeleton() {
           CONTENT_CALENDAR_ENABLED ||
           PITCHING_ENABLED ||
           METADATA_ENABLED ||
+          NOTES_ENABLED ||
           COVER_ART_ENABLED ||
           SONG_UPLOAD_ENABLED ||
           FILES_ENABLED ||

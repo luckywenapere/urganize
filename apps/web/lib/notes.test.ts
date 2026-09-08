@@ -108,6 +108,32 @@ describe('sortNotes', () => {
     expect(sortNotes(notes).map((note) => note.id)).toEqual(['pin-new', 'pin-old', 'plain']);
   });
 
+  /** The tiebreak exists for keyset paging: the server orders by
+   *  (pinned desc, updated_at desc, id desc) and the cursor names a row in
+   *  THAT ordering. Two notes can share an updated_at — a coarse clock, or
+   *  two writes in the same tick — and without a unique tiebreak the two
+   *  sides can disagree about which comes first, which at a page boundary
+   *  means a row shown twice or skipped. Descending, matching the server. */
+  it('breaks an updated_at tie by id, descending, like the server does', () => {
+    const at = '2026-08-05T10:00:00.000Z';
+    const notes = [
+      makeNote({ id: 'aaa', updatedAt: at }),
+      makeNote({ id: 'ccc', updatedAt: at }),
+      makeNote({ id: 'bbb', updatedAt: at }),
+    ];
+    expect(sortNotes(notes).map((note) => note.id)).toEqual(['ccc', 'bbb', 'aaa']);
+  });
+
+  it('applies the id tiebreak inside the pinned group too', () => {
+    const at = '2026-08-05T10:00:00.000Z';
+    const notes = [
+      makeNote({ id: 'p-aaa', pinned: true, updatedAt: at }),
+      makeNote({ id: 'p-bbb', pinned: true, updatedAt: at }),
+      makeNote({ id: 'zzz', updatedAt: at }),
+    ];
+    expect(sortNotes(notes).map((note) => note.id)).toEqual(['p-bbb', 'p-aaa', 'zzz']);
+  });
+
   it('does not mutate the input array', () => {
     const notes = [
       makeNote({ id: 'a', updatedAt: '2026-08-01T10:00:00.000Z' }),
