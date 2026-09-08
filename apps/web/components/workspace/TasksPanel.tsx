@@ -710,7 +710,7 @@ export function TasksPanel({
    * are a global surface that happens to filter by release, not a per-release
    * panel body — so this navigates to the notes page pre-filtered rather than
    * swapping this panel's contents. (Not a regression of the 2026-08-05
-   * "scenes render inline, not as pages" call: that call was about the four
+   * "scenes render inline, not as pages" call: that call was about the
    * release scenes, which stay inline.)
    */
   const notesPill =
