@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.31.0",
+    date: "September 8, 2026",
+    highlights: [
+      "Notes are back on. Park a thought mid-call with nothing to fill in first, then link it to a release whenever you want.",
+      "You can search your notes now. It reads the whole note, not just the title, and your words can be in any order.",
+      "Turn a note into an activity in one tap. It carries over the note's title, and the release the note belongs to.",
+    ],
+  },
+  {
     version: "1.30.0",
     date: "September 7, 2026",
     highlights: [
