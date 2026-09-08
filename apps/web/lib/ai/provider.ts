@@ -360,15 +360,26 @@ export async function generateStructuredAiOutput<T>({
       return parsed;
     } catch (error) {
       lastError = error;
+      // A client-side abort (our own timeout firing) never went through
+      // parseProviderError, so it reaches here as a bare DOMException/Error
+      // rather than an AiProviderError — and would otherwise fall back to
+      // `retryable: isFreeAutoRouter`, silently dropping to ONE attempt for
+      // every pinned model (which is every model this app actually uses:
+      // RodiumAi is not the free auto-router). Callers that budget a timeout
+      // × maxRetries duration (see PLANNER_TIMEOUT_MS's comment) are relying
+      // on a timeout actually being retried, not just accepted as fatal on
+      // attempt one. A slow response says nothing about the next attempt, so
+      // treat it the same as a 429/5xx: worth one more try.
+      const isAbort = error instanceof Error && error.name === 'AbortError';
       const typedError =
         error instanceof AiProviderError
           ? error
           : new AiProviderError(
               String((error as { message?: string } | null)?.message || 'Unknown AI generation error'),
-              { retryable: isFreeAutoRouter }
+              { retryable: isFreeAutoRouter || isAbort }
             );
 
-      const shouldRetry = (isFreeAutoRouter || typedError.retryable) && attempt < maxRetries;
+      const shouldRetry = (isFreeAutoRouter || isAbort || typedError.retryable) && attempt < maxRetries;
       if (shouldRetry) {
         await sleep(Math.min(1500 * attempt, 4000));
         continue;
@@ -424,15 +435,19 @@ export async function generatePlainTextAiOutput({
       return trimmed;
     } catch (error) {
       lastError = error;
+      // Same reasoning as generateStructuredAiOutput's identical block: a
+      // client-side abort must count as retryable on its own, not only under
+      // the free auto-router, or a pinned model never gets its second attempt.
+      const isAbort = error instanceof Error && error.name === 'AbortError';
       const typedError =
         error instanceof AiProviderError
           ? error
           : new AiProviderError(
               String((error as { message?: string } | null)?.message || 'Unknown AI generation error'),
-              { retryable: isFreeAutoRouter }
+              { retryable: isFreeAutoRouter || isAbort }
             );
 
-      const shouldRetry = (isFreeAutoRouter || typedError.retryable) && attempt < maxRetries;
+      const shouldRetry = (isFreeAutoRouter || isAbort || typedError.retryable) && attempt < maxRetries;
       if (shouldRetry) {
         await sleep(Math.min(1500 * attempt, 4000));
         continue;
