@@ -178,6 +178,23 @@ function buildNavItems(
   releases: { id: string; title: string }[]
 ): NavItem[] {
   return [
+    // UrgAns leads the list (founder call, 2026-09-08): it is the surface a
+    // signed-in user now lands on, so it is also the first thing here and in
+    // the topbar pair. Gated on its own flag, which this row was NOT before
+    // — the topbar has always gated its pair and this list never did, so
+    // with the assistant off it offered a first row that bounced straight
+    // back to the catalog. Harmless while it sat third; the wrong thing to
+    // leave at the top.
+    ...(CHAPPI_ENABLED
+      ? [
+          {
+            href: "/dashboard/urgans",
+            label: "UrgAns",
+            Icon: ChappiIcon,
+            isActive: (pathname: string) => pathname === "/dashboard/urgans",
+          },
+        ]
+      : []),
     {
       href: "/dashboard",
       label: "Catalog",
@@ -202,12 +219,6 @@ function buildNavItems(
         label: release.title,
         isActive: release.id === scopedReleaseId,
       })),
-    },
-    {
-      href: "/dashboard/urgans",
-      label: "UrgAns",
-      Icon: ChappiIcon,
-      isActive: (pathname: string) => pathname === "/dashboard/urgans",
     },
     // Exact match, like its neighbours: usePathname excludes the query string,
     // so a ?release= / ?note= deep link still lights this up.

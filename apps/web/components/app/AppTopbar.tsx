@@ -552,13 +552,17 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             brightens on hover, a soft round hover fill, and brand ink only
             on the active surface. The New release CTA stays the one filled
             control up here. */}
+        {/* UrgAns leads the pair (founder call, 2026-09-08), matching the
+            identity panel's nav and the fact that it is now the surface a
+            signed-in user lands on. The two are still mutual toggles; only
+            their order moved. */}
         {CHAPPI_ENABLED ? (
           <>
-            <Suspense fallback={CatalogLinkFallback}>
-              <CatalogTopbarAction />
-            </Suspense>
             <Suspense fallback={<ChappiLinkFallback />}>
               <ChappiTopbarAction />
+            </Suspense>
+            <Suspense fallback={CatalogLinkFallback}>
+              <CatalogTopbarAction />
             </Suspense>
           </>
         ) : null}

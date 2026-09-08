@@ -18,12 +18,22 @@
 // 2026-08-12 (founder decision): the catalog is the front door again, and
 // this is now unconditional. It no longer reads the assistant's flag: a
 // signed-in user lands on their releases whether or not UrgAns is enabled.
-// The assistant is still one tap away from the topbar, the mobile nav bar
-// and the identity panel, and the side rail still opens beside every page.
-// This is the THIRD flip of this value (07-15 assistant, 07-23 catalog,
-// 07-31 assistant, now catalog) — the reason this constant exists is that
-// every entry point moves together, so a future reversal is this line.
-export const HOME_PATH = '/dashboard';
+//
+// 2026-09-08 (founder decision): the assistant is the front door again, and
+// this is the FOURTH flip (07-15 assistant, 07-23 catalog, 07-31 assistant,
+// 08-12 catalog, now assistant). The 08-12 note above predicted that "a
+// future reversal is this line", and it was — every entry point still
+// imports this, so none of them had to move.
+//
+// IT IS FLAG-CONDITIONAL, AND THAT IS A REQUIREMENT RATHER THAN A
+// PREFERENCE. ChappiPageClient bounces to '/dashboard' when the assistant's
+// flag is off (its own `router.replace('/dashboard')`), so an unconditional
+// '/dashboard/urgans' would send a flag-off deployment into a redirect the
+// moment anyone signed in. Resolving to the catalog when the flag is off
+// matches that bounce, so the two agree and there is no loop either way.
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+export const HOME_PATH = CHAPPI_ENABLED ? '/dashboard/urgans' : '/dashboard';
 
 /** Where a curator-only account lands. That surface has no team chrome at all. */
 export const CURATOR_HOME_PATH = '/curator';
