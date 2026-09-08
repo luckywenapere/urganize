@@ -18,6 +18,16 @@ export interface Note {
   body: string;
   /** Pinned notes sort above the rest. */
   pinned: boolean;
+  /**
+   * When the note was archived, or null while it is active. A timestamp
+   * rather than a boolean so the archived view can be ordered and a note
+   * can say how long it has been put away — a boolean throws that away and
+   * nothing can reconstruct it.
+   *
+   * Archiving is NOT deleting: the note keeps its body, its release link
+   * and its pin, and restoring puts it back exactly as it was.
+   */
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

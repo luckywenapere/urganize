@@ -16,6 +16,7 @@ import {
   encodeNoteCursor,
   takeNotePage,
 } from '@/lib/note-paging';
+import { ARCHIVED_VIEW_PARAM, parseNotesView } from '@/lib/note-archive';
 
 /**
  * The owner's whole notebook, pinned first then most recently edited.
@@ -41,17 +42,25 @@ export async function GET(request: NextRequest) {
   // Keyset paging. See lib/note-paging.ts for why keyset and not offset, and
   // why pinned notes are returned whole rather than paged.
   const cursor = decodeNoteCursor(request.nextUrl.searchParams.get('cursor'));
+  // Two lists, one endpoint. The archived view is a different SHAPE, not a
+  // filtered version of the same one — see the pinned note below.
+  const view = parseNotesView(request.nextUrl.searchParams.get(ARCHIVED_VIEW_PARAM));
 
   // Pinned notes ride along on the FIRST page only — they are the top of the
   // list by definition, so re-sending them with every page would duplicate
   // them in the client's store. Capped like anything else, but not paged:
   // pinning exists to keep a handful of notes above the rest.
+  // In the ARCHIVED view there is no pinned section at all: pinning orders
+  // the notebook you work in, and an archived note is out of it. Keeping the
+  // split there would also make the client's display order diverge from the
+  // server's paging order, since sortNotes floats pinned rows.
   let pinned: Record<string, unknown>[] = [];
-  if (!cursor) {
+  if (view === 'active' && !cursor) {
     const { data, error } = await adminClient
       .from(NOTES_TABLE)
       .select(NOTE_COLUMNS)
       .eq('owner_user_id', auth.user.id)
+      .is('archived_at', null)
       .eq('pinned', true)
       .order('updated_at', { ascending: false })
       .order('id', { ascending: false })
@@ -69,8 +78,14 @@ export async function GET(request: NextRequest) {
   let query = adminClient
     .from(NOTES_TABLE)
     .select(NOTE_COLUMNS)
-    .eq('owner_user_id', auth.user.id)
-    .eq('pinned', false);
+    .eq('owner_user_id', auth.user.id);
+
+  query =
+    view === 'archived'
+      ? // Everything archived, pinned or not, as one flat page.
+        query.not('archived_at', 'is', null)
+      : // Active and unpinned — the pinned ones came back whole above.
+        query.is('archived_at', null).eq('pinned', false);
 
   if (cursor) {
     // Strictly after the cursor in (updated_at desc, id desc). Both halves are

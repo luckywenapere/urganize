@@ -1,6 +1,7 @@
 'use client';
 
-import { Pin, Plus, Search, X } from '@/components/icons';
+import { Archive, ArrowLeft, Pin, Plus, Search, X } from '@/components/icons';
+import type { NotesView } from '@/lib/note-archive';
 import Image from 'next/image';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { NoteListRow } from './NoteListRow';
@@ -34,6 +35,9 @@ type NotesListProps = {
   /** How many notes are loaded, before the release filter and search narrow
    *  them. Used only to be honest about what a search actually covered. */
   loadedCount: number;
+  /** Which list is on screen. */
+  view: NotesView;
+  onViewChange: (view: NotesView) => void;
 };
 
 const sectionSurface =
@@ -61,10 +65,13 @@ export function NotesList({
   isLoadingMore,
   onLoadMore,
   loadedCount,
+  view,
+  onViewChange,
 }: NotesListProps) {
   const isEmpty = pinned.length === 0 && others.length === 0;
   const isFiltering = Boolean(filterRelease) || filterUnresolved;
   const isSearching = searchTerms.length > 0;
+  const isArchivedView = view === 'archived';
 
   // Paging is keyset, so "older" is literally what the next page holds:
   // the list is newest-first and the cursor walks backwards through it.
@@ -95,16 +102,43 @@ export function NotesList({
   return (
     <>
       <div className="flex shrink-0 items-center justify-between gap-2 pb-3">
-        <h1 className="font-display text-lg font-semibold text-content-primary">Notes</h1>
-        <button
-          type="button"
-          onClick={onNewNote}
-          disabled={isCreating}
-          className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
-        >
-          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-          New note
-        </button>
+        <h1 className="font-display text-lg font-semibold text-content-primary">
+          {isArchivedView ? 'Archived' : 'Notes'}
+        </h1>
+        {/* The archive offers no "New note": you do not write into an
+            archive, and a create there would land in the list you are not
+            looking at. It gets a way back instead. */}
+        {isArchivedView ? (
+          <button
+            type="button"
+            onClick={() => onViewChange('active')}
+            className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            Notes
+          </button>
+        ) : (
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onViewChange('archived')}
+              aria-label="Show archived notes"
+              title="Archived"
+              className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+            >
+              <Archive className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={onNewNote}
+              disabled={isCreating}
+              className="motion-focus motion-press inline-flex h-8 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              New note
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Search sits above the release chip because it is the broader filter:
@@ -204,6 +238,20 @@ export function NotesList({
               </div>
             }
           />
+        ) : isEmpty && isArchivedView ? (
+          <EmptyState
+            title="Nothing archived."
+            description="Archiving a note puts it here instead of deleting it. Nothing is lost, and one tap puts it back."
+            action={
+              <button
+                type="button"
+                onClick={() => onViewChange('active')}
+                className="motion-focus motion-press inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              >
+                Back to notes
+              </button>
+            }
+          />
         ) : isEmpty ? (
           <EmptyState
             mascot="resting"
@@ -240,22 +288,35 @@ export function NotesList({
           />
         ) : (
           <>
-            {pinned.length > 0 ? (
+            {/* One flat list in the archive. A "Pinned" heading there would
+                be labelling an ordering that no longer does anything: pinning
+                keeps a note at the top of the notebook you work in, and an
+                archived note is out of it. The pin is kept on the row, so
+                restoring puts it back where its owner left it. */}
+            {isArchivedView ? (
               <section>
-                <p className={eyebrow}>
-                  <Pin className="h-3 w-3" aria-hidden="true" />
-                  Pinned
-                </p>
-                <div className={sectionSurface}>{renderRows(pinned)}</div>
+                <div className={sectionSurface}>{renderRows([...pinned, ...others])}</div>
               </section>
-            ) : null}
+            ) : (
+              <>
+                {pinned.length > 0 ? (
+                  <section>
+                    <p className={eyebrow}>
+                      <Pin className="h-3 w-3" aria-hidden="true" />
+                      Pinned
+                    </p>
+                    <div className={sectionSurface}>{renderRows(pinned)}</div>
+                  </section>
+                ) : null}
 
-            {others.length > 0 ? (
-              <section className={pinned.length > 0 ? 'mt-4' : undefined}>
-                {pinned.length > 0 ? <p className={eyebrow}>Notes</p> : null}
-                <div className={sectionSurface}>{renderRows(others)}</div>
-              </section>
-            ) : null}
+                {others.length > 0 ? (
+                  <section className={pinned.length > 0 ? 'mt-4' : undefined}>
+                    {pinned.length > 0 ? <p className={eyebrow}>Notes</p> : null}
+                    <div className={sectionSurface}>{renderRows(others)}</div>
+                  </section>
+                ) : null}
+              </>
+            )}
 
             {/* The 201st note used to be invisible with nothing on screen to
                 say so. Now the end of the list is either the end of the

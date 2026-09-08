@@ -9,6 +9,7 @@ import {
   requireActiveAuthenticatedUser,
   toNote,
 } from '../_shared';
+import { parseArchivedPatch } from '@/lib/note-archive';
 
 /**
  * Patches a note. Every field is optional and presence-checked with `in`, so
@@ -53,6 +54,20 @@ export async function PATCH(
       return NextResponse.json({ error: 'Pinned must be true or false.' }, { status: 400 });
     }
     updates.pinned = payload.pinned;
+  }
+
+  // Archive / restore. `archived` absent means "not part of this patch",
+  // which is a different thing from false — conflating them would restore a
+  // note every time somebody edited its body. parseArchivedPatch draws that
+  // line and refuses a non-boolean, so archiving stays an explicit act.
+  if ('archived' in payload) {
+    const archived = parseArchivedPatch(payload.archived);
+    if (archived === undefined) {
+      return NextResponse.json({ error: 'Archived must be true or false.' }, { status: 400 });
+    }
+    // Stamped server-side. A client-supplied timestamp would let the
+    // archived list be reordered by whoever sends the request.
+    updates.archived_at = archived ? new Date().toISOString() : null;
   }
 
   let releaseIdToVerify: string | null = null;
