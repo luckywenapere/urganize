@@ -56,6 +56,12 @@ const nextConfig = {
   // dashboard — this line alone does nothing. Undefined outside Vercel (local,
   // CI), where Next simply omits the stamp, so it is safe everywhere.
   deploymentId: process.env.VERCEL_DEPLOYMENT_ID,
+  // Stamped at BUILD time and read at request time by /api/version, so the
+  // deployed app can say when it was built. Evaluated once per build, which
+  // is the point: a request-time `new Date()` would just report now.
+  env: {
+    BUILD_TIME: new Date().toISOString(),
+  },
   // The recap card renderer reads static font binaries off disk at request
   // time (satori cannot use next/font). Output tracing only follows imports, so
   // a bare fs.readFile would leave the .ttf files out of the deployed lambda
