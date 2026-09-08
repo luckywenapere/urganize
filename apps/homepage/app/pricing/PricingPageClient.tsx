@@ -31,18 +31,23 @@ import { FOUNDING_MEMBER_LINE } from "@/content/founding-member";
 // tier checkout, the picker on /locked, plan changes and the entitlement
 // resolver. So the two surfaces CAN now legitimately disagree, and the safe
 // direction is the one they disagree in: this page can advertise a tier the app
-// cannot yet sell (the visitor books a demo and talks to a human), where the
-// reverse — an app selling what the site never mentioned — would be the
-// surprise. If a public figure ever needs suppressing again, edit this file.
+// cannot yet sell, because `purchasableTiers()` in apps/web withholds any tier
+// whose Paystack Plan is unminted and the visitor simply does not meet it at the
+// wall. The reverse — an app selling what the site never mentioned — would be
+// the surprise. If a public figure ever needs suppressing again, edit this file.
 //
-// Two things that have NOT changed, both still load-bearing:
-//   * Every CTA is a capture. The cards book a demo and the sales-led card
-//     emails us. Nothing links to app.urganize.app, because that would reopen
-//     the self-serve funnel the founder closed in URG-125/URG-136.
+// Two notes on the CTAs, the first of which has moved twice:
+//   * "EVERY CTA IS A CAPTURE" WAS THE RULE UNTIL 2026-09-02, when Solo and
+//     Manager started sending visitors to a free trial. Since 2026-09-08 Label
+//     does too, so THREE cards start a trial and only Group emails us. What the
+//     old rule was really protecting is intact: nobody lands in the product
+//     without an account, because APP_SIGNUP_URL is /onboarding rather than the
+//     login-only /auth.
 //   * This is NOT the pre-2026-07-23 layout (Monthly/Annual/Label cards,
 //     geo-resolved currency toggle, billing FAQ + JSON-LD). That one sold legacy
-//     plans in two currencies; the tier model is NGN-only by design. It is in
-//     git history if anyone needs it.
+//     plans in two currencies on a monthly/annual toggle; the tier model is
+//     NGN-only and annual-only by design. It is in git history if anyone needs
+//     it.
 
 // ANIMATION: CSS, not framer-motion (2026-08-08 performance pass).
 //
@@ -107,15 +112,17 @@ export function PricingPageClient() {
 
         {/* WHAT A DEMO LOOKS LIKE — plain-language expectations so "demo"
             doesn't read as a sales gauntlet. Three short beats.
-            
-            The heading was added 2026-08-30: with Solo and Manager now starting
-            a trial instead, these cards describe only the Label path, and
-            unlabelled they read as three steps everyone has to go through. */}
+
+            The heading was added 2026-08-30 because these cards describe ONE
+            path, not the way in for everyone, and unlabelled they read as three
+            steps everybody has to go through. That path narrowed again on
+            2026-09-08: Label went back to a card checkout, so Group is the only
+            card this describes now, and the heading says so. */}
         <section className="relative px-6 pb-20">
           <div className="mx-auto mb-10 max-w-4xl text-center">
             <ScrollReveal>
               <h2 className="text-3xl font-black tracking-tight md:text-4xl">
-                How a demo works
+                How the Group plan works
               </h2>
             </ScrollReveal>
           </div>
@@ -135,7 +142,7 @@ export function PricingPageClient() {
                 {
                   step: "03",
                   title: "You start planning",
-                  body: "If it fits, we set your team up ourselves. Your releases and plans, ready to go.",
+                  body: "If it fits, we agree a price and set your team up ourselves. Your releases and plans, ready to go.",
                 },
               ] as const
             ).map((item) => (

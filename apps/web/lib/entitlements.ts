@@ -225,13 +225,23 @@ export type BooleanEntitlementKey = {
   [K in keyof Entitlements]: Entitlements[K] extends boolean ? K : never;
 }[keyof Entitlements];
 
-/** The cheapest DISPLAYED tier that grants a boolean entitlement, or null if
- *  none does. Reads PRICING_TIER_ORDER (the tiers a visitor sees) rather than
- *  every stored tier, so a sales-led id never becomes an upgrade target no
- *  ordinary team can self-serve into. Exists so a refusal copy never
- *  hardcodes a tier name that a later re-cut would leave lying. */
+/** The cheapest tier a team can BUY that grants a boolean entitlement, or null
+ *  if none does. Exists so a refusal copy never hardcodes a tier name that a
+ *  later re-cut would leave lying.
+ *
+ *  It walks PRICING_TIER_ORDER (the tiers a visitor sees) and SKIPS the
+ *  sales-led ones, because the answer is used as an upgrade target and pointing
+ *  a team at a card whose only button is "Let's talk" is not an upgrade path.
+ *
+ *  THE SKIP USED TO BE IMPLICIT and stopped being true on 2026-09-08. The
+ *  displayed order carried no sales-led tier between 2026-08-30 and then, so
+ *  reading the order alone happened to give the right answer; Group rejoining
+ *  the page made `minimumTierWith('sso')` start answering 'enterprise' for an
+ *  entitlement nothing implements and no page advertises. Filtering on
+ *  `contactSales` says what was always meant. */
 export function minimumTierWith<K extends BooleanEntitlementKey>(key: K): PricingTierId | null {
   for (const tier of PRICING_TIER_ORDER) {
+    if (PRICING_TIERS[tier].contactSales) continue;
     if (ENTITLEMENTS[tier][key]) return tier;
   }
   return null;

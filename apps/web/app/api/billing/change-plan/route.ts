@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
   const subscriptionResult = await admin
     .from('subscriptions')
-    .select('id, plan, billing_interval, status, expires_at, paystack_subscription_code')
+    .select('id, plan, billing_interval, status, expires_at, paystack_subscription_code, amount')
     .eq('user_id', auth.user.id)
     .maybeSingle();
   const subscription = subscriptionResult.data as {
@@ -114,6 +114,9 @@ export async function POST(request: NextRequest) {
     status: string | null;
     expires_at: string | null;
     paystack_subscription_code: string | null;
+    /** Kobo. The last full period charge, which is what a period of this
+     *  subscription costs — see isGrandfatheredRate. */
+    amount: number | null;
   } | null;
 
   if (!subscription) {
@@ -133,6 +136,11 @@ export async function POST(request: NextRequest) {
     targetTier: targetPlan,
     targetInterval,
     periodEndsAt: subscription.expires_at,
+    // What a period of this subscription actually costs. The 2026-09-08 reprice
+    // moved every tier's list price, so pricing a change off the package alone
+    // would quote anyone who bought before it against a number they have never
+    // paid. See isGrandfatheredRate.
+    currentPaidMinorUnit: subscription.amount,
     now,
   });
 

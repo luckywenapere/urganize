@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.32.0",
+    date: "September 8, 2026",
+    highlights: [
+      "New prices, and every plan is now paid once a year. Solo is ₦5,000, Manager is ₦22,000 and Label is ₦50,000.",
+      "There is no monthly option any more, so there is one price to read on every plan.",
+      "Already paying? Your price stays exactly where it is. Ask us if you want to move to a new one.",
+    ],
+  },
+  {
     version: "1.31.0",
     date: "September 8, 2026",
     highlights: [

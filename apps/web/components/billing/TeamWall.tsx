@@ -7,10 +7,10 @@ import {
   PRICING_TIER_ORDER,
   SALES_CONTACT_EMAIL,
   SALES_WHATSAPP_URL,
+  SELLING_INTERVAL,
   formatPlanCyclePrice,
   getPlan,
   getTier,
-  type BillingInterval,
   type PricingTierId,
 } from '@urganize/pricing';
 import { AlertTriangle, CheckCircle2, MessageCircle } from '@/components/icons';
@@ -89,7 +89,7 @@ const DEFAULT_TIER: PricingTierId = 'manager';
 
 const VALUE_LINES = [
   'Every release, task and file exactly where you left it.',
-  'Your whole team, on the same plan.',
+  'One price for your whole team, paid once a year.',
   'Cancel whenever you want, from settings.',
 ];
 
@@ -108,7 +108,11 @@ export function TeamWall() {
   // while it is on — kept side by side rather than overloaded, so a rollback is
   // one boolean and not a data migration in component state.
   const [selectedTier, setSelectedTier] = useState<PricingTierId>(DEFAULT_TIER);
-  const [selectedInterval, setSelectedInterval] = useState<BillingInterval>('annual');
+  // NO INTERVAL STATE since 2026-09-08: everything is billed once a year, so
+  // there is nothing to choose. `SELLING_INTERVAL` is still SENT, because the
+  // checkout and change-plan routes both require the field and it is what tells
+  // the webhook how far to set expires_at. What went away is the toggle, not
+  // the fact.
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   /** Set when a change completed without a redirect: a downgrade, or an upgrade
@@ -126,14 +130,26 @@ export function TeamWall() {
   // at the last step of checkout. That is what stops a customer clicking a price
   // we cannot charge, the gap this repo has shipped four times.
   //
-  // Falling back to WALL_TIERS rather than to nothing is deliberate: an older
-  // server, or a payload we could not read, must not leave a walled team with no
-  // way to pay at all. Offering a tier that might fail is the lesser harm, and
-  // the checkout error names the real problem when it does.
+  // ABSENT AND EMPTY MEAN DIFFERENT THINGS, and conflating them cost real
+  // safety. This read `fromServer && fromServer.length > 0`, so an empty list
+  // fell back to offering everything — on the reasoning that a walled team must
+  // never be left with no way to pay. That reasoning holds for ABSENT (an older
+  // server, a payload we could not read). It is wrong for EMPTY, which is the
+  // server positively telling us it cannot charge any of them, and where the
+  // fallback turns a withheld card into a radio that ends in a 500.
+  //
+  // It matters most in exactly the window a reprice opens: new Plan objects have
+  // to be minted at the new amounts, and between the deploy and the minting the
+  // honest answer is "talk to us", not a button that errors. The full-weight
+  // Talk to us card is already sitting beside this one.
   const offeredTiers = useMemo(() => {
     const fromServer = team?.purchasableTiers;
-    return fromServer && fromServer.length > 0 ? fromServer : WALL_TIERS;
+    return Array.isArray(fromServer) ? fromServer : WALL_TIERS;
   }, [team?.purchasableTiers]);
+
+  /** Is there anything here a card can actually buy? Always true on the legacy
+   *  branch, which reads its own PLAN_ORDER rather than the server's answer. */
+  const canCheckOut = !PRICING_V2 || offeredTiers.length > 0;
 
   // The tier actually in play. DERIVED rather than corrected in an effect, and
   // that is worth a sentence: the offered list arrives asynchronously, so a
@@ -260,7 +276,7 @@ export function TeamWall() {
         const changeResponse = await fetch('/api/billing/change-plan', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: effectiveTier, interval: selectedInterval }),
+          body: JSON.stringify({ plan: effectiveTier, interval: SELLING_INTERVAL }),
         });
         const changePayload = (await changeResponse.json().catch(() => ({}))) as {
           kind?: string;
@@ -303,7 +319,7 @@ export function TeamWall() {
         body: JSON.stringify({
           plan: PRICING_V2 ? effectiveTier : selectedPlan,
           currency: 'NGN',
-          ...(PRICING_V2 ? { interval: selectedInterval } : {}),
+          ...(PRICING_V2 ? { interval: SELLING_INTERVAL } : {}),
           ...(team?.primaryWorkspaceId ? { workspaceId: team.primaryWorkspaceId } : {}),
         }),
       });
@@ -329,7 +345,6 @@ export function TeamWall() {
   }, [
     selectedPlan,
     effectiveTier,
-    selectedInterval,
     team?.hasAccess,
     team?.canWrite,
     team?.primaryWorkspaceId,
@@ -495,16 +510,30 @@ export function TeamWall() {
                 </div>
               ) : (
                 <>
-                  {PRICING_V2 ? (
+                  {PRICING_V2 && !canCheckOut ? (
+                    // Nothing is mintable in this environment. Say so plainly
+                    // rather than rendering an empty fieldset above a button
+                    // that would 500 — and point at the card beside this one,
+                    // because a refusal with no next step is a dead end.
+                    <p className="rounded-lg border border-stroke-default bg-bg-elevated p-4 text-sm text-content-secondary">
+                      Card payment is not available right now. Talk to us and we
+                      will get your team on a plan today.
+                    </p>
+                  ) : PRICING_V2 ? (
                     <TierPlanPicker
                       tiers={offeredTiers}
                       selectedTier={effectiveTier}
                       onSelectTier={setSelectedTier}
-                      interval={selectedInterval}
-                      onIntervalChange={setSelectedInterval}
                       disabled={isStartingCheckout}
                     />
                   ) : (
+                  /* THE LEGACY PICKER, and the one place a monthly figure
+                     survives the 2026-09-08 annual-only reprice. Deliberate:
+                     this branch only renders with NEXT_PUBLIC_FEATURE_PRICING_V2
+                     OFF, which is the documented rollback state, and its numbers
+                     come from BILLING_PLANS — what real legacy subscribers still
+                     renew against. Sweeping it would mean editing their prices
+                     to tidy a screen nobody in production sees. */
                   <div role="radiogroup" aria-label="Choose a plan" className="flex flex-col gap-2">
                     {PLAN_ORDER.map((planId) => {
                       const plan = getPlan(planId);
@@ -556,20 +585,27 @@ export function TeamWall() {
                     ))}
                   </ul>
 
-                  <Button
-                    variant="primary"
-                    className="w-full"
-                    disabled={isStartingCheckout}
-                    onClick={handleActivate}
-                  >
-                    {isStartingCheckout
-                      ? 'Opening secure checkout'
-                      : isUpgradeIntent
-                        ? 'Change your plan'
-                        : isReadOnlyTeam
-                          ? 'Start your plan again'
-                          : 'Activate your plan'}
-                  </Button>
+                  {/* HIDDEN rather than disabled when there is nothing to buy.
+                      A greyed-out button with no explanation is the pattern this
+                      repo already corrected on the seat cap: there the round
+                      trip carried the reason, and here the server has already
+                      given it, so the line above says it and the button goes. */}
+                  {canCheckOut ? (
+                    <Button
+                      variant="primary"
+                      className="w-full"
+                      disabled={isStartingCheckout}
+                      onClick={handleActivate}
+                    >
+                      {isStartingCheckout
+                        ? 'Opening secure checkout'
+                        : isUpgradeIntent
+                          ? 'Change your plan'
+                          : isReadOnlyTeam
+                            ? 'Start your plan again'
+                            : 'Activate your plan'}
+                    </Button>
+                  ) : null}
 
                   {checkoutError ? (
                     <p className="flex items-start gap-2 text-sm text-status-error">

@@ -82,6 +82,7 @@ export type PlanChangeRefusalReason =
   | 'interval_change'
   | 'sales_led_target'
   | 'legacy_current_plan'
+  | 'grandfathered_rate'
   | 'no_active_period';
 
 export type PlanChangeQuote =
@@ -106,6 +107,59 @@ export type PlanChangeQuote =
       daysRemaining: number;
     }
   | { kind: 'refused'; reason: PlanChangeRefusalReason };
+
+/**
+ * Is this subscription paying something other than today's list price?
+ *
+ * THE REASON THIS EXISTS: on 2026-09-08 every tier was repriced downward and
+ * hard — Solo ₦80,000 → ₦5,000 a year, Manager ₦350,000 → ₦22,000 — and the
+ * founder's rule for that reprice is that existing paying accounts keep the
+ * price they signed up on. `quotePlanChange` prices a change by reading BOTH
+ * ends out of @urganize/pricing, so for anyone who bought before that date the
+ * credit side of the arithmetic is a number they have never paid. Left alone it
+ * would quote an upgrade against a base sixteen times off.
+ *
+ * THE COMPARISON IS AGAINST `subscriptions.amount`, which is the last full
+ * period charge in kobo — written by the initial purchase and rewritten by every
+ * renewal, and deliberately NOT touched by a prorated top-up (see
+ * handlePlanChangeCharge in the Paystack webhook). So it means "what a period of
+ * this subscription costs", which is exactly the question. Nothing new is
+ * stored: no column, no cutoff date, no flag to keep in step. It also
+ * self-maintains through the NEXT reprice, because the comparison is always
+ * against whatever the package says today.
+ *
+ * IT FAILS TOWARD GRANDFATHERED, on every uncertainty. Wrongly refusing sends a
+ * team to a human who can sort it out in a sentence; wrongly allowing quotes a
+ * change against the wrong base and takes the wrong amount of real money, which
+ * noticing later does not undo.
+ *
+ * ONE KNOWN FALSE POSITIVE, accepted: between an upgrade and the next renewal,
+ * `amount` still holds the OLD tier's price, so a second change inside the same
+ * period is refused. That window is also exactly when the founder still has a
+ * Paystack swap to perform by hand (the plan-change flow records the decision
+ * and a human moves the subscription), so a further self-serve change genuinely
+ * should be a conversation until that has landed.
+ */
+export function isGrandfatheredRate(input: {
+  /** subscriptions.plan as stored. */
+  plan: string | null | undefined;
+  /** The interval that subscription bills on. */
+  interval: BillingInterval;
+  /** subscriptions.amount, in kobo. */
+  paidMinorUnit: number | null | undefined;
+}): boolean {
+  const listed = isPricingTierId(input.plan)
+    ? (getTierPrice(input.plan, input.interval)?.minorUnit ?? null)
+    : null;
+  // No list price to compare against: a sales-led tier, a legacy id, or an
+  // interval we no longer sell. Every one of those is a conversation anyway.
+  if (listed === null) return true;
+
+  const paid = Number(input.paidMinorUnit);
+  if (!Number.isFinite(paid) || paid <= 0) return true;
+
+  return paid !== listed;
+}
 
 /** Whole days between now and the period end, floored at zero. */
 function daysUntil(periodEnd: Date, now: Date): number {
@@ -147,6 +201,12 @@ export function quotePlanChange(input: {
   targetInterval: string;
   /** subscriptions.expires_at. */
   periodEndsAt: string | null | undefined;
+  /** subscriptions.amount, in kobo — the last full period charge. REQUIRED
+   *  rather than optional on purpose: absent has to mean "refuse" (see
+   *  `isGrandfatheredRate`), and an optional field defaulting to that would turn
+   *  every caller who forgot it into a silent wall of refusals rather than a
+   *  type error. */
+  currentPaidMinorUnit: number | null | undefined;
   now: Date;
 }): PlanChangeQuote {
   const current = String(input.currentPlan ?? '').trim();
@@ -176,6 +236,20 @@ export function quotePlanChange(input: {
     // Nothing paid for, so nothing to prorate against. A team in this state
     // belongs in ordinary checkout, not in a change flow.
     return { kind: 'refused', reason: 'no_active_period' };
+  }
+
+  // Priced against what they ACTUALLY pay, or not at all. Placed after the
+  // cheap identity checks so a team on an old rate asking for the plan they are
+  // already on still hears "you are already on this plan", which is the more
+  // useful of the two true answers.
+  if (
+    isGrandfatheredRate({
+      plan: current,
+      interval,
+      paidMinorUnit: input.currentPaidMinorUnit,
+    })
+  ) {
+    return { kind: 'refused', reason: 'grandfathered_rate' };
   }
 
   const currentPrice = getTierPrice(current, interval)?.minorUnit ?? null;
@@ -227,6 +301,11 @@ export function planChangeRefusalMessage(reason: PlanChangeRefusalReason): strin
       return 'Group is quoted per contract. Talk to us and we will scope it with you.';
     case 'legacy_current_plan':
       return 'Your team is on an older plan, so we handle changes to it ourselves. Talk to us and we will move you across.';
+    case 'grandfathered_rate':
+      // Never says "you pay more than the new price". It may be less, it may be
+      // a comped deal, and either way the number on their invoice is not this
+      // page's to discuss. It says what happens next and stops.
+      return 'Your team is on the price you signed up at, so we move you ourselves rather than letting the page guess. Talk to us and we will sort it out.';
     case 'no_active_period':
       return 'There is no active plan to change yet. Activate a plan first.';
   }

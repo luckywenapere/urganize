@@ -284,9 +284,24 @@ export type PricingTierDefinition = {
   label: string;
   /** One line on who this is for — the pricing card's subtitle. */
   audience: string;
-  /** NGN prices per interval. Absent entirely on a sales-led tier, so a
-   *  caller cannot accidentally render a price we never quoted. */
-  prices?: Record<BillingInterval, TierPrice>;
+  /** The NGN price. ANNUAL ONLY since 2026-09-08 (founder call): every tier is
+   *  billed once a year and there is no monthly option anywhere.
+   *
+   *  THE SHAPE IS THE ENFORCEMENT. This is not `Record<BillingInterval, …>`
+   *  with the monthly key left empty — there is no monthly figure in the data
+   *  at all, so no surface can render one by reaching for the wrong key, and
+   *  `getTierPrice` answers null for any interval but annual. The acceptance
+   *  bar for that reprice was "nowhere a monthly figure", and a type is a
+   *  better guarantee of that than a sweep of the call sites.
+   *
+   *  `BillingInterval` still carries 'monthly' and must keep doing so: real
+   *  rows in `subscriptions.billing_interval` hold it, and those subscriptions
+   *  still renew on a monthly cycle. What ended is SELLING one, not honouring
+   *  the ones already sold.
+   *
+   *  Absent entirely on a sales-led tier, so a caller cannot accidentally
+   *  render a price we never quoted. */
+  prices?: { annual: TierPrice };
   /** The countable ceilings. See TierLimits for why they live here. */
   limits: TierLimits;
   /** The non-countable things this tier includes, in customer words.
@@ -324,8 +339,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     label: 'Solo',
     audience: 'For a manager running one artist.',
     prices: {
-      monthly: { amount: 8_000, minorUnit: 8_000_00 },
-      annual: { amount: 80_000, minorUnit: 80_000_00 },
+      annual: { amount: 5_000, minorUnit: 5_000_00 },
     },
     limits: { artists: 1, seats: 2, activeReleases: 1, urgansMonthlyActions: 40 },
     perks: [
@@ -339,8 +353,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     label: 'Manager',
     audience: 'For a manager running two or more artists.',
     prices: {
-      monthly: { amount: 35_000, minorUnit: 35_000_00 },
-      annual: { amount: 350_000, minorUnit: 350_000_00 },
+      annual: { amount: 22_000, minorUnit: 22_000_00 },
     },
     limits: { artists: 5, seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
     perks: [
@@ -354,33 +367,38 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // actually buy, so it is also the one to point at.
     recommended: true,
   },
-  // SALES-LED SINCE 2026-08-30 (founder call). Label used to be the flagship
-  // self-serve tier at ₦80,000 / ₦800,000 and carried `recommended`; it now
-  // occupies the slot Group held — no price displayed, no card checkout, a
-  // "Let's talk" CTA on both surfaces.
+  // SELF-SERVE AGAIN SINCE 2026-09-08 (founder call), at ₦50,000/year. This
+  // REVERSES the 2026-08-30 decision that made Label sales-led with no price at
+  // all, and the reversal was confirmed before it was built rather than inferred
+  // from the reprice: the annual-only spec's own acceptance line is "three
+  // annual prices and one 'Let's talk' card", which only adds up if Label
+  // carries a price and a card checkout and Group is the lone conversation.
   //
-  // Its prices are GONE rather than retained, per the `prices` field doc: a
-  // sales-led tier carries none so no caller can render a figure we never
-  // quoted. Nothing needed them — a Label renewal reads
-  // `subscriptions.billing_interval` and BILLING_PLANS, not this tier's
-  // amounts, so existing Label subscribers keep renewing at what they signed
-  // for. What DOES change for them: `isContactSalesPlan` now answers true, so
-  // a lapsed Label subscriber is pointed at the mailto instead of a checkout,
-  // and `plan-change.ts` refuses a self-serve move to or from Label. Both are
-  // the intended behaviour of a sales-led tier, but they are behaviour
-  // changes for anyone already on it.
+  // WHAT THIS CHANGES FOR AN EXISTING LABEL SUBSCRIBER, because it is more than
+  // a number: `isContactSalesPlan('label')` answers false again, so a lapsed
+  // Label subscriber is pointed at checkout rather than a mailto, and
+  // `plan-change.ts` no longer refuses a move to or from Label as sales-led.
+  // Neither is a problem, because the grandfathered-rate guard in that module
+  // now refuses any self-serve change for an account paying something other
+  // than today's list price — and every pre-2026-09-08 Label subscriber is
+  // exactly that. See `isGrandfatheredRate`.
+  //
+  // Its Paystack Plan is its OWN, and must be. Label's tier prices used to be
+  // byte-identical to the legacy monthly/annual plans, which is why
+  // TIER_PLAN_CODE_ENV_VAR pointed it at those shared Plan objects. At ₦50,000
+  // that is no longer true, so reusing them would bill a new Label customer
+  // ₦800,000. See the env var block in apps/web/lib/billing-plans.ts.
   //
   // `label` MUST keep unlimited limits: `resolveTeamTier` fails open to this
   // tier for a walled, legacy or unrecognised plan, so capping it here would
   // silently cap teams the resolver could not identify.
-  //
-  // `isRecurringPlan` in apps/web deliberately still accepts 'label' — that is
-  // what keeps a live Label subscription extending at each renewal. Do not
-  // "tidy" it out to match this flag.
   label: {
     id: 'label',
     label: 'Label',
     audience: 'For a label or a team running a roster.',
+    prices: {
+      annual: { amount: 50_000, minorUnit: 50_000_00 },
+    },
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
       'Everything in Manager',
@@ -388,13 +406,15 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
       'We set your roster up with you',
       'WhatsApp support, answered same day',
     ],
-    contactSales: true,
   },
-  // RETIRED FROM DISPLAY 2026-08-30 (founder call): Group is off both pricing
-  // surfaces — it is absent from PRICING_TIER_ORDER below and from the wall's
-  // WALL_TIERS, so no visitor sees it. Label took over the sales-led slot.
+  // BACK ON THE PAGE 2026-09-08 (founder call), in the same pass that gave
+  // Label a price. Group is the one sales-led card now — the annual-only spec
+  // asks for "three annual prices and one 'Let's talk' card", and this is that
+  // card. It had been off both surfaces since 2026-08-30, when Label took the
+  // sales-led slot; Label handing that slot back is what makes room for it.
   //
-  // The DEFINITION deliberately stays. `enterprise` is allowed by
+  // The DEFINITION never went away, which is why this is one line in
+  // PRICING_TIER_ORDER rather than a rebuild. `enterprise` is allowed by
   // subscriptions_plan_check and may already sit on a row, and ENTITLEMENTS
   // keys off every PricingTierId — so deleting it would need a migration and
   // would leave a stored row unresolvable, for no gain. This is exactly how
@@ -434,37 +454,29 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   },
 };
 
-/** Card order on the pricing page: cheapest first, up to the sales-led tier.
+/** Card order on the pricing page: cheapest first, then the conversation.
  *  Solo leads and Manager sits one step above it, so the jump the ladder is
  *  built around (one artist to a roster) is the first thing a visitor reads.
  *
- *  THREE cards since 2026-08-30 (founder call). `enterprise` (Group) is
- *  deliberately absent — see the note on its definition above; the tier still
- *  exists in code so stored rows resolve, it simply is not offered. Label is
- *  the one sales-led card now, so the ladder reads: two prices, then a
- *  conversation. */
+ *  FOUR cards since 2026-09-08 (founder call): three prices, then Group. Both
+ *  ends of that moved in the same pass — Label came back from sales-led with a
+ *  price, and Group came back onto the page to be the single "Let's talk". */
 export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
   'solo',
   'manager',
   'label',
+  'enterprise',
 ] as const;
 
-/** Annual is billed as ten months, so two are free. Used for the saving copy,
- *  which the spec requires be phrased as "2 months free" and never as a
- *  percentage. */
-export const ANNUAL_MONTHS_BILLED = 10;
-
-/** The annual saving, phrased the one way the spec allows.
+/** The one interval anything is sold on, since 2026-09-08 (founder call).
  *
- *  Never a percentage, by requirement: "2 months free" is what a manager can
- *  check against their own bank statement, and a percentage invites an argument
- *  about how it was calculated. Derived from ANNUAL_MONTHS_BILLED so repricing
- *  cannot leave this line stale. Null for a tier with no annual price. */
-export function annualSavingCopy(id: PricingTierId): string | null {
-  if (!PRICING_TIERS[id].prices) return null;
-  const free = 12 - ANNUAL_MONTHS_BILLED;
-  return `${free} months free`;
-}
+ *  EXPORTED SO NOTHING HAS TO WRITE THE LITERAL. Checkout, the wall and the
+ *  status route all need to say "annual" and every one of them writing `'annual'`
+ *  by hand is how a future second interval gets half-added. `BillingInterval`
+ *  keeps both members because existing subscriptions still bill monthly and
+ *  still renew; this constant is about what is on SALE, which is a different
+ *  question and the one every new purchase asks. */
+export const SELLING_INTERVAL: BillingInterval = 'annual';
 
 /** One customer-facing line per countable ceiling, plus the tier's perks.
  *
@@ -477,6 +489,25 @@ export function annualSavingCopy(id: PricingTierId): string | null {
  *  Plural handling is explicit rather than a naive `+ 's'`: "1 people" on a
  *  future one-seat tier would be the kind of small wrongness that makes a
  *  pricing page feel unfinished. */
+/** Lines every tier carries, appended after the ceilings and before the tier's
+ *  own perks.
+ *
+ *  ONE ARRAY RATHER THAN FOUR COPIES, so "on all tiers" is a fact of the code.
+ *  Four pasted strings drift the moment one card is edited, and this repo has
+ *  the receipts on that.
+ *
+ *  ⚠️ "Distribution included" IS A FOUNDER OVERRIDE, NOT DRIFT, and the doc on
+ *  `perks` above forbids exactly this — nothing there may name an unbuilt
+ *  feature. Urganize does not distribute music: it has no DSP integration, and
+ *  third-party music platform integrations are on the v1 out-of-scope list. The
+ *  real thing behind the word is the Metadata scene, which assembles the ISRC,
+ *  UPC, splits and credits a distributor asks for so the handoff is one paste
+ *  rather than a week of chasing. Honest wording for that was offered and the
+ *  founder chose this line as written (2026-09-08). Recorded here so the next
+ *  reader treats it as a decision to take back to him rather than a mistake to
+ *  quietly correct. */
+const UNIVERSAL_HIGHLIGHTS: readonly string[] = ['Distribution included'] as const;
+
 export function tierHighlights(id: PricingTierId): string[] {
   const { limits, perks } = PRICING_TIERS[id];
   const lines: string[] = [];
@@ -510,7 +541,7 @@ export function tierHighlights(id: PricingTierId): string[] {
       : `${limits.urgansMonthlyActions} UrgAns actions a month`
   );
 
-  return [...lines, ...perks];
+  return [...lines, ...UNIVERSAL_HIGHLIGHTS, ...perks];
 }
 
 export function getTier(id: PricingTierId): PricingTierDefinition {
@@ -530,28 +561,42 @@ export function isBillingInterval(value: unknown): value is BillingInterval {
   return value === 'monthly' || value === 'annual';
 }
 
-/** Null for a sales-led tier — callers must render "Let's talk", not ₦0. */
+/** Null for a sales-led tier, and null for any interval but the one we sell —
+ *  callers must render "Let's talk" or refuse, never ₦0.
+ *
+ *  IT STILL TAKES AN INTERVAL even though only one is on sale, because the
+ *  callers that reach for it are the ones genuinely holding an interval that
+ *  came from somewhere else: a checkout request naming one, or a stored
+ *  subscription that bills monthly. Dropping the argument would make those call
+ *  sites assert annual rather than check it. Display code should call
+ *  `formatTierPrice` instead, which has no interval to get wrong. */
 export function getTierPrice(
   id: PricingTierId,
   interval: BillingInterval
 ): TierPrice | null {
-  return PRICING_TIERS[id].prices?.[interval] ?? null;
+  if (interval !== SELLING_INTERVAL) return null;
+  return PRICING_TIERS[id].prices?.annual ?? null;
 }
 
-/** Formats a tier's price with its cycle suffix, e.g. "₦80,000/mo".
- *  Deliberately NOT formatPlanCyclePrice, which derives the suffix from
- *  `id === 'monthly'` — correct for the legacy plans where the id IS the
- *  interval, and silently wrong here where it never is. */
-export function formatTierCyclePrice(
-  id: PricingTierId,
-  interval: BillingInterval
-): string | null {
-  const price = getTierPrice(id, interval);
+/** A tier's price as a customer reads it: "₦5,000/year". Null for a sales-led
+ *  tier, which must render "Let's talk" instead.
+ *
+ *  NO INTERVAL ARGUMENT, on purpose. Every tier is billed once a year, so a
+ *  parameter here would only ever be passed one value — and the display surface
+ *  that got it wrong would print a monthly figure, which the annual-only spec
+ *  names as the one thing that must appear nowhere. The absence of the argument
+ *  is the guarantee.
+ *
+ *  "/year" spelled out rather than "/yr", per the founder's copy rules: the
+ *  page has to read at a fifth-grade level and an abbreviation is one more
+ *  thing to decode. */
+export function formatTierPrice(id: PricingTierId): string | null {
+  const price = getTierPrice(id, SELLING_INTERVAL);
   if (!price) return null;
   const formatted = new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN',
     maximumFractionDigits: 0,
   }).format(price.amount);
-  return `${formatted}${interval === 'monthly' ? '/mo' : '/yr'}`;
+  return `${formatted}/year`;
 }
