@@ -615,7 +615,13 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
             pendingSync: true,
           };
 
+          // The queue item's id MUST be the placeholder row's id: sync.ts's
+          // onSynced swaps the local row by matching `task.id === item.id`.
+          // Without this, enqueue mints its own id, that match never holds,
+          // and a task that synced perfectly well keeps showing "Waiting to
+          // sync" until the next full reload.
           await enqueue({
+            id: offlineId,
             kind: 'task_create',
             userId,
             payload: quickCreatePayload,

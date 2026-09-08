@@ -7,6 +7,11 @@ import { sortNotes } from '@/lib/notes';
 import type { Note } from '@/types/notes';
 import { isNetworkFailure } from '@/lib/offline/network-error';
 import { noteBelongsInView, type NotesView } from '@/lib/note-archive';
+import { buildPendingNote, isPendingNote, mergePendingNotes } from '@/lib/note-offline';
+import { enqueue, mutateQueuedPayload, removeQueued, type QueuedMutation } from '@/lib/offline/queue';
+import { isBrowserOnline } from '@/lib/offline/status';
+
+const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 
 type NotePatch = {
   body?: string;
@@ -38,6 +43,9 @@ type NotesStore = {
   /** Append the next page. No-op while one is in flight or when there is
    *  nothing more — both are ordinary states, not errors. */
   loadMore: () => Promise<void>;
+  /** Swap a synced placeholder for the server's row. Called by the offline
+   *  flush, which is the only thing that knows a queued create landed. */
+  replacePendingNote: (placeholderId: string, note: Note) => void;
   create: (input?: { body?: string; releaseId?: string | null }) => Promise<Note | null>;
   update: (noteId: string, patch: NotePatch) => Promise<void>;
   remove: (noteId: string) => Promise<void>;
@@ -169,7 +177,10 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         } | null;
         if (!payload || !Array.isArray(payload.notes)) return;
 
-        const notes = sortNotes(payload.notes);
+        // A fetch replaces the list, and a note captured offline is not in
+        // it — without this it would vanish the moment anything refreshed,
+        // before the flush had a chance to send it.
+        const notes = sortNotes(mergePendingNotes(payload.notes, get().notes));
         cacheNotes(userId, notes, get().view);
         notesLoadedAt = Date.now();
         // A fresh load is page one, so any pages appended earlier are
@@ -255,19 +266,49 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     const { accessToken, userId } = await getSession();
     if (!accessToken) return null;
 
-    // No optimistic phantom row: the editor needs a real id to autosave into,
-    // and a note the server has never seen has nowhere to save to.
-    const response = await fetch('/api/notes', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        body: input?.body ?? '',
-        releaseId: input?.releaseId ?? null,
-      }),
-    });
+    const body = input?.body ?? '';
+    const releaseId = input?.releaseId ?? null;
+
+    /**
+     * Capture with no connection. The placeholder's id IS the queue item's
+     * id — that is what lets the flush swap this row for the server's when
+     * it lands, and what lets every offline edit find the one pending
+     * create to merge into. See lib/note-offline.ts.
+     */
+    const queueForLater = async (): Promise<Note | null> => {
+      if (!OFFLINE_ENABLED || !userId) return null;
+      const item = await enqueue<Extract<QueuedMutation, { kind: 'note_create' }>>({
+        kind: 'note_create',
+        userId,
+        payload: { body, releaseId },
+      });
+      const note = buildPendingNote({ id: item.id, body, releaseId });
+      const notes = sortNotes([note, ...get().notes]);
+      cacheNotes(userId, notes, get().view);
+      set({ notes });
+      return note;
+    };
+
+    // Known offline: skip a request that can only fail, so the editor opens
+    // on the new note immediately rather than after a timeout.
+    if (OFFLINE_ENABLED && !isBrowserOnline()) return queueForLater();
+
+    let response: Response;
+    try {
+      response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ body, releaseId }),
+      });
+    } catch (error) {
+      // The connection dropped between the online check and the request.
+      // Same answer as being offline outright — the note is not lost.
+      if (isNetworkFailure(error)) return queueForLater();
+      throw error;
+    }
     if (!response.ok) return null;
 
     const payload = (await response.json().catch(() => null)) as { note?: Note } | null;
@@ -283,6 +324,34 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     const previous = get().notes;
     const target = previous.find((note) => note.id === noteId);
     if (!target) return;
+
+    // A note that has never reached the server cannot be PATCHed — its id
+    // is a queue item's, not a row's. Typing into it updates local state and
+    // merges into the ONE pending create, so the note arrives complete as a
+    // single POST rather than a create followed by edits with nothing to
+    // address. Only body and releaseId can survive that trip, which is why
+    // pin and archive are hidden on a pending note rather than silently
+    // dropped here.
+    if (isPendingNote(target)) {
+      const optimistic = sortNotes(
+        previous.map((note) =>
+          note.id === noteId
+            ? {
+                ...note,
+                ...(patch.body !== undefined ? { body: patch.body } : {}),
+                ...(patch.releaseId !== undefined ? { releaseId: patch.releaseId } : {}),
+                updatedAt: new Date().toISOString(),
+              }
+            : note
+        )
+      );
+      set({ notes: optimistic });
+      await mutateQueuedPayload<Extract<QueuedMutation, { kind: 'note_create' }>>(noteId, {
+        ...(patch.body !== undefined ? { body: patch.body } : {}),
+        ...(patch.releaseId !== undefined ? { releaseId: patch.releaseId } : {}),
+      });
+      return;
+    }
 
     // Optimistic merge (never a replace): a pin toggle in flight must not
     // clobber body text the autosave is separately persisting, and vice versa.
@@ -351,6 +420,19 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     }
   },
   remove: async (noteId) => {
+    // Deleting a note that never reached the server means dropping its
+    // queued create. Calling DELETE would 404 against an id the server has
+    // never seen, and leaving the item behind would resurrect the note on
+    // the next flush — which is precisely what somebody deleting it does
+    // not want. This is also the path the virgin-note reaper takes, so an
+    // untouched offline note cleans itself up the same way.
+    const pending = get().notes.find((note) => note.id === noteId);
+    if (pending && isPendingNote(pending)) {
+      set({ notes: get().notes.filter((note) => note.id !== noteId) });
+      await removeQueued(noteId);
+      return;
+    }
+
     const { accessToken, userId } = await getSession();
     if (!accessToken) return;
 
@@ -368,5 +450,19 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     } catch {
       await get().load({ force: true });
     }
+  },
+  replacePendingNote: (placeholderId, note) => {
+    const current = get().notes;
+    const swapped = current.some((existing) => existing.id === placeholderId)
+      ? current.map((existing) => (existing.id === placeholderId ? note : existing))
+      : // The placeholder is gone — a refresh landed between the POST and
+        // this callback. Insert rather than drop it: losing the note from
+        // the list is worse than a row appearing at the top.
+        [note, ...current];
+    // Dedupe by id in case both the placeholder swap and a concurrent fetch
+    // brought the same server row in.
+    const byId = new Map(swapped.map((existing) => [existing.id, existing]));
+    const notes = sortNotes([...byId.values()]);
+    set({ notes });
   },
 }));

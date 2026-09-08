@@ -30,4 +30,14 @@ export interface Note {
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Set only on a note captured while offline and not yet sent. Its `id` is
+   * the offline queue item's id, not a server id — nothing may PATCH or
+   * DELETE against it, because the server has never heard of it.
+   *
+   * Absent on every note that came from the server, which is why it is
+   * optional rather than a boolean that would have to be written on each
+   * row the API returns.
+   */
+  pendingSync?: boolean;
 }

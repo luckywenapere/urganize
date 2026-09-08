@@ -67,6 +67,16 @@ export function NoteListRow({
         <span className="shrink-0 font-mono text-[10px] text-content-tertiary">
           {formatRelativeTime(note.updatedAt)}
         </span>
+        {/* Captured offline and not sent yet. Without this a note that
+            exists only on this device looks exactly like one that is safely
+            stored — which is the same silence paging and search were fixed
+            for. Deliberately not styled as an error: nothing has gone wrong
+            and the note is not at risk, it simply has not travelled yet. */}
+        {note.pendingSync ? (
+          <span className="inline-flex shrink-0 items-center rounded-full bg-bg-elevated px-2 py-0.5 text-[10px] font-semibold text-content-tertiary">
+            Waiting to sync
+          </span>
+        ) : null}
         {releaseTitle ? (
           <span className="inline-flex min-w-0 items-center rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
             <span className="truncate">{releaseTitle}</span>
