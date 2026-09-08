@@ -13,9 +13,9 @@ import {
   Layers,
   Loader2,
   NotebookPen,
-  PiggyBank,
   RotateCcw,
   Rocket,
+  Send,
   Sparkles,
   ThumbsDown,
   ThumbsUp,
@@ -71,10 +71,11 @@ type ChappiConversationProps = {
 // fallback for any chip id without an entry.
 const DEFAULT_CHIP_ICON: LucideIcon = Sparkles;
 const CHIP_ICONS: Record<string, LucideIcon> = {
+  'what-can-you-do': Sparkles,
+  'todays-focus': Rocket,
   'new-release': Disc3,
-  'plan-single-6w': Rocket,
-  'plan-ep': Layers,
-  'plan-small-budget': PiggyBank,
+  'plan-release': Layers,
+  'status-update': Send,
   'add-task': ClipboardList,
   'take-note': NotebookPen,
 };
@@ -82,10 +83,11 @@ const CHIP_ICONS: Record<string, LucideIcon> = {
 // Hover tooltip (title attr) for each quick-action button — the "clicks"
 // this page exists to preserve, only ever shown at lg+.
 const CHIP_DESCRIPTIONS: Record<string, string> = {
+  'what-can-you-do': 'What Urganize does, and what you can ask me for',
+  'todays-focus': "What's due, what's late and what's blocked",
   'new-release': 'Start a new release with a rollout plan',
-  'plan-single-6w': 'Answer a few questions and get a draft rollout plan',
-  'plan-ep': 'Answer a few questions and get a draft rollout plan',
-  'plan-small-budget': 'Answer a few questions and get a draft rollout plan',
+  'plan-release': 'Answer a few questions and get a draft rollout plan',
+  'status-update': 'A paragraph on where the release stands, ready to send',
   'add-task': 'Create an activity for one of your releases',
   'take-note': 'Park a thought before it gets away',
 };
@@ -550,6 +552,20 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   };
 
   const handleChipClick = (chip: ChappiChip) => {
+    // An ASK chip is a question, so it goes through the ordinary send path and
+    // the assistant answers it. Deliberately NOT handleIntent: the router would
+    // keyword-match the question and act on it — "How do I plan a release?"
+    // contains 'plan', so it would open the planner instead of explaining it.
+    // With no model configured submitPrompt falls back to the router anyway,
+    // which lands on the help card for these — an honest answer to "what can
+    // you do", rather than a wrong one.
+    // `!== undefined` rather than truthiness: an ask chip's `ask` is a required
+    // string, so a falsy check cannot exclude the variant and TS keeps `intent`
+    // possibly-undefined in the branch below.
+    if (chip.ask !== undefined) {
+      sendUserTurn(chip.ask);
+      return;
+    }
     appendMessage({ id: nextMessageId('u'), role: 'user', content: chip.label });
     handleIntent({ kind: chip.intent, plannerPreset: chip.plannerPreset });
   };

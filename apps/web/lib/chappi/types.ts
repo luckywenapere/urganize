@@ -71,12 +71,40 @@ export type ChappiIntent = {
 
 /** A quick-action chip shown under the prompt. Icon is resolved in the
  * component (icons are React nodes and can't live in this client-safe lib). */
-export type ChappiChip = {
+/**
+ * A chip that runs an app action instantly, with no model call. These are what
+ * keep the front door useful when no model is configured, which is a state
+ * production has been in for long stretches.
+ */
+export type ChappiActionChip = {
   id: string;
   label: string;
   intent: ChappiChipIntent;
   plannerPreset?: PlannerChipPreset;
+  ask?: never;
 };
+
+/**
+ * A chip that ASKS something instead of doing something — the label is sent as
+ * the user's message and the assistant answers it.
+ *
+ * Added 2026-09-08 (founder call) because the questions people actually arrive
+ * with — what is this, how do I use it, what does it do for me — are not
+ * actions and had no chip shape at all. Every chip before this was a creation
+ * verb, which serves a first release and nothing about the day after.
+ *
+ * `ask` carries the text rather than reusing `label`, so a short chip can send
+ * a fuller question than would fit on it.
+ */
+export type ChappiAskChip = {
+  id: string;
+  label: string;
+  ask: string;
+  intent?: never;
+  plannerPreset?: never;
+};
+
+export type ChappiChip = ChappiActionChip | ChappiAskChip;
 
 /**
  * The assistant's response to a deterministic turn: a short line plus optional
