@@ -875,6 +875,26 @@ export function TasksPanel({
           isActive: activeScene === 'metadata',
         }
       : null,
+    // Capture a note about THIS release. The only entry in this menu that
+    // navigates away instead of swapping the panel body, and the only one
+    // that exists purely for the phone: the desktop pill above already
+    // carries `?release=`, and the notes page pre-links a new note from that
+    // filter, so a laptop is two clicks. MobileNavBar's Notes tab carries no
+    // release, so without this a phone user has to find it in a picker.
+    //
+    // `&new=1` is consumed once by the notes page, which then strips the
+    // param so a refresh cannot mint a second note, and leaves `?release=`
+    // in place so the list stays filtered. No `isActive`: it is not a scene,
+    // so there is no lit state to report.
+    NOTES_ENABLED && scopedRelease
+      ? {
+          key: 'note',
+          label: 'Note this',
+          icon: NotebookPen,
+          onClick: () =>
+            router.push(`/dashboard/notes?release=${scopedRelease.id}&new=1`),
+        }
+      : null,
     COVER_ART_ENABLED && scopedRelease
       ? {
           key: 'coverart',
