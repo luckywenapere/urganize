@@ -19,7 +19,17 @@ type NotesStore = {
   /** True until the first load settles. Gates the page skeleton; a later
    * navigation back to Notes renders cached rows instead of a skeleton. */
   isInitialLoading: boolean;
+  /** True when the server said another page exists. Drives the "Load older
+   *  notes" control AND the honest search notice — search filters what is
+   *  loaded, so while this is true a miss does not mean the note is gone. */
+  hasMore: boolean;
+  /** Opaque; only ever echoed back to the server. */
+  nextCursor: string | null;
+  isLoadingMore: boolean;
   load: (options?: { force?: boolean }) => Promise<void>;
+  /** Append the next page. No-op while one is in flight or when there is
+   *  nothing more — both are ordinary states, not errors. */
+  loadMore: () => Promise<void>;
   create: (input?: { body?: string; releaseId?: string | null }) => Promise<Note | null>;
   update: (noteId: string, patch: NotePatch) => Promise<void>;
   remove: (noteId: string) => Promise<void>;
@@ -86,6 +96,9 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
   notes: [],
   hydrated: false,
   isInitialLoading: true,
+  hasMore: false,
+  nextCursor: null,
+  isLoadingMore: false,
   load: async (options) => {
     if (!options?.force) {
       if (notesInFlight) {
@@ -122,13 +135,25 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         });
         if (!response.ok) return;
 
-        const payload = (await response.json().catch(() => null)) as { notes?: Note[] } | null;
+        const payload = (await response.json().catch(() => null)) as {
+          notes?: Note[];
+          hasMore?: boolean;
+          nextCursor?: string | null;
+        } | null;
         if (!payload || !Array.isArray(payload.notes)) return;
 
         const notes = sortNotes(payload.notes);
         cacheNotes(userId, notes);
         notesLoadedAt = Date.now();
-        set({ notes, hydrated: true });
+        // A fresh load is page one, so any pages appended earlier are
+        // dropped along with their cursor — otherwise the list would keep
+        // rows the server did not just send.
+        set({
+          notes,
+          hydrated: true,
+          hasMore: payload.hasMore === true,
+          nextCursor: typeof payload.nextCursor === 'string' ? payload.nextCursor : null,
+        });
       } catch (error) {
         // Offline / a dropped connection: keep whatever notebook is already
         // painted (cached or in-memory) rather than letting this become an
@@ -148,6 +173,51 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       if (notesInFlight === run) {
         notesInFlight = null;
       }
+    }
+  },
+
+  loadMore: async () => {
+    const { hasMore, nextCursor, isLoadingMore, notes } = get();
+    if (!hasMore || !nextCursor || isLoadingMore) return;
+
+    set({ isLoadingMore: true });
+    try {
+      const { accessToken, userId } = await getSession();
+      if (!accessToken) return;
+
+      const response = await fetch(`/api/notes?cursor=${encodeURIComponent(nextCursor)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
+      if (!response.ok) return;
+
+      const payload = (await response.json().catch(() => null)) as {
+        notes?: Note[];
+        hasMore?: boolean;
+        nextCursor?: string | null;
+      } | null;
+      if (!payload || !Array.isArray(payload.notes)) return;
+
+      // Merge by id rather than concatenating. A note edited between the two
+      // requests jumps to the top of the server's ordering, so it can arrive
+      // on this page having already been on the first — appending blindly
+      // would show it twice. Newest copy wins.
+      const byId = new Map(notes.map((note) => [note.id, note]));
+      payload.notes.forEach((note) => byId.set(note.id, note));
+      const merged = sortNotes([...byId.values()]);
+
+      cacheNotes(userId, merged);
+      set({
+        notes: merged,
+        hasMore: payload.hasMore === true,
+        nextCursor: typeof payload.nextCursor === 'string' ? payload.nextCursor : null,
+      });
+    } catch (error) {
+      // Same posture as load(): a dropped connection leaves the pages already
+      // on screen alone. The button stays, so the reader can try again.
+      if (!isNetworkFailure(error)) throw error;
+    } finally {
+      set({ isLoadingMore: false });
     }
   },
   create: async (input) => {

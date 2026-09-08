@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  NOTES_LIST_LIMIT,
   NOTES_TABLE,
   NOTE_COLUMNS,
   createAdminClient,
@@ -11,6 +10,12 @@ import {
   requireActiveAuthenticatedUserOrInternal,
   toNote,
 } from './_shared';
+import {
+  NOTES_PAGE_SIZE,
+  decodeNoteCursor,
+  encodeNoteCursor,
+  takeNotePage,
+} from '@/lib/note-paging';
 
 /**
  * The owner's whole notebook, pinned first then most recently edited.
@@ -33,20 +38,70 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const { data, error } = await adminClient
+  // Keyset paging. See lib/note-paging.ts for why keyset and not offset, and
+  // why pinned notes are returned whole rather than paged.
+  const cursor = decodeNoteCursor(request.nextUrl.searchParams.get('cursor'));
+
+  // Pinned notes ride along on the FIRST page only — they are the top of the
+  // list by definition, so re-sending them with every page would duplicate
+  // them in the client's store. Capped like anything else, but not paged:
+  // pinning exists to keep a handful of notes above the rest.
+  let pinned: Record<string, unknown>[] = [];
+  if (!cursor) {
+    const { data, error } = await adminClient
+      .from(NOTES_TABLE)
+      .select(NOTE_COLUMNS)
+      .eq('owner_user_id', auth.user.id)
+      .eq('pinned', true)
+      .order('updated_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(NOTES_PAGE_SIZE);
+    if (error) {
+      return NextResponse.json(
+        { error: error.message || 'Could not load notes.' },
+        { status: 500 }
+      );
+    }
+    pinned = (data || []) as Record<string, unknown>[];
+  }
+
+  // One more than the page so `hasMore` needs no second COUNT query.
+  let query = adminClient
     .from(NOTES_TABLE)
     .select(NOTE_COLUMNS)
     .eq('owner_user_id', auth.user.id)
-    .order('pinned', { ascending: false })
+    .eq('pinned', false);
+
+  if (cursor) {
+    // Strictly after the cursor in (updated_at desc, id desc). Both halves are
+    // shape-validated by decodeNoteCursor, so neither can carry a PostgREST
+    // filter delimiter.
+    query = query.or(
+      `updated_at.lt.${cursor.updatedAt},and(updated_at.eq.${cursor.updatedAt},id.lt.${cursor.id})`
+    );
+  }
+
+  const { data: rest, error } = await query
     .order('updated_at', { ascending: false })
-    .limit(NOTES_LIST_LIMIT);
+    .order('id', { ascending: false })
+    .limit(NOTES_PAGE_SIZE + 1);
 
   if (error) {
     return NextResponse.json({ error: error.message || 'Could not load notes.' }, { status: 500 });
   }
 
+  const { page, hasMore } = takeNotePage((rest || []) as Record<string, unknown>[], NOTES_PAGE_SIZE);
+  const last = page[page.length - 1];
+
   return NextResponse.json({
-    notes: (data || []).map((row) => toNote(row as Record<string, unknown>)),
+    notes: [...pinned, ...page].map((row) => toNote(row)),
+    hasMore,
+    // Only ever built from a row we actually handed out, so the next page
+    // starts exactly where this one stopped.
+    nextCursor:
+      hasMore && last
+        ? encodeNoteCursor({ updatedAt: String(last.updated_at), id: String(last.id) })
+        : null,
   });
 }
 

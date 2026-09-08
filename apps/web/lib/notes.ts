@@ -65,6 +65,11 @@ export function deriveNotePreview(body: string): string {
 export function sortNotes(notes: Note[]): Note[] {
   return [...notes].sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-    return b.updatedAt.localeCompare(a.updatedAt);
+    if (a.updatedAt !== b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
+    // Unique tiebreak, descending, matching the server's
+    // (pinned desc, updated_at desc, id desc). Keyset paging names a row in
+    // that ordering, so if the two sides disagree about two notes sharing an
+    // updated_at, a page boundary can repeat or skip one.
+    return b.id.localeCompare(a.id);
   });
 }
