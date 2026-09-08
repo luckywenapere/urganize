@@ -8,15 +8,12 @@
  * store so the stores don't need to know about IndexedDB or retry
  * classification.
  *
- * Note creation is deliberately NOT wired in here despite `note_create`
- * existing in queue.ts's type union. useNotesStore.create's own comment is
- * explicit about why: "No optimistic phantom row: the editor needs a real
- * id to autosave into, and a note the server has never seen has nowhere to
- * save to." Queuing a note create means the autosave loop has to target a
- * temporary id via mutateQueuedPayload instead of PATCHing a real one, and
- * the virgin-note reaper's assumptions (NotesPageClient) would need
- * re-checking against that. That is a real, separate piece of work — left
- * for a follow-up rather than forced into this pass.
+ * Note creation IS wired in as of 2026-09-08. It was left out originally
+ * because "the editor needs a real id to autosave into, and a note the
+ * server has never seen has nowhere to save to" — solved by making the
+ * note's local id the QUEUE ITEM's id, so offline edits merge into the one
+ * pending create via mutateQueuedPayload rather than PATCHing an id the
+ * server would not recognise. See lib/note-offline.ts.
  */
 
 import { supabase } from '@/lib/supabase/client';
@@ -25,6 +22,8 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import { uploadCoverArt } from '@/lib/cover-art-upload';
 import { uploadSong } from '@/lib/song';
+import { useNotesStore } from '@/stores/useNotesStore';
+import type { Note } from '@/types/notes';
 import type { Task } from '@/types/tasks';
 import {
   flush,
@@ -89,6 +88,41 @@ async function replayTaskCreate(
   return { kind: 'client_error', status: response.status };
 }
 
+/**
+ * One POST carrying the note's FINAL text.
+ *
+ * Every offline edit merged into this item's payload rather than queueing
+ * its own mutation, so a note written entirely offline reaches the server
+ * as a single create — no create-then-patch sequence that would each need
+ * a server id to address.
+ */
+async function replayNoteCreate(
+  item: Extract<QueuedMutation, { kind: 'note_create' }>,
+  token: string
+): Promise<FlushAttemptResult & { data?: Note }> {
+  let response: Response;
+  try {
+    response = await fetch('/api/notes', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        body: item.payload.body,
+        releaseId: item.payload.releaseId ?? null,
+      }),
+      cache: 'no-store',
+    });
+  } catch {
+    return { kind: 'network_failure' };
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as { note?: Note; error?: string };
+  if (response.ok && payload.note) {
+    return { kind: 'success', data: payload.note };
+  }
+  if (response.status >= 500) return { kind: 'server_error', status: response.status };
+  return { kind: 'client_error', status: response.status };
+}
+
 async function replayCoverArtUpload(
   item: Extract<QueuedMutation, { kind: 'cover_art_upload' }>,
   token: string
@@ -134,10 +168,7 @@ async function replay(item: QueuedMutation, token: string): Promise<FlushAttempt
     case 'song_upload':
       return replaySongUpload(item, token);
     case 'note_create':
-      // Not wired in yet — see the file header. Treated as a permanent
-      // client error so a stray queued item (there should never be one)
-      // cannot block the rest of the flush forever.
-      return { kind: 'client_error', status: 501 };
+      return replayNoteCreate(item, token);
   }
 }
 
@@ -166,6 +197,14 @@ export async function flushOfflineQueue(): Promise<{ synced: number; dropped: nu
           taskStore.setTasks(
             taskStore.tasks.map((task) => (task.id === item.id ? serverTask : task))
           );
+        }
+
+        if (item.kind === 'note_create' && data && typeof data === 'object' && 'id' in data) {
+          // Replace the placeholder in place, or insert if it is no longer
+          // there — a refresh between the POST and this callback can have
+          // already dropped it, and losing the note from the list would be
+          // worse than a row appearing at the top.
+          useNotesStore.getState().replacePendingNote(item.id, data as Note);
         }
       },
     });

@@ -111,6 +111,23 @@ export async function mutateQueuedPayload<T extends QueuedMutation>(
   notifyListeners();
 }
 
+/**
+ * Drop one queued item without replaying it.
+ *
+ * The case this exists for: deleting a note that was captured offline and
+ * has never reached the server. There is no server row to DELETE — its id
+ * is this queue item's id — and leaving the item behind would resurrect the
+ * note on the next flush, which is exactly what somebody deleting it does
+ * not want.
+ *
+ * Silent when the id is not queued: already synced, already dropped and
+ * never there are all the same to a caller that just wants it gone.
+ */
+export async function removeQueued(id: string): Promise<void> {
+  await idbDelete(id);
+  notifyListeners();
+}
+
 type PendingCountListener = () => void;
 const listeners = new Set<PendingCountListener>();
 

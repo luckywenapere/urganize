@@ -73,6 +73,11 @@ export function NoteEditor({
   onAutoFocusConsumed,
 }: NoteEditorProps) {
   const archived = Boolean(note.archivedAt);
+  // Captured offline and not sent yet. Its id is a queue item's, so nothing
+  // here may address it on the server — pin and archive are hidden rather
+  // than shown and silently dropped, because only the body and the release
+  // link survive the trip.
+  const pending = Boolean(note.pendingSync);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [, setTick] = useState(0);
 
@@ -101,6 +106,12 @@ export function NoteEditor({
   }, []);
 
   const indicator = (() => {
+    if (pending) {
+      // "Saved" would be a lie: this note exists on this device and nowhere
+      // else. It is not an error state either — nothing has gone wrong and
+      // nothing is at risk, so it reads as a fact rather than a warning.
+      return <>Saved on this device</>;
+    }
     if (saveState === 'dirty' || saveState === 'saving') {
       // "Queued" versus "in flight" is a distinction without a difference to
       // the person typing — both mean their words are being handled.
@@ -190,6 +201,8 @@ export function NoteEditor({
           {indicator}
         </span>
 
+        {pending ? null : (
+          <>
         <button
           type="button"
           onClick={onTogglePin}
@@ -225,6 +238,8 @@ export function NoteEditor({
             <Archive className="h-4 w-4" aria-hidden="true" />
           )}
         </button>
+          </>
+        )}
 
         <button
           type="button"
