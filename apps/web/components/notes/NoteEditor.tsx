@@ -1,7 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, Loader2, Pin, Plus, Sparkles, Trash2 } from '@/components/icons';
+import {
+  Archive,
+  ArrowLeft,
+  Check,
+  Loader2,
+  Pin,
+  Plus,
+  Sparkles,
+  Trash2,
+  Undo2,
+} from '@/components/icons';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { NoteReleasePicker } from './NoteReleasePicker';
 import type { NoteSaveState } from './useNoteAutosave';
@@ -19,6 +29,10 @@ type NoteEditorProps = {
   onSetRelease: (releaseId: string | null) => void;
   onTogglePin: () => void;
   onRequestDelete: () => void;
+  /** Archive, or restore if this note is already archived. Unlike delete
+   *  this needs no confirmation: nothing is lost and the same control puts
+   *  it straight back. */
+  onToggleArchive: () => void;
   /** Turn this note into a release plan. Absent hides the action — the notes
    * page decides, because it knows whether the linked release already has one. */
   onMakePlan?: () => void;
@@ -53,10 +67,12 @@ export function NoteEditor({
   onMakePlan,
   onMakeActivity,
   onRequestDelete,
+  onToggleArchive,
   onBack,
   autoFocus,
   onAutoFocusConsumed,
 }: NoteEditorProps) {
+  const archived = Boolean(note.archivedAt);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [, setTick] = useState(0);
 
@@ -191,6 +207,23 @@ export function NoteEditor({
             fill={note.pinned ? 'currentColor' : 'none'}
             aria-hidden="true"
           />
+        </button>
+
+        {/* Archive sits BEFORE delete, and is the softer of the two: the
+            ordinary way a note ends. Delete stays destructive and confirmed
+            for the case where you genuinely never want it back. */}
+        <button
+          type="button"
+          onClick={onToggleArchive}
+          aria-label={archived ? 'Restore note' : 'Archive note'}
+          title={archived ? 'Restore' : 'Archive'}
+          className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        >
+          {archived ? (
+            <Undo2 className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Archive className="h-4 w-4" aria-hidden="true" />
+          )}
         </button>
 
         <button

@@ -21,7 +21,8 @@ export {
 
 export const NOTES_TABLE = 'notes';
 
-export const NOTE_COLUMNS = 'id,release_id,body,pinned,created_at,updated_at';
+export const NOTE_COLUMNS =
+  'id,release_id,body,pinned,archived_at,created_at,updated_at';
 
 // Paging lives in lib/note-paging.ts (NOTES_PAGE_SIZE and the cursor).
 // NOTES_LIST_LIMIT used to sit here as a hard cap with no paging and no
@@ -43,6 +44,7 @@ export const toNote = (row: Record<string, unknown>): Note => ({
   releaseId: row.release_id ? String(row.release_id) : null,
   body: typeof row.body === 'string' ? row.body : '',
   pinned: row.pinned === true,
+  archivedAt: row.archived_at ? String(row.archived_at) : null,
   createdAt: String(row.created_at || ''),
   updatedAt: String(row.updated_at || ''),
 });

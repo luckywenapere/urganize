@@ -41,6 +41,8 @@ export default function NotesPageClient() {
     isInitialLoading,
     hasMore,
     isLoadingMore,
+    view,
+    setView,
     load,
     loadMore,
     create,
@@ -210,6 +212,25 @@ export default function NotesPageClient() {
     };
   }, [autosave.draft, openQuickCreate, selectedNote]);
 
+  /**
+   * Archive the open note, or restore it if it is already archived.
+   *
+   * Flushes first: archiving is a deliberate act on a note somebody has
+   * probably just been typing in, and the debounce would otherwise still be
+   * holding their last sentence when the row leaves the list.
+   *
+   * Then deselects, because either direction moves the note to the list you
+   * are NOT looking at — leaving the editor open on a note absent from the
+   * list beside it reads as a bug.
+   */
+  const handleToggleArchive = useCallback(async () => {
+    if (!selectedNote) return;
+    const archived = Boolean(selectedNote.archivedAt);
+    autosave.flush();
+    selectNote(null);
+    await update(selectedNote.id, { archived: !archived });
+  }, [autosave, selectNote, selectedNote, update]);
+
   const handleBack = useCallback(() => {
     const outgoing = selectedNoteId;
     selectNote(null);
@@ -361,6 +382,8 @@ export default function NotesPageClient() {
             // a search actually covered, and the release filter narrowing the
             // view does not change how much of the notebook is in memory.
             loadedCount={notes.length}
+            view={view}
+            onViewChange={setView}
           />
         </section>
 
@@ -380,6 +403,7 @@ export default function NotesPageClient() {
               onSetRelease={(releaseId) => void update(selectedNote.id, { releaseId })}
               onTogglePin={() => void update(selectedNote.id, { pinned: !selectedNote.pinned })}
               onRequestDelete={() => setIsDeleteOpen(true)}
+              onToggleArchive={() => void handleToggleArchive()}
               onMakePlan={planFromNote}
               onMakeActivity={makeActivityFromNote}
               onBack={handleBack}

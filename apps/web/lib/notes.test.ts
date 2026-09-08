@@ -13,6 +13,7 @@ const makeNote = (overrides: Partial<Note> = {}): Note => ({
   releaseId: null,
   body: '',
   pinned: false,
+  archivedAt: null,
   createdAt: '2026-08-01T10:00:00.000Z',
   updatedAt: '2026-08-01T10:00:00.000Z',
   ...overrides,

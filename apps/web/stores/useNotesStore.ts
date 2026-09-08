@@ -6,11 +6,14 @@ import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { sortNotes } from '@/lib/notes';
 import type { Note } from '@/types/notes';
 import { isNetworkFailure } from '@/lib/offline/network-error';
+import { noteBelongsInView, type NotesView } from '@/lib/note-archive';
 
 type NotePatch = {
   body?: string;
   releaseId?: string | null;
   pinned?: boolean;
+  /** True archives, false restores. Absent leaves it alone. */
+  archived?: boolean;
 };
 
 type NotesStore = {
@@ -26,6 +29,11 @@ type NotesStore = {
   /** Opaque; only ever echoed back to the server. */
   nextCursor: string | null;
   isLoadingMore: boolean;
+  /** Which list is on screen. The archived view is a separate fetch, not a
+   *  client-side filter — archived notes are never loaded alongside active
+   *  ones, so paging and search both stay honest about one list at a time. */
+  view: NotesView;
+  setView: (view: NotesView) => void;
   load: (options?: { force?: boolean }) => Promise<void>;
   /** Append the next page. No-op while one is in flight or when there is
    *  nothing more — both are ordinary states, not errors. */
@@ -79,8 +87,17 @@ async function getSession() {
 // localStorage.setItem throws on quota (writePersistedState does not guard
 // it), and this runs inside an async store action where an uncaught throw
 // becomes an unhandled rejection. A cache miss is harmless; a crash is not.
-function cacheNotes(userId: string, notes: Note[]) {
-  if (!userId) return;
+/**
+ * Persist the notebook for the next cache-first paint.
+ *
+ * ONE key, so it holds the ACTIVE list only. Writing the archived list here
+ * would poison the next cold load, which paints from this cache before any
+ * fetch and always starts in the active view — the reader would see archived
+ * notes under their notebook for a moment. Archived notes are rare to read
+ * and never urgent, so they simply are not cached.
+ */
+function cacheNotes(userId: string, notes: Note[], view: NotesView) {
+  if (!userId || view !== 'active') return;
   try {
     writePersistedState<NotesCache>(NOTES_CACHE_KEY, NOTES_CACHE_VERSION, {
       userId,
@@ -99,6 +116,15 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
   hasMore: false,
   nextCursor: null,
   isLoadingMore: false,
+  view: 'active',
+  setView: (view) => {
+    if (get().view === view) return;
+    // Hard reset. The two lists share no rows, so keeping the old ones on
+    // screen would show active notes under an "Archived" heading until the
+    // fetch landed. isInitialLoading puts the skeleton back for the gap.
+    set({ view, notes: [], hasMore: false, nextCursor: null, isInitialLoading: true });
+    void get().load({ force: true });
+  },
   load: async (options) => {
     if (!options?.force) {
       if (notesInFlight) {
@@ -129,7 +155,8 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       }
 
       try {
-        const response = await fetch('/api/notes', {
+        const archivedParam = get().view === 'archived' ? '?archived=1' : '';
+        const response = await fetch(`/api/notes${archivedParam}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
           cache: 'no-store',
         });
@@ -143,7 +170,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
         if (!payload || !Array.isArray(payload.notes)) return;
 
         const notes = sortNotes(payload.notes);
-        cacheNotes(userId, notes);
+        cacheNotes(userId, notes, get().view);
         notesLoadedAt = Date.now();
         // A fresh load is page one, so any pages appended earlier are
         // dropped along with their cursor — otherwise the list would keep
@@ -185,10 +212,14 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       const { accessToken, userId } = await getSession();
       if (!accessToken) return;
 
-      const response = await fetch(`/api/notes?cursor=${encodeURIComponent(nextCursor)}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: 'no-store',
-      });
+      const archivedParam = get().view === 'archived' ? '&archived=1' : '';
+      const response = await fetch(
+        `/api/notes?cursor=${encodeURIComponent(nextCursor)}${archivedParam}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: 'no-store',
+        }
+      );
       if (!response.ok) return;
 
       const payload = (await response.json().catch(() => null)) as {
@@ -206,7 +237,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       payload.notes.forEach((note) => byId.set(note.id, note));
       const merged = sortNotes([...byId.values()]);
 
-      cacheNotes(userId, merged);
+      cacheNotes(userId, merged, get().view);
       set({
         notes: merged,
         hasMore: payload.hasMore === true,
@@ -244,7 +275,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
     if (!note?.id) return null;
 
     const notes = sortNotes([note, ...get().notes]);
-    cacheNotes(userId, notes);
+    cacheNotes(userId, notes, get().view);
     set({ notes });
     return note;
   },
@@ -268,12 +299,21 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
               ...(patch.body !== undefined ? { body: patch.body } : {}),
               ...(patch.pinned !== undefined ? { pinned: patch.pinned } : {}),
               ...(patch.releaseId !== undefined ? { releaseId: patch.releaseId } : {}),
+              ...(patch.archived !== undefined
+                ? { archivedAt: patch.archived ? new Date().toISOString() : null }
+                : {}),
               updatedAt: new Date().toISOString(),
             }
           : note
       )
     );
-    set({ notes: optimistic });
+    // Archiving moves a note to the OTHER list, so it leaves this one now
+    // rather than on the next refetch — the row it was in is exactly where
+    // the reader is looking. Restoring from the archived view is the same
+    // move in reverse, which is why this asks the shared predicate rather
+    // than testing `archived` directly.
+    const view = get().view;
+    set({ notes: optimistic.filter((note) => noteBelongsInView(note, view)) });
 
     const { accessToken, userId } = await getSession();
     if (!accessToken) return;
@@ -292,10 +332,15 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
       const payload = (await response.json().catch(() => null)) as { note?: Note } | null;
       const saved = payload?.note;
       if (saved?.id) {
+        // The server is the authority on archived_at, so re-apply the view
+        // filter against what it actually stored rather than trusting the
+        // optimistic guess above.
         const merged = sortNotes(
-          get().notes.map((note) => (note.id === noteId ? saved : note))
+          get()
+            .notes.map((note) => (note.id === noteId ? saved : note))
+            .filter((note) => noteBelongsInView(note, get().view))
         );
-        cacheNotes(userId, merged);
+        cacheNotes(userId, merged, get().view);
         set({ notes: merged });
       }
     } catch (error) {
@@ -311,7 +356,7 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
 
     const previous = get().notes;
     const optimistic = previous.filter((note) => note.id !== noteId);
-    cacheNotes(userId, optimistic);
+    cacheNotes(userId, optimistic, get().view);
     set({ notes: optimistic });
 
     try {

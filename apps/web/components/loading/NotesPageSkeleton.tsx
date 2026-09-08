@@ -20,7 +20,14 @@ export function NotesPageSkeleton() {
       <section className="flex min-h-0 flex-col lg:w-[320px] lg:shrink-0">
         <div className="flex shrink-0 items-center justify-between gap-2 pb-3">
           <SkeletonBlock className="h-6 w-16 rounded" />
-          <SkeletonBlock className="h-8 w-24 rounded-full" />
+          {/* The archived toggle and New note. A cold load always resolves
+              to the ACTIVE view, which is the pair that renders there —
+              the archive shows a single wider control instead, and is
+              never what a fresh load lands on. */}
+          <div className="flex shrink-0 items-center gap-2">
+            <SkeletonBlock className="h-8 w-8 rounded-full" />
+            <SkeletonBlock className="h-8 w-24 rounded-full" />
+          </div>
         </div>
         {/* The search bar renders unconditionally, so it is reserved
             unconditionally — h-9 plus the pb-3 the real one carries. */}
@@ -45,6 +52,8 @@ export function NotesPageSkeleton() {
         <div className="flex shrink-0 items-center gap-2 pb-3">
           <SkeletonBlock className="h-8 w-32 rounded-full" />
           <div className="flex-1" />
+          {/* Pin, archive, delete. */}
+          <SkeletonBlock className="h-8 w-8 rounded-full" />
           <SkeletonBlock className="h-8 w-8 rounded-full" />
           <SkeletonBlock className="h-8 w-8 rounded-full" />
         </div>
