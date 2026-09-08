@@ -26,6 +26,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Stamped at BUILD time and read at request time by /api/version, so the
+  // deployed site can say when it was built. Evaluated once per build, which
+  // is the point: a request-time `new Date()` would just report now.
+  env: {
+    BUILD_TIME: new Date().toISOString(),
+  },
   serverExternalPackages: ["@libsql/client", "libsql"],
   // @urganize/ui ships TypeScript source (its exports map points at
   // src/index.ts), so it must be transpiled here exactly as apps/web does.
