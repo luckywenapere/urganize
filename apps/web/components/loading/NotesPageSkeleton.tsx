@@ -22,6 +22,11 @@ export function NotesPageSkeleton() {
           <SkeletonBlock className="h-6 w-16 rounded" />
           <SkeletonBlock className="h-8 w-24 rounded-full" />
         </div>
+        {/* The search bar renders unconditionally, so it is reserved
+            unconditionally — h-9 plus the pb-3 the real one carries. */}
+        <div className="shrink-0 pb-3">
+          <SkeletonBlock className="h-9 w-full rounded-full" />
+        </div>
         <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
           {Array.from({ length: noteCount }).map((_, index) => (
             <div

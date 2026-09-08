@@ -45,6 +45,13 @@ type QuickCreateDefaults = {
   releaseId?: string | null;
   groupId?: string | null;
   source?: TaskCreateSource;
+  /**
+   * Seeds the title field. The input is focused AND selected on open, so a
+   * prefill is accepted by pressing Enter and replaced by simply typing —
+   * which is what makes seeding it non-intrusive rather than something to
+   * clear first.
+   */
+  title?: string;
 };
 
 type TaskUIContextValue = {
@@ -378,6 +385,10 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const openQuickCreate = useCallback(
     (defaults?: QuickCreateDefaults) => {
       setQuickCreateDefaults(defaults || {});
+      // Seeded explicitly rather than relying on resetQuickCreate having
+      // cleared it on close: passing '' when there is no prefill is what
+      // guarantees one open's title can never leak into the next.
+      setQuickTitle(defaults?.title ?? '');
       // A failure from a previous session's in-flight create can land after
       // the modal closed — never show that stale message over a fresh form.
       setQuickError('');

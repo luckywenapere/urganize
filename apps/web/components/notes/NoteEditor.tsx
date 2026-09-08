@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, Loader2, Pin, Sparkles, Trash2 } from '@/components/icons';
+import { ArrowLeft, Check, Loader2, Pin, Plus, Sparkles, Trash2 } from '@/components/icons';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { NoteReleasePicker } from './NoteReleasePicker';
 import type { NoteSaveState } from './useNoteAutosave';
@@ -22,6 +22,15 @@ type NoteEditorProps = {
   /** Turn this note into a release plan. Absent hides the action — the notes
    * page decides, because it knows whether the linked release already has one. */
   onMakePlan?: () => void;
+  /**
+   * Turn this note into an activity. Unlike onMakePlan this is offered
+   * unconditionally: quick-create carries its own release picker and refuses
+   * to submit without one, so a note with no release is a case the modal
+   * already handles rather than a reason to hide the action. Hiding it when
+   * unlinked would hide it exactly when it is most useful — most notes are
+   * captured with no release, which is the whole point of capture-first.
+   */
+  onMakeActivity?: () => void;
   onBack: () => void;
   /** True only for a note that was just created — focus once, then never steal. */
   autoFocus: boolean;
@@ -42,6 +51,7 @@ export function NoteEditor({
   onSetRelease,
   onTogglePin,
   onMakePlan,
+  onMakeActivity,
   onRequestDelete,
   onBack,
   autoFocus,
@@ -127,6 +137,19 @@ export function NoteEditor({
           linkedReleaseId={note.releaseId}
           onSelect={onSetRelease}
         />
+
+        {onMakeActivity ? (
+          <button
+            type="button"
+            onClick={onMakeActivity}
+            title="Turn this note into an activity"
+            className="motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:border-brand/50 hover:bg-bg-hover"
+          >
+            <Plus className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+            <span className="hidden sm:inline">Make an activity</span>
+            <span className="sm:hidden">Activity</span>
+          </button>
+        ) : null}
 
         {onMakePlan ? (
           <button

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useNotesStore } from '@/stores/useNotesStore';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { NotesList } from '@/components/notes/NotesList';
 import { NoteEditor, NoteEditorEmpty } from '@/components/notes/NoteEditor';
@@ -14,6 +15,8 @@ import { useNoteSelection } from '@/components/notes/useNoteSelection';
 import { useNoteAutosave } from '@/components/notes/useNoteAutosave';
 import { NotesPageSkeleton } from '@/components/loading/NotesPageSkeleton';
 import { deriveNoteTitle } from '@/lib/notes';
+import { searchNotes } from '@/lib/note-search';
+import { parseSearchTerms } from '@/lib/task-search';
 
 // Same flag AppTopbar and the API routes read — if a direct link is followed
 // while the flag is off, bounce to the workspace (the route has no
@@ -36,11 +39,19 @@ export default function NotesPageClient() {
   const { notes, isInitialLoading, load, create, update, remove } = useNotesStore();
   const tasks = useTaskStore((state) => state.tasks);
   const openIntake = usePlannerStore((state) => state.openIntake);
+  const { openQuickCreate } = useTaskUI();
 
   const { selectedNoteId, selectNote } = useNoteSelection();
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  /**
+   * Search is local state, deliberately NOT a URL param. Typing would push a
+   * history entry per keystroke, and this page already carries `?note=` and
+   * `?release=` — a third param that changes on every character would make
+   * Back unusable. The catalog's own search bar made the same call.
+   */
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Ids created in THIS mount. Only these are ever auto-reaped when left
   // empty — a note that arrived empty from the server is someone's data, not
@@ -157,6 +168,38 @@ export default function NotesPageClient() {
     };
   }, [selectedNote, tasks, openIntake, autosave.draft]);
 
+  /**
+   * Turn this note into an activity.
+   *
+   * Opens quick-create seeded with the note's derived title and its linked
+   * release. Offered unconditionally: the modal carries its own release
+   * picker and refuses to submit without one, so an unlinked note is a case
+   * it already handles — and hiding the action when unlinked would hide it
+   * exactly when it is most useful, since capture-first means most notes have
+   * no release yet.
+   *
+   * The LIVE draft is the source, not the stored body, so a thought still
+   * being typed can become work without waiting for the autosave.
+   *
+   * It deliberately does NOT mutate the note: no auto-link to the release
+   * picked in the modal, and the note is not consumed. Linking on a
+   * successful create is defensible and would need a create callback
+   * threaded through TaskUIProvider; a silent write on an action the user
+   * might still cancel is not worth it without one.
+   */
+  const makeActivityFromNote = useMemo(() => {
+    if (!selectedNote) return undefined;
+    return () => {
+      const title = deriveNoteTitle(autosave.draft);
+      if (!title) return;
+      openQuickCreate({
+        releaseId: selectedNote.releaseId ?? null,
+        title,
+        source: 'note',
+      });
+    };
+  }, [autosave.draft, openQuickCreate, selectedNote]);
+
   const handleBack = useCallback(() => {
     const outgoing = selectedNoteId;
     selectNote(null);
@@ -224,10 +267,21 @@ export default function NotesPageClient() {
     [releaseFilterId, releases]
   );
 
-  const visibleNotes = useMemo(
-    () => (releaseFilterId ? notes.filter((note) => note.releaseId === releaseFilterId) : notes),
-    [notes, releaseFilterId]
-  );
+  const searchTerms = useMemo(() => parseSearchTerms(searchQuery), [searchQuery]);
+
+  /**
+   * The release filter and the search COMPOSE — both narrow, neither clears
+   * the other. Release first, then search, so "notes about this release
+   * mentioning the promoter" is expressible. Search returns the list
+   * unchanged for an empty query, so with no query this is exactly the
+   * previous behaviour.
+   */
+  const visibleNotes = useMemo(() => {
+    const scoped = releaseFilterId
+      ? notes.filter((note) => note.releaseId === releaseFilterId)
+      : notes;
+    return searchNotes(scoped, searchQuery);
+  }, [notes, releaseFilterId, searchQuery]);
 
   const pinned = useMemo(() => visibleNotes.filter((note) => note.pinned), [visibleNotes]);
   const others = useMemo(() => visibleNotes.filter((note) => !note.pinned), [visibleNotes]);
@@ -284,6 +338,9 @@ export default function NotesPageClient() {
             filterRelease={filterRelease}
             filterUnresolved={Boolean(releaseFilterId) && !filterRelease}
             isCreating={isCreating}
+            searchQuery={searchQuery}
+            searchTerms={searchTerms}
+            onSearchChange={setSearchQuery}
             onSelect={handleSelect}
             onNewNote={() => void handleNewNote()}
             onClearFilter={clearFilter}
@@ -307,6 +364,7 @@ export default function NotesPageClient() {
               onTogglePin={() => void update(selectedNote.id, { pinned: !selectedNote.pinned })}
               onRequestDelete={() => setIsDeleteOpen(true)}
               onMakePlan={planFromNote}
+              onMakeActivity={makeActivityFromNote}
               onBack={handleBack}
               autoFocus={pendingFocusId === selectedNote.id}
               onAutoFocusConsumed={() => setPendingFocusId(null)}
