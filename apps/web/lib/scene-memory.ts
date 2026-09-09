@@ -1,5 +1,5 @@
 import { readPersistedState, writePersistedState } from './persisted-state';
-import type { SceneName } from './scene-cache';
+import { resolveActiveScene, type SceneName } from './scene-cache';
 
 // Remembers which scene (Metadata / Calendar / Song / …, or none = the
 // default Activities list) each release was last showing, so navigating
@@ -70,11 +70,77 @@ function readScenes(userId: string): Record<string, SceneName> {
 
 /** What scene a release was last showing this session, or null for the
  * default Activities view (never visited this session, or its last state
- * WAS Activities). */
+ * WAS Activities).
+ *
+ * A plain storage read: it answers what was REMEMBERED, not what may be shown.
+ * Whether that scene can still render is `decideIncomingScene`'s job, which is
+ * the one place validity is applied — see the note on its `remembered` field. */
 export function recallScene(releaseId: string): SceneName | null {
   if (!releaseId) return null;
   const userId = readSessionUserId();
   return readScenes(userId)[releaseId] ?? null;
+}
+
+/**
+ * Which scene the release being scoped TO should show — the precedence rule
+ * between three candidate answers, and the whole of the fix for a "Review your
+ * draft plan" tap that landed on Metadata (founder report, 2026-09-08).
+ *
+ * MEMORY IS A DEFAULT, NEVER AN OVERRIDE. That inversion was the bug: setScope
+ * used to overwrite whatever `scene` the URL was carrying with whatever it
+ * remembered for the incoming release, so an explicitly requested scene lost to
+ * a scene the user had merely visited earlier. On a single-release account the
+ * auto-scope runs setScope on arrival, so every return to /dashboard resolved
+ * to the remembered scene and destroyed the one that had just been asked for.
+ *
+ * Order, highest first:
+ *
+ *  1. `requested` — the caller said so outright. `null` is a real answer here
+ *     ("no scene"), which is why the field's ABSENCE is what means "no
+ *     opinion", tested with `in` rather than a truthiness check. Same
+ *     absent-vs-null distinction the metadata and curator PATCH routes make,
+ *     and for the same reason: three states, not two.
+ *  2. `urlScene` — a scene already in the address bar, and ONLY when
+ *     `previousReleaseId` is null. That is the one case where the scene in the
+ *     URL was authored for the release being scoped TO: a deep link, a shared
+ *     URL, or the single-release auto-scope firing under one. When SWITCHING
+ *     between two releases the URL's scene belongs to the release being LEFT,
+ *     and carrying it across is the leak this module was built to stop — so
+ *     that condition lives in here rather than in the caller, where it could
+ *     not be tested.
+ *  3. `remembered` — recallScene's answer, flag-filtered HERE. A remembered
+ *     scene outlives the flag that allowed it: switch Content off and a
+ *     release last showing the calendar would otherwise get `scene=calendar`
+ *     written back into its URL, where `resolveActiveScene` nulls it on
+ *     render — address bar says one thing, panel shows the main view. Null
+ *     means it simply resumes at the main view, which is what renders anyway.
+ *
+ * Pure on purpose: the storage read and the URL read both happen in the hook,
+ * so the rule itself is unit-testable without a DOM.
+ */
+export type IncomingSceneInput = {
+  /** The release being left, or null when scoping from no release at all. */
+  previousReleaseId: string | null;
+  /** Whatever `scene` the URL is carrying right now. */
+  urlScene: string | null;
+  /** What the caller asked for. ABSENT means "no opinion"; null means "none". */
+  requested?: SceneName | null;
+  /** recallScene's answer for the release being scoped to. */
+  remembered: SceneName | null;
+};
+
+export function decideIncomingScene(input: IncomingSceneInput): SceneName | null {
+  if ('requested' in input) return input.requested ?? null;
+
+  // Validated, not merely name-checked, in both places below: a scene whose
+  // flag is off cannot render, so honouring one would leave the URL saying one
+  // thing and the panel showing another.
+  if (input.previousReleaseId === null) {
+    const fromUrl = resolveActiveScene(input.urlScene);
+    if (fromUrl) return fromUrl;
+  }
+
+  return input.remembered ? resolveActiveScene(input.remembered) : null;
 }
 
 /**

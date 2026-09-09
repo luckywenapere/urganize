@@ -7,6 +7,7 @@ import {
   flush,
   listQueued,
   mutateQueuedPayload,
+  removeQueued,
   pendingCount,
   subscribeQueueChanges,
   type QueuedMutation,
@@ -325,5 +326,49 @@ describe('flush', () => {
       expect.objectContaining({ id: item.id }),
       { id: 'server-task-1' }
     );
+  });
+});
+
+describe('removeQueued', () => {
+  // Same fake-IndexedDB harness as the blocks above: this repo's vitest
+  // environment is plain Node, so without it every storage call no-ops and
+  // the assertions here would pass vacuously against an empty store.
+  beforeEach(() => {
+    installFakeIndexedDb();
+    __resetIdbForTests();
+  });
+
+  afterEach(() => {
+    const globalScope = globalThis as unknown as Record<string, unknown>;
+    delete globalScope.indexedDB;
+    delete globalScope.window;
+    __resetIdbForTests();
+  });
+  /** Deleting a note that never reached the server means dropping its
+   *  queued create — there is no server row to DELETE, and leaving the item
+   *  would resurrect the note on the next flush. */
+  it('drops one item and leaves the rest', async () => {
+    const keep = await enqueue({ kind: 'note_create', userId: 'user-1', payload: { body: 'keep' } });
+    const drop = await enqueue({ kind: 'note_create', userId: 'user-1', payload: { body: 'drop' } });
+    await removeQueued(drop.id);
+    const left = await listQueued('user-1');
+    expect(left.map((item) => item.id)).toEqual([keep.id]);
+  });
+
+  /** Already synced, already dropped, or simply never there — all the same
+   *  to a caller that just wants it gone. */
+  it('is a no-op for an id that is not queued', async () => {
+    await enqueue({ kind: 'note_create', userId: 'user-1', payload: { body: 'x' } });
+    await expect(removeQueued('nope')).resolves.toBeUndefined();
+    expect(await pendingCount('user-1')).toBe(1);
+  });
+
+  it('notifies subscribers so a pending count can re-read', async () => {
+    const item = await enqueue({ kind: 'note_create', userId: 'user-1', payload: { body: 'x' } });
+    let calls = 0;
+    const stop = subscribeQueueChanges(() => { calls += 1; });
+    await removeQueued(item.id);
+    stop();
+    expect(calls).toBeGreaterThan(0);
   });
 });

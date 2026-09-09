@@ -20,12 +20,28 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.32.0",
-    date: "September 8, 2026",
+    version: "1.33.0",
+    date: "September 9, 2026",
     highlights: [
       "New prices, and every plan is now paid once a year. Solo is ₦5,000, Manager is ₦22,000 and Label is ₦50,000.",
       "There is no monthly option any more, so there is one price to read on every plan.",
       "Already paying? Your price stays exactly where it is. Ask us if you want to move to a new one.",
+    ],
+  },
+  {
+    version: "1.32.1",
+    date: "September 8, 2026",
+    highlights: [
+      "Tapping \"Review your draft plan\" opens your plan again. Some people were being sent to the Metadata page instead.",
+      "An old link to something you have since switched off now opens the release, instead of a page with nothing on it.",
+    ],
+  },
+  {
+    version: "1.32.0",
+    date: "September 8, 2026",
+    highlights: [
+      "UrgAns tailors your rollout plan more reliably now. It used to give up and hand you the plain playbook more often than it should have.",
+      "UrgAns has a voice now — strict, a little bossy, and focused on getting your release out. Its replies also read clean, with no stray symbols.",
     ],
   },
   {

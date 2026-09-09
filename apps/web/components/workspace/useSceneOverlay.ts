@@ -36,8 +36,10 @@ const SCENE_PARAM = 'scene';
 const RELEASE_PARAM = 'release';
 
 // Canonical in lib/scene-cache.ts — the URL layer here and the data layer
-// (stores/useSceneDataStore.ts) both key off the same four names, so they
-// share one definition rather than two lists that can drift.
+// (stores/useSceneDataStore.ts) both key off the same names, so they share one
+// definition rather than two lists that can drift. (There were four when this
+// was written and there are ten now, which is the drift the shared list
+// prevents; the comment itself said "four" until 2026-09-08.)
 export { SCENE_NAMES, type SceneName } from '@/lib/scene-cache';
 import { SCENE_NAMES, type SceneName } from '@/lib/scene-cache';
 
@@ -68,7 +70,9 @@ export function clearSceneScopedParams(params: URLSearchParams): void {
 }
 
 export type SceneOverlay = {
-  /** Null unless the URL names one of the four known scenes. */
+  /** Null unless the URL names a known scene. NOT flag-filtered — both
+   * consumers immediately re-gate this through `resolveActiveScene`, which is
+   * what decides whether the scene can actually render. */
   activeScene: SceneName | null;
   openScene: (scene: SceneName, releaseId: string) => void;
   closeScene: () => void;

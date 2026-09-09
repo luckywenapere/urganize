@@ -75,18 +75,23 @@ describe('persist policy', () => {
     // rather than a snapshot, so it owns its own reads and writes. The
     // calendar joins the list only when its flag is on — with it off, its API
     // routes 404, so prefetching would burn a guaranteed-404 per release.
-    const metadataEnabled = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
-    const contentCalendarEnabled = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
-    const captureEnabled = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
-    const songUploadEnabled = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
-    const coverArtEnabled = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
-    const cacheable = [...SCENE_NAMES]
-      .filter(isCacheableScene)
-      .filter((scene) => scene !== 'metadata' || metadataEnabled)
-      .filter((scene) => scene !== 'calendar' || contentCalendarEnabled)
-      .filter((scene) => scene !== 'capture' || captureEnabled)
-      .filter((scene) => scene !== 'song' || songUploadEnabled)
-      .filter((scene) => scene !== 'coverart' || coverArtEnabled);
+    // Every cacheable scene is gated on its own flag now — files and pitch
+    // joined the rest on 2026-09-08. They had been unconditional, which meant
+    // that with those flags off the prefetch spent a guaranteed 404 per scoped
+    // release and then threw, since readJson rejects a non-ok response.
+    const flagFor: Partial<Record<string, string>> = {
+      metadata: 'NEXT_PUBLIC_FEATURE_METADATA',
+      calendar: 'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',
+      capture: 'NEXT_PUBLIC_FEATURE_CAPTURE',
+      song: 'NEXT_PUBLIC_FEATURE_SONG_UPLOAD',
+      coverart: 'NEXT_PUBLIC_FEATURE_COVER_ART',
+      files: 'NEXT_PUBLIC_FEATURE_FILES',
+      pitch: 'NEXT_PUBLIC_FEATURE_PITCHING',
+    };
+    const cacheable = [...SCENE_NAMES].filter(isCacheableScene).filter((scene) => {
+      const flag = flagFor[scene];
+      return !flag || process.env[flag] === 'true';
+    });
     expect([...SCENE_PREFETCH_ORDER].sort()).toEqual([...cacheable].sort());
     expect(new Set(SCENE_PREFETCH_ORDER).size).toBe(SCENE_PREFETCH_ORDER.length);
   });
@@ -262,21 +267,30 @@ describe('withinPersistBudget', () => {
   });
 });
 
-// resolveActiveScene reads its four feature flags at MODULE scope (the
+// resolveActiveScene reads its feature flags at MODULE scope (the
 // NEXT_PUBLIC_* inlining pattern), so stubbing env after an import would be too
-// late — each case re-imports with the flags it wants. All four are stubbed
+// late — each case re-imports with the flags it wants. Every flag is stubbed
 // explicitly rather than read from the ambient environment: vitest does not load
 // .env.local, and leaving any of them to chance would make these assertions
 // depend on whoever ran them.
+//
+// The list grew from five to nine on 2026-09-08, when metadata / files / pitch
+// / plan gained the URL-level gate the other five always had.
+const SCENE_FLAGS = [
+  'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',
+  'NEXT_PUBLIC_FEATURE_CAPTURE',
+  'NEXT_PUBLIC_FEATURE_SONG_UPLOAD',
+  'NEXT_PUBLIC_FEATURE_COVER_ART',
+  'NEXT_PUBLIC_FEATURE_TIMELINE',
+  'NEXT_PUBLIC_FEATURE_METADATA',
+  'NEXT_PUBLIC_FEATURE_FILES',
+  'NEXT_PUBLIC_FEATURE_PITCHING',
+  'NEXT_PUBLIC_FEATURE_RELEASE_PLANNER',
+] as const;
+
 async function loadResolver(flagsOn: boolean) {
   vi.resetModules();
-  for (const flag of [
-    'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',
-    'NEXT_PUBLIC_FEATURE_CAPTURE',
-    'NEXT_PUBLIC_FEATURE_SONG_UPLOAD',
-    'NEXT_PUBLIC_FEATURE_COVER_ART',
-    'NEXT_PUBLIC_FEATURE_TIMELINE',
-  ]) {
+  for (const flag of SCENE_FLAGS) {
     vi.stubEnv(flag, flagsOn ? 'true' : 'false');
   }
   return import('./scene-cache');
@@ -312,16 +326,26 @@ describe('resolveActiveScene', () => {
     }
   });
 
-  it('leaves the five ungated scenes open with those flags off', async () => {
-    // Deliberate, and the reason this is asserted rather than left implicit:
-    // metadata / files / pitch / plan gate themselves inside
-    // ReleaseScenePanel and their own pills, and gating them here would change
-    // which scenes RENDER rather than just consolidating the check. A future
-    // change that adds one of them to the resolver has to break this test on
-    // purpose.
+  it('gates metadata, files, pitch and plan too (2026-09-08)', async () => {
+    // These four had NO url-level gate anywhere. The old comment here claimed
+    // they "gate themselves inside ReleaseScenePanel"; that file reads no flag
+    // at all and never has, so a stale bookmark or a shared link opened a
+    // header with a dead fetch under it. Files has been off in production
+    // since v0.16.4, so ?scene=files was that empty page for anyone holding an
+    // old link. Founder call: land on the release instead.
     const { resolveActiveScene } = await loadResolver(false);
     for (const scene of ['metadata', 'files', 'pitch', 'plan']) {
-      expect(resolveActiveScene(scene)).toBe(scene);
+      expect(resolveActiveScene(scene)).toBeNull();
+    }
+  });
+
+  it('leaves activities open in every flag state', async () => {
+    // The one genuinely ungated name, and it has to stay that way: it is
+    // resolveMainView's fallback, so a rollback that gated it would leave the
+    // panel blank.
+    for (const flagsOn of [true, false]) {
+      const { resolveActiveScene } = await loadResolver(flagsOn);
+      expect(resolveActiveScene('activities')).toBe('activities');
     }
   });
 });
@@ -363,6 +387,16 @@ describe('resolvePanelBody', () => {
     const { resolvePanelBody } = await loadResolver(true);
     expect(resolvePanelBody('metadata')).toBe('metadata');
     expect(resolvePanelBody('calendar')).toBe('calendar');
+    // 'plan' was never covered here, which is how a "Review your draft plan"
+    // tap could resolve to something else without a test noticing.
+    expect(resolvePanelBody('plan')).toBe('plan');
+  });
+
+  it('resolves every scene name to itself with the flags on', async () => {
+    const { resolvePanelBody, SCENE_NAMES: names } = await loadResolver(true);
+    for (const scene of names) {
+      expect(resolvePanelBody(scene)).toBe(scene);
+    }
   });
 
   // A stale bookmark to ?scene=timeline after a rollback must not render a
