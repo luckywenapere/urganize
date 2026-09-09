@@ -62,7 +62,7 @@ describe('buildWorkspaceInviteEmail', () => {
       inviterLabel: '',
       accessLabel: '',
     });
-    expect(subject).toBe('A teammate invited you to a workspace on Urganize');
+    expect(subject).toBe('A teammate invited you to a team on Urganize');
     expect(text).toContain("You'll have access.");
   });
 

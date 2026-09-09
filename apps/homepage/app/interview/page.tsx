@@ -3,14 +3,15 @@ import { InterviewForm } from "../components/interview/InterviewForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { SectionShell } from "../components/landing/SectionShell";
+import { CUSTOMER_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 // Sent directly to specific artists, not discovered — noindex, not in the
 // sitemap, not linked from ProductMenu or anywhere else on the site.
 export const metadata: Metadata = {
   ...buildPageMetadata({
-    title: "Book an interview — Urganize",
-    description: "Pick a day and time for your Urganize interview.",
+    title: "Book an interview",
+    description: `Pick a day and time to talk to us about Urganize, the ${CUSTOMER_LINE}.`,
     path: "/interview",
   }),
   robots: { index: false, follow: false },

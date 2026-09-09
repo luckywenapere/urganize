@@ -4,6 +4,7 @@ import { Space_Grotesk, Fraunces, Space_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
 import { CursorRefresher } from '@/components/app/CursorRefresher';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
+import { CUSTOMER_LINE, PROMISE } from '@/lib/positioning';
 import './globals.css';
 
 // Self-hosted via next/font (preloaded, no third-party request chain). Per
@@ -31,8 +32,10 @@ const spaceMono = Space_Mono({
 });
 
 const appName = 'Urganize';
-const appDescription =
-  'Urganize is a music campaign execution workspace for planning releases, tracking tasks, and keeping your team aligned.';
+// The category leads, then the audience, then the promise (2026-09-09
+// positioning). Imported rather than typed out so the app, the marketing site
+// and the share card cannot describe a different product; see lib/positioning.
+const appDescription = `Urganize is an ${CUSTOMER_LINE}. ${PROMISE}.`;
 
 function getMetadataBase() {
   // Production fallback is the CANONICAL domain, never the *.vercel.app

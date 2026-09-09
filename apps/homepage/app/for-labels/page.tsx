@@ -8,13 +8,14 @@ import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { SALES_CONTACT_EMAIL } from "@urganize/pricing";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Urganize for labels",
+  title: "For labels",
   description:
-    "Urganize for labels and management companies running a roster. The founders set you up, templates match how your label works and every release runs the same way.",
+    `An ${PRODUCT_CATEGORY} for labels and management companies running a roster. The founders set you up, templates match how your label works and every release runs the same way.`,
   path: "/for-labels",
 });
 
@@ -59,9 +60,9 @@ const valueBlocks = [
   {
     kicker: "Status",
     title: "See the whole roster's status without asking.",
-    body: "One workspace shows every release you have going: progress, what's overdue, what's due this week. You stop needing a meeting just to share status.",
+    body: "One list shows every release you have going: progress, what's overdue, what's due this week. You stop needing a meeting just to share status.",
     points: [
-      "Every release and activity in one workspace",
+      "Every release and activity in one place",
       "Overdue and due-today shown first",
       "See one release on its own when that's all you need",
     ],
@@ -141,7 +142,7 @@ export default function ForLabelsPage() {
                   founder SERVICE from a self-serve FEATURE. That distinction is
                   the reason this section exists; only the factual half moved. */}
               <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
-                You get the same workspace as everyone else, with your whole
+                You get the same product as everyone else, with your whole
                 roster in it. The founders also work with you directly across it.
               </p>
             </div>

@@ -25,7 +25,7 @@ import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 // Same flag WorkspaceView reads for the "first win" reveal — Chappi's
-// "New release" card can plausibly create a user's very first release too.
+// "New rollout" card can plausibly create a user's very first release too.
 const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
 // Type-first create (2026-09-01): tap-the-type creation lands straight in the
@@ -152,8 +152,8 @@ export default function ChappiPageClient() {
                 scopedReleaseId ? `/dashboard?release=${scopedReleaseId}` : '/dashboard'
               );
             }}
-            aria-label="Collapse into workspace"
-            title="Back to workspace"
+            aria-label="Collapse into the catalog"
+            title="Back to the catalog"
             className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />

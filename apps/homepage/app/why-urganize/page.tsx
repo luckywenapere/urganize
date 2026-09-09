@@ -6,12 +6,13 @@ import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    "WhatsApp and Google Drive work for one artist and one release. Running more than one? Urganize gives you a real rollout plan, owners on every activity and status you can see without asking.",
+    `WhatsApp and Google Drive work for one artist and one release. Running more than one? An ${PRODUCT_CATEGORY} gives you a real rollout plan, owners on every activity and status you can see without asking.`,
   path: "/why-urganize",
 });
 
@@ -61,7 +62,7 @@ const compactComparisons = [
   {
     kicker: "Status",
     them: "Finding out where a release stands means scrolling weeks of chat, for every release you run.",
-    us: "One workspace shows progress, what's overdue and what's due this week, for everything you have going.",
+    us: "One list shows progress, what's overdue and what's due this week, for everything you have going.",
   },
 ] as const;
 
@@ -199,15 +200,16 @@ export default function WhyUrganizePage() {
               <h2 className={`mt-6 ${headlineClass}`}>
                 Keep WhatsApp. Keep Drive.
               </h2>
-              {/* "Workspace" is the one allowed place-word; describing
-                  WHATSAPP and DRIVE as places is fine — the ban is on
-                  framing Urganize as a container (2026-08 positioning). */}
+              {/* Describing WHATSAPP and DRIVE as places is the point of
+                  this beat. Under the 2026-09-09 positioning Urganize may be
+                  a place too ("from one place" is the promise), and the word
+                  it may never be called is "workspace". */}
               <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
                 This isn&apos;t about deleting apps. WhatsApp is still where
                 you talk, and Drive is still where your raw files live.
-                Urganize doesn&apos;t replace either one. It&apos;s the
-                workspace where the plan, the work and the status come
-                together. The plan never has to sit in a chat thread again.
+                Urganize doesn&apos;t replace either one. It&apos;s where the
+                plan, the work and the status come together. The plan never has
+                to sit in a chat thread again.
               </p>
             </div>
           </SectionShell>

@@ -30,7 +30,7 @@ async function resolveMutableMembership(
   const membership = access.memberships.find((item) => item.workspaceId === workspaceId) || null;
 
   if (!workspaceId || !membership) {
-    return { error: NextResponse.json({ error: 'Workspace not found.' }, { status: 404 }) };
+    return { error: NextResponse.json({ error: 'Team not found.' }, { status: 404 }) };
   }
 
   if (membership.role !== 'owner' && membership.role !== 'admin') {
@@ -72,17 +72,17 @@ export async function PATCH(
       }
 
       return NextResponse.json(
-        { error: memberResult.error.message || 'Could not load workspace member.' },
+        { error: memberResult.error.message || 'Could not load that teammate.' },
         { status: 500 }
       );
     }
 
     if (!memberResult.data) {
-      return NextResponse.json({ error: 'Workspace member not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'That teammate was not found.' }, { status: 404 });
     }
 
     if (readString(memberResult.data.role) === 'owner') {
-      return NextResponse.json({ error: 'The workspace owner cannot be changed here.' }, { status: 400 });
+      return NextResponse.json({ error: 'The team owner cannot be changed here.' }, { status: 400 });
     }
 
     const body = (await request.json().catch(() => ({}))) as UpdateWorkspaceMemberBody;
@@ -103,7 +103,7 @@ export async function PATCH(
       }
 
       return NextResponse.json(
-        { error: updateResult.error.message || 'Could not update workspace member.' },
+        { error: updateResult.error.message || 'Could not update that teammate.' },
         { status: 500 }
       );
     }
@@ -115,7 +115,7 @@ export async function PATCH(
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not update workspace member.' },
+      { error: error instanceof Error ? error.message : 'Could not update that teammate.' },
       { status: 500 }
     );
   }
@@ -153,17 +153,17 @@ export async function DELETE(
       }
 
       return NextResponse.json(
-        { error: memberResult.error.message || 'Could not load workspace member.' },
+        { error: memberResult.error.message || 'Could not load that teammate.' },
         { status: 500 }
       );
     }
 
     if (!memberResult.data) {
-      return NextResponse.json({ error: 'Workspace member not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'That teammate was not found.' }, { status: 404 });
     }
 
     if (readString(memberResult.data.role) === 'owner') {
-      return NextResponse.json({ error: 'The workspace owner cannot be removed.' }, { status: 400 });
+      return NextResponse.json({ error: 'The team owner cannot be removed.' }, { status: 400 });
     }
 
     const deleteResult = await adminClient
@@ -181,7 +181,7 @@ export async function DELETE(
       }
 
       return NextResponse.json(
-        { error: deleteResult.error.message || 'Could not remove workspace member.' },
+        { error: deleteResult.error.message || 'Could not remove that teammate.' },
         { status: 500 }
       );
     }
@@ -193,7 +193,7 @@ export async function DELETE(
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not remove workspace member.' },
+      { error: error instanceof Error ? error.message : 'Could not remove that teammate.' },
       { status: 500 }
     );
   }

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { ONE_LINER } from "@/lib/positioning";
 import Link from "next/link";
 import { BackToTopButton } from "./BackToTopButton";
 import { FaLinkedin } from "react-icons/fa6";
@@ -86,6 +87,12 @@ export function MarketingFooter() {
                 className="marketing-wordmark h-[15px] w-auto"
               />
             </Link>
+            {/* The footer tagline (2026-09-09). One line, the one-liner from
+                lib/positioning, so the last thing on every marketing page
+                says what this is. */}
+            <p className="mt-1 max-w-[22rem] text-sm leading-6 text-[var(--marketing-text-subtle)]">
+              {ONE_LINER}
+            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm tracking-[-0.01em] text-[var(--marketing-text-subtle)]">

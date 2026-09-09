@@ -160,7 +160,7 @@ export async function DELETE(
   // removing it from the team's schedule is the owner's call.
   if (access.ownerUserId !== auth.user.id) {
     return NextResponse.json(
-      { error: 'Only the workspace owner can delete a show.' },
+      { error: 'Only the team owner can delete a show.' },
       { status: 403 }
     );
   }

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId) {
       console.error('[workspace-logo] no workspace for user', { userId: auth.user.id });
-      return NextResponse.json({ error: 'No workspace found.' }, { status: 404 });
+      return NextResponse.json({ error: 'No team found.' }, { status: 404 });
     }
     const storagePath = buildWorkspaceLogoStoragePath(access.primaryWorkspaceId, fileName);
 

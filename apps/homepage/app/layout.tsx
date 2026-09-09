@@ -7,6 +7,7 @@ import {
   Roboto_Mono,
 } from "next/font/google";
 import "./globals.css";
+import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { LANDING_DESCRIPTION, LANDING_TITLE } from "@/lib/seo";
 import { Suspense } from "react";
 import FormbricksProvider from "./formbricks-provider";
@@ -16,17 +17,20 @@ import { LandingAnalytics } from "./components/landing/LandingAnalytics";
 
 const SITE_URL = "https://urganize.app";
 const LEGAL_NAME = "The Urganization Ltd";
-// Executive repositioning (2026-08-19): label/exec-shaped terms lead;
-// "artist manager software" stays — managers remain a real search segment
-// and the ecosystem entry point, they're just no longer the hero.
+// AI Music Manager positioning (2026-09-09). The category leads, because it
+// is now the thing we want to be found for rather than a description of the
+// software. Two terms left with it: "music release management" is a retired
+// category label, and "A&R software" named an audience the brief replaced
+// with artists, managers and labels. "artist manager software" stays, since
+// managers are the middle of the new audience list rather than gone from it.
 const LANDING_KEYWORDS = [
+  "AI music manager",
+  "music manager app",
   "artist manager software",
   "music release planning",
   "release rollout plan",
-  "music release management",
   "label management software",
   "record label software",
-  "A&R software",
 ] as const;
 
 // Typography
@@ -113,7 +117,13 @@ const softwareApplicationSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Urganize",
-  "applicationCategory": "BusinessApplication",
+  // The product category, not schema.org's broad "BusinessApplication" that
+  // stood here before. The field is free Text, so this is valid, and the
+  // 2026-09-09 brief asks the schema to carry the positioning: the whole point
+  // of naming a category is that machines and people read the same one. The
+  // trade-off, recorded rather than hidden: a crawler grouping apps by the
+  // conventional enumerated values will not find Urganize among them.
+  "applicationCategory": PRODUCT_CATEGORY,
   "operatingSystem": "Web",
   "description": LANDING_DESCRIPTION,
   "url": SITE_URL,

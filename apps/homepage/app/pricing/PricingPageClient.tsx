@@ -80,8 +80,9 @@ export function PricingPageClient() {
                 in the lead below it. The lead keeps the locked positioning
                 sentence and drops what the headline now says. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              Urganize is the AI workspace for music executives. Start free on
-              your own, or let us set your roster up with you.
+              Urganize is an AI Music Manager for artists, managers and
+              labels. Start free on your own, or let us set your roster up
+              with you.
             </p>
 
             <div className="hero-fade-in hero-delay-3 mt-10">
@@ -90,7 +91,7 @@ export function PricingPageClient() {
                   repeated rather than as a choice. The header's "Start free
                   trial" is on screen throughout anyway. */}
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
-                Built for music executives working with ambitious artists.
+                Built for artists, managers and labels.
               </p>
               {/* The Founding Member line, from content/founding-member.ts.
                   The homepage pricing strip renders the same constant since

@@ -46,7 +46,7 @@ export function WorkspaceLogoSection({
 
   return (
     <section className={panelClass}>
-      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Workspace logo</h2>
+      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Team logo</h2>
       {/* Trimmed 2026-08-05 for the two-column row (shares one line with
           Workspace identity now): the heading already says "Workspace logo",
           so this drops the redundant lead-in and the "new and existing...
@@ -79,7 +79,7 @@ export function WorkspaceLogoSection({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={logo.url}
-                  alt="Workspace logo"
+                  alt="Team logo"
                   width={96}
                   height={96}
                   onError={() => setFailedUrl(logo.url)}

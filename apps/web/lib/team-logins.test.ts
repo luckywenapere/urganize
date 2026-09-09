@@ -98,7 +98,7 @@ describe('buildLoginShareMessage', () => {
 
   it('stays coherent with nothing but a URL', () => {
     const message = buildLoginShareMessage({ url });
-    expect(message).toContain("You've been added to a workspace on Urganize.");
+    expect(message).toContain("You've been added to a team on Urganize.");
     expect(message).toContain(url);
     // No dangling "undefined"/"null" from missing optional context.
     expect(message).not.toMatch(/undefined|null/);

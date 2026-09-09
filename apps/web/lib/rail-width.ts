@@ -10,7 +10,13 @@
  *
  * Everything here is pure: vitest collects lib/**\/*.test.ts and this repo has
  * no component tests, so the decisions live where they can be held.
+ *
+ * The side menu on the other edge is draggable too, and its mirror of this
+ * module is lib/sidebar-width.ts. The two share MAIN_MINIMUM and nothing else
+ * — see that file's header for why they are not one parameterised module.
  */
+
+import { MAIN_MINIMUM } from './layout-columns';
 
 /** Below the composer and the transcript stop being usable. */
 export const MIN_RAIL_WIDTH = 320;
@@ -34,15 +40,8 @@ export const RAIL_WIDTH_VERSION = 1;
 export const RAIL_KEYBOARD_STEP = 16;
 export const RAIL_KEYBOARD_STEP_LARGE = 64;
 
-/** What <main> keeps no matter what. Below this the workspace stops being a
- *  workspace, which is not a trade a width control should be able to make. */
-const MAIN_MINIMUM = 560;
-
-/** WorkspaceIdentityPanel's 240px plus its mr-8. */
-const IDENTITY_PANEL_TOTAL = 272;
-
 /** The rail's own mr-8. */
-const RAIL_GUTTER = 32;
+export const RAIL_GUTTER = 32;
 
 /** Tailwind's lg. The rail is `hidden lg:block`, so there is nothing to drag
  *  below it — asserted rather than assumed, because the handle must not exist
@@ -63,20 +62,28 @@ export function isRailResizable(viewportWidth: number): boolean {
 }
 
 /**
- * NOTE ON `hasIdentityPanel`: the caller decides this, not us, because
- * WorkspaceIdentityPanel hides ITSELF between lg and xl whenever the rail is
- * open (`railIsCompeting`). Reserving its width in that band would compute the
- * maximum against a column that is not on screen.
+ * NOTE ON `identityPanelTotal`: the caller decides it, not us, and passes 0
+ * whenever the side menu is not on screen — flagged off, or hidden between lg
+ * and xl, which WorkspaceIdentityPanel does to ITSELF whenever the rail is
+ * open (`railIsCompeting`). Reserving a column that is not there would compute
+ * the maximum against space nobody can see.
+ *
+ * IT IS A WIDTH RATHER THAN A BOOLEAN because that menu is draggable now (use
+ * sidebarTotalWidth to build it). A constant was fine while the card was a
+ * fixed 240px; against a card dragged to 420 it under-reserves by 148px, and
+ * the whole point of MAIN_MINIMUM is that nothing gets to spend it. The old
+ * constant was also 32px short even at 240, having counted the card's mr-8 and
+ * forgotten its ml-8.
  */
 export function resolveRailBounds(
   viewportWidth: number,
-  hasIdentityPanel: boolean
+  identityPanelTotal: number
 ): RailBounds {
   const locked: RailBounds = { min: MIN_RAIL_WIDTH, max: MIN_RAIL_WIDTH, resizable: false };
   if (!isRailResizable(viewportWidth)) return locked;
 
-  const reserved = MAIN_MINIMUM + RAIL_GUTTER + (hasIdentityPanel ? IDENTITY_PANEL_TOTAL : 0);
-  const available = Math.floor(viewportWidth - reserved);
+  const card = Number.isFinite(identityPanelTotal) ? Math.max(0, identityPanelTotal) : 0;
+  const available = Math.floor(viewportWidth - MAIN_MINIMUM - RAIL_GUTTER - card);
   const max = Math.min(MAX_RAIL_WIDTH, available);
 
   if (!Number.isFinite(max) || max < MIN_RAIL_WIDTH) return locked;

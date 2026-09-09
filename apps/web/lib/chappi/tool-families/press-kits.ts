@@ -165,7 +165,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
       return {
         ok: true,
         summary: kit
-          ? `${kit.artistName}'s press kit is started. Some of it was filled in from what the workspace already knows.`
+          ? `${kit.artistName}'s press kit is started. Some of it was filled in from what your team already knows.`
           : 'Started the press kit.',
         data: { kitId: kit?.id ?? null },
       };

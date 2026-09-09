@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     const workspaceId = body.workspaceId || access.primaryWorkspaceId;
 
     if (!workspaceId) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
     const workspaceAccess = await ensureWorkspaceAccess(adminClient, workspaceId, auth.user, access);

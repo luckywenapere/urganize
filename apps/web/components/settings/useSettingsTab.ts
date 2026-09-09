@@ -53,7 +53,7 @@ const isSettingsTab = (value: string | null): value is SettingsTab =>
 
 export const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
   account: 'Account',
-  workspace: 'Workspace',
+  workspace: 'Profile',
   team: 'Team',
   notifications: 'Notifications',
 };

@@ -89,8 +89,8 @@ export function buildLoginShareMessage(params: {
   const inviter = String(params.inviterName || '').trim();
 
   const opening = inviter
-    ? `${inviter} has added you to ${workspace || 'their workspace'} on Urganize.`
-    : `You've been added to ${workspace || 'a workspace'} on Urganize.`;
+    ? `${inviter} has added you to ${workspace || 'their team'} on Urganize.`
+    : `You've been added to ${workspace || 'a team'} on Urganize.`;
 
   const context = release ? ` We're running ${release} in there.` : '';
 

@@ -176,7 +176,7 @@ export default function AuthorizePageClient() {
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12">
         <h1 className="font-display text-2xl text-content-primary">Not available</h1>
         <p className="mt-2 text-sm text-content-secondary">
-          Connecting outside apps is not switched on for this workspace yet.
+          Connecting outside apps is not switched on for your team yet.
         </p>
       </main>
     );

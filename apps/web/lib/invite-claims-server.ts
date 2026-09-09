@@ -171,7 +171,7 @@ function isExpiredAt(expiresAt: string | null): boolean {
   return ms <= Date.now();
 }
 
-const EXPIRED_MESSAGE = 'This invite link has expired. Ask the workspace owner for a new one.';
+const EXPIRED_MESSAGE = 'This invite link has expired. Ask the team owner for a new one.';
 const INVALID_MESSAGE = 'Invite not found.';
 
 /** Multi-use JOIN for link-style invites (wl.* tokens and short codes):

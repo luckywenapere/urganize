@@ -6,7 +6,7 @@
 import type { ChappiChip, ChappiIntent, ChappiReply } from './types';
 
 // With the planner on, the three planning chips take the place of the bare
-// "New release" chip: planning IS how a release starts, and two doors that both
+// "New rollout" chip: planning IS how a release starts, and two doors that both
 // mint releases makes neither of them the main one.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
@@ -100,7 +100,7 @@ const PLANNER_CHIPS: ChappiChip[] = [
 export const CHAPPI_CHIPS: ChappiChip[] = [
   ...(PLANNER_ENABLED
     ? PLANNER_CHIPS
-    : [{ id: 'new-release', label: 'New release', intent: 'new_release' as const }]),
+    : [{ id: 'new-release', label: 'New rollout', intent: 'new_release' as const }]),
   { id: 'add-task', label: 'Add activity', intent: 'add_task' },
   ...(SONG_UPLOAD_ENABLED
     ? [{ id: 'upload-song', label: 'Upload the song', intent: 'upload_song' as const }]
@@ -160,7 +160,15 @@ export function resolveIntent(raw: string): ChappiIntent {
   if (RELEASE_RECAP_ENABLED && has('recap')) {
     return { kind: 'generate_recap' };
   }
-  if (has('release', 'single', 'album', ' ep', 'drop', 'song', 'track', 'project')) {
+  // 'rollout' is here because the CONTROL is called "New rollout" now, and a
+  // suggestion in buildHelpReply below reads "Create a new rollout" — those
+  // suggestions are clicked and fed straight back through this function, so
+  // without the word that chip would answer with the help card it came from.
+  // Someone who reads the button and types what it says deserves the same.
+  // With the planner ON the branch above already claims 'rollout', so these
+  // two are only ever reached with it off, which is exactly the state that
+  // renders that suggestion.
+  if (has('release', 'rollout', 'roll out', 'single', 'album', ' ep', 'drop', 'song', 'track', 'project')) {
     return { kind: PLANNER_ENABLED ? 'plan_release' : 'new_release' };
   }
   if (has('status', 'update', 'report', 'summary')) {
@@ -180,7 +188,7 @@ export function buildHelpReply(): ChappiReply {
   return {
     text: "I can help you run your releases. I'm still learning to chat — for now, try one of these:",
     suggestions: [
-      PLANNER_ENABLED ? 'Plan a release' : 'Create a new release',
+      PLANNER_ENABLED ? 'Plan a release' : 'Create a new rollout',
       'Add an activity',
       ...(SONG_UPLOAD_ENABLED ? ['Upload the song'] : []),
       ...(EVENTS_ENABLED ? ['My shows'] : []),

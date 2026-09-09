@@ -8,6 +8,7 @@ import { isNativePlatform } from '@/lib/platform';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 import { getAccessToken } from './getAccessToken';
+import { HelpTip } from '@/components/shared/HelpTip';
 
 const EXPORT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DATA_EXPORT === 'true';
 
@@ -90,14 +91,13 @@ export function DataExportSection() {
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Your data
       </h2>
-      <p className="mb-1 text-sm text-content-secondary">
-        Take a copy of everything Urganize holds for you, whenever you want. This is on every plan
-        and always will be.
-      </p>
-      <p className="mb-4 text-sm text-content-tertiary">
-        Everything covers your releases, activities, files, notes, team and billing history.
-        Activities is a spreadsheet of every activity across your releases.
-        {isNativePlatform() ? '' : ' Both download straight to this device.'}
+      {/* Two paragraphs and six sentences until 2026-09-08. What is IN the
+          export moved into the pullout; the platform line stays visible
+          because it changes what the buttons below actually do. */}
+      <p className="mb-4 text-sm text-content-secondary">
+        Take a copy of everything Urganize holds for you, whenever you want.
+        {isNativePlatform() ? '' : ' Both download straight to this device.'}{' '}
+        <HelpTip helpKey="settings.export" className="align-text-bottom" />
       </p>
       <div className="flex flex-wrap gap-2">
         <button

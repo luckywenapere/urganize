@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { CUSTOMER_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Subprocessors",
   description:
-    "The third-party services Urganize uses to operate, and what data each one processes.",
+    `The third-party services behind Urganize, the ${CUSTOMER_LINE}, and what data each one processes.`,
   path: "/subprocessors",
   // Same class as Privacy and Terms, so it gets the same treatment: kept out
   // of search so the homepage's sitelinks stay commercial. Noindex hides the
