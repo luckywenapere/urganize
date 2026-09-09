@@ -22,6 +22,11 @@ import { MAIN_MINIMUM } from './layout-columns';
  * the card's padding, so shrinking past roughly this point leaves the labels
  * truncated to a couple of characters — at which point the expanded card is a
  * worse version of the collapsed icon rail it already offers.
+ *
+ * That reasoning is also why a drag past this point SNAPS to the rail rather
+ * than rendering the card any narrower: the expanded card is never drawn
+ * between here and COLLAPSED_SIDEBAR_WIDTH, because this is exactly the range
+ * in which it would be the worse of the two things it could be.
  */
 export const MIN_SIDEBAR_WIDTH = 208;
 
@@ -38,12 +43,37 @@ export const MAX_SIDEBAR_WIDTH = 420;
 export const DEFAULT_SIDEBAR_WIDTH = 240;
 
 /**
- * The collapsed icon rail's `w-16`. NOT a bound: a collapsed card is not
- * resizable at all (64px has no room for a label to grow into), so this exists
- * only so the rail can reserve the right amount of space for a collapsed
- * neighbour.
+ * The collapsed icon rail's `w-16`.
+ *
+ * A REACHABLE STATE OF THE DRAG SINCE 2026-09-09 (founder call: "make it so it
+ * is collapsible up until it's in collapsed view"). This used to be documented
+ * as explicitly not a bound — "a collapsed card is not resizable at all" — and
+ * both halves of that have reversed: the handle is offered while collapsed, and
+ * a drag that crosses SIDEBAR_COLLAPSE_AT collapses the card rather than
+ * stopping dead at the minimum. Recorded as a reversal rather than edited away,
+ * because the old reasoning was sound and is what still keeps the card from
+ * rendering at any width in between.
+ *
+ * It remains what the rail reserves for a collapsed neighbour — see
+ * sidebarTotalWidth.
  */
 export const COLLAPSED_SIDEBAR_WIDTH = 64;
+
+/**
+ * Where a drag stops being a resize and becomes a collapse, in the same
+ * candidate-width units the drag itself works in.
+ *
+ * ONE number for both directions, deliberately: cross it moving left and the
+ * card becomes the icon rail, cross it moving right and the rail comes back at
+ * MIN_SIDEBAR_WIDTH. A separate expand threshold would give the control
+ * hysteresis nobody asked for and two numbers to keep in step.
+ *
+ * It sits BELOW the minimum rather than at it, so collapsing takes a clear
+ * overshoot (48px of it) instead of happening to anyone who drags the card as
+ * narrow as it goes. The card is pinned at its minimum through that overshoot —
+ * see MIN_SIDEBAR_WIDTH for why it is never drawn any narrower.
+ */
+export const SIDEBAR_COLLAPSE_AT = 160;
 
 export const SIDEBAR_WIDTH_KEY = 'urganize.workspace.sidebar-width';
 export const SIDEBAR_WIDTH_VERSION = 1;
@@ -150,20 +180,68 @@ export function parsePersistedSidebarWidth(value: unknown): number | null {
 }
 
 /**
+ * What the card is doing: the icon rail, or expanded at a width.
+ *
+ * A COLLAPSED STATE CARRIES NO WIDTH, and that is the point of the union rather
+ * than a `{ collapsed, width }` pair. The width the user dragged to has to
+ * survive a collapse — expanding restores it rather than the default (see the
+ * store's own note) — so a collapsed result that carried a width would be the
+ * one shape able to clobber it. This one cannot.
+ */
+export type SidebarState =
+  | { collapsed: true }
+  | { collapsed: false; width: number };
+
+/**
  * THE HANDLE IS THE CARD'S RIGHT EDGE, so moving the pointer RIGHT makes the
  * menu WIDER — the exact opposite sign from the rail, whose handle is on its
  * left edge. Getting this backwards is the most obvious way for the whole
  * control to feel broken, and the two modules disagreeing about it is the
  * reason they are not one parameterised module. Hence its own test.
+ *
+ * The drag tracks ONE continuous candidate width and derives the rendered state
+ * from it, which is what lets the same gesture run from the maximum all the way
+ * into the rail and back out without any mode of its own. `start` is where the
+ * card was when the pointer went down — for a collapsed card that is the rail's
+ * own 64px, i.e. what is actually on screen, so the gesture starts from where
+ * the user is looking rather than from a stored width they cannot see.
  */
-export function sidebarWidthFromDrag(
-  startWidth: number,
+export function sidebarStateFromDrag(
+  start: SidebarState,
   startX: number,
   currentX: number,
   bounds: SidebarBounds
-): number {
-  if (!Number.isFinite(startX) || !Number.isFinite(currentX)) {
-    return clampSidebarWidth(startWidth, bounds);
+): SidebarState {
+  // Unchanged rather than clamped: clamping the rail's 64 would land on the
+  // minimum and silently expand a card nobody touched.
+  if (!Number.isFinite(startX) || !Number.isFinite(currentX)) return start;
+
+  const startWidth = start.collapsed ? COLLAPSED_SIDEBAR_WIDTH : start.width;
+  const candidate = startWidth + (currentX - startX);
+  if (candidate < SIDEBAR_COLLAPSE_AT) return { collapsed: true };
+  return { collapsed: false, width: clampSidebarWidth(candidate, bounds) };
+}
+
+/**
+ * One arrow-key step, including crossing into and out of the rail — the
+ * keyboard twin of the drag's own threshold crossing. Without it the collapse
+ * gesture would be reachable with a pointer and not without one, on a control
+ * that is deliberately keyboard-operable everywhere else.
+ *
+ * It does not reuse SIDEBAR_COLLAPSE_AT's overshoot: a keypress is deliberate
+ * where a drag can be a slip, so one step narrower than the minimum is enough
+ * to mean it.
+ */
+export function sidebarStateFromStep(
+  current: SidebarState,
+  delta: number,
+  bounds: SidebarBounds
+): SidebarState {
+  if (current.collapsed) {
+    // Only widening does anything: there is nothing narrower than the rail.
+    return delta > 0 ? { collapsed: false, width: bounds.min } : current;
   }
-  return clampSidebarWidth(startWidth + (currentX - startX), bounds);
+  const next = current.width + delta;
+  if (next < bounds.min) return { collapsed: true };
+  return { collapsed: false, width: clampSidebarWidth(next, bounds) };
 }

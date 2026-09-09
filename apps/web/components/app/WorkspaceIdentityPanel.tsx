@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -9,19 +9,20 @@ import { SiInstagram, SiX } from "react-icons/si";
 import { openExternalUrl } from "@/lib/external-link";
 import { useAuthStore } from "@/lib/auth-store";
 import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
+import type { WorkspaceIdentityLogo } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
 import { CatalogIcon, ChappiIcon, GearIcon, NotesIcon } from "@/components/app/BrandIcons";
 import { MicVocal } from '@/components/icons';
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState } from "@/lib/persisted-state";
-import { isReleaseActive } from "@/lib/release-activity";
 import { leaveReleaseForCatalog } from "@/lib/catalog-intent";
 import { HelpTipPanel } from "@/components/shared/HelpTip";
 import type { HelpKey } from "@/lib/help-copy";
 import { useSidebarStore } from "@/stores/useSidebarStore";
 import { RAIL_GUTTER } from "@/lib/rail-width";
 import {
+  COLLAPSED_SIDEBAR_WIDTH,
   DEFAULT_SIDEBAR_WIDTH,
   SIDEBAR_COLLAPSED_KEY,
   SIDEBAR_COLLAPSED_VERSION,
@@ -32,8 +33,10 @@ import {
   clampSidebarWidth,
   parsePersistedSidebarWidth,
   resolveSidebarBounds,
-  sidebarWidthFromDrag,
+  sidebarStateFromDrag,
+  sidebarStateFromStep,
 } from "@/lib/sidebar-width";
+import type { SidebarState } from "@/lib/sidebar-width";
 
 // Collapsed state and the expanded WIDTH both live in useSidebarStore now,
 // persisted there on write. They were local component state, on the reasoning
@@ -344,17 +347,62 @@ function buildNavItems(
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === "true";
 
 /**
- * The workspace identity card (URG-214) — a LinkedIn-company-page-style
- * display of the record label / manager's logo, name, artist, and a couple
- * of at-a-glance counts. Display-only: every field shown here is edited in
- * Settings -> Workspace identity, never here.
+ * The team's logo, or the Urganize mark when it has none.
  *
- * Mounted once by AppShell as a layout-flow LEFT column sibling of <main>
- * (mirroring ChappiSidePanel's right column), so it appears on every chrome
- * page without per-page wiring. Hidden below `lg`; AppShell additionally
- * hides it at lg-xl while the UrgAns rail is open (see the width-budget note
- * there) since two rails plus main would squeeze the center content.
+ * ONE implementation for both states of the card. They render the same 40px
+ * mark since 2026-09-09 (founder call: the expanded card should match the
+ * collapsed rail), and two copies of it — which is what this replaced — is
+ * exactly the drift this file has had to correct elsewhere.
  */
+function TeamMark({
+  logo,
+  failed,
+  onFail,
+  className = "",
+}: {
+  logo: WorkspaceIdentityLogo | null;
+  failed: boolean;
+  onFail: () => void;
+  className?: string;
+}) {
+  if (logo && !failed) {
+    return (
+      // A signed Storage URL, so next/image's proxying and caching would break
+      // on TTL expiry — the same rationale the public press kit page records.
+      //
+      // The directive has to sit on the line DIRECTLY above the element: both
+      // copies this replaced carried it above a two-line explanation, so it
+      // landed on a comment and suppressed nothing while the rule fired anyway.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logo.url}
+        alt=""
+        className={`h-10 w-10 shrink-0 rounded-xl border border-stroke-subtle object-cover ${className}`}
+        onError={onFail}
+      />
+    );
+  }
+  return (
+    // The default when the team has no logo of its own (founder call,
+    // 2026-08-06): the Urganize mark, not the team's initials. Same asset and
+    // `app-wordmark` light-theme invert the loading screen and the topbar
+    // wordmark use, so the three brand surfaces cannot drift. Decorative — the
+    // name renders beside it, so alt="" + aria-hidden.
+    <div
+      className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-stroke-subtle bg-bg-elevated ${className}`}
+    >
+      <Image
+        src="/images/urganize-mark.png"
+        alt=""
+        aria-hidden="true"
+        width={24}
+        height={24}
+        className="app-wordmark h-6 w-6 object-contain"
+      />
+    </div>
+  );
+}
+
 /** One line of muted text under the team name. Shared so the Suspense fallback
  *  and the resolved line cannot drift apart in size or colour. */
 function ArtistLine({ label }: { label: string }) {
@@ -387,11 +435,27 @@ function ScopedArtistLine({ fallbackLabel }: { fallbackLabel: string }) {
   return <ArtistLine label={scoped?.artistName?.trim() || fallbackLabel} />;
 }
 
+/**
+ * The team identity card (URG-214) — a LinkedIn-company-page-style display of
+ * the record label / manager's logo, name and artist, on one row (founder call,
+ * 2026-09-09) so it reads as the collapsed rail with the words added. It used
+ * to carry a teammate and active-release count below that; the same call
+ * removed them, for the same reason. Display-only: every field shown here is
+ * edited in Settings -> Profile, never here.
+ *
+ * Mounted once by AppShell as a layout-flow LEFT column sibling of <main>
+ * (mirroring ChappiSidePanel's right column), so it appears on every chrome
+ * page without per-page wiring. Hidden below `lg`; AppShell additionally
+ * hides it at lg-xl while the UrgAns rail is open (see the width-budget note
+ * there) since two rails plus main would squeeze the center content.
+ *
+ * This doc block sat stranded above the helpers for a while, which made it read
+ * as documentation for whichever one came first — moved here 2026-09-09.
+ */
 export function WorkspaceIdentityPanel() {
   const name = useWorkspaceIdentityStore((state) => state.name);
   const artist = useWorkspaceIdentityStore((state) => state.artist);
   const artistCount = useWorkspaceIdentityStore((state) => state.artistCount);
-  const memberCount = useWorkspaceIdentityStore((state) => state.memberCount);
   const logo = useWorkspaceIdentityStore((state) => state.logo);
   const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
   // null while the capability probe is in flight; treated as "no" for rendering,
@@ -426,12 +490,21 @@ export function WorkspaceIdentityPanel() {
   // Both start at their defaults so SSR and the initial client render agree;
   // the mount effect below then applies the stored choices. Same SSR-safe
   // hydration order AppShell uses for the UrgAns rail's own two values.
-  const collapsed = useSidebarStore((state) => state.collapsed);
+  const storedCollapsed = useSidebarStore((state) => state.collapsed);
   const setCollapsed = useSidebarStore((state) => state.setCollapsed);
   const hydrateCollapsed = useSidebarStore((state) => state.hydrateCollapsed);
   const storedWidth = useSidebarStore((state) => state.width);
   const setWidth = useSidebarStore((state) => state.setWidth);
   const hydrateWidth = useSidebarStore((state) => state.hydrateWidth);
+
+  // Which side of the collapse threshold the drag in progress is on, or null
+  // when no drag has crossed it. Local rather than in the store, and written at
+  // most a couple of times per gesture — only when the side CHANGES — because
+  // the store persists on every write and a per-frame one would hammer storage
+  // mid-drag. Everything below reads the derived `collapsed`, so the card
+  // becomes the rail under the pointer and the gesture reads as continuous.
+  const [previewCollapsed, setPreviewCollapsed] = useState<boolean | null>(null);
+  const collapsed = previewCollapsed ?? storedCollapsed;
 
   useEffect(() => {
     const persistedCollapsed = readPersistedState(
@@ -511,9 +584,29 @@ export function WorkspaceIdentityPanel() {
     if (viewport > 0 && !collapsed && width !== storedWidth) setWidth(width);
   }, [viewport, collapsed, width, storedWidth, setWidth]);
 
+  // The one place a resolved state reaches the store. A COLLAPSED state carries
+  // no width by construction (see SidebarState), so the width the user dragged
+  // to survives a collapse and expanding restores it rather than the default.
+  // The collapsed flag is read back off the store rather than the closure, so a
+  // drag that ends on the side it started on writes nothing.
   const commit = useCallback(
-    (next: number) => setWidth(clampSidebarWidth(next, bounds)),
-    [bounds, setWidth],
+    (next: SidebarState) => {
+      if (next.collapsed !== useSidebarStore.getState().collapsed) setCollapsed(next.collapsed);
+      if (!next.collapsed) setWidth(clampSidebarWidth(next.width, bounds));
+    },
+    [bounds, setCollapsed, setWidth],
+  );
+
+  // Where the card is right now, in the shape the pure helpers take. For a
+  // collapsed card that is the rail itself, NOT the stored expanded width: a
+  // drag has to start from what is on screen, or the first pixel of movement
+  // would jump the card to a width the user cannot see.
+  //
+  // Memoised because both handlers below depend on it, and a fresh object every
+  // render would rebuild them every render.
+  const state: SidebarState = useMemo(
+    () => (collapsed ? { collapsed: true } : { collapsed: false, width }),
+    [collapsed, width],
   );
 
   const handlePointerDown = useCallback(
@@ -525,32 +618,41 @@ export function WorkspaceIdentityPanel() {
 
       const handle = event.currentTarget;
       const startX = event.clientX;
-      const startWidth = width;
+      const start = state;
       const pointerId = event.pointerId;
       handle.setPointerCapture(pointerId);
       setDragging(true);
 
       // The drag writes a CSS variable, not React state: at 120Hz this is one
       // style write per frame instead of one render per frame. State is set
-      // once, on release.
+      // once, on release — with the one exception below, where crossing the
+      // collapse threshold is a real change of shape rather than a width.
       let frame = 0;
-      let latest = startWidth;
+      let latest: SidebarState = start;
 
       const paint = () => {
         frame = 0;
-        asideRef.current?.style.setProperty("--urganize-sidebar-width", `${latest}px`);
+        // Nothing to paint while collapsed: the rail's width comes from `w-16`,
+        // and the variable is not applied at all in that state.
+        if (latest.collapsed) return;
+        asideRef.current?.style.setProperty("--urganize-sidebar-width", `${latest.width}px`);
       };
 
       const onMove = (moveEvent: PointerEvent) => {
         if (moveEvent.pointerId !== pointerId) return;
         // Bounds are recomputed per move so a window resized mid-drag cannot
         // strand the card outside them.
-        latest = sidebarWidthFromDrag(
-          startWidth,
+        const next = sidebarStateFromDrag(
+          start,
           startX,
           moveEvent.clientX,
           resolveSidebarBounds(document.documentElement.clientWidth, railTotal),
         );
+        // Only on a CROSSING, not per frame. Two renders in the worst case,
+        // and it is what makes the card collapse and reopen under the pointer
+        // instead of snapping only once the button is released.
+        if (next.collapsed !== latest.collapsed) setPreviewCollapsed(next.collapsed);
+        latest = next;
         if (!frame) frame = window.requestAnimationFrame(paint);
       };
 
@@ -569,6 +671,9 @@ export function WorkspaceIdentityPanel() {
         }
         asideRef.current?.style.removeProperty("--urganize-sidebar-width");
         setDragging(false);
+        // Cleared BEFORE the commit so the derived `collapsed` is never left
+        // reading a preview of a gesture that has ended.
+        setPreviewCollapsed(null);
         commit(latest);
       };
 
@@ -576,7 +681,7 @@ export function WorkspaceIdentityPanel() {
       handle.addEventListener("pointerup", finish);
       handle.addEventListener("pointercancel", finish);
     },
-    [bounds.resizable, commit, railTotal, width],
+    [bounds.resizable, commit, railTotal, state],
   );
 
   const handleKeyDown = useCallback(
@@ -584,17 +689,22 @@ export function WorkspaceIdentityPanel() {
       if (!bounds.resizable) return;
       const step = event.shiftKey ? SIDEBAR_KEYBOARD_STEP_LARGE : SIDEBAR_KEYBOARD_STEP;
       // Right widens, matching the drag direction exactly — and therefore the
-      // opposite way round from the rail's handle on the other edge.
-      if (event.key === "ArrowRight") commit(width + step);
-      else if (event.key === "ArrowLeft") commit(width - step);
-      else if (event.key === "Home") commit(bounds.max);
-      else if (event.key === "End") commit(bounds.min);
-      else if (event.key === "Enter" || event.key === " ") commit(DEFAULT_SIDEBAR_WIDTH);
+      // opposite way round from the rail's handle on the other edge. Narrowing
+      // past the minimum collapses and widening out of the rail returns, so the
+      // whole gesture is reachable without a pointer.
+      if (event.key === "ArrowRight") commit(sidebarStateFromStep(state, step, bounds));
+      else if (event.key === "ArrowLeft") commit(sidebarStateFromStep(state, -step, bounds));
+      // The two ends of the control's range, which now runs from the collapsed
+      // rail to the maximum rather than stopping at the minimum.
+      else if (event.key === "Home") commit({ collapsed: false, width: bounds.max });
+      else if (event.key === "End") commit({ collapsed: true });
+      else if (event.key === "Enter" || event.key === " ")
+        commit({ collapsed: false, width: DEFAULT_SIDEBAR_WIDTH });
       else return;
       // Only once we know it was ours: Escape and Tab still belong to the page.
       event.preventDefault();
     },
-    [bounds, commit, width],
+    [bounds, commit, state],
   );
 
   // Cursor and selection are set on <body> for the whole drag, so neither
@@ -620,12 +730,6 @@ export function WorkspaceIdentityPanel() {
     // so it can't just assume something else already fetched them.
     void loadCommandCenter();
   }, [load, loadCommandCenter]);
-
-  // Shared with the Manager tier's active-release ceiling (lib/release-activity.ts),
-  // so the number shown here and the number the cap counts cannot disagree.
-  const activeReleaseCount = releases.filter((release) =>
-    isReleaseActive(release.status),
-  ).length;
 
   // What this line says when no release is scoped. One artist keeps naming
   // them, which is what this card has always done; several says how many,
@@ -659,7 +763,12 @@ export function WorkspaceIdentityPanel() {
       // Collapsed, the card is a 64px icon rail rather than hidden outright:
       // hiding it would leave the topbar as the only way to reach these
       // surfaces, which is what the rail exists to avoid. 64px fits the 40px
-      // hit targets plus the card's own padding.
+      // hit targets plus the card's own padding — and, since 2026-09-09, it is
+      // the same 40px mark the expanded card leads with, so the two states are
+      // the same row with and without its words.
+      //
+      // Reachable by DRAGGING the handle past SIDEBAR_COLLAPSE_AT as well as by
+      // the footer button (founder call, 2026-09-09).
       //
       // The rail-competition rule (see railIsCompeting) is relaxed while
       // collapsed — the width-budget note it defends is about THREE full
@@ -691,22 +800,33 @@ export function WorkspaceIdentityPanel() {
       {/* The drag handle sits on the card's RIGHT edge, so dragging toward the
           centre of the screen widens it — the mirror of the UrgAns rail, whose
           handle is on its left edge for the same reason. A 2px visible hairline
-          inside a wider hit area; withheld entirely while collapsed (64px has
-          nothing to grow into) or when the viewport cannot pay for any
-          movement, because a control that cannot move is worse than none. */}
-      {!collapsed && bounds.resizable ? (
+          inside a wider hit area.
+
+          OFFERED WHILE COLLAPSED TOO since 2026-09-09 (founder call), which is
+          what makes the gesture two-way: it used to be withheld there on the
+          reasoning that 64px has nothing to grow into, and dragging out of the
+          rail is exactly that. Still withheld when the viewport cannot pay for
+          any movement at all, because a control that cannot move is worse than
+          none — and that case is also the one where expanding is impossible, so
+          nothing is lost but the footer's collapse button. */}
+      {bounds.resizable ? (
         <div
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize workspace menu"
-          aria-valuenow={width}
-          aria-valuemin={bounds.min}
+          // Reports the rail's own width while collapsed rather than the stored
+          // expanded one, so the announced value is what is on screen. The
+          // minimum is the rail, not MIN_SIDEBAR_WIDTH: collapsing is reachable
+          // from this control now, so the rail is genuinely the bottom of its
+          // range.
+          aria-valuenow={collapsed ? COLLAPSED_SIDEBAR_WIDTH : width}
+          aria-valuemin={COLLAPSED_SIDEBAR_WIDTH}
           aria-valuemax={bounds.max}
           tabIndex={0}
           draggable={false}
           onPointerDown={handlePointerDown}
           onKeyDown={handleKeyDown}
-          onDoubleClick={() => commit(DEFAULT_SIDEBAR_WIDTH)}
+          onDoubleClick={() => commit({ collapsed: false, width: DEFAULT_SIDEBAR_WIDTH })}
           className="motion-focus group absolute right-0 top-0 z-10 h-full w-3 cursor-col-resize touch-none select-none"
         >
           <span
@@ -732,87 +852,47 @@ export function WorkspaceIdentityPanel() {
             collapsed ? (
               <SkeletonBlock className="mx-auto h-10 w-10 rounded-xl" />
             ) : (
-              <div className="space-y-3">
-                <SkeletonBlock className="h-14 w-14 rounded-xl" />
-                <SkeletonBlock className="h-4 w-3/4 rounded" />
-                <SkeletonBlock className="h-3 w-1/2 rounded" />
+              // Mirrors the resolved row below exactly — the same 40px mark
+              // with a two-line text column beside it — so nothing shifts as
+              // the real values arrive (the loading-skeleton-sync rule).
+              <div className="flex items-center gap-3">
+                <SkeletonBlock className="h-10 w-10 shrink-0 rounded-xl" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <SkeletonBlock className="h-4 w-3/4 rounded" />
+                  <SkeletonBlock className="h-3 w-1/2 rounded" />
+                </div>
               </div>
             )
           ) : collapsed ? (
-            // Collapsed identity: the mark alone, with the workspace name kept
-            // in the accessibility tree (sr-only) so this link keeps the same
+            // Collapsed identity: the mark alone, with the team name kept in
+            // the accessibility tree (sr-only) so this link keeps the same
             // accessible name it has when expanded.
             <>
-              {logo && !logoFailed ? (
-                // eslint-disable-next-line @next/next/no-img-element -- signed
-                // Storage URL, same rationale as the expanded branch below.
-                <img
-                  src={logo.url}
-                  alt=""
-                  className="mx-auto h-10 w-10 rounded-xl border border-stroke-subtle object-cover"
-                  onError={() => setLogoFailed(true)}
-                />
-              ) : (
-                <div className="mx-auto grid h-10 w-10 place-items-center rounded-xl border border-stroke-subtle bg-bg-elevated">
-                  <Image
-                    src="/images/urganize-mark.png"
-                    alt=""
-                    aria-hidden="true"
-                    width={24}
-                    height={24}
-                    className="app-wordmark h-6 w-6 object-contain"
-                  />
-                </div>
-              )}
+              <TeamMark
+                logo={logo}
+                failed={logoFailed}
+                onFail={() => setLogoFailed(true)}
+                className="mx-auto"
+              />
               <span className="sr-only">{name || "Your team"}</span>
             </>
           ) : (
-            <>
-              {logo && !logoFailed ? (
-                // eslint-disable-next-line @next/next/no-img-element -- signed
-                // Storage URL; next/image proxying/caching would break on TTL
-                // expiry (same rationale as the public EPK page).
-                <img
-                  src={logo.url}
-                  alt=""
-                  className="h-14 w-14 rounded-xl border border-stroke-subtle object-cover"
-                  onError={() => setLogoFailed(true)}
-                />
-              ) : (
-                // Default when the workspace has no logo of its own (founder
-                // call, 2026-08-06): the Urganize mark, not the workspace's
-                // initials. Same asset + `app-wordmark` light-theme invert the
-                // loading screen and topbar wordmark use, so the three brand
-                // surfaces can't drift. Decorative — the workspace name renders
-                // directly below it, so alt="" + aria-hidden.
-                <div className="grid h-14 w-14 place-items-center rounded-xl border border-stroke-subtle bg-bg-elevated">
-                  <Image
-                    src="/images/urganize-mark.png"
-                    alt=""
-                    aria-hidden="true"
-                    width={32}
-                    height={32}
-                    className="app-wordmark h-8 w-8 object-contain"
-                  />
-                </div>
-              )}
-
-              <p
-                className="mt-3 truncate font-display text-sm text-content-primary"
-                title={name}
-              >
-                {name || "Your team"}
-              </p>
-              <Suspense fallback={<ArtistLine label={rosterLabel} />}>
-                <ScopedArtistLine fallbackLabel={rosterLabel} />
-              </Suspense>
-
-              <p className="mt-3 text-[11px] text-content-tertiary">
-                {memberCount} teammate{memberCount === 1 ? "" : "s"} ·{" "}
-                {activeReleaseCount} active release
-                {activeReleaseCount === 1 ? "" : "s"}
-              </p>
-            </>
+            // Mark, name and artist on ONE row (founder call, 2026-09-09), so
+            // the expanded card reads as the collapsed rail with the words
+            // added rather than as a different block. `min-w-0` on the text
+            // column is what lets `truncate` work inside a flex row — without
+            // it the column takes its content's width and pushes the mark out.
+            <div className="flex items-center gap-3">
+              <TeamMark logo={logo} failed={logoFailed} onFail={() => setLogoFailed(true)} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-display text-sm text-content-primary" title={name}>
+                  {name || "Your team"}
+                </p>
+                <Suspense fallback={<ArtistLine label={rosterLabel} />}>
+                  <ScopedArtistLine fallbackLabel={rosterLabel} />
+                </Suspense>
+              </div>
+            </div>
           )}
         </Link>
 
