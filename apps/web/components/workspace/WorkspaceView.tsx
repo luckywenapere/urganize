@@ -241,7 +241,15 @@ export function WorkspaceView() {
   useEffect(() => {
     if (searchParams.get('new') !== '1' || !scopedReleaseId) return;
     setShowNewReleaseGuide(true);
-    router.replace(`/dashboard?release=${scopedReleaseId}`, { scroll: false });
+    // Consume ONLY `new`. This used to rebuild the URL from scratch as
+    // `/dashboard?release=<id>`, which silently dropped `scene` along with the
+    // calendar's `calendar`/`month` — so any create flow that landed on a
+    // scene lost it the instant the guide was consumed, and the user was left
+    // on the main view wondering what they had just tapped.
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('new');
+    const query = params.toString();
+    router.replace(`/dashboard${query ? `?${query}` : ''}`, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per mount to consume the param; router/searchParams identity churn shouldn't re-fire this.
   }, []);
 

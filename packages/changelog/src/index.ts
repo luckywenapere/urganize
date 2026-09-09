@@ -23,10 +23,20 @@ export const changelog: Release[] = [
     version: "1.33.0",
     date: "September 9, 2026",
     highlights: [
+      "Signing in takes you straight to UrgAns. Ask it something, or tap Catalog for your releases.",
+      "UrgAns is first in the side menu and the top bar now, so it is the easiest thing to reach.",
       "Hover a row in the side menu and it tells you what that page is for, in one plain line.",
       "The Metadata page is quieter. Every box has a small i beside it, so the explanation is there when you want it and out of the way when you don't.",
       "Shorter wording in a few more places, with the detail tucked behind the same small i.",
       "The Settings tab holding your team name, logo and artists is called Profile now.",
+    ],
+  },
+  {
+    version: "1.32.1",
+    date: "September 8, 2026",
+    highlights: [
+      "Tapping \"Review your draft plan\" opens your plan again. Some people were being sent to the Metadata page instead.",
+      "An old link to something you have since switched off now opens the release, instead of a page with nothing on it.",
     ],
   },
   {

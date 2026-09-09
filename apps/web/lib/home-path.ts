@@ -16,14 +16,26 @@
 // mid-session or with an installed PWA pointed at it.
 //
 // 2026-08-12 (founder decision): the catalog is the front door again, and
-// this is now unconditional. It no longer reads the assistant's flag: a
-// signed-in user lands on their releases whether or not UrgAns is enabled.
-// The assistant is still one tap away from the topbar, the mobile nav bar
-// and the identity panel, and the side rail still opens beside every page.
-// This is the THIRD flip of this value (07-15 assistant, 07-23 catalog,
-// 07-31 assistant, now catalog) — the reason this constant exists is that
-// every entry point moves together, so a future reversal is this line.
-export const HOME_PATH = '/dashboard';
+// this became unconditional for a while — no longer reading the assistant's
+// flag, so a signed-in user landed on their releases whether or not UrgAns
+// was enabled.
+//
+// 2026-09-09 (founder decision): the assistant is the front door again, and
+// the flag-conditional form is restored with it. This is the FOURTH flip of
+// this value (07-15 assistant, 07-23 catalog, 07-31 assistant, 08-12 catalog,
+// now assistant) — the reason this constant exists is that every entry point
+// moves together, so each reversal is this one line.
+//
+// THE FLAG READ IS NOT OPTIONAL. ChappiPageClient bounces to '/dashboard'
+// when NEXT_PUBLIC_FEATURE_CHAPPI is off, so an unconditional
+// '/dashboard/urgans' would send every flag-off deployment through a bounce
+// on every sign-in. Resolving to '/dashboard' here matches that bounce, so
+// there is no round trip either way.
+//
+// It is inlined at build time like every other NEXT_PUBLIC_* read, so a flag
+// flip needs a deploy that actually rebuilds apps/web before this moves.
+export const HOME_PATH =
+  process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true' ? '/dashboard/urgans' : '/dashboard';
 
 /** Where a curator-only account lands. That surface has no team chrome at all. */
 export const CURATOR_HOME_PATH = '/curator';
