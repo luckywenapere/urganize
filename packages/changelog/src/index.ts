@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.34.0",
+    date: "September 9, 2026",
+    highlights: [
+      "Pitching has its own page now. Open it from the side menu, the top bar or the bar at the bottom of your phone to see every pitch you have sent and what the playlist owner said.",
+      "You can send a pitch from that page too. Pick the release, pick a playlist, send the song.",
+      "Press kits moved into Settings. Open Settings, then Workspace, and they are there.",
+    ],
+  },
+  {
     version: "1.33.0",
     date: "September 9, 2026",
     highlights: [

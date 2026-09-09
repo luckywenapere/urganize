@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Inbox, MicVocal, Newspaper, Plus } from '@/components/icons';
+import { Inbox, MicVocal, Plus, Radio } from '@/components/icons';
 import { Logo } from '@urganize/ui';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -30,7 +30,6 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 // Shows. Same flag WorkspaceIdentityPanel reads for its own nav row, so the
 // two entry points cannot disagree about whether the surface exists.
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
-const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 
 // The crossing point into the playlist-owner side, for an account that holds
 // BOTH capabilities. Gated on the flag AND on the account actually owning a
@@ -607,23 +606,28 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           </Link>
         ) : null}
 
-        {/* Press kits, beside Shows for the same reason: a standing surface
-            that is not a release, reached as a plain link rather than through
-            the Catalog/UrgAns toggle pair. Below lg this is `hidden` via
-            NAV_ICON_DISPLAY and MobileNavBar carries it instead, so the width
-            budget noted above is untouched on a phone. */}
-        {PRESS_KITS_ENABLED ? (
+        {/* Pitching — the TEAM side, in the slot Press kits held until
+            2026-09-09 (founder call: press kits moved to Settings, pitching
+            became app-wide). Every team account, not only a dual one: before
+            this the team side of pitching could only be reached by scoping a
+            release first. Distinct from Playlist pitches below, which is the
+            curator inbox for playlists this account owns.
+
+            Swapping one icon for another keeps the control count flat, so the
+            width budget noted above is unchanged. Below lg this is `hidden`
+            via NAV_ICON_DISPLAY and MobileNavBar carries it instead. */}
+        {PITCHING_ENABLED ? (
           <Link
-            href="/dashboard/press-kits"
-            aria-label="Press kits"
-            title="Press kits"
+            href="/dashboard/pitching"
+            aria-label="Pitching"
+            title="Pitching"
             className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
-              pathname?.startsWith('/dashboard/press-kits')
+              pathname?.startsWith('/dashboard/pitching')
                 ? 'bg-brand/10 text-brand'
                 : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
             }`}
           >
-            <Newspaper className="h-[18px] w-[18px]" aria-hidden />
+            <Radio className="h-[18px] w-[18px]" aria-hidden />
           </Link>
         ) : null}
 

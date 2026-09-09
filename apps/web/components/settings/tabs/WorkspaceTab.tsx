@@ -4,6 +4,7 @@ import { WorkspaceIdentitySection } from '../WorkspaceIdentitySection';
 import { WorkspaceLogoSection } from '../WorkspaceLogoSection';
 import { WorkspaceArtistSection } from '../WorkspaceArtistSection';
 import { ReleasesSection } from '../ReleasesSection';
+import { PressKitsSection } from '../PressKitsSection';
 import { TeamBriefSection } from '../TeamBriefSection';
 import { isTeamBriefEnabled } from '@/lib/team-brief';
 import {
@@ -76,6 +77,11 @@ export function WorkspaceTab({ workspace }: WorkspaceTabProps) {
           onRemove={workspace.removeArtist}
         />
       )}
+
+      {/* After the artist rows, because a kit belongs to an artist on the
+          roster. This is press kits' only entry point (founder call,
+          2026-09-09) — it left every menu the same day. */}
+      <PressKitsSection />
 
       {/* Before ReleasesSection, which is destructive and stays last. */}
       {isTeamBriefEnabled() && <TeamBriefSection />}

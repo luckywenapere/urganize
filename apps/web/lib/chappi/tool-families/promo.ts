@@ -76,20 +76,29 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'list_pitches',
     kind: 'read',
-    description: "See the pitches already sent for a release and how curators answered.",
+    description:
+      'See the pitches already sent and how curators answered. Pass a releaseId for one release, or leave it out for every release this team has pitched.',
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
-      required: ['releaseId'],
     },
     execute: async (ctx, args) => {
+      // TWO BUGS LIVED HERE, both fixed 2026-09-09 and both silent:
+      //
+      //   1. The query param was `?release=`, and the route reads `releaseId`,
+      //      so this tool answered 400 "Release id is required." on every
+      //      single call it has ever made.
+      //   2. It read `pitch.curatorReply`, but the payload's field is `reply`
+      //      (see toSentPitch). So the curator's answer — the one thing worth
+      //      asking this tool for — would have come back null even once the
+      //      request started working.
+      //
+      // releaseId is optional now, matching the route's own team-wide mode
+      // (added with the Pitching page): "what have we pitched" is a question
+      // the model could not previously answer at all.
       const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return fail('releaseId is required.');
-      const res = await callInternalApi(
-        ctx,
-        `/api/pitching/pitches?release=${encodeURIComponent(releaseId)}`,
-        { method: 'GET' }
-      );
+      const query = releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : '';
+      const res = await callInternalApi(ctx, `/api/pitching/pitches${query}`, { method: 'GET' });
       if (isFlagGateOff(res)) return fail(PITCHING_OFF);
       if (!res.ok) return fail(apiError(res, 'Could not load the pitches.'));
 
@@ -98,15 +107,17 @@ export const PROMO_TOOLS: ChappiTool[] = [
         : [];
       const data = pitches.map((pitch) => ({
         id: String(pitch.id ?? ''),
+        release: (pitch.releaseTitle ?? null) as string | null,
         playlist: String(pitch.playlistName ?? ''),
         song: String(pitch.songTitle ?? ''),
         status: String(pitch.status ?? ''),
-        reply: (pitch.curatorReply ?? null) as string | null,
+        reply: (pitch.reply ?? null) as string | null,
       }));
       const added = data.filter((pitch) => pitch.status === 'added').length;
+      const scope = releaseId ? 'for this release' : 'across every release';
       return {
         ok: true,
-        summary: `${data.length} pitch(es) sent, ${added} added to a playlist.`,
+        summary: `${data.length} pitch(es) sent ${scope}, ${added} added to a playlist.`,
         data,
       };
     },
