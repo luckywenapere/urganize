@@ -45,9 +45,9 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "The song took an afternoon. The rollout still takes weeks.",
-    body: "Create a release and Urganize lays out the whole rollout, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. You did not have to think of any of it, and you can delete whatever does not apply to how you work.",
+    body: "Create a rollout and Urganize lays out the whole plan, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. You did not have to think of any of it, and you can delete whatever does not apply to how you work.",
     points: [
-      "One template, shaped for each release",
+      "One template, shaped for each rollout",
       "Every activity dated around that release day",
       "Edit or delete anything. It is your plan",
     ],
@@ -58,7 +58,7 @@ const valueBlocks = [
     body: "Set the date you actually have. Every activity is dated from release day, so a shorter runway moves the whole plan with it instead of leaving you a list of dates that already passed. Cut the activities that do not fit and keep the ones that do.",
     points: [
       "Move the release date and the plan moves with it",
-      "Run several releases at once, each on its own plan",
+      "Run several rollouts at once, each on its own plan",
       "Nothing assumes a label, a budget or a team of ten",
     ],
   },
@@ -68,7 +68,7 @@ const compactBlocks = [
   {
     kicker: "Press kit",
     title: "You will be asked for a press kit. Have one.",
-    body: "Urganize builds one from the release and keeps it current when the release changes. Send the same link to a blog, a curator or a booker instead of assembling a folder every time.",
+    body: "Urganize builds one from the rollout and keeps it current when the rollout changes. Send the same link to a blog, a curator or a booker instead of assembling a folder every time.",
   },
   {
     kicker: "Whoever helps",
@@ -78,7 +78,7 @@ const compactBlocks = [
   {
     kicker: "Status",
     title: "Know what is late before it is late.",
-    body: "One list shows every release you have going: progress, what is overdue and what is due this week. Volume stops being the thing that breaks you.",
+    body: "One list shows every rollout you have going: progress, what is overdue and what is due this week. Volume stops being the thing that breaks you.",
   },
 ] as const;
 
@@ -180,7 +180,7 @@ export default function ForAiArtistsPage() {
               <p className="mx-auto mt-6 max-w-[38rem] text-balance text-base leading-8 text-[var(--marketing-text-muted)]">
                 Keep whatever you use to write, generate, mix and master. Keep
                 your distributor. Urganize is the part after that: the plan,
-                who is doing what and where every release stands.
+                who is doing what and where every rollout stands.
               </p>
             </div>
           </SectionShell>
@@ -225,7 +225,7 @@ export default function ForAiArtistsPage() {
           containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
         >
           <p className="text-center text-sm text-[var(--marketing-text-subtle)]">
-            Running other people&apos;s releases too?{" "}
+            Running other people&apos;s rollouts too?{" "}
             <Link
               href="/for-managers"
               className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"

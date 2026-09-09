@@ -19,7 +19,7 @@ import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-urls";
 export const metadata: Metadata = buildPageMetadata({
   title: "Sign up",
   description:
-    `Create your Urganize account and start planning releases with the ${CUSTOMER_LINE}.`,
+    `Create your Urganize account and start planning rollouts with the ${CUSTOMER_LINE}.`,
   path: "/signup",
 });
 
@@ -37,8 +37,8 @@ export default function SignupPage() {
             Create your account
           </h1>
           <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-            Add your first release and get a rollout plan built from a real
-            release template, not a blank board you have to fill in yourself.
+            Add your first rollout and get a plan built from a real playbook,
+            not a blank board you have to fill in yourself.
           </p>
 
           <div className="mt-10">
@@ -59,7 +59,7 @@ export default function SignupPage() {
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
               Artist managers and small labels running more than one
-              artist&apos;s releases at once. If you&apos;re coordinating
+              artist&apos;s rollouts at once. If you&apos;re coordinating
               handoffs, files, and status across a roster, that&apos;s the
               problem this was built for. See{" "}
               <Link

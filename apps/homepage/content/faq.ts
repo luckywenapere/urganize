@@ -18,7 +18,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "Do I need a card to start?",
     answer:
-      "No. The trial is free for 14 days, you can start with a test release and you pick a plan only when it ends.",
+      "No. The trial is free for 14 days, you can start with a test rollout and you pick a plan only when it ends.",
   },
   {
     question: "What happens when the 14 days end?",
@@ -37,17 +37,17 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "Can I change the plan it gives me?",
     answer:
-      "Yes. Edit or delete any activity, and UrgAns tailors the draft to your release before you approve it.",
+      "Yes. Edit or delete any activity, and UrgAns tailors the draft to your rollout before you approve it.",
   },
   {
     question: "Will UrgAns do things without asking?",
     answer:
-      "It asks before anything that cannot be undone, like deleting a release, and only runs it after you approve.",
+      "It asks before anything that cannot be undone, like deleting a rollout, and only runs it after you approve.",
   },
   {
     question: "Does it post for me or distribute my music?",
     answer:
-      "No. Urganize plans and tracks the release. You still post and distribute.",
+      "No. Urganize plans and tracks the rollout. You still post and distribute.",
   },
   {
     question: "Does it work on my phone?",

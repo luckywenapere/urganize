@@ -20,8 +20,8 @@ import { wideContainerClass } from "./shared";
 // plan payoff ("the whole rollout was already laid out, week by week") and
 // is mounted here for the first time — see ProofLine.tsx's mount table.
 const POINTS = [
-  "Run several artists on one team and pick who each release is for.",
-  "Invite a teammate for one artist and they see only that artist's releases.",
+  "Run several artists on one team and pick who each rollout is for.",
+  "Invite a teammate for one artist and they see only that artist's rollouts.",
   "Hand a sign-in link to the designer or the DJ on WhatsApp. They choose their own password.",
 ] as const;
 
@@ -39,7 +39,7 @@ export function RosterSection() {
               One team. Every artist.
             </h2>
             <p className="mt-5 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-              Built for the people who run the release: managers, labels and
+              Built for the people who run the rollout: managers, labels and
               their teams. Artists feel the results.
             </p>
             <ul className="mt-7 space-y-3">

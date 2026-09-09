@@ -20,7 +20,7 @@ export const metadata: Metadata = buildPageMetadata({
 const VOICE_PILLARS = [
   {
     title: "Plain-spoken, no jargon",
-    body: "We say “the plan, the activities and the press kit for your release,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
+    body: "We say “the plan, the activities and the press kit for your rollout,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
     say: "One link, and the press kit is live.",
     avoid: "Holistic asset-lifecycle management.",
   },
@@ -28,17 +28,17 @@ const VOICE_PILLARS = [
     title: "Concrete, never overclaiming",
     body: "We don’t advertise what isn’t built. Unshipped work is marked “coming soon,” and screenshots show the real app.",
     say: "64 activities, generated from a template.",
-    avoid: "AI runs your whole release for you.",
+    avoid: "AI runs your whole rollout for you.",
   },
   {
     title: "Name the problem",
-    body: "We say the quiet part out loud: releases run on group chats and “Final v3 ACTUAL final” in Drive. The enemy is chaos — we name it.",
-    say: "Stop running releases out of WhatsApp threads.",
+    body: "We say the quiet part out loud: rollouts run on group chats and “Final v3 ACTUAL final” in Drive. The enemy is chaos — we name it.",
+    say: "Stop running rollouts out of WhatsApp threads.",
     avoid: "Streamline your creative workflow.",
   },
   {
     title: "Operator to operator",
-    body: "We write like a manager talking to a manager — benefit-first, active, specific. We’ve run releases; the copy shows it.",
+    body: "We write like a manager talking to a manager — benefit-first, active, specific. We’ve run rollouts; the copy shows it.",
     say: "No more “who’s doing the art again?”",
     avoid: "Empower your creative journey.",
   },
@@ -81,12 +81,12 @@ const LOGO_DOWNLOADS = [
 const OTHER_ASSETS = [
   { label: "Social share image (PNG)", href: "/opengraph-image.png", note: "1200×630" },
   {
-    label: "Product screenshot: releases",
+    label: "Product screenshot: rollouts",
     href: "/images/product/workspace-releases.png",
     note: "The live app",
   },
   {
-    label: "Product screenshot: releases (dark)",
+    label: "Product screenshot: rollouts (dark)",
     href: "/images/product/workspace-releases-dark.png",
     note: "The live app",
   },
@@ -142,8 +142,8 @@ export default function BrandPage() {
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Mission</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   The music industry runs on chaos: knowledge stuck in people’s heads, scattered
-                  group chats, spreadsheets and one overworked person holding every release
-                  together. Urganize ends that. Every release runs to plan, with the work and
+                  group chats, spreadsheets and one overworked person holding every rollout
+                  together. Urganize ends that. Every rollout runs to plan, with the work and
                   the status in one place.
                 </p>
               </div>
@@ -159,8 +159,8 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Artists, managers and labels. One release is a lot of moving parts; a roster
-                  is many release calendars, many rollouts at once and a pile of chats holding it
+                  Artists, managers and labels. One rollout is a lot of moving parts; a roster
+                  is many calendars, many rollouts at once and a pile of chats holding it
                   together. Urganize is what runs that. Labels with a bigger roster get the Label
                   plan, with the founders working alongside them.
                 </p>
@@ -171,11 +171,11 @@ export default function BrandPage() {
                   What we believe
                 </h3>
                 <ul className={`mt-1.5 list-disc space-y-1 pl-5 ${bodyText}`}>
-                  <li>The release is the spine. Every feature serves a release.</li>
+                  <li>The rollout is the spine. Every feature serves a rollout.</li>
                   <li>We are opinionated on purpose: if it doesn’t cut the chaos, it’s out.</li>
                   <li>
                     That’s why we don’t do revenue tracking, legal contracts, analytics dashboards,
-                    or distribution. We stay focused on the release.
+                    or distribution. We stay focused on the rollout.
                   </li>
                 </ul>
               </div>
@@ -187,7 +187,7 @@ export default function BrandPage() {
                   Urganize is an AI Music Manager for artists, managers and labels. It helps
                   music teams plan rollouts, coordinate people, manage assets and metadata,
                   track execution and keep every part of a rollout moving from one place.
-                  Every release runs on a rollout plan written by real managers, with an owner
+                  Every rollout runs on a plan written by real managers, with an owner
                   and a due date on every activity and a press kit you can send as one link.
                 </p>
               </div>

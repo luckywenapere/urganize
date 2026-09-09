@@ -131,12 +131,12 @@ export function PricingPageClient() {
                 {
                   step: "02",
                   title: "We try it together",
-                  body: "On a short call, we put one of your real releases into Urganize with you.",
+                  body: "On a short call, we put one of your real rollouts into Urganize with you.",
                 },
                 {
                   step: "03",
                   title: "You start planning",
-                  body: "If it fits, we set your team up ourselves. Your releases and plans, ready to go.",
+                  body: "If it fits, we set your team up ourselves. Your rollouts and plans, ready to go.",
                 },
               ] as const
             ).map((item) => (

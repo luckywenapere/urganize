@@ -17,7 +17,7 @@ import { APP_LOGIN_URL, APP_PASSWORD_RESET_URL } from "@/lib/app-urls";
 export const metadata: Metadata = buildPageMetadata({
   title: "Log in",
   description:
-    `Log in to Urganize, the ${CUSTOMER_LINE}, and pick up your releases, activities and team.`,
+    `Log in to Urganize, the ${CUSTOMER_LINE}, and pick up your rollouts, activities and team.`,
   path: "/login",
 });
 
@@ -36,7 +36,7 @@ export default function LoginPage() {
           </h1>
           <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
             Urganize is at app.urganize.app. Sign in there to pick up your
-            releases, your activity list and whatever your team moved since
+            rollouts, your activity list and whatever your team moved since
             you last looked.
           </p>
 

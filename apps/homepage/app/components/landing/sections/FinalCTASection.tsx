@@ -30,7 +30,7 @@ export function FinalCTASection() {
         containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
       >
         <div className="text-center">
-          <h2 className={centeredHeadlineClass}>Put your next release on plan.</h2>
+          <h2 className={centeredHeadlineClass}>Put your next rollout on plan.</h2>
 
           <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-4">
             <TrialButton location="final" size="lg" className="w-full sm:w-auto" />

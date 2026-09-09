@@ -18,7 +18,7 @@ export function WorkspaceShotSection() {
         className="py-[80px] lg:py-[100px]"
       >
         {/* The proof-numbers line that used to sit here ("7 founding teams,
-            10 artists and 2 releases running right now. Live since January
+            10 artists and 2 rollouts running right now. Live since January
             2026.") was REMOVED 2026-08-25 on the founder's call, in the same
             pass that cut the row titles from TransformationSection (itself
             removed 2026-08-25). The

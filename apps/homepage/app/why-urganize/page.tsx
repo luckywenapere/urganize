@@ -12,7 +12,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    `WhatsApp and Google Drive work for one artist and one release. Running more than one? An ${PRODUCT_CATEGORY} gives you a real rollout plan, owners on every activity and status you can see without asking.`,
+    `WhatsApp and Google Drive work for one artist and one rollout. Running more than one? An ${PRODUCT_CATEGORY} gives you a real rollout plan, owners on every activity and status you can see without asking.`,
   path: "/why-urganize",
 });
 
@@ -37,8 +37,8 @@ const comparisons = [
     // `them` is byte-identical to transformationPairs[0].before in
     // content/testimonials.ts — that file owns the string, this page
     // mirrors it. Change both together or not at all.
-    them: "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new release starts from scratch.",
-    us: "Create a release and Urganize lays out the whole rollout, written by real managers and sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Edit or delete any activity.",
+    them: "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new rollout starts from scratch.",
+    us: "Create a rollout and Urganize lays out the whole plan, written by real managers and sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Edit or delete any activity.",
   },
 ] as const;
 
@@ -57,11 +57,11 @@ const compactComparisons = [
   {
     kicker: "Press kit",
     them: "The press kit is a doc full of dead links you rebuild from scratch every time someone asks.",
-    us: "Urganize builds one from your release, keeps it current and lets you turn it off anytime.",
+    us: "Urganize builds one from your rollout, keeps it current and lets you turn it off anytime.",
   },
   {
     kicker: "Status",
-    them: "Finding out where a release stands means scrolling weeks of chat, for every release you run.",
+    them: "Finding out where a rollout stands means scrolling weeks of chat, for every rollout you run.",
     us: "One list shows progress, what's overdue and what's due this week, for everything you have going.",
   },
 ] as const;
@@ -91,8 +91,8 @@ export default function WhyUrganizePage() {
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              For one artist and one release, a group chat and a Drive folder
-              really do work. Add a second release, a third artist and a
+              For one artist and one rollout, a group chat and a Drive folder
+              really do work. Add a second rollout, a third artist and a
               team passing work around. The system that got you here starts
               to drop things.
             </p>
@@ -219,7 +219,7 @@ export default function WhyUrganizePage() {
         <ScrollReveal>
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
-              <h2 className={headlineClass}>Put every release on a plan.</h2>
+              <h2 className={headlineClass}>Put every rollout on a plan.</h2>
               <div className="mt-10 flex w-full flex-col items-center gap-3">
                 <WaitlistForm source="why_urganize_cta" />
                 <ProofLine id="tamuno" className="mt-2" />
