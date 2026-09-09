@@ -186,6 +186,7 @@ export function WorkspaceReleaseCard({
         type="button"
         aria-pressed={selected}
         onClick={() => onSelect(release.id)}
+        data-tour="release-card"
         className={frameClass}
       >
         {/* Horizontal header: fixed square art thumbnail beside the meta.
@@ -217,6 +218,7 @@ export function WorkspaceReleaseCard({
       type="button"
       aria-pressed={selected}
       onClick={() => onSelect(release.id)}
+      data-tour="release-card"
       className={frameClass}
     >
       {/* Cover-art banner — same aspect-square + next/image pattern the

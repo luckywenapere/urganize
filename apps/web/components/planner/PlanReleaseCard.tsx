@@ -80,6 +80,8 @@ export function PlanReleaseCard({
       <Button
         type="button"
         onClick={state === 'fresh' ? onDraftNow : onReview}
+        // Guided-tour anchor (lib/tours.ts); inert without the flag.
+        data-tour="plan-rollout"
         className="mt-5 h-11 w-full justify-center sm:w-auto"
       >
         {copy.cta}

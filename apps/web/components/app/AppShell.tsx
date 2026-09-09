@@ -101,6 +101,11 @@ const PushPermissionPrompt = dynamic(
 // and it must stay client-only: every branch it takes depends on reading the
 // user agent, the display mode, and whether the browser has offered us an
 // install of its own.
+const TourOverlay = dynamic(
+  () => import('@/components/tours/TourOverlay').then((m) => m.TourOverlay),
+  { ssr: false }
+);
+
 const InstallAppPrompt = dynamic(
   () => import('@/components/app/InstallAppPrompt').then((m) => m.InstallAppPrompt),
   { ssr: false }
@@ -171,6 +176,7 @@ const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 // countdown and the once-per-visit rule, and InstallAppPrompt.tsx for why the
 // three platforms need three different mechanisms.
 const INSTALL_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_INSTALL_PROMPT === 'true';
+const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
 
 // Once-per-session arming for the side rail: landing on the assistant page
 // (the post-auth front door when the flag is on — see lib/home-path.ts)
@@ -674,6 +680,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           be a minute of using the app, not a minute spent on /auth. */}
       {INSTALL_PROMPT_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <InstallAppPrompt />
+      ) : null}
+      {/* The guided tours (lib/tours.ts). Same gate again — a tour points at
+          app chrome, so there has to be app chrome. It renders nothing until
+          something calls useTourStore.start, so mounting it costs a subscribed
+          selector and no markup. */}
+      {TOURS_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <TourOverlay />
       ) : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       {/* FirstTimeOnboardingGate was mounted here until 2026-07-29 (URG-191).

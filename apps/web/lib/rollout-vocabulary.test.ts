@@ -44,6 +44,7 @@ const GUARDED_FILES = [
   'lib/email-templates.ts',
   'lib/notification-presets.ts',
   'lib/help-copy.ts',
+  'lib/tours.ts',
   '../../packages/pricing/src/index.ts',
 ];
 

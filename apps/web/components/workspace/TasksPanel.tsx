@@ -1048,7 +1048,7 @@ export function TasksPanel({
     // where this is a direct grid child that stretches to fill its row track
     // (see WorkspaceDesktopFocused) — on mobile, where it's an ordinary block
     // child in normal page flow, `flex: 1 1 0%` on a non-flex-item is inert.
-    <aside id={id} className="flex min-h-0 min-w-0 flex-1 flex-col scroll-mt-20">
+    <aside id={id} data-tour="activities" className="flex min-h-0 min-w-0 flex-1 flex-col scroll-mt-20">
       {/* Desktop header row (lg+ ONLY). Below `lg` none of these buttons
           render at all as of 2026-08-31: every one of them is an entry in the
           release menu at the base of the panel instead (founder call — the
@@ -1063,7 +1063,10 @@ export function TasksPanel({
 
           Right-aligned and wrapping, exactly as it has rendered at lg+ since
           2026-08-05. */}
-      <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
+      <div
+        data-tour="rollout-menu"
+        className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex"
+      >
         {activitiesToggleButton}
         {planButton}
         {activitiesButton}
@@ -1402,6 +1405,7 @@ export function TasksPanel({
                   // 2026-08-31 it holds every release surface, so it is the
                   // release menu and says so.
                   aria-label="Rollout menu"
+                  data-tour="rollout-menu"
                   className={MOBILE_DOCK_TRIGGER_CLASS}
                 >
                   <Menu className="h-3.5 w-3.5" aria-hidden="true" />

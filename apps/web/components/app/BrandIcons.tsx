@@ -174,3 +174,16 @@ export function BlankSheetIllustration({ className = 'h-9 w-9' }: IconProps) {
     </svg>
   );
 }
+
+/** Guided tour: a dotted route from where you are to a marker — someone
+ * walking you there, rather than a map you have to read. */
+export function TourIcon({ className = 'h-4.5 w-4.5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="5.5" cy="18.5" r="1.6" fill="currentColor" stroke="none" />
+      <path d="M5.5 18.5c5.2 0 3.4-6 9-6" strokeDasharray="2.4 3" strokeLinecap="round" />
+      <path d="M16.5 4.5v9" strokeLinecap="round" />
+      <path d="M16.5 5.5h4.2l-1.4 2 1.4 2h-4.2Z" strokeLinejoin="round" />
+    </svg>
+  );
+}

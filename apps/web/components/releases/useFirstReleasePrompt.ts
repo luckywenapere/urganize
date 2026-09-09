@@ -22,6 +22,12 @@
 //   4. mid-conversation with UrgAns (any of its three surfaces) → consume
 //      silently; the assistant is itself an activation path and must not be
 //      talked over.
+//   5. a guided tour is running, or one has been asked for and not yet
+//      reached (lib/tours.ts) → consume silently. A tour's last step hands
+//      off to creating or planning, so the two are aiming at the same thing
+//      and the tour is the gentler of them. The ARMING effect also waits on
+//      the same signal, so the countdown starts after a tour ends rather
+//      than running underneath it.
 // Mark-then-open ordering: shown is recorded before the modal opens, so a
 // crash between the two fails toward silence, never toward a second prompt.
 
@@ -31,6 +37,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { isFirstReleaseRequired } from '@/lib/first-release-required';
 import { isBodyScrollLocked } from '@/lib/body-scroll-lock';
+import { tourBlocksPrompts, useTourStore } from '@/stores/useTourStore';
 import {
   armPrompt,
   decideFirstReleasePrompt,
@@ -57,6 +64,10 @@ function firstReleaseRequiredNow(): boolean {
 
 export function useFirstReleasePrompt(onPrompt: () => void): void {
   const required = useFirstReleaseRequired();
+  // Subscribed, not read imperatively: this holds the ARMING effect, so it has
+  // to retrigger it when a tour ends. `tourBlocksPrompts()` above is the
+  // fire-time half, which runs in a timer callback outside render.
+  const tourBlocking = useTourStore((state) => state.active !== null || state.pendingReplay !== null);
 
   // Latest-ref so callers can pass an inline closure without churning the
   // arming effect — its deps stay [required].
@@ -66,7 +77,7 @@ export function useFirstReleasePrompt(onPrompt: () => void): void {
   });
 
   useEffect(() => {
-    if (!required) return;
+    if (!required || tourBlocking) return;
     if (typeof window === 'undefined') return;
 
     let timerId: number | null = null;
@@ -90,6 +101,10 @@ export function useFirstReleasePrompt(onPrompt: () => void): void {
         return;
       }
       if (useChappiStore.getState().messages.length > 0) {
+        markPromptShown(Date.now());
+        return;
+      }
+      if (tourBlocksPrompts()) {
         markPromptShown(Date.now());
         return;
       }
@@ -117,5 +132,5 @@ export function useFirstReleasePrompt(onPrompt: () => void): void {
       if (timerId !== null) window.clearTimeout(timerId);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [required]);
+  }, [required, tourBlocking]);
 }
