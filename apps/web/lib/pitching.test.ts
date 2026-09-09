@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ASSET_SIZE_LIMITS } from './asset-constants';
+import type { SentPitch } from '@/types/pitching';
 import {
   acceptsPitchReply,
   countWaitingPitches,
+  describeSentPitchScope,
+  groupPitchesByRelease,
   detectPitchPlatform,
   formatFollowerCount,
   isPitchPlatform,
@@ -217,5 +220,111 @@ describe('limits', () => {
   it('does not track the cover art limit', () => {
     expect(MAX_CURATOR_PHOTO_BYTES).not.toBe(ASSET_SIZE_LIMITS.cover_art);
     expect(MAX_CURATOR_PHOTO_BYTES).toBeLessThan(ASSET_SIZE_LIMITS.cover_art);
+  });
+});
+
+/**
+ * The team-wide list's grouping, added with the Pitching page (2026-09-09).
+ *
+ * The page shows every pitch the team has sent, across releases, so it needs a
+ * grouping the release scene never did — and the grouping is the one place a
+ * deleted release has to be handled rather than dropped.
+ */
+describe('groupPitchesByRelease', () => {
+  // `in` rather than `??` for the two nullable fields, because null is a REAL
+  // value here (a deleted release, an unresolved title) and `??` would quietly
+  // swap it for the default — a fixture that cannot express the case the test
+  // is named after.
+  const pitch = (over: Partial<SentPitch> & { id: string }): SentPitch => ({
+    id: over.id,
+    releaseId: 'releaseId' in over ? (over.releaseId ?? null) : 'r1',
+    releaseTitle: 'releaseTitle' in over ? (over.releaseTitle ?? null) : 'Midnight EP',
+    playlistId: 'p1',
+    playlistName: 'Night Drive',
+    curatorName: 'Ada',
+    songTitle: 'Lagos Nights',
+    songUrl: 'https://example.com/song',
+    songPlatform: null,
+    note: '',
+    status: over.status ?? 'new',
+    reply: null,
+    pitcherName: 'Lucky',
+    createdAt: over.createdAt ?? '2026-09-01T10:00:00.000Z',
+    updatedAt: over.createdAt ?? '2026-09-01T10:00:00.000Z',
+  });
+
+  it('returns nothing for an empty list', () => {
+    expect(groupPitchesByRelease([])).toEqual([]);
+  });
+
+  it('puts every pitch for one release in one group', () => {
+    const groups = groupPitchesByRelease([
+      pitch({ id: 'a' }),
+      pitch({ id: 'b' }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].releaseId).toBe('r1');
+    expect(groups[0].releaseTitle).toBe('Midnight EP');
+    expect(groups[0].pitches.map((p) => p.id)).toEqual(['a', 'b']);
+  });
+
+  // Keyed on the release ID, never the title: two releases can share a name,
+  // and merging them would credit one release with the other's answers.
+  it('keeps two releases apart even when they share a title', () => {
+    const groups = groupPitchesByRelease([
+      pitch({ id: 'a', releaseId: 'r1', releaseTitle: 'Single' }),
+      pitch({ id: 'b', releaseId: 'r2', releaseTitle: 'Single' }),
+    ]);
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => group.releaseId).sort()).toEqual(['r1', 'r2']);
+  });
+
+  // Newest activity first, so the release being worked on is at the top.
+  it('orders groups by their newest pitch', () => {
+    const groups = groupPitchesByRelease([
+      pitch({ id: 'old', releaseId: 'r1', createdAt: '2026-08-01T10:00:00.000Z' }),
+      pitch({ id: 'new', releaseId: 'r2', createdAt: '2026-09-05T10:00:00.000Z' }),
+    ]);
+    expect(groups.map((group) => group.releaseId)).toEqual(['r2', 'r1']);
+  });
+
+  // A deleted release leaves release_id null (on delete set null), so these
+  // pitches are real and still awaiting an answer. They go LAST rather than
+  // being dropped: the curator may still reply, and losing the row would lose
+  // the answer.
+  it('collects pitches whose release is gone into one last group', () => {
+    const groups = groupPitchesByRelease([
+      pitch({ id: 'gone', releaseId: null, releaseTitle: null, createdAt: '2026-09-09T10:00:00.000Z' }),
+      pitch({ id: 'live', releaseId: 'r1', createdAt: '2026-08-01T10:00:00.000Z' }),
+    ]);
+    expect(groups.map((group) => group.releaseId)).toEqual(['r1', null]);
+    expect(groups[1].pitches.map((p) => p.id)).toEqual(['gone']);
+  });
+
+  it('names a group whose title never resolved without inventing one', () => {
+    const groups = groupPitchesByRelease([
+      pitch({ id: 'a', releaseId: 'r9', releaseTitle: null }),
+    ]);
+    expect(groups[0].releaseTitle).toBeNull();
+  });
+});
+
+describe('describeSentPitchScope', () => {
+  it('says nothing when there is nothing to describe', () => {
+    expect(describeSentPitchScope(0, false)).toBe('');
+  });
+
+  it('counts one pitch in the singular', () => {
+    expect(describeSentPitchScope(1, false)).toBe('1 pitch sent');
+  });
+
+  it('counts several', () => {
+    expect(describeSentPitchScope(4, false)).toBe('4 pitches sent');
+  });
+
+  // The list is capped server-side, so a full page has to say so rather than
+  // implying it is showing everything.
+  it('says when the list was cut short', () => {
+    expect(describeSentPitchScope(200, true)).toBe('Showing the newest 200 pitches');
   });
 });

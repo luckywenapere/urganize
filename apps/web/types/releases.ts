@@ -51,7 +51,7 @@ export function isDbReleaseType(value: unknown): value is DbReleaseType {
  * SetReleaseDateCard: a release still carrying the default has never been
  * named, and there is no other rename affordance anywhere in the app.
  */
-export const DEFAULT_RELEASE_TITLE = 'Untitled release';
+export const DEFAULT_RELEASE_TITLE = 'Untitled rollout';
 
 export interface Release {
   id: string;

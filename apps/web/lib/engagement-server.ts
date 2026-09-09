@@ -46,7 +46,7 @@ export const WELCOME_STEP: DripStep = {
   kind: 'welcome',
   delayMinutes: 0,
   title: 'You showed up — that’s the hard part',
-  body: 'Your releases are lined up and listening. Knock one activity out while you’re here.',
+  body: 'Your rollouts are lined up and listening. Knock one activity out while you’re here.',
   url: '/dashboard',
 };
 
@@ -62,14 +62,14 @@ export const DRIP_STEPS: DripStep[] = [
     kind: 'comeback_1d',
     delayMinutes: 24 * 60,
     title: 'Your rollout kept counting',
-    body: 'A day has passed on the release clock. Come see what’s due and keep it on time.',
+    body: 'A day has passed on the rollout clock. Come see what’s due and keep it on time.',
     url: '/dashboard',
   },
   {
     kind: 'comeback_7d',
     delayMinutes: 7 * 24 * 60,
     title: 'A week is a long time in music',
-    body: 'Your release plan hasn’t stopped. Drop in, check your progress, move one thing forward.',
+    body: 'Your rollout plan hasn’t stopped. Drop in, check your progress, move one thing forward.',
     url: '/dashboard',
   },
   {
@@ -82,7 +82,7 @@ export const DRIP_STEPS: DripStep[] = [
   {
     kind: 'comeback_30d',
     delayMinutes: 30 * 24 * 60,
-    title: 'Great releases don’t ship themselves',
+    title: 'Great rollouts don’t ship themselves',
     body: 'It’s been a month. Open Urganize, pick one activity, and get the machine moving.',
     url: '/dashboard',
   },

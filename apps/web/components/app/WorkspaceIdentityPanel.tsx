@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } fr
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, ClipboardList, Inbox, Newspaper, PanelLeftClose, PanelLeftOpen, ShieldCheck, Users } from '@/components/icons';
+import { ChevronDown, ClipboardList, Inbox, PanelLeftClose, PanelLeftOpen, Radio, ShieldCheck, Users } from '@/components/icons';
 import { SiInstagram, SiX } from "react-icons/si";
 import { openExternalUrl } from "@/lib/external-link";
 import { useAuthStore } from "@/lib/auth-store";
@@ -122,15 +122,19 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === "true";
 // disagree about whether the surface exists.
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === "true";
 
-// Press kits. Same flag AppTopbar and MobileNavBar read for their own entry
-// points, so the three cannot disagree about whether the surface exists.
-const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === "true";
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === "true";
 
-// One account can be both a team running releases and a playlist owner, so this
-// card is where a dual account crosses back to its pitch inbox. Shown only when
-// the account actually owns a curator profile (auth store's hasCuratorProfile);
-// the /curator shell enforces the same thing for anyone who types the URL.
+// Playlist pitching, which this card carries TWICE for one account and in two
+// directions. The team row (/dashboard/pitching) is every pitch the team sent
+// and is shown to every team account. The crossing at the base of the list
+// (/curator) is the inbox for playlists the account owns, so it is shown only
+// when the account actually holds a curator profile (auth store's
+// hasCuratorProfile); the /curator shell enforces the same thing for anyone
+// who types the URL.
+//
+// Press kits used to read this same file's own flag for a row here. It left
+// the menus entirely on 2026-09-09 (founder call) and is reached from
+// Settings alone; the pages did not move.
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === "true";
 
 // NavItem.Icon must always return a ReactElement (matching the BrandIcons
@@ -150,8 +154,12 @@ function ShowsIcon({ className }: { className?: string }) {
   return <MicVocal className={className} aria-hidden="true" />;
 }
 
-function PressKitsIcon({ className }: { className?: string }) {
-  return <Newspaper className={className} aria-hidden="true" />;
+// The same glyph the release Pitch pill uses, so the release scene and this
+// row read as one feature. Deliberately NOT Inbox, which PitchesIcon below
+// uses for the curator crossing — the two rows point in opposite directions
+// and must not share a mark.
+function PitchingIcon({ className }: { className?: string }) {
+  return <Radio className={className} aria-hidden="true" />;
 }
 
 function DirectoryIcon({ className }: { className?: string }) {
@@ -274,27 +282,34 @@ function buildNavItems(
           } satisfies NavItem,
         ]
       : []),
-    // Beside Shows, as the other standing surface that is not a release.
-    // Prefix match, because one artist's kit lives a level deeper.
-    ...(PRESS_KITS_ENABLED
+    // Pitching — the TEAM side, in the slot Press kits held until 2026-09-09
+    // (founder call: "Playlist pitching should be accessible app wide ... on
+    // desktop on the side menu and top menu"). Before this the team side of
+    // pitching existed only as a release scene, so it could not be reached
+    // without scoping a release first.
+    //
+    // Distinct from Playlist pitches at the base of this list, which is the
+    // other direction: the inbox for playlists this account owns.
+    ...(PITCHING_ENABLED
       ? [
           {
-            href: "/dashboard/press-kits",
-            label: "Press kits",
-            Icon: PressKitsIcon,
-            isActive: (pathname: string) => pathname.startsWith("/dashboard/press-kits"),
-            help: "nav.pressKits",
+            href: "/dashboard/pitching",
+            label: "Pitching",
+            Icon: PitchingIcon,
+            isActive: (pathname: string) => pathname.startsWith("/dashboard/pitching"),
+            help: "nav.pitching",
             beta: true,
           } satisfies NavItem,
         ]
       : []),
-    // Beside Press kits, as the other standing surface that belongs to nobody's
+    // Beside Pitching, as the other standing surface that belongs to nobody's
     // release. Prefix match so a person's page keeps the row lit.
     //
-    // DESKTOP ONLY, and that is a known gap rather than an oversight: the
-    // mobile tab bar is at its seven-slot ceiling, so a phone reaches this
-    // through the search surface (lib/app-pages.ts carries the keywords) until
-    // the role gaps panel gives it a better path in.
+    // DESKTOP ONLY, and that is a known gap rather than an oversight: a phone
+    // reaches this through the search surface (lib/app-pages.ts carries the
+    // keywords) until the role gaps panel gives it a better path in. The
+    // mobile bar has room for one more tab (its own arithmetic says ~47px at
+    // eight), but past that an overflow sheet is the honest answer.
     ...(DIRECTORY_ENABLED
       ? [
           {
@@ -1143,7 +1158,7 @@ function WorkspaceNavList({
             aria-expanded={expanded}
             aria-controls={subListId}
             aria-label={expanded ? `Hide ${label.toLowerCase()} list` : `Show ${label.toLowerCase()} list`}
-            title={expanded ? "Hide releases" : "Show releases"}
+            title={expanded ? "Hide rollouts" : "Show rollouts"}
             className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <ChevronDown
@@ -1168,7 +1183,7 @@ function WorkspaceNavList({
                       : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                   }`}
                 >
-                  {child.label || "Untitled release"}
+                  {child.label || "Untitled rollout"}
                 </Link>
               </li>
             ))}

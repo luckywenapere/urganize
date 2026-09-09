@@ -102,7 +102,7 @@ export function ArchiveReleaseDialog({
       if (!response.ok) {
         const payload = (await response.json().catch(() => ({}))) as { error?: string };
         throw new Error(
-          payload.error || (nextArchived ? 'Could not archive release.' : 'Could not restore release.')
+          payload.error || (nextArchived ? 'Could not archive rollout.' : 'Could not restore rollout.')
         );
       }
 
@@ -112,8 +112,8 @@ export function ArchiveReleaseDialog({
         caught instanceof Error
           ? caught.message
           : nextArchived
-            ? 'Could not archive release.'
-            : 'Could not restore release.'
+            ? 'Could not archive rollout.'
+            : 'Could not restore rollout.'
       );
     } finally {
       setIsSaving(false);
@@ -127,7 +127,7 @@ export function ArchiveReleaseDialog({
     >
       <button
         type="button"
-        aria-label={nextArchived ? 'Close archive release dialog' : 'Close restore release dialog'}
+        aria-label={nextArchived ? 'Close archive rollout dialog' : 'Close restore rollout dialog'}
         className="absolute inset-0"
         onClick={() => {
           if (!isSaving) onClose();
@@ -142,7 +142,7 @@ export function ArchiveReleaseDialog({
       >
         <div className="p-4 sm:p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
-            {nextArchived ? 'Archive release' : 'Restore release'}
+            {nextArchived ? 'Archive rollout' : 'Restore rollout'}
           </p>
           <h2
             id="archive-release-title"
@@ -175,7 +175,7 @@ export function ArchiveReleaseDialog({
             isLoading={isSaving}
             leftIcon={isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
           >
-            {nextArchived ? 'Archive release' : 'Restore release'}
+            {nextArchived ? 'Archive rollout' : 'Restore rollout'}
           </Button>
         </div>
       </div>

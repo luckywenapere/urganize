@@ -20,7 +20,7 @@ import {
  * is off. Without translating that, the model would report it the same way it
  * reports ensureReleaseOwnership's 'Release not found.' and tell the user their
  * release does not exist. The create_note precedent. */
-const METADATA_OFF = 'Release details are not switched on for your team.';
+const METADATA_OFF = 'Rollout details are not switched on for your team.';
 
 /** The exact allowlist PATCH …/metadata accepts, in the order the form shows
  * them. Anything outside this is not writable through that route. */
@@ -43,7 +43,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
     name: 'get_release_metadata',
     kind: 'read',
     description:
-      "Read a release's distribution details: ISRC, UPC, ISWC, genre, subgenre, language, explicit flag, label name, and the (P)/(C) lines.",
+      "Read a rollout's distribution details: ISRC, UPC, ISWC, genre, subgenre, language, explicit flag, label name, and the (P)/(C) lines.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -56,7 +56,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
         method: 'GET',
       });
       if (isFlagGateOff(res)) return fail(METADATA_OFF);
-      if (!res.ok) return fail(apiError(res, 'Could not load the release details.'));
+      if (!res.ok) return fail(apiError(res, 'Could not load the rollout details.'));
 
       const metadata = (res.body.metadata ?? {}) as Record<string, unknown>;
       const data: Record<string, unknown> = { explicit: metadata.explicit ?? null };
@@ -75,13 +75,13 @@ export const METADATA_TOOLS: ChappiTool[] = [
     name: 'update_release_metadata',
     kind: 'mutate',
     description:
-      "Set a release's distribution details. Pass only the fields being changed — the rest are preserved. To clear a field, pass it as an empty string.",
+      "Set a rollout's distribution details. Pass only the fields being changed — the rest are preserved. To clear a field, pass it as an empty string.",
     inputSchema: {
       type: 'object',
       properties: {
         releaseId: { type: 'string' },
         isrc: { type: 'string', description: 'Recording code for the track.' },
-        upc: { type: 'string', description: 'Barcode for the release.' },
+        upc: { type: 'string', description: 'Barcode for the rollout.' },
         iswc: {
           type: 'string',
           description: 'Composition code from the collection society, e.g. "T-123456789-1".',
@@ -115,7 +115,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
       });
       if (isFlagGateOff(current)) return fail(METADATA_OFF);
       if (!current.ok) {
-        return fail(apiError(current, 'That release was not found on your team.'));
+        return fail(apiError(current, 'That rollout was not found on your team.'));
       }
       const existing = (current.body.metadata ?? {}) as Record<string, unknown>;
 
@@ -132,7 +132,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
         body,
       });
       if (isFlagGateOff(res)) return fail(METADATA_OFF);
-      if (!res.ok) return fail(apiError(res, 'Could not save the release details.'));
+      if (!res.ok) return fail(apiError(res, 'Could not save the rollout details.'));
 
       const names = [...changed, ...(explicitChanged ? ['explicit'] : [])];
       return {
@@ -146,7 +146,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
     name: 'get_release_credits',
     kind: 'read',
     description:
-      "The collaborator credits link for a release, and what has come back through it: legal names, roles, songwriter and master splits, PRO and publisher details. This is what a distributor handoff needs.",
+      "The collaborator credits link for a rollout, and what has come back through it: legal names, roles, songwriter and master splits, PRO and publisher details. This is what a distributor handoff needs.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -168,7 +168,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
           ? `${submissions.length} ${
               submissions.length === 1 ? 'answer' : 'answers'
             } so far. The link is ${link.closedAt ? 'closed' : 'open'}.`
-          : 'No credits link on this release yet.',
+          : 'No credits link on this rollout yet.',
         data: {
           shareUrl: link ? `${ctx.origin}/credits/${String(link.shareToken || '')}` : null,
           isClosed: link ? Boolean(link.closedAt) : null,
@@ -189,7 +189,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
     name: 'create_credits_link',
     kind: 'mutate',
     description:
-      "Create the shareable, no-login link collaborators use to submit their own credits and splits. Safe to call twice — a release that already has one gets it back rather than a second link.",
+      "Create the shareable, no-login link collaborators use to submit their own credits and splits. Safe to call twice — a rollout that already has one gets it back rather than a second link.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },

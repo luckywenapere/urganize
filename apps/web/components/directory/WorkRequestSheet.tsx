@@ -94,7 +94,7 @@ export function WorkRequestSheet({
               Ask {person.displayName}
             </h2>
             <p className="mt-1 text-sm text-content-secondary">
-              They see your name, the job and your note. Nothing about the release.
+              They see your name, the job and your note. Nothing about the rollout.
             </p>
           </div>
           <button

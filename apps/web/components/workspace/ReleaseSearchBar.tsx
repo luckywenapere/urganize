@@ -67,8 +67,8 @@ export function ReleaseSearchBar({
           type="text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Search release"
-          aria-label="Search release"
+          placeholder="Search rollout"
+          aria-label="Search rollout"
           className="motion-focus h-11 w-full rounded-full border border-stroke-default bg-bg-surface pl-10 pr-10 text-lg text-content-primary placeholder:text-content-tertiary"
         />
         {filtering ? (
@@ -90,7 +90,7 @@ export function ReleaseSearchBar({
           role="status"
           aria-live="polite"
         >
-          {matchCount} of {totalCount} {totalCount === 1 ? 'release' : 'releases'}
+          {matchCount} of {totalCount} {totalCount === 1 ? 'rollout' : 'rollouts'}
         </p>
       ) : null}
     </div>

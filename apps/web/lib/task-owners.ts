@@ -147,7 +147,7 @@ export function proposeTaskOwners(input: {
           taskId: task.id,
           userId: candidate,
           basis: 'history',
-          reason: `${nameFor(candidate)} handled this on ${count} past ${pluralize(count, 'release', 'releases')}.`,
+          reason: `${nameFor(candidate)} handled this on ${count} past ${pluralize(count, 'rollout', 'rollouts')}.`,
         };
       }
     }
@@ -160,7 +160,7 @@ export function proposeTaskOwners(input: {
           taskId: task.id,
           userId: candidate,
           basis: 'role',
-          reason: `${nameFor(candidate)} usually takes ${task.role} work on your releases.`,
+          reason: `${nameFor(candidate)} usually takes ${task.role} work on your rollouts.`,
         };
       }
     }

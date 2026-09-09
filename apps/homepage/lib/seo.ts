@@ -51,20 +51,25 @@ export const LANDING_DESCRIPTION =
 // Bump this string every time public/opengraph-image.png changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-09-09";
+const SHARE_IMAGE_VERSION = "2026-09-09-rollout";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.png?v=${SHARE_IMAGE_VERSION}`,
   width: 1200,
   height: 630,
   // Alt mirrors the text baked into the PNG, and is the ONLY machine-readable
-  // record of what that image says — the card itself is a static file with no
-  // generator in the repo, so a regeneration that skipped this line would
-  // leave the two describing different products with nothing to catch it.
-  // `apps/web/lib/positioning-guard.test.ts` reads this string for exactly
-  // that reason. Regenerated 2026-09-09 for the AI Music Manager positioning;
-  // the card before it said "The AI workspace for music executives", and the
-  // one before that "One home", a banned container metaphor.
+  // record of what that image says, so a regeneration that skipped this line
+  // would leave the two describing different products with nothing to catch
+  // it. `apps/web/lib/positioning-guard.test.ts` reads this string for exactly
+  // that reason. It composes from ONE_LINER and PROMISE, so it follows the
+  // positioning automatically; the VERSION above does not and has to be bumped
+  // by hand whenever the card is regenerated.
+  //
+  // The generator is `apps/homepage/scripts/generate-og-image.mjs` (the note
+  // here said there was none until 2026-09-09, when one landed). Regenerated
+  // 2026-09-09 for the release-to-rollout rename; before that for the AI Music
+  // Manager positioning, before that it said "The AI workspace for music
+  // executives", and before that "One home", a banned container metaphor.
   alt: `${ONE_LINER} ${PROMISE}. Urganize.`,
 };
 

@@ -35,7 +35,7 @@ export function ReleaseDeliveredMark({ total, done }: { total: number; done: num
       <Chappi
         pose="celebrating"
         size={CHAPPI_MIN_SIZE}
-        ariaLabel="Every activity on this release is done"
+        ariaLabel="Every activity on this rollout is done"
       />
       <span className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-brand">
         Delivered

@@ -242,11 +242,11 @@ export default function OnboardingAdminPageClient() {
         </div>
 
         <div className="mt-8 space-y-6 rounded-lg border border-stroke-default bg-bg-surface p-6">
-          <TallyRow title="What they're working on" tallies={breakdowns.releaseType} emptyLabel="No releases created yet." />
+          <TallyRow title="What they're working on" tallies={breakdowns.releaseType} emptyLabel="No rollouts created yet." />
           <TallyRow title="Role" tallies={breakdowns.role} emptyLabel="No signups yet." />
-          <TallyRow title="How they want releases planned" tallies={breakdowns.planningPreference} emptyLabel="Not answered yet." />
-          <TallyRow title="Where a release usually falls apart" tallies={breakdowns.whereStuck} emptyLabel="Not answered yet." />
-          <TallyRow title="Where this release is in its lifecycle" tallies={breakdowns.stage} emptyLabel="Not answered yet." />
+          <TallyRow title="How they want rollouts planned" tallies={breakdowns.planningPreference} emptyLabel="Not answered yet." />
+          <TallyRow title="Where a rollout usually falls apart" tallies={breakdowns.whereStuck} emptyLabel="Not answered yet." />
+          <TallyRow title="Where this rollout is in its lifecycle" tallies={breakdowns.stage} emptyLabel="Not answered yet." />
         </div>
 
         {hasLegacyData ? (

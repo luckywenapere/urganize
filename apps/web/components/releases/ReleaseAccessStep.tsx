@@ -113,7 +113,7 @@ export function ReleaseAccessStep({ releaseId, releaseTitle, onDone }: ReleaseAc
                   is a login you can send to anyone who needs to work on it.
                 </>
               ) : (
-                'Your release is set up. Here is a login you can send to anyone who needs to work on it.'
+                'Your rollout is set up. Here is a login you can send to anyone who needs to work on it.'
               )}
             </p>
           </div>
@@ -168,7 +168,7 @@ export function ReleaseAccessStep({ releaseId, releaseTitle, onDone }: ReleaseAc
             still lets them through, and Settings → Team is where they finish
             the job. */}
         <Button type="button" className="mt-6 w-full" onClick={onDone}>
-          {state.kind === 'failed' ? 'Continue without a login' : 'Done — go to the release'}
+          {state.kind === 'failed' ? 'Continue without a login' : 'Done — go to the rollout'}
         </Button>
       </div>
     </div>

@@ -36,7 +36,7 @@ export async function POST(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);

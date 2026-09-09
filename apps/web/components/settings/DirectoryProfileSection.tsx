@@ -260,7 +260,7 @@ export function DirectoryProfileSection() {
             <span className="mb-2 block text-xs text-content-tertiary">What you have delivered</span>
             {delivered.length === 0 ? (
               <p className="text-sm text-content-secondary">
-                Nothing yet. This fills in on its own once a release you worked on comes out.
+                Nothing yet. This fills in on its own once a rollout you worked on comes out.
               </p>
             ) : (
               <ul className="flex flex-wrap gap-2">

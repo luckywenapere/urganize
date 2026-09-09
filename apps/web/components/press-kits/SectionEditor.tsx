@@ -350,7 +350,7 @@ export function SectionEditor({ section, draft, readOnly, setField, onBlur, phot
       ) : null}
 
       {section === 'music' ? (
-        <FedFromElsewhere source="This fills in from the release you are working on, once the kit can read it." />
+        <FedFromElsewhere source="This fills in from the rollout you are working on, once the kit can read it." />
       ) : null}
 
       {section === 'credits' ? (

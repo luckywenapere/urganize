@@ -42,8 +42,34 @@ describe('buildPrefetchRoutes', () => {
       '/settings',
       '/dashboard/notes',
       '/dashboard/shows',
+      '/dashboard/pitching',
       '/curator',
     ]);
+  });
+
+  // The team side of pitching needs only the flag, unlike the crossing below
+  // it. A team account with no playlists of its own still has this nav entry,
+  // so leaving it cold would be the bug this module exists to prevent.
+  it('warms the team pitching page for an account that owns no playlists', async () => {
+    const { buildPrefetchRoutes } = await loadRoutes(ALL_ON);
+    const routes = buildPrefetchRoutes({ hasCuratorProfile: false });
+    expect(routes).toContain('/dashboard/pitching');
+    expect(routes).not.toContain('/curator');
+  });
+
+  // Press kits left the nav on 2026-09-09 (founder call) and is reached from
+  // Settings, which is already a base route. Warming the page would spend
+  // bytes on a destination no menu offers.
+  it('never warms the press kits page, whatever the flags say', async () => {
+    vi.resetModules();
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_NOTES', 'true');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_EVENTS', 'true');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCHING', 'true');
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_PRESS_KITS', 'true');
+    const { buildPrefetchRoutes } = await import('./prefetch-routes');
+    expect(buildPrefetchRoutes({ hasCuratorProfile: true })).not.toContain(
+      '/dashboard/press-kits'
+    );
   });
 
   it('leaves a flagged-off route out — with the flag off it bounces or 404s', async () => {

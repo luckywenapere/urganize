@@ -55,7 +55,7 @@ const SPRING = '#7FD99A';
 // to change too, and that one is compared against the shared constants.
 const MAIN_LINE = 'AI Music Manager for artists, managers and labels.';
 const ACCENT = 'AI Music Manager';
-const SUB_LINE = 'Plan, organize and execute releases from one place.';
+const SUB_LINE = 'Plan, organize and execute rollouts from one place.';
 
 const font = (file) => readFileSync(join(WEB, 'assets', 'fonts', file));
 const logo = readFileSync(join(HOMEPAGE, 'public', 'images', 'urganize-logo.png'));

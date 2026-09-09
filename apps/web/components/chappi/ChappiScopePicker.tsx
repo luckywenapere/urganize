@@ -98,7 +98,7 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={scoped ? `Conversation scoped to ${scoped.title}` : 'Choose a release for this conversation'}
+        aria-label={scoped ? `Conversation scoped to ${scoped.title}` : 'Choose a rollout for this conversation'}
         className="motion-focus inline-flex max-w-full items-center gap-1.5 rounded-full bg-bg-elevated px-2 py-1.5 text-xs text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
       >
         {scoped ? (
@@ -118,7 +118,7 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
             scoped ? 'font-medium text-content-secondary' : ''
           }`}
         >
-          {scoped ? scoped.title : 'All releases'}
+          {scoped ? scoped.title : 'All rollouts'}
         </span>
         <ChevronDown
           className={`h-3 w-3 shrink-0 transition-transform ${open ? '' : 'rotate-180'}`}
@@ -129,7 +129,7 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
       {open ? (
         <div
           role="listbox"
-          aria-label="Scope this conversation to a release"
+          aria-label="Scope this conversation to a rollout"
           className="absolute bottom-full left-0 z-50 mb-2 max-h-72 w-64 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain rounded-xl border border-stroke-default bg-bg-surface py-1 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           <button
@@ -142,7 +142,7 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
             }`}
           >
             <Disc3 className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
-            All releases
+            All rollouts
           </button>
           {releases.map((release) => {
             const selected = release.id === scopedReleaseId;

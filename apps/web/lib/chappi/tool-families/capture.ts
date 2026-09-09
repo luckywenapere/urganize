@@ -63,7 +63,7 @@ export const CAPTURE_TOOLS: ChappiTool[] = [
     name: 'get_capture_page',
     kind: 'read',
     description:
-      "A release's fan capture page: what it says, whether it is live, how many emails it has collected, and what the conversion playbook says is still wrong with it.",
+      "A rollout's fan capture page: what it says, whether it is live, how many emails it has collected, and what the conversion playbook says is still wrong with it.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -82,7 +82,7 @@ export const CAPTURE_TOOLS: ChappiTool[] = [
       if (!page) {
         return {
           ok: true,
-          summary: 'No fan capture page on this release yet.',
+          summary: 'No fan capture page on this rollout yet.',
           data: { page: null },
         };
       }
@@ -122,7 +122,7 @@ export const CAPTURE_TOOLS: ChappiTool[] = [
     name: 'create_capture_page',
     kind: 'mutate',
     description:
-      "Start a fan capture page for a release. Safe to call twice — a release that already has one gets it back. It starts paused and needs a destination link before it can do anything.",
+      "Start a fan capture page for a rollout. Safe to call twice — a rollout that already has one gets it back. It starts paused and needs a destination link before it can do anything.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -183,7 +183,7 @@ export const CAPTURE_TOOLS: ChappiTool[] = [
       if (isFlagGateOff(current)) return fail(CAPTURE_OFF);
       if (!current.ok) return fail(apiError(current, 'Could not read the capture page.'));
       const page = (current.body as CaptureResponse).page;
-      if (!page) return fail('There is no capture page on this release yet — create one first.');
+      if (!page) return fail('There is no capture page on this rollout yet — create one first.');
 
       const draft: Record<string, unknown> = { ...toDraft(page) };
       for (const key of [

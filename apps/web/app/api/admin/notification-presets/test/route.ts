@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (category === 'releaseReminders') {
     const step = presets.releaseReminders.steps[0];
     if (!step) {
-      return NextResponse.json({ error: 'No release reminder steps configured.' }, { status: 400 });
+      return NextResponse.json({ error: 'No rollout reminder steps configured.' }, { status: 400 });
     }
     payload = {
       title: step.title,

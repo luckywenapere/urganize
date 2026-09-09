@@ -38,7 +38,7 @@ AI Music Manager for artists, managers and labels.
 ### Full description (4000 characters max)
 
 ```
-Urganize is an AI Music Manager for artists, managers and labels. It helps music teams plan releases, coordinate people, manage assets and metadata, track execution and keep every part of a rollout moving from one place.
+Urganize is an AI Music Manager for artists, managers and labels. It helps music teams plan rollouts, coordinate people, manage assets and metadata, track execution and keep every part moving from one place.
 
 PLAN THE ROLLOUT
 Every release starts with a real plan, not a blank board. Pick what you are putting out and Urganize lays out the whole rollout, sized to the format, with every activity dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
@@ -114,7 +114,7 @@ line of the description.
 ### Promotional text (170 characters max)
 
 ```
-AI Music Manager for artists, managers and labels. Plan, organize and execute releases from one place.
+AI Music Manager for artists, managers and labels. Plan, organize and execute rollouts from one place.
 ```
 
 101 characters. This is `SHORT_DESCRIPTION` from `positioning.ts` unchanged.

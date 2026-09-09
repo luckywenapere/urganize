@@ -164,7 +164,7 @@ export function formatReleaseContext(input: {
 
   sections.push(
     [
-      `Release: ${release.title}`,
+      `Rollout: ${release.title}`,
       `Artist: ${release.artistName || 'not set'}`,
       `Type: ${release.releaseType || 'single'}`,
       `Date: ${release.releaseDate || 'not set'} (${describeRunway(release.releaseDate ?? null, today)})`,
@@ -174,7 +174,7 @@ export function formatReleaseContext(input: {
   );
 
   if (release.description?.trim()) {
-    sections.push(`What this release is:\n${release.description.trim()}`);
+    sections.push(`What this rollout is:\n${release.description.trim()}`);
   }
 
   if (overdue.length) {

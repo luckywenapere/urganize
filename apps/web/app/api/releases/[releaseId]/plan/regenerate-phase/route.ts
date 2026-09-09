@@ -53,7 +53,7 @@ export async function POST(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const body = (await request.json().catch(() => null)) as { phase?: unknown } | null;
@@ -140,7 +140,7 @@ export async function POST(
     });
   } catch (error) {
     const failure = classifyPlannerFailure(error);
-    console.error('[plan] phase redraft failed for release', releaseId, failure, error);
+    console.error('[plan] phase redraft failed for rollout', releaseId, failure, error);
     return plannerFailureResponse(failure);
   }
 
@@ -152,7 +152,7 @@ export async function POST(
     Array.from(assignable.ids)
   );
   if (!validation.ok) {
-    console.error('[plan] phase redraft rejected for release', releaseId, validation.error);
+    console.error('[plan] phase redraft rejected for rollout', releaseId, validation.error);
     return NextResponse.json(
       { error: 'Invalid changes were suggested. No changes made.' },
       { status: 500 }

@@ -50,7 +50,7 @@ export function DirectoryEmptyState({
       <div className="rounded-xl border border-stroke-default p-6">
         <h3 className="text-base font-semibold text-content-primary">Nobody is listed yet</h3>
         <p className={`mt-2 ${line}`}>
-          The directory is how managers find people who have delivered the work a release needs.
+          The directory is how managers find people who have delivered the work a rollout needs.
           It fills up as people add themselves.
         </p>
         <button type="button" onClick={onListMe} className={`mt-4 ${nudge}`}>

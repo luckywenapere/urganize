@@ -20,12 +20,28 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.36.0",
+    version: "1.38.0",
     date: "September 9, 2026",
     highlights: [
       "Keep dragging the side menu's right edge and it collapses to just icons. Drag it back out to bring the words back.",
       "Your team name and artist sit beside the logo now, not under it.",
-      "The teammate and release counts are gone from the menu, so it looks the same open or collapsed.",
+      "The teammate and rollout counts are gone from the menu, so it looks the same open or collapsed.",
+    ],
+  },
+  {
+    version: "1.37.0",
+    date: "September 9, 2026",
+    highlights: [
+      "Releases are now called rollouts. Same thing, clearer name. You will see it everywhere in the app.",
+    ],
+  },
+  {
+    version: "1.36.0",
+    date: "September 9, 2026",
+    highlights: [
+      "Pitching has its own page now. Open it from the side menu, the top bar or the bar at the bottom of your phone to see every pitch you have sent and what the playlist owner said.",
+      "You can send a pitch from that page too. Pick the release, pick a playlist, send the song.",
+      "Press kits moved into Settings. Open Settings, then Profile, and they are there.",
     ],
   },
   {

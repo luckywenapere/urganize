@@ -126,8 +126,8 @@ function LegacyDashboard() {
           </h1>
           <p className="mt-1 text-sm text-content-secondary">
             {releases.length === 0
-              ? 'Create your first release to get started.'
-              : `${releases.length} active release${releases.length === 1 ? '' : 's'}`}
+              ? 'Create your first rollout to get started.'
+              : `${releases.length} active rollout${releases.length === 1 ? '' : 's'}`}
           </p>
         </div>
 

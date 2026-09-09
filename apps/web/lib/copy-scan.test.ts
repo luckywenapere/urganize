@@ -83,9 +83,9 @@ describe('readableCopy', () => {
   });
 
   it('collapses whitespace so a wrapped sentence matches as one line', () => {
-    const source = '<p>\n  Plan, organize and execute\n  releases from one place.\n</p>';
+    const source = '<p>\n  Plan, organize and execute\n  rollouts from one place.\n</p>';
     expect(readableCopy(source)).toContain(
-      'Plan, organize and execute releases from one place.',
+      'Plan, organize and execute rollouts from one place.',
     );
   });
 

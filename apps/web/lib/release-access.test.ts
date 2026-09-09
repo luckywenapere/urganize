@@ -34,7 +34,7 @@ const decide = (
 
 describe('RELEASE_NOT_FOUND_MESSAGE', () => {
   it("is the exact string every release route group answers with — and is NOT the flag-gate 'Not found.'", () => {
-    expect(RELEASE_NOT_FOUND_MESSAGE).toBe('Release not found.');
+    expect(RELEASE_NOT_FOUND_MESSAGE).toBe('Rollout not found.');
     expect(RELEASE_NOT_FOUND_MESSAGE).not.toBe('Not found.');
   });
 });

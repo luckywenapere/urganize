@@ -423,10 +423,10 @@ export async function reassignReleaseArtist(
     .maybeSingle();
 
   if (updateRelease.error) {
-    return { error: updateRelease.error.message || 'Could not move the release.' };
+    return { error: updateRelease.error.message || 'Could not move the rollout.' };
   }
   if (!updateRelease.data) {
-    return { error: 'Release not found.' };
+    return { error: 'Rollout not found.' };
   }
 
   // Best-effort, exactly as the rename path treats it: the sidecar is a second
@@ -523,13 +523,13 @@ export function describeArtistDeletionBlock(
 
   const { releases, scopedMembers } = blockers;
   if (releases > 0 && scopedMembers > 0) {
-    return `This artist has ${releases} ${releases === 1 ? 'release' : 'releases'} and ${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} who can only see them. Move the ${releases === 1 ? 'release' : 'releases'} and change that access first.`;
+    return `This artist has ${releases} ${releases === 1 ? 'rollout' : 'rollouts'} and ${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} who can only see them. Move ${releases === 1 ? 'it' : 'them'} and change that access first.`;
   }
   if (releases > 0) {
-    return `This artist has ${releases} ${releases === 1 ? 'release' : 'releases'}. Move ${releases === 1 ? 'it' : 'them'} to another artist first, or archive ${releases === 1 ? 'it' : 'them'}.`;
+    return `This artist has ${releases} ${releases === 1 ? 'rollout' : 'rollouts'}. Move ${releases === 1 ? 'it' : 'them'} to another artist first, or archive ${releases === 1 ? 'it' : 'them'}.`;
   }
   if (scopedMembers > 0) {
-    return `${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} can only see this artist. Change their access first, or they will start seeing every release.`;
+    return `${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} can only see this artist. Change their access first, or they will start seeing every rollout.`;
   }
   return null;
 }
@@ -557,7 +557,7 @@ export async function deleteWorkspaceArtist(
     // release was filed under this artist between our check and this delete.
     const code = String((error as { code?: string }).code || '');
     if (code === '23503') {
-      return { error: 'This artist has releases now. Move them first.' };
+      return { error: 'This artist has rollouts now. Move them first.' };
     }
     return { error: error.message || 'Could not remove this artist.' };
   }

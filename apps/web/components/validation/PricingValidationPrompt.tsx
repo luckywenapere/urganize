@@ -73,7 +73,7 @@ export function PricingValidationPrompt({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-2xl">
           <p className="saas-eyebrow">Pricing validation</p>
-          <h3 className="saas-title mt-2">{title || 'Would you pay monthly if Urganize solved the full release stack?'}</h3>
+          <h3 className="saas-title mt-2">{title || 'Would you pay monthly if Urganize solved the full rollout stack?'}</h3>
           <p className="saas-copy mt-2">{PRICING_VALIDATION_COPY.primaryPrompt}</p>
           <p className="mt-3 text-sm text-content-secondary">{helperText}</p>
         </div>

@@ -92,7 +92,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     const releaseId = access.task.release_id;
     if (!releaseId) {
-      return NextResponse.json({ error: 'This task has no release.' }, { status: 400 });
+      return NextResponse.json({ error: 'This task has no rollout.' }, { status: 400 });
     }
 
     let summary = buildTemplateOutcomeSummary(outcome, note);

@@ -52,7 +52,7 @@ describe('collaboratorLabel', () => {
 
 describe('releaseLabel', () => {
   it('defaults an untitled release rather than rendering a blank', () => {
-    expect(releaseLabel('  ')).toBe('your release');
+    expect(releaseLabel('  ')).toBe('your rollout');
     expect(releaseLabel('Midnight EP')).toBe('Midnight EP');
   });
 });
@@ -125,7 +125,7 @@ describe('buildCreditSubmissionPush', () => {
       notice({ releaseTitle: '', legalName: '', stageName: '' }),
       DEFAULT_NOTIFICATION_PRESETS.creditSubmissions.copy
     );
-    expect(push.title).toContain('your release');
+    expect(push.title).toContain('your rollout');
     expect(push.body).toContain('Someone');
   });
 

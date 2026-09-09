@@ -110,9 +110,11 @@ const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'tru
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 
 // The release-scoped press kit (EPK) was retired 2026-09-05 in favour of the
-// standing per-artist one, which is reached from the topbar and the side menu
-// rather than from a release. No pill here any more; NEXT_PUBLIC_FEATURE_EPK
-// now only decides whether an old /epk/[token] link still resolves.
+// standing per-artist one, which since 2026-09-09 is reached from Settings
+// alone (founder call — it left the topbar, the side menu and the mobile bar
+// that day). Either way not from a release: no pill here, and
+// NEXT_PUBLIC_FEATURE_EPK now only decides whether an old /epk/[token] link
+// still resolves.
 
 // Fan capture entry point (2026-08-14). On mobile this lives in the folded
 // "more" menu rather than the top tabs — see the 2026-08-16 mobile redesign
@@ -1154,7 +1156,7 @@ export function TasksPanel({
               </div>
             ) : null}
             <p className="text-sm text-content-secondary">
-              {scopedRelease ? 'No activities for this release yet.' : 'No activities yet.'}
+              {scopedRelease ? 'No activities for this rollout yet.' : 'No activities yet.'}
             </p>
             <button
               type="button"
@@ -1399,7 +1401,7 @@ export function TasksPanel({
                   // "More" was right while this was an overflow list. Since
                   // 2026-08-31 it holds every release surface, so it is the
                   // release menu and says so.
-                  aria-label="Release menu"
+                  aria-label="Rollout menu"
                   className={MOBILE_DOCK_TRIGGER_CLASS}
                 >
                   <Menu className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1562,7 +1564,7 @@ export function TasksPanel({
                 {toolMatches.length > 0 ? (
                   <>
                     {showSearchGroupHeadings ? (
-                      <p className={SEARCH_GROUP_HEADING_CLASS}>Release tools</p>
+                      <p className={SEARCH_GROUP_HEADING_CLASS}>Rollout tools</p>
                     ) : null}
                     <ul>
                       {toolMatches.map((action) => (

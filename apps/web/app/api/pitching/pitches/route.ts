@@ -19,8 +19,34 @@ import {
   detectPitchPlatform,
   isValidSongUrl,
 } from '@/lib/pitching';
+import { decideReleaseAccess } from '@/lib/release-access';
+import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
 
-/** Pitches already sent for one release, newest first. */
+/**
+ * Pitches this team has sent, newest first.
+ *
+ * TWO MODES, and `releaseId` is what picks between them:
+ *
+ *   - With it: one release's pitches, exactly as this route has always
+ *     behaved — visibility checked through ensureReleaseVisible, one query
+ *     filtered on that release. This is what the release scene calls.
+ *   - Without it: every release's, for the Pitching page (2026-09-09, founder:
+ *     "Playlist pitching should be accessible app wide"). Before that page
+ *     existed there was nowhere to ask this question from, which is why the
+ *     param used to be required.
+ *
+ * THE TEAM-WIDE READ IS FILTERED TWICE, and the second filter is the one that
+ * matters. Owner ids alone would hand an artist-scoped teammate every pitch
+ * their team ever sent, including ones for releases they are not allowed to
+ * see — `releaseOwnerIds` is a team boundary, not a per-release one. So the
+ * referenced releases are loaded and each row is put through the shared
+ * decideReleaseAccess, the same rule the events list uses for the same reason.
+ * Cloning that rule as SQL is how eleven route groups drifted apart.
+ *
+ * A pitch whose release was deleted (`release_id` null) survives the filter on
+ * the owner check alone: it is this team's own pitch, the curator may still be
+ * sitting on it, and hiding it would lose the answer. The page labels it.
+ */
 export async function GET(request: NextRequest) {
   if (!isPitchingFeatureEnabled()) return flagOffResponse();
 
@@ -28,17 +54,49 @@ export async function GET(request: NextRequest) {
   if ('error' in auth && auth.error) return auth.error;
 
   const releaseId = new URL(request.url).searchParams.get('releaseId') || '';
-  if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+
+  if (releaseId) {
+    const visible = await ensureReleaseVisible(auth.adminClient, releaseId, auth.user);
+    if ('error' in visible) return visible.error;
+
+    const { data, error } = await auth.adminClient
+      .from(PITCHES_TABLE)
+      .select(SENT_PITCH_COLUMNS)
+      .eq('release_id', releaseId)
+      .order('created_at', { ascending: false })
+      .limit(SENT_PITCH_LIST_LIMIT);
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message || 'Could not load pitches.' },
+        { status: 500 }
+      );
+    }
+
+    const rows = (data || []) as Array<Record<string, unknown>>;
+    const names = await loadCuratorNames(
+      auth.adminClient,
+      rows.map((row) => String(row.curator_user_id || ''))
+    );
+
+    return NextResponse.json({
+      pitches: rows.map((row) =>
+        toSentPitch(
+          row,
+          names.get(String(row.curator_user_id || '')) || 'Playlist owner',
+          visible.title || null
+        )
+      ),
+    });
   }
 
-  const visible = await ensureReleaseVisible(auth.adminClient, releaseId, auth.user);
-  if ('error' in visible) return visible.error;
+  const access = await loadWorkspaceAccessContext(auth.adminClient, auth.user as never);
+  const ownerIds = access.releaseOwnerIds.length ? access.releaseOwnerIds : [auth.user.id];
 
   const { data, error } = await auth.adminClient
     .from(PITCHES_TABLE)
     .select(SENT_PITCH_COLUMNS)
-    .eq('release_id', releaseId)
+    .in('owner_user_id', ownerIds)
     .order('created_at', { ascending: false })
     .limit(SENT_PITCH_LIST_LIMIT);
 
@@ -50,16 +108,73 @@ export async function GET(request: NextRequest) {
   }
 
   const rows = (data || []) as Array<Record<string, unknown>>;
+  const releases = await loadPitchReleases(
+    auth.adminClient,
+    rows.map((row) => String(row.release_id || ''))
+  );
+
+  const readable = rows.filter((row) => {
+    const rowReleaseId = String(row.release_id || '');
+    // A deleted release leaves nothing to check beyond the owner filter above.
+    if (!rowReleaseId) return true;
+    const release = releases.get(rowReleaseId);
+    // A release we cannot read back is one this caller should not be told
+    // about: fail closed, unlike the counts elsewhere in this app, because the
+    // cost here is showing somebody another artist's work rather than refusing
+    // an action they could retry.
+    if (!release) return false;
+    return (
+      decideReleaseAccess({
+        releaseOwnerId: release.ownerUserId,
+        releaseArtistId: release.artistId,
+        userId: auth.user.id,
+        access,
+        write: false,
+      }) === 'allow'
+    );
+  });
+
   const names = await loadCuratorNames(
     auth.adminClient,
-    rows.map((row) => String(row.curator_user_id || ''))
+    readable.map((row) => String(row.curator_user_id || ''))
   );
 
   return NextResponse.json({
-    pitches: rows.map((row) =>
-      toSentPitch(row, names.get(String(row.curator_user_id || '')) || 'Playlist owner')
+    pitches: readable.map((row) =>
+      toSentPitch(
+        row,
+        names.get(String(row.curator_user_id || '')) || 'Playlist owner',
+        releases.get(String(row.release_id || ''))?.title || null
+      )
     ),
+    // The list is capped, so say when it was cut rather than letting the page
+    // imply it is showing everything.
+    truncated: rows.length >= SENT_PITCH_LIST_LIMIT,
   });
+}
+
+/** The releases a set of pitches point at, for the access filter and the title. */
+async function loadPitchReleases(
+  adminClient: SupabaseClient,
+  releaseIds: string[]
+): Promise<Map<string, { ownerUserId: string; artistId: string; title: string }>> {
+  const found = new Map<string, { ownerUserId: string; artistId: string; title: string }>();
+  const ids = Array.from(new Set(releaseIds.filter(Boolean)));
+  if (!ids.length) return found;
+
+  const { data } = await adminClient
+    .from('releases')
+    .select('id,owner_user_id,artist_id,title')
+    .in('id', ids);
+
+  for (const row of (data || []) as Array<Record<string, unknown>>) {
+    found.set(String(row.id || ''), {
+      ownerUserId: String(row.owner_user_id || ''),
+      artistId: String(row.artist_id || ''),
+      title: String(row.title || ''),
+    });
+  }
+  return found;
 }
 
 /**
@@ -95,7 +210,7 @@ export async function POST(request: NextRequest) {
   const releaseId = typeof payload.releaseId === 'string' ? payload.releaseId : '';
   const playlistId = typeof payload.playlistId === 'string' ? payload.playlistId : '';
   if (!releaseId || !playlistId) {
-    return NextResponse.json({ error: 'Pick a release and a playlist.' }, { status: 400 });
+    return NextResponse.json({ error: 'Pick a rollout and a playlist.' }, { status: 400 });
   }
 
   const songTitle = typeof payload.songTitle === 'string' ? payload.songTitle.trim() : '';
@@ -162,7 +277,7 @@ export async function POST(request: NextRequest) {
   if ((waitingCount || 0) >= MAX_WAITING_PITCHES_PER_RELEASE) {
     return NextResponse.json(
       {
-        error: `This release already has ${MAX_WAITING_PITCHES_PER_RELEASE} pitches waiting. Wait for replies before sending more.`,
+        error: `This rollout already has ${MAX_WAITING_PITCHES_PER_RELEASE} pitches waiting. Wait for replies before sending more.`,
       },
       { status: 409 }
     );
@@ -193,7 +308,7 @@ export async function POST(request: NextRequest) {
     // 23505: the one-waiting-pitch-per-playlist index caught a duplicate.
     if (error.code === '23505') {
       return NextResponse.json(
-        { error: 'This playlist already has a pitch waiting for this release.' },
+        { error: 'This playlist already has a pitch waiting for this rollout.' },
         { status: 409 }
       );
     }
@@ -212,7 +327,10 @@ export async function POST(request: NextRequest) {
     {
       pitch: toSentPitch(
         data as Record<string, unknown>,
-        names.get(String(playlist.curator_user_id || '')) || 'Playlist owner'
+        names.get(String(playlist.curator_user_id || '')) || 'Playlist owner',
+        // So a pitch sent from the Pitching page lands in the right group
+        // without waiting for a refetch.
+        visible.title || null
       ),
     },
     { status: 201 }

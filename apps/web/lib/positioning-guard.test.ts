@@ -171,7 +171,7 @@ describe('positioning', () => {
     expect(PRODUCT_CATEGORY).toBe('AI Music Manager');
     expect(BRAND_LINE).toBe('Urganize, AI Music Manager');
     expect(CUSTOMER_LINE).toBe('AI Music Manager for artists, managers and labels');
-    expect(PROMISE).toBe('Plan, organize and execute releases from one place');
+    expect(PROMISE).toBe('Plan, organize and execute rollouts from one place');
     expect(URGANS_LINE).toBe('personal AI for music professionals');
   });
 

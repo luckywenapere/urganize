@@ -28,7 +28,7 @@ import {
 //
 // The body is exactly 'Not found.' on purpose. lib/chappi/tool-families/shared
 // .ts:isFlagGateOff matches that string to tell "the feature is off" apart
-// from the release access check's 'Release not found.', so the assistant can
+// from the release access check's 'Rollout not found.', so the assistant can
 // explain which one happened instead of reporting a missing release.
 const isMetadataFeatureEnabled = (): boolean =>
   process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
@@ -45,7 +45,7 @@ export async function GET(
   if ('error' in auth) return auth.error;
 
   const { releaseId } = await context.params;
-  if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+  if (!releaseId) return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
 
   const adminClient = createAdminClient(auth.supabaseUrl);
   // Team read (whole-workspace visibility): any member of the owner's
@@ -124,7 +124,7 @@ export async function PATCH(
   if ('error' in auth) return auth.error;
 
   const { releaseId } = await context.params;
-  if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+  if (!releaseId) return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
 
   const adminClient = createAdminClient(auth.supabaseUrl);
   const ownership = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);

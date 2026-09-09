@@ -21,7 +21,6 @@
  * be a dead end. */
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
-const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 
@@ -78,7 +77,7 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       key: 'catalog',
       label: 'Catalog',
       href: '/dashboard',
-      keywords: ['releases', 'home', 'all releases'],
+      keywords: ['rollouts', 'releases', 'home', 'all rollouts', 'all releases'],
       leavesRelease: true,
     },
     {
@@ -95,17 +94,6 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       label: 'Notes',
       href: '/dashboard/notes',
       keywords: ['note', 'idea', 'capture'],
-    });
-  }
-
-  if (PRESS_KITS_ENABLED) {
-    pages.push({
-      key: 'press-kits',
-      label: 'Press kits',
-      href: '/dashboard/press-kits',
-      // Nobody types "press kit" when they are hunting for a bio or a photo
-      // to send a journalist, so the words they DO type are what carry this.
-      keywords: ['epk', 'bio', 'biography', 'press', 'media kit', 'one sheet', 'photos'],
     });
   }
 
@@ -141,6 +129,29 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
     });
   }
 
+  // The team side of pitching: every pitch this team sent, and where a new one
+  // is sent from. The flag alone gates it — unlike the curator crossing below,
+  // which additionally needs the account to own playlists.
+  if (PITCHING_ENABLED) {
+    pages.push({
+      key: 'pitching',
+      label: 'Pitching',
+      href: '/dashboard/pitching',
+      // The platforms are here because a manager thinking about this thinks
+      // "get on a Spotify playlist" rather than "pitching".
+      keywords: [
+        'pitch',
+        'pitches',
+        'playlist',
+        'playlists',
+        'curator',
+        'spotify',
+        'apple music',
+        'audiomack',
+      ],
+    });
+  }
+
   // Both halves required: the feature has to be on AND this account has to
   // actually be a playlist owner. Everyone else has no such crossing.
   if (PITCHING_ENABLED && hasCuratorProfile === true) {
@@ -158,6 +169,12 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
     href: '/settings',
     // The sections Settings contains. Someone hunting for their card details
     // types "billing", and no page in this app is called that.
+    //
+    // The press-kit words are here for exactly that reason, since 2026-09-09:
+    // press kits left the menus (founder call) and are reached from a Settings
+    // row, so Settings is now the honest answer to "press kit" and "bio". This
+    // is Settings being findable by what it holds, not a press kits entry
+    // sneaking back in — the destination is /settings.
     keywords: [
       'account',
       'billing',
@@ -176,6 +193,13 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       'export',
       'password',
       'delete account',
+      'press kit',
+      'press kits',
+      'epk',
+      'bio',
+      'biography',
+      'media kit',
+      'one sheet',
     ],
   });
 

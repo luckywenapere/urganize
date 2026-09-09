@@ -30,15 +30,15 @@ export const BRAND_LINE = `Urganize, ${PRODUCT_CATEGORY}`;
 
 export const CUSTOMER_LINE = `${PRODUCT_CATEGORY} for ${AUDIENCE_LINE}`;
 
-export const PROMISE = 'Plan, organize and execute releases from one place';
+export const PROMISE = 'Plan, organize and execute rollouts from one place';
 
 export const ONE_LINER = `${CUSTOMER_LINE}.`;
 
 export const SHORT_DESCRIPTION = `${CUSTOMER_LINE}. ${PROMISE}.`;
 
 export const CANONICAL_DESCRIPTION =
-  'Urganize is an AI Music Manager for artists, managers and labels. It helps music teams plan releases, ' +
-  'coordinate people, manage assets and metadata, track execution and keep every part of a rollout moving ' +
+  'Urganize is an AI Music Manager for artists, managers and labels. It helps music teams plan rollouts, ' +
+  'coordinate people, manage assets and metadata, track execution and keep every part moving ' +
   'from one place.';
 
 export const URGANS_LINE = 'personal AI for music professionals';

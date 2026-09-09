@@ -6,12 +6,12 @@ and the checklist for switching it on.
 
 ## What it does
 
-Your releases, your activities, your notes and your team brief become something
+Your rollouts, your activities, your notes and your team brief become something
 any AI app you already pay for can read — and update — without you copying
 anything across. Ask Claude "what's overdue on the Midnight EP?" and it reads
 your actual workspace.
 
-It can add and change things: create a release, add an activity, tick one off,
+It can add and change things: create a rollout, add an activity, tick one off,
 write a note. It **cannot delete anything**, and it cannot see another team's
 work.
 
@@ -63,7 +63,7 @@ https://app.urganize.app/api/mcp
 ```
 
 Claude registers itself, sends you to Urganize to sign in, and shows a screen
-asking whether to let it read and update your releases. Say Allow and you land
+asking whether to let it read and update your rollouts. Say Allow and you land
 back in Claude, connected. Leave the OAuth client ID and secret fields empty —
 Claude registers itself and there is nothing to paste.
 
@@ -94,13 +94,13 @@ Settings → Account → Connected apps. One button per app. It takes effect on 
 next request that app makes — both its access and its refresh token die with the
 row, so it cannot quietly come back.
 
-That list is also the honest answer to "what has access to my releases?".
+That list is also the honest answer to "what has access to my rollouts?".
 
 ## What to say when someone asks about safety
 
 - It only ever acts as **you**, in your own workspace. One connection, one
   account, and no way for an app to ask to be treated as somebody else.
-- It cannot delete a release, an activity or a note. Deletions need a
+- It cannot delete a rollout, an activity or a note. Deletions need a
   confirmation step that only exists inside Urganize.
 - You can cut any app off at any time, and see when each one last called.
 - If your plan lapses, connected apps can still **read** — the same as the app
@@ -115,7 +115,7 @@ That list is also the honest answer to "what has access to my releases?".
 - **Registration is open**, which is what claude.ai requires. Registering grants
   nothing: a client id is not a credential, and nothing happens until a signed-in
   person approves it on the consent screen.
-- **Prompt injection widens.** Text living in your own workspace — a release
+- **Prompt injection widens.** Text living in your own workspace — a rollout
   title, a note — now reaches a third-party model that can call create and update
   tools. The same accepted posture UrgAns already has: everything those tools do
   is visible and undoable in the app. Worth restating because the model is one we

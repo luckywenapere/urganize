@@ -117,8 +117,8 @@ export function CaptureEditor({
             />
             <p className="text-sm text-content-secondary">
               {hasGraphic
-                ? 'Using this release’s cover art. Change the artwork to change the page.'
-                : 'No artwork on this release yet — the page will show text only.'}
+                ? 'Using this rollout’s cover art. Change the artwork to change the page.'
+                : 'No artwork on this rollout yet — the page will show text only.'}
             </p>
           </div>
           <Hint>{FIELD_GUIDANCE.graphic}</Hint>

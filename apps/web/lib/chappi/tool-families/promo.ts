@@ -19,7 +19,7 @@ import {
 } from './shared';
 
 const PITCHING_OFF = "Playlist pitching isn't enabled yet.";
-const RECAP_OFF = "Release recaps aren't enabled yet.";
+const RECAP_OFF = "Rollout recaps aren't enabled yet.";
 
 /** Bound the browse payload — the route returns up to 200 playlists. */
 const MAX_LISTED_PLAYLISTS = 30;
@@ -76,20 +76,29 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'list_pitches',
     kind: 'read',
-    description: "See the pitches already sent for a release and how curators answered.",
+    description:
+      'See the pitches already sent and how curators answered. Pass a releaseId for one rollout, or leave it out for every rollout this team has pitched.',
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
-      required: ['releaseId'],
     },
     execute: async (ctx, args) => {
+      // TWO BUGS LIVED HERE, both fixed 2026-09-09 and both silent:
+      //
+      //   1. The query param was `?release=`, and the route reads `releaseId`,
+      //      so this tool answered 400 "Release id is required." on every
+      //      single call it has ever made.
+      //   2. It read `pitch.curatorReply`, but the payload's field is `reply`
+      //      (see toSentPitch). So the curator's answer — the one thing worth
+      //      asking this tool for — would have come back null even once the
+      //      request started working.
+      //
+      // releaseId is optional now, matching the route's own team-wide mode
+      // (added with the Pitching page): "what have we pitched" is a question
+      // the model could not previously answer at all.
       const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return fail('releaseId is required.');
-      const res = await callInternalApi(
-        ctx,
-        `/api/pitching/pitches?release=${encodeURIComponent(releaseId)}`,
-        { method: 'GET' }
-      );
+      const query = releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : '';
+      const res = await callInternalApi(ctx, `/api/pitching/pitches${query}`, { method: 'GET' });
       if (isFlagGateOff(res)) return fail(PITCHING_OFF);
       if (!res.ok) return fail(apiError(res, 'Could not load the pitches.'));
 
@@ -98,15 +107,17 @@ export const PROMO_TOOLS: ChappiTool[] = [
         : [];
       const data = pitches.map((pitch) => ({
         id: String(pitch.id ?? ''),
+        release: (pitch.releaseTitle ?? null) as string | null,
         playlist: String(pitch.playlistName ?? ''),
         song: String(pitch.songTitle ?? ''),
         status: String(pitch.status ?? ''),
-        reply: (pitch.curatorReply ?? null) as string | null,
+        reply: (pitch.reply ?? null) as string | null,
       }));
       const added = data.filter((pitch) => pitch.status === 'added').length;
+      const scope = releaseId ? 'for this release' : 'across every release';
       return {
         ok: true,
-        summary: `${data.length} pitch(es) sent, ${added} added to a playlist.`,
+        summary: `${data.length} pitch(es) sent ${scope}, ${added} added to a playlist.`,
         data,
       };
     },
@@ -115,7 +126,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
     name: 'pitch_song',
     kind: 'mutate',
     description:
-      "Pitch a song from a release to a curator's playlist. Requires the user to approve a confirmation card — calling this only proposes it, and nothing reaches the curator until they approve.",
+      "Pitch a song from a rollout to a curator's playlist. Requires the user to approve a confirmation card — calling this only proposes it, and nothing reaches the curator until they approve.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -198,7 +209,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'get_recap',
     kind: 'read',
-    description: "Check whether a finished release has a recap card, and the numbers behind it.",
+    description: "Check whether a finished rollout has a recap card, and the numbers behind it.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -214,7 +225,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
       if (!res.ok) return fail(apiError(res, 'Could not check the recap.'));
       return {
         ok: true,
-        summary: res.body.recap ? 'This release has a recap card.' : 'No recap card yet.',
+        summary: res.body.recap ? 'This rollout has a recap card.' : 'No recap card yet.',
         data: { hasRecap: Boolean(res.body.recap), stats: res.body.stats ?? null },
       };
     },
@@ -223,14 +234,14 @@ export const PROMO_TOOLS: ChappiTool[] = [
     name: 'generate_recap',
     kind: 'mutate',
     description:
-      "Build the shareable recap card for a finished release. Only works once the release date has passed or every activity is done. Ask for the highlight in conversation first — it's optional.",
+      "Build the shareable recap card for a finished rollout. Only works once the release date has passed or every activity is done. Ask for the highlight in conversation first — it's optional.",
     inputSchema: {
       type: 'object',
       properties: {
         releaseId: { type: 'string' },
         highlight: {
           type: 'string',
-          description: 'One thing worth remembering about the release, in the user\'s own words.',
+          description: 'One thing worth remembering about the rollout, in the user\'s own words.',
         },
       },
       required: ['releaseId'],
@@ -261,7 +272,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
     name: 'delete_recap',
     kind: 'mutate',
     description:
-      'Delete a release recap card. Requires the user to approve a confirmation card — calling this only proposes it.',
+      'Delete a rollout recap card. Requires the user to approve a confirmation card — calling this only proposes it.',
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },

@@ -57,7 +57,7 @@ async function removeUserStorageObjects(supabaseAdmin: SupabaseClient, userId: s
         .from('task_attachments')
         .select('storage_path')
         .in('task_id', taskIds);
-      logQueryError('release task attachments', releaseAttachmentsResult.error);
+      logQueryError('rollout task attachments', releaseAttachmentsResult.error);
       for (const row of releaseAttachmentsResult.data ?? []) {
         collectPath(TASK_ATTACHMENTS_BUCKET, row.storage_path);
       }

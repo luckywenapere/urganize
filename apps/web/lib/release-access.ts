@@ -28,7 +28,7 @@
  *   reads that exact body as "the feature flag is off" and would tell the
  *   user the feature is unavailable instead of the release being missing.
  */
-export const RELEASE_NOT_FOUND_MESSAGE = 'Release not found.';
+export const RELEASE_NOT_FOUND_MESSAGE = 'Rollout not found.';
 
 export type ReleaseAccessDecision = 'allow' | 'not_found' | 'read_only';
 

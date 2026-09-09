@@ -182,7 +182,7 @@ export function NoteEditor({
           <button
             type="button"
             onClick={onMakePlan}
-            title="Turn this note into a release plan"
+            title="Turn this note into a rollout plan"
             className="motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:border-brand/50 hover:bg-bg-hover"
           >
             <Sparkles className="h-3.5 w-3.5 text-brand" aria-hidden="true" />

@@ -134,7 +134,7 @@ export function buildFounderBillingAlertEmail(
     ['Owner', owner],
     ['Contact', ownerEmail],
     ['Days since signup', formatCount(context.daysSinceSignup)],
-    ['Releases in trial', formatCount(context.releasesDuringTrial)],
+    ['Rollouts in trial', formatCount(context.releasesDuringTrial)],
     ['Tasks in trial', formatCount(context.tasksDuringTrial)],
   ];
 

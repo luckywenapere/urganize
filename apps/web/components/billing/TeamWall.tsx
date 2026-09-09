@@ -88,7 +88,7 @@ const WALL_TIERS: readonly PricingTierId[] = PRICING_TIER_ORDER.filter(
 const DEFAULT_TIER: PricingTierId = 'manager';
 
 const VALUE_LINES = [
-  'Every release, task and file exactly where you left it.',
+  'Every rollout, task and file exactly where you left it.',
   'Your whole team, on the same plan.',
   'Cancel whenever you want, from settings.',
 ];
@@ -440,14 +440,14 @@ export function TeamWall() {
               // Someone who arrived here from a ceiling already has access, so
               // the reassurance below would be answering a question they did
               // not ask.
-              'Pick the plan that fits what your team is doing now. Your releases carry over untouched.'
+              'Pick the plan that fits what your team is doing now. Your rollouts carry over untouched.'
             ) : isReadOnlyTeam ? (
               // They can already see everything, so the reassurance is about
               // what they cannot do rather than what they might have lost.
               'Your team can still see everything. Pay again to start making changes.'
             ) : (
               <>
-                Your releases, tasks and files are safe and waiting.
+                Your rollouts, tasks and files are safe and waiting.
                 {team?.teamName ? ` Nothing on ${team.teamName} has been removed.` : ''}
               </>
             )}

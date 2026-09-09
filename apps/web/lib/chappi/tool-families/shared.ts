@@ -149,7 +149,7 @@ export async function callInternalApi(
 /**
  * True when a route 404'd because ITS FEATURE FLAG is off, as opposed to the
  * thing not existing. A flag gate answers with a bare 'Not found', while
- * ownership misses say what was missing ('Release not found.', 'Show not
+ * ownership misses say what was missing ('Rollout not found.', 'Show not
  * found.', 'Note not found.') — so this stays narrow enough that a genuine
  * ownership 404 still reaches the model intact.
  *

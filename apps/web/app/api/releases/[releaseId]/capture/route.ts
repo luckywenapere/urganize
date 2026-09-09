@@ -45,7 +45,7 @@ export async function GET(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -118,7 +118,7 @@ export async function POST(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -205,7 +205,7 @@ export async function PATCH(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const draft = normalizeCaptureDraft(await request.json().catch(() => ({})));
@@ -245,7 +245,7 @@ export async function PATCH(
 
   if (!updated) {
     return NextResponse.json(
-      { error: 'No capture page exists yet for this release.' },
+      { error: 'No capture page exists yet for this rollout.' },
       { status: 404 }
     );
   }
@@ -266,7 +266,7 @@ export async function DELETE(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);
