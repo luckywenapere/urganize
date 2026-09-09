@@ -20,7 +20,7 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.38.0",
+    version: "1.39.0",
     date: "September 9, 2026",
     highlights: [
       "New prices, and every plan is now paid once a year. Solo is ₦5,000, Manager is ₦22,000 and Label is ₦50,000.",
@@ -28,6 +28,15 @@ export const changelog: Release[] = [
       "Already paying? Your price stays exactly where it is. Ask us if you want to move to a new one.",
       "UrgAns suggests a few things to ask it when you open it, so there is somewhere to start.",
       "Asking UrgAns to add an activity works now. It did not know that word before.",
+    ],
+  },
+  {
+    version: "1.38.0",
+    date: "September 9, 2026",
+    highlights: [
+      "Keep dragging the side menu's right edge and it collapses to just icons. Drag it back out to bring the words back.",
+      "Your team name and artist sit beside the logo now, not under it.",
+      "The teammate and rollout counts are gone from the menu, so it looks the same open or collapsed.",
     ],
   },
   {
