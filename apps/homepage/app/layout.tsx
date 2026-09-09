@@ -23,6 +23,11 @@ const LEGAL_NAME = "The Urganization Ltd";
 // category label, and "A&R software" named an audience the brief replaced
 // with artists, managers and labels. "artist manager software" stays, since
 // managers are the middle of the new audience list rather than gone from it.
+//
+// THE TWO "release" TERMS SURVIVED THE 2026-09-09 rollout rename ON PURPOSE.
+// Every string a person reads now says rollout, but these are not read —
+// they are what somebody types into a search box, and nobody is searching
+// for a word we coined last week. Revisit once the term has an audience.
 const LANDING_KEYWORDS = [
   "AI music manager",
   "music manager app",

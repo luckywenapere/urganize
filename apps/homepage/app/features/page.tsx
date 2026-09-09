@@ -13,7 +13,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Features",
   description:
-    `What your ${PRODUCT_CATEGORY} does: a rollout plan for every release, activities your team owns and a press kit you send as one link. Plus UrgAns.`,
+    `What your ${PRODUCT_CATEGORY} does: a plan for every rollout, activities your team owns and a press kit you send as one link. Plus UrgAns.`,
   path: "/features",
 });
 
@@ -39,7 +39,7 @@ const features = [
     // 64 activities / 11 weeks, EP 90 / 16, album 113 / 21. The screenshot
     // below shows the EP one, so the copy names all three rather than
     // describing a single next to a 90-activity image.
-    body: "Create a release and Urganize lays out the whole rollout, written by real managers and sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Edit or delete any activity.",
+    body: "Create a rollout and Urganize lays out the whole plan, written by real managers and sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Edit or delete any activity.",
     points: [
       "Singles, EPs and albums each get their own playbook",
       "Every activity dated around your release day",
@@ -56,7 +56,7 @@ const features = [
     image: {
       src: "/images/product/workspace-tasks.png",
       darkSrc: "/images/product/workspace-tasks-dark.png",
-      alt: "A release open in Urganize: the Motion bar at 7 of 90, the week's activities each with an owner and a due date, and the UrgAns assistant open alongside asking what you want to get done today.",
+      alt: "A rollout open in Urganize: the Motion bar at 7 of 90, the week's activities each with an owner and a due date, and the UrgAns assistant open alongside asking what you want to get done today.",
     },
   },
 ] as const;
@@ -73,22 +73,22 @@ const compactFeatures = [
   {
     kicker: "Press kit",
     title: "One link, ready to send.",
-    body: "Urganize builds your artist a press kit from the work you already put in, tells you when a new release is missing from it, and you can take it down anytime.",
+    body: "Urganize builds your artist a press kit from the work you already put in, tells you when a new rollout is missing from it, and you can take it down anytime.",
   },
   {
     kicker: "Assistant",
     title: "UrgAns handles the small stuff.",
-    body: "Tell UrgAns, the personal AI for music professionals inside Urganize, what you need. Create a release, add an activity, mark something done. Type it and it happens.",
+    body: "Tell UrgAns, the personal AI for music professionals inside Urganize, what you need. Create a rollout, add an activity, mark something done. Type it and it happens.",
   },
   {
     kicker: "Milestones",
     title: "The moments that matter, on the timeline.",
-    body: "Listening party, video shoot, release day. Milestones sit inside the release plan as dated events the whole team sees coming.",
+    body: "Listening party, video shoot, release day. Milestones sit inside the rollout plan as dated events the whole team sees coming.",
   },
   {
     kicker: "Visibility",
-    title: "Know where every release stands.",
-    body: "One list shows every release you have going: progress, what's overdue and what's due this week. No meeting needed.",
+    title: "Know where every rollout stands.",
+    body: "One list shows every rollout you have going: progress, what's overdue and what's due this week. No meeting needed.",
   },
 ] as const;
 
@@ -111,7 +111,7 @@ export default function FeaturesPage() {
               Features
             </p>
             <h1 className="mt-8 text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem]">
-              Everything a release needs.{" "}
+              Everything a rollout needs.{" "}
               <span className="italic text-[var(--marketing-accent)]">
                 Nothing it doesn&apos;t.
               </span>
@@ -123,7 +123,7 @@ export default function FeaturesPage() {
                 product's own promise, so it is the sanctioned phrasing now. */}
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
               Urganize runs the plan, the work and the status for every
-              release from one place.
+              rollout from one place.
             </p>
             {/* CTA moved into the hero (2026-08-05, URG-218): the page
                 previously had no ask until the very bottom, ~7 screens
@@ -213,7 +213,7 @@ export default function FeaturesPage() {
                 Everything else
               </p>
               <h2 className={`mt-5 max-w-[40rem] ${headlineClass}`}>
-                The rest of what a release gets.
+                The rest of what a rollout gets.
               </h2>
 
               <div className="mt-10 divide-y divide-[color:var(--marketing-border)]">
@@ -240,7 +240,7 @@ export default function FeaturesPage() {
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
               <h2 className={headlineClass}>
-                Run your next release with a system.
+                Run your next rollout with a system.
               </h2>
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="features_cta" size="lg" className="w-full sm:w-auto" />

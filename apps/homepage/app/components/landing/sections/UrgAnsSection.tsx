@@ -41,12 +41,12 @@ export function UrgAnsSection() {
             </h2>
             <p className="mt-5 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
               UrgAns is the assistant inside Urganize. Say &ldquo;create a
-              release for Tolu&apos;s EP on 24 October&rdquo; or &ldquo;mark
+              rollout for Tolu&apos;s EP on 24 October&rdquo; or &ldquo;mark
               the artwork done&rdquo; and it does it. It asks before anything
               that cannot be undone.
             </p>
             <p className="mt-4 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-              Use Claude or ChatGPT? Connect it and ask about your releases
+              Use Claude or ChatGPT? Connect it and ask about your rollouts
               there too.
             </p>
           </div>
@@ -54,7 +54,7 @@ export function UrgAnsSection() {
           <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
             <ThemedProductShot
               {...PRODUCT_SHOTS.urgansConfirmation}
-              alt="A conversation with UrgAns in Urganize. Asked to mark an activity done, the assistant did it. Asked to delete a release, it stops and asks for approval before doing anything."
+              alt="A conversation with UrgAns in Urganize. Asked to mark an activity done, the assistant did it. Asked to delete a rollout, it stops and asks for approval before doing anything."
               sizes="(min-width: 1024px) 560px, 100vw"
             />
           </div>

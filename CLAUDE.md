@@ -13040,7 +13040,14 @@ Three mechanisms hold it:
 - **UrgAns is told the word, in `URGANS_COPY_RULES` rather than in `ROLE`.** That constant is already exempted from the positioning guard by identity — the `bannedCopyInstruction()` precedent — and a rule that names a banned word has to live somewhere exempt or the instruction enforcing it fails the guard enforcing it. It says: say rollout, never release, when you mean that object; the tools stay `*_release`; "release date" and "release day" stay as they are. The typed keyword router (`intent-router.ts`) ACCEPTS "rollout" alongside "release" rather than replacing it — someone who learned the old word is not stranded — and the test asserts both route the same.
 - **The changelog voice** uses rollout from v1.37.0 forward; history is not rewritten.
 
-`packages/pricing` moved with the app ("3 rollouts at a time"), which the marketing site also reads — so `/pricing` shows the new word one PR ahead of the rest of `apps/homepage`, whose copy sweep is the next PR and earns no version (the app-only scope rule).
+`packages/pricing` moved with the app ("3 rollouts at a time"), which the marketing site also reads — so `/pricing` showed the new word one PR ahead of the rest of `apps/homepage`.
+
+**The marketing site followed the same day, in its own PR and with no version bump** (the app-only scope rule). Every page speaks the new word; four things deliberately do not:
+
+- **`LANDING_KEYWORDS` keeps "music release planning" and "release rollout plan".** Those are not read, they are typed into a search box, and nobody searches for a word we coined last week. Revisit once the term has an audience — the reasoning is written beside the constant so it is not "fixed" by the next sweep.
+- **Verbatim testimonials.** Three customer quotes still say "release" and stay that way; a quote is not ours to edit. The `before`/`them` strings beside them ARE our prose and moved — and one of them, Antoine's, is documented as byte-identical between `content/testimonials.ts` and `/why-urganize`. **The rename broke that mirror and it had to be restored**; check both when either changes.
+- **`/for-curators`, `/privacy`, `/terms`, `/subprocessors`.** Curators are not our users and legal copy is not marketing copy.
+- **"Release fast without releasing messy."** (`/for-ai-artists`). Both are the VERB. The plan called for rewriting it to avoid a double meaning, and that was written when the OBJECT was also a release — with the object renamed, the pun is *less* ambiguous, not more, so it stays.
 
 **THE FOUNDER-LOCKED POSITIONING MOVED TOO, and it could not be deferred to that next PR.** Asked whether the rename should reach `lib/positioning.ts`, the founder answered "rename them too", so `PROMISE` is now *"Plan, organize and execute rollouts from one place"*. Three consequences worth knowing:
 

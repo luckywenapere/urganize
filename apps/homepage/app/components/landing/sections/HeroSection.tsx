@@ -63,7 +63,7 @@ export function HeroSection() {
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
             {PROMISE}. Urganize lays out the full rollout, you put a name on
-            every activity, and your team sees where each release stands.
+            every activity, and your team sees where each rollout stands.
           </p>
         </div>
 

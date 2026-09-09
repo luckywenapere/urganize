@@ -23,27 +23,27 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 const STEPS = [
   {
     kicker: "01",
-    title: "Create the release. Get the plan.",
+    title: "Create the rollout. Get the plan.",
     body:
-      "Pick single, EP or album and answer seven quick questions. Urganize drafts the whole rollout from a playbook written by real managers and UrgAns tailors it to your release. A single gets 64 activities over 11 weeks. Approve it and the plan is live.",
+      "Pick single, EP or album and answer seven quick questions. Urganize drafts the whole rollout from a playbook written by real managers and UrgAns tailors it to your rollout. A single gets 64 activities over 11 weeks. Approve it and the plan is live.",
     shot: PRODUCT_SHOTS.scopedRelease,
-    alt: "A release open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
+    alt: "A rollout open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
   },
   {
     kicker: "02",
     title: "Put a name on every activity.",
     body:
-      "Assign it and they get an email with the release, the due date and a button that opens it. Activities unlock in order, so the next step is always clear.",
+      "Assign it and they get an email with the rollout, the due date and a button that opens it. Activities unlock in order, so the next step is always clear.",
     shot: PRODUCT_SHOTS.activityDetail,
     alt: "An activity opened in Urganize, showing who it is assigned to, its due date and its place in the plan.",
   },
   {
     kicker: "03",
-    title: "See where every release stands.",
+    title: "See where every rollout stands.",
     body:
-      "Open the catalog and see what is done, what is blocked and what is due this week, for every artist at once. Open a release and see the whole rollout on a timeline, week by week.",
+      "Open the catalog and see what is done, what is blocked and what is due this week, for every artist at once. Open one and see the whole rollout on a timeline, week by week.",
     shot: PRODUCT_SHOTS.timeline,
-    alt: "The Timeline view of a release in Urganize: every activity on a week axis with today marked.",
+    alt: "The Timeline view of a rollout in Urganize: every activity on a week axis with today marked.",
   },
 ] as const;
 
@@ -56,7 +56,7 @@ export function StorySection() {
       <ScrollReveal>
         <div className="mx-auto max-w-[52rem] text-center">
           <h2 className={centeredHeadlineClass}>
-            Releases run on chat threads and memory.
+            Rollouts run on chat threads and memory.
           </h2>
         </div>
       </ScrollReveal>

@@ -19,7 +19,7 @@ import { WHATSAPP_COMMUNITY_URL } from "@/lib/community";
 export const metadata: Metadata = buildPageMetadata({
   title: "Community",
   description:
-    `Join the Urganize community, a group chat for people running releases on the ${CUSTOMER_LINE}.`,
+    `Join the Urganize community, a group chat for people running rollouts on the ${CUSTOMER_LINE}.`,
   path: "/community",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For managers / For labels). The page stays public
@@ -42,7 +42,7 @@ export default function CommunityPage() {
           </h1>
           <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
             A group chat for artist managers and small labels running
-            releases. Trade notes, ask questions, and see how other teams
+            rollouts. Trade notes, ask questions, and see how other teams
             handle the same mess Urganize fixes.
           </p>
 
@@ -63,7 +63,7 @@ export default function CommunityPage() {
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
               Managers and small teams running more than one
-              artist&apos;s releases. No pitch and no spam. Just managers
+              artist&apos;s rollouts. No pitch and no spam. Just managers
               comparing notes on real rollouts.
             </p>
           </section>
