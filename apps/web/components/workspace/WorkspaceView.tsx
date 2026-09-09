@@ -21,6 +21,10 @@ import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
+import { useCatalogTourAutoStart } from '@/components/tours/useCatalogTourAutoStart';
+import { markTourSeen, ROLLOUT_TOUR_STEPS } from '@/lib/tours';
+import { useTourStore } from '@/stores/useTourStore';
+import { TourOfferCard } from '@/components/tours/TourOfferCard';
 import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { TestReleaseBanner } from './TestReleaseBanner';
 import { PostPlanKitPrompt } from '@/components/press-kits/PostPlanKitPrompt';
@@ -72,6 +76,7 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // until a plan is approved. Supersedes the immediate-apply tailor-plan feature,
 // which mutated real task rows the moment the model answered.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
+const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const DIRECTORY_REQUESTS_ENABLED =
@@ -212,6 +217,11 @@ export function WorkspaceView() {
   // null = dialog closed. Only ever set for the SCOPED release, and only when
   // it carries the test marker and the viewer owns it (the banner's own gate).
   const [kitPromptFor, setKitPromptFor] = useState<string | null>(null);
+  // Tour B is OFFERED after a plan is approved, never auto-run. Held in
+  // component state rather than the tour store: this is a card in the banner
+  // slot, not a running tour, and the store's `pendingReplay` means something
+  // different (a replay asked for from another page).
+  const [rolloutTourOfferFor, setRolloutTourOfferFor] = useState<string | null>(null);
   const [testReleaseToDelete, setTestReleaseToDelete] = useState<Pick<
     Release,
     'id' | 'title'
@@ -582,6 +592,23 @@ export function WorkspaceView() {
     if (!scopedReleaseId) return taskList;
     return taskList.filter((task) => task.releaseId === scopedReleaseId);
   }, [scopedReleaseId, taskList]);
+
+  // Tour A. Mounted here rather than in AppShell because it needs the scoped
+  // rollout, its activity count and the release list to build the contextual
+  // last step — and because being here IS "the user reached the catalog": the
+  // post-auth landing is UrgAns when its flag is on, so a first-run user
+  // arrives at the catalog by tapping rather than by signing in. It sits below
+  // `scopedTasks` because it reads it.
+  const startTour = useTourStore((state) => state.start);
+  useCatalogTourAutoStart({
+    enabled: TOURS_ENABLED,
+    plannerEnabled: PLANNER_ENABLED,
+    releasesLoaded: !isInitialLoading,
+    releaseCount: releases.length,
+    scopedReleaseId,
+    scopedTaskCount: scopedTasks.length,
+    canCreate: true,
+  });
 
   // The jobs on this release nobody is on yet (the directory's role gaps,
   // 2026-09-05). Owner-only, like the other release-row affordances here:
@@ -967,6 +994,7 @@ export function WorkspaceView() {
           // one is worth mentioning. The prompt decides for itself whether
           // there is anything to say and renders nothing when there is not.
           setKitPromptFor(scopedReleaseSlim?.id ?? null);
+          if (TOURS_ENABLED) setRolloutTourOfferFor(scopedReleaseSlim?.id ?? null);
         }}
         onStartPlanIntake={() => openPlanIntake()}
       />
@@ -977,13 +1005,29 @@ export function WorkspaceView() {
   // template release, has not been built yet (URG-230). The date card above
   // is the honest version of the same moment, and stacking both would put
   // two banners over one empty list.
+  const tourOfferBanner =
+    TOURS_ENABLED && rolloutTourOfferFor && rolloutTourOfferFor === scopedReleaseSlim?.id ? (
+      <TourOfferCard
+        onStart={() => {
+          setRolloutTourOfferFor(null);
+          markTourSeen(user?.id ?? '', 'rollout');
+          startTour('rollout', ROLLOUT_TOUR_STEPS);
+        }}
+        onDismiss={() => {
+          setRolloutTourOfferFor(null);
+          markTourSeen(user?.id ?? '', 'rollout');
+        }}
+      />
+    ) : null;
+
   const newReleaseGuideBanner =
-    showNewReleaseGuide && !setReleaseDateBanner && !planBanner ? (
+    tourOfferBanner ??
+    (showNewReleaseGuide && !setReleaseDateBanner && !planBanner ? (
       <NewReleaseGuide
         onDismiss={() => setShowNewReleaseGuide(false)}
         releaseType={scopedReleaseSlim?.releaseType}
       />
-    ) : null;
+    ) : null);
 
   const handleSelect = (releaseId: string) => {
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;

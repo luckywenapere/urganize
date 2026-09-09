@@ -192,6 +192,14 @@ const ADMIN_ITEM: NavItem = {
   help: "nav.admin",
 };
 
+/** The three nav rows a guided tour points at (lib/tours.ts). Keyed by href so
+ *  it stays in step with where the row actually goes. */
+const TOUR_ANCHOR_BY_HREF: Record<string, string | undefined> = {
+  "/dashboard": "nav-catalog",
+  "/dashboard/urgans": "nav-urgans",
+  "/settings": "nav-settings",
+};
+
 const SETTINGS_ITEM: NavItem = {
   href: "/settings",
   label: "Settings",
@@ -1133,6 +1141,11 @@ function WorkspaceNavList({
         key={href}
         href={href}
         onClick={onNavigate}
+        // Guided-tour anchor, derived from the href rather than added as a
+        // field on every NavItem: three rows need one and the mapping cannot
+        // drift from the destination this way. Inert without the flag — it is
+        // an attribute nothing reads until TourOverlay looks for it.
+        data-tour={TOUR_ANCHOR_BY_HREF[href]}
         aria-current={active ? "page" : undefined}
         title={collapsed ? collapsedLabel : undefined}
         {...helpHandlers}

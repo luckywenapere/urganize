@@ -54,18 +54,23 @@ function NavTab({
   Icon,
   isActive,
   onClick,
+  dataTour,
 }: {
   href: string;
   label: string;
   Icon: TabIcon;
   isActive: boolean;
   onClick?: () => void;
+  /** Guided-tour anchor (lib/tours.ts). Inert without the flag: it is an
+   *  attribute nothing reads until TourOverlay looks for it. */
+  dataTour?: string;
 }) {
   return (
     <li className="flex-1">
       <Link
         href={href}
         onClick={onClick}
+        data-tour={dataTour}
         aria-current={isActive ? 'page' : undefined}
         className={tabClass(isActive)}
       >
@@ -272,6 +277,7 @@ export function MobileNavBar() {
           <NavTab
             href="/dashboard"
             label="Home"
+            dataTour="nav-catalog"
             Icon={CatalogIcon}
             isActive={isHome}
             onClick={handleHomeClick}
@@ -281,6 +287,7 @@ export function MobileNavBar() {
             <NavTab
               href="/dashboard/urgans"
               label="UrgAns"
+              dataTour="nav-urgans"
               Icon={ChappiIcon}
               isActive={isUrgAns}
               onClick={handleUrgAnsClick}

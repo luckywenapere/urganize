@@ -1,16 +1,24 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { openExternalUrl } from '@/lib/external-link';
-import { CommunityIcon, ContactIcon, DocsIcon, ReportIcon } from '@/components/app/BrandIcons';
+import { CommunityIcon, ContactIcon, DocsIcon, ReportIcon, TourIcon } from '@/components/app/BrandIcons';
 import { useReportIssueStore } from '@/stores/useReportIssueStore';
+import { useReleaseStore } from '@/stores/useReleaseStore';
+import { useTourStore } from '@/stores/useTourStore';
+import { ROLLOUT_TOUR_STEPS } from '@/lib/tours';
 
 // In-app issue reporting. The dialog is mounted once by AppShell and opened
 // through the store — this menu is one of its two entry points, the other
 // being Settings → Account (which is what makes it reachable on a phone, since
 // this launcher is `hidden md:block`).
 const REPORT_ISSUE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_REPORT_ISSUE === 'true';
+
+// Replay for the guided tours. This is the `md+` entry point; Settings →
+// Account is the other one, and is what makes replay reachable on a phone
+// (this launcher is `hidden md:block`).
+const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
 
 // The keyboard-shortcuts panel (and its "?" hotkey + menu item) was removed
 // 2026-07-23 (founder call) — the menu is Docs / Contact plus the
@@ -62,6 +70,10 @@ export function HelpMenu() {
   const [isOpen, setIsOpen] = useState(false);
 
   const openReportIssue = useReportIssueStore((state) => state.openReportIssue);
+  const router = useRouter();
+  const requestReplay = useTourStore((state) => state.requestReplay);
+  const startTour = useTourStore((state) => state.start);
+  const firstReleaseId = useReleaseStore((state) => state.releases[0]?.id ?? null);
 
   const menuGroups = useMemo(
     () => [
@@ -100,8 +112,46 @@ export function HelpMenu() {
           onClick: () => openExternalLink('https://chat.whatsapp.com/DGUGyC2GK3d5v6KPGw5aft'),
         },
       ],
+      // Last group: replay is the thing you reach for least, and it is the
+      // only group whose items can be absent.
+      ...(TOURS_ENABLED
+        ? [
+            [
+              {
+                label: 'Show me the catalog again',
+                icon: <TourIcon />,
+                // Parked rather than started: the menu opens from any chrome
+                // page, and the catalog tour's anchors only resolve on
+                // /dashboard. useCatalogTourAutoStart consumes the request
+                // when it mounts there.
+                onClick: () => {
+                  requestReplay('catalog');
+                  router.push('/dashboard');
+                },
+              },
+              ...(firstReleaseId
+                ? [
+                    {
+                      label: 'Show me a rollout again',
+                      icon: <TourIcon />,
+                      // Started directly, unlike the catalog one: navigating
+                      // to a scoped rollout IS the whole precondition, and
+                      // nothing watches for a pending rollout replay. Hidden
+                      // rather than disabled when there is no rollout to
+                      // point at — a menu is not the place for a dead row,
+                      // and Settings carries the explanatory hint instead.
+                      onClick: () => {
+                        router.push(`/dashboard?release=${firstReleaseId}`);
+                        startTour('rollout', ROLLOUT_TOUR_STEPS);
+                      },
+                    },
+                  ]
+                : []),
+            ],
+          ]
+        : []),
     ],
-    [openReportIssue]
+    [openReportIssue, requestReplay, startTour, router, firstReleaseId]
   );
 
   useEffect(() => {

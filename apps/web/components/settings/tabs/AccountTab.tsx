@@ -9,6 +9,7 @@ import { AdminSection } from '../AdminSection';
 import { SessionSection } from '../SessionSection';
 import { DataExportSection } from '../DataExportSection';
 import { ReportIssueSection } from '../ReportIssueSection';
+import { GuidedToursSection } from '../GuidedToursSection';
 import { DirectoryProfileSection } from '../DirectoryProfileSection';
 import { McpConnectionsSection } from '@/components/mcp/McpConnectionsSection';
 import { DeleteAccountSection } from '../DeleteAccountSection';
@@ -68,6 +69,12 @@ import { DeleteAccountSection } from '../DeleteAccountSection';
  * they leave the team, which is the whole point of a record that outlives a
  * job. Renders nothing when NEXT_PUBLIC_FEATURE_DIRECTORY is off.
  *
+ * GuidedToursSection (2026-09-09) sits directly after ReportIssueSection
+ * because the two are the same kind of thing in the same predicament: both are
+ * help surfaces, and both are here because their sibling entry point is the
+ * `?` HelpMenu, which is `hidden md:block` — so on a phone this tab is the only
+ * way to replay a tour. Renders nothing when NEXT_PUBLIC_FEATURE_TOURS is off.
+ *
  * DataExportSection (2026-08-23) sits directly above DeleteAccountSection, and
  * that adjacency is the point: they are the same conversation in the right
  * order. The export covers the same scope deletion destroys, so a user standing
@@ -84,6 +91,7 @@ export function AccountTab() {
       <DirectoryProfileSection />
       <SecuritySection />
       <ReportIssueSection />
+      <GuidedToursSection />
       <AdminSection />
       <SessionSection />
       <McpConnectionsSection />

@@ -210,6 +210,7 @@ function ChappiLinkFallback() {
       href={onAssistantPage ? '/dashboard' : '/dashboard/urgans'}
       aria-label="UrgAns"
       title="UrgAns"
+      data-tour="nav-urgans"
       className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
         onAssistantPage
           ? 'bg-brand/10 text-brand'
@@ -245,6 +246,7 @@ function CatalogTopbarAction() {
         onClick={() => router.push('/dashboard/urgans')}
         aria-label="Catalog"
         title="Catalog"
+        data-tour="nav-catalog"
         aria-pressed
         className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors`}
       >
@@ -263,6 +265,7 @@ function CatalogTopbarAction() {
       onClick={leaveReleaseForCatalog}
       aria-label="Catalog"
       title="Catalog"
+      data-tour="nav-catalog"
       className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
         pathname === '/dashboard'
           ? 'bg-brand/10 text-brand'
@@ -322,6 +325,7 @@ function ChappiTopbarAction() {
         }}
         aria-label="UrgAns"
         title="UrgAns"
+        data-tour="nav-urgans"
         // Pressed: this IS the open surface, and pressing again closes it —
         // the same semantics (and the same bare attribute) as the Workspace
         // icon's at-rest branch.
@@ -356,6 +360,7 @@ function ChappiTopbarAction() {
       onClick={handleClick}
       aria-label="UrgAns"
       title="UrgAns"
+      data-tour="nav-urgans"
       aria-pressed={isRailOpen}
       className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary ${
         // lg:-scoped so the tint can never light up below lg, where the
@@ -471,6 +476,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           href="/settings"
           aria-label="You"
           title="You"
+          data-tour="nav-settings"
           aria-current={pathname?.startsWith('/settings') ? 'page' : undefined}
           className={`motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors lg:hidden ${
             pathname?.startsWith('/settings')
@@ -528,6 +534,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         <button
           type="button"
           onClick={onNewRelease}
+          data-tour="new-rollout"
           className={`motion-focus motion-press hidden h-10 items-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover ${
             // Below lg, MobileNavBar's center button is the create
             // affordance — showing both would be a double CTA on tablets.
@@ -689,6 +696,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           onClick={handleCreateClick}
           aria-label="New rollout"
           title="New rollout"
+          data-tour="new-rollout"
           className={`motion-focus motion-press ${MOBILE_CREATE_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full border border-brand/25 bg-brand text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover`}
         >
           <Plus className="h-5 w-5" />
