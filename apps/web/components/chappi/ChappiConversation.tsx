@@ -82,7 +82,7 @@ const CHIP_ICONS: Record<string, LucideIcon> = {
 // Hover tooltip (title attr) for each quick-action button — the "clicks"
 // this page exists to preserve, only ever shown at lg+.
 const CHIP_DESCRIPTIONS: Record<string, string> = {
-  'new-release': 'Start a new release with a rollout plan',
+  'new-release': 'Start a new rollout, planned from the playbook',
   'plan-single-6w': 'Answer a few questions and get a draft rollout plan',
   'plan-ep': 'Answer a few questions and get a draft rollout plan',
   'plan-small-budget': 'Answer a few questions and get a draft rollout plan',
@@ -121,7 +121,7 @@ function nextMessageId(role: 'u' | 'a'): string {
  *  - Empty: a Perplexity-style landing — one plain question sits right above
  *    the input. On the `page` variant the whole block centers vertically on
  *    the full screen; the compact `panel` variant (dock/rail) bottom-anchors
- *    instead. The quick-action buttons (New release or the three planner
+ *    instead. The quick-action buttons (New rollout or the three planner
  *    chips, plus Add activity) render BELOW the box, but only at lg+ — a
  *    phone gets the question and the box and nothing else.
  *  - Active: a scrolling transcript of every turn, chip-triggered or typed,
@@ -308,7 +308,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     switch (intent.kind) {
       case 'new_release':
         onNewRelease();
-        appendAssistantReply("Let's set up a new release — the form is open.");
+        appendAssistantReply("Let's set up a new rollout — the form is open.");
         return;
       case 'plan_release': {
         const preset = intent.plannerPreset;

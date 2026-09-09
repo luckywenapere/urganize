@@ -86,7 +86,7 @@ const IDENTITY_PANEL_ENABLED =
  * Mirrors the CURRENT workspace shape, not a generic placeholder (re-synced
  * 2026-08-06, URG-228, against the state after URG-224/225/226):
  *  - the at-rest release grid: mobile 2-up (`ReleasesColumn`, plus its
- *    `sm:hidden` full-width "New release" button), desktop centered auto-fit
+ *    `sm:hidden` full-width "New rollout" button), desktop centered auto-fit
  *    up to 4-up capped at 1008px (`WorkspaceDesktopGrid`) — each card slot
  *    shaped like `WorkspaceReleaseCard`'s tile variant (square art + meta
  *    block, including the Motion label row above the progress bar)
@@ -220,7 +220,7 @@ function ReleaseGridSkeleton({ count, columns }: { count: number; columns: strin
   );
 }
 
-/** At-rest MOBILE surface (2026-08-07): the full-width "New release" button
+/** At-rest MOBILE surface (2026-08-07): the full-width "New rollout" button
  * ReleasesColumn shows below sm, then a stack of horizontal row slots. Mirrors
  * that file's `space-y-3` list of `focused`-variant cards — fixed square
  * thumbnail (w-28, sm:w-36) beside the meta column — so nothing resizes when
