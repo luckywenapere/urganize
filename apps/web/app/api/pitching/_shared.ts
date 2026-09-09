@@ -22,9 +22,17 @@ export const PITCHES_TABLE = 'playlist_pitches';
 export const CURATOR_PLAYLISTS_TABLE = 'curator_playlists';
 export const CURATOR_PROFILES_TABLE = 'curator_profiles';
 
-/** What the team sees about its own pitches. */
+/**
+ * What the team sees about its own pitches.
+ *
+ * `release_id` is here for the team-wide list (2026-09-09): that read spans
+ * every release, so a row has to say which one it belongs to. It is also what
+ * the access filter keys off. Note the CURATOR's own columns are a different,
+ * narrower set — see CURATOR_PITCH_COLUMNS in the curator route group, which
+ * deliberately carries no release id at all.
+ */
 export const SENT_PITCH_COLUMNS =
-  'id,playlist_id,playlist_name,curator_user_id,song_title,song_url,song_platform,note,status,curator_reply,pitcher_name,created_at,updated_at';
+  'id,release_id,playlist_id,playlist_name,curator_user_id,song_title,song_url,song_platform,note,status,curator_reply,pitcher_name,created_at,updated_at';
 
 export const BROWSE_LIST_LIMIT = 200;
 export const SENT_PITCH_LIST_LIMIT = 200;
@@ -102,8 +110,24 @@ export const toBrowsablePlaylist = (
   url: typeof row.url === 'string' ? row.url : '',
 });
 
-export const toSentPitch = (row: Record<string, unknown>, curatorName: string): SentPitch => ({
+/**
+ * One pitch as the sending team sees it.
+ *
+ * `releaseTitle` is passed in rather than read off the row: a pitch stores the
+ * SONG title and the artist name, never the release's own title, so the caller
+ * resolves it — from the release it already loaded (the per-release list) or
+ * from one lookup over the set (the team-wide list). Null means the release was
+ * deleted after the pitch went out; `release_id` is `on delete set null`, so
+ * the pitch legitimately outlives it and the UI says so rather than hiding it.
+ */
+export const toSentPitch = (
+  row: Record<string, unknown>,
+  curatorName: string,
+  releaseTitle: string | null = null
+): SentPitch => ({
   id: String(row.id || ''),
+  releaseId: row.release_id ? String(row.release_id) : null,
+  releaseTitle,
   playlistId: row.playlist_id ? String(row.playlist_id) : null,
   playlistName: typeof row.playlist_name === 'string' ? row.playlist_name : '',
   curatorName,

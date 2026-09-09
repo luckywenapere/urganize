@@ -32,7 +32,6 @@
  * pages bounce or 404, and warming them would be pure waste. */
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
-const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
@@ -63,7 +62,11 @@ export function buildPrefetchRoutes({ hasCuratorProfile }: PrefetchAudience): st
 
   if (NOTES_ENABLED) routes.push('/dashboard/notes');
   if (EVENTS_ENABLED) routes.push('/dashboard/shows');
-  if (PRESS_KITS_ENABLED) routes.push('/dashboard/press-kits');
+  // The team side of pitching, in the nav for every team account since
+  // 2026-09-09. Press kits left this list the same day: it is no longer a nav
+  // destination, and /settings — the one route that now reaches it — is
+  // already a base route.
+  if (PITCHING_ENABLED) routes.push('/dashboard/pitching');
   if (DIRECTORY_ENABLED) routes.push('/dashboard/directory');
   // Both halves required: the feature has to be on AND this account has to
   // actually be a playlist owner. Everyone else has no such nav entry.

@@ -61,9 +61,18 @@ export interface CuratorPitch {
   updatedAt: string;
 }
 
-/** A pitch as the sending team sees it on the release. */
+/** A pitch as the sending team sees it, on the release or on the Pitching page. */
 export interface SentPitch {
   id: string;
+  /**
+   * Which release this went out for. Null when that release was deleted
+   * afterwards (`release_id` is `on delete set null`, so a pitch outlives it).
+   * Both of these fields are for the team-wide list, which spans releases; the
+   * per-release scene already knows which release it is showing.
+   */
+  releaseId: string | null;
+  /** The release's title, resolved by the route. Null when unknown or deleted. */
+  releaseTitle: string | null;
   playlistId: string | null;
   playlistName: string;
   curatorName: string;
