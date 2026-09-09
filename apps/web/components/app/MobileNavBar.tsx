@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Inbox, MicVocal, Newspaper, Users } from '@/components/icons';
+import { Inbox, MicVocal, Radio, Users } from '@/components/icons';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
@@ -16,7 +16,6 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
-const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 
 /**
@@ -83,12 +82,13 @@ function NavTab({
  * reaches on a phone, and stands in for the ChappiDock launcher (which retires
  * on this same viewport range — see ChappiDock.tsx).
  *
- * Slots: Home (Catalog) · UrgAns · Notes · New rollout/New activity (centre,
- * filled) · Shows · Pitches · Press kits.
+ * Slots: Home (Catalog) · UrgAns · Notes · Shows · Pitching · Directory, plus
+ * Playlist pitches for a dual account.
  *
  * EVERY TAB IS ALWAYS VISIBLE (founder call, 2026-09-05). Which tabs EXIST is
- * decided by feature flags and, for Pitches, by whether the account is a dual
- * team+curator one — all of which are fixed for a given account, so the bar
+ * decided by feature flags and, for the curator crossing, by whether the
+ * account is a dual team+curator one — all of which are fixed for a given
+ * account, so the bar
  * holds one shape for a whole session and never rearranges under a thumb that
  * is already moving toward a target. No tab drops out on the view it points
  * at either: the active one lights up instead, which is what `aria-current`
@@ -117,9 +117,11 @@ function NavTab({
  * because they need an answer once, on demand, rather than a subscription that
  * would drag the whole bar behind a boundary.
  *
- * PRESS KITS IS LAST (founder call, 2026-09-05), taking the trailing slot Song
- * vacated. It is the outward-facing surface — the thing you send to somebody
- * — so it sits at the end rather than among the working tabs.
+ * PRESS KITS IS NOT HERE ANY MORE (founder call, 2026-09-09): "Press kit
+ * should only be accessible through settings not visible through the main app
+ * view." It held the trailing slot from 2026-09-05 as the outward-facing
+ * surface; it is now reached from Settings alone, and Pitching took the slot.
+ * The pages did not move, so a link to one still resolves.
  *
  * ICONS ONLY — every tab's label is `sr-only` (founder call, 2026-08-31), to
  * save width. See tabClass above for why the strings are kept rather than
@@ -137,11 +139,27 @@ function NavTab({
  * AppTopbar.tsx is now the one implementation. Nothing here creates anything;
  * this bar is destinations only, which is what it always claimed to be.
  *
- * Pitches appears only for a dual account (team + playlist owner) — a state
- * currently held by a single partner. This bar is the only navigation a phone
- * has: the topbar's own icons are `hidden lg:grid` under this flag and the
- * identity card never renders below `lg`, so without it a dual account had to
- * open a second tab to reach its own inbox.
+ * PITCHING IS FOR EVERY TEAM ACCOUNT (founder call, 2026-09-09): "Playlist
+ * pitching should be accessible app wide on mobile on the nav bar at the
+ * bottom." Until now the team side of pitching existed only as a release
+ * scene, so it could not be reached at all without first scoping a release —
+ * and the only pitching entry in this bar belonged to the dual-account
+ * crossing below, which is the OTHER direction (pitches you received).
+ *
+ * The two are separate tabs on purpose and must stay distinguishable. This one
+ * is the team side: /dashboard/pitching, every pitch you sent. Playlist
+ * pitches below is the curator side: /curator, the inbox for playlists you
+ * own. Labels are `sr-only` here, so the visible difference is the glyph —
+ * Radio (the same one the release Pitch pill uses) against Inbox.
+ *
+ * Playlist pitches appears only for a dual account (team + playlist owner) — a
+ * state currently held by a single partner. This bar is the only navigation a
+ * phone has: the topbar's own icons are `hidden lg:grid` under this flag and
+ * the identity card never renders below `lg`, so without it a dual account had
+ * to open a second tab to reach its own inbox. Its label is the fuller
+ * "Playlist pitches" rather than the bare "Pitches" it read until 2026-09-09,
+ * which both matches the side menu's wording for the same destination and
+ * keeps a screen reader from hearing two near-identical names in one bar.
  *
  * LAYOUT. One row of equal `flex-1` slots, which is what it was before the
  * centred "+" arrived and what it is again now that the "+" has left.
@@ -149,16 +167,18 @@ function NavTab({
  * THE WIDTH BUDGET IS MUCH LOOSER THAN IT WAS, and the arithmetic is the
  * reason two rules above it were deleted rather than adjusted. With the 64px
  * centre gone the whole 375px is divisible: six tabs are ~62px each and seven
- * — the dual-account maximum, with Pitches — are ~54px, both comfortably over
- * the ~44px touch target. The old "three per side" ceiling, and the
- * dual-account exclusion Directory carried for one day because of it, were
- * both artefacts of that fixed centre and are gone with it.
+ * — the dual-account maximum — are ~54px, both comfortably over the ~44px
+ * touch target. The old "three per side" ceiling, and the dual-account
+ * exclusion Directory carried for one day because of it, were both artefacts
+ * of that fixed centre and are gone with it. The 2026-09-09 swap held the
+ * count flat: Pitching arrived in the slot Press kits left.
  *
  * WHICH SIDE a tab sat on used to be a width decision. It is now an ORDERING
- * one, and the order is left to right: Home, UrgAns, Notes, Shows, Directory,
- * Pitches, Press kits — working surfaces first, the outward-facing one last.
- * Notes no longer sits where it does for a width reason; it sits there
- * because that is where it reads.
+ * one, and the order is left to right: Home, UrgAns, Notes, Shows, Pitching,
+ * Directory, and Playlist pitches for a dual account — working surfaces
+ * first, the crossing into the other side of the product last. Notes no
+ * longer sits where it does for a width reason; it sits there because that is
+ * where it reads.
  *
  * The ceiling now is about eight tabs at 375px (~47px each), so there is real
  * headroom, but an overflow sheet is still the honest answer past that rather
@@ -181,9 +201,9 @@ export function MobileNavBar() {
   const isUrgAns = pathname === '/dashboard/urgans';
   const isNotes = pathname === '/dashboard/notes';
   const isShows = pathname?.startsWith('/dashboard/shows') ?? false;
-  const isPressKits = pathname?.startsWith('/dashboard/press-kits') ?? false;
-  // Exact, unlike Shows and Press kits: a person's page lives at /p/{slug},
-  // not under this path, so there is no deeper route to keep lit.
+  const isPitching = pathname?.startsWith('/dashboard/pitching') ?? false;
+  // Exact, unlike Shows: a person's page lives at /p/{slug}, not under this
+  // path, so there is no deeper route to keep lit.
   const isDirectory = pathname === '/dashboard/directory';
   // Tri-state — `null` means the probe is still in flight, and it is null on
   // every fresh load (never persisted). Only a CONFIRMED positive adds the
@@ -291,12 +311,15 @@ export function MobileNavBar() {
             />
           ) : null}
 
-          {PITCHING_ENABLED && hasCuratorProfile === true ? (
+          {/* Pitching — the TEAM side, in the slot Press kits left. Every team
+              account, not just a dual one: until 2026-09-09 the only way to
+              reach the team side of pitching was to scope a release first. */}
+          {PITCHING_ENABLED ? (
             <NavTab
-              href="/curator"
-              label="Pitches"
-              Icon={Inbox}
-              isActive={pathname?.startsWith('/curator') ?? false}
+              href="/dashboard/pitching"
+              label="Pitching"
+              Icon={Radio}
+              isActive={isPitching}
             />
           ) : null}
 
@@ -323,16 +346,15 @@ export function MobileNavBar() {
             />
           ) : null}
 
-          {/* Press kits LAST (founder call, 2026-09-05), in the slot Song
-              vacated: it is the surface you send outward rather than work in,
-              so it belongs at the end of the bar rather than among the working
-              tabs. Prefix match — a single kit's page lives one level deeper. */}
-          {PRESS_KITS_ENABLED ? (
+          {/* The curator crossing LAST, and it is the other direction from
+              Pitching above: this is the inbox for playlists this account
+              owns, not the pitches it sent. Dual accounts only. */}
+          {PITCHING_ENABLED && hasCuratorProfile === true ? (
             <NavTab
-              href="/dashboard/press-kits"
-              label="Press kits"
-              Icon={Newspaper}
-              isActive={isPressKits}
+              href="/curator"
+              label="Playlist pitches"
+              Icon={Inbox}
+              isActive={pathname?.startsWith('/curator') ?? false}
             />
           ) : null}
         </ul>

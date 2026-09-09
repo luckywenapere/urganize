@@ -27,6 +27,9 @@ const ALL_ON = {
   NEXT_PUBLIC_FEATURE_NOTES: 'true',
   NEXT_PUBLIC_FEATURE_EVENTS: 'true',
   NEXT_PUBLIC_FEATURE_PITCHING: 'true',
+  // Kept in the stub set even though no page reads it any more (press kits
+  // left the catalog 2026-09-09): a case asserting its ABSENCE has to be able
+  // to turn the flag on.
   NEXT_PUBLIC_FEATURE_PRESS_KITS: 'true',
 };
 
@@ -84,21 +87,65 @@ describe('buildAppPages — flag gates', () => {
     expect(on.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'shows')).toBe(true);
   });
 
-  it('adds Press kits only when the press kits flag is on', async () => {
-    const off = await loadPages();
-    expect(
-      off.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'press-kits')
-    ).toBe(false);
-    const on = await loadPages({ NEXT_PUBLIC_FEATURE_PRESS_KITS: 'true' });
-    expect(
-      on.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'press-kits')
-    ).toBe(true);
+  // Press kits left the menus on 2026-09-09 (founder call: "only accessible
+  // through settings not visible through the main app view"), and the search
+  // surface is part of that view — so it must not be offered as its own
+  // destination even with its flag on.
+  it('never offers Press kits as a page, whatever the flags say', async () => {
+    const { buildAppPages } = await loadPages({
+      ...ALL_ON,
+      NEXT_PUBLIC_FEATURE_PRESS_KITS: 'true',
+    });
+    const pages = buildAppPages({ hasCuratorProfile: true });
+    expect(pages.some((p) => p.key === 'press-kits')).toBe(false);
+    expect(pages.map((p) => p.href)).not.toContain('/dashboard/press-kits');
   });
 
-  it('finds the press kit by the words a manager would actually type', async () => {
-    const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_PRESS_KITS: 'true' });
-    const page = buildAppPages({ hasCuratorProfile: false }).find((p) => p.key === 'press-kits');
-    expect(page?.keywords).toEqual(expect.arrayContaining(['epk', 'bio', 'photos']));
+  // Findability is preserved through Settings instead, which is where the row
+  // now lives. This is the same reasoning "billing" already rests on: the page
+  // is named for itself, the keywords name what it holds.
+  it('sends someone hunting a press kit to Settings', async () => {
+    const { buildAppPages, appPageHaystack } = await loadPages(ALL_ON);
+    const settings = buildAppPages({ hasCuratorProfile: true }).find((p) => p.key === 'settings');
+    expect(settings).toBeDefined();
+    for (const query of ['press kit', 'epk', 'bio']) {
+      expect(
+        matchesSearchTerms(appPageHaystack(settings!), parseSearchTerms(query))
+      ).toBe(true);
+    }
+  });
+
+  it('adds the team pitching page on the flag alone, with no curator profile', async () => {
+    const off = await loadPages();
+    expect(off.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'pitching')).toBe(
+      false
+    );
+    const on = await loadPages({ NEXT_PUBLIC_FEATURE_PITCHING: 'true' });
+    // The whole point of the 2026-09-09 change: a team that owns no playlists
+    // still reaches the team side of pitching.
+    expect(on.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'pitching')).toBe(
+      true
+    );
+    expect(on.buildAppPages({ hasCuratorProfile: null }).some((p) => p.key === 'pitching')).toBe(
+      true
+    );
+  });
+
+  it('keeps the two pitching destinations apart', async () => {
+    const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_PITCHING: 'true' });
+    const byKey = new Map(buildAppPages({ hasCuratorProfile: true }).map((p) => [p.key, p]));
+    expect(byKey.get('pitching')?.href).toBe('/dashboard/pitching');
+    expect(byKey.get('curator')?.href).toBe('/curator');
+    expect(byKey.get('pitching')?.label).not.toBe(byKey.get('curator')?.label);
+  });
+
+  it('finds pitching by the platform a manager is aiming at', async () => {
+    const { buildAppPages, appPageHaystack } = await loadPages({
+      NEXT_PUBLIC_FEATURE_PITCHING: 'true',
+    });
+    const page = buildAppPages({ hasCuratorProfile: false }).find((p) => p.key === 'pitching');
+    expect(page).toBeDefined();
+    expect(matchesSearchTerms(appPageHaystack(page!), parseSearchTerms('spotify'))).toBe(true);
   });
 
   it('needs BOTH the pitching flag and a real curator profile for the crossing', async () => {

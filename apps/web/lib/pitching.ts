@@ -5,7 +5,7 @@
  * pattern). No node-only imports.
  */
 
-import type { PitchPlatform, PitchStatus } from '@/types/pitching';
+import type { PitchPlatform, PitchStatus, SentPitch } from '@/types/pitching';
 
 /**
  * The spam brake: how many pitches may be waiting on a reply per release.
@@ -181,3 +181,93 @@ export function formatFollowerCount(count: number | null | undefined): string {
 /** How many of these pitches are still waiting on a reply. */
 export const countWaitingPitches = (statuses: Array<{ status: PitchStatus }>): number =>
   statuses.filter((entry) => entry.status === 'new').length;
+
+/**
+ * One release's worth of sent pitches, for the team-wide Pitching page.
+ *
+ * `releaseId` is null for the one group that is not a release: pitches whose
+ * release was deleted after they went out.
+ */
+export type SentPitchGroup = {
+  releaseId: string | null;
+  releaseTitle: string | null;
+  pitches: SentPitch[];
+};
+
+/**
+ * Groups the team-wide pitch list by release, newest activity first.
+ *
+ * KEYED ON THE RELEASE ID, never the title: two releases can legitimately
+ * carry the same name, and merging them would show one release the other's
+ * answers.
+ *
+ * ORDERED BY EACH GROUP'S NEWEST PITCH rather than by release date, so the
+ * release actually being worked on rises to the top — which is the question
+ * this page is opened to answer.
+ *
+ * PITCHES WHOSE RELEASE IS GONE GO LAST, in a single group, rather than being
+ * dropped. `playlist_pitches.release_id` is `on delete set null`, so a pitch
+ * outlives its release by design; the curator may still be sitting on it, and
+ * hiding the row would lose the answer when it comes. The page names that
+ * group rather than pretending the pitch was never sent.
+ *
+ * Input order within a group is preserved (the route sends newest first), so
+ * this never re-sorts individual pitches.
+ */
+export function groupPitchesByRelease(pitches: SentPitch[]): SentPitchGroup[] {
+  const byRelease = new Map<string, SentPitchGroup>();
+  const orphans: SentPitch[] = [];
+
+  for (const pitch of pitches) {
+    if (!pitch.releaseId) {
+      orphans.push(pitch);
+      continue;
+    }
+    const existing = byRelease.get(pitch.releaseId);
+    if (existing) {
+      existing.pitches.push(pitch);
+      // First non-null title wins, so one row with an unresolved title cannot
+      // blank a group the rest of the rows can name.
+      if (!existing.releaseTitle && pitch.releaseTitle) {
+        existing.releaseTitle = pitch.releaseTitle;
+      }
+      continue;
+    }
+    byRelease.set(pitch.releaseId, {
+      releaseId: pitch.releaseId,
+      releaseTitle: pitch.releaseTitle,
+      pitches: [pitch],
+    });
+  }
+
+  const newest = (group: SentPitchGroup): number => {
+    let latest = 0;
+    for (const pitch of group.pitches) {
+      const at = Date.parse(pitch.createdAt);
+      // An unparseable timestamp counts as the oldest rather than as now,
+      // which would float a broken row to the top of the page.
+      if (Number.isFinite(at) && at > latest) latest = at;
+    }
+    return latest;
+  };
+
+  const groups = Array.from(byRelease.values()).sort((a, b) => newest(b) - newest(a));
+
+  if (orphans.length) {
+    groups.push({ releaseId: null, releaseTitle: null, pitches: orphans });
+  }
+
+  return groups;
+}
+
+/**
+ * The line under the Pitching page's heading.
+ *
+ * Empty when there is nothing sent yet: the page's own empty state says that
+ * better than a "0 pitches sent" would.
+ */
+export function describeSentPitchScope(count: number, truncated: boolean): string {
+  if (count <= 0) return '';
+  if (truncated) return `Showing the newest ${count} pitches`;
+  return count === 1 ? '1 pitch sent' : `${count} pitches sent`;
+}

@@ -165,9 +165,9 @@ export const HELP_COPY = {
     label: 'Shows',
     text: 'Plan a live date: the set list, the running order, and the files your DJ needs.',
   },
-  'nav.pressKits': {
-    label: 'Press kits',
-    text: 'One page about the artist that you can send to writers and radio stations.',
+  'nav.pitching': {
+    label: 'Pitching',
+    text: 'Send a song to a music list and see what the person running it said.',
   },
   'nav.directory': {
     label: 'Directory',
