@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.38.0",
+    date: "September 9, 2026",
+    highlights: [
+      "Keep dragging the side menu's right edge and it collapses to just icons. Drag it back out to bring the words back.",
+      "Your team name and artist sit beside the logo now, not under it.",
+      "The teammate and rollout counts are gone from the menu, so it looks the same open or collapsed.",
+    ],
+  },
+  {
     version: "1.37.0",
     date: "September 9, 2026",
     highlights: [

@@ -5,14 +5,17 @@ import {
   DEFAULT_SIDEBAR_WIDTH,
   MAX_SIDEBAR_WIDTH,
   MIN_SIDEBAR_WIDTH,
+  SIDEBAR_COLLAPSE_AT,
   SIDEBAR_GUTTERS,
   clampSidebarWidth,
   isSidebarResizable,
   parsePersistedSidebarWidth,
   resolveSidebarBounds,
+  sidebarStateFromDrag,
+  sidebarStateFromStep,
   sidebarTotalWidth,
-  sidebarWidthFromDrag,
 } from './sidebar-width';
+import type { SidebarState } from './sidebar-width';
 
 const wide = resolveSidebarBounds(2560, 0);
 
@@ -167,37 +170,140 @@ describe('parsePersistedSidebarWidth', () => {
   });
 });
 
-describe('sidebarWidthFromDrag', () => {
+/** The drag's starting state, spelled out at each call site so the assertions
+ *  read as "from expanded at 240" / "from the collapsed rail". */
+const from = (width: number): SidebarState => ({ collapsed: false, width });
+const fromCollapsed: SidebarState = { collapsed: true };
+
+/** Narrow the union without repeating the assertion in every test. */
+function expandedWidth(state: SidebarState): number {
+  if (state.collapsed) throw new Error('expected an expanded state, got the collapsed rail');
+  return state.width;
+}
+
+describe('SIDEBAR_COLLAPSE_AT', () => {
+  it('sits between the rail and the minimum, so collapsing takes a real overshoot', () => {
+    // At the minimum it would fire for anyone who simply drags the card as
+    // narrow as it goes; at the rail's own width there would be no travel left
+    // to cross it in.
+    expect(SIDEBAR_COLLAPSE_AT).toBeGreaterThan(COLLAPSED_SIDEBAR_WIDTH);
+    expect(SIDEBAR_COLLAPSE_AT).toBeLessThan(MIN_SIDEBAR_WIDTH);
+  });
+});
+
+describe('sidebarStateFromDrag', () => {
   it('widens when the pointer moves RIGHT, because the handle is the right edge', () => {
     // The menu is the LEFT column, so this is the opposite sign from the
     // rail's drag. Getting it backwards is the most obvious way for the whole
     // control to feel broken.
-    expect(sidebarWidthFromDrag(240, 300, 400, wide)).toBe(340);
+    expect(sidebarStateFromDrag(from(240), 300, 400, wide)).toEqual({
+      collapsed: false,
+      width: 340,
+    });
   });
 
   it('narrows when the pointer moves left', () => {
-    expect(sidebarWidthFromDrag(340, 400, 300, wide)).toBe(240);
+    expect(sidebarStateFromDrag(from(340), 400, 300, wide)).toEqual({
+      collapsed: false,
+      width: 240,
+    });
   });
 
-  it('clamps at both stops rather than overshooting', () => {
-    expect(sidebarWidthFromDrag(240, 300, 5000, wide)).toBe(wide.max);
-    expect(sidebarWidthFromDrag(240, 300, -5000, wide)).toBe(wide.min);
+  it('clamps at the max rather than overshooting', () => {
+    expect(expandedWidth(sidebarStateFromDrag(from(240), 300, 5000, wide))).toBe(wide.max);
+  });
+
+  it('collapses once the drag crosses below the threshold', () => {
+    // The founder's ask (2026-09-09): keep dragging and it becomes the icon
+    // rail, rather than the handle stopping dead at the minimum.
+    const past = 300 - (240 - SIDEBAR_COLLAPSE_AT) - 1;
+    expect(sidebarStateFromDrag(from(240), 300, past, wide)).toEqual({ collapsed: true });
+    expect(sidebarStateFromDrag(from(240), 300, -5000, wide)).toEqual({ collapsed: true });
+  });
+
+  it('holds at the minimum through the overshoot instead of rendering a narrower card', () => {
+    // MIN_SIDEBAR_WIDTH's own reasoning still stands: an expanded card
+    // narrower than that is a worse version of the rail it is about to become,
+    // so the card sits pinned at its minimum and then snaps.
+    const between = 300 - (240 - MIN_SIDEBAR_WIDTH) - 10;
+    const state = sidebarStateFromDrag(from(240), 300, between, wide);
+    expect(state.collapsed).toBe(false);
+    expect(expandedWidth(state)).toBe(MIN_SIDEBAR_WIDTH);
+  });
+
+  it('comes back out of the rail at the minimum, across the same one threshold', () => {
+    // One boundary in both directions: cross it going left and the card
+    // collapses, cross it going right and it returns at MIN_SIDEBAR_WIDTH.
+    const out = 300 + (SIDEBAR_COLLAPSE_AT - COLLAPSED_SIDEBAR_WIDTH);
+    expect(sidebarStateFromDrag(fromCollapsed, 300, out, wide)).toEqual({
+      collapsed: false,
+      width: MIN_SIDEBAR_WIDTH,
+    });
+  });
+
+  it('stays collapsed until that threshold is crossed', () => {
+    expect(sidebarStateFromDrag(fromCollapsed, 300, 310, wide)).toEqual({ collapsed: true });
+    expect(sidebarStateFromDrag(fromCollapsed, 300, 200, wide)).toEqual({ collapsed: true });
+  });
+
+  it('carries NO width when it collapses, so the stored one cannot be overwritten', () => {
+    // The width the user chose has to survive a collapse — expanding restores
+    // it rather than the default. A collapsed outcome that carried a width is
+    // how that gets clobbered, so the shape refuses to.
+    const state = sidebarStateFromDrag(from(400), 300, 0, wide);
+    expect(state.collapsed).toBe(true);
+    expect('width' in state).toBe(false);
+  });
+
+  it('returns the starting state unchanged on a nonsense coordinate', () => {
+    // The collapsed case is the one that matters: clamping the rail's 64 would
+    // land on the minimum and silently expand a card nobody touched.
+    expect(sidebarStateFromDrag(fromCollapsed, Number.NaN, 300, wide)).toEqual(fromCollapsed);
+    expect(sidebarStateFromDrag(fromCollapsed, 300, Number.NaN, wide)).toEqual(fromCollapsed);
+    expect(sidebarStateFromDrag(from(240), 300, Number.NaN, wide)).toEqual(from(240));
   });
 
   it('returns the starting width when nothing moved', () => {
-    expect(sidebarWidthFromDrag(240, 300, 300, wide)).toBe(240);
-  });
-
-  it('is stable against a nonsense coordinate', () => {
-    expect(sidebarWidthFromDrag(240, Number.NaN, 300, wide)).toBe(240);
-    expect(sidebarWidthFromDrag(240, 300, Number.NaN, wide)).toBe(240);
+    expect(sidebarStateFromDrag(from(240), 300, 300, wide)).toEqual(from(240));
   });
 
   it('runs opposite to the rail, which is the whole reason it has its own module', () => {
-    const right = sidebarWidthFromDrag(240, 300, 400, wide);
-    const left = sidebarWidthFromDrag(240, 300, 200, wide);
-    expect(right).toBeGreaterThan(240);
-    expect(left).toBeLessThan(240);
+    expect(expandedWidth(sidebarStateFromDrag(from(240), 300, 400, wide))).toBeGreaterThan(240);
+    expect(expandedWidth(sidebarStateFromDrag(from(240), 300, 280, wide))).toBeLessThan(240);
+  });
+});
+
+describe('sidebarStateFromStep', () => {
+  it('widens and narrows by the step', () => {
+    expect(sidebarStateFromStep(from(240), 16, wide)).toEqual({ collapsed: false, width: 256 });
+    expect(sidebarStateFromStep(from(240), -16, wide)).toEqual({ collapsed: false, width: 224 });
+  });
+
+  it('collapses one step narrower than the minimum, rather than doing nothing', () => {
+    // The keyboard twin of the drag crossing the threshold. Without it the
+    // gesture would be reachable with a pointer and not without one.
+    expect(sidebarStateFromStep(from(MIN_SIDEBAR_WIDTH), -16, wide)).toEqual({ collapsed: true });
+  });
+
+  it('widens out of the rail to the minimum', () => {
+    expect(sidebarStateFromStep(fromCollapsed, 16, wide)).toEqual({
+      collapsed: false,
+      width: MIN_SIDEBAR_WIDTH,
+    });
+  });
+
+  it('does nothing when narrowing the rail, because nothing is narrower', () => {
+    expect(sidebarStateFromStep(fromCollapsed, -16, wide)).toEqual(fromCollapsed);
+  });
+
+  it('clamps at the max', () => {
+    expect(expandedWidth(sidebarStateFromStep(from(wide.max), 64, wide))).toBe(wide.max);
+  });
+
+  it('carries no width when it collapses', () => {
+    const state = sidebarStateFromStep(from(MIN_SIDEBAR_WIDTH), -64, wide);
+    expect(state.collapsed).toBe(true);
+    expect('width' in state).toBe(false);
   });
 });
 
