@@ -25,7 +25,7 @@ import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 // Same flag WorkspaceView reads for the "first win" reveal — Chappi's
-// "New release" card can plausibly create a user's very first release too.
+// "New rollout" card can plausibly create a user's very first release too.
 const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
 // Type-first create (2026-09-01): tap-the-type creation lands straight in the

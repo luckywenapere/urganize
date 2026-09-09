@@ -20,7 +20,7 @@ const isPersistedOpen = (value: unknown): value is boolean => typeof value === '
 
 type ChappiDockProps = {
   /** Opens the CreateReleaseModal owned by AppShell (the same instance the
-   * topbar's "New release" button uses). */
+   * topbar's "New rollout" button uses). */
   onNewRelease: () => void;
 };
 
