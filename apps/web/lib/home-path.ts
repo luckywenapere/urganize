@@ -16,24 +16,26 @@
 // mid-session or with an installed PWA pointed at it.
 //
 // 2026-08-12 (founder decision): the catalog is the front door again, and
-// this is now unconditional. It no longer reads the assistant's flag: a
-// signed-in user lands on their releases whether or not UrgAns is enabled.
+// this became unconditional for a while — no longer reading the assistant's
+// flag, so a signed-in user landed on their releases whether or not UrgAns
+// was enabled.
 //
-// 2026-09-08 (founder decision): the assistant is the front door again, and
-// this is the FOURTH flip (07-15 assistant, 07-23 catalog, 07-31 assistant,
-// 08-12 catalog, now assistant). The 08-12 note above predicted that "a
-// future reversal is this line", and it was — every entry point still
-// imports this, so none of them had to move.
+// 2026-09-09 (founder decision): the assistant is the front door again, and
+// the flag-conditional form is restored with it. This is the FOURTH flip of
+// this value (07-15 assistant, 07-23 catalog, 07-31 assistant, 08-12 catalog,
+// now assistant) — the reason this constant exists is that every entry point
+// moves together, so each reversal is this one line.
 //
-// IT IS FLAG-CONDITIONAL, AND THAT IS A REQUIREMENT RATHER THAN A
-// PREFERENCE. ChappiPageClient bounces to '/dashboard' when the assistant's
-// flag is off (its own `router.replace('/dashboard')`), so an unconditional
-// '/dashboard/urgans' would send a flag-off deployment into a redirect the
-// moment anyone signed in. Resolving to the catalog when the flag is off
-// matches that bounce, so the two agree and there is no loop either way.
-const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
-
-export const HOME_PATH = CHAPPI_ENABLED ? '/dashboard/urgans' : '/dashboard';
+// THE FLAG READ IS NOT OPTIONAL. ChappiPageClient bounces to '/dashboard'
+// when NEXT_PUBLIC_FEATURE_CHAPPI is off, so an unconditional
+// '/dashboard/urgans' would send every flag-off deployment through a bounce
+// on every sign-in. Resolving to '/dashboard' here matches that bounce, so
+// there is no round trip either way.
+//
+// It is inlined at build time like every other NEXT_PUBLIC_* read, so a flag
+// flip needs a deploy that actually rebuilds apps/web before this moves.
+export const HOME_PATH =
+  process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true' ? '/dashboard/urgans' : '/dashboard';
 
 /** Where a curator-only account lands. That surface has no team chrome at all. */
 export const CURATOR_HOME_PATH = '/curator';

@@ -178,13 +178,17 @@ function buildNavItems(
   releases: { id: string; title: string }[]
 ): NavItem[] {
   return [
-    // UrgAns leads the list (founder call, 2026-09-08): it is the surface a
-    // signed-in user now lands on, so it is also the first thing here and in
-    // the topbar pair. Gated on its own flag, which this row was NOT before
-    // — the topbar has always gated its pair and this list never did, so
-    // with the assistant off it offered a first row that bounced straight
-    // back to the catalog. Harmless while it sat third; the wrong thing to
-    // leave at the top.
+    // FIRST, above Catalog (founder call, 2026-09-09), and the same call that
+    // made the assistant the post-auth landing again (lib/home-path.ts). The
+    // row you land on is the row that leads the list.
+    //
+    // GATED ON ITS OWN FLAG, which this row was NOT before it moved. The
+    // topbar has always gated its pair and this list never did, so with the
+    // assistant off the list offered a row that bounces: ChappiPageClient
+    // does `router.replace('/dashboard')` when the flag is off, which is the
+    // same reason HOME_PATH is flag-conditional. Harmless while it sat third
+    // among many; the wrong thing to leave at the top of the nav, where it is
+    // the first thing a flag-off deployment offers.
     ...(CHAPPI_ENABLED
       ? [
           {
