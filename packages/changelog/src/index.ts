@@ -20,6 +20,25 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.35.0",
+    date: "September 9, 2026",
+    highlights: [
+      "Hover a row in the side menu and it tells you what that page is for, in one plain line.",
+      "The Metadata page is quieter. Every box has a small i beside it, so the explanation is there when you want it and out of the way when you don't.",
+      "Shorter wording in a few more places, with the detail tucked behind the same small i.",
+      "The Settings tab holding your team name, logo and artists is called Profile now.",
+    ],
+  },
+  {
+    version: "1.34.0",
+    date: "September 9, 2026",
+    highlights: [
+      "You can resize the side menu now. Drag its right edge to make it wider or narrower, and double-click that edge to put it back.",
+      "The width you pick is remembered, so the menu stays how you left it next time you open the app.",
+      "The New release button is called New rollout now. Same button, same place.",
+    ],
+  },
+  {
     version: "1.33.0",
     date: "September 9, 2026",
     highlights: [

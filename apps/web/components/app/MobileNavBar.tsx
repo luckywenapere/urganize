@@ -79,11 +79,11 @@ function NavTab({
 
 /**
  * Bottom tab bar, below lg only (NEXT_PUBLIC_FEATURE_MOBILE_NAV). Moves the
- * topbar's nav icons and the "New release" CTA down to where a thumb actually
+ * topbar's nav icons and the "New rollout" CTA down to where a thumb actually
  * reaches on a phone, and stands in for the ChappiDock launcher (which retires
  * on this same viewport range — see ChappiDock.tsx).
  *
- * Slots: Home (Catalog) · UrgAns · Notes · New release/New activity (centre,
+ * Slots: Home (Catalog) · UrgAns · Notes · New rollout/New activity (centre,
  * filled) · Shows · Pitches · Press kits.
  *
  * EVERY TAB IS ALWAYS VISIBLE (founder call, 2026-09-05). Which tabs EXIST is
@@ -132,7 +132,7 @@ function NavTab({
  * THE "+" IS NOT HERE ANY MORE (founder call, 2026-09-06). It moved to the
  * topbar's top-RIGHT corner, opposite the account link that already sits
  * top-left. Its contextual behaviour went with it — quick-create for a scoped
- * release, New release everywhere else, which is the job TasksPanel's retired
+ * release, New rollout everywhere else, which is the job TasksPanel's retired
  * mobile "New activity" pill left behind — so `handleCreateClick` in
  * AppTopbar.tsx is now the one implementation. Nothing here creates anything;
  * this bar is destinations only, which is what it always claimed to be.

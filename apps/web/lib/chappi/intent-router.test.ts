@@ -98,6 +98,28 @@ describe('resolveIntent — existing branches are unaffected', () => {
     const { resolveIntent } = await loadRouter({ notes: true, planner: false });
     expect(resolveIntent('start a new single').kind).toBe('new_release');
   });
+
+  it('routes the word the control is named after', async () => {
+    // The button says "New rollout", and buildHelpReply's own suggestion reads
+    // "Create a new rollout" — those suggestions are clicked and fed back
+    // through resolveIntent, so if this branch does not claim the word, the
+    // chip answers with the help card it came from. Asserted with the ACTUAL
+    // suggestion string rather than a paraphrase, so renaming the copy without
+    // the keyword fails here.
+    const { resolveIntent, buildHelpReply } = await loadRouter({ notes: true, planner: false });
+    const suggestion = buildHelpReply().suggestions?.find((text) => /rollout/i.test(text));
+    expect(suggestion).toBe('Create a new rollout');
+    expect(resolveIntent(suggestion as string).kind).toBe('new_release');
+    expect(resolveIntent('new rollout').kind).toBe('new_release');
+    expect(resolveIntent('roll out my next one').kind).toBe('new_release');
+  });
+
+  it('leaves the word to the planner when the planner is on', async () => {
+    // Same word, and the planner branch above claims it first — planning IS
+    // how a rollout starts once that surface exists.
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true });
+    expect(resolveIntent('new rollout').kind).toBe('plan_release');
+  });
 });
 
 describe('resolveIntent — shows', () => {

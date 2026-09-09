@@ -513,7 +513,7 @@ export function CreateReleaseModal({
                       ? 'Your first release'
                       : 'Create your first release'
                     : plan
-                      ? 'New release'
+                      ? 'New rollout'
                       : 'How do you want to start?'}
               </h2>
               {TYPE_FIRST_CREATE_ENABLED ? (

@@ -12,13 +12,15 @@ import {
   railWidthFromDrag,
   resolveRailBounds,
 } from '@/lib/rail-width';
+import { sidebarTotalWidth } from '@/lib/sidebar-width';
+import { useSidebarStore } from '@/stores/useSidebarStore';
 import { ChappiConversation } from './ChappiConversation';
 
 const IDENTITY_PANEL_ENABLED = process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true';
 
 type ChappiSidePanelProps = {
   /** Opens the CreateReleaseModal owned by AppShell (the same instance
-   * the topbar's "New release" button and the dock use). */
+   * the topbar's "New rollout" button and the dock use). */
   onNewRelease: () => void;
 };
 
@@ -59,6 +61,8 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
   const reset = useChappiStore((state) => state.reset);
   const railWidth = useChappiStore((state) => state.railWidth);
   const setRailWidth = useChappiStore((state) => state.setRailWidth);
+  const sidebarWidth = useSidebarStore((state) => state.width);
+  const sidebarCollapsed = useSidebarStore((state) => state.collapsed);
 
   const asideRef = useRef<HTMLElement | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -88,12 +92,25 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
     };
   }, []);
 
-  // The identity card hides ITSELF between lg and xl while the rail is open
-  // (railIsCompeting in WorkspaceIdentityPanel), so reserving its width in
-  // that band would compute the maximum against a column that is not there.
-  const identityPanelPresent =
-    IDENTITY_PANEL_ENABLED && viewport >= 1280;
-  const bounds = resolveRailBounds(viewport, identityPanelPresent);
+  // How much the workspace side menu is taking, which is a real measurement
+  // now rather than a constant: that card is draggable too, so a fixed
+  // reservation under-reserves the moment somebody widens it and the shortfall
+  // comes straight out of <main>'s floor.
+  //
+  // It hides ITSELF between lg and xl while the rail is open (railIsCompeting
+  // in WorkspaceIdentityPanel) — but only while EXPANDED; a collapsed 64px
+  // card coexists with the rail from lg up, which is what makes collapsing the
+  // menu the user's own way to give this rail more room. Reserving a column
+  // that is not on screen would compute the maximum against space nobody can
+  // see, so those cases pass 0.
+  const identityPanelTotal = !IDENTITY_PANEL_ENABLED
+    ? 0
+    : sidebarCollapsed
+      ? sidebarTotalWidth(sidebarWidth, true)
+      : viewport >= 1280
+        ? sidebarTotalWidth(sidebarWidth, false)
+        : 0;
+  const bounds = resolveRailBounds(viewport, identityPanelTotal);
   const width = clampRailWidth(railWidth, bounds);
 
   // A width the current viewport cannot pay for is corrected in state too,
@@ -141,7 +158,7 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
           startWidth,
           startX,
           moveEvent.clientX,
-          resolveRailBounds(document.documentElement.clientWidth, identityPanelPresent)
+          resolveRailBounds(document.documentElement.clientWidth, identityPanelTotal)
         );
         if (!frame) frame = window.requestAnimationFrame(paint);
       };
@@ -168,7 +185,7 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
       handle.addEventListener('pointerup', finish);
       handle.addEventListener('pointercancel', finish);
     },
-    [bounds.resizable, commit, identityPanelPresent, width]
+    [bounds.resizable, commit, identityPanelTotal, width]
   );
 
   const handleKeyDown = useCallback(

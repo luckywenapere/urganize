@@ -187,7 +187,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
   const router = useRouter();
-  // Lifted here so the universal topbar "New release" button opens the same
+  // Lifted here so the universal topbar "New rollout" button opens the same
   // creation modal the page-level buttons use, from any dashboard page,
   // without navigating away.
   const [isCreateReleaseOpen, setIsCreateReleaseOpen] = useState(false);
@@ -608,7 +608,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {REPORT_ISSUE_ENABLED && showHelpMenu ? <ReportIssueDialog /> : null}
       {/* Deliberately NO onStartTestRelease on this instance, unlike the two
           the first-release prompt opens (WorkspaceView, ChappiPageClient).
-          Two reasons: this modal only opens from deliberate "+ New release"
+          Two reasons: this modal only opens from deliberate "+ New rollout"
           taps, not from the prompt the test path serves; and AppShell cannot
           consume the ToastProvider it mounts itself, so a failed test-release
           create here would have NO surface at all — a silent dead tap, the
