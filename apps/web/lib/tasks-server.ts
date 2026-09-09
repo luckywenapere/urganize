@@ -714,7 +714,7 @@ async function syncOrganizationMembersIntoWorkspace(
 /** Thrown when a curator-ONLY account reaches a team-provisioning path. */
 export class CuratorAccountError extends Error {
   constructor() {
-    super('Playlist owner accounts cannot create releases.');
+    super('Playlist owner accounts cannot create rollouts.');
     this.name = 'CuratorAccountError';
   }
 }
@@ -1561,7 +1561,7 @@ export async function resolveReleaseTaskWorkspace(
     .maybeSingle();
 
   if (releaseResult.error || !releaseResult.data) {
-    throw releaseResult.error || new Error('Release not found.');
+    throw releaseResult.error || new Error('Rollout not found.');
   }
 
   const release = releaseResult.data as ReleaseRow;

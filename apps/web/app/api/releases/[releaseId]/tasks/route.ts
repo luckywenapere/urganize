@@ -28,7 +28,7 @@ export async function GET(
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not load release tasks.' },
+      { error: error instanceof Error ? error.message : 'Could not load rollout tasks.' },
       { status: 500 }
     );
   }

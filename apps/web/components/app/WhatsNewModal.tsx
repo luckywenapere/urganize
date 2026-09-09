@@ -41,7 +41,7 @@ export function WhatsNewModal() {
     if (seenVersion === CURRENT_VERSION) return [];
     const candidates =
       seenVersion === null
-        ? // First visit on this device: announce only the current release —
+        ? // First visit on this device: announce only the current rollout —
           // enough to say "here's what just landed" without a history dump.
           changelog.slice(0, 1)
         : (() => {

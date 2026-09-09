@@ -62,7 +62,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       // would null out whatever it omits.
       const current = await callInternalApi(ctx, `/api/releases/${releaseId}`, { method: 'GET' });
       if (!current.ok) {
-        return fail(apiError(current, 'That release was not found on your team.'));
+        return fail(apiError(current, 'That rollout was not found on your team.'));
       }
       const release = (current.body.release ?? {}) as Record<string, unknown>;
       const currentTitle = typeof release.title === 'string' ? release.title : '';
@@ -76,13 +76,13 @@ export const RELEASE_TOOLS: ChappiTool[] = [
         description: description || currentDescription,
       };
       if (status) body.status = status;
-      if (!body.title) return fail('A release needs a title.');
+      if (!body.title) return fail('A rollout needs a title.');
 
       const res = await callInternalApi(ctx, `/api/releases/${releaseId}`, {
         method: 'PATCH',
         body,
       });
-      if (!res.ok) return fail(apiError(res, 'Could not update the release.'));
+      if (!res.ok) return fail(apiError(res, 'Could not update the rollout.'));
       return {
         ok: true,
         summary: `Updated "${body.title as string}".`,
@@ -94,7 +94,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
     name: 'schedule_release',
     kind: 'mutate',
     description:
-      "Set or change a release's date. If the release was waiting on a date to build its rollout activities, this also creates them.",
+      "Set or change a rollout's date. If the rollout was waiting on a date to build its rollout activities, this also creates them.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -139,7 +139,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
     name: 'delete_release',
     kind: 'mutate',
     description:
-      'Permanently delete a release and everything attached to it. Requires the user to approve a confirmation card — calling this only proposes the deletion, it does not perform it.',
+      'Permanently delete a rollout and everything attached to it. Requires the user to approve a confirmation card — calling this only proposes the deletion, it does not perform it.',
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -156,7 +156,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       // approve it. See listOwnedReleases in ../release-scope.ts.
       const releases = await listOwnedReleases(ctx);
       const release = releases.find((r) => r.id === releaseId);
-      if (!release) return { ok: false, summary: 'That release was not found on your team.' };
+      if (!release) return { ok: false, summary: 'That rollout was not found on your team.' };
 
       const tasks = await new TaskService(ctx.adminClient).getTasksForUser(
         ctx.user.id,
@@ -167,18 +167,18 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       return {
         ok: true,
         title: `Delete "${release.title}"?`,
-        detail: `This removes the release, its ${taskLine}, and every file attached to it. It cannot be undone.`,
-        confirmLabel: 'Delete release',
+        detail: `This removes the rollout, its ${taskLine}, and every file attached to it. It cannot be undone.`,
+        confirmLabel: 'Delete rollout',
       };
     },
     execute: async (ctx, args) => {
       const releaseId = argString(args, 'releaseId');
       if (!releaseId) return fail('releaseId is required.');
       const res = await callInternalApi(ctx, `/api/releases/${releaseId}`, { method: 'DELETE' });
-      if (!res.ok) return fail(apiError(res, 'Could not delete the release.'));
+      if (!res.ok) return fail(apiError(res, 'Could not delete the rollout.'));
       return {
         ok: true,
-        summary: 'Deleted the release.',
+        summary: 'Deleted the rollout.',
         // Back to the catalog: the scoped view the user may be sitting on now
         // points at a release that no longer exists.
         clientAction: { type: 'navigate', href: '/dashboard' },
@@ -253,7 +253,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
     name: 'archive_release',
     kind: 'mutate',
     description:
-      "Archive a finished release, or bring one back. Archiving hides it from the working catalogue and frees a slot against the plan's active-release limit; nothing is deleted. Pass archived: false to restore it, which returns it to draft.",
+      "Archive a finished rollout, or bring one back. Archiving hides it from the working catalogue and frees a slot against the plan's active-rollout limit; nothing is deleted. Pass archived: false to restore it, which returns it to draft.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -271,11 +271,11 @@ export const RELEASE_TOOLS: ChappiTool[] = [
         method: 'POST',
         body: { archived },
       });
-      if (!res.ok) return fail(apiError(res, 'Could not change the release.'));
+      if (!res.ok) return fail(apiError(res, 'Could not change the rollout.'));
       return {
         ok: true,
         summary: archived
-          ? 'Archived it. Nothing was deleted, and that frees a slot for a new release.'
+          ? 'Archived it. Nothing was deleted, and that frees a slot for a new rollout.'
           : 'Brought it back, as a draft.',
         clientAction: { type: 'refresh' },
       };

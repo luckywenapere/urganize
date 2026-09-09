@@ -306,7 +306,7 @@ export function PlanScene({
         <div className="mt-6 rounded-xl border border-stroke-default bg-bg-surface p-5 text-center">
           <p className="text-sm text-content-secondary">No draft plan here yet.</p>
           <Button type="button" onClick={onStartIntake} className="mt-4">
-            Plan this release with UrgAns
+            Plan this rollout with UrgAns
           </Button>
         </div>
       </section>
@@ -466,7 +466,7 @@ export function PlanScene({
           <p className={`${noticeClass} border-brand/30 bg-brand/5 text-content-secondary`}>
             <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />
             <span>
-              UrgAns drafted this from the release facts alone.{' '}
+              UrgAns drafted this from the rollout facts alone.{' '}
               <button
                 type="button"
                 onClick={onStartIntake}
@@ -508,7 +508,7 @@ export function PlanScene({
           <p className={`${noticeClass} border-stroke-default bg-bg-elevated text-content-secondary`}>
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
             <span>
-              This release already has {existingTaskCount}{' '}
+              This rollout already has {existingTaskCount}{' '}
               {existingTaskCount === 1 ? 'activity' : 'activities'}. Approving adds the plan
               alongside them.
             </span>

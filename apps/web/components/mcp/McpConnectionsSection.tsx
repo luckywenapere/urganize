@@ -54,7 +54,7 @@ export function McpConnectionsSection() {
         Connected apps
       </h2>
       <p className="mb-5 max-w-prose text-sm leading-6 text-content-secondary">
-        AI apps you have let into your releases. They can see your releases, your activities
+        AI apps you have let into your rollouts. They can see your rollouts, your activities
         and your notes, and add or change them — they cannot delete anything. Connect one from
         the app itself, and disconnect it here any time.
       </p>

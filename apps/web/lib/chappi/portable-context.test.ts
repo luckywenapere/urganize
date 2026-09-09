@@ -50,7 +50,7 @@ function hash(value: string): number {
 describe('formatReleaseContext', () => {
   it('leads with the facts a model needs to orient', () => {
     const text = formatReleaseContext({ release: release(), tasks: [], today: TODAY });
-    expect(text).toContain('Release: Midnight EP');
+    expect(text).toContain('Rollout: Midnight EP');
     expect(text).toContain('Artist: Tems');
     expect(text).toContain('Type: ep');
     expect(text).toContain('Status: draft');
@@ -172,10 +172,10 @@ describe('formatReleaseContext', () => {
         tasks: [],
         today: TODAY,
       })
-    ).toContain('What this release is:\nSecond EP, Lagos-recorded.');
+    ).toContain('What this rollout is:\nSecond EP, Lagos-recorded.');
     expect(
       formatReleaseContext({ release: release({ description: '   ' }), tasks: [], today: TODAY })
-    ).not.toContain('What this release is');
+    ).not.toContain('What this rollout is');
   });
 
   it('falls back rather than printing an empty artist or type', () => {

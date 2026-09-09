@@ -78,7 +78,7 @@ export async function PATCH(
       updates.release_id = payload.releaseId;
       releaseIdToVerify = payload.releaseId;
     } else {
-      return NextResponse.json({ error: 'Release id must be text or null.' }, { status: 400 });
+      return NextResponse.json({ error: 'Rollout id must be text or null.' }, { status: 400 });
     }
   }
 

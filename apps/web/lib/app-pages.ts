@@ -77,7 +77,7 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       key: 'catalog',
       label: 'Catalog',
       href: '/dashboard',
-      keywords: ['releases', 'home', 'all releases'],
+      keywords: ['rollouts', 'releases', 'home', 'all rollouts', 'all releases'],
       leavesRelease: true,
     },
     {

@@ -267,7 +267,7 @@ export function PlannerIntakeModal() {
           error?: string;
         };
         if (!created.ok || !payload.releaseId) {
-          throw new Error(payload.error || 'Could not create the release.');
+          throw new Error(payload.error || 'Could not create the rollout.');
         }
         releaseId = payload.releaseId;
 

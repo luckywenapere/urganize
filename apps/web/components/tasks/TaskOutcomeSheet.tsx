@@ -214,7 +214,7 @@ function OutcomeSheetBody({
             <div>
               <h2 className="font-display text-xl text-content-primary">Thanks. Saved.</h2>
               <p className="mt-1 text-sm text-content-secondary">
-                UrgAns will remember this for the release.
+                UrgAns will remember this for the rollout.
               </p>
             </div>
           ) : phase === 'followup' && question ? (

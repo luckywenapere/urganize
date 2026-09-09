@@ -137,11 +137,11 @@ export const INSIGHTS_TOOLS: ChappiTool[] = [
     name: 'compare_releases',
     kind: 'read',
     description:
-      "Compare the user's most recent releases side by side: date, status, task completion, and how far off (or how long ago) each one is. Use this for questions about trends, what worked before, or what to change based on past releases.",
+      "Compare the user's most recent rollouts side by side: date, status, task completion, and how far off (or how long ago) each one is. Use this for questions about trends, what worked before, or what to change based on past rollouts.",
     inputSchema: {
       type: 'object',
       properties: {
-        limit: { type: 'number', description: 'How many releases, most recent first. Defaults to 5.' },
+        limit: { type: 'number', description: 'How many rollouts, most recent first. Defaults to 5.' },
       },
     },
     execute: async (ctx, args) => {
@@ -176,7 +176,7 @@ export const INSIGHTS_TOOLS: ChappiTool[] = [
       const compared = compareReleases(rows, today, limit);
       return {
         ok: true,
-        summary: compared.length ? `Compared ${compared.length} release(s).` : 'No releases to compare yet.',
+        summary: compared.length ? `Compared ${compared.length} rollout(s).` : 'No rollouts to compare yet.',
         data: compared,
       };
     },
@@ -185,7 +185,7 @@ export const INSIGHTS_TOOLS: ChappiTool[] = [
     name: 'get_team_workload',
     kind: 'read',
     description:
-      "See how open work is spread across the team right now: each teammate's open and overdue task count, plus how much is unassigned. Use this before suggesting who should take on a piece of work, or to explain why a release is stalled.",
+      "See how open work is spread across the team right now: each teammate's open and overdue task count, plus how much is unassigned. Use this before suggesting who should take on a piece of work, or to explain why a rollout is stalled.",
     inputSchema: { type: 'object', properties: {} },
     execute: async (ctx) => {
       const membersRes = await callInternalApi(ctx, '/api/workspace/members', { method: 'GET' });

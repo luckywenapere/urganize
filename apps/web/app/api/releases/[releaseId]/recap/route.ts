@@ -106,7 +106,7 @@ export async function GET(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -168,7 +168,7 @@ export async function POST(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   let body: unknown = {};
@@ -200,7 +200,7 @@ export async function POST(
 
     if (!isRecapEligible(release, raw)) {
       return NextResponse.json(
-        { error: 'This release is not ready for a recap yet.' },
+        { error: 'This rollout is not ready for a recap yet.' },
         { status: 400 }
       );
     }
@@ -208,7 +208,7 @@ export async function POST(
     stats = selectRecapStats(raw);
   } catch (error) {
     console.error('[recap] could not gather stats', error);
-    return NextResponse.json({ error: 'Could not read this release. Try again.' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not read this rollout. Try again.' }, { status: 500 });
   }
 
   // Render both sizes, then upload both, before touching the row. If anything
@@ -361,7 +361,7 @@ export async function DELETE(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);

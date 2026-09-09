@@ -100,7 +100,7 @@ async function loadReleaseRetentionSummary(
       : 0;
 
   if (tasksResult.error && !isMissingOptionalFeatureTable(tasksResult.error)) {
-    throw new Error(tasksResult.error.message || 'Could not load release tasks.');
+    throw new Error(tasksResult.error.message || 'Could not load rollout tasks.');
   }
 
   if (workspaceResult.error && !isMissingOptionalFeatureTable(workspaceResult.error)) {
@@ -118,7 +118,7 @@ async function loadReleaseRetentionSummary(
       suggestedAction: {
         type: 'add_task',
         title: 'Add your first task to stay on track',
-        description: 'Tasks give the release a real plan instead of leaving important work floating in your head.',
+        description: 'Tasks give the rollout a real plan instead of leaving important work floating in your head.',
         ctaLabel: 'Open tasks',
         href: `/dashboard?release=${releaseId}`,
       },
@@ -132,7 +132,7 @@ async function loadReleaseRetentionSummary(
       suggestedAction: {
         type: 'invite_team',
         title: 'Invite your team to assign work',
-        description: 'Bring managers, publicists and collaborators into your team so the release stops depending on one person.',
+        description: 'Bring managers, publicists and collaborators into your team so the rollout stops depending on one person.',
         ctaLabel: 'Invite artists, freelancers and team members',
         href: `/settings`,
       },
@@ -159,7 +159,7 @@ export async function GET(
   if ('error' in auth) return auth.error;
 
   const { releaseId } = await context.params;
-  if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+  if (!releaseId) return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
 
   const adminClient = createAdminClient(auth.supabaseUrl);
   // Read path allows any member of the owner's workspace (whole-workspace
@@ -174,7 +174,7 @@ export async function GET(
       .then((summary) => ({ summary }))
       .catch((error: unknown) => ({
         retentionError:
-          error instanceof Error ? error.message : 'Could not load release retention state.',
+          error instanceof Error ? error.message : 'Could not load rollout retention state.',
       })),
   ]);
   if ('error' in commandCenter) return commandCenter.error;
@@ -221,7 +221,7 @@ export async function PATCH(
     if ('error' in auth) return auth.error;
 
     const { releaseId } = await context.params;
-    if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    if (!releaseId) return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
 
     const adminClient = createAdminClient(auth.supabaseUrl);
     const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
@@ -248,13 +248,13 @@ export async function PATCH(
     const statusInput = trimString(body?.status);
     if (statusInput && !isValidReleaseStatus(statusInput)) {
       return NextResponse.json(
-        { error: `Release status must be one of: ${RELEASE_STATUSES.join(', ')}.` },
+        { error: `Rollout status must be one of: ${RELEASE_STATUSES.join(', ')}.` },
         { status: 400 }
       );
     }
     const status = statusInput || ownership.release.status;
 
-    if (!title) return NextResponse.json({ error: 'Release title is required.' }, { status: 400 });
+    if (!title) return NextResponse.json({ error: 'Rollout title is required.' }, { status: 400 });
 
     // Same validation the POST route runs — without it a malformed date
     // string reached Postgres, cast-errored, and surfaced as a raw 500.
@@ -281,7 +281,7 @@ export async function PATCH(
 
     if (releaseUpdate.error) {
       if (isOptionalTableMissingError(releaseUpdate.error)) return buildMissingTableResponse();
-      return NextResponse.json({ error: releaseUpdate.error.message || 'Could not update release.' }, { status: 500 });
+      return NextResponse.json({ error: releaseUpdate.error.message || 'Could not update rollout.' }, { status: 500 });
     }
 
     const metadataUpdate = await adminClient!
@@ -337,7 +337,7 @@ export async function DELETE(
     if ('error' in auth) return auth.error;
 
     const { releaseId } = await context.params;
-    if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    if (!releaseId) return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
 
     const adminClient = createAdminClient(auth.supabaseUrl);
     const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
@@ -354,7 +354,7 @@ export async function DELETE(
 
     if (assetsResult.error && !isOptionalTableMissingError(assetsResult.error)) {
       return NextResponse.json(
-        { error: assetsResult.error.message || 'Could not load release assets.' },
+        { error: assetsResult.error.message || 'Could not load rollout assets.' },
         { status: 500 }
       );
     }
@@ -373,7 +373,7 @@ export async function DELETE(
       const removeResult = await adminClient!.storage.from(bucket).remove(paths);
       if (removeResult.error) {
         return NextResponse.json(
-          { error: removeResult.error.message || 'Could not delete release files from storage.' },
+          { error: removeResult.error.message || 'Could not delete rollout files from storage.' },
           { status: 500 }
         );
       }
@@ -391,7 +391,7 @@ export async function DELETE(
     if (deleteResult.error) {
       if (isOptionalTableMissingError(deleteResult.error)) return buildMissingTableResponse();
       return NextResponse.json(
-        { error: deleteResult.error.message || 'Could not delete release.' },
+        { error: deleteResult.error.message || 'Could not delete rollout.' },
         { status: 500 }
       );
     }

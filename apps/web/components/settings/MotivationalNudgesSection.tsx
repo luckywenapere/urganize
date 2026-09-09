@@ -56,7 +56,7 @@ export function MotivationalNudgesSection() {
       title="Motivation"
       description={
         isEnabled
-          ? 'A weekly nudge to keep your releases moving — one push, once a week.'
+          ? 'A weekly nudge to keep your rollouts moving — one push, once a week.'
           : 'Urganize will not send motivational nudges.'
       }
       action={

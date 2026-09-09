@@ -115,7 +115,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
     name: 'get_release_plan',
     kind: 'read',
     description:
-      "Check whether a release has a rollout plan yet: whether a draft is waiting, whether it has been approved, and how many activities sit in each phase. Returns a summary, not the full plan.",
+      "Check whether a rollout has a plan yet: whether a draft is waiting, whether it has been approved, and how many activities sit in each phase. Returns a summary, not the full plan.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -135,7 +135,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
           ok: true,
           summary: releaseDate
             ? 'No rollout plan yet. Run the intake questions and generate one.'
-            : 'No rollout plan yet, and the release has no date — set one before approving any plan.',
+            : 'No plan yet, and the rollout has no date — set one before approving any plan.',
           data: { hasDraft: false, approved: false, releaseDate },
         };
       }
@@ -156,26 +156,26 @@ export const PLANNER_TOOLS: ChappiTool[] = [
     name: 'generate_release_plan',
     kind: 'mutate',
     description:
-      "Build a draft rollout plan from the hand-crafted playbook, tailored to the seven intake answers. Collect all seven in conversation first and read them back before calling this. Omit releaseId to create the release and draft its plan in one call — the usual case for a brand-new release. It does NOT create any activities — the plan stays a draft until it is approved.",
+      "Build a draft rollout plan from the hand-crafted playbook, tailored to the seven intake answers. Collect all seven in conversation first and read them back before calling this. Omit releaseId to create the rollout and draft its plan in one call — the usual case for a brand-new rollout. It does NOT create any activities — the plan stays a draft until it is approved.",
     inputSchema: {
       type: 'object',
       properties: {
         releaseId: {
           type: 'string',
           description:
-            'Only for an existing release that has no activities yet. Omit to create the release and draft its plan in one call.',
+            'Only for an existing rollout that has no activities yet. Omit to create the rollout and draft its plan in one call.',
         },
         title: {
           type: 'string',
           description:
-            'Title for the new release, when the user named one. Ignored when releaseId is passed.',
+            'Title for the new rollout, when the user named one. Ignored when releaseId is passed.',
         },
         release_type: {
           type: 'string',
           enum: ['single', 'ep', 'album'],
           description: 'Q1 — what they are releasing.',
         },
-        artist_name: { type: 'string', description: 'Q2 — the artist this release is for.' },
+        artist_name: { type: 'string', description: 'Q2 — the artist this rollout is for.' },
         release_date: {
           type: 'string',
           description: 'Q3 — release day, YYYY-MM-DD. Null only if genuinely undecided.',
@@ -253,9 +253,9 @@ export const PLANNER_TOOLS: ChappiTool[] = [
             source: 'chappi',
           },
         });
-        if (!created.ok) return fail(apiError(created, 'Could not create the release.'));
+        if (!created.ok) return fail(apiError(created, 'Could not create the rollout.'));
         releaseId = String(created.body.releaseId || '');
-        if (!releaseId) return fail('Could not create the release.');
+        if (!releaseId) return fail('Could not create the rollout.');
         createdHere = true;
       }
 
@@ -267,12 +267,12 @@ export const PLANNER_TOOLS: ChappiTool[] = [
       if (!res.ok) {
         if (res.body.code === 'draft_exists') {
           return fail(
-            'There is already a draft plan for this release. Ask whether to start over before generating again.'
+            'There is already a draft plan for this rollout. Ask whether to start over before generating again.'
           );
         }
         if (res.body.code === 'tasks_exist') {
           return fail(
-            'This release already has its activities, so it cannot be re-planned. To plan a NEW release, call generate_release_plan again without a releaseId.'
+            'This rollout already has its activities, so it cannot be re-planned. To plan a NEW rollout, call generate_release_plan again without a releaseId.'
           );
         }
         if (createdHere) {
@@ -280,7 +280,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
           // id back so the retry targets it instead of minting a duplicate.
           return {
             ok: false,
-            summary: `The release was created — it exists now — but the plan could not be drafted: ${apiError(res, 'Could not build the plan.')} Retry by calling generate_release_plan again WITH releaseId ${releaseId}; do not create another release.`,
+            summary: `The rollout was created — it exists now — but the plan could not be drafted: ${apiError(res, 'Could not build the plan.')} Retry by calling generate_release_plan again WITH releaseId ${releaseId}; do not create another rollout.`,
             data: { releaseId },
           };
         }
@@ -305,7 +305,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
         .join(', ');
       return {
         ok: true,
-        summary: `${createdHere ? 'Created the release and drafted' : 'Drafted'} ${summary.totalTasks} activities (${phaseLine}). Nothing is scheduled yet — it needs approving.`,
+        summary: `${createdHere ? 'Created the rollout and drafted' : 'Drafted'} ${summary.totalTasks} activities (${phaseLine}). Nothing is scheduled yet — it needs approving.`,
         data: { releaseId, ...summary },
         // Open the review scene so they can read the plan before approving.
         clientAction: { type: 'navigate', href: `/dashboard?release=${releaseId}&scene=plan` },
@@ -316,7 +316,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
     name: 'approve_release_plan',
     kind: 'mutate',
     description:
-      'Turn the draft rollout plan into real activities on the release. Requires the user to approve a confirmation card — calling this only proposes it. Cannot be undone from here.',
+      'Turn the draft plan into real activities on the rollout. Requires the user to approve a confirmation card — calling this only proposes it. Cannot be undone from here.',
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -344,7 +344,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
         return {
           ok: false,
           summary:
-            'This release has no date yet, and the plan needs one. Set the date with schedule_release first.',
+            'This rollout has no date yet, and the plan needs one. Set the date with schedule_release first.',
         };
       }
 
@@ -352,7 +352,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
       return {
         ok: true,
         title: `Approve this plan and create ${summary.totalTasks} activities?`,
-        detail: `They will be scheduled around ${releaseDate} and appear on the release straight away. Undoing this means deleting the activities one by one.`,
+        detail: `They will be scheduled around ${releaseDate} and appear on the rollout straight away. Undoing this means deleting the activities one by one.`,
         confirmLabel: 'Approve plan',
       };
     },
@@ -422,7 +422,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
       return {
         ok: true,
         title: 'Discard this draft plan?',
-        detail: `The ${summary.totalTasks} drafted activities and any edits made to them will be lost. No activities have been created yet, so nothing on the release changes.`,
+        detail: `The ${summary.totalTasks} drafted activities and any edits made to them will be lost. No activities have been created yet, so nothing on the rollout changes.`,
         confirmLabel: 'Discard draft',
       };
     },

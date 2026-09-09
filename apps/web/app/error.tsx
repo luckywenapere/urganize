@@ -74,7 +74,7 @@ export default function AppError({
             href={HOME_PATH}
             className="inline-flex min-h-11 items-center justify-center border border-stroke-default bg-bg-surface px-5 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary"
           >
-            Back to your releases
+            Back to your rollouts
           </Link>
         </div>
 

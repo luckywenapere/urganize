@@ -107,7 +107,7 @@ async function unwrapAccessError(
   } catch {
     // Fall through to the generic message below.
   }
-  return { status, error: 'Could not check release access.' };
+  return { status, error: 'Could not check rollout access.' };
 }
 
 /**
@@ -191,7 +191,7 @@ export async function resolveActionScope(
   }
 
   if (action.access === 'owner_write' && access.release.ownerUserId !== user.id) {
-    return { ok: false, status: 404, error: 'Release not found.' };
+    return { ok: false, status: 404, error: 'Rollout not found.' };
   }
 
   const release = access.release;

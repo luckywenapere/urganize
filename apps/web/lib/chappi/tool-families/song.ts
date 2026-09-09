@@ -58,10 +58,10 @@ export const SONG_TOOLS: ChappiTool[] = [
     name: 'get_song',
     kind: 'read',
     description:
-      "Check whether a release has its song (the audio master) uploaded, and what the file is.",
+      "Check whether a rollout has its song (the audio master) uploaded, and what the file is.",
     inputSchema: {
       type: 'object',
-      properties: { releaseId: { type: 'string', description: 'The release id.' } },
+      properties: { releaseId: { type: 'string', description: 'The rollout id.' } },
       required: ['releaseId'],
     },
     execute: async (ctx, args) => {
@@ -80,7 +80,7 @@ export const SONG_TOOLS: ChappiTool[] = [
       if (songs.length === 0) {
         return {
           ok: true,
-          summary: 'No song has been uploaded to this release yet.',
+          summary: 'No song has been uploaded to this rollout yet.',
           data: { hasSong: false, songs },
         };
       }
@@ -99,14 +99,14 @@ export const SONG_TOOLS: ChappiTool[] = [
     name: 'upload_song',
     kind: 'mutate',
     description:
-      "Start uploading the song (the audio master) for a release. Use this whenever the user wants to add, send, attach or replace a release's audio. It opens a file picker right here in the conversation — it does NOT upload anything by itself, and you cannot be given the file. Tell the user to choose their file in the card that appears.",
+      "Start uploading the song (the audio master) for a rollout. Use this whenever the user wants to add, send, attach or replace a rollout's audio. It opens a file picker right here in the conversation — it does NOT upload anything by itself, and you cannot be given the file. Tell the user to choose their file in the card that appears.",
     inputSchema: {
       type: 'object',
       properties: {
         releaseId: {
           type: 'string',
           description:
-            'The release to upload the song for. Resolve the name to an id first; never guess.',
+            'The rollout to upload the song for. Resolve the name to an id first; never guess.',
         },
       },
       required: ['releaseId'],
@@ -130,7 +130,7 @@ export const SONG_TOOLS: ChappiTool[] = [
       return {
         ok: true,
         summary: existing
-          ? `Ready — choose the file in the card below. This release already has ${currentName}; uploading another adds a version rather than replacing it.`
+          ? `Ready — choose the file in the card below. This rollout already has ${currentName}; uploading another adds a version rather than replacing it.`
           : 'Ready — choose the file in the card below.',
         data: { awaitingFile: true, existingSongCount: existing },
         clientAction,

@@ -56,7 +56,7 @@ export function AutofillSummary({ counts, filled, gapCount, onStart }: Props) {
             </p>
           ) : (
             <p className="text-sm text-content-primary">
-              Some of this kit is already filled in from your releases.
+              Some of this kit is already filled in from your rollouts.
             </p>
           )}
 

@@ -19,10 +19,10 @@ import { errorMessage } from '@/lib/errors';
 
 // What redeeming actually unlocks — kept honest to the shipped product.
 const PERKS = [
-  'A hand-crafted release rollout plan',
+  'A hand-crafted rollout rollout plan',
   'Tasks with owners, due dates, and dependencies',
-  'Every release file in one place',
-  'Milestones on your release timeline',
+  'Every rollout file in one place',
+  'Milestones on your rollout timeline',
 ];
 
 export default function RedeemPageClient() {

@@ -32,7 +32,7 @@ export function NewReleaseGuide({ onDismiss, releaseType = 'single' }: NewReleas
     >
       <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-content-primary">Your release is set up</p>
+        <p className="text-sm font-semibold text-content-primary">Your rollout is set up</p>
         <p className="mt-1 text-sm leading-6 text-content-secondary">
           This rollout plans ~{spanWeeks} weeks of work, starting {leadWeeks} weeks before
           release. It&apos;s a starting point — edit any activity, add your own, or reassign

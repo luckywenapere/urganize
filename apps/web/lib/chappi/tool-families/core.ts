@@ -23,7 +23,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'list_releases',
     kind: 'read',
-    description: "List all of the user's releases with status and date.",
+    description: "List all of the user's rollouts with status and date.",
     inputSchema: { type: 'object', properties: {} },
     execute: async (ctx) => {
       const releases = await listVisibleReleases(ctx);
@@ -34,16 +34,16 @@ export const CORE_TOOLS: ChappiTool[] = [
         status: r.status,
         releaseDate: r.releaseDate,
       }));
-      return { ok: true, summary: `Found ${data.length} release(s).`, data };
+      return { ok: true, summary: `Found ${data.length} rollout(s).`, data };
     },
   },
   {
     name: 'get_release',
     kind: 'read',
-    description: 'Get one release and its tasks by release id.',
+    description: 'Get one rollout and its tasks by rollout id.',
     inputSchema: {
       type: 'object',
-      properties: { releaseId: { type: 'string', description: 'The release id.' } },
+      properties: { releaseId: { type: 'string', description: 'The rollout id.' } },
       required: ['releaseId'],
     },
     execute: async (ctx, args) => {
@@ -51,7 +51,7 @@ export const CORE_TOOLS: ChappiTool[] = [
       if (!releaseId) return fail('releaseId is required.');
       const releases = await listVisibleReleases(ctx);
       const release = releases.find((r) => r.id === releaseId);
-      if (!release) return fail('That release was not found on your team.');
+      if (!release) return fail('That rollout was not found on your team.');
       const tasks = await new TaskService(ctx.adminClient).getTasksForUser(
         ctx.user.id,
         ctx.workspaceIds,
@@ -77,7 +77,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'list_tasks',
     kind: 'read',
-    description: 'List tasks, optionally filtered by release, status, or priority.',
+    description: 'List tasks, optionally filtered by rollout, status, or priority.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -103,7 +103,7 @@ export const CORE_TOOLS: ChappiTool[] = [
     name: 'get_dashboard',
     kind: 'read',
     description:
-      "Get a high-level snapshot: release count, task counts by state, and today's suggested focus task.",
+      "Get a high-level snapshot: rollout count, task counts by state, and today's suggested focus task.",
     inputSchema: { type: 'object', properties: {} },
     execute: async (ctx) => {
       const releases = await listVisibleReleases(ctx);
@@ -117,7 +117,7 @@ export const CORE_TOOLS: ChappiTool[] = [
       const focus = overdue || dueToday || incomplete[0] || null;
       return {
         ok: true,
-        summary: `${releases.length} release(s), ${incomplete.length} open task(s).`,
+        summary: `${releases.length} rollout(s), ${incomplete.length} open task(s).`,
         data: {
           releaseCount: releases.length,
           openTasks: incomplete.length,
@@ -131,16 +131,16 @@ export const CORE_TOOLS: ChappiTool[] = [
     name: 'create_release',
     kind: 'mutate',
     description:
-      "Create a new release. Depending on the environment this either generates the rollout task plan from the template straight away, or leaves the release ready to be planned. Call this AT MOST ONCE per user request — it is not idempotent.",
+      "Create a new rollout. Depending on the environment this either generates the rollout task plan from the template straight away, or leaves the rollout ready to be planned. Call this AT MOST ONCE per user request — it is not idempotent.",
     inputSchema: {
       type: 'object',
       properties: {
-        title: { type: 'string', description: 'The release title.' },
+        title: { type: 'string', description: 'The rollout title.' },
         releaseDate: { type: 'string', description: 'Optional release date, YYYY-MM-DD.' },
         isTest: {
           type: 'boolean',
           description:
-            'A practice release to look around with, deletable in one tap. Only when the user asks for a test or a demo — never for real work.',
+            'A practice rollout to look around with, deletable in one tap. Only when the user asks for a test or a demo — never for real work.',
         },
       },
       required: ['title'],
@@ -163,7 +163,7 @@ export const CORE_TOOLS: ChappiTool[] = [
           isTest: argBoolean(args, 'isTest') === true ? true : undefined,
         },
       });
-      if (!res.ok) return fail(String(res.body.error || 'Could not create the release.'));
+      if (!res.ok) return fail(String(res.body.error || 'Could not create the rollout.'));
       const releaseId = String(res.body.releaseId || '');
       const clientAction: ChappiClientAction = releaseId
         ? { type: 'navigate', href: `/dashboard?release=${releaseId}` }
@@ -185,7 +185,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'create_task',
     kind: 'mutate',
-    description: 'Create a task on a release.',
+    description: 'Create a task on a rollout.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -227,7 +227,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'create_note',
     kind: 'mutate',
-    description: "Create a private note for the user. Optionally attach it to a release.",
+    description: "Create a private note for the user. Optionally attach it to a rollout.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -237,7 +237,7 @@ export const CORE_TOOLS: ChappiTool[] = [
         },
         releaseId: {
           type: 'string',
-          description: 'Release to attach the note to. Omit for a note with no release.',
+          description: 'Rollout to attach the note to. Omit for a note with no rollout.',
         },
       },
       required: ['body'],
@@ -360,7 +360,7 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'generate_status_update',
     kind: 'mutate',
-    description: 'Generate a one-paragraph status update for a release.',
+    description: 'Generate a one-paragraph status update for a rollout.',
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -403,12 +403,12 @@ export const CORE_TOOLS: ChappiTool[] = [
   {
     name: 'navigate',
     kind: 'mutate',
-    description: 'Take the user to a page: the dashboard, settings, or a specific release.',
+    description: 'Take the user to a page: the dashboard, settings, or a specific rollout.',
     inputSchema: {
       type: 'object',
       properties: {
         target: { type: 'string', enum: ['dashboard', 'settings', 'release'] },
-        releaseId: { type: 'string', description: 'Required when target is "release".' },
+        releaseId: { type: 'string', description: 'Required when target is "rollout".' },
       },
       required: ['target'],
     },

@@ -159,7 +159,7 @@ export function SongSection({ releaseId, onToast }: SongSectionProps) {
           // master is missing when the request merely failed is the worse of
           // the two lies.
           <div className="border border-status-error/30 bg-status-error/5 p-4">
-            <p className="text-sm text-content-primary">We could not load this release&apos;s song.</p>
+            <p className="text-sm text-content-primary">We could not load this rollout&apos;s song.</p>
             <p className="mt-1 text-xs text-content-secondary">{loadError}</p>
             <button
               type="button"
@@ -172,9 +172,9 @@ export function SongSection({ releaseId, onToast }: SongSectionProps) {
         ) : songs.length === 0 ? (
           <div className="border border-dashed border-stroke-default p-8 text-center">
             <Music className="mx-auto h-5 w-5 text-content-tertiary" aria-hidden="true" />
-            <p className="mt-3 text-sm text-content-primary">No song on this release yet.</p>
+            <p className="mt-3 text-sm text-content-primary">No song on this rollout yet.</p>
             <p className="mt-1 text-xs text-content-secondary">
-              Upload the master and it travels with the release — ready when you pitch it or hand it
+              Upload the master and it travels with the rollout — ready when you pitch it or hand it
               to a distributor.
             </p>
           </div>

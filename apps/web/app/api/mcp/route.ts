@@ -205,13 +205,13 @@ export async function POST(request: NextRequest) {
                 uri: WORKSPACE_CONTEXT_URI,
                 name: 'Everything about this team',
                 description:
-                  'How the team works, every current release with its progress, what is overdue, and who is carrying what.',
+                  'How the team works, every current rollout with its progress, what is overdue, and who is carrying what.',
               }),
               ...releases.map((release) =>
                 buildResourceDescriptor({
                   uri: buildReleaseContextUri(release.id),
                   name: release.title,
-                  description: `One release in full: dates, progress, what is blocked and what is next.${
+                  description: `One rollout in full: dates, progress, what is blocked and what is next.${
                     release.releaseDate ? ` Out ${release.releaseDate}.` : ''
                   }`,
                 })

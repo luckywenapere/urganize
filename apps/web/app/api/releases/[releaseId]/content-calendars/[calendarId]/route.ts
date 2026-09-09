@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const { releaseId, calendarId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
   if (!calendarId) {
     return NextResponse.json({ error: 'Calendar id is required.' }, { status: 400 });
@@ -93,7 +93,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
   const { releaseId, calendarId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
   if (!calendarId) {
     return NextResponse.json({ error: 'Calendar id is required.' }, { status: 400 });

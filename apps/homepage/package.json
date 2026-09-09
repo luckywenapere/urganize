@@ -1,7 +1,7 @@
 {
   "name": "@urganize/homepage",
-  "description": "AI Music Manager for artists, managers and labels. Plan, organize and execute releases from one place.",
-  "version": "1.37.0",
+  "description": "AI Music Manager for artists, managers and labels. Plan, organize and execute rollouts from one place.",
+  "version": "1.38.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

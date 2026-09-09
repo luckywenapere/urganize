@@ -192,11 +192,11 @@ export default function AuthorizePageClient() {
       </div>
 
       <h1 className="mt-4 font-display text-2xl leading-snug text-content-primary">
-        Let this app read and update your releases?
+        Let this app read and update your rollouts?
       </h1>
 
       <p className="mt-3 text-sm leading-relaxed text-content-secondary">
-        It will be able to see your releases, your activities and your notes, and to add or change
+        It will be able to see your rollouts, your activities and your notes, and to add or change
         them. It cannot delete anything, and it cannot see another team&rsquo;s work.
       </p>
       <p className="mt-2 text-sm leading-relaxed text-content-secondary">

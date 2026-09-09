@@ -88,9 +88,13 @@ const CHIP_DESCRIPTIONS: Record<string, string> = {
   // #570's wording, on the chip that survived: the three planner presets it
   // also described are gone from CHAPPI_CHIPS, so their keys would be dead.
   'new-release': 'Start a new rollout, planned from the playbook',
+  // The three planner-preset keys #571 renamed are gone with the presets
+  // themselves: CHAPPI_CHIPS folded them into one 'plan-release' chip, so a
+  // description keyed on 'plan-single-6w' would never be looked up. Their
+  // rename of the object is kept — "rollouts", never "releases".
   'plan-release': 'Answer a few questions and get a draft rollout plan',
-  'status-update': 'A paragraph on where the release stands, ready to send',
-  'add-task': 'Create an activity for one of your releases',
+  'status-update': 'A paragraph on where the rollout stands, ready to send',
+  'add-task': 'Create an activity for one of your rollouts',
   'take-note': 'Park a thought before it gets away',
 };
 
@@ -379,7 +383,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           (releases.length === 1 ? releases[0]?.id : null);
         if (!target) {
           appendAssistantReply(
-            'Which release? Open one first, or tell me its name and ask again.'
+            'Which rollout? Open one first, or tell me its name and ask again.'
           );
           return;
         }
@@ -439,7 +443,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           (releases.length === 1 ? releases[0]?.id : null);
         if (!target) {
           appendAssistantReply(
-            'Which release? Open one first, or tell me its name and ask again.'
+            'Which rollout? Open one first, or tell me its name and ask again.'
           );
           return;
         }
@@ -535,7 +539,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         // asking.
         if (!scopedRelease) {
           appendAssistantReply(
-            'Which release is the song for? Pick it below the prompt and ask me again.'
+            'Which rollout is the song for? Pick it below the prompt and ask me again.'
           );
           return;
         }
@@ -700,7 +704,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       appendAssistantReply('That did not go through. Nothing was changed.');
     } catch {
       appendAssistantReply(
-        'Something went wrong confirming that. Check your release, it may or may not have gone through.'
+        'Something went wrong confirming that. Check your rollout, it may or may not have gone through.'
       );
     } finally {
       setIsThinking(false);

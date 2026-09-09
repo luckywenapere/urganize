@@ -19,7 +19,7 @@ import {
 } from './shared';
 
 const PITCHING_OFF = "Playlist pitching isn't enabled yet.";
-const RECAP_OFF = "Release recaps aren't enabled yet.";
+const RECAP_OFF = "Rollout recaps aren't enabled yet.";
 
 /** Bound the browse payload — the route returns up to 200 playlists. */
 const MAX_LISTED_PLAYLISTS = 30;
@@ -77,7 +77,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
     name: 'list_pitches',
     kind: 'read',
     description:
-      'See the pitches already sent and how curators answered. Pass a releaseId for one release, or leave it out for every release this team has pitched.',
+      'See the pitches already sent and how curators answered. Pass a releaseId for one rollout, or leave it out for every rollout this team has pitched.',
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -126,7 +126,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
     name: 'pitch_song',
     kind: 'mutate',
     description:
-      "Pitch a song from a release to a curator's playlist. Requires the user to approve a confirmation card — calling this only proposes it, and nothing reaches the curator until they approve.",
+      "Pitch a song from a rollout to a curator's playlist. Requires the user to approve a confirmation card — calling this only proposes it, and nothing reaches the curator until they approve.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -209,7 +209,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
   {
     name: 'get_recap',
     kind: 'read',
-    description: "Check whether a finished release has a recap card, and the numbers behind it.",
+    description: "Check whether a finished rollout has a recap card, and the numbers behind it.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -225,7 +225,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
       if (!res.ok) return fail(apiError(res, 'Could not check the recap.'));
       return {
         ok: true,
-        summary: res.body.recap ? 'This release has a recap card.' : 'No recap card yet.',
+        summary: res.body.recap ? 'This rollout has a recap card.' : 'No recap card yet.',
         data: { hasRecap: Boolean(res.body.recap), stats: res.body.stats ?? null },
       };
     },
@@ -234,14 +234,14 @@ export const PROMO_TOOLS: ChappiTool[] = [
     name: 'generate_recap',
     kind: 'mutate',
     description:
-      "Build the shareable recap card for a finished release. Only works once the release date has passed or every activity is done. Ask for the highlight in conversation first — it's optional.",
+      "Build the shareable recap card for a finished rollout. Only works once the release date has passed or every activity is done. Ask for the highlight in conversation first — it's optional.",
     inputSchema: {
       type: 'object',
       properties: {
         releaseId: { type: 'string' },
         highlight: {
           type: 'string',
-          description: 'One thing worth remembering about the release, in the user\'s own words.',
+          description: 'One thing worth remembering about the rollout, in the user\'s own words.',
         },
       },
       required: ['releaseId'],
@@ -272,7 +272,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
     name: 'delete_recap',
     kind: 'mutate',
     description:
-      'Delete a release recap card. Requires the user to approve a confirmation card — calling this only proposes it.',
+      'Delete a rollout recap card. Requires the user to approve a confirmation card — calling this only proposes it.',
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },

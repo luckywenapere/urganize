@@ -114,12 +114,12 @@ export function DeleteReleaseDialog({
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(payload.error || 'Could not delete release.');
+        throw new Error(payload.error || 'Could not delete rollout.');
       }
 
       onDeleted(release.id);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not delete release.');
+      setError(caught instanceof Error ? caught.message : 'Could not delete rollout.');
     } finally {
       setIsDeleting(false);
     }
@@ -132,7 +132,7 @@ export function DeleteReleaseDialog({
     >
       <button
         type="button"
-        aria-label="Close delete release dialog"
+        aria-label="Close delete rollout dialog"
         className="absolute inset-0"
         onClick={() => {
           if (!isDeleting) {
@@ -149,7 +149,7 @@ export function DeleteReleaseDialog({
       >
         <div className="p-4 sm:p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
-            Delete release
+            Delete rollout
           </p>
           <h2
             id="delete-release-title"
@@ -158,7 +158,7 @@ export function DeleteReleaseDialog({
             Delete &ldquo;{release.title}&rdquo;?
           </h2>
           <p className="mt-2 text-sm leading-6 text-content-secondary">
-            This permanently deletes the release
+            This permanently deletes the rollout
             {tasksTotal > 0
               ? `, its ${tasksTotal} ${tasksTotal === 1 ? 'task' : 'tasks'},`
               : ''}{' '}
@@ -185,7 +185,7 @@ export function DeleteReleaseDialog({
             isLoading={isDeleting}
             leftIcon={isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
           >
-            Delete release
+            Delete rollout
           </Button>
         </div>
       </div>

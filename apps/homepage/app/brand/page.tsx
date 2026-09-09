@@ -152,7 +152,7 @@ export default function BrandPage() {
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Positioning</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   Urganize is an AI Music Manager for artists, managers and labels. Plan,
-                  organize and execute releases from one place.
+                  organize and execute rollouts from one place.
                 </p>
               </div>
 
@@ -185,7 +185,7 @@ export default function BrandPage() {
                 <p className={sectionEyebrow}>Boilerplate · copy / paste</p>
                 <p className="mt-2 text-[var(--marketing-text)]">
                   Urganize is an AI Music Manager for artists, managers and labels. It helps
-                  music teams plan releases, coordinate people, manage assets and metadata,
+                  music teams plan rollouts, coordinate people, manage assets and metadata,
                   track execution and keep every part of a rollout moving from one place.
                   Every release runs on a rollout plan written by real managers, with an owner
                   and a due date on every activity and a press kit you can send as one link.

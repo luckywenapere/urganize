@@ -142,7 +142,7 @@ export const TEAM_TOOLS: ChappiTool[] = [
         ok: true,
         title: `Remove ${label} from your team?`,
         detail:
-          'They lose access straight away. Anything assigned to them stays on the release, unassigned.',
+          'They lose access straight away. Anything assigned to them stays on the rollout, unassigned.',
         confirmLabel: 'Remove teammate',
       };
     },

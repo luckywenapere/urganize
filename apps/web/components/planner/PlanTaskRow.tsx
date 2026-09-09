@@ -48,7 +48,7 @@ function offsetLabel(offsetDays: number): string {
 function assigneeProvenanceLabel(basis: DraftTask['assignee_basis']): string | null {
   switch (basis) {
     case 'history':
-      return 'From past releases';
+      return 'From past rollouts';
     case 'role':
       return 'Role match';
     case 'ai':

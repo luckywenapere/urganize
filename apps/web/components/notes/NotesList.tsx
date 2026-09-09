@@ -189,7 +189,7 @@ export function NotesList({
               </span>
             ) : null}
             <span className="truncate">
-              {filterRelease ? filterRelease.title : 'Unknown release'}
+              {filterRelease ? filterRelease.title : 'Unknown rollout'}
             </span>
             <button
               type="button"
@@ -222,7 +222,7 @@ export function NotesList({
               hasMore
                 ? `Search only covers the ${loadedCount} notes loaded so far. Load older notes and try again.`
                 : isFiltering
-                  ? 'Nothing here matches your search. Try fewer words, or clear the release filter to search everything.'
+                  ? 'Nothing here matches your search. Try fewer words, or clear the rollout filter to search everything.'
                   : 'Try fewer words — search matches the title and the body, in any order.'
             }
             action={
@@ -256,11 +256,11 @@ export function NotesList({
           <EmptyState
             mascot="resting"
             title={
-              isFiltering ? 'No notes for this release yet.' : 'Park a thought before it gets away.'
+              isFiltering ? 'No notes for this rollout yet.' : 'Park a thought before it gets away.'
             }
             description={
               isFiltering
-                ? 'Notes you link to this release show up here. Start one now, or clear the filter to see everything.'
+                ? 'Notes you link to this rollout show up here. Start one now, or clear the filter to see everything.'
                 : undefined
             }
             action={

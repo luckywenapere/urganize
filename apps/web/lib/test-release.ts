@@ -72,12 +72,12 @@ export function writeTestRelease(
 
 /** The canned title. Plain on purpose: the card tag, the banner and the
  * delete dialog all lean on the release SAYING it is a test. */
-export const TEST_RELEASE_TITLE = 'Test release';
+export const TEST_RELEASE_TITLE = 'Test rollout';
 
 /** One line shown wherever the release description surfaces (press kit,
  * status updates). Copy rules: short words, "you", no em dash. */
 export const TEST_RELEASE_DESCRIPTION =
-  'A practice release you can explore and delete when you are done.';
+  'A practice rollout you can explore and delete when you are done.';
 
 /** 9 weeks. The single playbook spans day -56 to day +21, so a release dated
  * +63 days puts every one of its 64 activities in the future (+7..+84) and

@@ -144,7 +144,7 @@ export async function POST(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   if (!isAiConfigured()) {
@@ -178,13 +178,13 @@ export async function POST(
       return NextResponse.json({ error: 'Release schema is incomplete.' }, { status: 501 });
     }
     return NextResponse.json(
-      { error: releaseResult.error.message || 'Could not load release.' },
+      { error: releaseResult.error.message || 'Could not load rollout.' },
       { status: 500 }
     );
   }
   const release = releaseResult.data as ReleaseRow | null;
   if (!release) {
-    return NextResponse.json({ error: 'Release not found.' }, { status: 404 });
+    return NextResponse.json({ error: 'Rollout not found.' }, { status: 404 });
   }
 
   // --- Load tasks + assets in parallel ----------------------------------------
@@ -216,7 +216,7 @@ export async function POST(
   };
 
   const releaseInfo: StatusReleaseInfo = {
-    title: release.title || 'Untitled release',
+    title: release.title || 'Untitled rollout',
     artistName: release.artist_name || '',
     releaseDate: release.release_date,
     releaseType: release.release_type || 'single',

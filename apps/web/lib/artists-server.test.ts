@@ -182,7 +182,7 @@ describe('reassignReleaseArtist', () => {
   it('reports a missing release rather than silently succeeding', async () => {
     const stub = stubReassignClient({ releaseResult: { data: null } });
     const result = await reassignReleaseArtist(stub.client, { releaseId: 'gone', artist: ARTIST });
-    expect(result.error).toBe('Release not found.');
+    expect(result.error).toBe('Rollout not found.');
   });
 
   it('surfaces a failed release write', async () => {
@@ -228,17 +228,17 @@ describe('describeArtistDeletionBlock', () => {
   it('says what happens to a scoped teammate rather than only refusing', () => {
     const message = describeArtistDeletionBlock({ releases: 0, scopedMembers: 2 }) ?? '';
     expect(message).toContain('2');
-    expect(message).toMatch(/every release/i);
+    expect(message).toMatch(/every rollout/i);
   });
 
   it('covers both blockers in one message when both apply', () => {
     const message = describeArtistDeletionBlock({ releases: 1, scopedMembers: 1 }) ?? '';
-    expect(message).toMatch(/release/i);
+    expect(message).toMatch(/rollout/i);
     expect(message).toMatch(/access/i);
   });
 
   it('reads naturally for one of each', () => {
-    expect(describeArtistDeletionBlock({ releases: 1, scopedMembers: 0 })).toContain('1 release.');
+    expect(describeArtistDeletionBlock({ releases: 1, scopedMembers: 0 })).toContain('1 rollout.');
     expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 1 })).toContain('1 person');
   });
 });

@@ -253,7 +253,7 @@ export default function PitchingPageClient() {
                       href={`/dashboard?release=${group.releaseId}&scene=pitch`}
                       className="motion-focus truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary hover:text-content-primary"
                     >
-                      {group.releaseTitle || 'Untitled release'}
+                      {group.releaseTitle || 'Untitled rollout'}
                     </Link>
                   ) : (
                     // The release was deleted after these went out. The pitches

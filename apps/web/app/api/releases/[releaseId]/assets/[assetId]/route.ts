@@ -27,7 +27,7 @@ export async function DELETE(
   const { releaseId, assetId } = await context.params;
   if (!releaseId || !assetId) {
     return NextResponse.json(
-      { error: 'Release id and asset id are required.' },
+      { error: 'Rollout id and asset id are required.' },
       { status: 400 }
     );
   }
@@ -63,7 +63,7 @@ export async function DELETE(
   // Defense in depth: confirm the asset belongs to the URL's release.
   if (fetchResult.data.release_id !== releaseId) {
     return NextResponse.json(
-      { error: 'Asset does not belong to this release.' },
+      { error: 'Asset does not belong to this rollout.' },
       { status: 404 }
     );
   }

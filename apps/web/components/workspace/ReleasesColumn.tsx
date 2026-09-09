@@ -80,7 +80,7 @@ export function ReleasesColumn({
       className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full border border-brand/25 bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
     >
       <Plus className="h-4 w-4" />
-      Create release
+      Create rollout
     </button>
   );
 
@@ -105,8 +105,8 @@ export function ReleasesColumn({
       ) : releases.length === 0 ? (
         <EmptyState
           mascot="resting"
-          title="No releases yet"
-          description="Create your first release to start planning activities."
+          title="No rollouts yet"
+          description="Create your first rollout to start planning activities."
           action={
             testRelease ? (
               <div className="flex flex-col items-center gap-2.5">
@@ -117,7 +117,7 @@ export function ReleasesColumn({
                   disabled={testRelease.isStarting}
                   className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface px-4 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {testRelease.isStarting ? 'Setting up your test release…' : 'Try a test release'}
+                  {testRelease.isStarting ? 'Setting up your test rollout…' : 'Try a test rollout'}
                 </button>
                 {testRelease.error ? (
                   <p className="text-xs text-status-error">{testRelease.error}</p>

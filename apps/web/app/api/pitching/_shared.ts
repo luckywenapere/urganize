@@ -73,20 +73,20 @@ export async function ensureReleaseVisible(
   if (error) {
     return {
       error: NextResponse.json(
-        { error: error.message || 'Could not load release.' },
+        { error: error.message || 'Could not load rollout.' },
         { status: 500 }
       ),
     };
   }
   if (!release) {
-    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
+    return { error: NextResponse.json({ error: 'Rollout not found.' }, { status: 404 }) };
   }
 
   const ownerUserId = String(release.owner_user_id || '');
   if (ownerUserId !== user.id) {
     const access = await loadWorkspaceAccessContext(adminClient, user as never);
     if (!access.releaseOwnerIds.includes(ownerUserId)) {
-      return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
+      return { error: NextResponse.json({ error: 'Rollout not found.' }, { status: 404 }) };
     }
   }
 

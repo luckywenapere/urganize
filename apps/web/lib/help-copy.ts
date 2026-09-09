@@ -151,7 +151,7 @@ export const HELP_COPY = {
   // expanded card; only the collapsed icon rail carried a native title.
   'nav.catalog': {
     label: 'Catalog',
-    text: 'Every release you are working on, in one list. Tap one to open it.',
+    text: 'Every rollout you are working on, in one list. Tap one to open it.',
   },
   'nav.urgans': {
     label: 'UrgAns',
@@ -159,7 +159,7 @@ export const HELP_COPY = {
   },
   'nav.notes': {
     label: 'Notes',
-    text: 'A quick place to write something down mid call. You can link it to a release later.',
+    text: 'A quick place to write something down mid call. You can link it to a rollout later.',
   },
   'nav.shows': {
     label: 'Shows',
@@ -231,7 +231,7 @@ export const HELP_COPY = {
   },
   'metadata.field.upc': {
     label: 'UPC',
-    text: 'The barcode for the whole release. This also comes from your distributor.',
+    text: 'The barcode for the whole record. This also comes from your distributor.',
   },
   'metadata.field.iswc': {
     label: 'ISWC',
@@ -253,11 +253,11 @@ export const HELP_COPY = {
   // is the right call rather than clutter.
   'settings.export': {
     label: 'Your data',
-    text: 'Releases, activities, files, notes, team and billing history. Included on every plan.',
+    text: 'Rollouts, activities, files, notes, team and billing history. Included on every plan.',
   },
   'settings.directory': {
     label: 'Your directory record',
-    text: 'Managers here look for people who have done the work a release needs. Listing yourself opens your page.',
+    text: 'Managers here look for people who have done the work a rollout needs. Listing yourself opens your page.',
   },
   'settings.teamBrief': {
     label: 'Team brief',
@@ -265,12 +265,12 @@ export const HELP_COPY = {
   },
   'settings.artists': {
     label: 'Artists',
-    text: "Renaming one updates that artist's releases too. You pick one when you make a new release.",
+    text: "Renaming one updates that artist's rollouts too. You pick one when you make a new rollout.",
   },
 
   // --------------------------------------------------------------- workspace
   'workspace.testRelease': {
-    label: 'This is a test release',
+    label: 'This is a test rollout',
     text: 'It comes with the full plan, so you can see how the real thing works. Delete it whenever you like.',
   },
 } as const satisfies Record<string, HelpEntry>;

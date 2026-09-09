@@ -29,7 +29,7 @@ export const CALENDAR_TOOLS: ChappiTool[] = [
     name: 'list_content_calendars',
     kind: 'read',
     description:
-      "List a release's content calendars — one per platform account, with how many posts each holds.",
+      "List a rollout's content calendars — one per platform account, with how many posts each holds.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -60,7 +60,7 @@ export const CALENDAR_TOOLS: ChappiTool[] = [
     name: 'create_content_calendar',
     kind: 'mutate',
     description:
-      'Add a content calendar to a release for one platform account. A release can have several per platform — use the name to tell them apart.',
+      'Add a content calendar to a rollout for one platform account. A rollout can have several per platform — use the name to tell them apart.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -118,7 +118,7 @@ export const CALENDAR_TOOLS: ChappiTool[] = [
         ? (res.body.calendars as Record<string, unknown>[])
         : [];
       const calendar = calendars.find((entry) => String(entry.id ?? '') === calendarId);
-      if (!calendar) return { ok: false, summary: 'That calendar was not found on this release.' };
+      if (!calendar) return { ok: false, summary: 'That calendar was not found on this rollout.' };
 
       const postCount = Number(calendar.postCount ?? 0);
       const label = String(calendar.name || calendar.platform || 'calendar');

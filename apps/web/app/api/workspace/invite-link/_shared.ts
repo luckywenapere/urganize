@@ -99,7 +99,7 @@ export async function loadReleaseTitles(
     return new Map(
       (result.data as { id: string; title: string | null }[]).map((row) => [
         row.id,
-        row.title || 'Untitled release',
+        row.title || 'Untitled rollout',
       ])
     );
   } catch {

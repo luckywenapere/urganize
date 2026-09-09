@@ -33,14 +33,14 @@ import {
 } from './shared';
 
 const COVER_ART_OFF = "Cover art isn't switched on for your team yet.";
-const FILES_OFF = "Release files aren't switched on for your team yet.";
+const FILES_OFF = "Rollout files aren't switched on for your team yet.";
 
 export const FILE_TOOLS: ChappiTool[] = [
   {
     name: 'get_cover_art',
     kind: 'read',
     description:
-      "Whether a release has cover art, what file it is, and whether it meets what music stores require. Says nothing about the release card's fallback image — this is the real artwork or nothing.",
+      "Whether a rollout has cover art, what file it is, and whether it meets what music stores require. Says nothing about the rollout card's fallback image — this is the real artwork or nothing.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -58,7 +58,7 @@ export const FILE_TOOLS: ChappiTool[] = [
       if (!coverArt) {
         return {
           ok: true,
-          summary: 'No cover art on this release yet.',
+          summary: 'No cover art on this rollout yet.',
           data: { coverArt: null },
         };
       }
@@ -87,7 +87,7 @@ export const FILE_TOOLS: ChappiTool[] = [
     name: 'upload_cover_art',
     kind: 'mutate',
     description:
-      "Start attaching cover art to a release. You cannot be sent a file and cannot upload one yourself — this puts a file picker in the conversation for the user to choose with. Uploading REPLACES whatever artwork is there now. Say the picker is ready and ask them to pick; never claim it is done until they say so.",
+      "Start attaching cover art to a rollout. You cannot be sent a file and cannot upload one yourself — this puts a file picker in the conversation for the user to choose with. Uploading REPLACES whatever artwork is there now. Say the picker is ready and ask them to pick; never claim it is done until they say so.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -104,7 +104,7 @@ export const FILE_TOOLS: ChappiTool[] = [
         method: 'GET',
       });
       if (isFlagGateOff(res)) return fail(COVER_ART_OFF);
-      if (!res.ok) return fail(apiError(res, 'Could not open the cover art for that release.'));
+      if (!res.ok) return fail(apiError(res, 'Could not open the cover art for that rollout.'));
       const existing = res.body.coverArt as Record<string, unknown> | null;
 
       return {
@@ -126,7 +126,7 @@ export const FILE_TOOLS: ChappiTool[] = [
     name: 'list_release_files',
     kind: 'read',
     description:
-      "What is attached to a release — artwork, masters, contracts, split sheets — by category. Read only: you cannot attach a file yourself, and only the song and the cover art have a picker.",
+      "What is attached to a rollout — artwork, masters, contracts, split sheets — by category. Read only: you cannot attach a file yourself, and only the song and the cover art have a picker.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -150,7 +150,7 @@ export const FILE_TOOLS: ChappiTool[] = [
         ok: true,
         summary:
           assets.length === 0
-            ? 'Nothing attached to this release yet.'
+            ? 'Nothing attached to this rollout yet.'
             : `${assets.length} ${assets.length === 1 ? 'file' : 'files'}: ${[...byCategory]
                 .map(([category, count]) => `${count} ${category.replace(/_/g, ' ')}`)
                 .join(', ')}.`,

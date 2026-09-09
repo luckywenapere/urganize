@@ -41,7 +41,7 @@ export const PERSON_VISIBILITY_COPY: Record<PersonVisibility, { label: string; h
 };
 
 export const PERSON_AVAILABILITY_COPY: Record<PersonAvailability, { label: string; hint: string }> = {
-  open: { label: 'Open to work', hint: 'Taking on new releases now.' },
+  open: { label: 'Open to work', hint: 'Taking on new rollouts now.' },
   selective: { label: 'Selective', hint: 'Open to the right thing.' },
   closed: { label: 'Not taking work', hint: 'You stay findable. People know not to ask yet.' },
 };

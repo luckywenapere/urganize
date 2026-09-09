@@ -196,7 +196,7 @@ describe('buildCreditSubmissionEmail', () => {
   it('survives no rows at all', () => {
     const email = buildCreditSubmissionEmail({ ...input, rows: [] });
     expect(email.subject).toContain('Midnight EP');
-    expect(email.html).toContain('Open the release');
+    expect(email.html).toContain('Open the rollout');
   });
 
   it('defaults a blank name and release rather than rendering gaps', () => {
@@ -205,7 +205,7 @@ describe('buildCreditSubmissionEmail', () => {
       collaboratorLabel: '   ',
       releaseTitle: '   ',
     });
-    expect(email.subject).toBe('A collaborator sent credits for your release');
+    expect(email.subject).toBe('A collaborator sent credits for your rollout');
   });
 
   it('uses inline styles only, no var() and no web fonts', () => {

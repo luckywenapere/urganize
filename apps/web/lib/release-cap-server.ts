@@ -62,12 +62,12 @@ async function countActiveReleases(
       // treats an unrecognised value.
       .not('status', 'in', `(${INACTIVE_RELEASE_STATUSES.join(',')})`);
     if (error) {
-      console.error('[release-cap] could not count active releases:', error.message);
+      console.error('[release-cap] could not count active rollouts:', error.message);
       return null;
     }
     return count ?? 0;
   } catch (error) {
-    console.error('[release-cap] could not count active releases:', error);
+    console.error('[release-cap] could not count active rollouts:', error);
     return null;
   }
 }

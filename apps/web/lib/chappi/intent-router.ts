@@ -91,7 +91,7 @@ const BARE_NOTE = /^\s*(?:take\s+a\s+note|make\s+a\s+note|new\s+note|note)\s*[.!
  *  2. EVERY CHIP EARNS ITS SPACE. This row is `flex-wrap`, so a long list does
  *     not overflow — it just stops being read. The three planner presets
  *     (single-in-6-weeks / EP / small budget) were folded back into one "Plan a
- *     release": three chips opening one modal, differing only in a preset the
+ *     rollout": three chips opening one modal, differing only in a preset the
  *     planner asks for anyway, was the largest block of a landing that had
  *     nothing for a returning user. They are in git history rather than kept
  *     here as dead code; `plannerPreset` is still on the chip type, so putting
@@ -113,9 +113,11 @@ export const CHAPPI_CHIPS: ChappiChip[] = [
   },
   { id: 'todays-focus', label: 'What should I focus on today?', ask: 'What should I focus on today?' },
   ...(PLANNER_ENABLED
-    ? [{ id: 'plan-release', label: 'Plan a release', intent: 'plan_release' as const }]
-    // "New rollout", not "New release" — #570 renamed the control, and this
-    // chip is that control's twin on the assistant's landing.
+    ? [{ id: 'plan-release', label: 'Plan a rollout', intent: 'plan_release' as const }]
+    // "rollout", never "release", in both labels — #570 renamed the control and
+    // #571 renamed the object everywhere a person reads it. The ids and intents
+    // keep their `release` names, which is the documented split: code
+    // identifiers are exempt, rendered copy is not.
     : [{ id: 'new-release', label: 'New rollout', intent: 'new_release' as const }]),
   {
     id: 'status-update',
@@ -226,14 +228,15 @@ export function resolveIntent(raw: string): ChappiIntent {
  */
 export function buildHelpReply(): ChappiReply {
   return {
-    text: "I can help you run your releases. Here's what I can do without any setup:",
+    text: "I can help you run your rollouts. Here's what I can do without any setup:",
     suggestions: [
       'What should I focus on today?',
       'Generate a status update',
-      // "a new rollout", matching the renamed control — and the release branch
-      // above knows the word for exactly this reason: these suggestions are
-      // clicked and fed straight back through resolveIntent.
-      PLANNER_ENABLED ? 'Plan a release' : 'Create a new rollout',
+      // "rollout", not "release" — #571 renamed the object in every user-facing
+      // string, and the branch below knows both words for exactly this reason:
+      // these suggestions are clicked and fed straight back through
+      // resolveIntent.
+      PLANNER_ENABLED ? 'Plan a rollout' : 'Create a new rollout',
       'Add an activity',
       ...(SONG_UPLOAD_ENABLED ? ['Upload the song'] : []),
       ...(EVENTS_ENABLED ? ['My shows'] : []),

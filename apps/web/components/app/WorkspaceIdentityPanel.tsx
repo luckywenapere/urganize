@@ -1090,7 +1090,7 @@ function WorkspaceNavList({
             aria-expanded={expanded}
             aria-controls={subListId}
             aria-label={expanded ? `Hide ${label.toLowerCase()} list` : `Show ${label.toLowerCase()} list`}
-            title={expanded ? "Hide releases" : "Show releases"}
+            title={expanded ? "Hide rollouts" : "Show rollouts"}
             className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <ChevronDown
@@ -1115,7 +1115,7 @@ function WorkspaceNavList({
                       : "text-content-secondary hover:bg-bg-hover hover:text-content-primary"
                   }`}
                 >
-                  {child.label || "Untitled release"}
+                  {child.label || "Untitled rollout"}
                 </Link>
               </li>
             ))}

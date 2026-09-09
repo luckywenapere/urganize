@@ -1156,7 +1156,7 @@ export function TasksPanel({
               </div>
             ) : null}
             <p className="text-sm text-content-secondary">
-              {scopedRelease ? 'No activities for this release yet.' : 'No activities yet.'}
+              {scopedRelease ? 'No activities for this rollout yet.' : 'No activities yet.'}
             </p>
             <button
               type="button"
@@ -1401,7 +1401,7 @@ export function TasksPanel({
                   // "More" was right while this was an overflow list. Since
                   // 2026-08-31 it holds every release surface, so it is the
                   // release menu and says so.
-                  aria-label="Release menu"
+                  aria-label="Rollout menu"
                   className={MOBILE_DOCK_TRIGGER_CLASS}
                 >
                   <Menu className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1564,7 +1564,7 @@ export function TasksPanel({
                 {toolMatches.length > 0 ? (
                   <>
                     {showSearchGroupHeadings ? (
-                      <p className={SEARCH_GROUP_HEADING_CLASS}>Release tools</p>
+                      <p className={SEARCH_GROUP_HEADING_CLASS}>Rollout tools</p>
                     ) : null}
                     <ul>
                       {toolMatches.map((action) => (
