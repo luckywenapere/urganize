@@ -11,13 +11,14 @@ import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { TESTIMONIALS } from "@/content/testimonials";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Urganize for artist managers",
+  title: "For artist managers",
   description:
-    "Urganize for artist managers running more than one release at once. A rollout plan, owners on every activity and a press kit you send as one link.",
+    `An ${PRODUCT_CATEGORY} for artist managers running more than one release at once. A rollout plan, owners on every activity and a press kit you send as one link.`,
   path: "/for-managers",
 });
 
@@ -65,7 +66,7 @@ const compactBlocks = [
   {
     kicker: "Status",
     title: "Answer \"where's that release?\" without scrolling WhatsApp.",
-    body: "One workspace shows every release you run: progress, what's overdue, what's due this week and which artist it belongs to.",
+    body: "One list shows every release you run: progress, what's overdue, what's due this week and which artist it belongs to.",
   },
 ] as const;
 

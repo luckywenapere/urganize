@@ -11,27 +11,25 @@ import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Urganize for AI artists",
+  title: "For AI artists",
   description:
-    "Making the song got fast. The rollout did not. Urganize gives every drop a full rollout plan, an owner on every activity and a press kit you send as one link.",
+    `Making the song got fast. The rollout did not. Urganize is an ${PRODUCT_CATEGORY}: a full rollout plan per drop, an owner on every activity and a press kit you send as one link.`,
   path: "/for-ai-artists",
 });
 
-// POSITIONING NOTE — read before editing this page. The locked positioning
-// (founder brief, 2026-08-19) is "the AI workspace for music executives
-// working with ambitious artists", and it says artists are ecosystem
-// advocates, never the addressee. This page addresses artists directly, so
-// it is a deliberate exception the founder asked for (2026-08-21), not a
-// drift — the same way /for-managers keeps speaking to managers after
-// executives became the hero. Two guardrails keep it from undoing the
-// brief: /for-executives is the hero page and leads the persona group in
-// the ProductMenu, and this page speaks to the person RUNNING an AI artist
-// project (releasing at volume), which is operator work, not fan-facing
-// artist copy. If the brief is ever re-litigated, re-litigate this page
-// with it.
+// POSITIONING NOTE, and it is shorter than it used to be. Under the
+// 2026-08-19 brief this page needed defending: that positioning made
+// executives the hero and called artists ecosystem advocates rather than the
+// addressee, so a page speaking to artists directly was a founder-sanctioned
+// exception (2026-08-21). The 2026-09-09 positioning retires the exception
+// entirely: the audience is artists, managers and labels, in that order, with
+// artists FIRST. This page is now squarely on-brief rather than a tolerated
+// edge. It still speaks to the person RUNNING an AI artist project, which is
+// operator work rather than fan-facing artist copy.
 //
 // Honesty rule, and it bites hardest here: Urganize has NO AI-music
 // feature. It does not make, master, tag or distribute anything, and the
@@ -80,7 +78,7 @@ const compactBlocks = [
   {
     kicker: "Status",
     title: "Know what is late before it is late.",
-    body: "One workspace shows every release you have going: progress, what is overdue and what is due this week. Volume stops being the thing that breaks you.",
+    body: "One list shows every release you have going: progress, what is overdue and what is due this week. Volume stops being the thing that breaks you.",
   },
 ] as const;
 

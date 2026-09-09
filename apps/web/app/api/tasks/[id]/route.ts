@@ -153,7 +153,7 @@ export async function PATCH(
 
       if (!memberResult.data && !ownerResult.data) {
         return NextResponse.json(
-          { error: 'Cannot assign task to user outside workspace.' },
+          { error: 'Cannot assign an activity to someone outside your team.' },
           { status: 400 }
         );
       }

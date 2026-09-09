@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { HOME_PATH } from '@/lib/home-path';
+import { SHORT_DESCRIPTION } from '@/lib/positioning';
 
 // Web app manifest — makes the app installable as a PWA (Add to Home
 // Screen), which is a prerequisite for push notifications on iOS Safari
@@ -9,8 +10,10 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Urganize',
     short_name: 'Urganize',
-    description:
-      'Urganize is how your music gets the release it deserves — plan releases, track tasks, keep your team aligned.',
+    // An app store reviewer reads this, so it carries the category and no em
+    // dash. `SHORT_DESCRIPTION` is under 160 characters for exactly this kind
+    // of field.
+    description: SHORT_DESCRIPTION,
     // Cold-launch destination for an installed PWA — kept in sync with the
     // in-app post-auth landing surface (URG-205) via the shared constant.
     start_url: HOME_PATH,

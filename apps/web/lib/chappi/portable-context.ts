@@ -56,7 +56,7 @@ export async function buildPortableWorkspaceContext(
 ): Promise<PortableContext> {
   const today = new Date().toISOString().slice(0, 10);
 
-  let snapshot = 'Workspace snapshot unavailable.';
+  let snapshot = 'Team snapshot unavailable.';
   try {
     const releases = await listVisibleReleases(ctx);
     const tasks = ctx.workspaceIds.length

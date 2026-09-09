@@ -85,7 +85,9 @@ const CHIP_ICONS: Record<string, LucideIcon> = {
 const CHIP_DESCRIPTIONS: Record<string, string> = {
   'what-can-you-do': 'What Urganize does, and what you can ask me for',
   'todays-focus': "What's due, what's late and what's blocked",
-  'new-release': 'Start a new release with a rollout plan',
+  // #570's wording, on the chip that survived: the three planner presets it
+  // also described are gone from CHAPPI_CHIPS, so their keys would be dead.
+  'new-release': 'Start a new rollout, planned from the playbook',
   'plan-release': 'Answer a few questions and get a draft rollout plan',
   'status-update': 'A paragraph on where the release stands, ready to send',
   'add-task': 'Create an activity for one of your releases',
@@ -123,7 +125,7 @@ function nextMessageId(role: 'u' | 'a'): string {
  *  - Empty: a Perplexity-style landing — one plain question sits right above
  *    the input. On the `page` variant the whole block centers vertically on
  *    the full screen; the compact `panel` variant (dock/rail) bottom-anchors
- *    instead. The quick-action buttons (New release or the three planner
+ *    instead. The quick-action buttons (New rollout or the three planner
  *    chips, plus Add activity) render BELOW the box, but only at lg+ — a
  *    phone gets the question and the box and nothing else.
  *  - Active: a scrolling transcript of every turn, chip-triggered or typed,
@@ -310,7 +312,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     switch (intent.kind) {
       case 'new_release':
         onNewRelease();
-        appendAssistantReply("Let's set up a new release — the form is open.");
+        appendAssistantReply("Let's set up a new rollout — the form is open.");
         return;
       case 'plan_release': {
         const preset = intent.plannerPreset;
@@ -698,7 +700,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       appendAssistantReply('That did not go through. Nothing was changed.');
     } catch {
       appendAssistantReply(
-        'Something went wrong confirming that. Check your workspace — it may or may not have gone through.'
+        'Something went wrong confirming that. Check your release, it may or may not have gone through.'
       );
     } finally {
       setIsThinking(false);

@@ -3,12 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { CUSTOMER_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Brand",
   description:
-    "How Urganize looks, how it speaks and what it stands for. Voice, colors and logos you can download.",
+    `How Urganize looks, how it speaks and what it stands for. The brand behind the ${CUSTOMER_LINE}.`,
   path: "/brand",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For managers / For labels). The page stays public
@@ -82,22 +83,22 @@ const OTHER_ASSETS = [
   {
     label: "Product screenshot: releases",
     href: "/images/product/workspace-releases.png",
-    note: "The live workspace",
+    note: "The live app",
   },
   {
     label: "Product screenshot: releases (dark)",
     href: "/images/product/workspace-releases-dark.png",
-    note: "The live workspace",
+    note: "The live app",
   },
   {
     label: "Product screenshot: activities",
     href: "/images/product/workspace-tasks.png",
-    note: "The live workspace",
+    note: "The live app",
   },
   {
     label: "Product screenshot: activities (dark)",
     href: "/images/product/workspace-tasks-dark.png",
-    note: "The live workspace",
+    note: "The live app",
   },
 ] as const;
 
@@ -142,28 +143,26 @@ export default function BrandPage() {
                 <p className={`mt-1.5 ${bodyText}`}>
                   The music industry runs on chaos: knowledge stuck in people’s heads, scattered
                   group chats, spreadsheets and one overworked person holding every release
-                  together. Urganize ends that. Every release runs to plan, with the work and the
-                  status in one workspace.
+                  together. Urganize ends that. Every release runs to plan, with the work and
+                  the status in one place.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Positioning</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Urganize is the AI workspace for music executives working with ambitious
-                  artists. Every release run to plan.
+                  Urganize is an AI Music Manager for artists, managers and labels. Plan,
+                  organize and execute releases from one place.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Urganize is built for music executives: label heads, A&amp;R and the people
-                  running operations for ambitious artists. A roster means many release calendars,
-                  many rollouts moving at once and a pile of chats holding it together. Urganize
-                  is the workspace for that. Artists are not the customer — they feel the results.
-                  Labels running a bigger roster get the Label plan, with the founders working
-                  alongside them.
+                  Artists, managers and labels. One release is a lot of moving parts; a roster
+                  is many release calendars, many rollouts at once and a pile of chats holding it
+                  together. Urganize is what runs that. Labels with a bigger roster get the Label
+                  plan, with the founders working alongside them.
                 </p>
               </div>
 
@@ -185,11 +184,11 @@ export default function BrandPage() {
               <div className="border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
                 <p className={sectionEyebrow}>Boilerplate · copy / paste</p>
                 <p className="mt-2 text-[var(--marketing-text)]">
-                  Urganize is the AI workspace for music executives working with ambitious
-                  artists. Every release runs on a rollout plan written by real managers, with an
-                  owner and a due date on every activity and a press kit you can send as one
-                  link. Labels running a bigger roster get the Label plan, with the founders
-                  working alongside them.
+                  Urganize is an AI Music Manager for artists, managers and labels. It helps
+                  music teams plan releases, coordinate people, manage assets and metadata,
+                  track execution and keep every part of a rollout moving from one place.
+                  Every release runs on a rollout plan written by real managers, with an owner
+                  and a due date on every activity and a press kit you can send as one link.
                 </p>
               </div>
 

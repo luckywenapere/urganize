@@ -310,14 +310,14 @@ export const getDashboardEmptyStateCopy = (role: UserRole | null) => {
   if (role === 'manager') {
     return {
       title: 'No releases yet.',
-      description: 'Create the first release workspace so your team has one place to manage tracks, credits, and launch work.',
+      description: 'Create your first release so your team has one place for tracks, credits and launch work.',
     };
   }
 
   if (role === 'label') {
     return {
       title: 'No releases yet.',
-      description: 'Start a release workspace to organize metadata, private listening links, and pre-save momentum before launch.',
+      description: 'Start a release to organize metadata, private listening links and pre-save momentum before launch.',
     };
   }
 

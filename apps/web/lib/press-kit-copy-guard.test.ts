@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
+import { userFacingStrings } from './copy-scan';
 import { BANNED_COPY_CHARS, BANNED_COPY_WORDS, bannedCopyInstruction } from './press-kits';
 
 /**
@@ -49,27 +50,19 @@ const FILES = [
   // makes the coverage a decision instead of a coincidence.
   join(WEB, 'lib', 'chappi', 'tool-families', 'press-kits.ts'),
   join(WEB, 'lib', 'chappi', 'tool-families', 'directory.ts'),
+  // The help pullouts (2026-09-08). Every string in that module is read by a
+  // manager, and it is a NEW surface, so it is born under the house rules
+  // rather than grandfathered out of them like the older copy this guard's
+  // header excludes. Its own guard, lib/help-copy.test.ts, adds the
+  // readability caps on top; this one supplies the em dash, the banned words
+  // and the "never says workspace" rule so there is one definition of each.
+  join(WEB, 'lib', 'help-copy.ts'),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
-/**
- * Only the strings a person reads.
- *
- * Comments are the working record of why the code is the way it is, and hold
- * dates, prose and the odd quotation. Holding them to product copy rules would
- * either gut them or teach everyone to work around the test.
- */
-function userFacingStrings(source: string): string[] {
-  const withoutComments = source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1');
-
-  const matches = withoutComments.match(/(['"])(?:\\.|(?!\1)[^\\\r\n])*\1/g) || [];
-  return matches
-    .map((raw) => raw.slice(1, -1))
-    // Anything with no space is an identifier, a class name, a path or a key.
-    // A sentence a person reads has spaces in it.
-    .filter((value) => /\s/.test(value.trim()) && /[a-z]{3}/i.test(value));
-}
+// `userFacingStrings` moved to lib/copy-scan.ts on 2026-09-09, when the
+// positioning guard needed the same reader. It is unchanged; this file's own
+// header already argued that two guards sharing a rule should not carry two
+// copies of it.
 
 const report = (path: string, value: string) =>
   `${path.replace(`${WEB}/`, '')}: ${value}`;

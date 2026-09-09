@@ -98,6 +98,53 @@ describe('resolveIntent — existing branches are unaffected', () => {
     const { resolveIntent } = await loadRouter({ notes: true, planner: false });
     expect(resolveIntent('start a new single').kind).toBe('new_release');
   });
+
+  it('routes the word the control is named after', async () => {
+    // The button says "New rollout", and buildHelpReply's own suggestion reads
+    // "Create a new rollout" — those suggestions are clicked and fed back
+    // through resolveIntent, so if this branch does not claim the word, the
+    // chip answers with the help card it came from. Asserted with the ACTUAL
+    // suggestion string rather than a paraphrase, so renaming the copy without
+    // the keyword fails here.
+    const { resolveIntent, buildHelpReply } = await loadRouter({ notes: true, planner: false });
+    const suggestion = buildHelpReply().suggestions?.find((text) => /rollout/i.test(text));
+    expect(suggestion).toBe('Create a new rollout');
+    expect(resolveIntent(suggestion as string).kind).toBe('new_release');
+    expect(resolveIntent('new rollout').kind).toBe('new_release');
+    expect(resolveIntent('roll out my next one').kind).toBe('new_release');
+  });
+
+  it('leaves the word to the planner when the planner is on', async () => {
+    // Same word, and the planner branch above claims it first — planning IS
+    // how a rollout starts once that surface exists.
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true });
+    expect(resolveIntent('new rollout').kind).toBe('plan_release');
+  });
+
+  it('routes the word THE TASK control is named after, which is the same bug twice', async () => {
+    // The exact shape of the 'rollout' case above, on the other branch: tasks
+    // were renamed "activities" in the UI, the chip reads "Add activity" and
+    // buildHelpReply suggests "Add an activity" — and the add_task branch was
+    // never told the word, so the one suggestion the help card makes answered
+    // with the help card again. Asserted against the ACTUAL chip label and the
+    // ACTUAL suggestion, not a paraphrase, so renaming either without teaching
+    // the branch fails here rather than in someone's chat.
+    const { resolveIntent, buildHelpReply, CHAPPI_CHIPS } = await loadRouter({
+      notes: true,
+      planner: true,
+    });
+    const suggestion = buildHelpReply().suggestions?.find((text) => /activity/i.test(text));
+    expect(suggestion).toBe('Add an activity');
+    expect(resolveIntent(suggestion as string)).toEqual({ kind: 'add_task' });
+
+    const chip = CHAPPI_CHIPS.find((c) => c.intent === 'add_task');
+    expect(chip?.label).toBe('Add activity');
+    expect(resolveIntent(chip?.label as string)).toEqual({ kind: 'add_task' });
+
+    // Plural, and the phrase a manager actually types.
+    expect(resolveIntent('add an activity for the release')).toEqual({ kind: 'add_task' });
+    expect(resolveIntent('show me my activities')).toEqual({ kind: 'add_task' });
+  });
 });
 
 describe('resolveIntent — shows', () => {

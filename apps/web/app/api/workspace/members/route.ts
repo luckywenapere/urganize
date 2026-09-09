@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   try {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId || !access.primaryWorkspace) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
     const members = await loadWorkspaceMembers(adminClient, access.primaryWorkspaceId, auth.user.id);
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not load workspace members.' },
+      { error: error instanceof Error ? error.message : 'Could not load your team.' },
       { status: 500 }
     );
   }

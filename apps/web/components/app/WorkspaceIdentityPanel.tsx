@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -14,18 +14,34 @@ import { useChappiStore } from "@/stores/useChappiStore";
 import { CatalogIcon, ChappiIcon, GearIcon, NotesIcon } from "@/components/app/BrandIcons";
 import { MicVocal } from '@/components/icons';
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
-import { readPersistedState, writePersistedState } from "@/lib/persisted-state";
+import { readPersistedState } from "@/lib/persisted-state";
 import { isReleaseActive } from "@/lib/release-activity";
 import { leaveReleaseForCatalog } from "@/lib/catalog-intent";
+import { HelpTipPanel } from "@/components/shared/HelpTip";
+import type { HelpKey } from "@/lib/help-copy";
+import { useSidebarStore } from "@/stores/useSidebarStore";
+import { RAIL_GUTTER } from "@/lib/rail-width";
+import {
+  DEFAULT_SIDEBAR_WIDTH,
+  SIDEBAR_COLLAPSED_KEY,
+  SIDEBAR_COLLAPSED_VERSION,
+  SIDEBAR_KEYBOARD_STEP,
+  SIDEBAR_KEYBOARD_STEP_LARGE,
+  SIDEBAR_WIDTH_KEY,
+  SIDEBAR_WIDTH_VERSION,
+  clampSidebarWidth,
+  parsePersistedSidebarWidth,
+  resolveSidebarBounds,
+  sidebarWidthFromDrag,
+} from "@/lib/sidebar-width";
 
-// Collapsed state — same lib/persisted-state pattern as the UrgAns rail's
-// RAIL_OPEN_KEY, and for the same reason: pure UI-chrome state, so a reload
-// shouldn't snap the layout back. Kept as local component state rather than a
-// store (unlike railOpen) because nothing outside this panel toggles it — the
-// card owns its own width and flexbox does the rest, so AppShell needs no
-// changes.
-const SIDEBAR_COLLAPSED_KEY = "urganize.workspace.sidebar-collapsed";
-const SIDEBAR_COLLAPSED_VERSION = 1;
+// Collapsed state and the expanded WIDTH both live in useSidebarStore now,
+// persisted there on write. They were local component state, on the reasoning
+// that "nothing outside this panel toggles it" — still true of writes, no
+// longer true of reads: ChappiSidePanel has to know how much room this column
+// is taking to compute its own maximum, and that answer depends on both
+// values. Bounds, clamping and the storage validators are all in
+// lib/sidebar-width.ts.
 const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
 
 // Urganize's own social profiles (both @urganize), shown in the card's footer
@@ -83,6 +99,16 @@ type NavItem = {
    *  state's tooltip since there's no room for it there. Sparing — most nav
    *  items should not set this. */
   beta?: boolean;
+  /** The pullout explaining what this surface is for (founder ask, 2026-09-08,
+   *  from a screenshot of Vercel's own side menu). A row's LABEL says what it is
+   *  called and nothing says what it does, which is the gap this closes.
+   *
+   *  Hover only, and that costs nothing here: this whole card is
+   *  `hidden lg:block`, so it never renders on a device without a pointer. The
+   *  collapsed rail is the one place it does not show — there the native
+   *  `title` is already carrying the label, which matters more than the
+   *  explanation, and two popups on one row is worse than either alone. */
+  help?: HelpKey;
 };
 
 // Same flag AppTopbar reads for its Notes icon — the two entry points appear
@@ -152,6 +178,7 @@ const ADMIN_ITEM: NavItem = {
   label: "Admin",
   Icon: AdminIcon,
   isActive: (pathname: string) => pathname.startsWith("/admin"),
+  help: "nav.admin",
 };
 
 const SETTINGS_ITEM: NavItem = {
@@ -159,6 +186,7 @@ const SETTINGS_ITEM: NavItem = {
   label: "Settings",
   Icon: GearIcon,
   isActive: (pathname: string) => pathname.startsWith("/settings"),
+  help: "nav.settings",
 };
 
 /**
@@ -196,6 +224,7 @@ function buildNavItems(
             label: "UrgAns",
             Icon: ChappiIcon,
             isActive: (pathname: string) => pathname === "/dashboard/urgans",
+            help: "nav.urgans" as const,
           },
         ]
       : []),
@@ -212,6 +241,7 @@ function buildNavItems(
       // one control whose job is to get you OUT of a release. AppTopbar's
       // `isAtRest` has always drawn the line here; the two agree now.
       isActive: (pathname: string) => pathname === "/dashboard" && !scopedReleaseId,
+      help: "nav.catalog",
       // Leaving a release forgets its scene, so tapping it again lands on
       // Activities rather than the thing you were getting out of — and records
       // that the catalog was asked for, so a single-release workspace does not
@@ -233,7 +263,8 @@ function buildNavItems(
             label: "Notes",
             Icon: NotesIcon,
             isActive: (pathname: string) => pathname === "/dashboard/notes",
-          },
+            help: "nav.notes",
+          } satisfies NavItem,
         ]
       : []),
     // Shows sit beside Notes as the other global surface: a release is not
@@ -247,8 +278,9 @@ function buildNavItems(
             label: "Shows",
             Icon: ShowsIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/shows"),
+            help: "nav.shows",
             beta: true,
-          },
+          } satisfies NavItem,
         ]
       : []),
     // Beside Shows, as the other standing surface that is not a release.
@@ -260,8 +292,9 @@ function buildNavItems(
             label: "Press kits",
             Icon: PressKitsIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/press-kits"),
+            help: "nav.pressKits",
             beta: true,
-          },
+          } satisfies NavItem,
         ]
       : []),
     // Beside Press kits, as the other standing surface that belongs to nobody's
@@ -278,8 +311,9 @@ function buildNavItems(
             label: "Directory",
             Icon: DirectoryIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/directory"),
+            help: "nav.directory",
             beta: true,
-          },
+          } satisfies NavItem,
         ]
       : []),
     // Fourth, after Notes (founder call, moved off its earlier "right after
@@ -293,7 +327,8 @@ function buildNavItems(
             label: "Metadata",
             Icon: MetadataIcon,
             isActive: (pathname: string) => pathname === "/dashboard" && activeScene === "metadata",
-          },
+            help: "nav.metadata",
+          } satisfies NavItem,
         ]
       : []),
     // The crossing point for an account that is also a playlist owner. Last in
@@ -307,7 +342,8 @@ function buildNavItems(
             label: "Playlist pitches",
             Icon: PitchesIcon,
             isActive: (pathname: string) => pathname.startsWith("/curator"),
-          },
+            help: "nav.pitches",
+          } satisfies NavItem,
         ]
       : []),
     // Settings and Admin deliberately do NOT belong here — they're pinned to
@@ -379,6 +415,7 @@ export function WorkspaceIdentityPanel() {
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const railOpen = useChappiStore((state) => state.railOpen);
+  const railWidth = useChappiStore((state) => state.railWidth);
   const pathname = usePathname();
 
   // The UrgAns rail (see ChappiSidePanel) renders nowhere on its own page —
@@ -398,26 +435,194 @@ export function WorkspaceIdentityPanel() {
     setLogoFailed(false);
   }, [logo?.url]);
 
-  // Always false for the first paint so SSR and the initial client render
-  // agree; the mount effect below then applies the stored choice. Same
-  // SSR-safe hydration order AppShell uses for the UrgAns rail.
-  const [collapsed, setCollapsed] = useState(false);
+  // Both start at their defaults so SSR and the initial client render agree;
+  // the mount effect below then applies the stored choices. Same SSR-safe
+  // hydration order AppShell uses for the UrgAns rail's own two values.
+  const collapsed = useSidebarStore((state) => state.collapsed);
+  const setCollapsed = useSidebarStore((state) => state.setCollapsed);
+  const hydrateCollapsed = useSidebarStore((state) => state.hydrateCollapsed);
+  const storedWidth = useSidebarStore((state) => state.width);
+  const setWidth = useSidebarStore((state) => state.setWidth);
+  const hydrateWidth = useSidebarStore((state) => state.hydrateWidth);
+
   useEffect(() => {
-    const persisted = readPersistedState(
+    const persistedCollapsed = readPersistedState(
       SIDEBAR_COLLAPSED_KEY,
       SIDEBAR_COLLAPSED_VERSION,
       isBoolean,
     );
-    if (persisted !== null) setCollapsed(persisted);
-  }, []);
+    if (persistedCollapsed !== null) hydrateCollapsed(persistedCollapsed);
+    const persistedWidth = readPersistedState(
+      SIDEBAR_WIDTH_KEY,
+      SIDEBAR_WIDTH_VERSION,
+      (value): value is number => parsePersistedSidebarWidth(value) !== null,
+    );
+    if (persistedWidth !== null) hydrateWidth(persistedWidth);
+  }, [hydrateCollapsed, hydrateWidth]);
 
   const toggleCollapsed = useCallback(() => {
-    setCollapsed((previous) => {
-      const next = !previous;
-      writePersistedState(SIDEBAR_COLLAPSED_KEY, SIDEBAR_COLLAPSED_VERSION, next);
-      return next;
-    });
+    setCollapsed(!collapsed);
+  }, [collapsed, setCollapsed]);
+
+  const asideRef = useRef<HTMLElement | null>(null);
+  const [dragging, setDragging] = useState(false);
+
+  // Measured rather than assumed, and re-measured on resize: a width sized on
+  // a big monitor must not survive onto a laptop, and browser zoom, OS display
+  // scaling and a rotating tablet all arrive through this same event. Same
+  // measurement ChappiSidePanel takes, including using
+  // documentElement.clientWidth rather than innerWidth — this repo has already
+  // been burned measuring the wrong one, and innerWidth counts a classic
+  // scrollbar that is not layout space.
+  const [viewport, setViewport] = useState(0);
+  useEffect(() => {
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      setViewport(document.documentElement.clientWidth);
+    };
+    measure();
+    const onResize = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(measure);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
+
+  // What the rail is taking out of the row right now — 0 whenever it is not on
+  // screen, which railIsCompeting above already answers exactly (flag off,
+  // closed, or the assistant page where the rail renders nowhere).
+  //
+  // The store's raw railWidth is used rather than the rail's own clamped one.
+  // They converge on the next frame (the rail writes its clamp back), and while
+  // they disagree this OVER-reserves, which is the safe direction: it makes our
+  // maximum smaller, never main's floor thinner. Every clamp on either side
+  // only ever shrinks, so the two columns settle instead of oscillating.
+  const railTotal = railIsCompeting ? railWidth + RAIL_GUTTER : 0;
+  const bounds = resolveSidebarBounds(viewport, railTotal);
+  // UNTIL THE VIEWPORT HAS BEEN MEASURED, the stored width renders unclamped.
+  // A viewport of 0 is "not known yet", not "too small", and the locked
+  // fallback's max is the MINIMUM — so clamping against it would paint the card
+  // at 208px and then jump to 240 as soon as the measure effect lands. The rail
+  // never had to deal with this because it is closed on first paint; this card
+  // is visible immediately. The handle is withheld either way (bounds.resizable
+  // is false while unmeasured), so there is nothing to drag against a bound we
+  // have not worked out.
+  const width = viewport > 0 ? clampSidebarWidth(storedWidth, bounds) : storedWidth;
+
+  // A width the current viewport cannot pay for is corrected in state too, not
+  // just on screen — otherwise the next drag would start from a number nothing
+  // on the page agrees with. Skipped while collapsed: the card is 64px then, so
+  // the stored expanded width is not on screen and must not be rewritten by a
+  // bound it is not currently subject to.
+  useEffect(() => {
+    if (viewport > 0 && !collapsed && width !== storedWidth) setWidth(width);
+  }, [viewport, collapsed, width, storedWidth, setWidth]);
+
+  const commit = useCallback(
+    (next: number) => setWidth(clampSidebarWidth(next, bounds)),
+    [bounds, setWidth],
+  );
+
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      // Left button only. A right or middle click here is not a resize, and a
+      // second finger arriving mid-drag must not hijack the first.
+      if (event.button !== 0 || !bounds.resizable) return;
+      event.preventDefault();
+
+      const handle = event.currentTarget;
+      const startX = event.clientX;
+      const startWidth = width;
+      const pointerId = event.pointerId;
+      handle.setPointerCapture(pointerId);
+      setDragging(true);
+
+      // The drag writes a CSS variable, not React state: at 120Hz this is one
+      // style write per frame instead of one render per frame. State is set
+      // once, on release.
+      let frame = 0;
+      let latest = startWidth;
+
+      const paint = () => {
+        frame = 0;
+        asideRef.current?.style.setProperty("--urganize-sidebar-width", `${latest}px`);
+      };
+
+      const onMove = (moveEvent: PointerEvent) => {
+        if (moveEvent.pointerId !== pointerId) return;
+        // Bounds are recomputed per move so a window resized mid-drag cannot
+        // strand the card outside them.
+        latest = sidebarWidthFromDrag(
+          startWidth,
+          startX,
+          moveEvent.clientX,
+          resolveSidebarBounds(document.documentElement.clientWidth, railTotal),
+        );
+        if (!frame) frame = window.requestAnimationFrame(paint);
+      };
+
+      const finish = (endEvent: PointerEvent) => {
+        if (endEvent.pointerId !== pointerId) return;
+        if (frame) window.cancelAnimationFrame(frame);
+        handle.removeEventListener("pointermove", onMove);
+        handle.removeEventListener("pointerup", finish);
+        // A cancelled drag COMMITS what the user last saw rather than snapping
+        // back: the pointer was taken by the OS, not by them.
+        handle.removeEventListener("pointercancel", finish);
+        try {
+          handle.releasePointerCapture(pointerId);
+        } catch {
+          // Already released, or the element is going away. Nothing to undo.
+        }
+        asideRef.current?.style.removeProperty("--urganize-sidebar-width");
+        setDragging(false);
+        commit(latest);
+      };
+
+      handle.addEventListener("pointermove", onMove);
+      handle.addEventListener("pointerup", finish);
+      handle.addEventListener("pointercancel", finish);
+    },
+    [bounds.resizable, commit, railTotal, width],
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!bounds.resizable) return;
+      const step = event.shiftKey ? SIDEBAR_KEYBOARD_STEP_LARGE : SIDEBAR_KEYBOARD_STEP;
+      // Right widens, matching the drag direction exactly — and therefore the
+      // opposite way round from the rail's handle on the other edge.
+      if (event.key === "ArrowRight") commit(width + step);
+      else if (event.key === "ArrowLeft") commit(width - step);
+      else if (event.key === "Home") commit(bounds.max);
+      else if (event.key === "End") commit(bounds.min);
+      else if (event.key === "Enter" || event.key === " ") commit(DEFAULT_SIDEBAR_WIDTH);
+      else return;
+      // Only once we know it was ours: Escape and Tab still belong to the page.
+      event.preventDefault();
+    },
+    [bounds, commit, width],
+  );
+
+  // Cursor and selection are set on <body> for the whole drag, so neither
+  // flickers as the pointer crosses other elements.
+  useEffect(() => {
+    if (!dragging) return;
+    const { style } = document.body;
+    const previousCursor = style.cursor;
+    const previousSelect = style.userSelect;
+    style.cursor = "col-resize";
+    style.userSelect = "none";
+    return () => {
+      style.cursor = previousCursor;
+      style.userSelect = previousSelect;
+    };
+  }, [dragging]);
 
   useEffect(() => {
     void load();
@@ -444,7 +649,11 @@ export function WorkspaceIdentityPanel() {
 
   return (
     <aside
-      aria-label="Workspace"
+      // Named for what a screen reader should hear, which is not what this
+      // component is called (2026-09-09 positioning: never "workspace" in
+      // anything a person reads). Single-word strings are invisible to
+      // lib/copy-scan.ts by design, so this one was found by reading.
+      aria-label="Your team"
       // Height calc is copied from ChappiSidePanel so the two columns are the
       // same length: topbar 4rem + 1px border + <main>'s pt-5 (1.25rem) =
       // 5.25rem top offset; 100dvh minus that minus main's md:pb-10 (2.5rem)
@@ -469,14 +678,64 @@ export function WorkspaceIdentityPanel() {
       // columns squeezing the centre; a 64px rail costs ~176px less, so at
       // lg-xl a collapsed card and an open UrgAns rail coexist fine. That
       // makes collapsing the user's own fix for the squeeze.
-      className={`hidden shrink-0 self-start sticky top-[calc(5.25rem+1px)] ml-8 mr-8 h-[calc(100dvh-7.75rem-1px)] min-h-[24rem] transition-[width] duration-base ease-out ${
-        collapsed ? "w-16" : "w-[240px]"
+      ref={asideRef}
+      // NO `relative` here, deliberately: `sticky` is already a positioned
+      // ancestor, so the drag handle below anchors to this element as it is.
+      // Adding both would leave which one applies up to Tailwind's utility
+      // ordering rather than to us, and losing `sticky` un-pins the whole card.
+      className={`hidden shrink-0 self-start sticky top-[calc(5.25rem+1px)] ml-8 mr-8 h-[calc(100dvh-7.75rem-1px)] min-h-[24rem] ${
+        // The transition is REMOVED while dragging. It animates `width`, so
+        // every frame of a drag would lag behind the cursor — the single most
+        // likely way for this to look broken.
+        dragging ? "" : "transition-[width] duration-base ease-out"
+      } ${
+        // Collapsed keeps its fixed `w-16`; expanded takes its width from the
+        // custom property below, which is also what the drag writes to.
+        collapsed ? "w-16" : ""
       } ${railIsCompeting && !collapsed ? "xl:block" : "lg:block"}`}
+      style={
+        {
+          "--urganize-sidebar-width": `${width}px`,
+          ...(collapsed ? null : { width: "var(--urganize-sidebar-width)" }),
+        } as React.CSSProperties
+      }
     >
+      {/* The drag handle sits on the card's RIGHT edge, so dragging toward the
+          centre of the screen widens it — the mirror of the UrgAns rail, whose
+          handle is on its left edge for the same reason. A 2px visible hairline
+          inside a wider hit area; withheld entirely while collapsed (64px has
+          nothing to grow into) or when the viewport cannot pay for any
+          movement, because a control that cannot move is worse than none. */}
+      {!collapsed && bounds.resizable ? (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize workspace menu"
+          aria-valuenow={width}
+          aria-valuemin={bounds.min}
+          aria-valuemax={bounds.max}
+          tabIndex={0}
+          draggable={false}
+          onPointerDown={handlePointerDown}
+          onKeyDown={handleKeyDown}
+          onDoubleClick={() => commit(DEFAULT_SIDEBAR_WIDTH)}
+          className="motion-focus group absolute right-0 top-0 z-10 h-full w-3 cursor-col-resize touch-none select-none"
+        >
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none absolute inset-y-0 right-1 w-0.5 rounded-full transition-colors ${
+              dragging
+                ? "bg-brand"
+                : "bg-transparent group-hover:bg-brand/50 group-focus-visible:bg-brand"
+            }`}
+          />
+        </div>
+      ) : null}
+
       <div className="flex h-full flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface">
         <Link
           href="/settings"
-          title={collapsed ? name || "Your workspace" : undefined}
+          title={collapsed ? name || "Your team" : undefined}
           className={`motion-focus block shrink-0 transition-colors hover:bg-bg-hover ${
             collapsed ? "px-2 py-4" : "p-4"
           }`}
@@ -517,7 +776,7 @@ export function WorkspaceIdentityPanel() {
                   />
                 </div>
               )}
-              <span className="sr-only">{name || "Your workspace"}</span>
+              <span className="sr-only">{name || "Your team"}</span>
             </>
           ) : (
             <>
@@ -554,7 +813,7 @@ export function WorkspaceIdentityPanel() {
                 className="mt-3 truncate font-display text-sm text-content-primary"
                 title={name}
               >
-                {name || "Your workspace"}
+                {name || "Your team"}
               </p>
               <Suspense fallback={<ArtistLine label={rosterLabel} />}>
                 <ScopedArtistLine fallbackLabel={rosterLabel} />
@@ -577,7 +836,7 @@ export function WorkspaceIdentityPanel() {
           release surfaces above them take the remaining height and scroll on a
           short viewport rather than overflowing the fixed-height card. */}
         <nav
-          aria-label="Workspace navigation"
+          aria-label="Main navigation"
           className="flex min-h-0 flex-1 flex-col border-t border-stroke-subtle p-2"
         >
           {/* WorkspaceNavLinks needs useSearchParams (to find the currently
@@ -649,7 +908,7 @@ export function WorkspaceIdentityPanel() {
             type="button"
             onClick={toggleCollapsed}
             aria-expanded={!collapsed}
-            aria-label={collapsed ? "Expand workspace menu" : "Collapse workspace menu"}
+            aria-label={collapsed ? "Expand the menu" : "Collapse the menu"}
             title={collapsed ? "Expand menu" : "Collapse menu"}
             className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
@@ -737,7 +996,13 @@ function WorkspaceNavList({
   // release: the founder asked for an arrow you open, and a nav that expands
   // itself on every load buries Settings below a roster on a short viewport.
   const [expandedHref, setExpandedHref] = useState<string | null>(null);
-  const renderRow = ({ href, label, Icon, isActive, beta, children, onNavigate }: NavItem) => {
+  // ONE panel for the whole list, not one per row. Only a single tip is ever
+  // visible, and the rows are built by the `renderRow` closure below inside a
+  // `.map`, where a per-row hook would break the rules of hooks. So the rows
+  // report which one they are pointing at and this component owns the panel.
+  const [activeHelp, setActiveHelp] = useState<{ key: HelpKey; el: HTMLElement } | null>(null);
+  const helpPanelId = useId();
+  const renderRow = ({ href, label, Icon, isActive, beta, children, onNavigate, help }: NavItem) => {
     const active = isActive(pathname || "");
     // Collapsed has no room for a visible pill (icon-only), so the signal
     // folds into the same text that already stands in for the label there —
@@ -751,6 +1016,23 @@ function WorkspaceNavList({
     const expanded = expandedHref === href;
     const subListId = `workspace-nav-sub-${href.replace(/[^a-zA-Z0-9]+/g, "-")}`;
 
+    // Only while expanded: the collapsed rail's native `title` is already
+    // carrying the label there, and two popups on one row is worse than either
+    // alone. Focus as well as hover, since this card is keyboard-reachable and
+    // desktop-only.
+    const helpHandlers =
+      help && !collapsed
+        ? {
+            "aria-describedby": activeHelp?.key === help ? helpPanelId : undefined,
+            onPointerEnter: (event: React.PointerEvent<HTMLAnchorElement>) =>
+              setActiveHelp({ key: help, el: event.currentTarget }),
+            onPointerLeave: () => setActiveHelp(null),
+            onFocus: (event: React.FocusEvent<HTMLAnchorElement>) =>
+              setActiveHelp({ key: help, el: event.currentTarget }),
+            onBlur: () => setActiveHelp(null),
+          }
+        : {};
+
     const link = (
       <Link
         key={href}
@@ -758,6 +1040,7 @@ function WorkspaceNavList({
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         title={collapsed ? collapsedLabel : undefined}
+        {...helpHandlers}
         className={`${navRowClass(active, collapsed)}${subItems.length > 0 ? " min-w-0 flex-1" : ""}`}
       >
         <Icon className="h-4 w-4 shrink-0" />
@@ -809,7 +1092,7 @@ function WorkspaceNavList({
                   href={`/dashboard?release=${child.releaseId}`}
                   aria-current={child.isActive ? "page" : undefined}
                   // The full name, since the visible one is truncated to the
-                  // card's 240px.
+                  // card's width, whatever it has been dragged to.
                   title={child.label}
                   className={`motion-focus mb-0.5 block truncate rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
                     child.isActive
@@ -850,6 +1133,19 @@ function WorkspaceNavList({
         {isAdmin ? renderRow(ADMIN_ITEM) : null}
         {renderRow(SETTINGS_ITEM)}
       </div>
+
+      {/* Portals to the body, so it renders nothing here and this fragment
+        stays transparent for the flex arrangement above. `prefer="right"` puts
+        it beside the card, which is the shape the founder's reference
+        screenshot shows. */}
+      {activeHelp ? (
+        <HelpTipPanel
+          helpKey={activeHelp.key}
+          anchor={activeHelp.el}
+          prefer="right"
+          id={helpPanelId}
+        />
+      ) : null}
     </>
   );
 }

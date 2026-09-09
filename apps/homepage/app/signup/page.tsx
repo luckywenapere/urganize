@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { CUSTOMER_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-urls";
 
@@ -18,7 +19,7 @@ import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-urls";
 export const metadata: Metadata = buildPageMetadata({
   title: "Sign up",
   description:
-    "Create your Urganize account and set up a workspace for your releases, tasks, and team.",
+    `Create your Urganize account and start planning releases with the ${CUSTOMER_LINE}.`,
   path: "/signup",
 });
 
@@ -36,9 +37,8 @@ export default function SignupPage() {
             Create your account
           </h1>
           <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-            Set up a workspace, add your first release, and get a rollout plan
-            built from a real release template — not a blank board you have to
-            fill in yourself.
+            Add your first release and get a rollout plan built from a real
+            release template, not a blank board you have to fill in yourself.
           </p>
 
           <div className="mt-10">
@@ -85,7 +85,7 @@ export default function SignupPage() {
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
               If a manager invited you, open the invite link they sent rather
-              than signing up here — it joins you to their workspace instead of
+              than signing up here. It joins you to their team instead of
               creating a separate one. Already have an account?{" "}
               <a
                 href={APP_LOGIN_URL}

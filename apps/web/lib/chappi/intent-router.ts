@@ -6,7 +6,7 @@
 import type { ChappiChip, ChappiIntent, ChappiReply } from './types';
 
 // With the planner on, the three planning chips take the place of the bare
-// "New release" chip: planning IS how a release starts, and two doors that both
+// "New rollout" chip: planning IS how a release starts, and two doors that both
 // mint releases makes neither of them the main one.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
@@ -114,11 +114,13 @@ export const CHAPPI_CHIPS: ChappiChip[] = [
   { id: 'todays-focus', label: 'What should I focus on today?', ask: 'What should I focus on today?' },
   ...(PLANNER_ENABLED
     ? [{ id: 'plan-release', label: 'Plan a release', intent: 'plan_release' as const }]
-    : [{ id: 'new-release', label: 'New release', intent: 'new_release' as const }]),
+    // "New rollout", not "New release" — #570 renamed the control, and this
+    // chip is that control's twin on the assistant's landing.
+    : [{ id: 'new-release', label: 'New rollout', intent: 'new_release' as const }]),
   {
     id: 'status-update',
     label: 'Write an update I can send',
-    // No the word "release" in here, deliberately: the release branch below is
+    // NOT the word "release" in here, deliberately: the release branch below is
     // checked BEFORE the status branch, so "a status update on my release"
     // resolves to plan_release and this chip would open the planner whenever no
     // model is configured. Caught by a test, not by reading.
@@ -188,7 +190,15 @@ export function resolveIntent(raw: string): ChappiIntent {
   if (RELEASE_RECAP_ENABLED && has('recap')) {
     return { kind: 'generate_recap' };
   }
-  if (has('release', 'single', 'album', ' ep', 'drop', 'song', 'track', 'project')) {
+  // 'rollout' is here because the CONTROL is called "New rollout" now, and a
+  // suggestion in buildHelpReply below reads "Create a new rollout" — those
+  // suggestions are clicked and fed straight back through this function, so
+  // without the word that chip would answer with the help card it came from.
+  // Someone who reads the button and types what it says deserves the same.
+  // With the planner ON the branch above already claims 'rollout', so these
+  // two are only ever reached with it off, which is exactly the state that
+  // renders that suggestion.
+  if (has('release', 'rollout', 'roll out', 'single', 'album', ' ep', 'drop', 'song', 'track', 'project')) {
     return { kind: PLANNER_ENABLED ? 'plan_release' : 'new_release' };
   }
   if (has('status', 'update', 'report', 'summary')) {
@@ -220,7 +230,10 @@ export function buildHelpReply(): ChappiReply {
     suggestions: [
       'What should I focus on today?',
       'Generate a status update',
-      PLANNER_ENABLED ? 'Plan a release' : 'Create a new release',
+      // "a new rollout", matching the renamed control — and the release branch
+      // above knows the word for exactly this reason: these suggestions are
+      // clicked and fed straight back through resolveIntent.
+      PLANNER_ENABLED ? 'Plan a release' : 'Create a new rollout',
       'Add an activity',
       ...(SONG_UPLOAD_ENABLED ? ['Upload the song'] : []),
       ...(EVENTS_ENABLED ? ['My shows'] : []),

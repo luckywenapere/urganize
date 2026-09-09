@@ -37,11 +37,11 @@ export async function PATCH(request: NextRequest) {
   const nextName = rawName.trim();
 
   if (!nextName) {
-    return NextResponse.json({ error: 'Workspace name cannot be empty.' }, { status: 400 });
+    return NextResponse.json({ error: 'Team name cannot be empty.' }, { status: 400 });
   }
   if (nextName.length > MAX_NAME_LENGTH) {
     return NextResponse.json(
-      { error: `Workspace name must be ${MAX_NAME_LENGTH} characters or fewer.` },
+      { error: `Team name must be ${MAX_NAME_LENGTH} characters or fewer.` },
       { status: 400 }
     );
   }
@@ -49,7 +49,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId || !access.primaryWorkspace) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
     const workspaceId = access.primaryWorkspaceId;
@@ -57,7 +57,7 @@ export async function PATCH(request: NextRequest) {
 
     if (!membership || membership.role !== 'owner') {
       return NextResponse.json(
-        { error: 'Only the workspace owner can rename the workspace.' },
+        { error: 'Only the team owner can rename it.' },
         { status: 403 }
       );
     }
@@ -71,7 +71,7 @@ export async function PATCH(request: NextRequest) {
 
     if (updateResult.error || !updateResult.data) {
       return NextResponse.json(
-        { error: updateResult.error?.message || 'Could not rename workspace.' },
+        { error: updateResult.error?.message || 'Could not rename your team.' },
         { status: 500 }
       );
     }
@@ -79,7 +79,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ workspaceId, name: updateResult.data.name });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not rename workspace.' },
+      { error: error instanceof Error ? error.message : 'Could not rename your team.' },
       { status: 500 }
     );
   }

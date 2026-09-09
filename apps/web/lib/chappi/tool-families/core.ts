@@ -51,7 +51,7 @@ export const CORE_TOOLS: ChappiTool[] = [
       if (!releaseId) return fail('releaseId is required.');
       const releases = await listVisibleReleases(ctx);
       const release = releases.find((r) => r.id === releaseId);
-      if (!release) return fail('That release was not found in your workspace.');
+      if (!release) return fail('That release was not found on your team.');
       const tasks = await new TaskService(ctx.adminClient).getTasksForUser(
         ctx.user.id,
         ctx.workspaceIds,
@@ -194,7 +194,7 @@ export const CORE_TOOLS: ChappiTool[] = [
         description: { type: 'string' },
         dueDate: { type: 'string', description: 'YYYY-MM-DD' },
         priority: { type: 'string', description: 'none, low, medium, high' },
-        assigneeId: { type: 'string', description: 'Workspace member user id to assign.' },
+        assigneeId: { type: 'string', description: 'Team member user id to assign.' },
       },
       required: ['releaseId', 'title'],
     },
@@ -291,7 +291,7 @@ export const CORE_TOOLS: ChappiTool[] = [
         assigneeId: {
           type: 'string',
           description:
-            'Workspace member user id. Resolve names to ids with list_workspace_members first — never guess.',
+            'Team member user id. Resolve names to ids with list_workspace_members first — never guess.',
         },
       },
       required: ['taskId'],

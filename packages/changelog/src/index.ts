@@ -20,7 +20,7 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.34.0",
+    version: "1.36.0",
     date: "September 9, 2026",
     highlights: [
       "New prices, and every plan is now paid once a year. Solo is ₦5,000, Manager is ₦22,000 and Label is ₦50,000.",
@@ -31,11 +31,34 @@ export const changelog: Release[] = [
     ],
   },
   {
+    version: "1.35.0",
+    date: "September 9, 2026",
+    highlights: [
+      "Hover a row in the side menu and it tells you what that page is for, in one plain line.",
+      "The Metadata page is quieter. Every box has a small i beside it, so the explanation is there when you want it and out of the way when you don't.",
+      "Shorter wording in a few more places, with the detail tucked behind the same small i.",
+      "The Settings tab holding your team name, logo and artists is called Profile now.",
+    ],
+  },
+  {
+    version: "1.34.0",
+    date: "September 9, 2026",
+    highlights: [
+      "You can resize the side menu now. Drag its right edge to make it wider or narrower, and double-click that edge to put it back.",
+      "The width you pick is remembered, so the menu stays how you left it next time you open the app.",
+      "The New release button is called New rollout now. Same button, same place.",
+    ],
+  },
+  {
     version: "1.33.0",
     date: "September 9, 2026",
     highlights: [
       "Signing in takes you straight to UrgAns. Ask it something, or tap Catalog for your releases.",
       "UrgAns is first in the side menu and the top bar now, so it is the easiest thing to reach.",
+      "Hover a row in the side menu and it tells you what that page is for, in one plain line.",
+      "The Metadata page is quieter. Every box has a small i beside it, so the explanation is there when you want it and out of the way when you don't.",
+      "Shorter wording in a few more places, with the detail tucked behind the same small i.",
+      "The Settings tab holding your team name, logo and artists is called Profile now.",
     ],
   },
   {

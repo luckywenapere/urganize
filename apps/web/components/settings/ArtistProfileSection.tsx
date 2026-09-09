@@ -58,7 +58,7 @@ export function ArtistProfileSection() {
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Your artist name</h2>
       <p className="mb-4 text-sm text-content-secondary">
         The artist name on your own profile, reused wherever the app greets you.
-        The workspace&apos;s artist is set under Workspace.
+        The team&apos;s artist is set under Profile.
       </p>
       <div className="space-y-3">
         <label className="block">

@@ -513,7 +513,7 @@ export function CreateReleaseModal({
                       ? 'Your first release'
                       : 'Create your first release'
                     : plan
-                      ? 'New release'
+                      ? 'New rollout'
                       : 'How do you want to start?'}
               </h2>
               {TYPE_FIRST_CREATE_ENABLED ? (
@@ -523,12 +523,11 @@ export function CreateReleaseModal({
                 </p>
               ) : null}
               {/* First-run context, echoing the onboarding wizard's own line
-                  ("Every release gets a workspace.") so the two first-run
-                  surfaces sound like one product. */}
+                  so the two first-run surfaces sound like one product. */}
               {isFirstRelease ? (
                 <p className="mt-2 max-w-xl text-sm leading-6 text-content-secondary">
-                  Every release gets its own workspace — activities, files, and your team in
-                  one place. Start with this one and everything else follows.
+                  Every release gets its own place for activities, files and your team.
+                  Start with this one and everything else follows.
                 </p>
               ) : null}
             </div>

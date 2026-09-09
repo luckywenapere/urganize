@@ -51,7 +51,7 @@ type Slot = { key: string; height: string; show: boolean };
  * below-`sm` padding first, `px-3` from `sm` up. */
 const TAB_PILL_SKELETON_WIDTH: Record<SettingsTab, string> = {
   account: 'w-[66px] sm:w-[70px]',
-  workspace: 'w-[79px] sm:w-[83px]',
+  workspace: 'w-[66px] sm:w-[70px]',
   team: 'w-[49px] sm:w-[53px]',
   notifications: 'w-[89px] sm:w-[93px]',
 };

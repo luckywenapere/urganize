@@ -62,7 +62,7 @@ const MOBILE_CREATE_DISPLAY = MOBILE_NAV_ENABLED ? 'grid lg:hidden' : 'hidden';
 
 type AppTopbarProps = {
   /** Opens the release creation modal. Lifted to AppShell so this universal
-   * button behaves identically to the page-level "New release" buttons
+   * button behaves identically to the page-level "New rollout" buttons
    * instead of navigating to the releases list. */
   onNewRelease?: () => void;
   /** Display name surfaced as the monogram on the workspace menu trigger.
@@ -181,8 +181,8 @@ function ContextTitle() {
 const CatalogLinkFallback = (
   <Link
     href="/dashboard"
-    aria-label="Workspace"
-    title="Workspace"
+    aria-label="Catalog"
+    title="Catalog"
     className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary`}
   >
     <CatalogIcon className="h-[18px] w-[18px]" />
@@ -244,8 +244,8 @@ function CatalogTopbarAction() {
       <button
         type="button"
         onClick={() => router.push('/dashboard/urgans')}
-        aria-label="Workspace"
-        title="Workspace"
+        aria-label="Catalog"
+        title="Catalog"
         aria-pressed
         className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors`}
       >
@@ -262,8 +262,8 @@ function CatalogTopbarAction() {
       // One of five surfaces that make the same move — see
       // lib/catalog-intent.ts. Safe from any page, scoped or not.
       onClick={leaveReleaseForCatalog}
-      aria-label="Workspace"
-      title="Workspace"
+      aria-label="Catalog"
+      title="Catalog"
       className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
         pathname === '/dashboard'
           ? 'bg-brand/10 text-brand'
@@ -369,7 +369,7 @@ function ChappiTopbarAction() {
   );
 }
 
-// Mobile topbar layout (centered logo, no New release button, no
+// Mobile topbar layout (centered logo, no New rollout button, no
 // notifications bell below lg) landed in a previous deploy — this
 // comment exists only to produce a diff on apps/web and force a fresh
 // Vercel build/deploy of the Web project. Second retry: the prior two
@@ -399,7 +399,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
    * useSearchParams. The ACTION is then always right, including on the one
    * transition a render-time read would lag — scoping a release while already
    * on /dashboard, which is a same-pathname replace. The aria-label stays a
-   * static "New release" for the same reason inverted: a label that is
+   * static "New rollout" for the same reason inverted: a label that is
    * sometimes wrong is worse than one that is honestly generic.
    */
   const isWorkspace = pathname === '/dashboard';
@@ -439,7 +439,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         } px-3 sm:gap-3 sm:px-5 md:px-6 lg:px-8`}
       >
         {/* Mobile: logo is centered in the bar (founder request) rather than
-            anchored top-left — with the New release CTA and notifications
+            anchored top-left — with the New rollout CTA and notifications
             bell both gone from this row below lg, a left-anchored logo would
             just sit alone off-center. Absolutely positioned so it doesn't
             take part in the flex flow the rest of this row uses; the parent
@@ -536,7 +536,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           }`}
         >
           <Plus className="h-4 w-4" />
-          <span>New release</span>
+          <span>New rollout</span>
         </button>
 
         {/* The app's two surfaces as a topbar pair: Workspace (releases +
@@ -550,7 +550,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         {/* Nav icons follow the help "?"'s quiet voice (founder call,
             2026-07-23): no boxed borders at rest — tertiary ink that
             brightens on hover, a soft round hover fill, and brand ink only
-            on the active surface. The New release CTA stays the one filled
+            on the active surface. The New rollout CTA stays the one filled
             control up here. */}
         {CHAPPI_ENABLED ? (
           <>
@@ -683,8 +683,8 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
         <button
           type="button"
           onClick={handleCreateClick}
-          aria-label="New release"
-          title="New release"
+          aria-label="New rollout"
+          title="New rollout"
           className={`motion-focus motion-press ${MOBILE_CREATE_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full border border-brand/25 bg-brand text-content-inverse shadow-[0_18px_36px_-28px_rgb(var(--color-brand)/0.55)] hover:bg-brand-hover`}
         >
           <Plus className="h-5 w-5" />

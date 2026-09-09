@@ -208,7 +208,7 @@ export default function InviteAcceptPage() {
       setIsSubmitting(true);
       const result = await acceptInvite();
       if (result.ok) {
-        setSuccessMessage('Joined! Taking you to the workspace…');
+        setSuccessMessage('Joined! Taking you in…');
         router.replace(HOME_PATH);
       } else {
         setError(result.message || 'Could not accept invite.');
@@ -262,7 +262,7 @@ export default function InviteAcceptPage() {
           `${result.message || 'Could not finish joining.'} Your account was created — sign in and you'll join ${displayWorkspace} automatically.`
         );
       }
-      setSuccessMessage('Joined! Taking you to the workspace…');
+      setSuccessMessage('Joined! Taking you in…');
       router.replace(HOME_PATH);
     } catch (signupError) {
       setError(errorMessage(signupError, 'Could not finish signup.'));
@@ -298,7 +298,7 @@ export default function InviteAcceptPage() {
     setIsSubmitting(true);
     const result = await acceptInvite();
     if (result.ok) {
-      setSuccessMessage('Joined! Taking you to the workspace…');
+      setSuccessMessage('Joined! Taking you in…');
       router.replace(HOME_PATH);
     } else {
       setError(result.message || 'Could not accept invite.');
@@ -326,7 +326,7 @@ export default function InviteAcceptPage() {
   // recompute, and memoizing them tripped react-hooks/preserve-manual-
   // memoization once handleEmailPasswordSignup started reading them.
   const displayInviter = metadata?.inviterName || 'Your teammate';
-  const displayWorkspace = metadata?.workspaceName || 'a workspace';
+  const displayWorkspace = metadata?.workspaceName || 'a team';
   const showSwitchAccountHelper = useMemo(() => {
     if (!isAuthenticated || !user?.email || !metadata?.invitedEmail) return false;
     return user.email.trim().toLowerCase() !== metadata.invitedEmail.trim().toLowerCase();
@@ -420,7 +420,7 @@ export default function InviteAcceptPage() {
                   <p className="text-sm text-content-secondary">
                     {displayInviter} invited{' '}
                     <span className="text-content-primary">{metadata.invitedEmail}</span> to
-                    join their workspace on Urganize.
+                    join their team on Urganize.
                   </p>
                 </div>
 

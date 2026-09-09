@@ -308,7 +308,7 @@ export async function renameWorkspaceArtist(
     if (collision.data) {
       return {
         data: null,
-        error: `An artist named "${trimmed}" already exists in this workspace.`,
+        error: `An artist named "${trimmed}" already exists on this team.`,
         conflict: true,
       };
     }
@@ -335,7 +335,7 @@ export async function renameWorkspaceArtist(
     if (updateErrorCode === '23505') {
       return {
         data: null,
-        error: `An artist named "${trimmed}" already exists in this workspace.`,
+        error: `An artist named "${trimmed}" already exists on this team.`,
         conflict: true,
       };
     }
