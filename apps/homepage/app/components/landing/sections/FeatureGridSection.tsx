@@ -33,7 +33,7 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 const TILES = [
   {
     title: "Press kit",
-    body: "One link for press, curators and bookers. It updates when the release changes.",
+    body: "One link for press, curators and bookers. It updates when the rollout changes.",
   },
   {
     title: "Shows and DJ packs",
@@ -41,7 +41,7 @@ const TILES = [
   },
   {
     title: "Cover art and song files",
-    body: "Cover art is checked against streaming platforms' rules. Upload the master once and share it from the release.",
+    body: "Cover art is checked against streaming platforms' rules. Upload the master once and share it from the rollout.",
   },
 ] as const;
 
@@ -53,7 +53,7 @@ export function FeatureGridSection() {
         containerClassName={wideContainerClass}
       >
         <div className="mx-auto max-w-[52rem] text-center">
-          <h2 className={centeredHeadlineClass}>Everything a release needs.</h2>
+          <h2 className={centeredHeadlineClass}>Everything a rollout needs.</h2>
         </div>
 
         <div className="mx-auto mt-14 grid max-w-[74rem] items-start gap-10 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-14">
@@ -75,7 +75,7 @@ export function FeatureGridSection() {
             </ul>
             <p className="mt-8 max-w-[44rem] text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
               Plus playlist pitches you can track as the curator listens, adds
-              or passes. And a recap card to share when the release is out.
+              or passes. And a recap card to share when the rollout is out.
             </p>
           </div>
 
@@ -89,7 +89,7 @@ export function FeatureGridSection() {
               // NEXT_PUBLIC_FEATURE_PRESS_KITS on, so it is on that flag's
               // activation checklist rather than faked here: `pnpm --filter
               // @urganize/homepage shots`.
-              alt="A press kit made in Urganize, open on a phone: cover art, the artist, the release and its date on one public page."
+              alt="A press kit made in Urganize, open on a phone: cover art, the artist, the rollout and its date on one public page."
               sizes="260px"
             />
           </div>

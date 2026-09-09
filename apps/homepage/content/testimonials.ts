@@ -147,7 +147,7 @@ export const transformationPairs: readonly TransformationPair[] = [
   {
     testimonialId: "antoine",
     before:
-      "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new release starts from scratch.",
+      "Your plan is spread across a pinned chat, an old spreadsheet and your memory. Every new rollout starts from scratch.",
   },
   {
     testimonialId: "adenaiye",
@@ -159,6 +159,6 @@ export const transformationPairs: readonly TransformationPair[] = [
   {
     testimonialId: "tamuno",
     before:
-      "To find out where a release stands, you scroll back through weeks of chat or ask someone to repeat themselves.",
+      "To find out where a rollout stands, you scroll back through weeks of chat or ask someone to repeat themselves.",
   },
 ];

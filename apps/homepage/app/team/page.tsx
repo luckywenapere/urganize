@@ -78,17 +78,17 @@ export default function TeamPage() {
             <div className="mt-6 max-w-[42rem] space-y-5 leading-8 text-[var(--marketing-text-muted)]">
               <p>
                 Urganize started in December 2025, in the middle of the mess.
-                Lucky was sorting out activities for a third artist&apos;s release
+                Lucky was sorting out activities for a third artist&apos;s rollout
                 across chats, notes, and memory. That is when it became clear
                 the problem was not effort. His artists&apos; music was not
-                getting the releases it deserved, because nothing held the
-                release together.
+                getting the rollouts it deserved, because nothing held the
+                rollout together.
               </p>
               <p>
                 After nine years in the industry as a videographer, director,
                 and editor, he had seen that mess from every side of a
                 rollout. So he built the system he needed. Now he runs his
-                own artists&apos; releases on it.
+                own artists&apos; rollouts on it.
               </p>
             </div>
           </section>

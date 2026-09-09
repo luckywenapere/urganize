@@ -18,7 +18,7 @@ import { TESTIMONIALS } from "@/content/testimonials";
 export const metadata: Metadata = buildPageMetadata({
   title: "For roster teams",
   description:
-    `Urganize is an ${PRODUCT_CATEGORY} for teams running a roster. Every release runs on the same plan, every activity has an owner, and you see where all of them stand without chasing anyone.`,
+    `Urganize is an ${PRODUCT_CATEGORY} for teams running a roster. Every rollout runs on the same plan, every activity has an owner, and you see where all of them stand without chasing anyone.`,
   path: "/for-executives",
 });
 
@@ -46,10 +46,10 @@ export const metadata: Metadata = buildPageMetadata({
 const valueBlocks = [
   {
     kicker: "The plan",
-    title: "Every release runs the same way, whoever runs it.",
-    body: "Create a release and Urganize lays out the whole rollout, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Your newest manager delivers a release the same way your best one does, and anyone can edit or delete an activity that does not apply.",
+    title: "Every rollout runs the same way, whoever runs it.",
+    body: "Create a rollout and Urganize lays out the whole plan, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Your newest manager delivers a rollout the same way your best one does, and anyone can edit or delete an activity that does not apply.",
     points: [
-      "One template, shaped for each release",
+      "One template, shaped for each rollout",
       "Every activity dated around that release day",
       "The same starting plan for every artist and every team",
     ],
@@ -65,12 +65,12 @@ const compactBlocks = [
   {
     kicker: "Status",
     title: "Walk into the meeting already knowing.",
-    body: "One list shows every release you have going: progress, what is overdue and what is due this week. You stop booking a call just to find out where things stand.",
+    body: "One list shows every rollout you have going: progress, what is overdue and what is due this week. You stop booking a call just to find out where things stand.",
   },
   {
     kicker: "Press kit",
-    title: "One link per release, ready before anyone asks.",
-    body: "Urganize builds each artist a press kit from the work you already put in, and tells you when a new release is missing from it. One link for press, curators and bookers, and it stays the same link.",
+    title: "One link per rollout, ready before anyone asks.",
+    body: "Urganize builds each artist a press kit from the work you already put in, and tells you when a new rollout is missing from it. One link for press, curators and bookers, and it stays the same link.",
   },
 ] as const;
 
@@ -93,16 +93,16 @@ export default function ForExecutivesPage() {
                 SHARE_IMAGE in lib/seo.ts). Same words on the card and on
                 the executive page on purpose. */}
             <h1 className="mt-8 text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem]">
-              Every artist. Every release.{" "}
+              Every artist. Every rollout.{" "}
               <span className="italic text-[var(--marketing-accent)]">
                 On plan.
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              You answer for releases you did not personally run. The plan
+              You answer for rollouts you did not personally run. The plan
               sits in someone else&apos;s head, the status sits in someone
               else&apos;s chat and you find out a date slipped after it
-              slipped. Urganize gives every release the same plan and shows
+              slipped. Urganize gives every rollout the same plan and shows
               you all of them at once.
             </p>
             {/* Since the 2026-09-02 homepage overhaul the ask is the free
@@ -188,7 +188,7 @@ export default function ForExecutivesPage() {
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
               <h2 className={PERSONA_HEADLINE_CLASS}>
-                See every release without asking.
+                See every rollout without asking.
               </h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
                 Start with a 14-day free trial, and we set up every team
@@ -227,7 +227,7 @@ export default function ForExecutivesPage() {
             >
               See Urganize for labels
             </Link>
-            . Running the releases yourself?{" "}
+            . Running the rollouts yourself?{" "}
             <Link
               href="/for-managers"
               className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"

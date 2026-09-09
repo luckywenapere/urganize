@@ -15,7 +15,7 @@ import { SALES_CONTACT_EMAIL } from "@urganize/pricing";
 export const metadata: Metadata = buildPageMetadata({
   title: "For labels",
   description:
-    `An ${PRODUCT_CATEGORY} for labels and management companies running a roster. The founders set you up, templates match how your label works and every release runs the same way.`,
+    `An ${PRODUCT_CATEGORY} for labels and management companies running a roster. The founders set you up, templates match how your label works and every rollout runs the same way.`,
   path: "/for-labels",
 });
 
@@ -30,9 +30,9 @@ const valueBlocks = [
   {
     kicker: "The plan",
     title: "Every artist's rollout, the same system.",
-    body: "Each release gets the full rollout, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Run it the same way for every artist on the roster and edit or delete any activity.",
+    body: "Each rollout gets the full plan, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Run it the same way for every artist on the roster and edit or delete any activity.",
     points: [
-      "One template, shaped for each release",
+      "One template, shaped for each rollout",
       "Every activity dated around that release day",
       "The same for every artist you work with",
     ],
@@ -49,22 +49,22 @@ const valueBlocks = [
   },
   {
     kicker: "Press kit",
-    title: "One link per release, across the whole roster.",
-    body: "Urganize builds each artist a press kit from the work you already put in: bio, photos, credits, shows. When a new release lands it tells you what is missing and you take the parts you want. One link for press, curators and bookers, and it works the same for every artist.",
+    title: "One link per rollout, across the whole roster.",
+    body: "Urganize builds each artist a press kit from the work you already put in: bio, photos, credits, shows. When a new rollout lands it tells you what is missing and you take the parts you want. One link for press, curators and bookers, and it works the same for every artist.",
     points: [
-      "Built for you from the release",
+      "Built for you from the rollout",
       "Always up to date. No rebuilding by hand",
-      "The same system for every release on the roster",
+      "The same system for every rollout on the roster",
     ],
   },
   {
     kicker: "Status",
     title: "See the whole roster's status without asking.",
-    body: "One list shows every release you have going: progress, what's overdue, what's due this week. You stop needing a meeting just to share status.",
+    body: "One list shows every rollout you have going: progress, what's overdue, what's due this week. You stop needing a meeting just to share status.",
     points: [
-      "Every release and activity in one place",
+      "Every rollout and activity in one place",
       "Overdue and due-today shown first",
-      "See one release on its own when that's all you need",
+      "See one rollout on its own when that's all you need",
     ],
   },
 ] as const;
@@ -75,8 +75,8 @@ const valueBlocks = [
 // and this page owns persona framing; if the benefit list changes there,
 // update it here too.
 const labelBenefits = [
-  "Roster set-up: we set up every artist's releases with you",
-  "Release templates shaped to how your label actually works",
+  "Roster set-up: we set up every artist's rollouts with you",
+  "Rollout templates shaped to how your label actually works",
   "Hands-on set-up for your whole team",
   "Priority support with a direct line to the founders",
 ] as const;
@@ -97,15 +97,15 @@ export default function ForLabelsPage() {
               For labels
             </p>
             <h1 className="mt-8 text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem]">
-              A roster is a lot of releases at once.{" "}
+              A roster is a lot of rollouts at once.{" "}
               <span className="italic text-[var(--marketing-accent)]">
                 Urganize is built for that.
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
-              A roster means many release calendars, many rollouts moving at
+              A roster means many calendars, many rollouts moving at
               once and a pile of chats holding it all together.
-              Urganize gives every release the same system, and the founders
+              Urganize gives every rollout the same system, and the founders
               help you set it up.
             </p>
           </div>
@@ -202,14 +202,14 @@ export default function ForLabelsPage() {
           containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
         >
           <p className="text-center text-sm text-[var(--marketing-text-subtle)]">
-            Running one artist&apos;s releases yourself?{" "}
+            Running one artist&apos;s rollouts yourself?{" "}
             <Link
               href="/for-managers"
               className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"
             >
               See Urganize for managers
             </Link>
-            . Answering for releases other people run?{" "}
+            . Answering for rollouts other people run?{" "}
             <Link
               href="/for-executives"
               className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"

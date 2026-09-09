@@ -138,12 +138,15 @@ export function PricingPageClient() {
                 {
                   step: "02",
                   title: "We try it together",
-                  body: "On a short call, we put one of your real releases into Urganize with you.",
+                  body: "On a short call, we put one of your real rollouts into Urganize with you.",
                 },
                 {
                   step: "03",
                   title: "You start planning",
-                  body: "If it fits, we agree a price and set your team up ourselves. Your releases and plans, ready to go.",
+                  // "we agree a price" is this branch's — Group is the one
+                  // sales-led tier now, so its price is agreed rather than
+                  // listed; "rollouts" is #575's rename.
+                  body: "If it fits, we agree a price and set your team up ourselves. Your rollouts and plans, ready to go.",
                 },
               ] as const
             ).map((item) => (
