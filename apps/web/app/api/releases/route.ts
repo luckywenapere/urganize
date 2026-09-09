@@ -126,7 +126,7 @@ async function loadReleaseMetadataMap(
 
     return {
       error: NextResponse.json(
-        { error: error.message || 'Could not load release artwork.' },
+        { error: error.message || 'Could not load rollout artwork.' },
         { status: 500 }
       ),
     };
@@ -249,7 +249,7 @@ export async function GET(request: NextRequest) {
 
   if (releasesResult.error) {
     if (isOptionalTableMissingError(releasesResult.error)) return buildMissingTableResponse();
-    return NextResponse.json({ error: releasesResult.error.message || 'Could not load releases.' }, { status: 500 });
+    return NextResponse.json({ error: releasesResult.error.message || 'Could not load rollouts.' }, { status: 500 });
   }
 
   // Artist-scoped members only see their own artist's releases.
@@ -309,7 +309,7 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { error: existingReleaseCountResult.error.message || 'Could not verify release access.' },
+        { error: existingReleaseCountResult.error.message || 'Could not verify rollout access.' },
         { status: 500 }
       );
     }
@@ -343,7 +343,7 @@ export async function POST(request: NextRequest) {
     if (releaseTypeInput) {
       if (!isDbReleaseType(releaseTypeInput)) {
         return NextResponse.json(
-          { error: "Release type must be 'single', 'ep', or 'album'." },
+          { error: "Format must be 'single', 'ep', or 'album'." },
           { status: 400 }
         );
       }
@@ -357,7 +357,7 @@ export async function POST(request: NextRequest) {
       // would mint an unmarked release titled "Test release" — no card tag,
       // no banner, no delete exit, and nothing explaining why. The route
       // itself stays ungated; every ordinary create must keep working.
-      return NextResponse.json({ error: 'Test releases are not switched on.' }, { status: 400 });
+      return NextResponse.json({ error: 'Test rollouts are not switched on.' }, { status: 400 });
     }
     // A test release always takes the template plan: a blank one would be an
     // empty activity list under a banner that says "tick activities off", and
@@ -380,7 +380,7 @@ export async function POST(request: NextRequest) {
       // instantiates. buildTestReleaseDraft always supplies a date; this
       // guard is what makes the spread exclusivity provable rather than
       // assumed.
-      return NextResponse.json({ error: 'A test release needs a release date.' }, { status: 400 });
+      return NextResponse.json({ error: 'A test rollout needs a release date.' }, { status: 400 });
     }
 
     if (coverArtUrl && !isValidHttpUrl(coverArtUrl)) {
@@ -620,7 +620,7 @@ export async function POST(request: NextRequest) {
       if (isOptionalTableMissingError(releaseResult.error)) {
         return buildMissingTableResponse('Release creation failed because the releases schema is incomplete.');
       }
-      return NextResponse.json({ error: releaseResult.error?.message || 'Could not create release.' }, { status: 500 });
+      return NextResponse.json({ error: releaseResult.error?.message || 'Could not create rollout.' }, { status: 500 });
     }
 
     const releaseId = String(releaseResult.data.id);
@@ -657,7 +657,7 @@ export async function POST(request: NextRequest) {
       if (isOptionalTableMissingError(eventResult.error)) {
         return buildMissingTableResponse('Release event logging failed because the events schema is incomplete.');
       }
-      return NextResponse.json({ error: eventResult.error.message || 'Could not log release event.' }, { status: 500 });
+      return NextResponse.json({ error: eventResult.error.message || 'Could not log rollout event.' }, { status: 500 });
     }
 
     // Template-driven task generation. If template instantiation fails, the

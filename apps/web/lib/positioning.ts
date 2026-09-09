@@ -51,7 +51,7 @@ export const CUSTOMER_LINE = `${PRODUCT_CATEGORY} for ${AUDIENCE_LINE}`;
 
 /** What it does, in the customer's words. Carried by a subhead, under a
  * headline that already carried the category. */
-export const PROMISE = 'Plan, organize and execute releases from one place';
+export const PROMISE = 'Plan, organize and execute rollouts from one place';
 
 /**
  * Under 80 characters. Bios, OG cards, anywhere a single line is all there is.
@@ -73,8 +73,8 @@ export const SHORT_DESCRIPTION = `${CUSTOMER_LINE}. ${PROMISE}.`;
  * sentence that reads like it was assembled from fragments.
  */
 export const CANONICAL_DESCRIPTION =
-  'Urganize is an AI Music Manager for artists, managers and labels. It helps music teams plan releases, ' +
-  'coordinate people, manage assets and metadata, track execution and keep every part of a rollout moving ' +
+  'Urganize is an AI Music Manager for artists, managers and labels. It helps music teams plan rollouts, ' +
+  'coordinate people, manage assets and metadata, track execution and keep every part moving ' +
   'from one place.';
 
 /**

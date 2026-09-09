@@ -182,15 +182,15 @@ export function formatWorkspaceSummary(input: {
   today: string;
 }): string {
   const { tasks, members, today } = input;
-  if (input.releases.length === 0) return 'The user has no releases yet.';
+  if (input.releases.length === 0) return 'The user has no rollouts yet.';
 
   const shown = selectSnapshotReleases(input.releases, tasks);
   const sections: string[] = [];
 
   const heading =
     shown.length < input.releases.length
-      ? `Current releases (${input.releases.length}, showing the ${shown.length} most recently worked on):`
-      : `Current releases (${input.releases.length}):`;
+      ? `Current rollouts (${input.releases.length}, showing the ${shown.length} most recently worked on):`
+      : `Current rollouts (${input.releases.length}):`;
 
   sections.push(
     `${heading}\n${shown

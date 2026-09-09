@@ -32,7 +32,7 @@ const SECTIONS: Array<{
   {
     href: '/admin/onboarding',
     label: 'Onboarding',
-    description: 'What signups pick during the setup wizard — roles, release types, where their process breaks.',
+    description: 'What signups pick during the setup wizard — roles, rollout types, where their process breaks.',
     icon: ClipboardList,
   },
   {
@@ -44,7 +44,7 @@ const SECTIONS: Array<{
   {
     href: '/admin/notifications',
     label: 'Notifications',
-    description: 'Edit the copy and timing for release reminders, motivational nudges, and deadline reminders.',
+    description: 'Edit the copy and timing for rollout reminders, motivational nudges, and deadline reminders.',
     icon: BellRing,
   },
   {

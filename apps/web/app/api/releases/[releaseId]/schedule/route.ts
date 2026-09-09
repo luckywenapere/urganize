@@ -46,7 +46,7 @@ export async function POST(
 
     const { releaseId } = await context.params;
     if (!releaseId) {
-      return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+      return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
     }
 
     const body = (await request.json().catch(() => ({}))) as {
@@ -94,7 +94,7 @@ export async function POST(
 
     if (pendingResult.error) {
       return NextResponse.json(
-        { error: pendingResult.error.message || 'Could not load release.' },
+        { error: pendingResult.error.message || 'Could not load rollout.' },
         { status: 500 }
       );
     }
@@ -162,7 +162,7 @@ export async function POST(
             activitiesCreated: 0,
             templatePending: true,
             error:
-              'Your release date was saved, but the rollout plan could not be built. Try again from the release.',
+              'Your release date was saved, but the rollout plan could not be built. Try again from the rollout.',
           },
           { status: 207 }
         );

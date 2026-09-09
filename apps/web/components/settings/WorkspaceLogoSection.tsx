@@ -52,7 +52,7 @@ export function WorkspaceLogoSection({
           so this drops the redundant lead-in and the "new and existing...
           until you upload" elaboration, keeping just the core behavior. */}
       <p className="mb-4 text-sm text-content-secondary">
-        Shown on releases with no cover art of their own.
+        Shown on rollouts with no cover art of their own.
       </p>
       {isLoading ? (
         <div className="flex items-center gap-4">

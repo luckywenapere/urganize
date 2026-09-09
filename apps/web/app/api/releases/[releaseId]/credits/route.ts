@@ -33,7 +33,7 @@ export async function GET(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -87,7 +87,7 @@ export async function POST(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -167,7 +167,7 @@ export async function PUT(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);
@@ -206,7 +206,7 @@ export async function PUT(
   }
 
   if (!updated) {
-    return NextResponse.json({ error: 'No credits link exists yet for this release.' }, { status: 404 });
+    return NextResponse.json({ error: 'No credits link exists yet for this rollout.' }, { status: 404 });
   }
 
   return NextResponse.json({ link: toReleaseCreditLink(updated as Record<string, unknown>) });
@@ -237,7 +237,7 @@ export async function PATCH(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
   const body = (await request.json().catch(() => ({}))) as { action?: unknown };
@@ -272,7 +272,7 @@ export async function PATCH(
   }
 
   if (!updated) {
-    return NextResponse.json({ error: 'No credits link exists yet for this release.' }, { status: 404 });
+    return NextResponse.json({ error: 'No credits link exists yet for this rollout.' }, { status: 404 });
   }
 
   return NextResponse.json({ link: toReleaseCreditLink(updated as Record<string, unknown>) });

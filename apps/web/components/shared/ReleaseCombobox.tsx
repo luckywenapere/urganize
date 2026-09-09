@@ -275,7 +275,7 @@ export function ReleaseCombobox({
         aria-activedescendant={activeOptionId}
         aria-label="Release"
         className="input h-12 w-full rounded-[18px]"
-        placeholder="Search releases or type a new title"
+        placeholder="Search rollouts or type a new title"
         autoComplete="off"
       />
 
@@ -284,11 +284,11 @@ export function ReleaseCombobox({
           <div id={listboxId} role="listbox" className="max-h-[22rem] overflow-y-auto p-2">
             {isLoading ? (
               <div className="rounded-[18px] px-4 py-4 text-sm text-content-secondary">
-                Loading releases...
+                Loading rollouts...
               </div>
             ) : items.length === 0 ? (
               <div className="rounded-[18px] px-4 py-4 text-sm text-content-secondary">
-                Type a release title to create one and keep going.
+                Type a title to create one and keep going.
               </div>
             ) : (
               items.map((item, index) => {
@@ -317,7 +317,7 @@ export function ReleaseCombobox({
                           Create &ldquo;{item.value}&rdquo;
                         </p>
                         <p className="mt-0.5 truncate text-[11px] leading-tight text-content-secondary">
-                          New release will be created inline and selected automatically.
+                          New rollout will be created inline and selected automatically.
                         </p>
                       </div>
                       <span className="shrink-0 rounded-full border border-stroke-default px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-content-secondary">

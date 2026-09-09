@@ -159,12 +159,12 @@ export async function ensureReleaseOwnership(
     if (isOptionalTableMissingError(error)) {
       return { error: buildMissingTableResponse() };
     }
-    return { error: NextResponse.json({ error: error.message || 'Could not load release.' }, { status: 500 }) };
+    return { error: NextResponse.json({ error: error.message || 'Could not load rollout.' }, { status: 500 }) };
   }
 
   const ownerId = String(release?.owner_user_id || '');
   if (!release || ownerId !== userId) {
-    return { error: NextResponse.json({ error: 'Release not found.' }, { status: 404 }) };
+    return { error: NextResponse.json({ error: 'Rollout not found.' }, { status: 404 }) };
   }
 
   return { release: toReleaseSummary(release as Record<string, unknown>) };
@@ -226,7 +226,7 @@ export async function loadReleaseCommandCenterData(
     if (isOptionalTableMissingError(error)) {
       return { error: buildMissingTableResponse() };
     }
-    return { error: NextResponse.json({ error: error.message || 'Could not load release data.' }, { status: 500 }) };
+    return { error: NextResponse.json({ error: error.message || 'Could not load rollout data.' }, { status: 500 }) };
   }
 
   const collaboratorRows = Array.isArray(collaboratorsResult.data) ? collaboratorsResult.data : [];

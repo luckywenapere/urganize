@@ -40,7 +40,7 @@ type CreateReleaseResponse = {
   error?: string;
 };
 
-const GENERIC_ERROR = 'Could not set up the test release. Try again.';
+const GENERIC_ERROR = 'Could not set up the test rollout. Try again.';
 
 export function useStartTestRelease(options?: { onError?: (message: string) => void }) {
   const router = useRouter();

@@ -67,7 +67,7 @@ describe('proposeTaskOwners: ranking by exact template step', () => {
       taskId: 'task-1',
       userId: 'ada',
       basis: 'history',
-      reason: 'Ada handled this on 2 past releases.',
+      reason: 'Ada handled this on 2 past rollouts.',
     });
   });
 
@@ -79,7 +79,7 @@ describe('proposeTaskOwners: ranking by exact template step', () => {
       creatorUserId: OWNER,
       memberNames: { ada: 'Ada' },
     });
-    expect(proposal.reason).toBe('Ada handled this on 1 past release.');
+    expect(proposal.reason).toBe('Ada handled this on 1 past rollout.');
   });
 
   it('breaks a frequency tie toward the more recent assignment (entries are newest-first)', () => {
@@ -122,7 +122,7 @@ describe('proposeTaskOwners: ranking by exact template step', () => {
       taskId: 'task-3',
       userId: 'ben',
       basis: 'history',
-      reason: 'Ben handled this on 1 past release.',
+      reason: 'Ben handled this on 1 past rollout.',
     });
   });
 
@@ -163,7 +163,7 @@ describe('proposeTaskOwners: falling through the ladder', () => {
       taskId: 'task-5',
       userId: 'ada',
       basis: 'role',
-      reason: 'Ada usually takes editorial work on your releases.',
+      reason: 'Ada usually takes editorial work on your rollouts.',
     });
   });
 
@@ -209,7 +209,7 @@ describe('proposeTaskOwners: falling through the ladder', () => {
       creatorUserId: OWNER,
       memberNames: {},
     });
-    expect(proposal.reason).toBe('Someone on the team handled this on 1 past release.');
+    expect(proposal.reason).toBe('Someone on the team handled this on 1 past rollout.');
   });
 });
 

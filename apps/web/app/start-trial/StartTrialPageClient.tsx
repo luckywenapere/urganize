@@ -52,8 +52,8 @@ type AccessSnapshot = {
 };
 
 const VALUE_BULLETS = [
-  'A full rollout plan for your release, built from a proven playbook.',
-  'Every activity, file and teammate for the release in one place.',
+  'A full rollout plan for your rollout, built from a proven playbook.',
+  'Every activity, file and teammate for the rollout in one place.',
   'You will not be charged during the trial — cancel anytime in Settings.',
 ];
 
@@ -211,7 +211,7 @@ export default function StartTrialPageClient() {
               Start your {TRIAL_DAYS}-day free trial.
             </h1>
             <p className="text-sm text-content-secondary">
-              Everything you need to run a release — the plan, the tasks, the
+              Everything you need to run a rollout — the plan, the tasks, the
               team — free for {TRIAL_DAYS} days. Add a card to begin; nothing
               is charged until your trial ends.
             </p>

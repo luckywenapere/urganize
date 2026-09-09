@@ -65,7 +65,7 @@ export function buildWorkspaceInviteEmail(input: WorkspaceInviteEmailInput): Bui
   const text = [
     `${inviter} invited you to join ${workspace} on Urganize.`,
     '',
-    'Urganize is where the team runs a release: the plan, the work, and who',
+    'Urganize is where the team runs a rollout: the plan, the work, and who',
     'is doing what, in one place.',
     '',
     `You'll have ${access}.`,
@@ -100,7 +100,7 @@ ${escapeHtml(`${inviter} invited you to join ${workspace} on Urganize.`)}
         ${escapeHtml(inviter)} invited you to ${escapeHtml(workspace)}
       </h1>
       <p style="margin:0 0 22px;color:${BODY_TEXT};font-size:15px;line-height:1.6;">
-        Urganize is where the team runs a release: the plan, the work, and who
+        Urganize is where the team runs a rollout: the plan, the work, and who
         is doing what, in one place. You&rsquo;ll have ${escapeHtml(access)}.
       </p>
       <a href="${escapeHtml(url)}"
@@ -169,16 +169,16 @@ export function buildWelcomeEmail(input: WelcomeEmailInput): BuiltEmail {
     '',
     "Lucky here — I'm the founder of Urganize. Thanks for signing up.",
     '',
-    'I built this because running a release across group chats and',
+    'I built this because running a rollout across group chats and',
     'spreadsheets kept breaking my own team. In Urganize you create a',
-    'release and get a full rollout plan — every task, in order, with',
+    'rollout and get a full rollout plan — every task, in order, with',
     'dates. You just work the plan.',
     '',
     'If anything feels confusing or missing, message me on WhatsApp:',
     FOUNDER_WHATSAPP_URL,
     'I read every message.',
     '',
-    'When you are ready, set up your first release:',
+    'When you are ready, set up your first rollout:',
     APP_URL,
     '',
     '— Lucky',
@@ -197,9 +197,9 @@ export function buildWelcomeEmail(input: WelcomeEmailInput): BuiltEmail {
 <div style="max-width:560px;margin:0 auto;padding:36px 24px;font-family:${FONT_STACK};">
   <p style="${p}">${escapeHtml(greeting)}</p>
   <p style="${p}">Lucky here &mdash; I&rsquo;m the founder of Urganize. Thanks for signing up.</p>
-  <p style="${p}">I built this because running a release across group chats and spreadsheets kept breaking my own team. In Urganize you create a release and get a full rollout plan &mdash; every task, in order, with dates. You just work the plan.</p>
+  <p style="${p}">I built this because running a rollout across group chats and spreadsheets kept breaking my own team. In Urganize you create a rollout and get a full rollout plan &mdash; every task, in order, with dates. You just work the plan.</p>
   <p style="${p}">If anything feels confusing or missing, <a href="${FOUNDER_WHATSAPP_URL}" style="color:#1e5c38;">message me on WhatsApp</a>. I read every message.</p>
-  <p style="${p}">When you&rsquo;re ready, <a href="${APP_URL}" style="color:#1e5c38;">set up your first release</a>.</p>
+  <p style="${p}">When you&rsquo;re ready, <a href="${APP_URL}" style="color:#1e5c38;">set up your first rollout</a>.</p>
   <p style="margin:24px 0 0;color:#1e2621;font-size:15px;line-height:1.65;">&mdash; Lucky<br>
   <span style="color:${MUTED_TEXT};font-size:13px;">Founder, Urganize</span></p>
 </div>
@@ -235,7 +235,7 @@ export type CreditSubmissionEmailInput = {
  */
 export function buildCreditSubmissionEmail(input: CreditSubmissionEmailInput): BuiltEmail {
   const who = input.collaboratorLabel.trim() || 'A collaborator';
-  const release = input.releaseTitle.trim() || 'your release';
+  const release = input.releaseTitle.trim() || 'your rollout';
   const url = input.metadataUrl;
   const rows = input.rows.filter((row) => row.label.trim() && row.value.trim());
 
@@ -250,7 +250,7 @@ export function buildCreditSubmissionEmail(input: CreditSubmissionEmailInput): B
     url,
     '',
     'You are getting this because you created the credits link for this',
-    'release. Corrections they make later replace this entry quietly, without',
+    'rollout. Corrections they make later replace this entry quietly, without',
     'another email.',
   ].join('\n');
 
@@ -291,7 +291,7 @@ ${rowsHtml}
       </table>
       <a href="${escapeHtml(url)}"
          style="display:inline-block;background-color:${SPRING};color:${INK};font-size:15px;font-weight:700;text-decoration:none;padding:13px 26px;border-radius:10px;">
-        Open the release
+        Open the rollout
       </a>
       <p style="margin:22px 0 0;color:${MUTED_TEXT};font-size:13px;line-height:1.6;">
         Or paste this link into your browser:<br>
@@ -301,7 +301,7 @@ ${rowsHtml}
     <div style="border-top:1px solid ${HAIRLINE};padding:18px 28px;">
       <p style="margin:0;color:${MUTED_TEXT};font-size:12px;line-height:1.6;">
         You are getting this because you created the credits link for this
-        release. If they correct something later it replaces this entry quietly,
+        rollout. If they correct something later it replaces this entry quietly,
         without another email.
       </p>
     </div>

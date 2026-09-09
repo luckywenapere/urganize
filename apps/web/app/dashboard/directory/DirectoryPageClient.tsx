@@ -65,7 +65,7 @@ function DirectoryFrame() {
       <header className="mb-6">
         <h1 className="font-display text-2xl text-content-primary">Directory</h1>
         <p className="mt-1 text-sm text-content-secondary">
-          Find people who have delivered the work your release needs.
+          Find people who have delivered the work your rollout needs.
         </p>
       </header>
     </div>
@@ -205,7 +205,7 @@ function DirectoryBody() {
       <header className="mb-6">
         <h1 className="font-display text-2xl text-content-primary">Directory</h1>
         <p className="mt-1 text-sm text-content-secondary">
-          Find people who have delivered the work your release needs.
+          Find people who have delivered the work your rollout needs.
         </p>
       </header>
 

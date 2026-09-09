@@ -131,7 +131,7 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Your first release is planned"
+        aria-label="Your first rollout is planned"
         className={`relative w-full max-w-lg urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface p-6 shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] transition-all duration-500 sm:p-8 ${
           isMounted ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
         }`}
@@ -150,7 +150,7 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
               </span>
             </div>
             <h2 className="mt-3 font-display text-2xl font-semibold leading-tight text-content-primary sm:text-3xl">
-              “{release?.title || 'Your release'}” is planned.
+              “{release?.title || 'Your rollout'}” is planned.
             </h2>
 
             <div className="mt-5 flex flex-wrap items-end gap-x-6 gap-y-3">
@@ -216,7 +216,7 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
               Assign activities to your team
             </h2>
             <p className="mt-2 text-sm text-content-secondary">
-              Invite an artist, freelancer or team member to “{release?.title || 'this release'}” so you
+              Invite an artist, freelancer or team member to “{release?.title || 'this rollout'}” so you
               can hand off activities — or do it later from Settings.
             </p>
 

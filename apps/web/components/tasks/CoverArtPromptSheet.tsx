@@ -166,9 +166,9 @@ function CoverArtPromptBody({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-2 sm:px-6 sm:pb-6">
           {isDone ? (
             <div>
-              <h2 className="font-display text-xl text-content-primary">On the release.</h2>
+              <h2 className="font-display text-xl text-content-primary">On the rollout.</h2>
               <p className="mt-1 text-sm text-content-secondary">
-                It shows on the release card, the press kit and anywhere else the release appears.
+                It shows on the rollout card, the press kit and anywhere else the rollout appears.
               </p>
             </div>
           ) : (
@@ -178,8 +178,8 @@ function CoverArtPromptBody({
               </h2>
               <p className="mt-1 text-sm text-content-secondary">
                 {existing
-                  ? 'This release already has cover art. Upload the new file to replace it.'
-                  : 'You just marked this done. Put the file on the release while you have it open.'}
+                  ? 'This rollout already has cover art. Upload the new file to replace it.'
+                  : 'You just marked this done. Put the file on the rollout while you have it open.'}
               </p>
 
               <div className="mt-4 flex items-start gap-3">
@@ -243,7 +243,7 @@ function CoverArtPromptBody({
                 I&apos;ll do it later
               </button>
               <p className="mt-1.5 text-center text-[11px] text-content-tertiary">
-                You can add it any time from Cover art on this release.
+                You can add it any time from Cover art on this rollout.
               </p>
 
               {upload.queued ? (

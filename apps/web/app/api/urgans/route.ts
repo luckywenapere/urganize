@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     const built = await buildChappiSystemPrompt(ctx);
     let system = built.prompt;
     if (releaseScope) {
-      system += `\n\nThe user has scoped this conversation to the release "${releaseScope.title}" (release id: ${releaseScope.id}). Unless they clearly name a different release, interpret questions and actions as being about this release and pass its id to tools. If the id doesn't resolve, say so instead of guessing.`;
+      system += `\n\nThe user has scoped this conversation to the rollout "${releaseScope.title}" (rollout id: ${releaseScope.id}). Unless they clearly name a different rollout, interpret questions and actions as being about this rollout and pass its id to tools. If the id doesn't resolve, say so instead of guessing.`;
     }
 
     if (confirmedAction) {

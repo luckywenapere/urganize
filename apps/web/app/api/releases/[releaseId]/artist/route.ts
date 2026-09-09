@@ -41,7 +41,7 @@ export async function POST(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'A release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'A rollout id is required.' }, { status: 400 });
   }
 
   const body = await request.json().catch(() => null);
@@ -94,7 +94,7 @@ export async function POST(
     });
     if (result.error) {
       console.error('[releases/artist] could not reassign:', result.error);
-      return NextResponse.json({ error: 'Could not move this release.' }, { status: 500 });
+      return NextResponse.json({ error: 'Could not move this rollout.' }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -103,7 +103,7 @@ export async function POST(
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not move this release.' },
+      { error: error instanceof Error ? error.message : 'Could not move this rollout.' },
       { status: 500 }
     );
   }

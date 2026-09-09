@@ -160,7 +160,7 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
           set((state) => ({
             isInitialLoading: false,
             isRefreshing: false,
-            error: state.releases.length > 0 ? '' : "You're offline. Reconnect to load your releases.",
+            error: state.releases.length > 0 ? '' : "You're offline. Reconnect to load your rollouts.",
           }));
           return null;
         }
@@ -168,7 +168,7 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
       }
       const payload = (await response.json().catch(() => ({}))) as Partial<CommandCenterData> & { error?: string };
       if (!response.ok || !Array.isArray(payload.releases)) {
-        set({ isInitialLoading: false, isRefreshing: false, error: payload.error || 'Could not load releases.' });
+        set({ isInitialLoading: false, isRefreshing: false, error: payload.error || 'Could not load rollouts.' });
         return null;
       }
 
@@ -225,7 +225,7 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
 
     const payload = (await response.json().catch(() => ({}))) as { releaseId?: string; templatePending?: boolean; release?: { title?: string; artistId?: string; artistName?: string; releaseType?: string; releaseDate?: string | null }; error?: string };
     if (!response.ok || !payload.releaseId) {
-      set({ error: payload.error || 'Could not create release.' });
+      set({ error: payload.error || 'Could not create rollout.' });
       return null;
     }
 

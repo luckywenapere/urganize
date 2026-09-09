@@ -166,7 +166,7 @@ export function TimelineScene({
     return (
       <TimelineEmptyState
         title="Set a release date first"
-        body="The timeline lays everything out against release day, so it needs one to anchor to. Add a date to this release and the whole rollout appears here."
+        body="The timeline lays everything out against release day, so it needs one to anchor to. Add a date to this rollout and the whole plan appears here."
       />
     );
   }
@@ -176,7 +176,7 @@ export function TimelineScene({
     return (
       <TimelineEmptyState
         title="No activities yet"
-        body="Generate a rollout plan for this release and every activity in it lands on this timeline, laid out week by week."
+        body="Generate a plan for this rollout and every activity in it lands on this timeline, laid out week by week."
       />
     );
   }
@@ -599,7 +599,7 @@ function TimelineWeekList({
   if (groups.length === 0) {
     return (
       <p className="mt-4 text-sm text-content-secondary">
-        Nothing is scheduled on this release yet.
+        Nothing is scheduled on this rollout yet.
       </p>
     );
   }

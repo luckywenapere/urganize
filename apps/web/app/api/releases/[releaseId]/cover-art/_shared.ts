@@ -125,7 +125,7 @@ export async function loadCurrentCoverArt(
     .maybeSingle();
 
   if (releaseError) {
-    return { error: releaseError.message || 'Could not load the release.' };
+    return { error: releaseError.message || 'Could not load the rollout.' };
   }
 
   const assetId = release?.artwork_asset_id ? String(release.artwork_asset_id) : '';

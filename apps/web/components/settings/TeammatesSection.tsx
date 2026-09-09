@@ -224,7 +224,7 @@ export function TeammatesSection({
         : null;
       setTeammateMessage(
         scopedArtistName
-          ? `Artist invite link created — whoever joins with it only sees ${scopedArtistName}'s releases. Valid for ${payload.ttlDays ?? 7} days.`
+          ? `Artist invite link created — whoever joins with it only sees ${scopedArtistName}'s rollouts. Valid for ${payload.ttlDays ?? 7} days.`
           : `Invite link created — anyone with it joins as a Team Member. Valid for ${payload.ttlDays ?? 7} days.`
       );
       try {

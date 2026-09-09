@@ -57,7 +57,7 @@ const TIMELINE_STAGE_OFFSETS: Record<TimelineStage, number> = {
 const CHECKLIST_TEMPLATE: ReleaseChecklistTemplateItem[] = [
   {
     title: 'Define Release Strategy',
-    description: 'Plan the release goals, audience, and rollout strategy before the campaign begins.',
+    description: 'Plan the release goals, audience, and release strategy before the campaign begins.',
     timelineStage: '12_weeks_before',
   },
   {

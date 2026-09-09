@@ -57,7 +57,7 @@ const base = { releases: [release({ id: 'r1' })], tasks: [], members: [], today:
 
 describe('empty and near-empty states', () => {
   it('says so plainly when there are no releases', () => {
-    expect(formatWorkspaceSummary({ ...base, releases: [] })).toBe('The user has no releases yet.');
+    expect(formatWorkspaceSummary({ ...base, releases: [] })).toBe('The user has no rollouts yet.');
   });
 
   // A header over an empty list teaches the model to invent something to put
@@ -229,12 +229,12 @@ describe('degrading a large catalog', () => {
 
   it('says it is showing a subset, and how big the catalog really is', () => {
     const out = formatWorkspaceSummary({ ...base, releases: many });
-    expect(out).toContain('Current releases (30, showing the 25 most recently worked on)');
+    expect(out).toContain('Current rollouts (30, showing the 25 most recently worked on)');
   });
 
   it('does not claim a subset when it is showing everything', () => {
     const out = formatWorkspaceSummary({ ...base, releases: many.slice(0, 4) });
-    expect(out).toContain('Current releases (4):');
+    expect(out).toContain('Current rollouts (4):');
     expect(out).not.toContain('most recently worked on');
   });
 });

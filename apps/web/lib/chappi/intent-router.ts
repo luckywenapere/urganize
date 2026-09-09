@@ -89,7 +89,7 @@ const PLANNER_CHIPS: ChappiChip[] = [
   },
   {
     id: 'plan-small-budget',
-    label: 'Plan a release with a small budget',
+    label: 'Plan a rollout with a small budget',
     intent: 'plan_release',
     plannerPreset: { budget: 'under_100k' },
   },
@@ -186,9 +186,9 @@ export function resolveIntent(raw: string): ChappiIntent {
  * example prompts the user can click to run. */
 export function buildHelpReply(): ChappiReply {
   return {
-    text: "I can help you run your releases. I'm still learning to chat — for now, try one of these:",
+    text: "I can help you run your rollouts. I'm still learning to chat — for now, try one of these:",
     suggestions: [
-      PLANNER_ENABLED ? 'Plan a release' : 'Create a new rollout',
+      PLANNER_ENABLED ? 'Plan a rollout' : 'Create a new rollout',
       'Add an activity',
       ...(SONG_UPLOAD_ENABLED ? ['Upload the song'] : []),
       ...(EVENTS_ENABLED ? ['My shows'] : []),

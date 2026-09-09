@@ -32,7 +32,7 @@ export const ONBOARDING_WHERE_STUCK_OPTIONS: Array<{ value: OnboardingWhereStuck
   { value: 'keeping_team_aligned', label: 'Keeping the team aligned' },
   { value: 'tracking_progress', label: "Tracking what's done and what's next" },
   { value: 'collecting_credits', label: 'Collecting credits and metadata' },
-  { value: 'managing_multiple_releases', label: 'Managing multiple releases at once' },
+  { value: 'managing_multiple_releases', label: 'Managing multiple rollouts at once' },
   { value: 'marketing_promo', label: 'Marketing and promo' },
   { value: 'distribution', label: 'Distribution and platforms' },
 ];

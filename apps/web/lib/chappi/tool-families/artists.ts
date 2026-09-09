@@ -86,7 +86,7 @@ export const ARTIST_TOOLS: ChappiTool[] = [
     name: 'rename_artist',
     kind: 'mutate',
     description:
-      'Rename an artist. The new name follows through to every release of theirs, so this is how a name is corrected — never by editing releases one at a time.',
+      'Rename an artist. The new name follows through to every rollout of theirs, so this is how a name is corrected — never by editing rollouts one at a time.',
     inputSchema: {
       type: 'object',
       properties: { artistId: { type: 'string' }, name: { type: 'string' } },
@@ -104,7 +104,7 @@ export const ARTIST_TOOLS: ChappiTool[] = [
       if (!res.ok) return fail(apiError(res, 'Could not rename the artist.'));
       return {
         ok: true,
-        summary: `Renamed them to ${name}. Their releases say so too.`,
+        summary: `Renamed them to ${name}. Their rollouts say so too.`,
         clientAction: { type: 'refresh' },
       };
     },
@@ -120,7 +120,7 @@ export const ARTIST_TOOLS: ChappiTool[] = [
     name: 'remove_artist',
     kind: 'mutate',
     description:
-      'Remove an artist from the roster. Only works if nothing is attached to them — it refuses, and says why, if they have releases, a teammate scoped to them, or are the last artist left.',
+      'Remove an artist from the roster. Only works if nothing is attached to them — it refuses, and says why, if they have rollouts, a teammate scoped to them, or are the last artist left.',
     inputSchema: {
       type: 'object',
       properties: { artistId: { type: 'string' } },
@@ -147,7 +147,7 @@ export const ARTIST_TOOLS: ChappiTool[] = [
     name: 'move_release_to_artist',
     kind: 'mutate',
     description:
-      'File a release under a different artist on the roster. Use this when a release was created against the wrong one. It changes who can see it: a teammate scoped to one artist sees only that artist’s releases.',
+      'File a rollout under a different artist on the roster. Use this when a rollout was created against the wrong one. It changes who can see it: a teammate scoped to one artist sees only that artist’s rollouts.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -172,14 +172,14 @@ export const ARTIST_TOOLS: ChappiTool[] = [
       // therefore belt-and-braces rather than live, kept so the tool still
       // behaves if the route ever grows a gate of its own.
       if (isFlagGateOff(res)) return fail(ROSTER_OFF);
-      if (!res.ok) return fail(apiError(res, 'Could not move the release.'));
+      if (!res.ok) return fail(apiError(res, 'Could not move the rollout.'));
       const changed = res.body.changed;
       return {
         ok: true,
         summary:
           changed === false
             ? 'It was already filed under that artist, so nothing changed.'
-            : 'Moved the release. Anyone scoped to the old artist will no longer see it.',
+            : 'Moved the rollout. Anyone scoped to the old artist will no longer see it.',
         clientAction: { type: 'refresh' },
       };
     },

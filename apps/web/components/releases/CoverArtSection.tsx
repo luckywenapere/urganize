@@ -125,7 +125,7 @@ export function CoverArtSection({ releaseId, onToast }: CoverArtSectionProps) {
             ) : coverArt?.downloadUrl ? (
               <img
                 src={coverArt.downloadUrl}
-                alt="Release cover art"
+                alt="Cover art"
                 className="h-full w-full object-cover"
               />
             ) : (
@@ -142,7 +142,7 @@ export function CoverArtSection({ releaseId, onToast }: CoverArtSectionProps) {
             </p>
             <p className="mt-1 text-xs text-content-secondary">
               {DSP_REQUIREMENT_LABEL}, up to {formatFileSize(COVER_ART_MAX_BYTES)}. Shows on the
-              release card, the press kit and anywhere else the release is displayed. Uploading a
+              rollout card, the press kit and anywhere else the rollout is displayed. Uploading a
               new image replaces the current one.
             </p>
             {coverArt ? (
@@ -221,7 +221,7 @@ export function CoverArtSection({ releaseId, onToast }: CoverArtSectionProps) {
 
       {loadError ? (
         <div className="mt-4 border border-status-error/30 bg-status-error/5 p-4">
-          <p className="text-sm text-content-primary">We could not load this release&apos;s cover art.</p>
+          <p className="text-sm text-content-primary">We could not load this rollout&apos;s cover art.</p>
           <p className="mt-1 text-xs text-content-secondary">{loadError}</p>
           <button
             type="button"

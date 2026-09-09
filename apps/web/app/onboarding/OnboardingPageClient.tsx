@@ -112,9 +112,9 @@ const TOTAL_STEPS = WORKSPACE_ENABLED ? 7 : 6;
 
 const STEP_TITLES: Record<StepIndex, string> = {
   0: "What are you working on?",
-  1: 'Where does a release usually fall apart?',
-  2: 'Where is this release in its lifecycle?',
-  3: 'Tell us about this release',
+  1: 'Where does a rollout usually fall apart?',
+  2: 'Where is this rollout in its lifecycle?',
+  3: 'Tell us about this rollout',
   4: 'Your first move',
   5: 'Create your account',
   6: 'Bring your team in',
@@ -151,12 +151,12 @@ const PLANNING_PREFERENCE_OPTIONS: Array<{
   {
     value: 'ai_recommendations',
     label: ONBOARDING_PLANNING_PREFERENCE_LABELS.ai_recommendations,
-    helper: 'See a suggested next step like the one above, every time you start a release.',
+    helper: 'See a suggested next step like the one above, every time you start a rollout.',
   },
   {
     value: 'start_from_scratch',
     label: ONBOARDING_PLANNING_PREFERENCE_LABELS.start_from_scratch,
-    helper: 'Skip the suggestions. Your release starts blank and you add every activity yourself.',
+    helper: 'Skip the suggestions. Your rollout starts blank and you add every activity yourself.',
   },
 ];
 
@@ -171,12 +171,12 @@ const ONBOARDING_ROLE_OPTIONS: Array<{ value: OnboardingRole; label: string; hel
   {
     value: 'artist-manager',
     label: 'I manage an artist',
-    helper: 'You run releases on behalf of the artist (manager, label, agency).',
+    helper: 'You run rollouts on behalf of the artist (manager, label, agency).',
   },
   {
     value: 'artist',
     label: "I'm the artist",
-    helper: 'You are the artist running your own releases.',
+    helper: 'You are the artist running your own rollouts.',
   },
 ];
 
@@ -605,7 +605,7 @@ export default function OnboardingPage() {
     // themself — the same `plan` contract CreateReleaseModal uses (URG-201:
     // before this, the preference was recorded on the profile but the
     // release was always created with the full template).
-    setProgressMessage('Setting up your first release...');
+    setProgressMessage('Setting up your first rollout...');
     const releaseResponse = await fetch('/api/releases', {
       method: 'POST',
       headers: {
@@ -626,7 +626,7 @@ export default function OnboardingPage() {
       error?: string;
     };
     if (!releaseResponse.ok) {
-      throw new Error(releasePayload.error || 'Could not create your release.');
+      throw new Error(releasePayload.error || 'Could not create your rollout.');
     }
 
     // 3a. If the workspace flag is OFF, mark complete + ship to dashboard.
@@ -694,7 +694,7 @@ export default function OnboardingPage() {
     // otherwise end authed-setup mode mid-run and eject the user before
     // finishToDashboard's own redirect lands.
     setAccountCreated(true);
-    setProgressMessage('Setting up your first release...');
+    setProgressMessage('Setting up your first rollout...');
     try {
       const accessToken = await getAccessToken();
       await runPostSignupHandoff(accessToken);
@@ -974,7 +974,7 @@ export default function OnboardingPage() {
               Welcome aboard
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-content-secondary">
-              A few questions and your first release is ready.
+              A few questions and your first rollout is ready.
             </p>
           </div>
         </div>
@@ -1020,7 +1020,7 @@ export default function OnboardingPage() {
           {step === 0 ? (
             <div className="mt-5 space-y-4">
               <p className="text-sm leading-relaxed text-content-secondary">
-                Urganize is built around a single artist. Pick the release for that artist. Only release
+                Urganize is built around a single artist. Pick the rollout for that artist. Only rollout
                 types backed by a working playbook are selectable; others are marked &quot;coming soon&quot;
                 until their template is ready.
               </p>
@@ -1140,7 +1140,7 @@ export default function OnboardingPage() {
                 What&apos;s the release called, and when is it going out?
               </p>
               <label className="block space-y-1.5">
-                <span className={labelBase}>Release title</span>
+                <span className={labelBase}>Title</span>
                 <input
                   type="text"
                   value={draft.title}
@@ -1212,7 +1212,7 @@ export default function OnboardingPage() {
               {/* URG-158: one-time planning preference, captured right where
                   the value of an AI-suggested next step is already visible. */}
               <fieldset className="mt-6 space-y-2">
-                <legend className={labelBase}>How do you want to plan releases?</legend>
+                <legend className={labelBase}>How do you want to plan rollouts?</legend>
                 <div className="space-y-2">
                   {PLANNING_PREFERENCE_OPTIONS.map((option) => {
                     const selected = draft.planningPreference === option.value;
@@ -1249,7 +1249,7 @@ export default function OnboardingPage() {
           {step === 5 ? (
             <div className="mt-5 space-y-5">
               <p className="text-sm leading-relaxed text-content-secondary">
-                Create your account to lock in your release and pick up this task on the other side.
+                Create your account to lock in your rollout and pick up this task on the other side.
               </p>
 
               {/* Role picker — at the top because it changes which fields
@@ -1532,7 +1532,7 @@ export default function OnboardingPage() {
                 disabled={!canAdvance || isSubmitting || isGoogleRedirecting}
                 className={primaryButton}
               >
-                {isSubmitting ? 'Working…' : 'Create account & release'}
+                {isSubmitting ? 'Working…' : 'Create account & rollout'}
               </button>
             ) : step === 6 ? (
               <button
@@ -1554,7 +1554,7 @@ export default function OnboardingPage() {
                 disabled={!canAdvance || isSubmitting}
                 className={primaryButton}
               >
-                {isSubmitting ? 'Working…' : 'Create my release'}
+                {isSubmitting ? 'Working…' : 'Create my rollout'}
               </button>
             ) : (
               <button

@@ -22,7 +22,7 @@ export const CONTEXT_TOOLS: ChappiTool[] = [
     name: 'get_workspace_context',
     kind: 'read',
     description:
-      'Get the full working context for this team as one block of text: how the team works, every current release with its progress, what is overdue, who is carrying what, and who is on the team. Call this first when you need to understand the whole picture rather than one release.',
+      'Get the full working context for this team as one block of text: how the team works, every current rollout with its progress, what is overdue, who is carrying what, and who is on the team. Call this first when you need to understand the whole picture rather than one rollout.',
     inputSchema: { type: 'object', properties: {} },
     execute: async (ctx) => {
       const context = await buildPortableWorkspaceContext(ctx);
@@ -40,20 +40,20 @@ export const CONTEXT_TOOLS: ChappiTool[] = [
     name: 'get_release_context',
     kind: 'read',
     description:
-      'Get one release in full as a block of text: its date and how far off it is, its progress, what is overdue, what is blocked, what is still to do, and its dated moments. Use this when the question is about a specific release.',
+      'Get one rollout in full as a block of text: its date and how far off it is, its progress, what is overdue, what is blocked, what is still to do, and its dated moments. Use this when the question is about a specific rollout.',
     inputSchema: {
       type: 'object',
-      properties: { releaseId: { type: 'string', description: 'The release id.' } },
+      properties: { releaseId: { type: 'string', description: 'The rollout id.' } },
       required: ['releaseId'],
     },
     execute: async (ctx, args) => {
       const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return fail('Which release? I need its id.');
+      if (!releaseId) return fail('Which rollout? I need its id.');
       const context = await buildReleaseContext(ctx, releaseId);
       // A release the caller cannot see reads exactly like one that does not
       // exist — listVisibleReleases is what draws that line, and it is the same
       // line the rest of the app draws.
-      if (!context) return fail('I could not find that release.');
+      if (!context) return fail('I could not find that rollout.');
       return { ok: true, summary: context };
     },
   },

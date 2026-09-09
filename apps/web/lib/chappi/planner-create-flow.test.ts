@@ -129,7 +129,7 @@ describe('generate_release_plan without a releaseId', () => {
     expect('plan' in createBody).toBe(false);
 
     expect(result.ok).toBe(true);
-    expect(result.summary).toMatch(/^Created the release and drafted 3 activities/);
+    expect(result.summary).toMatch(/^Created the rollout and drafted 3 activities/);
     expect((result.data as { releaseId: string }).releaseId).toBe('rel-new');
     expect(result.clientAction).toEqual({
       type: 'navigate',
@@ -150,7 +150,7 @@ describe('generate_release_plan without a releaseId', () => {
     expect(result.ok).toBe(false);
     // The model must retry WITH the id, never by minting a second release.
     expect(result.summary).toContain('rel-new');
-    expect(result.summary).toContain('do not create another release');
+    expect(result.summary).toContain('do not create another rollout');
     expect((result.data as { releaseId: string }).releaseId).toBe('rel-new');
   });
 
@@ -185,7 +185,7 @@ describe('generate_release_plan with a releaseId', () => {
   it('maps the tasks_exist 409 to guidance about planning a new release instead', async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(
-        { error: 'This release already has a rollout plan.', code: 'tasks_exist' },
+        { error: 'This rollout already has a plan.', code: 'tasks_exist' },
         409
       )
     );

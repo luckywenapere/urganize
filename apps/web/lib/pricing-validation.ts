@@ -45,30 +45,30 @@ export const PRICING_BAND_OPTIONS: Array<{
 
 export const PRICING_VALIDATION_COPY = {
   primaryPrompt:
-    'If Urganize could solve mastering for you and also give you release planning, listener insight, marketing guidance, consultations, investor-readiness support, and one organized place, would you pay for it monthly?',
+    'If Urganize could solve mastering for you and also give you rollout planning, listener insight, marketing guidance, consultations, investor-readiness support, and one organized place, would you pay for it monthly?',
   supportingPoints: [
-    'Become more investor-ready with clearer release execution and presentation.',
+    'Become more investor-ready with clearer rollout execution and presentation.',
     'Access free consultations when you need strategic direction.',
     'Identify your unique listener profile and market to the right people.',
     'Get practical digital and organic marketing guidance.',
-    'Follow clear step-by-step release planning without scattered tools.',
+    'Follow clear step-by-step rollout planning without scattered tools.',
     'Keep everything organized in one stress-free place.',
   ],
   variations: {
     onboarding: [
-      'Urganize just mapped your release work. If it also handled mastering and kept planning, audience insight, marketing support, consultations, and execution in one place, would you pay monthly for it?',
-      'You now have your first release plan. If Urganize could also solve mastering and keep your release strategy, listener targeting, consultations, and execution stress-free in one place, would a monthly subscription feel worth it?',
-      'If this platform could give you mastering plus the full release system you need, from planning and listener profiling to marketing guidance and consultations, would you pay for it every month?',
+      'Urganize just mapped your rollout work. If it also handled mastering and kept planning, audience insight, marketing support, consultations, and execution in one place, would you pay monthly for it?',
+      'You now have your first rollout plan. If Urganize could also solve mastering and keep your rollout strategy, listener targeting, consultations, and execution stress-free in one place, would a monthly subscription feel worth it?',
+      'If this platform could give you mastering plus the full rollout system you need, from planning and listener profiling to marketing guidance and consultations, would you pay for it every month?',
     ],
     dashboard: [
-      'Would you pay monthly for Urganize if it solved mastering and kept release planning, listener insight, marketing support, consultations, and execution organized in one place?',
+      'Would you pay monthly for Urganize if it solved mastering and kept rollout planning, listener insight, marketing support, consultations, and execution organized in one place?',
       'If Urganize could keep you stress-free by handling mastering alongside planning, audience profiling, marketing guidance, and consultations, would you subscribe monthly?',
-      'How likely are you to pay monthly for a platform that combines mastering, release planning, listener targeting, consultation access, and organization in one place?',
+      'How likely are you to pay monthly for a platform that combines mastering, rollout planning, listener targeting, consultation access, and organization in one place?',
     ],
     research: [
-      'If Urganize solved mastering and gave you the major tools you need to plan releases, understand your audience, improve marketing, access consultations, and stay organized, would you pay monthly for it?',
-      'We are testing whether artists and teams would pay monthly for an all-in-one release platform that includes mastering, investor-readiness support, listener profiling, marketing guidance, and consultations. Would you?',
-      'Would a monthly subscription make sense to you if Urganize could combine mastering, release execution, audience insight, consultations, and stress-free organization in one product?',
+      'If Urganize solved mastering and gave you the major tools you need to plan rollouts, understand your audience, improve marketing, access consultations, and stay organized, would you pay monthly for it?',
+      'We are testing whether artists and teams would pay monthly for an all-in-one rollout platform that includes mastering, investor-readiness support, listener profiling, marketing guidance, and consultations. Would you?',
+      'Would a monthly subscription make sense to you if Urganize could combine mastering, rollout execution, audience insight, consultations, and stress-free organization in one product?',
     ],
   },
 } as const;

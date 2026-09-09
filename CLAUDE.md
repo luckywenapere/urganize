@@ -6,7 +6,7 @@ This file is the source of truth for AI coding assistants working in this reposi
 
 ## What Urganize is
 
-Urganize is an **AI Music Manager for artists, managers and labels**. It helps music teams plan releases, coordinate people, manage assets and metadata, track execution and keep every part of a rollout moving from one place. That category line is the founder's, locked 2026-09-09; the canonical strings live in `apps/web/lib/positioning.ts` and are enforced by `apps/web/lib/positioning-guard.test.ts`. What v1 BUILDS is unchanged and is the six-feature list below: a release management surface, described here in the words a customer reads rather than the words the build used.
+Urganize is an **AI Music Manager for artists, managers and labels**. It helps music teams plan rollouts, coordinate people, manage assets and metadata, track execution and keep every part moving from one place. That category line is the founder's, locked 2026-09-09; the canonical strings live in `apps/web/lib/positioning.ts` and are enforced by `apps/web/lib/positioning-guard.test.ts`. What v1 BUILDS is unchanged and is the six-feature list below: a release management surface, described here in the words a customer reads rather than the words the build used.
 
 **Target user for v1:** an artist manager or small label running more than one artist's releases at once. Not enterprise teams, not artists directly. Team-scale coordination (handoffs, files, status across a roster) is the paying pain point, confirmed directly: a solo manager with one artist already has a workable system (WhatsApp, Drive, calendar) and won't switch. Labels running a full roster are served by the premium Label tier (founder-delivered onboarding + template tailoring), not the self-serve core wedge.
 
@@ -13014,6 +13014,43 @@ not dumped into Metadata.
 The `?new=1` fix is **comment-guarded rather than test-guarded** — it is four
 lines of standard `URLSearchParams` inside a React effect, and this repo has no
 component tests to reach it. Said plainly rather than implied.
+
+---
+
+## The object is a rollout (2026-09-09, v1.37.0)
+
+Founder call: the thing a manager creates and runs is a **rollout**, not a release. Until this the word "rollout" named only a PLAN TYPE ("rollout plan" vs "blank"), while every label, heading, email, UrgAns reply and error message called the object a release. Now every string a person reads in `apps/web` says rollout. **Everything in this file above this section says "release" as historical record and is deliberately not rewritten.**
+
+The rules, so the next label does not drift back:
+
+| Case | Rule |
+|---|---|
+| The object (singular, plural, possessive) | rollout / rollouts / rollout's. "New rollout", "Archive rollout", "No rollouts yet", Settings → "Rollouts". |
+| "Release title" | **"Title"** alone — the title names the record, so neither "Release title" nor "Rollout title" is right. |
+| "Release type" (Single / EP / Album) | **"Format"**. The values are unchanged. |
+| release date / release day / release week, the Timeline axis label `Release`, `PlanTaskRow`'s "Release day", the `released` status | **KEEP** — these name the day the music comes out, not the object. |
+| Public and outward pages: `/epk`, `/credits`, `/capture`, `/pack`, the press-kit prose an editor reads, the printed recap card (`RECAP_EYEBROW`), collaborator- and fan-facing emails | **KEEP** "release" — those readers do not know our word. The in-app labels that OPEN those surfaces say rollout. |
+| Playbook task copy (`lib/release-templates/*`) | **KEEP** in this pass. Dominated by date phrasing, versioned as `.md` + `.ts` pairs, test-pinned. The few "the release" object references in task bodies are an optional follow-up. |
+| Identifiers | never touched: URLs (`?release=`, `/dashboard/releases/`), DB tables and enums, env flags, tool names (`create_release`), TS symbols, DOM ids, storage keys, analytics event names, comments. |
+| API error bodies | `'Rollout not found.'`, `'Rollout id is required.'` — the flag gates still match exactly `'Not found.'` (`isFlagGateOff`), which is untouched. |
+
+Three mechanisms hold it:
+
+- **`lib/rollout-vocabulary.test.ts`** scans an explicit list of high-traffic UI files (the create modal, the workspace, the nav, UrgAns's conversation and system prompt, the emails, the notification presets, `help-copy.ts`, the pricing package) and fails on the object word inside string literals, template literals or JSX text, letting the date phrases, URLs, table names and tool names through. **It reads through `readableCopy` from `lib/copy-scan.ts`, not a reader of its own** — that module's header states the rule ("two guards would drift the moment one of them gained a rule"), and a first draft of this guard that hand-rolled an extractor was deleted for it. Two of copy-scan's documented behaviours come free and both are wanted: comments are exempt, and a whitespace-free string reads as an identifier, so a bare `'Release'` (a table name, a key, the timeline axis label) is invisible here exactly as intended. Two skips ARE local, each with a test: a segment carrying JS punctuation (copy-scan's `>...<` rule can read an arrow-function body as JSX text), and `URGANS_COPY_RULES` by identity.
+- **UrgAns is told the word, in `URGANS_COPY_RULES` rather than in `ROLE`.** That constant is already exempted from the positioning guard by identity — the `bannedCopyInstruction()` precedent — and a rule that names a banned word has to live somewhere exempt or the instruction enforcing it fails the guard enforcing it. It says: say rollout, never release, when you mean that object; the tools stay `*_release`; "release date" and "release day" stay as they are. The typed keyword router (`intent-router.ts`) ACCEPTS "rollout" alongside "release" rather than replacing it — someone who learned the old word is not stranded — and the test asserts both route the same.
+- **The changelog voice** uses rollout from v1.37.0 forward; history is not rewritten.
+
+`packages/pricing` moved with the app ("3 rollouts at a time"), which the marketing site also reads — so `/pricing` shows the new word one PR ahead of the rest of `apps/homepage`, whose copy sweep is the next PR and earns no version (the app-only scope rule).
+
+**THE FOUNDER-LOCKED POSITIONING MOVED TOO, and it could not be deferred to that next PR.** Asked whether the rename should reach `lib/positioning.ts`, the founder answered "rename them too", so `PROMISE` is now *"Plan, organize and execute rollouts from one place"*. Three consequences worth knowing:
+
+- **`CANONICAL_DESCRIPTION` is a hand rewrite, not a substitution.** It already ended "keep every part of a rollout moving from one place", so a mechanical pass says the word twice in one sentence; the second is dropped, leaving "keep every part moving from one place".
+- **It is one unit across BOTH apps.** `positioning-guard.test.ts` lives in `apps/web` but walks `apps/homepage/app`, `apps/homepage/lib`, `README.md` and `docs/store-listing.md`, and asserts the homepage mirror is byte-identical below its header — so splitting positioning across PR1 and PR2 would have landed one PR with a red guard. `⚠️ /music rollouts/i` is on that guard's RETIRED list, so the rename must never produce that phrase.
+- **The OG card bakes the promise**, so it was regenerated (`apps/homepage/scripts/generate-og-image.mjs`) and `SHARE_IMAGE_VERSION` bumped to `2026-09-09-rollout`. The `alt` needed no edit: it composes from `ONE_LINER` and `PROMISE`. A stale comment beside it claiming there is "no generator in the repo" was corrected in the same pass — that generator landed 2026-09-09.
+
+**A rebase lesson worth keeping, because it changed the resolution rule mid-flight.** This branch sat unmerged while #569 (positioning), #570 (the draggable side menu) and then #572/#573 (the Pitching page) landed on `main` underneath it — TWO rebases in one afternoon, the first colliding on 53 files. The first attempt resolved them by taking THIS branch's version and replaying main's small diffs on top — which quietly reintroduced the word "workspace" into user-facing copy across a dozen files, because this branch predates the brief that banned it. **Main's wording is the base; the rename goes on top of it.** The direction matters more than the mechanics: when a rebase collides two copy changes, the newer editorial decision wins and the older mechanical one is re-derived. That is also why the plan called for re-running the rename rather than hand-merging 187 files.
+
+**Verified:** the full vitest suite green (3119 passing) including the new guard and router cases; `eslint .` at the measured 3-error / 81-warning baseline with zero new findings, measured by stashing rather than assumed; `next build` green by exit code with `/auth`, `/onboarding`, `/settings` still `○ Static`. **Not verified:** nothing rendered in a browser — this sandbox cannot mint a session — so the "Title" and "Format" labels in the create modal and the onboarding wizard are the two things worth a look.
 
 ---
 

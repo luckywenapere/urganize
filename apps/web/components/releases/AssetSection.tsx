@@ -102,7 +102,7 @@ export function AssetSection({ releaseId, onToast }: AssetSectionProps) {
         <div>
           <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">Files</h2>
           <p className="mt-1 text-sm text-content-secondary">
-            Cover art, masters, contracts, and other release artifacts.
+            Cover art, masters, contracts, and other rollout artifacts.
           </p>
         </div>
       </div>

@@ -127,7 +127,7 @@ export function CuratorShell({ children }: { children: ReactNode }) {
                   className="inline-flex h-9 items-center gap-1.5 rounded-full border border-brand bg-brand/10 px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/20 disabled:opacity-60"
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
-                  {isActivating ? 'Setting up…' : 'Run your releases'}
+                  {isActivating ? 'Setting up…' : 'Run your rollouts'}
                 </button>
               ) : (
                 <Link

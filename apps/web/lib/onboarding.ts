@@ -136,7 +136,7 @@ export const ONBOARDING_BIGGEST_HEADACHE_LABELS: Record<OnboardingBiggestHeadach
   keeping_team_aligned: 'Keeping the team aligned',
   tracking_whats_done_and_whats_next: "Tracking what's done and what's next",
   collecting_credits_and_metadata: 'Collecting credits and metadata',
-  managing_multiple_releases_at_once: 'Managing multiple releases at once',
+  managing_multiple_releases_at_once: 'Managing multiple rollouts at once',
 };
 
 export const ONBOARDING_PLANNING_PREFERENCE_LABELS: Record<OnboardingPlanningPreference, string> = {
@@ -309,27 +309,27 @@ export const normalizeOnboardingState = (value: unknown): OnboardingState => {
 export const getDashboardEmptyStateCopy = (role: UserRole | null) => {
   if (role === 'manager') {
     return {
-      title: 'No releases yet.',
-      description: 'Create your first release so your team has one place for tracks, credits and launch work.',
+      title: 'No rollouts yet.',
+      description: 'Create your first rollout so your team has one place for tracks, credits and launch work.',
     };
   }
 
   if (role === 'label') {
     return {
-      title: 'No releases yet.',
-      description: 'Start a release to organize metadata, private listening links and pre-save momentum before launch.',
+      title: 'No rollouts yet.',
+      description: 'Start a rollout to organize metadata, private listening links and pre-save momentum before launch.',
     };
   }
 
   if (role === 'other') {
     return {
-      title: 'No releases yet.',
-      description: 'Create a release to start organizing tasks, assets, and collaborators.',
+      title: 'No rollouts yet.',
+      description: 'Create a rollout to start organizing tasks, assets, and collaborators.',
     };
   }
 
   return {
-    title: 'No releases yet.',
-    description: 'Start with a release. Once it exists, the playbook, tracks, credits, and launch workflow all snap into place.',
+    title: 'No rollouts yet.',
+    description: 'Start with a rollout. Once it exists, the playbook, tracks, credits, and launch workflow all snap into place.',
   };
 };
