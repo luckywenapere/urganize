@@ -125,23 +125,24 @@ describe('isRecurringPlan', () => {
     expect(isRecurringPlan('')).toBe(false);
   });
 
-  it('rejects enterprise, which is invoiced by hand', () => {
-    // It has no Paystack plan code and its expires_at is set by an admin, so a
-    // charge event must never be able to reach the renewal math with it.
+  it('sells Label again, self-serve', () => {
+    // Label came back to self-serve on 2026-09-08 with a ₦50,000/year price,
+    // having been sales-led since 2026-08-30.
+    expect(isSelfServeTier('label')).toBe(true);
+    expect(isRecurringPlan('label')).toBe(true);
+  });
+
+  // Group (id `enterprise`) was the one tier in neither list while it existed
+  // — no Paystack Plan, no card checkout, and an expires_at an admin set by
+  // hand rather than a charge. Removed entirely from @urganize/pricing on
+  // 2026-09-09, so this is no longer "the sales-led tier is excluded"; it is
+  // "a stray legacy row still reads as neither", which matters because the DB
+  // CHECK constraint still permits the string (see the removal note in
+  // @urganize/pricing).
+  it('treats a stray enterprise plan string as neither self-serve nor recurring', () => {
     expect(isRecurringPlan('enterprise')).toBe(false);
     expect(isSelfServeTier('enterprise')).toBe(false);
     expect(isSelfServeTier('manager')).toBe(true);
-  });
-
-  it('sells Label again, and never sold Group', () => {
-    // Label came back to self-serve on 2026-09-08 with a ₦50,000/year price,
-    // having been sales-led since 2026-08-30. Group is the lone conversation
-    // now, and is the only tier in neither list: no Paystack Plan, no card
-    // checkout, and an expires_at an admin sets by hand rather than a charge.
-    expect(isSelfServeTier('label')).toBe(true);
-    expect(isRecurringPlan('label')).toBe(true);
-    expect(isSelfServeTier('enterprise')).toBe(false);
-    expect(isRecurringPlan('enterprise')).toBe(false);
   });
 
   it('keeps renewing the legacy plans nobody can buy', () => {
@@ -449,20 +450,28 @@ describe('resolveCheckoutPurchase', () => {
     expect(result.error).toContain('once a year');
   });
 
-  it('refuses Group, the one tier that is quoted by hand', () => {
-    // Answered BEFORE the shape of the request, so the message says what to do
-    // instead of listing plan ids that do not include this one.
+  // Group (id `enterprise`) was the one tier that was quoted per contract; it
+  // was removed from @urganize/pricing entirely on 2026-09-09, so 'enterprise'
+  // is no longer recognised as sales-led in EITHER generation — it is simply
+  // an unknown string now, refused the same way any garbage plan id is. This
+  // used to assert the error named "Group"; re-asserting that would be
+  // re-inventing a tier that no longer exists, so the assertion is now that it
+  // does NOT.
+  it('refuses a stray "enterprise" string as an unknown plan, not as sales-led', () => {
     stubLive();
-    const result = resolveCheckoutPurchase({
-      plan: 'enterprise',
-      currency: 'NGN',
-      interval: 'annual',
-      pricingV2: true,
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected a refusal');
-    expect(result.status).toBe(400);
-    expect(result.error).toContain('Group');
+    for (const pricingV2 of [true, false]) {
+      const result = resolveCheckoutPurchase({
+        plan: 'enterprise',
+        currency: 'NGN',
+        interval: 'annual',
+        pricingV2,
+      });
+      expect(result.ok, `pricingV2=${pricingV2}`).toBe(false);
+      if (result.ok) throw new Error('expected a refusal');
+      expect(result.status, `pricingV2=${pricingV2}`).toBe(400);
+      expect(result.error, `pricingV2=${pricingV2}`).not.toContain('Group');
+      expect(result.error, `pricingV2=${pricingV2}`).not.toMatch(/quoted per contract/i);
+    }
   });
 
   it('refuses the LEGACY label plan with pricing v2 off, and sells the TIER with it on', () => {
@@ -533,23 +542,6 @@ describe('resolveCheckoutPurchase', () => {
     }
   });
 
-  it('refuses Group by its display name, not its stored id', () => {
-    // The id is 'enterprise' and customers read "Group". A refusal naming the id
-    // would be meaningless to the person reading it.
-    stubLive();
-    const result = resolveCheckoutPurchase({
-      plan: 'enterprise',
-      currency: 'NGN',
-      interval: 'annual',
-      pricingV2: true,
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('expected a refusal');
-    expect(result.status).toBe(400);
-    expect(result.error).toContain('Group');
-    expect(result.error).not.toContain('enterprise');
-  });
-
   it('records NO interval for a legacy purchase, whose id already carries it', () => {
     stubLive();
     expect(
@@ -585,19 +577,6 @@ describe('resolveCheckoutPurchase', () => {
       status: 400,
       error: 'plan must be "monthly", "annual", or "label".',
     });
-  });
-
-  it('refuses enterprise with its own message, whatever the flag says', () => {
-    for (const pricingV2 of [true, false]) {
-      const result = resolveCheckoutPurchase({
-        plan: 'enterprise',
-        currency: 'NGN',
-        interval: 'annual',
-        pricingV2,
-      });
-      expect(result).toMatchObject({ ok: false, status: 400 });
-      expect(result.ok === false && result.error).toMatch(/quoted per contract/i);
-    }
   });
 
   it('requires an interval for a tier, and refuses a malformed one', () => {

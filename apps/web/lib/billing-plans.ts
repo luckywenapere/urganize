@@ -33,9 +33,12 @@ import {
  * `subscriptions.billing_interval`. Anything reading an interval off a plan name
  * must go through `resolveBillingInterval` rather than matching strings.
  *
- * 'enterprise' is deliberately absent. It is `contactSales` — quoted per
- * contract and invoiced by hand — so it has no Paystack plan code and must never
- * reach self-serve checkout or the renewal path.
+ * 'enterprise' (Group) is absent, and as of 2026-09-09 it is absent for a
+ * stronger reason than it used to be: it is no longer a `PricingTierId` at
+ * all, having been removed from @urganize/pricing entirely. While it existed
+ * it was `contactSales` — quoted per contract and invoiced by hand — so it had
+ * no Paystack plan code and never reached self-serve checkout or the renewal
+ * path either.
  */
 export type RecurringPlanId = BillingPlanId | 'manager' | 'solo';
 
@@ -48,10 +51,13 @@ export type RecurringPlanId = BillingPlanId | 'manager' | 'solo';
  * code path could write.
  *
  * LABEL REJOINED 2026-09-08 (founder call), in the annual-only reprice that gave
- * it a ₦50,000/year price. It had been sales-led since 2026-08-30. Group stays
- * OUT and is now the only tier that does: it is quoted per contract, has no
- * price and no Paystack Plan, and its path is the talk-to-us card rather than a
- * radio.
+ * it a ₦50,000/year price. It had been sales-led since 2026-08-30.
+ *
+ * GROUP (id 'enterprise') IS GONE, not merely excluded. It was the one
+ * sales-led tier — quoted per contract, no price, no Paystack Plan, talk-to-us
+ * card rather than a radio — for the one day between Label getting a price and
+ * the founder removing it, 2026-09-09. There is no sales-led tier on the ladder
+ * at all now; `SelfServeTierId` and `PricingTierId` are the same three ids.
  *
  * This is about NEW purchases only. An existing subscription on any of these
  * ids renews regardless, because `isRecurringPlan` below is a separate list
@@ -434,8 +440,13 @@ export const RECURRING_PLAN_IDS: readonly RecurringPlanId[] = [
  * from here has its renewals SILENTLY STOP EXTENDING. That is exactly what
  * happened to the tier ids before this change.
  *
- * 'enterprise' stays out: it is invoiced by hand, has no Paystack plan code, and
- * an enterprise row's expires_at is set by an admin, not by a charge event.
+ * 'enterprise' stays out: while it existed it was invoiced by hand with no
+ * Paystack plan code and its expires_at was set by an admin, not by a charge
+ * event. It was removed from @urganize/pricing on 2026-09-09, but any
+ * pre-existing subscription row could still carry the string (the CHECK
+ * constraint permits it — see the removal note in packages/pricing), so
+ * keeping this exclusion is what stops such a row's renewal being read as
+ * recurring.
  *
  * 'label' STAYS IN, even though Label became sales-led on 2026-08-30 and is no
  * longer in `SelfServeTierId`. It was self-serve for the whole pricing-v2
@@ -474,11 +485,14 @@ export function getPlanMinorUnit(plan: BillingPlanId, currency: PricingCurrencyC
 }
 
 /**
- * The pricing-v2 equivalent. Null on a tier/interval with no price, which today
- * means only 'enterprise' — and `SelfServeTierId` already excludes it, so null
- * here signals a pricing-package edit that removed a price rather than a caller
- * mistake. Callers must refuse the checkout on null; sending Paystack a
- * fabricated amount is the one outcome worse than failing.
+ * The pricing-v2 equivalent. Null on a tier/interval with no price — which as
+ * of 2026-09-09 should never actually happen: all three tiers `SelfServeTierId`
+ * admits (solo, manager, label) carry an annual price, and the interval
+ * argument is checked against `SELLING_INTERVAL` before this is ever called
+ * (see `resolveCheckoutPurchase`). A null here now signals a pricing-package
+ * edit that removed a price rather than a caller mistake. Callers must refuse
+ * the checkout on null; sending Paystack a fabricated amount is the one
+ * outcome worse than failing.
  *
  * NGN only, matching TIER_PLAN_CODE_ENV_VAR and PRICING_TIERS.
  */
@@ -531,10 +545,11 @@ export function getTierMinorUnit(
  * table agrees". That test is now written to pin the thing that actually
  * matters: a plan sales-led in either generation is refused in that generation.
  *
- * Returns the NAME rather than a boolean so the refusal can say "Label" or
- * "Group" — the tier ids do not match their display names ('enterprise' is
- * shown as Group), and a message naming the id would be meaningless to whoever
- * reads it.
+ * Returns the NAME rather than a boolean so the refusal can name the actual
+ * plan — tier ids do not always match their display names (Group, removed
+ * 2026-09-09, was shown for the id `enterprise`; the same could be true of a
+ * future sales-led tier), and a message naming the raw id would be
+ * meaningless to whoever reads it.
  */
 function readSalesLedPlanName(plan: unknown, pricingV2: boolean): string | null {
   // Under v2, a tier id is read as a tier and the tier table is the authority.
@@ -542,9 +557,11 @@ function readSalesLedPlanName(plan: unknown, pricingV2: boolean): string | null 
     return PRICING_TIERS[plan].contactSales ? PRICING_TIERS[plan].label : null;
   }
   // Otherwise the legacy table decides for an id it knows, and the tier table
-  // covers the ids it does not ('solo', 'manager', 'enterprise'), so a sales-led
-  // tier is still refused with the flag off rather than reported as an
-  // unrecognised plan.
+  // covers the ids it does not ('solo', 'manager', and — while it existed —
+  // 'enterprise'), so a sales-led tier is still refused with the flag off
+  // rather than reported as an unrecognised plan. Dead today (no tier is
+  // contactSales), kept so a future sales-led tier is caught with no code
+  // change here.
   if (isBillingPlanId(plan) && BILLING_PLANS[plan].contactSales) {
     return BILLING_PLANS[plan].label;
   }

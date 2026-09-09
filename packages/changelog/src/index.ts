@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.40.0",
+    date: "September 9, 2026",
+    highlights: [
+      "The Group plan is gone. There are three plans now: Solo, Manager and Label.",
+      "The \"Most teams\" badge moved from Manager to Solo, since that is where most teams start.",
+    ],
+  },
+  {
     version: "1.39.0",
     date: "September 9, 2026",
     highlights: [

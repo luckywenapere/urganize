@@ -39,10 +39,11 @@ import { FOUNDING_MEMBER_LINE } from "@/content/founding-member";
 // Two notes on the CTAs, the first of which has moved twice:
 //   * "EVERY CTA IS A CAPTURE" WAS THE RULE UNTIL 2026-09-02, when Solo and
 //     Manager started sending visitors to a free trial. Since 2026-09-08 Label
-//     does too, so THREE cards start a trial and only Group emails us. What the
-//     old rule was really protecting is intact: nobody lands in the product
-//     without an account, because APP_SIGNUP_URL is /onboarding rather than the
-//     login-only /auth.
+//     does too, so all THREE cards start a trial now — and since 2026-09-09,
+//     when Group was removed, there is no fourth card left to email us at all.
+//     What the old rule was really protecting is intact: nobody lands in the
+//     product without an account, because APP_SIGNUP_URL is /onboarding rather
+//     than the login-only /auth.
 //   * This is NOT the pre-2026-07-23 layout (Monthly/Annual/Label cards,
 //     geo-resolved currency toggle, billing FAQ + JSON-LD). That one sold legacy
 //     plans in two currencies on a monthly/annual toggle; the tier model is
@@ -111,61 +112,19 @@ export function PricingPageClient() {
 
         <PricingTierCards />
 
-        {/* WHAT A DEMO LOOKS LIKE — plain-language expectations so "demo"
-            doesn't read as a sales gauntlet. Three short beats.
-
-            The heading was added 2026-08-30 because these cards describe ONE
-            path, not the way in for everyone, and unlabelled they read as three
-            steps everybody has to go through. That path narrowed again on
-            2026-09-08: Label went back to a card checkout, so Group is the only
-            card this describes now, and the heading says so. */}
-        <section className="relative px-6 pb-20">
-          <div className="mx-auto mb-10 max-w-4xl text-center">
-            <ScrollReveal>
-              <h2 className="text-3xl font-black tracking-tight md:text-4xl">
-                How the Group plan works
-              </h2>
-            </ScrollReveal>
-          </div>
-          <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-3">
-            {(
-              [
-                {
-                  step: "01",
-                  title: "You reach out",
-                  body: "Send us one email. Tell us who you manage and what is coming up.",
-                },
-                {
-                  step: "02",
-                  title: "We try it together",
-                  body: "On a short call, we put one of your real rollouts into Urganize with you.",
-                },
-                {
-                  step: "03",
-                  title: "You start planning",
-                  // "we agree a price" is this branch's — Group is the one
-                  // sales-led tier now, so its price is agreed rather than
-                  // listed; "rollouts" is #575's rename.
-                  body: "If it fits, we agree a price and set your team up ourselves. Your rollouts and plans, ready to go.",
-                },
-              ] as const
-            ).map((item) => (
-              <ScrollReveal key={item.step}>
-                <div className="h-full rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6">
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
-                    {item.step}
-                  </p>
-                  <p className="mt-3 text-base font-bold tracking-tight text-[var(--marketing-text)]">
-                    {item.title}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--marketing-text-muted)]">
-                    {item.body}
-                  </p>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-        </section>
+        {/* THE "HOW THE GROUP PLAN WORKS" THREE-STEP SECTION THAT USED TO SIT
+            HERE IS DELETED, not merely reworded — REMOVED 2026-09-09, the same
+            pass that took Group off the ladder entirely. It walked through a
+            reach-out / demo-call / agree-a-price flow, and that flow was
+            EXCLUSIVELY Group's: the comment above it, right up to the moment of
+            removal, said outright "Group is the only card this describes now".
+            With every remaining tier self-serve (Solo, Manager, Label all send
+            a visitor straight to the free trial), there is no sales
+            conversation left on this page for three steps to describe — keeping
+            a "How the Group plan works" heading above cards that no longer
+            include Group would have been a worse inconsistency than a stale
+            comment. If a sales-led tier is ever reintroduced, git history has
+            the three cards (title, step number, body) verbatim to restore. */}
 
         {/* WAITLIST — the secondary path for anyone not ready to talk yet.
             Same capture pipeline as the rest of the marketing site

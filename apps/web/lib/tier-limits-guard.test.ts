@@ -102,10 +102,9 @@ describe('every countable ceiling passes at the limit and refuses past it', () =
   // rests on: everything the resolver cannot confidently place lands on one of
   // these, so a wrong answer grants rather than refuses.
   it('never refuses an uncapped tier, at any count', () => {
-    for (const tier of ['label', 'enterprise'] as PricingTierId[]) {
-      for (const { key } of LIMIT_KEYS) {
-        expect(checkLimit({ tier, key, current: 10_000 }).allowed, `${tier}/${key}`).toBe(true);
-      }
+    const tier = 'label';
+    for (const { key } of LIMIT_KEYS) {
+      expect(checkLimit({ tier, key, current: 10_000 }).allowed, `${tier}/${key}`).toBe(true);
     }
   });
 });
@@ -255,10 +254,13 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
   // `isSelfServeTier(tier)` guard from purchasableTiers() does NOT fail any
   // test, because Label has no entry in TIER_PLAN_CODE_ENV_VAR (its mapping
   // moved to RETIRED_TIER_PLAN_CODE_ENV_VAR, which getTierPaystackPlanCode
-  // does not read) and Group is absent from PRICING_TIER_ORDER. So today the
-  // env mapping alone is what excludes them, and the predicate is
-  // defence-in-depth against one specific future edit: someone re-adding a
-  // sales-led tier to TIER_PLAN_CODE_ENV_VAR. That edit WOULD be caught.
+  // does not read). So today the env mapping alone is what excludes Label,
+  // and the predicate is defence-in-depth against one specific future edit:
+  // someone re-adding a sales-led tier to TIER_PLAN_CODE_ENV_VAR. That edit
+  // WOULD be caught. (Group, id `enterprise`, used to be a second example
+  // here — "absent from PRICING_TIER_ORDER" — but it was removed from
+  // @urganize/pricing entirely on 2026-09-09, so there is no longer a tier id
+  // for an assertion to even name; the type system already refuses it.)
   //
   // Rather than write an assertion that looks like it proves more than it does,
   // both halves are pinned where each is really checkable.
@@ -271,7 +273,6 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
     process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = 'PLN_b';
     const offered = purchasableTiers();
     expect(offered).not.toContain('label');
-    expect(offered).not.toContain('enterprise');
     expect(offered).toContain('solo');
   });
 

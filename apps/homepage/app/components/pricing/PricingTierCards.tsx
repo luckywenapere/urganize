@@ -52,16 +52,17 @@ function isSelfServe(tierId: PricingTierId): boolean {
 export function PricingTierCards() {
   return (
     <section className="relative px-6 pb-20">
-      {/* max-w-6xl for four cards, the width this page used the last time it
-          carried four. NO INTERVAL SWITCH above them since 2026-09-08: there is
-          one interval, so there is nothing to switch, and the "2 months free"
-          badge that lived under it went with the comparison it described. */}
-      <div className="mx-auto max-w-6xl">
-        {/* Four cards: one column on a phone (where most of this traffic reads
-            it), two from sm, four from xl. Deliberately not four at lg — 1024px
-            over four columns wraps the ceiling lines, and the prices are short
-            enough now that two-up reads fine in the middle. */}
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      {/* max-w-5xl for three cards — narrower than the max-w-6xl this page used
+          while it carried four (Group, removed 2026-09-09). NO INTERVAL SWITCH
+          above them since 2026-09-08: there is one interval, so there is
+          nothing to switch, and the "2 months free" badge that lived under it
+          went with the comparison it described. */}
+      <div className="mx-auto max-w-5xl">
+        {/* Three cards: one column on a phone (where most of this traffic
+            reads it), three from md — the same breakpoint the "how the Group
+            plan works" three-step section below already uses for three cards,
+            so the two three-up layouts on this page agree. */}
+        <div className="grid gap-6 md:grid-cols-3">
           {PRICING_TIER_ORDER.map((tierId) => {
             const tier = getTier(tierId);
             const price = formatTierPrice(tierId);

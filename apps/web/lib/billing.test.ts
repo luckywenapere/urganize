@@ -71,7 +71,13 @@ describe('getPlanExpiry — tier plans', () => {
     expect(getPlanExpiry('manager', now).getTime()).toBe(new Date(2026, 6, 10).getTime());
   });
 
-  it('pegs enterprise far-future like custom, since it is invoiced by hand', () => {
+  // 'enterprise' was Group's pricing-v2 id — quoted per contract, invoiced by
+  // hand, never charged through self-serve checkout. Group was removed from
+  // @urganize/pricing entirely on 2026-09-09, so this is no longer "the
+  // sales-led tier gets a long window"; it is a defensive branch for a stray
+  // pre-removal row, kept because subscriptions_plan_check still permits the
+  // string (see the removal note in packages/pricing/src/index.ts).
+  it('pegs a stray "enterprise" row far-future like custom, defensively', () => {
     expect(getPlanExpiry('enterprise', now).getTime()).toBe(new Date(2126, 5, 10).getTime());
     // Even with an interval passed: a hand-negotiated contract term is not a
     // Paystack billing period.

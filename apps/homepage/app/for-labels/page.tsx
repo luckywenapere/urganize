@@ -166,8 +166,11 @@ export default function ForLabelsPage() {
             it carries a ₦50,000/year price and a card checkout again, so this
             page no longer says we price each roster deal by hand. What survives
             is the offer that was always the real substance of Label and is not
-            self-serve at all: the founders set the roster up with you. Group is
-            the contactSales tier now, and /pricing is where a visitor meets it. */}
+            self-serve at all: the founders set the roster up with you. There is
+            no contactSales tier anywhere in the product any more — Group briefly
+            filled that slot and was removed 2026-09-09 — so "Talk to the
+            founders" below is a parallel path on Label itself, not a pointer at
+            a separate tier. */}
         <ScrollReveal>
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">

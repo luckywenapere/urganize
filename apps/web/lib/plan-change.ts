@@ -33,8 +33,10 @@ import {
 //     annual is buying a year, which means restarting the period — the policy
 //     the founder explicitly did not pick. So it is a conversation, not a
 //     button.
-//   - A SALES-LED TARGET. Group (id `enterprise`) is quoted per contract and has no price
-//     to prorate against.
+//   - A SALES-LED TARGET, or a tier this package has no price for. Nothing on
+//     the ladder is sales-led as of 2026-09-09 (Group, id `enterprise`, was
+//     removed), but `contactSales` stays generic on PricingTierDefinition, so
+//     a future sales-led tier is refused here with no new code.
 //   - A LEGACY OR ADMIN CURRENT PLAN ('monthly', 'annual', 'access', 'custom',
 //     'founding'). A grandfathered rate is not in @urganize/pricing at all
 //     (CLAUDE.md: the displayed amounts are today's LIST prices, not
@@ -298,7 +300,7 @@ export function planChangeRefusalMessage(reason: PlanChangeRefusalReason): strin
     case 'interval_change':
       return 'Switching between monthly and annual is something we set up with you. Talk to us and we will sort it out.';
     case 'sales_led_target':
-      return 'Group is quoted per contract. Talk to us and we will scope it with you.';
+      return 'That plan is quoted per contract, not sold from this page. Talk to us and we will scope it with you.';
     case 'legacy_current_plan':
       return 'Your team is on an older plan, so we handle changes to it ourselves. Talk to us and we will move you across.';
     case 'grandfathered_rate':

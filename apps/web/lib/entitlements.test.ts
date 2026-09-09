@@ -33,9 +33,11 @@ import {
 const TIERS = PRICING_TIER_ORDER;
 
 // Every tier that EXISTS, display-retired ones included. Structural checks use
-// this: `enterprise` came off PRICING_TIER_ORDER on 2026-08-30 but its
-// definition and entitlements are still live for any stored row, so testing
-// only the displayed set would quietly stop covering it.
+// this rather than TIERS, so a future tier that comes off PRICING_TIER_ORDER
+// while staying in PRICING_TIERS (the way `enterprise` briefly did between
+// 2026-08-30 and 2026-09-08) is still covered. Currently identical to TIERS —
+// `enterprise` was removed from PRICING_TIERS entirely on 2026-09-09, so there
+// is no display-retired tier left to differ on.
 const ALL_TIERS = Object.keys(PRICING_TIERS) as PricingTierId[];
 
 // THE ONE THAT MUST NEVER GO GREEN BY BEING DELETED.
@@ -100,12 +102,11 @@ describe('the tier table matches what is published', () => {
   // Seats are never capped above the entry tier. A seat wall pushes half the
   // release back into WhatsApp and churns the account, which is the opposite of
   // what a coordination product is for.
-  it('never caps seats or releases on label or enterprise', () => {
-    for (const tier of ['label', 'enterprise'] as const) {
-      expect(isUnlimited(resolveEntitlements(tier).seats), `${tier} seats`).toBe(true);
-      expect(isUnlimited(resolveEntitlements(tier).active_releases), `${tier} releases`).toBe(true);
-      expect(isUnlimited(resolveEntitlements(tier).urgans_monthly_actions)).toBe(true);
-    }
+  it('never caps seats or releases on label', () => {
+    const tier = 'label';
+    expect(isUnlimited(resolveEntitlements(tier).seats), `${tier} seats`).toBe(true);
+    expect(isUnlimited(resolveEntitlements(tier).active_releases), `${tier} releases`).toBe(true);
+    expect(isUnlimited(resolveEntitlements(tier).urgans_monthly_actions)).toBe(true);
   });
 
   it('gives every tier the hand-written rollout template and file attachments', () => {
@@ -115,23 +116,28 @@ describe('the tier table matches what is published', () => {
     }
   });
 
-  it('escalates support and reserves priority and enterprise features', () => {
+  it('escalates support from Manager to Label', () => {
     expect(getEntitlement('manager', 'support_channel')).toBe('email');
     expect(getEntitlement('label', 'support_channel')).toBe('whatsapp_24h');
-    expect(getEntitlement('enterprise', 'support_channel')).toBe('sla');
+  });
 
-    // Priority routing and the two enterprise features are enterprise-only.
-    for (const key of ['urgans_priority', 'sso', 'sub_teams'] as const) {
-      expect(getEntitlement('manager', key), `manager ${key}`).toBe(false);
-      expect(getEntitlement('label', key), `label ${key}`).toBe(false);
-      expect(getEntitlement('enterprise', key), `enterprise ${key}`).toBe(true);
+  // Group (id `enterprise`) was the one tier with 'sla' support, priority
+  // routing, sso and sub-teams — all four gone with it on 2026-09-09. This is
+  // the replacement for a test that used to assert `enterprise` carried them;
+  // now that no such tier exists, the meaningful assertion is that nothing
+  // does.
+  it('reserves priority routing, sla support, sso and sub-teams for nothing', () => {
+    for (const tier of TIERS) {
+      expect(getEntitlement(tier, 'urgans_priority'), `${tier} urgans_priority`).toBe(false);
+      expect(getEntitlement(tier, 'sso'), `${tier} sso`).toBe(false);
+      expect(getEntitlement(tier, 'sub_teams'), `${tier} sub_teams`).toBe(false);
+      expect(getEntitlement(tier, 'support_channel'), `${tier} support_channel`).not.toBe('sla');
     }
   });
 
   it('gates concierge onboarding, which is real founder hours', () => {
     expect(getEntitlement('manager', 'concierge_onboarding')).toBe(false);
     expect(getEntitlement('label', 'concierge_onboarding')).toBe(true);
-    expect(getEntitlement('enterprise', 'concierge_onboarding')).toBe(true);
   });
 
   // UrgAns embedded actions (2026-09-03): the first feature-by-tier gate in
@@ -140,7 +146,6 @@ describe('the tier table matches what is published', () => {
     expect(getEntitlement('solo', 'urgans_embedded_actions')).toBe(false);
     expect(getEntitlement('manager', 'urgans_embedded_actions')).toBe(true);
     expect(getEntitlement('label', 'urgans_embedded_actions')).toBe(true);
-    expect(getEntitlement('enterprise', 'urgans_embedded_actions')).toBe(true);
   });
 
   it('declares an entitlement for every tier, with no gaps', () => {
@@ -204,18 +209,19 @@ describe('tier prices and the sales-led tier', () => {
     expect(formatTierPrice('solo')).toBe('₦5,000/year');
     expect(formatTierPrice('manager')).toBe('₦22,000/year');
     expect(formatTierPrice('label')).toBe('₦50,000/year');
-    expect(formatTierPrice('enterprise')).toBeNull();
   });
 
   // Never render a price for a tier we quote by hand. Returning null forces the
-  // caller into the "Let's talk" branch instead of formatting a zero.
-  it('has no price at all on any sales-led tier', () => {
-    // Label left this set again on 2026-09-08 when it got a ₦50,000/year price,
-    // so Group is the lone conversation. Written over every contactSales tier
-    // rather than naming one, so a future sales-led tier cannot ship still
-    // carrying an amount.
+  // caller into the "Let's talk" branch instead of formatting a zero. Written
+  // over every contactSales tier rather than naming one, so a future sales-led
+  // tier cannot ship still carrying an amount.
+  it('has no sales-led tier, so nothing here needs a "Let\'s talk" price refusal', () => {
+    // Group (id `enterprise`) was the last one, removed 2026-09-09. Every
+    // remaining tier is self-serve, so this list is empty rather than naming
+    // one — the moment it stops being empty, the loop below starts proving
+    // the refusal for whichever tier that is.
     const salesLed = ALL_TIERS.filter((tier) => PRICING_TIERS[tier].contactSales);
-    expect(salesLed).toEqual(['enterprise']);
+    expect(salesLed).toEqual([]);
     for (const tier of salesLed) {
       expect(PRICING_TIERS[tier].prices, `${tier} prices`).toBeUndefined();
       expect(getTierPrice(tier, 'annual'), `${tier}/annual`).toBeNull();
@@ -223,40 +229,39 @@ describe('tier prices and the sales-led tier', () => {
     }
   });
 
-  // The stored id and the customer-facing name deliberately differ for the
-  // sales-led tier: it is called "Group" on every surface a customer reads
-  // (founder call, 2026-08-24 — "Enterprise" is B2B jargon that means nothing
-  // to a label head, and a distributor is not a label either), while the id
-  // stays `enterprise` because it is written into subscriptions.plan and
-  // allowed by subscriptions_plan_check. Renaming the id needs a migration and
-  // a backfill; this test is what turns "tidying" it into a failure here
-  // rather than a silently re-graded row in production.
-  it('calls the sales-led tier Group while keeping the enterprise id', () => {
-    expect(PRICING_TIERS.enterprise.id).toBe('enterprise');
-    expect(PRICING_TIERS.enterprise.label).toBe('Group');
-    // No tier displays the old name anywhere, retired ones included.
+  // Group (id `enterprise`) was the sales-led tier, called "Group" on every
+  // customer-facing surface (founder call, 2026-08-24) while the id stayed
+  // `enterprise` because it was written into subscriptions.plan. It was
+  // removed entirely on 2026-09-09 — not hidden, not renamed, DELETED — so
+  // there is no `enterprise` member of PricingTierId left to carry either
+  // name. This is what stops either from quietly coming back.
+  it('has no tier called Group, and no enterprise id, any more', () => {
+    expect(ALL_TIERS).not.toContain('enterprise');
     for (const tier of ALL_TIERS) {
+      expect(PRICING_TIERS[tier].label).not.toBe('Group');
       expect(PRICING_TIERS[tier].label).not.toMatch(/enterprise/i);
     }
   });
 
   it('recommends exactly one tier, and it is the one we sell', () => {
-    // Moved from Label to Manager on 2026-08-30: Label became sales-led, so
-    // Manager is the only tier a visitor can actually buy — pointing at a card
-    // with no checkout behind it would be the worst of both.
+    // ON SOLO since 2026-09-09 (founder call), moved from Manager. It sat on
+    // Manager from 2026-08-30, back when Manager was the cheapest self-serve
+    // tier; Solo has been the actual entry tier since that same day, so the
+    // marker now sits on the plan it was always meant to describe.
     const recommended = TIERS.filter((tier) => PRICING_TIERS[tier].recommended);
-    expect(recommended).toEqual(['manager']);
-    expect(PRICING_TIERS.manager.contactSales).toBeUndefined();
+    expect(recommended).toEqual(['solo']);
+    expect(PRICING_TIERS.solo.contactSales).toBeUndefined();
   });
 
-  it('orders the cards cheapest first, ending at the sales-led tier', () => {
-    // Four cards since 2026-09-08: three prices, then Group. Group had been off
-    // the page since 2026-08-30 while Label held the sales-led slot; Label
-    // taking a price handed that slot back.
-    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label', 'enterprise']);
-    // The conversation comes last, or the ladder stops reading as a ladder.
-    const last = PRICING_TIER_ORDER[PRICING_TIER_ORDER.length - 1];
-    expect(PRICING_TIERS[last].contactSales).toBe(true);
+  it('orders the cards cheapest first, and none of them is sales-led', () => {
+    // THREE cards since 2026-09-09: Group (the one sales-led, "Let's talk"
+    // tier, id `enterprise`) came back onto the ladder for a day on
+    // 2026-09-08, when Label got a price of its own, and was removed for good
+    // the next day. There is no fourth card and nothing left to end at.
+    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label']);
+    for (const tier of PRICING_TIER_ORDER) {
+      expect(PRICING_TIERS[tier].contactSales, tier).toBeUndefined();
+    }
   });
 
   it('carries an annual price on every self-serve tier, in whole kobo', () => {
@@ -308,11 +313,13 @@ describe('minimumTierWith', () => {
   });
 
   it('returns null when no tier a visitor can buy grants it', () => {
-    // `sso` is granted by Group alone, and Group is sales-led. It came back onto
-    // PRICING_TIER_ORDER on 2026-09-08, which is exactly when reading the
-    // displayed order alone stopped being enough — see minimumTierWith.
-    expect(PRICING_TIERS.enterprise.contactSales).toBe(true);
-    expect(ENTITLEMENTS.enterprise.sso).toBe(true);
+    // `sso` used to be granted by Group alone (the one sales-led tier, id
+    // `enterprise`), which is exactly why minimumTierWith cannot just read the
+    // displayed order — a sales-led tier is never something a visitor can buy
+    // into from this page. Group was removed 2026-09-09, so `sso` is now
+    // granted by NOTHING, and the answer is still null for the same reason:
+    // there is nothing to self-serve into either way.
+    expect(ALL_TIERS.every((tier) => !ENTITLEMENTS[tier].sso)).toBe(true);
     expect(minimumTierWith('sso')).toBeNull();
   });
 
@@ -365,7 +372,15 @@ describe('resolveTeamTier fails open', () => {
   it('reads a tier id straight through', () => {
     expect(resolveTeamTier({ state: 'paid', ownerPlan: 'manager' })).toBe('manager');
     expect(resolveTeamTier({ state: 'paid', ownerPlan: 'label' })).toBe('label');
-    expect(resolveTeamTier({ state: 'paid', ownerPlan: 'enterprise' })).toBe('enterprise');
+  });
+
+  // A stray 'enterprise' row is possible — the DB CHECK constraint still
+  // permits the string, deliberately not narrowed by a migration (see
+  // @urganize/pricing) — but 'enterprise' is no longer a PricingTierId, so
+  // isPricingTierId rejects it and this falls through to the same "unknown
+  // plan" fail-open path every other retired id already takes.
+  it('resolves a stray enterprise row to label rather than throwing', () => {
+    expect(resolveTeamTier({ state: 'paid', ownerPlan: 'enterprise' })).toBe('label');
   });
 
   it('trims whitespace rather than treating it as unknown', () => {
@@ -563,10 +578,9 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
   });
 
   it('never caps artists on the tiers that advertise unlimited', () => {
-    for (const tier of ['label', 'enterprise'] as const) {
-      expect(isUnlimited(resolveEntitlements(tier).artists), `${tier} artists`).toBe(true);
-      expect(checkLimit({ tier, key: 'artists', current: 999 }).allowed).toBe(true);
-    }
+    const tier = 'label';
+    expect(isUnlimited(resolveEntitlements(tier).artists), `${tier} artists`).toBe(true);
+    expect(checkLimit({ tier, key: 'artists', current: 999 }).allowed).toBe(true);
   });
 
   it('caps a paying Manager team at its fourth seat, so the fifth invite is refused', () => {
@@ -757,7 +771,6 @@ describe('tierHighlights', () => {
       `Up to ${PRICING_TIERS.manager.limits.artists} artists`
     );
     expect(tierHighlights('label')[0]).toBe('Unlimited artists');
-    expect(tierHighlights('enterprise')[0]).toBe('Unlimited artists');
   });
 
   it('includes every perk after the ceilings', () => {
@@ -771,18 +784,23 @@ describe('tierHighlights', () => {
 });
 
 describe('public tier copy tells the truth', () => {
-  // Founder call, 2026-08-24: Group may be sold on SSO and sub-teams in a
-  // CONTRACT, but a public page cannot claim them. Both are declared in the map
-  // above and read by nothing, so this is enforced structurally rather than
-  // left to a reviewer noticing.
+  // Founder call, 2026-08-24: a sales-led tier may be sold on SSO and
+  // sub-teams in a CONTRACT, but a public page cannot claim them. Group (id
+  // `enterprise`) was the one tier that carried both, declared in the map and
+  // read by nothing; it was removed entirely on 2026-09-09, so this is now a
+  // structural guarantee over every remaining tier rather than a single named
+  // one — the moment a future tier declares either, this starts proving its
+  // copy stays silent about it.
   it('never advertises an unbuilt feature', () => {
-    expect(ENTITLEMENTS.enterprise.sso).toBe(true);
-    expect(ENTITLEMENTS.enterprise.sub_teams).toBe(true);
-    const enterpriseCopy = tierHighlights('enterprise').join(' ').toLowerCase();
-    expect(enterpriseCopy).not.toContain('sso');
-    expect(enterpriseCopy).not.toContain('single sign');
-    expect(enterpriseCopy).not.toContain('sub-team');
-    expect(enterpriseCopy).not.toContain('sub team');
+    for (const tier of TIERS) {
+      expect(ENTITLEMENTS[tier].sso, `${tier} sso`).toBe(false);
+      expect(ENTITLEMENTS[tier].sub_teams, `${tier} sub_teams`).toBe(false);
+      const copy = tierHighlights(tier).join(' ').toLowerCase();
+      expect(copy, `${tier} copy`).not.toContain('sso');
+      expect(copy, `${tier} copy`).not.toContain('single sign');
+      expect(copy, `${tier} copy`).not.toContain('sub-team');
+      expect(copy, `${tier} copy`).not.toContain('sub team');
+    }
   });
 
   it('carries no percentage, no em dash and no "workspace" in the tier copy', () => {
@@ -806,7 +824,6 @@ describe('directory search', () => {
     expect(getEntitlement('solo', 'directory_search')).toBe(false);
     expect(getEntitlement('manager', 'directory_search')).toBe(true);
     expect(getEntitlement('label', 'directory_search')).toBe(true);
-    expect(getEntitlement('enterprise', 'directory_search')).toBe(true);
   });
 
   it('names a real tier in refusal copy rather than a hardcoded string', () => {
