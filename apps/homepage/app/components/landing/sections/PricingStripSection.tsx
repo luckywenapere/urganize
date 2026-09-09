@@ -1,6 +1,5 @@
 import {
-  annualSavingCopy,
-  formatTierCyclePrice,
+  formatTierPrice,
   getTier,
   PRICING_TIER_ORDER,
   tierHighlights,
@@ -13,28 +12,28 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 
 // Transparent pricing on the homepage (2026-09-02). Self-serve pages that
 // show the price convert better than pages that hide it, and every figure
-// here is RENDERED from @urganize/pricing — the tier order, the labels, the
-// audience lines, the monthly price, the first three highlight lines (which
-// carry the seat and artist ceilings, so nobody meets a wall the page never
-// mentioned) and the annual saving, phrased the one way the package allows.
-// Nothing is typed here: this repo has shipped a page quoting one figure
-// while checkout charged another four separate times.
+// here is RENDERED from @urganize/pricing: the tier order, the labels, the
+// audience lines, the price, and the first three highlight lines, which carry
+// the seat and artist ceilings so nobody meets a wall the page never mentioned.
+// Nothing is typed here: this repo has shipped a page quoting one figure while
+// checkout charged another four separate times.
 //
-// Server component with no interval toggle, so `/` stays static. Full
-// pricing, the annual toggle and the Label conversation live on /pricing.
-// Group is absent by design: it left the display ladder on 2026-08-30.
+// ANNUAL ONLY since 2026-09-08. This showed the MONTHLY figure with the annual
+// saving as a line underneath; there is one price now and it is a year, so the
+// saving line went with the comparison it described.
+//
+// Server component and always was, so `/` stays static. The full ladder and
+// the Group conversation live on /pricing; this is the teaser.
 export function PricingStripSection() {
   const tiers = PRICING_TIER_ORDER.map((id) => {
     const tier = getTier(id);
     return {
       id,
       tier,
-      price: formatTierCyclePrice(id, "monthly"),
+      price: formatTierPrice(id),
       highlights: tierHighlights(id).slice(0, 3),
     };
   });
-  const firstPriced = tiers.find((entry) => entry.price)?.id;
-  const saving = firstPriced ? annualSavingCopy(firstPriced) : null;
 
   return (
     <ScrollReveal>
@@ -45,12 +44,15 @@ export function PricingStripSection() {
         <div className="mx-auto max-w-[52rem] text-center">
           <h2 className={centeredHeadlineClass}>One price for your team.</h2>
           <p className="mt-5 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-            Not per person. Start free for 14 days, then pick the plan that
-            fits how many artists you run.
+            Not per person, and paid once a year. Start free for 14 days, then
+            pick the plan that fits how many artists you run.
           </p>
         </div>
 
-        <ul className="mx-auto mt-12 grid max-w-[64rem] gap-4 md:grid-cols-3">
+        {/* Four since 2026-09-08, when Label got a price and Group came back
+            onto the ladder. Two-up in the middle rather than four, because four
+            across 64rem leaves each card too narrow for its ceiling lines. */}
+        <ul className="mx-auto mt-12 grid max-w-[64rem] gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {tiers.map(({ id, tier, price, highlights }) => (
             <li
               key={id}
@@ -97,16 +99,11 @@ export function PricingStripSection() {
         </ul>
 
         <div className="mx-auto mt-8 max-w-[64rem] text-center">
-          {saving ? (
-            <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-              Pay for the year and get {saving}.
-            </p>
-          ) : null}
-          <p className="mt-2 text-sm leading-6 text-[var(--marketing-text-muted)]">
+          <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
             {FOUNDING_MEMBER_LINE}
           </p>
           <p className="mono-label mt-6 text-[var(--marketing-text-subtle)]">
-            Prices in Naira · No card · Export your data any time
+            Prices in Naira · Paid once a year · Export your data any time
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
             <TrialButton location="pricing" />

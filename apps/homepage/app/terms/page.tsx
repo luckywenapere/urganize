@@ -19,7 +19,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 // Real date discipline: moves only when the terms text changes.
-const LAST_UPDATED = "August 22, 2026";
+const LAST_UPDATED = "September 8, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Terms%20question%20-%20Urganize";
@@ -82,13 +82,15 @@ export default function TermsPage() {
                 card required. The trial covers the whole team, not each
                 person, so joining an existing team does not start a new one.
                 After the trial, continued use requires a paid subscription,
-                priced per team and billed monthly or annually through
-                Paystack. We never see or store your card details.
+                priced per team and paid once a year through Paystack. We never
+                see or store your card details.
               </p>
               <p>
-                Subscriptions renew at the end of each billing cycle. You can
-                cancel anytime from Settings; you keep access through the
-                period you already paid for. Access is locked when a trial ends
+                Subscriptions renew at the end of each year. If we change our
+                prices, your renewal stays at the price you signed up on unless
+                we agree otherwise with you. You can cancel anytime from
+                Settings; you keep access through the period you already paid
+                for. Access is locked when a trial ends
                 without a subscription, when a payment fails or when a
                 subscription lapses. Nothing you created is deleted when access
                 is locked.

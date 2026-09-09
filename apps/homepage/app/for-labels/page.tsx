@@ -162,17 +162,20 @@ export default function ForLabelsPage() {
           </SectionShell>
         </ScrollReveal>
 
-        {/* FINAL CTA — sales-led, not self-serve. The Label plan is
-            contactSales in @urganize/pricing: no price, no waitlist form,
-            a mailto straight to the founders, identical href construction
-            to the Label PricingTierCard on /pricing. */}
+        {/* FINAL CTA. The Label plan STOPPED being sales-led on 2026-09-08:
+            it carries a ₦50,000/year price and a card checkout again, so this
+            page no longer says we price each roster deal by hand. What survives
+            is the offer that was always the real substance of Label and is not
+            self-serve at all: the founders set the roster up with you. Group is
+            the contactSales tier now, and /pricing is where a visitor meets it. */}
         <ScrollReveal>
           <SectionShell containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10">
             <div className="text-center">
               <h2 className={PERSONA_HEADLINE_CLASS}>Set up your roster with the founders.</h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                We shape and price each roster deal with you. Talk to us
-                directly, or see{" "}
+                Start on the Label plan and we will sit down with you to get
+                your whole roster in. Talk to us first if you would rather, or
+                see{" "}
                 <Link
                   href="/pricing"
                   className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"

@@ -236,15 +236,15 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
     process.env.PAYSTACK_PLAN_SOLO_MONTHLY_NGN = 'PLN_solo_monthly';
     expect(purchasableTiers()).toEqual([]);
 
-    process.env.PAYSTACK_PLAN_SOLO_ANNUAL_NGN = 'PLN_solo_annual';
+    process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = 'PLN_solo_annual';
     expect(purchasableTiers()).toEqual(['solo']);
   });
 
   it('keeps pricing-page order, cheapest first', () => {
     process.env.PAYSTACK_PLAN_SOLO_MONTHLY_NGN = 'PLN_a';
-    process.env.PAYSTACK_PLAN_SOLO_ANNUAL_NGN = 'PLN_b';
+    process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = 'PLN_b';
     process.env.PAYSTACK_PLAN_MANAGER_MONTHLY_NGN = 'PLN_c';
-    process.env.PAYSTACK_PLAN_MANAGER_ANNUAL_NGN = 'PLN_d';
+    process.env.PAYSTACK_PLAN_MANAGER_YEARLY_NGN = 'PLN_d';
     expect(purchasableTiers()).toEqual(['solo', 'manager']);
   });
 
@@ -268,7 +268,7 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
     process.env.PAYSTACK_PLAN_MONTHLY_NGN = 'PLN_legacy_monthly';
     process.env.PAYSTACK_PLAN_ANNUAL_NGN = 'PLN_legacy_annual';
     process.env.PAYSTACK_PLAN_SOLO_MONTHLY_NGN = 'PLN_a';
-    process.env.PAYSTACK_PLAN_SOLO_ANNUAL_NGN = 'PLN_b';
+    process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = 'PLN_b';
     const offered = purchasableTiers();
     expect(offered).not.toContain('label');
     expect(offered).not.toContain('enterprise');
@@ -286,9 +286,19 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
   });
 
   it('treats an empty env var as unset, not as a code', () => {
-    process.env.PAYSTACK_PLAN_SOLO_MONTHLY_NGN = '   ';
-    process.env.PAYSTACK_PLAN_SOLO_ANNUAL_NGN = 'PLN_b';
+    process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = '   ';
     expect(purchasableTiers()).not.toContain('solo');
+  });
+
+  it('needs only the annual Plan, because that is the only one sold', () => {
+    // This required BOTH a monthly and an annual code until 2026-09-08, when
+    // the interval toggle went away. Leaving the monthly requirement in place
+    // would have made every tier unpurchasable the moment the monthly prices
+    // were removed — the single sharpest way that reprice could have taken
+    // checkout down with no test failing anywhere.
+    delete process.env.PAYSTACK_PLAN_SOLO_MONTHLY_NGN;
+    process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = 'PLN_solo_year';
+    expect(purchasableTiers()).toContain('solo');
   });
 });
 

@@ -220,13 +220,25 @@ function buildNavItems(
     // FIRST, above Catalog (founder call, 2026-09-09), and the same call that
     // made the assistant the post-auth landing again (lib/home-path.ts). The
     // row you land on is the row that leads the list.
-    {
-      href: "/dashboard/urgans",
-      label: "UrgAns",
-      Icon: ChappiIcon,
-      isActive: (pathname: string) => pathname === "/dashboard/urgans",
-      help: "nav.urgans",
-    },
+    //
+    // GATED ON ITS OWN FLAG, which this row was NOT before it moved. The
+    // topbar has always gated its pair and this list never did, so with the
+    // assistant off the list offered a row that bounces: ChappiPageClient
+    // does `router.replace('/dashboard')` when the flag is off, which is the
+    // same reason HOME_PATH is flag-conditional. Harmless while it sat third
+    // among many; the wrong thing to leave at the top of the nav, where it is
+    // the first thing a flag-off deployment offers.
+    ...(CHAPPI_ENABLED
+      ? [
+          {
+            href: "/dashboard/urgans",
+            label: "UrgAns",
+            Icon: ChappiIcon,
+            isActive: (pathname: string) => pathname === "/dashboard/urgans",
+            help: "nav.urgans" as const,
+          },
+        ]
+      : []),
     {
       href: "/dashboard",
       label: "Catalog",

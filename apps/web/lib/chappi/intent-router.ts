@@ -74,33 +74,60 @@ const NOTE_PREFIX = /^\s*(?:take\s+a\s+note|make\s+a\s+note|note)\s*[:,\-–—]
 /** Bare "note" / "take a note" with nothing after it. */
 const BARE_NOTE = /^\s*(?:take\s+a\s+note|make\s+a\s+note|new\s+note|note)\s*[.!]?\s*$/i;
 
-const PLANNER_CHIPS: ChappiChip[] = [
-  {
-    id: 'plan-single-6w',
-    label: 'Plan a single dropping in 6 weeks',
-    intent: 'plan_release',
-    plannerPreset: { releaseType: 'single', weeksOut: 6 },
-  },
-  {
-    id: 'plan-ep',
-    label: 'Plan an EP rollout',
-    intent: 'plan_release',
-    plannerPreset: { releaseType: 'ep' },
-  },
-  {
-    id: 'plan-small-budget',
-    label: 'Plan a rollout with a small budget',
-    intent: 'plan_release',
-    plannerPreset: { budget: 'under_100k' },
-  },
-];
-
-/** The quick-action chips shown under the prompt. Each maps to an existing
- * app action wired up in ChappiConversation. */
+/**
+ * The recommended prompts under the input.
+ *
+ * REORDERED AND REWRITTEN 2026-09-08 (founder call), from the observation that
+ * people mostly arrive wanting to know what Urganize is, how to use it and what
+ * it does for them. Every chip before this was a creation verb — plan, add,
+ * upload, note — which answers "I am starting my first release" and nothing
+ * about the day after, or about what the product is for.
+ *
+ * Three rules held while choosing this set:
+ *
+ *  1. ORIENTATION LEADS. The first chip is the question the founder says people
+ *     actually have. It costs a model call and is worth it; nothing else here
+ *     answers "what is this".
+ *  2. EVERY CHIP EARNS ITS SPACE. This row is `flex-wrap`, so a long list does
+ *     not overflow — it just stops being read. The three planner presets
+ *     (single-in-6-weeks / EP / small budget) were folded back into one "Plan a
+ *     rollout": three chips opening one modal, differing only in a preset the
+ *     planner asks for anyway, was the largest block of a landing that had
+ *     nothing for a returning user. They are in git history rather than kept
+ *     here as dead code; `plannerPreset` is still on the chip type, so putting
+ *     one back is an entry in this list and nothing else.
+ *  3. PREFER WHAT IS OTHERWISE UNDISCOVERABLE. "Write a status update I can
+ *     send" advertises a capability with no button anywhere since the pill was
+ *     removed (2026-09-07) — a chip is now the only way anyone learns it exists.
+ *
+ * Two of these degrade well with no model configured, which is not luck:
+ * "focus today" and "status update" both hit deterministic keyword branches in
+ * resolveIntent below. The orientation chip falls through to the help card,
+ * which is an honest answer to "what can you do" rather than a wrong one.
+ */
 export const CHAPPI_CHIPS: ChappiChip[] = [
+  {
+    id: 'what-can-you-do',
+    label: 'What can you help me with?',
+    ask: 'What can you help me with, and what is Urganize for?',
+  },
+  { id: 'todays-focus', label: 'What should I focus on today?', ask: 'What should I focus on today?' },
   ...(PLANNER_ENABLED
-    ? PLANNER_CHIPS
+    ? [{ id: 'plan-release', label: 'Plan a rollout', intent: 'plan_release' as const }]
+    // "rollout", never "release", in both labels — #570 renamed the control and
+    // #571 renamed the object everywhere a person reads it. The ids and intents
+    // keep their `release` names, which is the documented split: code
+    // identifiers are exempt, rendered copy is not.
     : [{ id: 'new-release', label: 'New rollout', intent: 'new_release' as const }]),
+  {
+    id: 'status-update',
+    label: 'Write an update I can send',
+    // NOT the word "release" in here, deliberately: the release branch below is
+    // checked BEFORE the status branch, so "a status update on my release"
+    // resolves to plan_release and this chip would open the planner whenever no
+    // model is configured. Caught by a test, not by reading.
+    ask: 'Write a status update I can send to the artist.',
+  },
   { id: 'add-task', label: 'Add activity', intent: 'add_task' },
   ...(SONG_UPLOAD_ENABLED
     ? [{ id: 'upload-song', label: 'Upload the song', intent: 'upload_song' as const }]
@@ -132,7 +159,12 @@ export function resolveIntent(raw: string): ChappiIntent {
     }
   }
 
-  if (has('task', 'to-do', 'todo', 'checklist item')) {
+  // 'activity' is the product's own word for these — tasks were renamed in the
+  // UI and this list was never told, so "add an activity" fell through to the
+  // help card. buildHelpReply has been SUGGESTING that exact phrase, which made
+  // the card offer a prompt that only ever returned the card. Found by the test
+  // asserting every suggestion resolves to something real (2026-09-08).
+  if (has('task', 'activity', 'activities', 'to-do', 'todo', 'checklist item')) {
     return { kind: 'add_task' };
   }
   // Before the planner/release branches, which already claim 'song' and
@@ -182,19 +214,33 @@ export function resolveIntent(raw: string): ChappiIntent {
   return { kind: 'help' };
 }
 
-/** The "here's what I can do" card for unmatched input. Suggestions are
- * example prompts the user can click to run. */
+/**
+ * The "here's what I can do" card for unmatched input — the SECOND surface of
+ * recommended prompts, and the one an ask-chip lands on when no model is
+ * configured. Suggestions are example prompts the user can click to run.
+ *
+ * Ordered the same way CHAPPI_CHIPS is (2026-09-08): the daily question first,
+ * because someone who reaches this card has asked something the router could
+ * not place and the most useful thing to offer is the thing they most likely
+ * wanted. Everything listed here runs deterministically — this card exists
+ * precisely when the model does not, so it must never advertise something that
+ * needs one.
+ */
 export function buildHelpReply(): ChappiReply {
   return {
-    text: "I can help you run your rollouts. I'm still learning to chat — for now, try one of these:",
+    text: "I can help you run your rollouts. Here's what I can do without any setup:",
     suggestions: [
+      'What should I focus on today?',
+      'Generate a status update',
+      // "rollout", not "release" — #571 renamed the object in every user-facing
+      // string, and the branch below knows both words for exactly this reason:
+      // these suggestions are clicked and fed straight back through
+      // resolveIntent.
       PLANNER_ENABLED ? 'Plan a rollout' : 'Create a new rollout',
       'Add an activity',
       ...(SONG_UPLOAD_ENABLED ? ['Upload the song'] : []),
       ...(EVENTS_ENABLED ? ['My shows'] : []),
       ...(NOTES_ENABLED ? ['Note Call the promoter about Friday'] : []),
-      'What should I focus on today?',
-      'Generate a status update',
     ],
   };
 }

@@ -1,14 +1,9 @@
-"use client";
-
-import { useState } from "react";
 import { RiCheckLine } from "react-icons/ri";
 import {
   PRICING_TIER_ORDER,
-  annualSavingCopy,
-  formatTierCyclePrice,
+  formatTierPrice,
   getTier,
   tierHighlights,
-  type BillingInterval,
   type PricingTierId,
 } from "@urganize/pricing";
 import { APP_SIGNUP_URL } from "@/lib/app-urls";
@@ -43,86 +38,35 @@ import { salesMailto } from "@/lib/sales-mailto";
 // decoration: it is the only signal the founder gets about which plan someone
 // came in on, and it costs nothing to carry.
 
-const INTERVALS: readonly BillingInterval[] = ["monthly", "annual"] as const;
-
-/** Tiers a visitor can start on their own. Everything else talks to us first. */
-const SELF_SERVE_TIERS: ReadonlySet<PricingTierId> = new Set<PricingTierId>([
-  "solo",
-  "manager",
-]);
-
-const INTERVAL_LABEL: Record<BillingInterval, string> = {
-  monthly: "Monthly",
-  annual: "Annual",
-};
+/** Tiers a visitor can start on their own. Everything else talks to us first.
+ *
+ *  DERIVED, NOT LISTED, since 2026-09-08. It was a hand-written Set of two ids,
+ *  and it went stale the same day Label got a price: the card would have shown
+ *  ₦50,000 above a "Let's talk" button. A tier is self-serve exactly when it is
+ *  not `contactSales`, which is the same fact `isSelfServeTier` encodes on the
+ *  checkout side and the same derivation the in-app wall already makes. */
+function isSelfServe(tierId: PricingTierId): boolean {
+  return !getTier(tierId).contactSales;
+}
 
 export function PricingTierCards() {
-  // Annual first. It is the better deal and the one most teams take, so opening
-  // on monthly would show everybody the higher-looking number first.
-  const [interval, setInterval] = useState<BillingInterval>("annual");
-
-  // Derived from the first tier that still HAS a price, never a named one.
-  // This read `annualSavingCopy("label")` until 2026-08-30, when Label went
-  // sales-led and lost its prices — which silently returned null and took the
-  // "2 months free" badge off the page altogether.
-  const firstPricedTier = PRICING_TIER_ORDER.find((tierId) => !getTier(tierId).contactSales);
-  const saving = firstPricedTier ? annualSavingCopy(firstPricedTier) : null;
-
   return (
     <section className="relative px-6 pb-20">
-      {/* max-w-5xl for three cards. It went to 6xl when there were four across
-          (₦800,000/yr would not sit on one line at 5xl); Group came off the page
-          2026-08-30, so the wider container just thinned three cards out. */}
-      <div className="mx-auto max-w-5xl">
-        {/* Interval switch. Above the cards, because it reprices every one of
-            them and asking for it afterwards would move the numbers under the
-            reader's cursor. */}
-        <div className="mb-10 flex flex-col items-center gap-3">
-          <div
-            role="radiogroup"
-            aria-label="Choose how often you pay"
-            className="inline-flex overflow-hidden rounded-full border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-1"
-          >
-            {INTERVALS.map((option) => {
-              const isActive = interval === option;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  role="radio"
-                  aria-checked={isActive}
-                  onClick={() => setInterval(option)}
-                  className={`rounded-full px-5 py-2 text-sm font-medium tracking-[-0.01em] transition-colors ${
-                    isActive
-                      ? "bg-[var(--marketing-primary)] text-[var(--marketing-primary-text)]"
-                      : "text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
-                  }`}
-                >
-                  {INTERVAL_LABEL[option]}
-                </button>
-              );
-            })}
-          </div>
-          {/* Phrased as months, never as a percentage — the one wording the
-              pricing package requires. Derived from ANNUAL_MONTHS_BILLED. */}
-          {saving && interval === "annual" ? (
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-accent)]">
-              {saving}
-            </p>
-          ) : null}
-        </div>
-
-        {/* Three cards: one column on a phone (where most of this traffic reads
-            it), three from lg. No two-column step, because three cards across
-            two columns orphans the third on its own row. Kept off md for the
-            old reason — at 768px a third of the row wraps the price and every
-            ceiling line. */}
-        <div className="grid gap-6 lg:grid-cols-3">
+      {/* max-w-6xl for four cards, the width this page used the last time it
+          carried four. NO INTERVAL SWITCH above them since 2026-09-08: there is
+          one interval, so there is nothing to switch, and the "2 months free"
+          badge that lived under it went with the comparison it described. */}
+      <div className="mx-auto max-w-6xl">
+        {/* Four cards: one column on a phone (where most of this traffic reads
+            it), two from sm, four from xl. Deliberately not four at lg — 1024px
+            over four columns wraps the ceiling lines, and the prices are short
+            enough now that two-up reads fine in the middle. */}
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {PRICING_TIER_ORDER.map((tierId) => {
             const tier = getTier(tierId);
-            const price = formatTierCyclePrice(tierId, interval);
+            const price = formatTierPrice(tierId);
             const highlights = tierHighlights(tierId);
-            const selfServe = SELF_SERVE_TIERS.has(tierId);
+            const selfServe = isSelfServe(tierId);
             return (
               <div
                 key={tierId}
@@ -179,11 +123,11 @@ export function PricingTierCards() {
                       : "border border-[var(--marketing-border)] text-[var(--marketing-text)] hover:border-[var(--marketing-accent)]/50"
                   }`}
                 >
-                  {selfServe
-                    ? "Start free"
-                    : tier.contactSales
-                      ? "Let's talk"
-                      : "Book a demo"}
+                  {/* Two outcomes, not three. "Book a demo" used to sit on a
+                      priced tier that was not self-serve; since 2026-09-08 the
+                      two conditions are exact complements, so that branch was
+                      unreachable and is gone rather than left to rot. */}
+                  {selfServe ? "Start free" : "Let's talk"}
                 </a>
               </div>
             );
@@ -193,11 +137,12 @@ export function PricingTierCards() {
         {/* The trial terms belong beside the button that starts one. 14 days and
             no card are the shipped terms (TEAM_TRIAL_DAYS in apps/web, and the
             /signup page says the same) — if either changes, all three move
-            together. */}
+            together. "Your whole team" rather than "your workspace": that word
+            is out of anything a customer reads. */}
         <p className="mt-8 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">
           Prices are in Naira. One price covers your whole team, not each person.
-          Annual plans are paid once a year. The free trial lasts 14 days and
-          needs no card.
+          Every plan is paid once a year. The free trial lasts 14 days and needs
+          no card.
         </p>
       </div>
     </section>

@@ -120,6 +120,31 @@ describe('resolveIntent — existing branches are unaffected', () => {
     const { resolveIntent } = await loadRouter({ notes: true, planner: true });
     expect(resolveIntent('new rollout').kind).toBe('plan_release');
   });
+
+  it('routes the word THE TASK control is named after, which is the same bug twice', async () => {
+    // The exact shape of the 'rollout' case above, on the other branch: tasks
+    // were renamed "activities" in the UI, the chip reads "Add activity" and
+    // buildHelpReply suggests "Add an activity" — and the add_task branch was
+    // never told the word, so the one suggestion the help card makes answered
+    // with the help card again. Asserted against the ACTUAL chip label and the
+    // ACTUAL suggestion, not a paraphrase, so renaming either without teaching
+    // the branch fails here rather than in someone's chat.
+    const { resolveIntent, buildHelpReply, CHAPPI_CHIPS } = await loadRouter({
+      notes: true,
+      planner: true,
+    });
+    const suggestion = buildHelpReply().suggestions?.find((text) => /activity/i.test(text));
+    expect(suggestion).toBe('Add an activity');
+    expect(resolveIntent(suggestion as string)).toEqual({ kind: 'add_task' });
+
+    const chip = CHAPPI_CHIPS.find((c) => c.intent === 'add_task');
+    expect(chip?.label).toBe('Add activity');
+    expect(resolveIntent(chip?.label as string)).toEqual({ kind: 'add_task' });
+
+    // Plural, and the phrase a manager actually types.
+    expect(resolveIntent('add an activity for the release')).toEqual({ kind: 'add_task' });
+    expect(resolveIntent('show me my activities')).toEqual({ kind: 'add_task' });
+  });
 });
 
 describe('resolveIntent — shows', () => {
@@ -210,6 +235,91 @@ describe('resolveIntent — the recap card', () => {
     // become a status update. Help is the honest answer.
     const { resolveIntent } = await loadRouter({ notes: true, planner: true, recap: false });
     expect(resolveIntent('release recap').kind).not.toBe('generate_recap');
+  });
+});
+
+/**
+ * The recommended prompts (2026-09-08). What is pinned here is the SHAPE and
+ * the DEGRADE, not the wording: the founder should be able to rewrite a label
+ * without a test failing, but not to accidentally ship a chip that does the
+ * wrong thing when no model is configured.
+ */
+describe('CHAPPI_CHIPS — the recommended prompts', () => {
+  it('gives every chip exactly one of ask or intent', async () => {
+    const { CHAPPI_CHIPS } = await loadRouter({ notes: true, planner: true });
+    for (const chip of CHAPPI_CHIPS) {
+      const isAsk = chip.ask !== undefined;
+      const isAction = chip.intent !== undefined;
+      expect(
+        isAsk !== isAction,
+        `chip "${chip.id}" must be exactly one of ask or action`
+      ).toBe(true);
+    }
+  });
+
+  it('leads with the orientation question', async () => {
+    // The founder's stated finding is that people arrive wanting to know what
+    // Urganize is. Pinned so a reorder is a deliberate edit rather than a side
+    // effect of adding a chip to the top of the list.
+    const { CHAPPI_CHIPS } = await loadRouter({ notes: true, planner: true });
+    expect(CHAPPI_CHIPS[0]?.id).toBe('what-can-you-do');
+  });
+
+  it('never ships an empty ask, which would send a blank turn', async () => {
+    const { CHAPPI_CHIPS } = await loadRouter({ notes: true, planner: true });
+    for (const chip of CHAPPI_CHIPS) {
+      if (chip.ask !== undefined) expect(chip.ask.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  /**
+   * THE DEGRADE, and the reason these two were chosen over prettier wording.
+   * With no model configured an ask chip falls through to resolveIntent, so a
+   * chip whose text lands on a real branch keeps working. Rewording either of
+   * these past its keyword silently turns a working chip into the help card.
+   */
+  it('keeps the daily and status prompts working with no model configured', async () => {
+    const { CHAPPI_CHIPS, resolveIntent } = await loadRouter({ notes: true, planner: true });
+    const focus = CHAPPI_CHIPS.find((chip) => chip.id === 'todays-focus');
+    const status = CHAPPI_CHIPS.find((chip) => chip.id === 'status-update');
+    expect(resolveIntent(focus?.ask ?? '')).toEqual({ kind: 'todays_focus' });
+    expect(resolveIntent(status?.ask ?? '')).toEqual({ kind: 'generate_status' });
+  });
+
+  it('lands the orientation prompt on the help card rather than acting on it', async () => {
+    // It mentions neither a release nor a verb the router claims, so with no
+    // model it answers "here is what I can do" — which is the honest reply to
+    // "what can you help me with", and not a modal nobody asked to open.
+    const { CHAPPI_CHIPS, resolveIntent } = await loadRouter({ notes: true, planner: true });
+    const orientation = CHAPPI_CHIPS.find((chip) => chip.id === 'what-can-you-do');
+    expect(resolveIntent(orientation?.ask ?? '')).toEqual({ kind: 'help' });
+  });
+
+  it('offers a release action whichever way the planner flag is set', async () => {
+    const planned = await loadRouter({ notes: true, planner: true });
+    expect(planned.CHAPPI_CHIPS.find((chip) => chip.id === 'plan-release')?.intent).toBe(
+      'plan_release'
+    );
+    const unplanned = await loadRouter({ notes: true, planner: false });
+    expect(unplanned.CHAPPI_CHIPS.find((chip) => chip.id === 'new-release')?.intent).toBe(
+      'new_release'
+    );
+  });
+});
+
+describe('buildHelpReply — the fallback prompt list', () => {
+  it('only suggests things that run without a model', async () => {
+    // This card exists precisely when the model does not, so every line on it
+    // must resolve to a real deterministic branch. 'help' would mean the card
+    // suggesting itself.
+    const { buildHelpReply, resolveIntent } = await loadRouter({
+      notes: true,
+      planner: true,
+      events: true,
+    });
+    for (const suggestion of buildHelpReply().suggestions ?? []) {
+      expect(resolveIntent(suggestion).kind, `"${suggestion}" resolves to help`).not.toBe('help');
+    }
   });
 });
 

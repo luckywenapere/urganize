@@ -66,15 +66,21 @@ describe('isContactSalesPlan', () => {
   // FLIPPED TWICE, so the history matters more than the current value. 'label'
   // is the one id that exists in both plan generations: legacy Label was the
   // sales-led ₦800,000 roster plan, tier Label launched as the self-serve
-  // flagship (2026-08-24, when this assertion was inverted to false), and on
-  // 2026-08-30 the founder made the tier sales-led too — so it reads true
-  // again, now for a reason that applies to BOTH generations.
+  // flagship (2026-08-24, when this assertion was inverted to false), on
+  // 2026-08-30 the founder made the tier sales-led too, and on 2026-09-08 the
+  // annual-only reprice gave it a ₦50,000/year price and made it self-serve
+  // again. Third flip, so read the tier table rather than this comment.
   //
   // The consequence this assertion is really guarding: a Label subscriber who
-  // lapses is pointed at the mailto rather than a checkout. That is correct for
-  // a tier we quote by hand, and it is a real change for anyone already on it.
-  it('treats a stored Label plan as sales-led', () => {
-    expect(isContactSalesPlan('label')).toBe(true);
+  // lapses is pointed at a checkout rather than a mailto. Correct for a tier
+  // anyone can buy — and note what protects the ones already on it, since this
+  // is where they would be overcharged: they cannot self-serve a CHANGE at all,
+  // because `isGrandfatheredRate` refuses anyone paying something other than
+  // today's list price.
+  it('treats a stored Label plan as buyable again', () => {
+    expect(isContactSalesPlan('label')).toBe(false);
+    // Group is the one left.
+    expect(isContactSalesPlan('enterprise')).toBe(true);
   });
 });
 
@@ -210,15 +216,16 @@ describe('summarizeBilling', () => {
     expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).title).toBe(
       'Label plan'
     );
-    // 'contact' since 2026-08-30: Label is sales-led, so both a paying and a
-    // lapsed Label customer are pointed at us rather than at a self-serve
-    // picker they cannot buy from. This asserted 'change'/'plans' while the
-    // tier was purchasable.
+    // Back to 'change'/'plans' on 2026-09-08, when Label got a price again. It
+    // read 'contact' for the nine days it was sales-led. A paying Label customer
+    // gets the ordinary change CTA; whether the change is actually quotable is
+    // the route's business, and for anyone on the old rate the answer is a
+    // refusal that names the next step rather than a wrong number.
     expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'label' })).cta).toBe(
-      'contact'
+      'change'
     );
     expect(summarizeBilling(snapshot({ accountStatus: 'expired', plan: 'label' })).cta).toBe(
-      'contact'
+      'plans'
     );
   });
 

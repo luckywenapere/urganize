@@ -12,6 +12,7 @@ import {
   BILLING_PLANS,
   PRICING_TIERS,
   PRICING_TIER_ORDER,
+  SELLING_INTERVAL,
   getTierPrice,
   isBillingInterval,
   isBillingPlanId,
@@ -46,15 +47,20 @@ export type RecurringPlanId = BillingPlanId | 'manager' | 'solo';
  * enforced on nobody, because `resolveTeamTier` could never return a tier no
  * code path could write.
  *
- * Label and Group stay OUT: both are sales-led, so their path is the
- * talk-to-us card rather than a radio. Note this is about NEW purchases — an
- * existing Label subscription still renews, because `isRecurringPlan` below
- * still accepts 'label'. The two lists answer different questions and are meant
- * to disagree there. */
-export type SelfServeTierId = Extract<PricingTierId, 'manager' | 'solo'>;
+ * LABEL REJOINED 2026-09-08 (founder call), in the annual-only reprice that gave
+ * it a ₦50,000/year price. It had been sales-led since 2026-08-30. Group stays
+ * OUT and is now the only tier that does: it is quoted per contract, has no
+ * price and no Paystack Plan, and its path is the talk-to-us card rather than a
+ * radio.
+ *
+ * This is about NEW purchases only. An existing subscription on any of these
+ * ids renews regardless, because `isRecurringPlan` below is a separate list
+ * answering a separate question — whether a tier can be BOUGHT today and
+ * whether a live subscription still EXTENDS are meant to be able to disagree. */
+export type SelfServeTierId = Extract<PricingTierId, 'manager' | 'solo' | 'label'>;
 
 export function isSelfServeTier(value: unknown): value is SelfServeTierId {
-  return value === 'manager' || value === 'solo';
+  return value === 'manager' || value === 'solo' || value === 'label';
 }
 
 /**
@@ -116,67 +122,100 @@ const PLAN_CODE_ENV_VAR: Record<BillingPlanId, Record<PricingCurrencyCode, strin
   },
 };
 
-// Map of (tier, interval) → env var name, for pricing v2.
+// Which Paystack Plan each self-serve tier is sold on.
+//
+// ONE ENV VAR PER TIER, NOT ONE PER TIER AND INTERVAL, since 2026-09-08: every
+// tier is billed once a year now, so the interval dimension collapsed. A
+// monthly tier purchase is refused before it ever gets here (see
+// `getTierPaystackPlanCode` and `resolveCheckoutPurchase`), which means there is
+// no monthly Plan to name and no way to accidentally name one.
 //
 // NGN ONLY, and that is honest rather than lazy: PRICING_TIERS carries NGN
 // prices alone, the Paystack account only offers NGN in plan creation, and USD
 // checkout has never worked on any tier (there are no PAYSTACK_PLAN_*_USD vars
-// set anywhere). Inventing four USD entries here would let a USD tier checkout
-// get one step further before failing, which is worse than refusing it plainly.
+// set anywhere). Inventing USD entries here would let a USD tier checkout get
+// one step further before failing, which is worse than refusing it plainly.
 //
-// ⚠️ LABEL REUSES THE LIVE MONTHLY/ANNUAL PLANS ON PURPOSE. The tier's prices
-// are byte-identical to BILLING_PLANS.monthly / .annual (₦80,000 / ₦800,000 —
-// pinned by a test in packages/pricing), which is the entire reason the tier
-// rollout needs no new Plan objects for it and no existing subscriber changes
-// price. Do NOT repoint these at PAYSTACK_PLAN_LABEL_*: that var holds a
-// mislabeled ₦750,000 Plan from an earlier attempt (CLAUDE.md records it), and
-// pointing Label at it would charge every new Label customer the wrong amount.
+// ⚠️ THESE ARE NEW VAR NAMES, AND THE NEWNESS IS THE SAFETY MECHANISM. Read this
+// before "tidying" them back onto the _ANNUAL_ names below.
 //
-// Solo and Manager are the tiers needing their own Plan objects minted. Until a
-// tier's two env vars are set, its checkout returns the "plan not configured"
-// 500 — which is the correct failure: it refuses rather than charging a Plan
-// that bills the wrong amount or term.
+// The 2026-09-08 reprice moved every amount (Solo ₦80,000 → ₦5,000, Manager
+// ₦350,000 → ₦22,000, Label new at ₦50,000), and a Paystack Plan's amount is
+// FIXED WHEN THE PLAN IS CREATED. So the new prices need new Plan objects, and
+// the dangerous question is what happens if this code ships before somebody
+// mints them.
 //
-// SOLO'S PLANS ARE MINTED (2026-09-01), at ₦8,000/mo and ₦80,000/yr, matching
-// PRICING_TIERS. Both env vars were set BEFORE the code shipped, which is the
-// first time in this repo's history the order of operations has been followed on
-// the first attempt rather than corrected afterwards. Note the Plan objects are
-// named `monthly` and `yearly` in the Paystack dashboard rather than
-// `PAYSTACK_PLAN_SOLO_*` like Manager's — the amount is what identifies them.
+// Reusing PAYSTACK_PLAN_SOLO_ANNUAL_NGN would answer that badly: it is already
+// set, and it points at the ₦80,000 Plan. The page would advertise ₦5,000 and
+// the card would be charged ₦80,000 — a sixteen-fold overcharge, discovered by
+// a customer reading their bank statement. That is the advertise-versus-charge
+// gap this repo has shipped FIVE times (2026-07-14, -07-15, -08-16, -08-21, and
+// the Manager tier), every time caught by a person rather than by code.
 //
-// Label's entry moved to RETIRED_TIER_PLAN_CODE_ENV_VAR on 2026-08-30 when it
-// became sales-led: no longer purchasable, so it must not be reachable from
-// checkout, but its live subscriptions still renew and are still validated.
-const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, Record<BillingInterval, string>> = {
-  solo: {
-    monthly: 'PAYSTACK_PLAN_SOLO_MONTHLY_NGN',
-    annual: 'PAYSTACK_PLAN_SOLO_ANNUAL_NGN',
-  },
-  manager: {
-    monthly: 'PAYSTACK_PLAN_MANAGER_MONTHLY_NGN',
-    annual: 'PAYSTACK_PLAN_MANAGER_ANNUAL_NGN',
-  },
+// A name nothing has set yet inverts the failure. Ship before minting and
+// `purchasableTiers()` below finds no code, withholds the tier, and the wall
+// shows one less card — visible immediately, and nobody is charged anything.
+// Set the var and the tier starts being offered with no deploy. That is exactly
+// what purchasableTiers() was built to guarantee, and reusing a live var name is
+// the one thing that defeats it. THE ORDER OF OPERATIONS IS NOW UNNECESSARY
+// RATHER THAN REMEMBERED.
+//
+// ⚠️ _YEARLY_ IS NOT _ANNUAL_. The two are synonyms in English and different
+// vars here: _YEARLY_ is the live one this map reads, _ANNUAL_ is superseded and
+// read only by the renewal sanity check below. Setting the wrong one leaves the
+// tier unoffered, which is the harmless direction, but it will look like the
+// deploy did nothing.
+//
+// ⚠️ AND PAYSTACK_PLAN_LABEL_YEARLY_NGN IS NOT PAYSTACK_PLAN_LABEL_NGN. That
+// second one already exists and holds a mislabeled ₦750,000 Plan from an early
+// attempt; it sits in the legacy map above, where it has never been reachable
+// because the legacy `label` plan is refused at checkout.
+//
+// Label is in this map at all because it stopped being sales-led on 2026-09-08.
+// Its tier price used to be byte-identical to the legacy annual plan, which is
+// why it once shared that Plan object; at ₦50,000 it does not.
+const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, string> = {
+  solo: 'PAYSTACK_PLAN_SOLO_YEARLY_NGN',
+  manager: 'PAYSTACK_PLAN_MANAGER_YEARLY_NGN',
+  label: 'PAYSTACK_PLAN_LABEL_YEARLY_NGN',
 };
 
 /**
- * Tiers we no longer sell but still renew. Read ONLY by
- * `planCodeMatchesSubscription`, never by checkout — that separation is the
- * point: a retired tier must be impossible to buy while its existing
- * subscriptions stay judged against the Plans they were actually sold on.
+ * Plan objects a tier USED to be sold on, read ONLY by
+ * `planCodeMatchesSubscription` and never by checkout.
  *
- * Label maps to the LIVE monthly/annual Plans, not PAYSTACK_PLAN_LABEL_* — its
- * tier prices were identical to those plans by design, so that is what its
- * subscribers are really billed against. PAYSTACK_PLAN_LABEL_NGN holds a
- * mislabeled ₦750,000 Plan from an earlier attempt and must never be used here.
+ * That separation is the point: a superseded Plan must be impossible to buy
+ * while the subscriptions already bound to it stay judged against the Plan they
+ * were actually sold on. A Paystack subscription is bound to its Plan at
+ * creation, so repointing the vars above changes what NEW customers are charged
+ * and nothing at all about what existing ones pay — which is exactly the
+ * "existing subscribers stay on what they have" half of the reprice, and it is
+ * a property of Paystack rather than something this code has to enforce.
  *
- * Keyed loosely by string because these ids are precisely the ones no longer in
- * SelfServeTierId.
+ * Without these entries the renewal sanity check would compare an old
+ * subscriber's incoming plan code against the NEW Plan, find a mismatch, and log
+ * a warning on every renewal of theirs. It never blocks — the webhook logs and
+ * continues by design — so this is noise control rather than correctness.
+ *
+ * Label's entries are the legacy monthly/annual Plans because that is genuinely
+ * what a pricing-v2-era Label subscriber was billed against; the tier's price
+ * was identical to those plans by design. PAYSTACK_PLAN_LABEL_NGN is deliberately
+ * NOT here: nothing was ever sold on it.
+ *
+ * THE _ANNUAL_ AND _MONTHLY_ VARS LIVE HERE NOW. They are the pre-2026-09-08
+ * Plans, still set in the environment, and keeping them named is what stops an
+ * older subscriber's renewal logging a warning every year forever. Nothing sells
+ * against them — see the deliberately different names in the map above.
+ *
+ * Label's legacy entries are the shared monthly/annual Plans, because that is
+ * genuinely what a pricing-v2-era Label subscriber was billed against: the
+ * tier's price was identical to those Plans by design.
+ * PAYSTACK_PLAN_LABEL_NGN is deliberately absent — nothing was ever sold on it.
  */
-const RETIRED_TIER_PLAN_CODE_ENV_VAR: Record<string, Record<BillingInterval, string>> = {
-  label: {
-    monthly: 'PAYSTACK_PLAN_MONTHLY_NGN',
-    annual: 'PAYSTACK_PLAN_ANNUAL_NGN',
-  },
+const SUPERSEDED_TIER_PLAN_CODE_ENV_VARS: Record<string, readonly string[]> = {
+  solo: ['PAYSTACK_PLAN_SOLO_ANNUAL_NGN', 'PAYSTACK_PLAN_SOLO_MONTHLY_NGN'],
+  manager: ['PAYSTACK_PLAN_MANAGER_ANNUAL_NGN', 'PAYSTACK_PLAN_MANAGER_MONTHLY_NGN'],
+  label: ['PAYSTACK_PLAN_MONTHLY_NGN', 'PAYSTACK_PLAN_ANNUAL_NGN'],
 };
 
 function readPlanCodeEnv(envName: string | undefined): string | null {
@@ -215,7 +254,14 @@ export function getTierPaystackPlanCode(
   tier: SelfServeTierId,
   interval: BillingInterval
 ): string | null {
-  return readPlanCodeEnv(TIER_PLAN_CODE_ENV_VAR[tier]?.[interval]);
+  // Annual-only since 2026-09-08. The interval argument survives the collapse
+  // on purpose: it is what a checkout REQUEST carries, and refusing a monthly
+  // one here rather than ignoring it means a stale client posting `monthly`
+  // gets a plain "not configured" refusal instead of quietly being sold a year.
+  // Defence in depth — `resolveCheckoutPurchase` refuses it earlier and with a
+  // better message.
+  if (interval !== SELLING_INTERVAL) return null;
+  return readPlanCodeEnv(TIER_PLAN_CODE_ENV_VAR[tier]);
 }
 
 /**
@@ -237,16 +283,17 @@ export function getTierPaystackPlanCode(
  * /api/subscription-status rather than deriving it, which is the whole point —
  * a client bundle cannot see whether a Plan exists.
  *
- * BOTH intervals are required rather than either, deliberately: the wall's
- * interval toggle is always live, so offering a tier that can only be billed
- * monthly would move the failure one click later instead of removing it.
+ * ONE CODE IS NOW ENOUGH. This required BOTH a monthly and an annual code until
+ * 2026-09-08, because the wall carried an interval toggle and a tier that could
+ * only be billed one way moved the failure one click later instead of removing
+ * it. The toggle is gone and there is one interval, so requiring a monthly code
+ * would now make every tier unpurchasable — which is the single sharpest way
+ * this reprice could have taken checkout down without a test failing anywhere.
  */
 export function purchasableTiers(): PricingTierId[] {
   return PRICING_TIER_ORDER.filter(
     (tier) =>
-      isSelfServeTier(tier) &&
-      getTierPaystackPlanCode(tier, 'monthly') !== null &&
-      getTierPaystackPlanCode(tier, 'annual') !== null
+      isSelfServeTier(tier) && getTierPaystackPlanCode(tier, SELLING_INTERVAL) !== null
   );
 }
 
@@ -273,23 +320,20 @@ export function planCodeMatchesSubscription(input: {
   if (!incoming) return true;
 
   const expected: Array<string | null> = [];
-  const retired = RETIRED_TIER_PLAN_CODE_ENV_VAR[input.plan];
+  const superseded = SUPERSEDED_TIER_PLAN_CODE_ENV_VARS[input.plan];
   if (isSelfServeTier(input.plan)) {
-    const interval = resolveBillingInterval({
-      plan: input.plan,
-      storedInterval: input.storedInterval,
-    });
-    expected.push(getTierPaystackPlanCode(input.plan, interval));
-  } else if (retired) {
-    // A tier we stopped selling but still renew. Judged interval-sensitively,
-    // exactly as it was while it was on sale — dropping to the legacy branch
-    // below would read PAYSTACK_PLAN_LABEL_* (never set), find nothing
-    // configured, and quietly stop checking these renewals at all.
-    const interval = resolveBillingInterval({
-      plan: input.plan,
-      storedInterval: input.storedInterval,
-    });
-    expected.push(readPlanCodeEnv(retired[interval]));
+    // EVERY Plan this tier has ever been sold on, not just today's. A tier is
+    // repriced by minting a new Plan and repointing its var, so a subscriber
+    // from before the reprice legitimately renews against a code that is no
+    // longer the current one. Judging them against the new Plan alone would
+    // warn on every renewal of theirs for the rest of their life.
+    expected.push(getTierPaystackPlanCode(input.plan, SELLING_INTERVAL));
+    for (const envName of superseded ?? []) expected.push(readPlanCodeEnv(envName));
+  } else if (superseded) {
+    // A plan id that is not self-serve but still has Plans we sold it on.
+    // Nothing hits this today; it is here so retiring a tier from
+    // SelfServeTierId does not silently stop checking its renewals.
+    for (const envName of superseded) expected.push(readPlanCodeEnv(envName));
   } else if (input.plan === 'monthly' || input.plan === 'annual' || input.plan === 'label') {
     for (const currency of ['NGN', 'USD'] as const) {
       expected.push(getPaystackPlanCode(input.plan, currency));
@@ -469,22 +513,41 @@ export function getTierMinorUnit(
 /**
  * The display name of a sales-led plan, or null when it is not sales-led.
  *
- * ONE CHECK COVERS BOTH GENERATIONS, and that is worth stating because the
- * obvious version checks two. Every sales-led id is a `PricingTierId`: 'label'
- * is a valid id in BOTH generations, and 'enterprise' is tier-only, while the
- * ids that are legacy-only ('monthly', 'annual') are not sales-led and never
- * will be. So a second lookup against BILLING_PLANS would be unreachable code
- * — written first, then removed after a mutation test showed nothing depended
- * on it. `salesLedIdsAreAllTierIds` in billing-plans.test.ts pins that
- * assumption, so if a legacy-only id ever becomes sales-led this stops being
- * true loudly rather than silently letting it through.
+ * IT ASKS THE GENERATION THE REQUEST IS BEING READ IN, and that is not
+ * over-engineering — it is a defect this function shipped with for a day.
+ *
+ * It used to do ONE lookup, against PRICING_TIERS, on the reasoning that every
+ * sales-led id is also a tier id. True, and not sufficient: 'label' is a valid
+ * id in BOTH generations and the two disagree about it. Since 2026-09-08 the
+ * TIER Label is a ₦50,000/year self-serve plan, while the LEGACY `label` is
+ * still the retired sales-led roster plan whose `PAYSTACK_PLAN_LABEL_NGN` holds
+ * a mislabeled ₦750,000 Plan. A single tier-table lookup answered "not
+ * sales-led" for both, which would have let a flag-off 'label' request through
+ * to the legacy branch and charged ₦750,000 while recording ₦800,000 — the
+ * exact bug the 2026-09-01 pass fixed, reopened from the other end.
+ *
+ * `salesLedIdsAreAllTierIds` in billing-plans.test.ts did NOT catch it, because
+ * it pins "every sales-led legacy id is also a tier id" rather than "the tier
+ * table agrees". That test is now written to pin the thing that actually
+ * matters: a plan sales-led in either generation is refused in that generation.
  *
  * Returns the NAME rather than a boolean so the refusal can say "Label" or
  * "Group" — the tier ids do not match their display names ('enterprise' is
  * shown as Group), and a message naming the id would be meaningless to whoever
  * reads it.
  */
-function readSalesLedPlanName(plan: unknown): string | null {
+function readSalesLedPlanName(plan: unknown, pricingV2: boolean): string | null {
+  // Under v2, a tier id is read as a tier and the tier table is the authority.
+  if (pricingV2 && isPricingTierId(plan)) {
+    return PRICING_TIERS[plan].contactSales ? PRICING_TIERS[plan].label : null;
+  }
+  // Otherwise the legacy table decides for an id it knows, and the tier table
+  // covers the ids it does not ('solo', 'manager', 'enterprise'), so a sales-led
+  // tier is still refused with the flag off rather than reported as an
+  // unrecognised plan.
+  if (isBillingPlanId(plan) && BILLING_PLANS[plan].contactSales) {
+    return BILLING_PLANS[plan].label;
+  }
   if (isPricingTierId(plan) && PRICING_TIERS[plan].contactSales) {
     return PRICING_TIERS[plan].label;
   }
@@ -537,7 +600,7 @@ export function resolveCheckoutPurchase(input: {
   //
   // Derived from `contactSales` rather than listing ids, so making a tier
   // sales-led in @urganize/pricing closes its checkout in the same edit.
-  const salesLedName = readSalesLedPlanName(plan);
+  const salesLedName = readSalesLedPlanName(plan, pricingV2);
   if (salesLedName) {
     return {
       ok: false,
@@ -548,7 +611,20 @@ export function resolveCheckoutPurchase(input: {
 
   if (pricingV2 && isSelfServeTier(plan)) {
     if (!isBillingInterval(input.interval)) {
-      return { ok: false, status: 400, error: 'interval must be "monthly" or "annual".' };
+      return { ok: false, status: 400, error: 'interval must be "annual".' };
+    }
+    // ANNUAL ONLY since 2026-09-08. Refused here, with a sentence a person can
+    // read, rather than left to fall through to the amount lookup below — that
+    // one would answer "No price configured for solo/monthly" as a 500, which
+    // reads as our server being broken when the request was simply asking for
+    // something we do not sell. A stale client or an old bookmark is the likely
+    // source, so the message says what to do.
+    if (input.interval !== SELLING_INTERVAL) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'Plans are billed once a year. Reload the page and pick a plan again.',
+      };
     }
     // NGN only, and refused plainly rather than half-attempted: PRICING_TIERS
     // carries no USD prices, the Paystack account offers NGN alone in plan

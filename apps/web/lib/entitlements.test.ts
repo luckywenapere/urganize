@@ -4,7 +4,8 @@ import {
   BILLING_PLAN_ORDER,
   PRICING_TIERS,
   PRICING_TIER_ORDER,
-  annualSavingCopy,
+  SELLING_INTERVAL,
+  formatTierPrice,
   getTierPrice,
   tierHighlights,
 } from '@urganize/pricing';
@@ -173,36 +174,52 @@ describe('tier prices and the sales-led tier', () => {
     // order rather than named, so this keeps holding if a tier is added.
     const priced = PRICING_TIER_ORDER.filter((tier) => !PRICING_TIERS[tier].contactSales);
     expect(priced.length).toBeGreaterThan(1);
-    for (const interval of ['monthly', 'annual'] as const) {
-      let previous = 0;
-      for (const tier of priced) {
-        const amount = getTierPrice(tier, interval)?.amount ?? 0;
-        expect(amount, `${tier}/${interval}`).toBeGreaterThan(previous);
-        previous = amount;
-      }
+    let previous = 0;
+    for (const tier of priced) {
+      const amount = getTierPrice(tier, SELLING_INTERVAL)?.amount ?? 0;
+      expect(amount, tier).toBeGreaterThan(previous);
+      previous = amount;
     }
   });
 
-  it('holds the 2-months-free ratio on every priced tier', () => {
-    for (const tier of ['solo', 'manager'] as const) {
-      const monthly = getTierPrice(tier, 'monthly')?.amount ?? 0;
-      const annual = getTierPrice(tier, 'annual')?.amount ?? 0;
-      expect(annual, `${tier} annual`).toBe(monthly * 10);
+  // THE ACCEPTANCE BAR OF THE 2026-09-08 REPRICE, held structurally rather than
+  // by a copy sweep: a monthly figure must appear nowhere. This is the check
+  // that makes that true at the source — no tier CARRIES a monthly price, and
+  // the one accessor that could return one refuses. A display surface can only
+  // print what the data holds.
+  it('sells one interval, and holds no monthly figure to print', () => {
+    expect(SELLING_INTERVAL).toBe('annual');
+    for (const tier of ALL_TIERS) {
+      const prices = PRICING_TIERS[tier].prices;
+      if (prices) {
+        expect(Object.keys(prices), `${tier} price keys`).toEqual(['annual']);
+      }
+      expect(getTierPrice(tier, 'monthly'), `${tier}/monthly`).toBeNull();
     }
+  });
+
+  it('labels the price as a year, spelled out', () => {
+    // "/year" rather than "/yr": the founder's copy rules ask for fifth-grade
+    // readable, and an abbreviation is one more thing to decode.
+    expect(formatTierPrice('solo')).toBe('₦5,000/year');
+    expect(formatTierPrice('manager')).toBe('₦22,000/year');
+    expect(formatTierPrice('label')).toBe('₦50,000/year');
+    expect(formatTierPrice('enterprise')).toBeNull();
   });
 
   // Never render a price for a tier we quote by hand. Returning null forces the
   // caller into the "Let's talk" branch instead of formatting a zero.
   it('has no price at all on any sales-led tier', () => {
-    // Label joined enterprise here on 2026-08-30. Written over every
-    // contactSales tier rather than naming one, so a future sales-led tier
-    // cannot ship still carrying an amount.
+    // Label left this set again on 2026-09-08 when it got a ₦50,000/year price,
+    // so Group is the lone conversation. Written over every contactSales tier
+    // rather than naming one, so a future sales-led tier cannot ship still
+    // carrying an amount.
     const salesLed = ALL_TIERS.filter((tier) => PRICING_TIERS[tier].contactSales);
-    expect(salesLed).toEqual(['label', 'enterprise']);
+    expect(salesLed).toEqual(['enterprise']);
     for (const tier of salesLed) {
       expect(PRICING_TIERS[tier].prices, `${tier} prices`).toBeUndefined();
-      expect(getTierPrice(tier, 'monthly'), `${tier}/monthly`).toBeNull();
       expect(getTierPrice(tier, 'annual'), `${tier}/annual`).toBeNull();
+      expect(formatTierPrice(tier), `${tier} formatted`).toBeNull();
     }
   });
 
@@ -233,22 +250,23 @@ describe('tier prices and the sales-led tier', () => {
   });
 
   it('orders the cards cheapest first, ending at the sales-led tier', () => {
-    // Group (id `enterprise`) was retired from display 2026-08-30. Its
-    // DEFINITION deliberately survives so a stored row still resolves, which is
-    // exactly why this asserts the order rather than the tier table.
-    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label']);
-    expect(PRICING_TIER_ORDER).not.toContain('enterprise');
-    expect(PRICING_TIERS.enterprise).toBeDefined();
+    // Four cards since 2026-09-08: three prices, then Group. Group had been off
+    // the page since 2026-08-30 while Label held the sales-led slot; Label
+    // taking a price handed that slot back.
+    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label', 'enterprise']);
+    // The conversation comes last, or the ladder stops reading as a ladder.
+    const last = PRICING_TIER_ORDER[PRICING_TIER_ORDER.length - 1];
+    expect(PRICING_TIERS[last].contactSales).toBe(true);
   });
 
-  it('carries a price for every interval on every self-serve tier', () => {
+  it('carries an annual price on every self-serve tier, in whole kobo', () => {
     for (const tier of TIERS) {
       if (PRICING_TIERS[tier].contactSales) continue;
-      for (const interval of ['monthly', 'annual'] as const) {
-        const price = getTierPrice(tier, interval);
-        expect(price, `${tier}/${interval}`).not.toBeNull();
-        expect(price?.minorUnit).toBe((price?.amount ?? 0) * 100);
-      }
+      const price = getTierPrice(tier, SELLING_INTERVAL);
+      expect(price, tier).not.toBeNull();
+      // The minor unit is pre-computed in the package so no caller multiplies
+      // by 100 at the call site, which is where unit-mismatch bugs hide.
+      expect(price?.minorUnit, tier).toBe((price?.amount ?? 0) * 100);
     }
   });
 });
@@ -289,15 +307,19 @@ describe('minimumTierWith', () => {
     expect(minimumTierWith('concierge_onboarding')).toBe('label');
   });
 
-  it('returns null when no tier grants it', () => {
+  it('returns null when no tier a visitor can buy grants it', () => {
+    // `sso` is granted by Group alone, and Group is sales-led. It came back onto
+    // PRICING_TIER_ORDER on 2026-09-08, which is exactly when reading the
+    // displayed order alone stopped being enough — see minimumTierWith.
+    expect(PRICING_TIERS.enterprise.contactSales).toBe(true);
+    expect(ENTITLEMENTS.enterprise.sso).toBe(true);
     expect(minimumTierWith('sso')).toBeNull();
   });
 
   it('never returns a sales-led tier a visitor cannot self-serve into', () => {
-    // sso is enterprise-only, and enterprise is off PRICING_TIER_ORDER, so this
-    // exercises the same path minimumTierWith('sso') already covers above —
-    // asserted again here against data_export (true everywhere) to confirm the
-    // search only ever walks the displayed order, never past it.
+    // Asserted against data_export (true everywhere) to confirm the search
+    // starts at the cheapest displayed tier rather than skipping into the
+    // middle of the ladder.
     expect(minimumTierWith('data_export')).toBe(PRICING_TIER_ORDER[0]);
   });
 });
@@ -609,14 +631,14 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
     const result = resolveCheckoutPurchase({
       plan: 'solo',
       currency: 'NGN',
-      interval: 'monthly',
+      interval: SELLING_INTERVAL,
       pricingV2: true,
     });
     if (result.ok) {
       // The Plans have been minted in this environment. Then the only thing
       // worth checking is that it resolved as the tier and not as something else.
       expect(result.planId).toBe('solo');
-      expect(result.interval).toBe('monthly');
+      expect(result.interval).toBe(SELLING_INTERVAL);
       return;
     }
     expect(result.status).toBe(500);
@@ -761,14 +783,6 @@ describe('public tier copy tells the truth', () => {
     expect(enterpriseCopy).not.toContain('single sign');
     expect(enterpriseCopy).not.toContain('sub-team');
     expect(enterpriseCopy).not.toContain('sub team');
-  });
-
-  it('phrases the annual saving in months and never as a percentage', () => {
-    expect(annualSavingCopy('solo')).toBe('2 months free');
-    expect(annualSavingCopy('manager')).toBe('2 months free');
-    // No annual price to save against on a sales-led tier.
-    expect(annualSavingCopy('label')).toBeNull();
-    expect(annualSavingCopy('enterprise')).toBeNull();
   });
 
   it('carries no percentage, no em dash and no "workspace" in the tier copy', () => {
