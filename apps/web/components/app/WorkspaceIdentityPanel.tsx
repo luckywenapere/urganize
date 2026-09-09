@@ -178,6 +178,15 @@ function buildNavItems(
   releases: { id: string; title: string }[]
 ): NavItem[] {
   return [
+    // FIRST, above Catalog (founder call, 2026-09-09), and the same call that
+    // made the assistant the post-auth landing again (lib/home-path.ts). The
+    // row you land on is the row that leads the list.
+    {
+      href: "/dashboard/urgans",
+      label: "UrgAns",
+      Icon: ChappiIcon,
+      isActive: (pathname: string) => pathname === "/dashboard/urgans",
+    },
     {
       href: "/dashboard",
       label: "Catalog",
@@ -202,12 +211,6 @@ function buildNavItems(
         label: release.title,
         isActive: release.id === scopedReleaseId,
       })),
-    },
-    {
-      href: "/dashboard/urgans",
-      label: "UrgAns",
-      Icon: ChappiIcon,
-      isActive: (pathname: string) => pathname === "/dashboard/urgans",
     },
     // Exact match, like its neighbours: usePathname excludes the query string,
     // so a ?release= / ?note= deep link still lights this up.

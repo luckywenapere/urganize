@@ -554,11 +554,14 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             control up here. */}
         {CHAPPI_ENABLED ? (
           <>
-            <Suspense fallback={CatalogLinkFallback}>
-              <CatalogTopbarAction />
-            </Suspense>
+            {/* UrgAns leads the pair (founder call, 2026-09-09), matching the
+                identity card's nav and the post-auth landing. The two are
+                still mutual toggles; only their order moved. */}
             <Suspense fallback={<ChappiLinkFallback />}>
               <ChappiTopbarAction />
+            </Suspense>
+            <Suspense fallback={CatalogLinkFallback}>
+              <CatalogTopbarAction />
             </Suspense>
           </>
         ) : null}
