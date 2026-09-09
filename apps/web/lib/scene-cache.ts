@@ -42,15 +42,19 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'timeline',
 ];
 
-// Inlined at build time, same read every UI gate uses. The prefetch list must
-// respect it: with the flag off the calendar API routes 404, so prefetching
-// the scene burned one guaranteed-404 request per scoped release.
+// Inlined at build time, same read every UI gate uses. Both consumers below
+// must respect them: with a flag off that scene's API routes 404, so
+// prefetching it burned one guaranteed-404 request per scoped release, and
+// resolving its URL param opened a header with nothing under it.
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
+const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
+const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
@@ -73,9 +77,9 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   ...(METADATA_ENABLED ? (['metadata'] as const) : []),
   ...(COVER_ART_ENABLED ? (['coverart'] as const) : []),
   ...(SONG_UPLOAD_ENABLED ? (['song'] as const) : []),
-  'files',
+  ...(FILES_ENABLED ? (['files'] as const) : []),
   ...(CONTENT_CALENDAR_ENABLED ? (['calendar'] as const) : []),
-  'pitch',
+  ...(PITCHING_ENABLED ? (['pitch'] as const) : []),
   ...(CAPTURE_ENABLED ? (['capture'] as const) : []),
 ];
 
@@ -96,12 +100,23 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
  * and a layout decision computed two ways is the bug class this consolidation
  * exists to end.
  *
- * DELIBERATELY ONLY FOUR FLAGS. metadata / files / pitch / plan are NOT
- * gated here, matching the behaviour this replaces exactly: those scenes gate
- * themselves inside ReleaseScenePanel and their own pills, and adding them here
- * would change which scenes render rather than just consolidating the check.
- * If one of them ever needs URL-level gating, it belongs here — but that is a
- * behaviour change, not a tidy-up.
+ * EVERY FLAG-GATED SCENE IS GATED HERE, and getting there was a behaviour
+ * change with founder sign-off (2026-09-08) rather than a tidy-up.
+ *
+ * This used to gate five scenes and deliberately skip metadata / files / pitch
+ * / plan, on the reasoning that "those scenes gate themselves inside
+ * ReleaseScenePanel and their own pills". The second half was true; THE FIRST
+ * HALF WAS NOT — ReleaseScenePanel reads no feature flag at all, and never
+ * has. So those four had no URL-level gate anywhere: a stale bookmark, a
+ * shared link or a scene remembered from before a flag was switched off opened
+ * a header with a dead fetch under it. Files has been off in production since
+ * v0.16.4, so `?scene=files` was that empty page for anyone holding an old
+ * link.
+ *
+ * Founder call: an old link to something since switched off should quietly
+ * open the release instead. That is what resolvePanelBody's fallback already
+ * did for the other five, so this makes the ten consistent rather than
+ * inventing anything.
  */
 export function resolveActiveScene(rawParam: string | null): SceneName | null {
   if (!rawParam || !(SCENE_NAMES as readonly string[]).includes(rawParam)) return null;
@@ -111,6 +126,10 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   if (scene === 'song' && !SONG_UPLOAD_ENABLED) return null;
   if (scene === 'coverart' && !COVER_ART_ENABLED) return null;
   if (scene === 'timeline' && !TIMELINE_ENABLED) return null;
+  if (scene === 'metadata' && !METADATA_ENABLED) return null;
+  if (scene === 'files' && !FILES_ENABLED) return null;
+  if (scene === 'pitch' && !PITCHING_ENABLED) return null;
+  if (scene === 'plan' && !PLANNER_ENABLED) return null;
   return scene;
 }
 

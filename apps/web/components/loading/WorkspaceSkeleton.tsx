@@ -8,7 +8,11 @@ import {
 } from '@/components/workspace/TasksPanel';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
-import { resolveMainView, resolvePanelBody } from '@/lib/scene-cache';
+import {
+  resolvePanelBody,
+  type ReleaseMainView,
+  type SceneName,
+} from '@/lib/scene-cache';
 
 // Same URL param useReleaseScope reads (`?release=`). Knowing this at
 // skeleton-render time (before release data has loaded) lets the skeleton
@@ -16,6 +20,9 @@ import { resolveMainView, resolvePanelBody } from '@/lib/scene-cache';
 // grid — the two are visually very different, and landing on a scoped URL
 // (a release deep link, a notification click, a refresh) is a common path.
 const SCOPE_PARAM = 'release';
+
+/** What `resolvePanelBody` answers: a scene, or one of the two main views. */
+type PanelBody = SceneName | ReleaseMainView;
 
 // Same build-time flags TasksPanel reads for its scoped-header pills. The
 // skeleton renders one placeholder pill per REAL pill so the row doesn't
@@ -116,9 +123,12 @@ export function WorkspaceSkeleton() {
   // container query). Expressed as "the body is not the buckets" so the two
   // read the same way. Flag off, `resolveMainView()` is 'activities' and this
   // is byte-identical to the line it replaces.
-  const hideRails =
-    (CHAPPI_ENABLED && isRailOpen) ||
-    resolvePanelBody(searchParams.get('scene')) !== 'activities';
+  // ONE read, threaded to both consumers. The rails decision and the body
+  // decision have to be the same value or the skeleton contradicts itself —
+  // which is exactly what it did until 2026-09-08, hiding the rails for a scene
+  // and then reserving a timeline body underneath.
+  const panelBody = resolvePanelBody(searchParams.get('scene'));
+  const hideRails = (CHAPPI_ENABLED && isRailOpen) || panelBody !== 'activities';
   const knownCount = useKnownReleaseCount();
   // `?release=` is the normal signal, but a single-release workspace scopes
   // itself in an effect, so the URL is still bare while WorkspaceView holds
@@ -165,7 +175,7 @@ export function WorkspaceSkeleton() {
 
           <section className="flex min-h-0 flex-1 flex-col lg:hidden">
             {isFocused ? (
-              <MobileFocusedSkeleton />
+              <MobileFocusedSkeleton panelBody={panelBody} />
             ) : (
               <ReleaseRowListSkeleton count={Math.min(knownCount, 6)} />
             )}
@@ -173,7 +183,11 @@ export function WorkspaceSkeleton() {
 
           <section className="hidden lg:block">
             {isFocused ? (
-              <DesktopFocusedSkeleton knownCount={knownCount} hideRails={hideRails} />
+              <DesktopFocusedSkeleton
+                knownCount={knownCount}
+                hideRails={hideRails}
+                panelBody={panelBody}
+              />
             ) : (
               // Matches WorkspaceDesktopGrid's current template exactly
               // (240px max track + the 1008px structural cap — see that
@@ -281,7 +295,7 @@ function ReleaseCardSkeleton() {
  * TasksPanel.tsx's real row (2026-08-10 bug fix: this file's inner wrapper
  * had already drifted to `flex-wrap` when the real one had none — the
  * loading-skeleton-sync rule this file otherwise follows). */
-function TasksPanelSkeleton() {
+function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
   const pillWidths = [
     // Cover art comes right after Metadata in the real row, before Song.
     ...(COVER_ART_ENABLED ? ['w-24'] : []), // Cover art
@@ -371,11 +385,19 @@ function TasksPanelSkeleton() {
         {/* Which body is coming. The timeline paints a legend strip and then
             week groups, nothing like the bucket cards, so reserving the wrong
             one is a guaranteed shift on first data. */}
-        {resolveMainView() === 'timeline' ? (
-          <TimelineBodySkeleton />
-        ) : (
-          <BucketBodySkeleton />
-        )}
+        {(() => {
+          // Read the REAL `?scene=` param, not just the main view. `hideRails`
+          // above already does, and the two disagreeing is what made every
+          // scene URL reserve a timeline (or bucket) body and then paint a
+          // scene over it — the exact shift the comment above says this is
+          // here to prevent. A scene gets a neutral block: its own section
+          // owns the internal skeleton, so guessing its shape here would just
+          // be a second wrong answer.
+          const body = panelBody;
+          if (body === 'timeline') return <TimelineBodySkeleton />;
+          if (body === 'activities') return <BucketBodySkeleton />;
+          return <SceneBodySkeleton />;
+        })()}
       </div>
       {/* Desktop footer placeholders — Calendar (2026-08-13) and
           Fan capture (2026-08-14); see the real block's comment in
@@ -457,7 +479,7 @@ function TasksPanelSkeleton() {
  * anymore) above the tasks panel. No release rail on mobile; it's a single
  * column, matching the real drill-down.
  */
-function MobileFocusedSkeleton() {
+function MobileFocusedSkeleton({ panelBody }: { panelBody: PanelBody }) {
   return (
     // `flex min-h-0 flex-1 flex-col` carries the height chain the real mobile
     // branch has (its back header / Motion strip / TasksPanel are direct flex
@@ -478,7 +500,7 @@ function MobileFocusedSkeleton() {
         <SkeletonBlock className="h-1.5 flex-1 rounded-full" />
         <SkeletonBlock className="h-2.5 w-8" />
       </div>
-      <TasksPanelSkeleton />
+      <TasksPanelSkeleton panelBody={panelBody} />
     </div>
   );
 }
@@ -496,9 +518,11 @@ function MobileFocusedSkeleton() {
 function DesktopFocusedSkeleton({
   knownCount,
   hideRails = false,
+  panelBody,
 }: {
   knownCount: number;
   hideRails?: boolean;
+  panelBody: PanelBody;
 }) {
   // Rails mirror WorkspaceDesktopFocused's split of the NON-selected
   // releases: ceiling on the left, floor on the right (count-aware,
@@ -543,7 +567,7 @@ function DesktopFocusedSkeleton({
             banner slot — the one-time NewReleaseGuide never shows during
             an initial load. */}
         <div className="flex min-h-0 min-w-0 flex-col">
-          <TasksPanelSkeleton />
+          <TasksPanelSkeleton panelBody={panelBody} />
         </div>
 
         {hideRails ? null : (
@@ -595,6 +619,20 @@ function BucketBodySkeleton() {
  * bigger lie than a slightly short list — and under-reserving grows downward,
  * which is the direction this file already prefers. Phases render EXPANDED as
  * of 2026-09-06, so this reserves real rows rather than collapsed headers. */
+/** A scene is coming, and which one is not this file's business — every scene
+ * section renders its own internal skeleton the moment it mounts. Reserving the
+ * header block and one body slab keeps the column from collapsing to nothing
+ * and then jumping, without pretending to know the shape. */
+function SceneBodySkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden="true">
+      <SkeletonBlock className="h-6 w-40 rounded-md" />
+      <SkeletonBlock className="h-4 w-64 rounded-md" />
+      <SkeletonBlock className="h-64 w-full rounded-xl" />
+    </div>
+  );
+}
+
 function TimelineBodySkeleton() {
   return (
     <>

@@ -44,6 +44,25 @@ import { calendarFontVariables } from '@/components/content-calendar/calendar-fo
  * this is the panel they drive.
  */
 
+/** The scenes the generic section below renders a body for. */
+const SECTION_SCENES = [
+  'metadata',
+  'song',
+  'coverart',
+  'files',
+  'pitch',
+  'capture',
+  'timeline',
+] as const;
+
+// No compile-time coverage check beside this list, deliberately. One was
+// written and then deleted: `SCENE_LABELS` is a `Record<SceneName, string>`,
+// and `SCENE_PERSISTED` and `ScenePayloadMap` are the same shape, so a name
+// added to `SceneName` already fails the build in three places before it
+// could reach here. Verified by mutation rather than assumed. The runtime bail
+// below is a different question and is NOT redundant — `activities` is a legal
+// `SceneName` a caller can pass today.
+
 const SCENE_LABELS: Record<SceneName, string> = {
   // Present for completeness only. The activity buckets never render through
   // this panel — they are chromeless, the way the timeline is when it is the
@@ -176,6 +195,17 @@ export function ReleaseScenePanel({
       </section>
     );
   }
+
+  // Every scene this generic section knows how to fill. `activities` is a
+  // SceneName with no body here on purpose — it IS the main view, so nothing
+  // routes it to this panel — and `plan` / `calendar` returned above.
+  //
+  // The bail matters because the failure without it is silent: an unhandled
+  // scene rendered this header with `SCENE_LABELS[scene]` resolving to
+  // undefined and nothing underneath, which reads as a broken page rather than
+  // a missing branch. Returning null hands the decision back to the caller,
+  // which falls through to the main view.
+  if (!(SECTION_SCENES as readonly string[]).includes(scene)) return null;
 
   return (
     <section aria-label={`${release.title} — ${SCENE_LABELS[scene]}`} className="min-w-0">

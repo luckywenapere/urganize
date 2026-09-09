@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { clearSceneScopedParams, SCENE_NAMES, type SceneName } from './useSceneOverlay';
-import { recallScene, rememberScene } from '@/lib/scene-memory';
+import { decideIncomingScene, recallScene, rememberScene } from '@/lib/scene-memory';
 
 /** The `?scene=` param, owned by useSceneOverlay — read here so the outgoing
  * release's current scene can be captured before it's overwritten below (see
@@ -50,6 +50,18 @@ export type SetScopeOptions = {
    * lib/scene-memory.
    */
   forgetScene?: boolean;
+  /**
+   * Show this scene on the release being scoped to, overriding whatever it
+   * was last showing. `null` forces the main view.
+   *
+   * The point is that it is ATOMIC. Before this existed, "go to release B and
+   * show scene S" meant setScope(B) followed by openScene(S, B) — two
+   * navigations, where the first one resolves the scene from memory and the
+   * second corrects it, so the wrong scene paints for a frame and either call
+   * can lose the race. Omit the field entirely to keep the resume behaviour;
+   * see decideIncomingScene for why absent and null differ.
+   */
+  scene?: SceneName | null;
 };
 
 export type ReleaseScope = {
@@ -84,26 +96,37 @@ export function useReleaseScope(): ReleaseScope {
       // warning as a false positive. Only clears on an actual change, so
       // re-scoping to the same release still resumes its calendar view.
       if (previousReleaseId !== releaseId) {
+        const urlScene = params.get(SCENE_PARAM);
+
         // Remember what the release we're LEAVING was showing (its `scene`
         // param, or none = Activities) before it's touched below — see
         // lib/scene-memory.ts. This and useSceneOverlay.openScene's matching
         // hook are the two "release is changing" choke points, the same pair
         // SCENE_SCOPED_PARAMS already uses.
         if (previousReleaseId) {
-          const outgoingScene = options?.forgetScene ? null : params.get(SCENE_PARAM);
+          const outgoingScene = options?.forgetScene ? null : urlScene;
           rememberScene(previousReleaseId, isSceneName(outgoingScene) ? outgoingScene : null);
         }
 
         clearSceneScopedParams(params);
 
-        // Resume whatever the release we're ENTERING last showed this
-        // session. A release never visited this session (or a fresh login,
-        // which wipes all of it — see resetSceneMemory) starts at
-        // Activities, matching a plain release-card click's existing
-        // default.
-        const resumedScene = releaseId ? recallScene(releaseId) : null;
-        if (resumedScene) {
-          params.set(SCENE_PARAM, resumedScene);
+        // WHICH SCENE THE INCOMING RELEASE SHOWS. The whole rule lives in
+        // lib/scene-memory.ts's decideIncomingScene — including the
+        // "only when scoping from nothing" condition on the URL scene — so
+        // that it can be tested without a DOM. This hook renders nothing and
+        // has no unit test of its own, so any decision left inline here is a
+        // decision nothing checks. Read that function before changing this.
+        const nextScene = releaseId
+          ? decideIncomingScene({
+              previousReleaseId,
+              urlScene,
+              ...(options && 'scene' in options ? { requested: options.scene ?? null } : {}),
+              remembered: recallScene(releaseId),
+            })
+          : null;
+
+        if (nextScene) {
+          params.set(SCENE_PARAM, nextScene);
         } else {
           params.delete(SCENE_PARAM);
         }
