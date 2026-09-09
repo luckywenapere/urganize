@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LegalSection as Section } from "../components/marketing/LegalSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { CUSTOMER_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 // noIndex: this page was outranking the homepage for the query "urganize" —
@@ -11,7 +12,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Privacy Policy",
   description:
-    "What Urganize collects, why, who processes it, and the choices you have.",
+    `What Urganize collects, why, who processes it, and the choices you have. The privacy policy for the ${CUSTOMER_LINE}.`,
   path: "/privacy",
   noIndex: true,
 });
@@ -83,8 +84,8 @@ export default function PrivacyPolicy() {
             <Section number="01" title="Who we are">
               <p>
                 Urganize (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
-                &ldquo;us&rdquo;) is a release management workspace for music
-                teams, operated by The Urganization Ltd, a company
+                &ldquo;us&rdquo;) is an AI Music Manager for artists, managers
+                and labels, operated by The Urganization Ltd, a company
                 registered in Nigeria.
               </p>
               <p>
@@ -115,13 +116,13 @@ export default function PrivacyPolicy() {
                 </strong>{" "}
                 Email address and password (or your Google account email if you
                 sign in with Google), your name and role if you provide them,
-                and your workspace settings.
+                and your team settings.
               </p>
               <p>
                 <strong className="text-[var(--marketing-text)]">
                   Setup answers.
                 </strong>{" "}
-                The questions we ask when you first set up your workspace: what
+                The questions we ask when you first set up your team: what
                 you&apos;re working on, where your releases usually fall apart,
                 what stage the release is at, and how you want releases
                 planned. We keep these to decide what to put in front of you
@@ -131,7 +132,7 @@ export default function PrivacyPolicy() {
                 <strong className="text-[var(--marketing-text)]">
                   Release data.
                 </strong>{" "}
-                Everything you put into the workspace: artists, releases,
+                Everything you put into Urganize: artists, releases,
                 dates, tasks, comments, event milestones, teammates you invite
                 (their email addresses), and the files you upload: masters,
                 artwork, contracts, split sheets.
@@ -224,7 +225,7 @@ export default function PrivacyPolicy() {
                 collect device identifiers and usage events.
               </p>
               <p>
-                The app also stores your session and some workspace state in
+                The app also stores your session and some app state in
                 your browser&apos;s local storage so it loads fast and keeps
                 you signed in. Clearing your browser storage signs you out.
               </p>

@@ -46,7 +46,7 @@ export function PlanReleaseCard({
   const copy = {
     fresh: {
       headline: "Let's plan this release.",
-      body: 'UrgAns drafts your rollout from the playbook that ships releases, using what this release already tells us. You approve every task before anything is scheduled.',
+      body: 'UrgAns drafts your rollout from the playbook that delivers releases, using what this release already tells us. You approve every task before anything is scheduled.',
       cta: 'Draft the plan',
     },
     draft: {

@@ -21,7 +21,7 @@ import { errorMessage } from '@/lib/errors';
 const PERKS = [
   'A hand-crafted release rollout plan',
   'Tasks with owners, due dates, and dependencies',
-  'Every release file in one workspace',
+  'Every release file in one place',
   'Milestones on your release timeline',
 ];
 
@@ -122,7 +122,7 @@ export default function RedeemPageClient() {
                   {success.freeDays ? ` — ${success.freeDays} days of full access` : ''}
                 </h1>
                 <p className="text-sm text-content-secondary">
-                  {success.label ? `${success.label}. ` : ''}Taking you to your workspace…
+                  {success.label ? `${success.label}. ` : ''}Taking you in…
                 </p>
               </div>
             ) : (

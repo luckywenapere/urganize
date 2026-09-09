@@ -41,7 +41,7 @@ import {
   type ChappiTool,
 } from './shared';
 
-const SHOWS_OFF = "Shows aren't switched on for this workspace yet.";
+const SHOWS_OFF = "Shows aren't switched on for your team yet.";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pure helpers

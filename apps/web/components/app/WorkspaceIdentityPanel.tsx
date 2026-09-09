@@ -451,7 +451,11 @@ export function WorkspaceIdentityPanel() {
 
   return (
     <aside
-      aria-label="Workspace"
+      // Named for what a screen reader should hear, which is not what this
+      // component is called (2026-09-09 positioning: never "workspace" in
+      // anything a person reads). Single-word strings are invisible to
+      // lib/copy-scan.ts by design, so this one was found by reading.
+      aria-label="Your team"
       // Height calc is copied from ChappiSidePanel so the two columns are the
       // same length: topbar 4rem + 1px border + <main>'s pt-5 (1.25rem) =
       // 5.25rem top offset; 100dvh minus that minus main's md:pb-10 (2.5rem)
@@ -483,7 +487,7 @@ export function WorkspaceIdentityPanel() {
       <div className="flex h-full flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface">
         <Link
           href="/settings"
-          title={collapsed ? name || "Your workspace" : undefined}
+          title={collapsed ? name || "Your team" : undefined}
           className={`motion-focus block shrink-0 transition-colors hover:bg-bg-hover ${
             collapsed ? "px-2 py-4" : "p-4"
           }`}
@@ -524,7 +528,7 @@ export function WorkspaceIdentityPanel() {
                   />
                 </div>
               )}
-              <span className="sr-only">{name || "Your workspace"}</span>
+              <span className="sr-only">{name || "Your team"}</span>
             </>
           ) : (
             <>
@@ -561,7 +565,7 @@ export function WorkspaceIdentityPanel() {
                 className="mt-3 truncate font-display text-sm text-content-primary"
                 title={name}
               >
-                {name || "Your workspace"}
+                {name || "Your team"}
               </p>
               <Suspense fallback={<ArtistLine label={rosterLabel} />}>
                 <ScopedArtistLine fallbackLabel={rosterLabel} />
@@ -584,7 +588,7 @@ export function WorkspaceIdentityPanel() {
           release surfaces above them take the remaining height and scroll on a
           short viewport rather than overflowing the fixed-height card. */}
         <nav
-          aria-label="Workspace navigation"
+          aria-label="Main navigation"
           className="flex min-h-0 flex-1 flex-col border-t border-stroke-subtle p-2"
         >
           {/* WorkspaceNavLinks needs useSearchParams (to find the currently
@@ -656,7 +660,7 @@ export function WorkspaceIdentityPanel() {
             type="button"
             onClick={toggleCollapsed}
             aria-expanded={!collapsed}
-            aria-label={collapsed ? "Expand workspace menu" : "Collapse workspace menu"}
+            aria-label={collapsed ? "Expand the menu" : "Collapse the menu"}
             title={collapsed ? "Expand menu" : "Collapse menu"}
             className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >

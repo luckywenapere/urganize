@@ -42,8 +42,8 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
   const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
   // URG-214: the identity card (mounted app-wide) keeps this store hydrated
-  // with the real workspace name — falls back to the generic "Workspace"
-  // label when the card's flag is off or hasn't loaded yet.
+  // with the real team name. Falls back to a generic "Your team" when the
+  // card's flag is off or hasn't loaded yet.
   const workspaceName = useWorkspaceIdentityStore((state) => state.name);
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -138,7 +138,7 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Workspace menu"
+        aria-label="Team menu"
         className="motion-focus motion-press grid h-10 w-10 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
       >
         {/* Person icon, not initials (founder call, 2026-07-23) — drawn in
@@ -150,7 +150,7 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
         <div
           ref={menuRef}
           role="menu"
-          aria-label="Workspace menu"
+          aria-label="Team menu"
           className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-60 origin-top-right overflow-hidden rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           {/* Stage 2: the "Lucky / Workspace" identity used to live in the
@@ -172,7 +172,7 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
                 {userName?.trim() || 'Urganize'}
               </p>
               <p className="truncate text-[11px] text-content-tertiary">
-                {workspaceName.trim() || 'Workspace'}
+                {workspaceName.trim() || 'Your team'}
               </p>
             </div>
           </div>

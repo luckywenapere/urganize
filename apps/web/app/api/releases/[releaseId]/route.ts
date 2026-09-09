@@ -104,11 +104,11 @@ async function loadReleaseRetentionSummary(
   }
 
   if (workspaceResult.error && !isMissingOptionalFeatureTable(workspaceResult.error)) {
-    throw new Error(workspaceResult.error.message || 'Could not load workspace.');
+    throw new Error(workspaceResult.error.message || 'Could not load your team.');
   }
 
   if (teamMembersResult.error && !isMissingOptionalFeatureTable(teamMembersResult.error)) {
-    throw new Error(teamMembersResult.error.message || 'Could not load workspace members.');
+    throw new Error(teamMembersResult.error.message || 'Could not load your team.');
   }
 
   if (taskCount === 0) {
@@ -132,7 +132,7 @@ async function loadReleaseRetentionSummary(
       suggestedAction: {
         type: 'invite_team',
         title: 'Invite your team to assign work',
-        description: 'Bring managers, publicists, and collaborators into the workspace so the release stops depending on one person.',
+        description: 'Bring managers, publicists and collaborators into your team so the release stops depending on one person.',
         ctaLabel: 'Invite artists, freelancers and team members',
         href: `/settings`,
       },

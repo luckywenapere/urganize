@@ -33,7 +33,7 @@ export async function requireLinkManager(
   const membership = access.memberships.find((item) => item.workspaceId === workspaceId) || null;
 
   if (!workspaceId || !membership) {
-    return { error: NextResponse.json({ error: 'Workspace not found.' }, { status: 404 }) };
+    return { error: NextResponse.json({ error: 'Team not found.' }, { status: 404 }) };
   }
   if (membership.role !== 'owner' && membership.role !== 'admin') {
     return {

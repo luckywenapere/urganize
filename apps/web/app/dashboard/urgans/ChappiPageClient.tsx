@@ -152,8 +152,8 @@ export default function ChappiPageClient() {
                 scopedReleaseId ? `/dashboard?release=${scopedReleaseId}` : '/dashboard'
               );
             }}
-            aria-label="Collapse into workspace"
-            title="Back to workspace"
+            aria-label="Collapse into the catalog"
+            title="Back to the catalog"
             className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />

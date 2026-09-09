@@ -156,7 +156,7 @@ export function RoadmapPageClient() {
               </h1>
               <p className="mt-4 text-[var(--marketing-text-muted)]">
                 Vote on what matters to you. The most-wanted ideas rise to the top. To see what
-                we&apos;ve shipped recently,{" "}
+                we&apos;ve delivered recently,{" "}
                 <Link href="/changelog" className="text-[var(--marketing-text)] underline underline-offset-2">
                   visit the changelog
                 </Link>
@@ -265,10 +265,10 @@ export function RoadmapPageClient() {
             )}
           </section>
 
-          {/* Shipped: muted footer strip, no voting. */}
+          {/* Delivered: muted footer strip, no voting. */}
           {shippedIdeas.length > 0 ? (
             <section className="mt-12">
-              <h2 className="mono-label text-[var(--marketing-text-subtle)]">Shipped</h2>
+              <h2 className="mono-label text-[var(--marketing-text-subtle)]">Delivered</h2>
               <ul className="mt-3 space-y-1.5">
                 {shippedIdeas.map((idea) => (
                   <li

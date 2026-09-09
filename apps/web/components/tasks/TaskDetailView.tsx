@@ -284,7 +284,7 @@ export function TaskDetailView({
         setInviteUrl(payload.inviteUrl);
         setInviteMessage('Invite link created — share it with your teammate.');
       } else {
-        setInviteMessage('Already a member of this workspace.');
+        setInviteMessage('Already on this team.');
       }
     } catch (err) {
       setInviteError(errorMessage(err, 'Could not invite teammate.'));

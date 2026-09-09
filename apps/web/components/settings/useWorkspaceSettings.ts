@@ -211,7 +211,7 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     setNameMessage('');
     const trimmed = nameInput.trim();
     if (!trimmed) {
-      setNameError('Workspace name cannot be empty.');
+      setNameError('Team name cannot be empty.');
       return;
     }
     if (trimmed === identityName) {
@@ -233,13 +233,13 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
       });
       const payload = (await response.json().catch(() => ({}))) as { name?: string; error?: string };
       if (!response.ok || typeof payload.name !== 'string') {
-        throw new Error(payload.error || 'Could not rename workspace.');
+        throw new Error(payload.error || 'Could not rename your team.');
       }
       setIdentityName(payload.name);
       setNameInput(payload.name);
-      setNameMessage('Workspace renamed.');
+      setNameMessage('Team renamed.');
     } catch (err) {
-      setNameError(errorMessage(err, 'Could not rename workspace.'));
+      setNameError(errorMessage(err, 'Could not rename your team.'));
     } finally {
       setIsSavingName(false);
     }

@@ -22,7 +22,7 @@ import {
   type ChappiTool,
 } from './shared';
 
-const ROSTER_OFF = "The artist roster isn't switched on for this workspace.";
+const ROSTER_OFF = "The artist roster isn't switched on for your team.";
 
 type Artist = { id: string; name: string; slug: string };
 

@@ -177,7 +177,7 @@ export function TeammatesSection({
             : 'Invite link created — share it with your teammate.'
         );
       } else {
-        setTeammateMessage('Already a member of this workspace.');
+        setTeammateMessage('Already on this team.');
       }
       // The route can't return a full member row for someone who hasn't
       // signed up yet, so refetch the list from the parent instead of

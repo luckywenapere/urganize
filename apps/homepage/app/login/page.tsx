@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { CUSTOMER_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { APP_LOGIN_URL, APP_PASSWORD_RESET_URL } from "@/lib/app-urls";
 
@@ -16,7 +17,7 @@ import { APP_LOGIN_URL, APP_PASSWORD_RESET_URL } from "@/lib/app-urls";
 export const metadata: Metadata = buildPageMetadata({
   title: "Log in",
   description:
-    "Log in to your Urganize workspace to pick up your releases, tasks and team activity.",
+    `Log in to Urganize, the ${CUSTOMER_LINE}, and pick up your releases, activities and team.`,
   path: "/login",
 });
 
@@ -34,9 +35,9 @@ export default function LoginPage() {
             Log in to Urganize
           </h1>
           <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-            Your workspace is at app.urganize.app. Sign in there to pick up
-            your releases, your activity list and whatever your team moved
-            since you last looked.
+            Urganize is at app.urganize.app. Sign in there to pick up your
+            releases, your activity list and whatever your team moved since
+            you last looked.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
@@ -61,7 +62,7 @@ export default function LoginPage() {
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
               If you created your account with Google, use the same Google
               button on the sign-in screen. Email and Google sign-in reach the
-              same workspace as long as the address matches.
+              same account as long as the address matches.
             </p>
           </section>
 
@@ -78,8 +79,8 @@ export default function LoginPage() {
                 create one here
               </Link>
               . If a teammate invited you, open the invite link they sent
-              instead — it joins you to their workspace rather than starting a
-              new one.
+              instead. It joins you to their team rather than starting a new
+              one.
             </p>
           </section>
         </div>

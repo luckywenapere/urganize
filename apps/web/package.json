@@ -1,5 +1,6 @@
 {
   "name": "@urganize/web",
+  "description": "AI Music Manager for artists, managers and labels. Plan, organize and execute releases from one place.",
   "version": "1.33.0",
   "private": true,
   "scripts": {

@@ -89,7 +89,7 @@ export function CuratorShell({ children }: { children: ReactNode }) {
       });
       const payload = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) {
-        throw new Error(payload?.error || 'Could not set up your workspace.');
+        throw new Error(payload?.error || 'Could not set up your team.');
       }
 
       // Force: the role just changed server-side, so the recency guard has to be
@@ -97,7 +97,7 @@ export function CuratorShell({ children }: { children: ReactNode }) {
       await checkAuth({ force: true });
       router.push(HOME_PATH);
     } catch (error) {
-      setActivationError(error instanceof Error ? error.message : 'Could not set up your workspace.');
+      setActivationError(error instanceof Error ? error.message : 'Could not set up your team.');
       setIsActivating(false);
     }
   };
@@ -135,7 +135,7 @@ export function CuratorShell({ children }: { children: ReactNode }) {
                   className="inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-default px-3 text-xs font-semibold text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
-                  Your workspace
+                  Your releases
                 </Link>
               )}
               <button

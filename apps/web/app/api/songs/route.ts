@@ -47,7 +47,7 @@ async function resolveArtist(
 ) {
   const access = await loadWorkspaceAccessContext(adminClient, user);
   if (!access.primaryWorkspaceId) {
-    return { error: NextResponse.json({ error: 'No workspace found.' }, { status: 400 }) };
+    return { error: NextResponse.json({ error: 'No team found.' }, { status: 400 }) };
   }
   const roster = await listWorkspaceArtists(adminClient, access.primaryWorkspaceId);
   const artist = roster.find((candidate) => candidate.id === artistId);

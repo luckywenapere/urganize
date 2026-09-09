@@ -69,7 +69,7 @@ export function FaqSection() {
               href="/changelog"
               className="text-[var(--marketing-text)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:decoration-[color:var(--marketing-text)]"
             >
-              {recentUpdates} updates shipped in the last 30 days
+              {recentUpdates} updates delivered in the last 30 days
             </a>
             .
           </p>

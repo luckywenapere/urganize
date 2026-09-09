@@ -105,7 +105,7 @@ async function loadWorkspaceContext(
       .maybeSingle(),
   ]);
 
-  const workspaceName = workspaceResult.data?.name || 'a workspace';
+  const workspaceName = workspaceResult.data?.name || 'a team';
   const ownerUserId = ownerProfileResult.data?.user_id || workspaceResult.data?.owner_id || null;
 
   let inviterName: string | null = null;
@@ -178,7 +178,7 @@ export async function GET(
     if (verdict.status === 'expired') {
       return NextResponse.json({
         status: 'expired',
-        workspaceName: 'a workspace',
+        workspaceName: 'a team',
         inviterName: null,
         invitedEmail: '',
         role: 'member',
@@ -203,7 +203,7 @@ export async function GET(
       if (link.revoked_at || isExpired(link.expires_at)) {
         return NextResponse.json({
           status: 'expired',
-          workspaceName: 'a workspace',
+          workspaceName: 'a team',
           inviterName: null,
           invitedEmail: '',
           role: link.role || 'member',

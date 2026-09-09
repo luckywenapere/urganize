@@ -3,12 +3,13 @@ import Link from "next/link";
 import { LegalSection as Section } from "../components/marketing/LegalSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { CUSTOMER_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Terms of Service",
   description:
-    "The terms that govern your use of Urganize: accounts, subscriptions, your content, and our responsibilities.",
+    `The terms that govern your use of Urganize, the ${CUSTOMER_LINE}: accounts, subscriptions, your content and our responsibilities.`,
   path: "/terms",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For managers / For labels). Noindex hides the page
@@ -47,8 +48,8 @@ export default function TermsPage() {
           <div className="mt-12">
             <Section number="01" title="Who we are">
               <p>
-                Urganize is a release management workspace for music teams,
-                operated by The Urganization Ltd, a company registered in
+                Urganize is an AI Music Manager for artists, managers and
+                labels, operated by The Urganization Ltd, a company registered in
                 Nigeria (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
                 &ldquo;us&rdquo;). The service runs at urganize.app and
                 app.urganize.app.
@@ -57,7 +58,7 @@ export default function TermsPage() {
 
             <Section number="02" title="The service">
               <p>
-                Urganize gives you a workspace to plan and run music releases:
+                Urganize gives you one place to plan and run music releases:
                 a rollout plan generated from our hand-crafted templates, tasks
                 with owners and dependencies, file storage per release, event
                 milestones, and optional AI assistance. We improve the product
@@ -113,9 +114,8 @@ export default function TermsPage() {
                 invite.
               </p>
               <p>
-                Workspaces are shared spaces. People you invite to your
-                workspace can see and work on its releases and tasks. Invite
-                accordingly.
+                Teams are shared. People you invite to your team can see and
+                work on its releases and tasks. Invite accordingly.
               </p>
               <p>
                 You are responsible for having the rights to what you upload.

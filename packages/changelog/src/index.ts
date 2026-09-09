@@ -26,6 +26,7 @@ export const changelog: Release[] = [
       "Hover a row in the side menu and it tells you what that page is for, in one plain line.",
       "The Metadata page is quieter. Every box has a small i beside it, so the explanation is there when you want it and out of the way when you don't.",
       "Shorter wording in a few more places, with the detail tucked behind the same small i.",
+      "The Settings tab holding your team name, logo and artists is called Profile now.",
     ],
   },
   {
