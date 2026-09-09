@@ -85,7 +85,7 @@ export default function GlobalError({
               color: 'rgba(245, 240, 230, 0.64)',
             }}
           >
-            Something went wrong before we could load your workspace. Reloading
+            Something went wrong before we could load Urganize. Reloading
             usually clears it. Nothing you have saved is affected.
           </p>
 

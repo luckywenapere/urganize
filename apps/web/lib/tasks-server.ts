@@ -529,8 +529,8 @@ const createWorkspaceName = (user: DatabaseUser, organizationName: string | null
     return normalizedOrgName;
   }
 
-  const emailHandle = readString(user.email).split('@')[0] || 'Workspace';
-  return `${emailHandle}'s Workspace`;
+  const emailHandle = readString(user.email).split('@')[0] || 'Team';
+  return `${emailHandle}'s Team`;
 };
 
 export function isTaskSchemaMissingError(error: unknown): boolean {
@@ -846,11 +846,11 @@ export async function ensureOwnedWorkspace(
         .maybeSingle();
 
       if (racedResult.error || !racedResult.data) {
-        throw racedResult.error || new Error('Could not create workspace.');
+        throw racedResult.error || new Error('Could not create your team.');
       }
       workspace = racedResult.data as WorkspaceRow;
     } else {
-      throw insertResult.error || new Error('Could not create workspace.');
+      throw insertResult.error || new Error('Could not create your team.');
     }
   }
 
@@ -1443,7 +1443,7 @@ export async function ensureWorkspaceAccess(
 ): Promise<{ access: WorkspaceAccessContext } | { error: NextResponse }> {
   const access = resolvedAccess ?? (await loadWorkspaceAccessContext(adminClient, user));
   if (!access.workspaceIds.includes(workspaceId)) {
-    return { error: NextResponse.json({ error: 'Workspace not found.' }, { status: 404 }) };
+    return { error: NextResponse.json({ error: 'Team not found.' }, { status: 404 }) };
   }
 
   return { access };
@@ -1456,7 +1456,7 @@ export async function ensureTaskAccess(
 ): Promise<{ task: TaskRow; access: WorkspaceAccessContext } | { error: NextResponse }> {
   const access = await loadWorkspaceAccessContext(adminClient, user);
   if (!access.workspaceIds.length) {
-    return { error: NextResponse.json({ error: 'Workspace not found.' }, { status: 404 }) };
+    return { error: NextResponse.json({ error: 'Team not found.' }, { status: 404 }) };
   }
 
   const result = await adminClient
@@ -1571,7 +1571,7 @@ export async function resolveReleaseTaskWorkspace(
   // to be a member of it. The previous implementation matched the caller's
   // own membership rows against the release owner's user id — every row's
   // userId is the CALLER's, so it only ever matched when the caller WAS the
-  // owner, and every non-owner teammate got "Release workspace not found."
+  // owner, and every non-owner teammate got "Could not find the team for this release."
   // (found in the 2026-07-23 collaboration audit).
   const ownerWorkspacesResult = await adminClient
     .from(WORKSPACES_TABLE)
@@ -1587,7 +1587,7 @@ export async function resolveReleaseTaskWorkspace(
     .find((id) => id && access.workspaceIds.includes(id));
 
   if (!releaseWorkspaceId) {
-    throw new Error('Release workspace not found.');
+    throw new Error('Could not find the team for this release.');
   }
 
   // Artist-scoped members only reach boards for THEIR artist's releases.
@@ -1596,7 +1596,7 @@ export async function resolveReleaseTaskWorkspace(
     artistScope &&
     String((releaseResult.data as { artist_id?: unknown }).artist_id || '') !== artistScope
   ) {
-    throw new Error('Release workspace not found.');
+    throw new Error('Could not find the team for this release.');
   }
 
   await createDefaultReleaseTaskGroups(adminClient, releaseWorkspaceId, releaseId);
@@ -2232,7 +2232,7 @@ export function isReadOnlyWorkspaceMember(
 
 export function buildReadOnlyResponse(): NextResponse {
   return NextResponse.json(
-    { error: 'Your role in this workspace is view-only.' },
+    { error: 'Your role on this team is view-only.' },
     { status: 403 }
   );
 }

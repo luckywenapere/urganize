@@ -33,13 +33,13 @@ export function WorkspaceIdentitySection({
 }: WorkspaceIdentitySectionProps) {
   return (
     <section className={panelClass}>
-      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Workspace identity</h2>
+      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Team name</h2>
       {/* Trimmed 2026-08-05 for the two-column row (shares one line with
           Workspace logo now): the heading already says "Workspace identity"
           and the input label right below says "Workspace name", so the old
           "Your label or team name," lead-in was redundant. */}
       <p className="mb-4 text-sm text-content-secondary">
-        Shown on the workspace card across the app.
+        Shown on the team card across the app.
       </p>
       {isLoading ? (
         <div className="space-y-2">
@@ -49,7 +49,7 @@ export function WorkspaceIdentitySection({
       ) : (
         <div className="space-y-3">
           <label className="block">
-            <span className="mb-1 block text-sm text-content-secondary">Workspace name</span>
+            <span className="mb-1 block text-sm text-content-secondary">Team name</span>
             <input
               value={input}
               onChange={(event) => onInputChange(event.target.value)}
@@ -66,7 +66,7 @@ export function WorkspaceIdentitySection({
             disabled={isSaving}
             className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
           >
-            {isSaving ? 'Saving…' : 'Save workspace name'}
+            {isSaving ? 'Saving…' : 'Save team name'}
           </button>
         </div>
       )}

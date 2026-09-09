@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
   const access = await loadWorkspaceAccessContext(adminClient, auth.user);
   if (!access.primaryWorkspaceId) {
-    return NextResponse.json({ error: 'No workspace found.' }, { status: 400 });
+    return NextResponse.json({ error: 'No team found.' }, { status: 400 });
   }
 
   // The artist has to be on the CALLER'S roster. Resolving it this way rather

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json(
-      { error: error.message || 'Could not set up your workspace.' },
+      { error: error.message || 'Could not set up your team.' },
       { status: 500 }
     );
   }

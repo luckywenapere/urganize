@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     // once already; this route just never got the same fix applied to it).
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
     const logo = await buildWorkspaceLogoPayload(adminClient, access.primaryWorkspaceId);
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ workspaceId: access.primaryWorkspaceId, logo });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not load workspace logo.' },
+      { error: error instanceof Error ? error.message : 'Could not load the team logo.' },
       { status: 500 }
     );
   }
@@ -103,7 +103,7 @@ export async function PUT(request: NextRequest) {
   try {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
     const workspaceId = access.primaryWorkspaceId;
 
@@ -128,7 +128,7 @@ export async function PUT(request: NextRequest) {
       // them, so drop them rather than leaving an orphan behind.
       await removeStorageObject(adminClient, storagePath);
       return NextResponse.json(
-        { error: 'storage_path does not belong to this workspace.' },
+        { error: 'storage_path does not belong to this team.' },
         { status: 400 }
       );
     }
@@ -177,7 +177,7 @@ export async function PUT(request: NextRequest) {
       // The bytes are already in storage. Drop them so the user can retry.
       await removeStorageObject(adminClient, storagePath);
       return NextResponse.json(
-        { error: updateResult.error.message || 'Could not save workspace logo.' },
+        { error: updateResult.error.message || 'Could not save the team logo.' },
         { status: 500 }
       );
     }
@@ -190,7 +190,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ workspaceId, logo });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not save workspace logo.' },
+      { error: error instanceof Error ? error.message : 'Could not save the team logo.' },
       { status: 500 }
     );
   }
@@ -209,7 +209,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
     const workspaceId = access.primaryWorkspaceId;
     const previousLogo = await getWorkspaceLogo(adminClient, workspaceId);
@@ -226,7 +226,7 @@ export async function DELETE(request: NextRequest) {
 
       if (updateResult.error) {
         return NextResponse.json(
-          { error: updateResult.error.message || 'Could not remove workspace logo.' },
+          { error: updateResult.error.message || 'Could not remove the team logo.' },
           { status: 500 }
         );
       }
@@ -238,7 +238,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ workspaceId, logo: null });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not remove workspace logo.' },
+      { error: error instanceof Error ? error.message : 'Could not remove the team logo.' },
       { status: 500 }
     );
   }

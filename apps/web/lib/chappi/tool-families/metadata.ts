@@ -20,7 +20,7 @@ import {
  * is off. Without translating that, the model would report it the same way it
  * reports ensureReleaseOwnership's 'Release not found.' and tell the user their
  * release does not exist. The create_note precedent. */
-const METADATA_OFF = 'Release details are not switched on for this workspace.';
+const METADATA_OFF = 'Release details are not switched on for your team.';
 
 /** The exact allowlist PATCH …/metadata accepts, in the order the form shows
  * them. Anything outside this is not writable through that route. */
@@ -115,7 +115,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
       });
       if (isFlagGateOff(current)) return fail(METADATA_OFF);
       if (!current.ok) {
-        return fail(apiError(current, 'That release was not found in your workspace.'));
+        return fail(apiError(current, 'That release was not found on your team.'));
       }
       const existing = (current.body.metadata ?? {}) as Record<string, unknown>;
 

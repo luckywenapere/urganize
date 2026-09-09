@@ -181,8 +181,8 @@ function ContextTitle() {
 const CatalogLinkFallback = (
   <Link
     href="/dashboard"
-    aria-label="Workspace"
-    title="Workspace"
+    aria-label="Catalog"
+    title="Catalog"
     className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary`}
   >
     <CatalogIcon className="h-[18px] w-[18px]" />
@@ -244,8 +244,8 @@ function CatalogTopbarAction() {
       <button
         type="button"
         onClick={() => router.push('/dashboard/urgans')}
-        aria-label="Workspace"
-        title="Workspace"
+        aria-label="Catalog"
+        title="Catalog"
         aria-pressed
         className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand transition-colors`}
       >
@@ -262,8 +262,8 @@ function CatalogTopbarAction() {
       // One of five surfaces that make the same move — see
       // lib/catalog-intent.ts. Safe from any page, scoped or not.
       onClick={leaveReleaseForCatalog}
-      aria-label="Workspace"
-      title="Workspace"
+      aria-label="Catalog"
+      title="Catalog"
       className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
         pathname === '/dashboard'
           ? 'bg-brand/10 text-brand'

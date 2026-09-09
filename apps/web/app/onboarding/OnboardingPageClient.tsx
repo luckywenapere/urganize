@@ -670,7 +670,7 @@ export default function OnboardingPage() {
       const accessToken = await getAccessToken();
       await runPostSignupHandoff(accessToken);
     } catch (handoffError) {
-      setError(errorMessage(handoffError, 'Could not finish creating your workspace.'));
+      setError(errorMessage(handoffError, 'Could not finish creating your team.'));
       setProgressMessage('');
       setIsSubmitting(false);
     }
@@ -699,7 +699,7 @@ export default function OnboardingPage() {
       const accessToken = await getAccessToken();
       await runPostSignupHandoff(accessToken);
     } catch (handoffError) {
-      setError(errorMessage(handoffError, 'Could not finish setting up your workspace.'));
+      setError(errorMessage(handoffError, 'Could not finish setting up your team.'));
       setProgressMessage('');
       setIsSubmitting(false);
     }
@@ -802,7 +802,7 @@ export default function OnboardingPage() {
 
         await runPostSignupHandoff(accessToken);
       } catch (handoffError) {
-        setError(errorMessage(handoffError, 'Could not finish setting up your workspace.'));
+        setError(errorMessage(handoffError, 'Could not finish setting up your team.'));
         setProgressMessage('');
         setIsSubmitting(false);
       } finally {
@@ -1022,7 +1022,7 @@ export default function OnboardingPage() {
               <p className="text-sm leading-relaxed text-content-secondary">
                 Urganize is built around a single artist. Pick the release for that artist. Only release
                 types backed by a working playbook are selectable; others are marked &quot;coming soon&quot;
-                until their template ships.
+                until their template is ready.
               </p>
               <div className="space-y-2">
                 {ONBOARDING_RELEASE_TYPES.map((option) => {
@@ -1411,7 +1411,7 @@ export default function OnboardingPage() {
             <div className="mt-5 space-y-5">
               <p className="text-sm leading-relaxed text-content-secondary">
                 Optional. Bring the people who&apos;ll touch this release with you. We&apos;ll email them
-                an invite to join your workspace. You can do this later from Settings.
+                an invite to join your team. You can do this later from Settings.
               </p>
               <div className="space-y-3">
                 {inviteRows.map((row, index) => (

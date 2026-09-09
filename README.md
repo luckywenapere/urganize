@@ -1,6 +1,6 @@
 # Urganize
 
-Urganize is operational infrastructure for music industry teams. v1 is a **release management workspace**: the system of record for a music release — where the plan lives, where the work happens, where the team sees status.
+Urganize is an **AI Music Manager** for artists, managers and labels. It helps music teams plan releases, coordinate people, manage assets and metadata, track execution and keep every part of a rollout moving from one place.
 
 The target user is an independent music manager handling 1–3 artists, planning their next release in the next 90 days. The central object is the release; every feature ties back to one.
 
@@ -17,7 +17,7 @@ The target user is an independent music manager handling 1–3 artists, planning
 
 ## Repository layout
 
-pnpm workspace + Turborepo monorepo with two deployable apps:
+pnpm + Turborepo monorepo with two deployable apps:
 
 ```
 urganize/
@@ -72,7 +72,7 @@ All root scripts fan out through Turborepo:
 |---|---|
 | `pnpm dev` | Dev servers for both apps |
 | `pnpm build` | Production build (type-checks everything, including test files) |
-| `pnpm lint` | ESLint across the workspace |
+| `pnpm lint` | ESLint across the monorepo |
 | `pnpm test` | Vitest unit tests (`apps/web/lib/*.test.ts`) |
 
 Scope to one app with `pnpm --filter @urganize/web <script>` or `--filter @urganize/homepage`.

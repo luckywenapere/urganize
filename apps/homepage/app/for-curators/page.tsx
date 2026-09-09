@@ -9,12 +9,13 @@ import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { CUSTOMER_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Urganize for playlist curators",
+  title: "For playlist curators",
   description:
-    "One inbox for the songs people pitch you. List your playlists, read the note, answer New, Listened, Added or Passed in one tap. Free for curators and nothing connects to your playlist.",
+    `One inbox for the songs people pitch you, inside Urganize, the ${CUSTOMER_LINE}. Answer in one tap. Free for curators, and nothing connects to your playlist.`,
   path: "/for-curators",
 });
 
@@ -34,8 +35,10 @@ export const metadata: Metadata = buildPageMetadata({
 // MAX_WAITING_PITCHES_PER_RELEASE (10), PITCH_PLATFORM_LABELS and
 // PITCH_STATUS_LABELS. If any of those move, move this copy with them.
 //
-// Language rules (founder brief, 2026-08-19): no "system of record", no
-// container metaphors, fifth-grader readability, no Oxford comma.
+// Language rules (founder brief, 2026-09-09): never "workspace", never
+// "ship", no "system of record", fifth-grader readability, no Oxford comma.
+// The 2026-08-19 ban on container metaphors is the one rule that flipped:
+// "from one place" is the product's own promise now.
 const valueBlocks = [
   {
     kicker: "The inbox",

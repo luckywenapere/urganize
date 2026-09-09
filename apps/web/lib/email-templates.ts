@@ -55,7 +55,7 @@ function escapeHtml(value: string): string {
 }
 
 export function buildWorkspaceInviteEmail(input: WorkspaceInviteEmailInput): BuiltEmail {
-  const workspace = input.workspaceName.trim() || 'a workspace';
+  const workspace = input.workspaceName.trim() || 'a team';
   const inviter = input.inviterLabel.trim() || 'A teammate';
   const access = input.accessLabel.trim() || 'access';
   const url = input.inviteUrl;
@@ -65,7 +65,7 @@ export function buildWorkspaceInviteEmail(input: WorkspaceInviteEmailInput): Bui
   const text = [
     `${inviter} invited you to join ${workspace} on Urganize.`,
     '',
-    'Urganize is where the team runs a release — the plan, the work, and who',
+    'Urganize is where the team runs a release: the plan, the work, and who',
     'is doing what, in one place.',
     '',
     `You'll have ${access}.`,
@@ -100,7 +100,7 @@ ${escapeHtml(`${inviter} invited you to join ${workspace} on Urganize.`)}
         ${escapeHtml(inviter)} invited you to ${escapeHtml(workspace)}
       </h1>
       <p style="margin:0 0 22px;color:${BODY_TEXT};font-size:15px;line-height:1.6;">
-        Urganize is where the team runs a release &mdash; the plan, the work, and who
+        Urganize is where the team runs a release: the plan, the work, and who
         is doing what, in one place. You&rsquo;ll have ${escapeHtml(access)}.
       </p>
       <a href="${escapeHtml(url)}"

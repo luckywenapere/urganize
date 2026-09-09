@@ -59,7 +59,7 @@ export async function PATCH(
   try {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
     // Authorize by reading the caller's OWN roster and looking for this id,
@@ -123,7 +123,7 @@ export async function DELETE(
   try {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
     // Same authorization shape as PATCH: read the caller's OWN roster and look

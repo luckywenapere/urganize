@@ -11,22 +11,24 @@ import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { TESTIMONIALS } from "@/content/testimonials";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Urganize for music executives",
+  title: "For roster teams",
   description:
-    "Urganize is the AI workspace for music executives. Every release runs on the same plan, every activity has an owner and you see where all of them stand without chasing anyone.",
+    `Urganize is an ${PRODUCT_CATEGORY} for teams running a roster. Every release runs on the same plan, every activity has an owner, and you see where all of them stand without chasing anyone.`,
   path: "/for-executives",
 });
 
-// This is the persona page for the LOCKED positioning (founder brief,
-// 2026-08-19): "Urganize is the AI workspace for music executives working
-// with ambitious artists." Executives — label heads, A&R, VP Ops — are the
-// buyer and the hero; /for-managers and /for-labels are the two adjacent
-// entry points, not competing heroes. If the positioning ever moves, this
-// page moves with it first.
+// This is the persona page for the team running a roster. It was written for
+// the 2026-08-19 positioning, which made executives the hero and is now
+// superseded: the 2026-09-09 brief puts artists first in the audience and
+// retires the job titles that brief used to name this reader. So the page
+// keeps its route (a live URL is not a copy decision) and speaks to the WORK
+// of running several artists rather than to a title. /for-managers and
+// /for-labels are the two adjacent entry points, not competing heroes.
 //
 // Same honesty rule as every other marketing page: every claim below
 // describes the product as it ships today. Nothing here promises AI
@@ -37,14 +39,15 @@ export const metadata: Metadata = buildPageMetadata({
 // keeps the approved positioning wording (it mirrors LANDING_DESCRIPTION in
 // lib/seo.ts) rather than inventing a new AI claim.
 //
-// Language rules from the same brief: no "system of record", no container
-// metaphors ("one home", "lives in one place"), "workspace" is fine,
-// fifth-grader readability, no Oxford comma in house copy.
+// Language rules (2026-09-09): never "workspace", never "ship", no "system
+// of record", fifth-grader readability, no Oxford comma in house copy. The
+// earlier ban on container metaphors is the one rule that flipped, since
+// "from one place" is now the product's own promise.
 const valueBlocks = [
   {
     kicker: "The plan",
     title: "Every release runs the same way, whoever runs it.",
-    body: "Create a release and Urganize lays out the whole rollout, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Your newest manager ships a release the same way your best one does, and anyone can edit or delete an activity that does not apply.",
+    body: "Create a release and Urganize lays out the whole rollout, sized to the format: 64 activities for a single, 90 for an EP, 113 for an album. Your newest manager delivers a release the same way your best one does, and anyone can edit or delete an activity that does not apply.",
     points: [
       "One template, shaped for each release",
       "Every activity dated around that release day",
@@ -62,7 +65,7 @@ const compactBlocks = [
   {
     kicker: "Status",
     title: "Walk into the meeting already knowing.",
-    body: "One workspace shows every release you have going: progress, what is overdue and what is due this week. You stop booking a call just to find out where things stand.",
+    body: "One list shows every release you have going: progress, what is overdue and what is due this week. You stop booking a call just to find out where things stand.",
   },
   {
     kicker: "Press kit",
@@ -84,7 +87,7 @@ export default function ForExecutivesPage() {
         >
           <div className="mx-auto max-w-[46rem] text-center">
             <p className="mono-label text-[var(--marketing-text-subtle)]">
-              For music executives
+              For roster teams
             </p>
             {/* The hero line is the OG card's baked tagline (see
                 SHARE_IMAGE in lib/seo.ts). Same words on the card and on

@@ -682,7 +682,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       appendAssistantReply('That did not go through. Nothing was changed.');
     } catch {
       appendAssistantReply(
-        'Something went wrong confirming that. Check your workspace — it may or may not have gone through.'
+        'Something went wrong confirming that. Check your release, it may or may not have gone through.'
       );
     } finally {
       setIsThinking(false);

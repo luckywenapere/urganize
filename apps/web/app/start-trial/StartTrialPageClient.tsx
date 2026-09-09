@@ -53,7 +53,7 @@ type AccessSnapshot = {
 
 const VALUE_BULLETS = [
   'A full rollout plan for your release, built from a proven playbook.',
-  'Every task, file and teammate for the release in one workspace.',
+  'Every activity, file and teammate for the release in one place.',
   'You will not be charged during the trial — cancel anytime in Settings.',
 ];
 

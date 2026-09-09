@@ -72,7 +72,7 @@ export async function POST(
     // release, so that exception cannot apply.
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
     const roster = await listWorkspaceArtists(adminClient, access.primaryWorkspaceId);

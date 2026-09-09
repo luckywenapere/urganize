@@ -44,7 +44,7 @@ export const ROADMAP_STATUS_LABELS: Record<RoadmapIdeaStatus, string> = {
   under_consideration: 'Under consideration',
   planned: 'Planned',
   in_progress: 'In progress',
-  shipped: 'Shipped',
+  shipped: 'Delivered',
   declined: 'Declined',
 };
 

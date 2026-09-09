@@ -29,6 +29,8 @@ import {
   creditsCsvFileName,
 } from '@/lib/credit-submissions-csv';
 import { shareOrDownloadTextFile } from '@/lib/share-file';
+import { HelpTip } from '@/components/shared/HelpTip';
+import { HELP_COPY, type HelpKey } from '@/lib/help-copy';
 import { useSceneData } from './useSceneData';
 import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneDataStore';
 
@@ -612,12 +614,14 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
 
   return (
     <div className="mt-8 space-y-4">
-      {/* One plain sentence saying what this whole page is for AND how to use
-          it — the interaction itself ("tap a step") is part of the 5th-grader
-          bar, not just the vocabulary (founder feedback, round two, 2026-08-25). */}
+      {/* ROUND FOUR (2026-09-08): one sentence, down from three. The other two
+          said "tap a step to open it" and "nothing here is required" — the
+          first is what a row of chevrons already communicates, and the second
+          is now on the step that actually has the fields, where it is true and
+          useful rather than a blanket disclaimer read before anything is on
+          screen. */}
       <p className="text-sm leading-relaxed text-content-secondary">
-        Everything music stores need for this song, in three steps. Tap a step to open it. Nothing
-        here is required.
+        Everything music stores need for this song, in three steps.
       </p>
 
       {loadError && !data ? (
@@ -695,9 +699,13 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
             </button>
             {openSteps.details ? (
               <div id={detailsBodyId} className="p-4">
+                {/* The visible line says what to DO; the pullout says who is
+                    asking and why. Complementary rather than the same sentence
+                    twice — see the Field docblock for the same split applied to
+                    each of the nine boxes below. */}
                 <p className="text-sm text-content-secondary">
-                  Music stores like Spotify and Apple ask for these when a song goes out. Every field
-                  is optional, so fill in what you know now and come back for the rest.
+                  Every box is optional. Fill in what you know now.{' '}
+                  <HelpTip helpKey="metadata.step.details" className="align-text-bottom" />
                 </p>
 
                 {isLoading ? (
@@ -710,7 +718,7 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
                   <div className="mt-4 grid grid-cols-1 gap-4 border border-stroke-default bg-bg-surface p-4 sm:grid-cols-2">
                     <Field
                       label="Genre"
-                      hint="The main style of the music, like Afrobeats or Hip-hop."
+                      help="metadata.field.genre"
                       value={form.genre}
                       onChange={(v) => editForm((f) => ({ ...f, genre: v }))}
                       labelAction={
@@ -747,51 +755,51 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
                     />
                     <Field
                       label="Subgenre"
-                      hint="A more specific style, like Amapiano or Drill. Leave blank if none fits."
+                      help="metadata.field.subgenre"
                       value={form.subgenre}
                       onChange={(v) => editForm((f) => ({ ...f, subgenre: v }))}
                     />
                     <Field
                       label="Language"
-                      hint="The language of the lyrics, like English or Yoruba."
+                      help="metadata.field.language"
                       value={form.language}
                       onChange={(v) => editForm((f) => ({ ...f, language: v }))}
                     />
                     <Field
                       label="Label name"
-                      hint="The label putting this out. Use the artist's name if there's no label."
+                      help="metadata.field.labelName"
                       value={form.labelName}
                       onChange={(v) => editForm((f) => ({ ...f, labelName: v }))}
                     />
                     <Field
                       label="ISRC"
-                      hint="The ID code for this one recording. Your distributor gives it to you — leave blank if you don't have it yet."
+                      help="metadata.field.isrc"
                       value={form.isrc}
                       onChange={(v) => editForm((f) => ({ ...f, isrc: v }))}
                     />
                     <Field
                       label="UPC"
-                      hint="The barcode number for the whole release. Also from your distributor."
+                      help="metadata.field.upc"
                       value={form.upc}
                       onChange={(v) => editForm((f) => ({ ...f, upc: v }))}
                     />
                     <Field
                       label="ISWC"
-                      hint="The ID code for the song itself, not the recording. Your publisher or royalty society gives it to you. Leave blank if you don't have it yet."
+                      help="metadata.field.iswc"
                       placeholder="T-123456789-1"
                       value={form.iswc}
                       onChange={(v) => editForm((f) => ({ ...f, iswc: v }))}
                     />
                     <Field
-                      label="℗ line (who owns the recording)"
-                      hint="The year, then whoever owns the recording."
+                      label="℗ line"
+                      help="metadata.field.pLine"
                       placeholder="℗ 2026 Some Label"
                       value={form.pLine}
                       onChange={(v) => editForm((f) => ({ ...f, pLine: v }))}
                     />
                     <Field
-                      label="© line (who owns the words and artwork)"
-                      hint="The year, then whoever owns the song itself."
+                      label="© line"
+                      help="metadata.field.cLine"
                       placeholder="© 2026 Some Label"
                       value={form.cLine}
                       onChange={(v) => editForm((f) => ({ ...f, cLine: v }))}
@@ -862,10 +870,12 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
             </button>
             {openSteps.credits ? (
               <div id={creditsBodyId} className="p-4">
+                {/* Four sentences until 2026-09-08, and the worst in the file.
+                    One stays visible (what to do with the link); who fills it
+                    in and the no-account part moved into the pullout. */}
                 <p className="text-sm text-content-secondary">
-                  Anyone who worked on this song, like producers, writers and engineers, fills out
-                  one short form. Copy the link and send it to them on WhatsApp, text or email. They
-                  don&rsquo;t need an account. One link works for everyone.
+                  Copy the link and send it to anyone who worked on this song.{' '}
+                  <HelpTip helpKey="metadata.step.credits" className="align-text-bottom" />
                 </p>
 
                 {isLoading ? (
@@ -969,10 +979,17 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
                         </button>
                       </div>
                     </div>
+                    {/* TRIMMED, NOT PULLED (2026-09-08). Three sentences per
+                        branch became two. This one deliberately does NOT move
+                        behind a pullout, unlike the field hints above: it is the
+                        difference between two actions a person is about to take,
+                        one of which kills a link that may already be in
+                        somebody's inbox. A choice with a consequence stays on
+                        screen. */}
                     <p className="mt-3 text-xs text-content-tertiary">
                       {isLinkClosed
-                        ? 'This link is closed. Anyone who opens it sees a short "this request is closed" note instead of the form. Tap Reopen link to start collecting again.'
-                        : 'Done collecting? Tap Close link and the form stops taking answers, without breaking the link. Regenerate instead if you need a brand new one: the old link stops working right away, and answers you already collected are safe.'}
+                        ? 'This link is closed. Tap Reopen link and it starts taking answers again.'
+                        : 'Close link stops new answers without breaking the link. Regenerate makes a new one, and the old stops working right away.'}
                     </p>
                   </div>
                 )}
@@ -1020,8 +1037,13 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
                 {submissions.length === 0 ? (
                   <p className="text-sm text-content-secondary">
                     {link
-                      ? 'Nothing yet. Once you share the link, each person’s answer shows up here on its own.'
-                      : 'Create the link in step 2 first, then share it. Answers show up here as they come in.'}
+                      ? 'Nothing yet. Answers show up here on their own.'
+                      : 'Create the link in step 2 first, then share it.'}{' '}
+                    {/* Only in the empty state, deliberately: once answers are
+                        on screen, what the list holds is self-evident and the
+                        pullout would be explaining something the user can
+                        already read. */}
+                    <HelpTip helpKey="metadata.step.answers" className="align-text-bottom" />
                   </p>
                 ) : (
                   <>
@@ -1086,64 +1108,77 @@ function Field({
   onChange,
   placeholder,
   labelAction,
-  hint,
+  help,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   labelAction?: React.ReactNode;
-  /** Plain-English explanation of what the field wants. Sits under the input
-   * and is wired up with aria-describedby, so a screen reader hears it too. */
-  hint?: string;
+  /** The explanation of what this field wants, offered behind a pullout beside
+   * the label rather than printed under the input (founder ask, 2026-09-08).
+   *
+   * Nine fields each printing a sentence of grey text under a two-column grid
+   * was the wall this replaced: the explanations were good, and having all nine
+   * on screen at once meant none of them got read.
+   *
+   * SIGHTED USERS GET THE PULLOUT; SCREEN READERS STILL GET THE SENTENCE. The
+   * same text renders as an `sr-only` paragraph wired to the input with
+   * aria-describedby, exactly as the old visible hint was — moving an
+   * explanation behind a hover would otherwise have taken it away entirely from
+   * the people who cannot see the icon. Both read from one HELP_COPY entry, so
+   * they cannot drift. */
+  help?: HelpKey;
 }) {
   const inputId = useId();
   const hintId = `${inputId}-hint`;
+  const helpText = help ? HELP_COPY[help].text : null;
   const input = (
     <input
       id={inputId}
       type="text"
       value={value}
       placeholder={placeholder}
-      aria-describedby={hint ? hintId : undefined}
+      aria-describedby={helpText ? hintId : undefined}
       onChange={(event) => onChange(event.target.value)}
       className="mt-1 w-full border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
     />
   );
-  const hintLine = hint ? (
-    <p id={hintId} className="mt-1 text-xs leading-snug text-content-tertiary">
-      {hint}
+  const srHint = helpText ? (
+    <p id={hintId} className="sr-only">
+      {helpText}
     </p>
   ) : null;
 
-  // With a label action, the wrapper becomes a div and the label text an
-  // explicit <label htmlFor> — a button must not nest inside a <label>, or
-  // clicking it would also activate the labelled input.
-  if (labelAction) {
+  // A <button> must not nest inside a <label>, or activating it would also
+  // activate the labelled input — so any field carrying a pullout or an action
+  // uses an explicit <label htmlFor> in a row instead of a wrapping label. The
+  // pullout counts as a button, which is why this is now the common case
+  // rather than labelAction's special one.
+  if (help || labelAction) {
     return (
       <div className="block text-sm">
         <div className="flex items-center justify-between gap-2">
-          <label htmlFor={inputId} className="text-xs text-content-tertiary">
-            {label}
-          </label>
+          <span className="flex min-w-0 items-center gap-1">
+            <label htmlFor={inputId} className="truncate text-xs text-content-tertiary">
+              {label}
+            </label>
+            {help ? <HelpTip helpKey={help} /> : null}
+          </span>
           {labelAction}
         </div>
         {input}
-        {hintLine}
+        {srHint}
       </div>
     );
   }
 
   return (
     <div className="block text-sm">
-      {/* An explicit <label htmlFor> rather than a wrapping <label>: the hint
-          is a sibling paragraph, and wrapping it would make the hint text part
-          of the input's clickable label. */}
       <label htmlFor={inputId} className="text-xs text-content-tertiary">
         {label}
       </label>
       {input}
-      {hintLine}
     </div>
   );
 }

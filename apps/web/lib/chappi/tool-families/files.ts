@@ -32,8 +32,8 @@ import {
   type ChappiTool,
 } from './shared';
 
-const COVER_ART_OFF = "Cover art isn't switched on for this workspace yet.";
-const FILES_OFF = "Release files aren't switched on for this workspace yet.";
+const COVER_ART_OFF = "Cover art isn't switched on for your team yet.";
+const FILES_OFF = "Release files aren't switched on for your team yet.";
 
 export const FILE_TOOLS: ChappiTool[] = [
   {

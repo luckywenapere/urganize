@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   try {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
     const artists = await listWorkspaceArtists(adminClient, access.primaryWorkspaceId);
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
   try {
     const access = await loadWorkspaceAccessContext(adminClient, auth.user);
     if (!access.primaryWorkspaceId) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
     // Validation before the ceiling, so an empty name is answered as the

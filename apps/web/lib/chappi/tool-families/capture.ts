@@ -36,7 +36,7 @@ import {
   type ChappiTool,
 } from './shared';
 
-const CAPTURE_OFF = "Fan capture isn't switched on for this workspace yet.";
+const CAPTURE_OFF = "Fan capture isn't switched on for your team yet.";
 
 type CaptureResponse = {
   page?: ReleaseCapturePage | null;

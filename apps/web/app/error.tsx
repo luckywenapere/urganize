@@ -61,7 +61,7 @@ export default function AppError({
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-content-secondary">
           Not something you did. Try it again — if it keeps happening, the rest of
-          your workspace is still fine, so head back and carry on there.
+          your work is still fine, so head back and carry on there.
         </p>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">

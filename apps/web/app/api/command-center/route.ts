@@ -39,7 +39,7 @@ const toActivity = (
   taskId: row.task_id ? String(row.task_id) : null,
   actorName: resolveActorName(row, actorProfileById),
   action: String(row.action || 'updated'),
-  message: String(row.message || 'Workspace activity recorded'),
+  message: String(row.message || 'Activity recorded'),
   createdAt: String(row.created_at || new Date().toISOString()),
 });
 

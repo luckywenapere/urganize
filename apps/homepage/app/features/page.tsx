@@ -7,12 +7,13 @@ import { TrialButton } from "../components/landing/TrialButton";
 import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Features",
   description:
-    "What Urganize does: a rollout plan for every release, activities your team owns and a press kit you send as one link. Plus UrgAns, the assistant in your workspace.",
+    `What your ${PRODUCT_CATEGORY} does: a rollout plan for every release, activities your team owns and a press kit you send as one link. Plus UrgAns.`,
   path: "/features",
 });
 
@@ -77,7 +78,7 @@ const compactFeatures = [
   {
     kicker: "Assistant",
     title: "UrgAns handles the small stuff.",
-    body: "Tell the assistant built into your workspace what you need. Create a release, add an activity, mark something done. Type it and it happens.",
+    body: "Tell UrgAns, the personal AI for music professionals inside Urganize, what you need. Create a release, add an activity, mark something done. Type it and it happens.",
   },
   {
     kicker: "Milestones",
@@ -87,7 +88,7 @@ const compactFeatures = [
   {
     kicker: "Visibility",
     title: "Know where every release stands.",
-    body: "One workspace shows every release you have going: progress, what's overdue and what's due this week. No meeting needed.",
+    body: "One list shows every release you have going: progress, what's overdue and what's due this week. No meeting needed.",
   },
 ] as const;
 
@@ -115,13 +116,14 @@ export default function FeaturesPage() {
                 Nothing it doesn&apos;t.
               </span>
             </h1>
-            {/* Executive repositioning (2026-08-19): the old subhead
-                addressed the artist ("your music") and used the banned
-                "live in one place" container metaphor. "Workspace" is the
-                one allowed place-word. */}
+            {/* The 2026-08-19 brief banned container metaphors ("live in one
+                place") and allowed "workspace" as the one place-word. The
+                2026-09-09 positioning REVERSES both halves: "workspace" is
+                banned in anything a person reads, and "from one place" is the
+                product's own promise, so it is the sanctioned phrasing now. */}
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">
               Urganize runs the plan, the work and the status for every
-              release in one workspace.
+              release from one place.
             </p>
             {/* CTA moved into the hero (2026-08-05, URG-218): the page
                 previously had no ask until the very bottom, ~7 screens

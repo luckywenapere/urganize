@@ -16,7 +16,7 @@ export const TEAM_TOOLS: ChappiTool[] = [
     name: 'list_workspace_members',
     kind: 'read',
     description:
-      'List the teammates in the workspace with their user ids. Use this to resolve a person\'s name to the assigneeId that create_task and update_task need.',
+      'List the teammates on your team with their user ids. Use this to resolve a person\'s name to the assigneeId that create_task and update_task need.',
     inputSchema: { type: 'object', properties: {} },
     execute: async (ctx) => {
       const res = await callInternalApi(ctx, '/api/workspace/members', { method: 'GET' });
@@ -46,7 +46,7 @@ export const TEAM_TOOLS: ChappiTool[] = [
     name: 'invite_teammate',
     kind: 'mutate',
     description:
-      'Invite someone to the workspace by email. Requires the user to approve a confirmation card — calling this only proposes it, and the invite email is not sent until they approve.',
+      'Invite someone to your team by email. Requires the user to approve a confirmation card — calling this only proposes it, and the invite email is not sent until they approve.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -77,7 +77,7 @@ export const TEAM_TOOLS: ChappiTool[] = [
       const canEmail = isEmailConfigured();
       return {
         ok: true,
-        title: `Invite ${email} to the workspace?`,
+        title: `Invite ${email} to your team?`,
         detail: canEmail
           ? `They will get an email with a join link, and ${access} once they accept.`
           : `This creates a single-use join link for you to send them — email delivery is not set up, so nothing is sent automatically. They get ${access} once they accept.`,
@@ -111,7 +111,7 @@ export const TEAM_TOOLS: ChappiTool[] = [
     name: 'remove_teammate',
     kind: 'mutate',
     description:
-      'Remove someone from the workspace. Requires the user to approve a confirmation card — calling this only proposes it. The workspace owner cannot be removed.',
+      'Remove someone from your team. Requires the user to approve a confirmation card — calling this only proposes it. The team owner cannot be removed.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -134,13 +134,13 @@ export const TEAM_TOOLS: ChappiTool[] = [
       const member = members.find((entry) => String(entry.id ?? '') === memberId);
       if (!member) return { ok: false, summary: 'That teammate was not found.' };
       if (member.role === 'owner') {
-        return { ok: false, summary: 'The workspace owner cannot be removed.' };
+        return { ok: false, summary: 'The team owner cannot be removed.' };
       }
 
       const label = String(member.name || member.email || 'this teammate');
       return {
         ok: true,
-        title: `Remove ${label} from the workspace?`,
+        title: `Remove ${label} from your team?`,
         detail:
           'They lose access straight away. Anything assigned to them stays on the release, unassigned.',
         confirmLabel: 'Remove teammate',
@@ -153,7 +153,7 @@ export const TEAM_TOOLS: ChappiTool[] = [
         method: 'DELETE',
       });
       if (!res.ok) return fail(apiError(res, 'Could not remove that teammate.'));
-      return { ok: true, summary: 'Removed them from the workspace.', clientAction: { type: 'refresh' } };
+      return { ok: true, summary: 'Removed them from your team.', clientAction: { type: 'refresh' } };
     },
   },
 ];

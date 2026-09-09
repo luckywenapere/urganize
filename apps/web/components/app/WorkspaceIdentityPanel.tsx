@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -17,6 +17,8 @@ import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState } from "@/lib/persisted-state";
 import { isReleaseActive } from "@/lib/release-activity";
 import { leaveReleaseForCatalog } from "@/lib/catalog-intent";
+import { HelpTipPanel } from "@/components/shared/HelpTip";
+import type { HelpKey } from "@/lib/help-copy";
 import { useSidebarStore } from "@/stores/useSidebarStore";
 import { RAIL_GUTTER } from "@/lib/rail-width";
 import {
@@ -97,6 +99,16 @@ type NavItem = {
    *  state's tooltip since there's no room for it there. Sparing — most nav
    *  items should not set this. */
   beta?: boolean;
+  /** The pullout explaining what this surface is for (founder ask, 2026-09-08,
+   *  from a screenshot of Vercel's own side menu). A row's LABEL says what it is
+   *  called and nothing says what it does, which is the gap this closes.
+   *
+   *  Hover only, and that costs nothing here: this whole card is
+   *  `hidden lg:block`, so it never renders on a device without a pointer. The
+   *  collapsed rail is the one place it does not show — there the native
+   *  `title` is already carrying the label, which matters more than the
+   *  explanation, and two popups on one row is worse than either alone. */
+  help?: HelpKey;
 };
 
 // Same flag AppTopbar reads for its Notes icon — the two entry points appear
@@ -166,6 +178,7 @@ const ADMIN_ITEM: NavItem = {
   label: "Admin",
   Icon: AdminIcon,
   isActive: (pathname: string) => pathname.startsWith("/admin"),
+  help: "nav.admin",
 };
 
 const SETTINGS_ITEM: NavItem = {
@@ -173,6 +186,7 @@ const SETTINGS_ITEM: NavItem = {
   label: "Settings",
   Icon: GearIcon,
   isActive: (pathname: string) => pathname.startsWith("/settings"),
+  help: "nav.settings",
 };
 
 /**
@@ -200,6 +214,7 @@ function buildNavItems(
       label: "UrgAns",
       Icon: ChappiIcon,
       isActive: (pathname: string) => pathname === "/dashboard/urgans",
+      help: "nav.urgans",
     },
     {
       href: "/dashboard",
@@ -214,6 +229,7 @@ function buildNavItems(
       // one control whose job is to get you OUT of a release. AppTopbar's
       // `isAtRest` has always drawn the line here; the two agree now.
       isActive: (pathname: string) => pathname === "/dashboard" && !scopedReleaseId,
+      help: "nav.catalog",
       // Leaving a release forgets its scene, so tapping it again lands on
       // Activities rather than the thing you were getting out of — and records
       // that the catalog was asked for, so a single-release workspace does not
@@ -235,7 +251,8 @@ function buildNavItems(
             label: "Notes",
             Icon: NotesIcon,
             isActive: (pathname: string) => pathname === "/dashboard/notes",
-          },
+            help: "nav.notes",
+          } satisfies NavItem,
         ]
       : []),
     // Shows sit beside Notes as the other global surface: a release is not
@@ -249,8 +266,9 @@ function buildNavItems(
             label: "Shows",
             Icon: ShowsIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/shows"),
+            help: "nav.shows",
             beta: true,
-          },
+          } satisfies NavItem,
         ]
       : []),
     // Beside Shows, as the other standing surface that is not a release.
@@ -262,8 +280,9 @@ function buildNavItems(
             label: "Press kits",
             Icon: PressKitsIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/press-kits"),
+            help: "nav.pressKits",
             beta: true,
-          },
+          } satisfies NavItem,
         ]
       : []),
     // Beside Press kits, as the other standing surface that belongs to nobody's
@@ -280,8 +299,9 @@ function buildNavItems(
             label: "Directory",
             Icon: DirectoryIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/directory"),
+            help: "nav.directory",
             beta: true,
-          },
+          } satisfies NavItem,
         ]
       : []),
     // Fourth, after Notes (founder call, moved off its earlier "right after
@@ -295,7 +315,8 @@ function buildNavItems(
             label: "Metadata",
             Icon: MetadataIcon,
             isActive: (pathname: string) => pathname === "/dashboard" && activeScene === "metadata",
-          },
+            help: "nav.metadata",
+          } satisfies NavItem,
         ]
       : []),
     // The crossing point for an account that is also a playlist owner. Last in
@@ -309,7 +330,8 @@ function buildNavItems(
             label: "Playlist pitches",
             Icon: PitchesIcon,
             isActive: (pathname: string) => pathname.startsWith("/curator"),
-          },
+            help: "nav.pitches",
+          } satisfies NavItem,
         ]
       : []),
     // Settings and Admin deliberately do NOT belong here — they're pinned to
@@ -615,7 +637,11 @@ export function WorkspaceIdentityPanel() {
 
   return (
     <aside
-      aria-label="Workspace"
+      // Named for what a screen reader should hear, which is not what this
+      // component is called (2026-09-09 positioning: never "workspace" in
+      // anything a person reads). Single-word strings are invisible to
+      // lib/copy-scan.ts by design, so this one was found by reading.
+      aria-label="Your team"
       // Height calc is copied from ChappiSidePanel so the two columns are the
       // same length: topbar 4rem + 1px border + <main>'s pt-5 (1.25rem) =
       // 5.25rem top offset; 100dvh minus that minus main's md:pb-10 (2.5rem)
@@ -697,7 +723,7 @@ export function WorkspaceIdentityPanel() {
       <div className="flex h-full flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface">
         <Link
           href="/settings"
-          title={collapsed ? name || "Your workspace" : undefined}
+          title={collapsed ? name || "Your team" : undefined}
           className={`motion-focus block shrink-0 transition-colors hover:bg-bg-hover ${
             collapsed ? "px-2 py-4" : "p-4"
           }`}
@@ -738,7 +764,7 @@ export function WorkspaceIdentityPanel() {
                   />
                 </div>
               )}
-              <span className="sr-only">{name || "Your workspace"}</span>
+              <span className="sr-only">{name || "Your team"}</span>
             </>
           ) : (
             <>
@@ -775,7 +801,7 @@ export function WorkspaceIdentityPanel() {
                 className="mt-3 truncate font-display text-sm text-content-primary"
                 title={name}
               >
-                {name || "Your workspace"}
+                {name || "Your team"}
               </p>
               <Suspense fallback={<ArtistLine label={rosterLabel} />}>
                 <ScopedArtistLine fallbackLabel={rosterLabel} />
@@ -798,7 +824,7 @@ export function WorkspaceIdentityPanel() {
           release surfaces above them take the remaining height and scroll on a
           short viewport rather than overflowing the fixed-height card. */}
         <nav
-          aria-label="Workspace navigation"
+          aria-label="Main navigation"
           className="flex min-h-0 flex-1 flex-col border-t border-stroke-subtle p-2"
         >
           {/* WorkspaceNavLinks needs useSearchParams (to find the currently
@@ -870,7 +896,7 @@ export function WorkspaceIdentityPanel() {
             type="button"
             onClick={toggleCollapsed}
             aria-expanded={!collapsed}
-            aria-label={collapsed ? "Expand workspace menu" : "Collapse workspace menu"}
+            aria-label={collapsed ? "Expand the menu" : "Collapse the menu"}
             title={collapsed ? "Expand menu" : "Collapse menu"}
             className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
@@ -958,7 +984,13 @@ function WorkspaceNavList({
   // release: the founder asked for an arrow you open, and a nav that expands
   // itself on every load buries Settings below a roster on a short viewport.
   const [expandedHref, setExpandedHref] = useState<string | null>(null);
-  const renderRow = ({ href, label, Icon, isActive, beta, children, onNavigate }: NavItem) => {
+  // ONE panel for the whole list, not one per row. Only a single tip is ever
+  // visible, and the rows are built by the `renderRow` closure below inside a
+  // `.map`, where a per-row hook would break the rules of hooks. So the rows
+  // report which one they are pointing at and this component owns the panel.
+  const [activeHelp, setActiveHelp] = useState<{ key: HelpKey; el: HTMLElement } | null>(null);
+  const helpPanelId = useId();
+  const renderRow = ({ href, label, Icon, isActive, beta, children, onNavigate, help }: NavItem) => {
     const active = isActive(pathname || "");
     // Collapsed has no room for a visible pill (icon-only), so the signal
     // folds into the same text that already stands in for the label there —
@@ -972,6 +1004,23 @@ function WorkspaceNavList({
     const expanded = expandedHref === href;
     const subListId = `workspace-nav-sub-${href.replace(/[^a-zA-Z0-9]+/g, "-")}`;
 
+    // Only while expanded: the collapsed rail's native `title` is already
+    // carrying the label there, and two popups on one row is worse than either
+    // alone. Focus as well as hover, since this card is keyboard-reachable and
+    // desktop-only.
+    const helpHandlers =
+      help && !collapsed
+        ? {
+            "aria-describedby": activeHelp?.key === help ? helpPanelId : undefined,
+            onPointerEnter: (event: React.PointerEvent<HTMLAnchorElement>) =>
+              setActiveHelp({ key: help, el: event.currentTarget }),
+            onPointerLeave: () => setActiveHelp(null),
+            onFocus: (event: React.FocusEvent<HTMLAnchorElement>) =>
+              setActiveHelp({ key: help, el: event.currentTarget }),
+            onBlur: () => setActiveHelp(null),
+          }
+        : {};
+
     const link = (
       <Link
         key={href}
@@ -979,6 +1028,7 @@ function WorkspaceNavList({
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         title={collapsed ? collapsedLabel : undefined}
+        {...helpHandlers}
         className={`${navRowClass(active, collapsed)}${subItems.length > 0 ? " min-w-0 flex-1" : ""}`}
       >
         <Icon className="h-4 w-4 shrink-0" />
@@ -1071,6 +1121,19 @@ function WorkspaceNavList({
         {isAdmin ? renderRow(ADMIN_ITEM) : null}
         {renderRow(SETTINGS_ITEM)}
       </div>
+
+      {/* Portals to the body, so it renders nothing here and this fragment
+        stays transparent for the flex arrangement above. `prefer="right"` puts
+        it beside the card, which is the shape the founder's reference
+        screenshot shows. */}
+      {activeHelp ? (
+        <HelpTipPanel
+          helpKey={activeHelp.key}
+          anchor={activeHelp.el}
+          prefer="right"
+          id={helpPanelId}
+        />
+      ) : null}
     </>
   );
 }

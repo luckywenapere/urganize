@@ -62,7 +62,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       // would null out whatever it omits.
       const current = await callInternalApi(ctx, `/api/releases/${releaseId}`, { method: 'GET' });
       if (!current.ok) {
-        return fail(apiError(current, 'That release was not found in your workspace.'));
+        return fail(apiError(current, 'That release was not found on your team.'));
       }
       const release = (current.body.release ?? {}) as Record<string, unknown>;
       const currentTitle = typeof release.title === 'string' ? release.title : '';
@@ -156,7 +156,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       // approve it. See listOwnedReleases in ../release-scope.ts.
       const releases = await listOwnedReleases(ctx);
       const release = releases.find((r) => r.id === releaseId);
-      if (!release) return { ok: false, summary: 'That release was not found in your workspace.' };
+      if (!release) return { ok: false, summary: 'That release was not found on your team.' };
 
       const tasks = await new TaskService(ctx.adminClient).getTasksForUser(
         ctx.user.id,
@@ -203,7 +203,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
         ctx.workspaceIds
       );
       const task = tasks.find((t) => t.id === taskId);
-      if (!task) return { ok: false, summary: 'That activity was not found in your workspace.' };
+      if (!task) return { ok: false, summary: 'That activity was not found on your team.' };
       return {
         ok: true,
         title: `Delete "${task.title}"?`,

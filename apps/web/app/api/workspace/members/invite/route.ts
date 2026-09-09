@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     const membership = access.memberships.find((item) => item.workspaceId === workspaceId) || null;
 
     if (!workspaceId || !membership) {
-      return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
+      return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
     if (membership.role !== 'owner' && membership.role !== 'admin') {
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { error: existingResult.error.message || 'Could not load workspace member.' },
+        { error: existingResult.error.message || 'Could not load that teammate.' },
         { status: 500 }
       );
     }
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
 
       if (updateResult.error) {
         return NextResponse.json(
-          { error: updateResult.error.message || 'Could not update workspace member.' },
+          { error: updateResult.error.message || 'Could not update that teammate.' },
           { status: 500 }
         );
       }
@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json(
-          { error: insertResult.error.message || 'Could not invite workspace member.' },
+          { error: insertResult.error.message || 'Could not send that invite.' },
           { status: 500 }
         );
       }
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
           readString(auth.user.email) ||
           'A teammate';
         const built = buildWorkspaceInviteEmail({
-          workspaceName: access.primaryWorkspace?.name || 'their workspace',
+          workspaceName: access.primaryWorkspace?.name || 'their team',
           inviterLabel,
           inviteUrl,
           accessLabel: WORKSPACE_ROLE_ACCESS_LABEL[role],
