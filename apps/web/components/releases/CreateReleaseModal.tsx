@@ -99,7 +99,7 @@ type CreateReleaseModalProps = {
   /**
    * The one-tap test path (NEXT_PUBLIC_FEATURE_TEST_RELEASE). When provided
    * AND this is a first release, the chooser step carries a quiet
-   * "Just looking? Try a test release instead" link that closes the modal
+   * "Just looking? Try a test rollout instead" link that closes the modal
    * and runs it. Threaded from the mount sites rather than instantiated
    * here on purpose: this modal deliberately holds no router, and the test
    * path's defining act is a navigation. Callers pass it flag-gated, so
@@ -337,7 +337,7 @@ export function CreateReleaseModal({
     // An empty title is fine (URG-230) — the server names it. Length is
     // still enforced because the column is capped at 140.
     if (title.trim().length > 140) {
-      nextErrors.title = 'Release title must be 140 characters or fewer.';
+      nextErrors.title = 'Rollout title must be 140 characters or fewer.';
     }
 
     const dateError = validateReleaseDate(releaseDate);
@@ -371,7 +371,7 @@ export function CreateReleaseModal({
     // useful to queue, so say so plainly instead of firing a request that
     // can only time out.
     if (!isBrowserOnline()) {
-      setSubmitError("You're offline — creating a release needs a connection. Try again once you're back online.");
+      setSubmitError("You're offline — creating a rollout needs a connection. Try again once you're back online.");
       return;
     }
 
@@ -406,12 +406,12 @@ export function CreateReleaseModal({
 
       const payload = (await response.json().catch(() => ({}))) as CreateReleaseResponse;
       if (!response.ok) {
-        throw new Error(payload.error || 'Could not create release.');
+        throw new Error(payload.error || 'Could not create rollout.');
       }
 
       const releaseId = payload.release?.id || payload.releaseId || payload.id || '';
       if (!releaseId) {
-        throw new Error('Release created, but no release id was returned.');
+        throw new Error('Rollout created, but no rollout id was returned.');
       }
 
       setTitle('');
@@ -428,7 +428,7 @@ export function CreateReleaseModal({
         releaseType: input.typeWasPicked ? input.releaseType : null,
       });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Could not create release.');
+      setSubmitError(error instanceof Error ? error.message : 'Could not create rollout.');
     } finally {
       setIsSubmitting(false);
     }
@@ -469,7 +469,7 @@ export function CreateReleaseModal({
     >
       <button
         type="button"
-        aria-label="Close create release modal"
+        aria-label="Close create rollout modal"
         className="absolute inset-0"
         onClick={() => {
           if (!isSubmitting) {
@@ -492,7 +492,7 @@ export function CreateReleaseModal({
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-stroke-subtle p-4 sm:p-5">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
-                {isFirstRelease ? 'Welcome to Urganize' : 'Create release'}
+                {isFirstRelease ? 'Welcome to Urganize' : 'Create rollout'}
                 {plan ? (
                   <button
                     type="button"
@@ -501,7 +501,7 @@ export function CreateReleaseModal({
                     className="motion-focus inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
                   >
                     <ArrowLeft className="h-3 w-3" aria-hidden="true" />
-                    {plan === 'template' ? 'Rollout plan' : 'Blank release'}
+                    {plan === 'template' ? 'Rollout plan' : 'Blank rollout'}
                   </button>
                 ) : null}
               </p>
@@ -510,15 +510,15 @@ export function CreateReleaseModal({
                   ? 'What are you releasing?'
                   : isFirstRelease
                     ? plan
-                      ? 'Your first release'
-                      : 'Create your first release'
+                      ? 'Your first rollout'
+                      : 'Create your first rollout'
                     : plan
                       ? 'New rollout'
                       : 'How do you want to start?'}
               </h2>
               {TYPE_FIRST_CREATE_ENABLED ? (
                 <p className="mt-2 max-w-xl text-sm leading-6 text-content-secondary">
-                  Tap one and your release is created — you can name it and set the
+                  Tap one and your rollout is created — you can name it and set the
                   date inside.
                 </p>
               ) : null}
@@ -526,7 +526,7 @@ export function CreateReleaseModal({
                   so the two first-run surfaces sound like one product. */}
               {isFirstRelease ? (
                 <p className="mt-2 max-w-xl text-sm leading-6 text-content-secondary">
-                  Every release gets its own place for activities, files and your team.
+                  Every rollout gets its own place for activities, files and your team.
                   Start with this one and everything else follows.
                 </p>
               ) : null}
@@ -602,7 +602,7 @@ export function CreateReleaseModal({
                 <span className="text-sm leading-6 text-content-secondary">
                   {PLANNER_ENABLED
                     ? 'Plan it with UrgAns. A few questions, then a draft rollout you can edit before anything is scheduled.'
-                    : 'Start with the proven release plan — every activity from first prep to release day, scheduled around your date and ready to edit. No date yet? It waits for one.'}
+                    : 'Start with the proven rollout plan — every activity from first prep to release day, scheduled around your date and ready to edit. No date yet? It waits for one.'}
                 </span>
               </button>
 
@@ -615,10 +615,10 @@ export function CreateReleaseModal({
                   <BlankSheetIllustration className="h-7 w-7" />
                 </span>
                 <span className="font-display text-base font-semibold text-content-primary">
-                  Blank release
+                  Blank rollout
                 </span>
                 <span className="text-sm leading-6 text-content-secondary">
-                  An empty release with no plan attached. Add your own
+                  An empty rollout with no plan attached. Add your own
                   activities as you go — you know your process.
                 </span>
               </button>
@@ -638,7 +638,7 @@ export function CreateReleaseModal({
                   disabled={isSubmitting}
                   className="motion-focus justify-self-center rounded-lg px-3 py-2 text-sm font-medium text-content-secondary transition-colors hover:text-content-primary sm:col-span-2"
                 >
-                  Just looking? Try a test release instead
+                  Just looking? Try a test rollout instead
                 </button>
               ) : null}
             </div>
@@ -684,9 +684,9 @@ export function CreateReleaseModal({
               ) : null}
 
               {SHOW_TYPE_PICKER ? (
-                <div role="radiogroup" aria-label="Release type">
+                <div role="radiogroup" aria-label="Rollout type">
                   <span className="mb-2 block text-sm font-medium text-content-primary">
-                    Release type
+                    Format
                   </span>
                   <div className="flex gap-2">
                     {CREATABLE_RELEASE_TYPES.map((option) => {
@@ -718,7 +718,7 @@ export function CreateReleaseModal({
                   the label. */}
               <label className="block">
                 <span className="mb-2 flex items-baseline gap-2 text-sm font-medium text-content-primary">
-                  Release title
+                  Title
                   <span className="text-xs font-normal text-content-tertiary">Optional</span>
                 </span>
                 <input
@@ -799,7 +799,7 @@ export function CreateReleaseModal({
                 isLoading={isSubmitting}
                 leftIcon={isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
               >
-                Create release
+                Create rollout
               </Button>
             </div>
           ) : null}

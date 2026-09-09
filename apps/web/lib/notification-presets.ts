@@ -77,7 +77,7 @@ export const DEFAULT_NOTIFICATION_PRESETS: NotificationPresets = {
       {
         id: '1d',
         delayMinutes: 24 * 60,
-        title: 'Your release is waiting',
+        title: 'Your rollout is waiting',
         body: '“{releaseTitle}” could use some attention — pick one activity and push it forward.',
       },
       {
@@ -94,7 +94,7 @@ export const DEFAULT_NOTIFICATION_PRESETS: NotificationPresets = {
       {
         id: 'momentum',
         title: 'Keep the momentum going',
-        body: 'Great releases are built one activity at a time. What can you finish today?',
+        body: 'Great rollouts are built one activity at a time. What can you finish today?',
       },
       {
         id: 'consistency',
@@ -104,7 +104,7 @@ export const DEFAULT_NOTIFICATION_PRESETS: NotificationPresets = {
       {
         id: 'focus',
         title: 'One thing at a time',
-        body: 'Pick the next activity on your list and give it five minutes. That’s how releases ship.',
+        body: 'Pick the next activity on your list and give it five minutes. That’s how rollouts ship.',
       },
       {
         id: 'discipline',
@@ -114,11 +114,11 @@ export const DEFAULT_NOTIFICATION_PRESETS: NotificationPresets = {
       {
         id: 'teamwork',
         title: 'Your team is counting on you',
-        body: 'Check in on your releases — a quick update keeps everyone aligned.',
+        body: 'Check in on your rollouts — a quick update keeps everyone aligned.',
       },
       {
         id: 'finish-line',
-        title: 'Every release has a finish line',
+        title: 'Every rollout has a finish line',
         body: 'You’re closer than you think. See what’s left and keep moving.',
       },
     ],

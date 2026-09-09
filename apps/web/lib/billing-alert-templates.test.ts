@@ -51,9 +51,9 @@ describe('buildFounderBillingAlertEmail', () => {
       tasksDuringTrial: null,
       daysSinceSignup: null,
     });
-    expect(email.text).toContain('Releases in trial: unknown');
+    expect(email.text).toContain('Rollouts in trial: unknown');
     expect(email.text).toContain('Tasks in trial: unknown');
-    expect(email.text).not.toContain('Releases in trial: 0');
+    expect(email.text).not.toContain('Rollouts in trial: 0');
   });
 
   it('degrades gracefully with no team or owner on file', () => {

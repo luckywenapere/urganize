@@ -212,3 +212,18 @@ describe('resolveIntent — the recap card', () => {
     expect(resolveIntent('release recap').kind).not.toBe('generate_recap');
   });
 });
+
+describe('resolveIntent — "rollout" is the word users type now (2026-09-09)', () => {
+  it('routes "rollout" exactly like "release" with the planner on', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true });
+    expect(resolveIntent('new rollout').kind).toBe(resolveIntent('new release').kind);
+    expect(resolveIntent('plan my rollout').kind).toBe('plan_release');
+    expect(resolveIntent('start a new rollout').kind).toBe('plan_release');
+  });
+
+  it('and with the planner off, so nobody who learned the old word is stranded', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: false });
+    expect(resolveIntent('new rollout').kind).toBe('new_release');
+    expect(resolveIntent('new release').kind).toBe('new_release');
+  });
+});

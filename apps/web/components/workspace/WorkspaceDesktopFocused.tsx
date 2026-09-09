@@ -197,7 +197,7 @@ export function WorkspaceDesktopFocused({
           <RailColumn
             cards={leftRail}
             onSelect={onSelect}
-            ariaLabel="Other releases (left)"
+            ariaLabel="Other rollouts (left)"
             hiddenBelowXl={IDENTITY_PANEL_ENABLED}
           />
         )}
@@ -227,7 +227,7 @@ export function WorkspaceDesktopFocused({
           <RailColumn
             cards={rightRail}
             onSelect={onSelect}
-            ariaLabel="Other releases (right)"
+            ariaLabel="Other rollouts (right)"
             hiddenBelowXl={IDENTITY_PANEL_ENABLED}
           />
         )}

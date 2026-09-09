@@ -163,9 +163,9 @@ export default function NotificationsPageClient() {
       <section className="mt-8 rounded-lg border border-stroke-default bg-bg-surface p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold">Release re-engagement reminders</h2>
+            <h2 className="text-sm font-semibold">Rollout re-engagement reminders</h2>
             <p className="mt-1 text-xs text-content-tertiary">
-              Sent after a user creates a release and doesn’t come back.
+              Sent after a user creates a rollout and doesn’t come back.
             </p>
           </div>
           <CategoryToggle
@@ -205,7 +205,7 @@ export default function NotificationsPageClient() {
                 className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
               />
               <p className="mt-1 text-[11px] text-content-tertiary">
-                Use <code>{'{releaseTitle}'}</code> to insert the release’s title.
+                Use <code>{'{releaseTitle}'}</code> to insert the rollout’s title.
               </p>
             </div>
           ))}
@@ -360,7 +360,7 @@ export default function NotificationsPageClient() {
           <div>
             <h2 className="text-sm font-semibold">Credit submissions</h2>
             <p className="mt-1 text-xs text-content-tertiary">
-              Sent to the release owner the moment a collaborator sends their credits. Turning this
+              Sent to the rollout owner the moment a collaborator sends their credits. Turning this
               off stops the push and the email. Corrections never notify.
             </p>
           </div>
@@ -410,7 +410,7 @@ export default function NotificationsPageClient() {
           />
           <p className="mt-1 text-[11px] text-content-tertiary">
             Use <code>{'{collaboratorName}'}</code> for who sent it and{' '}
-            <code>{'{releaseTitle}'}</code> for the release.
+            <code>{'{releaseTitle}'}</code> for the rollout.
           </p>
           <p className="mt-2 text-[11px] text-content-tertiary">
             The email that goes out alongside this is not editable here: it lists exactly what the

@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
   const releaseId = typeof payload.releaseId === 'string' ? payload.releaseId : '';
   const playlistId = typeof payload.playlistId === 'string' ? payload.playlistId : '';
   if (!releaseId || !playlistId) {
-    return NextResponse.json({ error: 'Pick a release and a playlist.' }, { status: 400 });
+    return NextResponse.json({ error: 'Pick a rollout and a playlist.' }, { status: 400 });
   }
 
   const songTitle = typeof payload.songTitle === 'string' ? payload.songTitle.trim() : '';
@@ -277,7 +277,7 @@ export async function POST(request: NextRequest) {
   if ((waitingCount || 0) >= MAX_WAITING_PITCHES_PER_RELEASE) {
     return NextResponse.json(
       {
-        error: `This release already has ${MAX_WAITING_PITCHES_PER_RELEASE} pitches waiting. Wait for replies before sending more.`,
+        error: `This rollout already has ${MAX_WAITING_PITCHES_PER_RELEASE} pitches waiting. Wait for replies before sending more.`,
       },
       { status: 409 }
     );
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
     // 23505: the one-waiting-pitch-per-playlist index caught a duplicate.
     if (error.code === '23505') {
       return NextResponse.json(
-        { error: 'This playlist already has a pitch waiting for this release.' },
+        { error: 'This playlist already has a pitch waiting for this rollout.' },
         { status: 409 }
       );
     }

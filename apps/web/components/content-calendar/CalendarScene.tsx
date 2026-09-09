@@ -546,7 +546,7 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
             </div>
           ) : calendars.length === 0 ? (
             <div className="border border-[var(--cc-border)] bg-[var(--cc-text)]/[0.03] p-8 text-center">
-              <p className="text-sm text-[var(--cc-text-muted)]">Plan this release&rsquo;s social content.</p>
+              <p className="text-sm text-[var(--cc-text-muted)]">Plan this rollout&rsquo;s social content.</p>
               {!emptyCreateOpen ? (
                 <button
                   type="button"

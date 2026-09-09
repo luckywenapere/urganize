@@ -344,7 +344,7 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
       }
 
       setIdentityLogo(recordPayload.logo);
-      setLogoMessage('Logo saved. Releases without cover art now show it automatically.');
+      setLogoMessage('Logo saved. Rollouts without cover art now show it automatically.');
     } catch (err) {
       // The code goes ON SCREEN, because that is the only channel that reaches
       // us: the PostHog event below is inert unless NEXT_PUBLIC_POSTHOG_KEY is
@@ -386,7 +386,7 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
         throw new Error(payload.error || 'Could not remove logo.');
       }
       setIdentityLogo(null);
-      setLogoMessage('Logo removed. Releases without cover art show the neutral placeholder again.');
+      setLogoMessage('Logo removed. Rollouts without cover art show the neutral placeholder again.');
     } catch (err) {
       setLogoError(errorMessage(err, 'Could not remove logo.'));
     } finally {

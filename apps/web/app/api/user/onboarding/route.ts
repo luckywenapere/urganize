@@ -437,7 +437,7 @@ export async function PATCH(request: NextRequest) {
       !isOnboardingReleaseProcess(body.onboardingReleaseProcess)
     ) {
       return NextResponse.json(
-        { error: 'Onboarding release process is invalid.' } satisfies OnboardingApiError,
+        { error: 'Onboarding rollout process is invalid.' } satisfies OnboardingApiError,
         { status: 400 }
       );
     }
@@ -503,7 +503,7 @@ export async function PATCH(request: NextRequest) {
   if (body.releaseId !== undefined) {
     const normalizedReleaseId = typeof body.releaseId === 'string' ? body.releaseId.trim() : '';
     if (body.releaseId !== null && !normalizedReleaseId) {
-      return NextResponse.json({ error: 'Release id is invalid.' } satisfies OnboardingApiError, {
+      return NextResponse.json({ error: 'Rollout id is invalid.' } satisfies OnboardingApiError, {
         status: 400,
       });
     }
@@ -518,13 +518,13 @@ export async function PATCH(request: NextRequest) {
 
       if (releaseResult.error) {
         return NextResponse.json(
-          { error: releaseResult.error.message || 'Could not verify onboarding release.' } satisfies OnboardingApiError,
+          { error: releaseResult.error.message || 'Could not verify onboarding rollout.' } satisfies OnboardingApiError,
           { status: 500 }
         );
       }
 
       if (!releaseResult.data?.id) {
-        return NextResponse.json({ error: 'Release not found.' } satisfies OnboardingApiError, {
+        return NextResponse.json({ error: 'Rollout not found.' } satisfies OnboardingApiError, {
           status: 404,
         });
       }
@@ -570,7 +570,7 @@ export async function PATCH(request: NextRequest) {
 
       const taskReleaseId = typeof taskResult.data.release_id === 'string' ? taskResult.data.release_id : null;
       if (!taskReleaseId || !expectedReleaseId || taskReleaseId !== expectedReleaseId) {
-        return NextResponse.json({ error: 'Task does not belong to the onboarding release.' } satisfies OnboardingApiError, {
+        return NextResponse.json({ error: 'Task does not belong to the onboarding rollout.' } satisfies OnboardingApiError, {
           status: 400,
         });
       }

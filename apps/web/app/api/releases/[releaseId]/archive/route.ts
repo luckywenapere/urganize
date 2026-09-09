@@ -38,7 +38,7 @@ export async function POST(
 
   const { releaseId } = await context.params;
   if (!releaseId) {
-    return NextResponse.json({ error: 'A release id is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'A rollout id is required.' }, { status: 400 });
   }
 
   const body = await request.json().catch(() => null);
@@ -73,7 +73,7 @@ export async function POST(
   if (error) {
     console.error('[releases/archive] could not update status:', error.message);
     return NextResponse.json(
-      { error: archived ? 'Could not archive this release.' : 'Could not restore this release.' },
+      { error: archived ? 'Could not archive this rollout.' : 'Could not restore this rollout.' },
       { status: 500 }
     );
   }

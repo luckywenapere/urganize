@@ -25,13 +25,13 @@ export const NOTE_TOOLS: ChappiTool[] = [
     name: 'list_notes',
     kind: 'read',
     description:
-      "List the user's notes (most recent first, pinned first). Returns each note's id, title line, and whether it is linked to a release — not the full text.",
+      "List the user's notes (most recent first, pinned first). Returns each note's id, title line, and whether it is linked to a rollout — not the full text.",
     inputSchema: {
       type: 'object',
       properties: {
         releaseId: {
           type: 'string',
-          description: 'Only notes linked to this release.',
+          description: 'Only notes linked to this rollout.',
         },
       },
     },
@@ -63,7 +63,7 @@ export const NOTE_TOOLS: ChappiTool[] = [
     name: 'update_note',
     kind: 'mutate',
     description:
-      "Edit a note's text, pin or unpin it, or link it to a release. Pass only what is changing. To unlink a note from its release, pass releaseId as an empty string.",
+      "Edit a note's text, pin or unpin it, or link it to a rollout. Pass only what is changing. To unlink a note from its rollout, pass releaseId as an empty string.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -72,7 +72,7 @@ export const NOTE_TOOLS: ChappiTool[] = [
         pinned: { type: 'boolean' },
         releaseId: {
           type: 'string',
-          description: 'Release to link the note to. Empty string unlinks it.',
+          description: 'Rollout to link the note to. Empty string unlinks it.',
         },
       },
       required: ['noteId'],
@@ -92,7 +92,7 @@ export const NOTE_TOOLS: ChappiTool[] = [
         patch.releaseId = argString(args, 'releaseId') || null;
       }
       if (Object.keys(patch).length === 0) {
-        return fail('Nothing to update — provide text, a pin state, or a release to link.');
+        return fail('Nothing to update — provide text, a pin state, or a rollout to link.');
       }
 
       const res = await callInternalApi(ctx, `/api/notes/${noteId}`, { method: 'PATCH', body: patch });

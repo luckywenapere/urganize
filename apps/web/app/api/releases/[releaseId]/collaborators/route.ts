@@ -19,7 +19,7 @@ export async function GET(
   if ('error' in auth) return auth.error;
 
   const { releaseId } = await context.params;
-  if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+  if (!releaseId) return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
 
   const adminClient = createAdminClient(auth.supabaseUrl);
   const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
@@ -50,7 +50,7 @@ export async function POST(
   if (paywallResponse) return paywallResponse;
 
   const { releaseId } = await context.params;
-  if (!releaseId) return NextResponse.json({ error: 'Release id is required.' }, { status: 400 });
+  if (!releaseId) return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
 
   const adminClient = createAdminClient(auth.supabaseUrl);
   const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);

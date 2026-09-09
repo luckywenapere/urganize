@@ -98,7 +98,7 @@ function ArtistRow({
             // prompt is a slip guard, not a decision point.
             if (
               window.confirm(
-                `Remove ${artist.name}? This only works if they have no releases and nobody is limited to seeing them.`
+                `Remove ${artist.name}? This only works if they have no rollouts and nobody is limited to seeing them.`
               )
             ) {
               onRemove(artist.id);

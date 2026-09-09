@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
   let releaseId: string | null = null;
   if ('releaseId' in payload && payload.releaseId !== null && payload.releaseId !== undefined) {
     if (typeof payload.releaseId !== 'string' || !payload.releaseId) {
-      return NextResponse.json({ error: 'Release id must be text.' }, { status: 400 });
+      return NextResponse.json({ error: 'Rollout id must be text.' }, { status: 400 });
     }
     releaseId = payload.releaseId;
   }

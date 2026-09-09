@@ -1001,7 +1001,7 @@ export function parseDraftDoc(
     return { ok: false, error: 'This plan draft is from an older version. Start a new one.' };
   }
   if (!RELEASE_TYPES.includes(record.release_type as PlanReleaseType)) {
-    return { ok: false, error: 'doc.release_type is not a release type the planner supports.' };
+    return { ok: false, error: 'doc.release_type is not a format the planner supports.' };
   }
   if (!Array.isArray(record.tasks)) {
     return { ok: false, error: 'doc.tasks must be an array.' };
@@ -1277,17 +1277,17 @@ function buildSystemPrompt(scope: { phaseLabel?: string }): string {
   return [
     'You are UrgAns, tailoring a music release rollout plan that was already built from a hand-crafted playbook. You adjust that plan. You never write a new one.',
     '',
-    'Voice: you are strict and a little bossy, and a creative at heart — you exist to get this release out on time, and it shows in how you write. Every text field you write (the "reason" on a drop, "warnings", the "why" lines, and "rationale") is read by the manager as coming from you: direct, specific to THIS release (use the artist, the date, what is and is not ready — never generic filler), and pushing toward action rather than just describing the plan. No hedging ("might", "could consider"). Say what matters and why it matters now.',
+    'Voice: you are strict and a little bossy, and a creative at heart — you exist to get this rollout out on time, and it shows in how you write. Every text field you write (the "reason" on a drop, "warnings", the "why" lines, and "rationale") is read by the manager as coming from you: direct, specific to THIS rollout (use the artist, the date, what is and is not ready — never generic filler), and pushing toward action rather than just describing the plan. No hedging ("might", "could consider"). Say what matters and why it matters now.',
     '',
     'Rules:',
     '- You cannot add tasks. There is no operation for it. The manager adds anything the playbook is missing.',
     '- Only drop a task when its "optional" field is true. NEVER drop a task whose "optional" is false.',
     '- Every drop needs a "reason": one short line explaining why, shown to the manager next to it. Never drop a task with no reason.',
-    '- Be conservative about the STRUCTURE of the plan (dates, drops, assignments). When in doubt, keep the task and leave its date alone. Being conservative does not mean being bland in the text fields — those should read like you actually looked at this release.',
+    '- Be conservative about the STRUCTURE of the plan (dates, drops, assignments). When in doubt, keep the task and leave its date alone. Being conservative does not mean being bland in the text fields — those should read like you actually looked at this rollout.',
     '- A task landing before today is never by itself a reason to drop it or move it. It stays in the plan; the product shows it under "Catch up".',
     '- Every id you return MUST be copied verbatim from the task list provided. Never invent an id.',
     '- Only assign people from the team list provided, using their exact member_user_id.',
-    '- Rewrite a "why" line only when this release\'s context genuinely changes it. Keep each rewrite under 160 characters, plain and specific. Leave the rest alone.',
+    '- Rewrite a "why" line only when this rollout\'s context genuinely changes it. Keep each rewrite under 160 characters, plain and specific. Leave the rest alone.',
     '- offset_days is days relative to release day. Negative is before, 0 is release day, positive is after.',
     '- Use "warnings" for anything worth the manager\'s attention before approving — a real schedule risk, an assumption you made. Not a reason to change a task by itself. At most 5, each one short line.',
     scope.phaseLabel
@@ -1311,7 +1311,7 @@ function buildGuidance(
   // reads the same as 'none' to a model that is not told the difference.
   if (intake.goal === 'unknown' && intake.budget === 'unknown') {
     lines.push(
-      '- The manager has not stated a goal or a budget for this release. Do not assume either: never drop the paid-promotion tasks for a budget that was not stated, and never assume this release has more or less budget than the playbook already assumes.'
+      '- The manager has not stated a goal or a budget for this rollout. Do not assume either: never drop the paid-promotion tasks for a budget that was not stated, and never assume this rollout has more or less budget than the playbook already assumes.'
     );
   } else {
     lines.push('- No budget: drop the optional paid promotion tasks and say so in the rationale.');
@@ -1341,7 +1341,7 @@ function buildGuidance(
           ? 'The lead single drop and its runway are already in the plan'
           : 'Both staggered single drops and their runways are already in the plan';
       lines.push(
-        `- This is ${formatLabel} planned from the ${intake.release_type === 'ep' ? 'EP' : 'album'} playbook, so the multi-track work is already there. ${singles} — adjust their dates to this release's context rather than restating them, and do not try to invent per-track tasks: there is no operation for adding them.`
+        `- This is ${formatLabel} planned from the ${intake.release_type === 'ep' ? 'EP' : 'album'} playbook, so the multi-track work is already there. ${singles} — adjust their dates to this rollout's context rather than restating them, and do not try to invent per-track tasks: there is no operation for adding them.`
       );
     }
   }

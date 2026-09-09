@@ -63,7 +63,7 @@ export const TEAM_BRIEF_SECTION_META: Record<TeamBriefSection, SectionMeta> = {
   how_we_work: {
     label: 'How we work',
     promptLabel: 'How this team runs a rollout',
-    placeholder: 'How do you usually run a release? What does a rollout look like here?',
+    placeholder: 'How do you usually run a rollout? What does one look like here?',
   },
   positioning: {
     label: 'Positioning',
@@ -198,7 +198,7 @@ export function formatTeamBriefForPrompt(entries: TeamBriefEntry[]): string {
   return [
     'About this team, written by the team itself. Treat it as standing background:',
     'it tells you who they are and how they work, but it is NOT more current than',
-    'the releases and activities below. Where the two disagree — a date, a status,',
+    'the rollouts and activities below. Where the two disagree — a date, a status,',
     "who owns something — the live data wins and this does not.",
     '',
     blocks.join('\n\n'),

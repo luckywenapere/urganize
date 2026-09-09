@@ -93,7 +93,7 @@ export function RoleGapsPanel({ releaseId, gaps }: { releaseId: string; gaps: Ro
         <button
           type="button"
           onClick={dismiss}
-          aria-label="Hide this for this release"
+          aria-label="Hide this for this rollout"
           className="motion-focus -mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-content-tertiary hover:bg-bg-hover hover:text-content-primary"
         >
           <X className="h-4 w-4" aria-hidden />

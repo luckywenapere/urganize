@@ -108,7 +108,7 @@ describe('resolveActionScope', () => {
 
     const result = await resolveActionScope(fakeAdmin(), { access: 'owner_write', objectTypes: ['release'] }, 'release-1', TEAMMATE);
 
-    expect(result).toEqual({ ok: false, status: 404, error: 'Release not found.' });
+    expect(result).toEqual({ ok: false, status: 404, error: 'Rollout not found.' });
   });
 
   it("a non-member gets the visibility check's own refusal untouched, for every access level", async () => {
@@ -116,7 +116,7 @@ describe('resolveActionScope', () => {
       ensureReleaseTeamReadAccess.mockReset();
       ensureReleaseTeamWriteAccess.mockReset();
       const check = access === 'team_write' ? ensureReleaseTeamWriteAccess : ensureReleaseTeamReadAccess;
-      check.mockResolvedValueOnce(refused(404, 'Release not found.'));
+      check.mockResolvedValueOnce(refused(404, 'Rollout not found.'));
 
       const result = await resolveActionScope(
         fakeAdmin(),
@@ -125,7 +125,7 @@ describe('resolveActionScope', () => {
         TEAMMATE
       );
 
-      expect(result).toEqual({ ok: false, status: 404, error: 'Release not found.' });
+      expect(result).toEqual({ ok: false, status: 404, error: 'Rollout not found.' });
     }
   });
 

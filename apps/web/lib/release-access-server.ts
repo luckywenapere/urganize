@@ -66,7 +66,7 @@ async function ensureReleaseAccess(
   if (error) {
     return {
       error: NextResponse.json(
-        { error: error.message || 'Could not load release.' },
+        { error: error.message || 'Could not load rollout.' },
         { status: 500 }
       ),
     };
@@ -99,7 +99,7 @@ async function ensureReleaseAccess(
       // the scenes surface the JSON error field verbatim.
       return {
         error: NextResponse.json(
-          { error: 'Could not check release access.' },
+          { error: 'Could not check rollout access.' },
           { status: 500 }
         ),
       };

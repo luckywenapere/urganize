@@ -115,7 +115,7 @@ async function loadTeamForRelease(
     } as Parameters<typeof resolveReleaseTaskWorkspace>[2]);
     return { ok: true, workspaceId: resolved.workspaceId, members: resolved.members };
   } catch (error) {
-    console.error('[urgans-actions] could not resolve the team for release', releaseId, error);
+    console.error('[urgans-actions] could not resolve the team for rollout', releaseId, error);
     return { ok: false };
   }
 }
@@ -135,7 +135,7 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
 
   async execute({ admin, objectId, actor, ownerUserId, input }) {
     const release = await loadReleaseRow(admin, objectId);
-    if (!release) return { ok: false, status: 404, error: 'Release not found.' };
+    if (!release) return { ok: false, status: 404, error: 'Rollout not found.' };
 
     let intake: ReleasePlanIntake;
     if (input?.intake !== undefined) {
@@ -193,7 +193,7 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
 
   async apply({ admin, objectId, actor, ownerUserId }) {
     const release = await loadReleaseRow(admin, objectId);
-    if (!release) return { ok: false, status: 404, error: 'Release not found.' };
+    if (!release) return { ok: false, status: 404, error: 'Rollout not found.' };
 
     const result = await approvePlanDraft(admin, {
       release,

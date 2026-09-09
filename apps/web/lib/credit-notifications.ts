@@ -33,7 +33,7 @@ export type CreditSubmissionNotice = {
  * legalName is required by the submit route, so the person fallback is a
  * belt-and-braces case rather than an expected one. */
 const UNNAMED_PERSON = 'Someone';
-const UNNAMED_RELEASE = 'your release';
+const UNNAMED_RELEASE = 'your rollout';
 
 export function collaboratorLabel(notice: {
   legalName: string;

@@ -151,7 +151,7 @@ export function ReleaseSetupSheet({
       <form
         role="dialog"
         aria-modal="true"
-        aria-label="Finish setting up this release"
+        aria-label="Finish setting up this rollout"
         onSubmit={(event) => void handleSubmit(event)}
         className="task-outcome-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] sm:max-w-md sm:rounded-2xl sm:border"
         style={

@@ -20,7 +20,7 @@ export async function DELETE(
 
   const { releaseId, submissionId } = await context.params;
   if (!releaseId || !submissionId) {
-    return NextResponse.json({ error: 'Release id and submission id are required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Rollout id and submission id are required.' }, { status: 400 });
   }
 
   const adminClient = createAdminClient(auth.supabaseUrl);

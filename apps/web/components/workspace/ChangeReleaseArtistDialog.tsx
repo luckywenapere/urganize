@@ -115,12 +115,12 @@ export function ChangeReleaseArtistDialog({
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(payload.error || 'Could not move this release.');
+        throw new Error(payload.error || 'Could not move this rollout.');
       }
 
       onChanged(release.id, target.name);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not move this release.');
+      setError(caught instanceof Error ? caught.message : 'Could not move this rollout.');
     } finally {
       setIsSaving(false);
     }
@@ -150,7 +150,7 @@ export function ChangeReleaseArtistDialog({
           id="change-release-artist-title"
           className="font-display text-lg font-semibold text-content-primary"
         >
-          Move this release
+          Move this rollout
         </h2>
         <p className="mt-2 text-sm leading-6 text-content-secondary">
           &ldquo;{release.title}&rdquo; is filed under{' '}
@@ -205,7 +205,7 @@ export function ChangeReleaseArtistDialog({
                 Moving…
               </span>
             ) : (
-              'Move release'
+              'Move rollout'
             )}
           </Button>
         </div>

@@ -85,7 +85,7 @@ export function describeStatusFacts(stats: StatusFacts): string {
 }
 
 const STATUS_SYSTEM_PROMPT = [
-  'You are writing a status update for a music release. The update is from a manager to someone else involved with the release (the artist, the label, a collaborator). It should be conversational and direct, written in "we" voice (as the manager speaking about their team\'s work).',
+  'You are writing a status update for a music rollout. The update is from a manager to someone else involved with the rollout (the artist, the label, a collaborator). It should be conversational and direct, written in "we" voice (as the manager speaking about their team\'s work).',
   '',
   'Rules:',
   '- One paragraph, 3-4 sentences max.',
@@ -94,7 +94,7 @@ const STATUS_SYSTEM_PROMPT = [
   '- Be specific. Reference real task names from the data, not generic "marketing tasks."',
   "- Don't list. Write as flowing sentences a human would.",
   '- No salutations. No closing line. No formatting. Plain text.',
-  "- Don't add commentary about Urganize or templates. Just the release status.",
+  "- Don't add commentary about Urganize or templates. Just the rollout status.",
 ].join('\n');
 
 function daysAway(releaseDate: string | null): string {
@@ -127,7 +127,7 @@ export function buildStatusMessages(params: {
     : 'None';
 
   const user = [
-    `Release: ${release.title} by ${release.artistName || 'the artist'}, releasing ${release.releaseDate || 'TBD'} (${daysAway(release.releaseDate)}).`,
+    `Rollout: ${release.title} by ${release.artistName || 'the artist'}, releasing ${release.releaseDate || 'TBD'} (${daysAway(release.releaseDate)}).`,
     `Type: ${release.releaseType}`,
     'Task summary:',
     `- Done: ${summary.doneCount} tasks`,

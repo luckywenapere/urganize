@@ -153,7 +153,7 @@ function ArtistStep({ draft, patch, disabled, knownArtistName }: StepBodyProps) 
             onChange={(event) => patch({ artistName: event.target.value })}
             disabled={disabled}
             className={inputClass}
-            placeholder="The artist this release is for"
+            placeholder="The artist this rollout is for"
             maxLength={120}
           />
         </label>
@@ -193,7 +193,7 @@ function ArtistStep({ draft, patch, disabled, knownArtistName }: StepBodyProps) 
             onChange={(event) => patch({ artistName: event.target.value })}
             disabled={disabled}
             className={inputClass}
-            placeholder="Who is this release for?"
+            placeholder="Who is this rollout for?"
             maxLength={120}
             autoFocus
           />

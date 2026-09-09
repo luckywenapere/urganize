@@ -682,7 +682,7 @@ export function WorkspaceView() {
   const catalogNoMatchState =
     releaseQuery.trim().length > 0 && catalogReleases.length === 0 ? (
       <EmptyState
-        title="No releases match that"
+        title="No rollouts match that"
         description="Try a different word, or clear the search to see everything."
         action={
           <button
@@ -810,7 +810,7 @@ export function WorkspaceView() {
   const archiveAction =
     scopedReleaseId && scopedReleaseIsOwn && (isRecapEligible || isScopedArchived)
       ? {
-          label: isScopedArchived ? 'Restore release' : 'Archive release',
+          label: isScopedArchived ? 'Restore rollout' : 'Archive rollout',
           onClick: () => setIsArchiveOpen(true),
         }
       : null;
@@ -1073,7 +1073,7 @@ export function WorkspaceView() {
   // a screen reader needs. A constant also keeps this out of the class of bugs
   // where a label is derived from storage during render and disagrees between
   // the server and the client.
-  const backLabel = 'Back to all releases';
+  const backLabel = 'Back to all rollouts';
 
   // ONE skeleton, rendered here (not as a route-segment Suspense fallback).
   // SSR serializes the skeleton into the HTML response; hydration re-renders
@@ -1520,7 +1520,7 @@ export function WorkspaceView() {
         onArchived={(_releaseId, archived) => {
           setIsArchiveOpen(false);
           setToast({
-            message: archived ? 'Release archived.' : 'Release restored.',
+            message: archived ? 'Rollout archived.' : 'Rollout restored.',
             tone: 'success',
           });
           // Force-refresh so the catalog grid and the identity card's active
@@ -1557,7 +1557,7 @@ export function WorkspaceView() {
           // remembered scene on the way out.
           markCatalogRequested();
           setScope(null, { forgetScene: true });
-          setToast({ message: 'Test release deleted.', tone: 'success' });
+          setToast({ message: 'Test rollout deleted.', tone: 'success' });
         }}
       />
 

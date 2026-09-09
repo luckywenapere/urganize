@@ -67,7 +67,7 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
           <CuratorCardListSkeleton rows={2} />
         ) : pitches.length === 0 ? (
           <p className="rounded-xl border border-stroke-default bg-bg-surface p-4 text-sm text-content-secondary">
-            No pitches yet for this release.
+            No pitches yet for this rollout.
           </p>
         ) : (
           <ul className="space-y-2">

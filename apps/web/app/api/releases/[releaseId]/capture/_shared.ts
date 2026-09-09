@@ -179,7 +179,7 @@ export async function ensureGraphicAsset(
 
   if (!asset || String(asset.release_id || '') !== releaseId) {
     return {
-      error: NextResponse.json({ error: 'That image is not on this release.' }, { status: 400 }),
+      error: NextResponse.json({ error: 'That image is not on this rollout.' }, { status: 400 }),
     };
   }
 

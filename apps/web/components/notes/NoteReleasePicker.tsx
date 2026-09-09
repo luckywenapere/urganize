@@ -101,7 +101,7 @@ export function NoteReleasePicker({
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={linked ? `Linked to ${linked.title}` : 'Link this note to a release'}
+        aria-label={linked ? `Linked to ${linked.title}` : 'Link this note to a rollout'}
         className={`motion-focus inline-flex h-8 max-w-full items-center gap-1.5 rounded-full px-2.5 text-xs transition-colors ${
           linked
             ? 'border border-brand/25 bg-brand/10 font-medium text-brand hover:bg-brand/15'
@@ -113,7 +113,7 @@ export function NoteReleasePicker({
         ) : (
           <Disc3 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         )}
-        <span className="truncate">{linked ? linked.title : 'Link release'}</span>
+        <span className="truncate">{linked ? linked.title : 'Link rollout'}</span>
         <ChevronDown
           className={`h-3 w-3 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
           aria-hidden="true"
@@ -123,7 +123,7 @@ export function NoteReleasePicker({
       {open ? (
         <div
           role="listbox"
-          aria-label="Link this note to a release"
+          aria-label="Link this note to a rollout"
           className="absolute left-0 top-full z-50 mt-2 max-h-72 w-64 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain rounded-xl border border-stroke-default bg-bg-surface py-1 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           <button
@@ -136,7 +136,7 @@ export function NoteReleasePicker({
             }`}
           >
             <Disc3 className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
-            No release
+            No rollout
           </button>
           {releases.map((release) => {
             const selected = release.id === linkedReleaseId;
