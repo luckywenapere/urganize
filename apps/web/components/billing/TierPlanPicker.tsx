@@ -1,19 +1,24 @@
 'use client';
 
-import { formatTierPrice, getTier, type PricingTierId } from '@urganize/pricing';
+import {
+  SELLABLE_INTERVALS,
+  annualSavingCopy,
+  formatTierPrice,
+  getTier,
+  type BillingInterval,
+  type PricingTierId,
+} from '@urganize/pricing';
 
 /**
- * The pricing-v2 plan picker: pick a tier.
+ * The pricing-v2 plan picker: pick a tier, and how often you pay.
  *
- * ONE DIMENSION SINCE 2026-09-08. This asked twice until then — a tier says who
- * you are, an interval says how often you pay — and the interval half is gone
- * because every tier is billed once a year now. The radiogroup that used to sit
- * above these cards, and the "2 months free" badge under it, went with it.
+ * TWO DIMENSIONS AGAIN SINCE 2026-09-10. It asked once between 2026-09-08 and
+ * then, while everything was billed annually; monthly went back on sale, so the
+ * interval radiogroup and the "2 months free" badge came back with it.
  *
- * That is not only a simplification: the annual-only spec's acceptance bar is
- * that a monthly figure appears NOWHERE, and the surest way to hold that is for
- * the control to have no way to ask for one. `formatTierPrice` takes no interval
- * for the same reason.
+ * The interval sits ABOVE the tier cards because it reprices every one of them,
+ * and asking for it afterwards would move the numbers under the reader's cursor
+ * — the same ordering the marketing pricing page uses, for the same reason.
  *
  * NGN only, with no currency toggle. The tier prices carry no USD figure, the
  * Paystack account offers NGN alone in plan creation, and CLAUDE.md records the
@@ -30,11 +35,18 @@ import { formatTierPrice, getTier, type PricingTierId } from '@urganize/pricing'
  * worse than a tier the visitor never saw.
  */
 
+const INTERVAL_LABEL: Record<BillingInterval, string> = {
+  monthly: 'Monthly',
+  annual: 'Yearly',
+};
+
 type TierPlanPickerProps = {
   /** Which tiers to offer. Sales-led tiers do not belong here. */
   tiers: readonly PricingTierId[];
   selectedTier: PricingTierId;
   onSelectTier: (tier: PricingTierId) => void;
+  selectedInterval: BillingInterval;
+  onSelectInterval: (interval: BillingInterval) => void;
   disabled?: boolean;
 };
 
@@ -42,15 +54,58 @@ export function TierPlanPicker({
   tiers,
   selectedTier,
   onSelectTier,
+  selectedInterval,
+  onSelectInterval,
   disabled,
 }: TierPlanPickerProps) {
+  // Read off the first tier that HAS a price rather than a named one: a named
+  // tier that later goes sales-led returns null and silently takes the badge off
+  // the picker, which is exactly how the marketing page lost it once.
+  const saving = tiers.map(annualSavingCopy).find(Boolean) ?? null;
+
   return (
     <fieldset className="flex flex-col gap-2" disabled={disabled}>
       <legend className="sr-only">Choose a plan</legend>
+
+      <div className="mb-2 flex flex-col items-center gap-2">
+        <div
+          role="radiogroup"
+          aria-label="Choose how often you pay"
+          className="inline-flex overflow-hidden rounded-full border border-stroke-default bg-bg-elevated p-1"
+        >
+          {SELLABLE_INTERVALS.map((option) => {
+            const isActive = selectedInterval === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={isActive}
+                disabled={disabled}
+                onClick={() => onSelectInterval(option)}
+                className={`min-h-9 rounded-full px-4 text-xs font-semibold transition-colors ${
+                  isActive
+                    ? 'bg-brand text-content-inverse'
+                    : 'text-content-secondary hover:text-content-primary'
+                } ${disabled ? 'cursor-not-allowed' : ''}`}
+              >
+                {INTERVAL_LABEL[option]}
+              </button>
+            );
+          })}
+        </div>
+        {/* Phrased as months, never a percentage — the one wording the pricing
+            package allows. Derived from ANNUAL_MONTHS_BILLED. */}
+        {saving && selectedInterval === 'annual' ? (
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
+            {saving}
+          </p>
+        ) : null}
+      </div>
       {tiers.map((tierId) => {
         const tier = getTier(tierId);
         const isActive = selectedTier === tierId;
-        const price = formatTierPrice(tierId);
+        const price = formatTierPrice(tierId, selectedInterval);
         return (
           <label
             key={tierId}

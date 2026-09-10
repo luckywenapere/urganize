@@ -4,7 +4,10 @@ import {
   BILLING_PLAN_ORDER,
   PRICING_TIERS,
   PRICING_TIER_ORDER,
-  SELLING_INTERVAL,
+  ANNUAL_MONTHS_BILLED,
+  DEFAULT_SELLING_INTERVAL,
+  SELLABLE_INTERVALS,
+  annualSavingCopy,
   formatTierPrice,
   getTierPrice,
   tierHighlights,
@@ -181,34 +184,62 @@ describe('tier prices and the sales-led tier', () => {
     expect(priced.length).toBeGreaterThan(1);
     let previous = 0;
     for (const tier of priced) {
-      const amount = getTierPrice(tier, SELLING_INTERVAL)?.amount ?? 0;
+      const amount = getTierPrice(tier, DEFAULT_SELLING_INTERVAL)?.amount ?? 0;
       expect(amount, tier).toBeGreaterThan(previous);
       previous = amount;
     }
   });
 
-  // THE ACCEPTANCE BAR OF THE 2026-09-08 REPRICE, held structurally rather than
-  // by a copy sweep: a monthly figure must appear nowhere. This is the check
-  // that makes that true at the source — no tier CARRIES a monthly price, and
-  // the one accessor that could return one refuses. A display surface can only
-  // print what the data holds.
-  it('sells one interval, and holds no monthly figure to print', () => {
-    expect(SELLING_INTERVAL).toBe('annual');
+  // THE SHAPE OF THE 2026-09-10 REPRICE, held structurally rather than by a copy
+  // sweep. It replaces the 2026-09-08 bar ("a monthly figure appears nowhere"),
+  // which was true while annual was the only interval on sale and is deliberately
+  // false now: monthly is the price we set. What holds instead is that no tier
+  // carries a YEARLY figure, so a yearly price that disagrees with the monthly
+  // one cannot be typed into the data at all.
+  it('stores a monthly price only, and computes the yearly one', () => {
+    expect(SELLABLE_INTERVALS).toEqual(['monthly', 'annual']);
+    expect(DEFAULT_SELLING_INTERVAL).toBe('monthly');
     for (const tier of ALL_TIERS) {
-      const prices = PRICING_TIERS[tier].prices;
-      if (prices) {
-        expect(Object.keys(prices), `${tier} price keys`).toEqual(['annual']);
-      }
-      expect(getTierPrice(tier, 'monthly'), `${tier}/monthly`).toBeNull();
+      const monthly = PRICING_TIERS[tier].monthlyPrice;
+      if (!monthly) continue;
+      expect(getTierPrice(tier, 'monthly'), `${tier}/monthly`).toEqual(monthly);
+      const annual = getTierPrice(tier, 'annual');
+      expect(annual?.amount, `${tier}/annual`).toBe(monthly.amount * ANNUAL_MONTHS_BILLED);
+      // The kobo leg is derived too, so it cannot fall out of step with the
+      // naira one — a mismatch there is what a Paystack charge is built on.
+      expect(annual?.minorUnit, `${tier}/annual kobo`).toBe((annual?.amount ?? 0) * 100);
     }
   });
 
-  it('labels the price as a year, spelled out', () => {
-    // "/year" rather than "/yr": the founder's copy rules ask for fifth-grade
-    // readable, and an abbreviation is one more thing to decode.
-    expect(formatTierPrice('solo')).toBe('₦5,000/year');
-    expect(formatTierPrice('manager')).toBe('₦22,000/year');
-    expect(formatTierPrice('label')).toBe('₦50,000/year');
+  // THE REGRESSION GUARD ON DERIVED MONEY. Yearly amounts are not typed
+  // anywhere, so a change to ANNUAL_MONTHS_BILLED silently moves every one of
+  // them — including tiers whose yearly Plan is already minted, which is how this
+  // repo has five times advertised one price and charged another. If this fails,
+  // the arithmetic moved: mint the Plans and repoint the vars BEFORE shipping it.
+  it('resolves the yearly prices to the figures the Plans must be minted at', () => {
+    expect(getTierPrice('solo', 'annual')?.amount).toBe(50_000);
+    expect(getTierPrice('manager', 'annual')?.amount).toBe(220_000);
+    expect(getTierPrice('label', 'annual')?.amount).toBe(500_000);
+  });
+
+  it('labels each price by its interval, spelled out', () => {
+    // "/month" and "/year" rather than "/mo" and "/yr": the founder's copy rules
+    // ask for fifth-grade readable, and an abbreviation is one more thing to
+    // decode. The no-argument call takes the default, which is monthly.
+    expect(formatTierPrice('solo')).toBe('₦5,000/month');
+    expect(formatTierPrice('manager')).toBe('₦22,000/month');
+    expect(formatTierPrice('label')).toBe('₦50,000/month');
+    expect(formatTierPrice('solo', 'annual')).toBe('₦50,000/year');
+    expect(formatTierPrice('manager', 'annual')).toBe('₦220,000/year');
+    expect(formatTierPrice('label', 'annual')).toBe('₦500,000/year');
+  });
+
+  it('phrases the yearly saving in months and never as a percentage', () => {
+    // A percentage invites an argument about how it was calculated; "2 months
+    // free" is something a manager can check against their own statement.
+    for (const tier of PRICING_TIER_ORDER) {
+      expect(annualSavingCopy(tier), tier).toBe('2 months free');
+    }
   });
 
   // Never render a price for a tier we quote by hand. Returning null forces the
@@ -223,7 +254,8 @@ describe('tier prices and the sales-led tier', () => {
     const salesLed = ALL_TIERS.filter((tier) => PRICING_TIERS[tier].contactSales);
     expect(salesLed).toEqual([]);
     for (const tier of salesLed) {
-      expect(PRICING_TIERS[tier].prices, `${tier} prices`).toBeUndefined();
+      expect(PRICING_TIERS[tier].monthlyPrice, `${tier} monthlyPrice`).toBeUndefined();
+      expect(getTierPrice(tier, 'monthly'), `${tier}/monthly`).toBeNull();
       expect(getTierPrice(tier, 'annual'), `${tier}/annual`).toBeNull();
       expect(formatTierPrice(tier), `${tier} formatted`).toBeNull();
     }
@@ -264,14 +296,16 @@ describe('tier prices and the sales-led tier', () => {
     }
   });
 
-  it('carries an annual price on every self-serve tier, in whole kobo', () => {
+  it('carries a price at every sellable interval, in whole kobo', () => {
     for (const tier of TIERS) {
       if (PRICING_TIERS[tier].contactSales) continue;
-      const price = getTierPrice(tier, SELLING_INTERVAL);
-      expect(price, tier).not.toBeNull();
+      for (const interval of SELLABLE_INTERVALS) {
+      const price = getTierPrice(tier, interval);
+      expect(price, `${tier}/${interval}`).not.toBeNull();
       // The minor unit is pre-computed in the package so no caller multiplies
       // by 100 at the call site, which is where unit-mismatch bugs hide.
-      expect(price?.minorUnit, tier).toBe((price?.amount ?? 0) * 100);
+      expect(price?.minorUnit, `${tier}/${interval}`).toBe((price?.amount ?? 0) * 100);
+      }
     }
   });
 });
@@ -645,14 +679,14 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
     const result = resolveCheckoutPurchase({
       plan: 'solo',
       currency: 'NGN',
-      interval: SELLING_INTERVAL,
+      interval: DEFAULT_SELLING_INTERVAL,
       pricingV2: true,
     });
     if (result.ok) {
       // The Plans have been minted in this environment. Then the only thing
       // worth checking is that it resolved as the tier and not as something else.
       expect(result.planId).toBe('solo');
-      expect(result.interval).toBe(SELLING_INTERVAL);
+      expect(result.interval).toBe(DEFAULT_SELLING_INTERVAL);
       return;
     }
     expect(result.status).toBe(500);

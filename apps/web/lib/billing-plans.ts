@@ -12,7 +12,7 @@ import {
   BILLING_PLANS,
   PRICING_TIERS,
   PRICING_TIER_ORDER,
-  SELLING_INTERVAL,
+  SELLABLE_INTERVALS,
   getTierPrice,
   isBillingInterval,
   isBillingPlanId,
@@ -180,10 +180,19 @@ const PLAN_CODE_ENV_VAR: Record<BillingPlanId, Record<PricingCurrencyCode, strin
 // Label is in this map at all because it stopped being sales-led on 2026-09-08.
 // Its tier price used to be byte-identical to the legacy annual plan, which is
 // why it once shared that Plan object; at ₦50,000 it does not.
-const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, string> = {
-  solo: 'PAYSTACK_PLAN_SOLO_YEARLY_NGN',
-  manager: 'PAYSTACK_PLAN_MANAGER_YEARLY_NGN',
-  label: 'PAYSTACK_PLAN_LABEL_YEARLY_NGN',
+const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, Record<BillingInterval, string>> = {
+  solo: {
+    monthly: 'PAYSTACK_PLAN_SOLO_PER_MONTH_NGN',
+    annual: 'PAYSTACK_PLAN_SOLO_PER_YEAR_NGN',
+  },
+  manager: {
+    monthly: 'PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN',
+    annual: 'PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN',
+  },
+  label: {
+    monthly: 'PAYSTACK_PLAN_LABEL_PER_MONTH_NGN',
+    annual: 'PAYSTACK_PLAN_LABEL_PER_YEAR_NGN',
+  },
 };
 
 /**
@@ -219,9 +228,21 @@ const TIER_PLAN_CODE_ENV_VAR: Record<SelfServeTierId, string> = {
  * PAYSTACK_PLAN_LABEL_NGN is deliberately absent — nothing was ever sold on it.
  */
 const SUPERSEDED_TIER_PLAN_CODE_ENV_VARS: Record<string, readonly string[]> = {
-  solo: ['PAYSTACK_PLAN_SOLO_ANNUAL_NGN', 'PAYSTACK_PLAN_SOLO_MONTHLY_NGN'],
-  manager: ['PAYSTACK_PLAN_MANAGER_ANNUAL_NGN', 'PAYSTACK_PLAN_MANAGER_MONTHLY_NGN'],
-  label: ['PAYSTACK_PLAN_MONTHLY_NGN', 'PAYSTACK_PLAN_ANNUAL_NGN'],
+  solo: [
+    'PAYSTACK_PLAN_SOLO_YEARLY_NGN',
+    'PAYSTACK_PLAN_SOLO_ANNUAL_NGN',
+    'PAYSTACK_PLAN_SOLO_MONTHLY_NGN',
+  ],
+  manager: [
+    'PAYSTACK_PLAN_MANAGER_YEARLY_NGN',
+    'PAYSTACK_PLAN_MANAGER_ANNUAL_NGN',
+    'PAYSTACK_PLAN_MANAGER_MONTHLY_NGN',
+  ],
+  label: [
+    'PAYSTACK_PLAN_LABEL_YEARLY_NGN',
+    'PAYSTACK_PLAN_MONTHLY_NGN',
+    'PAYSTACK_PLAN_ANNUAL_NGN',
+  ],
 };
 
 function readPlanCodeEnv(envName: string | undefined): string | null {
@@ -260,14 +281,11 @@ export function getTierPaystackPlanCode(
   tier: SelfServeTierId,
   interval: BillingInterval
 ): string | null {
-  // Annual-only since 2026-09-08. The interval argument survives the collapse
-  // on purpose: it is what a checkout REQUEST carries, and refusing a monthly
-  // one here rather than ignoring it means a stale client posting `monthly`
-  // gets a plain "not configured" refusal instead of quietly being sold a year.
-  // Defence in depth — `resolveCheckoutPurchase` refuses it earlier and with a
-  // better message.
-  if (interval !== SELLING_INTERVAL) return null;
-  return readPlanCodeEnv(TIER_PLAN_CODE_ENV_VAR[tier]);
+  // Both intervals again since 2026-09-10, so the interval genuinely selects a
+  // Plan rather than being checked and discarded. Getting it wrong now bills the
+  // wrong TERM rather than returning null, which is why the two var names are as
+  // far apart as PER_MONTH and PER_YEAR.
+  return readPlanCodeEnv(TIER_PLAN_CODE_ENV_VAR[tier]?.[interval]);
 }
 
 /**
@@ -299,7 +317,16 @@ export function getTierPaystackPlanCode(
 export function purchasableTiers(): PricingTierId[] {
   return PRICING_TIER_ORDER.filter(
     (tier) =>
-      isSelfServeTier(tier) && getTierPaystackPlanCode(tier, SELLING_INTERVAL) !== null
+      isSelfServeTier(tier) &&
+      // BOTH intervals, because both are offered. A tier with only one Plan
+      // minted would render an interval toggle where one side 500s at checkout,
+      // and a customer who happened to pick that side would read it as the
+      // product being broken. Withholding the whole tier until both exist keeps
+      // the fresh-var-name guarantee intact: ship before minting and the card
+      // simply does not appear, rather than half-appearing.
+      SELLABLE_INTERVALS.every(
+        (interval) => getTierPaystackPlanCode(tier, interval) !== null
+      )
   );
 }
 
@@ -333,7 +360,15 @@ export function planCodeMatchesSubscription(input: {
     // from before the reprice legitimately renews against a code that is no
     // longer the current one. Judging them against the new Plan alone would
     // warn on every renewal of theirs for the rest of their life.
-    expected.push(getTierPaystackPlanCode(input.plan, SELLING_INTERVAL));
+    // BOTH intervals, because a subscriber's stored interval is not always
+    // knowable here and both are legitimately in use. Pushing each is cheaper
+    // and safer than resolving one: this list is only ever asked "does the
+    // incoming code appear", so a superset can produce a false PASS but never a
+    // false warning, and a false warning on a healthy renewal is the failure
+    // this whole function is written to avoid.
+    for (const interval of SELLABLE_INTERVALS) {
+      expected.push(getTierPaystackPlanCode(input.plan, interval));
+    }
     for (const envName of superseded ?? []) expected.push(readPlanCodeEnv(envName));
   } else if (superseded) {
     // A plan id that is not self-serve but still has Plans we sold it on.
@@ -485,14 +520,13 @@ export function getPlanMinorUnit(plan: BillingPlanId, currency: PricingCurrencyC
 }
 
 /**
- * The pricing-v2 equivalent. Null on a tier/interval with no price — which as
- * of 2026-09-09 should never actually happen: all three tiers `SelfServeTierId`
- * admits (solo, manager, label) carry an annual price, and the interval
- * argument is checked against `SELLING_INTERVAL` before this is ever called
- * (see `resolveCheckoutPurchase`). A null here now signals a pricing-package
- * edit that removed a price rather than a caller mistake. Callers must refuse
- * the checkout on null; sending Paystack a fabricated amount is the one
- * outcome worse than failing.
+ * The pricing-v2 equivalent. Null on a tier/interval with no price — which
+ * should never actually happen: all three tiers `SelfServeTierId` admits (solo,
+ * manager, label) carry a monthly price, and the yearly one is computed from it,
+ * so a price exists for every tier and interval combination the checkout can
+ * name. A null here signals a pricing-package edit that removed a price rather
+ * than a caller mistake. Callers must refuse the checkout on null; sending
+ * Paystack a fabricated amount is the one outcome worse than failing.
  *
  * NGN only, matching TIER_PLAN_CODE_ENV_VAR and PRICING_TIERS.
  */
@@ -627,21 +661,12 @@ export function resolveCheckoutPurchase(input: {
   }
 
   if (pricingV2 && isSelfServeTier(plan)) {
+    // Both intervals are sellable again since 2026-09-10, so an interval is
+    // validated for being one of ours and then honoured, rather than checked
+    // against a single permitted value. The annual-only refusal that stood here
+    // is gone with the restriction it enforced.
     if (!isBillingInterval(input.interval)) {
-      return { ok: false, status: 400, error: 'interval must be "annual".' };
-    }
-    // ANNUAL ONLY since 2026-09-08. Refused here, with a sentence a person can
-    // read, rather than left to fall through to the amount lookup below — that
-    // one would answer "No price configured for solo/monthly" as a 500, which
-    // reads as our server being broken when the request was simply asking for
-    // something we do not sell. A stale client or an old bookmark is the likely
-    // source, so the message says what to do.
-    if (input.interval !== SELLING_INTERVAL) {
-      return {
-        ok: false,
-        status: 400,
-        error: 'Plans are billed once a year. Reload the page and pick a plan again.',
-      };
+      return { ok: false, status: 400, error: 'interval must be "monthly" or "annual".' };
     }
     // NGN only, and refused plainly rather than half-attempted: PRICING_TIERS
     // carries no USD prices, the Paystack account offers NGN alone in plan

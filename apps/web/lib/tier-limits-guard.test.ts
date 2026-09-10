@@ -232,35 +232,31 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
 
     // Monthly alone is not enough. The wall's interval toggle is always live, so
     // a half-configured tier just moves the failure one click later.
-    process.env.PAYSTACK_PLAN_SOLO_MONTHLY_NGN = 'PLN_solo_monthly';
+    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_solo_monthly';
     expect(purchasableTiers()).toEqual([]);
 
-    process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = 'PLN_solo_annual';
+    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_solo_annual';
     expect(purchasableTiers()).toEqual(['solo']);
   });
 
   it('keeps pricing-page order, cheapest first', () => {
-    process.env.PAYSTACK_PLAN_SOLO_MONTHLY_NGN = 'PLN_a';
-    process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = 'PLN_b';
-    process.env.PAYSTACK_PLAN_MANAGER_MONTHLY_NGN = 'PLN_c';
-    process.env.PAYSTACK_PLAN_MANAGER_YEARLY_NGN = 'PLN_d';
+    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_a';
+    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_b';
+    process.env.PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN = 'PLN_c';
+    process.env.PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN = 'PLN_d';
     expect(purchasableTiers()).toEqual(['solo', 'manager']);
   });
 
   // A SALES-LED TIER IS KEPT OUT BY TWO INDEPENDENT THINGS, and this asserts
   // them separately because only one of them can be exercised from a test.
   //
-  // Said plainly after mutation-testing this block: deleting the
-  // `isSelfServeTier(tier)` guard from purchasableTiers() does NOT fail any
-  // test, because Label has no entry in TIER_PLAN_CODE_ENV_VAR (its mapping
-  // moved to RETIRED_TIER_PLAN_CODE_ENV_VAR, which getTierPaystackPlanCode
-  // does not read). So today the env mapping alone is what excludes Label,
-  // and the predicate is defence-in-depth against one specific future edit:
-  // someone re-adding a sales-led tier to TIER_PLAN_CODE_ENV_VAR. That edit
-  // WOULD be caught. (Group, id `enterprise`, used to be a second example
-  // here — "absent from PRICING_TIER_ORDER" — but it was removed from
-  // @urganize/pricing entirely on 2026-09-09, so there is no longer a tier id
-  // for an assertion to even name; the type system already refuses it.)
+  // THAT NOTE IS STALE AS OF 2026-09-10 and is rewritten rather than deleted,
+  // because the reasoning still matters. It used to say the isSelfServeTier
+  // guard was unexercised, since Label had no entry in TIER_PLAN_CODE_ENV_VAR.
+  // Label is self-serve with its own two Plans now, so nothing sales-led remains
+  // on the ladder at all — which means this block asserts a property with no
+  // current example rather than one that is merely hard to reach. It is kept so
+  // that the day a tier does go sales-led again, the assertion is already here.
   //
   // Rather than write an assertion that looks like it proves more than it does,
   // both halves are pinned where each is really checkable.
@@ -269,8 +265,8 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
     process.env.PAYSTACK_PLAN_LABEL_NGN = 'PLN_label';
     process.env.PAYSTACK_PLAN_MONTHLY_NGN = 'PLN_legacy_monthly';
     process.env.PAYSTACK_PLAN_ANNUAL_NGN = 'PLN_legacy_annual';
-    process.env.PAYSTACK_PLAN_SOLO_MONTHLY_NGN = 'PLN_a';
-    process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = 'PLN_b';
+    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_a';
+    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_b';
     const offered = purchasableTiers();
     expect(offered).not.toContain('label');
     expect(offered).toContain('solo');
@@ -287,18 +283,20 @@ describe('purchasableTiers only names tiers this deployment can charge', () => {
   });
 
   it('treats an empty env var as unset, not as a code', () => {
-    process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = '   ';
+    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = '   ';
     expect(purchasableTiers()).not.toContain('solo');
   });
 
-  it('needs only the annual Plan, because that is the only one sold', () => {
-    // This required BOTH a monthly and an annual code until 2026-09-08, when
-    // the interval toggle went away. Leaving the monthly requirement in place
-    // would have made every tier unpurchasable the moment the monthly prices
-    // were removed — the single sharpest way that reprice could have taken
-    // checkout down with no test failing anywhere.
-    delete process.env.PAYSTACK_PLAN_SOLO_MONTHLY_NGN;
-    process.env.PAYSTACK_PLAN_SOLO_YEARLY_NGN = 'PLN_solo_year';
+  it('needs BOTH Plans again, because both intervals are sold', () => {
+    // It required both until 2026-09-08, only the annual one while annual was
+    // the sole interval, and both again from 2026-09-10. The requirement tracks
+    // what the wall OFFERS: a toggle with two live sides means a tier missing
+    // either Plan would 500 on one of them, so it is withheld until both exist.
+    delete process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN;
+    process.env.PAYSTACK_PLAN_SOLO_PER_YEAR_NGN = 'PLN_solo_year';
+    expect(purchasableTiers()).not.toContain('solo');
+
+    process.env.PAYSTACK_PLAN_SOLO_PER_MONTH_NGN = 'PLN_solo_month';
     expect(purchasableTiers()).toContain('solo');
   });
 });

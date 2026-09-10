@@ -163,7 +163,8 @@ export default function ForLabelsPage() {
         </ScrollReveal>
 
         {/* FINAL CTA. The Label plan STOPPED being sales-led on 2026-09-08:
-            it carries a ₦50,000/year price and a card checkout again, so this
+            it carries a price and a card checkout again — ₦50,000/month, or a
+            year for the price of ten months since 2026-09-10 — so this
             page no longer says we price each roster deal by hand. What survives
             is the offer that was always the real substance of Label and is not
             self-serve at all: the founders set the roster up with you. There is
