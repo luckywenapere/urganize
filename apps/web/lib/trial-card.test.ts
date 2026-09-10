@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  classifyTrialCardFailure,
+  describeTrialCardFailure,
   ONBOARDING_SETUP_PATH,
   TRIAL_CARD_PLAN,
   TRIAL_CARD_SOURCE,
@@ -417,5 +419,54 @@ describe('shouldRunAuthedOnboardingSetup', () => {
   it('curator-only accounts → never (no team side, no billing)', () => {
     expect(shouldRunAuthedOnboardingSetup({ ...setup, role: 'curator' })).toBe(false);
     expect(shouldRunAuthedOnboardingSetup({ ...setup, role: ' Curator ' })).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// classifyTrialCardFailure / describeTrialCardFailure
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// The property under test is a refusal to blame the customer. Three reasons
+// reach here from failTrialCardCharge and only one is about their card; the
+// other two are our own Paystack plan config, where "try a different card" is
+// advice that cannot work. These cases exist so widening the 'card' branch is
+// a deliberate edit rather than a plausible-looking tidy-up.
+
+describe('classifyTrialCardFailure', () => {
+  it("only a non-reusable card counts as the card's fault", () => {
+    expect(classifyTrialCardFailure('card_not_reusable')).toBe('card');
+  });
+
+  it('our own plan-config failures are OURS, not the card\'s', () => {
+    expect(classifyTrialCardFailure('subscription_create_failed')).toBe('setup');
+    expect(classifyTrialCardFailure('plan_unresolvable')).toBe('setup');
+  });
+
+  it('an unknown, absent or blank reason is never blamed on the card', () => {
+    expect(classifyTrialCardFailure('something_new')).toBe('setup');
+    expect(classifyTrialCardFailure(null)).toBe('setup');
+    expect(classifyTrialCardFailure(undefined)).toBe('setup');
+    expect(classifyTrialCardFailure('   ')).toBe('setup');
+  });
+
+  it('tolerates the surrounding whitespace a jsonb round trip can leave', () => {
+    expect(classifyTrialCardFailure(' card_not_reusable ')).toBe('card');
+  });
+});
+
+describe('describeTrialCardFailure', () => {
+  it('tells a card failure to try another card', () => {
+    expect(describeTrialCardFailure('card')).toMatch(/different card/i);
+  });
+
+  it('NEVER tells a setup failure to try another card', () => {
+    const copy = describeTrialCardFailure('setup');
+    expect(copy).not.toMatch(/different card/i);
+    expect(copy).toMatch(/contact@urganize\.app/);
+  });
+
+  it('says the check is refunded either way', () => {
+    expect(describeTrialCardFailure('card')).toMatch(/refunded/i);
+    expect(describeTrialCardFailure('setup')).toMatch(/refunded/i);
   });
 });

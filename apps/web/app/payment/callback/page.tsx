@@ -6,7 +6,12 @@ import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { describePlanName, formatBillingDate } from '@/lib/billing-summary';
-import { TRIAL_CARD_PLAN, TRIAL_DAYS } from '@/lib/trial-card';
+import {
+  TRIAL_CARD_PLAN,
+  TRIAL_DAYS,
+  describeTrialCardFailure,
+  type TrialCardFailureKind,
+} from '@/lib/trial-card';
 import { LoadingMark, LoadingScreen } from '@urganize/ui';
 
 // Paystack post-checkout landing.
@@ -34,6 +39,10 @@ type VerifyResponse = {
   plan?: string | null;
   reference?: string;
   error?: string;
+  /** Card-trial failures only: which side the failure was on. Absent for
+   *  every other outcome, and 'setup' is the honest default for an absent or
+   *  unrecognised value — see classifyTrialCardFailure. */
+  failureKind?: TrialCardFailureKind;
 };
 
 const POLL_INTERVAL_MS = 1_500;
@@ -100,14 +109,20 @@ function PaymentCallbackContent() {
 
         if (res.ok && payload.status === 'failed') {
           // Terminal: today only the card-trial webhook branch writes
-          // 'failed' (e.g. a card whose authorization isn't reusable), so
-          // this is a no-op for the ordinary subscription flow.
+          // 'failed', so this is a no-op for the ordinary subscription flow.
+          //
+          // The copy is chosen by WHY it failed, not by the fact that it did.
+          // Only one of the webhook's three reasons is about the customer's
+          // card; the others are a missing or stale Paystack plan code on our
+          // side, and "try a different card" for those is advice that cannot
+          // work however many cards they own. verify hands us the coarse
+          // classification — see classifyTrialCardFailure.
           setStatus('failed');
           setResult({
             ...payload,
             error:
               payload.plan === TRIAL_CARD_PLAN
-                ? "That card couldn't be saved for future billing. The ₦100 check is refunded automatically. Try a different card."
+                ? describeTrialCardFailure(payload.failureKind ?? 'setup')
                 : 'The payment did not complete. Try again from the plans page.',
           });
           return;

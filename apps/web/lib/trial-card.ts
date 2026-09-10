@@ -106,6 +106,50 @@ export function extractReusableAuthorization(
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Why a card-trial setup failed, in the only two shapes a user can act on
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// failTrialCardCharge writes one of three reasons into
+// payments.paystack_response.failure_reason: 'card_not_reusable',
+// 'subscription_create_failed', 'plan_unresolvable'. Exactly ONE of those is
+// about the customer's card. The other two are our side — a Paystack plan code
+// that is missing, stale, or from the wrong Paystack mode — and telling someone
+// to "try a different card" for those sends them round a loop that cannot
+// succeed however many cards they own. That is what this classifier exists to
+// stop.
+//
+// COARSE ON PURPOSE, and this is the load-bearing bit: the value crosses
+// /api/payments/verify, which is an UNAUTHENTICATED route keyed on a
+// query-string reference. So it is an allowlist of two classifications rather
+// than the stored reason, and `failure_detail` (which can carry a Paystack
+// message) never leaves the server at all — the lib/upload-failure-report.ts
+// posture, for the same reason: a string designed to be read by a stranger has
+// to be safe to hand a stranger.
+//
+// An unknown reason classifies as 'setup', not 'card'. A reason we do not
+// recognise is not evidence the customer did anything wrong.
+
+export type TrialCardFailureKind = 'card' | 'setup';
+
+/** The one reason that genuinely means "this card cannot be billed later". */
+const CARD_FAILURE_REASON = 'card_not_reusable';
+
+export function classifyTrialCardFailure(
+  reason: string | null | undefined
+): TrialCardFailureKind {
+  return String(reason ?? '').trim() === CARD_FAILURE_REASON ? 'card' : 'setup';
+}
+
+/** The copy each kind earns. 'setup' deliberately does NOT say "try a
+ * different card": nothing about the card is wrong, retrying is futile, and
+ * the honest next step is to reach us. */
+export function describeTrialCardFailure(kind: TrialCardFailureKind): string {
+  return kind === 'card'
+    ? "That card can't be saved for future billing, so we can't start a trial on it. The ₦100 check is refunded automatically — try a different card."
+    : "Your card is fine and the ₦100 check is refunded automatically — this one is on us. Something went wrong setting up the trial itself, so retrying with another card won't help. Email contact@urganize.app and we'll sort it out.";
+}
+
 export type DelayedSubscriptionPayload = {
   customer: string;
   plan: string;
