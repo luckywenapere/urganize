@@ -22,8 +22,9 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // saving as a line underneath; there is one price now and it is a year, so the
 // saving line went with the comparison it described.
 //
-// Server component and always was, so `/` stays static. The full ladder and
-// the Group conversation live on /pricing; this is the teaser.
+// Server component and always was, so `/` stays static. The full ladder lives
+// on /pricing; this is the teaser. (There was a Group conversation to point at
+// too, briefly — removed 2026-09-09, see @urganize/pricing.)
 export function PricingStripSection() {
   const tiers = PRICING_TIER_ORDER.map((id) => {
     const tier = getTier(id);
@@ -49,10 +50,10 @@ export function PricingStripSection() {
           </p>
         </div>
 
-        {/* Four since 2026-09-08, when Label got a price and Group came back
-            onto the ladder. Two-up in the middle rather than four, because four
-            across 64rem leaves each card too narrow for its ceiling lines. */}
-        <ul className="mx-auto mt-12 grid max-w-[64rem] gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {/* THREE since 2026-09-09 (Group, the fourth, was removed the day after
+            it came back onto the ladder). One column below md, three from md —
+            the same breakpoint /pricing's own three-card layout uses. */}
+        <ul className="mx-auto mt-12 grid max-w-[56rem] gap-4 md:grid-cols-3">
           {tiers.map(({ id, tier, price, highlights }) => (
             <li
               key={id}

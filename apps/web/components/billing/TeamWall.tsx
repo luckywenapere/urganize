@@ -81,11 +81,12 @@ const WALL_TIERS: readonly PricingTierId[] = PRICING_TIER_ORDER.filter(
   (tier) => !getTier(tier).contactSales
 );
 
-/** Which tier a returning owner lands on. Manager rather than the cheapest, and
- *  deliberately: it carries `recommended` on the public page, and pre-selecting
- *  the entry tier would quietly steer every returning customer down a rung. It
+/** Which tier a returning owner lands on. Solo, because it is the tier that
+ *  carries `recommended` on the public page (moved here from Manager
+ *  2026-09-09) — pre-selecting anything else would open the wall on a
+ *  different plan than the one the pricing page just told them to pick. It
  *  must stay a member of WALL_TIERS, or the wall opens with nothing selected. */
-const DEFAULT_TIER: PricingTierId = 'manager';
+const DEFAULT_TIER: PricingTierId = 'solo';
 
 const VALUE_LINES = [
   // #571's rename on the first line; this branch's annual-only fact on the
@@ -635,7 +636,7 @@ export function TeamWall() {
                 </h2>
                 <p className="mt-1 text-sm text-content-secondary">
                   {PRICING_V2
-                    ? 'Running several labels, or prefer an invoice? Group is quoted per contract. Talk to us directly.'
+                    ? 'Running several labels, or prefer an invoice? Talk to us directly.'
                     : 'Prefer an invoice or a walkthrough for your team? Talk to us directly.'}
                 </p>
               </div>

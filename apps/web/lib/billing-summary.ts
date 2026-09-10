@@ -127,10 +127,14 @@ export function describePlanName(plan: string | null): string | null {
  * picker — the caller offers a "contact us" exit instead.
  *
  * Tier-first for the same reason as above, and the practical consequence is the
- * one that would have bitten a real customer: under pricing v2 the sales-led
- * plan is 'enterprise', while 'label' is buyable. Reading 'label' as the legacy
+ * one that would have bitten a real customer around the 2026-09-08 reprice:
+ * pricing v2 briefly had a sales-led tier (Group, id 'enterprise' — removed
+ * 2026-09-09) while 'label' was self-serve. Reading 'label' as the legacy
  * contactSales plan would have pointed a lapsed Label subscriber at a mailto
- * instead of the checkout they were trying to reach.
+ * instead of the checkout they were trying to reach. No v2 tier is sales-led
+ * today, but the generation check stays: 'label' still means two different
+ * things across the legacy and tier id spaces, and only a stored value's own
+ * history says which one it is.
  */
 export function isContactSalesPlan(plan: string | null): boolean {
   if (!plan) return false;

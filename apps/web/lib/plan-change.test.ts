@@ -304,7 +304,15 @@ describe('quotePlanChange — what it refuses', () => {
       'interval_change',
     ],
     [
-      'a sales-led target with no price to prorate',
+      // Group (id `enterprise`) was a real sales-led tier until 2026-09-09,
+      // when it was removed from @urganize/pricing entirely — not merely made
+      // priceless. So this case is now functionally identical to "an unknown
+      // target" below it: isPricingTierId('enterprise') is false, and this
+      // reason code already covers "not a tier at all" and "a tier but
+      // contactSales" alike. Kept as its own case anyway, because a stray
+      // client still bookmarking the old id is a real scenario distinct from
+      // a typo.
+      'a stray "enterprise" target, now unrecognised rather than sales-led',
       {
         currentPlan: 'manager',
         currentInterval: 'annual',
@@ -460,9 +468,15 @@ describe('the quote can never contradict the tier table', () => {
     }
   });
 
-  it('never quotes a price for a tier the package has no price for', () => {
-    // Group (id `enterprise`) carries no `prices` at all, which is what makes this
-    // structural rather than a lookup that happens to return undefined.
-    expect(PRICING_TIERS.enterprise.prices).toBeUndefined();
+  // Nothing on the ladder is sales-led any more — Group (id `enterprise`),
+  // the one tier that structurally lacked `prices`, was removed from
+  // @urganize/pricing entirely on 2026-09-09. This is the replacement
+  // assertion: every tier the package advertises today carries a price,
+  // which is what makes the loop above (every priced pair resolves cleanly
+  // to upgrade or downgrade) exhaustive rather than merely lucky.
+  it('carries a price for every tier the package advertises', () => {
+    for (const tier of Object.keys(PRICING_TIERS) as Array<keyof typeof PRICING_TIERS>) {
+      expect(PRICING_TIERS[tier].prices, tier).toBeDefined();
+    }
   });
 });

@@ -54,22 +54,30 @@ describe('describePlanName', () => {
 });
 
 describe('isContactSalesPlan', () => {
-  it('is true only for the sales-led tier', () => {
-    expect(isContactSalesPlan('enterprise')).toBe(true);
+  // ALWAYS FALSE TODAY — no plan value reaches `true` any more. Group (id
+  // `enterprise`) was the last sales-led tier, removed from @urganize/pricing
+  // entirely on 2026-09-09; Label (both generations) has been self-serve
+  // since 2026-09-08 (see the next test's comment for that history). The
+  // function and the `contactSales` field it reads stay generic
+  // infrastructure for a future sales-led tier — see the removal note in
+  // @urganize/pricing — but there is nothing left for either to say yes to.
+  it('is false for every plan value that exists, legacy and tier alike', () => {
     expect(isContactSalesPlan('manager')).toBe(false);
+    expect(isContactSalesPlan('solo')).toBe(false);
+    expect(isContactSalesPlan('label')).toBe(false);
     expect(isContactSalesPlan('monthly')).toBe(false);
     expect(isContactSalesPlan('annual')).toBe(false);
     expect(isContactSalesPlan('access')).toBe(false);
     expect(isContactSalesPlan(null)).toBe(false);
   });
 
-  // FLIPPED TWICE, so the history matters more than the current value. 'label'
-  // is the one id that exists in both plan generations: legacy Label was the
-  // sales-led ₦800,000 roster plan, tier Label launched as the self-serve
-  // flagship (2026-08-24, when this assertion was inverted to false), on
-  // 2026-08-30 the founder made the tier sales-led too, and on 2026-09-08 the
-  // annual-only reprice gave it a ₦50,000/year price and made it self-serve
-  // again. Third flip, so read the tier table rather than this comment.
+  // FLIPPED THREE TIMES, so the history matters more than the current value.
+  // 'label' is the one id that exists in both plan generations: legacy Label
+  // was the sales-led ₦800,000 roster plan, tier Label launched as the
+  // self-serve flagship (2026-08-24, when this assertion was inverted to
+  // false), on 2026-08-30 the founder made the tier sales-led too, and on
+  // 2026-09-08 the annual-only reprice gave it a ₦50,000/year price and made
+  // it self-serve again — where it has stayed.
   //
   // The consequence this assertion is really guarding: a Label subscriber who
   // lapses is pointed at a checkout rather than a mailto. Correct for a tier
@@ -77,10 +85,14 @@ describe('isContactSalesPlan', () => {
   // is where they would be overcharged: they cannot self-serve a CHANGE at all,
   // because `isGrandfatheredRate` refuses anyone paying something other than
   // today's list price.
-  it('treats a stored Label plan as buyable again', () => {
+  it('treats a stored Label plan as buyable again, and a stray Group row as unrecognised', () => {
     expect(isContactSalesPlan('label')).toBe(false);
-    // Group is the one left.
-    expect(isContactSalesPlan('enterprise')).toBe(true);
+    // Group (id `enterprise`) was the last sales-led tier and was removed
+    // entirely, not merely made self-serve as Label was twice. So a stored
+    // 'enterprise' row is no longer "sales-led", it is UNRECOGNISED:
+    // isPricingTierId rejects it, isBillingPlanId rejects it, and this falls
+    // through to the same `false` any garbage plan string gets.
+    expect(isContactSalesPlan('enterprise')).toBe(false);
   });
 });
 
@@ -197,13 +209,18 @@ describe('summarizeBilling', () => {
     expect(result.title).toBe('Active plan');
   });
 
-  it('routes a sales-led plan to contact, not to the self-serve picker', () => {
-    // Group is quoted per contract, so /locked would be a dead end.
+  it('treats a stray "enterprise" plan as unrecognised, not as sales-led', () => {
+    // Group (id `enterprise`) was the one sales-led tier this branch existed
+    // to route to `cta: 'contact'`. It was removed from @urganize/pricing
+    // entirely on 2026-09-09, so a stray 'enterprise' row no longer reads as
+    // sales-led — isContactSalesPlan rejects it like any garbage string — and
+    // this falls through to the same generic treatment any unrecognised plan
+    // value gets: a bare "Active plan" title and the ordinary self-serve exits.
     expect(summarizeBilling(snapshot({ accountStatus: 'paid', plan: 'enterprise' })).cta).toBe(
-      'contact'
+      'change'
     );
     expect(summarizeBilling(snapshot({ accountStatus: 'expired', plan: 'enterprise' })).cta).toBe(
-      'contact'
+      'plans'
     );
   });
 

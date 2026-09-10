@@ -38,9 +38,14 @@ export const getPlanExpiry = (
   // today, but the type allows it) doesn't accidentally set a short
   // window. Admin paths set their own expires_at directly.
   //
-  // 'enterprise' is its pricing-v2 successor and is handled the same way for
+  // 'enterprise' was Group's pricing-v2 id and was handled the same way for
   // the same reason: quoted per contract, invoiced by hand, never charged
-  // through self-serve checkout. It is deliberately absent from
+  // through self-serve checkout. Group was removed from @urganize/pricing
+  // entirely on 2026-09-09 (no `PricingTierId` member left for it), but the
+  // string check stays here as a defensive branch: `subscriptions_plan_check`
+  // still permits a stored row to carry 'enterprise' from before that date
+  // (no migration narrowed it — see the removal note in
+  // packages/pricing/src/index.ts), and it is deliberately absent from
   // isRecurringPlan, so a charge event cannot reach here with it — but if one
   // ever does, a far-future window beats a silent one-month window on a deal
   // somebody signed for a year.
