@@ -1,5 +1,33 @@
 // Card-before-trial (NEXT_PUBLIC_FEATURE_CARD_TRIAL) — pure, client-safe logic.
 //
+// ⚠️ RETIRED 2026-09-10 (founder call). The flag is off in production and this
+// funnel must not be revived as written. Two reasons, both live defects rather
+// than staleness:
+//
+//   1. ITS PRICES ARE THE FROZEN LEGACY TABLE. /start-trial renders
+//      getPlan('monthly'|'annual') from BILLING_PLANS — ₦80,000/mo and
+//      ₦800,000/yr — and charges the matching legacy Paystack Plans via
+//      PAYSTACK_PLAN_{MONTHLY,ANNUAL}_NGN. Since 2026-09-08 the product sells
+//      PRICING_TIERS, ANNUAL ONLY: Solo ₦5,000, Manager ₦22,000, Label
+//      ₦50,000 a year. So it quotes 160× Solo's real price and offers an
+//      interval we stopped selling. BILLING_PLANS is deliberately frozen (its
+//      own comment says editing it would change what a real checkout
+//      advertises) and this was the last live checkout still reading it.
+//   2. IT CONTRADICTS THE TRIAL WE ANNOUNCE. TRIAL_DAYS is 28 and card-first;
+//      TEAM_TRIAL_DAYS is 3 and card-free, and the v1.41.0 ledger entry tells
+//      customers in as many words "your whole team, no card".
+//
+// Reviving it means rewiring the picker, the checkout route's plan validation,
+// the webhook's plan resolution and subscription create, what lands in
+// subscriptions.plan, and the recorded amount onto purchasableTiers() at
+// SELLING_INTERVAL — NOT flipping the flag. Read the CLAUDE.md working note
+// "The card trial is retired" first.
+//
+// What deliberately still works with the flag off: POST
+// /api/billing/cancel-trial (money is on the line for anyone mid-trial) and
+// the classifier below, which the callback page reads for a payment that
+// failed before the flip.
+//
 // The flow this supports (see the CLAUDE.md working-notes entry):
 //   onboarding → /start-trial → POST /api/trial/start-checkout reserves a
 //   payments row (plan = TRIAL_CARD_PLAN) and sends the user to Paystack for a
