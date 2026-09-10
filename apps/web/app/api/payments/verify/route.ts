@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { TRIAL_CARD_PLAN, classifyTrialCardFailure } from '@/lib/trial-card';
 
 // Post-checkout UI confirmation endpoint.
 //
@@ -31,6 +32,7 @@ type PaymentRow = {
   status: string;
   plan: string | null;
   amount: number | null;
+  paystack_response: { failure_reason?: unknown } | null;
 };
 
 export async function GET(request: NextRequest) {
@@ -48,7 +50,7 @@ export async function GET(request: NextRequest) {
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const { data, error } = await admin
     .from('payments')
-    .select('status,plan,amount')
+    .select('status,plan,amount,paystack_response')
     .eq('reference', reference)
     .maybeSingle();
 
@@ -62,10 +64,26 @@ export async function GET(request: NextRequest) {
   }
 
   const row = data as PaymentRow;
+
+  // Card-trial failures carry WHY, in the two-value classification
+  // classifyTrialCardFailure allows and nothing more. This route is
+  // unauthenticated (a query-string reference is its only key), so the stored
+  // reason string and `failure_detail` — which can carry a Paystack message —
+  // deliberately never leave the server; see the note on that classifier.
+  const failureKind =
+    row.status === 'failed' && row.plan === TRIAL_CARD_PLAN
+      ? classifyTrialCardFailure(
+          typeof row.paystack_response?.failure_reason === 'string'
+            ? row.paystack_response.failure_reason
+            : null
+        )
+      : undefined;
+
   return NextResponse.json({
     status: row.status,
     plan: row.plan,
     amount: row.amount,
+    ...(failureKind ? { failureKind } : {}),
     reference,
   });
 }

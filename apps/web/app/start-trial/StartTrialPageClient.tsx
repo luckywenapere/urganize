@@ -23,6 +23,16 @@ import {
 
 // /start-trial — the card-before-trial page (NEXT_PUBLIC_FEATURE_CARD_TRIAL).
 //
+// ⚠️ RETIRED 2026-09-10 (founder call), flag off in production. DO NOT flip it
+// back on: the two getPlan()/formatPlanCyclePrice calls below read the frozen
+// legacy BILLING_PLANS table, so this page quotes ₦80,000/mo and ₦800,000/yr —
+// against a product that has sold PRICING_TIERS annual-only since 2026-09-08
+// (Solo ₦5,000, Manager ₦22,000, Label ₦50,000 a year). It also charges the
+// legacy Paystack Plans rather than the tier ones. Rewiring to
+// purchasableTiers() at SELLING_INTERVAL is the precondition for reviving
+// this; see the header of lib/trial-card.ts and the CLAUDE.md working note
+// "The card trial is retired".
+//
 // Onboarding lands new signups here (finishToDashboard) and the login-time
 // bounce in auth-store sends escapees back. The user picks Monthly or Annual,
 // sees exactly what will happen (₦0 due today, a refunded ₦100 card check,
