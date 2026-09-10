@@ -73,7 +73,7 @@ export function HeroSection() {
         <div className="hero-fade-in hero-delay-3 relative z-[60] mt-9 flex w-full flex-col items-center gap-4">
           <TrialButton location="hero" size="lg" className="w-full sm:w-auto" />
           <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-            14 days free. No card. Your whole team. Or <WatchDemo variant="link" />.
+            3 days free. No card. Your whole team. Or <WatchDemo variant="link" />.
           </p>
           {/* Proof directly under the primary CTA (2026-07-31): zaddyfunds'
               quote is the shortest and the only publicly link-verifiable

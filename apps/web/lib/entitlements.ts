@@ -239,7 +239,7 @@ export function minimumTierWith<K extends BooleanEntitlementKey>(key: K): Pricin
   return null;
 }
 
-/** The tier a team on trial is treated as. The shipped trial is a 14-day
+/** The tier a team on trial is treated as. The shipped trial is a 3-day
  * FULL-ACCESS team trial, so it resolves to the flagship rather than to the
  * entry tier: a trial that quietly capped seats would teach the buyer the wrong
  * thing about the product they are evaluating. */

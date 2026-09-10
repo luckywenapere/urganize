@@ -45,7 +45,7 @@ export function PricingStripSection() {
         <div className="mx-auto max-w-[52rem] text-center">
           <h2 className={centeredHeadlineClass}>One price for your team.</h2>
           <p className="mt-5 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-            Not per person, and paid once a year. Start free for 14 days, then
+            Not per person, and paid once a year. Start free for 3 days, then
             pick the plan that fits how many artists you run.
           </p>
         </div>

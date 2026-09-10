@@ -5,7 +5,8 @@ import { PRICING_TIERS } from "@urganize/pricing";
 // so the structured data can never say something the page does not.
 //
 // Every answer is a claim about the product AS IT SHIPS TODAY (the /features
-// honesty rule): 14 days is TEAM_TRIAL_DAYS, the artist ceilings come out of
+// honesty rule): 3 days is TEAM_TRIAL_DAYS (shortened from 14 by a founder
+// call on 2026-09-10), the artist ceilings come out of
 // @urganize/pricing rather than being typed here, "test release" is the
 // one-tap test path (v1.16.0), the Android app is only ever "offered inside
 // Urganize" (private beta, no store listing). Plain words, short sentences,
@@ -18,10 +19,10 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "Do I need a card to start?",
     answer:
-      "No. The trial is free for 14 days, you can start with a test rollout and you pick a plan only when it ends.",
+      "No. The trial is free for 3 days, you can start with a test rollout and you pick a plan only when it ends.",
   },
   {
-    question: "What happens when the 14 days end?",
+    question: "What happens when the 3 days end?",
     answer:
       "Your work is kept and your team is paused until you pick a plan.",
   },

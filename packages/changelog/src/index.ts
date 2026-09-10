@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.41.0",
+    date: "September 10, 2026",
+    highlights: [
+      "The free trial is now 3 days instead of 14. Same terms otherwise: your whole team, no card.",
+    ],
+  },
+  {
     version: "1.40.0",
     date: "September 9, 2026",
     highlights: [

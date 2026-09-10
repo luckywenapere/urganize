@@ -136,7 +136,7 @@ export default function FeaturesPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="features_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                14 days free. No card.
+                3 days free. No card.
               </p>
             </div>
           </div>
@@ -245,7 +245,7 @@ export default function FeaturesPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="features_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  14 days free. No card.
+                  3 days free. No card.
                 </p>
                 <ProofLine id="antoine" className="mt-2" />
                 <div className="mt-6 w-full">

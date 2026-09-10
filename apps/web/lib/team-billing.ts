@@ -1,6 +1,6 @@
 // Team trial + hard paywall (NEXT_PUBLIC_FEATURE_HARD_PAYWALL) — pure logic.
 //
-// A team gets 14 days of full access from the moment it is created, then the
+// A team gets 3 days of full access from the moment it is created, then the
 // wall goes up: no partial access, nothing deleted. The wall lifts on payment, a
 // comp, or an extended trial.
 //
@@ -28,15 +28,17 @@
 // flag. Nothing here imports it, and TEAM_TRIAL_DAYS is intentionally not
 // trial-card's TRIAL_DAYS.
 
-/** The team trial length. 14 days, per the founder's spec. Deliberately NOT
- * lib/trial-card.ts's TRIAL_DAYS (28) — that constant belongs to the
- * superseded card-first funnel and is load-bearing copy on other surfaces. */
-export const TEAM_TRIAL_DAYS = 14;
+/** The team trial length. 3 days, shortened from the original 14-day spec by
+ * a founder call on 2026-09-10. Deliberately NOT lib/trial-card.ts's
+ * TRIAL_DAYS (28) — that constant belongs to the superseded card-first funnel
+ * and is load-bearing copy on other surfaces. */
+export const TEAM_TRIAL_DAYS = 3;
 
 /** The trial indicator appears at this many days left or fewer. Calm and
- * non-blocking until then: a countdown from day 14 would be nagging, not
- * informative. */
-export const TEAM_TRIAL_PILL_THRESHOLD_DAYS = 10;
+ * non-blocking until then. Shrunk from 10 to 1 alongside the 2026-09-10
+ * length change — a 3-day trial has no room for a multi-day countdown, so
+ * the indicator now shows only on the trial's final day. */
+export const TEAM_TRIAL_PILL_THRESHOLD_DAYS = 1;
 
 /**
  * Server-side grace past trial_ends_at, for the mid-session-expiry rule ("do
@@ -80,7 +82,7 @@ export type TeamAccessState =
   | 'paid'
   /** Admin-granted indefinite free access. */
   | 'comped'
-  /** Inside the 14 days. */
+  /** Inside the 3 days. */
   | 'trial'
   /** Past the trial but inside TEAM_TRIAL_EXPIRY_GRACE_MS (server only). */
   | 'grace'
@@ -358,7 +360,7 @@ function combineWith(
  * The problem this solves: `loadWorkspaceAccessContext` provisions a workspace
  * for EVERY non-curator account on first load, so an invited teammate owns an
  * empty shell alongside the real team they were invited into. That shell gets
- * its own 14-day trial. Without care, a teammate whose team is walled would
+ * its own 3-day trial. Without care, a teammate whose team is walled would
  * keep working on their shell's trial, and the wall would never apply to
  * anyone who had ever been invited.
  *

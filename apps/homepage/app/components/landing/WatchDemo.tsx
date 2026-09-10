@@ -17,8 +17,9 @@ const START_SECONDS = 0;
 // is gone with it).
 //
 // Two shapes (2026-09-02): the original pill, and a `link` variant that
-// reads as the tail of a sentence ("14 days free. No card. Or watch the
-// demo."). The hero uses the link so the primary button, its terms line
+// reads as the tail of a sentence ("3 days free. No card. Or watch the
+// demo." — 14 originally, shortened 2026-09-10). The hero uses the link so
+// the primary button, its terms line
 // and the proof quote all fit in the first phone screen; a second pill
 // there pushed the proof below the fold.
 //
