@@ -7,10 +7,11 @@ import {
   PRICING_TIER_ORDER,
   SALES_CONTACT_EMAIL,
   SALES_WHATSAPP_URL,
-  SELLING_INTERVAL,
+  DEFAULT_SELLING_INTERVAL,
   formatPlanCyclePrice,
   getPlan,
   getTier,
+  type BillingInterval,
   type PricingTierId,
 } from '@urganize/pricing';
 import { AlertTriangle, CheckCircle2, MessageCircle } from '@/components/icons';
@@ -89,11 +90,13 @@ const WALL_TIERS: readonly PricingTierId[] = PRICING_TIER_ORDER.filter(
 const DEFAULT_TIER: PricingTierId = 'solo';
 
 const VALUE_LINES = [
-  // #571's rename on the first line; this branch's annual-only fact on the
-  // second, which is the whole point of the reprice and must not be reverted
-  // to the interval-agnostic wording it replaced.
+  // The second line carried "paid once a year" while annual was the only
+  // interval on sale (2026-09-08 to 09-10). Both sell again, and the wall now
+  // shows a toggle, so a line promising one of them would contradict the control
+  // directly above it. The team-not-per-person half is the part that matters and
+  // is unchanged.
   'Every rollout, task and file exactly where you left it.',
-  'One price for your whole team, paid once a year.',
+  'One price for your whole team, not per person.',
   'Cancel whenever you want, from settings.',
 ];
 
@@ -112,11 +115,14 @@ export function TeamWall() {
   // while it is on — kept side by side rather than overloaded, so a rollback is
   // one boolean and not a data migration in component state.
   const [selectedTier, setSelectedTier] = useState<PricingTierId>(DEFAULT_TIER);
-  // NO INTERVAL STATE since 2026-09-08: everything is billed once a year, so
-  // there is nothing to choose. `SELLING_INTERVAL` is still SENT, because the
-  // checkout and change-plan routes both require the field and it is what tells
-  // the webhook how far to set expires_at. What went away is the toggle, not
-  // the fact.
+  const [selectedInterval, setSelectedInterval] =
+    useState<BillingInterval>(DEFAULT_SELLING_INTERVAL);
+  // INTERVAL STATE IS BACK since 2026-09-10, when monthly went on sale again
+  // alongside yearly. It was absent from 2026-09-08 while everything was billed
+  // once a year, and `DEFAULT_SELLING_INTERVAL` is what it opens on. The field
+  // has always been SENT on both requests — checkout and change-plan require it,
+  // and it is what tells the webhook how far to set expires_at. What came back
+  // is the toggle, not the field.
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   /** Set when a change completed without a redirect: a downgrade, or an upgrade
@@ -280,7 +286,7 @@ export function TeamWall() {
         const changeResponse = await fetch('/api/billing/change-plan', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: effectiveTier, interval: SELLING_INTERVAL }),
+          body: JSON.stringify({ plan: effectiveTier, interval: selectedInterval }),
         });
         const changePayload = (await changeResponse.json().catch(() => ({}))) as {
           kind?: string;
@@ -323,7 +329,7 @@ export function TeamWall() {
         body: JSON.stringify({
           plan: PRICING_V2 ? effectiveTier : selectedPlan,
           currency: 'NGN',
-          ...(PRICING_V2 ? { interval: SELLING_INTERVAL } : {}),
+          ...(PRICING_V2 ? { interval: selectedInterval } : {}),
           ...(team?.primaryWorkspaceId ? { workspaceId: team.primaryWorkspaceId } : {}),
         }),
       });
@@ -528,6 +534,8 @@ export function TeamWall() {
                       tiers={offeredTiers}
                       selectedTier={effectiveTier}
                       onSelectTier={setSelectedTier}
+                      selectedInterval={selectedInterval}
+                      onSelectInterval={setSelectedInterval}
                       disabled={isStartingCheckout}
                     />
                   ) : (

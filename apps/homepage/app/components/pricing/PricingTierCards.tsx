@@ -1,9 +1,16 @@
+"use client";
+
+import { useState } from "react";
 import { RiCheckLine } from "react-icons/ri";
 import {
+  DEFAULT_SELLING_INTERVAL,
   PRICING_TIER_ORDER,
+  SELLABLE_INTERVALS,
+  annualSavingCopy,
   formatTierPrice,
   getTier,
   tierHighlights,
+  type BillingInterval,
   type PricingTierId,
 } from "@urganize/pricing";
 import { APP_SIGNUP_URL } from "@/lib/app-urls";
@@ -49,15 +56,67 @@ function isSelfServe(tierId: PricingTierId): boolean {
   return !getTier(tierId).contactSales;
 }
 
+const INTERVAL_LABEL: Record<BillingInterval, string> = {
+  monthly: "Monthly",
+  annual: "Yearly",
+};
+
 export function PricingTierCards() {
+  // Monthly first: it is the price we set and the smaller number, so opening on
+  // yearly would show every visitor the larger figure first. The saving badge
+  // beside the toggle is what argues for the yearly option.
+  const [interval, setInterval] = useState<BillingInterval>(DEFAULT_SELLING_INTERVAL);
+
+  // Read off the first tier that still HAS a price rather than a named one: a
+  // named tier that later goes sales-led returns null and silently takes the
+  // badge off the page, which has happened here once already.
+  const saving = PRICING_TIER_ORDER.map(annualSavingCopy).find(Boolean) ?? null;
+
   return (
     <section className="relative px-6 pb-20">
       {/* max-w-5xl for three cards — narrower than the max-w-6xl this page used
-          while it carried four (Group, removed 2026-09-09). NO INTERVAL SWITCH
-          above them since 2026-09-08: there is one interval, so there is
-          nothing to switch, and the "2 months free" badge that lived under it
-          went with the comparison it described. */}
+          while it carried four (Group, removed 2026-09-09). THE INTERVAL SWITCH
+          CAME BACK on 2026-09-10, when monthly went on sale again beside
+          yearly; it and the "2 months free" badge were absent from 2026-09-08,
+          while there was only one interval to show. */}
       <div className="mx-auto max-w-5xl">
+        {/* Above the cards, because it reprices every one of them and asking
+            for it afterwards would move the numbers under the reader's
+            cursor. */}
+        <div className="mb-10 flex flex-col items-center gap-3">
+          <div
+            role="radiogroup"
+            aria-label="Choose how often you pay"
+            className="inline-flex overflow-hidden rounded-full border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-1"
+          >
+            {SELLABLE_INTERVALS.map((option) => {
+              const isActive = interval === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={isActive}
+                  onClick={() => setInterval(option)}
+                  className={`rounded-full px-5 py-2 text-sm font-medium tracking-[-0.01em] transition-colors ${
+                    isActive
+                      ? "bg-[var(--marketing-primary)] text-[var(--marketing-primary-text)]"
+                      : "text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
+                  }`}
+                >
+                  {INTERVAL_LABEL[option]}
+                </button>
+              );
+            })}
+          </div>
+          {/* Phrased as months, never a percentage — the one wording the pricing
+              package allows. Derived from ANNUAL_MONTHS_BILLED. */}
+          {saving && interval === "annual" ? (
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-accent)]">
+              {saving}
+            </p>
+          ) : null}
+        </div>
         {/* Three cards: one column on a phone (where most of this traffic
             reads it), three from md — the same breakpoint the "how the Group
             plan works" three-step section below already uses for three cards,
@@ -65,7 +124,7 @@ export function PricingTierCards() {
         <div className="grid gap-6 md:grid-cols-3">
           {PRICING_TIER_ORDER.map((tierId) => {
             const tier = getTier(tierId);
-            const price = formatTierPrice(tierId);
+            const price = formatTierPrice(tierId, interval);
             const highlights = tierHighlights(tierId);
             const selfServe = isSelfServe(tierId);
             return (

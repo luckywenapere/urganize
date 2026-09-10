@@ -266,13 +266,31 @@ describe('tier plan codes and prices', () => {
     expect(judge('PLN_wrong_750k', 'monthly')).toBe(false);
   });
 
-  it('reads each tier from its own annual env var', () => {
-    vi.stubEnv('PAYSTACK_PLAN_SOLO_YEARLY_NGN', '  PLN_solo  ');
-    vi.stubEnv('PAYSTACK_PLAN_MANAGER_YEARLY_NGN', 'PLN_mgr');
-    vi.stubEnv('PAYSTACK_PLAN_LABEL_YEARLY_NGN', 'PLN_label');
-    expect(getTierPaystackPlanCode('solo', 'annual')).toBe('PLN_solo');
-    expect(getTierPaystackPlanCode('manager', 'annual')).toBe('PLN_mgr');
-    expect(getTierPaystackPlanCode('label', 'annual')).toBe('PLN_label');
+  it('reads each tier and interval from its own env var', () => {
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_MONTH_NGN', '  PLN_solo_m  ');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_YEAR_NGN', 'PLN_solo_y');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN', 'PLN_mgr_m');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN', 'PLN_mgr_y');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_MONTH_NGN', 'PLN_label_m');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_YEAR_NGN', 'PLN_label_y');
+    expect(getTierPaystackPlanCode('solo', 'monthly')).toBe('PLN_solo_m');
+    expect(getTierPaystackPlanCode('solo', 'annual')).toBe('PLN_solo_y');
+    expect(getTierPaystackPlanCode('manager', 'monthly')).toBe('PLN_mgr_m');
+    expect(getTierPaystackPlanCode('manager', 'annual')).toBe('PLN_mgr_y');
+    expect(getTierPaystackPlanCode('label', 'monthly')).toBe('PLN_label_m');
+    expect(getTierPaystackPlanCode('label', 'annual')).toBe('PLN_label_y');
+  });
+
+  // THE TWO INTERVALS MUST NOT CROSS. Billing a yearly Plan for a monthly
+  // request charges ten times the advertised figure, which is why the var names
+  // are PER_MONTH and PER_YEAR rather than a shared stem with a suffix.
+  it('never answers one interval with the Plan for the other', () => {
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_MONTH_NGN', 'PLN_solo_m');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_YEAR_NGN', '');
+    expect(getTierPaystackPlanCode('solo', 'annual')).toBeNull();
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_MONTH_NGN', '');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_YEAR_NGN', 'PLN_solo_y');
+    expect(getTierPaystackPlanCode('solo', 'monthly')).toBeNull();
   });
 
   // ⚠️ PAYSTACK_PLAN_LABEL_YEARLY_NGN IS NOT PAYSTACK_PLAN_LABEL_NGN. The second
@@ -281,31 +299,33 @@ describe('tier plan codes and prices', () => {
   // ₦750,000 for a ₦50,000 tier — so pin that the tier reads neither the legacy
   // var nor the shared annual one.
   it('never resolves Label to the stale legacy plan vars', () => {
+    // The superseded vars are all set to recognisable values: if the tier reads
+    // ANY of them, this fails rather than a customer being billed the wrong
+    // amount for the wrong term.
     vi.stubEnv('PAYSTACK_PLAN_LABEL_NGN', 'PLN_stale_750k');
     vi.stubEnv('PAYSTACK_PLAN_ANNUAL_NGN', 'PLN_shared_legacy');
-    vi.stubEnv('PAYSTACK_PLAN_LABEL_YEARLY_NGN', '');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_YEARLY_NGN', 'PLN_superseded_5k_year');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_MONTH_NGN', '');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_YEAR_NGN', '');
+    expect(getTierPaystackPlanCode('label', 'monthly')).toBeNull();
     expect(getTierPaystackPlanCode('label', 'annual')).toBeNull();
   });
 
-  it('refuses a monthly code outright, because nothing is sold monthly', () => {
-    // Defence in depth. resolveCheckoutPurchase turns a monthly request away
-    // earlier and with a better message; this makes it impossible for a caller
-    // that skipped that check to resolve a Plan anyway.
-    vi.stubEnv('PAYSTACK_PLAN_MANAGER_YEARLY_NGN', 'PLN_mgr');
-    expect(getTierPaystackPlanCode('manager', 'monthly')).toBeNull();
-  });
-
   it('returns null when a tier plan is not configured, so checkout refuses', () => {
-    vi.stubEnv('PAYSTACK_PLAN_MANAGER_YEARLY_NGN', '   ');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN', '   ');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN', '   ');
+    expect(getTierPaystackPlanCode('manager', 'monthly')).toBeNull();
     expect(getTierPaystackPlanCode('manager', 'annual')).toBeNull();
   });
 
-  it('prices every self-serve tier annually, in kobo', () => {
-    expect(getTierMinorUnit('solo', 'annual')).toBe(5_000_00);
-    expect(getTierMinorUnit('manager', 'annual')).toBe(22_000_00);
-    expect(getTierMinorUnit('label', 'annual')).toBe(50_000_00);
-    // And holds no monthly figure to price against.
-    expect(getTierMinorUnit('manager', 'monthly')).toBeNull();
+  it('prices every self-serve tier at both intervals, in kobo', () => {
+    // Monthly is the stored figure; yearly is ten months of it, computed.
+    expect(getTierMinorUnit('solo', 'monthly')).toBe(5_000_00);
+    expect(getTierMinorUnit('manager', 'monthly')).toBe(22_000_00);
+    expect(getTierMinorUnit('label', 'monthly')).toBe(50_000_00);
+    expect(getTierMinorUnit('solo', 'annual')).toBe(50_000_00);
+    expect(getTierMinorUnit('manager', 'annual')).toBe(220_000_00);
+    expect(getTierMinorUnit('label', 'annual')).toBe(500_000_00);
   });
 });
 
@@ -384,9 +404,12 @@ describe('resolveCheckoutPurchase', () => {
   const stubLive = () => {
     vi.stubEnv('PAYSTACK_PLAN_MONTHLY_NGN', 'PLN_live_month');
     vi.stubEnv('PAYSTACK_PLAN_ANNUAL_NGN', 'PLN_live_year');
-    vi.stubEnv('PAYSTACK_PLAN_SOLO_YEARLY_NGN', 'PLN_solo_year');
-    vi.stubEnv('PAYSTACK_PLAN_MANAGER_YEARLY_NGN', 'PLN_mgr_year');
-    vi.stubEnv('PAYSTACK_PLAN_LABEL_YEARLY_NGN', 'PLN_label_year');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_MONTH_NGN', 'PLN_solo_m');
+    vi.stubEnv('PAYSTACK_PLAN_SOLO_PER_YEAR_NGN', 'PLN_solo_y');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN', 'PLN_mgr_m');
+    vi.stubEnv('PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN', 'PLN_mgr_y');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_MONTH_NGN', 'PLN_label_m');
+    vi.stubEnv('PAYSTACK_PLAN_LABEL_PER_YEAR_NGN', 'PLN_label_y');
   };
 
   it('resolves a tier purchase to its Plan, price and interval', () => {
@@ -401,14 +424,15 @@ describe('resolveCheckoutPurchase', () => {
     ).toEqual({
       ok: true,
       planId: 'manager',
-      planCode: 'PLN_mgr_year',
-      amountMinorUnit: 22_000_00,
+      planCode: 'PLN_mgr_y',
+      amountMinorUnit: 220_000_00,
       interval: 'annual',
     });
   });
 
   it('sells Label at its own Plan, never the stale ₦750,000 one', () => {
-    // Label became self-serve again on 2026-09-08 at ₦50,000/year. The trap it
+    // Label became self-serve again on 2026-09-08, and is ₦50,000/month since
+    // 2026-09-10, so a year of it is ₦500,000. The trap it
     // has to clear: PAYSTACK_PLAN_LABEL_NGN exists in the dashboard holding a
     // mislabeled ₦750,000 Plan, and it is one word away from the var this tier
     // actually reads. Stubbed here precisely so a regression that reached for it
@@ -425,29 +449,48 @@ describe('resolveCheckoutPurchase', () => {
     ).toEqual({
       ok: true,
       planId: 'label',
-      planCode: 'PLN_label_year',
-      amountMinorUnit: 50_000_00,
+      planCode: 'PLN_label_y',
+      amountMinorUnit: 500_000_00,
       interval: 'annual',
     });
   });
 
-  it('refuses a monthly tier purchase, because nothing is sold monthly', () => {
+  it('sells a monthly tier purchase at the monthly Plan and price', () => {
+    // Monthly went back on sale 2026-09-10. This test refused it while annual
+    // was the only interval; it now pins the opposite, and specifically that a
+    // monthly request resolves the MONTHLY Plan rather than the yearly one —
+    // crossing those bills ten times the advertised figure.
+    stubLive();
+    expect(
+      resolveCheckoutPurchase({
+        plan: 'manager',
+        currency: 'NGN',
+        interval: 'monthly',
+        pricingV2: true,
+      })
+    ).toEqual({
+      ok: true,
+      planId: 'manager',
+      planCode: 'PLN_mgr_m',
+      amountMinorUnit: 22_000_00,
+      interval: 'monthly',
+    });
+  });
+
+  it('refuses an interval that is not one of ours', () => {
     // A stale client or an old bookmark is the likely source, so it is a 400
-    // with a sentence rather than the 500 the amount lookup would otherwise
-    // produce ("No price configured for manager/monthly"), which reads as our
-    // server being broken for a request that simply asked for something we do
-    // not sell.
+    // with a sentence rather than the 500 the amount lookup would produce.
     stubLive();
     const result = resolveCheckoutPurchase({
       plan: 'manager',
       currency: 'NGN',
-      interval: 'monthly',
+      interval: 'weekly',
       pricingV2: true,
     });
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error('expected a refusal');
     expect(result.status).toBe(400);
-    expect(result.error).toContain('once a year');
+    expect(result.error).toContain('interval');
   });
 
   // Group (id `enterprise`) was the one tier that was quoted per contract; it
@@ -508,7 +551,7 @@ describe('resolveCheckoutPurchase', () => {
     });
     expect(tier.ok).toBe(true);
     if (!tier.ok) throw new Error('expected a sale');
-    expect(tier.planCode).toBe('PLN_label_year');
+    expect(tier.planCode).toBe('PLN_label_y');
   });
 
   // Pins what `readSalesLedPlanName` actually has to guarantee: a plan that is

@@ -468,15 +468,18 @@ describe('the quote can never contradict the tier table', () => {
     }
   });
 
-  // Nothing on the ladder is sales-led any more — Group (id `enterprise`),
-  // the one tier that structurally lacked `prices`, was removed from
+  // Nothing on the ladder is sales-led any more — Group (id `enterprise`), the
+  // one tier that structurally lacked a price, was removed from
   // @urganize/pricing entirely on 2026-09-09. This is the replacement
-  // assertion: every tier the package advertises today carries a price,
-  // which is what makes the loop above (every priced pair resolves cleanly
-  // to upgrade or downgrade) exhaustive rather than merely lucky.
+  // assertion: every tier the package advertises today carries a price, which is
+  // what makes the loop above (every priced pair resolves cleanly to upgrade or
+  // downgrade) exhaustive rather than merely lucky.
+  //
+  // It reads `monthlyPrice` since 2026-09-10: that is the only price a tier
+  // stores now, and the yearly one is computed from it.
   it('carries a price for every tier the package advertises', () => {
     for (const tier of Object.keys(PRICING_TIERS) as Array<keyof typeof PRICING_TIERS>) {
-      expect(PRICING_TIERS[tier].prices, tier).toBeDefined();
+      expect(PRICING_TIERS[tier].monthlyPrice, tier).toBeDefined();
     }
   });
 });

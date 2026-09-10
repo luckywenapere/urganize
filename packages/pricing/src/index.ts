@@ -245,6 +245,35 @@ export type TierPrice = {
   minorUnit: number;
 };
 
+/** Months billed on the yearly plan, so two of the twelve are free.
+ *
+ *  MONTHLY IS THE PRICE WE SET; YEARLY IS ARITHMETIC (founder call,
+ *  2026-09-10). A tier declares `monthlyPrice` and nothing else — the yearly
+ *  figure is this many months of it, computed in `getTierPrice`. Repricing is
+ *  one number per tier, the ratio holds by construction rather than by anyone
+ *  keeping two literals in step, and the "2 months free" badge comes out of the
+ *  same constant as the gap it describes (see annualSavingCopy).
+ *
+ *  !! CHANGING THIS MOVES EVERY YEARLY PRICE AT ONCE, including tiers whose
+ *  yearly Paystack Plan is already minted — the advertise-versus-charge gap
+ *  this repo has shipped five times. `entitlements.test.ts` pins what the
+ *  arithmetic resolves to for exactly that reason: if it fails, mint the Plans
+ *  before shipping the number. */
+export const ANNUAL_MONTHS_BILLED = 10;
+
+/** The yearly amount for a monthly one. The only place the multiplication
+ *  happens, so no caller can scale or round it differently. */
+function annualAmount(monthlyAmount: number): number {
+  return monthlyAmount * ANNUAL_MONTHS_BILLED;
+}
+
+/** Builds a TierPrice from a whole-naira amount, deriving the kobo figure so no
+ *  tier carries a hand-typed minor unit — that is where unit-mismatch bugs
+ *  hide, and it is why this package pre-computes them at all. */
+function tierPrice(amount: number): TierPrice {
+  return { amount, minorUnit: amount * 100 };
+}
+
 /** A countable ceiling on a tier. `null` means no ceiling.
  *
  * These live HERE rather than only in apps/web's entitlement map because the
@@ -284,24 +313,23 @@ export type PricingTierDefinition = {
   label: string;
   /** One line on who this is for — the pricing card's subtitle. */
   audience: string;
-  /** The NGN price. ANNUAL ONLY since 2026-09-08 (founder call): every tier is
-   *  billed once a year and there is no monthly option anywhere.
+  /** The tier's NGN price PER MONTH — the only price a tier declares.
    *
-   *  THE SHAPE IS THE ENFORCEMENT. This is not `Record<BillingInterval, …>`
-   *  with the monthly key left empty — there is no monthly figure in the data
-   *  at all, so no surface can render one by reaching for the wrong key, and
-   *  `getTierPrice` answers null for any interval but annual. The acceptance
-   *  bar for that reprice was "nowhere a monthly figure", and a type is a
-   *  better guarantee of that than a sweep of the call sites.
+   *  THE SHAPE IS STILL THE ENFORCEMENT, pointed the other way. From 2026-09-08
+   *  this field was `{ annual: TierPrice }` and the acceptance bar was "nowhere
+   *  a monthly figure"; on 2026-09-10 the founder reversed that — monthly is
+   *  what we charge and yearly is ten months of it. So there is no stored yearly
+   *  figure at all: `getTierPrice(id, 'annual')` computes it, and no surface can
+   *  render a yearly price that disagrees with the monthly one, because there is
+   *  only one number to disagree with.
    *
-   *  `BillingInterval` still carries 'monthly' and must keep doing so: real
-   *  rows in `subscriptions.billing_interval` hold it, and those subscriptions
-   *  still renew on a monthly cycle. What ended is SELLING one, not honouring
-   *  the ones already sold.
+   *  BOTH INTERVALS ARE ON SALE AGAIN. `SELLABLE_INTERVALS` is the list, and
+   *  `DEFAULT_SELLING_INTERVAL` is what a surface opens on.
    *
-   *  Absent entirely on a sales-led tier, so a caller cannot accidentally
-   *  render a price we never quoted. */
-  prices?: { annual: TierPrice };
+   *  Absent entirely on a sales-led tier, so a caller cannot accidentally render
+   *  a price we never quoted — `getTierPrice` answers null for BOTH intervals
+   *  and the caller is forced into the "Let's talk" branch. */
+  monthlyPrice?: TierPrice;
   /** The countable ceilings. See TierLimits for why they live here. */
   limits: TierLimits;
   /** The non-countable things this tier includes, in customer words.
@@ -353,9 +381,8 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     id: 'solo',
     label: 'Solo',
     audience: 'For a manager running one artist.',
-    prices: {
-      annual: { amount: 5_000, minorUnit: 5_000_00 },
-    },
+    // Monthly only. The yearly price is ten months of this — see monthlyPrice.
+    monthlyPrice: tierPrice(5_000),
     limits: { artists: 1, seats: 2, activeReleases: 1, urgansMonthlyActions: 40 },
     perks: [
       'Files and credits on every rollout, and a press kit for every artist',
@@ -372,9 +399,8 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     id: 'manager',
     label: 'Manager',
     audience: 'For a manager running two or more artists.',
-    prices: {
-      annual: { amount: 22_000, minorUnit: 22_000_00 },
-    },
+    // Monthly only. The yearly price is ten months of this — see monthlyPrice.
+    monthlyPrice: tierPrice(22_000),
     limits: { artists: 5, seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
     perks: [
       'A full rollout plan, written by real managers',
@@ -412,9 +438,8 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     id: 'label',
     label: 'Label',
     audience: 'For a label or a team running a roster.',
-    prices: {
-      annual: { amount: 50_000, minorUnit: 50_000_00 },
-    },
+    // Monthly only. The yearly price is ten months of this — see monthlyPrice.
+    monthlyPrice: tierPrice(50_000),
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
       'Everything in Manager',
@@ -464,15 +489,43 @@ export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
   'label',
 ] as const;
 
-/** The one interval anything is sold on, since 2026-09-08 (founder call).
+/** The intervals a new purchase may choose, and the one a surface opens on.
  *
- *  EXPORTED SO NOTHING HAS TO WRITE THE LITERAL. Checkout, the wall and the
- *  status route all need to say "annual" and every one of them writing `'annual'`
- *  by hand is how a future second interval gets half-added. `BillingInterval`
- *  keeps both members because existing subscriptions still bill monthly and
- *  still renew; this constant is about what is on SALE, which is a different
- *  question and the one every new purchase asks. */
-export const SELLING_INTERVAL: BillingInterval = 'annual';
+ *  BOTH ARE ON SALE AGAIN since 2026-09-10 (founder call), reversing the
+ *  2026-09-08 collapse to annual-only. That collapse exported a single
+ *  `SELLING_INTERVAL`, which is deliberately GONE rather than repointed: it read
+ *  as "the one interval", so leaving the name in place while two intervals sell
+ *  would be the half-added state its own comment warned about. A caller that
+ *  used to reach for it now has to say which of the two it means, and the
+ *  compiler makes it.
+ *
+ *  STILL EXPORTED SO NOTHING WRITES THE LITERAL. Checkout, the wall and the
+ *  status route all need to name an interval, and each of them spelling
+ *  `'monthly'` by hand is how the two surfaces drift apart.
+ *
+ *  Monthly is the default because it is the price we set and the smaller
+ *  number; the yearly option is the upsell beside it, carrying
+ *  `annualSavingCopy`. */
+export const SELLABLE_INTERVALS: readonly BillingInterval[] = ['monthly', 'annual'] as const;
+export const DEFAULT_SELLING_INTERVAL: BillingInterval = 'monthly';
+
+export function isSellableInterval(value: unknown): value is BillingInterval {
+  return value === 'monthly' || value === 'annual';
+}
+
+/** The yearly saving, phrased the one way the copy rules allow.
+ *
+ *  Never a percentage: "2 months free" is what a manager can check against
+ *  their own bank statement, and a percentage invites an argument about how it
+ *  was calculated. Derived from ANNUAL_MONTHS_BILLED — the same constant
+ *  `getTierPrice` uses to compute the yearly amount — so this line and the
+ *  saving it describes are one fact stated twice, and repricing cannot leave
+ *  either stale. Null for a sales-led tier, which has no monthly price and so
+ *  no yearly one to save against. */
+export function annualSavingCopy(id: PricingTierId): string | null {
+  if (!PRICING_TIERS[id].monthlyPrice) return null;
+  return `${12 - ANNUAL_MONTHS_BILLED} months free`;
+}
 
 /** One customer-facing line per countable ceiling, plus the tier's perks.
  *
@@ -556,42 +609,45 @@ export function isBillingInterval(value: unknown): value is BillingInterval {
   return value === 'monthly' || value === 'annual';
 }
 
-/** Null for a sales-led tier, and null for any interval but the one we sell —
- *  callers must render "Let's talk" or refuse, never ₦0.
+/** A tier's price for one interval. Null for a sales-led tier — callers must
+ *  render "Let's talk" or refuse, never ₦0.
  *
- *  IT STILL TAKES AN INTERVAL even though only one is on sale, because the
- *  callers that reach for it are the ones genuinely holding an interval that
- *  came from somewhere else: a checkout request naming one, or a stored
- *  subscription that bills monthly. Dropping the argument would make those call
- *  sites assert annual rather than check it. Display code should call
- *  `formatTierPrice` instead, which has no interval to get wrong. */
+ *  MONTHLY IS READ, YEARLY IS COMPUTED. Only the monthly figure is stored, so
+ *  every yearly price the product displays and every yearly amount it charges
+ *  comes out of the one multiplication here. There is nowhere else a yearly
+ *  figure can enter the system, which is the point of the shape. */
 export function getTierPrice(
   id: PricingTierId,
   interval: BillingInterval
 ): TierPrice | null {
-  if (interval !== SELLING_INTERVAL) return null;
-  return PRICING_TIERS[id].prices?.annual ?? null;
+  const monthly = PRICING_TIERS[id].monthlyPrice;
+  if (!monthly) return null;
+  return interval === 'monthly' ? monthly : tierPrice(annualAmount(monthly.amount));
 }
 
-/** A tier's price as a customer reads it: "₦5,000/year". Null for a sales-led
- *  tier, which must render "Let's talk" instead.
+/** A tier's price as a customer reads it: "₦5,000/month", "₦50,000/year". Null
+ *  for a sales-led tier, which must render "Let's talk" instead.
  *
- *  NO INTERVAL ARGUMENT, on purpose. Every tier is billed once a year, so a
- *  parameter here would only ever be passed one value — and the display surface
- *  that got it wrong would print a monthly figure, which the annual-only spec
- *  names as the one thing that must appear nowhere. The absence of the argument
- *  is the guarantee.
+ *  THE INTERVAL ARGUMENT CAME BACK on 2026-09-10, when both intervals went on
+ *  sale again. It was deliberately absent while only one was, so that no display
+ *  surface could print the wrong kind of figure; with two on sale the guarantee
+ *  has to move from the signature to the caller, which now passes whatever its
+ *  own toggle is showing. It defaults to DEFAULT_SELLING_INTERVAL so a surface
+ *  with no toggle still reads correctly rather than having to pick.
  *
- *  "/year" spelled out rather than "/yr", per the founder's copy rules: the
- *  page has to read at a fifth-grade level and an abbreviation is one more
- *  thing to decode. */
-export function formatTierPrice(id: PricingTierId): string | null {
-  const price = getTierPrice(id, SELLING_INTERVAL);
+ *  "/month" and "/year" spelled out rather than "/mo" and "/yr", per the
+ *  founder's copy rules: the page has to read at a fifth-grade level and an
+ *  abbreviation is one more thing to decode. */
+export function formatTierPrice(
+  id: PricingTierId,
+  interval: BillingInterval = DEFAULT_SELLING_INTERVAL
+): string | null {
+  const price = getTierPrice(id, interval);
   if (!price) return null;
   const formatted = new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN',
     maximumFractionDigits: 0,
   }).format(price.amount);
-  return `${formatted}/year`;
+  return `${formatted}/${interval === 'monthly' ? 'month' : 'year'}`;
 }

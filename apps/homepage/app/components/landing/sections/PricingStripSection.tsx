@@ -18,9 +18,14 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // Nothing is typed here: this repo has shipped a page quoting one figure while
 // checkout charged another four separate times.
 //
-// ANNUAL ONLY since 2026-09-08. This showed the MONTHLY figure with the annual
-// saving as a line underneath; there is one price now and it is a year, so the
-// saving line went with the comparison it described.
+// MONTHLY AGAIN since 2026-09-10, when both intervals went back on sale. This
+// showed a monthly figure before 2026-09-08, a yearly one between then and now,
+// and a monthly one again — always by calling `formatTierPrice` and never by
+// naming an interval, which is why the swap costs nothing here.
+//
+// It takes the DEFAULT interval deliberately rather than offering a toggle: this
+// is the teaser, and the smaller number is the one that earns a click through to
+// /pricing, where the full comparison and the saving badge live.
 //
 // Server component and always was, so `/` stays static. The full ladder lives
 // on /pricing; this is the teaser. (There was a Group conversation to point at
@@ -45,8 +50,9 @@ export function PricingStripSection() {
         <div className="mx-auto max-w-[52rem] text-center">
           <h2 className={centeredHeadlineClass}>One price for your team.</h2>
           <p className="mt-5 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-            Not per person, and paid once a year. Start free for 3 days, then
-            pick the plan that fits how many artists you run.
+            Not per person. Pay monthly, or once a year and get two months
+            free. Start free for 3 days, then pick the plan that fits how many
+            artists you run.
           </p>
         </div>
 
@@ -104,7 +110,7 @@ export function PricingStripSection() {
             {FOUNDING_MEMBER_LINE}
           </p>
           <p className="mono-label mt-6 text-[var(--marketing-text-subtle)]">
-            Prices in Naira · Paid once a year · Export your data any time
+            Prices in Naira · Monthly or yearly · Export your data any time
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
             <TrialButton location="pricing" />
