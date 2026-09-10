@@ -25,8 +25,10 @@ import {
 //
 // CALM, per the spec. It states the number and offers the action; it does not
 // escalate as the number drops, does not turn red, and carries no warning
-// icon. It also appears only in the last third of the trial: a countdown from
-// day 14 would be nagging rather than informative.
+// icon. It also appears only on the trial's final day (the 2026-09-10
+// 3-day-trial shortening left no room for a multi-day countdown) — a
+// countdown running the whole trial would be nagging rather than
+// informative.
 //
 // NOT DISMISSIBLE, deliberately, unlike the Android banner. The spec asks for
 // a persistent, non-blocking indicator: dismissing it would hide the one piece

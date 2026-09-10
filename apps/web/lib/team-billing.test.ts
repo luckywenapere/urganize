@@ -37,12 +37,12 @@ const trialingTeam: WorkspaceBillingFields = {
 };
 
 describe('team-billing constants', () => {
-  it('pins the team trial at 14 days, distinct from the superseded card flow', () => {
-    expect(TEAM_TRIAL_DAYS).toBe(14);
+  it('pins the team trial at 3 days, distinct from the superseded card flow', () => {
+    expect(TEAM_TRIAL_DAYS).toBe(3);
   });
 
-  it('shows the indicator only inside the last 10 days', () => {
-    expect(TEAM_TRIAL_PILL_THRESHOLD_DAYS).toBe(10);
+  it('shows the indicator only on the trial\'s final day', () => {
+    expect(TEAM_TRIAL_PILL_THRESHOLD_DAYS).toBe(1);
     expect(TEAM_TRIAL_PILL_THRESHOLD_DAYS).toBeLessThan(TEAM_TRIAL_DAYS);
   });
 
@@ -208,14 +208,14 @@ describe('resolveTeamAccess — migration assignment matrix', () => {
     expect(result.reason).toBe('owner_allowlisted');
   });
 
-  it('a backfilled unpaid team is trialing with its full 14 days', () => {
+  it('a backfilled unpaid team is trialing with its full 3 days', () => {
     const result = resolveTeamAccess({
       ownerHasAccess: false,
-      team: { ...trialingTeam, trialStartedAt: NOW.toISOString(), trialEndsAt: at(14 * DAY) },
+      team: { ...trialingTeam, trialStartedAt: NOW.toISOString(), trialEndsAt: at(TEAM_TRIAL_DAYS * DAY) },
       now: NOW,
     });
     expect(result.state).toBe('trial');
-    expect(result.trialDaysLeft).toBe(14);
+    expect(result.trialDaysLeft).toBe(TEAM_TRIAL_DAYS);
   });
 
   it('an unstamped team fails OPEN rather than walling on our own bug', () => {

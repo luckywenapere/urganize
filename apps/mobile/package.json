@@ -1,6 +1,6 @@
 {
   "name": "@urganize/mobile",
-  "version": "1.40.0",
+  "version": "1.41.0",
   "private": true,
   "description": "Capacitor native shell (iOS + Android) for Urganize, the AI Music Manager for artists, managers and labels. Loads the production web app remotely; see docs/mobile/capacitor-audit.md for the strategy decision.",
   "scripts": {

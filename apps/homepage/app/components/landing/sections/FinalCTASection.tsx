@@ -35,7 +35,7 @@ export function FinalCTASection() {
           <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-4">
             <TrialButton location="final" size="lg" className="w-full sm:w-auto" />
             <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-              14 days free. No card.
+              3 days free. No card.
             </p>
             <ProofLine
               id="adenaiye"

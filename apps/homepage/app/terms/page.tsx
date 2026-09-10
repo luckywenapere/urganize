@@ -78,7 +78,7 @@ export default function TermsPage() {
 
             <Section number="04" title="Trial, subscriptions, and billing">
               <p>
-                New teams get a 14-day free trial of the full product with no
+                New teams get a 3-day free trial of the full product with no
                 card required. The trial covers the whole team, not each
                 person, so joining an existing team does not start a new one.
                 After the trial, continued use requires a paid subscription,

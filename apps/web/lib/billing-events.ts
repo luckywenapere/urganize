@@ -15,7 +15,7 @@
  * new moment needs no migration), but this union is what the app writes and
  * what the admin panel and dedupe checks read. */
 export const BILLING_EVENT_TYPES = [
-  /** A team's 14 days began (workspace provisioned, or the backfill). */
+  /** A team's 3 days began (workspace provisioned, or the backfill). */
   'trial_started',
   /** An admin added days. */
   'trial_extended',

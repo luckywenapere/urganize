@@ -20,8 +20,9 @@
 //   its three steps with the matching `before` line.
 // - TemplatePlanSection: REMOVED 2026-08-25 (founder call, same pass).
 // - StatsSection: REMOVED 2026-09-02 (homepage overhaul, URG-240). Its three
-//   founder-supplied facts survive where they now do the most work: "14 days
-//   free" in the CTA micro-copy, the Founding Member line in the pricing
+//   founder-supplied facts survive where they now do the most work: "3 days
+//   free" in the CTA micro-copy (14 originally, shortened 2026-09-10), the
+//   Founding Member line in the pricing
 //   strip (content/founding-member.ts), the one-team-all-artists offer in
 //   RosterSection.
 // - ThreeFeaturesSection: REMOVED 2026-09-02 (URG-240). Its three claims —

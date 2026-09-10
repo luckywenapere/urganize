@@ -61,10 +61,10 @@ UrgAns is the personal AI for music professionals inside Urganize. Ask it what i
 WHO IT IS FOR
 Artists running their own releases. Managers running more than one artist at a time. Labels and management companies running a roster.
 
-Start free for 14 days. No card needed.
+Start free for 3 days. No card needed.
 ```
 
-1,777 characters.
+1,776 characters.
 
 ### Other Play Console fields
 

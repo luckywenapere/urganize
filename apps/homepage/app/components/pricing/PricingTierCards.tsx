@@ -135,14 +135,15 @@ export function PricingTierCards() {
           })}
         </div>
 
-        {/* The trial terms belong beside the button that starts one. 14 days and
+        {/* The trial terms belong beside the button that starts one. 3 days and
             no card are the shipped terms (TEAM_TRIAL_DAYS in apps/web, and the
             /signup page says the same) — if either changes, all three move
-            together. "Your whole team" rather than "your workspace": that word
-            is out of anything a customer reads. */}
+            together. Shortened from 14 days by a founder call on 2026-09-10.
+            "Your whole team" rather than "your workspace": that word is out
+            of anything a customer reads. */}
         <p className="mt-8 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">
           Prices are in Naira. One price covers your whole team, not each person.
-          Every plan is paid once a year. The free trial lasts 14 days and needs
+          Every plan is paid once a year. The free trial lasts 3 days and needs
           no card.
         </p>
       </div>

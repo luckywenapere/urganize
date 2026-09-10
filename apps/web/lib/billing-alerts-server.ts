@@ -25,7 +25,7 @@ import {
   type FounderAlertKind,
 } from './billing-alert-templates';
 import { logBillingEvent, hasBillingEvent } from './billing-events-server';
-import { isHardPaywallEnabled } from './team-billing';
+import { isHardPaywallEnabled, TEAM_TRIAL_PILL_THRESHOLD_DAYS } from './team-billing';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -185,11 +185,17 @@ export async function notifyFounder(
 }
 
 /**
- * Daily sweep: teams entering the last 3 days of their trial.
+ * Daily sweep: teams entering the last TEAM_TRIAL_PILL_THRESHOLD_DAYS days of
+ * their trial — the same threshold the visible pill uses, so the founder is
+ * never warned about a team before the team itself sees a countdown.
+ * Previously a separately hardcoded "3 days," sized against the original
+ * 14-day trial; with the 2026-09-10 shortening to a 3-day trial, a fixed
+ * 3-day horizon would have fired for every team on day one. Deriving it from
+ * the shared constant is what keeps that from happening again.
  *
  * Runs from the existing daily cron rather than a new schedule (the Vercel
- * Hobby plan caps crons at once per day, and "entered the last 3 days" is a
- * day-granularity question anyway). Deduped on the event row, so a team is
+ * Hobby plan caps crons at once per day, and this is a day-granularity
+ * question anyway). Deduped on the event row, so a team is
  * only ever announced once per trial however many times this runs.
  *
  * Skips teams that are comped, and teams whose owner already has access —
@@ -202,7 +208,7 @@ export async function runTrialEndingSweep(
 
   try {
     const now = new Date();
-    const horizon = new Date(now.getTime() + 3 * DAY_MS);
+    const horizon = new Date(now.getTime() + TEAM_TRIAL_PILL_THRESHOLD_DAYS * DAY_MS);
 
     const result = await admin
       .from('workspaces')
