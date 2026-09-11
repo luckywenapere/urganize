@@ -34,11 +34,18 @@ import { wideContainerClass } from "./shared";
 // ~190px above and below; items-start piled all 377px into one block under the
 // image, which is arguably worse.
 //
-// So the quote moved into the RIGHT column, under the shot. Columns go 661/284
-// to 498/464 and the void is gone. That is also what the founder asked for in
+// So the quote moved into the RIGHT column, under the shot. Columns went 661/284
+// to 498/464 and the void was gone. That is also what the founder asked for in
 // the first place — he reached for "centralize the testimonial" as a way to
 // balance a lopsided section, and round 1 rejected the letter of it while
 // ignoring what prompted it.
+//
+// A later founder call (2026-09-11) took out the audience paragraph that sat
+// under the h2 ("Built for the people who run the rollout: managers, labels and
+// their teams. Artists feel the results."), so the left column is shorter again
+// — see the numbers below. items-start is what makes that a non-event: the two
+// columns start together and the shorter one simply ends earlier, where under
+// items-center any difference would be split into a gap at both ends.
 //
 // Consequences worth keeping:
 //   - ProofLine.tsx's mount table rule (proof sits beside its CTA) still holds,
@@ -47,9 +54,10 @@ import { wideContainerClass } from "./shared";
 //   - The rule above the quote spans the full 560px column, which is exactly
 //     the shot's width, so it lands flush with the image edge above it. That is
 //     why ProofLine's left variant has no measure cap — see its header.
-//   - UrgAnsSection uses a byte-identical grid and keeps items-center, because
-//     its left column holds four elements to this one's nine and its shot is
-//     the taller of the two. THE TWO DIVERGING IS THE POINT — do not re-sync.
+//   - UrgAnsSection uses a byte-identical grid and keeps items-center. Both
+//     left columns have since been cut back and both are now shorter than
+//     their shot, so the two are closer than they were — but they still
+//     diverge deliberately. THE TWO DIVERGING IS THE POINT — do not re-sync.
 //
 // This beat is also the PILOT for globals.css's --space-* scale, which was
 // declared with --phi and then never used by anything. Spacing here reads
@@ -76,10 +84,6 @@ export function RosterSection() {
             <h2 className="mt-[var(--space-3)] text-balance text-[2rem] font-semibold leading-[1.08] tracking-[-0.04em] text-[var(--marketing-text)] sm:text-[2.6rem] lg:text-[3rem]">
               One team. Every artist.
             </h2>
-            <p className="mt-[var(--space-3)] text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-              Built for the people who run the rollout: managers, labels and
-              their teams. Artists feel the results.
-            </p>
             <ul className="mt-[var(--space-4)] space-y-[var(--space-2)]">
               {POINTS.map((point) => (
                 <li
