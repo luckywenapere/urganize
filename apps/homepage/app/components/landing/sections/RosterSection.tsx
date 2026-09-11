@@ -1,5 +1,4 @@
 import { PRODUCT_SHOTS } from "@/content/product-shots";
-import { salesMailto } from "@/lib/sales-mailto";
 import { ProofLine } from "../ProofLine";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
@@ -46,6 +45,21 @@ import { wideContainerClass } from "./shared";
 // — see the numbers below. items-start is what makes that a non-event: the two
 // columns start together and the shorter one simply ends earlier, where under
 // items-center any difference would be split into a gap at both ends.
+//
+// The same day took the audience paragraph's two companion links out of the
+// CTA block ("Running a label? Book a demo with the founders" and a bare "See
+// pricing"), leaving the trial button alone — so both wrappers went with them,
+// since a flex column and a flex-wrap row laying out one inline-flex child do
+// nothing. mt-[var(--space-6)] stays: it is this beat's rung on the --space-*
+// ladder, not the old row's own spacing.
+//
+// NEITHER PATH IS STRANDED, checked rather than assumed. /pricing is in the
+// header's ProductMenu AND survives lower on this page as PricingStripSection's
+// "See full pricing", which is the better-placed of the two — it sits in the
+// pricing beat rather than the roster one. The label demo lives on /for-labels
+// (its own mailto, also in the ProductMenu) and on /pricing's Group card. What
+// IS gone is any book-a-demo ask on the landing page itself; that was the only
+// salesMailto mount here, so a label now meets the trial button first.
 //
 // Consequences worth keeping:
 //   - ProofLine.tsx's mount table rule (proof sits beside its CTA) still holds,
@@ -101,22 +115,8 @@ export function RosterSection() {
               ))}
             </ul>
 
-            <div className="mt-[var(--space-6)] flex flex-col items-start gap-[var(--space-2)]">
-              <div className="flex flex-wrap items-center gap-x-[var(--space-3)] gap-y-[var(--space-2)]">
-                <TrialButton location="roster" />
-                <a
-                  href={salesMailto("Label")}
-                  className="text-sm font-medium text-[var(--marketing-text)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:decoration-[color:var(--marketing-text)]"
-                >
-                  Running a label? Book a demo with the founders →
-                </a>
-              </div>
-              <a
-                href="/pricing"
-                className="text-sm text-[var(--marketing-text-muted)] underline decoration-[color:var(--marketing-border-strong)] underline-offset-4 transition-colors hover:text-[var(--marketing-text)]"
-              >
-                See pricing
-              </a>
+            <div className="mt-[var(--space-6)]">
+              <TrialButton location="roster" />
             </div>
           </div>
 
