@@ -21,19 +21,35 @@ import { wideContainerClass } from "./shared";
 // is mounted here for the first time — see ProofLine.tsx's mount table.
 //
 // LAYOUT (2026-09-11, founder call: "not laid out properly ... maybe the
-// testimonial should be centralized ... guided by the golden ratio"). Centring
-// the quote was considered and rejected: ProofSection is a large centred
-// blockquote two beats later, so two centred quotes would land close together,
-// and ProofLine.tsx's mount table puts proof BESIDE its CTA. The quote stays;
-// what was wrong was mechanical, and both halves are fixed here:
+// testimonial should be centralized"). Two rounds. THE SECOND ONE IS THE REAL
+// FIX, and the first is worth knowing about so nobody re-derives it:
 //
-//   1. items-center → items-start. UrgAnsSection uses a byte-identical grid,
-//      but its left column holds four elements against this one's ten, so the
-//      shot floated at mid-height and the quote hung past its bottom edge.
-//      THE TWO SECTIONS DIVERGING IS THE POINT — do not re-sync them.
-//      /features:153 is the house precedent for items-start on unequal columns.
-//   2. ProofLine's left variant lost its 30rem cap, so the rule now runs the
-//      column's full 34rem and lands level with the headline and bullets.
+// Round 1 read the source, found two defects visible there (a ProofLine measure
+// cap, and items-center) and shipped both. It did not fix the complaint. Round 2
+// rendered the page and MEASURED it, which is the only way to settle a layout
+// question: the text column is 661px tall and the product shot is 284px, so the
+// right column had a 377px hole in it — larger than the image itself. That is
+// what reads as "not laid out properly", and NO VALUE OF align-items FIXES IT,
+// because align-items only decides where the void sits. items-center split it
+// ~190px above and below; items-start piled all 377px into one block under the
+// image, which is arguably worse.
+//
+// So the quote moved into the RIGHT column, under the shot. Columns go 661/284
+// to 498/464 and the void is gone. That is also what the founder asked for in
+// the first place — he reached for "centralize the testimonial" as a way to
+// balance a lopsided section, and round 1 rejected the letter of it while
+// ignoring what prompted it.
+//
+// Consequences worth keeping:
+//   - ProofLine.tsx's mount table rule (proof sits beside its CTA) still holds,
+//     but now ACROSS the row rather than within one column. Below lg the grid
+//     collapses and the order is text, CTA, shot, quote.
+//   - The rule above the quote spans the full 560px column, which is exactly
+//     the shot's width, so it lands flush with the image edge above it. That is
+//     why ProofLine's left variant has no measure cap — see its header.
+//   - UrgAnsSection uses a byte-identical grid and keeps items-center, because
+//     its left column holds four elements to this one's nine and its shot is
+//     the taller of the two. THE TWO DIVERGING IS THE POINT — do not re-sync.
 //
 // This beat is also the PILOT for globals.css's --space-* scale, which was
 // declared with --phi and then never used by anything. Spacing here reads
@@ -97,15 +113,21 @@ export function RosterSection() {
               >
                 See pricing
               </a>
-              <ProofLine id="antoine" align="left" className="mt-[var(--space-1)] border-t border-[color:var(--marketing-border)] pt-[var(--space-3)]" />
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
-            <ThemedProductShot
-              {...PRODUCT_SHOTS.artistsRoster}
-              alt="The Artists section of Settings in Urganize, listing the artists on one team above an Add an artist field."
-              sizes="(min-width: 1024px) 560px, 100vw"
+          <div>
+            <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
+              <ThemedProductShot
+                {...PRODUCT_SHOTS.artistsRoster}
+                alt="The Artists section of Settings in Urganize, listing the artists on one team above an Add an artist field."
+                sizes="(min-width: 1024px) 560px, 100vw"
+              />
+            </div>
+            <ProofLine
+              id="antoine"
+              align="left"
+              className="mt-[var(--space-6)] border-t border-[color:var(--marketing-border)] pt-[var(--space-3)]"
             />
           </div>
         </div>
