@@ -50,7 +50,7 @@ export function TrialButton({
       data-location={location}
       className={`inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] transition-colors hover:bg-[var(--marketing-primary-hover)] ${sizing} ${className}`.trim()}
     >
-      Start free
+      Try Urganize
     </a>
   );
 }

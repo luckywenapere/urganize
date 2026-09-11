@@ -130,20 +130,20 @@ export function PricingTierCards() {
             return (
               <div
                 key={tierId}
-                className={`flex h-full flex-col rounded-[1.5rem] border p-6 ${
-                  tier.recommended
-                    ? "border-[var(--marketing-accent)]/50 bg-[var(--marketing-accent)]/[0.06]"
-                    : "border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)]"
-                }`}
+                className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6"
               >
-                {/* NO "MOST TEAMS" BADGE (founder call, 2026-09-11). Removed
-                    from the marketing site outright rather than hidden behind a
-                    condition, so there is nothing left to switch back on by
-                    accident. `tier.recommended` is untouched and still does its
-                    other two jobs — it elevates this card and fills its CTA
-                    below — so the label went and the emphasis stayed. The
-                    in-app wall (TierPlanPicker) keeps its own badge; that is a
-                    separate surface and a separate call. */}
+                {/* NO BADGE AND NO ELEVATION — all three cards are identical:
+                    same border, same ground, same filled CTA below. Founder
+                    call, 2026-09-11, in two passes the same day: the "Most
+                    teams" badge went first, and then the accent border and
+                    ground that had been left doing the emphasis on their own.
+
+                    `tier.recommended` is NOT read on this surface any more, nor
+                    on the homepage pricing strip. It is not dormant either —
+                    the in-app wall's TierPlanPicker still renders its badge off
+                    it, and that is deliberately a separate surface and a
+                    separate call. So reaching for the flag to re-emphasise a
+                    card here would reopen exactly what was just closed. */}
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
                   {tier.label}
                 </p>
@@ -174,21 +174,30 @@ export function PricingTierCards() {
                   ))}
                 </ul>
 
+                {/* FILLED ON EVERY CARD, and that was a choice rather than a
+                    deletion: the two branches this replaced differed in box
+                    model (the other added its own `border`), so uniform meant
+                    picking one. Filled, because TrialButton — the site's one
+                    primary ask, twelve mounts — and the header pill both carry
+                    these exact three classes, so this is the site's CTA look
+                    rather than a per-tier emphasis. What it replaced was
+                    explicitly the de-emphasised treatment (no fill, hover only
+                    on the border), so demoting all three to that would have
+                    left /pricing with no filled CTA at all — quieter than
+                    today, which is more than uniform asks for. Deliberately NOT
+                    also taking TrialButton's drop shadow; three shadowed
+                    buttons in one card row is a different change. */}
                 <a
                   href={selfServe ? APP_SIGNUP_URL : salesMailto(tier.label)}
                   data-track={selfServe ? "start_trial_click" : undefined}
                   data-location={selfServe ? `pricing_${tierId}` : undefined}
-                  className={`mt-8 inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium tracking-[-0.02em] transition-colors ${
-                    tier.recommended
-                      ? "bg-[var(--marketing-primary)] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)]"
-                      : "border border-[var(--marketing-border)] text-[var(--marketing-text)] hover:border-[var(--marketing-accent)]/50"
-                  }`}
+                  className="mt-8 inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] transition-colors hover:bg-[var(--marketing-primary-hover)]"
                 >
                   {/* Two outcomes, not three. "Book a demo" used to sit on a
                       priced tier that was not self-serve; since 2026-09-08 the
                       two conditions are exact complements, so that branch was
                       unreachable and is gone rather than left to rot. */}
-                  {selfServe ? "Start free" : "Let's talk"}
+                  {selfServe ? "Try Urganize" : "Let's talk"}
                 </a>
               </div>
             );
