@@ -161,10 +161,20 @@ const PLAN_CODE_ENV_VAR: Record<BillingPlanId, Record<PricingCurrencyCode, strin
 // A name nothing has set yet inverts the failure. Ship before minting and
 // `purchasableTiers()` below finds no code, withholds the tier, and the wall
 // shows one less card — visible immediately, and nobody is charged anything.
-// Set the var and the tier starts being offered with no deploy. That is exactly
-// what purchasableTiers() was built to guarantee, and reusing a live var name is
-// the one thing that defeats it. THE ORDER OF OPERATIONS IS NOW UNNECESSARY
-// RATHER THAN REMEMBERED.
+// Set the var, REBUILD, and the tier starts being offered with no code change.
+//
+// ⚠️ THIS SAID "WITH NO DEPLOY" UNTIL 2026-09-11, AND THAT WAS WRONG. Vercel
+// snapshots env vars per deployment, so a var set after a build never reaches
+// the deployment already running. Activating the monthly/yearly reprice needed
+// a `vercel redeploy` of the live production deployment before the app could
+// see any of the six new Plans at all.
+//
+// What purchasableTiers() actually guarantees is the failure MODE — ship before
+// minting and the tier is WITHHELD rather than mischarged — which is a claim
+// about what goes wrong, not about deployment mechanics. The two were
+// conflated. Reusing a live var name is still the one thing that defeats it, so
+// THE ORDER OF OPERATIONS IS SAFE IN EITHER DIRECTION rather than unnecessary:
+// mint first or ship first, but redeploy before expecting either to show up.
 //
 // ⚠️ _YEARLY_ IS NOT _ANNUAL_. The two are synonyms in English and different
 // vars here: _YEARLY_ is the live one this map reads, _ANNUAL_ is superseded and
