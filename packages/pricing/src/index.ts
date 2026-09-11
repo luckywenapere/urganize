@@ -353,11 +353,17 @@ export type PricingTierDefinition = {
    *  something specific to the tier that used to use it, so a future sales-led
    *  tier needs no new plumbing — just this flag. */
   contactSales?: boolean;
-  /** Visually elevated on the pricing page. It NO LONGER carries a "Most teams"
-   *  badge there — that label was removed from both marketing surfaces on
-   *  2026-09-11 (founder call), leaving this flag to do elevation and CTA
-   *  emphasis only. The in-app wall's TierPlanPicker still renders the badge.
-   *  Exactly one tier may set this.
+  /** ⚠️ READ ONLY BY THE IN-APP WALL NOW. The marketing site ignores this
+   *  flag entirely: the "Most teams" badge came off both surfaces on
+   *  2026-09-11, and the card elevation and CTA emphasis it was still doing
+   *  came off the same day (founder call, "remove the highlight so all the
+   *  pricing tabs look uniform"). So /pricing and the homepage strip render
+   *  three identical cards, and changing this value moves nothing there.
+   *
+   *  Its one live consumer is apps/web's TierPlanPicker, which renders the
+   *  badge on the upgrade wall — deliberately a separate surface and a
+   *  separate call. Exactly one tier may set this, and entitlements.test.ts
+   *  pins which one, so this stays in the data rather than being deleted.
    *
    *  ON SOLO since 2026-09-09 (founder call), moved from Manager. It was on
    *  Manager because Manager used to be the cheapest self-serve tier and the

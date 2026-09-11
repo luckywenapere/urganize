@@ -63,14 +63,13 @@ export function PricingStripSection() {
           {tiers.map(({ id, tier, price, highlights }) => (
             <li
               key={id}
-              className={`flex h-full flex-col rounded-[1.5rem] border p-6 ${
-                tier.recommended
-                  ? "border-[var(--marketing-accent)]/50 bg-[var(--marketing-accent)]/[0.06]"
-                  : "border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)]"
-              }`}
+              className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6"
             >
-              {/* No "Most teams" badge — see the note in PricingTierCards.
-                  Removed from the marketing site 2026-09-11 (founder call). */}
+              {/* No badge and no elevation — every card here is identical, and
+                  `tier.recommended` is not read on this surface. Both went on
+                  2026-09-11 (founder call); the full reasoning, including why
+                  the flag is still live for the in-app wall, is in the note in
+                  PricingTierCards. */}
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
                 {tier.label}
               </p>

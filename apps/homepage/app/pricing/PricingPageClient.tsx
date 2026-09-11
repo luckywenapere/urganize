@@ -94,8 +94,8 @@ export function PricingPageClient() {
             <div className="hero-fade-in hero-delay-3 mt-10">
               {/* NO hero CTA, deliberately: every card below already carries
                   its own, and one more button up here reads as a button
-                  repeated rather than as a choice. The header's "Start free
-                  trial" is on screen throughout anyway. */}
+                  repeated rather than as a choice. The header's "Try Urganize"
+                  is on screen throughout anyway. */}
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
                 Built for artists, managers and labels.
               </p>

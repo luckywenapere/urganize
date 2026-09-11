@@ -25,7 +25,21 @@ export function MarketingHeader() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[color:var(--marketing-border)] bg-[var(--marketing-bg)]/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-[84rem] items-center justify-between gap-6 px-6 py-4 sm:px-8 lg:px-10">
+        {/* THE GAPS TIGHTEN BELOW sm, AND THAT IS THE LONGER CTA PAYING FOR
+            ITSELF. "Try Urganize" replaced "Start free" on 2026-09-11 and costs
+            about 20px more. Measured at 375px, where the row is logo (56.9px:
+            13px tall on a 7726x1766 wordmark) + "Product" + the CTA + the theme
+            toggle, with "Log in" already stepped aside (hidden sm:block), and
+            only 327px available once px-6 is taken off both sides: the old
+            label left roughly 15px spare, so the new one would have overflowed.
+            Dropping the outer gap 24 -> 12 and the inner 16 -> 12 gives back
+            the same 20px.
+
+            Nothing above sm changes, and nothing wide changes either: with
+            justify-between a gap is only a floor, so it binds at exactly the
+            tight widths and nowhere else. If a control is ever added to this
+            row, re-measure rather than assuming this still fits. */}
+        <div className="mx-auto flex max-w-[84rem] items-center justify-between gap-3 px-6 py-4 sm:gap-6 sm:px-8 lg:px-10">
           {/* The wordmark's viewBox is cropped to the ink (see the comment in
               the SVG), so items-center alone lands it on the same centreline as
               Product, Log in, the CTA and the toggle. It used to be cropped
@@ -52,7 +66,7 @@ export function MarketingHeader() {
             />
           </Link>
 
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             <ProductMenu />
             <Link
               href="/login"
@@ -77,7 +91,7 @@ export function MarketingHeader() {
               data-location="header"
               className="inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--marketing-primary)] px-4 py-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)] sm:px-5 sm:py-2.5"
             >
-              Start free
+              Try Urganize
             </a>
             <ThemeToggle />
           </div>
