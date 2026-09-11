@@ -42,8 +42,20 @@ export function HeroSection() {
           {/* THE CATEGORY IS THE HEADLINE (2026-09-09 positioning). The brief
               fixes the hierarchy for anything that introduces the product:
               category first, audience second, promise third, explanation last.
-              So the h1 is the customer line verbatim and the subhead opens
-              with the promise.
+              So the h1 is the customer line verbatim and the subhead IS the
+              promise, verbatim and nothing else.
+
+              The fourth rung was dropped on a founder call (2026-09-11): the
+              subhead used to follow the promise with "Urganize lays out the
+              full rollout, you put a name on every activity, and your team
+              sees where each rollout stands." Do not add an explanation
+              sentence back here without asking. The promise itself stays, and
+              still reaches search and social through LANDING_DESCRIPTION and
+              the share card either way.
+
+              max-w-[44rem] is deliberately left at a width one line no longer
+              needs. It is harmless on centred text, and correct again if this
+              ever grows; text-balance simply stops applying to a single line.
 
               It reads as a definition rather than a benefit, which is the
               deliberate trade: the line it replaced ("One artist or ten, every
@@ -62,8 +74,7 @@ export function HeroSection() {
           </h1>
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-            {PROMISE}. Urganize lays out the full rollout, you put a name on
-            every activity, and your team sees where each rollout stands.
+            {PROMISE}.
           </p>
         </div>
 
