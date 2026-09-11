@@ -1,8 +1,4 @@
 import { PRODUCT_SHOTS } from "@/content/product-shots";
-import {
-  type TestimonialId,
-  transformationPairs,
-} from "@/content/testimonials";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { ThemedProductShot } from "../ThemedProductShot";
@@ -10,53 +6,39 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 
 // The problem and the three steps, as one beat (2026-09-02).
 //
-// The 2026-08-25 trim cut the before/after rows as "too bulky", and a
-// separate problem section would have put those three lines back as a beat
-// of their own. Instead a step can OPEN with a `before` line — the house
-// description of how the work ran, then what Urganize does about it.
+// Each step opened with a `before` line — the house description of how the
+// work used to run — until a founder call on 2026-09-11 removed all three,
+// one at a time, along with the bodies of steps 01 and 03. The beat is now a
+// heading and three captioned screenshots, and the h2 above carries the whole
+// problem framing on its own, in the past tense.
 //
-// ⚠️ THE PAIRING IS BY ID, NOT BY POSITION, and it has to stay that way. It
-// used to read `transformationPairs[index]`, which was fine only while every
-// step had a line and the two arrays were the same length. Step 01's line was
-// dropped on a founder call (2026-09-11), and under index pairing that would
-// have silently slid 02's line onto 01 and 03's onto 02 — every step labelled
-// with the wrong problem, and nothing failing. A step with no `beforeId`
-// simply opens with its kicker, and its `mt-8` goes with the line it existed
-// to clear.
+// So this file no longer reads content/testimonials.ts at all. The three
+// strings are still OWNED there, and two of them (Antoine's and Adenaiye's)
+// are still mirrored byte-identically by /why-urganize, which renders them —
+// that array is a sign-off ledger of real people's approved copy, not dead
+// code, and it is where the lines come back from if this beat ever wants them.
 //
-// Steps 01 and 03 lost their `body` on a founder call (2026-09-11), and 03 its
-// `before` with it, so both are now a kicker, a title and the screenshot. The
-// bodies are gone from here; 03's before line is still OWNED by
-// content/testimonials.ts, which is a sign-off ledger rather than dead code.
-//
-// Those `before` strings are house copy, NOT the quoted people's words:
-// content/testimonials.ts forbids styling them as quotes, and this file
-// renders them as plain muted paragraphs for that reason. They also carry
-// data-nosnippet: chat-chaos prose is exactly what Google once substituted
-// for the page description (lib/seo.ts), and the strong description is only
-// half of that fix.
+// Two things went with them, both worth knowing before adding a line back.
+// The kicker's top margin existed only to clear a problem line. And those
+// paragraphs carried data-nosnippet, because chat-chaos prose is exactly what
+// Google once substituted for the page description (lib/seo.ts) — a new one
+// needs that attribute again, and the strong description is only half of that
+// fix.
 const STEPS: readonly {
   kicker: string;
   title: string;
   body?: string;
   shot: (typeof PRODUCT_SHOTS)[keyof typeof PRODUCT_SHOTS];
   alt: string;
-  beforeId?: TestimonialId;
 }[] = [
   {
     kicker: "01",
-    // No `beforeId`: the "pinned chat" line was removed here on a founder
-    // call (2026-09-11). The h2 above carries that framing now, in the past
-    // tense. content/testimonials.ts still OWNS the string — /why-urganize
-    // mirrors it byte-identically and is untouched — so this drops the
-    // rendering, not the copy.
     title: "Create the rollout. Get the plan.",
     shot: PRODUCT_SHOTS.scopedRelease,
     alt: "A rollout open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
   },
   {
     kicker: "02",
-    beforeId: "adenaiye",
     title: "Put a name on every activity.",
     body:
       "Assign it and they get an email with the rollout, the due date and a button that opens it. Activities unlock in order, so the next step is always clear.",
@@ -87,11 +69,6 @@ export function StorySection() {
 
       <div className="mx-auto mt-16 max-w-[74rem] space-y-16 lg:space-y-24">
         {STEPS.map((step, index) => {
-          const before = step.beforeId
-            ? transformationPairs.find(
-                (pair) => pair.testimonialId === step.beforeId,
-              )?.before
-            : undefined;
           return (
             <ScrollReveal key={step.title}>
               <div
@@ -100,19 +77,7 @@ export function StorySection() {
                 }`}
               >
                 <div className="max-w-[32rem]">
-                  {before ? (
-                    <p
-                      data-nosnippet
-                      className="text-[0.95rem] leading-7 text-[var(--marketing-text-subtle)]"
-                    >
-                      {before}
-                    </p>
-                  ) : null}
-                  <p
-                    className={`mono-label text-[var(--marketing-accent)] ${
-                      before ? "mt-8" : ""
-                    }`}
-                  >
+                  <p className="mono-label text-[var(--marketing-accent)]">
                     {step.kicker}
                   </p>
                   <h3 className="mt-3 text-balance text-[1.75rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[2.1rem]">
