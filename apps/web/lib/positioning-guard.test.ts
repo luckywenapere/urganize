@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
-import { join } from 'path';
+import { join, sep } from 'path';
 import { describe, expect, it } from 'vitest';
 import { URGANS_COPY_RULES } from './chappi/system-prompt';
 import { readableCopy } from './copy-scan';
@@ -56,6 +56,23 @@ function walk(dir: string): string[] {
     return statSync(path).isDirectory() ? walk(path) : [path];
   });
 }
+
+/**
+ * Paths with forward slashes, whatever the platform.
+ *
+ * `join` emits backslashes on Windows, and several filters below match on
+ * `/` — `//page.tsx$/`, `!//components//`. On Windows those matched
+ * NOTHING, so "gives every marketing page a description that names the
+ * category" failed with `expected 0 to be greater than 15` on a clean tree:
+ * the guard could not see a single page. It passed in CI and failed on the
+ * founder's own machine, which is the worst shape a guard can have — a test
+ * that always fails locally is a test people learn to skip.
+ *
+ * Node reads a forward-slash path on Windows perfectly well, so normalising
+ * here costs nothing and fixes the whole class rather than the one filter that
+ * happened to be noticed.
+ */
+const posix = (path: string) => path.split(sep).join('/');
 
 const isSource = (path: string) =>
   /\.tsx?$/.test(path) && !/\.test\.tsx?$/.test(path);
@@ -276,7 +293,7 @@ describe('positioning', () => {
   it('gives every marketing page a description that names the category', () => {
     // The brief's acceptance criterion, and the one most likely to rot: a new
     // page is easy to add without a description, and nothing else would notice.
-    const pages = walk(join(HOMEPAGE, 'app')).filter(
+    const pages = walk(join(HOMEPAGE, 'app')).map(posix).filter(
       (path) => /\/page\.tsx$/.test(path) && !/\/components\//.test(path),
     );
     expect(pages.length).toBeGreaterThan(15);
