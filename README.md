@@ -1,6 +1,6 @@
 # Urganize
 
-Urganize is an **AI Music Manager** for artists, managers and labels. It helps music teams plan rollouts, coordinate people, manage assets and metadata, track execution and keep every part moving from one place.
+Urganize is an **AI Music Business Manager** for artists, managers and labels. It helps music teams plan rollouts, coordinate people, manage assets and metadata, track execution and keep every part moving from one place.
 
 The target user is an independent music manager handling 1–3 artists, planning their next release in the next 90 days. The central object is the release; every feature ties back to one.
 

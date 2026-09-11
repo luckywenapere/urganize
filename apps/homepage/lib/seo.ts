@@ -18,10 +18,11 @@ const SITE_NAME = "Urganize";
 //
 // TITLE: the brand line, and nothing else. The 2026-09-09 positioning makes
 // this an acceptance criterion rather than a judgement call: the homepage
-// title is "Urganize, AI Music Manager". It is 26 characters, well inside the
-// ~60 Google renders whole, and it deliberately drops the keyword tail the
+// title is "Urganize, AI Music Business Manager". It is 35 characters (26
+// before the category was widened on 2026-09-11), still well inside the ~60
+// Google renders whole, and it deliberately drops the keyword tail the
 // previous title carried — the category IS the keyword now, and a searcher who
-// has never heard of us learns what this is from two words.
+// has never heard of us learns what this is from three words.
 //
 // DESCRIPTION: written at ~150-160 characters on purpose. A shorter one was
 // 106 characters and opened with "How", and Google was ignoring it entirely —
@@ -32,6 +33,10 @@ const SITE_NAME = "Urganize";
 // any other page text (the /community page still carries group-chat copy).
 // It leads with the category and the audience, then the promise, which is the
 // hierarchy the brief fixes for anything that introduces the product.
+//
+// Widening the category on 2026-09-11 took it from 150 characters to 159, which
+// is the top of that band rather than past it. Anything added here from now on
+// has to come out of the tail, not on top of it.
 export const LANDING_TITLE = BRAND_LINE;
 export const LANDING_DESCRIPTION =
   `Urganize is an ${CUSTOMER_LINE}. ${PROMISE}, with an owner on every activity.`;
@@ -51,7 +56,7 @@ export const LANDING_DESCRIPTION =
 // Bump this string every time public/opengraph-image.png changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-09-09-rollout";
+const SHARE_IMAGE_VERSION = "2026-09-11-business-manager";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.png?v=${SHARE_IMAGE_VERSION}`,
@@ -67,9 +72,10 @@ const SHARE_IMAGE = {
   //
   // The generator is `apps/homepage/scripts/generate-og-image.mjs` (the note
   // here said there was none until 2026-09-09, when one landed). Regenerated
-  // 2026-09-09 for the release-to-rollout rename; before that for the AI Music
-  // Manager positioning, before that it said "The AI workspace for music
-  // executives", and before that "One home", a banned container metaphor.
+  // 2026-09-11 for the widened category; before that 2026-09-09 for the
+  // release-to-rollout rename, before that for the AI Music Manager
+  // positioning, before that it said "The AI workspace for music executives",
+  // and before that "One home", a banned container metaphor.
   alt: `${ONE_LINER} ${PROMISE}. Urganize.`,
 };
 

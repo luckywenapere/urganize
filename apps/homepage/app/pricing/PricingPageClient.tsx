@@ -86,8 +86,8 @@ export function PricingPageClient() {
                 in the lead below it. The lead keeps the locked positioning
                 sentence and drops what the headline now says. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              Urganize is an AI Music Manager for artists, managers and
-              labels. Start free on your own, or let us set your roster up
+              Urganize is an AI Music Business Manager for artists, managers
+              and labels. Start free on your own, or let us set your roster up
               with you.
             </p>
 

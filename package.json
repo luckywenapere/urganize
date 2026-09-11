@@ -1,6 +1,6 @@
 {
   "name": "urganize",
-  "description": "AI Music Manager for artists, managers and labels. Plan, organize and execute rollouts from one place.",
+  "description": "AI Music Business Manager for artists, managers and labels. Plan, organize and execute rollouts from one place.",
   "version": "1.41.0",
   "private": true,
   "packageManager": "pnpm@10.6.4",

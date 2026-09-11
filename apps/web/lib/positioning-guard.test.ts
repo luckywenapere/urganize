@@ -16,12 +16,12 @@ import {
 } from './positioning';
 
 /**
- * The 2026-09-09 positioning, enforced rather than reviewed.
+ * The 2026-09-09 positioning, amended 2026-09-11, enforced rather than reviewed.
  *
- * Urganize is an AI Music Manager. The brief retires eleven phrases and asks
- * for zero hits in "any user-facing string, meta tag, doc, image or store
- * listing" — an acceptance criterion that is a grep today and rots the moment
- * somebody writes a new page. This is that grep, kept.
+ * Urganize is an AI Music Business Manager. The brief retires eleven phrases
+ * and asks for zero hits in "any user-facing string, meta tag, doc, image or
+ * store listing" — an acceptance criterion that is a grep today and rots the
+ * moment somebody writes a new page. This is that grep, kept.
  *
  * IT RUNS OVER BOTH APPS. `apps/homepage` has no test runner of its own
  * (vitest is configured in `apps/web` only), and the marketing site is where
@@ -185,9 +185,11 @@ describe('positioning', () => {
   });
 
   it('names the category, the audience and the promise once', () => {
-    expect(PRODUCT_CATEGORY).toBe('AI Music Manager');
-    expect(BRAND_LINE).toBe('Urganize, AI Music Manager');
-    expect(CUSTOMER_LINE).toBe('AI Music Manager for artists, managers and labels');
+    expect(PRODUCT_CATEGORY).toBe('AI Music Business Manager');
+    expect(BRAND_LINE).toBe('Urganize, AI Music Business Manager');
+    expect(CUSTOMER_LINE).toBe(
+      'AI Music Business Manager for artists, managers and labels',
+    );
     expect(PROMISE).toBe('Plan, organize and execute rollouts from one place');
     expect(URGANS_LINE).toBe('personal AI for music professionals');
   });

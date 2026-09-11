@@ -53,8 +53,8 @@ const SPRING = '#7FD99A';
 // outside the TypeScript build and cannot import it. The guard on the alt text
 // is what catches a divergence: change the line here and lib/seo.ts's alt has
 // to change too, and that one is compared against the shared constants.
-const MAIN_LINE = 'AI Music Manager for artists, managers and labels.';
-const ACCENT = 'AI Music Manager';
+const MAIN_LINE = 'AI Music Business Manager for artists, managers and labels.';
+const ACCENT = 'AI Music Business Manager';
 const SUB_LINE = 'Plan, organize and execute rollouts from one place.';
 
 const font = (file) => readFileSync(join(WEB, 'assets', 'fonts', file));
