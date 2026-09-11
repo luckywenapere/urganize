@@ -30,10 +30,13 @@
   --marketing-screen-border: #ddd3c7;
   --marketing-logo-card-bg: rgba(255, 255, 255, 0.82);
   --marketing-accent: #3f7e5c;
-  /* The surface behind the Chappi mascot (UrgAnsSection). Nothing in light —
-     his ink hood reads on cream — and the model sheet's stage wash in dark,
-     so the hood separates from the canvas. Mirrors CHAPPI_GLOW in
-     packages/ui/src/chappi-constants.ts; change both or neither. */
+  /* The surface behind the Chappi mascot. Nothing in light — his ink hood
+     reads on cream — and the model sheet's stage wash in dark, so the hood
+     separates from the canvas. Mirrors CHAPPI_GLOW in
+     packages/ui/src/chappi-constants.ts; change both or neither.
+     Orphaned 2026-09-11: UrgAnsSection, its only consumer, was removed.
+     Left declared — a CSS custom property costs nothing unused — in case a
+     future Chappi placement wants it back. */
   --marketing-chappi-stage: none;
   /* The intended proportion system. Read this before using it, because the
      comment that used to sit here was misleading: --phi is NOT referenced by
