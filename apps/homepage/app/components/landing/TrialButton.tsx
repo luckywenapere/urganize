@@ -2,7 +2,6 @@ import { APP_SIGNUP_URL } from "@/lib/app-urls";
 
 export type TrialButtonLocation =
   | "hero"
-  | "roster"
   | "pricing"
   | "final"
   | "features_hero"
@@ -14,9 +13,11 @@ export type TrialButtonLocation =
   | "for_ai_artists_hero"
   | "for_ai_artists_cta";
 
-// The site's one primary ask (2026-09-02). Four mounts on the homepage, then
-// /features and the three self-serve persona pages in the same day's
-// follow-up: one component, so the label, the destination and the tracking
+// The site's one primary ask (2026-09-02). Three mounts on the homepage
+// (hero, pricing, final — RosterSection carried a fourth, "roster", until it
+// was removed 2026-09-11, founder call), then /features and the three
+// self-serve persona pages in the same day's follow-up: one component, so
+// the label, the destination and the tracking
 // attribute cannot drift between them the way the three hand-rolled pill
 // variants on this site already had. The header pill and the pricing cards
 // keep their own sizing and carry the same data-track attributes by hand, so

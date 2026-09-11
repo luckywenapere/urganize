@@ -12,7 +12,6 @@ import {
   HeroSection,
   PricingStripSection,
   ProofSection,
-  RosterSection,
   StorySection,
   UrgAnsSection,
 } from "./components/landing/Sections";
@@ -54,11 +53,12 @@ export default function Home() {
         <MarketingHeader />
 
         <main>
-          {/* Nine beats (2026-09-02 overhaul, URG-240), one ask repeated four
-              times (hero, roster, pricing, final): the hero names the buyer
-              and shows the product; the story opens each of three steps with
-              how the work runs today; the roster beat states the position
-              nobody else owns and carries the mid-page ask; UrgAns is the
+          {/* Eight beats (2026-09-02 overhaul, URG-240; RosterSection removed
+              2026-09-11, founder call — see components/landing/Sections.tsx
+              for what it said and why nothing replaced it), one ask repeated
+              three times (hero, pricing, final): the hero names the buyer and
+              shows the product; the story opens each of three steps with how
+              the work runs today, leading straight into UrgAns, the
               differentiator; one large quote; three tiles for everything else;
               the price, rendered from the pricing package; the objections;
               the final ask with the waitlist folded behind a link.
@@ -68,7 +68,6 @@ export default function Home() {
               three features, final form) is in git history under that date. */}
           <HeroSection />
           <StorySection />
-          <RosterSection />
           <UrgAnsSection />
           <ProofSection />
           <FeatureGridSection />
