@@ -393,11 +393,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // Monthly only. The yearly price is ten months of this — see monthlyPrice.
     monthlyPrice: tierPrice(5_000),
     limits: { artists: 1, seats: 2, activeReleases: 1, urgansMonthlyActions: 40 },
-    perks: [
-      'Files and credits on every rollout, and a press kit for every artist',
-      'Export everything you put in, any time',
-      'Email support',
-    ],
+    perks: [],
     // Moved here from Manager 2026-09-09 (founder call). Manager carried this
     // from 2026-08-30, back when it was the cheapest self-serve tier; Solo has
     // been the actual entry tier since that same day, so "most teams choose
@@ -411,12 +407,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // Monthly only. The yearly price is ten months of this — see monthlyPrice.
     monthlyPrice: tierPrice(22_000),
     limits: { artists: 5, seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
-    perks: [
-      'A full rollout plan, written by real managers',
-      'Files and credits on every rollout, and a press kit for every artist',
-      'Export everything you put in, any time',
-      'Email support',
-    ],
+    perks: [],
   },
   // SELF-SERVE AGAIN SINCE 2026-09-08 (founder call), at ₦50,000/year. This
   // REVERSES the 2026-08-30 decision that made Label sales-led with no price at
