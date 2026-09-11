@@ -353,8 +353,11 @@ export type PricingTierDefinition = {
    *  something specific to the tier that used to use it, so a future sales-led
    *  tier needs no new plumbing — just this flag. */
   contactSales?: boolean;
-  /** Visually elevated on the pricing page and carries the "Most teams
-   *  choose this" marker. Exactly one tier may set this.
+  /** Visually elevated on the pricing page. It NO LONGER carries a "Most teams"
+   *  badge there — that label was removed from both marketing surfaces on
+   *  2026-09-11 (founder call), leaving this flag to do elevation and CTA
+   *  emphasis only. The in-app wall's TierPlanPicker still renders the badge.
+   *  Exactly one tier may set this.
    *
    *  ON SOLO since 2026-09-09 (founder call), moved from Manager. It was on
    *  Manager because Manager used to be the cheapest self-serve tier and the

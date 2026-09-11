@@ -136,16 +136,17 @@ export function PricingTierCards() {
                     : "border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)]"
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
-                    {tier.label}
-                  </p>
-                  {tier.recommended ? (
-                    <span className="rounded-full bg-[var(--marketing-accent)]/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--marketing-accent)]">
-                      Most teams
-                    </span>
-                  ) : null}
-                </div>
+                {/* NO "MOST TEAMS" BADGE (founder call, 2026-09-11). Removed
+                    from the marketing site outright rather than hidden behind a
+                    condition, so there is nothing left to switch back on by
+                    accident. `tier.recommended` is untouched and still does its
+                    other two jobs — it elevates this card and fills its CTA
+                    below — so the label went and the emphasis stayed. The
+                    in-app wall (TierPlanPicker) keeps its own badge; that is a
+                    separate surface and a separate call. */}
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
+                  {tier.label}
+                </p>
 
                 {/* A sales-led tier has no `prices` at all, so there is no
                     figure to render and no risk of printing one we never

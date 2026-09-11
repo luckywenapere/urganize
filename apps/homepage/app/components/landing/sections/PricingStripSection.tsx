@@ -69,16 +69,11 @@ export function PricingStripSection() {
                   : "border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)]"
               }`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
-                  {tier.label}
-                </p>
-                {tier.recommended ? (
-                  <span className="rounded-full bg-[var(--marketing-accent)]/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--marketing-accent)]">
-                    Most teams
-                  </span>
-                ) : null}
-              </div>
+              {/* No "Most teams" badge — see the note in PricingTierCards.
+                  Removed from the marketing site 2026-09-11 (founder call). */}
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
+                {tier.label}
+              </p>
               <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)]">
                 {tier.audience}
               </p>
