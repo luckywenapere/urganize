@@ -7,10 +7,10 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // The problem and the three steps, as one beat (2026-09-02).
 //
 // Each step opened with a `before` line — the house description of how the
-// work used to run — until a founder call on 2026-09-11 removed all three,
-// one at a time, along with the bodies of steps 01 and 03. The beat is now a
-// heading and three captioned screenshots, and the h2 above carries the whole
-// problem framing on its own, in the past tense.
+// work used to run — and closed with a `body` explaining the step. A founder
+// call on 2026-09-11 removed all six, a line at a time, so a step is now a
+// kicker, a title and a screenshot, and the h2 above carries the whole problem
+// framing on its own, in the past tense.
 //
 // So this file no longer reads content/testimonials.ts at all. The three
 // strings are still OWNED there, and two of them (Antoine's and Adenaiye's)
@@ -27,7 +27,6 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 const STEPS: readonly {
   kicker: string;
   title: string;
-  body?: string;
   shot: (typeof PRODUCT_SHOTS)[keyof typeof PRODUCT_SHOTS];
   alt: string;
 }[] = [
@@ -40,8 +39,6 @@ const STEPS: readonly {
   {
     kicker: "02",
     title: "Put a name on every activity.",
-    body:
-      "Assign it and they get an email with the rollout, the due date and a button that opens it. Activities unlock in order, so the next step is always clear.",
     shot: PRODUCT_SHOTS.activityDetail,
     alt: "An activity opened in Urganize, showing who it is assigned to, its due date and its place in the plan.",
   },
@@ -83,11 +80,6 @@ export function StorySection() {
                   <h3 className="mt-3 text-balance text-[1.75rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[2.1rem]">
                     {step.title}
                   </h3>
-                  {step.body ? (
-                    <p className="mt-5 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-                      {step.body}
-                    </p>
-                  ) : null}
                 </div>
                 <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
                   <ThemedProductShot
