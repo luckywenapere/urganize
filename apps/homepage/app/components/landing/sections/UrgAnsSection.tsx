@@ -7,10 +7,14 @@ import { wideContainerClass } from "./shared";
 
 // The differentiator no competitor has (2026-09-02): an assistant that does
 // the work, and asks first. Every claim here is live in production — UrgAns
-// runs on a real tool-calling model (v1.0.0), gated actions show a
-// confirmation card before anything irreversible, and Claude / ChatGPT
-// connect through MCP (v1.2.0). Nothing about files or notes: both are
-// switched off in production, so their tools refuse.
+// runs on a real tool-calling model (v1.0.0) and gated actions show a
+// confirmation card before anything irreversible. Nothing about files or
+// notes: both are switched off in production, so their tools refuse.
+//
+// The "use Claude or ChatGPT? connect it" line was REMOVED on a founder call
+// (2026-09-11). MCP connect is still live — NEXT_PUBLIC_FEATURE_MCP_CONNECT
+// is on, and docs/mcp-connect.md is the customer setup guide. It is simply not
+// marketed here, and this was the only mention of it anywhere on the site.
 //
 // Chappi is the face of UrgAns, so this is the one place on the page he
 // carries meaning rather than decoration: the `pointing` pose the model
@@ -44,10 +48,6 @@ export function UrgAnsSection() {
               rollout for Tolu&apos;s EP on 24 October&rdquo; or &ldquo;mark
               the artwork done&rdquo; and it does it. It asks before anything
               that cannot be undone.
-            </p>
-            <p className="mt-4 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-              Use Claude or ChatGPT? Connect it and ask about your rollouts
-              there too.
             </p>
           </div>
 
