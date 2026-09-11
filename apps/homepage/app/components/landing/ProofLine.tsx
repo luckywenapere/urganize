@@ -79,7 +79,14 @@ export function ProofLine({ id, align = "center", className }: ProofLineProps) {
   return (
     <figure
       className={[
-        align === "center" ? "mx-auto max-w-[30rem] text-center" : "max-w-[30rem] text-left",
+        // Only the centred variant sets its own measure. A centred mount floats
+        // in a full-width stack with nothing else establishing one, so it needs
+        // the 30rem cap. A left mount sits inside a column that has ALREADY set
+        // a measure (RosterSection's is 34rem), and capping again makes its
+        // border-t stop ~64px short of the headline and bullets directly above
+        // it — a divider ending short of the content it divides reads as an
+        // accident. Let the parent column govern instead.
+        align === "center" ? "mx-auto max-w-[30rem] text-center" : "text-left",
         className,
       ]
         .filter(Boolean)

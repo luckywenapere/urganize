@@ -19,6 +19,28 @@ import { wideContainerClass } from "./shared";
 // because three identical forms read as pressure. Antoine's quote is the
 // plan payoff ("the whole rollout was already laid out, week by week") and
 // is mounted here for the first time — see ProofLine.tsx's mount table.
+//
+// LAYOUT (2026-09-11, founder call: "not laid out properly ... maybe the
+// testimonial should be centralized ... guided by the golden ratio"). Centring
+// the quote was considered and rejected: ProofSection is a large centred
+// blockquote two beats later, so two centred quotes would land close together,
+// and ProofLine.tsx's mount table puts proof BESIDE its CTA. The quote stays;
+// what was wrong was mechanical, and both halves are fixed here:
+//
+//   1. items-center → items-start. UrgAnsSection uses a byte-identical grid,
+//      but its left column holds four elements against this one's ten, so the
+//      shot floated at mid-height and the quote hung past its bottom edge.
+//      THE TWO SECTIONS DIVERGING IS THE POINT — do not re-sync them.
+//      /features:153 is the house precedent for items-start on unequal columns.
+//   2. ProofLine's left variant lost its 30rem cap, so the rule now runs the
+//      column's full 34rem and lands level with the headline and bullets.
+//
+// This beat is also the PILOT for globals.css's --space-* scale, which was
+// declared with --phi and then never used by anything. Spacing here reads
+// mt-[var(--space-N)] rather than mt-5; the ladder is 16·24·24·32·48. A phi
+// COLUMN split was rejected on purpose: reading measure caps the text at 34rem,
+// and ReleasesColumn.tsx:137 records a phi layout being killed by founder call
+// in the product app for "filling neither axis."
 const POINTS = [
   "Run several artists on one team and pick who each rollout is for.",
   "Invite a teammate for one artist and they see only that artist's rollouts.",
@@ -32,21 +54,21 @@ export function RosterSection() {
         className="py-[80px] lg:py-[100px]"
         containerClassName={wideContainerClass}
       >
-        <div className="mx-auto grid max-w-[74rem] items-center gap-10 lg:grid-cols-2 lg:gap-16">
+        <div className="mx-auto grid max-w-[74rem] items-start gap-10 lg:grid-cols-2 lg:gap-16">
           <div className="max-w-[34rem]">
             <p className="mono-label text-[var(--marketing-accent)]">Built for a roster</p>
-            <h2 className="mt-5 text-balance text-[2rem] font-semibold leading-[1.08] tracking-[-0.04em] text-[var(--marketing-text)] sm:text-[2.6rem] lg:text-[3rem]">
+            <h2 className="mt-[var(--space-3)] text-balance text-[2rem] font-semibold leading-[1.08] tracking-[-0.04em] text-[var(--marketing-text)] sm:text-[2.6rem] lg:text-[3rem]">
               One team. Every artist.
             </h2>
-            <p className="mt-5 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
+            <p className="mt-[var(--space-3)] text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
               Built for the people who run the rollout: managers, labels and
               their teams. Artists feel the results.
             </p>
-            <ul className="mt-7 space-y-3">
+            <ul className="mt-[var(--space-4)] space-y-[var(--space-2)]">
               {POINTS.map((point) => (
                 <li
                   key={point}
-                  className="flex items-baseline gap-4 text-[0.95rem] leading-7 text-[var(--marketing-text)]"
+                  className="flex items-baseline gap-[var(--space-2)] text-[0.95rem] leading-7 text-[var(--marketing-text)]"
                 >
                   <span
                     className="font-mono text-[0.72rem] text-[var(--marketing-accent)]"
@@ -59,8 +81,8 @@ export function RosterSection() {
               ))}
             </ul>
 
-            <div className="mt-9 flex flex-col items-start gap-4">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div className="mt-[var(--space-6)] flex flex-col items-start gap-[var(--space-2)]">
+              <div className="flex flex-wrap items-center gap-x-[var(--space-3)] gap-y-[var(--space-2)]">
                 <TrialButton location="roster" />
                 <a
                   href={salesMailto("Label")}
@@ -75,7 +97,7 @@ export function RosterSection() {
               >
                 See pricing
               </a>
-              <ProofLine id="antoine" align="left" className="mt-2 border-t border-[color:var(--marketing-border)] pt-5" />
+              <ProofLine id="antoine" align="left" className="mt-[var(--space-1)] border-t border-[color:var(--marketing-border)] pt-[var(--space-3)]" />
             </div>
           </div>
 
