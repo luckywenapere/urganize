@@ -1,7 +1,8 @@
 # App store listings
 
 Paste-ready listing copy for the Urganize mobile app. Written 2026-09-09 for the
-AI Music Manager positioning.
+AI Music Manager positioning, and amended 2026-09-11 when the category widened
+to **AI Music Business Manager**.
 
 **Every string here comes from the same place as the product's own copy.** The
 category, the audience order and the promise are defined once in
@@ -15,30 +16,42 @@ Do not reorder the audience. It is artists, managers, labels, everywhere.
 
 ## Google Play — READY TO PASTE
 
-The app is `com.urganize.app`. Nothing below needs editing; the character counts
-are Play's own limits and every field is inside them.
+The app is `com.urganize.app`. Every field below is inside Play's own limits,
+with one exception that is called out where it appears: the app name cannot fit
+the full category and carries a shortened form.
 
 ### App name (30 characters max)
 
 ```
-Urganize: AI Music Manager
+Urganize: Music Business AI
 ```
 
-26 characters. Play shows the app name under the icon, so the category has to
-survive the truncation, which is why it follows the brand rather than leading.
+27 characters.
+
+⚠️ **THIS IS THE ONE FIELD THE CATEGORY DOES NOT FIT, and it needs the founder's
+word before anyone submits.** "Urganize: AI Music Business Manager" is 35
+characters against a hard 30-character cap that both stores enforce, so
+something has to give and this is the least-bad thing on offer: it keeps all
+three distinctive words (music, business, AI), drops only "Manager", and reads
+as a noun phrase rather than a fragment. Every other field on this page carries
+the category in full.
+
+The reason the brand leads rather than the category is unchanged: Play shows the
+app name under the icon, so whatever follows "Urganize" is what survives the
+truncation.
 
 ### Short description (80 characters max)
 
 ```
-AI Music Manager for artists, managers and labels.
+AI Music Business Manager for artists, managers and labels.
 ```
 
-50 characters. This is the one-liner from `positioning.ts` unchanged.
+59 characters. This is the one-liner from `positioning.ts` unchanged.
 
 ### Full description (4000 characters max)
 
 ```
-Urganize is an AI Music Manager for artists, managers and labels. It helps music teams plan rollouts, coordinate people, manage assets and metadata, track execution and keep every part moving from one place.
+Urganize is an AI Music Business Manager for artists, managers and labels. It helps music teams plan rollouts, coordinate people, manage assets and metadata, track execution and keep every part moving from one place.
 
 PLAN THE ROLLOUT
 Every release starts with a real plan, not a blank board. Pick what you are putting out and Urganize lays out the whole rollout, sized to the format, with every activity dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
@@ -64,7 +77,11 @@ Artists running their own releases. Managers running more than one artist at a t
 Start free for 3 days. No card needed.
 ```
 
-1,776 characters.
+1,714 characters.
+
+Recounted 2026-09-11. The previous figure here read 1,776 and was already 71
+characters stale before this edit — the rollout rename shortened the block and
+nobody recounted it. Measured off the fenced text above, not estimated.
 
 ### Other Play Console fields
 
@@ -98,8 +115,11 @@ Connect.
 ### App name (30 characters max)
 
 ```
-Urganize: AI Music Manager
+Urganize: Music Business AI
 ```
+
+Same 30-character cap and the same compromise as Play, for the same reason. See
+the note under the Play app name above.
 
 ### Subtitle (30 characters max)
 
@@ -114,10 +134,10 @@ line of the description.
 ### Promotional text (170 characters max)
 
 ```
-AI Music Manager for artists, managers and labels. Plan, organize and execute rollouts from one place.
+AI Music Business Manager for artists, managers and labels. Plan, organize and execute rollouts from one place.
 ```
 
-101 characters. This is `SHORT_DESCRIPTION` from `positioning.ts` unchanged.
+110 characters. This is `SHORT_DESCRIPTION` from `positioning.ts` unchanged.
 
 ### Description
 
@@ -132,6 +152,12 @@ music manager,release planning,artist manager,rollout,press kit,setlist,music te
 
 87 characters. No spaces after the commas: Apple counts them, and the field is
 tight.
+
+THE TAGS AND KEYWORDS DID NOT MOVE WITH THE CATEGORY on 2026-09-11, and that is
+the same call `LANDING_KEYWORDS` records in `apps/homepage/app/layout.tsx`:
+these are not read, they are typed into a store's search box, and nobody
+searches for a phrase we widened last week. "music manager" is still what a
+manager types. Revisit once the longer term has an audience.
 
 ### Other App Store Connect fields
 

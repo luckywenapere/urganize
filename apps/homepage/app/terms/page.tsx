@@ -48,8 +48,8 @@ export default function TermsPage() {
           <div className="mt-12">
             <Section number="01" title="Who we are">
               <p>
-                Urganize is an AI Music Manager for artists, managers and
-                labels, operated by The Urganization Ltd, a company registered in
+                Urganize is an AI Music Business Manager for artists, managers
+                and labels, operated by The Urganization Ltd, a company registered in
                 Nigeria (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
                 &ldquo;us&rdquo;). The service runs at urganize.app and
                 app.urganize.app.

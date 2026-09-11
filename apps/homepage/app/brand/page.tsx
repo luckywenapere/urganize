@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { CUSTOMER_LINE } from "@/lib/positioning";
+import { CUSTOMER_LINE, PROMISE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -150,9 +150,14 @@ export default function BrandPage() {
 
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Positioning</h3>
+                {/* Composed from the shared constants rather than typed out.
+                    This block is the one paragraph on the site whose entire job
+                    is to state the positioning, so it is the last place that
+                    should be able to drift from it — and it was written out by
+                    hand until 2026-09-11, when widening the category meant
+                    finding it by grep rather than by the compiler. */}
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Urganize is an AI Music Manager for artists, managers and labels. Plan,
-                  organize and execute rollouts from one place.
+                  Urganize is an {CUSTOMER_LINE}. {PROMISE}.
                 </p>
               </div>
 
@@ -184,11 +189,12 @@ export default function BrandPage() {
               <div className="border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
                 <p className={sectionEyebrow}>Boilerplate · copy / paste</p>
                 <p className="mt-2 text-[var(--marketing-text)]">
-                  Urganize is an AI Music Manager for artists, managers and labels. It helps
-                  music teams plan rollouts, coordinate people, manage assets and metadata,
-                  track execution and keep every part of a rollout moving from one place.
-                  Every rollout runs on a plan written by real managers, with an owner
-                  and a due date on every activity and a press kit you can send as one link.
+                  Urganize is an AI Music Business Manager for artists, managers and
+                  labels. It helps music teams plan rollouts, coordinate people, manage
+                  assets and metadata, track execution and keep every part of a rollout
+                  moving from one place. Every rollout runs on a plan written by real
+                  managers, with an owner and a due date on every activity and a press
+                  kit you can send as one link.
                 </p>
               </div>
 

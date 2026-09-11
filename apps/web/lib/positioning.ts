@@ -1,10 +1,16 @@
 /**
  * How Urganize describes itself. One definition, every surface.
  *
- * Founder brief (2026-09-09): the product is an **AI Music Manager**. Every
- * page, tag, email, store listing and assistant reply that introduces it says
- * so in the same words, and the only thing allowed to vary between surfaces is
- * how many characters fit.
+ * Founder brief (2026-09-09, amended 2026-09-11): the product is an **AI Music
+ * Business Manager**. Every page, tag, email, store listing and assistant reply
+ * that introduces it says so in the same words, and the only thing allowed to
+ * vary between surfaces is how many characters fit.
+ *
+ * The amendment widened the category from "AI Music Manager" and changed nothing
+ * else: the audience order, the promise and the UrgAns line are untouched. It
+ * cost nine characters. Every derived string absorbs that; the one field that
+ * cannot is the app store name, whose 30-character cap the full category no
+ * longer fits. See docs/store-listing.md.
  *
  * WHY A MODULE RATHER THAN THE STRING AT EACH CALL SITE. This repo has shipped
  * the display-vs-reality gap four times with prices, once with the share card's
@@ -28,7 +34,7 @@
  * The category. Leads any sentence that introduces the product, and is the
  * thing every meta description has to contain.
  */
-export const PRODUCT_CATEGORY = 'AI Music Manager';
+export const PRODUCT_CATEGORY = 'AI Music Business Manager';
 
 /**
  * Who it is for, in the fixed order artists, managers, labels.
@@ -73,7 +79,7 @@ export const SHORT_DESCRIPTION = `${CUSTOMER_LINE}. ${PROMISE}.`;
  * sentence that reads like it was assembled from fragments.
  */
 export const CANONICAL_DESCRIPTION =
-  'Urganize is an AI Music Manager for artists, managers and labels. It helps music teams plan rollouts, ' +
+  'Urganize is an AI Music Business Manager for artists, managers and labels. It helps music teams plan rollouts, ' +
   'coordinate people, manage assets and metadata, track execution and keep every part moving ' +
   'from one place.';
 

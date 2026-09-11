@@ -28,6 +28,14 @@ const LEGAL_NAME = "The Urganization Ltd";
 // Every string a person reads now says rollout, but these are not read —
 // they are what somebody types into a search box, and nobody is searching
 // for a word we coined last week. Revisit once the term has an audience.
+//
+// THE WHOLE LIST SURVIVED THE 2026-09-11 CATEGORY WIDENING for the same
+// reason, and this is the case where the rule is hardest to keep: "AI music
+// manager" was chosen BECAUSE it was the category, and the category is now
+// "AI Music Business Manager". It stays anyway, because search volume does not
+// move when we change our own words — a searcher still types the short form.
+// Adding the long form would cost nothing and find nobody, so it waits for the
+// same signal the release terms are waiting for.
 const LANDING_KEYWORDS = [
   "AI music manager",
   "music manager app",

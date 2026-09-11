@@ -1,10 +1,16 @@
 /**
  * How Urganize describes itself. One definition, every surface.
  *
- * Founder brief (2026-09-09): the product is an **AI Music Manager**. Every
- * page, tag, email, store listing and assistant reply that introduces it says
- * so in the same words, and the only thing allowed to vary between surfaces is
- * how many characters fit.
+ * Founder brief (2026-09-09, amended 2026-09-11): the product is an **AI Music
+ * Business Manager**. Every page, tag, email, store listing and assistant reply
+ * that introduces it says so in the same words, and the only thing allowed to
+ * vary between surfaces is how many characters fit.
+ *
+ * The amendment widened the category from "AI Music Manager" and changed nothing
+ * else: the audience order, the promise and the UrgAns line are untouched. It
+ * cost nine characters. Every derived string absorbs that; the one field that
+ * cannot is the app store name, whose 30-character cap the full category no
+ * longer fits. See docs/store-listing.md.
  *
  * THIS IS THE MIRROR. The canonical copy, with the full reasoning, is
  * apps/web/lib/positioning.ts. `apps/homepage` cannot import from `apps/web`
@@ -20,7 +26,7 @@
  * marketing site and the product two different descriptions.
  */
 
-export const PRODUCT_CATEGORY = 'AI Music Manager';
+export const PRODUCT_CATEGORY = 'AI Music Business Manager';
 
 export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
 
@@ -37,7 +43,7 @@ export const ONE_LINER = `${CUSTOMER_LINE}.`;
 export const SHORT_DESCRIPTION = `${CUSTOMER_LINE}. ${PROMISE}.`;
 
 export const CANONICAL_DESCRIPTION =
-  'Urganize is an AI Music Manager for artists, managers and labels. It helps music teams plan rollouts, ' +
+  'Urganize is an AI Music Business Manager for artists, managers and labels. It helps music teams plan rollouts, ' +
   'coordinate people, manage assets and metadata, track execution and keep every part moving ' +
   'from one place.';
 
