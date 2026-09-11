@@ -159,6 +159,36 @@ export function PricingTierCards() {
                   {tier.audience}
                 </p>
 
+                {/* CTA LEADS THE CHECKLIST (moved here 2026-09-11, founder
+                    call): the ask comes before the reasons, not after them —
+                    a visitor who already wants in should not have to scroll
+                    past the list to find the button. FILLED ON EVERY CARD,
+                    and that was a choice rather than a deletion: the two
+                    branches this replaced differed in box model (the other
+                    added its own `border`), so uniform meant picking one.
+                    Filled, because TrialButton — the site's one primary ask,
+                    twelve mounts — and the header pill both carry these exact
+                    three classes, so this is the site's CTA look rather than
+                    a per-tier emphasis. What it replaced was explicitly the
+                    de-emphasised treatment (no fill, hover only on the
+                    border), so demoting all three to that would have left
+                    /pricing with no filled CTA at all — quieter than today,
+                    which is more than uniform asks for. Deliberately NOT
+                    also taking TrialButton's drop shadow; three shadowed
+                    buttons in one card row is a different change. */}
+                <a
+                  href={selfServe ? APP_SIGNUP_URL : salesMailto(tier.label)}
+                  data-track={selfServe ? "start_trial_click" : undefined}
+                  data-location={selfServe ? `pricing_${tierId}` : undefined}
+                  className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] transition-colors hover:bg-[var(--marketing-primary-hover)]"
+                >
+                  {/* Two outcomes, not three. "Book a demo" used to sit on a
+                      priced tier that was not self-serve; since 2026-09-08 the
+                      two conditions are exact complements, so that branch was
+                      unreachable and is gone rather than left to rot. */}
+                  {selfServe ? "Try Urganize" : "Let's talk"}
+                </a>
+
                 <ul className="mt-6 flex flex-1 flex-col gap-2.5">
                   {highlights.map((line) => (
                     <li
@@ -173,32 +203,6 @@ export function PricingTierCards() {
                     </li>
                   ))}
                 </ul>
-
-                {/* FILLED ON EVERY CARD, and that was a choice rather than a
-                    deletion: the two branches this replaced differed in box
-                    model (the other added its own `border`), so uniform meant
-                    picking one. Filled, because TrialButton — the site's one
-                    primary ask, twelve mounts — and the header pill both carry
-                    these exact three classes, so this is the site's CTA look
-                    rather than a per-tier emphasis. What it replaced was
-                    explicitly the de-emphasised treatment (no fill, hover only
-                    on the border), so demoting all three to that would have
-                    left /pricing with no filled CTA at all — quieter than
-                    today, which is more than uniform asks for. Deliberately NOT
-                    also taking TrialButton's drop shadow; three shadowed
-                    buttons in one card row is a different change. */}
-                <a
-                  href={selfServe ? APP_SIGNUP_URL : salesMailto(tier.label)}
-                  data-track={selfServe ? "start_trial_click" : undefined}
-                  data-location={selfServe ? `pricing_${tierId}` : undefined}
-                  className="mt-8 inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] transition-colors hover:bg-[var(--marketing-primary-hover)]"
-                >
-                  {/* Two outcomes, not three. "Book a demo" used to sit on a
-                      priced tier that was not self-serve; since 2026-09-08 the
-                      two conditions are exact complements, so that branch was
-                      unreachable and is gone rather than left to rot. */}
-                  {selfServe ? "Try Urganize" : "Let's talk"}
-                </a>
               </div>
             );
           })}
