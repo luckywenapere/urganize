@@ -15,23 +15,17 @@ import { TESTIMONIALS, type TestimonialId } from "@/content/testimonials";
 //                                      verifiable one — max credibility
 //                                      per pixel, right where the primary
 //                                      CTA lives)
-//   homepage_roster    → antoine     (2026-09-02: the plan payoff — "the
-//                                      whole rollout was already laid out,
-//                                      week by week" — beside the mid-page
-//                                      trial button in RosterSection. One
-//                                      quote per CTA, so this is that CTA's
-//                                      only proof. 2026-09-11: it moved into
-//                                      that section's OTHER column, under the
-//                                      product shot, to fill a measured 377px
-//                                      void. Still beside its CTA, now across
-//                                      the row rather than within one column;
-//                                      below lg it follows the shot.)
 //   homepage (proof)   → tamuno      (2026-09-02: NOT a ProofLine mount —
 //                                      the single large blockquote in
 //                                      ProofSection. Listed so the "each
 //                                      voice once per page" accounting is
-//                                      visible: zaddyfunds hero, antoine
-//                                      roster, tamuno proof, adenaiye final.)
+//                                      visible: zaddyfunds hero, tamuno
+//                                      proof, adenaiye final. Antoine's
+//                                      homepage_roster row above was retired
+//                                      2026-09-11 with RosterSection itself —
+//                                      his one remaining mount is features_cta,
+//                                      below, so he no longer speaks on the
+//                                      homepage at all.)
 //   homepage_final_cta → adenaiye    (sharpest ICP-match sentence; swapped
 //                                      off tamuno 2026-08-13 to avoid
 //                                      repeating his then-on-page full
@@ -91,10 +85,14 @@ export function ProofLine({ id, align = "center", className }: ProofLineProps) {
         // it is meant to divide — a divider ending short of its own content
         // reads as an accident. Let the parent column govern instead.
         //
-        // The one left mount is RosterSection's, under that section's product
-        // shot in a 560px column — so the rule lands flush with the image edge
-        // directly above it. text-balance keeps the quote itself to a readable
-        // measure, which is why the wider column costs nothing here.
+        // No current mount uses align="left" — RosterSection was the one
+        // consumer (under that section's product shot in a 560px column, so
+        // the rule landed flush with the image edge directly above it), and
+        // it was removed 2026-09-11. Kept rather than deleted: the next left
+        // mount should reuse this variant instead of inventing a second one,
+        // the same call shared.ts's mutedLeadClass makes for its own orphan.
+        // text-balance still keeps the quote itself to a readable measure
+        // whenever a left mount does return.
         align === "center" ? "mx-auto max-w-[30rem] text-center" : "text-left",
         className,
       ]

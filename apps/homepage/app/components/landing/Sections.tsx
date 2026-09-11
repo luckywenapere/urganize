@@ -23,11 +23,23 @@
 //   founder-supplied facts survive where they now do the most work: "3 days
 //   free" in the CTA micro-copy (14 originally, shortened 2026-09-10), the
 //   Founding Member line in the pricing
-//   strip (content/founding-member.ts), the one-team-all-artists offer in
-//   RosterSection.
+//   strip (content/founding-member.ts), and the one-team-all-artists offer,
+//   which lived in RosterSection until that section itself was removed
+//   2026-09-11 (see below) — that fact no longer survives anywhere on the
+//   site.
 // - ThreeFeaturesSection: REMOVED 2026-09-02 (URG-240). Its three claims —
 //   assigned activities, UrgAns, status at a glance — are steps 2 and 3 of
 //   StorySection and the UrgAnsSection.
+// - RosterSection: REMOVED 2026-09-11 (founder call). Its claims — running
+//   several artists on one team, a teammate scoped to one artist, a
+//   self-service sign-in link for an external collaborator like a designer
+//   or DJ — are not restated anywhere else on the site: /for-managers,
+//   /for-labels and /for-executives all touch the broader roster idea but
+//   none reproduce the per-artist-scoped-invite or sign-in-link mechanic,
+//   and /signup, /login and /terms describe team-wide (not artist-scoped)
+//   invite visibility instead. Antoine's testimonial, mounted here, is
+//   unaffected — its other, independent mount is /features' features_cta
+//   row (see ProofLine.tsx's mount table), so nothing needed to move.
 // - WorkspaceShotSection left the landing page 2026-09-02 (the hero carries
 //   the catalog shot now) but stays exported: the four persona pages still
 //   import it.
@@ -37,7 +49,6 @@ export { FinalCTASection } from "./sections/FinalCTASection";
 export { HeroSection } from "./sections/HeroSection";
 export { PricingStripSection } from "./sections/PricingStripSection";
 export { ProofSection } from "./sections/ProofSection";
-export { RosterSection } from "./sections/RosterSection";
 export { StorySection } from "./sections/StorySection";
 export { UrgAnsSection } from "./sections/UrgAnsSection";
 export { WorkspaceShotSection } from "./sections/WorkspaceShotSection";
