@@ -1,5 +1,8 @@
 import { PRODUCT_SHOTS } from "@/content/product-shots";
-import { transformationPairs } from "@/content/testimonials";
+import {
+  type TestimonialId,
+  transformationPairs,
+} from "@/content/testimonials";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { ThemedProductShot } from "../ThemedProductShot";
@@ -9,10 +12,16 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 //
 // The 2026-08-25 trim cut the before/after rows as "too bulky", and a
 // separate problem section would have put those three lines back as a beat
-// of their own. Instead each step OPENS with its `before` line — the house
-// description of how the work runs today, then what Urganize does about it.
-// `transformationPairs` is already ordered plan → team → status, which is
-// exactly steps 1 → 2 → 3, so the pairing costs nothing to keep in step.
+// of their own. Instead a step can OPEN with a `before` line — the house
+// description of how the work ran, then what Urganize does about it.
+//
+// ⚠️ THE PAIRING IS BY ID, NOT BY POSITION, and it has to stay that way. It
+// used to read `transformationPairs[index]`, which was fine only while every
+// step had a line and the two arrays were the same length. Step 01's line was
+// dropped on a founder call (2026-09-11), and under index pairing that would
+// have silently slid 02's line onto 01 and 03's onto 02 — every step labelled
+// with the wrong problem, and nothing failing. A step with no `beforeId`
+// simply opens with its kicker.
 //
 // Those `before` strings are house copy, NOT the quoted people's words:
 // content/testimonials.ts forbids styling them as quotes, and this file
@@ -20,9 +29,21 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // data-nosnippet: chat-chaos prose is exactly what Google once substituted
 // for the page description (lib/seo.ts), and the strong description is only
 // half of that fix.
-const STEPS = [
+const STEPS: readonly {
+  kicker: string;
+  title: string;
+  body: string;
+  shot: (typeof PRODUCT_SHOTS)[keyof typeof PRODUCT_SHOTS];
+  alt: string;
+  beforeId?: TestimonialId;
+}[] = [
   {
     kicker: "01",
+    // No `beforeId`: the "pinned chat" line was removed here on a founder
+    // call (2026-09-11). The h2 above carries that framing now, in the past
+    // tense. content/testimonials.ts still OWNS the string — /why-urganize
+    // mirrors it byte-identically and is untouched — so this drops the
+    // rendering, not the copy.
     title: "Create the rollout. Get the plan.",
     body:
       "Pick single, EP or album and answer seven quick questions. Urganize drafts the whole rollout from a playbook written by real managers and UrgAns tailors it to your rollout. A single gets 64 activities over 11 weeks. Approve it and the plan is live.",
@@ -31,6 +52,7 @@ const STEPS = [
   },
   {
     kicker: "02",
+    beforeId: "adenaiye",
     title: "Put a name on every activity.",
     body:
       "Assign it and they get an email with the rollout, the due date and a button that opens it. Activities unlock in order, so the next step is always clear.",
@@ -39,6 +61,7 @@ const STEPS = [
   },
   {
     kicker: "03",
+    beforeId: "tamuno",
     title: "See where every rollout stands.",
     body:
       "Open the catalog and see what is done, what is blocked and what is due this week, for every artist at once. Open one and see the whole rollout on a timeline, week by week.",
@@ -56,14 +79,18 @@ export function StorySection() {
       <ScrollReveal>
         <div className="mx-auto max-w-[52rem] text-center">
           <h2 className={centeredHeadlineClass}>
-            Rollouts run on chat threads and memory.
+            Rollouts used to run on chat threads and memory.
           </h2>
         </div>
       </ScrollReveal>
 
       <div className="mx-auto mt-16 max-w-[74rem] space-y-16 lg:space-y-24">
         {STEPS.map((step, index) => {
-          const before = transformationPairs[index]?.before;
+          const before = step.beforeId
+            ? transformationPairs.find(
+                (pair) => pair.testimonialId === step.beforeId,
+              )?.before
+            : undefined;
           return (
             <ScrollReveal key={step.title}>
               <div
