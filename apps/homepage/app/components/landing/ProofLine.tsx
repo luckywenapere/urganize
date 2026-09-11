@@ -20,7 +20,12 @@ import { TESTIMONIALS, type TestimonialId } from "@/content/testimonials";
 //                                      week by week" — beside the mid-page
 //                                      trial button in RosterSection. One
 //                                      quote per CTA, so this is that CTA's
-//                                      only proof.)
+//                                      only proof. 2026-09-11: it moved into
+//                                      that section's OTHER column, under the
+//                                      product shot, to fill a measured 377px
+//                                      void. Still beside its CTA, now across
+//                                      the row rather than within one column;
+//                                      below lg it follows the shot.)
 //   homepage (proof)   → tamuno      (2026-09-02: NOT a ProofLine mount —
 //                                      the single large blockquote in
 //                                      ProofSection. Listed so the "each
@@ -82,10 +87,14 @@ export function ProofLine({ id, align = "center", className }: ProofLineProps) {
         // Only the centred variant sets its own measure. A centred mount floats
         // in a full-width stack with nothing else establishing one, so it needs
         // the 30rem cap. A left mount sits inside a column that has ALREADY set
-        // a measure (RosterSection's is 34rem), and capping again makes its
-        // border-t stop ~64px short of the headline and bullets directly above
-        // it — a divider ending short of the content it divides reads as an
-        // accident. Let the parent column govern instead.
+        // one, and capping again leaves its border-t stopping short of whatever
+        // it is meant to divide — a divider ending short of its own content
+        // reads as an accident. Let the parent column govern instead.
+        //
+        // The one left mount is RosterSection's, under that section's product
+        // shot in a 560px column — so the rule lands flush with the image edge
+        // directly above it. text-balance keeps the quote itself to a readable
+        // measure, which is why the wider column costs nothing here.
         align === "center" ? "mx-auto max-w-[30rem] text-center" : "text-left",
         className,
       ]
