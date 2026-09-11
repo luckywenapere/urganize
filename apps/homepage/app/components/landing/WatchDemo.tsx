@@ -23,6 +23,31 @@ const START_SECONDS = 0;
 // and the proof quote all fit in the first phone screen; a second pill
 // there pushed the proof below the fold.
 //
+// ⚠️ THE LINK VARIANT OWNS ITS "Or" AND ITS FULL STOP, and that is the fix for
+// a real review finding rather than a stylistic choice. Do not move either
+// back into the hero's prose.
+//
+// It used to read `…Your whole team. Or <WatchDemo variant="link" />.`, which
+// renders correctly for a person and leaves **"Or ."** for anything that reads
+// the page as text and drops interactive elements — AI crawlers, SEO and
+// readability tools, link-preview scrapers, reader modes. A reviewer reported
+// exactly that on 2026-09-10 ("fix the stray 'Or .' under the CTA"), having
+// read the page that way; the built HTML was `Or <button …>watch the
+// demo</button>.`, so the connector and the stop were the two orphans left
+// behind.
+//
+// With both inside the control the sentence before it is complete on its own,
+// so a reader that drops the button sees "3 days free. No card. Your whole
+// team." and nothing stray. Visually identical either way.
+//
+// The general rule, since this is a class of bug rather than one instance: a
+// sentence must never depend on an interactive element for its grammar. If a
+// control has to sit in prose, give it every word and mark it needs to stand
+// alone. (Deliberately NOT enforced by a test — the honest pattern, a text
+// node ending in a conjunction, fires just as readily on `foo and
+// <strong>bar</strong>`, which is correct code. A guard that cries wolf is
+// worse than this comment.)
+//
 // The overlay is portaled to document.body, and that is load-bearing, not
 // style: the hero's `hero-fade-in` animation is forwards-filled and its
 // final keyframe keeps `transform: translateY(0)`, and a transformed
@@ -74,7 +99,12 @@ export function WatchDemo({ variant = "pill" }: { variant?: "pill" | "link" }) {
           onClick={openDemo}
           className="cursor-pointer text-[var(--marketing-text)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:decoration-[color:var(--marketing-text)]"
         >
-          watch the demo
+          {/* The "Or" and the stop belong to this control, not to the hero's
+              sentence — see the header. The accessible name becomes "Or watch
+              the demo.", which is why there is no aria-label narrowing it to
+              "Watch the demo": that would be an accessible name the visible
+              label does not contain (WCAG 2.5.3, Label in Name). */}
+          Or watch the demo.
         </button>
       ) : (
         <button
