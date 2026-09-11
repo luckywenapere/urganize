@@ -21,7 +21,13 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // dropped on a founder call (2026-09-11), and under index pairing that would
 // have silently slid 02's line onto 01 and 03's onto 02 — every step labelled
 // with the wrong problem, and nothing failing. A step with no `beforeId`
-// simply opens with its kicker.
+// simply opens with its kicker, and its `mt-8` goes with the line it existed
+// to clear.
+//
+// Steps 01 and 03 lost their `body` on a founder call (2026-09-11), and 03 its
+// `before` with it, so both are now a kicker, a title and the screenshot. The
+// bodies are gone from here; 03's before line is still OWNED by
+// content/testimonials.ts, which is a sign-off ledger rather than dead code.
 //
 // Those `before` strings are house copy, NOT the quoted people's words:
 // content/testimonials.ts forbids styling them as quotes, and this file
@@ -32,7 +38,7 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 const STEPS: readonly {
   kicker: string;
   title: string;
-  body: string;
+  body?: string;
   shot: (typeof PRODUCT_SHOTS)[keyof typeof PRODUCT_SHOTS];
   alt: string;
   beforeId?: TestimonialId;
@@ -45,8 +51,6 @@ const STEPS: readonly {
     // mirrors it byte-identically and is untouched — so this drops the
     // rendering, not the copy.
     title: "Create the rollout. Get the plan.",
-    body:
-      "Pick single, EP or album and answer seven quick questions. Urganize drafts the whole rollout from a playbook written by real managers and UrgAns tailors it to your rollout. A single gets 64 activities over 11 weeks. Approve it and the plan is live.",
     shot: PRODUCT_SHOTS.scopedRelease,
     alt: "A rollout open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
   },
@@ -61,10 +65,7 @@ const STEPS: readonly {
   },
   {
     kicker: "03",
-    beforeId: "tamuno",
     title: "See where every rollout stands.",
-    body:
-      "Open the catalog and see what is done, what is blocked and what is due this week, for every artist at once. Open one and see the whole rollout on a timeline, week by week.",
     shot: PRODUCT_SHOTS.timeline,
     alt: "The Timeline view of a rollout in Urganize: every activity on a week axis with today marked.",
   },
@@ -107,15 +108,21 @@ export function StorySection() {
                       {before}
                     </p>
                   ) : null}
-                  <p className="mono-label mt-8 text-[var(--marketing-accent)]">
+                  <p
+                    className={`mono-label text-[var(--marketing-accent)] ${
+                      before ? "mt-8" : ""
+                    }`}
+                  >
                     {step.kicker}
                   </p>
                   <h3 className="mt-3 text-balance text-[1.75rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[2.1rem]">
                     {step.title}
                   </h3>
-                  <p className="mt-5 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-                    {step.body}
-                  </p>
+                  {step.body ? (
+                    <p className="mt-5 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
+                      {step.body}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
                   <ThemedProductShot

@@ -5,9 +5,10 @@ import { TrialButton } from "../TrialButton";
 import { WaitlistDisclosure } from "../WaitlistDisclosure";
 import { centeredHeadlineClass } from "./shared";
 
-// The journey's one terminal ask (2026-09-02): the trial button, its terms,
-// one real quote, and the waitlist folded behind a text link for anyone not
-// ready to start. The form used to BE this beat's ask; since the two lowest
+// The journey's one terminal ask (2026-09-02): the trial button, one real
+// quote, and the waitlist folded behind a text link for anyone not ready to
+// start. Its terms line ("3 days free. No card.") was removed on a founder
+// call (2026-09-11), the same pass that took the hero's. The form used to BE this beat's ask; since the two lowest
 // tiers went self-serve on 2026-08-30 the trial is, and a visitor who can
 // start today should not be queued (see WaitlistDisclosure for why the
 // waitlist survives at all).
@@ -34,9 +35,6 @@ export function FinalCTASection() {
 
           <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-4">
             <TrialButton location="final" size="lg" className="w-full sm:w-auto" />
-            <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-              3 days free. No card.
-            </p>
             <ProofLine
               id="adenaiye"
               className="mt-3 w-full max-w-[30rem] border-t border-[color:var(--marketing-border)] pt-5"

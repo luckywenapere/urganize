@@ -4,7 +4,6 @@ import {
   PRICING_TIER_ORDER,
   tierHighlights,
 } from "@urganize/pricing";
-import { FOUNDING_MEMBER_LINE } from "@/content/founding-member";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { TrialButton } from "../TrialButton";
@@ -49,11 +48,6 @@ export function PricingStripSection() {
       >
         <div className="mx-auto max-w-[52rem] text-center">
           <h2 className={centeredHeadlineClass}>One price for your team.</h2>
-          <p className="mt-5 text-base leading-8 text-[var(--marketing-text-muted)] sm:text-[1.05rem]">
-            Not per person. Pay monthly, or once a year and get two months
-            free. Start free for 3 days, then pick the plan that fits how many
-            artists you run.
-          </p>
         </div>
 
         {/* THREE since 2026-09-09 (Group, the fourth, was removed the day after
@@ -99,14 +93,13 @@ export function PricingStripSection() {
           ))}
         </ul>
 
-        <div className="mx-auto mt-8 max-w-[64rem] text-center">
-          <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-            {FOUNDING_MEMBER_LINE}
-          </p>
-          <p className="mono-label mt-6 text-[var(--marketing-text-subtle)]">
-            Prices in Naira · Monthly or yearly · Export your data any time
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+        {/* The Founding Member line, the naira/interval/export label and the
+            "Not per person…" explainer above were all removed on a founder
+            call (2026-09-11): the strip is the tiers and the ask now, and
+            /pricing carries the detail. FOUNDING_MEMBER_LINE still exists and
+            still renders THERE — see content/founding-member.ts, which is why
+            this no longer imports it. */}
+        <div className="mx-auto mt-10 flex max-w-[64rem] flex-wrap items-center justify-center gap-x-6 gap-y-3">
             <TrialButton location="pricing" />
             <a
               href="/pricing"
@@ -114,7 +107,6 @@ export function PricingStripSection() {
             >
               See full pricing →
             </a>
-          </div>
         </div>
       </SectionShell>
     </ScrollReveal>
