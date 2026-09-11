@@ -2,15 +2,38 @@ import { PRODUCT_SHOTS } from "@/content/product-shots";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { ThemedProductShot } from "../ThemedProductShot";
-import { centeredHeadlineClass, wideContainerClass } from "./shared";
+import { wideContainerClass } from "./shared";
 
-// The problem and the three steps, as one beat (2026-09-02).
+// Three steps, as one beat (2026-09-02). It opened with the problem, and no
+// longer does — see below.
 //
 // Each step opened with a `before` line — the house description of how the
 // work used to run — and closed with a `body` explaining the step. A founder
-// call on 2026-09-11 removed all six, a line at a time, so a step is now a
-// kicker, a title and a screenshot, and the h2 above carries the whole problem
-// framing on its own, in the past tense.
+// call on 2026-09-11 removed all six, a line at a time, leaving the h2 to
+// carry the whole problem framing on its own; the same call then took the h2
+// ("Rollouts used to run on chat threads and memory."). So a step is a kicker,
+// a title and a screenshot, and THE BEAT RUNS HEADLESS — with it, the landing
+// page states no problem anywhere. That is the founder's call rather than an
+// oversight, and it is the thing to put back first if the page ever reads as
+// jumping from the hero straight into features.
+//
+// The heading block went whole (its ScrollReveal and centred div with it — a
+// wrapper around nothing is dead markup), and `mt-16` went with it: those 64px
+// spaced the steps BELOW the heading, and left in they would stack on
+// SectionShell's own py-[80px] lg:py-[100px]. This beat now starts where
+// Roster and UrgAns start.
+//
+// THE STEP TITLES ARE h2 BECAUSE THE SECTION HAS NO OTHER HEADING (founder
+// call, asked). Three h3s under no h2 is a level skip straight from the hero's
+// h1, and these three are the page's top-level product statements now. It
+// costs no pixels: globals.css's one heading rule groups h1-h6 with identical
+// declarations and nothing targets a single level, so the tag carries none of
+// the styling — all of it is on the element as classes. If a section heading
+// ever comes back, these go back to h3 in the same edit.
+//
+// `centeredHeadlineClass` is NOT dead, so do not delete it: five other
+// sections still use it (PricingStrip, FeatureGrid, Faq, FinalCTA). Only this
+// file's import of it went.
 //
 // So this file no longer reads content/testimonials.ts at all. The three
 // strings are still OWNED there, and two of them (Antoine's and Adenaiye's)
@@ -56,15 +79,7 @@ export function StorySection() {
       className="py-[80px] lg:py-[100px]"
       containerClassName={wideContainerClass}
     >
-      <ScrollReveal>
-        <div className="mx-auto max-w-[52rem] text-center">
-          <h2 className={centeredHeadlineClass}>
-            Rollouts used to run on chat threads and memory.
-          </h2>
-        </div>
-      </ScrollReveal>
-
-      <div className="mx-auto mt-16 max-w-[74rem] space-y-16 lg:space-y-24">
+      <div className="mx-auto max-w-[74rem] space-y-16 lg:space-y-24">
         {STEPS.map((step, index) => {
           return (
             <ScrollReveal key={step.title}>
@@ -77,9 +92,9 @@ export function StorySection() {
                   <p className="mono-label text-[var(--marketing-accent)]">
                     {step.kicker}
                   </p>
-                  <h3 className="mt-3 text-balance text-[1.75rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[2.1rem]">
+                  <h2 className="mt-3 text-balance text-[1.75rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[2.1rem]">
                     {step.title}
-                  </h3>
+                  </h2>
                 </div>
                 <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
                   <ThemedProductShot
