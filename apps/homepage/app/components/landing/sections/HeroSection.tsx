@@ -72,8 +72,15 @@ export function HeroSection() {
             z-[100]. */}
         <div className="hero-fade-in hero-delay-3 relative z-[60] mt-9 flex w-full flex-col items-center gap-4">
           <TrialButton location="hero" size="lg" className="w-full sm:w-auto" />
+          {/* The terms are a complete sentence and the demo control carries its
+              own "Or" and full stop — so a reader that drops buttons (an AI
+              crawler, a readability tool, reader mode) sees the terms and
+              nothing stray, instead of the "Or ." a reviewer caught here on
+              2026-09-10. Do not fold that connector back into this line; the
+              reasoning is in WatchDemo's header. */}
           <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-            3 days free. No card. Your whole team. Or <WatchDemo variant="link" />.
+            3 days free. No card. Your whole team.{" "}
+            <WatchDemo variant="link" />
           </p>
           {/* Proof directly under the primary CTA (2026-07-31): zaddyfunds'
               quote is the shortest and the only publicly link-verifiable
