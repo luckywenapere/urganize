@@ -16,16 +16,19 @@ const START_SECONDS = 0;
 // nothing from YouTube's CDN at all (the facade's i.ytimg.com thumbnail
 // is gone with it).
 //
-// Two shapes (2026-09-02): the original pill, and a `link` variant that
-// reads as the tail of a sentence ("3 days free. No card. Or watch the
-// demo." — 14 originally, shortened 2026-09-10). The hero uses the link so
-// the primary button, its terms line
-// and the proof quote all fit in the first phone screen; a second pill
-// there pushed the proof below the fold.
+// Two shapes (2026-09-02): the original pill, and a `link` variant. The hero
+// uses the link so the primary button and the proof quote fit the first phone
+// screen; a second pill there pushed the proof below the fold.
 //
-// ⚠️ THE LINK VARIANT OWNS ITS "Or" AND ITS FULL STOP, and that is the fix for
-// a real review finding rather than a stylistic choice. Do not move either
-// back into the hero's prose.
+// ⚠️ THE LINK VARIANT OWNS ITS FULL STOP, and that is the fix for a real
+// review finding rather than a stylistic choice. Do not move it back into the
+// hero's prose.
+//
+// It owned an "Or" as well until 2026-09-11, when the terms line it followed
+// ("3 days free. No card. Your whole team.") was removed on a founder call.
+// A connector with no sentence in front of it is the same orphan in a new
+// place, so it went with it and the control now stands alone. If a sentence
+// ever returns above this, the "Or" belongs HERE, not in that sentence.
 //
 // It used to read `…Your whole team. Or <WatchDemo variant="link" />.`, which
 // renders correctly for a person and leaves **"Or ."** for anything that reads
@@ -99,12 +102,11 @@ export function WatchDemo({ variant = "pill" }: { variant?: "pill" | "link" }) {
           onClick={openDemo}
           className="cursor-pointer text-[var(--marketing-text)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:decoration-[color:var(--marketing-text)]"
         >
-          {/* The "Or" and the stop belong to this control, not to the hero's
-              sentence — see the header. The accessible name becomes "Or watch
-              the demo.", which is why there is no aria-label narrowing it to
-              "Watch the demo": that would be an accessible name the visible
-              label does not contain (WCAG 2.5.3, Label in Name). */}
-          Or watch the demo.
+          {/* The stop belongs to this control, not to the hero's prose — see
+              the header. No aria-label narrowing this further: the accessible
+              name has to contain the visible label (WCAG 2.5.3, Label in
+              Name). */}
+          Watch the demo.
         </button>
       ) : (
         <button
