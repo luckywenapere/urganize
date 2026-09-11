@@ -35,7 +35,22 @@
      so the hood separates from the canvas. Mirrors CHAPPI_GLOW in
      packages/ui/src/chappi-constants.ts; change both or neither. */
   --marketing-chappi-stage: none;
-  /* Golden Ratio Constants */
+  /* The intended proportion system. Read this before using it, because the
+     comment that used to sit here was misleading: --phi is NOT referenced by
+     the calc()s below and never has been. The ladder is linear 8px multiples
+     at FIBONACCI INDICES (8 16 24 32 48 64 104 168 272 440px), which lands
+     near phi only at the top — 21/13 = 1.615, 34/21 = 1.619 — and nowhere
+     near it at the bottom, where 4/3 = 1.33.
+
+     Dead until 2026-09-11: declared, wired into no @theme block, and consumed
+     by nothing. RosterSection is the first consumer (spacing written as
+     mt-[var(--space-3)], matching how this file's colours are already
+     consumed). Rolling it out further is a separate decision.
+
+     Use it for VERTICAL RHYTHM, not for splitting columns: the marketing
+     site's text is capped at a reading measure, and ReleasesColumn.tsx:137 in
+     the product app records a phi column layout being reversed by founder call
+     for "filling neither axis." --phi is kept because it states the intent. */
   --phi: 1.618;
   /* Base spacing unit (8px) */
   --space-unit: 0.5rem;
