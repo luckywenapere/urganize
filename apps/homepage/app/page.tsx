@@ -13,7 +13,6 @@ import {
   PricingStripSection,
   ProofSection,
   StorySection,
-  UrgAnsSection,
 } from "./components/landing/Sections";
 import { MarketingFooter } from "./components/marketing/MarketingFooter";
 import { MarketingHeader } from "./components/marketing/MarketingHeader";
@@ -53,22 +52,22 @@ export default function Home() {
         <MarketingHeader />
 
         <main>
-          {/* Eight beats (2026-09-02 overhaul, URG-240; RosterSection removed
-              2026-09-11, founder call — see components/landing/Sections.tsx
-              for what it said and why nothing replaced it), one ask repeated
-              three times (hero, pricing, final): the hero names the buyer and
-              shows the product; the story opens each of three steps with how
-              the work runs today, leading straight into UrgAns, the
-              differentiator; one large quote; three tiles for everything else;
-              the price, rendered from the pricing package; the objections;
-              the final ask with the waitlist folded behind a link.
+          {/* Seven beats (2026-09-02 overhaul, URG-240; RosterSection and
+              UrgAnsSection both removed 2026-09-11, same founder call — see
+              components/landing/Sections.tsx for what each said and why
+              nothing replaced them), one ask repeated three times (hero,
+              pricing, final): the hero names the buyer and shows the
+              product; the story opens each of three steps with how the
+              work runs today, leading straight into one large quote; three
+              tiles for everything else; the price, rendered from the
+              pricing package; the objections; the final ask with the
+              waitlist folded behind a link.
 
               Removal history lives in components/landing/Sections.tsx. The
               2026-08-25 five-beat page (hero + video, stats, screenshot,
               three features, final form) is in git history under that date. */}
           <HeroSection />
           <StorySection />
-          <UrgAnsSection />
           <ProofSection />
           <FeatureGridSection />
           <PricingStripSection />

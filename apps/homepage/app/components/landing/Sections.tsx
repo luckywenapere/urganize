@@ -28,8 +28,10 @@
 //   2026-09-11 (see below) — that fact no longer survives anywhere on the
 //   site.
 // - ThreeFeaturesSection: REMOVED 2026-09-02 (URG-240). Its three claims —
-//   assigned activities, UrgAns, status at a glance — are steps 2 and 3 of
-//   StorySection and the UrgAnsSection.
+//   assigned activities, UrgAns, status at a glance — were steps 2 and 3 of
+//   StorySection plus UrgAnsSection; the UrgAns claim no longer survives
+//   anywhere now that UrgAnsSection itself has also been removed (see
+//   below).
 // - RosterSection: REMOVED 2026-09-11 (founder call). Its claims — running
 //   several artists on one team, a teammate scoped to one artist, a
 //   self-service sign-in link for an external collaborator like a designer
@@ -40,6 +42,15 @@
 //   invite visibility instead. Antoine's testimonial, mounted here, is
 //   unaffected — its other, independent mount is /features' features_cta
 //   row (see ProofLine.tsx's mount table), so nothing needed to move.
+// - UrgAnsSection: REMOVED 2026-09-11 (founder call, same day as
+//   RosterSection). It positioned UrgAns as the differentiator no
+//   competitor has, alongside a live product screenshot of a
+//   confirmation-gated action ("mark the artwork done" runs immediately; a
+//   delete stops and asks first). That gating behavior — UrgAns asks before
+//   anything irreversible — is no longer explained anywhere on the
+//   homepage: the FAQ's "Will UrgAns do things without asking?" answer now
+//   has no on-page antecedent. /features retains a partial, non-gating
+//   mention of UrgAns elsewhere on the site.
 // - WorkspaceShotSection left the landing page 2026-09-02 (the hero carries
 //   the catalog shot now) but stays exported: the four persona pages still
 //   import it.
@@ -50,5 +61,4 @@ export { HeroSection } from "./sections/HeroSection";
 export { PricingStripSection } from "./sections/PricingStripSection";
 export { ProofSection } from "./sections/ProofSection";
 export { StorySection } from "./sections/StorySection";
-export { UrgAnsSection } from "./sections/UrgAnsSection";
 export { WorkspaceShotSection } from "./sections/WorkspaceShotSection";
