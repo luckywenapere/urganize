@@ -84,8 +84,8 @@ export default function PrivacyPolicy() {
             <Section number="01" title="Who we are">
               <p>
                 Urganize (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
-                &ldquo;us&rdquo;) is an AI Music Business Manager for artists,
-                managers and labels, operated by The Urganization Ltd, a company
+                &ldquo;us&rdquo;) is an AI Music Business Manager for artists
+                and managers, operated by The Urganization Ltd, a company
                 registered in Nigeria.
               </p>
               <p>

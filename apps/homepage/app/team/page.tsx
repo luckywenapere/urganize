@@ -11,7 +11,7 @@ export const metadata: Metadata = buildPageMetadata({
     `The people building Urganize, the ${CUSTOMER_LINE}: artist managers, artists and engineers.`,
   path: "/team",
   // Kept out of search so the homepage's sitelinks stay commercial
-  // (Features / Pricing / For managers / For labels). The page stays public
+  // (Features / Pricing / For executives / For managers). The page stays public
   // and footer-linked — it just never competes as a search result.
   noIndex: true,
 });

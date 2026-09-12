@@ -12,7 +12,7 @@ export const metadata: Metadata = buildPageMetadata({
     `The terms that govern your use of Urganize, the ${CUSTOMER_LINE}: accounts, subscriptions, your content and our responsibilities.`,
   path: "/terms",
   // Kept out of search so the homepage's sitelinks stay commercial
-  // (Features / Pricing / For managers / For labels). Noindex hides the page
+  // (Features / Pricing / For executives / For managers). Noindex hides the page
   // from RESULTS only — it stays public, footer-linked, and reachable, which
   // is what any "terms must be accessible" obligation actually requires.
   noIndex: true,
@@ -48,8 +48,8 @@ export default function TermsPage() {
           <div className="mt-12">
             <Section number="01" title="Who we are">
               <p>
-                Urganize is an AI Music Business Manager for artists, managers
-                and labels, operated by The Urganization Ltd, a company registered in
+                Urganize is an AI Music Business Manager for artists and
+                managers, operated by The Urganization Ltd, a company registered in
                 Nigeria (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
                 &ldquo;us&rdquo;). The service runs at urganize.app and
                 app.urganize.app.

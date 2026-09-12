@@ -24,6 +24,16 @@ const nextConfig: NextConfig = {
         destination: "https://urganize.app/community",
         permanent: false,
       },
+      // The /for-labels persona page was removed on 2026-09-11 (founder call:
+      // the product is for artists and managers). It sat in the sitemap at 0.8
+      // for weeks, so inbound links exist; /pricing is where the Label plan it
+      // sold still lives. Temporary on purpose: a 308 is cached by the reader's
+      // browser forever, and a copy decision is the kind that can be reversed.
+      {
+        source: "/for-labels",
+        destination: "/pricing",
+        permanent: false,
+      },
     ];
   },
   // Stamped at BUILD time and read at request time by /api/version, so the

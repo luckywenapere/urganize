@@ -6,7 +6,7 @@ A high-level snapshot of what this codebase is and where it stands. The deep, al
 
 ## The product
 
-Urganize is an **AI Music Business Manager** for artists, managers and labels. The music industry runs on chaos: group chats, spreadsheets, one overworked person holding every release together. Urganize v1 gives an independent music manager (1-3 artists, next release inside 90 days) one place for the plan, the tasks, the files and the status, all attached to the release.
+Urganize is an **AI Music Business Manager** for artists and managers. The music industry runs on chaos: group chats, spreadsheets, one overworked person holding every release together. Urganize v1 gives an independent music manager (1-3 artists, next release inside 90 days) one place for the plan, the tasks, the files and the status, all attached to the release.
 
 **The release is the spine.** Every feature ties back to a specific release. Hand-crafted release templates carry the domain knowledge; AI is a removable polish layer on top — the product works, degraded but functional, if AI is unavailable.
 

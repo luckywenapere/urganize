@@ -12,6 +12,11 @@
  * cannot is the app store name, whose 30-character cap the full category no
  * longer fits. See docs/store-listing.md.
  *
+ * Amended again 2026-09-11 (founder call, later the same day): "labels" is
+ * dropped from the audience. It is artists and managers. Artists still lead,
+ * the category, the promise and the UrgAns line are untouched, and every
+ * derived string absorbs it. The /for-labels persona page went with it.
+ *
  * WHY A MODULE RATHER THAN THE STRING AT EACH CALL SITE. This repo has shipped
  * the display-vs-reality gap four times with prices, once with the share card's
  * alt text against the card's own baked tagline, and twice with a landing title
@@ -37,16 +42,17 @@
 export const PRODUCT_CATEGORY = 'AI Music Business Manager';
 
 /**
- * Who it is for, in the fixed order artists, managers, labels.
+ * Who it is for, in the fixed order artists, managers.
  *
  * ARTISTS ALWAYS LEAD, and the order is never reordered for emphasis. It is
  * data rather than a baked string so the guard can pin the order rather than
- * pin one sentence that happens to contain it.
+ * pin one sentence that happens to contain it. Labels were the third entry
+ * until 2026-09-11 (founder call: it is not for labels).
  */
-export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
+export const AUDIENCE = ['artists', 'managers'] as const;
 
-/** "artists, managers and labels" — built from the list above so the order
- * cannot be rewritten in prose without rewriting the list. */
+/** "artists and managers" — built from the list above so the order cannot be
+ * rewritten in prose without rewriting the list. */
 export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
 
 /** The brand line. The homepage title, and nothing else in the app uses it. */
@@ -79,7 +85,7 @@ export const SHORT_DESCRIPTION = `${CUSTOMER_LINE}. ${PROMISE}.`;
  * sentence that reads like it was assembled from fragments.
  */
 export const CANONICAL_DESCRIPTION =
-  'Urganize is an AI Music Business Manager for artists, managers and labels. It helps music teams plan rollouts, ' +
+  'Urganize is an AI Music Business Manager for artists and managers. It helps music teams plan rollouts, ' +
   'coordinate people, manage assets and metadata, track execution and keep every part moving ' +
   'from one place.';
 

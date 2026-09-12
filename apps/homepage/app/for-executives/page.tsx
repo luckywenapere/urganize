@@ -27,8 +27,9 @@ export const metadata: Metadata = buildPageMetadata({
 // superseded: the 2026-09-09 brief puts artists first in the audience and
 // retires the job titles that brief used to name this reader. So the page
 // keeps its route (a live URL is not a copy decision) and speaks to the WORK
-// of running several artists rather than to a title. /for-managers and
-// /for-labels are the two adjacent entry points, not competing heroes.
+// of running several artists rather than to a title. /for-managers is the
+// adjacent entry point, not a competing hero (/for-labels was the other until
+// it was removed on 2026-09-11; its URL now redirects to /pricing).
 //
 // Same honesty rule as every other marketing page: every claim below
 // describes the product as it ships today. Nothing here promises AI
@@ -220,14 +221,7 @@ export default function ForExecutivesPage() {
           containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
         >
           <p className="text-center text-sm text-[var(--marketing-text-subtle)]">
-            Running a roster with your own team?{" "}
-            <Link
-              href="/for-labels"
-              className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"
-            >
-              See Urganize for labels
-            </Link>
-            . Running the rollouts yourself?{" "}
+            Running the rollouts yourself?{" "}
             <Link
               href="/for-managers"
               className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"

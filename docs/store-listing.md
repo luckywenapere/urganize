@@ -1,8 +1,10 @@
 # App store listings
 
 Paste-ready listing copy for the Urganize mobile app. Written 2026-09-09 for the
-AI Music Manager positioning, and amended 2026-09-11 when the category widened
-to **AI Music Business Manager**.
+AI Music Manager positioning, amended 2026-09-11 when the category widened
+to **AI Music Business Manager**, and again later that day when the audience
+narrowed to **artists and managers** (founder call: labels are no longer an
+audience).
 
 **Every string here comes from the same place as the product's own copy.** The
 category, the audience order and the promise are defined once in
@@ -10,7 +12,8 @@ category, the audience order and the promise are defined once in
 scans this file for the retired phrases, so a listing that drifted from the
 product would fail the build rather than sit here quietly disagreeing with it.
 
-Do not reorder the audience. It is artists, managers, labels, everywhere.
+Do not reorder the audience. It is artists then managers, everywhere. Labels were
+the third entry until 2026-09-11.
 
 ---
 
@@ -43,15 +46,15 @@ truncation.
 ### Short description (80 characters max)
 
 ```
-AI Music Business Manager for artists, managers and labels.
+AI Music Business Manager for artists and managers.
 ```
 
-59 characters. This is the one-liner from `positioning.ts` unchanged.
+51 characters. This is the one-liner from `positioning.ts` unchanged.
 
 ### Full description (4000 characters max)
 
 ```
-Urganize is an AI Music Business Manager for artists, managers and labels. It helps music teams plan rollouts, coordinate people, manage assets and metadata, track execution and keep every part moving from one place.
+Urganize is an AI Music Business Manager for artists and managers. It helps music teams plan rollouts, coordinate people, manage assets and metadata, track execution and keep every part moving from one place.
 
 PLAN THE ROLLOUT
 Every release starts with a real plan, not a blank board. Pick what you are putting out and Urganize lays out the whole rollout, sized to the format, with every activity dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
@@ -72,16 +75,17 @@ ASK URGANS
 UrgAns is the personal AI for music professionals inside Urganize. Ask it what is late, have it draft a rollout plan, or tell it to create an activity in plain words. You review and approve anything it drafts before it takes effect.
 
 WHO IT IS FOR
-Artists running their own releases. Managers running more than one artist at a time. Labels and management companies running a roster.
+Artists running their own releases. Managers running more than one artist at a time.
 
 Start free for 3 days. No card needed.
 ```
 
-1,714 characters.
+1,656 characters.
 
-Recounted 2026-09-11. The previous figure here read 1,776 and was already 71
-characters stale before this edit — the rollout rename shortened the block and
-nobody recounted it. Measured off the fenced text above, not estimated.
+Recounted 2026-09-11, twice. The figure here read 1,776 for a block that
+measured 1,714 — the rollout rename had shortened it and nobody recounted — and
+then 1,656 once the audience narrowed later the same day. Measured off the
+fenced text above with `wc -m`, not estimated.
 
 ### Other Play Console fields
 
@@ -134,10 +138,11 @@ line of the description.
 ### Promotional text (170 characters max)
 
 ```
-AI Music Business Manager for artists, managers and labels. Plan, organize and execute rollouts from one place.
+AI Music Business Manager for artists and managers. Plan, organize and execute rollouts from one place.
 ```
 
-110 characters. This is `SHORT_DESCRIPTION` from `positioning.ts` unchanged.
+103 characters. This is `SHORT_DESCRIPTION` from `positioning.ts` unchanged.
+(The figure here read 110 for a string that was 111; measured this time.)
 
 ### Description
 
@@ -147,10 +152,10 @@ Apple's 4,000-character limit and carries no Play-specific wording.
 ### Keywords (100 characters max, comma separated)
 
 ```
-music manager,release planning,artist manager,rollout,press kit,setlist,music team,label
+music manager,release planning,artist manager,rollout,press kit,setlist,music team
 ```
 
-87 characters. No spaces after the commas: Apple counts them, and the field is
+82 characters. No spaces after the commas: Apple counts them, and the field is
 tight.
 
 THE TAGS AND KEYWORDS DID NOT MOVE WITH THE CATEGORY on 2026-09-11, and that is
@@ -158,6 +163,12 @@ the same call `LANDING_KEYWORDS` records in `apps/homepage/app/layout.tsx`:
 these are not read, they are typed into a store's search box, and nobody
 searches for a phrase we widened last week. "music manager" is still what a
 manager types. Revisit once the longer term has an audience.
+
+THE AUDIENCE NARROWING LATER THAT DAY IS THE ONE EXCEPTION: `label` left the
+Apple keywords, the way `A&R software` left `LANDING_KEYWORDS` when that audience
+went. A category rename keeps its keywords because the searcher still types the
+old word; a keyword that recruits an audience we no longer name sends the wrong
+person to a listing that tells them so.
 
 ### Other App Store Connect fields
 

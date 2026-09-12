@@ -644,7 +644,7 @@ export function TeamWall() {
                 </h2>
                 <p className="mt-1 text-sm text-content-secondary">
                   {PRICING_V2
-                    ? 'Running several labels, or prefer an invoice? Talk to us directly.'
+                    ? 'Running a bigger roster, or prefer an invoice? Talk to us directly.'
                     : 'Prefer an invoice or a walkthrough for your team? Talk to us directly.'}
                 </p>
               </div>
@@ -662,8 +662,8 @@ export function TeamWall() {
               </div>
 
               <p className="text-xs leading-6 text-content-tertiary">
-                We set up annual agreements, invoices and bank transfers for labels and
-                management teams every week. Tell us how your team pays and we will match it.
+                We set up annual agreements, invoices and bank transfers for management
+                teams every week. Tell us how your team pays and we will match it.
               </p>
             </Card>
           </div>

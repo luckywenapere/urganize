@@ -24,10 +24,11 @@ const productLinks = [
   { href: "/pricing", label: "Pricing" },
   // Persona pages, executives first: they are the buyer and the hero in the
   // locked positioning (founder brief, 2026-08-19), so they lead the group
-  // and get the best sitelink odds of the five. The other four are adjacent
-  // audiences, ordered by how close each is to that buyer.
+  // and get the best sitelink odds of the four. The other three are adjacent
+  // audiences, ordered by how close each is to that buyer. /for-labels sat
+  // second until 2026-09-11 (founder call: the product is not for labels; the
+  // page is gone and its URL redirects to /pricing).
   { href: "/for-executives", label: "For executives" },
-  { href: "/for-labels", label: "For labels" },
   { href: "/for-managers", label: "For managers" },
   { href: "/for-curators", label: "For curators" },
   { href: "/for-ai-artists", label: "For AI artists" },
@@ -53,7 +54,8 @@ const productLinks = [
 //
 // 2026-08-21: three persona pages were added here (executives, curators, AI
 // artists). This menu is still their only home, so the DOM rule above now
-// matters for five pages rather than two.
+// matters for five pages rather than two (four since /for-labels was removed
+// on 2026-09-11).
 export function ProductMenu() {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

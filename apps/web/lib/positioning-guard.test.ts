@@ -125,6 +125,12 @@ const RETIRED = [
   /music rollouts/i,
   /Global standard, from here/i,
   /\bworkspaces?\b/i,
+  // 2026-09-11 (founder call): the audience is artists and managers. The old
+  // triple, the persona page's title and the "small labels" wording retire
+  // together, so none of them can come back through a stale paste.
+  /artists, managers and labels/i,
+  /\bfor labels\b/i,
+  /small labels/i,
 ] as const;
 
 /**
@@ -187,20 +193,20 @@ describe('positioning', () => {
   it('names the category, the audience and the promise once', () => {
     expect(PRODUCT_CATEGORY).toBe('AI Music Business Manager');
     expect(BRAND_LINE).toBe('Urganize, AI Music Business Manager');
-    expect(CUSTOMER_LINE).toBe(
-      'AI Music Business Manager for artists, managers and labels',
-    );
+    expect(CUSTOMER_LINE).toBe('AI Music Business Manager for artists and managers');
     expect(PROMISE).toBe('Plan, organize and execute rollouts from one place');
     expect(URGANS_LINE).toBe('personal AI for music professionals');
   });
 
   it('leads the audience with artists, every time', () => {
-    // The brief: "Artists always lead the audience list. The order is artists,
-    // managers, labels. Never reorder it." Pinned as the list rather than as a
-    // sentence containing it, so a reorder fails here rather than in review.
-    expect([...AUDIENCE]).toEqual(['artists', 'managers', 'labels']);
+    // The brief: "Artists always lead the audience list." Pinned as the list
+    // rather than as a sentence containing it, so a reorder fails here rather
+    // than in review. The list was artists, managers, labels until 2026-09-11,
+    // when the founder dropped labels ("it is not for labels"); artists still
+    // lead, and the old triple is on the RETIRED list above so it cannot come
+    // back by accident.
+    expect([...AUDIENCE]).toEqual(['artists', 'managers']);
     expect(ONE_LINER.indexOf('artists')).toBeLessThan(ONE_LINER.indexOf('managers'));
-    expect(ONE_LINER.indexOf('managers')).toBeLessThan(ONE_LINER.indexOf('labels'));
   });
 
   it('fits the limits other platforms enforce', () => {

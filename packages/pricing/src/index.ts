@@ -437,7 +437,10 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   label: {
     id: 'label',
     label: 'Label',
-    audience: 'For a label or a team running a roster.',
+    // Read "For a label or a team running a roster." until 2026-09-11, when the
+    // founder dropped labels from the audience everywhere. The tier keeps its
+    // name and id; only who it is described as being for changed.
+    audience: 'For a team running a roster.',
     // Monthly only. The yearly price is ten months of this — see monthlyPrice.
     monthlyPrice: tierPrice(50_000),
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },

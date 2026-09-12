@@ -14,7 +14,8 @@ import { wideContainerClass } from "./shared";
 // no "ship". "From one place" is the promise rather than a banned container
 // metaphor, which is the one rule of the 2026-08-19 brief that flipped; its
 // other rules still hold, no "system of record", fifth-grade readability, no
-// Oxford comma in house copy.
+// Oxford comma in house copy. Since 2026-09-11 the audience is artists and
+// managers only (founder call); labels are out of the h1 and off the site.
 //
 // One ask. The primary button is the free trial, straight into the app
 // (APP_SIGNUP_URL): since 2026-08-30 the two lowest tiers are self-serve, so

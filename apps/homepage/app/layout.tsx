@@ -21,8 +21,9 @@ const LEGAL_NAME = "The Urganization Ltd";
 // is now the thing we want to be found for rather than a description of the
 // software. Two terms left with it: "music release management" is a retired
 // category label, and "A&R software" named an audience the brief replaced
-// with artists, managers and labels. "artist manager software" stays, since
-// managers are the middle of the new audience list rather than gone from it.
+// with artists, managers and labels (labels went too on 2026-09-11, see the
+// last paragraph). "artist manager software" stays, since managers are still
+// in the audience list rather than gone from it.
 //
 // THE TWO "release" TERMS SURVIVED THE 2026-09-09 rollout rename ON PURPOSE.
 // Every string a person reads now says rollout, but these are not read —
@@ -36,14 +37,20 @@ const LEGAL_NAME = "The Urganization Ltd";
 // move when we change our own words — a searcher still types the short form.
 // Adding the long form would cost nothing and find nobody, so it waits for the
 // same signal the release terms are waiting for.
+//
+// TWO MORE LEFT ON 2026-09-11, when the audience narrowed to artists and
+// managers (founder call: it is not for labels): "label management software"
+// and "record label software". That is the A&R rule from the first paragraph,
+// not a reversal of the two between it and here: a CATEGORY rename keeps its
+// keywords because the searcher still types the old word, but a keyword that
+// recruits an AUDIENCE the brief no longer names sends the wrong person to a
+// page that tells them so.
 const LANDING_KEYWORDS = [
   "AI music manager",
   "music manager app",
   "artist manager software",
   "music release planning",
   "release rollout plan",
-  "label management software",
-  "record label software",
 ] as const;
 
 // Typography

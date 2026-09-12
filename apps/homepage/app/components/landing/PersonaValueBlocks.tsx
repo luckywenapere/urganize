@@ -2,12 +2,13 @@ import { ScrollReveal } from "./ScrollReveal";
 import { SectionShell } from "./SectionShell";
 
 // The full-size, alternating value block used by every persona page
-// (/for-executives, /for-managers, /for-labels, /for-curators,
-// /for-ai-artists). Extracted 2026-08-21 when the third, fourth and fifth
-// persona pages landed: /for-managers and /for-labels carried a
-// byte-identical 43-line copy of this markup each, and five copies of it
-// is how the two drift apart. The rendered output is unchanged from those
-// two copies — this is a lift, not a redesign.
+// (/for-executives, /for-managers, /for-curators, /for-ai-artists; also
+// /for-labels until that page was removed on 2026-09-11). Extracted
+// 2026-08-21 when the third, fourth and fifth persona pages landed:
+// /for-managers and /for-labels carried a byte-identical 43-line copy of
+// this markup each, and five copies of it is how the two drift apart. The
+// rendered output is unchanged from those two copies — this is a lift, not
+// a redesign.
 //
 // `points` is optional so a page can run a block as prose only. Blocks
 // alternate sides on lg+ by index, same as before.
