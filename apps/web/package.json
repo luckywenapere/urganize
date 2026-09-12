@@ -1,6 +1,6 @@
 {
   "name": "@urganize/web",
-  "description": "AI Music Business Manager for artists, managers and labels. Plan, organize and execute rollouts from one place.",
+  "description": "AI Music Business Manager for artists and managers. Plan, organize and execute rollouts from one place.",
   "version": "1.41.0",
   "private": true,
   "scripts": {

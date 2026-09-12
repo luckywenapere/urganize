@@ -22,7 +22,7 @@ export const metadata: Metadata = buildPageMetadata({
     `Join the Urganize community, a group chat for people running rollouts on the ${CUSTOMER_LINE}.`,
   path: "/community",
   // Kept out of search so the homepage's sitelinks stay commercial
-  // (Features / Pricing / For managers / For labels). The page stays public
+  // (Features / Pricing / For executives / For managers). The page stays public
   // and footer-linked — it just never competes as a search result.
   noIndex: true,
 });
@@ -41,9 +41,9 @@ export default function CommunityPage() {
             The Urganize community
           </h1>
           <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-            A group chat for artist managers and small labels running
-            rollouts. Trade notes, ask questions, and see how other teams
-            handle the same mess Urganize fixes.
+            A group chat for artists and managers running rollouts. Trade
+            notes, ask questions, and see how other teams handle the same mess
+            Urganize fixes.
           </p>
 
           <div className="mt-10">

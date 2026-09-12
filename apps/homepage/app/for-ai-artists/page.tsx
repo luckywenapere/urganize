@@ -26,7 +26,7 @@ export const metadata: Metadata = buildPageMetadata({
 // executives the hero and called artists ecosystem advocates rather than the
 // addressee, so a page speaking to artists directly was a founder-sanctioned
 // exception (2026-08-21). The 2026-09-09 positioning retires the exception
-// entirely: the audience is artists, managers and labels, in that order, with
+// entirely: the audience is artists and managers, in that order, with
 // artists FIRST. This page is now squarely on-brief rather than a tolerated
 // edge. It still speaks to the person RUNNING an AI artist project, which is
 // operator work rather than fan-facing artist copy.
@@ -161,8 +161,9 @@ export default function ForAiArtistsPage() {
           </SectionShell>
         </ScrollReveal>
 
-        {/* TO BE CLEAR — the honesty guardrail, same slot /for-labels uses
-            for its founder-service-versus-UI clarification. Says plainly
+        {/* TO BE CLEAR — the honesty guardrail, the slot the retired
+            /for-labels page used for its founder-service-versus-UI
+            clarification. Says plainly
             what this product does not do, because "for AI artists" invites
             exactly the wrong assumption. */}
         <ScrollReveal>

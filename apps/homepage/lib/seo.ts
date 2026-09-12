@@ -36,7 +36,9 @@ const SITE_NAME = "Urganize";
 //
 // Widening the category on 2026-09-11 took it from 150 characters to 159, which
 // is the top of that band rather than past it. Anything added here from now on
-// has to come out of the tail, not on top of it.
+// has to come out of the tail, not on top of it. Narrowing the audience to
+// artists and managers later the same day took it back to 151, so there are
+// eight characters of headroom again.
 export const LANDING_TITLE = BRAND_LINE;
 export const LANDING_DESCRIPTION =
   `Urganize is an ${CUSTOMER_LINE}. ${PROMISE}, with an owner on every activity.`;
@@ -56,7 +58,7 @@ export const LANDING_DESCRIPTION =
 // Bump this string every time public/opengraph-image.png changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-09-11-business-manager";
+const SHARE_IMAGE_VERSION = "2026-09-11-artists-and-managers";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.png?v=${SHARE_IMAGE_VERSION}`,
@@ -72,7 +74,8 @@ const SHARE_IMAGE = {
   //
   // The generator is `apps/homepage/scripts/generate-og-image.mjs` (the note
   // here said there was none until 2026-09-09, when one landed). Regenerated
-  // 2026-09-11 for the widened category; before that 2026-09-09 for the
+  // twice on 2026-09-11, first for the widened category and then for the
+  // audience narrowing to artists and managers; before that 2026-09-09 for the
   // release-to-rollout rename, before that for the AI Music Manager
   // positioning, before that it said "The AI workspace for music executives",
   // and before that "One home", a banned container metaphor.

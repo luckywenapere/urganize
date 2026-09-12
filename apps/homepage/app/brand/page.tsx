@@ -12,7 +12,7 @@ export const metadata: Metadata = buildPageMetadata({
     `How Urganize looks, how it speaks and what it stands for. The brand behind the ${CUSTOMER_LINE}.`,
   path: "/brand",
   // Kept out of search so the homepage's sitelinks stay commercial
-  // (Features / Pricing / For managers / For labels). The page stays public
+  // (Features / Pricing / For executives / For managers). The page stays public
   // and footer-linked — it just never competes as a search result.
   noIndex: true,
 });
@@ -164,10 +164,10 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Artists, managers and labels. One rollout is a lot of moving parts; a roster
-                  is many calendars, many rollouts at once and a pile of chats holding it
-                  together. Urganize is what runs that. Labels with a bigger roster get the Label
-                  plan, with the founders working alongside them.
+                  Artists and managers. One rollout is a lot of moving parts; a roster is
+                  many calendars, many rollouts at once and a pile of chats holding it
+                  together. Urganize is what runs that. Teams with a bigger roster get the
+                  Label plan, with the founders working alongside them.
                 </p>
               </div>
 
@@ -189,8 +189,8 @@ export default function BrandPage() {
               <div className="border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
                 <p className={sectionEyebrow}>Boilerplate · copy / paste</p>
                 <p className="mt-2 text-[var(--marketing-text)]">
-                  Urganize is an AI Music Business Manager for artists, managers and
-                  labels. It helps music teams plan rollouts, coordinate people, manage
+                  Urganize is an AI Music Business Manager for artists and
+                  managers. It helps music teams plan rollouts, coordinate people, manage
                   assets and metadata, track execution and keep every part of a rollout
                   moving from one place. Every rollout runs on a plan written by real
                   managers, with an owner and a due date on every activity and a press

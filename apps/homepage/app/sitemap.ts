@@ -42,17 +42,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
-    // The five persona pages. Same priority across all of them — the
+    // The four persona pages (/for-labels left on 2026-09-11, founder call;
+    // its URL redirects to /pricing). Same priority across all of them — the
     // ProductMenu's link order is where the executive-first preference is
     // expressed (that's a sitelink signal we control); sitemap priority is
     // not, and inventing a split here would just be noise.
     {
       url: `${SITE_URL}/for-executives`,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/for-labels`,
       changeFrequency: "monthly",
       priority: 0.8,
     },

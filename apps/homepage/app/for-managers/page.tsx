@@ -219,14 +219,7 @@ export default function ForManagersPage() {
           containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
         >
           <p className="text-center text-sm text-[var(--marketing-text-subtle)]">
-            Running a bigger roster with your own team?{" "}
-            <Link
-              href="/for-labels"
-              className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"
-            >
-              See Urganize for labels
-            </Link>
-            . Answering for rollouts other people run?{" "}
+            Answering for rollouts other people run?{" "}
             <Link
               href="/for-executives"
               className="text-[var(--marketing-text)] underline underline-offset-4 hover:text-[var(--marketing-accent)]"

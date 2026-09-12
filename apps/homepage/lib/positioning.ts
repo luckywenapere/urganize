@@ -12,6 +12,11 @@
  * cannot is the app store name, whose 30-character cap the full category no
  * longer fits. See docs/store-listing.md.
  *
+ * Amended again 2026-09-11 (founder call, later the same day): "labels" is
+ * dropped from the audience. It is artists and managers. Artists still lead,
+ * the category, the promise and the UrgAns line are untouched, and every
+ * derived string absorbs it. The /for-labels persona page went with it.
+ *
  * THIS IS THE MIRROR. The canonical copy, with the full reasoning, is
  * apps/web/lib/positioning.ts. `apps/homepage` cannot import from `apps/web`
  * (separate Next apps, no shared path alias), and a package for eight strings
@@ -28,7 +33,7 @@
 
 export const PRODUCT_CATEGORY = 'AI Music Business Manager';
 
-export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
+export const AUDIENCE = ['artists', 'managers'] as const;
 
 export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
 
@@ -43,7 +48,7 @@ export const ONE_LINER = `${CUSTOMER_LINE}.`;
 export const SHORT_DESCRIPTION = `${CUSTOMER_LINE}. ${PROMISE}.`;
 
 export const CANONICAL_DESCRIPTION =
-  'Urganize is an AI Music Business Manager for artists, managers and labels. It helps music teams plan rollouts, ' +
+  'Urganize is an AI Music Business Manager for artists and managers. It helps music teams plan rollouts, ' +
   'coordinate people, manage assets and metadata, track execution and keep every part moving ' +
   'from one place.';
 

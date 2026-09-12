@@ -11,7 +11,7 @@ export const metadata: Metadata = buildPageMetadata({
     `Every Urganize update, newest first. What changed and when in the ${CUSTOMER_LINE}.`,
   path: "/changelog",
   // Kept out of search so the homepage's sitelinks stay commercial
-  // (Features / Pricing / For managers / For labels). The page stays public
+  // (Features / Pricing / For executives / For managers). The page stays public
   // and footer-linked — it just never competes as a search result.
   noIndex: true,
 });
