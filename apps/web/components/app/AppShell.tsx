@@ -251,6 +251,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     // A person's public record, opened by a manager deciding who to hire.
     pathname?.startsWith('/p/') ||
     pathname?.startsWith('/capture/') ||
+    // A curator's public page, opened by an artist who has no account yet and
+    // is deciding whether to make one. Chrome here would be the product
+    // talking over the person whose page it is.
+    pathname?.startsWith('/pitch/') ||
     // A DJ pack link, opened by someone with no account at all.
     pathname?.startsWith('/pack/') ||
     // The OAuth consent screen. Signed-in, but it is a decision about handing a

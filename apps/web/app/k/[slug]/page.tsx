@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: 'Press kit', robots: { index: false, follow: false } };
   }
 
-  const title = `${kit.artistName} — press kit`;
+  const title = `${kit.artistName}: press kit`;
   const description = kitDescription(kit.artistName, kit.byKey.header || {}, kit.byKey.bios || {});
   // The ONE indexable public page in this product, and only when somebody has
   // deliberately picked the listed setting. Everything else stays out of

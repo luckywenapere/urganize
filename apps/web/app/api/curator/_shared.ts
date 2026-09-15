@@ -23,13 +23,15 @@ import type { CuratorPitch, CuratorPlaylist, PitchPlatform } from '@/types/pitch
 // convention).
 export { getAuthenticatedUser, createAdminClient } from '@/app/api/_shared/auth';
 
+import { isValidCuratorSlug } from '@/lib/curator-public';
+
 export const CURATOR_INVITES_TABLE = 'curator_invites';
 export const CURATOR_PROFILES_TABLE = 'curator_profiles';
 export const CURATOR_PLAYLISTS_TABLE = 'curator_playlists';
 export const PITCHES_TABLE = 'playlist_pitches';
 
 export const CURATOR_PROFILE_COLUMNS =
-  'user_id,display_name,bio,photo_path,created_at,updated_at';
+  'user_id,display_name,bio,photo_path,slug,published_at,created_at,updated_at';
 
 export const CURATOR_PLAYLIST_COLUMNS =
   'id,name,platform,genres,follower_count,url,created_at,updated_at';
@@ -179,6 +181,34 @@ export const parsePlaylistName = (value: unknown) =>
 
 export const parseReply = (value: unknown) =>
   parseTextField(value, { label: 'Reply', max: MAX_PITCH_REPLY_LENGTH, required: false });
+
+/**
+ * The handle in a curator's public URL.
+ *
+ * Normalized before it is checked, because the shape rule is lowercase and
+ * somebody typing their own name will capitalize it. There is deliberately no
+ * way to CLEAR it: an empty handle would take her page off the internet while
+ * leaving it published, and unpublishing is the control that does that
+ * properly and keeps the URL for when she comes back.
+ */
+export function parseCuratorSlug(value: unknown): { error: NextResponse } | { value: string } {
+  if (typeof value !== 'string') {
+    return { error: NextResponse.json({ error: 'Link must be text.' }, { status: 400 }) };
+  }
+  const slug = value.trim().toLowerCase();
+  if (!isValidCuratorSlug(slug)) {
+    return {
+      error: NextResponse.json(
+        {
+          error:
+            'Use two to sixty characters: lowercase letters, numbers and single hyphens between them.',
+        },
+        { status: 400 }
+      ),
+    };
+  }
+  return { value: slug };
+}
 
 /** Playlist links must be real http(s) URLs so a pitcher can open them. */
 export function parsePlaylistUrl(value: unknown): { error: NextResponse } | { value: string } {
