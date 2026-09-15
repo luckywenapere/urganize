@@ -12,11 +12,11 @@
 // a task-insert), stale means it crashed and the slot is free again.
 //
 // This mirrors release_plan_drafts' own claim (its `status='draft'`
-// conditional update, one layer down) — the two IDEMPOTENCY CLAIMS defend
-// different call paths, not the same one twice: that one is what makes
-// Chappi's approve_release_plan tool safe even though it never touches
-// urgans_actions at all; this one is what makes the NEW /apply endpoint safe
-// for ITS OWN callers (a double-tap, two open tabs).
+// conditional update, one layer down, inside createReleasePlan) — the two
+// IDEMPOTENCY CLAIMS defend different call paths, not the same one twice:
+// that one is what makes two racing calls to POST .../plan safe even though
+// neither touches urgans_actions directly; this one is what makes the /apply
+// endpoint safe for ITS OWN callers (a double-tap, two open tabs).
 
 export type UrgansActionStatus = 'drafted' | 'applied' | 'discarded' | 'failed';
 

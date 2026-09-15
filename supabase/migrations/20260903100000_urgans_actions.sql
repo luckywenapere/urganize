@@ -2,13 +2,25 @@
 -- urgans_actions — the log and the Apply claim for embedded UrgAns actions
 --
 -- "UrgAns in every function", Phase 0 + the first real action,
--- release.draft_plan (spec 6.1, "Draft the plan"). Every embedded action —
--- inside a product function rather than in chat — follows Draft, Review,
--- Apply, and this table is what makes that model auditable and idempotent.
--- It is NEVER the product data itself: a drafted plan lives in
--- release_plan_drafts exactly as it always has, and Approve still writes
--- `tasks` exactly as it always has. This table only records that a run
--- happened, what it cost, and whether it was applied.
+-- release.draft_plan (spec 6.1, "Draft the plan"). An embedded action —
+-- inside a product function rather than in chat — either follows Draft,
+-- Review, Apply (a card the user later accepts or discards) or, when there is
+-- nothing worth pausing on, runs straight to done in one call (an action's
+-- `oneShot` flag; see lib/urgans-actions/types.ts). This table makes either
+-- shape auditable, and idempotent for the two-step one. It is NEVER the
+-- product data itself, whichever shape wrote the row.
+--
+-- RELEASE.DRAFT_PLAN ITSELF WAS REDESIGNED 2026-09-15, AFTER THIS TABLE WAS
+-- WRITTEN: the review step (drafting into release_plan_drafts, a manager
+-- approving or discarding it) is gone. Finishing the intake now builds the
+-- plan straight into the rollout's activities in one call — the same
+-- createReleasePlan pipeline the workspace card and the chat door both call —
+-- so this action is `oneShot: true` and every row it produces lands here
+-- already `applied`, with no `drafted` row ever preceding it. Everything
+-- below describing the general shape (status, applied_result, the claim)
+-- still holds exactly as written, and still fully describes a genuine
+-- two-step action like presskit.draft_section — this table was built generic
+-- enough that the redesign needed no schema change, only this note.
 --
 -- WHO DID WHAT, AND WHY THREE ACTOR COLUMNS:
 --   * owner_user_id is whose TEAM this counts against and whose child rows
@@ -39,21 +51,25 @@
 -- a release id), and a deleted object must keep its log — the same reasoning
 -- billing_events' owner/actor columns already use.
 --
--- WHY applied_result EXISTS: it is what makes the second call to
+-- WHY applied_result EXISTS: it is what makes a second call to
 -- POST /api/urgans/actions/[actionId]/apply idempotent for ITS OWN callers (a
 -- double-tap, two open tabs) — decideApplyClaim returns the FIRST apply's
--- result rather than re-running the write. This is a SECOND, independent
--- idempotency claim from release_plan_drafts' own `status='draft'`
--- conditional update one layer down: that one is what makes Chappi's
--- approve_release_plan tool safe even though it never touches this table at
--- all; this one defends the new endpoint specifically. They protect different
--- call paths, not the same one twice.
+-- result rather than re-running the write. For a two-step action this is set
+-- by that later Apply call. For a ONE-SHOT action (release.draft_plan) it is
+-- set at INSERT time instead, since the run itself already did the whole
+-- job — a later /apply call on such a row hits decideApplyClaim's
+-- return_cached path immediately and never reaches the action's own code
+-- again. This used to be a SECOND, independent idempotency claim alongside
+-- release_plan_drafts' own `status='draft'` conditional update one layer
+-- down, which protected the old review-then-approve flow; that flow is
+-- retired for release.draft_plan, so this table's claim now stands on its
+-- own for it. It still layers the same way for a two-step action.
 --
--- edited_output exists for a FUTURE action whose review surface is a
--- lightweight inline card rather than a full existing scene (release.draft_
--- plan's review IS the existing PlanScene, which edits release_plan_drafts
--- directly through its own PUT autosave — this column is unused by that
--- action and stays null for every row it produces).
+-- edited_output exists for a two-step action whose review surface is a
+-- lightweight inline card rather than a full existing scene — presskit.
+-- draft_section is the live example, whose card lets a manager edit the
+-- drafted words before accepting them. release.draft_plan has no review step
+-- to edit (it is oneShot) and never writes this column.
 --
 -- tokens_in/tokens_out are NULLABLE, and null must never become 0: null means
 -- "not reported" (the gateway/model did not surface usage, or a run's own

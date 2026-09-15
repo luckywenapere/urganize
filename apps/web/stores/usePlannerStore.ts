@@ -2,10 +2,11 @@
 
 import { create } from 'zustand';
 
-import type { PlanBudget, PlanReleaseType } from '@/lib/release-planning';
+import type { CreatedPlan, PlanBudget, PlanReleaseType } from '@/lib/release-planning';
 
 /**
- * The planner intake's launcher, and nothing else.
+ * The planner intake's launcher, plus the two answers a build can leave
+ * behind for the workspace to act on.
  *
  * The intake can be opened from four places that live in different ownership
  * islands: the workspace empty-state card, a note, an UrgAns chip on the
@@ -13,10 +14,15 @@ import type { PlanBudget, PlanReleaseType } from '@/lib/release-planning';
  * to all of them would touch a file per entry point, so the modal is mounted
  * once in AppShell and opened through this store instead.
  *
- * The draft plan itself is deliberately NOT here. It lives in the review scene
- * that edits it, because that scene is its only consumer and the document is
- * under an autosave queue — a second copy in a global store is just something
- * to desync.
+ * SINCE 2026-09-15 THE INTAKE BUILDS THE PLAN. There is no draft to review:
+ * finishing the questions creates the activities, and the modal has closed
+ * and navigated by the time its request resolves (it takes up to about half
+ * a minute on the model). So the outcome cannot live in the modal's own state
+ * — it lands here, and WorkspaceView, which is where the manager is by then,
+ * subscribes: `lastBuilt` for a plan that landed (refresh the activities, say
+ * so, offer the press kit and the tour), `buildError` for a build UrgAns
+ * refused because it could not read the typed notes (the card offers to try
+ * again, and the answers are still in sessionStorage).
  */
 
 export type PlannerIntakeSource = 'empty_state' | 'note' | 'chip';
@@ -43,13 +49,11 @@ export type PlannerIntakePayload = {
  * A Solo team's release.draft_plan run refused with `reason: 'plan_required'`
  * — the entitlement gate's own answer, verbatim (see UrgansLockedSheet).
  *
- * Lives here rather than as local state in whichever component fired the
- * request, for the same reason the intake itself does: the one-tap card and
- * the seven-question modal's fire-and-forget submit are two different
- * ownership islands, and the modal in particular has already closed and
- * navigated away by the time its background request can resolve — there is
- * nowhere local left to hold the answer. One shared field means one
- * UrgansLockedSheet mount (in WorkspaceView) serves both entry points.
+ * Lives here rather than as local state in the modal for the same reason the
+ * build outcomes do: the modal has already closed and navigated away by the
+ * time its background request can resolve, so there is nowhere local left to
+ * hold the answer. One shared field means one UrgansLockedSheet mount (in
+ * WorkspaceView) serves it.
  */
 export type PlannerLockedRefusal = {
   releaseId: string;
@@ -57,28 +61,62 @@ export type PlannerLockedRefusal = {
   actionType: string;
 };
 
+/** A plan that landed. Held until WorkspaceView has acted on it, then cleared. */
+export type PlannerBuiltPlan = {
+  releaseId: string;
+  plan: CreatedPlan;
+};
+
+/**
+ * A build that was refused with nothing created — today only
+ * `tailoring_unavailable`, the model failing while the manager had typed
+ * notes it must not ignore. Cleared when the intake is opened again for that
+ * release, which is the only way out the card offers.
+ */
+export type PlannerBuildError = {
+  releaseId: string;
+  message: string;
+};
+
 type PlannerStore = {
   intake: PlannerIntakePayload | null;
   /**
-   * Releases with a generation call in flight. The intake navigates to the
-   * review scene the moment it fires the request rather than sitting on a
-   * spinner, so the scene needs to know a draft is coming before one exists.
+   * Releases with a build in flight. The intake closes the moment it fires
+   * the request rather than sitting on a spinner, so the empty-state card
+   * needs to know a plan is coming before its activities exist.
    */
   generatingReleaseIds: string[];
   lockedRefusal: PlannerLockedRefusal | null;
+  lastBuilt: PlannerBuiltPlan | null;
+  buildError: PlannerBuildError | null;
   openIntake: (payload: PlannerIntakePayload) => void;
   closeIntake: () => void;
   setGenerating: (releaseId: string, generating: boolean) => void;
   isGenerating: (releaseId: string) => boolean;
   setLockedRefusal: (refusal: PlannerLockedRefusal | null) => void;
+  markBuilt: (releaseId: string, plan: CreatedPlan) => void;
+  clearBuilt: () => void;
+  /** Null clears. */
+  setBuildError: (error: PlannerBuildError | null) => void;
 };
 
 export const usePlannerStore = create<PlannerStore>((set, get) => ({
   intake: null,
   generatingReleaseIds: [],
   lockedRefusal: null,
+  lastBuilt: null,
+  buildError: null,
 
-  openIntake: (payload) => set({ intake: payload }),
+  openIntake: (payload) =>
+    set((current) => ({
+      intake: payload,
+      // Reopening the questions for a release IS the retry, so the failed
+      // state stops being true the moment they are open again.
+      buildError:
+        current.buildError && payload.releaseId === current.buildError.releaseId
+          ? null
+          : current.buildError,
+    })),
   closeIntake: () => set({ intake: null }),
 
   setGenerating: (releaseId, generating) =>
@@ -90,4 +128,8 @@ export const usePlannerStore = create<PlannerStore>((set, get) => ({
   isGenerating: (releaseId) => get().generatingReleaseIds.includes(releaseId),
 
   setLockedRefusal: (refusal) => set({ lockedRefusal: refusal }),
+
+  markBuilt: (releaseId, plan) => set({ lastBuilt: { releaseId, plan }, buildError: null }),
+  clearBuilt: () => set({ lastBuilt: null }),
+  setBuildError: (error) => set({ buildError: error }),
 }));

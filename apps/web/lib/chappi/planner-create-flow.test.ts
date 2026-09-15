@@ -1,11 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Pins generate_release_plan's create-then-generate flow — the fix for the
+// Pins generate_release_plan's create-then-build flow — the fix for the
 // interview dead end where the model, having no way to create a release, aimed
-// the plan at an EXISTING release and was refused ("This release already has a
-// rollout plan"), leaving the user with seven answered questions and nothing
-// created. With no releaseId the tool now creates the release itself
-// (mirroring PlannerIntakeModal's chip/note path) and generates against it.
+// the plan at an EXISTING release and was refused ("This rollout already has a
+// plan"), leaving the user with seven answered questions and nothing created.
+// With no releaseId the tool now creates the release itself (mirroring
+// PlannerIntakeModal's chip/note path) and builds the plan against it.
+//
+// Since 2026-09-15 the tool calls POST /plan directly — there is no separate
+// generate/approve step, so a successful call means the activities already
+// exist. NEXT_PUBLIC_FEATURE_URGANS_ACTIONS is deliberately left unstubbed
+// (default off): recordChatActionRun short-circuits on that flag, so the
+// chat-door log call inside execute() is a safe no-op here rather than
+// something this file needs to mock.
 //
 // The tool is exercised directly — not through the runner — because everything
 // under test lives in its execute(): the ordering (validate before create,
@@ -38,15 +45,18 @@ const VALID_ANSWERS = {
   budget: 'under_100k',
 };
 
-// A draft body just big enough for summarizeDraft to count.
-const DRAFT_RESPONSE = {
-  draft: {
-    id: 'draft-1',
-    status: 'draft',
-    doc: {
-      tasks: [{ phase: 'setup' }, { phase: 'pre_release' }, { phase: 'release_week' }],
-      ai: {},
-    },
+// A plan body just big enough for the summary/data mapping to read from.
+const PLAN_RESPONSE = {
+  plan: {
+    tasksCreated: 3,
+    taskIds: ['t1', 't2', 't3'],
+    warnings: [],
+    removed: [],
+    appliedExclusions: [],
+    rationale: 'Kept close to the playbook.',
+    aiApplied: true,
+    aiFailure: null,
+    releaseDate: '2026-11-20',
   },
 };
 
@@ -97,13 +107,13 @@ describe('generate_release_plan without a releaseId', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('creates the release, then generates the plan against the new id', async () => {
+  it('creates the release, then builds the plan against the new id', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (String(url).endsWith('/api/releases')) {
         return jsonResponse({ releaseId: 'rel-new' });
       }
-      if (String(url).endsWith('/api/releases/rel-new/plan/generate')) {
-        return jsonResponse(DRAFT_RESPONSE);
+      if (String(url).endsWith('/api/releases/rel-new/plan')) {
+        return jsonResponse(PLAN_RESPONSE, 201);
       }
       throw new Error(`unexpected fetch: ${url}`);
     });
@@ -123,26 +133,30 @@ describe('generate_release_plan without a releaseId', () => {
     expect(createBody.releaseType).toBe('single');
     expect(createBody.releaseDate).toBe('2026-11-20');
     expect(createBody.source).toBe('chappi');
-    // Deliberately absent: omitting `plan` (with the flag guaranteed on) makes
-    // the release plannerPending, so a failed generate still leaves a release
-    // the workspace routes into the planner.
-    expect('plan' in createBody).toBe(false);
+
+    const planBody = JSON.parse(String(fetchMock.mock.calls[1][1].body)) as Record<
+      string,
+      unknown
+    >;
+    expect(planBody).toHaveProperty('intake');
 
     expect(result.ok).toBe(true);
-    expect(result.summary).toMatch(/^Created the rollout and drafted 3 activities/);
+    expect(result.summary).toMatch(/^Created the rollout and built 3 activities/);
     expect((result.data as { releaseId: string }).releaseId).toBe('rel-new');
+    // No scene: the plan lands straight in the activity list, there is nothing
+    // left to review.
     expect(result.clientAction).toEqual({
       type: 'navigate',
-      href: '/dashboard?release=rel-new&scene=plan',
+      href: '/dashboard?release=rel-new',
     });
   });
 
-  it('hands the new releaseId back when the generate fails after the create', async () => {
+  it('hands the new releaseId back when the build fails after the create', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (String(url).endsWith('/api/releases')) {
         return jsonResponse({ releaseId: 'rel-new' });
       }
-      return jsonResponse({ error: 'Could not save the plan draft.' }, 500);
+      return jsonResponse({ error: 'Could not build the plan.' }, 500);
     });
 
     const result = await generateReleasePlan.execute(ctx, { ...VALID_ANSWERS });
@@ -154,7 +168,7 @@ describe('generate_release_plan without a releaseId', () => {
     expect((result.data as { releaseId: string }).releaseId).toBe('rel-new');
   });
 
-  it('relays the create failure without calling generate', async () => {
+  it('relays the create failure without calling the plan route', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ error: 'Artist name is required.' }, 400));
 
     const result = await generateReleasePlan.execute(ctx, { ...VALID_ANSWERS });
@@ -166,8 +180,8 @@ describe('generate_release_plan without a releaseId', () => {
 });
 
 describe('generate_release_plan with a releaseId', () => {
-  it('generates against the given release without creating one', async () => {
-    fetchMock.mockResolvedValue(jsonResponse(DRAFT_RESPONSE));
+  it('builds against the given release without creating one', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(PLAN_RESPONSE, 201));
 
     const result = await generateReleasePlan.execute(ctx, {
       ...VALID_ANSWERS,
@@ -175,18 +189,47 @@ describe('generate_release_plan with a releaseId', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0][0])).toContain(
-      '/api/releases/rel-existing/plan/generate'
-    );
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/releases/rel-existing/plan');
     expect(result.ok).toBe(true);
-    expect(result.summary).toMatch(/^Drafted 3 activities/);
+    expect(result.summary).toMatch(/^Built 3 activities/);
   });
 
   it('maps the tasks_exist 409 to guidance about planning a new release instead', async () => {
     fetchMock.mockResolvedValue(
+      jsonResponse({ error: 'This rollout already has its plan.', code: 'tasks_exist' }, 409)
+    );
+
+    const result = await generateReleasePlan.execute(ctx, {
+      ...VALID_ANSWERS,
+      releaseId: 'rel-existing',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.summary).toContain('already has its plan');
+    expect(result.summary).toContain('without a releaseId');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps missing_release_date to asking for a date rather than a raw error', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ error: 'Set a release date first.', code: 'missing_release_date' }, 400)
+    );
+
+    const result = await generateReleasePlan.execute(ctx, {
+      ...VALID_ANSWERS,
+      releaseId: 'rel-existing',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.summary).toMatch(/no release date/i);
+    expect(result.summary).toMatch(/release_date/);
+  });
+
+  it('maps tailoring_unavailable to offering a retry, never a raw error', async () => {
+    fetchMock.mockResolvedValue(
       jsonResponse(
-        { error: 'This rollout already has a plan.', code: 'tasks_exist' },
-        409
+        { error: 'UrgAns could not read your notes just now.', code: 'tailoring_unavailable' },
+        503
       )
     );
 
@@ -196,8 +239,6 @@ describe('generate_release_plan with a releaseId', () => {
     });
 
     expect(result.ok).toBe(false);
-    expect(result.summary).toContain('already has its activities');
-    expect(result.summary).toContain('without a releaseId');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.summary).toMatch(/try again/i);
   });
 });

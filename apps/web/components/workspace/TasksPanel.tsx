@@ -20,7 +20,6 @@ import {
   Plus,
   Radio,
   Search,
-  Sparkles,
   X,
   type LucideProps,
   ListChecks,
@@ -88,7 +87,7 @@ export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
 // Content calendar entry point (URG-157). Same flag that gates the calendar
 // API routes. It has been a dock pill, then a permanent mobile top tab
 // (2026-08-16), and since 2026-08-31 an entry in the release menu — ranked
-// third there, behind only Plan and Timeline, because marketing is 37 of the
+// right behind the other main view, because marketing is 37 of the
 // playbook's 64 activities and this is where that work gets planned.
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 
@@ -332,12 +331,6 @@ type TasksPanelProps = {
    * needs its own empty state. Inferring would leave that case blank.
    */
   bannerReplacesEmptyState?: boolean;
-  /**
-   * Show the Plan pill. Owned by WorkspaceView because the answer depends on
-   * whether a draft exists, which only it knows — this component stays
-   * presentational.
-   */
-  showPlanPill?: boolean;
 };
 
 /** One entry in the mobile release menu. Since 2026-08-31 that is EVERY
@@ -375,7 +368,6 @@ export function TasksPanel({
   activitiesBanner,
   activitiesFooter,
   bannerReplacesEmptyState = false,
-  showPlanPill = false,
 }: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
@@ -504,8 +496,8 @@ export function TasksPanel({
 
   // The mobile dock's two panels (2026-08-16 redesign, split 2026-08-31 —
   // see the base-dock block below). Both collapsed by default, so neither is
-  // reserved in the skeleton beyond its trigger button (the Plan-pill
-  // precedent: data this component doesn't have yet gets no guessed width).
+  // reserved in the skeleton beyond its trigger button (data this component
+  // doesn't have yet gets no guessed width).
   //
   // ONE selector rather than two booleans, so the panels are mutually
   // exclusive by construction: they occupy the same slot above the trigger
@@ -562,24 +554,10 @@ export function TasksPanel({
     </button>
   );
 
-  // Plan: first while it exists. A release with no activities has exactly
-  // one job, and this is it; once a plan is approved the pill disappears,
-  // because from then on the activity list IS the plan. Only shown while
-  // there is something to open (no activities yet, or a draft already
-  // waiting) so it never becomes permanent chrome. Desktop header row only —
-  // on mobile it lives in the folded "more" menu (see below).
-  const planButton =
-    showPlanPill && scopedRelease ? (
-      <button
-        type="button"
-        onClick={() => toggleScene('plan', scopedRelease.id)}
-        aria-pressed={activeScene === 'plan'}
-        className={pillClass('plan')}
-      >
-        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-        Plan
-      </button>
-    ) : null;
+  // (Until 2026-09-15 a "Plan" pill led this row while a release had no
+  // activities, opening the draft review scene. The review step is gone:
+  // the plan is built straight into activities from the planning questions,
+  // and the card that fills the empty panel is the questions' only door.)
 
   // Timeline and Metadata — DESKTOP HEADER ROW ONLY since 2026-08-31, when the
   // mobile top-tabs strip these two also fed was removed (founder call; see the
@@ -821,15 +799,6 @@ export function TasksPanel({
    * guarding against.
    */
   const moreMenuActionsRaw: (MoreMenuAction | null)[] = [
-    showPlanPill && scopedRelease
-      ? {
-          key: 'plan',
-          label: 'Plan',
-          icon: Sparkles,
-          onClick: () => toggleScene('plan', scopedRelease.id),
-          isActive: activeScene === 'plan',
-        }
-      : null,
     // The four below were the top tabs until 2026-08-31. They keep the labels
     // and icons their pills carry on desktop, so a user moving between a phone
     // and a laptop sees the same names in the same order.
@@ -1068,7 +1037,6 @@ export function TasksPanel({
         className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex"
       >
         {activitiesToggleButton}
-        {planButton}
         {activitiesButton}
         {metadataButton}
         {coverArtButton}
@@ -1129,7 +1097,7 @@ export function TasksPanel({
       <div className="min-h-0 flex-1 pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
       {/* Above the body rather than inside the buckets, so it survives the
           timeline taking the main view — see `bodyIsMainView`. Deliberately
-          NOT shown over the named scenes: a "Draft the plan" card on top of
+          NOT shown over the named scenes: a "Plan the rollout" card on top of
           the Metadata scene is noise, and that is the behaviour this keeps. */}
       {bodyIsMainView && activitiesBanner ? (
         <div className="mb-3">{activitiesBanner}</div>
@@ -1299,8 +1267,8 @@ export function TasksPanel({
       {/* Mobile base dock (below `lg` ONLY) — redesigned 2026-08-16 (founder
           request, screenshot reference) from "every pill in one wrapping
           block" into a folded "more" menu, holding everything else this panel
-          used to put in the old dock: Plan (while it exists), Cover art,
-          Song, Files, Status update, Recap, Press kit, Fan capture.
+          used to put in the old dock: Cover art, Song, Files, Status update,
+          Recap, Press kit, Fan capture.
 
           SPLIT 2026-08-31 (founder request, screenshot reference): the two
           icon buttons used to open the SAME panel, which carried a search box

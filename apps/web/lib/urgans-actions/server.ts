@@ -291,6 +291,17 @@ export async function runUrgansAction(
     input: params.input,
   });
 
+  // A ONE-SHOT action's execute() already did the whole job — there is no
+  // draft awaiting a later Apply, so the row is logged as already 'applied'
+  // and `output` is mirrored into `applied_result` right here. That mirror is
+  // what makes decideApplyClaim's return_cached path fire on a stray later
+  // call to POST .../apply, so such an action's own apply() (which does not
+  // exist) is never reached. This is the smallest change that keeps
+  // decideApplyClaim itself untouched: it still only ever reads the row, and
+  // a one-shot row simply always answers 'applied' with a result already on
+  // it.
+  const oneShot = outcome.ok && action.oneShot === true;
+
   const insert = await admin
     .from(URGANS_ACTIONS_TABLE)
     .insert({
@@ -300,15 +311,16 @@ export async function runUrgansAction(
       plan_at_time: scope.tier,
       action_type: action.id,
       // From the scope, NEVER a literal. This was hardcoded 'release' until
-      // 2026-09-07, so every embedded press-kit draft was filed as a release:
-      // wrong in the console's own object grouping, and enough to make
-      // findLatestDraftedActionId (which filters on object_type) never find a
-      // kit's own drafted run.
+      // 2026-09-07, so every embedded press-kit draft was filed as a release —
+      // wrong in the console's own object grouping, and enough to make any
+      // lookup filtering on object_type never find a kit's own drafted run.
       object_type: scope.objectType,
       object_id: params.objectId,
-      status: outcome.ok ? 'drafted' : 'failed',
+      status: outcome.ok ? (oneShot ? 'applied' : 'drafted') : 'failed',
       input_summary: outcome.ok ? outcome.inputSummary : {},
       output: outcome.ok ? outcome.output : null,
+      applied_result: oneShot ? (outcome as { output: unknown }).output : null,
+      applied_at: oneShot ? new Date().toISOString() : null,
       model: outcome.ok ? outcome.model : null,
       prompt_version: action.promptVersion,
       tokens_in: outcome.ok ? outcome.tokensIn : null,
@@ -468,6 +480,16 @@ export async function applyUrgansAction(
     return { ok: false, status: 409, error: 'This is already being applied. Try again in a moment.' };
   }
 
+  // Practically unreachable for a real oneShot action — its row is always
+  // inserted already 'applied' with a non-null applied_result, so the
+  // return_cached branch above always fires first. Guarded anyway: `apply` is
+  // optional on the type precisely because a oneShot action may omit it, and
+  // this is what stops that omission from being a runtime crash if a claim
+  // somehow reached this point regardless.
+  if (!action.apply) {
+    return { ok: false, status: 409, error: 'This action has nothing left to apply.' };
+  }
+
   const applyOutcome = await action.apply({
     admin,
     objectId: row.object_id,
@@ -503,46 +525,6 @@ export async function applyUrgansAction(
   return { ok: true, result: applyOutcome.result };
 }
 
-/**
- * The actionId a review scene should call apply/discard against for this
- * release's current draft, or null when there is none (the flag is off, the
- * migration is not applied yet, the draft predates this feature, or it came
- * from Chappi's own approve_release_plan tool, which never touches this
- * table at all).
- *
- * Re-derived from the database on every GET /plan rather than threaded
- * through client state — a page reload, a deep link, or a draft started on
- * another device must all resolve the same answer.
- *
- * FAILS to null on ANY error, including "relation does not exist": this is
- * read from inside the pre-existing, unconditionally-required GET /plan
- * route, which is gated only on NEXT_PUBLIC_FEATURE_RELEASE_PLANNER — a
- * deployment can have that flag on with the urgans_actions migration not yet
- * applied, and that must never break loading the draft itself.
- */
-export async function findLatestDraftedActionId(
-  admin: SupabaseClient,
-  input: { objectType: string; objectId: string; actionType: string }
-): Promise<string | null> {
-  if (!isUrgansActionsEnabled()) return null;
-  try {
-    const { data, error } = await admin
-      .from(URGANS_ACTIONS_TABLE)
-      .select('id')
-      .eq('object_type', input.objectType)
-      .eq('object_id', input.objectId)
-      .eq('action_type', input.actionType)
-      .eq('status', 'drafted')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error || !data) return null;
-    return String((data as { id: string }).id) || null;
-  } catch {
-    return null;
-  }
-}
-
 export type DiscardActionParams = { actionId: string; actor: User };
 export type DiscardActionResult = { ok: true } | { ok: false; status: number; error: string };
 
@@ -569,6 +551,13 @@ export async function discardUrgansAction(
   if (row.status === 'discarded') return { ok: true };
   if (row.status === 'applied') {
     return { ok: false, status: 409, error: 'This was already applied and cannot be discarded.' };
+  }
+
+  // A oneShot row is never 'drafted' (see runUrgansAction), so it is always
+  // caught by the 'applied' check above before reaching here — this guard is
+  // for the same defensive reason the one in applyUrgansAction is.
+  if (!action.discard) {
+    return { ok: false, status: 409, error: 'This action cannot be discarded.' };
   }
 
   const outcome = await action.discard({

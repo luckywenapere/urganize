@@ -11,32 +11,35 @@
 //   is relayed verbatim so the model can re-ask ONE question rather than
 //   restarting the interview.
 // - The PLAN itself still comes from the hand-crafted playbook. Nothing here
-//   lets the model invent tasks; generate applies a validated delta to a
-//   deterministic draft, exactly as the modal does.
+//   lets the model invent tasks: generate_release_plan calls the SAME
+//   createReleasePlan pipeline the workspace card does, which applies a
+//   validated delta to a deterministic draft and instantiates it in one move.
 //
-// Approval is confirmation-gated: it writes ~60 real task rows in one batch and
-// cannot be undone from the assistant.
+// SINCE 2026-09-15 THERE IS NO DRAFT TO APPROVE. Finishing the questions BUILDS
+// the plan straight into the rollout's activities — there is nothing left to
+// review or discard, so those two tools are gone. generate_release_plan is
+// therefore ungated (no confirmation card): the manager already agreed by
+// reading the questions back, and every activity it creates is editable
+// afterward like any other.
 //
-// THESE THREE TOOLS ARE THE CHAT DOOR ONTO release.draft_plan, the embedded
-// action a button inside the release runs. They reach the same draft through
-// the same legacy /plan/* routes the review scene uses, so they need none of
-// the action runner — but they DO log to urgans_actions, or /admin/urgans
-// would be blind to half the drafting that happens. The gate is deliberately
-// not shared: see lib/urgans-actions/chat-log-server.ts, which argues that.
-// Every log call is fire-and-forget after the tool's own success, so a failed
-// generate logs nothing and a failed log never costs the user their answer.
+// generate_release_plan IS THE CHAT DOOR ONTO release.draft_plan, the embedded
+// action a button inside the release runs. It reaches the plan through the
+// same POST /plan route the workspace card uses, so it needs none of the
+// action runner — but it DOES log to urgans_actions, or /admin/urgans would be
+// blind to half the building that happens. The gate is deliberately not
+// shared: see lib/urgans-actions/chat-log-server.ts, which argues that. The
+// log call is a one-shot 'applied' row (the write_press_kit_section
+// precedent) — there was never a drafted row to settle, because the write IS
+// the build.
 
 import {
+  PLAN_SCOPE_LABELS,
   isReleasePlannerEnabled,
   parseReleasePlanIntake,
+  type PlanScope,
   type ReleasePlanIntake,
 } from '@/lib/release-planning';
-import {
-  markChatActionApplied,
-  markChatActionDiscarded,
-  recordChatActionRun,
-} from '@/lib/urgans-actions/chat-log-server';
-import { findLatestDraftedActionId } from '@/lib/urgans-actions/server';
+import { recordChatActionRun } from '@/lib/urgans-actions/chat-log-server';
 import {
   apiError,
   argString,
@@ -48,7 +51,7 @@ import {
 
 const PLANNER_OFF = "The rollout planner isn't enabled yet.";
 
-/** The embedded action these three tools are the chat door onto. */
+/** The embedded action this tool is the chat door onto. */
 const PLAN_ACTION = 'release.draft_plan';
 
 /** Phase labels in the order a rollout actually runs, for the summary. */
@@ -85,15 +88,18 @@ export function buildPlanIntake(
   if (typeof args.goal_text === 'string' && args.goal_text.trim()) {
     candidate.goal_text = args.goal_text.trim();
   }
+  if (Array.isArray(args.exclusions) && args.exclusions.length > 0) {
+    candidate.exclusions = args.exclusions;
+  }
   if (typeof args.extra_notes === 'string' && args.extra_notes.trim()) {
     candidate.extra_notes = args.extra_notes.trim();
   }
   return parseReleasePlanIntake(candidate);
 }
 
-/** Per-phase counts instead of the whole document: a draft is ~60 tasks and
+/** Per-phase counts instead of the whole document: a plan is ~60 tasks and
  * dumping it would crowd out the conversation it is supposed to support. */
-function summarizeDraft(doc: Record<string, unknown>) {
+function summarizePlanDoc(doc: Record<string, unknown>) {
   const tasks = Array.isArray(doc.tasks) ? (doc.tasks as Record<string, unknown>[]) : [];
   const byPhase = PHASE_ORDER.map((phase) => ({
     phase: PHASE_LABELS[phase] ?? phase,
@@ -110,12 +116,26 @@ function summarizeDraft(doc: Record<string, unknown>) {
   };
 }
 
+/** Human labels for the scopes a build left out, for the chat reply. Unknown
+ *  values (a future scope this file has not caught up with) fall back to the
+ *  raw string rather than disappearing silently. */
+function scopeLabels(appliedExclusions: unknown): string[] {
+  if (!Array.isArray(appliedExclusions)) return [];
+  const labels: string[] = [];
+  for (const entry of appliedExclusions) {
+    const scope = (entry as { scope?: unknown } | null)?.scope;
+    if (typeof scope !== 'string') continue;
+    labels.push(PLAN_SCOPE_LABELS[scope as PlanScope] ?? scope);
+  }
+  return labels;
+}
+
 export const PLANNER_TOOLS: ChappiTool[] = [
   {
     name: 'get_release_plan',
     kind: 'read',
     description:
-      "Check whether a rollout has a plan yet: whether a draft is waiting, whether it has been approved, and how many activities sit in each phase. Returns a summary, not the full plan.",
+      'Check whether a rollout has a plan yet, and how many activities landed in each phase. Returns a summary, not the full plan.',
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -128,27 +148,24 @@ export const PLANNER_TOOLS: ChappiTool[] = [
       if (isFlagGateOff(res)) return fail(PLANNER_OFF);
       if (!res.ok) return fail(apiError(res, 'Could not load the plan.'));
 
-      const draft = res.body.draft as Record<string, unknown> | null;
+      const plan = res.body.plan as Record<string, unknown> | null;
       const releaseDate = (res.body.releaseDate ?? null) as string | null;
-      if (!draft) {
+      if (!plan) {
         return {
           ok: true,
           summary: releaseDate
-            ? 'No rollout plan yet. Run the intake questions and generate one.'
-            : 'No plan yet, and the rollout has no date — set one before approving any plan.',
-          data: { hasDraft: false, approved: false, releaseDate },
+            ? 'No rollout plan yet. Collect the seven questions and build one with generate_release_plan.'
+            : 'No plan yet, and the rollout has no date. A plan needs one before it can be built.',
+          data: { hasPlan: false, releaseDate },
         };
       }
 
-      const doc = (draft.doc ?? {}) as Record<string, unknown>;
-      const summary = summarizeDraft(doc);
-      const approved = draft.status === 'approved';
+      const doc = (plan.doc ?? {}) as Record<string, unknown>;
+      const summary = summarizePlanDoc(doc);
       return {
         ok: true,
-        summary: approved
-          ? `The plan is approved: ${summary.totalTasks} activities.`
-          : `A draft plan is waiting for approval: ${summary.totalTasks} activities.`,
-        data: { hasDraft: true, approved, releaseDate, ...summary },
+        summary: `The plan is built: ${summary.totalTasks} activities.`,
+        data: { hasPlan: true, releaseDate, ...summary },
       };
     },
   },
@@ -156,14 +173,14 @@ export const PLANNER_TOOLS: ChappiTool[] = [
     name: 'generate_release_plan',
     kind: 'mutate',
     description:
-      "Build a draft rollout plan from the hand-crafted playbook, tailored to the seven intake answers. Collect all seven in conversation first and read them back before calling this. Omit releaseId to create the rollout and draft its plan in one call — the usual case for a brand-new rollout. It does NOT create any activities — the plan stays a draft until it is approved.",
+      "Build the rollout's plan from the hand-crafted playbook straight into its activities, tailored to the seven intake answers. Collect all seven in conversation first and read them back before calling this. Omit releaseId to create the rollout and build its plan in one call — the usual case for a brand-new rollout. This creates the activities immediately; there is no draft to approve afterward, so only call it once the answers are settled.",
     inputSchema: {
       type: 'object',
       properties: {
         releaseId: {
           type: 'string',
           description:
-            'Only for an existing rollout that has no activities yet. Omit to create the rollout and draft its plan in one call.',
+            'Only for an existing rollout that has no activities yet. Omit to create the rollout and build its plan in one call.',
         },
         title: {
           type: 'string',
@@ -206,11 +223,19 @@ export const PLANNER_TOOLS: ChappiTool[] = [
           enum: ['none', 'under_100k', '100k_500k', 'over_500k'],
           description: 'Q6 — promo budget in naira.',
         },
-        extra_notes: { type: 'string', description: 'Q7 — anything else worth knowing.' },
-        replace: {
-          type: 'boolean',
+        exclusions: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['marketing', 'press', 'paid_ads', 'events', 'physical'],
+          },
           description:
-            'Only true when a draft already exists AND the user agreed to discard it and start over.',
+            'Q7 — kinds of work to leave out entirely, only when the user plainly asked for it. Never suggest one yourself. Release day and getting it to stores stay in the plan either way.',
+        },
+        extra_notes: {
+          type: 'string',
+          description:
+            'Q7 — anything else worth knowing. Read as instructions: something ruled out here becomes an excluded scope in the plan.',
         },
       },
       required: ['release_type', 'artist_name', 'ready_today', 'goal', 'budget'],
@@ -233,17 +258,10 @@ export const PLANNER_TOOLS: ChappiTool[] = [
       // release, which already has its activities and gets refused.
       let createdHere = false;
       if (!releaseId) {
-        // Guard BEFORE creating: with the flag off the plan routes 404, so
-        // creating first would strand a release — and worse, the create route
-        // would instantiate the full template plan.
+        // Guard BEFORE creating: with the flag off the plan route 404s, so
+        // creating first would strand a release with nothing able to plan it.
         if (!isReleasePlannerEnabled()) return fail(PLANNER_OFF);
 
-        // `plan` is deliberately omitted (default 'template'), NOT the
-        // modal's 'blank': with the planner on that means plannerPending —
-        // no tasks, plus the planner_pending marker — so if the generate
-        // below fails, the workspace still routes the manager into the
-        // planner instead of leaving a bare unexplained release. The flag
-        // guard above is what makes the default safe.
         const created = await callInternalApi(ctx, '/api/releases', {
           method: 'POST',
           body: {
@@ -259,190 +277,84 @@ export const PLANNER_TOOLS: ChappiTool[] = [
         createdHere = true;
       }
 
-      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/plan/generate`, {
+      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/plan`, {
         method: 'POST',
-        body: { intake: parsed.intake, replace: args.replace === true },
+        body: { intake: parsed.intake },
       });
       if (isFlagGateOff(res)) return fail(PLANNER_OFF);
       if (!res.ok) {
-        if (res.body.code === 'draft_exists') {
+        if (res.body.code === 'missing_release_date') {
           return fail(
-            'There is already a draft plan for this rollout. Ask whether to start over before generating again.'
+            'This rollout has no release date yet, and the plan needs one. Ask for a date, then call this again with release_date filled in.'
           );
         }
         if (res.body.code === 'tasks_exist') {
           return fail(
-            'This rollout already has its activities, so it cannot be re-planned. To plan a NEW rollout, call generate_release_plan again without a releaseId.'
+            'This rollout already has its plan, so it cannot be re-planned. To plan a NEW rollout, call generate_release_plan again without a releaseId.'
+          );
+        }
+        if (res.body.code === 'plan_in_progress') {
+          return fail(
+            'UrgAns is already building a plan for this rollout. Wait a moment, then check with get_release_plan.'
+          );
+        }
+        if (res.body.code === 'tailoring_unavailable') {
+          return fail(
+            'UrgAns could not read the typed notes just now, so nothing was created. Offer to try again with the same answers.'
           );
         }
         if (createdHere) {
-          // The release exists now even though the draft does not. Hand the
+          // The release exists now even though the plan does not. Hand the
           // id back so the retry targets it instead of minting a duplicate.
           return {
             ok: false,
-            summary: `The rollout was created — it exists now — but the plan could not be drafted: ${apiError(res, 'Could not build the plan.')} Retry by calling generate_release_plan again WITH releaseId ${releaseId}; do not create another rollout.`,
+            summary: `The rollout was created, and it exists now, but the plan could not be built: ${apiError(res, 'Could not build the plan.')} Retry by calling generate_release_plan again WITH releaseId ${releaseId}; do not create another rollout.`,
             data: { releaseId },
           };
         }
         return fail(apiError(res, 'Could not build the plan.'));
       }
 
-      const draft = (res.body.draft ?? {}) as Record<string, unknown>;
-      const doc = (draft.doc ?? {}) as Record<string, unknown>;
-      const summary = summarizeDraft(doc);
+      const plan = (res.body.plan ?? {}) as Record<string, unknown>;
+      const tasksCreated = Number(plan.tasksCreated ?? 0);
+      const removed = Array.isArray(plan.removed) ? plan.removed : [];
+      const appliedExclusions = Array.isArray(plan.appliedExclusions) ? plan.appliedExclusions : [];
+      const warnings = Array.isArray(plan.warnings) ? (plan.warnings as string[]) : [];
 
-      // Logged after the draft exists, never before: a run that failed is not
-      // a run the console should count.
+      // Logged as ALREADY APPLIED, with no prior drafted row: the write above
+      // IS the build, so there was never a draft to settle later. Fire after
+      // the plan exists, never before — a run that failed is not a run the
+      // console should count.
       await recordChatActionRun(ctx.adminClient, {
         actionType: PLAN_ACTION,
         objectId: releaseId,
         actor: ctx.user,
+        status: 'applied',
         inputSummary: { intakeSource: 'chat', releaseType: parsed.intake.release_type },
-        output: { totalTasks: summary.totalTasks, phases: summary.phases },
+        output: { tasksCreated, tasksRemoved: removed.length },
       });
-      const phaseLine = summary.phases
-        .map((entry) => `${entry.phase}: ${entry.tasks}`)
-        .join(', ');
+
+      const labels = scopeLabels(appliedExclusions);
+      const leftOutLine = labels.length
+        ? ` Left out: ${labels.join(', ')}.`
+        : removed.length > 0
+          ? ` ${removed.length} ${removed.length === 1 ? 'activity was' : 'activities were'} left out.`
+          : '';
+      const worthALookLine = warnings.length ? ` Worth a look: ${warnings.join(' ')}` : '';
+      const fullBreakdownLine =
+        labels.length || removed.length ? ' See the rollout for the full breakdown of what was left out and why.' : '';
+
       return {
         ok: true,
-        summary: `${createdHere ? 'Created the rollout and drafted' : 'Drafted'} ${summary.totalTasks} activities (${phaseLine}). Nothing is scheduled yet — it needs approving.`,
-        data: { releaseId, ...summary },
-        // Open the review scene so they can read the plan before approving.
-        clientAction: { type: 'navigate', href: `/dashboard?release=${releaseId}&scene=plan` },
-      };
-    },
-  },
-  {
-    name: 'approve_release_plan',
-    kind: 'mutate',
-    description:
-      'Turn the draft plan into real activities on the rollout. Requires the user to approve a confirmation card — calling this only proposes it. Cannot be undone from here.',
-    inputSchema: {
-      type: 'object',
-      properties: { releaseId: { type: 'string' } },
-      required: ['releaseId'],
-    },
-    confirm: async (ctx, args) => {
-      const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return { ok: false, summary: 'releaseId is required.' };
-
-      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/plan`, { method: 'GET' });
-      if (isFlagGateOff(res)) return { ok: false, summary: PLANNER_OFF };
-      if (!res.ok) return { ok: false, summary: apiError(res, 'Could not load the plan.') };
-
-      const draft = res.body.draft as Record<string, unknown> | null;
-      if (!draft) {
-        return { ok: false, summary: 'There is no draft plan to approve yet.' };
-      }
-      if (draft.status === 'approved') {
-        return { ok: false, summary: 'That plan has already been approved.' };
-      }
-      // Approval needs a date to hang every offset off — say so here rather
-      // than letting the user approve into a 400.
-      const releaseDate = (res.body.releaseDate ?? null) as string | null;
-      if (!releaseDate) {
-        return {
-          ok: false,
-          summary:
-            'This rollout has no date yet, and the plan needs one. Set the date with schedule_release first.',
-        };
-      }
-
-      const summary = summarizeDraft((draft.doc ?? {}) as Record<string, unknown>);
-      return {
-        ok: true,
-        title: `Approve this plan and create ${summary.totalTasks} activities?`,
-        detail: `They will be scheduled around ${releaseDate} and appear on the rollout straight away. Undoing this means deleting the activities one by one.`,
-        confirmLabel: 'Approve plan',
-      };
-    },
-    execute: async (ctx, args) => {
-      const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return fail('releaseId is required.');
-      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/plan/approve`, {
-        method: 'POST',
-        body: {},
-      });
-      if (isFlagGateOff(res)) return fail(PLANNER_OFF);
-      if (!res.ok) return fail(apiError(res, 'Could not approve the plan.'));
-
-      const created = Number(res.body.tasksCreated ?? 0);
-
-      // Settle whichever run drafted this plan, whichever door it came
-      // through. findLatestDraftedActionId is the same lookup the review
-      // scene uses, and re-deriving it here rather than threading an id
-      // through the conversation is deliberate: a plan drafted from the
-      // button and approved in chat is a real sequence, and the transcript
-      // would know nothing about that run.
-      await markChatActionApplied(
-        ctx.adminClient,
-        await findLatestDraftedActionId(ctx.adminClient, {
-          objectType: 'release',
-          objectId: releaseId,
-          actionType: PLAN_ACTION,
-        }),
-        { tasksCreated: created }
-      );
-
-      const warnings = Array.isArray(res.body.warnings) ? (res.body.warnings as string[]) : [];
-      const warningLine = warnings.length ? ` Note: ${warnings.join(' ')}` : '';
-      return {
-        ok: true,
-        summary: `Created ${created} activities from the plan.${warningLine}`,
+        summary: `${createdHere ? 'Created the rollout and built' : 'Built'} ${tasksCreated} activities.${leftOutLine}${worthALookLine}${fullBreakdownLine}`,
+        data: {
+          releaseId,
+          tasksCreated,
+          tasksRemoved: removed.length,
+          exclusionsCount: appliedExclusions.length,
+        },
         clientAction: { type: 'navigate', href: `/dashboard?release=${releaseId}` },
       };
-    },
-  },
-  {
-    name: 'discard_release_plan',
-    kind: 'mutate',
-    description:
-      'Throw away the draft rollout plan so a new one can be built. Requires the user to approve a confirmation card. Approved plans cannot be discarded.',
-    inputSchema: {
-      type: 'object',
-      properties: { releaseId: { type: 'string' } },
-      required: ['releaseId'],
-    },
-    confirm: async (ctx, args) => {
-      const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return { ok: false, summary: 'releaseId is required.' };
-
-      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/plan`, { method: 'GET' });
-      if (isFlagGateOff(res)) return { ok: false, summary: PLANNER_OFF };
-      const draft = res.ok ? (res.body.draft as Record<string, unknown> | null) : null;
-      if (!draft) return { ok: false, summary: 'There is no draft plan to discard.' };
-      if (draft.status === 'approved') {
-        return {
-          ok: false,
-          summary: 'That plan is already approved, so it cannot be discarded.',
-        };
-      }
-
-      const summary = summarizeDraft((draft.doc ?? {}) as Record<string, unknown>);
-      return {
-        ok: true,
-        title: 'Discard this draft plan?',
-        detail: `The ${summary.totalTasks} drafted activities and any edits made to them will be lost. No activities have been created yet, so nothing on the rollout changes.`,
-        confirmLabel: 'Discard draft',
-      };
-    },
-    execute: async (ctx, args) => {
-      const releaseId = argString(args, 'releaseId');
-      if (!releaseId) return fail('releaseId is required.');
-      const res = await callInternalApi(ctx, `/api/releases/${releaseId}/plan`, { method: 'DELETE' });
-      if (isFlagGateOff(res)) return fail(PLANNER_OFF);
-      if (!res.ok) return fail(apiError(res, 'Could not discard the draft.'));
-
-      await markChatActionDiscarded(
-        ctx.adminClient,
-        await findLatestDraftedActionId(ctx.adminClient, {
-          objectType: 'release',
-          objectId: releaseId,
-          actionType: PLAN_ACTION,
-        })
-      );
-
-      return { ok: true, summary: 'Discarded the draft plan.' };
     },
   },
 ];

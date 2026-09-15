@@ -236,7 +236,7 @@ REST-style Next.js Route Handlers at `app/api/**/route.ts`. No tRPC, no GraphQL.
 
 **Four AI integration points now exist in v1** (was two — Chappi was added 2026-07-13 and genre prediction 2026-08-08, both conscious scope expansions; see the Chappi subsection below and the genre-prediction section further down).
 
-1. **Release rollout planner (UrgAns planner):** Input = the hand-crafted template + a seven-question intake (release type, artist, date, what is ready, goal, naira budget, free text). The model is asked for a **delta** against a draft already built from the template — drop optional tasks, shift offsets, map role archetypes to real teammates, rewrite a few "why this matters" lines — never for a plan. It **cannot add tasks**: there is no operation for it, because a task with no template origin is the invention failure mode this file forbids and there would be nothing to validate it against. The delta is rejected wholesale if any id was not one we supplied or any dropped task was non-optional. The draft persists in `release_plan_drafts`, the manager edits it, and **approval is the only path into the `tasks` table**. With no model configured the deterministic template draft IS the plan, so the whole flow works with AI off. One call per generate, one per per-phase redraft. See "UrgAns release planner" in Working notes.
+1. **Release rollout planner (UrgAns planner):** Input = the hand-crafted template + an eight-question intake (release type, artist, date, what is ready, goal, naira budget, what to leave out, free text — the "what to leave out" question was added 2026-09-15). The model is asked for a **delta** against a draft already built from the template — drop tasks, exclude a whole kind of work the manager plainly asked to leave out, shift offsets, map role archetypes to real teammates, rewrite a few "why this matters" lines — never for a plan. It **cannot add tasks**: there is no operation for it, because a task with no template origin is the invention failure mode this file forbids and there would be nothing to validate it against. The delta is rejected wholesale if any id was not one we supplied, or a dropped required task falls outside a scope the manager actually asked to leave out. **Since 2026-09-15 there is no draft to approve** — finishing the intake builds the plan straight into the `tasks` table in one call, and the manager edits the resulting activities directly afterward. `release_plan_drafts` still exists as the internal insert-or-claim lock and audit row, but nobody reviews it as a document anymore; see "The plan is built, not drafted" in Working notes, which supersedes the review-then-approve shape this paragraph used to describe. With no model configured the deterministic template draft IS the plan, so the whole flow works with AI off. One call per build. See "UrgAns release planner" in Working notes for the pipeline's history.
 
 2. **Status update generator:** Input = current release state (tasks completed, blocked, upcoming; recent activity; release date). Output = one-paragraph narrative status. One API call per request, a handful per release per week.
 
@@ -258,8 +258,8 @@ It still honors the "AI is removable" principle: with no capable model configure
 - **Transport — the deliberate exception, rewritten 2026-08-13:** Chappi still uses its OWN transport and OWN credentials, separate from `lib/ai/provider.ts` — but the transport itself changed. It originally used the official `@anthropic-ai/sdk` against Anthropic's native Messages API; that's now gone (dependency removed from `apps/web/package.json`). **Why:** the founder's 2026-08-13 cost call (see the AI integration intro above) is to run everything, UrgAns included, on RodiumAi — and RodiumAi's Anthropic-compatible `/v1/messages` endpoint is documented as Claude-only ("Claude-first MVP"), so it can't serve a non-Anthropic model at all. `lib/chappi/runner.ts` now speaks **plain OpenAI-protocol chat completions** (hand-rolled `fetch`, no SDK — same "boring stack" call as the hand-rolled MCP JSON-RPC layer) against `CHAPPI_API_BASE` (default `https://api.rodiumai.io/v1`), with `tools`/`tool_calls` in the OpenAI shape rather than Anthropic's `tool_use`/`tool_result` blocks. `lib/chappi/tools.ts`'s `getChappiToolSchemas()` now emits the OpenAI `{type:'function', function:{name,description,parameters}}` envelope instead of Anthropic's `{name,description,input_schema}` — the MCP tool registry (`lib/mcp/tools.ts`) was never coupled to this (it already read the registry's own `inputSchema` field directly) so it needed no change beyond an updated comment. Env: `CHAPPI_MODEL` (a tool-capable RodiumAi catalogue id — `openai/gpt-4o-mini`, verified working live 2026-08-13: real `tool_calls`, correct arguments), `CHAPPI_API_KEY` (an `rd_sk_…` key, separate from `AI_API_KEY`), optional `CHAPPI_API_BASE`. **Do not default `CHAPPI_MODEL` to a `meta/llama-*` free-tier id** — see the geo-block paragraph in the AI integration intro above; it applies to this transport exactly as much as to `lib/ai/provider.ts`'s. Capability still gates on `CHAPPI_MODEL` being set to a real model. **Any future gateway swapped in here must speak OpenAI-style `tools`/`tool_calls`** — that's now the hard requirement, not "must be Anthropic's SDK".
 - **Backend:** `app/api/urgans/route.ts` (renamed from `app/api/chappi/route.ts` in URG-212; POST, `maxDuration = 60`, auth via `requireAuthenticatedAdmin`) → `lib/chappi/{config,tools,dispatch,system-prompt,runner}.ts`. A tool-calling loop **capped at 5 rounds**. Conversation state is **ephemeral** (client-held; no DB table, no migration — consistent with the CUT_PLAN removal of AI tables).
 - **Tools (91 as of 2026-09-07, split across `lib/chappi/tool-families/*`):** `tools.ts` is only the facade — it assembles `CHAPPI_TOOLS` from `core.ts` (the original twelve plus the two insight tools), `releases.ts`, `planner.ts`, `metadata.ts`, `calendar.ts`, `notes.ts`, `team.ts`, `promo.ts`, `shows.ts`, `press-kits.ts`, `artists.ts`, `files.ts`, `capture.ts`, `directory.ts` and re-exports `getChappiTool`/`getChappiToolSchemas`, so no import site outside `lib/chappi/**` changed. The count read 45 here for three weeks after it stopped being true; see "UrgAns learns the rest of the product" below for what the six newest families cover and for the test that now makes the number self-correcting. Core: read (`list_releases`, `get_release`, `list_tasks`, `get_dashboard`) + mutate (`create_release`, `create_task`, `create_note`, `update_task`, `complete_task`, `reopen_task`, `generate_status_update`, `navigate`). Added by the full-control expansion: `update_release`, `schedule_release`, `delete_release`, `delete_task`, `add_task_comment`, `list_notes`, `update_note`, `delete_note`, `list_workspace_members`, plus the planner four below.
-- **The rollout questionnaire runs in the chat (2026-08-14).** `tool-families/planner.ts` exposes `get_release_plan`, `generate_release_plan`, `approve_release_plan` (gated), `discard_release_plan` (gated), and the system prompt carries the seven intake questions as an interview script. The division of labour is the thing to preserve: the MODEL collects answers in natural language and normalizes them to the enum values; **`parseReleasePlanIntake` — the same validator `POST …/plan/generate` uses — decides whether they are valid**, and its per-field error is relayed verbatim so the model re-asks ONE question instead of restarting the interview (`buildPlanIntake` in that file is the seam, unit-tested in `plan-intake-args.test.ts`). The plan itself still comes from the hand-crafted playbook via the existing route, so "AI tailors templates, never invents from scratch" is untouched — the chat replaces the seven-screen modal as an input method, nothing more. `get_release_plan` returns per-phase COUNTS, not the draft document: a draft is ~60 tasks and returning it would crowd out the conversation.
-- **The confirmation gate (2026-08-14) — read this before adding a mutating tool.** A tool carrying a `confirm` builder is **confirmation-gated**: the model may PROPOSE it, but `runner.ts` refuses to execute it and instead returns a `pendingConfirmation` the client renders as an inline card; only the user's Approve click POSTs back with `confirmedAction`, which the route executes through the ordinary `executeToolCall` (so every per-tool ownership/flag/dependency check still runs). **The security property is that a gated tool is never reachable from inside the model loop**, so text living in workspace data — a release title, a note body — cannot talk the model into a deletion. Three consequences: (1) the gate lives in `runner.ts`, NOT `dispatch.ts`, which is shared with MCP; (2) every gated tool must be in `lib/mcp/tools.ts`'s `EXCLUDED_TOOL_NAMES`, since MCP has no card to show — `tool-registry.test.ts` asserts that structurally, alongside "every `delete_*` tool is gated"; (3) gating is driven by the `confirm` builder's presence, not by `ChappiToolKind`, because `approve_release_plan`-style tools need approval without being destructive and only the tool can write entity-specific copy ("Delete 'Midnight EP' and its 42 activities"). **The gated set is a founder decision, not a code smell — it is "deletes plus anything else that can't be taken back", which is why six non-deletes are on it.** Currently sixteen: `delete_release`, `delete_task`, `delete_note`, `delete_content_calendar` (cascades its posts), `delete_content_post`, `delete_recap`, `delete_show`, `delete_setlist`, `approve_release_plan` (irreversible in bulk — writes ~60 task rows), `discard_release_plan`, `invite_teammate` (sends an email to a real person), `remove_teammate` (revokes access immediately), `pitch_song` (lands in a curator's inbox and cannot be unsent), `send_dj_pack` (a private link reaches a real person's phone), `send_work_request` (lands in a stranger's inbox), `publish_press_kit` (puts an artist's page on the public internet). This list said `revoke_epk_link` until 2026-09-07, months after that tool was deleted — read the registry, not this sentence, if the two ever disagree again. `resolveToolInvocation` in runner.ts is the pure, unit-tested decision (execute / propose / refuse-second-proposal).
+- **The rollout questionnaire runs in the chat (2026-08-14; SUPERSEDED 2026-09-15 — see "The plan is built, not drafted" near the end of this file).** `tool-families/planner.ts` exposes `get_release_plan` and `generate_release_plan`, and the system prompt carries the eight intake questions as an interview script (a seventh question, what to leave out, was added 2026-09-15). The division of labour is the thing to preserve: the MODEL collects answers in natural language and normalizes them to the enum values; **`parseReleasePlanIntake` — the same validator `POST …/plan` uses — decides whether they are valid**, and its per-field error is relayed verbatim so the model re-asks ONE question instead of restarting the interview (`buildPlanIntake` in that file is the seam, unit-tested in `plan-intake-args.test.ts`). The plan itself still comes from the hand-crafted playbook via the existing route, so "AI tailors templates, never invents from scratch" is untouched — the chat replaces the seven-screen modal as an input method, nothing more. `get_release_plan` returns per-phase COUNTS, not the plan document: a plan is ~60 tasks and returning it would crowd out the conversation. **`approve_release_plan` and `discard_release_plan` are gone as of 2026-09-15** — finishing the interview builds the plan straight into the rollout's activities, so there is nothing left to approve or discard.
+- **The confirmation gate (2026-08-14) — read this before adding a mutating tool.** A tool carrying a `confirm` builder is **confirmation-gated**: the model may PROPOSE it, but `runner.ts` refuses to execute it and instead returns a `pendingConfirmation` the client renders as an inline card; only the user's Approve click POSTs back with `confirmedAction`, which the route executes through the ordinary `executeToolCall` (so every per-tool ownership/flag/dependency check still runs). **The security property is that a gated tool is never reachable from inside the model loop**, so text living in workspace data — a release title, a note body — cannot talk the model into a deletion. Three consequences: (1) the gate lives in `runner.ts`, NOT `dispatch.ts`, which is shared with MCP; (2) every gated tool must be in `lib/mcp/tools.ts`'s `EXCLUDED_TOOL_NAMES`, since MCP has no card to show — `tool-registry.test.ts` asserts that structurally, alongside "every `delete_*` tool is gated"; (3) gating is driven by the `confirm` builder's presence, not by `ChappiToolKind`, because `publish_press_kit`-style tools need approval without being destructive and only the tool can write entity-specific copy ("Delete 'Midnight EP' and its 42 activities"). **The gated set is a founder decision, not a code smell — it is "deletes plus anything else that can't be taken back", which is why six non-deletes are on it.** Currently fourteen (was sixteen until 2026-09-15, when `approve_release_plan`/`discard_release_plan` were deleted outright — see "The plan is built, not drafted" near the end of this file): `delete_release`, `delete_task`, `delete_note`, `delete_content_calendar` (cascades its posts), `delete_content_post`, `delete_recap`, `delete_show`, `delete_setlist`, `invite_teammate` (sends an email to a real person), `remove_teammate` (revokes access immediately), `pitch_song` (lands in a curator's inbox and cannot be unsent), `send_dj_pack` (a private link reaches a real person's phone), `send_work_request` (lands in a stranger's inbox), `publish_press_kit` (puts an artist's page on the public internet). This list said `revoke_epk_link` until 2026-09-07, months after that tool was deleted — read the registry, not this sentence, if the two ever disagree again. `resolveToolInvocation` in runner.ts is the pure, unit-tested decision (execute / propose / refuse-second-proposal).
 - **Reads in the newer families go through REST, not the services** — a deliberate deviation from the core family, recorded in `tools.ts`'s header. It keeps each domain's feature flag and ownership rules defined once (in the route) and makes the flag-off 404 translatable per request via `isFlagGateOff`. **`update_release` and `update_release_metadata` must read-then-merge**: both PATCH routes behave like PUTs, so a sparse body nulls whatever it omits — a "just set the genre" call would otherwise wipe the ISRC. `update_release` additionally must NOT echo back the `status` it reads: `GET /api/releases/[id]` overwrites that field with a COMPUTED value that can never be `released`, so round-tripping it would rewrite the stored status.
 - **Prompt-injection note:** the gate covers irreversible actions only. Reversible mutations (create/update/complete) remain callable by the model directly, so hostile text in workspace data could in principle nudge one. Accepted: they are all visible and undoable in-app, and gating everything would make the assistant unusable. `create_note` (2026-08-13) is the one tool gated on a feature OTHER than Chappi's own: rather than filtering the registry (a `NEXT_PUBLIC_*` read would be inlined at build time), it translates the notes route's flag-off 404 into a polite refusal at call time — the `generate_status_update` precedent. It matches the flag gate's exact `'Not found.'` body so the route's OTHER 404, `'Release not found.'` from the ownership check, still reaches the model intact. Mutating tools call the existing REST endpoints via internal fetch — preserving template instantiation, assignee validation, and notifications rather than reimplementing them — EXCEPT completion, which goes through the new `TaskService.completeTaskWithCascade` (+ `reopenTask`). That method replicates the dependency-blocker gate + cascade-unlock that otherwise lived only in `useTaskStore.completeTask`, so a Chappi-driven completion can't bypass it. Every mutating tool re-validates the model's ids against live rows server-side; the system-prompt workspace snapshot is a hint, not the guard.
 - **Frontend:** `app/dashboard/urgans/{page.tsx,ChappiPageClient.tsx}` (the route — auth guard + its own `CreateReleaseModal` instance, mirroring `WorkspaceView`), `components/chappi/ChappiConversation.tsx` (the conversation surface itself — empty-state quick-action cards when `messages` is empty, a scrolling transcript once it isn't; takes `variant: 'page' | 'panel'`), `stores/useChappiStore.ts`, `lib/chappi/{types,intent-router}.ts`. Chips run deterministic actions instantly (no round-trip) and are recorded as a turn either way; free-text sends the full `messages` history to the agent, falling back to the intent-router on failure or deterministic mode. The "Today's focus" chip opens the task cross-page (`router.push('/dashboard?release=...')` then `openTask(id)`, same pattern `NotificationsBell` uses) since the task detail view renders on the workspace page, not here.
@@ -10355,6 +10355,22 @@ foundation nothing else can start without) TOGETHER WITH the first real
 action, spec 6.1 **"Draft the plan."** 6.2 "Assign the team," 6.3 "Move the
 plan," 6.4 "What's late," and Phases 2–6 are explicitly deferred.
 
+**AMENDED 2026-09-15: `release.draft_plan` stopped following this section's
+opening rule.** "An action produces a draft, a human reviews and edits it, and
+nothing writes until they tap Apply" described `release.draft_plan` exactly
+until then — see "The plan is built, not drafted" near the end of this file
+for the founder call that ended it. It is now **one-shot**: `execute()` calls
+`createReleasePlan` and writes the plan straight into `tasks` in the same
+request, so there is no draft row to review and no separate Apply. The
+one-tap "drafting from an auto-derived intake" path described two paragraphs
+below (point 2) is GONE with `buildAutoIntake`, the function that built it —
+every caller must now supply the full eight-question intake, collected by the
+modal or the chat interview, exactly as `POST …/plan` has always required.
+The general FRAMEWORK point still holds — `oneShot` (`lib/urgans-actions/types.ts`)
+is the sanctioned way an action can skip the draft/apply split, and
+`presskit.draft_section` below is unaffected and still follows the
+draft-then-apply shape this section describes.
+
 **AMENDED 2026-09-05: there are TWO registered actions, not one.** #499's
 press-kit work added `presskit.draft_section` (UrgAns drafts the three prose
 sections, a person accepts) and, with it, the track's second OBJECT TYPE — so
@@ -10631,13 +10647,18 @@ ever stops being a good idea there will be numbers rather than a guess.
 
 **What changed.** `urgans_actions` gained a `source` column (`button` | `chat`,
 defaulting to `button`) — an amendment to the original migration rather than a
-second file, because that table has never been applied anywhere. Four chat
+second file, because that table has never been applied anywhere. ~~Four chat
 tools now log: `generate_release_plan` writes a `drafted` row, `approve_` and
 `discard_release_plan` settle it, and `write_press_kit_section` writes one
-already `applied` (a one-shot: the words were composed in the transcript and
-saved on assent, so there was never a draft to settle). `/admin/urgans` groups
-by door, with the door sorting LAST so the two doors onto one action sit
-together.
+already `applied`~~ **SUPERSEDED 2026-09-15 — see "The plan is built, not
+drafted" near the end of this file. The plan's own review step is gone, and
+`approve_release_plan`/`discard_release_plan` were deleted with it, so the
+drafted-then-settled description above is no longer how any chat tool works.
+Three chat tools log now, not four: `generate_release_plan` is `oneShot` and
+writes ONE row that is already `applied` in the same call that builds the
+plan, and `write_press_kit_section` still writes one already `applied` for
+the reason below.** `/admin/urgans` groups by door, with the door sorting
+LAST so the two doors onto one action sit together.
 
 **Five things worth knowing before editing any of it:**
 
@@ -10653,10 +10674,16 @@ together.
    would log an error against a missing relation.
 3. **Nothing throws.** A lost log row costs a console entry; an exception
    would cost the user the answer they asked for.
-4. **Approve and discard re-derive the run through
+4. ~~**Approve and discard re-derive the run through
    `findLatestDraftedActionId`** rather than threading an id through the
    conversation. A plan drafted from the button and approved in chat is a real
-   sequence, and the transcript would know nothing about that run.
+   sequence, and the transcript would know nothing about that run.~~
+   **SUPERSEDED 2026-09-15: there is no approve/discard step left for the
+   planner to re-derive an id for.** `findLatestDraftedActionId` was deleted
+   in the same pass — it had exactly one consumer, the two chat tools this
+   point described, and once they were gone the function had none. A plan
+   drafted from the button and one asked for in chat are now simply two
+   separate, independently-complete runs; neither refers back to the other.
 5. **A real defect fixed on the way:** `runUrgansAction`'s insert hardcoded
    `object_type: 'release'`, so every embedded press-kit draft was filed as a
    release — wrong in the console's grouping, and enough that
@@ -13413,6 +13440,19 @@ approving it; and the pill is self-removing anyway (shown only while a release
 has no activities or a draft is waiting), so it never becomes the permanent
 chrome the other two had become.
 
+**SUPERSEDED 2026-09-15 — half of this reasoning was overtaken by a founder
+call, not disproven.** There is no review scene, no draft, no `approve_release_plan`
+and no per-phase redraft any more; the pill (still a pill) now opens the
+intake, and finishing it writes the plan straight into `tasks` — see "The plan
+is built, not drafted" near the end of this file. The "a transcript is a poor
+place to edit sixty rows" argument is moot rather than wrong, because there is
+no longer a DRAFT DOCUMENT to edit before commit at all: the manager edits the
+created activities through the ordinary release view, the same surface every
+other task uses. What survives from this paragraph is the actual reason the
+pill stays a pill — the eight-question interview itself is still a poor fit
+for the transcript's own turn-taking compared to a modal's discrete steps —
+and the self-removing behaviour, unchanged.
+
 - **Verified:** 2827 tests (10 new across `lib/recap-share.test.ts` and
   `lib/chappi/intent-router.test.ts`), `eslint .` at the exact 3-error /
   81-warning baseline (all three pre-existing in `WorkspaceView.tsx`),
@@ -15010,3 +15050,210 @@ The live site, until the deploy lands — this sandbox has no route to either
 urganize domain. Worth one pass after: paste the homepage URL into a social
 debugger and confirm the new card, open `/for-labels` and confirm it lands on
 `/pricing`, and read the wall in the app for the two reworded sentences.
+
+---
+
+## The plan is built, not drafted (2026-09-15)
+
+Founder call, verbatim: *"Remove the plan review they should just automatically
+create the plan they can edit it manally themselves if they want after it has
+already been created. And the plan has to aligned with what they type or
+select during the asking question stage before the plan is created. if someone
+says they want a normal release no marketing then it should tailor to that,
+Then to help this let's use a open ai model that can do this very well."*
+
+Four forks were put to the founder and answered before any code changed:
+finishing the interview in chat **builds the plan straight away**, no card, no
+draft; a model failure **holds and asks to try again** when the manager typed
+real notes (nothing is created, the answers are kept), and quietly proceeds
+from the selected answers alone when they typed nothing; the planner model is
+**`openai/gpt-5.4`** via RodiumAi; and "no marketing" means **the whole
+campaign**, not just the optional edges of it — release day and getting the
+music to stores stay in every plan regardless.
+
+**Why the old build could not honour "no marketing" at all, measured before
+writing a line of this:** the single-release playbook has 64 tasks, 37 tagged
+`marketing`, and 27 of those are `optional: false`. The AI contract only let
+the model drop OPTIONAL tasks and rejected the whole delta if it touched a
+required one, so the most any instruction could ever remove was 10 optional
+marketing tasks out of 37. The guidance was also keyed wrong — every intake,
+even a well-funded one, was told "No budget: drop the optional paid promotion
+tasks" — and a manager's free-text answer reached the model as "anything else
+they said" with no rule that it actually bound the output. A "normal release,
+no marketing" request was structurally unable to produce one.
+
+### The exclusion model replaces "the AI decides what to drop"
+
+`PLAN_SCOPES` (`lib/release-planning.ts`) is five buckets a manager's words map
+onto — `marketing`, `press`, `paid_ads`, `events`, `physical` — each carrying a
+playbook tag (`SCOPE_TAGS`) and a plain label. `KEEP_TAGS = ['release_day',
+'distribution']`: a task carrying either tag survives every scope, whatever
+else it is tagged, because release day and the distributor handoff ARE the
+release — a rollout with no marketing still goes out and still reaches stores.
+`isTaskInScope(task, scope)` is the one test: the scope's tag present, no keep
+tag present.
+
+**Removal is CODE, not a model suggestion.** The intake's `exclusions` field
+(a manager's explicit "leave this out" chips) and `budget === 'none'` (which
+silently adds `paid_ads`) are applied by `applyScopeExclusions` before the
+model ever sees the draft. The model can still propose `exclude_scopes` from
+free text — "keep it low-key, no press push" becomes a press exclusion with a
+reason — but a required task can only be dropped when it falls inside a scope
+the manager or the model actually named; `validatePlannerDelta` rejects the
+whole delta otherwise, and a keep-tagged task can never be dropped by any
+scope, ever (`lib/release-planning.test.ts` pins both, mutation-tested — see
+Verified below).
+
+### One pipeline, no draft: `createReleasePlan`
+
+`lib/release-planning-actions-server.ts` replaces the old
+`generatePlanDraft` + `approvePlanDraft` pair with one function, called from
+three doors that now all do the same thing: `POST /api/releases/[id]/plan`
+(the workspace card), `generate_release_plan` (the chat tool), and
+`release.draft_plan` (the embedded action). In order: resolve the release
+date (writing it if the intake supplied one and the row lacked it); refuse a
+second plan on a release that already has one; build the deterministic
+template draft and propose owners from past assignments; apply the
+deterministic exclusions (intake + budget-none); ask the model for a delta
+over the REMAINING tasks only; **insert-or-claim** on `release_plan_drafts`
+(the row is now purely an idempotency lock and an audit trail — nothing reads
+it as a document to review) so two racing requests can't both build; and
+instantiate straight into `tasks` in the same call. `generate/`, `approve/`
+and `regenerate-phase/` route files are deleted outright.
+
+**The AI-failure policy is the "hold and ask to try again" fork, made
+precise** (`decidePlanCreationOnAiFailure`, pure and tested): with the
+gateway simply not configured, proceed untailored — the deterministic result
+is still a valid plan. With a real failure (timeout, rate limit, bad output)
+and the manager had typed real notes (`extra_notes` or `goal_text`), refuse
+with 503 `tailoring_unavailable` **before writing anything** — the notes are
+the one thing code cannot fall back to interpreting, so a manager who wrote
+"keep it minimal, we're skipping the video shoot" gets told to try again
+rather than getting a plan that silently ignored what they wrote. With no
+typed notes, proceed with the deterministic + selected-answer result and a
+warning that the rest could not be tailored.
+
+### The provider, and why an OpenAI model needed new plumbing
+
+`lib/ai/provider.ts` gained `jsonSchema` (strict `json_schema` response
+format, with a one-time fallback to `json_object` if a gateway 400s on the
+newer shape), `reasoningEffort` (sent only to models `supportsReasoningEffort`
+recognizes as accepting it — `openai/gpt-5.4` does, `openai/gpt-4o-mini` does
+not — with its own one-time fallback if a gateway rejects the parameter), and
+a `deadlineMs` that shortens each retry's timeout as the budget runs down and
+skips a retry with under 8s left rather than starting one it cannot finish.
+`lib/ai/planner-model.ts` resolves `openai/gpt-5.4` as the RodiumAi default
+(env override `AI_PLANNER_MODEL` unchanged) and `'low'` as the default
+reasoning effort (`AI_PLANNER_REASONING_EFFORT`). Every prompt string still
+carries no model or provider name, per the existing test that forbids it.
+
+### The scene is gone; the manager edits real activities instead
+
+Deleted: `PlanScene.tsx`, `usePlanDraft.ts`, `PlanApproveBar.tsx`,
+`PlanPhaseSection.tsx`, `PlanTaskRow.tsx`, the plan-scene skeleton, and every
+`openScene('plan', …)` call. `'plan'` is out of `SceneName` entirely, so the
+compiler — not a runtime check — is what caught every call site that still
+assumed a review scene existed. `PlanReleaseCard` now has three states
+(`fresh` → the intake, `generating` → a short wait, `failed` → try again,
+answers kept) and the primary button in every one of them is the questions,
+because there is nothing else to open. A new `PlanBuiltBanner` is the ONLY
+place a manager learns what the model removed and why — it renders once,
+dismissible, listing every dropped task's reason and every applied exclusion,
+because "trust me" without a list of what changed would violate the file's
+own "visible state changes" principle.
+
+### Chat: finishing the interview is the go-ahead
+
+The system prompt's interview grew from seven questions to eight — the new
+one asks what to leave out, answered only when the manager plainly says so
+and never suggested by the model — and reading the eight answers back for a
+yes is now the ENTIRE approval step; there is nothing after it.
+`approve_release_plan` and `discard_release_plan` are deleted from the tool
+registry, `ChappiToolName`, and every gated-tool list in this file (the
+"Currently sixteen" bullet under "The confirmation gate" is fourteen now).
+`generate_release_plan` is ungated (per the founder's call) and, when called
+with no `releaseId`, creates the rollout and builds its plan in one request —
+the usual shape, since most of the time the release does not exist yet when
+the interview starts.
+
+### The embedded action needed a new primitive: `oneShot`
+
+`release.draft_plan` used to run `execute()` (draft) then a separate `apply()`
+(commit); now `execute()` does the whole job and there is nothing left to
+apply or discard. Rather than special-case this one action,
+`UrgansActionDefinition` gained `oneShot?: boolean` and `apply`/`discard`
+became OPTIONAL methods (`lib/urgans-actions/types.ts`); `runUrgansAction`
+checks `action.oneShot` and, on success, inserts the `urgans_actions` row
+**already** `status: 'applied'` with `applied_result` set from the same
+output, rather than `'drafted'` waiting for a later settle call.
+`findLatestDraftedActionId`, `markChatActionApplied` and
+`markChatActionDiscarded` are deleted — nothing calls them once the planner
+stopped needing a settle step, and a settle function with no drafted row to
+settle is a function nothing can safely reach for. `presskit.draft_section`,
+the OTHER embedded action, is untouched and still uses the two-step shape —
+`oneShot` is an option this framework offers, not a direction it forces every
+action toward.
+
+### Verified
+
+`vitest run` in `apps/web`: **3256 passed, 30 skipped**, zero failures.
+`eslint .`: **3 errors / 77 warnings** in `apps/web` (all three errors the
+documented pre-existing `WorkspaceView.tsx` ref-during-render finding, zero
+new warnings) and **0 errors / 2 warnings** in `apps/homepage` (the documented
+pre-existing `RoadmapPageClient.tsx` finding) — both baselines matched
+exactly. `tsc --noEmit` clean in `apps/homepage`; clean in `apps/web` apart
+from the 8 documented pre-existing `confirmed-action.test.ts` errors. `next
+build` green **by exit code** for both apps, and `apps/web` built clean with
+`NEXT_PUBLIC_FEATURE_RELEASE_PLANNER` both on and off, `/auth`, `/onboarding`,
+`/settings` and `/dashboard` all still `○ Static` in every combination.
+
+**Runtime probes on `next start`, rebuilt between flag states:** flag off,
+`POST` and `GET /api/releases/<id>/plan` both answer **404** with body exactly
+`{"error":"Not found."}` while the ungated `/api/releases` still **401**s —
+the discrimination that proves the gate is real rather than a routing
+accident. Flag on, both methods **401** unauthenticated, so auth runs after
+the flag check as designed. The three deleted routes (`/plan/generate`,
+`/plan/approve`, `/plan/regenerate-phase`) return Next's own generic 404 page
+in both flag states — confirming the FILES are gone, not merely gated.
+
+**Compiled output checked directly, this repo's habit for anything the build
+could silently get wrong:** the flag-on client bundle carries "Build my plan",
+"Let's plan this rollout" and "UrgAns is building your plan"; it carries
+**zero** live occurrences of "Review your draft plan" or "Decide before you
+approve" — the one surviving hit for the first phrase is the CHANGELOG's own
+v1.32.1 entry, a quotation of history that is never rewritten, not live UI
+copy. The homepage's prerendered `/` carries the new FAQ answer both in the
+visible accordion and in the `FAQPage` JSON-LD, and the old answer is gone.
+The store listing's stated character count was remeasured with `wc -m` after
+the copy changed (1,656 → 1,641) rather than estimated.
+
+**Two mutations run, each printing `APPLIED` first, each restored
+byte-identical afterward (`diff` confirmed):** dropping the keep-tag guard
+inside `isTaskInScope` failed 4 tests; letting `validatePlannerDelta` accept a
+required drop with no matching excluded scope failed 2. Both are the load-
+bearing half of "if someone says no marketing, tailor to that" — a manager's
+exclusion has to survive validation exactly as strictly as the model's own
+proposed one, or the instruction is decorative.
+
+### Not verified, and it is the whole product risk
+
+**No live model call.** RodiumAi is egress-blocked from this sandbox and no
+key is configured here, so whether `openai/gpt-5.4` actually holds the
+`json_schema` contract, accepts `reasoning_effort`, and produces a plan that
+genuinely omits every marketing task when asked to has never been observed —
+only reasoned from the provider's own retry/fallback logic and the pipeline's
+tests. **The manual pass this needs after deploy:** a single with budget
+`none` and the note "a normal release, no marketing" should come back missing
+roughly 30 tasks (teasers, announcements, the content shoot, briefing the
+marketing lead) while keeping release-day and distribution work and every
+paid-ads task; the `PlanBuiltBanner` should list every removal with a reason
+in voice; a second attempt on the same release should answer "already has its
+plan"; the chat interview should reach the same result end to end; and a
+build should land comfortably inside the 60s route ceiling. If it does not,
+`AI_PLANNER_REASONING_EFFORT=none` or falling back to `openai/gpt-5.4-mini`
+are both env-only levers, no redeploy of logic required.
+
+**Nothing has rendered in a browser.** This sandbox cannot mint an
+authenticated session and has no route to app.urganize.app, so the intake's
+new exclusion chips, the three `PlanReleaseCard` states, and the banner have
+never been seen, only built and unit-tested.

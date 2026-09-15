@@ -129,19 +129,38 @@ export type UrgansActionDefinition<Input, Output, Result = Output> = {
    *  shape changes meaningfully, so a stored `urgans_actions.prompt_version`
    *  tells you which behaviour produced a given row. */
   promptVersion: string;
+  /**
+   * True for an action with no draft worth pausing on — execute() already
+   * does the whole job (release.draft_plan: since 2026-09-15, finishing the
+   * intake writes the tasks directly, so there is nothing left to review).
+   * runUrgansAction logs such a run as ALREADY 'applied', with `output`
+   * mirrored into `applied_result` at insert time, so a stray later call to
+   * POST .../apply hits decideApplyClaim's return_cached path and never
+   * reaches `apply` at all — which is why `apply`/`discard` may be omitted
+   * entirely for a one-shot action. Omit this field (or set it false) for the
+   * ordinary Draft/Review/Apply shape, where a card is shown and a person
+   * accepts or discards it later — presskit.draft_section is that shape.
+   */
+  oneShot?: boolean;
   /** Run the whole draft step: resolve whatever this action needs beyond the
    *  access check already done (the full object row, its team), call a model
    *  if one applies, and return a draft output plus what to log. Must record
    *  nothing itself — the caller (runUrgansAction) owns the one
-   *  `urgans_actions` insert. */
+   *  `urgans_actions` insert. For a `oneShot` action this IS the whole job:
+   *  its output is the final, already-applied result, never a draft awaiting
+   *  a separate apply(). */
   execute(params: UrgansActionRunInput<Input>): Promise<UrgansActionRunOutcome<Output>>;
   /** Turn the run's output into exactly what gets written and what the caller
    *  sees, in ONE statement or none — supabase-js has no transactions, so
-   *  "atomic" here means "a single insert/update", never several. */
-  apply(params: UrgansActionApplyInput<Output>): Promise<UrgansActionApplyOutcome<Result>>;
+   *  "atomic" here means "a single insert/update", never several. Omitted
+   *  entirely by a `oneShot` action, which has nothing left to apply. */
+  apply?(params: UrgansActionApplyInput<Output>): Promise<UrgansActionApplyOutcome<Result>>;
   /** Undo a run that was never applied. Idempotent: calling this twice, or on
-   *  a row that was never really committed, must not error. */
-  discard(params: {
+   *  a row that was never really committed, must not error. Omitted entirely
+   *  by a `oneShot` action: its row is inserted already 'applied', so
+   *  discardUrgansAction's own "already applied and cannot be discarded"
+   *  refusal is reached before this would ever be called. */
+  discard?(params: {
     admin: SupabaseClient;
     objectId: string;
     actor: UrgansActionActor;

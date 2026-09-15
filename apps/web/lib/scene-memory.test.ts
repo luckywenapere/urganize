@@ -273,14 +273,14 @@ describe('decideIncomingScene', () => {
   it('lets an explicit request beat a remembered scene', async () => {
     const decide = await loadDecider(true);
     expect(
-      decide({ ...fromRelease, urlScene: null, requested: 'plan', remembered: 'metadata' })
-    ).toBe('plan');
+      decide({ ...fromRelease, urlScene: null, requested: 'coverart', remembered: 'metadata' })
+    ).toBe('coverart');
   });
 
   it('treats an explicit null as "no scene", not as "no opinion"', async () => {
     const decide = await loadDecider(true);
     expect(
-      decide({ ...fromNothing, urlScene: 'plan', requested: null, remembered: 'metadata' })
+      decide({ ...fromNothing, urlScene: 'coverart', requested: null, remembered: 'metadata' })
     ).toBeNull();
   });
 
@@ -293,11 +293,15 @@ describe('decideIncomingScene', () => {
 
   it('KEEPS a scene already in the URL when scoping from no release', async () => {
     // THE BUG, in one line. The single-release auto-scope runs setScope on
-    // arrival, and this used to overwrite `?scene=plan` with whatever that
-    // release was last showing — which is how a tap on "Review your draft
-    // plan" landed on Metadata (founder report, 2026-09-08).
+    // arrival, and this used to overwrite the URL's scene with whatever that
+    // release was last showing — which is how a tap into the (since-removed)
+    // plan review scene landed on Metadata (founder report, 2026-09-08).
+    // `coverart` stands in for that scene here now; the rule under test is
+    // about ANY scene the URL names, not about which one it used to be.
     const decide = await loadDecider(true);
-    expect(decide({ ...fromNothing, urlScene: 'plan', remembered: 'metadata' })).toBe('plan');
+    expect(decide({ ...fromNothing, urlScene: 'coverart', remembered: 'metadata' })).toBe(
+      'coverart'
+    );
   });
 
   it('does NOT carry the URL scene across when switching between releases', async () => {
@@ -305,8 +309,10 @@ describe('decideIncomingScene', () => {
     // open scene leaking onto release B is the leak scene memory exists to
     // stop. B resumes its OWN memory, not A's scene.
     const decide = await loadDecider(true);
-    expect(decide({ ...fromRelease, urlScene: 'plan', remembered: 'metadata' })).toBe('metadata');
-    expect(decide({ ...fromRelease, urlScene: 'plan', remembered: null })).toBeNull();
+    expect(decide({ ...fromRelease, urlScene: 'coverart', remembered: 'metadata' })).toBe(
+      'metadata'
+    );
+    expect(decide({ ...fromRelease, urlScene: 'coverart', remembered: null })).toBeNull();
   });
 
   it('uses memory only when the URL names no usable scene', async () => {
@@ -316,7 +322,9 @@ describe('decideIncomingScene', () => {
     expect(decide({ ...fromNothing, urlScene: 'bogus', remembered: 'metadata' })).toBe('metadata');
     // Case is not normalized anywhere else either — a near-miss is a
     // hand-typed URL and reads as no scene.
-    expect(decide({ ...fromNothing, urlScene: 'Plan', remembered: 'metadata' })).toBe('metadata');
+    expect(decide({ ...fromNothing, urlScene: 'Metadata', remembered: 'metadata' })).toBe(
+      'metadata'
+    );
   });
 
   it('answers null when there is neither a URL scene nor a memory', async () => {
@@ -344,17 +352,18 @@ describe('decideIncomingScene', () => {
     // resolveActiveScene still nulls it at render, so the panel cannot show a
     // switched-off scene either way.
     const decide = await loadDecider(false);
-    expect(decide({ ...fromNothing, urlScene: null, requested: 'plan', remembered: null })).toBe(
-      'plan'
-    );
+    expect(
+      decide({ ...fromNothing, urlScene: null, requested: 'coverart', remembered: null })
+    ).toBe('coverart');
   });
 
-  it('resumes the plan scene like any other', async () => {
-    // scene-memory had ZERO coverage of 'plan' before this — every assertion
-    // in this file used 'metadata' — which is part of why the report took a
-    // full trace to reproduce.
+  it('resumes a scene other than metadata like any other (2026-09-08)', async () => {
+    // scene-memory had ZERO coverage of anything but 'metadata' before this —
+    // every assertion in this file used it — which is part of why the report
+    // took a full trace to reproduce. (The scene actually involved, the plan
+    // review, was removed 2026-09-15; 'coverart' stands in for it here.)
     const decide = await loadDecider(true);
-    expect(decide({ ...fromRelease, urlScene: null, remembered: 'plan' })).toBe('plan');
-    expect(decide({ ...fromNothing, urlScene: 'plan', remembered: null })).toBe('plan');
+    expect(decide({ ...fromRelease, urlScene: null, remembered: 'coverart' })).toBe('coverart');
+    expect(decide({ ...fromNothing, urlScene: 'coverart', remembered: null })).toBe('coverart');
   });
 });

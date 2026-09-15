@@ -72,7 +72,7 @@ PLAN THE SHOWS TOO
 Book a date, build the set against the slot length so it cannot overrun, and send the tracks to your DJ as one private link.
 
 ASK URGANS
-UrgAns is the personal AI for music professionals inside Urganize. Ask it what is late, have it draft a rollout plan, or tell it to create an activity in plain words. You review and approve anything it drafts before it takes effect.
+UrgAns is the personal AI for music professionals inside Urganize. Ask it what is late, have it build your rollout plan, or tell it to create an activity in plain words. It asks before anything that cannot be undone.
 
 WHO IT IS FOR
 Artists running their own releases. Managers running more than one artist at a time.
@@ -80,7 +80,13 @@ Artists running their own releases. Managers running more than one artist at a t
 Start free for 3 days. No card needed.
 ```
 
-1,656 characters.
+1,641 characters.
+
+Recounted 2026-09-15, after "Draft the plan" became "build your rollout plan"
+and the ASK URGANS line stopped promising a review-and-approve step the
+feature no longer has. Measured off the fenced text above with `wc -m`, not
+estimated — the same method the two 2026-09-11 recounts used, noted below for
+history rather than left to look like an unexplained jump.
 
 Recounted 2026-09-11, twice. The figure here read 1,776 for a block that
 measured 1,714 — the rollout rename had shortened it and nobody recounted — and

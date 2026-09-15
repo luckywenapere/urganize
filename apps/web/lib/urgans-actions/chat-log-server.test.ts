@@ -18,11 +18,7 @@ vi.mock('./server', async (importOriginal) => {
   };
 });
 
-import {
-  markChatActionApplied,
-  markChatActionDiscarded,
-  recordChatActionRun,
-} from './chat-log-server';
+import { recordChatActionRun } from './chat-log-server';
 
 const ACTOR = { id: 'teammate-1', email: 'teammate@example.com' };
 const RELEASE_ID = '11111111-1111-4111-8111-111111111111';
@@ -40,18 +36,20 @@ const scopeOk = (over: Partial<Record<string, unknown>> = {}) => ({
   },
 });
 
-/** Records every insert/update the module attempts, so a test can assert both
- *  what was written AND that nothing was written at all. */
-type Attempt = { table: string; op: 'insert' | 'update'; payload: Record<string, unknown>; match: Record<string, unknown> };
+/** Records every insert the module attempts, so a test can assert both what
+ *  was written AND that nothing was written at all. There is no settle step
+ *  to log an update for any more — recordChatActionRun's `status` argument
+ *  decides the row's final state at insert time. */
+type Attempt = { table: string; op: 'insert'; payload: Record<string, unknown> };
 
-function fakeAdmin(options: { insertError?: boolean; updateError?: boolean; throws?: boolean } = {}) {
+function fakeAdmin(options: { insertError?: boolean; throws?: boolean } = {}) {
   const attempts: Attempt[] = [];
   const client = {
     from(table: string) {
       if (options.throws) throw new Error('client exploded');
       return {
         insert(payload: Record<string, unknown>) {
-          attempts.push({ table, op: 'insert', payload, match: {} });
+          attempts.push({ table, op: 'insert', payload });
           return {
             select: () => ({
               single: async () =>
@@ -60,26 +58,6 @@ function fakeAdmin(options: { insertError?: boolean; updateError?: boolean; thro
                   : { data: { id: 'action-1' }, error: null },
             }),
           };
-        },
-        update(payload: Record<string, unknown>) {
-          // One attempt per update, not per .eq() — the module chains two of
-          // them (id AND status) and `match` accumulates into the same object,
-          // so pushing on every call would report one update as two.
-          const match: Record<string, unknown> = {};
-          attempts.push({ table, op: 'update', payload, match });
-          const chain = {
-            eq(column: string, value: unknown) {
-              match[column] = value;
-              return chain;
-            },
-            select: () => ({
-              maybeSingle: async () =>
-                options.updateError
-                  ? { data: null, error: { message: 'nope' } }
-                  : { data: { id: 'action-1' }, error: null },
-            }),
-          };
-          return chain;
         },
       };
     },
@@ -274,62 +252,5 @@ describe('recordChatActionRun', () => {
     ).toBeNull();
     expect(attempts).toEqual([]);
     expect(resolveActionScope).not.toHaveBeenCalled();
-  });
-});
-
-describe('settling a chat-logged run', () => {
-  it('marks it applied, and only while it is still drafted', async () => {
-    const { client, attempts } = fakeAdmin();
-
-    expect(await markChatActionApplied(client, 'action-1', { taskCount: 62 })).toBe(true);
-    expect(attempts).toHaveLength(1);
-    expect(attempts[0].op).toBe('update');
-    expect(attempts[0].payload).toMatchObject({
-      status: 'applied',
-      applied_result: { taskCount: 62 },
-    });
-    // The conditional is what stops a second approve rewriting a settled row.
-    expect(attempts[0].match).toMatchObject({ id: 'action-1', status: 'drafted' });
-  });
-
-  it('stamps applied_at so the console can show when', async () => {
-    const { client, attempts } = fakeAdmin();
-    await markChatActionApplied(client, 'action-1');
-    expect(typeof attempts[0].payload.applied_at).toBe('string');
-  });
-
-  it('marks it discarded, also only while drafted', async () => {
-    const { client, attempts } = fakeAdmin();
-
-    expect(await markChatActionDiscarded(client, 'action-1')).toBe(true);
-    expect(attempts[0].payload).toMatchObject({ status: 'discarded' });
-    expect(attempts[0].match).toMatchObject({ id: 'action-1', status: 'drafted' });
-  });
-
-  it('does nothing when the track is switched off', async () => {
-    vi.stubEnv('NEXT_PUBLIC_FEATURE_URGANS_ACTIONS', 'false');
-    const { client, attempts } = fakeAdmin();
-
-    expect(await markChatActionApplied(client, 'action-1')).toBe(false);
-    expect(await markChatActionDiscarded(client, 'action-1')).toBe(false);
-    expect(attempts).toEqual([]);
-  });
-
-  it('does nothing without an action id, rather than updating every row', async () => {
-    const { client, attempts } = fakeAdmin();
-
-    expect(await markChatActionApplied(client, '')).toBe(false);
-    expect(await markChatActionDiscarded(client, null)).toBe(false);
-    expect(attempts).toEqual([]);
-  });
-
-  it('returns false rather than throwing when the update fails', async () => {
-    const { client } = fakeAdmin({ updateError: true });
-    await expect(markChatActionApplied(client, 'action-1')).resolves.toBe(false);
-  });
-
-  it('returns false rather than throwing when the client throws', async () => {
-    const { client } = fakeAdmin({ throws: true });
-    await expect(markChatActionDiscarded(client, 'action-1')).resolves.toBe(false);
   });
 });
