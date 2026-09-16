@@ -17,6 +17,7 @@ import {
   Radio,
   TrendingUp,
   Users,
+  UserCircle2,
   Building2,
 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
@@ -76,6 +77,12 @@ const SECTIONS: Array<{
     label: 'Growth',
     description: 'Cumulative signups per week over the last 12 weeks.',
     icon: TrendingUp,
+  },
+  {
+    href: '/admin/signups',
+    label: 'Signups',
+    description: 'Real Urganize accounts created each month, from Supabase — not the waitlist.',
+    icon: UserCircle2,
   },
   {
     href: '/admin/interviews',

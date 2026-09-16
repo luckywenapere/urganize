@@ -16,6 +16,7 @@ import {
   Sparkles,
   TrendingUp,
   Users,
+  UserCircle2,
   UserPlus,
   Building2,
 } from '@/components/icons';
@@ -58,6 +59,7 @@ const ITEMS: Array<{
   { key: 'directory', label: 'Directory', icon: UserPlus, href: '/admin/directory' },
   { key: 'waitlist', label: 'Waitlist', icon: Users, href: '/admin/waitlist' },
   { key: 'growth', label: 'Growth', icon: TrendingUp, href: '/admin/growth' },
+  { key: 'signups', label: 'Signups', icon: UserCircle2, href: '/admin/signups' },
   { key: 'interviews', label: 'Interviews', icon: Mic, href: '/admin/interviews' },
   // The mascot's model sheet, rendered from the shared component. Reads no
   // data, so unlike its neighbours it has no backing API acting as the guard.
