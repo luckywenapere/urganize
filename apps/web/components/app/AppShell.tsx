@@ -27,6 +27,8 @@ import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
 import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
 import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
+import { ChappiHistoryBridge } from '@/components/chappi/ChappiHistoryBridge';
+import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
 import { registerAppServiceWorker } from '@/lib/offline/register';
 import { OfflineBanner } from '@/components/app/OfflineBanner';
 import { flushOfflineQueue } from '@/lib/offline/sync';
@@ -132,6 +134,11 @@ const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTIC
 // flag off there is no launcher at all — the founder WhatsApp chat feature
 // was removed outright rather than kept as a flag-off fallback.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
+// Saved UrgAns chats (NEXT_PUBLIC_FEATURE_URGANS_HISTORY, meaningful only with
+// the assistant flag). Gates the bridge that starts saving; with it off the
+// conversation stays exactly as transient as it always was.
+const CHAT_HISTORY_ENABLED = isChappiHistoryEnabled();
 
 // In-app issue reporting. Gates the dialog here and the two entry points that
 // open it; the API route checks the same flag itself, so a direct call cannot
@@ -502,6 +509,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     {/* Publishes on-screen-keyboard state to CSS — see globals.css's
         keyboard-aware assistant column block. Renders nothing. */}
     <KeyboardViewportBridge />
+    {/* Saves UrgAns chats to the browser and the server, and restores a recent
+        one. Renders nothing — see stores/useChappiHistoryStore.ts. */}
+    {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
     {/* Records every route change so back affordances (Settings' back
         button) can return to the exact previous page. */}
     <NavigationTracker />

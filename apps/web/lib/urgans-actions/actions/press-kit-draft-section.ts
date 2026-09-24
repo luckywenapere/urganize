@@ -7,7 +7,7 @@ import {
   buildDraftMessages,
   decideDraftApply,
   isDraftableSection,
-  parseDraftOutput,
+  parseDraftAiResponse,
 } from '@/lib/press-kit-draft';
 import {
   PRESS_KIT_COLUMNS,
@@ -141,7 +141,7 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
         // turn of phrase, and a redraft is one tap away when it is flat.
         temperature: 0.4,
         model: process.env.AI_PRESSKIT_MODEL || process.env.AI_STATUS_MODEL || undefined,
-        parse: (raw) => parseDraftOutput(section, raw),
+        parse: (raw) => parseDraftAiResponse(section, raw),
         onUsage: (reported) => {
           usage = reported;
         },
