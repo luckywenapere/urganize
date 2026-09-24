@@ -68,6 +68,10 @@ const nextConfig = {
   // and every generate would fail with ENOENT. Declare them explicitly.
   outputFileTracingIncludes: {
     '/api/releases/[releaseId]/recap': ['./assets/fonts/*.ttf'],
+    // The share posters (2026-09-23) load the same four cuts through the same
+    // loader, and the same rule applies: a route missing from this map ships
+    // without its fonts and fails every image with ENOENT.
+    '/api/releases/[releaseId]/share-card': ['./assets/fonts/*.ttf'],
   },
   // /.well-known/* CANNOT be an app/ directory: Next's router ignores
   // dot-prefixed path segments, so app/.well-known/oauth-.../route.ts never

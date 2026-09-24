@@ -165,19 +165,30 @@ export const CORE_TOOLS: ChappiTool[] = [
       });
       if (!res.ok) return fail(String(res.body.error || 'Could not create the rollout.'));
       const releaseId = String(res.body.releaseId || '');
+      // The server's answer, never a guess: false whenever sharing is off, and
+      // for a test rollout, so nothing here reads a flag of its own.
+      const firstRelease = res.body.firstRelease === true;
       const clientAction: ChappiClientAction = releaseId
-        ? { type: 'navigate', href: `/dashboard?release=${releaseId}` }
+        ? {
+            type: 'navigate',
+            href: `/dashboard?release=${releaseId}`,
+            ...(firstRelease ? { offerFirstShareFor: releaseId } : {}),
+          }
         : { type: 'refresh' };
       // Branch on what the API actually did, not on the flag: with the
       // planner on, the release is created with no tasks and the manager
       // plans it, so promising a generated plan here would be a lie.
       const plannerPending = res.body.plannerPending === true;
+      const created = plannerPending
+        ? `Created "${title}". Open it to plan the rollout with UrgAns.`
+        : `Created "${title}" and generated its rollout tasks.`;
       return {
         ok: true,
-        summary: plannerPending
-          ? `Created "${title}". Open it to plan the rollout with UrgAns.`
-          : `Created "${title}" and generated its rollout tasks.`,
-        data: { releaseId },
+        // Factual, and deliberately NOT "the share sheet opens now": over MCP
+        // the clientAction is dropped, so that sentence would be untrue there.
+        // What the in-app model should do about it lives in ROLE.
+        summary: firstRelease ? `${created} This is their first rollout.` : created,
+        data: { releaseId, firstRelease },
         clientAction,
       };
     },

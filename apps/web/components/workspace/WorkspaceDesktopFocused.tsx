@@ -57,6 +57,8 @@ type WorkspaceDesktopFocusedProps = {
   banner?: ReactNode;
   panelArchiveAction?: TaskPanelAction | null;
   panelChangeArtistAction?: TaskPanelAction | null;
+  /** Share to socials: opens the share sheet for the scoped rollout. */
+  panelShareAction?: TaskPanelAction | null;
   /** Forwarded verbatim to TasksPanel's `sceneContent` — a release scene
    * (Metadata / Calendar / Files / Press kit) that replaces the activity
    * buckets in this centre column while it's open (2026-08-05). */
@@ -101,6 +103,7 @@ export function WorkspaceDesktopFocused({
   banner,
   panelArchiveAction,
   panelChangeArtistAction,
+  panelShareAction,
   panelSceneContent,
   panelActivitiesBanner,
   panelActivitiesFooter,
@@ -215,6 +218,7 @@ export function WorkspaceDesktopFocused({
             scopedRelease={scopedRelease}
             archiveAction={panelArchiveAction}
             changeArtistAction={panelChangeArtistAction}
+            shareAction={panelShareAction}
             sceneContent={panelSceneContent}
             activitiesBanner={panelActivitiesBanner}
             activitiesFooter={panelActivitiesFooter}
