@@ -7,7 +7,6 @@ import {
   Roboto_Mono,
 } from "next/font/google";
 import "./globals.css";
-import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { LANDING_DESCRIPTION, LANDING_TITLE } from "@/lib/seo";
 import { Suspense } from "react";
 import FormbricksProvider from "./formbricks-provider";
@@ -45,6 +44,12 @@ const LEGAL_NAME = "The Urganization Ltd";
 // keywords because the searcher still types the old word, but a keyword that
 // recruits an AUDIENCE the brief no longer names sends the wrong person to a
 // page that tells them so.
+//
+// THE LIST SURVIVED THE 2026-09-24 POSITIONING TOO ("Everything after the
+// music"), by the category rule above: nobody searches for our new line, and
+// "AI music manager" is still what a searcher types. Labels came back into the
+// audience that day, so the two label terms that left on 2026-09-11 could
+// return by the A&R rule; that is a founder call, not done here.
 const LANDING_KEYWORDS = [
   "AI music manager",
   "music manager app",
@@ -137,13 +142,13 @@ const softwareApplicationSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Urganize",
-  // The product category, not schema.org's broad "BusinessApplication" that
-  // stood here before. The field is free Text, so this is valid, and the
-  // 2026-09-09 brief asks the schema to carry the positioning: the whole point
-  // of naming a category is that machines and people read the same one. The
-  // trade-off, recorded rather than hidden: a crawler grouping apps by the
-  // conventional enumerated values will not find Urganize among them.
-  "applicationCategory": PRODUCT_CATEGORY,
+  // schema.org's enumerated "BusinessApplication". From 2026-09-09 until
+  // 2026-09-24 this carried the product category as free text instead, so the
+  // schema said what the copy said. The 2026-09-24 positioning introduces the
+  // product by what it holds rather than by a category, so there is no category
+  // name left to carry and the conventional value, which crawlers group by,
+  // comes back. The positioning still reaches machines through "description".
+  "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web",
   "description": LANDING_DESCRIPTION,
   "url": SITE_URL,

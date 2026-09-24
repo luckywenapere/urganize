@@ -1,21 +1,27 @@
 /**
  * How Urganize describes itself. One definition, every surface.
  *
- * Founder brief (2026-09-09, amended 2026-09-11): the product is an **AI Music
- * Business Manager**. Every page, tag, email, store listing and assistant reply
- * that introduces it says so in the same words, and the only thing allowed to
- * vary between surfaces is how many characters fit.
+ * Founder brief (2026-09-24): you make the music, and Urganize is where your
+ * team does everything after. The product is no longer introduced by a
+ * category (it was an "AI Music Business Manager" from 2026-09-09 until this
+ * brief); it is introduced by what it holds. Every page, tag, email and store
+ * listing that introduces it says so in the same words, and the only thing
+ * allowed to vary between surfaces is how many characters fit.
  *
- * The amendment widened the category from "AI Music Manager" and changed nothing
- * else: the audience order, the promise and the UrgAns line are untouched. It
- * cost nine characters. Every derived string absorbs that; the one field that
- * cannot is the app store name, whose 30-character cap the full category no
- * longer fits. See docs/store-listing.md.
+ * Three lines, all the founder's, used verbatim:
+ *  - the core line (`CORE_LINE`), for anything that introduces the product;
+ *  - the short line (`SHORT_LINE`), for page titles, meta titles and tight bios;
+ *  - the long description (`CANONICAL_DESCRIPTION`), wherever there is room.
  *
- * Amended again 2026-09-11 (founder call, later the same day): "labels" is
- * dropped from the audience. It is artists and managers. Artists still lead,
- * the category, the promise and the UrgAns line are untouched, and every
- * derived string absorbs it. The /for-labels persona page went with it.
+ * LABELS ARE BACK IN THE AUDIENCE. They were dropped on 2026-09-11, and the
+ * long description's own last sentence ("For artists, managers and labels.")
+ * puts them back, so the list below has three entries again. "Small labels"
+ * stays retired in the guard; "for labels" does not.
+ *
+ * UrgAns is the one surface that still says the old category, on purpose: the
+ * founder is deciding separately how the assistant describes the product, so
+ * lib/chappi/system-prompt.ts was left as it was and the guard exempts that one
+ * file for that one phrase.
  *
  * WHY A MODULE RATHER THAN THE STRING AT EACH CALL SITE. This repo has shipped
  * the display-vs-reality gap four times with prices, once with the share card's
@@ -36,65 +42,68 @@
  */
 
 /**
- * The category. Leads any sentence that introduces the product, and is the
- * thing every meta description has to contain.
+ * The core line without its subject: "where your team does everything after
+ * the music is made". For a sentence that already names Urganize ("Urganize,
+ * where your team...", "Urganize is where your team...") so a page can say it
+ * without repeating the name twice in a row.
  */
-export const PRODUCT_CATEGORY = 'AI Music Business Manager';
+export const CORE_CLAUSE = 'where your team does everything after the music is made';
+
+/** The core line. Introduces the product anywhere a whole sentence fits. */
+export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
+
+/** The short line. Page titles, meta titles, tight bios, the share card. */
+export const SHORT_LINE = 'Everything after the music.';
 
 /**
- * Who it is for, in the fixed order artists, managers.
+ * Who it is for, in the fixed order artists, managers, labels.
  *
  * ARTISTS ALWAYS LEAD, and the order is never reordered for emphasis. It is
  * data rather than a baked string so the guard can pin the order rather than
- * pin one sentence that happens to contain it. Labels were the third entry
- * until 2026-09-11 (founder call: it is not for labels).
+ * pin one sentence that happens to contain it. Labels were dropped on
+ * 2026-09-11 and came back on 2026-09-24 with the founder's long description.
  */
-export const AUDIENCE = ['artists', 'managers'] as const;
+export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
 
-/** "artists and managers" — built from the list above so the order cannot be
- * rewritten in prose without rewriting the list. */
+/** "artists, managers and labels", built from the list above so the order
+ * cannot be rewritten in prose without rewriting the list. No Oxford comma. */
 export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
 
 /** The brand line. The homepage title, and nothing else in the app uses it. */
-export const BRAND_LINE = `Urganize, ${PRODUCT_CATEGORY}`;
-
-/** Category plus audience. A headline, never a sentence on its own. */
-export const CUSTOMER_LINE = `${PRODUCT_CATEGORY} for ${AUDIENCE_LINE}`;
-
-/** What it does, in the customer's words. Carried by a subhead, under a
- * headline that already carried the category. */
-export const PROMISE = 'Plan, organize and execute rollouts from one place';
+export const BRAND_LINE = `Urganize: ${SHORT_LINE.slice(0, -1)}`;
 
 /**
- * Under 80 characters. Bios, OG cards, anywhere a single line is all there is.
+ * Under 80 characters. Bios, the footer tagline, anywhere a single line is all
+ * there is.
  */
-export const ONE_LINER = `${CUSTOMER_LINE}.`;
+export const ONE_LINER = SHORT_LINE;
 
 /**
- * Under 160 characters. Meta descriptions and store listings, i.e. the two
- * places a hard limit is enforced by somebody else's software.
+ * Under 160 characters. The PWA manifest and store fields, i.e. the places a
+ * hard limit is enforced by somebody else's software.
  */
-export const SHORT_DESCRIPTION = `${CUSTOMER_LINE}. ${PROMISE}.`;
+export const SHORT_DESCRIPTION = CORE_LINE;
 
 /**
- * The full description. Used where there is room to say what the product
- * actually does rather than only what it is.
+ * The long description, verbatim from the founder. Used where there is room to
+ * say what the product actually does rather than only what it is.
  *
- * Written out rather than composed from the parts above: it is one paragraph of
- * prose with its own rhythm, and assembling it from fragments would produce a
- * sentence that reads like it was assembled from fragments.
+ * Written out rather than composed from the parts above, apart from the
+ * audience, so the one list the guard pins is the one list the prose uses.
+ * "Release" is the founder's word here and it is right: it is the unit that
+ * gets planned and put out, which is the vocabulary rule (rollout is the work,
+ * release is the unit).
  */
 export const CANONICAL_DESCRIPTION =
-  'Urganize is an AI Music Business Manager for artists and managers. It helps music teams plan rollouts, ' +
-  'coordinate people, manage assets and metadata, track execution and keep every part moving ' +
-  'from one place.';
+  'You make the music. Urganize is where your team does everything after. ' +
+  'Plan the release, assign the work, keep files and metadata in one place, pitch to curators, ' +
+  `book shows and put the release out. For ${AUDIENCE_LINE}.`;
 
 /**
  * UrgAns is NOT the product, and this line is the whole of the distinction.
  *
- * It is the AI inside Urganize. When it is asked what it is, it says this;
- * when it is asked what Urganize is, it says the category. Collapsing the two
- * would make the assistant the product, which is the positioning error this
- * brief exists to correct.
+ * It is the AI inside Urganize. When it is asked what it is, it says this.
+ * Collapsing the two would make the assistant the product, which is the
+ * positioning error every brief since 2026-09-09 has been careful to avoid.
  */
 export const URGANS_LINE = 'personal AI for music professionals';
