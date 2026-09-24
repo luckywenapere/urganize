@@ -40,6 +40,7 @@ const GUARDED_FILES = [
   'components/releases/ReleaseScenePanel.tsx',
   'components/chappi/ChappiConversation.tsx',
   'components/share/ShareSheet.tsx',
+  'components/settings/BrandColorsSection.tsx',
   'lib/chappi/intent-router.ts',
   'lib/chappi/system-prompt.ts',
   'lib/email-templates.ts',

@@ -65,6 +65,8 @@ export {
   MapPin, Maximize2, Menu, Mic,
   MicVocal, Minimize2, MonitorDown, MoreHorizontal,
   Newspaper, NotebookPen, PanelLeftClose, PanelLeftOpen,
+  // Brand colors (2026-09-24): the share sheet's link to Settings.
+  Palette,
   PartyPopper, Pencil, PiggyBank, Pin,
   Plug, Rocket, Send, Share,
   Share2, ShieldCheck, Slash, Smartphone,

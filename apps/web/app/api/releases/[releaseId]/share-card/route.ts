@@ -4,6 +4,8 @@ import { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_sh
 import { ensureReleaseTeamReadAccess } from '@/lib/release-access-server';
 import { loadRecapFonts } from '@/lib/recap-fonts';
 import { renderShareCard } from '@/lib/social-share-card';
+import { SHARE_PALETTE_HEADER, resolveSharePalette } from '@/lib/social-share-colors';
+import { loadArtistBrandColorsFor } from '@/lib/social-share-colors-server';
 import { loadShareCoverArtDataUrl } from '@/lib/social-share-server';
 import {
   SHARE_FORMAT_DIMENSIONS,
@@ -73,19 +75,26 @@ export async function GET(
   // The access summary does not carry the release type, and the eyebrow says
   // "NEW EP" or "NEW ALBUM" from it. A failed read falls back to single, the
   // type every release had before the picker existed, rather than failing the
-  // image over a label.
+  // image over a label. The artist id rides along for the brand colors.
   const { data: typeRow } = await adminClient
     .from('releases')
-    .select('release_type')
+    .select('release_type, artist_id')
     .eq('id', releaseId)
     .maybeSingle();
-  const rawType = (typeRow as { release_type?: unknown } | null)?.release_type;
+  const row = typeRow as { release_type?: unknown; artist_id?: unknown } | null;
+  const rawType = row?.release_type;
   const releaseType = isDbReleaseType(rawType) ? rawType : 'single';
+  const rawArtistId = row?.artist_id;
+  const artistId = typeof rawArtistId === 'string' ? rawArtistId : null;
 
   const { format, dateMode, extraLine, todayYmd } = parsed.value;
   const timing = describeShareTiming(release.releaseDate, dateMode, todayYmd ?? toUtcYmd());
   const { width, height } = SHARE_FORMAT_DIMENSIONS[format];
   const coverArtDataUrl = await loadShareCoverArtDataUrl(adminClient, release.artworkAssetId);
+  // The artist's brand colors, when they have any (2026-09-24). Never fails
+  // the image: flag off, no colors, the migration not applied or a read error
+  // all come back null, which draws the poster in Urganize's colors.
+  const palette = resolveSharePalette(await loadArtistBrandColorsFor(adminClient, artistId));
 
   const render = async (cover: string | null): Promise<Buffer> => {
     const fonts = await loadRecapFonts();
@@ -98,6 +107,7 @@ export async function GET(
         timing,
         extraLine,
         coverArtDataUrl: cover,
+        palette,
       }),
       { width, height, fonts }
     );
@@ -130,6 +140,9 @@ export async function GET(
       'Content-Length': String(png.length),
       'Cache-Control': 'private, no-store, max-age=0',
       'Content-Disposition': `inline; filename="${shareImageFileName(release.title, format)}"`,
+      // Tells the sheet whether these are the artist's colors or ours, so its
+      // "Set brand colors" line says the right thing without a second request.
+      [SHARE_PALETTE_HEADER]: palette.isBrand ? 'brand' : 'default',
     },
   });
 }

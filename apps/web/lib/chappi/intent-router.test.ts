@@ -265,6 +265,31 @@ describe('resolveIntent — share to socials', () => {
     }
   });
 
+  it('routes X, Twitter and Snapchat too (2026-09-24)', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, share: true });
+    for (const raw of [
+      'post it on twitter',
+      'tweet about the single',
+      'post it on X',
+      'share the release to x',
+      'put the new single on x',
+      'post it on snapchat',
+      'make a snap story for the single',
+    ]) {
+      expect(resolveIntent(raw).kind, raw).toBe('share_socials');
+    }
+  });
+
+  it('never reads a bare x as X, the platform', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: false, share: true });
+    // No posting verb, or an x that is part of a word: none of these is about X.
+    for (const raw of ['x', 'export the credits to xlsx', 'what is 2x the budget', 'remind me about Xavier']) {
+      expect(resolveIntent(raw).kind, raw).not.toBe('share_socials');
+    }
+    // And an activity still wins, exactly as it does for Instagram.
+    expect(resolveIntent('add a task to post on x').kind).toBe('add_task');
+  });
+
   it('beats the planner on "share the single", which would otherwise plan a new one', async () => {
     const { resolveIntent } = await loadRouter({ notes: true, planner: true, share: true });
     expect(resolveIntent('share the single').kind).toBe('share_socials');

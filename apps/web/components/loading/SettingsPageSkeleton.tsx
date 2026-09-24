@@ -20,6 +20,9 @@ const IDENTITY_PANEL_ENABLED =
 // Press kits' row in the Workspace tab, which became its only entry point on
 // 2026-09-09 (founder call) when it left every menu.
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
+// The Brand colors section under the artist rows (2026-09-24), same gates.
+const BRAND_COLORS_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_BRAND_COLORS === 'true' && WORKSPACE_FEATURE_ENABLED;
 const DATA_EXPORT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DATA_EXPORT === 'true';
 const REPORT_ISSUE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_REPORT_ISSUE === 'true';
 const MCP_CONNECT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MCP_CONNECT === 'true';
@@ -95,6 +98,9 @@ export function SettingsPageSkeleton({
           // page (2026-08-05) — special-cased in the render below.
           { key: 'workspace-identity-logo', height: 'h-24', show: IDENTITY_PANEL_ENABLED },
           { key: 'workspace-artist', height: 'h-28', show: WORKSPACE_FEATURE_ENABLED },
+          // One bordered row per artist with a small poster in it. One row's
+          // worth is reserved, since the artist count is not known yet.
+          { key: 'brand-colors', height: 'h-36', show: BRAND_COLORS_ENABLED },
           // A kicker plus one bordered block with a line of copy and a button
           // in it — the AdminSection shape.
           { key: 'press-kits', height: 'h-24', show: PRESS_KITS_ENABLED },

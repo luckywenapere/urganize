@@ -6,6 +6,8 @@ import {
   listWorkspaceArtists,
 } from '@/lib/artists-server';
 import { recordLimitHit } from '@/lib/seats-server';
+import { NO_BRAND_COLORS, isBrandColorsEnabled, type BrandColors } from '@/lib/social-share-colors';
+import { loadArtistBrandColors } from '@/lib/social-share-colors-server';
 
 // The team's artist roster.
 //
@@ -25,9 +27,18 @@ import { recordLimitHit } from '@/lib/seats-server';
 
 const isFlagOn = () => process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
-/** The wire shape, shared by both handlers so the client sees one artist type. */
-function toPayload(artist: { id: string; name: string; slug: string }) {
-  return { id: artist.id, name: artist.name, slug: artist.slug };
+/**
+ * The wire shape, shared by both handlers so the client sees one artist type.
+ * `brandColors` rides along only while the brand-colors flag is on, so with it
+ * off the payload is exactly what it always was.
+ */
+function toPayload(artist: { id: string; name: string; slug: string }, brandColors?: BrandColors) {
+  return {
+    id: artist.id,
+    name: artist.name,
+    slug: artist.slug,
+    ...(brandColors ? { brandColors } : {}),
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -56,9 +67,20 @@ export async function GET(request: NextRequest) {
     // matching how the seat limit is surfaced on /api/workspace/members.
     const allowance = await checkArtistAllowance(adminClient, access.primaryWorkspaceId);
 
+    // Read in its own query, and it never fails the roster: an artist with no
+    // readable colors (or no migration yet) comes back with none.
+    const brandColors = isBrandColorsEnabled()
+      ? await loadArtistBrandColors(
+          adminClient,
+          artists.map((artist) => artist.id)
+        )
+      : null;
+
     return NextResponse.json({
       workspaceId: access.primaryWorkspaceId,
-      artists: artists.map(toPayload),
+      artists: artists.map((artist) =>
+        toPayload(artist, brandColors ? (brandColors.get(artist.id) ?? NO_BRAND_COLORS) : undefined)
+      ),
       artistLimit: allowance.limit,
     });
   } catch (error) {
