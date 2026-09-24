@@ -73,6 +73,17 @@ describe('the system prompt', () => {
     expect(ROLE).toMatch(/streaming numbers/i);
     expect(ROLE).toMatch(/say so plainly/i);
   });
+
+  it('tells the model not to use markdown, without quoting the forbidden syntax', () => {
+    // 2026-09-24: the chat renderer now shows **bold** as bold rather than
+    // literal asterisks, so ROLE's own instruction must never demonstrate
+    // the thing it forbids — CLAUDE.md already records this exact trap for
+    // em dashes in this same paragraph, and it is worth a real assertion
+    // rather than a comment, since nothing type-checks a sentence.
+    expect(ROLE).toMatch(/plain text, not markdown/i);
+    expect(ROLE).toMatch(/asterisks/i);
+    expect(ROLE).not.toContain('**');
+  });
 });
 
 describe('the capability list in ROLE', () => {

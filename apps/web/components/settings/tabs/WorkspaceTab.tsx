@@ -3,6 +3,8 @@
 import { WorkspaceIdentitySection } from '../WorkspaceIdentitySection';
 import { WorkspaceLogoSection } from '../WorkspaceLogoSection';
 import { WorkspaceArtistSection } from '../WorkspaceArtistSection';
+import { BrandColorsSection } from '../BrandColorsSection';
+import { isBrandColorsEnabled } from '@/lib/social-share-colors';
 import { ReleasesSection } from '../ReleasesSection';
 import { PressKitsSection } from '../PressKitsSection';
 import { TeamBriefSection } from '../TeamBriefSection';
@@ -75,6 +77,19 @@ export function WorkspaceTab({ workspace }: WorkspaceTabProps) {
           onRename={workspace.renameArtist}
           onAdd={workspace.addArtist}
           onRemove={workspace.removeArtist}
+        />
+      )}
+
+      {/* Right under the artists the colors belong to. The share sheet links
+          straight here (BRAND_COLORS_SETTINGS_HREF). */}
+      {WORKSPACE_FEATURE_ENABLED && isBrandColorsEnabled() && (
+        <BrandColorsSection
+          artists={workspace.artists}
+          isLoading={workspace.isLoadingArtists}
+          savingId={workspace.savingBrandColorsId}
+          message={workspace.brandColorsMessage}
+          error={workspace.brandColorsError}
+          onSave={workspace.saveBrandColors}
         />
       )}
 

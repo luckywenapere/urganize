@@ -3,6 +3,7 @@ import { ImageResponse } from 'next/og';
 import { renderShareCard, type ShareCardProps } from './social-share-card';
 import { loadRecapFonts } from './recap-fonts';
 import { SHARE_FORMAT_DIMENSIONS, type ShareFormat } from './social-share';
+import { resolveSharePalette } from './social-share-colors';
 
 // Renders every poster layout to a real PNG through the same satori + fonts
 // path the route uses. Guards the two ways an image fails silently: a layout
@@ -65,6 +66,18 @@ describe('renderShareCard', () => {
         timing: { kind: 'soon' },
       });
       expect(readPngSize(png)).toEqual({ width, height });
+    }, 30_000);
+
+    it(`renders the ${format} poster in an artist's brand colors, with and without art`, async () => {
+      // A light ground, so the text flips to ink, and an accent too close to
+      // read, so it moves off the words: the two palette paths the default
+      // colors never take.
+      const palette = resolveSharePalette({ background: '#FFD700', accent: '#FFE55C' });
+      for (const coverArtDataUrl of [null, TINY_COVER]) {
+        const png = await renderPng(format, { palette, coverArtDataUrl });
+        expect(png.subarray(0, 8).equals(PNG_SIGNATURE)).toBe(true);
+        expect(readPngSize(png)).toEqual({ width, height });
+      }
     }, 30_000);
 
     it(`renders the ${format} poster with a very long title and emoji`, async () => {

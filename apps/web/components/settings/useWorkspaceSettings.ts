@@ -17,6 +17,7 @@ import {
   type UploadStep,
 } from '@/lib/upload-failure-report';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
+import { NO_BRAND_COLORS, sameBrandColors, type BrandColors } from '@/lib/social-share-colors';
 import { getAccessToken } from './getAccessToken';
 import type { WorkspaceLogo } from './WorkspaceLogoSection';
 import type { WorkspaceArtist } from './WorkspaceArtistSection';
@@ -92,6 +93,12 @@ export type WorkspaceSettingsState = {
   renameArtist: (artistId: string, name: string) => void;
   addArtist: (name: string) => void;
   removeArtist: (artistId: string) => void;
+  // Brand colors for the share images (2026-09-24)
+  /** The artist whose colors are being saved, so only that row shows it. */
+  savingBrandColorsId: string | null;
+  brandColorsMessage: string;
+  brandColorsError: string;
+  saveBrandColors: (artistId: string, colors: BrandColors) => void;
 };
 
 /**
@@ -115,6 +122,9 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
   const [artistMessage, setArtistMessage] = useState('');
   const [artistError, setArtistError] = useState('');
   const [artistPrimed, setArtistPrimed] = useState(false);
+  const [savingBrandColorsId, setSavingBrandColorsId] = useState<string | null>(null);
+  const [brandColorsMessage, setBrandColorsMessage] = useState('');
+  const [brandColorsError, setBrandColorsError] = useState('');
 
   // Workspace identity (name + logo) is sourced from the SAME global store
   // the always-mounted identity card reads (useWorkspaceIdentityStore) —
@@ -437,7 +447,12 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
         throw new Error(payload.error || 'Could not rename artist.');
       }
       const saved = payload.artist;
-      commitRoster((artists ?? []).map((entry) => (entry.id === artistId ? saved : entry)));
+      // Merged, not replaced: the rename answer carries the name and slug
+      // only, and replacing the row would drop the artist's brand colors
+      // until the next reload.
+      commitRoster(
+        (artists ?? []).map((entry) => (entry.id === artistId ? { ...entry, ...saved } : entry))
+      );
       // Renaming rewrites the artist name cached on every one of that artist's
       // releases, so say how many moved. It is the only visible sign that the
       // rename reached further than this page.
@@ -521,6 +536,66 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     }
   };
 
+  /**
+   * Save an artist's brand colors. Applied to the row straight away, so the
+   * preview does not flash back to the old colors while the request is out,
+   * and put back if the save fails, so the page never shows colors the server
+   * does not have.
+   */
+  const saveBrandColors = async (artistId: string, colors: BrandColors) => {
+    if (!userId) return;
+    const current = (artists ?? []).find((entry) => entry.id === artistId);
+    if (!current) return;
+
+    setBrandColorsError('');
+    setBrandColorsMessage('');
+    const previous = current.brandColors ?? NO_BRAND_COLORS;
+    if (sameBrandColors(previous, colors)) {
+      setBrandColorsMessage('No changes.');
+      return;
+    }
+
+    const withColors = (next: BrandColors) =>
+      (artists ?? []).map((entry) => (entry.id === artistId ? { ...entry, brandColors: next } : entry));
+
+    setSavingBrandColorsId(artistId);
+    commitRoster(withColors(colors));
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Session expired. Please sign in again.');
+      const response = await fetch(
+        `/api/workspace/artists/${encodeURIComponent(artistId)}/brand-colors`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(colors),
+        }
+      );
+      const payload = (await response.json().catch(() => ({}))) as {
+        artist?: { id: string; brandColors: BrandColors };
+        error?: string;
+      };
+      if (!response.ok || !payload.artist) {
+        throw new Error(payload.error || 'Could not save the colors. Try again.');
+      }
+      commitRoster(withColors(payload.artist.brandColors));
+      const reset = payload.artist.brandColors.background === null && payload.artist.brandColors.accent === null;
+      setBrandColorsMessage(
+        reset
+          ? `${current.name} is back to Urganize colors.`
+          : `Saved. ${current.name}’s share images use these colors now.`
+      );
+    } catch (err) {
+      commitRoster(withColors(previous));
+      setBrandColorsError(errorMessage(err, 'Could not save the colors. Try again.'));
+    } finally {
+      setSavingBrandColorsId(null);
+    }
+  };
+
   return {
     nameInput,
     setNameInput,
@@ -546,6 +621,10 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
     renameArtist: (artistId: string, name: string) => void renameArtist(artistId, name),
     addArtist: (name: string) => void addArtist(name),
     removeArtist: (artistId: string) => void removeArtist(artistId),
+    savingBrandColorsId,
+    brandColorsMessage,
+    brandColorsError,
+    saveBrandColors: (artistId: string, colors: BrandColors) => void saveBrandColors(artistId, colors),
   };
 }
 

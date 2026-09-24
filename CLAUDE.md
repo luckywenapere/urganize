@@ -15015,6 +15015,123 @@ debugger and confirm the new card, open `/for-labels` and confirm it lands on
 
 ---
 
+## UrgAns replies show markdown as formatting, not literal punctuation (2026-09-24, v1.42.1)
+
+Founder report, with a screenshot: a phase-breakdown reply rendered on screen
+as `- **Setup:** 26 tasks`, asterisks and all. `ChappiConversation.tsx` draws
+assistant text raw inside a `whitespace-pre-wrap` div, and `apps/web` has
+never had any markdown handling — the system prompt's own no-markdown rule
+(`lib/chappi/system-prompt.ts`, since v1.32.0) tells the model not to do
+this, and the model (`openai/gpt-4o-mini`) does not reliably follow it. A
+prompt-only fix had already been tried and had not held.
+
+**Founder decisions:** text in `**double asterisks**` shows as **bold**;
+every other markdown symbol is removed rather than rendered. Scope is the
+**chat only** — replies, the copy button, and the deterministic status-update
+branch that already renders through the same component. Text UrgAns saves
+elsewhere (notes, activities, the plan, press kit sections, emails) is
+explicitly OUT of scope and stays unsanitized.
+
+**`lib/model-markup.ts` (new, pure, no React/Node imports)** is a hand-rolled,
+deliberately conservative markdown-to-segments parser — no dependency added
+(boring-stack rule). `parseModelMarkup(text)` returns a flat
+`{text, bold}[]`; `stripModelMarkup(text)` is defined as the joined plain text
+of those segments, so the two cannot drift apart. A no-markup input returns
+untouched as one segment (not merely equal), which is what makes "no markup
+in, no markup out" a structural guarantee: every deterministic reply UrgAns
+already writes renders byte-identically to before.
+
+**Six things worth knowing before touching this again:**
+
+1. **`_` uses a STRICTER flanking rule than `*`, and this is a real bug this
+   pass found and fixed, not a stylistic choice.** Full CommonMark treats
+   punctuation (a quote, a period) as a valid emphasis boundary, which is
+   exactly what makes a CommonMark-faithful parser read `"__init__.wav"` as
+   emphasis around "init" — quote before the opener, period after the closer
+   both count. That silently eats the underscores off a dunder filename,
+   which this assistant is far more likely to write than to actually mean
+   "underline" (the house convention for emphasis is `**word**`). So `_`
+   only counts as a delimiter against actual whitespace or a true line
+   boundary, never against punctuation alone; `*`/`~~` keep the wider rule,
+   since they collide with no common identifier convention.
+2. **A censored word (`f**k`, `B**** …`) and a truncated bold marker
+   (`**Setup: 26 tasks`, cut off mid-reply) look identical as PLAIN TEXT
+   after the fact, so the two cannot be told apart by a regex over the final
+   string.** The distinction is made DURING pairing, from whether the run was
+   ever a genuine delimiter candidate (`canOpen`): a wholly-unmatched 2-3
+   length `*` run that WAS a candidate is dropped (the model got cut off
+   mid-bold); one that never was (flanked by letters on the wrong side) is
+   left exactly as typed.
+3. **Bold does not span a line break** (`**Setup\n26**` stays literal) — a
+   deliberate, pinned limitation. Inline markup is resolved one line at a
+   time, so one unclosed `**` can never swallow a whole multi-line reply.
+4. **The pairing algorithm supports a single closer run satisfying two
+   different openers** (`**Do this *today***` → one bold span, no stray
+   marker), the one piece of real complexity here: an opener only partially
+   consumed stays on the stack rather than being popped, so a later closer
+   can still use what's left of it.
+5. **History sent back to the model is cleaned, not just the render.**
+   `lib/chappi/runner.ts`'s new `toModelHistory()` strips markup off
+   ASSISTANT turns only (never the user's own words) before they go back as
+   conversation history — without this, UrgAns's own past `**` replies stay
+   in front of it as an example it keeps imitating, since the raw text
+   rendered on screen is also what gets resent every later turn.
+6. **The reveal (word-by-word fade-in) wraps per SEGMENT, not per word.**
+   `lib/chappi/reveal-tokens.ts`'s `buildRevealGroups` keeps one word counter
+   running across bold and plain segments alike (so timing doesn't care where
+   the bold boundary falls), and `components/chappi/ReplyText.tsx` wraps each
+   segment's words together in one bold span. Wrapping bold per WORD instead
+   would change the whitespace between words from un-bold to bold width the
+   instant the reveal finishes, which can re-wrap a line.
+
+`ReplyText.tsx` is its own component (not inlined into `ChappiConversation`)
+so a throwaway harness page could render it standalone for a browser check
+with no auth required — confirmed there, then deleted before this landed.
+The system prompt (`lib/chappi/system-prompt.ts:45`) keeps its plain-text
+rule but no longer quotes `**asterisks**` as the example of what it forbids
+(the same em-dash-in-a-rule-about-em-dashes trap this file already records
+elsewhere), and states a reason that stays true now that the renderer
+handles bold: markdown handed to a TOOL (a note, an activity, a press kit
+section) is still saved and shown exactly as written.
+
+**Verified:** the full vitest suite (3294 passing; the one failing file,
+`vercel-ignore-build.test.ts`, is a pre-existing, unrelated PowerShell/WSL
+bash-availability quirk in this sandbox, not something this change touched —
+confirmed via `git status` showing the file untouched), `eslint .` at the
+exact 3-error/78-warning baseline (all three pre-existing in
+`WorkspaceView.tsx`) with zero new findings in any touched file, `tsc
+--noEmit` clean apart from the 8 documented pre-existing
+`confirmed-action.test.ts` errors, and `next build` green **by exit code**
+with `/auth`, `/onboarding`, `/settings` and `/dashboard` all still
+`○ Static`. **Three mutation passes, each failing exactly its own tests**:
+letting `*` open after a letter (2 tests), dropping the `canOpen` guard so
+any unmatched `**` gets deleted regardless of context (3 tests), and
+skipping the strip in `toModelHistory` (both of its tests). **Rendered and
+inspected in a real browser** (the built-in preview pane): the screenshot
+reply's phase labels compute to `font-weight: 600` with zero stray
+asterisks; a censored word and a dunder filename both survive with their
+punctuation intact; an unclosed `**` at a simulated cutoff drops cleanly; the
+word-by-word reveal's delays increment continuously across bold and plain
+segments with no visual jump.
+
+**Not verified:** no live model call — this sandbox has no route to either
+urganize domain, so whether `openai/gpt-4o-mini` still occasionally reaches
+for other markdown this parser doesn't yet have a rule for (nested lists, a
+markdown table with more exotic alignment syntax) rests on the parser's
+conservative "when in doubt, leave it as plain text" design rather than on
+having observed a live reply. Worth one look after deploy: ask UrgAns a
+phase-breakdown question on a real rollout and confirm the labels render bold
+with a working copy button.
+
+**Noticed but explicitly out of scope, flagged rather than fixed:** the press
+kit "Draft this section" action passes the model's raw string straight to
+`parseDraftOutput`, whose signature expects an already-parsed object — every
+run of that action ends in a 502. It is dark today behind
+`NEXT_PUBLIC_FEATURE_URGANS_ACTIONS`, unrelated to this fix's scope, and is
+being flagged as a separate follow-up task rather than folded in here.
+
+---
+
 ## Share to socials (2026-09-23; switched on 2026-09-24 as v1.42.0)
 
 Founder request: when somebody creates a rollout for the first time, let them
@@ -15217,3 +15334,75 @@ as the route serving one.
    caption pastes; tap "Post to status" and confirm WhatsApp offers My status;
    send the message on WhatsApp; then open the Share button on a second rollout
    and confirm the answers came back.
+
+### X and Snapchat, and per-artist brand colors (2026-09-24, v1.43.0)
+
+Founder ask, on top of the shipped sheet: add X and Snapchat, and let each
+artist set their own colors for the images. Two additions, treated
+differently, because one rides the flag above and the other is genuinely new:
+
+- **X and Snapchat are two more tabs in the SAME sheet, and they ship live at
+  merge with no flag of their own.** `NEXT_PUBLIC_FEATURE_SOCIAL_SHARE` was
+  already `true` in production, and these tabs are inside the component that
+  flag already gates — the same "an addition rides an already-on flag" shape
+  as UrgAns's own tool registry growing. There was nothing to flip.
+- **X posts the same 4:5 image as Instagram**, with its own post text (a 280
+  character counter, X's own weighting: a link always counts 23 regardless of
+  length) and an "Open X with this post" link (`x.com/intent/post`, no account
+  or approval needed on our side, the WhatsApp button's precedent). Instagram's
+  caption still says "link in bio"; X's carries the raw link, because X makes
+  one tappable.
+- **Snapchat posts the same 9:16 image as the status**, with a plain sentence
+  and no link in the text — Snapchat takes no text or link from another app,
+  so the link is copied separately for its own link sticker (the paperclip),
+  and the sheet says so.
+- **Brand colors are genuinely new and stay behind their own flag**,
+  `NEXT_PUBLIC_FEATURE_BRAND_COLORS`, default `false`. Two optional colors per
+  ARTIST (a background and an accent), set in Settings under their name, used
+  only on these images. **The text color is never chosen** — `resolveSharePalette`
+  in `lib/social-share-colors.ts` picks cream or ink, whichever reads better
+  (WCAG contrast), so no pair of colors a manager picks can make the words
+  unreadable. **An accent too close to its background is taken OFF the words**
+  (the eyebrow, the artist line, the date) and kept only on the rule and the
+  small square beside the extra line, where it cannot hide anything — so a bad
+  pair makes an image plain, never broken. One palette function, three
+  consumers (the poster renderer, the image route, the Settings preview), so
+  what a manager sees in Settings is what gets posted.
+- **Migration:** `20260924120000_artists_brand_colors.sql` — two nullable,
+  CHECK-constrained columns on `artists` (`brand_background`, `brand_accent`,
+  `'#RRGGBB'` uppercase). **Applied to production 2026-09-24.** Additive and
+  safe either order: every read falls back to Urganize's own colors on any
+  failure, including before the migration ran.
+- **`PUT /api/workspace/artists/[artistId]/brand-colors`** saves both slots at
+  once (null in a slot means "use Urganize's"); `GET /api/workspace/artists`
+  carries a `brandColors` field per artist only while the flag is on. Both
+  gated the same way the artist rename route already is: found on the caller's
+  OWN roster, so an artist on another team is indistinguishable from one that
+  does not exist.
+- **The sheet links straight to the editor** once it knows a poster's colors
+  (`BRAND_COLORS_SETTINGS_HREF`, `/settings?tab=workspace#brand-colors`),
+  saying "These use Dorian's brand colors. Change them." or "Want your own
+  colors on these? Set brand colors." — never before the image route has
+  answered, since the honest sentence needs to know which is true first.
+
+**Verified:** the full vitest suite (3454 passing), `tsc --noEmit` and
+`eslint .` at the same baselines this section already records, `next build`
+green with the new flag both off and on. Runtime probes against `next start`
+in both states: the new brand-colors route answers 404 with the flag off and
+401 (unauthenticated) with it on, the same discrimination the image route
+above already relies on. Driven in a throwaway preview (deleted after): all
+five tabs render, an artist's saved colors reach the Settings preview and the
+actual rendered poster identically, X's counter and post-link button work,
+Snapchat's link-copy flow works, and "Change them" correctly routes into
+Settings.
+
+**Activation:**
+1. X and Snapchat needed no flip — live the moment this merged, since the
+   parent flag was already on.
+2. Migration applied 2026-09-24.
+3. `NEXT_PUBLIC_FEATURE_BRAND_COLORS=true` set on the `urganize` project's
+   Production environment via the Vercel CLI, non-sensitive, the same pattern
+   as every flag above it. The version-bump commit that carries this note is
+   the rebuild that inlines it.
+4. **OPEN:** the same manual pass as the section above, plus one artist's
+   brand colors actually reaching a real posted image on a real phone.

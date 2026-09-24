@@ -4,12 +4,19 @@ import {
   MAX_FAN_LINK_CHARS,
   MAX_SHARE_LINE_CHARS,
   SHARE_FORMAT_DIMENSIONS,
+  SHARE_CHANNEL_FORMAT,
   SHARE_OUTWARD_STATIC_STRINGS,
+  X_LINK_WEIGHT,
+  X_MAX_POST_WEIGHT,
   buildDmMessage,
   buildInstagramCaption,
   buildShareCardSearch,
   buildShareHeadline,
+  buildSnapchatCaption,
   buildStatusCaption,
+  buildXIntentUrl,
+  buildXPost,
+  xPostWeight,
   defaultShareVoice,
   describeShareTiming,
   isEmbeddableCoverArt,
@@ -292,6 +299,94 @@ describe('buildDmMessage', () => {
   });
 });
 
+describe('xPostWeight', () => {
+  it('counts plain words one character each', () => {
+    expect(xPostWeight('Out now.')).toBe(8);
+  });
+
+  it('counts every link as 23, however long it is', () => {
+    expect(xPostWeight('https://hyperfollow.com/dorian/lagos-nights-and-a-very-long-slug')).toBe(X_LINK_WEIGHT);
+    expect(xPostWeight('Listen here: https://a.co')).toBe('Listen here: '.length + X_LINK_WEIGHT);
+  });
+
+  it('counts the typographic quotes and apostrophes we write as one each', () => {
+    expect(xPostWeight('Dorian’s “Lagos”')).toBe(16);
+  });
+
+  it('counts emoji and wide script as two each, the way X does', () => {
+    expect(xPostWeight('🌙')).toBe(2);
+    expect(xPostWeight('夜')).toBe(2);
+  });
+});
+
+describe('buildXPost', () => {
+  it('is the sentence alone when there is nothing else to say', () => {
+    expect(buildXPost(facts(), answers(), TODAY)).toBe('My new single “Lagos Nights” is out October 3.');
+  });
+
+  it('carries the link, because X opens links in a post', () => {
+    const post = buildXPost(facts(), answers({ fanLink: 'https://hyperfollow.com/x' }), TODAY);
+    expect(post).toBe(
+      'My new single “Lagos Nights” is out October 3.\nPre-save it here: https://hyperfollow.com/x'
+    );
+  });
+
+  it('asks people to listen once it is out', () => {
+    const post = buildXPost(
+      facts({ releaseDate: '2026-09-01' }),
+      answers({ fanLink: 'https://hyperfollow.com/x' }),
+      TODAY
+    );
+    expect(post).toMatch(/is out now\.\nListen here: https:\/\/hyperfollow\.com\/x$/);
+  });
+
+  it('keeps the extra line when it fits', () => {
+    const post = buildXPost(facts(), answers({ extraLine: 'Featuring Tems' }), TODAY);
+    expect(post).toBe('My new single “Lagos Nights” is out October 3.\nFeaturing Tems.');
+  });
+
+  it('drops the extra line rather than run past 280, and never drops the link', () => {
+    const long = facts({ title: 'L'.repeat(150) });
+    const a = answers({ extraLine: 'x'.repeat(80), fanLink: 'https://hyperfollow.com/x' });
+    const post = buildXPost(long, a, TODAY);
+    expect(xPostWeight(post)).toBeLessThanOrEqual(X_MAX_POST_WEIGHT);
+    expect(post).not.toContain('x'.repeat(80));
+    expect(post).toContain('https://hyperfollow.com/x');
+  });
+
+  it('stays inside 280 across the ordinary cases, extra line and link included', () => {
+    for (const releaseType of ['single', 'ep', 'album'] as const) {
+      for (const voice of ['artist', 'team'] as const) {
+        const post = buildXPost(
+          facts({ releaseType, title: 'A Title Somebody Might Really Pick' }),
+          answers({ voice, extraLine: 'y'.repeat(80), fanLink: `https://example.com/${'z'.repeat(400)}` }),
+          TODAY
+        );
+        expect(xPostWeight(post)).toBeLessThanOrEqual(X_MAX_POST_WEIGHT);
+      }
+    }
+  });
+});
+
+describe('buildXIntentUrl', () => {
+  it('opens X with the post already written, spaces and line breaks included', () => {
+    const url = buildXIntentUrl('Out now.\nListen here: https://a.co/x?y=1&z=2');
+    expect(url.startsWith('https://x.com/intent/post?text=')).toBe(true);
+    expect(decodeURIComponent(url.split('text=')[1])).toBe('Out now.\nListen here: https://a.co/x?y=1&z=2');
+  });
+});
+
+describe('buildSnapchatCaption', () => {
+  it('is the sentence alone: the link goes on with the link sticker, the extra line is on the image', () => {
+    const caption = buildSnapchatCaption(
+      facts(),
+      answers({ fanLink: 'https://hyperfollow.com/x', extraLine: 'Featuring Tems' }),
+      TODAY
+    );
+    expect(caption).toBe('My new single “Lagos Nights” is out October 3.');
+  });
+});
+
 describe('outward copy rules', () => {
   // Captions, messages and images are read by FANS, not by the manager. They
   // must never carry our in-app word for the object, our old word for the team,
@@ -311,6 +406,8 @@ describe('outward copy rules', () => {
                 outputs.push(
                   buildInstagramCaption(f, a, TODAY),
                   buildStatusCaption(f, a, TODAY),
+                  buildXPost(f, a, TODAY),
+                  buildSnapchatCaption(f, a, TODAY),
                   buildDmMessage(f, a, TODAY)
                 );
               }
@@ -342,7 +439,13 @@ describe('outward copy rules', () => {
   });
 
   it('never leaks a secret date anywhere', () => {
-    for (const build of [buildInstagramCaption, buildStatusCaption, buildDmMessage]) {
+    for (const build of [
+      buildInstagramCaption,
+      buildStatusCaption,
+      buildXPost,
+      buildSnapchatCaption,
+      buildDmMessage,
+    ]) {
       expect(build(facts(), answers({ dateMode: 'secret' }), TODAY)).not.toMatch(/Oct/);
     }
     expect(shareTimingEyebrow(describeShareTiming('2026-10-03', 'secret', TODAY))).toBe('COMING SOON');
@@ -417,6 +520,17 @@ describe('shareImageFileName', () => {
   it('names the file after the title and where it is going', () => {
     expect(shareImageFileName('Lagos Nights', 'post')).toBe('lagos-nights-instagram-post.png');
     expect(shareImageFileName('Lagos Nights', 'status')).toBe('lagos-nights-whatsapp-status.png');
+    expect(shareImageFileName('Lagos Nights', 'post', 'x')).toBe('lagos-nights-x-post.png');
+    expect(shareImageFileName('Lagos Nights', 'status', 'snapchat')).toBe('lagos-nights-snapchat-story.png');
+  });
+
+  it('sends X the post and Snapchat the full-screen status', () => {
+    expect(SHARE_CHANNEL_FORMAT).toEqual({
+      instagram: 'post',
+      whatsapp: 'status',
+      x: 'post',
+      snapchat: 'status',
+    });
   });
 
   it('never produces a file that reads as broken', () => {
