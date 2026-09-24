@@ -14,6 +14,9 @@ import { resetSceneMemory } from '@/lib/scene-memory';
 import { resetCatalogIntent } from '@/lib/catalog-intent';
 import { resetPressKitsStore } from '@/stores/usePressKitsStore';
 import { clearKitDetailCache } from '@/lib/press-kit-detail-cache';
+import { useChappiStore } from '@/stores/useChappiStore';
+import { resetChappiHistory } from '@/stores/useChappiHistoryStore';
+import { clearPendingFirstShare } from '@/lib/social-share-offer';
 import {
   classifyAuthFailure,
   isProfileReadTransientError,
@@ -1089,6 +1092,26 @@ if (typeof window !== 'undefined') {
       // held in memory, which would otherwise survive a same-tab account
       // switch exactly as the roster would.
       clearKitDetailCache();
+      // The UrgAns conversation is the same exposure in its sharpest form: a
+      // whole transcript of account A's questions and answers, kept in a
+      // module-level store that a client-side navigation to /auth never
+      // tears down. Before this, signing in as account B in the same tab
+      // showed account A's chat. Resetting also bumps the store's epoch, so a
+      // reply still in flight for account A is dropped when it lands.
+      //
+      // Chat history goes FIRST, and the order matters: the history store
+      // subscribes to the transcript, and would read the reset below as
+      // "leaving a chat" and save it again under the account that is signing
+      // out. It also wipes the browser copy of account A's chats. Deliberately
+      // unconditional (not behind the history flag): a copy left behind by a
+      // session when the flag was on must still go.
+      resetChappiHistory();
+      useChappiStore.getState().resetForSignOut();
+      // A first-rollout share offer still waiting (share to socials) names
+      // account A's rollout but not account A. Left behind, it would open for
+      // account B on the next load, on a rollout B cannot see, and spend B's
+      // once-only offer on an error.
+      clearPendingFirstShare();
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,

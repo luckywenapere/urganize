@@ -14,14 +14,18 @@ import type {
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { checkUrgansAllowance, recordUrgansAction } from '@/lib/urgans-usage-server';
 import { recordLimitHit } from '@/lib/seats-server';
+import { CHAPPI_HISTORY_LIMIT } from '@/lib/chappi/conversation-history';
 
 // Same budget rationale as the plan routes: the agent's tool rounds +
 // model latency must fit inside Vercel's function ceiling, so the loop is
 // capped (MAX_ROUNDS in runner.ts) to land a handled response before 60s.
 export const maxDuration = 60;
 
-// Cap how much conversation the client can push, to bound token cost.
-const MAX_MESSAGES = 20;
+// Cap how much conversation reaches the model, to bound token cost. Shared
+// with the client (conversation-history.ts), which trims to the same number
+// before sending: a saved chat can run to hundreds of messages, and the model
+// never reads past the last twenty either way.
+const MAX_MESSAGES = CHAPPI_HISTORY_LIMIT;
 
 // Feature flag — when off, POST 404s so a direct API call can't invoke the
 // model either (mirrors the plan routes / generate-status).

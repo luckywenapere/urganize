@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
-import { useChappiStore } from '@/stores/useChappiStore';
+import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
 import { isChappiEnabled } from '@/lib/chappi/config';
 import { supabase } from '@/lib/supabase/client';
 
@@ -81,7 +81,9 @@ export function UrgansUsageStrip() {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
-  const turnCount = useChappiStore((state) => state.messages.length);
+  // Turns added this session. Opening a saved chat spends no action, so it
+  // must not count as one (identical to messages.length with history off).
+  const turnCount = useChappiStore(selectLiveTurnCount);
 
   const userId = user?.id ?? null;
 
