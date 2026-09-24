@@ -18,7 +18,9 @@ import { DEFAULT_RELEASE_TITLE, isDbReleaseType, type DbReleaseType } from '@/ty
 import { writeTemplatePending } from '@/lib/release-template-pending';
 import { writePlannerPending } from '@/lib/release-planner-pending';
 import { isReleasePlannerEnabled } from '@/lib/release-planning';
-import { isTestReleaseEnabled, writeTestRelease } from '@/lib/test-release';
+import { isTestReleaseEnabled, readTestRelease, writeTestRelease } from '@/lib/test-release';
+import { isSocialShareEnabled } from '@/lib/social-share';
+import { FIRST_RELEASE_TEST_SCAN, decideFirstRelease } from '@/lib/social-share-offer';
 import { enqueueReleaseReminders } from '@/lib/release-reminders-server';
 
 type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
@@ -385,6 +387,33 @@ export async function POST(request: NextRequest) {
 
     if (coverArtUrl && !isValidHttpUrl(coverArtUrl)) {
       return NextResponse.json({ error: 'Cover art URL is invalid.' }, { status: 400 });
+    }
+
+    // Share to socials (2026-09-23): was this the person's first REAL rollout?
+    // The share sheet opens by itself once, right after it. Decided here, from
+    // what they owned BEFORE this insert, because the client's copy of the
+    // catalog may not have loaded. Test rollouts never count either way, which
+    // needs their metadata, so the extra read only happens for somebody with a
+    // handful of earlier rollouts, and only with the feature on. A failed read
+    // answers "not the first": silence, with the Share button still there.
+    let firstRelease = false;
+    if (isSocialShareEnabled() && !isTest) {
+      const priorCount = existingReleaseCountResult.count ?? 0;
+      let priorTestFlags: boolean[] | null = [];
+      if (priorCount > 0 && priorCount <= FIRST_RELEASE_TEST_SCAN) {
+        const { data: priorRows, error: priorError } = await adminClient
+          .from('releases')
+          .select('metadata')
+          .eq('owner_user_id', auth.user.id)
+          .limit(FIRST_RELEASE_TEST_SCAN);
+        priorTestFlags =
+          priorError || !Array.isArray(priorRows)
+            ? null
+            : priorRows.map((row) =>
+                readTestRelease((row as { metadata?: Record<string, unknown> | null }).metadata)
+              );
+      }
+      firstRelease = decideFirstRelease({ isTest, priorCount, priorTestFlags });
     }
 
     let artistIdToUse = artistId;
@@ -778,6 +807,9 @@ export async function POST(request: NextRequest) {
       // use it to route the manager into the planner instead of showing a
       // "your release is set up" guide that would not be true yet.
       plannerPending,
+      // The person's first real rollout: the create flows open the share
+      // sheet once off the back of it. Always false with the feature off.
+      firstRelease,
       release: {
         id: releaseId,
         title: String(releaseResult.data.title || title),

@@ -18,6 +18,7 @@ import { useToast } from '@/components/shared/ToastProvider';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
+import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 
 // Same flag AppTopbar reads for the nav icon — if a direct link is followed
 // while the flag is off, bounce to the workspace instead of 404ing (the
@@ -178,16 +179,24 @@ export default function ChappiPageClient() {
           // TYPE-FIRST CREATE (2026-09-01): straight into the release — same
           // branch, same rationale as WorkspaceView's onCreated.
           if (TYPE_FIRST_CREATE_ENABLED) {
-            router.push(`/dashboard?release=${releaseId}`);
-            if (plannerPending) {
-              usePlannerStore.getState().openIntake({
-                source: 'empty_state',
-                releaseId,
-                ...(result?.releaseType
-                  ? { prefill: { releaseType: result.releaseType } }
-                  : {}),
-              });
-            }
+            // The first-rollout share sheet (2026-09-23) goes first here too.
+            withFirstShareOffer({
+              releaseId,
+              firstRelease: result?.firstRelease,
+              snapshot: result?.share,
+              then: () => {
+                router.push(`/dashboard?release=${releaseId}`);
+                if (plannerPending) {
+                  usePlannerStore.getState().openIntake({
+                    source: 'empty_state',
+                    releaseId,
+                    ...(result?.releaseType
+                      ? { prefill: { releaseType: result.releaseType } }
+                      : {}),
+                  });
+                }
+              },
+            })();
             return;
           }
           // Deferred continuation, mirroring WorkspaceView's onCreated: the
@@ -227,11 +236,20 @@ export default function ChappiPageClient() {
           // Creating a release from the assistant is still creating a release,
           // so it gets the same compulsory step. Skipping it here would make
           // the step's presence depend on which button you happened to use.
+          // Share to socials (2026-09-23): the first rollout's once-only share
+          // sheet slots in after the team-login step and before the rest,
+          // mirroring WorkspaceView's onCreated. See withFirstShareOffer.
+          const continueAfterAccess = withFirstShareOffer({
+            releaseId,
+            firstRelease: result?.firstRelease,
+            snapshot: result?.share,
+            then: resume,
+          });
           if (TEAM_LOGINS_ENABLED) {
-            setAccessStep({ releaseId, title: result?.title ?? null, resume });
+            setAccessStep({ releaseId, title: result?.title ?? null, resume: continueAfterAccess });
             return;
           }
-          resume();
+          continueAfterAccess();
         }}
       />
 

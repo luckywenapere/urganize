@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
-import { join } from 'path';
+import { basename, join } from 'path';
 import { describe, expect, it } from 'vitest';
 import { userFacingStrings } from './copy-scan';
 import { BANNED_COPY_CHARS, BANNED_COPY_WORDS, bannedCopyInstruction } from './press-kits';
@@ -57,6 +57,18 @@ const FILES = [
   // readability caps on top; this one supplies the em dash, the banned words
   // and the "never says workspace" rule so there is one definition of each.
   join(WEB, 'lib', 'help-copy.ts'),
+  // Share to socials (2026-09-23): the same argument as the pullouts. A new
+  // surface, so it is born under the house rules, and it is the one surface
+  // in the product whose copy is PUBLISHED by the user as their own words on
+  // Instagram and WhatsApp. The outward-copy tests in social-share.test.ts add
+  // the rules that only apply there (no "rollout", no Urganize in a caption,
+  // no date leaking out of a secret one); this supplies the em dash and the
+  // banned words, so there is one definition of each.
+  ...walk(join(WEB, 'components', 'share')),
+  // basename rather than a path pattern: walk() joins with the platform's
+  // separator, so a pattern written for "/" alone matches nothing on Windows.
+  ...walk(join(WEB, 'lib')).filter((path) => basename(path).startsWith('social-share')),
+  ...walk(join(WEB, 'app', 'api', 'releases', '[releaseId]', 'share-card')),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 // `userFacingStrings` moved to lib/copy-scan.ts on 2026-09-09, when the

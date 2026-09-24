@@ -33,6 +33,8 @@ import { flushOfflineQueue } from '@/lib/offline/sync';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
 import { CURATOR_HOME_PATH } from '@/lib/home-path';
+import { isSocialShareEnabled } from '@/lib/social-share';
+import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 
 // The prefetch list moved to lib/prefetch-routes.ts (2026-08-31) so it can be
 // flag- and account-aware and unit-tested. It used to be three hardcoded
@@ -110,6 +112,14 @@ const InstallAppPrompt = dynamic(
   () => import('@/components/app/InstallAppPrompt').then((m) => m.InstallAppPrompt),
   { ssr: false }
 );
+// Share to socials (2026-09-23). Mounted once for the whole app for the
+// planner intake's reason: it opens from the three create flows, the rollout's
+// Share button and UrgAns, which live in different ownership islands. Lazy and
+// flag-gated, so with the flag off its chunk is never requested.
+const ShareSheet = dynamic(
+  () => import('@/components/share/ShareSheet').then((m) => m.ShareSheet),
+  { ssr: false }
+);
 // NOTE: the release scenes (Metadata / Calendar / Files / Press kit) are NOT
 // mounted here. They were briefly overlay windows mounted app-wide from this
 // file (2026-08-04), but the founder corrected that to an inline panel that
@@ -177,6 +187,7 @@ const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 // three platforms need three different mechanisms.
 const INSTALL_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_INSTALL_PROMPT === 'true';
 const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
+const SOCIAL_SHARE_ENABLED = isSocialShareEnabled();
 
 // Once-per-session arming for the side rail: landing on the assistant page
 // (the post-auth front door when the flag is on — see lib/home-path.ts)
@@ -628,32 +639,50 @@ export function AppShell({ children }: { children: ReactNode }) {
           // loadCommandCenter refreshes quietly when data already exists.
           closeCreateRelease();
           void useReleaseStore.getState().loadCommandCenter();
-          // One exception to "stay put": a rollout-plan creation continues
-          // straight into the planner intake (mounted right below), the same
-          // settled call the workspace's create flow makes — planning is the
-          // whole point of having chosen a rollout plan. No navigation here:
-          // dismissing the intake leaves the user where they were, and
-          // submitting it navigates to the plan scene itself. The type picked
-          // in the modal rides along so the intake doesn't ask it again.
-          if (PLANNER_ENABLED && result?.plannerPending) {
-            usePlannerStore.getState().openIntake({
-              source: 'empty_state',
-              releaseId,
-              ...(result.releaseType
-                ? { prefill: { releaseType: result.releaseType } }
-                : {}),
-            });
-          } else if (TYPE_FIRST_CREATE_ENABLED) {
-            // TYPE-FIRST CREATE (2026-09-01): the type tap was the whole
-            // form, so the release view — where name and date get prompted —
-            // is the destination, wherever the modal was opened from. Flag
-            // off, the stay-put behavior above is unchanged.
-            router.push(`/dashboard?release=${releaseId}`);
-          }
+          // Share to socials (2026-09-23): a first rollout gets the share
+          // sheet before anything below, and the rest runs when it closes.
+          // Every other create is the continuation, untouched. See
+          // withFirstShareOffer.
+          withFirstShareOffer({
+            releaseId,
+            firstRelease: result?.firstRelease,
+            snapshot: result?.share,
+            then: () => {
+              // One exception to "stay put": a rollout-plan creation continues
+              // straight into the planner intake (mounted right below), the
+              // same settled call the workspace's create flow makes — planning
+              // is the whole point of having chosen a rollout plan. No
+              // navigation here: dismissing the intake leaves the user where
+              // they were, and submitting it navigates to the plan scene
+              // itself. The type picked in the modal rides along so the intake
+              // doesn't ask it again.
+              if (PLANNER_ENABLED && result?.plannerPending) {
+                usePlannerStore.getState().openIntake({
+                  source: 'empty_state',
+                  releaseId,
+                  ...(result.releaseType
+                    ? { prefill: { releaseType: result.releaseType } }
+                    : {}),
+                });
+              } else if (TYPE_FIRST_CREATE_ENABLED) {
+                // TYPE-FIRST CREATE (2026-09-01): the type tap was the whole
+                // form, so the release view — where name and date get
+                // prompted — is the destination, wherever the modal was opened
+                // from. Flag off, the stay-put behavior above is unchanged.
+                router.push(`/dashboard?release=${releaseId}`);
+              }
+            },
+          })();
         }}
       />
       {PLANNER_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <PlannerIntakeModal />
+      ) : null}
+      {/* Share to socials. Same gate as the intake above: a rollout to share
+          only exists for a signed-in team, on a page with app chrome, and
+          showWorkspaceChrome already excludes a curator-only account. */}
+      {SOCIAL_SHARE_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <ShareSheet />
       ) : null}
       {/* "What's new" (founder request, 2026-07-23): announces changelog
           entries this device hasn't seen yet, once per release, on signed-in

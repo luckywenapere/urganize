@@ -43,6 +43,9 @@ const TEAM_ACCESS_GROUPS = [
   'cover-art',
   'capture',
   'recap',
+  // Share to socials (2026-09-23). A read, so any member of the team (and a
+  // read-only guest) can make the posters for a rollout they can see.
+  'share-card',
   'generate-status',
   'content-calendars',
   'content-posts',
