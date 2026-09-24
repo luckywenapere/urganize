@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.42.1",
+    date: "September 24, 2026",
+    highlights: [
+      "UrgAns replies read cleanly now. Bold words show up bold, not wrapped in stars, and copying a reply gives you clean text.",
+    ],
+  },
+  {
     version: "1.42.0",
     date: "September 24, 2026",
     highlights: [
