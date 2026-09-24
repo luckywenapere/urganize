@@ -7,6 +7,7 @@ import {
   buildDraftMessages,
   decideDraftApply,
   isDraftableSection,
+  parseDraftAiResponse,
   parseDraftOutput,
 } from './press-kit-draft';
 import type { PressKitSection } from '@/types/press-kits';
@@ -108,6 +109,54 @@ describe('parseDraftOutput', () => {
   it('caps a runaway answer rather than storing it whole', () => {
     const parsed = parseDraftOutput('bios', { long: 'x'.repeat(20000) });
     expect((parsed.long as string).length).toBeLessThanOrEqual(4000);
+  });
+});
+
+// generateStructuredAiOutput (lib/ai/provider.ts) always calls its `parse`
+// callback with the model's raw STRING response, never a parsed object — so
+// this is what press-kit-draft-section.ts's `parse:` callback actually gets
+// handed, and it is the case the parseDraftOutput tests above never covered
+// (they only ever pass already-parsed objects in, plus one case proving
+// parseDraftOutput itself rejects a bare string). A real JSON string has to
+// round-trip through parseDraftAiResponse the same way it round-trips
+// through the real caller.
+describe('parseDraftAiResponse', () => {
+  it('round-trips a real JSON string the way generateStructuredAiOutput actually calls it', () => {
+    const parsed = parseDraftAiResponse(
+      'bios',
+      JSON.stringify({ short: 'a', medium: 'b', long: 'c' })
+    );
+    expect(parsed).toEqual({ short: 'a', medium: 'b', long: 'c' });
+  });
+
+  it('still drops a field it did not ask for, once parsed', () => {
+    const parsed = parseDraftAiResponse(
+      'header',
+      JSON.stringify({ descriptor: 'Afrobeats singer', homeCity: 'Lagos' })
+    );
+    expect(parsed).toEqual({ descriptor: 'Afrobeats singer' });
+  });
+
+  it('returns null, rather than throwing, when the string is not JSON at all', () => {
+    // null is generateStructuredAiOutput's own signal for "invalid format" —
+    // see GenerateStructuredAiOutputOptions['parse'] in lib/ai/provider.ts.
+    expect(parseDraftAiResponse('bios', 'sorry, here is your bio!')).toBeNull();
+    expect(parseDraftAiResponse('bios', '')).toBeNull();
+  });
+
+  it('still throws when the JSON parses but has nothing usable in it, same as parseDraftOutput', () => {
+    expect(() => parseDraftAiResponse('bios', JSON.stringify({ short: '   ' }))).toThrow();
+    expect(() => parseDraftAiResponse('bios', JSON.stringify({}))).toThrow();
+  });
+
+  it('still throws for a section UrgAns was never offered to draft', () => {
+    expect(() => parseDraftAiResponse('numbers', JSON.stringify({ stats: [] }))).toThrow();
+  });
+
+  it('still throws when the JSON parses to an array or a scalar rather than an object', () => {
+    expect(() => parseDraftAiResponse('bios', JSON.stringify(['a', 'b']))).toThrow();
+    expect(() => parseDraftAiResponse('bios', JSON.stringify('a bio'))).toThrow();
+    expect(() => parseDraftAiResponse('bios', JSON.stringify(null))).toThrow();
   });
 });
 
