@@ -1,13 +1,18 @@
 import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
 
 /**
- * Share to socials: the words and the rules behind the three things a manager
- * or an artist can send out about a rollout (founder request, 2026-09-23).
+ * Share to socials: the words and the rules behind the things a manager or an
+ * artist can send out about a rollout (founder request, 2026-09-23; X and
+ * Snapchat added 2026-09-24).
  *
  *   1. An Instagram post: a 4:5 image plus a caption.
  *   2. A WhatsApp status: a 9:16 image plus a short caption. The same image
  *      works as an Instagram story.
- *   3. A message they can DM to anybody, with their own fan link in it.
+ *   3. An X post: the same 4:5 image plus a post that fits in 280 characters
+ *      and carries the link, because X makes links tappable.
+ *   4. A Snapchat story: the same 9:16 image plus a line for the snap. The
+ *      link goes on with Snapchat's own link sticker, not in the text.
+ *   5. A message they can DM to anybody, with their own fan link in it.
  *
  * Pure and dependency free on purpose. The share sheet builds the captions in
  * the browser and the share-card route draws the images on the server, and
@@ -354,6 +359,95 @@ export function buildDmMessage(
   return `${opening}\n${isOut(timing) ? DM_LINK_AFTER : DM_LINK_BEFORE}: ${answers.fanLink}`;
 }
 
+// ── X ───────────────────────────────────────────────────────────────────────
+
+/** A post longer than this is refused by X for an ordinary account. */
+export const X_MAX_POST_WEIGHT = 280;
+
+/** X shortens every link to a fixed 23 characters, however long it really is. */
+export const X_LINK_WEIGHT = 23;
+
+const X_LINK_PATTERN = /https?:\/\/\S+/gi;
+
+// The code points X counts as ONE character. Everything outside these ranges
+// (Chinese, Japanese and Korean script, emoji) counts as two. The same ranges
+// X's own counting library uses.
+const X_LIGHT_RANGES: Array<[number, number]> = [
+  [0x0000, 0x10ff],
+  [0x2000, 0x200d],
+  [0x2010, 0x201f],
+  [0x2032, 0x2037],
+];
+
+const isLightCodePoint = (codePoint: number): boolean =>
+  X_LIGHT_RANGES.some(([start, end]) => codePoint >= start && codePoint <= end);
+
+// Joiners and selectors inside a compound emoji add nothing a reader sees.
+const EMOJI_GLUE = new Set([0x200d, 0xfe0e, 0xfe0f]);
+
+/**
+ * How long X thinks a post is. Links count 23 each, and a character outside
+ * X's light ranges counts two. It counts a compound emoji (a family, a flag) a
+ * little high, which only ever errs toward a post that fits.
+ */
+export function xPostWeight(text: string): number {
+  let weight = 0;
+  const withoutLinks = String(text ?? '').replace(X_LINK_PATTERN, () => {
+    weight += X_LINK_WEIGHT;
+    return '';
+  });
+  for (const character of withoutLinks) {
+    const codePoint = character.codePointAt(0) ?? 0;
+    if (EMOJI_GLUE.has(codePoint)) continue;
+    weight += isLightCodePoint(codePoint) ? 1 : 2;
+  }
+  return weight;
+}
+
+/**
+ * The X post. Unlike Instagram, X opens a link in a post, so the link goes in,
+ * on its own line with the same words the DM uses. When the whole thing would
+ * run past 280 characters the extra line is the part that goes: it is the one
+ * line the post can lose and still say everything, and the person can put it
+ * back by editing.
+ */
+export function buildXPost(facts: ShareReleaseFacts, answers: ShareAnswers, todayYmd: string): string {
+  const { sentence, timing } = announcement(facts, answers, todayYmd);
+  const extra = normalizeShareLine(answers.extraLine);
+  const linkLine = answers.fanLink
+    ? `${isOut(timing) ? DM_LINK_AFTER : DM_LINK_BEFORE}: ${answers.fanLink}`
+    : '';
+  const full = [sentence, extra ? finishSentence(extra) : '', linkLine].filter(Boolean).join('\n');
+  if (!extra || xPostWeight(full) <= X_MAX_POST_WEIGHT) return full;
+  return [sentence, linkLine].filter(Boolean).join('\n');
+}
+
+/**
+ * X's own "write a post" link, with the text already in the box. It opens the
+ * app on a phone and x.com on a computer, and needs no account or approval on
+ * our side, the same way the WhatsApp button works. It cannot carry an image,
+ * which is why the sheet saves or shares the image separately.
+ */
+export function buildXIntentUrl(text: string): string {
+  return `https://x.com/intent/post?text=${encodeURIComponent(text)}`;
+}
+
+// ── Snapchat ────────────────────────────────────────────────────────────────
+
+/**
+ * The words for a Snapchat story: the sentence, nothing else. Snapchat takes
+ * no text from another app and a link typed onto a snap is dead text, so the
+ * link is copied separately for Snapchat's link sticker, and the extra line is
+ * already on the image.
+ */
+export function buildSnapchatCaption(
+  facts: ShareReleaseFacts,
+  answers: ShareAnswers,
+  todayYmd: string
+): string {
+  return announcement(facts, answers, todayYmd).sentence;
+}
+
 // ── The image ───────────────────────────────────────────────────────────────
 
 /** Top-left of the poster, in the catalog voice (Space Mono, uppercase). */
@@ -503,13 +597,35 @@ export function isEmbeddableCoverArt(asset: {
 
 const MAX_SLUG_CHARS = 40;
 
+/** Where an image is going, which is what its file is named for. */
+export type ShareImageChannel = 'instagram' | 'whatsapp' | 'x' | 'snapchat';
+
+const FILE_SUFFIX: Record<ShareImageChannel, string> = {
+  instagram: 'instagram-post',
+  whatsapp: 'whatsapp-status',
+  x: 'x-post',
+  snapchat: 'snapchat-story',
+};
+
+/** The canvas each channel posts: X shares the post, Snapchat the status. */
+export const SHARE_CHANNEL_FORMAT: Record<ShareImageChannel, ShareFormat> = {
+  instagram: 'post',
+  whatsapp: 'status',
+  x: 'post',
+  snapchat: 'status',
+};
+
 /**
  * The file a saved image lands under: named after the song and where it is
- * going, so somebody who saves both finds two obvious files. The fallback is
+ * going, so somebody who saves several finds obvious files. The fallback is
  * the point, the recap's rule: a title that slugs away to nothing, or our own
  * placeholder, must not produce a file that looks broken.
  */
-export function shareImageFileName(title: string, format: ShareFormat): string {
+export function shareImageFileName(
+  title: string,
+  format: ShareFormat,
+  channel: ShareImageChannel = format === 'post' ? 'instagram' : 'whatsapp'
+): string {
   const display = shareDisplayTitle(title);
   const slug =
     (display ?? '')
@@ -518,7 +634,7 @@ export function shareImageFileName(title: string, format: ShareFormat): string {
       .replace(/^-+|-+$/g, '')
       .slice(0, MAX_SLUG_CHARS)
       .replace(/-+$/g, '') || 'new-music';
-  return `${slug}-${format === 'post' ? 'instagram-post' : 'whatsapp-status'}.png`;
+  return `${slug}-${FILE_SUFFIX[channel]}.png`;
 }
 
 // ── The request between the sheet and the image route ───────────────────────

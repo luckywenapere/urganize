@@ -5,8 +5,18 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 import { HelpTip } from '@/components/shared/HelpTip';
+import type { BrandColors } from '@/lib/social-share-colors';
 
-export type WorkspaceArtist = { id: string; name: string; slug: string };
+export type WorkspaceArtist = {
+  id: string;
+  name: string;
+  slug: string;
+  /**
+   * The share images' colors (2026-09-24). Present only while the brand-colors
+   * flag is on; absent means none were read, which draws Urganize's colors.
+   */
+  brandColors?: BrandColors;
+};
 
 type WorkspaceArtistSectionProps = {
   artists: WorkspaceArtist[] | undefined;

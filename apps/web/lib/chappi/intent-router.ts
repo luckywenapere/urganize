@@ -45,6 +45,15 @@ const SHARE_PLATFORM_PHRASES: readonly RegExp[] = [
   /\bsocials\b/i,
   /\bsocial\s+media\b/i,
   /\bannounce\b/i,
+  // X and Snapchat (2026-09-24). "twitter" and "tweet" are what most people
+  // still say. The bare letter x is NEVER matched on its own, only after a
+  // posting verb and "on" or "to", because a lone x turns up in everything
+  // ("xlsx", "x2", a name).
+  /\btwitter\b/i,
+  /\btweet\b/i,
+  /\b(?:post|share|put)\b[\s\S]{0,30}\b(?:on|to)\s+x\b/i,
+  /\bsnap\s?chat\b/i,
+  /\bsnap\s+story\b/i,
 ];
 
 /**

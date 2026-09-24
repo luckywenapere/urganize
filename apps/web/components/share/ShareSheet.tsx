@@ -6,11 +6,16 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentType,
   type KeyboardEvent,
   type ReactNode,
   type TouchEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
+// The real brand marks, the same set the content calendar's platform tabs use:
+// a person looking for the X or Snapchat button is looking for that logo.
+import { SiSnapchat, SiX } from 'react-icons/si';
 import {
   AlertCircle,
   Check,
@@ -20,6 +25,7 @@ import {
   Instagram,
   Loader2,
   MessageCircle,
+  Palette,
   RefreshCw,
   Send,
   Share2,
@@ -39,22 +45,31 @@ import {
 } from '@/lib/share-file';
 import {
   MAX_SHARE_LINE_CHARS,
+  SHARE_CHANNEL_FORMAT,
+  X_MAX_POST_WEIGHT,
   buildDmMessage,
   buildInstagramCaption,
   buildShareHeadline,
+  buildSnapchatCaption,
   buildStatusCaption,
+  buildXIntentUrl,
+  buildXPost,
   defaultShareVoice,
   describeShareTiming,
   normalizeFanLink,
   normalizeShareLine,
   releaseNoun,
   shareDisplayTitle,
+  shareImageFileName,
   shareTimingAnchor,
   toLocalYmd,
+  xPostWeight,
   type ShareAnswers,
   type ShareFormat,
+  type ShareImageChannel,
   type ShareReleaseFacts,
 } from '@/lib/social-share';
+import { BRAND_COLORS_SETTINGS_HREF, isBrandColorsEnabled } from '@/lib/social-share-colors';
 import {
   clearPendingFirstShare,
   hasOfferedFirstShare,
@@ -72,15 +87,16 @@ import { useShareImages, type ShareImageState } from './useShareImages';
 
 /**
  * Share to socials (founder request, 2026-09-23): the one sheet that turns a
- * rollout into an Instagram post, a WhatsApp status and a message somebody can
- * DM to anybody.
+ * rollout into an Instagram post, a WhatsApp status, an X post, a Snapchat
+ * story (both added 2026-09-24) and a message somebody can DM to anybody.
  *
  * Two steps, and the order is the founder's: ASK, then SHARE. The four
  * questions come first every time the sheet opens ("always ask questions for
  * clarity"), filled in with last time's answers so a second visit is one tap.
- * Nothing is posted anywhere by us. Instagram and WhatsApp are reached through
- * the phone's own share sheet, which is the only door either app opens to a
- * web page, and on a computer the images are saved instead.
+ * Nothing is posted anywhere by us. Instagram, WhatsApp, X and Snapchat are
+ * reached through the phone's own share sheet, which is the only door those
+ * apps open to a web page; X also has its own "write a post" link. On a
+ * computer the images are saved instead.
  *
  * Mounted ONCE, in AppShell, and opened through useShareStore. The sheet
  * mechanics follow the house contract (z-[170], the shared task-outcome-sheet
@@ -100,7 +116,9 @@ const PENDING_OFFER_MAX_ATTEMPTS = 40;
 const INSTAGRAM_INBOX_URL = 'https://www.instagram.com/direct/inbox/';
 
 type Step = 'ask' | 'share';
-type Tab = 'instagram' | 'status' | 'message';
+type Tab = 'instagram' | 'status' | 'x' | 'snapchat' | 'message';
+/** The tabs that send an image, each with the channel its file is named for. */
+type ImageTab = Exclude<Tab, 'message'>;
 type Feedback = { tone: 'ok' | 'error'; text: string };
 type CaptionEdits = Partial<Record<Tab, string>>;
 
@@ -184,6 +202,7 @@ function usePendingFirstShareOffer() {
 
 function ShareDialog({ request }: { request: ShareRequest }) {
   const close = useShareStore((state) => state.close);
+  const router = useRouter();
   const userId = useAuthStore((state) => state.user?.id ?? null);
   const role = useAuthStore((state) => state.user?.role ?? null);
   const storeRelease = useReleaseStore(
@@ -463,6 +482,16 @@ function ShareDialog({ request }: { request: ShareRequest }) {
               edits={edits}
               onEdit={(tab, value) => setEdits((current) => ({ ...current, [tab]: value }))}
               onDone={close}
+              onOpenBrandColors={
+                isBrandColorsEnabled()
+                  ? () => {
+                      // Close first: the sheet is mounted app-wide, so it would
+                      // otherwise sit open on top of Settings.
+                      close();
+                      router.push(BRAND_COLORS_SETTINGS_HREF);
+                    }
+                  : null
+              }
             />
           )}
         </div>
@@ -527,8 +556,8 @@ function AskStep({
       </h2>
       <p className="mt-1.5 text-sm leading-6 text-content-secondary">
         {isFirst ? 'Your first rollout is set up. ' : ''}
-        Answer four quick questions and we&apos;ll make an Instagram post, a WhatsApp status and a
-        message you can send to anyone.
+        Answer four quick questions and we&apos;ll make posts for Instagram, WhatsApp status, X and
+        Snapchat, plus a message you can send to anyone.
       </p>
 
       <ReleaseChip facts={facts} coverArtUrl={coverArtUrl} />
@@ -753,16 +782,89 @@ function Segmented<Value extends string>({
   );
 }
 
-// ── Step 2: the three things to send ────────────────────────────────────────
+// ── Step 2: the things to send ──────────────────────────────────────────────
 
-const TABS: Array<{ id: Tab; label: string; icon: typeof Instagram }> = [
+type TabIcon = ComponentType<{ className?: string }>;
+
+// The brand marks are filled shapes, so they sit a size smaller than lucide's
+// outlines or they read as heavier than the tabs beside them.
+const BRAND_MARK_CLASS = 'h-3.5 w-3.5';
+
+const TABS: Array<{ id: Tab; label: string; icon: TabIcon; iconClass?: string }> = [
   { id: 'instagram', label: 'Instagram', icon: Instagram },
   { id: 'status', label: 'Status', icon: MessageCircle },
+  { id: 'x', label: 'X', icon: SiX, iconClass: BRAND_MARK_CLASS },
+  { id: 'snapchat', label: 'Snapchat', icon: SiSnapchat, iconClass: BRAND_MARK_CLASS },
   { id: 'message', label: 'Message', icon: Send },
 ];
 
-type SentMethod = 'share' | 'download' | 'copy' | 'whatsapp' | 'instagram_dm' | 'more';
-type SentChannel = 'instagram' | 'whatsapp_status' | 'message';
+/**
+ * Five tabs, so the track is its own class rather than TRACK_CLASS. Below sm
+ * each tab stacks its icon over a small label, because five inline labels do
+ * not fit across a phone; a fully rounded track around stacked tabs would give
+ * the end tabs semicircle corners, so it rounds to match them instead.
+ */
+const TAB_TRACK_CLASS = 'gap-1 rounded-[20px] border border-stroke-default bg-bg-base p-1 sm:rounded-full';
+
+/** The channel each image tab's file is named for. */
+const IMAGE_TAB_CHANNEL: Record<ImageTab, ShareImageChannel> = {
+  instagram: 'instagram',
+  status: 'whatsapp',
+  x: 'x',
+  snapchat: 'snapchat',
+};
+
+type SentMethod = 'share' | 'download' | 'copy' | 'whatsapp' | 'instagram_dm' | 'more' | 'x_intent';
+type SentChannel = 'instagram' | 'whatsapp_status' | 'x' | 'snapchat' | 'message';
+
+const SENT_CHANNEL: Record<ImageTab, SentChannel> = {
+  instagram: 'instagram',
+  status: 'whatsapp_status',
+  x: 'x',
+  snapchat: 'snapchat',
+};
+
+const formatForTab = (tab: ImageTab): ShareFormat => SHARE_CHANNEL_FORMAT[IMAGE_TAB_CHANNEL[tab]];
+
+/**
+ * The file for one tab, named for where it is going. The post and the status
+ * are fetched once and shared by two tabs each, so X's copy of the post is
+ * renamed rather than fetched again. Synchronous, so it can run inside the tap.
+ */
+function fileForTab(file: File, title: string, tab: ImageTab): File {
+  const name = shareImageFileName(title, formatForTab(tab), IMAGE_TAB_CHANNEL[tab]);
+  return name === file.name ? file : new File([file], name, { type: file.type });
+}
+
+/** What to say once an image has gone to another app. */
+function sharedFeedback(tab: ImageTab, didCopy: boolean, hasLink: boolean): string {
+  switch (tab) {
+    case 'instagram':
+      return didCopy
+        ? 'Caption copied. Paste it into Instagram.'
+        : 'Shared. Copy the caption above and paste it into Instagram.';
+    case 'x':
+      return didCopy ? 'Shared. Your post is copied too, in case X leaves it out.' : 'Shared.';
+    case 'snapchat':
+      if (hasLink) {
+        return didCopy
+          ? 'Link copied. In Snapchat, tap the paperclip and paste it.'
+          : 'Shared. Copy your link below and add it with the paperclip in Snapchat.';
+      }
+      return didCopy ? 'Caption copied. Paste it onto your snap.' : 'Shared.';
+    default:
+      return 'Shared.';
+  }
+}
+
+/** What to say once an image has been saved instead (a computer). */
+function savedFeedback(tab: ImageTab, didCopy: boolean): string {
+  if (tab === 'snapchat') return 'Saved to your downloads. Post it from Snapchat on your phone.';
+  if (tab === 'x') {
+    return didCopy ? 'Saved to your downloads. Your post is copied too.' : 'Saved to your downloads.';
+  }
+  return didCopy ? 'Saved to your downloads. Your caption is copied too.' : 'Saved to your downloads.';
+}
 
 function ShareStep({
   releaseId,
@@ -774,6 +876,7 @@ function ShareStep({
   edits,
   onEdit,
   onDone,
+  onOpenBrandColors,
 }: {
   releaseId: string;
   facts: ShareReleaseFacts;
@@ -784,6 +887,8 @@ function ShareStep({
   edits: CaptionEdits;
   onEdit: (tab: Tab, value: string) => void;
   onDone: () => void;
+  /** Closes the sheet and opens the Settings editor; null when the flag is off. */
+  onOpenBrandColors: (() => void) | null;
 }) {
   const [tab, setTab] = useState<Tab>('instagram');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -793,6 +898,8 @@ function ShareStep({
     () => ({
       instagram: buildInstagramCaption(facts, answers, todayYmd),
       status: buildStatusCaption(facts, answers, todayYmd),
+      x: buildXPost(facts, answers, todayYmd),
+      snapchat: buildSnapchatCaption(facts, answers, todayYmd),
       message: buildDmMessage(facts, answers, todayYmd),
     }),
     [facts, answers, todayYmd]
@@ -826,46 +933,38 @@ function ShareStep({
     [releaseId]
   );
 
-  const sendImage = async (format: ShareFormat) => {
-    const state = images[format];
+  const sendImage = async (imageTab: ImageTab) => {
+    const state = images[formatForTab(imageTab)];
     if (state.kind !== 'ready' || busy) return;
-    const caption = textFor(format === 'post' ? 'instagram' : 'status');
-    const channel = format === 'post' ? 'instagram' : 'whatsapp_status';
-    // Both started inside this tap, before anything is awaited: the browser
-    // only allows the clipboard and the share sheet from a live gesture.
-    const copied = copyText(caption);
-    if (!canShareFilesToApps(state.file)) {
-      downloadFile(state.file, state.file.name);
+    const file = fileForTab(state.file, facts.title, imageTab);
+    const caption = textFor(imageTab);
+    const channel = SENT_CHANNEL[imageTab];
+    // Snapchat takes no text from another app, and the one thing worth
+    // pasting there is the link, into its link sticker. Everywhere else it is
+    // the caption. Both started inside this tap, before anything is awaited:
+    // the browser only allows the clipboard and the share sheet from a live
+    // gesture.
+    const copied = copyText(imageTab === 'snapchat' && answers.fanLink ? answers.fanLink : caption);
+    if (!canShareFilesToApps(file)) {
+      downloadFile(file, file.name);
       report(channel, 'download');
-      setFeedback({
-        tone: 'ok',
-        text: (await copied)
-          ? 'Saved to your downloads. Your caption is copied too.'
-          : 'Saved to your downloads.',
-      });
+      setFeedback({ tone: 'ok', text: savedFeedback(imageTab, await copied) });
       return;
     }
     setBusy(true);
     try {
       const outcome = await shareFileToApps({
-        file: state.file,
+        file,
         title: facts.title,
-        // Instagram ignores text beside an image and some builds refuse the
-        // pair, so the caption travels by clipboard. WhatsApp keeps it.
-        text: format === 'status' ? caption : undefined,
+        // WhatsApp and X keep text beside an image. Instagram and Snapchat
+        // ignore it and some builds refuse the pair, so theirs travels by
+        // clipboard.
+        text: imageTab === 'status' || imageTab === 'x' ? caption : undefined,
       });
       const didCopy = await copied;
       if (outcome === 'shared') {
         report(channel, 'share');
-        setFeedback({
-          tone: 'ok',
-          text:
-            format === 'post'
-              ? didCopy
-                ? 'Caption copied. Paste it into Instagram.'
-                : 'Shared. Copy the caption above and paste it into Instagram.'
-              : 'Shared.',
-        });
+        setFeedback({ tone: 'ok', text: sharedFeedback(imageTab, didCopy, Boolean(answers.fanLink)) });
       } else if (outcome === 'downloaded') {
         report(channel, 'download');
         setFeedback({ tone: 'ok', text: 'Saved to your downloads.' });
@@ -891,6 +990,9 @@ function ShareStep({
   };
 
   const panelId = `share-panel-${tab}`;
+  // Whose colors the posters are in, once the route has said. Both images are
+  // drawn from the same palette, so the post answers for both.
+  const paletteIsBrand = images.post.kind === 'ready' ? images.post.brand : null;
 
   return (
     // min-h-full resolves only where the panel has a fixed height (a phone, on
@@ -900,7 +1002,7 @@ function ShareStep({
         role="tablist"
         aria-label="Where to share"
         onKeyDown={onTabKeyDown}
-        className={`grid grid-cols-3 ${TRACK_CLASS}`}
+        className={`grid grid-cols-5 ${TAB_TRACK_CLASS}`}
       >
         {TABS.map((item) => {
           const selected = item.id === tab;
@@ -915,14 +1017,14 @@ function ShareStep({
               aria-controls={`share-panel-${item.id}`}
               tabIndex={selected ? 0 : -1}
               onClick={() => selectTab(item.id)}
-              className={`motion-focus motion-press inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-200 ${
+              className={`motion-focus motion-press flex h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-[16px] px-0.5 text-[11px] font-medium leading-none tracking-tight transition-[background-color,color,box-shadow] duration-200 sm:h-9 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-2 sm:text-sm sm:tracking-normal ${
                 selected
                   ? 'bg-bg-surface text-content-primary shadow-[0_1px_3px_rgb(var(--shadow-ink)/calc(0.25*var(--shadow-alpha-scale)))]'
                   : 'text-content-secondary hover:text-content-primary'
               }`}
             >
-              <Icon className="h-4 w-4" aria-hidden="true" />
-              {item.label}
+              <Icon className={`${item.iconClass ?? 'h-4 w-4'} shrink-0`} aria-hidden="true" />
+              <span className="max-w-full truncate">{item.label}</span>
             </button>
           );
         })}
@@ -964,22 +1066,37 @@ function ShareStep({
           />
         ) : (
           <ImagePanel
-            format={tab === 'instagram' ? 'post' : 'status'}
-            image={images[tab === 'instagram' ? 'post' : 'status']}
+            tab={tab}
+            image={images[formatForTab(tab)]}
             caption={textFor(tab)}
             onCaptionChange={(value) => onEdit(tab, value)}
             onCopyCaption={() =>
-              void copyAndSay(textFor(tab), tab === 'instagram' ? 'instagram' : 'whatsapp_status', 'Caption copied.')
+              void copyAndSay(textFor(tab), SENT_CHANNEL[tab], tab === 'x' ? 'Post copied.' : 'Caption copied.')
             }
-            hasLink={Boolean(answers.fanLink)}
+            fanLink={answers.fanLink}
+            onCopyLink={() => void copyAndSay(answers.fanLink, SENT_CHANNEL[tab], 'Link copied.')}
+            onOpenX={() => {
+              // X's own "write a post" page, text filled in. It cannot carry
+              // the image, which the main button shares or saves.
+              report('x', 'x_intent');
+              void openExternalUrl(buildXIntentUrl(textFor('x')));
+            }}
             busy={busy}
-            onSend={() => void sendImage(tab === 'instagram' ? 'post' : 'status')}
+            onSend={() => void sendImage(tab)}
             onRetry={onRetry}
           />
         )}
       </div>
 
       <div className="mt-auto">
+        {onOpenBrandColors && paletteIsBrand !== null ? (
+          <BrandColorsNote
+            artistName={facts.artistName}
+            isBrand={paletteIsBrand}
+            onOpen={onOpenBrandColors}
+          />
+        ) : null}
+
         <p aria-live="polite" className="mt-3 min-h-5 text-center text-xs font-medium">
           {feedback ? (
             <span
@@ -1009,28 +1126,125 @@ function ShareStep({
   );
 }
 
+/**
+ * The shortcut to Settings (founder call, 2026-09-24): one quiet line that
+ * says whose colors the posters are in and where to change them. Shown only
+ * once the route has answered, so it never says "brand colors" about an image
+ * that turns out to be in ours.
+ */
+function BrandColorsNote({
+  artistName,
+  isBrand,
+  onOpen,
+}: {
+  artistName: string;
+  isBrand: boolean;
+  onOpen: () => void;
+}) {
+  const artist = artistName.trim();
+  const owner = artist ? `${artist}’s` : 'your';
+  return (
+    <p className="mt-3 flex flex-wrap items-center justify-center gap-x-1.5 text-center text-xs leading-5 text-content-tertiary">
+      <Palette className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <span>{isBrand ? `These use ${owner} brand colors.` : `Want ${owner} own colors on these?`}</span>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="motion-focus font-semibold text-content-secondary underline decoration-content-tertiary underline-offset-4 transition-colors hover:text-content-primary"
+      >
+        {isBrand ? 'Change them' : 'Set brand colors'}
+      </button>
+    </p>
+  );
+}
+
+/** Everything that differs between the four image tabs, in one place. */
+const IMAGE_PANEL_COPY: Record<
+  ImageTab,
+  {
+    shareLabel: string;
+    icon: TabIcon;
+    iconClass?: string;
+    alt: string;
+    making: string;
+    captionLabel: string;
+    shareNote: (hasLink: boolean) => string;
+    saveNote: string;
+  }
+> = {
+  instagram: {
+    shareLabel: 'Share to Instagram',
+    icon: Instagram,
+    alt: 'Your Instagram post',
+    making: 'Making your post…',
+    captionLabel: 'Caption',
+    shareNote: () => 'We copy the caption for you. Paste it when Instagram opens.',
+    saveNote: 'Post it from your phone, or at instagram.com. Your caption is copied when you save.',
+  },
+  status: {
+    shareLabel: 'Post to status',
+    icon: MessageCircle,
+    alt: 'Your WhatsApp status',
+    making: 'Making your status…',
+    captionLabel: 'Caption',
+    shareNote: () => 'Pick WhatsApp, then My status. It works as an Instagram story too.',
+    saveNote: 'Save it, then post it from your phone. It works as an Instagram story too.',
+  },
+  x: {
+    shareLabel: 'Share to X',
+    icon: SiX,
+    iconClass: BRAND_MARK_CLASS,
+    alt: 'Your X post',
+    making: 'Making your post…',
+    captionLabel: 'Post',
+    shareNote: () => 'Pick X. We copy your post too, in case X leaves it out.',
+    saveNote: 'Save the image, then add it to your post on X. Your post is copied when you save.',
+  },
+  snapchat: {
+    shareLabel: 'Share to Snapchat',
+    icon: SiSnapchat,
+    iconClass: BRAND_MARK_CLASS,
+    alt: 'Your Snapchat story',
+    making: 'Making your story…',
+    captionLabel: 'Caption',
+    shareNote: (hasLink) =>
+      hasLink
+        ? 'Pick Snapchat. Your link is copied, so tap the paperclip and paste it.'
+        : 'Pick Snapchat, then add it to your story.',
+    saveNote: 'Save it, then post it from Snapchat on your phone.',
+  },
+};
+
+const SECONDARY_BUTTON_CLASS =
+  'motion-focus motion-press inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full border border-stroke-default bg-bg-surface px-3 text-sm font-medium text-content-primary transition-colors hover:bg-bg-hover';
+
 function ImagePanel({
-  format,
+  tab,
   image,
   caption,
   onCaptionChange,
   onCopyCaption,
-  hasLink,
+  fanLink,
+  onCopyLink,
+  onOpenX,
   busy,
   onSend,
   onRetry,
 }: {
-  format: ShareFormat;
+  tab: ImageTab;
   image: ShareImageState;
   caption: string;
   onCaptionChange: (value: string) => void;
   onCopyCaption: () => void;
-  hasLink: boolean;
+  fanLink: string;
+  onCopyLink: () => void;
+  onOpenX: () => void;
   busy: boolean;
   onSend: () => void;
   onRetry: () => void;
 }) {
-  const isPost = format === 'post';
+  const copy = IMAGE_PANEL_COPY[tab];
+  const isPost = formatForTab(tab) === 'post';
   const ready = image.kind === 'ready';
   // A failed image turns the main button into the retry. Left as it was, the
   // button sat disabled still saying "Making your post…" under an error that
@@ -1040,21 +1254,14 @@ function ImagePanel({
   // share sheet takes files shares, everything else saves.
   const canShare = useMemo(() => (image.kind === 'ready' ? canShareFilesToApps(image.file) : false), [image]);
 
-  const label = isPost
-    ? canShare
-      ? 'Share to Instagram'
-      : 'Save image'
-    : canShare
-      ? 'Post to status'
-      : 'Save image';
-  const ActionIcon = canShare ? (isPost ? Instagram : MessageCircle) : Download;
-  const footnote = isPost
-    ? canShare
-      ? 'We copy the caption for you. Paste it when Instagram opens.'
-      : 'Post it from your phone, or at instagram.com. Your caption is copied when you save.'
-    : canShare
-      ? 'Pick WhatsApp, then My status. It works as an Instagram story too.'
-      : 'Save it, then post it from your phone. It works as an Instagram story too.';
+  const label = canShare ? copy.shareLabel : 'Save image';
+  const ActionIcon: TabIcon = canShare ? copy.icon : Download;
+  const actionIconClass = canShare && copy.iconClass ? copy.iconClass : 'h-4 w-4';
+  const footnote = canShare ? copy.shareNote(Boolean(fanLink)) : copy.saveNote;
+  // X refuses a post over 280. Only measured on the X tab, where it is the
+  // difference between a post that goes and one that does not.
+  const xWeight = tab === 'x' ? xPostWeight(caption) : 0;
+  const xOver = xWeight > X_MAX_POST_WEIGHT;
 
   return (
     <div className="sm:grid sm:grid-cols-[15rem_minmax(0,1fr)] sm:items-start sm:gap-6">
@@ -1068,11 +1275,7 @@ function ImagePanel({
         {image.kind === 'ready' ? (
           // Plain img: an object URL of the exact file that will be shared.
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={image.url}
-            alt={isPost ? 'Your Instagram post' : 'Your WhatsApp status'}
-            className="h-full w-full object-cover"
-          />
+          <img src={image.url} alt={copy.alt} className="h-full w-full object-cover" />
         ) : image.kind === 'error' ? (
           // The message only. The retry is the big button below, so there is
           // one "Try again" on screen rather than two.
@@ -1083,38 +1286,76 @@ function ImagePanel({
         ) : (
           <div className="flex h-full animate-pulse flex-col items-center justify-center gap-2 text-content-tertiary">
             <Loader2 className="h-5 w-5 animate-spin text-brand" aria-hidden="true" />
-            <p className="text-xs">{isPost ? 'Making your post…' : 'Making your status…'}</p>
+            <p className="text-xs">{copy.making}</p>
           </div>
         )}
       </div>
 
       <div className="mt-4 sm:mt-0">
-        <div className="mb-1.5 flex items-center justify-between">
-          <label htmlFor={`share-caption-${format}`} className="text-sm font-medium text-content-primary">
-            Caption
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <label htmlFor={`share-caption-${tab}`} className="text-sm font-medium text-content-primary">
+            {copy.captionLabel}
           </label>
-          <button
-            type="button"
-            onClick={onCopyCaption}
-            className="motion-focus motion-press -mr-1 inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-          >
-            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-            Copy
-          </button>
+          <div className="flex items-center gap-1">
+            {tab === 'x' ? (
+              <span
+                className={`font-mono text-[11px] ${xOver ? 'text-status-error' : 'text-content-tertiary'}`}
+              >
+                {xWeight}/{X_MAX_POST_WEIGHT}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onClick={onCopyCaption}
+              className="motion-focus motion-press -mr-1 inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+            >
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              Copy
+            </button>
+          </div>
         </div>
         <textarea
-          id={`share-caption-${format}`}
+          id={`share-caption-${tab}`}
           value={caption}
           onChange={(event) => onCaptionChange(event.target.value)}
-          // Four for both: the status caption is shorter, but its raw link wraps on a
-          // phone, and at three rows the last line of it sat cut off under the edge.
+          // Four for all: the status caption is shorter, but its raw link wraps
+          // on a phone, and at three rows the last line of it sat cut off under
+          // the edge.
           rows={4}
-          className={`${FIELD_CLASS} resize-none py-2.5 leading-6`}
+          aria-invalid={xOver ? true : undefined}
+          className={`${FIELD_CLASS} resize-none py-2.5 leading-6 aria-[invalid=true]:border-status-error`}
         />
-        {isPost && hasLink ? (
+        {tab === 'instagram' && fanLink ? (
           <p className="mt-1.5 text-xs leading-5 text-content-tertiary">
             Links don&apos;t work in Instagram captions, so put yours in your bio.
           </p>
+        ) : null}
+        {tab === 'x' && xOver ? (
+          <p className="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-status-error">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            X allows {X_MAX_POST_WEIGHT} characters. Make it a little shorter.
+          </p>
+        ) : null}
+        {tab === 'snapchat' && fanLink ? (
+          <div className="mt-3">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <p className="text-sm font-medium text-content-primary">Your link</p>
+              <button
+                type="button"
+                onClick={onCopyLink}
+                className="motion-focus motion-press -mr-1 inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              >
+                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                Copy
+              </button>
+            </div>
+            <p className="truncate rounded-xl border border-stroke-default bg-bg-base px-4 py-2.5 font-mono text-xs text-content-secondary">
+              {fanLink}
+            </p>
+            <p className="mt-1.5 text-xs leading-5 text-content-tertiary">
+              Links don&apos;t work in snap text. Add yours with the paperclip.
+            </p>
+          </div>
         ) : null}
 
         <button
@@ -1128,10 +1369,16 @@ function ImagePanel({
           ) : failed ? (
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
           ) : (
-            <ActionIcon className="h-4 w-4" aria-hidden="true" />
+            <ActionIcon className={actionIconClass} aria-hidden="true" />
           )}
-          {ready ? label : failed ? 'Try again' : isPost ? 'Making your post…' : 'Making your status…'}
+          {ready ? label : failed ? 'Try again' : copy.making}
         </button>
+        {tab === 'x' ? (
+          <button type="button" onClick={onOpenX} className={`${SECONDARY_BUTTON_CLASS} mt-2`}>
+            <SiX className={BRAND_MARK_CLASS} aria-hidden="true" />
+            Open X with this post
+          </button>
+        ) : null}
         <p className="mt-2 text-center text-xs leading-5 text-content-tertiary">{footnote}</p>
       </div>
     </div>
