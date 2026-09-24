@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.42.0",
+    date: "September 24, 2026",
+    highlights: [
+      "Share a rollout on Instagram, as your WhatsApp status, or in a message to anyone. Answer four quick questions and we make the images and captions.",
+      "After your first rollout, the share screen opens once by itself. After that, every rollout has a Share button, and you can ask UrgAns to open it.",
+    ],
+  },
+  {
     version: "1.41.0",
     date: "September 10, 2026",
     highlights: [
