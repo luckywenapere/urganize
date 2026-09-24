@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.43.0",
+    date: "September 24, 2026",
+    highlights: [
+      "When you share a rollout, you can now also post to X or Snapchat, the same way as Instagram and WhatsApp.",
+    ],
+  },
+  {
     version: "1.42.1",
     date: "September 24, 2026",
     highlights: [
