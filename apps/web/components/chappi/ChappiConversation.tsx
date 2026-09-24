@@ -23,6 +23,8 @@ import {
 } from '@/components/icons';
 import { TeamBriefNudge } from './TeamBriefNudge';
 import { BriefAttribution } from './BriefAttribution';
+import { ReplyText } from './ReplyText';
+import { stripModelMarkup } from '@/lib/model-markup';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
 import { ChappiRecapCard } from '@/components/chappi/ChappiRecapCard';
@@ -1164,12 +1166,6 @@ function Transcript({
   );
 }
 
-// Per-word stagger for the reveal. The delay is capped so a long answer's
-// tail never keeps the user waiting — everything past the cap fades in
-// together, which reads as the stream "catching up".
-const REVEAL_WORD_STAGGER_MS = 24;
-const REVEAL_MAX_DELAY_MS = 1400;
-
 /**
  * One assistant reply: the (optionally revealed) text plus its action row.
  * Owns its own copy/feedback state so a transcript of many replies doesn't
@@ -1199,7 +1195,9 @@ function AssistantMessage({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(content);
+      // Clean text, not the raw reply: a copied "**Setup:**" pasted into
+      // WhatsApp or an email would show its asterisks literally there too.
+      await navigator.clipboard.writeText(stripModelMarkup(content));
       captureAnalyticsEvent({ name: 'urgans_reply_action', properties: { action: 'copy' } });
       setCopied(true);
       if (copyResetRef.current) clearTimeout(copyResetRef.current);
@@ -1225,8 +1223,8 @@ function AssistantMessage({
 
   return (
     <div>
-      <div className="whitespace-pre-wrap text-sm leading-7 text-content-primary">
-        {reveal ? <RevealedText content={content} /> : content}
+      <div className="whitespace-pre-wrap break-words text-sm leading-7 text-content-primary">
+        <ReplyText content={content} reveal={reveal} />
       </div>
       {/* Attribution sits between the answer and the action row: it belongs to
           the answer, and placing it among copy/retry/thumbs would read as a
@@ -1281,46 +1279,5 @@ function AssistantMessage({
         </button>
       </div>
     </div>
-  );
-}
-
-/**
- * Tokenizes a reply for the reveal: whitespace runs (spaces, newlines) get
- * `delay: null` and render as bare text nodes so `whitespace-pre-wrap` line
- * breaks survive untouched; word tokens carry their staggered delay. Module
- * scope and pure per call — the running word counter must not live inside
- * the component render (react-hooks/purity forbids reassignment there).
- */
-function buildRevealTokens(content: string): Array<{ token: string; delay: number | null }> {
-  let wordIndex = 0;
-  return content
-    .split(/(\s+)/)
-    .filter((token) => token !== '')
-    .map((token) => {
-      if (/^\s+$/.test(token)) return { token, delay: null };
-      const delay = Math.min(wordIndex * REVEAL_WORD_STAGGER_MS, REVEAL_MAX_DELAY_MS);
-      wordIndex += 1;
-      return { token, delay };
-    });
-}
-
-/**
- * Word-by-word fade-in for a newly arrived reply (CSS only — framer-motion
- * was removed 2026-08-08, and a stagger of opacity fades is exactly the kind
- * of motion CSS expresses fine).
- */
-function RevealedText({ content }: { content: string }) {
-  return (
-    <>
-      {buildRevealTokens(content).map(({ token, delay }, index) =>
-        delay === null ? (
-          token
-        ) : (
-          <span key={index} className="urgans-word" style={{ animationDelay: `${delay}ms` }}>
-            {token}
-          </span>
-        )
-      )}
-    </>
   );
 }
