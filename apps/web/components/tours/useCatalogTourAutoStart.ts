@@ -12,7 +12,7 @@ import {
   resolveCatalogTourCta,
   type TourStep,
 } from '@/lib/tours';
-import { useChappiStore } from '@/stores/useChappiStore';
+import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
 import { useTourStore } from '@/stores/useTourStore';
 
 /**
@@ -76,7 +76,8 @@ export function useCatalogTourAutoStart({
         onCatalog: true,
         releasesLoaded,
         bodyLocked: isBodyScrollLocked(),
-        chappiMessageCount: useChappiStore.getState().messages.length,
+        // Live turns only: a restored chat is not a conversation in progress.
+        chappiMessageCount: selectLiveTurnCount(useChappiStore.getState()),
       });
       if (!ready) return;
     }

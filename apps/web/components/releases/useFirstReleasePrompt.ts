@@ -34,7 +34,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
-import { useChappiStore } from '@/stores/useChappiStore';
+import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
 import { isFirstReleaseRequired } from '@/lib/first-release-required';
 import { isBodyScrollLocked } from '@/lib/body-scroll-lock';
 import { tourBlocksPrompts, useTourStore } from '@/stores/useTourStore';
@@ -100,7 +100,9 @@ export function useFirstReleasePrompt(onPrompt: () => void): void {
         markPromptShown(Date.now());
         return;
       }
-      if (useChappiStore.getState().messages.length > 0) {
+      // Live turns, not messages on screen: a chat restored from history is
+      // not a conversation in progress, and must not use up the prompt.
+      if (selectLiveTurnCount(useChappiStore.getState()) > 0) {
         markPromptShown(Date.now());
         return;
       }

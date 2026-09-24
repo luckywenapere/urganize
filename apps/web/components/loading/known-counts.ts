@@ -10,6 +10,21 @@
 
 import { useEffect, useState } from 'react';
 import { readPersistedState } from '@/lib/persisted-state';
+import { readResumableChatHint } from '@/lib/chappi/conversation-cache';
+
+/**
+ * How many messages the UrgAns chat about to resume has, or 0 — so the page
+ * skeleton can reserve a transcript instead of the greeting when a reload is
+ * going to land back in a chat. Capped, since a skeleton only needs the shape.
+ * Always 0 when nothing is cached, which includes chat history being off.
+ */
+export function useKnownResumableChat(max = 4): number {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    setCount(Math.min(readResumableChatHint(Date.now()), max));
+  }, [max]);
+  return count;
+}
 
 // Written by useReleaseStore on every successful command-center load.
 const RELEASE_COUNT_KEY = 'urganize.workspace.release-count';

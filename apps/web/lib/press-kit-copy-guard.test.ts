@@ -69,6 +69,16 @@ const FILES = [
   // separator, so a pattern written for "/" alone matches nothing on Windows.
   ...walk(join(WEB, 'lib')).filter((path) => basename(path).startsWith('social-share')),
   ...walk(join(WEB, 'app', 'api', 'releases', '[releaseId]', 'share-card')),
+  // Saved UrgAns chats (2026-09-24), a new surface born under the house rules
+  // for the same reason the help pullouts were. ChappiConversation itself is
+  // deliberately NOT here: it predates the rules and still carries em dashes,
+  // which is the retrofit this guard's header rules out.
+  ...walk(join(WEB, 'app', 'api', 'urgans', 'conversations')),
+  join(WEB, 'lib', 'chappi', 'conversation-history.ts'),
+  join(WEB, 'lib', 'chappi', 'conversations-server.ts'),
+  join(WEB, 'stores', 'useChappiHistoryStore.ts'),
+  join(WEB, 'components', 'chappi', 'ChappiHistoryList.tsx'),
+  join(WEB, 'components', 'chappi', 'ChappiDeleteChatDialog.tsx'),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 // `userFacingStrings` moved to lib/copy-scan.ts on 2026-09-09, when the
