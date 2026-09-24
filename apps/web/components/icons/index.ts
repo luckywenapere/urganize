@@ -7,7 +7,7 @@
 //   decide what belongs, and for the two directions that were drawn, tested at
 //   real icon size, and rejected on evidence.
 //
-//   PASSTHROUGH (68) — still lucide, re-exported unchanged. The long tail:
+//   PASSTHROUGH (69) — still lucide, re-exported unchanged. The long tail:
 //   admin tables, rare settings rows, one-off empty states. Drawing all
 //   98 would mean hand-cutting 68 marks for surfaces almost nobody opens,
 //   several of which lucide already draws better than we would.
@@ -56,6 +56,10 @@ export {
   CornerDownLeft, Disc3, FileText, Flag,
   FolderOpen, Gift, Globe, History,
   Image, ImageIcon, ImageOff, Info,
+  // Share to socials (2026-09-23). A brand mark is exactly what lucide draws
+  // better than we would, and it is the one glyph people look for on a
+  // button that sends a post to Instagram.
+  Instagram,
   KeyRound, Layers, LayoutDashboard, LayoutGrid,
   Link2, ListChecks, LockOpen, LogOut,
   MapPin, Maximize2, Menu, Mic,

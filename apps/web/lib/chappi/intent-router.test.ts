@@ -11,12 +11,14 @@ async function loadRouter(options: {
   planner: boolean;
   events?: boolean;
   recap?: boolean;
+  share?: boolean;
 }) {
   vi.resetModules();
   vi.stubEnv('NEXT_PUBLIC_FEATURE_NOTES', options.notes ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_RELEASE_PLANNER', options.planner ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_EVENTS', options.events ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_RELEASE_RECAP', options.recap ? 'true' : 'false');
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_SOCIAL_SHARE', options.share ? 'true' : 'false');
   return import('./intent-router');
 }
 
@@ -235,6 +237,107 @@ describe('resolveIntent — the recap card', () => {
     // become a status update. Help is the honest answer.
     const { resolveIntent } = await loadRouter({ notes: true, planner: true, recap: false });
     expect(resolveIntent('release recap').kind).not.toBe('generate_recap');
+  });
+});
+
+// Share to socials (2026-09-23). The typed path matters for the same reason
+// every branch here does: production runs with no model configured for long
+// stretches, and then this router IS the assistant.
+//
+// The danger is the neighbours. 'single', 'song' and 'rollout' are claimed by
+// the planner and release branches, 'status' by the status update, and
+// 'recap' by the recap card, so the cases below are mostly about what this
+// branch must NOT take.
+describe('resolveIntent — share to socials', () => {
+  it('routes the phrases that can only be about announcing', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, share: true });
+    for (const raw of [
+      'post it on instagram',
+      'make me an insta post',
+      'put it on my whatsapp status',
+      'share to socials',
+      'something for social media',
+      'announce the single',
+      'share my new single',
+      'share the rollout',
+    ]) {
+      expect(resolveIntent(raw).kind, raw).toBe('share_socials');
+    }
+  });
+
+  it('beats the planner on "share the single", which would otherwise plan a new one', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, share: true });
+    expect(resolveIntent('share the single').kind).toBe('share_socials');
+    // ...and does not claim the planner's own wording.
+    expect(resolveIntent('plan my rollout').kind).toBe('plan_release');
+    expect(resolveIntent('start a new single').kind).toBe('plan_release');
+  });
+
+  it('leaves a status update a status update', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: false, share: true });
+    expect(resolveIntent('share a status update with the artist').kind).toBe('generate_status');
+    expect(resolveIntent('generate a status update').kind).toBe('generate_status');
+    // "single" is inside the generic phrase's reach here, and the answer must
+    // still not be the share sheet. (Where it DOES land is the release branch's
+    // older claim on 'single', which this change leaves alone.)
+    expect(resolveIntent('share a status update on the single').kind).not.toBe('share_socials');
+    // A platform's name still wins over the word "update".
+    expect(resolveIntent('post an update on instagram').kind).toBe('share_socials');
+  });
+
+  it('stands aside for the recap card, which has its own share button', async () => {
+    const { resolveIntent } = await loadRouter({
+      notes: true,
+      planner: true,
+      recap: true,
+      share: true,
+    });
+    // Each of these names a platform or "share … release", so the share branch
+    // WOULD claim it if it did not stand aside. A mutation test found the first
+    // version of this case ("share the recap card") could never have caught
+    // that: it matched no share phrase to begin with.
+    for (const raw of ['share the release recap', 'post the recap on instagram']) {
+      expect(resolveIntent(raw).kind, raw).toBe('generate_recap');
+    }
+  });
+
+  it('reads "with the team" as access, not an announcement', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, share: true });
+    expect(resolveIntent('share the single with the team').kind).not.toBe('share_socials');
+  });
+
+  it('lets an activity win, so "add a task to post on instagram" is a task', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, share: true });
+    expect(resolveIntent('add a task to post on instagram').kind).toBe('add_task');
+  });
+
+  it('does not touch "show me my releases" or a plain question', async () => {
+    const { resolveIntent } = await loadRouter({ notes: true, planner: true, share: true });
+    expect(resolveIntent('show me my releases').kind).not.toBe('share_socials');
+    expect(resolveIntent('what should I focus on today?').kind).toBe('todays_focus');
+    // "installed" contains "insta" but not as a word.
+    expect(resolveIntent('I installed the app').kind).not.toBe('share_socials');
+  });
+
+  it('is silent when sharing is switched off', async () => {
+    const { resolveIntent, buildHelpReply } = await loadRouter({
+      notes: true,
+      planner: true,
+      share: false,
+    });
+    expect(resolveIntent('post it on instagram').kind).not.toBe('share_socials');
+    expect(buildHelpReply().suggestions).not.toContain('Share to socials');
+  });
+
+  it('offers it in the help card when on, and the suggestion runs', async () => {
+    const { resolveIntent, buildHelpReply } = await loadRouter({
+      notes: true,
+      planner: true,
+      share: true,
+    });
+    const suggestions = buildHelpReply().suggestions ?? [];
+    expect(suggestions).toContain('Share to socials');
+    expect(resolveIntent('Share to socials').kind).toBe('share_socials');
   });
 });
 

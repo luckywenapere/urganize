@@ -20,6 +20,7 @@ import {
   Plus,
   Radio,
   Search,
+  Share2,
   Sparkles,
   X,
   type LucideProps,
@@ -289,6 +290,9 @@ type TasksPanelProps = {
    *  toggle would — see `TaskPanelAction`. */
   archiveAction?: TaskPanelAction | null;
   changeArtistAction?: TaskPanelAction | null;
+  /** Share to socials (2026-09-23): opens the share sheet for this rollout.
+   *  Modal-shaped like the two above, so it never lights up. */
+  shareAction?: TaskPanelAction | null;
   /**
    * When set, replaces the activity buckets with this content while keeping the
    * header row of pills above it (2026-08-05, founder call). That row is the
@@ -371,6 +375,7 @@ export function TasksPanel({
   id,
   archiveAction,
   changeArtistAction,
+  shareAction,
   sceneContent,
   activitiesBanner,
   activitiesFooter,
@@ -781,6 +786,13 @@ export function TasksPanel({
     </button>
   ) : null;
 
+  const shareButton = shareAction ? (
+    <button type="button" onClick={shareAction.onClick} className={neutralPillClass}>
+      <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+      {shareAction.label}
+    </button>
+  ) : null;
+
   const changeArtistButton = changeArtistAction ? (
     <button type="button" onClick={changeArtistAction.onClick} className={neutralPillClass}>
       <Users className="h-3.5 w-3.5" aria-hidden="true" />
@@ -936,6 +948,16 @@ export function TasksPanel({
           isActive: activeScene === 'capture',
         }
       : null,
+    // Share to socials: modal-shaped like the two below, so no isActive.
+    shareAction
+      ? {
+          key: 'share',
+          label: shareAction.label,
+          icon: Share2,
+          onClick: shareAction.onClick,
+          disabled: shareAction.disabled,
+        }
+      : null,
     changeArtistAction
       ? {
           key: 'change-artist',
@@ -1076,6 +1098,7 @@ export function TasksPanel({
         {pitchButton}
         {filesButton}
         {notesPill}
+        {shareButton}
         {changeArtistButton}
         {archiveButton}
       </div>

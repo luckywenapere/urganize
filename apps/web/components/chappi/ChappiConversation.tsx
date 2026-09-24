@@ -37,6 +37,8 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useNotesStore } from '@/stores/useNotesStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
+import { useShareStore } from '@/stores/useShareStore';
+import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { supabase } from '@/lib/supabase/client';
@@ -489,6 +491,26 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         })();
         return;
       }
+      case 'share_socials': {
+        // No model in this path, so there is nobody to hear "the Lagos Nights
+        // one". The rollout in view, or the only one there is; anything else
+        // is a question, because opening the sheet on the wrong rollout would
+        // put the wrong title on somebody's post.
+        const target =
+          scopedRelease?.id ?? (releases.length === 1 ? releases[0]?.id : null);
+        if (!target) {
+          appendAssistantReply(
+            'Which rollout? Pick it below the prompt and ask me again.'
+          );
+          return;
+        }
+        if (openShareSheet(target)) {
+          appendAssistantReply(
+            'Opening the share sheet. Answer four quick questions and your posts are ready.'
+          );
+        }
+        return;
+      }
       case 'create_note': {
         const body = intent.noteBody?.trim() ?? '';
         // Nothing to save — treat it as the chip and open an empty editor.
@@ -576,10 +598,35 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     handleIntent({ kind: chip.intent, plannerPreset: chip.plannerPreset });
   };
 
+  // The share sheet is mounted once, in AppShell, and opened through its store.
+  // `open` answers false only when no sheet is mounted yet (it is a lazy chunk),
+  // and then the honest reply is that it is not ready, not that it opened.
+  const openShareSheet = (releaseId: string): boolean => {
+    const opened = useShareStore.getState().open({ releaseId, source: 'urgans' });
+    if (!opened) {
+      appendAssistantReply('The share sheet is still loading. Ask me again in a moment.');
+    }
+    return opened;
+  };
+
   // Client-side actions the agent asks us to perform.
   const executeClientActions = (actions: ChappiClientAction[]) => {
     for (const action of actions) {
-      if (action.type === 'navigate') router.push(action.href);
+      if (action.type === 'navigate') {
+        const href = action.href;
+        // create_release sets this when that was the person's first rollout.
+        // The once-only share sheet then comes first and the navigation runs
+        // when it closes, exactly as it does after the create buttons.
+        if (action.offerFirstShareFor) {
+          withFirstShareOffer({
+            releaseId: action.offerFirstShareFor,
+            firstRelease: true,
+            then: () => router.push(href),
+          })();
+        } else {
+          router.push(href);
+        }
+      } else if (action.type === 'open_share') openShareSheet(action.releaseId);
       else if (action.type === 'open_create_release') onNewRelease();
       else if (action.type === 'open_quick_create')
         openQuickCreate({ releaseId: action.releaseId ?? undefined, source: 'quick_create' });
