@@ -12,10 +12,12 @@ import {
   type ShareFormat,
   type ShareTiming,
 } from './social-share';
+import { resolveSharePalette, type SharePalette } from './social-share-colors';
 import type { DbReleaseType } from '@/types/releases';
 
 // The share posters: an Instagram post (1080x1350) and a WhatsApp status
-// (1080x1920), each in two layouts, with the cover art or with type alone.
+// (1080x1920), each in two layouts, with the cover art or with type alone. The
+// post also goes to X and the status to Snapchat; the canvases are the same.
 //
 // Rendered by satori through next/og, so this is flex layout and inline styles
 // only. Every element holding more than one child declares display flex, and a
@@ -26,12 +28,12 @@ import type { DbReleaseType } from '@/types/releases';
 // accent. Sharp corners, no shadows, no gradients. The recap card is the paper
 // mode sibling (cream ground); a fan who sees both should read them as one
 // family: same fonts, same catalog eyebrow, same quiet mark.
-
-const INK = '#0D120E';
-const SPRING = '#7FD99A';
-const CREAM = '#F5F0E6';
-const CREAM_MUTED = 'rgba(245, 240, 230, 0.66)';
-const CREAM_FAINT = 'rgba(245, 240, 230, 0.44)';
+//
+// Every color comes from a SharePalette (lib/social-share-colors.ts). With no
+// brand colors it is exactly the ink, spring and cream above; with an artist's
+// brand colors (2026-09-24) the ground and the accent are theirs, and the text
+// is still cream or ink, picked for contrast. The layout never changes with the
+// colors, so a brand poster is the same designed poster in other clothes.
 
 const FRAUNCES = 'Fraunces';
 const GROTESK = 'Space Grotesk';
@@ -47,7 +49,11 @@ export type ShareCardProps = {
   extraLine: string;
   /** A data: URL, or null to draw the typographic poster. */
   coverArtDataUrl: string | null;
+  /** The artist's brand palette. Omitted means Urganize's own colors. */
+  palette?: SharePalette;
 };
+
+type Painted = ShareCardProps & { palette: SharePalette };
 
 /** The page's own text, cleaned the way every dynamic poster string is. */
 function clean(value: string): string {
@@ -69,9 +75,10 @@ type Metrics = {
 
 // The status canvas keeps its top 200px and bottom 220px clear of anything
 // that matters: WhatsApp and Instagram both draw the progress bar, the name
-// and the reply box over those bands. A post has no overlays, so it gets an
-// even margin. Instagram's profile grid crops a 4:5 post to 3:4 from the
-// centre, which takes about 34px off each side, well inside the side margin.
+// and the reply box over those bands, and Snapchat draws its own over the same
+// places. A post has no overlays, so it gets an even margin. Instagram's
+// profile grid crops a 4:5 post to 3:4 from the centre, which takes about 34px
+// off each side, well inside the side margin.
 const METRICS: Record<ShareFormat, Metrics> = {
   post: {
     padTop: 88,
@@ -103,10 +110,12 @@ function EyebrowRow({
   left,
   right,
   size,
+  palette,
 }: {
   left: string;
   right: string;
   size: number;
+  palette: SharePalette;
 }) {
   return (
     <div
@@ -119,13 +128,21 @@ function EyebrowRow({
         letterSpacing: Math.round(size * 0.18),
       }}
     >
-      <span style={{ color: SPRING }}>{left}</span>
-      <span style={{ color: CREAM_MUTED }}>{right}</span>
+      <span style={{ color: palette.accentText }}>{left}</span>
+      <span style={{ color: palette.textMuted }}>{right}</span>
     </div>
   );
 }
 
-function Mark({ size, marginTop = 0 }: { size: number; marginTop?: number }) {
+function Mark({
+  size,
+  palette,
+  marginTop = 0,
+}: {
+  size: number;
+  palette: SharePalette;
+  marginTop?: number;
+}) {
   return (
     <div
       style={{
@@ -133,7 +150,7 @@ function Mark({ size, marginTop = 0 }: { size: number; marginTop?: number }) {
         fontFamily: MONO,
         fontSize: size,
         letterSpacing: 2,
-        color: CREAM_FAINT,
+        color: palette.textFaint,
         marginTop,
       }}
     >
@@ -142,7 +159,17 @@ function Mark({ size, marginTop = 0 }: { size: number; marginTop?: number }) {
   );
 }
 
-function ExtraLine({ text, size, marginBottom }: { text: string; size: number; marginBottom: number }) {
+function ExtraLine({
+  text,
+  size,
+  marginBottom,
+  palette,
+}: {
+  text: string;
+  size: number;
+  marginBottom: number;
+  palette: SharePalette;
+}) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom }}>
       <div
@@ -150,7 +177,7 @@ function ExtraLine({ text, size, marginBottom }: { text: string; size: number; m
           display: 'flex',
           width: Math.round(size * 0.78),
           height: Math.round(size * 0.78),
-          backgroundColor: SPRING,
+          backgroundColor: palette.accent,
           marginRight: Math.round(size * 0.6),
           marginTop: Math.round(size * 0.24),
           flexShrink: 0,
@@ -163,7 +190,7 @@ function ExtraLine({ text, size, marginBottom }: { text: string; size: number; m
           fontFamily: GROTESK,
           fontSize: size,
           lineHeight: 1.3,
-          color: CREAM,
+          color: palette.text,
         }}
       >
         {text}
@@ -186,7 +213,8 @@ function resolveHeadline(title: string | null, artistName: string): { headline: 
   return { headline: 'New music', byline: '' };
 }
 
-function TypographicPoster(props: ShareCardProps): ReactElement {
+function TypographicPoster(props: Painted): ReactElement {
+  const { palette } = props;
   const metrics = METRICS[props.format];
   const { width, height } = SHARE_FORMAT_DIMENSIONS[props.format];
   const { headline, byline } = resolveHeadline(props.title, props.artistName);
@@ -204,7 +232,7 @@ function TypographicPoster(props: ShareCardProps): ReactElement {
         height,
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: INK,
+        backgroundColor: palette.background,
         paddingTop: metrics.padTop,
         paddingBottom: metrics.padBottom,
         paddingLeft: metrics.padSide,
@@ -217,12 +245,13 @@ function TypographicPoster(props: ShareCardProps): ReactElement {
           left={shareEyebrow(props.releaseType)}
           right={shareTimingEyebrow(props.timing)}
           size={metrics.eyebrow}
+          palette={palette}
         />
         <div
           style={{
             display: 'flex',
             height: metrics.rule,
-            backgroundColor: SPRING,
+            backgroundColor: palette.accent,
             marginTop: metrics.eyebrowGap,
           }}
         />
@@ -248,7 +277,7 @@ function TypographicPoster(props: ShareCardProps): ReactElement {
             fontSize: titleSize,
             wordBreak: 'break-word',
             lineHeight: 1.0,
-            color: CREAM,
+            color: palette.text,
           }}
         >
           {headline}
@@ -260,7 +289,7 @@ function TypographicPoster(props: ShareCardProps): ReactElement {
               fontFamily: GROTESK,
               fontWeight: 500,
               fontSize: metrics.artist,
-              color: SPRING,
+              color: palette.accentText,
               marginTop: Math.round(metrics.artist * 0.6),
             }}
           >
@@ -271,7 +300,12 @@ function TypographicPoster(props: ShareCardProps): ReactElement {
 
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {extra ? (
-          <ExtraLine text={extra} size={metrics.extra} marginBottom={Math.round(metrics.extra * 1.25)} />
+          <ExtraLine
+            text={extra}
+            size={metrics.extra}
+            marginBottom={Math.round(metrics.extra * 1.25)}
+            palette={palette}
+          />
         ) : null}
         <div
           style={{
@@ -280,12 +314,12 @@ function TypographicPoster(props: ShareCardProps): ReactElement {
             fontWeight: 600,
             fontSize: shareAnchorSize(anchor, props.format),
             lineHeight: 1.05,
-            color: SPRING,
+            color: palette.accentText,
           }}
         >
           {anchor}
         </div>
-        <Mark size={metrics.mark} marginTop={Math.round(metrics.mark * 1.6)} />
+        <Mark size={metrics.mark} palette={palette} marginTop={Math.round(metrics.mark * 1.6)} />
       </div>
     </div>
   );
@@ -297,7 +331,8 @@ function TypographicPoster(props: ShareCardProps): ReactElement {
  * it. The extra line is left off both cover layouts on purpose. The art takes
  * that space, and the line is in the caption and the message either way.
  */
-function CoverPost(props: ShareCardProps & { coverArtDataUrl: string }): ReactElement {
+function CoverPost(props: Painted & { coverArtDataUrl: string }): ReactElement {
+  const { palette } = props;
   const { width, height } = SHARE_FORMAT_DIMENSIONS.post;
   const { headline, byline } = resolveHeadline(props.title, props.artistName);
   const band = height - width;
@@ -310,7 +345,7 @@ function CoverPost(props: ShareCardProps & { coverArtDataUrl: string }): ReactEl
         height,
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: INK,
+        backgroundColor: palette.background,
         fontFamily: GROTESK,
       }}
     >
@@ -339,6 +374,7 @@ function CoverPost(props: ShareCardProps & { coverArtDataUrl: string }): ReactEl
           left={shareEyebrow(props.releaseType)}
           right={shareTimingEyebrow(props.timing)}
           size={22}
+          palette={palette}
         />
         <div
           style={{
@@ -349,7 +385,7 @@ function CoverPost(props: ShareCardProps & { coverArtDataUrl: string }): ReactEl
             fontSize: titleSize,
             wordBreak: 'break-word',
             lineHeight: 1.05,
-            color: CREAM,
+            color: palette.text,
           }}
         >
           {headline}
@@ -361,19 +397,20 @@ function CoverPost(props: ShareCardProps & { coverArtDataUrl: string }): ReactEl
               fontFamily: GROTESK,
               fontWeight: 500,
               fontSize: 30,
-              color: SPRING,
+              color: palette.accentText,
             }}
           >
             {byline || ' '}
           </div>
-          <Mark size={18} />
+          <Mark size={18} palette={palette} />
         </div>
       </div>
     </div>
   );
 }
 
-function CoverStatus(props: ShareCardProps & { coverArtDataUrl: string }): ReactElement {
+function CoverStatus(props: Painted & { coverArtDataUrl: string }): ReactElement {
+  const { palette } = props;
   const metrics = METRICS.status;
   const { width, height } = SHARE_FORMAT_DIMENSIONS.status;
   const { headline, byline } = resolveHeadline(props.title, props.artistName);
@@ -387,7 +424,7 @@ function CoverStatus(props: ShareCardProps & { coverArtDataUrl: string }): React
         height,
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: INK,
+        backgroundColor: palette.background,
         paddingTop: metrics.padTop,
         paddingBottom: metrics.padBottom,
         paddingLeft: metrics.padSide,
@@ -400,12 +437,13 @@ function CoverStatus(props: ShareCardProps & { coverArtDataUrl: string }): React
           left={shareEyebrow(props.releaseType)}
           right={shareTimingEyebrow(props.timing)}
           size={metrics.eyebrow}
+          palette={palette}
         />
         <div
           style={{
             display: 'flex',
             height: metrics.rule,
-            backgroundColor: SPRING,
+            backgroundColor: palette.accent,
             marginTop: metrics.eyebrowGap,
           }}
         />
@@ -431,7 +469,7 @@ function CoverStatus(props: ShareCardProps & { coverArtDataUrl: string }): React
             fontSize: titleSize,
             wordBreak: 'break-word',
             lineHeight: 1.02,
-            color: CREAM,
+            color: palette.text,
           }}
         >
           {headline}
@@ -443,7 +481,7 @@ function CoverStatus(props: ShareCardProps & { coverArtDataUrl: string }): React
               fontFamily: GROTESK,
               fontWeight: 500,
               fontSize: 48,
-              color: SPRING,
+              color: palette.accentText,
               marginTop: 16,
             }}
           >
@@ -460,21 +498,22 @@ function CoverStatus(props: ShareCardProps & { coverArtDataUrl: string }): React
             fontWeight: 600,
             fontSize: Math.min(84, shareAnchorSize(shareTimingAnchor(props.timing), 'status')),
             lineHeight: 1.05,
-            color: SPRING,
+            color: palette.accentText,
           }}
         >
           {shareTimingAnchor(props.timing)}
         </div>
-        <Mark size={metrics.mark} marginTop={26} />
+        <Mark size={metrics.mark} palette={palette} marginTop={26} />
       </div>
     </div>
   );
 }
 
 export function renderShareCard(props: ShareCardProps): ReactElement {
-  if (props.coverArtDataUrl) {
-    const withArt = { ...props, coverArtDataUrl: props.coverArtDataUrl };
-    return props.format === 'post' ? CoverPost(withArt) : CoverStatus(withArt);
+  const painted: Painted = { ...props, palette: props.palette ?? resolveSharePalette(null) };
+  if (painted.coverArtDataUrl) {
+    const withArt = { ...painted, coverArtDataUrl: painted.coverArtDataUrl };
+    return painted.format === 'post' ? CoverPost(withArt) : CoverStatus(withArt);
   }
-  return TypographicPoster(props);
+  return TypographicPoster(painted);
 }

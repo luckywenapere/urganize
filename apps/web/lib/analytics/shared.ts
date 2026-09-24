@@ -253,8 +253,9 @@ export interface AnalyticsEventPropertiesMap {
   };
   social_share_sent: {
     release_id: string;
-    channel: 'instagram' | 'whatsapp_status' | 'message';
-    method: 'share' | 'download' | 'copy' | 'whatsapp' | 'instagram_dm' | 'more';
+    channel: 'instagram' | 'whatsapp_status' | 'x' | 'snapchat' | 'message';
+    /** `x_intent`: opened X's own "write a post" page with the text filled in. */
+    method: 'share' | 'download' | 'copy' | 'whatsapp' | 'instagram_dm' | 'more' | 'x_intent';
   };
 }
 

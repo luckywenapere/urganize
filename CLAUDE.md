@@ -15335,6 +15335,78 @@ as the route serving one.
    send the message on WhatsApp; then open the Share button on a second rollout
    and confirm the answers came back.
 
+### X and Snapchat, and per-artist brand colors (2026-09-24, v1.43.0)
+
+Founder ask, on top of the shipped sheet: add X and Snapchat, and let each
+artist set their own colors for the images. Two additions, treated
+differently, because one rides the flag above and the other is genuinely new:
+
+- **X and Snapchat are two more tabs in the SAME sheet, and they ship live at
+  merge with no flag of their own.** `NEXT_PUBLIC_FEATURE_SOCIAL_SHARE` was
+  already `true` in production, and these tabs are inside the component that
+  flag already gates — the same "an addition rides an already-on flag" shape
+  as UrgAns's own tool registry growing. There was nothing to flip.
+- **X posts the same 4:5 image as Instagram**, with its own post text (a 280
+  character counter, X's own weighting: a link always counts 23 regardless of
+  length) and an "Open X with this post" link (`x.com/intent/post`, no account
+  or approval needed on our side, the WhatsApp button's precedent). Instagram's
+  caption still says "link in bio"; X's carries the raw link, because X makes
+  one tappable.
+- **Snapchat posts the same 9:16 image as the status**, with a plain sentence
+  and no link in the text — Snapchat takes no text or link from another app,
+  so the link is copied separately for its own link sticker (the paperclip),
+  and the sheet says so.
+- **Brand colors are genuinely new and stay behind their own flag**,
+  `NEXT_PUBLIC_FEATURE_BRAND_COLORS`, default `false`. Two optional colors per
+  ARTIST (a background and an accent), set in Settings under their name, used
+  only on these images. **The text color is never chosen** — `resolveSharePalette`
+  in `lib/social-share-colors.ts` picks cream or ink, whichever reads better
+  (WCAG contrast), so no pair of colors a manager picks can make the words
+  unreadable. **An accent too close to its background is taken OFF the words**
+  (the eyebrow, the artist line, the date) and kept only on the rule and the
+  small square beside the extra line, where it cannot hide anything — so a bad
+  pair makes an image plain, never broken. One palette function, three
+  consumers (the poster renderer, the image route, the Settings preview), so
+  what a manager sees in Settings is what gets posted.
+- **Migration:** `20260924120000_artists_brand_colors.sql` — two nullable,
+  CHECK-constrained columns on `artists` (`brand_background`, `brand_accent`,
+  `'#RRGGBB'` uppercase). **Applied to production 2026-09-24.** Additive and
+  safe either order: every read falls back to Urganize's own colors on any
+  failure, including before the migration ran.
+- **`PUT /api/workspace/artists/[artistId]/brand-colors`** saves both slots at
+  once (null in a slot means "use Urganize's"); `GET /api/workspace/artists`
+  carries a `brandColors` field per artist only while the flag is on. Both
+  gated the same way the artist rename route already is: found on the caller's
+  OWN roster, so an artist on another team is indistinguishable from one that
+  does not exist.
+- **The sheet links straight to the editor** once it knows a poster's colors
+  (`BRAND_COLORS_SETTINGS_HREF`, `/settings?tab=workspace#brand-colors`),
+  saying "These use Dorian's brand colors. Change them." or "Want your own
+  colors on these? Set brand colors." — never before the image route has
+  answered, since the honest sentence needs to know which is true first.
+
+**Verified:** the full vitest suite (3454 passing), `tsc --noEmit` and
+`eslint .` at the same baselines this section already records, `next build`
+green with the new flag both off and on. Runtime probes against `next start`
+in both states: the new brand-colors route answers 404 with the flag off and
+401 (unauthenticated) with it on, the same discrimination the image route
+above already relies on. Driven in a throwaway preview (deleted after): all
+five tabs render, an artist's saved colors reach the Settings preview and the
+actual rendered poster identically, X's counter and post-link button work,
+Snapchat's link-copy flow works, and "Change them" correctly routes into
+Settings.
+
+**Activation:**
+1. X and Snapchat needed no flip — live the moment this merged, since the
+   parent flag was already on.
+2. Migration applied 2026-09-24.
+3. `NEXT_PUBLIC_FEATURE_BRAND_COLORS=true` set on the `urganize` project's
+   Production environment via the Vercel CLI, non-sensitive, the same pattern
+   as every flag above it. The version-bump commit that carries this note is
+   the rebuild that inlines it.
+4. **OPEN:** the same manual pass as the section above, plus one artist's
+   brand colors actually reaching a real posted image on a real phone.
+
 ---
 
 ## Saved UrgAns chats (2026-09-24, flag-off)

@@ -317,7 +317,7 @@ export const PROMO_TOOLS: ChappiTool[] = [
     name: 'share_release',
     kind: 'read',
     description:
-      "Open the share sheet for a rollout. It turns the rollout into an Instagram post, a WhatsApp status and a message the user can DM to anybody. The sheet asks four quick questions first (who is posting, whether the date can be public, a link for fans, one extra line), then the user posts from their own phone. You post nothing and cannot: this only opens the sheet. Say it is open and let them take it from there.",
+      "Open the share sheet for a rollout. It turns the rollout into posts for Instagram, WhatsApp status, X and Snapchat, and a message the user can DM to anybody. The sheet asks four quick questions first (who is posting, whether the date can be public, a link for fans, one extra line), then the user posts from their own phone. You post nothing and cannot: this only opens the sheet. Say it is open and let them take it from there.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },

@@ -9,10 +9,12 @@ import {
   type ShareDateMode,
   type ShareFormat,
 } from '@/lib/social-share';
+import { SHARE_PALETTE_HEADER } from '@/lib/social-share-colors';
 
 export type ShareImageState =
   | { kind: 'loading' }
-  | { kind: 'ready'; file: File; url: string }
+  /** `brand`: drawn in the artist's own brand colors rather than Urganize's. */
+  | { kind: 'ready'; file: File; url: string; brand: boolean }
   | { kind: 'error'; message: string };
 
 type Images = Record<ShareFormat, ShareImageState>;
@@ -84,11 +86,12 @@ export function useShareImages(input: {
             const payload = (await response.json().catch(() => ({}))) as { error?: string };
             throw new Error(payload.error || 'Could not make the image. Try again.');
           }
+          const brand = response.headers.get(SHARE_PALETTE_HEADER) === 'brand';
           const blob = await response.blob();
           const file = new File([blob], shareImageFileName(title, format), { type: 'image/png' });
           const url = URL.createObjectURL(file);
           created.push(url);
-          settle(format, { kind: 'ready', file, url });
+          settle(format, { kind: 'ready', file, url, brand });
         } catch (error) {
           if (controller.signal.aborted) return;
           settle(format, {

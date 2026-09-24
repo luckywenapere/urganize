@@ -79,6 +79,11 @@ const FILES = [
   join(WEB, 'stores', 'useChappiHistoryStore.ts'),
   join(WEB, 'components', 'chappi', 'ChappiHistoryList.tsx'),
   join(WEB, 'components', 'chappi', 'ChappiDeleteChatDialog.tsx'),
+  // Brand colors for those images (2026-09-24): the Settings editor and its
+  // route are the same new surface, so they are born under the same rules. The
+  // lib half is already reached by the social-share prefix above.
+  join(WEB, 'components', 'settings', 'BrandColorsSection.tsx'),
+  ...walk(join(WEB, 'app', 'api', 'workspace', 'artists', '[artistId]', 'brand-colors')),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 // `userFacingStrings` moved to lib/copy-scan.ts on 2026-09-09, when the
