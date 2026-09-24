@@ -10,9 +10,9 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Urganize',
     short_name: 'Urganize',
-    // An app store reviewer reads this, so it carries the category and no em
-    // dash. `SHORT_DESCRIPTION` is under 160 characters for exactly this kind
-    // of field.
+    // An app store reviewer reads this, so it carries the positioning (the
+    // founder's core line since 2026-09-24) and no em dash. `SHORT_DESCRIPTION`
+    // is under 160 characters for exactly this kind of field.
     description: SHORT_DESCRIPTION,
     // Cold-launch destination for an installed PWA — kept in sync with the
     // in-app post-auth landing surface (URG-205) via the shared constant.

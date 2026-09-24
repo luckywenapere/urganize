@@ -11,14 +11,13 @@ import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { TESTIMONIALS } from "@/content/testimonials";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "For roster teams",
   description:
-    `Urganize is an ${PRODUCT_CATEGORY} for teams running a roster. Every rollout runs on the same plan, every activity has an owner, and you see where all of them stand without chasing anyone.`,
+    "Urganize is everything after the music, for teams running a roster. Every rollout runs on the same plan, every activity has an owner and you see where all of them stand without chasing anyone.",
   path: "/for-executives",
 });
 
@@ -37,8 +36,8 @@ export const metadata: Metadata = buildPageMetadata({
 // tailoring and the status generator are both flag-gated off in production,
 // so this page describes the plan, ownership, press kit and status
 // mechanics that work with or without a model. The metadata line above
-// keeps the approved positioning wording (it mirrors LANDING_DESCRIPTION in
-// lib/seo.ts) rather than inventing a new AI claim.
+// keeps the approved positioning wording ("everything after the music", the
+// 2026-09-24 line) rather than inventing a new AI claim.
 //
 // Language rules (2026-09-09): never "workspace", never "ship", no "system
 // of record", fifth-grader readability, no Oxford comma in house copy. The

@@ -1,21 +1,12 @@
 /**
  * How Urganize describes itself. One definition, every surface.
  *
- * Founder brief (2026-09-09, amended 2026-09-11): the product is an **AI Music
- * Business Manager**. Every page, tag, email, store listing and assistant reply
- * that introduces it says so in the same words, and the only thing allowed to
- * vary between surfaces is how many characters fit.
- *
- * The amendment widened the category from "AI Music Manager" and changed nothing
- * else: the audience order, the promise and the UrgAns line are untouched. It
- * cost nine characters. Every derived string absorbs that; the one field that
- * cannot is the app store name, whose 30-character cap the full category no
- * longer fits. See docs/store-listing.md.
- *
- * Amended again 2026-09-11 (founder call, later the same day): "labels" is
- * dropped from the audience. It is artists and managers. Artists still lead,
- * the category, the promise and the UrgAns line are untouched, and every
- * derived string absorbs it. The /for-labels persona page went with it.
+ * Founder brief (2026-09-24): you make the music, and Urganize is where your
+ * team does everything after. The product is no longer introduced by a
+ * category (it was an "AI Music Business Manager" from 2026-09-09 until this
+ * brief); it is introduced by what it holds. Three lines, all the founder's,
+ * used verbatim: the core line, the short line and the long description.
+ * Labels are back in the audience.
  *
  * THIS IS THE MIRROR. The canonical copy, with the full reasoning, is
  * apps/web/lib/positioning.ts. `apps/homepage` cannot import from `apps/web`
@@ -31,25 +22,25 @@
  * marketing site and the product two different descriptions.
  */
 
-export const PRODUCT_CATEGORY = 'AI Music Business Manager';
+export const CORE_CLAUSE = 'where your team does everything after the music is made';
 
-export const AUDIENCE = ['artists', 'managers'] as const;
+export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
+
+export const SHORT_LINE = 'Everything after the music.';
+
+export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
 
 export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
 
-export const BRAND_LINE = `Urganize, ${PRODUCT_CATEGORY}`;
+export const BRAND_LINE = `Urganize: ${SHORT_LINE.slice(0, -1)}`;
 
-export const CUSTOMER_LINE = `${PRODUCT_CATEGORY} for ${AUDIENCE_LINE}`;
+export const ONE_LINER = SHORT_LINE;
 
-export const PROMISE = 'Plan, organize and execute rollouts from one place';
-
-export const ONE_LINER = `${CUSTOMER_LINE}.`;
-
-export const SHORT_DESCRIPTION = `${CUSTOMER_LINE}. ${PROMISE}.`;
+export const SHORT_DESCRIPTION = CORE_LINE;
 
 export const CANONICAL_DESCRIPTION =
-  'Urganize is an AI Music Business Manager for artists and managers. It helps music teams plan rollouts, ' +
-  'coordinate people, manage assets and metadata, track execution and keep every part moving ' +
-  'from one place.';
+  'You make the music. Urganize is where your team does everything after. ' +
+  'Plan the release, assign the work, keep files and metadata in one place, pitch to curators, ' +
+  `book shows and put the release out. For ${AUDIENCE_LINE}.`;
 
 export const URGANS_LINE = 'personal AI for music professionals';

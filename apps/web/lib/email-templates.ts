@@ -19,6 +19,8 @@
 // The brand shows up as the ink/spring accent pair rather than as the whole
 // canvas, which survives inversion intact.
 
+import { CORE_LINE } from './positioning';
+
 const INK = '#0d120e';
 const SPRING = '#7fd99a';
 const BODY_TEXT = '#33403a';
@@ -65,8 +67,9 @@ export function buildWorkspaceInviteEmail(input: WorkspaceInviteEmailInput): Bui
   const text = [
     `${inviter} invited you to join ${workspace} on Urganize.`,
     '',
-    'Urganize is where the team runs a rollout: the plan, the work, and who',
-    'is doing what, in one place.',
+    // The founder's core line (2026-09-24), from the shared positioning so the
+    // invite introduces the product in the same words as every other surface.
+    CORE_LINE,
     '',
     `You'll have ${access}.`,
     '',
@@ -100,8 +103,7 @@ ${escapeHtml(`${inviter} invited you to join ${workspace} on Urganize.`)}
         ${escapeHtml(inviter)} invited you to ${escapeHtml(workspace)}
       </h1>
       <p style="margin:0 0 22px;color:${BODY_TEXT};font-size:15px;line-height:1.6;">
-        Urganize is where the team runs a rollout: the plan, the work, and who
-        is doing what, in one place. You&rsquo;ll have ${escapeHtml(access)}.
+        ${escapeHtml(CORE_LINE)} You&rsquo;ll have ${escapeHtml(access)}.
       </p>
       <a href="${escapeHtml(url)}"
          style="display:inline-block;background-color:${SPRING};color:${INK};font-size:15px;font-weight:700;text-decoration:none;padding:13px 26px;border-radius:10px;">

@@ -1,6 +1,6 @@
 {
   "name": "@urganize/homepage",
-  "description": "AI Music Business Manager for artists and managers. Plan, organize and execute rollouts from one place.",
+  "description": "Urganize is where your team does everything after the music is made.",
   "version": "1.43.0",
   "private": true,
   "scripts": {

@@ -1,5 +1,5 @@
 import { PRODUCT_SHOTS } from "@/content/product-shots";
-import { AUDIENCE_LINE, PRODUCT_CATEGORY, PROMISE } from "@/lib/positioning";
+import { CORE_LINE, SHORT_LINE } from "@/lib/positioning";
 import { ProofLine } from "../ProofLine";
 import { ResponsiveProductShot } from "../ResponsiveProductShot";
 import { SectionShell } from "../SectionShell";
@@ -8,14 +8,11 @@ import { WatchDemo } from "../WatchDemo";
 import { wideContainerClass } from "./shared";
 
 // The hero, rebuilt 2026-09-02 for the buyer who actually converts: the
-// manager or small label running several artists' releases (founder call,
-// reversing the 2026-08-19 "executives are the hero" brief). The 2026-09-09
-// positioning is what binds now: artists lead the audience, no "workspace",
-// no "ship". "From one place" is the promise rather than a banned container
-// metaphor, which is the one rule of the 2026-08-19 brief that flipped; its
-// other rules still hold, no "system of record", fifth-grade readability, no
-// Oxford comma in house copy. Since 2026-09-11 the audience is artists and
-// managers only (founder call); labels are out of the h1 and off the site.
+// manager running several artists' releases (founder call, reversing the
+// 2026-08-19 "executives are the hero" brief). What binds the copy now is the
+// 2026-09-24 positioning: you make the music, Urganize is where your team does
+// everything after. No "workspace", no "ship", no em dashes, fifth-grade
+// readability, no Oxford comma in house copy.
 //
 // One ask. The primary button is the free trial, straight into the app
 // (APP_SIGNUP_URL): since 2026-08-30 the two lowest tiers are self-serve, so
@@ -32,6 +29,17 @@ import { wideContainerClass } from "./shared";
 // off the fold: art-directed, the phone capture below `sm` and the desktop
 // capture above it (see ResponsiveProductShot). Top edge visible in the first
 // desktop viewport; on a phone it is the second screen, so no `priority`.
+// The words of the headline that carry the accent. Found in SHORT_LINE rather
+// than typed out as three fragments, so the h1 stays the founder's short line
+// verbatim; if the line ever changes and the phrase is gone, the whole line
+// renders unaccented instead of breaking.
+const HEADLINE_ACCENT = "after the music";
+const accentAt = SHORT_LINE.indexOf(HEADLINE_ACCENT);
+const headlineBefore = accentAt >= 0 ? SHORT_LINE.slice(0, accentAt) : SHORT_LINE;
+const headlineAccent = accentAt >= 0 ? HEADLINE_ACCENT : "";
+const headlineAfter =
+  accentAt >= 0 ? SHORT_LINE.slice(accentAt + HEADLINE_ACCENT.length) : "";
+
 export function HeroSection() {
   return (
     <SectionShell
@@ -40,42 +48,32 @@ export function HeroSection() {
     >
       <div className="mx-auto flex max-w-[64rem] flex-col items-center text-center">
         <div className="flex flex-col items-center gap-8 sm:gap-10">
-          {/* THE CATEGORY IS THE HEADLINE (2026-09-09 positioning). The brief
-              fixes the hierarchy for anything that introduces the product:
-              category first, audience second, promise third, explanation last.
-              So the h1 is the customer line verbatim and the subhead IS the
-              promise, verbatim and nothing else.
+          {/* THE SHORT LINE IS THE HEADLINE AND THE CORE LINE IS THE SUBHEAD
+              (2026-09-24 positioning). Both are the founder's words verbatim,
+              and nothing else is on the fold above the button.
 
-              The fourth rung was dropped on a founder call (2026-09-11): the
-              subhead used to follow the promise with "Urganize lays out the
-              full rollout, you put a name on every activity, and your team
-              sees where each rollout stands." Do not add an explanation
-              sentence back here without asking. The promise itself stays, and
-              still reaches search and social through LANDING_DESCRIPTION and
-              the share card either way.
-
-              max-w-[44rem] is deliberately left at a width one line no longer
-              needs. It is harmless on centred text, and correct again if this
-              ever grows; text-balance simply stops applying to a single line.
-
-              It reads as a definition rather than a benefit, which is the
-              deliberate trade: the line it replaced ("One artist or ten, every
-              release runs to plan") was a better sentence and told a visitor
-              who had never heard of us nothing about what this IS.
+              The 2026-09-11 call still holds: no explanation sentence after
+              the subhead. Do not add one back here without asking. What the
+              product does in detail reaches search and social through
+              LANDING_DESCRIPTION (the founder's long description) and the
+              share card either way.
 
               Composed from the shared constants rather than typed out, so the
-              h1, the meta description and the share card cannot drift apart —
-              the accent falls on the category because that is the half worth
-              remembering. */}
+              h1, the meta description and the share card cannot drift apart.
+              The accent falls on "after the music" because that is the idea
+              worth remembering. */}
           <h1 className="hero-fade-in hero-delay-1 mx-auto max-w-[20ch] text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem] lg:text-[5.2rem]">
-            <span className="italic text-[var(--marketing-accent)]">
-              {PRODUCT_CATEGORY}
-            </span>{" "}
-            for {AUDIENCE_LINE}.
+            {headlineBefore}
+            {headlineAccent ? (
+              <span className="italic text-[var(--marketing-accent)]">
+                {headlineAccent}
+              </span>
+            ) : null}
+            {headlineAfter}
           </h1>
 
           <p className="hero-fade-in hero-delay-2 mx-auto block w-full max-w-[44rem] text-balance text-center text-lg leading-8 text-[var(--marketing-text-muted)] sm:text-[1.25rem] sm:leading-9">
-            {PROMISE}.
+            {CORE_LINE}
           </p>
         </div>
 

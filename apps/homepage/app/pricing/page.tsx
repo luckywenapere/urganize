@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { PricingPageClient } from "./PricingPageClient";
 
@@ -16,7 +15,7 @@ import { PricingPageClient } from "./PricingPageClient";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing",
   description:
-    `One price for your whole team, from a single manager to a full roster. What each ${PRODUCT_CATEGORY} plan includes, and how to book a demo with the founders.`,
+    "Everything after the music, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to book a demo with the founders.",
   path: "/pricing",
 });
 

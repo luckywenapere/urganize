@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import {
   BRAND_LINE,
-  CUSTOMER_LINE,
+  CANONICAL_DESCRIPTION,
   ONE_LINER,
-  PROMISE,
+  SHORT_DESCRIPTION,
 } from "./positioning";
 
 const SITE_URL = "https://urganize.app";
@@ -16,32 +16,24 @@ const SITE_NAME = "Urganize";
 // each string. Two hardcoded copies of a search snippet is a drift hazard on
 // the one page brand queries land on.
 //
-// TITLE: the brand line, and nothing else. The 2026-09-09 positioning makes
-// this an acceptance criterion rather than a judgement call: the homepage
-// title is "Urganize, AI Music Business Manager". It is 35 characters (26
-// before the category was widened on 2026-09-11), still well inside the ~60
-// Google renders whole, and it deliberately drops the keyword tail the
-// previous title carried — the category IS the keyword now, and a searcher who
-// has never heard of us learns what this is from three words.
+// TITLE: the brand line, and nothing else: "Urganize: Everything after the
+// music", the founder's short line after the name (2026-09-24). 36 characters,
+// well inside the ~60 Google renders whole. Before this it was "Urganize, AI
+// Music Business Manager" (2026-09-09 to 2026-09-24).
 //
-// DESCRIPTION: written at ~150-160 characters on purpose. A shorter one was
-// 106 characters and opened with "How", and Google was ignoring it entirely —
-// it substituted the landing CommunitySection's group-chat paragraph, so the
-// result for "urganize" described a group chat rather than release software.
-// That section was removed from the landing page on 2026-08-19, but KEEP the
-// description full-length: a short or weak one invites Google to substitute
-// any other page text (the /community page still carries group-chat copy).
-// It leads with the category and the audience, then the promise, which is the
-// hierarchy the brief fixes for anything that introduces the product.
+// DESCRIPTION: the founder's long description, verbatim (2026-09-24). A
+// description this full is on purpose. A 106-character one that opened with
+// "How" was ignored by Google entirely, which substituted the landing page's
+// old group-chat paragraph, so the result for "urganize" described a group
+// chat rather than the product. A short or weak description invites that.
 //
-// Widening the category on 2026-09-11 took it from 150 characters to 159, which
-// is the top of that band rather than past it. Anything added here from now on
-// has to come out of the tail, not on top of it. Narrowing the audience to
-// artists and managers later the same day took it back to 151, so there are
-// eight characters of headroom again.
+// It is about 230 characters, past the ~155 Google shows, so a search result
+// cuts it off partway through the list of what the product does. That was
+// accepted rather than trimmed: the first two sentences, which are the part
+// that says what Urganize is, always survive the cut, and the founder's words
+// stay whole everywhere else this string is used (the JSON-LD and the tags).
 export const LANDING_TITLE = BRAND_LINE;
-export const LANDING_DESCRIPTION =
-  `Urganize is an ${CUSTOMER_LINE}. ${PROMISE}, with an owner on every activity.`;
+export const LANDING_DESCRIPTION = CANONICAL_DESCRIPTION;
 
 // Absolute, canonical share image. Served as a static asset from public/
 // (NOT the app/opengraph-image.png file convention), so the URL is stable
@@ -58,7 +50,7 @@ export const LANDING_DESCRIPTION =
 // Bump this string every time public/opengraph-image.png changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-09-11-artists-and-managers";
+const SHARE_IMAGE_VERSION = "2026-09-24-everything-after-the-music";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.png?v=${SHARE_IMAGE_VERSION}`,
@@ -68,18 +60,18 @@ const SHARE_IMAGE = {
   // record of what that image says, so a regeneration that skipped this line
   // would leave the two describing different products with nothing to catch
   // it. `apps/web/lib/positioning-guard.test.ts` reads this string for exactly
-  // that reason. It composes from ONE_LINER and PROMISE, so it follows the
-  // positioning automatically; the VERSION above does not and has to be bumped
-  // by hand whenever the card is regenerated.
+  // that reason. It composes from ONE_LINER (the short line, the card's
+  // headline) and SHORT_DESCRIPTION (the core line, the card's second line),
+  // so it follows the positioning automatically; the VERSION above does not
+  // and has to be bumped by hand whenever the card is regenerated.
   //
-  // The generator is `apps/homepage/scripts/generate-og-image.mjs` (the note
-  // here said there was none until 2026-09-09, when one landed). Regenerated
-  // twice on 2026-09-11, first for the widened category and then for the
-  // audience narrowing to artists and managers; before that 2026-09-09 for the
-  // release-to-rollout rename, before that for the AI Music Manager
-  // positioning, before that it said "The AI workspace for music executives",
-  // and before that "One home", a banned container metaphor.
-  alt: `${ONE_LINER} ${PROMISE}. Urganize.`,
+  // The generator is `apps/homepage/scripts/generate-og-image.mjs`.
+  // Regenerated 2026-09-24 for "Everything after the music"; twice on
+  // 2026-09-11 for the widened category and the audience narrowing; on
+  // 2026-09-09 for the release-to-rollout rename and before that for the
+  // first category line. Earlier cards used retired taglines, including a
+  // banned container metaphor.
+  alt: `${ONE_LINER} ${SHORT_DESCRIPTION}`,
 };
 
 // Shared per-page metadata shape (canonical + OG + Twitter) so every
