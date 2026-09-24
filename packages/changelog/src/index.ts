@@ -27,6 +27,13 @@ export const changelog: Release[] = [
     ],
   },
   {
+    version: "1.43.1",
+    date: "September 24, 2026",
+    highlights: [
+      "Asking UrgAns to draft a press kit section for you now works, instead of failing every time.",
+    ],
+  },
+  {
     version: "1.43.0",
     date: "September 24, 2026",
     highlights: [

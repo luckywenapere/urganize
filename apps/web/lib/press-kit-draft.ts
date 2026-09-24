@@ -83,6 +83,36 @@ export function parseDraftOutput(
   return content;
 }
 
+/**
+ * The `parse` callback generateStructuredAiOutput (lib/ai/provider.ts) actually
+ * calls: it hands back the model's raw string response every time, never a
+ * parsed object (`parse: (raw: string) => T | null` is the contract). Passing
+ * that string straight to parseDraftOutput compiled fine — its `raw: unknown`
+ * parameter type-checks against a string — but always threw, because
+ * `typeof raw !== 'object'` is true for every string, so every real call
+ * landed in press-kit-draft-section.ts's catch block. This does the JSON.parse
+ * first and only then hands parseDraftOutput something it can validate.
+ *
+ * Returns null (never throws) on a JSON.parse failure, matching
+ * generateStructuredAiOutput's own `T | null` contract: a null result there
+ * becomes its standard "invalid format" failure. A value that parses but
+ * fails parseDraftOutput's own validation (nothing usable, the wrong section)
+ * still throws that function's own message — a genuinely different failure
+ * from a response that was not JSON at all.
+ */
+export function parseDraftAiResponse(
+  section: PressKitSectionKey,
+  raw: string
+): PressKitSectionContent | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  return parseDraftOutput(section, parsed);
+}
+
 export type DraftContext = {
   artistName: string;
   genres: string;
