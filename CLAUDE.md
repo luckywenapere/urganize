@@ -15397,12 +15397,17 @@ Snapchat's link-copy flow works, and "Change them" correctly routes into
 Settings.
 
 **Activation:**
-1. X and Snapchat needed no flip — live the moment this merged, since the
-   parent flag was already on.
-2. Migration applied 2026-09-24.
+1. X and Snapchat needed no flip — live the moment this merged (v1.43.0), since
+   the parent flag was already on. Confirmed against `/api/version` reporting
+   that exact commit on production.
+2. Migration applied 2026-09-24, by hand in the Supabase dashboard, before the
+   flag was touched.
 3. `NEXT_PUBLIC_FEATURE_BRAND_COLORS=true` set on the `urganize` project's
    Production environment via the Vercel CLI, non-sensitive, the same pattern
-   as every flag above it. The version-bump commit that carries this note is
-   the rebuild that inlines it.
+   as every flag above it. **Set AFTER v1.43.0 had already deployed**, so that
+   commit's own build did NOT inline it — the trap this file records for every
+   flag flip. This entry's own version bump (v1.44.0) is the deliberate
+   follow-up rebuild that actually picks the variable up; do not assume a var
+   is live just because `vercel env ls` shows it.
 4. **OPEN:** the same manual pass as the section above, plus one artist's
    brand colors actually reaching a real posted image on a real phone.
