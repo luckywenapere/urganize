@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.44.0",
+    date: "September 24, 2026",
+    highlights: [
+      "UrgAns remembers your conversations now, so you can pick one back up later instead of starting fresh. Your past chats also show up in a history list, where you can reopen or delete them.",
+    ],
+  },
+  {
     version: "1.43.1",
     date: "September 24, 2026",
     highlights: [

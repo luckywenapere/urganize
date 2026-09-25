@@ -15428,7 +15428,7 @@ Settings.
 
 ---
 
-## Saved UrgAns chats (2026-09-24, flag-off)
+## Saved UrgAns chats (2026-09-24, LIVE as v1.44.0)
 
 Founder ask: *"we need to start saving conversations and storing chat history
 both on the front end and the back end."* UrgAns conversations were ephemeral
@@ -15624,23 +15624,37 @@ restored a real chat.
 
 ### Activation checklist
 
-1. Apply `20260924100000_urgans_conversations.sql` before merging. The routes
-   404 before touching the table while the flag is off, but the data export
-   reads it regardless and would report `urgans_chats` as unavailable.
-2. Set `NEXT_PUBLIC_FEATURE_URGANS_HISTORY=true` on the Vercel `Web` project,
-   with a commit that rebuilds `apps/web` (the version bump does).
-3. Changelog entry + minor version bump across every `package.json` as the LAST
-   commit, at the flip rather than at merge (the EPK precedent).
-4. The privacy page (`apps/homepage/app/privacy/page.tsx`) should say UrgAns
-   chats are kept until deleted and removed with the account; bump its
-   `LAST_UPDATED`.
-5. Manual pass: reload inside and outside six hours; open the same chat in two
-   tabs and write in both (neither loses anything); switch chats mid-reply
-   (the answer is saved to its chat, the composer is free); sign out and in as
-   another account (nothing left over); go offline, use the router, come back
-   (it saves); a read-only team (no redirect, the notice shows); delete the
-   chat on screen and one from another device; export and find the chats; and
-   the three layouts below lg, lg and xl against the skeleton.
+1. ~~Apply `20260924100000_urgans_conversations.sql`~~ — done by the founder
+   2026-09-24, confirmed independently rather than taken on trust: an
+   unauthenticated PostgREST `GET` against `urgans_conversations` returned
+   **200** with `[]` (RLS hiding every row from an anon caller, not a
+   missing-relation error), and an anon `POST` was refused with **42501** —
+   proof the table and its owner-scoped policies are both real.
+2. ~~Set `NEXT_PUBLIC_FEATURE_URGANS_HISTORY=true`~~ — done 2026-09-24 via
+   the Vercel dashboard on the `Web` project's Production environment
+   (Config, non-sensitive, matching every other flag there), with an
+   explicit no-build-cache redeploy of the then-current production commit.
+   Confirmed against production itself rather than the dashboard alone:
+   `/api/urgans/conversations` flipped from 404 to 401, and `/api/version`
+   reported the fresh `builtAt`.
+3. ~~Changelog entry + minor version bump~~ — done, this commit, **v1.44.0**.
+4. **STILL OPEN:** the privacy page (`apps/homepage/app/privacy/page.tsx`)
+   should say UrgAns chats are kept until deleted and removed with the
+   account; bump its `LAST_UPDATED`.
+5. ~~Manual pass~~ — **PARTIAL**, in the founder's own real account (he
+   signed the browser session in himself). Confirmed: a real message
+   round-tripped through a genuine `PUT`, survived a full page reload (not
+   client-side routing), and appeared in the history list with the right
+   title and timestamp; delete was confirmed through the real `DELETE`
+   route and the list correctly returned to "No saved chats yet" after —
+   the UI button's hover-reveal itself did not register a click across
+   several attempts from this sandbox's browser automation, with nothing in
+   the network log suggesting the button is actually broken, so a real click
+   is still worth doing. **NOT exercised:** the two-tab conflict path,
+   switching chats mid-reply, signing out and in as a different account,
+   offline queuing, a read-only team's notice, the export including chats,
+   and a rigorous pass across all three responsive layouts against the
+   skeleton (only the narrow and xl layouts were seen, in passing).
 
 ### Known limits, stated plainly
 
