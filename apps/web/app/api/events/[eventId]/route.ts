@@ -1,28 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listWorkspaceArtists } from '@/lib/artists-server';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
-import { parseEventPatch } from '@/lib/events';
+import { decideReleaseAccess } from '@/lib/release-access';
+import { DEFAULT_TIMEZONE, parseEventPatch, rescheduleRunOfShowStep } from '@/lib/events';
+import { defaultPackExpiry } from '@/lib/dj-pack';
 import {
+  DJ_PACKS_TABLE,
   EVENTS_TABLE,
   EVENT_COLUMNS,
+  RUN_OF_SHOW_COLUMNS,
   RUN_OF_SHOW_TABLE,
   createAdminClient,
   ensureEventAccess,
   eventsDisabledResponse,
   isEventsFeatureEnabled,
   requireActiveAuthenticatedUser,
+  toRunOfShowItem,
   toShowEvent,
   asRow,
 } from '../_shared';
-import type { RunOfShowItem } from '@/types/events';
-
-const toRunOfShowItem = (row: Record<string, unknown>): RunOfShowItem => ({
-  id: String(row.id || ''),
-  eventId: String(row.event_id || ''),
-  label: String(row.label || ''),
-  at: row.at ? String(row.at) : null,
-  position: typeof row.position === 'number' ? row.position : 0,
-});
 
 /** The show plus its run of show — one request, because the detail screen
  *  needs both and a second round trip would just be a second spinner. */
@@ -46,7 +42,7 @@ export async function GET(
 
   const runOfShow = await adminClient!
     .from(RUN_OF_SHOW_TABLE)
-    .select('id,event_id,label,at,position')
+    .select(RUN_OF_SHOW_COLUMNS)
     .eq('event_id', eventId)
     .order('position', { ascending: true });
 
@@ -66,9 +62,26 @@ export async function GET(
     artistName = roster.find((artist) => artist.id === access.artistId)?.name || '';
   }
 
+  // What this viewer may do, computed with the same rule the write routes
+  // enforce, so the page shows no control that would end in a refusal: a guest
+  // sees no Edit, and only the team owner sees Delete (matching the DELETE
+  // handler below).
+  const permissions = {
+    canEdit:
+      decideReleaseAccess({
+        releaseOwnerId: access.ownerUserId,
+        releaseArtistId: access.artistId,
+        userId: auth.user.id,
+        access: workspace,
+        write: true,
+      }) === 'allow',
+    canDelete: access.ownerUserId === auth.user.id,
+  };
+
   return NextResponse.json({
     event: toShowEvent(access.event, artistName),
     runOfShow: (runOfShow.data || []).map((row) => toRunOfShowItem(asRow(row))),
+    permissions,
   });
 }
 
@@ -125,7 +138,105 @@ export async function PATCH(
     );
   }
 
+  if (Object.prototype.hasOwnProperty.call(parsed.columns, 'set_start_at')) {
+    const previousTimezone = access.event.timezone ? String(access.event.timezone) : DEFAULT_TIMEZONE;
+    await followReschedule(adminClient!, eventId, {
+      previousStart: access.event.set_start_at ? String(access.event.set_start_at) : null,
+      nextStart: parsed.columns.set_start_at ?? null,
+      previousTimezone,
+      nextTimezone: parsed.columns.timezone ?? previousTimezone,
+    });
+  }
+
   return NextResponse.json({ event: toShowEvent(asRow(data)) });
+}
+
+const sameInstant = (a: string | null, b: string | null): boolean => {
+  if (!a || !b) return a === b;
+  return Date.parse(a) === Date.parse(b);
+};
+
+/**
+ * A moved show takes its night with it.
+ *
+ * Two things hang off the set time and both went stale on a reschedule before
+ * 2026-09-25:
+ *
+ * 1. The RUN OF SHOW. Its times are real instants, so a show pushed back a
+ *    week left soundcheck and doors on the old date. Every timed step now
+ *    keeps its clock time and its day relative to the show (see
+ *    rescheduleRunOfShowStep, which also says why moving by the same number
+ *    of hours was an hour out across a clock change).
+ * 2. The PACK EXPIRY, fixed at creation to three days after the show. A show
+ *    moved later had its links die before it happened; a show gaining its
+ *    first date kept links that never expired. Recomputed from the new date.
+ *
+ * BEST-EFFORT, deliberately: the show itself is saved, which is what the
+ * manager asked for, and failing that save over a follow-up would lose it. A
+ * failure is logged; the next reschedule recomputes both from scratch anyway.
+ */
+async function followReschedule(
+  adminClient: NonNullable<ReturnType<typeof createAdminClient>>,
+  eventId: string,
+  times: {
+    previousStart: string | null;
+    nextStart: string | null;
+    previousTimezone: string;
+    nextTimezone: string;
+  }
+): Promise<void> {
+  const { previousStart, nextStart, previousTimezone, nextTimezone } = times;
+  if (sameInstant(previousStart, nextStart)) return;
+
+  // Steps only move between two real dates: a show gaining its first date has
+  // no timed steps to anchor, and one losing its date keeps them.
+  if (previousStart && nextStart) {
+    const steps = await adminClient
+      .from(RUN_OF_SHOW_TABLE)
+      .select('id,at')
+      .eq('event_id', eventId)
+      .not('at', 'is', null);
+    if (steps.error) {
+      console.error('[events] run of show read failed on reschedule', {
+        eventId,
+        message: steps.error.message,
+      });
+    } else {
+      for (const step of steps.data || []) {
+        const row = asRow(step);
+        const moved = rescheduleRunOfShowStep({
+          atIso: row.at ? String(row.at) : null,
+          previousStartIso: previousStart,
+          nextStartIso: nextStart,
+          previousTimezone,
+          nextTimezone,
+        });
+        if (!moved) continue;
+        const update = await adminClient
+          .from(RUN_OF_SHOW_TABLE)
+          .update({ at: moved })
+          .eq('id', String(row.id))
+          .eq('event_id', eventId);
+        if (update.error) {
+          console.error('[events] run of show shift failed', {
+            eventId,
+            message: update.error.message,
+          });
+        }
+      }
+    }
+  }
+
+  const packs = await adminClient
+    .from(DJ_PACKS_TABLE)
+    .update({ expires_at: defaultPackExpiry(nextStart) })
+    .eq('event_id', eventId);
+  if (packs.error) {
+    console.error('[events] pack expiry recompute failed', {
+      eventId,
+      message: packs.error.message,
+    });
+  }
 }
 
 /**

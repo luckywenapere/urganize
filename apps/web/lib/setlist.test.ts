@@ -71,7 +71,7 @@ describe('summarizeSetlist', () => {
     expect(summary.totalSeconds).toBe(600);
     expect(summary.unmeasuredCount).toBe(1);
     expect(summary.isPartial).toBe(true);
-    expect(describeSetlistFit(summary)).toBe('one item needs a length before this total means anything.');
+    expect(describeSetlistFit(summary)).toBe('Add a length to 1 song to see if the set fits.');
   });
 
   // The asymmetry that makes this module trustworthy: it may say "over"
@@ -79,7 +79,7 @@ describe('summarizeSetlist', () => {
   it('still reports over when the measured part alone busts the slot', () => {
     const summary = summarizeSetlist([song(1800), song(null)], 25);
     expect(summary.fit).toBe('over');
-    expect(describeSetlistFit(summary)).toBe('Already 5 minutes over 25, and 1 still need a length.');
+    expect(describeSetlistFit(summary)).toBe('Already 5 minutes over 25, and 1 song still needs a length.');
   });
 
   // ...and the mirror image, which is the one that would get an artist cut off
@@ -140,7 +140,7 @@ describe('describeSetlistFit', () => {
 
   it('pluralises the unmeasured count', () => {
     const two = summarizeSetlist([song(null), song(null)], 25);
-    expect(describeSetlistFit(two)).toBe('2 items need a length before this total means anything.');
+    expect(describeSetlistFit(two)).toBe('Add lengths to 2 songs to see if the set fits.');
   });
 });
 
@@ -151,11 +151,14 @@ describe('formatDuration', () => {
     expect(formatDuration(3860)).toBe('1:04:20');
   });
 
-  it('renders an em dash for anything unusable rather than 0:00', () => {
-    expect(formatDuration(null)).toBe('—');
-    expect(formatDuration(undefined)).toBe('—');
-    expect(formatDuration(0)).toBe('—');
-    expect(formatDuration(-5)).toBe('—');
+  // Empty, never "0:00" (which would claim an unmeasured song takes no time)
+  // and no longer "—" (a dash standing in for a sentence). Each caller says
+  // what it means instead.
+  it('renders nothing for anything unusable rather than 0:00', () => {
+    expect(formatDuration(null)).toBe('');
+    expect(formatDuration(undefined)).toBe('');
+    expect(formatDuration(0)).toBe('');
+    expect(formatDuration(-5)).toBe('');
   });
 });
 

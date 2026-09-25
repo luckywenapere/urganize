@@ -13,6 +13,8 @@ import { resetSceneData } from '@/stores/useSceneDataStore';
 import { resetSceneMemory } from '@/lib/scene-memory';
 import { resetCatalogIntent } from '@/lib/catalog-intent';
 import { resetPressKitsStore } from '@/stores/usePressKitsStore';
+import { resetEventsStore } from '@/stores/useEventsStore';
+import { resetArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { clearKitDetailCache } from '@/lib/press-kit-detail-cache';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { resetChappiHistory } from '@/stores/useChappiHistoryStore';
@@ -1092,6 +1094,11 @@ if (typeof window !== 'undefined') {
       // held in memory, which would otherwise survive a same-tab account
       // switch exactly as the roster would.
       clearKitDetailCache();
+      // Shows and the artist roster are the same exposure: account A's
+      // schedule and artist names in module-level stores that survive a
+      // same-tab switch (found 2026-09-25, the UrgAns class of bug).
+      resetEventsStore();
+      resetArtistRosterStore();
       // The UrgAns conversation is the same exposure in its sharpest form: a
       // whole transcript of account A's questions and answers, kept in a
       // module-level store that a client-side navigation to /auth never

@@ -23,12 +23,17 @@
 
 import {
   COMMON_RECIPIENT_ROLES,
-  defaultPackExpiry,
+  describePackReadiness,
   describeReceipt,
   type RecipientReceipt,
 } from '@/lib/dj-pack';
-import { EVENT_STATUSES, formatShowDateTime } from '@/lib/events';
-import { describeSetlistFit, formatDuration, type SetlistSummary } from '@/lib/setlist';
+import { EVENT_STATUSES, formatShowDateTime, partitionShows } from '@/lib/events';
+import {
+  describeSetlistFit,
+  formatDuration,
+  formatSetTotal,
+  type SetlistSummary,
+} from '@/lib/setlist';
 import type { ShowEvent } from '@/types/events';
 import {
   apiError,
@@ -67,50 +72,11 @@ export function describeShow(event: ShowEvent, now: Date = new Date()): string {
   return parts.filter(Boolean).join(' · ');
 }
 
-/**
- * Split a show list into what is still coming and what has been and gone.
- *
- * A show with no set time counts as UPCOMING, not past: the promoter has not
- * confirmed a time, which is a thing to chase rather than a thing to archive.
- * Cancelled shows stay in whichever half their date puts them — they are still
- * the answer to "what was on that weekend".
- */
-export function partitionShows(
-  events: readonly ShowEvent[],
-  now: Date = new Date()
-): { upcoming: ShowEvent[]; past: ShowEvent[] } {
-  const cutoff = now.getTime();
-  const upcoming: ShowEvent[] = [];
-  const past: ShowEvent[] = [];
-  for (const event of events) {
-    if (!event.setStartAt) {
-      upcoming.push(event);
-      continue;
-    }
-    const at = Date.parse(event.setStartAt);
-    if (Number.isNaN(at) || at >= cutoff) upcoming.push(event);
-    else past.push(event);
-  }
-  // Soonest first for what is coming, most recent first for what is done —
-  // both orders answer "and then what?" from where the reader is standing.
-  upcoming.sort((a, b) => rank(a) - rank(b));
-  past.sort((a, b) => rank(b) - rank(a));
-  return { upcoming, past };
-}
-
-/** Sort key. A show with no time sorts to the front of the upcoming half: an
- *  unconfirmed set time is the most urgent thing on the list. */
-function rank(event: ShowEvent): number {
-  if (!event.setStartAt) return -Infinity;
-  const at = Date.parse(event.setStartAt);
-  return Number.isNaN(at) ? -Infinity : at;
-}
-
 /** The running total and whether it fits, as one sentence. Reuses the copy the
  *  set builder itself shows, so the assistant and the screen cannot disagree
  *  about whether a set overruns. */
 export function describeSetTotal(summary: SetlistSummary, itemCount: number): string {
-  const total = formatDuration(summary.totalSeconds);
+  const total = formatSetTotal(summary.totalSeconds);
   const measured = summary.isPartial ? `${total} so far` : total;
   return `${itemCount} ${itemCount === 1 ? 'item' : 'items'}, ${measured}. ${describeSetlistFit(
     summary
@@ -121,14 +87,15 @@ export function describeSetTotal(summary: SetlistSummary, itemCount: number): st
  *  so it is stated per person rather than summed. */
 export function describePackState(
   receipts: readonly RecipientReceipt[],
-  now: Date = new Date()
+  now: Date = new Date(),
+  timezone?: string
 ): string {
   const live = receipts.filter((receipt) => !receipt.revokedAt);
   if (live.length === 0) return 'The pack exists but nobody has been sent it yet.';
   return live
     .map((receipt) => {
       const who = receipt.role ? `${receipt.name} (${receipt.role})` : receipt.name;
-      return `${who}: ${describeReceipt(receipt, now)}`;
+      return `${who}: ${describeReceipt(receipt, now, timezone)}`;
     })
     .join('; ');
 }
@@ -176,7 +143,7 @@ export const SHOW_TOOLS: ChappiTool[] = [
     name: 'list_shows',
     kind: 'read',
     description:
-      "List the team's shows — upcoming first, then past. Optionally narrow to one artist. Use this to find a show id.",
+      "List the team's shows, upcoming first, then past. Optionally narrow to one artist. Use this to find a show id.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -244,19 +211,36 @@ export const SHOW_TOOLS: ChappiTool[] = [
         }
         const items = (itemsRes.body.items || []) as Array<Record<string, unknown>>;
         const summary = itemsRes.body.summary as SetlistSummary | undefined;
+        const readiness = describePackReadiness(
+          items as { itemType?: string; version?: unknown }[]
+        );
         sets.push({
           id: set.id,
           name: set.name,
           itemCount: items.length,
           total: summary ? describeSetTotal(summary, items.length) : 'No running total.',
-          items: items.map((item) => ({
-            id: String(item.id || ''),
-            type: String(item.itemType || 'song'),
-            title: String(item.songTitle || item.label || ''),
-            duration: formatDuration(
-              typeof item.durationSeconds === 'number' ? item.durationSeconds : null
-            ),
-          })),
+          // Songs with no file to send, said before anything goes out.
+          files: readiness.summary || 'Every song has a file.',
+          items: items.map((item) => {
+            const song = (item.song || null) as Record<string, unknown> | null;
+            return {
+              id: String(item.id || ''),
+              type: String(item.itemType || 'song'),
+              // The song's own title. This read `item.songTitle`, a field the
+              // items route never sent, so every song reached the model with
+              // no name (found 2026-09-25).
+              title: String(song?.title || item.label || item.itemType || ''),
+              // The RESOLVED length (typed, file, or song), not just a typed
+              // override — the same number the running total adds up.
+              duration:
+                formatDuration(
+                  typeof item.resolvedDurationSeconds === 'number'
+                    ? item.resolvedDurationSeconds
+                    : null
+                ) || null,
+              hasFile: String(item.itemType || 'song') === 'song' ? Boolean(item.version) : null,
+            };
+          }),
         });
       }
 
@@ -272,7 +256,7 @@ export const SHOW_TOOLS: ChappiTool[] = [
         packs.push({
           setlistId: set.id,
           setName: set.name,
-          state: describePackState(receipts),
+          state: describePackState(receipts, new Date(), event.timezone),
         });
       }
 
@@ -294,7 +278,7 @@ export const SHOW_TOOLS: ChappiTool[] = [
     name: 'list_songs',
     kind: 'read',
     description:
-      "List an artist's song catalogue — what can be dragged into a setlist. Needed before add_setlist_item, which takes a song id.",
+      "List an artist's song catalogue: the songs that can go into a set. Needed before add_setlist_item, which takes a song id.",
     inputSchema: {
       type: 'object',
       properties: { artistId: { type: 'string', description: 'The artist id.' } },
@@ -318,9 +302,10 @@ export const SHOW_TOOLS: ChappiTool[] = [
           songs: songs.map((song) => ({
             id: String(song.id || ''),
             title: String(song.title || ''),
-            duration: formatDuration(
-              typeof song.durationSeconds === 'number' ? song.durationSeconds : null
-            ),
+            duration:
+              formatDuration(
+                typeof song.durationSeconds === 'number' ? song.durationSeconds : null
+              ) || null,
             bpm: song.bpm ?? null,
             key: song.musicalKey ?? null,
           })),
@@ -332,7 +317,7 @@ export const SHOW_TOOLS: ChappiTool[] = [
     name: 'create_song',
     kind: 'mutate',
     description:
-      "Add a song to an artist's catalogue so it can go in a setlist. Give a duration when you know it — a set with unmeasured songs cannot be told whether it fits.",
+      "Add a song to an artist's catalogue so it can go in a set. Give a duration when you know it, because a set with unmeasured songs cannot be told whether it fits.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -367,7 +352,7 @@ export const SHOW_TOOLS: ChappiTool[] = [
     name: 'create_show',
     kind: 'mutate',
     description:
-      'Book a show for an artist. The timezone is the VENUE\'s, not the user\'s — an IANA name like "Africa/Lagos". Set length is the slot in minutes.',
+      'Book a show for an artist. The timezone is the VENUE\'s, not the user\'s: an IANA name like "Africa/Lagos". Set length is the slot in minutes.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -485,7 +470,7 @@ export const SHOW_TOOLS: ChappiTool[] = [
   {
     name: 'delete_show',
     kind: 'mutate',
-    description: 'Delete a show and everything attached to it — its sets and their DJ packs.',
+    description: 'Delete a show and everything attached to it: its run of show, its sets and their DJ packs.',
     inputSchema: {
       type: 'object',
       properties: { showId: { type: 'string' } },
@@ -526,7 +511,7 @@ export const SHOW_TOOLS: ChappiTool[] = [
     name: 'create_setlist',
     kind: 'mutate',
     description:
-      'Add a set to a show. A show can have several — a main set and an encore, or one per artist at a festival.',
+      'Add a set to a show. A show can have several, like a main set and an encore.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -613,7 +598,7 @@ export const SHOW_TOOLS: ChappiTool[] = [
     name: 'add_setlist_item',
     kind: 'mutate',
     description:
-      'Add something to the end of a set. Either a song from the catalogue (songId), or a slot that is not a song — a break, a talk, a guest — with a label and a length. Call it once per item.',
+      'Add something to the end of a set. Either a song from the catalogue (songId), or a slot that is not a song (a break, a talk, an interlude) with a label and a length. Call it once per item.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -731,7 +716,7 @@ export const SHOW_TOOLS: ChappiTool[] = [
     name: 'send_dj_pack',
     kind: 'mutate',
     description:
-      "Send a set's tracks to one person — the DJ, the sound engineer — as their own private link, and report back when they open it. Each recipient gets a separate link, which is what makes the read receipts per person.",
+      "Send a set's tracks to one person, such as the DJ or the sound engineer, as their own private link, and report back when they open it. Each recipient gets a separate link, which is what makes the read receipts per person.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -741,7 +726,6 @@ export const SHOW_TOOLS: ChappiTool[] = [
           type: 'string',
           description: `Their job, e.g. ${COMMON_RECIPIENT_ROLES.join(', ')}.`,
         },
-        passcode: { type: 'string', description: 'Optional four digits to lock the link.' },
       },
       required: ['setlistId', 'recipientName'],
     },
@@ -756,17 +740,19 @@ export const SHOW_TOOLS: ChappiTool[] = [
       });
       if (isFlagGateOff(res)) return { ok: false, summary: SHOWS_OFF };
       if (!res.ok) return { ok: false, summary: apiError(res, 'Could not find that set.') };
-      const count = ((res.body.items || []) as unknown[]).length;
-      if (count === 0) {
+      const readiness = describePackReadiness(
+        (res.body.items || []) as { itemType?: string; version?: unknown }[]
+      );
+      if (readiness.songs === 0) {
         return {
           ok: false,
-          summary: 'That set is empty, so there is nothing to send. Add the songs first.',
+          summary: 'That set has no songs yet, so there is nothing to send. Add the songs first.',
         };
       }
       return {
         ok: true,
         title: `Send the pack to ${recipientName}?`,
-        detail: `${count} ${count === 1 ? 'track' : 'tracks'}. They get their own private link, and it cannot be unsent — though you can revoke it afterwards.`,
+        detail: readiness.detail,
         confirmLabel: 'Send pack',
       };
     },
@@ -782,11 +768,12 @@ export const SHOW_TOOLS: ChappiTool[] = [
       // rather than minting a second set of links for the same songs.
       const packRes = await callInternalApi(ctx, `/api/setlists/${setlistId}/pack`, {
         method: 'POST',
-        body: { passcode: argString(args, 'passcode') || undefined },
+        body: {},
       });
       if (isFlagGateOff(packRes)) return fail(SHOWS_OFF);
       if (!packRes.ok) return fail(apiError(packRes, 'Could not build the pack.'));
-      const packId = String((packRes.body.pack as Record<string, unknown>)?.id || '');
+      const pack = (packRes.body.pack || {}) as Record<string, unknown>;
+      const packId = String(pack.id || '');
       if (!packId) return fail('The pack was built but came back without an id.');
 
       const res = await callInternalApi(ctx, `/api/packs/${packId}/recipients`, {
@@ -794,6 +781,8 @@ export const SHOW_TOOLS: ChappiTool[] = [
         body: { name: recipientName, role: argString(args, 'role') || undefined },
       });
       if (!res.ok) {
+        // An expired pack says so in its own words (it names the fix), which
+        // is better than the generic line below.
         return fail(
           apiError(res, `The pack is ready but ${recipientName} could not be added to it.`)
         );
@@ -807,7 +796,10 @@ export const SHOW_TOOLS: ChappiTool[] = [
           : `Added ${recipientName} to the pack.`,
         data: {
           packUrl: token ? `${ctx.origin}/pack/${token}` : null,
-          expiresAt: defaultPackExpiry(null),
+          // The pack's REAL expiry. This used to report defaultPackExpiry(null),
+          // which is always null, so the assistant told people links never
+          // expire when they stop three days after the show.
+          expiresAt: typeof pack.expiresAt === 'string' ? pack.expiresAt : null,
         },
       };
     },
