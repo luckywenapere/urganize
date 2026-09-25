@@ -74,7 +74,7 @@ const SECTIONS: Array<{
   {
     href: '/admin/growth',
     label: 'Growth',
-    description: 'Cumulative signups per week over the last 12 weeks.',
+    description: 'New accounts each month, and waitlist signups each week.',
     icon: TrendingUp,
   },
   {
