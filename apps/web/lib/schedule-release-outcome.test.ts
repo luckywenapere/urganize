@@ -28,6 +28,34 @@ describe('interpretScheduleResponse', () => {
     });
   });
 
+  it('200 with activitiesMoved → saved, reporting the move rather than a creation count', () => {
+    expect(interpretScheduleResponse(200, { activitiesMoved: 14 })).toEqual({
+      kind: 'saved',
+      message: 'Release date set. 14 activities moved with it.',
+    });
+  });
+
+  it('singular phrasing for exactly one moved activity', () => {
+    expect(interpretScheduleResponse(200, { activitiesMoved: 1 })).toEqual({
+      kind: 'saved',
+      message: 'Release date set. 1 activity moved with it.',
+    });
+  });
+
+  it('moved takes precedence over created — the two never both apply to one save', () => {
+    expect(interpretScheduleResponse(200, { activitiesCreated: 64, activitiesMoved: 3 })).toEqual({
+      kind: 'saved',
+      message: 'Release date set. 3 activities moved with it.',
+    });
+  });
+
+  it('tolerates a non-numeric activitiesMoved', () => {
+    expect(interpretScheduleResponse(200, { activitiesMoved: 'garbage' })).toEqual({
+      kind: 'saved',
+      message: 'Release date set.',
+    });
+  });
+
   it('207 → partial, preferring the server sentence — the date IS saved', () => {
     expect(
       interpretScheduleResponse(207, { error: 'Plan build failed upstream.' })

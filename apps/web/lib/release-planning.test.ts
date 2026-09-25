@@ -7,13 +7,17 @@ import { getTemplateLeadTimeDays } from './release-templates/loader';
 import {
   applyDeltaToDraft,
   applyOwnerProposals,
+  applyPreset,
   applyScopeExclusions,
   buildDraftFromTemplate,
   buildPlannerMessages,
+  buildPlanPreview,
   computeTaskYmd,
   derivePlanPhase,
   deriveScheduleWarnings,
   formatYmd,
+  isTaskKeptByPreset,
+  isTaskPreCompletedByReady,
   offsetFromTaskYmd,
   parseDraftDoc,
   parsePlannerAiDelta,
@@ -24,8 +28,11 @@ import {
   toPromptTasks,
   validatePlannerDelta,
   KEEP_TAGS,
+  PLAN_PRESETS,
   PLAN_SCOPES,
   PLANNER_DELTA_JSON_SCHEMA,
+  QUIET_KEEP_TASK_IDS,
+  READY_TASK_IDS,
   SCOPE_TAGS,
   type PlannerAiDelta,
   type PlanPhase,
@@ -1353,5 +1360,382 @@ describe('PLANNER_DELTA_JSON_SCHEMA', () => {
     for (const keyword of ['minLength', 'maxLength', 'pattern', 'minItems', 'maxItems', 'format']) {
       expect(text).not.toContain(`"${keyword}"`);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Presets: quiet and surprise
+// ---------------------------------------------------------------------------
+
+const TEMPLATES = [SINGLE_RELEASE_TEMPLATE, EP_RELEASE_TEMPLATE, ALBUM_RELEASE_TEMPLATE];
+
+/** Real template tasks carry an OPTIONAL `tags` (an authoring convenience);
+ * every function under test in this section requires it non-optional,
+ * matching what the draft-building pipeline normalizes to before these ever
+ * see a task in production — see buildPlanPreview's identical normalization. */
+const withTags = <T extends { tags?: string[] }>(task: T): T & { tags: string[] } => ({
+  ...task,
+  tags: task.tags ?? [],
+});
+
+describe('isTaskKeptByPreset — surprise (tag-based, every playbook)', () => {
+  it('keeps exactly the tasks tagged release_day or distribution, on every playbook', () => {
+    for (const template of TEMPLATES) {
+      const expected = template.tasks
+        .filter((task) => withTags(task).tags.some((tag) => (KEEP_TAGS as readonly string[]).includes(tag)))
+        .map((task) => task.id)
+        .sort();
+      const actual = template.tasks
+        .filter((task) => isTaskKeptByPreset(withTags(task), 'surprise', template.id))
+        .map((task) => task.id)
+        .sort();
+      expect(actual, template.id).toEqual(expected);
+    }
+  });
+
+  it('keeps exactly 13 of the single playbook’s 64 — the reviewed number', () => {
+    const kept = SINGLE_RELEASE_TEMPLATE.tasks.filter((task) =>
+      isTaskKeptByPreset(withTags(task), 'surprise', SINGLE_RELEASE_TEMPLATE.id)
+    );
+    expect(kept).toHaveLength(13);
+  });
+
+  it('never depends on the template id: an unrecognized one gives the same tag-based answer', () => {
+    const task = { id: 'w6_upload_to_distributor', tags: ['distribution'] };
+    expect(isTaskKeptByPreset(task, 'surprise', 'made_up_template_v9')).toBe(true);
+    expect(isTaskKeptByPreset({ id: 'x', tags: ['marketing'] }, 'surprise', 'made_up_template_v9')).toBe(
+      false
+    );
+  });
+});
+
+describe('isTaskKeptByPreset / QUIET_KEEP_TASK_IDS — quiet', () => {
+  it('references only ids that actually exist in each playbook', () => {
+    for (const template of TEMPLATES) {
+      const realIds = new Set(template.tasks.map((task) => task.id));
+      const keep = QUIET_KEEP_TASK_IDS[template.id];
+      expect(keep, template.id).toBeDefined();
+      for (const id of keep) {
+        expect(realIds.has(id), `${template.id}: ${id}`).toBe(true);
+      }
+    }
+  });
+
+  it('lists no id twice, on any playbook', () => {
+    for (const template of TEMPLATES) {
+      const keep = QUIET_KEEP_TASK_IDS[template.id];
+      expect(new Set(keep).size, template.id).toBe(keep.length);
+    }
+  });
+
+  it('never leaves out a release-day milestone — a quiet rollout still has a release day', () => {
+    for (const template of TEMPLATES) {
+      const keep = new Set(QUIET_KEEP_TASK_IDS[template.id]);
+      const releaseDayTasks = template.tasks.filter((task) => withTags(task).tags.includes('release_day'));
+      expect(releaseDayTasks.length, template.id).toBeGreaterThan(0);
+      for (const task of releaseDayTasks) {
+        expect(keep.has(task.id), `${template.id}: ${task.id}`).toBe(true);
+      }
+    }
+  });
+
+  it('keeps exactly the reviewed 26 of the single playbook’s 64', () => {
+    expect(QUIET_KEEP_TASK_IDS['single_v0.3']).toHaveLength(26);
+    const kept = SINGLE_RELEASE_TEMPLATE.tasks.filter((task) =>
+      isTaskKeptByPreset(withTags(task), 'quiet', 'single_v0.3')
+    );
+    expect(kept).toHaveLength(26);
+  });
+
+  it('keeps the free Spotify for Artists pitch, which no scope-based rule could', () => {
+    // marketing/press scope removal would take this out too (it carries both
+    // tags); the whole reason Quiet is a hand-picked allowlist rather than a
+    // scope is that it must survive.
+    expect(QUIET_KEEP_TASK_IDS['single_v0.3']).toContain('w6_spotify_for_artists_pitch');
+  });
+
+  it('never keeps the distributor uploads for a template it does not recognize (fails open, not blind)', () => {
+    // Failing OPEN for an unknown template means "keep everything" (act as if
+    // no preset were applied), not "guess a shape from another playbook."
+    expect(isTaskKeptByPreset({ id: 'anything', tags: [] }, 'quiet', 'made_up_template_v9')).toBe(true);
+  });
+});
+
+describe('applyPreset', () => {
+  it('quiet removes exactly the 38 non-kept tasks of the single playbook, stamped intake', () => {
+    const doc = buildBaseDraft();
+    const next = applyPreset(doc, 'quiet');
+    const removed = next.tasks.filter((task) => task.removed);
+    expect(removed).toHaveLength(38);
+    for (const task of removed) {
+      expect(task.removed_by).toBe('intake');
+      expect(task.removed_reason).toBe(
+        'Quiet keeps the essentials: the song goes out, with no build-up around it.'
+      );
+    }
+    const kept = next.tasks.filter((task) => !task.removed).map((task) => task.id).sort();
+    expect(kept).toEqual([...QUIET_KEEP_TASK_IDS['single_v0.3']].sort());
+    // Soft removal only.
+    expect(next.tasks).toHaveLength(doc.tasks.length);
+  });
+
+  it('surprise removes exactly 51 of the single playbook’s 64', () => {
+    const next = applyPreset(buildBaseDraft(), 'surprise');
+    expect(next.tasks.filter((task) => task.removed)).toHaveLength(51);
+  });
+
+  it('is idempotent: applying it twice removes nothing further', () => {
+    const once = applyPreset(buildBaseDraft(), 'quiet');
+    const twice = applyPreset(once, 'quiet');
+    expect(twice).toEqual(once);
+  });
+
+  it('leaves a task the manager added alone, even if it would otherwise be out of scope', () => {
+    const doc = buildBaseDraft();
+    const withUserTask = {
+      ...doc,
+      tasks: [
+        ...doc.tasks,
+        { ...doc.tasks[0], id: 'user_abc', template_task_id: null, origin: 'user' as const },
+      ],
+    };
+    const next = applyPreset(withUserTask, 'quiet');
+    expect(next.tasks.find((task) => task.id === 'user_abc')?.removed).toBe(false);
+  });
+});
+
+describe('parseReleasePlanIntake — preset', () => {
+  it('accepts every known preset', () => {
+    for (const preset of PLAN_PRESETS) {
+      const result = parseReleasePlanIntake({ ...baseIntake, preset });
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.intake.preset).toBe(preset);
+    }
+  });
+
+  it('is absent by default, and rejects an unknown value', () => {
+    const withoutPreset = parseReleasePlanIntake(baseIntake);
+    expect(withoutPreset.ok && withoutPreset.intake.preset).toBeUndefined();
+
+    const bad = parseReleasePlanIntake({ ...baseIntake, preset: 'chaotic' });
+    expect(bad.ok).toBe(false);
+  });
+});
+
+describe('buildGuidance / describeIntake — preset line reaches the model', () => {
+  it('tells the model a preset already restricted the plan, and not to bring anything back', () => {
+    const doc = buildBaseDraft();
+    const messages = buildPlannerMessages({
+      release: { title: 'Ohema', artistName: 'Dorian', releaseDate: '2026-10-02' },
+      intake: { ...baseIntake, preset: 'quiet' },
+      tasks: toPromptTasks(doc.tasks),
+      members: [],
+      todayYmd: '2026-08-01',
+    });
+    const userMessage = messages.find((m) => m.role === 'user')?.content ?? '';
+    expect(userMessage).toContain('Quiet rollout');
+    expect(userMessage).toContain('Do not suggest adding marketing, press or paid work back');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Marking finished work done
+// ---------------------------------------------------------------------------
+
+describe('READY_TASK_IDS / isTaskPreCompletedByReady', () => {
+  it('references only ids that actually exist in each playbook', () => {
+    for (const template of TEMPLATES) {
+      const realIds = new Set(template.tasks.map((task) => task.id));
+      const map = READY_TASK_IDS[template.id];
+      expect(map, template.id).toBeDefined();
+      for (const [readyItem, ids] of Object.entries(map)) {
+        for (const id of ids ?? []) {
+          expect(realIds.has(id), `${template.id}/${readyItem}: ${id}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('never marks a distributor upload done — the manager still has to do that regardless of what is ready', () => {
+    const forbidden = [
+      'w6_upload_to_distributor',
+      'w6_upload_cover_art',
+      'w12_upload_lead_single',
+      'w5_upload_ep_to_distributor',
+      'w5_upload_ep_art',
+      'w15_upload_single_1',
+      'w10_upload_single_2',
+      'w7_upload_album_to_distributor',
+      'w7_upload_album_art',
+    ];
+    for (const template of TEMPLATES) {
+      const map = READY_TASK_IDS[template.id];
+      const everyCompletedId = Object.values(map).flat();
+      for (const id of forbidden) {
+        expect(everyCompletedId, `${template.id}: ${id}`).not.toContain(id);
+      }
+    }
+  });
+
+  it('the single playbook: master completes locking it, artwork completes the brief/draft/approval trio', () => {
+    expect(READY_TASK_IDS['single_v0.3'].master).toEqual(['w8_lock_master']);
+    expect(READY_TASK_IDS['single_v0.3'].artwork).toEqual([
+      'w7_brief_designer',
+      'w6_cover_art_first_draft',
+      'w5_cover_art_final_approved',
+    ]);
+  });
+
+  it('completes a task only when a matching ready answer was given', () => {
+    const task = { id: 'w8_lock_master' };
+    expect(isTaskPreCompletedByReady(task, ['master'], 'single_v0.3')).toBe(true);
+    expect(isTaskPreCompletedByReady(task, ['artwork'], 'single_v0.3')).toBe(false);
+    expect(isTaskPreCompletedByReady(task, [], 'single_v0.3')).toBe(false);
+  });
+
+  it('"none" ready completes nothing', () => {
+    const task = { id: 'w8_lock_master' };
+    expect(isTaskPreCompletedByReady(task, ['none'], 'single_v0.3')).toBe(false);
+  });
+
+  it('fails CLOSED on a template it does not recognize — nothing is marked done', () => {
+    expect(isTaskPreCompletedByReady({ id: 'w8_lock_master' }, ['master'], 'made_up_template_v9')).toBe(
+      false
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The preview UrgAns reads its confirmation from
+// ---------------------------------------------------------------------------
+
+describe('buildPlanPreview', () => {
+  it('reports the fixed date as given, unsuggested', () => {
+    const preview = buildPlanPreview({
+      template: SINGLE_RELEASE_TEMPLATE,
+      input: { release_date: '2026-10-02', ready_today: [] },
+      todayYmd: '2026-08-01',
+    });
+    expect(preview.releaseDate).toBe('2026-10-02');
+    expect(preview.dateWasSuggested).toBe(false);
+  });
+
+  it('suggests a date using the TEMPLATE’s own lead time, not a flat constant — EP and album differ from single', () => {
+    const today = '2026-08-01';
+    const single = buildPlanPreview({
+      template: SINGLE_RELEASE_TEMPLATE,
+      input: { ready_today: [] },
+      todayYmd: today,
+    });
+    const album = buildPlanPreview({
+      template: ALBUM_RELEASE_TEMPLATE,
+      input: { ready_today: [] },
+      todayYmd: today,
+    });
+    expect(single.dateWasSuggested).toBe(true);
+    expect(album.dateWasSuggested).toBe(true);
+    // The album's own runway (119 days) is far longer than the single's (56),
+    // so its suggested date must land materially later.
+    expect(new Date(album.releaseDate).getTime()).toBeGreaterThan(
+      new Date(single.releaseDate).getTime() + 30 * 24 * 60 * 60 * 1000
+    );
+    // Both suggestions are still Fridays.
+    for (const preview of [single, album]) {
+      expect(new Date(`${preview.releaseDate}T00:00:00Z`).getUTCDay()).toBe(5);
+    }
+  });
+
+  it('activityCount for a quiet preset matches the keep-list exactly, on every playbook', () => {
+    for (const template of TEMPLATES) {
+      const preview = buildPlanPreview({
+        template,
+        input: { release_date: '2026-12-04', ready_today: [], preset: 'quiet' },
+        todayYmd: '2026-08-01',
+      });
+      expect(preview.activityCount, template.id).toBe(QUIET_KEEP_TASK_IDS[template.id].length);
+      expect(preview.totalTemplateTasks, template.id).toBe(template.tasks.length);
+    }
+  });
+
+  it('activityCount for a surprise preset matches the tag-based count, on every playbook', () => {
+    for (const template of TEMPLATES) {
+      const expected = template.tasks.filter((task) =>
+        withTags(task).tags.some((tag) => (KEEP_TAGS as readonly string[]).includes(tag))
+      ).length;
+      const preview = buildPlanPreview({
+        template,
+        input: { release_date: '2026-12-04', ready_today: [], preset: 'surprise' },
+        todayYmd: '2026-08-01',
+      });
+      expect(preview.activityCount, template.id).toBe(expected);
+    }
+  });
+
+  it('activityCount with no promo budget drops exactly the paid-tagged tasks', () => {
+    const withoutBudgetFilter = buildPlanPreview({
+      template: SINGLE_RELEASE_TEMPLATE,
+      input: { release_date: '2026-12-04', ready_today: [] },
+      todayYmd: '2026-08-01',
+    });
+    const withNoBudget = buildPlanPreview({
+      template: SINGLE_RELEASE_TEMPLATE,
+      input: { release_date: '2026-12-04', ready_today: [], budget: 'none' },
+      todayYmd: '2026-08-01',
+    });
+    const paidCount = SINGLE_RELEASE_TEMPLATE.tasks.filter((task) => withTags(task).tags.includes('paid')).length;
+    expect(paidCount).toBeGreaterThan(0);
+    expect(withoutBudgetFilter.activityCount - withNoBudget.activityCount).toBe(paidCount);
+  });
+
+  it('counts activities that would already be late if the plan were built today', () => {
+    const preview = buildPlanPreview({
+      template: SINGLE_RELEASE_TEMPLATE,
+      // Release day tomorrow: the whole 8-week pre-release runway is already
+      // behind today, so every pre-release task is late.
+      input: { release_date: '2026-08-02', ready_today: [] },
+      todayYmd: '2026-08-01',
+    });
+    // "Late" means strictly before today, the same boundary
+    // deriveScheduleWarnings uses: release day is 2026-08-02 (offset 0), so a
+    // task due exactly today (offset -1) is due ON today, not before it.
+    const expectedLate = SINGLE_RELEASE_TEMPLATE.tasks.filter((task) => task.offset_days < -1).length;
+    expect(preview.lateCount).toBe(expectedLate);
+    expect(preview.lateCount).toBeGreaterThan(0);
+  });
+
+  it('reports no staggered single for a single release', () => {
+    const preview = buildPlanPreview({
+      template: SINGLE_RELEASE_TEMPLATE,
+      input: { release_date: '2026-12-04', ready_today: [] },
+      todayYmd: '2026-08-01',
+    });
+    expect(preview.singleDates).toEqual([]);
+  });
+
+  it('derives the lead single date for an EP from the template’s own offset, not a hardcoded number', () => {
+    const preview = buildPlanPreview({
+      template: EP_RELEASE_TEMPLATE,
+      input: { release_date: '2026-12-04', ready_today: [] },
+      todayYmd: '2026-08-01',
+    });
+    const milestone = EP_RELEASE_TEMPLATE.tasks.find((task) => task.id === 'w6_lead_single_drop');
+    expect(milestone).toBeDefined();
+    expect(preview.singleDates).toEqual([
+      { label: 'the lead single', date: computeTaskYmd('2026-12-04', milestone!.offset_days) },
+    ]);
+  });
+
+  it('derives both staggered single dates for an album, in single-1-then-single-2 order', () => {
+    const preview = buildPlanPreview({
+      template: ALBUM_RELEASE_TEMPLATE,
+      input: { release_date: '2027-03-05', ready_today: [] },
+      todayYmd: '2026-08-01',
+    });
+    const single1 = ALBUM_RELEASE_TEMPLATE.tasks.find((task) => task.id === 'w12_single_1_drop');
+    const single2 = ALBUM_RELEASE_TEMPLATE.tasks.find((task) => task.id === 'w6_single_2_drop');
+    expect(preview.singleDates).toEqual([
+      { label: 'single 1', date: computeTaskYmd('2027-03-05', single1!.offset_days) },
+      { label: 'single 2', date: computeTaskYmd('2027-03-05', single2!.offset_days) },
+    ]);
   });
 });

@@ -30,6 +30,7 @@
  */
 
 import type { Template, TaskRole } from './release-templates/types';
+import { getTemplateLeadTimeDays } from './release-templates/loader';
 import type { ProposedOwner } from './task-owners';
 
 // ---------------------------------------------------------------------------
@@ -111,6 +112,12 @@ export type ReleasePlanIntake = {
    *  Read by the model as instructions: "no listening party" here becomes an
    *  excluded scope in its delta. */
   extra_notes?: string;
+  /** A named shape for the whole plan, recognized from a manager's own words
+   *  ("quiet rollout", "we're dropping it tomorrow") BEFORE the interview
+   *  runs, rather than assembled question by question. Applied by code, the
+   *  same way exclusions are — see PLAN_PRESETS. Absent is the ordinary,
+   *  full-interview plan. */
+  preset?: PlanPreset;
 };
 
 export const RELEASE_TYPE_OPTIONS: Array<{ value: PlanReleaseType; label: string }> = [
@@ -210,6 +217,282 @@ export const isPlanScope = (value: unknown): value is PlanScope =>
 export function isTaskInScope(task: { tags: string[] }, scope: PlanScope): boolean {
   if (!task.tags.includes(SCOPE_TAGS[scope])) return false;
   return !task.tags.some((tag) => (KEEP_TAGS as readonly string[]).includes(tag));
+}
+
+// ---------------------------------------------------------------------------
+// Presets: a whole plan shape, named up front
+// ---------------------------------------------------------------------------
+
+/**
+ * A preset is recognized from the manager's own words BEFORE the interview
+ * runs ("quiet rollout", "we're dropping it tomorrow") rather than assembled
+ * answer by answer, and it removes tasks the same way a scope does — soft,
+ * by code, holding with no model configured. The two presets are shaped
+ * differently on purpose:
+ *
+ *  - `surprise` is TAG-BASED: keep only release-day and distribution work
+ *    (the exact set {@link KEEP_TAGS} already protects from every scope),
+ *    because "close enough to release day that nothing else fits" is a rule
+ *    about what a task IS, and applies identically to every playbook with no
+ *    per-template list to maintain.
+ *  - `quiet` is a HAND-PICKED ALLOWLIST per template ({@link
+ *    QUIET_KEEP_TASK_IDS}). It keeps a few things surprise does not — the
+ *    free Spotify for Artists pitch, confirming the release date, the split
+ *    sheet — that no single tag covers, so a tag rule could not produce it.
+ */
+export const PLAN_PRESETS = ['quiet', 'surprise'] as const;
+export type PlanPreset = (typeof PLAN_PRESETS)[number];
+
+export const isPlanPreset = (value: unknown): value is PlanPreset =>
+  typeof value === 'string' && (PLAN_PRESETS as readonly string[]).includes(value);
+
+export const PLAN_PRESET_OPTIONS: Array<{ value: PlanPreset; label: string; blurb: string }> = [
+  {
+    value: 'quiet',
+    label: 'Quiet rollout',
+    blurb: 'The song goes out properly, with no build-up around it.',
+  },
+  {
+    value: 'surprise',
+    label: 'Surprise drop',
+    blurb: 'Too close to release day for anything beyond getting the song out.',
+  },
+];
+
+export const PLAN_PRESET_LABELS = Object.fromEntries(
+  PLAN_PRESET_OPTIONS.map((o) => [o.value, o.label])
+) as Record<PlanPreset, string>;
+
+/** The one-line reason stamped on every task a preset removed, shown beside
+ *  it in the plan summary — the same spot a scope's reason shows. */
+export const PLAN_PRESET_REMOVED_REASON: Record<PlanPreset, string> = {
+  quiet: 'Quiet keeps the essentials: the song goes out, with no build-up around it.',
+  surprise: 'Too close to release day for anything beyond getting the song out.',
+};
+
+/**
+ * Which activities the Quiet preset keeps, by template id. Hand-picked, not
+ * derived from tags — the single_v0.3 list is the reviewed set of 26; the EP
+ * and album lists apply the same categories (lock the masters, confirm the
+ * date and distributor, the cover art for every dropped asset, the metadata
+ * and split sheet, the free editorial/Spotify pitch per asset, every
+ * release-day milestone, and the post-release wrap-up) to those playbooks'
+ * own task ids, since the reviewer's own note left that generalization to
+ * whoever built it. Pinned against the real templates in
+ * release-planning.test.ts, so a renamed or removed template task fails the
+ * build rather than silently shrinking a manager's plan.
+ *
+ * Keyed on template id rather than release type: `ep_v0.1` and `album_v0.1`
+ * sit behind NEXT_PUBLIC_FEATURE_EP_ALBUM_TEMPLATES, and a fallback-to-single
+ * draft (see fallbackToSingle in release-planning-actions-server.ts) already
+ * carries `template_id: 'single_v0.3'` regardless of the intake's own
+ * release_type, so keying on the DRAFT's real template is what makes this
+ * agree with whichever playbook actually built the draft.
+ */
+export const QUIET_KEEP_TASK_IDS: Record<string, string[]> = {
+  'single_v0.3': [
+    'w8_lock_master',
+    'w8_confirm_release_date',
+    'w8_choose_distributor',
+    'w7_brief_designer',
+    'w7_write_song_metadata',
+    'w7_draft_split_sheet',
+    'w6_finalize_split_sheet',
+    'w6_cover_art_first_draft',
+    'w5_cover_art_final_approved',
+    'w6_upload_to_distributor',
+    'w6_upload_cover_art',
+    'w6_confirm_release_date_at_distributor',
+    'w6_spotify_for_artists_pitch',
+    'w5_confirm_distributor_accepted',
+    'w2_prepare_release_day_posts',
+    'w2_setup_artist_analytics',
+    'release_day_announcement',
+    'release_day_monitor_distributor',
+    'release_day_thankyou_content',
+    'w0_compile_first_week_stats',
+    'w0_debrief_with_team',
+    'w0_update_release_tracker',
+    'post_w1_engage_with_fans',
+    'post_w2_review_analytics',
+    'post_w3_decide_next_release',
+    'post_w3_document_lessons',
+  ],
+  'ep_v0.1': [
+    'w13_lock_all_masters',
+    'w13_confirm_release_date',
+    'w13_choose_distributor',
+    'w12_write_ep_metadata',
+    'w12_draft_split_sheets',
+    'w11_split_signatures',
+    'w12_brief_single_art',
+    'w11_single_art_approved',
+    'w11_brief_designer_ep_art',
+    'w10_ep_art_draft',
+    'w9_ep_art_approved',
+    'w12_upload_lead_single',
+    'w11_confirm_single_accepted',
+    'w5_upload_ep_to_distributor',
+    'w5_upload_ep_art',
+    'w5_confirm_ep_date_locked',
+    'w8_confirm_ep_window',
+    'w4_confirm_ep_accepted',
+    'w11_single_editorial_pitch',
+    'w5_ep_editorial_pitch',
+    'w2_prepare_release_day_content',
+    'w7_analytics_access',
+    'w6_lead_single_drop',
+    'w6_monitor_single_golive',
+    'release_day_announcement',
+    'release_day_monitor_distributor',
+    'release_day_thankyou_content',
+    'w0_compile_first_week_stats',
+    'w0_team_debrief',
+    'w0_update_tracker',
+    'post_w1_fan_engagement',
+    'post_w2_review_analytics',
+    'post_w3_next_cycle',
+    'post_w3_lessons_learned',
+  ],
+  'album_v0.1': [
+    'w17_lock_all_masters',
+    'w17_confirm_release_date',
+    'w17_choose_distributor',
+    'w16_write_album_metadata',
+    'w16_draft_split_sheets',
+    'w15_split_signatures',
+    'w16_confirm_clearances',
+    'w16_brief_designer_album_art',
+    'w15_brief_single_1_art',
+    'w14_single_1_art_approved',
+    'w14_album_art_draft',
+    'w13_album_art_approved',
+    'w10_brief_single_2_art',
+    'w9_single_2_art_approved',
+    'w15_upload_single_1',
+    'w14_confirm_single_1_accepted',
+    'w10_upload_single_2',
+    'w9_confirm_single_2_accepted',
+    'w7_upload_album_to_distributor',
+    'w7_upload_album_art',
+    'w7_confirm_album_date_locked',
+    'w5_confirm_album_accepted',
+    'w14_single_1_editorial_pitch',
+    'w9_single_2_editorial_pitch',
+    'w5_album_editorial_pitch',
+    'w2_prepare_release_day_content',
+    'w13_analytics_access',
+    'w12_single_1_drop',
+    'w12_monitor_single_1_golive',
+    'w6_single_2_drop',
+    'w6_monitor_single_2_golive',
+    'release_day_announcement',
+    'release_day_monitor_distributor',
+    'release_day_thankyou_content',
+    'w0_compile_first_week_stats',
+    'w0_team_debrief',
+    'w0_update_tracker',
+    'post_w1_fan_engagement',
+    'post_w2_review_analytics',
+    'post_w4_next_cycle',
+    'post_w4_lessons_learned',
+  ],
+};
+
+/**
+ * Whether a preset keeps this template task.
+ *
+ * `surprise` never consults `templateId`: it is the same tag rule on every
+ * playbook. `quiet` fails OPEN on a template id it does not recognize (keeps
+ * everything, i.e. behaves as if no preset were applied) rather than gutting
+ * a plan built from a playbook this list has not caught up with yet — the
+ * same fail-open posture every tier/seat/release counter in this codebase
+ * already takes on an unknown input.
+ */
+export function isTaskKeptByPreset(
+  task: { id: string; tags: string[] },
+  preset: PlanPreset,
+  templateId: string
+): boolean {
+  if (preset === 'surprise') {
+    return task.tags.some((tag) => (KEEP_TAGS as readonly string[]).includes(tag));
+  }
+  const keep = QUIET_KEEP_TASK_IDS[templateId];
+  if (!keep) return true;
+  return keep.includes(task.id);
+}
+
+// ---------------------------------------------------------------------------
+// Marking finished work done
+// ---------------------------------------------------------------------------
+
+/**
+ * Which activities a "ready today" answer means are already finished, by
+ * template id. Hand-picked, the same footing as {@link QUIET_KEEP_TASK_IDS}:
+ * a `ready_today` answer says the OUTCOME is done, not that every step that
+ * produces it has been performed, so this maps each answer to the specific
+ * steps that outcome implies rather than to a tag.
+ *
+ * Deliberately narrow. `master` only ever completes locking the master file —
+ * never the distributor upload, which is separate work the manager still has
+ * to do regardless of what is ready. Same for `artwork`: it completes the
+ * brief/draft/approval steps that PRODUCE the art, never the upload of it.
+ * `distributor` completes only having the account itself set up, not
+ * anything submitted to it. `visualizer` and `none` complete nothing in any
+ * playbook today, so they are absent rather than mapped to an empty array.
+ */
+export const READY_TASK_IDS: Record<string, Partial<Record<ReadyItem, string[]>>> = {
+  'single_v0.3': {
+    master: ['w8_lock_master'],
+    artwork: ['w7_brief_designer', 'w6_cover_art_first_draft', 'w5_cover_art_final_approved'],
+    distributor: ['w8_choose_distributor'],
+  },
+  'ep_v0.1': {
+    master: ['w13_lock_all_masters'],
+    artwork: [
+      'w12_brief_single_art',
+      'w11_single_art_approved',
+      'w11_brief_designer_ep_art',
+      'w10_ep_art_draft',
+      'w9_ep_art_approved',
+    ],
+    distributor: ['w13_choose_distributor'],
+  },
+  'album_v0.1': {
+    master: ['w17_lock_all_masters'],
+    artwork: [
+      'w16_brief_designer_album_art',
+      'w15_brief_single_1_art',
+      'w14_single_1_art_approved',
+      'w14_album_art_draft',
+      'w13_album_art_approved',
+      'w10_brief_single_2_art',
+      'w9_single_2_art_approved',
+    ],
+    distributor: ['w17_choose_distributor'],
+  },
+};
+
+/**
+ * Whether a "ready today" answer means this task is already done. Read by
+ * buildTaskRowsFromDraft (lib/release-planning-server.ts) at the moment a
+ * plan's tasks become real rows, so a finished step never lands on the
+ * manager's list as open work.
+ *
+ * Fails closed on an unrecognized template id (nothing is marked done rather
+ * than guessing) — the opposite direction from {@link isTaskKeptByPreset}'s
+ * fail-open, because the risk here runs the other way: wrongly marking real
+ * work "done" hides it from the manager, where wrongly leaving it open only
+ * costs them a glance at a row they can tick themselves.
+ */
+export function isTaskPreCompletedByReady(
+  task: { id: string },
+  readyToday: ReadyItem[],
+  templateId: string
+): boolean {
+  const map = READY_TASK_IDS[templateId];
+  if (!map) return false;
+  return readyToday.some((item) => map[item]?.includes(task.id));
 }
 
 const RELEASE_TYPES = RELEASE_TYPE_OPTIONS.map((o) => o.value);
@@ -319,6 +602,13 @@ export function parseReleasePlanIntake(
     }
   }
 
+  if (record.preset !== undefined && record.preset !== null) {
+    if (!isPlanPreset(record.preset)) {
+      return { ok: false, error: `preset must be one of: ${PLAN_PRESETS.join(', ')}.` };
+    }
+    intake.preset = record.preset;
+  }
+
   return { ok: true, intake };
 }
 
@@ -408,6 +698,131 @@ export function suggestReleaseDate(
   const weekday = new Date(earliest).getUTCDay();
   const daysToFriday = (5 - weekday + 7) % 7;
   return formatYmd(earliest + daysToFriday * MS_PER_DAY);
+}
+
+// ---------------------------------------------------------------------------
+// The preview UrgAns reads its confirmation from
+// ---------------------------------------------------------------------------
+
+/**
+ * The staggered single-drop milestones a multi-track playbook already carries
+ * — read directly off the loaded template rather than a second copy of the
+ * offset, so an edit to ep.ts/album.ts's own timing can never disagree with
+ * what the preview reports. A single has none.
+ */
+const STAGGERED_SINGLE_MILESTONES: Record<string, Array<{ id: string; label: string }>> = {
+  'ep_v0.1': [{ id: 'w6_lead_single_drop', label: 'the lead single' }],
+  'album_v0.1': [
+    { id: 'w12_single_1_drop', label: 'single 1' },
+    { id: 'w6_single_2_drop', label: 'single 2' },
+  ],
+};
+
+/** Whatever of the intake the interview has collected so far — a preview can
+ *  be asked for before every question is answered, unlike the real build. */
+export type PlanPreviewInput = {
+  release_date?: string | null;
+  ready_today?: ReadyItem[];
+  preset?: PlanPreset;
+  exclusions?: PlanScope[];
+  budget?: PlanBudget;
+};
+
+export type PlanPreviewResult = {
+  /** Always a real date: the manager's own answer, or the deterministic
+   *  suggestion when none was given yet. */
+  releaseDate: string;
+  dateWasSuggested: boolean;
+  totalTemplateTasks: number;
+  /** How many tasks would land in the plan if it were built right now, from
+   *  the deterministic filters alone (a preset, then any excluded scopes).
+   *  Never counts the model's own tailoring, which has not run — the model
+   *  can only DROP further from here, never add, so this is already the
+   *  floor a manager can trust. */
+  activityCount: number;
+  /** Of those, how many are already dated before today — the plan would
+   *  build them straight into Catch up rather than failing. */
+  lateCount: number;
+  weeksOfRunway: number;
+  /** Empty for a single. For EP/album, when a release date is known (fixed
+   *  or suggested), the date each staggered single would drop on. */
+  singleDates: Array<{ label: string; date: string }>;
+};
+
+/**
+ * What UrgAns reads its "Here's what I'll build" confirmation from, instead
+ * of writing one from memory. Every number in it is computed the same way
+ * `createReleasePlan` computes the real plan, so the read-back the manager
+ * approves can never disagree with what actually gets built.
+ *
+ * Pure and read-only: nothing is written, and calling this as many times as
+ * the interview needs (the answers change turn to turn) costs nothing.
+ */
+export function buildPlanPreview(params: {
+  template: Template;
+  input: PlanPreviewInput;
+  todayYmd: string;
+}): PlanPreviewResult {
+  const { template, input, todayYmd } = params;
+  const readyToday = input.ready_today ?? [];
+
+  let releaseDate: string;
+  let dateWasSuggested = false;
+  if (input.release_date) {
+    releaseDate = input.release_date;
+  } else {
+    releaseDate =
+      suggestReleaseDate(todayYmd, readyToday, getTemplateLeadTimeDays(template)) ?? todayYmd;
+    dateWasSuggested = true;
+  }
+
+  const excludedScopes = new Set<PlanScope>(input.exclusions ?? []);
+  if (input.budget === 'none') excludedScopes.add('paid_ads');
+
+  const releaseEpoch = parseYmd(releaseDate);
+  const todayEpoch = parseYmd(todayYmd);
+
+  let activityCount = 0;
+  let lateCount = 0;
+  for (const rawTask of template.tasks) {
+    // Raw template tasks carry an OPTIONAL tags field (an authoring
+    // convenience); every downstream draft-task type normalizes it to a
+    // required array before isTaskInScope/isTaskKeptByPreset ever see it.
+    // This preview reads the template directly, so it does that
+    // normalization itself, once, right here.
+    const task = { ...rawTask, tags: rawTask.tags ?? [] };
+    const keptByPreset = !input.preset || isTaskKeptByPreset(task, input.preset, template.id);
+    const excludedByScope = Array.from(excludedScopes).some((scope) => isTaskInScope(task, scope));
+    if (!keptByPreset || excludedByScope) continue;
+
+    activityCount += 1;
+    if (releaseEpoch !== null && todayEpoch !== null) {
+      const taskEpoch = releaseEpoch + task.offset_days * MS_PER_DAY;
+      if (taskEpoch < todayEpoch) lateCount += 1;
+    }
+  }
+
+  const weeksOfRunway =
+    releaseEpoch !== null && todayEpoch !== null
+      ? Math.round((releaseEpoch - todayEpoch) / MS_PER_DAY / 7)
+      : 0;
+
+  const singleDates: Array<{ label: string; date: string }> = [];
+  for (const milestone of STAGGERED_SINGLE_MILESTONES[template.id] ?? []) {
+    const task = template.tasks.find((t) => t.id === milestone.id);
+    const date = task ? computeTaskYmd(releaseDate, task.offset_days) : null;
+    if (date) singleDates.push({ label: milestone.label, date });
+  }
+
+  return {
+    releaseDate,
+    dateWasSuggested,
+    totalTemplateTasks: template.tasks.length,
+    activityCount,
+    lateCount,
+    weeksOfRunway,
+    singleDates,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -789,6 +1204,26 @@ export function applyScopeExclusions(
   });
 
   return { ...doc, applied_exclusions: [...doc.applied_exclusions, ...fresh], tasks };
+}
+
+/**
+ * Soft-remove every template task the preset does not keep. Stamped
+ * `removed_by: 'intake'` — the manager's own answer, not the model's — so
+ * {@link summarizeRemovedTasks} reports these exactly like a scope exclusion
+ * with no changes needed there.
+ *
+ * Rows the manager added, and rows already removed, are left alone, same as
+ * {@link applyScopeExclusions}. Idempotent: calling this twice removes
+ * nothing new the second time.
+ */
+export function applyPreset(doc: ReleasePlanDraftDoc, preset: PlanPreset): ReleasePlanDraftDoc {
+  const reason = PLAN_PRESET_REMOVED_REASON[preset];
+  const tasks = doc.tasks.map((task) => {
+    if (task.origin !== 'template' || task.removed) return task;
+    if (isTaskKeptByPreset(task, preset, doc.template_id)) return task;
+    return { ...task, removed: true, removed_by: 'intake' as const, removed_reason: reason };
+  });
+  return { ...doc, tasks };
 }
 
 // ---------------------------------------------------------------------------
@@ -1480,6 +1915,9 @@ function describeIntake(intake: ReleasePlanIntake): string[] {
     `- Main goal: ${GOAL_LABELS[intake.goal] || intake.goal}`,
     `- Rollout budget: ${BUDGET_LABELS[intake.budget] || intake.budget}`,
   ];
+  if (intake.preset) {
+    lines.push(`- Preset: ${PLAN_PRESET_LABELS[intake.preset]}`);
+  }
   if (intake.exclusions?.length) {
     lines.push(
       `- Asked to leave out: ${intake.exclusions.map((scope) => PLAN_SCOPE_LABELS[scope]).join(', ')}`
@@ -1580,6 +2018,12 @@ function buildGuidance(
       `- Already left out at the manager's request: ${applied
         .map((entry) => PLAN_SCOPE_LABELS[entry.scope])
         .join(', ')}. Those tasks are not in the list below. Do not mention them, and do not suggest bringing them back.`
+    );
+  }
+
+  if (intake.preset) {
+    lines.push(
+      `- This is a ${PLAN_PRESET_LABELS[intake.preset]}: the tasks below are already only the ones that preset keeps. Do not suggest adding marketing, press or paid work back — the manager asked for exactly this shape.`
     );
   }
 

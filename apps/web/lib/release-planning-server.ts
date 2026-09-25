@@ -17,6 +17,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   activeDraftTasks,
+  isTaskPreCompletedByReady,
   parseYmd,
   type DraftTask,
   type ReleasePlanDraftDoc,
@@ -145,6 +146,14 @@ export function buildTaskRowsFromDraft(params: {
       reassignedCount += 1;
     }
 
+    // A "ready today" answer means the outcome is already finished, so the
+    // matching playbook steps land done rather than sitting on the manager's
+    // list as open work they have already done. Only ever a template task —
+    // a manager-added row has no playbook provenance for this to key off.
+    const preCompleted =
+      task.origin === 'template' &&
+      isTaskPreCompletedByReady(task, doc.intake.ready_today, doc.template_id);
+
     return {
       id,
       release_id: releaseId,
@@ -156,7 +165,7 @@ export function buildTaskRowsFromDraft(params: {
       assigned_collaborator_id: null,
       title: task.title,
       description: task.why,
-      status: 'todo',
+      status: preCompleted ? 'done' : 'todo',
       priority: 'none',
       state: 'planning',
       position: index,

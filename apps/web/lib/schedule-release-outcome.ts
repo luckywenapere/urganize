@@ -17,6 +17,7 @@ export type ScheduleReleaseOutcome =
 export type SchedulePayload = {
   error?: string;
   activitiesCreated?: unknown;
+  activitiesMoved?: unknown;
 };
 
 export function interpretScheduleResponse(
@@ -37,6 +38,16 @@ export function interpretScheduleResponse(
     };
   }
   const created = Number(payload.activitiesCreated || 0);
+  const moved = Number(payload.activitiesMoved || 0);
+  // A rollout with no activities yet gets some CREATED; an already-planned
+  // one moving its date gets some MOVED — the two never both apply to one
+  // save, so this reads either message rather than deciding between them.
+  if (moved > 0) {
+    return {
+      kind: 'saved',
+      message: `Release date set. ${moved} ${moved === 1 ? 'activity' : 'activities'} moved with it.`,
+    };
+  }
   return {
     kind: 'saved',
     message:

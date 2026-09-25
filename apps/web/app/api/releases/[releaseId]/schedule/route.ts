@@ -11,6 +11,11 @@ import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import { getTemplate } from '@/lib/release-templates/loader';
 import type { ReleaseType } from '@/lib/release-templates/types';
 import {
+  computeShiftedTaskDueDates,
+  daysBetweenReleaseDates,
+  type ReschedulableTask,
+} from '@/lib/release-reschedule';
+import {
   captureServerAnalyticsEvent,
   createPostHogEvent,
   createServerPostHogClient,
@@ -19,7 +24,10 @@ import {
 
 /**
  * Sets a release date, and builds the rollout plan if this release has been
- * waiting on one (URG-230).
+ * waiting on one (URG-230). If the rollout ALREADY had a date and activities,
+ * moving the date moves them with it — every open, dated activity shifts by
+ * the same number of days the release date moved; done work stays exactly
+ * where it landed. See lib/release-reschedule.ts for the pure arithmetic.
  *
  * Why this exists rather than reusing PATCH /api/releases/[releaseId]:
  *   1. That handler is a PUT in PATCH's clothing — it writes the whole row,
@@ -30,9 +38,11 @@ import {
  *      generic update handler. Here it's the stated job.
  *
  * Instantiation is the SAME `instantiateTemplate` call the create route makes
- * — deferred, not reimplemented. Nothing is re-dated and no existing activity
- * is touched, which is the whole reason the founder chose to hold the plan
- * rather than generate it undated and back-fill.
+ * — deferred, not reimplemented. A release still waiting on its first date has
+ * no activities yet, which is the whole reason the founder chose to hold the
+ * plan rather than generate it undated and back-fill; the reschedule branch
+ * above is the OTHER case, an already-planned rollout whose date moves, and
+ * the two are mutually exclusive (see `templatePending` below).
  */
 export async function POST(
   request: NextRequest,
@@ -85,10 +95,12 @@ export async function POST(
     // column list (used by many routes) — read them here rather than widening
     // that select. The metadata row is re-read here (not carried from the
     // client) so the clear below is a true read-modify-write and can't drop
-    // another key.
+    // another key. `release_date` is read here too — the OLD one, before the
+    // write below overwrites it — because ensureReleaseOwnership's summary
+    // shape (toReleaseSummary) drops that column entirely.
     const pendingResult = await adminClient
       .from('releases')
-      .select('metadata,release_type')
+      .select('metadata,release_type,release_date')
       .eq('id', releaseId)
       .maybeSingle();
 
@@ -105,6 +117,9 @@ export async function POST(
     > | null;
     const templatePending = readTemplatePending(existingMetadata);
     const releaseType = String(pendingResult.data?.release_type || 'single');
+    const previousReleaseDate = pendingResult.data?.release_date
+      ? String(pendingResult.data.release_date).slice(0, 10)
+      : null;
 
     // Write the date FIRST and independently of instantiation. If the plan
     // build fails below, the user still got the thing they asked for, and the
@@ -129,6 +144,68 @@ export async function POST(
     }
 
     let activitiesCreated = 0;
+    let activitiesMoved = 0;
+
+    // Moving an ALREADY-scheduled rollout's date takes its open activities
+    // with it — a release still waiting on its first date (templatePending)
+    // has no activities yet, so the two branches are mutually exclusive.
+    // Best-effort and non-fatal by the same reasoning the instantiation
+    // branch below uses: the date the user asked for is already saved: a
+    // failure here is reported, not rolled back.
+    if (!templatePending && previousReleaseDate && previousReleaseDate !== releaseDateResult.value) {
+      const daysMoved = daysBetweenReleaseDates(previousReleaseDate, releaseDateResult.value);
+      if (daysMoved) {
+        try {
+          const tasksResult = await adminClient
+            .from('tasks')
+            .select('id,status,due_date')
+            .eq('release_id', releaseId);
+          if (tasksResult.error) throw tasksResult.error;
+
+          const shifts = computeShiftedTaskDueDates(
+            (tasksResult.data || []).map(
+              (row): ReschedulableTask => ({
+                id: String(row.id),
+                status: String(row.status || ''),
+                dueDate: row.due_date ? String(row.due_date) : null,
+              })
+            ),
+            daysMoved
+          );
+
+          // One update per row: the shifts differ per task, and this repo
+          // has no raw-SQL "shift every matching row by N days" primitive to
+          // reach for instead (the boring-stack call — see release-reschedule.ts).
+          const results = await Promise.all(
+            shifts.map((shift) =>
+              adminClient.from('tasks').update({ due_date: shift.dueDate }).eq('id', shift.id)
+            )
+          );
+          const failed = results.find((result) => result.error);
+          if (failed?.error) throw failed.error;
+
+          activitiesMoved = shifts.length;
+        } catch (shiftError) {
+          console.error(
+            `Release ${releaseId}: date saved but moving its activities failed.`,
+            shiftError
+          );
+          return NextResponse.json(
+            {
+              releaseId,
+              releaseDate: releaseDateResult.value,
+              title: String(updateResult.data?.title || ''),
+              activitiesCreated: 0,
+              activitiesMoved: 0,
+              templatePending: false,
+              error:
+                'Your release date was saved, but its activities could not be moved with it. Try setting the date again.',
+            },
+            { status: 207 }
+          );
+        }
+      }
+    }
 
     if (templatePending) {
       try {
@@ -178,6 +255,7 @@ export async function POST(
         // set-at-creation case the create route already reports.
         deferred: true,
         activities_created: activitiesCreated,
+        activities_moved: activitiesMoved,
       })
     );
 
@@ -186,6 +264,7 @@ export async function POST(
       releaseDate: releaseDateResult.value,
       title: String(updateResult.data?.title || ''),
       activitiesCreated,
+      activitiesMoved,
       templatePending: false,
     });
   } finally {

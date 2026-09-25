@@ -68,12 +68,19 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       const currentTitle = typeof release.title === 'string' ? release.title : '';
       const currentDescription =
         typeof release.description === 'string' ? release.description : '';
+      // This tool never changes the date (schedule_release does), but the
+      // route treats an OMITTED releaseDate as "clear it" — so it has to be
+      // echoed back like title/description, or every edit through here would
+      // silently null the release's date.
+      const currentReleaseDate =
+        typeof release.releaseDate === 'string' ? release.releaseDate : null;
       // The GET overwrites `status` with a COMPUTED value that is never
       // 'released'; echoing it back would rewrite the stored status. Only send
       // a status when the user actually asked to change one.
       const body: Record<string, unknown> = {
         title: title || currentTitle,
         description: description || currentDescription,
+        releaseDate: currentReleaseDate,
       };
       if (status) body.status = status;
       if (!body.title) return fail('A rollout needs a title.');
@@ -94,7 +101,7 @@ export const RELEASE_TOOLS: ChappiTool[] = [
     name: 'schedule_release',
     kind: 'mutate',
     description:
-      "Set or change a rollout's date. If the rollout was waiting on a date to build its rollout activities, this also creates them.",
+      "Set or change a rollout's date. If the rollout was waiting on a date to build its rollout activities, this also creates them. If it already had a date and activities, moving the date moves every open, dated activity with it by the same number of days — done work stays where it landed.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -115,9 +122,10 @@ export const RELEASE_TOOLS: ChappiTool[] = [
       });
       if (!res.ok) return fail(apiError(res, 'Could not set the release date.'));
 
-      // 207: the date saved but building the activities failed. Say so rather
-      // than reporting a clean success.
+      // 207: the date saved but building (or moving) the activities failed.
+      // Say so rather than reporting a clean success.
       const created = Number(res.body.activitiesCreated ?? 0);
+      const moved = Number(res.body.activitiesMoved ?? 0);
       const stillPending = res.body.templatePending === true;
       if (stillPending) {
         return {
@@ -126,11 +134,17 @@ export const RELEASE_TOOLS: ChappiTool[] = [
           clientAction: { type: 'refresh' },
         };
       }
+      // Created and moved never both apply to one call: a rollout either had
+      // no activities yet (created) or already had a plan whose date just
+      // moved (moved).
+      const summary = moved
+        ? `Set the date to ${releaseDate} and moved ${moved} ${moved === 1 ? 'activity' : 'activities'} with it.`
+        : created
+          ? `Set the date to ${releaseDate} and built ${created} activities.`
+          : `Set the date to ${releaseDate}.`;
       return {
         ok: true,
-        summary: created
-          ? `Set the date to ${releaseDate} and built ${created} activities.`
-          : `Set the date to ${releaseDate}.`,
+        summary,
         clientAction: { type: 'refresh' },
       };
     },
