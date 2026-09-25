@@ -18,6 +18,11 @@ export interface CuratorProfile {
   photoUrl: string | null;
   /** Storage object path, kept so the client can tell "no photo" from "not loaded". */
   photoPath: string | null;
+  /** The handle in her public URL, or null before she has ever published. */
+  slug: string | null;
+  /** When her public page went live. Null means it is not live; the slug is
+   *  deliberately kept either way, so republishing restores the same URL. */
+  publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
