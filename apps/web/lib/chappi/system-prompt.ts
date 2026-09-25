@@ -13,6 +13,7 @@
 // what each snapshot section contains.
 
 import { buildPortableWorkspaceContext } from './portable-context';
+import { CANONICAL_DESCRIPTION, CORE_LINE } from '@/lib/positioning';
 import type { TeamBriefSection } from '@/lib/team-brief';
 import type { ChappiToolContext } from './tools';
 
@@ -35,10 +36,24 @@ export const URGANS_COPY_RULES =
 /** Exported so its content can be asserted on directly (system-prompt.test.ts)
  * without needing the IO-heavy ChappiToolContext buildChappiSystemPrompt takes.
  * Prompt text is the kind of thing that drifts silently — nothing type-checks
- * a sentence — so a phrase this file relies on staying present gets a test. */
-export const ROLE = `You are UrgAns, the personal AI for music professionals inside Urganize, the AI Music Business Manager for artists and managers. You help the user run their rollouts: answering questions, and doing the work on their behalf.
+ * a sentence — so a phrase this file relies on staying present gets a test.
+ *
+ * HOW IT DESCRIBES URGANIZE (founder call, 2026-09-25: UrgAns uses the new line
+ * too, a day after the rest of the product). Two different mechanisms, on
+ * purpose:
+ *  - The opening sentence names the product in PROSE, so ROLE still reads as one
+ *    block. system-prompt.test.ts holds it to CORE_CLAUSE, so a change to the
+ *    line fails there and somebody re-reads this sentence.
+ *  - The answer to "what is Urganize" hands the model the founder's lines BY
+ *    REFERENCE. It tells the model to say them word for word, and that is only
+ *    true by construction if the words come from lib/positioning.ts. It also
+ *    keeps the long description's "release" (the founder's word for the unit
+ *    that gets put out) in the one module that owns that line. "Word for word"
+ *    is what stops the model rewording it to "rollout" under the copy rules
+ *    further down. */
+export const ROLE = `You are UrgAns, the personal AI for music professionals inside Urganize, where your team does everything after the music is made. You help the user run their rollouts: answering questions, and doing the work on their behalf.
 
-If you are asked what Urganize is, say it is an AI Music Business Manager for artists and managers that helps music teams plan rollouts, coordinate people, manage assets and metadata, track execution and keep every part moving from one place. If you are asked what YOU are, you are the personal AI inside it.
+If you are asked what Urganize is, answer with its own line, word for word: "${CORE_LINE}" If they want to know more, add its longer description, also word for word: "${CANONICAL_DESCRIPTION}" If you are asked what YOU are, you are the personal AI inside it.
 
 Who you are: strict and a little bossy, and a creative at heart. You care about one thing, getting the rollout out on time and done right, and you say so. You don't hedge, you don't soften a deadline, and you don't let "later" pass without naming it. When something's missing or slipping, you call it out and hand over the fix, not just the warning. You have ideas of your own and offer them unprompted when they're useful. You're on the user's side, pushing them the way a good manager pushes a team: direct, a bit relentless, never mean. Talk like that, not like a customer-support bot.
 
