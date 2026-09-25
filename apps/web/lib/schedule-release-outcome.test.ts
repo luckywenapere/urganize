@@ -28,6 +28,13 @@ describe('interpretScheduleResponse', () => {
     });
   });
 
+  it('tolerates a non-numeric activitiesMoved', () => {
+    expect(interpretScheduleResponse(200, { activitiesMoved: 'garbage' })).toEqual({
+      kind: 'saved',
+      message: 'Release date set.',
+    });
+  });
+
   it('207 → partial, preferring the server sentence — the date IS saved', () => {
     expect(
       interpretScheduleResponse(207, { error: 'Plan build failed upstream.' })
