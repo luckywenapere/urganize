@@ -1,10 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { sendEmail } from './email';
-import {
-  APP_URL,
-  buildWorkRequestAnswerEmail,
-  buildWorkRequestEmail,
-} from './email-templates';
+import { isEmailConfigured, sendEmail } from './email';
+import { APP_URL } from './email/links';
 import { DIRECTORY_ROLE_LABELS, type DirectoryRole } from './directory-roles';
 import { revealsContact, type WorkRequestStatus } from './work-requests';
 import { DIRECTORY_SETTINGS_ANCHOR } from './person-profile';
@@ -73,22 +69,22 @@ export async function notifyWorkRequest(
   input: { recipientUserId: string; senderName: string; role: string; note: string }
 ): Promise<void> {
   try {
+    if (!isEmailConfigured()) return;
     const recipient = await lookupPerson(admin, input.recipientUserId);
     if (!recipient) return;
 
-    const built = buildWorkRequestEmail({
-      recipientName: recipient.name,
-      senderName: input.senderName,
-      roleLabel: DIRECTORY_ROLE_LABELS[input.role as DirectoryRole] || input.role,
-      note: input.note,
-      settingsUrl: settingsUrl(),
-    });
-
-    await sendEmail({
+    await sendEmail(admin, {
+      templateId: 'work_request',
       to: recipient.email,
-      subject: built.subject,
-      html: built.html,
-      text: built.text,
+      props: {
+        recipientName: recipient.name,
+        senderName: input.senderName,
+        roleLabel: DIRECTORY_ROLE_LABELS[input.role as DirectoryRole] || input.role,
+        note: input.note,
+        settingsUrl: settingsUrl(),
+      },
+      trigger: 'work_request_sent',
+      recipientUserId: input.recipientUserId,
       // "<name> via Urganize", the assignment email's rule: the inbox row
       // should read as the person, not as the product.
       fromLabel: `${input.senderName} via Urganize`,
@@ -109,6 +105,7 @@ export async function notifyWorkRequestAnswer(
   }
 ): Promise<void> {
   try {
+    if (!isEmailConfigured()) return;
     const [sender, answerer] = await Promise.all([
       lookupPerson(admin, input.senderUserId),
       lookupPerson(admin, input.recipientUserId),
@@ -126,21 +123,21 @@ export async function notifyWorkRequestAnswer(
     const contactEmail = reveal ? answerer?.email : undefined;
     const profileUrl = reveal ? await lookupPublicProfileUrl(admin, input.recipientUserId) : undefined;
 
-    const built = buildWorkRequestAnswerEmail({
-      recipientName: sender.name,
-      answererName,
-      roleLabel: DIRECTORY_ROLE_LABELS[input.role as DirectoryRole] || input.role,
-      interested: reveal,
-      reply: input.reply || '',
-      contactEmail,
-      profileUrl,
-    });
-
-    await sendEmail({
+    await sendEmail(admin, {
+      templateId: 'work_request_answer',
       to: sender.email,
-      subject: built.subject,
-      html: built.html,
-      text: built.text,
+      props: {
+        recipientName: sender.name,
+        answererName,
+        roleLabel: DIRECTORY_ROLE_LABELS[input.role as DirectoryRole] || input.role,
+        interested: reveal,
+        reply: input.reply || '',
+        contactEmail,
+        profileUrl,
+      },
+      trigger: 'work_request_answered',
+      recipientUserId: input.senderUserId,
+      actorUserId: input.recipientUserId,
       fromLabel: `${answererName} via Urganize`,
       // So that hitting Reply just works, which is what most people will do
       // before they read anything else in the message. Falls back to the

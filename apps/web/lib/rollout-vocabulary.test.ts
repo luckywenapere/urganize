@@ -43,7 +43,17 @@ const GUARDED_FILES = [
   'components/settings/BrandColorsSection.tsx',
   'lib/chappi/intent-router.ts',
   'lib/chappi/system-prompt.ts',
-  'lib/email-templates.ts',
+  // Customer-facing email copy (was lib/email-templates.ts before the 2026-09
+  // react-email split). The internal founder billing alert stays out.
+  'lib/email/templates/Layout.tsx',
+  'lib/email/templates/components.tsx',
+  'lib/email/templates/WelcomeEmail.tsx',
+  'lib/email/templates/WorkspaceInviteEmail.tsx',
+  'lib/email/templates/CreditSubmissionEmail.tsx',
+  'lib/email/templates/TaskAssignedEmail.tsx',
+  'lib/email/templates/WorkRequestEmail.tsx',
+  'lib/email/templates/WorkRequestAnswerEmail.tsx',
+  'lib/email/templates/NotifyAdminEmail.tsx',
   'lib/notification-presets.ts',
   'lib/help-copy.ts',
   'lib/tours.ts',

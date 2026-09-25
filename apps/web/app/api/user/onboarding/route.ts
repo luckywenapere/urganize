@@ -15,7 +15,6 @@ import {
   type UpdateOnboardingBody,
 } from '@/lib/onboarding';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
-import { buildWelcomeEmail } from '@/lib/email-templates';
 
 type ProfileOnboardingRecord = {
   id: string;
@@ -621,12 +620,13 @@ export async function PATCH(request: NextRequest) {
   if (isFirstCompletion && isEmailConfigured()) {
     const recipient = profileResult.profile.email || auth.user.email || '';
     if (recipient) {
-      const built = buildWelcomeEmail({ recipientName: profileResult.profile.name || '' });
-      const result = await sendEmail({
+      const result = await sendEmail(auth.adminClient, {
+        templateId: 'welcome',
         to: recipient,
-        subject: built.subject,
-        html: built.html,
-        text: built.text,
+        props: { recipientName: profileResult.profile.name || '' },
+        trigger: 'onboarding_completed',
+        recipientUserId: auth.user.id,
+        actorUserId: auth.user.id,
       });
       if (!result.ok && !result.skipped) {
         console.error(`[welcome-email] send failed for ${recipient}`, result.error);
