@@ -345,6 +345,34 @@ describe('platform detection', () => {
     vi.stubGlobal('window', { navigator: { userAgent: ANDROID_UA } });
     expect((await load()).isAndroidBrowser()).toBe(true);
   });
+
+  // The Capacitor app this shell replaced is still installed on phones that
+  // took the APK from urganize.app/download. It injects window.Capacitor and
+  // never the new shell's description or user-agent token, so without its own
+  // check the site would read it as a phone browser and offer to install the
+  // app inside the app.
+  it('never calls the retired Capacitor app a phone browser', async () => {
+    const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 15; Pixel 8; wv) AppleWebKit/537.36 Chrome/140.0 Mobile Safari/537.36';
+    const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
+
+    vi.stubGlobal('window', {
+      Capacitor: { isNativePlatform: () => true, getPlatform: () => 'android' },
+      navigator: { userAgent: ANDROID_UA },
+    });
+    expect((await load()).isAndroidBrowser()).toBe(false);
+    vi.resetModules();
+
+    // Presence alone is enough: nothing on this site defines that global.
+    vi.stubGlobal('window', { Capacitor: {}, navigator: { userAgent: IOS_UA } });
+    expect((await load()).isIOSBrowser()).toBe(false);
+    vi.resetModules();
+
+    // It is not the new shell either, so nothing asks it for a native feature.
+    vi.stubGlobal('window', { Capacitor: {}, navigator: { userAgent: ANDROID_UA } });
+    const legacy = await load();
+    expect(legacy.isNativePlatform()).toBe(false);
+    expect(legacy.getPlatform()).toBe('web');
+  });
 });
 
 describe('whenInShell', () => {

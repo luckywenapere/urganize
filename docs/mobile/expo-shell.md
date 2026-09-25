@@ -1,6 +1,6 @@
 # The Expo shell
 
-`apps/mobile` is an Expo app for iOS and Android (`com.urganize.app`). It shows the live, continuously deployed web app, `https://app.urganize.app`, in a `react-native-webview`, and does the few things a web page cannot do on its own. It replaced the Capacitor shell on 2026-09-24. No store release of the Capacitor shell ever shipped; there was one debug APK.
+`apps/mobile` is an Expo app for iOS and Android (`com.urganize.app`). It shows the live, continuously deployed web app, `https://app.urganize.app`, in a `react-native-webview`, and does the few things a web page cannot do on its own. It replaced the Capacitor shell on 2026-09-25. The Capacitor app never reached a store, but its APK (version 0.41.2, signed with the Urganize key) has been on urganize.app/download since 2026-08-08, and the install card has offered it to Android visitors since 2026-09-02 (v1.18.0). So real phones have it, and moving them over is its own step: see "Switching people from the old app" below.
 
 ## Why a shell, not a rebuild
 
@@ -62,7 +62,7 @@ The free trial and promo codes stay visible, because neither sells anything. And
 - **The splash** stays until the first page finishes loading, for at most 8 seconds.
 - **No app-bound domains on iOS.** They are what lets a service worker run in an iOS webview, and nothing needs one there today: Web Push cannot reach a webview, and the site's offline layer (`NEXT_PUBLIC_FEATURE_OFFLINE`) is switched off. They also narrow what the webview may load and run. If the offline layer is switched on and wanted in the app, add `WKAppBoundDomains` in `app.config.ts` and `limitsNavigationsToAppBoundDomains` in `App.tsx` together, and test the bridge on a real iPhone first.
 - **Android back button** walks the webview's history first, and leaves the app only from the first page.
-- **Permissions:** Android asks only for notifications. Expo's defaults for storage and drawing over other apps are removed in `app.config.ts` (`blockedPermissions`), because nothing uses them and each one is a line on the Play Store's data safety form.
+- **Permissions:** the only permission the app ever asks for is notifications. The others in its manifest (internet, network and wifi state, wake lock, vibrate, and Firebase's message receiver) are granted at install with no prompt. Expo's defaults for storage and drawing over other apps are removed in `app.config.ts` (`blockedPermissions`), because nothing uses them. Checked in the built APK's manifest, 2026-09-25.
 - **Native projects are generated, not committed.** `apps/mobile/android` and `apps/mobile/ios` are built from `app.config.ts` by `expo prebuild` and are gitignored. Change `app.config.ts` or a config plugin, never the generated folders.
 
 ## Building on Windows
@@ -84,7 +84,18 @@ and, from `apps/mobile/android`, with `JAVA_HOME` pointing at Android Studio's `
 
 The memory setting matters on Windows: when Gradle cannot reach its Kotlin compiler daemon it compiles inside its own process instead, and the generated default (512 MB of class space) runs out with `OutOfMemoryError: Metaspace`. If the path limit bites even from a short folder (ninja reporting `build.ninja still dirty after 100 tries`), add `node-linker=hoisted` to that copy's `.npmrc` only and install again: the flat layout makes every package path about 80 characters shorter. EAS builds on Linux and needs none of this.
 
-The APK lands in `apps/mobile/android/app/build/outputs/apk/release/`. It is signed with the debug key, so it installs on a phone for testing but cannot go to the Play Store.
+The APK lands in `apps/mobile/android/app/build/outputs/apk/release/`. It is signed with React Native's public test key, not the Urganize key, so it is for your own phone only: remove the old Urganize app first (a different key cannot install over it), and never put it on urganize.app/download (`android-signing.md` says why).
+
+## Switching people from the old app
+
+The APK on urganize.app/download is the Capacitor app, and the new website half cannot talk to it. Once this change is live, the old app still opens and signs in with email, and it never offers to install itself (`isRetiredCapacitorApp` in `lib/platform.ts`), but "Continue with Google" finishes in the phone's browser instead of the app. (It never had notifications or a share sheet: that build predates both.) So swap the download in the same release:
+
+1. Save the key's passwords and give the key to EAS (`android-signing.md`).
+2. Build a preview APK with EAS. It is signed with the same key, so it installs over the old app.
+3. Ship the website half and put the new APK at `apps/homepage/public/downloads/urganize.apk` together, updating `APP_VERSION` and `APK_SIZE` on the download page (`eas-setup.md`).
+4. Run the checklist below on a phone.
+
+Anyone who already has the old app just downloads the new one again from the same link.
 
 ## Known limits
 
@@ -95,7 +106,7 @@ The APK lands in `apps/mobile/android/app/build/outputs/apk/release/`. It is sig
 
 ## Manual test checklist
 
-Run this on a real phone with a new build, Android first:
+Run this on a real phone with a new build, Android first, once the website half is live. Before that, the live site does not know the new app: Google sign-in, notifications, sharing and the bar colours cannot work in it, and the site may offer "Get the app" inside it. What you can check early is that it opens with no browser bars, email sign-in, the keyboard (step 4), the back button, and the offline screen (step 8).
 
 1. **Opens.** The splash shows, then the app. No browser bars, no "Get the app" banner inside the app.
 2. **Signs in with email** and **with Google**: Google opens a sheet on its real consent screen, and approving returns you to the app signed in. Closing the sheet leaves the sign-in button usable.

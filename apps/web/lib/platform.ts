@@ -29,6 +29,29 @@ export function isAndroidApp(): boolean {
 }
 
 /**
+ * The Capacitor app this shell replaced (2026-09-25). It is still installed on
+ * phones that took the APK from urganize.app/download, and it injects
+ * window.Capacitor, which no browser tab has and nothing on this site defines.
+ * It is NOT the Expo shell, so nothing here asks it for a native feature; this
+ * only stops the two browser checks below from reading it as a phone browser,
+ * which would offer to install the app inside the app. Delete it once no
+ * installs of the Capacitor build remain.
+ */
+function isRetiredCapacitorApp(): boolean {
+  if (typeof window === 'undefined') return false;
+  return typeof (window as Window & { Capacitor?: unknown }).Capacitor !== 'undefined';
+}
+
+/** Inside one of our apps, old or new, however late the new one describes itself. */
+function isInsideAnApp(): boolean {
+  return (
+    isNativePlatform() ||
+    isRetiredCapacitorApp() ||
+    hasShellUserAgent(window.navigator?.userAgent)
+  );
+}
+
+/**
  * True only for a plain Android browser tab — getPlatform() reports 'web'
  * outside the native shell, so it can't distinguish "Android Chrome" from
  * any other browser. This is a UA sniff specifically for
@@ -38,11 +61,12 @@ export function isAndroidApp(): boolean {
  * The shell's user-agent token is checked as well as isNativePlatform():
  * Android injects the shell's description as the page starts loading, not
  * strictly before its first script, and in that gap the app would otherwise
- * read as a phone browser and offer to install itself.
+ * read as a phone browser and offer to install itself. The retired Capacitor
+ * app is checked for the same reason (isInsideAnApp).
  */
 export function isAndroidBrowser(): boolean {
   if (typeof window === 'undefined') return false;
-  if (isNativePlatform() || hasShellUserAgent(window.navigator?.userAgent)) return false;
+  if (isInsideAnApp()) return false;
   return /Android/i.test(window.navigator.userAgent);
 }
 
@@ -58,7 +82,7 @@ export function isAndroidBrowser(): boolean {
  */
 export function isIOSBrowser(): boolean {
   if (typeof window === 'undefined') return false;
-  if (isNativePlatform() || hasShellUserAgent(window.navigator?.userAgent)) return false;
+  if (isInsideAnApp()) return false;
   const nav = window.navigator;
   if (/iPad|iPhone|iPod/i.test(nav.userAgent)) return true;
   return nav.platform === 'MacIntel' && nav.maxTouchPoints > 1;
