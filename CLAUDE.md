@@ -15216,7 +15216,32 @@ the OTHER embedded action, is untouched and still uses the two-step shape —
 `oneShot` is an option this framework offers, not a direction it forces every
 action toward.
 
+**Rebased 2026-09-25, after ten days of unrelated drift, and the founder
+re-confirmed the direction before it landed** — this branch sat unmerged while
+`main` built further ON TOP of the review step it removes: share to socials'
+`shareAction`, the embedded-actions admin console, and a `share_release` tool
+name landing right beside the two this section deletes
+(`approve_release_plan`, `discard_release_plan`) in the same enum. None of
+that changes what already shipped here; the rebase kept `shareAction` and
+`share_release`, dropped `showPlanPill`/`hasPlanDraft` (the review-step pill
+this section retires), and re-derived the version number rather than trusting
+the branch's own stale v1.42.0 claim, which had since been taken twice over by
+other work. See "Everything after the music" and the rest of this file's
+2026-09-15-to-25 entries for what else moved underneath it.
+
 ### Verified
+
+**Re-run after the rebase, numbers below are from before it and are the
+build-time record — re-verified counts follow in the same order:** full
+vitest suite **3689 passed, 30 skipped**, zero failures; `eslint .` **3 errors
+/ 78 warnings** in `apps/web` (the same three pre-existing `WorkspaceView.tsx`
+errors, and one warning FEWER than a clean `main` checkout's own 79, measured
+by linting both); `tsc --noEmit` clean apart from the same 8 documented
+`confirmed-action.test.ts` errors; `next build` green by exit code with
+`NEXT_PUBLIC_FEATURE_RELEASE_PLANNER` both on and off, `/auth`, `/onboarding`,
+`/settings` and `/dashboard` all still `○ Static` in each; and the same
+404-vs-401 runtime discrimination on `/api/releases/[id]/plan` confirmed again
+post-rebase.
 
 `vitest run` in `apps/web`: **3256 passed, 30 skipped**, zero failures.
 `eslint .`: **3 errors / 77 warnings** in `apps/web` (all three errors the
