@@ -21,13 +21,9 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import type { AccountMonthsSummary } from '@/lib/account-months';
+import type { WaitlistSummary } from '@/lib/waitlist-weeks';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
-import {
-  AccountsSection,
-  WaitlistSection,
-  type SectionState,
-  type WaitlistSummary,
-} from './GrowthSections';
+import { AccountsSection, WaitlistSection, type SectionState } from './GrowthSections';
 
 type Loaded<T> = SectionState<T> | { kind: 'denied' };
 
@@ -76,6 +72,7 @@ function isWaitlistPayload(payload: unknown): payload is WaitlistSummary {
   return (
     Boolean(payload) &&
     typeof (payload as WaitlistSummary).total === 'number' &&
+    typeof (payload as WaitlistSummary).beforeWindow === 'number' &&
     Array.isArray((payload as WaitlistSummary).weeks)
   );
 }
