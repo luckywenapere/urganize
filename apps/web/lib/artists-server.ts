@@ -446,6 +446,10 @@ export type ArtistDeletionBlocker = {
   releases: number;
   /** Teammates who can only see this artist's releases. */
   scopedMembers: number;
+  /** Shows booked for this artist. events.artist_id is ON DELETE RESTRICT, so
+   *  the database would refuse anyway — as a raw error that deleteWorkspaceArtist
+   *  used to misreport as "This artist has rollouts now" (found 2026-09-25). */
+  shows: number;
 };
 
 /**
@@ -477,7 +481,7 @@ export async function countArtistDeletionBlockers(
 ): Promise<ArtistDeletionBlocker | null> {
   if (!artistId) return null;
   try {
-    const [releases, members] = await Promise.all([
+    const [releases, members, shows] = await Promise.all([
       adminClient
         .from(RELEASES_TABLE)
         .select('id', { count: 'exact', head: true })
@@ -487,12 +491,16 @@ export async function countArtistDeletionBlockers(
         .select('id', { count: 'exact', head: true })
         .eq('artist_scope_id', artistId)
         .neq('status', 'removed'),
+      adminClient
+        .from('events')
+        .select('id', { count: 'exact', head: true })
+        .eq('artist_id', artistId),
     ]);
 
-    if (releases.error || members.error) {
+    if (releases.error || members.error || shows.error) {
       console.error(
         '[artists] could not count deletion blockers:',
-        releases.error?.message || members.error?.message
+        releases.error?.message || members.error?.message || shows.error?.message
       );
       return null;
     }
@@ -500,6 +508,7 @@ export async function countArtistDeletionBlockers(
     return {
       releases: releases.count ?? 0,
       scopedMembers: members.count ?? 0,
+      shows: shows.count ?? 0,
     };
   } catch (error) {
     console.error('[artists] could not count deletion blockers:', error);
@@ -522,16 +531,44 @@ export function describeArtistDeletionBlock(
   }
 
   const { releases, scopedMembers } = blockers;
-  if (releases > 0 && scopedMembers > 0) {
-    return `This artist has ${releases} ${releases === 1 ? 'rollout' : 'rollouts'} and ${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} who can only see them. Move ${releases === 1 ? 'it' : 'them'} and change that access first.`;
+  const shows = blockers.shows ?? 0;
+
+  if (shows === 0) {
+    if (releases > 0 && scopedMembers > 0) {
+      return `This artist has ${releases} ${releases === 1 ? 'rollout' : 'rollouts'} and ${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} who can only see them. Move ${releases === 1 ? 'it' : 'them'} and change that access first.`;
+    }
+    if (releases > 0) {
+      return `This artist has ${releases} ${releases === 1 ? 'rollout' : 'rollouts'}. Move ${releases === 1 ? 'it' : 'them'} to another artist first, or archive ${releases === 1 ? 'it' : 'them'}.`;
+    }
+    if (scopedMembers > 0) {
+      return `${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} can only see this artist. Change their access first, or they will start seeing every rollout.`;
+    }
+    return null;
   }
-  if (releases > 0) {
-    return `This artist has ${releases} ${releases === 1 ? 'rollout' : 'rollouts'}. Move ${releases === 1 ? 'it' : 'them'} to another artist first, or archive ${releases === 1 ? 'it' : 'them'}.`;
-  }
-  if (scopedMembers > 0) {
-    return `${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} can only see this artist. Change their access first, or they will start seeing every rollout.`;
-  }
-  return null;
+
+  // Shows join the list. Same shape as the lines above: name every number, then
+  // say what to do about each one, in the order the manager would do it.
+  const held = [
+    releases > 0 ? `${releases} ${releases === 1 ? 'rollout' : 'rollouts'}` : null,
+    `${shows} ${shows === 1 ? 'show' : 'shows'}`,
+    scopedMembers > 0
+      ? `${scopedMembers} ${scopedMembers === 1 ? 'person' : 'people'} who can only see this artist`
+      : null,
+  ].filter((part): part is string => part !== null);
+  const steps = [
+    releases > 0 ? `move or archive the ${releases === 1 ? 'rollout' : 'rollouts'}` : null,
+    `delete the ${shows === 1 ? 'show' : 'shows'}`,
+    scopedMembers > 0 ? 'change that access' : null,
+  ].filter((part): part is string => part !== null);
+
+  const action = joinPlainList(steps);
+  return `This artist has ${joinPlainList(held)}. ${action.charAt(0).toUpperCase()}${action.slice(1)} first.`;
+}
+
+/** "a", "a and b", "a, b and c" — house style carries no Oxford comma. */
+function joinPlainList(parts: readonly string[]): string {
+  if (parts.length <= 1) return parts[0] ?? '';
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
 /**
@@ -546,6 +583,14 @@ export async function deleteWorkspaceArtist(
   adminClient: SupabaseClient,
   input: { artistId: string; workspaceId: string }
 ): Promise<{ error: string | null }> {
+  // The song catalog goes first. songs.artist_id is ON DELETE RESTRICT, so an
+  // artist who ever had a song added — even one in no set at all — could never
+  // be removed before 2026-09-25. By this point the caller has confirmed the
+  // artist has no shows (countArtistDeletionBlockers), and a set can only hold
+  // its own artist's songs, so nothing still plays any of them.
+  const catalog = await deleteArtistCatalog(adminClient, input.artistId);
+  if (catalog.error) return catalog;
+
   const { error } = await adminClient
     .from(ARTISTS_TABLE)
     .delete()
@@ -557,11 +602,75 @@ export async function deleteWorkspaceArtist(
     // release was filed under this artist between our check and this delete.
     const code = String((error as { code?: string }).code || '');
     if (code === '23503') {
-      return { error: 'This artist has rollouts now. Move them first.' };
+      // Something was filed under this artist between our check and this
+      // delete — a rollout or a show. Say so without guessing which.
+      return {
+        error: 'Something was just added to this artist. Check their rollouts and shows, then try again.',
+      };
     }
     return { error: error.message || 'Could not remove this artist.' };
   }
 
+  return { error: null };
+}
+
+/**
+ * Removes an artist's song catalog: the files in storage, then the rows (their
+ * versions cascade).
+ *
+ * Storage first and best-effort, the song-version DELETE route's order: a
+ * stranded object costs storage, whereas refusing here would leave the artist
+ * undeletable over a file nobody can see. A row that will not go (23503: a set
+ * still uses it, which should not be reachable once shows are gone) is
+ * reported rather than swallowed.
+ */
+export async function deleteArtistCatalog(
+  adminClient: SupabaseClient,
+  artistId: string
+): Promise<{ error: string | null }> {
+  if (!artistId) return { error: null };
+
+  const songs = await adminClient.from('songs').select('id').eq('artist_id', artistId);
+  if (songs.error) {
+    return { error: 'Could not check this artist’s songs. Try again.' };
+  }
+  const songIds = (songs.data || [])
+    .map((row) => String((row as Record<string, unknown>).id || ''))
+    .filter(Boolean);
+  if (songIds.length === 0) return { error: null };
+
+  const versions = await adminClient
+    .from('song_versions')
+    .select('storage_bucket,storage_path')
+    .in('song_id', songIds);
+  if (!versions.error) {
+    const byBucket = new Map<string, string[]>();
+    for (const entry of versions.data || []) {
+      const row = entry as Record<string, unknown>;
+      const bucket = String(row.storage_bucket || '');
+      const path = String(row.storage_path || '');
+      if (!bucket || !path) continue;
+      byBucket.set(bucket, [...(byBucket.get(bucket) || []), path]);
+    }
+    for (const [bucket, paths] of byBucket) {
+      const removal = await adminClient.storage.from(bucket).remove(paths);
+      if (removal.error) {
+        console.error('[artists] song file removal failed', {
+          artistId,
+          message: removal.error.message,
+        });
+      }
+    }
+  }
+
+  const { error } = await adminClient.from('songs').delete().eq('artist_id', artistId);
+  if (error) {
+    const code = String((error as { code?: string }).code || '');
+    if (code === '23503') {
+      return { error: 'One of this artist’s songs is still in a set. Delete their shows first.' };
+    }
+    return { error: error.message || 'Could not remove this artist’s songs.' };
+  }
   return { error: null };
 }
 

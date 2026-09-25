@@ -3,12 +3,14 @@ import { parseSetlistItemPatch, type SetlistItemType } from '@/lib/setlist';
 import {
   SETLIST_ITEMS_TABLE,
   SETLIST_ITEM_COLUMNS,
+  SONGS_TABLE,
   asRow,
   createAdminClient,
   ensureSetlistAccess,
   eventsDisabledResponse,
   isEventsFeatureEnabled,
   requireActiveAuthenticatedUser,
+  versionBelongsToSong,
 } from '@/app/api/events/_shared';
 
 const ITEM_NOT_FOUND = 'That is not in this set.';
@@ -70,7 +72,12 @@ export async function PATCH(
   // The stored type is required: the song-shape rule spans fields, so a patch
   // that turns a song slot into a break has to know what it is turning from.
   const currentType = String(existing.item.item_type || 'song') as SetlistItemType;
-  const parsed = parseSetlistItemPatch(body, currentType);
+  const storedSeconds = existing.item.duration_seconds;
+  const parsed = parseSetlistItemPatch(
+    body,
+    currentType,
+    typeof storedSeconds === 'number' ? storedSeconds : null
+  );
   if (parsed.errors.length > 0) {
     return NextResponse.json(
       { error: parsed.errors[0].message, fieldErrors: parsed.errors },
@@ -78,9 +85,46 @@ export async function PATCH(
     );
   }
 
+  const columns = { ...parsed.columns };
+  const previousSongId = existing.item.song_id ? String(existing.item.song_id) : null;
+  const nextSongId =
+    columns.song_id === undefined ? previousSongId : columns.song_id ?? null;
+
+  // Swapping the song has to stay inside THIS artist's catalog, the same check
+  // POST makes. It was missing here, so a patch could point a row at any song
+  // id at all.
+  if (columns.song_id && columns.song_id !== previousSongId) {
+    const song = await adminClient!
+      .from(SONGS_TABLE)
+      .select('id,artist_id')
+      .eq('id', columns.song_id)
+      .maybeSingle();
+    const songRow = song.data ? asRow(song.data) : null;
+    if (!songRow || String(songRow.artist_id || '') !== access.artistId) {
+      return NextResponse.json(
+        { error: 'That song is not in this artist’s catalog.' },
+        { status: 404 }
+      );
+    }
+    // The file chosen for the OLD song is not a file of the new one. Unless
+    // this same patch picks a new file, the row falls back to the new song's
+    // own default (see pickDefaultVersion).
+    if (columns.song_version_id === undefined) {
+      columns.song_version_id = null;
+    }
+  }
+
+  // A chosen file must be one of the row's song's files — POST's rule.
+  if (columns.song_version_id) {
+    const owned = await versionBelongsToSong(adminClient!, columns.song_version_id, nextSongId);
+    if (!owned) {
+      return NextResponse.json({ error: 'That file is not on this song.' }, { status: 404 });
+    }
+  }
+
   const { data, error } = await adminClient!
     .from(SETLIST_ITEMS_TABLE)
-    .update(parsed.columns)
+    .update(columns)
     .eq('id', itemId)
     .eq('setlist_id', setlistId)
     .select(SETLIST_ITEM_COLUMNS)

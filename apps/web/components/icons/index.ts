@@ -54,7 +54,10 @@ export {
   CalendarClock, CalendarPlus, Camera, ChartNoAxesGantt,
   CheckCircle, ChevronLeft, ChevronUp, CircleDot,
   CornerDownLeft, Disc3, FileText, Flag,
-  FolderOpen, Gift, Globe, History,
+  FolderOpen, Gift, Globe,
+  // Shows (2026-09-25): the drag handle on a set row, and tap-to-call on a
+  // promoter's number.
+  GripVertical, History,
   Image, ImageIcon, ImageOff, Info,
   // Share to socials (2026-09-23). A brand mark is exactly what lucide draws
   // better than we would, and it is the one glyph people look for on a
@@ -67,7 +70,7 @@ export {
   Newspaper, NotebookPen, PanelLeftClose, PanelLeftOpen,
   // Brand colors (2026-09-24): the share sheet's link to Settings.
   Palette,
-  PartyPopper, Pencil, PiggyBank, Pin,
+  PartyPopper, Pencil, Phone, PiggyBank, Pin,
   Plug, Rocket, Send, Share,
   Share2, ShieldCheck, Slash, Smartphone,
   Smile, ThumbsDown, ThumbsUp, TrendingUp,

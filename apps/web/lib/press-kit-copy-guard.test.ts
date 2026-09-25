@@ -99,6 +99,23 @@ const FILES = [
   join(WEB, 'lib', 'curator-public-server.ts'),
   join(WEB, 'lib', 'pitch-intent.ts'),
   join(WEB, 'components', 'shared', 'CopyLinkButton.tsx'),
+  // Shows (2026-09-25), when it came out of Beta. Every screen was rewritten
+  // for that, so the whole surface is born under the house rules: the pages,
+  // the DJ's own pack page, the routes whose errors a manager reads, the pure
+  // modules that write the sentences, and the assistant's tools for shows.
+  ...walk(join(WEB, 'components', 'events')),
+  ...walk(join(WEB, 'app', 'dashboard', 'shows')),
+  ...walk(join(WEB, 'app', 'pack')),
+  ...walk(join(WEB, 'app', 'api', 'events')),
+  ...walk(join(WEB, 'app', 'api', 'setlists')),
+  ...walk(join(WEB, 'app', 'api', 'songs')),
+  ...walk(join(WEB, 'app', 'api', 'packs')),
+  ...walk(join(WEB, 'app', 'api', 'pack')),
+  ...['events.ts', 'setlist.ts', 'dj-pack.ts', 'dj-pack-server.ts', 'song-versions.ts', 'song-version-upload.ts', 'song-catalog.ts'].map(
+    (file) => join(WEB, 'lib', file)
+  ),
+  join(WEB, 'lib', 'chappi', 'tool-families', 'shows.ts'),
+  join(WEB, 'stores', 'useEventsStore.ts'),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 // Reads through `readableCopy`, not the narrower `userFacingStrings` this file

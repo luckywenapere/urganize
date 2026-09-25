@@ -19,12 +19,38 @@ export type EventStatus = (typeof EVENT_STATUSES)[number];
 export const isEventStatus = (value: unknown): value is EventStatus =>
   typeof value === 'string' && (EVENT_STATUSES as readonly string[]).includes(value);
 
+/**
+ * What a person reads. The values stay as the database enum; the words are a
+ * manager's words (founder brief, 2026-09-25): a show not yet confirmed is
+ * "pencilled in", which is what a booker says, and "Draft" was a word for a
+ * document. A show that happened "played".
+ */
 export const EVENT_STATUS_COPY: Record<EventStatus, string> = {
-  draft: 'Draft',
+  draft: 'Pencilled in',
   confirmed: 'Confirmed',
-  done: 'Done',
+  done: 'Played',
   cancelled: 'Cancelled',
 };
+
+/**
+ * The statuses a manager chooses between. "Played" is not one of them: whether
+ * a show is in the past is a fact the date already knows, so asking someone to
+ * mark it would only create shows that are "upcoming" last month. Rows that
+ * already carry 'done' still read correctly through EVENT_STATUS_COPY.
+ */
+export const SELECTABLE_EVENT_STATUSES: readonly EventStatus[] = ['draft', 'confirmed', 'cancelled'];
+
+/**
+ * The one word a list row shows beside a show, or null for none.
+ *
+ * Only the two states that need attention earn a badge: pencilled in (still to
+ * confirm) and cancelled. A confirmed show is the normal case, and labelling
+ * every normal row is how a list turns into noise.
+ */
+export function showStatusBadge(status: EventStatus): string | null {
+  if (status === 'draft' || status === 'cancelled') return EVENT_STATUS_COPY[status];
+  return null;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Limits
@@ -60,16 +86,94 @@ export const DEFAULT_SET_LENGTH_MINUTES = 30;
 export function isValidTimezone(value: unknown): value is string {
   if (typeof value !== 'string' || !value.trim()) return false;
   try {
-    new Intl.DateTimeFormat('en-US', { timeZone: value });
+    formatterFor('numeric', value);
     return true;
   } catch {
     return false;
   }
 }
 
+/**
+ * Intl formatters are slow to build and cheap to reuse, and a shows list reads
+ * every date through several of them. One per zone and shape, built on first
+ * use. A zone that throws is never stored, so it keeps failing the same way.
+ * Bounded by the number of real zones, since only a zone that works is kept.
+ */
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function formatterFor(kind: 'numeric' | 'words', zone: string): Intl.DateTimeFormat {
+  const key = `${kind}:${zone}`;
+  const cached = formatterCache.get(key);
+  if (cached) return cached;
+  const formatter =
+    kind === 'numeric'
+      ? new Intl.DateTimeFormat('en-US', {
+          timeZone: zone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+      : new Intl.DateTimeFormat('en-GB', {
+          timeZone: zone,
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+        });
+  formatterCache.set(key, formatter);
+  return formatter;
+}
+
 /** The founder's own market. A manager in Lagos should not have to pick this
  *  on every show; anyone elsewhere changes it once per event. */
 export const DEFAULT_TIMEZONE = 'Africa/Lagos';
+
+const TIMEZONE_REGION_NAMES: Record<string, string> = {
+  Africa: 'Africa',
+  America: 'Americas',
+  Antarctica: 'Antarctica',
+  Arctic: 'Arctic',
+  Asia: 'Asia',
+  Atlantic: 'Atlantic',
+  Australia: 'Australia',
+  Europe: 'Europe',
+  Indian: 'Indian Ocean',
+  Pacific: 'Pacific',
+};
+
+export type TimezoneGroup = { region: string; zones: { value: string; label: string }[] };
+
+/**
+ * IANA zones grouped by region for a picker, each labelled the way a person
+ * says it: "Lagos", "Argentina / Buenos Aires". Replaced a free-text field
+ * where a manager had to type "Africa/Lagos" exactly or be refused.
+ *
+ * Anything outside the named regions ("UTC", "Etc/…") lands in "Other", last.
+ * `current` is always included, so an unusual saved zone is never silently
+ * swapped for the first option.
+ */
+export function groupTimezones(zones: readonly string[], current?: string): TimezoneGroup[] {
+  const all = new Set(zones.filter((zone) => typeof zone === 'string' && zone.trim()));
+  if (current && current.trim()) all.add(current);
+
+  const groups = new Map<string, { value: string; label: string }[]>();
+  for (const zone of all) {
+    const [head, ...rest] = zone.split('/');
+    const region = rest.length > 0 && TIMEZONE_REGION_NAMES[head] ? TIMEZONE_REGION_NAMES[head] : 'Other';
+    const label = (rest.length > 0 && TIMEZONE_REGION_NAMES[head] ? rest.join(' / ') : zone).replace(/_/g, ' ');
+    groups.set(region, [...(groups.get(region) || []), { value: zone, label }]);
+  }
+
+  const order = [...Object.values(TIMEZONE_REGION_NAMES), 'Other'];
+  return order
+    .filter((region) => groups.has(region))
+    .map((region) => ({
+      region,
+      zones: (groups.get(region) || []).sort((a, b) => a.label.localeCompare(b.label)),
+    }));
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Run of show
@@ -192,7 +296,7 @@ export function parseEventFields(
     if (!parsed.ok) {
       errors.push({
         field: String(inputKey),
-        message: `Check the ${label} — it is too long or not text.`,
+        message: `That ${label} is too long.`,
       });
       continue;
     }
@@ -229,7 +333,7 @@ export function parseEventFields(
     ) {
       errors.push({
         field: 'setLengthMinutes',
-        message: `How long is the set, in minutes? Between ${MIN_SET_LENGTH_MINUTES} and ${MAX_SET_LENGTH_MINUTES}.`,
+        message: `Give the set a length between ${MIN_SET_LENGTH_MINUTES} and ${MAX_SET_LENGTH_MINUTES} minutes.`,
       });
     } else {
       columns.set_length_minutes = minutes;
@@ -290,6 +394,59 @@ export function parseEventPatch(input: EventInput): {
 // Display
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** A wall clock, read in a zone. `date` is 'YYYY-MM-DD', `time` 'HH:MM'. */
+export type LocalParts = {
+  date: string;
+  time: string;
+  year: string;
+  weekday: string;
+  day: string;
+  month: string;
+};
+
+/**
+ * What an instant reads as on a clock in `zone`, or null when either is
+ * unusable. The one place a Shows date is broken into parts, so the list, the
+ * show page, the run of show and the DJ's page cannot each format a date their
+ * own way.
+ */
+export function localPartsInZone(iso: string | null | undefined, zone: string): LocalParts | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const safeZone = isValidTimezone(zone) ? zone : 'UTC';
+  try {
+    const numeric = formatterFor('numeric', safeZone).formatToParts(date);
+    const words = formatterFor('words', safeZone).formatToParts(date);
+    const pick = (parts: Intl.DateTimeFormatPart[], type: string) =>
+      parts.find((part) => part.type === type)?.value ?? '';
+    // Intl renders midnight as 24 in some environments.
+    const hour = pick(numeric, 'hour') === '24' ? '00' : pick(numeric, 'hour');
+    return {
+      date: `${pick(numeric, 'year')}-${pick(numeric, 'month')}-${pick(numeric, 'day')}`,
+      time: `${hour}:${pick(numeric, 'minute')}`,
+      year: pick(numeric, 'year'),
+      weekday: pick(words, 'weekday'),
+      day: pick(words, 'day'),
+      month: pick(words, 'month'),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Calendar days from `fromDate` to `toDate`, both 'YYYY-MM-DD'. */
+export function daysBetweenLocalDates(fromDate: string, toDate: string): number | null {
+  const read = (value: string) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    return match ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : Number.NaN;
+  };
+  const from = read(fromDate);
+  const to = read(toDate);
+  if (Number.isNaN(from) || Number.isNaN(to)) return null;
+  return Math.round((to - from) / 86_400_000);
+}
+
 /**
  * A set time, in the VENUE'S zone.
  *
@@ -298,43 +455,75 @@ export function parseEventPatch(input: EventInput): {
  * show from a plane must see the identical string. That is the entire reason
  * events.timezone exists and is not nullable.
  *
- * Falls back to UTC if the stored zone is somehow unusable, rather than
- * throwing — a broken zone should degrade one line, not take down the page.
+ * "Sat 20 Dec, 21:30". The YEAR appears only when it is not this year (in the
+ * venue's zone), because "Sat 20 Dec" alone is ambiguous exactly when a show is
+ * booked a year out, or a list reaches back into last year. Built from parts
+ * rather than one locale string so the two shapes match: en-GB adds a comma
+ * after the weekday when a year is present, and the list must not change
+ * punctuation from row to row.
+ *
+ * No date reads "Date to confirm"; asking for the time alone reads "Time to
+ * confirm". A broken zone falls back to UTC rather than throwing, so it
+ * degrades one line, not the page.
  */
 export function formatShowDateTime(
   iso: string | null | undefined,
   timezone: string,
-  options?: { includeDate?: boolean; includeTime?: boolean }
+  options?: { includeDate?: boolean; includeTime?: boolean; now?: Date }
 ): string {
-  if (!iso) return 'Time to confirm';
-
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return 'Time to confirm';
-
-  const zone = isValidTimezone(timezone) ? timezone : 'UTC';
   const includeDate = options?.includeDate !== false;
   const includeTime = options?.includeTime !== false;
+  const missing = includeDate ? 'Date to confirm' : 'Time to confirm';
 
-  const parts: Intl.DateTimeFormatOptions = { timeZone: zone };
-  if (includeDate) {
-    parts.weekday = 'short';
-    parts.day = 'numeric';
-    parts.month = 'short';
-  }
-  if (includeTime) {
-    // Padded and explicitly 24-hour: a list of set times reads as a schedule,
-    // and "05:30" next to "21:30" lines up where "5:30" does not. hour12 is
-    // pinned rather than left to the locale so the format cannot drift.
-    parts.hour = '2-digit';
-    parts.minute = '2-digit';
-    parts.hour12 = false;
-  }
+  const parts = localPartsInZone(iso, timezone);
+  if (!parts) return missing;
 
-  try {
-    return new Intl.DateTimeFormat('en-GB', parts).format(date);
-  } catch {
-    return 'Time to confirm';
-  }
+  if (!includeDate) return parts.time;
+
+  const now = localPartsInZone((options?.now ?? new Date()).toISOString(), timezone);
+  const showYear = now && now.year !== parts.year ? ` ${parts.year}` : '';
+  const day = `${parts.weekday} ${parts.day} ${parts.month}${showYear}`;
+  return includeTime ? `${day}, ${parts.time}` : day;
+}
+
+/**
+ * "Today", "Tomorrow" or "Yesterday" for a show, judged in the VENUE'S zone, or
+ * null for any other day. The venue's zone because "tonight" means tonight
+ * where the artist is playing; a manager in Lagos looking at a London show at
+ * 00:30 Lagos time should still read "Today" for the show that starts at 22:00
+ * London.
+ */
+export function relativeShowDay(
+  iso: string | null | undefined,
+  timezone: string,
+  now: Date = new Date()
+): 'Today' | 'Tomorrow' | 'Yesterday' | null {
+  const show = localPartsInZone(iso, timezone);
+  const today = localPartsInZone(now.toISOString(), timezone);
+  if (!show || !today) return null;
+  const days = daysBetweenLocalDates(today.date, show.date);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow';
+  if (days === -1) return 'Yesterday';
+  return null;
+}
+
+/** The calendar tile on a list row: "DEC / 20 / Sat", plus the year when it is
+ *  not this year. Null when the show has no date. */
+export function showDateTile(
+  iso: string | null | undefined,
+  timezone: string,
+  now: Date = new Date()
+): { month: string; day: string; weekday: string; year: string | null } | null {
+  const parts = localPartsInZone(iso, timezone);
+  if (!parts) return null;
+  const today = localPartsInZone(now.toISOString(), timezone);
+  return {
+    month: parts.month,
+    day: parts.day,
+    weekday: parts.weekday,
+    year: today && today.year !== parts.year ? parts.year : null,
+  };
 }
 
 /** "Africa/Lagos" reads as "Lagos" to a human. The zone is shown next to every
@@ -356,19 +545,26 @@ export function shortTimezoneLabel(timezone: string): string {
  * A datetime-local input carries no zone, so `new Date(value)` interprets it in
  * the BROWSER'S zone — which is wrong for every show a manager books outside
  * the city they are sitting in, and silently so. There is no platform API for
- * "parse in this zone", so this measures the offset instead: format a first
- * guess back into the target zone, see how far it lands from the wall clock we
- * were given, and shift by that much.
+ * "parse in this zone", so this measures the zone's offset instead, a day
+ * either side of the wall clock, and keeps whichever candidate really reads
+ * back as the clock that was typed.
  *
- * Runs twice, and the reason is narrower than it looks. Measured across 1536
- * wall clocks spanning four transitions in four zones, one pass and two agree
- * on every time that REALLY EXISTS. They differ only inside the hour a
- * spring-forward skips — a time a manager can type but that no clock ever
- * shows. There, one pass resolves BACKWARD (01:30 becomes 00:30, moving the
- * set earlier than intended) and two resolve FORWARD (01:30 becomes 02:30),
- * which is both the conventional resolution and the safer direction for a
- * stage time. The loop is bounded rather than recursive so a pathological zone
- * cannot hang the form.
+ * A wall clock can mean two instants or none. On the night the clocks go
+ * back, 01:30 happens twice; on the night they jump forward, 02:30 never
+ * happens at all, though a manager can still type it. Both are resolved the
+ * way calendars resolve them (the iCalendar and Temporal "compatible" rule),
+ * and the same way in every zone:
+ *
+ * - A time that happens twice is the FIRST one.
+ * - A time that never happens moves FORWARD by the length of the jump, so
+ *   02:30 becomes 03:30. A stage time pushed later is a problem somebody
+ *   notices; one pulled earlier is an artist who missed their slot.
+ *
+ * Until 2026-09-25 this was an iterative correction that measured forward in
+ * zones east of Greenwich and BACKWARD west of it, so every show in the
+ * Americas typed inside the skipped hour landed an hour early.
+ * lib/events-time.test.ts now checks 45 zones, every hour, on each
+ * hemisphere's clock-change days.
  */
 export function toIsoInZone(localValue: string, zone: string): string | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(localValue);
@@ -377,31 +573,36 @@ export function toIsoInZone(localValue: string, zone: string): string | null {
   const [, year, month, day, hour, minute] = match.map(Number) as unknown as number[];
   const wanted = Date.UTC(year, month - 1, day, hour, minute);
 
-  let instant = wanted;
-  for (let pass = 0; pass < 2; pass += 1) {
-    const seen = wallClockUtc(new Date(instant), zone);
-    if (seen === null) return new Date(wanted).toISOString();
-    const drift = seen - wanted;
-    if (drift === 0) break;
-    instant -= drift;
-  }
+  // The zone's offset a day either side. No real zone changes its offset twice
+  // inside 48 hours, so these are the only two offsets this wall clock can
+  // mean, and they are the same number on every ordinary day.
+  const before = offsetAt(wanted - DAY_MS, zone);
+  const after = offsetAt(wanted + DAY_MS, zone);
+  if (before === null || after === null) return new Date(wanted).toISOString();
 
-  return new Date(instant).toISOString();
+  const real = [wanted - before, wanted - after].filter(
+    (instant) => wallClockUtc(new Date(instant), zone) === wanted
+  );
+  if (real.length > 0) return new Date(Math.min(...real)).toISOString();
+
+  // Neither offset produces this wall clock: it is inside the skipped hour.
+  // The offset from before the jump lands it the length of the jump later.
+  return new Date(wanted - before).toISOString();
+}
+
+const DAY_MS = 86_400_000;
+
+/** How far `zone` is ahead of UTC at `instant`, in milliseconds. */
+function offsetAt(instant: number, zone: string): number | null {
+  const seen = wallClockUtc(new Date(instant), zone);
+  return seen === null ? null : seen - instant;
 }
 
 /** What `date` reads as on a clock in `zone`, expressed as a UTC timestamp so
  *  two wall clocks can be subtracted. Null if the zone is unusable. */
 function wallClockUtc(date: Date, zone: string): number | null {
   try {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: zone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).formatToParts(date);
+    const parts = formatterFor('numeric', zone).formatToParts(date);
 
     const read = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? NaN);
     const hour = read('hour');
@@ -578,6 +779,308 @@ export function shiftLocalDays(localValue: string, days: number): string | null 
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Upcoming and past
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** The slice of a show the upcoming/past split reads. Structural, so the list
+ *  page, the UrgAns tools and a test can all hand in what they have. */
+export type SchedulableShow = {
+  setStartAt: string | null;
+  setLengthMinutes: number;
+};
+
+/**
+ * When a show stops being "coming up": the END of its set, not the start.
+ *
+ * A show that started twenty minutes ago is happening, not over, and filing it
+ * under Past while the artist is still on stage reads as the product losing
+ * track of tonight. Null when there is no usable start time.
+ */
+export function showEndsAtMs(show: SchedulableShow): number | null {
+  if (!show.setStartAt) return null;
+  const start = Date.parse(show.setStartAt);
+  if (Number.isNaN(start)) return null;
+  const minutes =
+    Number.isFinite(show.setLengthMinutes) && show.setLengthMinutes > 0 ? show.setLengthMinutes : 0;
+  return start + minutes * 60_000;
+}
+
+/** Sort key. A show with no time sorts to the front of the upcoming half: an
+ *  unconfirmed set time is the most urgent thing on the list. */
+function upcomingRank(show: SchedulableShow): number {
+  if (!show.setStartAt) return -Infinity;
+  const at = Date.parse(show.setStartAt);
+  return Number.isNaN(at) ? -Infinity : at;
+}
+
+/**
+ * Split a show list into what is still coming and what has been and gone.
+ *
+ * ONE RULE for every surface. It lived in the UrgAns tool family until
+ * 2026-09-25, while the shows list sorted past-first straight off the API, so
+ * the assistant and the screen disagreed about what "next" meant. Both read
+ * this now.
+ *
+ * - No set time: UPCOMING, and first. The promoter has not confirmed a time,
+ *   which is a thing to chase rather than a thing to archive.
+ * - Otherwise upcoming until the set has ENDED (see showEndsAtMs).
+ * - Cancelled shows stay in whichever half their date puts them — they are
+ *   still the answer to "what was on that weekend".
+ * - An unparseable date counts as upcoming rather than vanishing.
+ */
+export function partitionShows<T extends SchedulableShow>(
+  events: readonly T[],
+  now: Date = new Date()
+): { upcoming: T[]; past: T[] } {
+  const cutoff = now.getTime();
+  const upcoming: T[] = [];
+  const past: T[] = [];
+  for (const event of events) {
+    const ends = showEndsAtMs(event);
+    if (ends === null || ends >= cutoff) upcoming.push(event);
+    else past.push(event);
+  }
+  // Soonest first for what is coming, most recent first for what is done —
+  // both orders answer "and then what?" from where the reader is standing.
+  upcoming.sort((a, b) => upcomingRank(a) - upcomingRank(b));
+  past.sort((a, b) => upcomingRank(b) - upcomingRank(a));
+  return { upcoming, past };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rescheduling
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * How far a show moved, in milliseconds, or null when nothing should follow.
+ *
+ * Null when either side is missing or unreadable, and when the time did not
+ * actually change. Only a real move from one date to another carries the run of
+ * show with it: a show gaining its first date has no run-of-show times to move
+ * (they cannot be set without a date), and a show losing its date keeps them
+ * rather than inventing where they went.
+ */
+export function computeRescheduleDeltaMs(
+  previousIso: string | null | undefined,
+  nextIso: string | null | undefined
+): number | null {
+  if (!previousIso || !nextIso) return null;
+  const previous = Date.parse(previousIso);
+  const next = Date.parse(nextIso);
+  if (Number.isNaN(previous) || Number.isNaN(next)) return null;
+  const delta = next - previous;
+  return delta === 0 ? null : delta;
+}
+
+/** One instant moved by `deltaMs`, or null for an unreadable input. Moving by
+ *  the instant keeps every run-of-show step at the same distance from the set,
+ *  which is what a rescheduled night actually is. */
+export function shiftIsoByMs(iso: string | null | undefined, deltaMs: number): string | null {
+  if (!iso) return null;
+  const at = Date.parse(iso);
+  if (Number.isNaN(at) || !Number.isFinite(deltaMs)) return null;
+  return new Date(at + deltaMs).toISOString();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Run of show
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const MAX_RUN_OF_SHOW_LABEL_LENGTH = 80;
+
+/** A night has perhaps a dozen steps. Thirty is a guard against a slip. */
+export const MAX_RUN_OF_SHOW_STEPS = 30;
+
+export function parseRunOfShowLabel(value: unknown): { label: string } | { error: string } {
+  if (typeof value !== 'string' || !value.trim()) return { error: 'Give the step a name.' };
+  const label = value.trim().replace(/\s+/g, ' ');
+  if (label.length > MAX_RUN_OF_SHOW_LABEL_LENGTH) {
+    return { error: `Keep the name under ${MAX_RUN_OF_SHOW_LABEL_LENGTH} characters.` };
+  }
+  return { label };
+}
+
+/** A step's time: an ISO instant, or null to clear it. */
+export function parseRunOfShowAt(value: unknown): { at: string | null } | { error: string } {
+  if (value === null || value === '') return { at: null };
+  if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
+    return { error: 'That time is not a real time.' };
+  }
+  return { at: new Date(value).toISOString() };
+}
+
+/**
+ * The two seeded steps that ARE the set: "Set start" and "Set end".
+ *
+ * Left untimed, they show the show's own times rather than a blank, so the run
+ * of show a tour manager reads top to bottom never has a gap where the set
+ * should be, and there is one set time to keep right rather than two that can
+ * disagree. Renaming one makes it an ordinary step.
+ */
+export function setBoundaryOf(label: string): 'start' | 'end' | null {
+  const normal = label.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (normal === 'set start') return 'start';
+  if (normal === 'set end') return 'end';
+  return null;
+}
+
+/** The slice of a run-of-show row these helpers read. */
+export type RunOfShowRow = { id: string; label: string; at: string | null; position: number };
+
+export type RunOfShowDisplayRow<T extends RunOfShowRow> = T & {
+  /** The instant shown: the step's own, or for an untimed Set start or Set end,
+   *  the show's. Null when there is nothing to show yet. */
+  shownAt: string | null;
+  /** True when shownAt comes from the show rather than the step. */
+  followsShow: boolean;
+};
+
+/**
+ * The run of show in the order it happens.
+ *
+ * Steps with a time sort by that time; steps without one stay where they are.
+ * That is the order a person would put them in by hand: a manager who has
+ * timed doors and soundcheck wants them in time order, and an untimed "Load
+ * out" should not jump to the top just because it has no time yet. Timed steps
+ * are re-sorted into the places timed steps already held, which is what keeps
+ * each untimed step in its slot.
+ */
+export function orderRunOfShow<T extends RunOfShowRow>(
+  rows: readonly T[],
+  show: SchedulableShow
+): RunOfShowDisplayRow<T>[] {
+  const valid = (iso: string | null) => Boolean(iso) && !Number.isNaN(Date.parse(iso as string));
+  const startIso = valid(show.setStartAt) ? new Date(show.setStartAt as string).toISOString() : null;
+  const endMs = startIso ? showEndsAtMs(show) : null;
+
+  const byPosition = [...rows].sort((a, b) => a.position - b.position || a.id.localeCompare(b.id));
+  const display: RunOfShowDisplayRow<T>[] = byPosition.map((row) => {
+    if (valid(row.at)) {
+      return { ...row, shownAt: new Date(row.at as string).toISOString(), followsShow: false };
+    }
+    const boundary = setBoundaryOf(row.label);
+    if (boundary === 'start' && startIso) return { ...row, shownAt: startIso, followsShow: true };
+    if (boundary === 'end' && endMs !== null) {
+      return { ...row, shownAt: new Date(endMs).toISOString(), followsShow: true };
+    }
+    return { ...row, shownAt: null, followsShow: false };
+  });
+
+  const slots = display.flatMap((row, index) => (row.shownAt ? [index] : []));
+  const timed = slots
+    .map((index) => display[index])
+    .sort((a, b) => Date.parse(a.shownAt as string) - Date.parse(b.shownAt as string));
+  const ordered = [...display];
+  slots.forEach((slot, rank) => {
+    ordered[slot] = timed[rank];
+  });
+  return ordered;
+}
+
+/**
+ * A step's time as a person reads it next to the show: the wall clock in the
+ * venue's zone, and how many days from the show's day it falls on (a call time
+ * the day before is -1, a load out after midnight is +1). The offset is null
+ * when the show has no date to measure from.
+ */
+export function describeRunOfShowTime(
+  atIso: string | null | undefined,
+  showStartIso: string | null | undefined,
+  timezone: string
+): { time: string; dayOffset: number | null } | null {
+  const at = localPartsInZone(atIso, timezone);
+  if (!at) return null;
+  const anchor = localPartsInZone(showStartIso, timezone);
+  return {
+    time: at.time,
+    dayOffset: anchor ? daysBetweenLocalDates(anchor.date, at.date) : null,
+  };
+}
+
+/** "-1", "+1", "+2", or '' for the show's own day. Written with a real minus
+ *  sign, like an airline itinerary. */
+export function formatDayOffset(offset: number | null | undefined): string {
+  if (!offset || !Number.isFinite(offset)) return '';
+  return offset > 0 ? `+${offset}` : `\u2212${Math.abs(offset)}`;
+}
+
+/** The same offset in words, for a screen reader and a tooltip. */
+export function describeDayOffset(offset: number | null | undefined): string {
+  if (!offset || !Number.isFinite(offset)) return 'on the day of the show';
+  if (offset === -1) return 'the day before the show';
+  if (offset === 1) return 'the day after the show';
+  return offset < 0
+    ? `${Math.abs(offset)} days before the show`
+    : `${offset} days after the show`;
+}
+
+/**
+ * Where one run-of-show step lands when its show moves.
+ *
+ * It keeps its WALL CLOCK and its DAY relative to the show: soundcheck at
+ * 18:00 on show day is 18:00 on the new show day, and a call time the day
+ * before is still the day before. Moving it by however many hours the set
+ * moved is right on an ordinary week and an hour out whenever the clocks
+ * change between the two dates, because the set and a step the day before can
+ * sit on different sides of the change (that was the rule until 2026-09-25).
+ * Keeping the wall clock is also what lets a change of zone keep the times a
+ * manager sees, which the set time already does.
+ *
+ * Falls back to moving by the same number of hours when the step cannot be
+ * read against the old show, and answers null when nothing should move.
+ */
+export function rescheduleRunOfShowStep(input: {
+  atIso: string | null | undefined;
+  previousStartIso: string | null | undefined;
+  nextStartIso: string | null | undefined;
+  previousTimezone: string;
+  nextTimezone: string;
+}): string | null {
+  const { atIso, previousStartIso, nextStartIso, previousTimezone, nextTimezone } = input;
+  if (!atIso || Number.isNaN(Date.parse(atIso))) return null;
+  const delta = computeRescheduleDeltaMs(previousStartIso, nextStartIso);
+  const zoneChanged = previousTimezone !== nextTimezone;
+  if (delta === null && !zoneChanged) return null;
+
+  const read = describeRunOfShowTime(atIso, previousStartIso, previousTimezone);
+  if (read && read.dayOffset !== null && nextStartIso) {
+    const moved = runOfShowInstant({
+      showStartIso: nextStartIso,
+      time: read.time,
+      dayOffset: read.dayOffset,
+      timezone: nextTimezone,
+    });
+    if (moved) return moved;
+  }
+  return delta === null ? null : shiftIsoByMs(atIso, delta);
+}
+
+/**
+ * The real instant for a step typed as a time of day plus a day (-1, 0, +1)
+ * relative to the show, read as a wall clock in the venue's zone. Null when
+ * the show has no date to anchor to, or the time is not a time.
+ */
+export function runOfShowInstant(input: {
+  showStartIso: string | null | undefined;
+  time: string;
+  dayOffset: number;
+  timezone: string;
+}): string | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(input.time.trim());
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59 || !Number.isInteger(input.dayOffset)) return null;
+
+  const anchor = localPartsInZone(input.showStartIso, input.timezone);
+  if (!anchor) return null;
+
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const local = shiftLocalDays(`${anchor.date}T${pad(hour)}:${pad(minute)}`, input.dayOffset);
+  return local ? toIsoInZone(local, input.timezone) : null;
+}
+
 /** What the shows list renders: a lone show, or a series with its members. */
 export type ShowListEntry<T extends SeriesMember> =
   | { kind: 'show'; event: T }
@@ -646,4 +1149,33 @@ export function groupShowsBySeries<T extends SeriesMember>(events: readonly T[])
   }
 
   return entries;
+}
+
+/**
+ * The shows list, split into what is coming and what has been, with festivals
+ * kept together.
+ *
+ * A festival counts as upcoming while ANY of its days is still to come, so a
+ * seven-day run does not appear twice (three played days under Past, four under
+ * Upcoming) with the same name on both cards. It sits in the upcoming half at
+ * the place of its next day, and in the past half at the place of its last one.
+ */
+export function partitionShowList<T extends SeriesMember & SchedulableShow>(
+  events: readonly T[],
+  now: Date = new Date()
+): { upcoming: ShowListEntry<T>[]; past: ShowListEntry<T>[] } {
+  const split = partitionShows(events, now);
+  const upcomingIds = new Set(split.upcoming.map((event) => event.id));
+  const entries = groupShowsBySeries([...split.upcoming, ...split.past]);
+
+  const upcoming: ShowListEntry<T>[] = [];
+  const past: ShowListEntry<T>[] = [];
+  for (const entry of entries) {
+    const isUpcoming =
+      entry.kind === 'show'
+        ? upcomingIds.has(entry.event.id)
+        : entry.shows.some((show) => upcomingIds.has(show.id));
+    (isUpcoming ? upcoming : past).push(entry);
+  }
+  return { upcoming, past };
 }
