@@ -11,13 +11,12 @@ import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "For AI artists",
   description:
-    `Making the song got fast. The rollout did not. Urganize is an ${PRODUCT_CATEGORY}: a full rollout plan per drop, an owner on every activity and a press kit you send as one link.`,
+    "Making the song got fast. The rollout did not. Urganize is everything after the music: a full rollout plan per drop, an owner on every activity and a press kit you send as one link.",
   path: "/for-ai-artists",
 });
 
@@ -25,9 +24,10 @@ export const metadata: Metadata = buildPageMetadata({
 // 2026-08-19 brief this page needed defending: that positioning made
 // executives the hero and called artists ecosystem advocates rather than the
 // addressee, so a page speaking to artists directly was a founder-sanctioned
-// exception (2026-08-21). The 2026-09-09 positioning retires the exception
-// entirely: the audience is artists and managers, in that order, with
-// artists FIRST. This page is now squarely on-brief rather than a tolerated
+// exception (2026-08-21). The 2026-09-09 positioning retired the exception
+// entirely, and the 2026-09-24 one keeps it retired: the audience is artists,
+// managers and labels, in that order, with artists FIRST. This page is
+// squarely on-brief rather than a tolerated
 // edge. It still speaks to the person RUNNING an AI artist project, which is
 // operator work rather than fan-facing artist copy.
 //

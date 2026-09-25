@@ -6,13 +6,12 @@ import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    `WhatsApp and Google Drive work for one artist and one rollout. Running more than one? An ${PRODUCT_CATEGORY} gives you a real rollout plan, owners on every activity and status you can see without asking.`,
+    "WhatsApp and Google Drive work for one artist and one rollout. Running more than one? Urganize is everything after the music: a real rollout plan, owners on every activity and status you can see without asking.",
   path: "/why-urganize",
 });
 

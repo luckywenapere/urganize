@@ -16,7 +16,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CUSTOMER_LINE, URGANS_LINE } from '../positioning';
+import { URGANS_LINE } from '../positioning';
 import { ROLE, URGANS_COPY_RULES } from './system-prompt';
 import { CHAPPI_TOOLS } from './tools';
 
@@ -47,20 +47,20 @@ describe('the system prompt', () => {
     expect(ROLE).toMatch(/no tool call needed/i);
   });
 
-  it('describes Urganize as the category, and itself as the AI inside it', () => {
-    // The 2026-09-09 positioning's own acceptance criterion: "UrgAns describes
-    // Urganize as an AI Music Business Manager when asked what it is". Nothing
-    // type-checks a sentence, and this one is the difference between the
-    // assistant being the product and being a feature of it, so it gets an
-    // assertion rather than a review pass.
+  it('describes what Urganize is, and itself as the AI inside it', () => {
+    // UrgAns is a feature of the product, never the product, and that line is
+    // the one thing in this prompt a later rewrite is most likely to blur.
     //
-    // ASSERTED AGAINST THE SHARED CONSTANTS, not a literal copy of them. The
-    // prompt states the category as prose rather than interpolating it, which
-    // is deliberate — it is one block of instruction a person reads whole — so
-    // this is what keeps the two in step. Widening the category on 2026-09-11
-    // failed exactly here, which is the mechanism working; a literal would have
-    // had to be remembered instead.
-    expect(ROLE).toContain(CUSTOMER_LINE);
+    // HELD, NOT CURRENT (2026-09-24). The rest of the product now says
+    // "Urganize is where your team does everything after the music is made"
+    // (lib/positioning.ts), and the founder is deciding separately how UrgAns
+    // describes it. So the prompt was deliberately left saying the previous
+    // category, and this pins that wording as a LITERAL instead of against the
+    // shared constants, which no longer carry it. When the founder decides,
+    // this assertion fails on purpose: change the prompt, point this back at
+    // the shared constants, and drop the held-category exemption in
+    // lib/positioning-guard.test.ts in the same change.
+    expect(ROLE).toContain('AI Music Business Manager for artists and managers');
     expect(ROLE).toContain(URGANS_LINE);
     expect(ROLE).toContain('If you are asked what Urganize is');
     // The word is banned everywhere a person reads it. The one place the prompt
