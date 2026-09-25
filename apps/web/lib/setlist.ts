@@ -185,9 +185,17 @@ export function summarizeSetlist(
 // Copy
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** "3:34", "1:04:20". Clock format, because that is how a set is read. */
+/**
+ * "3:34", "1:04:20". Clock format, because that is how a set is read.
+ *
+ * An unusable value renders as an EMPTY string — never "0:00", which would
+ * claim an unmeasured song takes no time, and no longer "—", which was a dash
+ * standing in for a sentence. Each caller says what it means instead ("Needs a
+ * length" on a row, nothing at all on the DJ's page). A set's TOTAL is
+ * different: nothing in it really is 0:00, so it uses formatSetTotal.
+ */
 export function formatDuration(totalSeconds: number | null | undefined): string {
-  if (!isUsableDuration(totalSeconds)) return '—';
+  if (!isUsableDuration(totalSeconds)) return '';
   const whole = Math.round(totalSeconds);
   const hours = Math.floor(whole / 3600);
   const minutes = Math.floor((whole % 3600) / 60);
@@ -196,6 +204,138 @@ export function formatDuration(totalSeconds: number | null | undefined): string 
   return hours > 0
     ? `${hours}:${mm}:${String(seconds).padStart(2, '0')}`
     : `${mm}:${String(seconds).padStart(2, '0')}`;
+}
+
+/** The running total. Zero is a true total for an empty set, so it reads
+ *  "0:00" rather than vanishing the way an unmeasured item does. */
+export function formatSetTotal(totalSeconds: number): string {
+  return formatDuration(totalSeconds) || '0:00';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Typing a length
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type DurationParse = { ok: true; seconds: number | null } | { ok: false; error: string };
+
+/**
+ * Reads a length the way a person types one.
+ *
+ *   "3:30"     3 minutes 30 seconds      "1:02:03"  1 hour 2 minutes 3 seconds
+ *   "4"        4 MINUTES                 "3.5"      3 and a half minutes
+ *   "90s"      90 seconds                "4m"       4 minutes
+ *   "3m 30s"   3 minutes 30 seconds      ""         clears the length
+ *   "3'30"     3 minutes 30 seconds, the way a lot of people in music write it
+ *
+ * A bare number is MINUTES, deliberately. The field says m:ss and songs are
+ * thought of in minutes; the old field took seconds and a manager typing "4"
+ * for a four minute song got a set four minutes shorter than it was. The
+ * normalised clock value is shown back as soon as the field is left, so the
+ * reading is never a surprise, and "45s" is there for a short talk.
+ *
+ * Refuses anything it cannot read exactly rather than guessing: "3:75", "abc",
+ * zero, and anything past the twenty minute item ceiling.
+ */
+export function parseDurationInput(raw: string): DurationParse {
+  const text = raw
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    // "3,5" is three and a half minutes wherever a comma is the decimal mark.
+    .replace(/^(\d+),(\d+)$/, '$1.$2')
+    // "3 : 30" is 3:30 with a stray space from a phone keyboard.
+    .replace(/\s*:\s*/g, ':')
+    // 3'30, 3'30", 3’30 and 3′30″ are minutes and seconds.
+    .replace(/^(\d+)\s*['’′]\s*(\d{1,2})\s*(?:["”″]|'')?$/, '$1:$2')
+    // 4' on its own is four minutes.
+    .replace(/^(\d+(?:\.\d+)?)\s*['’′]$/, '$1m');
+  if (!text) return { ok: true, seconds: null };
+
+  let seconds: number | null = null;
+
+  const clock = /^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/.exec(text);
+  const units = /^(?:(\d+(?:\.\d+)?)\s*m(?:in(?:ute)?s?)?)?\s*(?:(\d+)\s*s(?:ec(?:ond)?s?)?)?$/.exec(text);
+  const plain = /^\d+(?:\.\d+)?$/.exec(text);
+
+  if (clock) {
+    const [first, second, third] = [clock[1], clock[2], clock[3]].map((part) =>
+      part === undefined ? undefined : Number(part)
+    );
+    if (third === undefined) {
+      if ((second as number) >= 60) return { ok: false, error: 'Seconds go up to 59. Try 3:30.' };
+      seconds = (first as number) * 60 + (second as number);
+    } else {
+      if ((second as number) >= 60 || third >= 60) {
+        return { ok: false, error: 'Minutes and seconds go up to 59. Try 1:02:03.' };
+      }
+      seconds = (first as number) * 3600 + (second as number) * 60 + third;
+    }
+  } else if (plain) {
+    seconds = Math.round(Number(text) * 60);
+  } else if (units && (units[1] !== undefined || units[2] !== undefined)) {
+    const minutes = units[1] !== undefined ? Number(units[1]) : 0;
+    const extra = units[2] !== undefined ? Number(units[2]) : 0;
+    seconds = Math.round(minutes * 60 + extra);
+  } else {
+    return { ok: false, error: 'Type a length like 3:30.' };
+  }
+
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return { ok: false, error: 'A length has to be more than nothing.' };
+  }
+  if (seconds > MAX_ITEM_DURATION_SECONDS) {
+    return { ok: false, error: 'That is longer than twenty minutes. Check the length.' };
+  }
+  return { ok: true, seconds };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Which file a row sends
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type VersionCandidate = {
+  id: string;
+  label: string | null;
+  /** ISO. Used to find the newest; an unreadable one sorts as oldest. */
+  createdAt: string | null;
+};
+
+/**
+ * The file a set row plays when it has not chosen one: the song's Original,
+ * else its newest file.
+ *
+ * Before 2026-09-25 a row only had a file if it named one explicitly, and
+ * nothing ever named one, so every track on every pack read "No file". Now a
+ * file added to a song reaches every set that plays it. A row still CAN choose
+ * (the clean edit for a daytime show); this is only the answer when it has not.
+ *
+ * Original first because it is the file an artist means by "the song". Among
+ * several originals, the newest wins — a re-master replaces the file a DJ
+ * should get.
+ */
+export function pickDefaultVersion<T extends VersionCandidate>(versions: readonly T[]): T | null {
+  if (versions.length === 0) return null;
+  const time = (value: T) => {
+    const at = value.createdAt ? Date.parse(value.createdAt) : Number.NaN;
+    return Number.isNaN(at) ? -Infinity : at;
+  };
+  const newestFirst = [...versions].sort((a, b) => time(b) - time(a));
+  return newestFirst.find((version) => version.label === 'original') ?? newestFirst[0] ?? null;
+}
+
+/**
+ * A row's effective file: the one it chose, if that still belongs to its song;
+ * otherwise the song's default. `explicit` is the row's song_version_id.
+ */
+export function resolveRowVersion<T extends VersionCandidate>(
+  explicit: string | null | undefined,
+  songVersions: readonly T[]
+): { version: T | null; chosen: boolean } {
+  if (explicit) {
+    const match = songVersions.find((version) => version.id === explicit);
+    if (match) return { version: match, chosen: true };
+  }
+  return { version: pickDefaultVersion(songVersions), chosen: false };
 }
 
 const pluralMinutes = (count: number) => `${count} ${count === 1 ? 'minute' : 'minutes'}`;
@@ -217,22 +357,29 @@ export function describeSetlistFit(summary: SetlistSummary): string {
   // Zero measured with zero unmeasured can only be an empty set, since every
   // stored duration is checked > 0.
   if (summary.totalSeconds === 0 && summary.unmeasuredCount === 0) {
-    return `Nothing in the set yet. You have ${slotMinutes} minutes to fill.`;
+    return `Nothing in the set yet. You have ${pluralMinutes(slotMinutes)} to fill.`;
   }
+
+  const unmeasured = summary.unmeasuredCount;
 
   if (summary.fit === 'over') {
     return summary.isPartial
-      ? `Already ${overBy} over ${slotMinutes}, and ${summary.unmeasuredCount} still need a length.`
+      ? `Already ${overBy} over ${slotMinutes}, and ${unmeasured} ${
+          unmeasured === 1 ? 'song still needs' : 'songs still need'
+        } a length.`
       : `You are ${overBy} over ${slotMinutes}.`;
   }
 
+  // Under on what can be seen, but not everything can be seen. Says what to do
+  // rather than what is wrong: the fix is one field away on the row.
   if (summary.isPartial) {
-    const needed = summary.unmeasuredCount === 1 ? 'one item needs' : `${summary.unmeasuredCount} items need`;
-    return `${needed} a length before this total means anything.`;
+    return unmeasured === 1
+      ? 'Add a length to 1 song to see if the set fits.'
+      : `Add lengths to ${unmeasured} songs to see if the set fits.`;
   }
 
   if (summary.fit === 'on_time') {
-    return `Right on ${slotMinutes} minutes.`;
+    return `Right on ${pluralMinutes(slotMinutes)}.`;
   }
 
   return `You are ${underBy} under ${slotMinutes}.`;
@@ -260,9 +407,36 @@ function sanitizeFilePart(value: string): string {
   );
 }
 
+/** Filesystems cap a file name at 255 BYTES (not characters), and a phone
+ *  saving a download refuses a longer one outright. Kept well under, since a
+ *  title in Yoruba, Arabic or Japanese is two or three bytes a letter. */
+const MAX_PACK_FILE_NAME_BYTES = 200;
+
+const utf8Length = (value: string): number => new TextEncoder().encode(value).length;
+
+/** Cut to at most `maxBytes` of UTF-8, at a whole character, never through
+ *  the middle of one (an emoji or an accented letter split in two is a name
+ *  a zip tool rejects). */
+function truncateUtf8(value: string, maxBytes: number): string {
+  if (utf8Length(value) <= maxBytes) return value;
+  let out = '';
+  let used = 0;
+  for (const char of value) {
+    const size = utf8Length(char);
+    if (used + size > maxBytes) break;
+    out += char;
+    used += size;
+  }
+  return out.trimEnd();
+}
+
 export type PackFileNameInput = {
   /** 1-based place in the set. */
   position: number;
+  /** How many songs the pack holds, so the number can be padded to sort. Two
+   *  digits covers 99 songs; past that it widens, or "100" would sort before
+   *  "99" in a folder. Optional: two digits when absent. */
+  totalTracks?: number;
   artistName: string;
   songTitle: string;
   versionLabel?: SongVersionLabel | null;
@@ -285,26 +459,38 @@ export type PackFileNameInput = {
  */
 export function buildPackFileName(input: PackFileNameInput): string {
   const position = Math.max(1, Math.round(input.position));
-  const order = String(position).padStart(2, '0');
+  const total = Math.max(position, Math.round(input.totalTracks ?? 0));
+  const width = Math.max(2, String(total).length);
+  const order = String(position).padStart(width, '0');
 
-  const artist = sanitizeFilePart(input.artistName) || 'Unknown artist';
-  const title = sanitizeFilePart(input.songTitle) || 'Untitled';
+  let artist = sanitizeFilePart(input.artistName) || 'Unknown artist';
+  let title = sanitizeFilePart(input.songTitle) || 'Untitled';
 
-  let name = `${order} ${artist} - ${title}`;
-
+  let suffix = '';
   if (input.versionLabel && isSongVersionLabel(input.versionLabel)) {
-    name += ` (${SONG_VERSION_LABEL_COPY[input.versionLabel]})`;
+    suffix += ` (${SONG_VERSION_LABEL_COPY[input.versionLabel]})`;
   }
 
   if (typeof input.bpm === 'number' && Number.isFinite(input.bpm) && input.bpm > 0) {
-    name += `[${Math.round(input.bpm)}BPM]`;
+    suffix += `[${Math.round(input.bpm)}BPM]`;
   }
 
   const key = input.musicalKey ? sanitizeFilePart(input.musicalKey) : '';
-  if (key) name += `[${key}]`;
+  if (key) suffix += `[${key}]`;
 
-  const extension = (input.extension ?? '').replace(/^\.+/, '').toLowerCase();
-  return extension ? `${name}.${sanitizeFilePart(extension)}` : name;
+  const extension = sanitizeFilePart((input.extension ?? '').replace(/^\.+/, '').toLowerCase());
+  if (extension) suffix += `.${extension}`;
+
+  // Too long for a filesystem: shorten the artist first (it is on every file
+  // in the folder), then the title, which is the part that identifies the
+  // track, so it keeps as much as it can.
+  const fixed = utf8Length(`${order}  - ${suffix}`);
+  if (fixed + utf8Length(artist) + utf8Length(title) > MAX_PACK_FILE_NAME_BYTES) {
+    artist = truncateUtf8(artist, 48) || 'Unknown artist';
+    title = truncateUtf8(title, Math.max(16, MAX_PACK_FILE_NAME_BYTES - fixed - utf8Length(artist))) || 'Untitled';
+  }
+
+  return `${order} ${artist} - ${title}${suffix}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -324,6 +510,22 @@ export const SETLIST_ITEM_TYPES: readonly SetlistItemType[] = [
 
 export const isSetlistItemType = (value: unknown): value is SetlistItemType =>
   typeof value === 'string' && (SETLIST_ITEM_TYPES as readonly string[]).includes(value);
+
+/** What a person sees for the rows that are not songs, and the length each
+ *  starts at when added. One definition, read by the set builder's chips, the
+ *  DJ's pack page and the UrgAns tools, so a break is called the same thing on
+ *  every screen it appears on. */
+export const NON_SONG_ITEM_COPY: Record<Exclude<SetlistItemType, 'song'>, string> = {
+  talk: 'Talk',
+  interlude: 'Interlude',
+  break: 'Break',
+};
+
+export const NON_SONG_ITEM_DEFAULT_SECONDS: Record<Exclude<SetlistItemType, 'song'>, number> = {
+  talk: 60,
+  interlude: 90,
+  break: 60,
+};
 
 export const MAX_SETLIST_NAME_LENGTH = 80;
 export const MAX_CUE_NOTE_LENGTH = 400;
@@ -417,7 +619,7 @@ function parseSetlistItemFields(
     ) {
       errors.push({
         field: 'durationSeconds',
-        message: 'How long is it? Give a length in seconds, under twenty minutes.',
+        message: 'Give a length under twenty minutes, like 3:30.',
       });
     } else {
       columns.duration_seconds = raw;
@@ -519,7 +721,11 @@ export function parseSetlistItemCreate(input: SetlistItemInput): {
  */
 export function parseSetlistItemPatch(
   input: SetlistItemInput,
-  currentType: SetlistItemType
+  currentType: SetlistItemType,
+  /** The stored row's own length. When given, a row that becomes (or stays) a
+   *  talk, interlude or break must end up with a length — it has no song to
+   *  borrow one from, so without one it would silently count as nothing. */
+  currentDurationSeconds?: number | null
 ): { errors: SetlistFieldError[]; columns: SetlistItemColumns } {
   const result = parseSetlistItemFields(input, false);
   if (result.errors.length > 0) return result;
@@ -531,6 +737,18 @@ export function parseSetlistItemPatch(
   const nextType = result.columns.item_type ?? currentType;
 
   if (nextType !== 'song') {
+    const nextDuration =
+      result.columns.duration_seconds === undefined
+        ? currentDurationSeconds
+        : result.columns.duration_seconds;
+    const known = currentDurationSeconds !== undefined || result.columns.duration_seconds !== undefined;
+    if (known && !isUsableDuration(nextDuration)) {
+      result.errors.push({
+        field: 'durationSeconds',
+        message: `This ${NON_SONG_ITEM_COPY[nextType].toLowerCase()} needs a length.`,
+      });
+      return result;
+    }
     // Switching a song slot to a break clears the song rather than refusing:
     // the intent is plain, and leaving it set would violate the database
     // CHECK (setlist_items_song_shape).

@@ -163,7 +163,7 @@ export const HELP_COPY = {
   },
   'nav.shows': {
     label: 'Shows',
-    text: 'Plan a live date: the set list, the running order, and the files your DJ needs.',
+    text: 'Every live date, with its running order, its set and the tracks your DJ needs.',
   },
   'nav.pitching': {
     label: 'Pitching',

@@ -1,7 +1,7 @@
 {
   "name": "@urganize/web",
   "description": "Urganize is where your team does everything after the music is made.",
-  "version": "1.45.0",
+  "version": "1.46.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

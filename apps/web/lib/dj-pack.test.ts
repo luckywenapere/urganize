@@ -44,9 +44,9 @@ describe('describeReceipt', () => {
     ).toBe('Downloaded 2 days ago');
   });
 
-  it('reports a revoked link before anything else', () => {
+  it('reports a turned-off link before anything else', () => {
     const revoked = receipt({ revokedAt: '2026-09-13T00:00:00.000Z', lastDownloadedAt: '2026-09-12T00:00:00.000Z' });
-    expect(describeReceipt(revoked, NOW)).toBe('Link revoked');
+    expect(describeReceipt(revoked, NOW)).toBe('Link turned off');
   });
 });
 
@@ -65,9 +65,27 @@ describe('needsNudge', () => {
 
 describe('relativeDay', () => {
   it('reads in days, which is the precision the question has', () => {
-    expect(relativeDay('2026-09-14T01:00:00.000Z', NOW)).toBe('today');
-    expect(relativeDay('2026-09-13T01:00:00.000Z', NOW)).toBe('yesterday');
-    expect(relativeDay('2026-09-10T01:00:00.000Z', NOW)).toBe('4 days ago');
+    expect(relativeDay('2026-09-14T01:00:00.000Z', NOW, 'UTC')).toBe('today');
+    expect(relativeDay('2026-09-13T01:00:00.000Z', NOW, 'UTC')).toBe('yesterday');
+    expect(relativeDay('2026-09-10T01:00:00.000Z', NOW, 'UTC')).toBe('4 days ago');
+  });
+
+  it('counts calendar days, so ten to midnight seen at ten past is yesterday', () => {
+    expect(relativeDay('2026-09-13T23:50:00.000Z', new Date('2026-09-14T00:10:00.000Z'), 'UTC')).toBe(
+      'yesterday'
+    );
+    // The same two instants on Lagos's clock (UTC+1) are both the 14th.
+    expect(
+      relativeDay('2026-09-13T23:50:00.000Z', new Date('2026-09-14T00:10:00.000Z'), 'Africa/Lagos')
+    ).toBe('today');
+    // And on this device's clock, whatever zone the machine is in.
+    expect(relativeDay(new Date(2026, 8, 13, 23, 50).toISOString(), new Date(2026, 8, 14, 0, 10))).toBe(
+      'yesterday'
+    );
+  });
+
+  it('calls a time from the future today rather than a negative number', () => {
+    expect(relativeDay('2026-09-15T01:00:00.000Z', NOW, 'UTC')).toBe('today');
   });
 
   it('degrades rather than throwing on a bad timestamp', () => {

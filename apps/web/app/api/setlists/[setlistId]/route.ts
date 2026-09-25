@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseSetlistName } from '@/lib/setlist';
+import { describeSentSetRefusal } from '@/lib/dj-pack';
 import {
+  DJ_PACKS_TABLE,
+  DJ_PACK_RECIPIENTS_TABLE,
   SETLISTS_TABLE,
   SETLIST_COLUMNS,
   asRow,
@@ -65,11 +68,17 @@ export async function PATCH(
 /**
  * DELETE a set. Its items cascade.
  *
- * REFUSED when a DJ pack points at it — dj_packs.setlist_id is ON DELETE
- * RESTRICT, because a sent pack is a promise to someone outside the team and
- * deleting the set would break their link the night before a show. Postgres
- * would refuse this anyway; catching it here turns a raw foreign-key error
- * into a sentence naming what to do about it (the artist-deletion pattern).
+ * SENT SETS ARE KEPT (founder call, 2026-09-25). dj_packs.setlist_id is ON
+ * DELETE RESTRICT, and the pack carries the access log — the only record of who
+ * downloaded an unreleased track — so deleting a set that went to anyone would
+ * erase that record. The refusal names who it went to and offers renaming.
+ *
+ * A set with a pack NOBODY was ever added to is an ordinary set: creating a
+ * pack is a click, not a promise to anyone. Its empty pack goes first (the
+ * restrict would refuse otherwise), then the set.
+ *
+ * This replaced "Revoke the pack first, then delete it", which pointed at an
+ * action that did not exist, so a set that ever had a pack was undeletable.
  */
 export async function DELETE(
   request: NextRequest,
@@ -89,14 +98,11 @@ export async function DELETE(
   const access = await ensureSetlistAccess(adminClient, setlistId, auth.user, true);
   if ('error' in access) return access.error;
 
-  const packs = await adminClient!
-    .from('dj_packs')
-    .select('id', { count: 'exact', head: true })
-    .eq('setlist_id', setlistId);
+  const packs = await adminClient!.from(DJ_PACKS_TABLE).select('id').eq('setlist_id', setlistId);
 
-  // Fails CLOSED on an unreadable count, unlike most counts in this codebase:
-  // being wrong here breaks a link somebody is relying on to play a show, and
-  // being wrong the other way just makes a manager retry.
+  // Fails CLOSED on an unreadable read, unlike most counts in this codebase:
+  // being wrong here erases the record of who downloaded a track, and being
+  // wrong the other way just makes a manager retry.
   if (packs.error) {
     return NextResponse.json(
       { error: 'Could not check whether this set has been sent. Try again.' },
@@ -104,17 +110,37 @@ export async function DELETE(
     );
   }
 
-  if ((packs.count ?? 0) > 0) {
-    const count = packs.count ?? 0;
-    return NextResponse.json(
-      {
-        error:
-          count === 1
-            ? 'This set has been sent to someone. Revoke the pack first, then delete it.'
-            : `This set has been sent in ${count} packs. Revoke them first, then delete it.`,
-      },
-      { status: 409 }
-    );
+  const packIds = (packs.data || []).map((row) => String(asRow(row).id || '')).filter(Boolean);
+
+  if (packIds.length > 0) {
+    const recipients = await adminClient!
+      .from(DJ_PACK_RECIPIENTS_TABLE)
+      .select('recipient_name,created_at')
+      .in('pack_id', packIds)
+      .order('created_at', { ascending: true });
+
+    if (recipients.error) {
+      return NextResponse.json(
+        { error: 'Could not check whether this set has been sent. Try again.' },
+        { status: 500 }
+      );
+    }
+
+    const names = (recipients.data || []).map((row) => String(asRow(row).recipient_name || ''));
+    if (names.length > 0) {
+      return NextResponse.json(
+        { error: describeSentSetRefusal(names), code: 'set_was_sent' },
+        { status: 409 }
+      );
+    }
+
+    const removal = await adminClient!.from(DJ_PACKS_TABLE).delete().in('id', packIds);
+    if (removal.error) {
+      return NextResponse.json(
+        { error: removal.error.message || 'Could not delete the set.' },
+        { status: 500 }
+      );
+    }
   }
 
   const { error } = await adminClient!.from(SETLISTS_TABLE).delete().eq('id', setlistId);

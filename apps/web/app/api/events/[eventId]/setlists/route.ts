@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseSetlistName } from '@/lib/setlist';
 import {
+  DJ_PACKS_TABLE,
+  DJ_PACK_RECIPIENTS_TABLE,
   SETLISTS_TABLE,
   SETLIST_COLUMNS,
   asRow,
@@ -53,7 +55,56 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ setlists: (data || []).map((row) => toSetlist(asRow(row))) });
+  const setlists = (data || []).map((row) => toSetlist(asRow(row)));
+
+  // How many people each set went to (every recipient ever, turned off or
+  // not), so the page can say in advance why a sent set cannot be deleted
+  // instead of offering a button that is refused. Best-effort: an unreadable
+  // count leaves it unknown (null) and the DELETE route still decides.
+  const sentTo = await countRecipientsBySetlist(
+    adminClient!,
+    setlists.map((setlist) => setlist.id)
+  );
+
+  return NextResponse.json({
+    setlists: setlists.map((setlist) => ({
+      ...setlist,
+      sentTo: sentTo ? sentTo.get(setlist.id) ?? 0 : null,
+    })),
+  });
+}
+
+async function countRecipientsBySetlist(
+  adminClient: NonNullable<ReturnType<typeof createAdminClient>>,
+  setlistIds: string[]
+): Promise<Map<string, number> | null> {
+  const counts = new Map<string, number>();
+  if (setlistIds.length === 0) return counts;
+
+  const packs = await adminClient
+    .from(DJ_PACKS_TABLE)
+    .select('id,setlist_id')
+    .in('setlist_id', setlistIds);
+  if (packs.error) return null;
+
+  const setlistByPack = new Map<string, string>();
+  for (const row of packs.data || []) {
+    const pack = asRow(row);
+    setlistByPack.set(String(pack.id), String(pack.setlist_id));
+  }
+  if (setlistByPack.size === 0) return counts;
+
+  const recipients = await adminClient
+    .from(DJ_PACK_RECIPIENTS_TABLE)
+    .select('pack_id')
+    .in('pack_id', [...setlistByPack.keys()]);
+  if (recipients.error) return null;
+
+  for (const row of recipients.data || []) {
+    const setlistId = setlistByPack.get(String(asRow(row).pack_id));
+    if (setlistId) counts.set(setlistId, (counts.get(setlistId) ?? 0) + 1);
+  }
+  return counts;
 }
 
 /** Start a set. Named "Main set" unless the manager says otherwise, so the

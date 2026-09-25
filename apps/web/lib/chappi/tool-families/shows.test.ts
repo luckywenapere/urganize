@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 import type { RecipientReceipt } from '@/lib/dj-pack';
 import type { SetlistSummary } from '@/lib/setlist';
 import type { ShowEvent } from '@/types/events';
-import { describePackState, describeSetTotal, describeShow, partitionShows } from './shows';
+import { partitionShows } from '@/lib/events';
+import { describePackState, describeSetTotal, describeShow } from './shows';
 
 const NOW = new Date('2026-09-07T12:00:00Z');
 

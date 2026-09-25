@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'node:crypto';
-import { parseRecipient } from '@/lib/dj-pack';
+import { isPackExpired, parseRecipient } from '@/lib/dj-pack';
 import {
   asRow,
   createAdminClient,
@@ -56,7 +56,7 @@ export async function POST(
   // handed it.
   const pack = await adminClient
     .from(PACKS_TABLE)
-    .select('id,setlist_id')
+    .select('id,setlist_id,expires_at')
     .eq('id', packId)
     .maybeSingle();
 
@@ -73,6 +73,19 @@ export async function POST(
   const setlistId = String(asRow(pack.data).setlist_id || '');
   const access = await ensureSetlistAccess(adminClient, setlistId, auth.user, true);
   if ('error' in access) return access.error;
+
+  // An expired pack would hand this person a link that is dead on arrival. Say
+  // so, and let the owner open the links again (PATCH .../pack { reopen }).
+  const expiresAt = asRow(pack.data).expires_at;
+  if (isPackExpired(expiresAt ? String(expiresAt) : null)) {
+    return NextResponse.json(
+      {
+        error: 'These links have expired. Open them again first, then add them.',
+        code: 'pack_expired',
+      },
+      { status: 409 }
+    );
+  }
 
   const { data, error } = await adminClient
     .from(RECIPIENTS_TABLE)
