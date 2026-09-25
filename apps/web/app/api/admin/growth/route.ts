@@ -8,7 +8,7 @@ import { getNeonClient, verifyAdmin } from '../_shared';
 // homepage's shared-secret cookie. The homepage page remains untouched.
 
 type CountRow = { total: string };
-type WeeklyRow = { weekLabel: string; totalUsers: string | number };
+type WeeklyRow = { weekLabel: string; totalUsers: string | number; beforeWindow: string | number };
 
 export async function GET(req: NextRequest) {
   const adminResult = await verifyAdmin(req);
@@ -30,9 +30,14 @@ export async function GET(req: NextRequest) {
 
     const total = Number(totalRows[0]?.total ?? '0');
     if (total === 0) {
-      return NextResponse.json({ total: 0, weeks: [] });
+      return NextResponse.json({ total: 0, beforeWindow: 0, weeks: [] });
     }
 
+    // Each week is a running total at the END of that week, so the first
+    // week's own sign-ups need the count from before it began: beforeWindow.
+    // It is a column of this same statement, not a second query, so it reads
+    // the same NOW() as the weeks and the two can never straddle a Monday.
+    // An uncorrelated subquery runs once, not once per row.
     const rows = (await sql`
       WITH weeks AS (
         SELECT generate_series(
@@ -47,13 +52,19 @@ export async function GET(req: NextRequest) {
           SELECT COUNT(*)::int
           FROM "User"
           WHERE "createdAt" < week_start + INTERVAL '1 week'
-        ) AS "totalUsers"
+        ) AS "totalUsers",
+        (
+          SELECT COUNT(*)::int
+          FROM "User"
+          WHERE "createdAt" < date_trunc('week', NOW())::date - INTERVAL '11 weeks'
+        ) AS "beforeWindow"
       FROM weeks
       ORDER BY week_start ASC
     `) as WeeklyRow[];
 
     return NextResponse.json({
       total,
+      beforeWindow: Number(rows[0]?.beforeWindow ?? 0),
       weeks: rows.map((row) => ({
         weekLabel: row.weekLabel,
         totalUsers: Number(row.totalUsers),

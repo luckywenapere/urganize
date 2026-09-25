@@ -139,26 +139,18 @@ const RETIRED = [
   // Manager" is matched CASE-SENSITIVELY on purpose: the title-cased form is
   // how the category was written in copy, while the lowercase search keyword
   // "AI music manager" is kept in LANDING_KEYWORDS and the store tags, because
-  // nobody's search habits changed when our wording did. The current category
-  // ("AI Music Business Manager") is HELD_CATEGORY below, not here, because
-  // one file still says it on purpose.
+  // nobody's search habits changed when our wording did.
   /\bAI Music Manager\b/,
   /Music Business AI/i,
   /operating system for music/i,
   /plan, organize and execute/i,
+  // The category itself. Retired everywhere on 2026-09-24 except UrgAns's
+  // system prompt, which kept saying it while the founder decided how the
+  // assistant describes the product. He decided on 2026-09-25 (the new line,
+  // like everything else), so the one-file exemption and the test that
+  // guarded it are gone and this is an ordinary retired phrase now.
+  /AI Music Business Manager/i,
 ] as const;
-
-/**
- * The previous category, retired everywhere but one file.
- *
- * UrgAns's system prompt still introduces Urganize as an AI Music Business
- * Manager, on purpose: the founder is deciding separately how the assistant
- * describes the product (2026-09-24), so that file was left exactly as it was.
- * It is the only exemption, by path, and a test below fails the moment the
- * prompt stops saying it, so the exemption cannot outlive the reason for it.
- */
-const HELD_CATEGORY = /AI Music Business Manager/i;
-const HELD_CATEGORY_FILE = join(WEB, 'lib', 'chappi', 'system-prompt.ts');
 
 /**
  * Strings that legitimately contain a retired pattern, exempted by identity
@@ -296,13 +288,10 @@ describe('positioning', () => {
     const found: string[] = [];
 
     for (const path of SURFACES) {
-      // The one file allowed to keep saying the held category (see
-      // HELD_CATEGORY). Everywhere else it is retired like the rest.
-      const patterns = path === HELD_CATEGORY_FILE ? RETIRED : [...RETIRED, HELD_CATEGORY];
       for (const value of readableCopy(readFileSync(path, 'utf8'))) {
         if (ALLOWED.has(value) || isCopyRulesFragment(value)) continue;
         const prose = withoutIdentifiers(value);
-        const hit = patterns.find((pattern) => pattern.test(prose));
+        const hit = RETIRED.find((pattern) => pattern.test(prose));
         if (hit) found.push(report(path, `${hit} in "${value}"`));
       }
     }
@@ -318,9 +307,7 @@ describe('positioning', () => {
       // Markdown has no comments to strip and no identifiers to skip: every
       // line of it is read by a person.
       for (const line of text.split('\n')) {
-        const hit = [...RETIRED, HELD_CATEGORY].find((pattern) =>
-          pattern.test(withoutIdentifiers(line)),
-        );
+        const hit = RETIRED.find((pattern) => pattern.test(withoutIdentifiers(line)));
         if (hit) found.push(report(path, `${hit} in "${line.trim().slice(0, 90)}"`));
       }
     }
@@ -341,13 +328,6 @@ describe('positioning', () => {
       }
     }
     expect(found).toEqual([]);
-  });
-
-  it('keeps the held-category exemption only while it is still needed', () => {
-    // When the founder decides how UrgAns describes the product, the prompt
-    // changes and this fails: delete HELD_CATEGORY_FILE's exemption then, so
-    // the old category is retired everywhere.
-    expect(readFileSync(HELD_CATEGORY_FILE, 'utf8')).toMatch(HELD_CATEGORY);
   });
 
   it('gives every marketing page a description that says what Urganize is', () => {

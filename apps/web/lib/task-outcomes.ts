@@ -3,6 +3,7 @@
 // ratings, labels, length caps, or how a summary is built (the notes.ts /
 // asset-constants.ts pattern). No I/O here.
 
+import { CORE_CLAUSE, URGANS_LINE } from '@/lib/positioning';
 import { TASK_OUTCOME_RATINGS, type TaskOutcome, type TaskOutcomeRating } from '@/types/tasks';
 
 export { TASK_OUTCOME_RATINGS };
@@ -71,6 +72,11 @@ export type OutcomeAiMessage = { role: 'system' | 'user'; content: string };
  * One call produces both the summary and the optional follow-up question.
  * The model is addressed as UrgAns (never an internal model or provider
  * name) and the output contract is strict JSON for parseOutcomeAiResponse.
+ *
+ * It introduces UrgAns and Urganize from lib/positioning.ts, the same way the
+ * main UrgAns prompt does (2026-09-25), rather than keeping a description of
+ * its own: this line said "a rollout planning app for music teams" until then,
+ * a third way of saying what the product is.
  */
 export function buildOutcomeAiMessages(input: {
   taskTitle: string;
@@ -78,7 +84,7 @@ export function buildOutcomeAiMessages(input: {
   note: string;
 }): OutcomeAiMessage[] {
   const system = [
-    'You are UrgAns, the assistant inside Urganize, a rollout planning app for music teams.',
+    `You are UrgAns, the ${URGANS_LINE} inside Urganize, ${CORE_CLAUSE}.`,
     'A user just finished a task and told you how it went. The note may be voice dictated and messy.',
     'Respond with JSON only, no prose: {"summary": string, "followupQuestion": string or null}.',
     'Rules for summary: one plain sentence under 140 characters that restates what happened in the user\'s own words, past tense. No advice, no praise, no emojis, no em dashes.',

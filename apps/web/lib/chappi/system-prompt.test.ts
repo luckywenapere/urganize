@@ -16,7 +16,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { URGANS_LINE } from '../positioning';
+import { CANONICAL_DESCRIPTION, CORE_CLAUSE, CORE_LINE, URGANS_LINE } from '../positioning';
 import { ROLE, URGANS_COPY_RULES } from './system-prompt';
 import { CHAPPI_TOOLS } from './tools';
 
@@ -51,18 +51,21 @@ describe('the system prompt', () => {
     // UrgAns is a feature of the product, never the product, and that line is
     // the one thing in this prompt a later rewrite is most likely to blur.
     //
-    // HELD, NOT CURRENT (2026-09-24). The rest of the product now says
-    // "Urganize is where your team does everything after the music is made"
-    // (lib/positioning.ts), and the founder is deciding separately how UrgAns
-    // describes it. So the prompt was deliberately left saying the previous
-    // category, and this pins that wording as a LITERAL instead of against the
-    // shared constants, which no longer carry it. When the founder decides,
-    // this assertion fails on purpose: change the prompt, point this back at
-    // the shared constants, and drop the held-category exemption in
-    // lib/positioning-guard.test.ts in the same change.
-    expect(ROLE).toContain('AI Music Business Manager for artists and managers');
-    expect(ROLE).toContain(URGANS_LINE);
+    // Since 2026-09-25 UrgAns says the same line as the rest of the product
+    // (lib/positioning.ts). The opening sentence is PROSE, so it is held to the
+    // shared constants here: change the line in positioning.ts and this fails
+    // until somebody re-reads that sentence. The answer to "what is Urganize"
+    // quotes the founder's lines by reference, so those two assertions catch
+    // the reference being dropped, or the "word for word" instruction that
+    // stops the model rewording them.
+    expect(ROLE).toContain(`the ${URGANS_LINE} inside Urganize, ${CORE_CLAUSE}.`);
     expect(ROLE).toContain('If you are asked what Urganize is');
+    expect(ROLE).toContain(`word for word: "${CORE_LINE}"`);
+    expect(ROLE).toContain(`word for word: "${CANONICAL_DESCRIPTION}"`);
+    // The category every other surface retired on 2026-09-24. This reads the
+    // RENDERED prompt, which the positioning guard cannot: it scans source,
+    // where the quoted lines are only `${...}` holes.
+    expect(ROLE).not.toMatch(/Music Business Manager/i);
     // The word is banned everywhere a person reads it. The one place the prompt
     // may name it is the instruction that forbids it.
     expect(URGANS_COPY_RULES).toContain('workspace');
