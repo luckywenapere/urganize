@@ -27,12 +27,12 @@
 // Hand-off (after step 5):
 //   1. supabase.auth.signUp via useAuthStore.signup — reuses existing flow.
 //   2. POST /api/trial/start — grant 28-day trial so the next call passes the
-//      paywall (otherwise POST /api/releases 402s). SKIPPED when
-//      NEXT_PUBLIC_FEATURE_CARD_TRIAL is on: the trial then starts on
-//      /start-trial after a card is added, and this route 404s under the flag
-//      (404 is not in the tolerated {400, 409} set, so an unconditional call
-//      would throw). The release POST below still works pre-trial because the
-//      server paywall is off (see app/api/_shared/paywall.ts).
+//      paywall (otherwise POST /api/releases 402s). SKIPPED when the card trial
+//      OR the hard paywall is on: this route 404s under EITHER, and 404 is not
+//      in the tolerated {400, 409} set, so an unconditional call would throw and
+//      strand the signup. The release POST below still works pre-trial because
+//      either the server paywall is off (card-trial path) or the team already
+//      has its trial (hard-paywall path). See lib/onboarding-trial.ts.
 //   3. POST /api/releases — same path the in-app modal uses. The step-4
 //      planning preference maps to the route's `plan` field: template tasks
 //      get instantiated via apps/web/lib/release-templates/instantiate.ts,
@@ -81,6 +81,8 @@ import {
 import { getOnboardingAiMoment } from '@/lib/onboarding-ai-moment';
 import { getAvailableReleaseTypes } from '@/lib/release-templates/loader';
 import { isCardTrialEnabled, shouldRunAuthedOnboardingSetup } from '@/lib/trial-card';
+import { isHardPaywallEnabled } from '@/lib/team-billing';
+import { shouldStartOnboardingTrial } from '@/lib/onboarding-trial';
 import { isSocialShareEnabled } from '@/lib/social-share';
 import { markPendingFirstShare } from '@/lib/social-share-offer';
 import { resolvePostSignupDestination, takePitchIntent } from '@/lib/pitch-intent';
@@ -97,6 +99,15 @@ const WORKSPACE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 // hand-off and finishToDashboard lands on /start-trial instead of the
 // dashboard (see the Hand-off comment above).
 const CARD_TRIAL_ENABLED = isCardTrialEnabled();
+
+// Whether the hand-off should call POST /api/trial/start. That route 404s under
+// the card trial AND under the hard paywall, and the hand-off only tolerates
+// 400/409 — so calling it under either flag throws and strands the signup
+// before the release and welcome email. See lib/onboarding-trial.ts.
+const SHOULD_START_LEGACY_TRIAL = shouldStartOnboardingTrial({
+  cardTrialEnabled: CARD_TRIAL_ENABLED,
+  hardPaywallEnabled: isHardPaywallEnabled(),
+});
 
 // Single source of truth for selectable release types: the template registry.
 // See apps/web/lib/release-templates/loader.ts. EP/album/music_video become
@@ -595,11 +606,14 @@ export default function OnboardingPage() {
     // 1. Start the 28-day trial so the next call passes the paywall.
     // 400/409 are tolerable: a trial was already used / paid status, in
     // which case we let /api/releases be the arbiter.
-    // Card-trial flag ON: skipped entirely — the trial starts on /start-trial
-    // after a card is added, and /api/trial/start 404s under the flag (404
-    // isn't tolerated below, so calling it would throw). The release POST
-    // still works pre-trial because the server paywall is off.
-    if (!CARD_TRIAL_ENABLED) {
+    // Skipped when the card trial OR the hard paywall is on: /api/trial/start
+    // 404s under either (the card trial starts on /start-trial; the hard paywall
+    // grants a team trial at team creation), and a 404 isn't tolerated below, so
+    // calling it would throw and strand the signup before the release POST and
+    // the welcome email. The release POST still works pre-trial because either
+    // the server paywall is off (card-trial path) or the team already has its
+    // trial (hard-paywall path). See lib/onboarding-trial.ts.
+    if (SHOULD_START_LEGACY_TRIAL) {
       setProgressMessage('Starting your trial...');
       const trialResponse = await fetch('/api/trial/start', {
         method: 'POST',
