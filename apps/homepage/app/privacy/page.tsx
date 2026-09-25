@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LegalSection as Section } from "../components/marketing/LegalSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { CUSTOMER_LINE } from "@/lib/positioning";
+import { CORE_CLAUSE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 // noIndex: this page was outranking the homepage for the query "urganize" —
@@ -12,7 +12,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Privacy Policy",
   description:
-    `What Urganize collects, why, who processes it, and the choices you have. The privacy policy for the ${CUSTOMER_LINE}.`,
+    `What Urganize collects, why, who processes it and the choices you have. The privacy policy for Urganize, ${CORE_CLAUSE}.`,
   path: "/privacy",
   noIndex: true,
 });
@@ -84,9 +84,8 @@ export default function PrivacyPolicy() {
             <Section number="01" title="Who we are">
               <p>
                 Urganize (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
-                &ldquo;us&rdquo;) is an AI Music Business Manager for artists
-                and managers, operated by The Urganization Ltd, a company
-                registered in Nigeria.
+                &ldquo;us&rdquo;) is {CORE_CLAUSE}. It is operated by The
+                Urganization Ltd, a company registered in Nigeria.
               </p>
               <p>
                 For privacy questions, email{" "}

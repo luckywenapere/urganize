@@ -20,10 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.44.0",
+    version: "1.45.0",
     date: "September 24, 2026",
     highlights: [
       "You can now give each artist their own colors for share images, instead of Urganize's own colors. Set them in Settings, under the artist's name.",
+    ],
+  },
+  {
+    version: "1.44.0",
+    date: "September 24, 2026",
+    highlights: [
+      "UrgAns remembers your conversations now, so you can pick one back up later instead of starting fresh. Your past chats also show up in a history list, where you can reopen or delete them.",
     ],
   },
   {

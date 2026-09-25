@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { CUSTOMER_LINE } from "@/lib/positioning";
+import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { APP_LOGIN_URL, APP_PASSWORD_RESET_URL } from "@/lib/app-urls";
 
@@ -17,7 +17,7 @@ import { APP_LOGIN_URL, APP_PASSWORD_RESET_URL } from "@/lib/app-urls";
 export const metadata: Metadata = buildPageMetadata({
   title: "Log in",
   description:
-    `Log in to Urganize, the ${CUSTOMER_LINE}, and pick up your rollouts, activities and team.`,
+    `${CORE_LINE} Log in to pick up your rollouts, activities and team.`,
   path: "/login",
 });
 

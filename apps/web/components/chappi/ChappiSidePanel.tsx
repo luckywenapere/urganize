@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Maximize2, MessageCircle, RotateCcw, X } from '@/components/icons';
+import { History, Maximize2, MessageCircle, RotateCcw, X } from '@/components/icons';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
 import {
   DEFAULT_RAIL_WIDTH,
   RAIL_KEYBOARD_STEP,
@@ -15,8 +16,11 @@ import {
 import { sidebarTotalWidth } from '@/lib/sidebar-width';
 import { useSidebarStore } from '@/stores/useSidebarStore';
 import { ChappiConversation } from './ChappiConversation';
+import { ChappiHistoryList } from './ChappiHistoryList';
 
 const IDENTITY_PANEL_ENABLED = process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true';
+// Saved chats: a header button swaps the rail's body to the chats list.
+const HISTORY_ENABLED = isChappiHistoryEnabled();
 
 type ChappiSidePanelProps = {
   /** Opens the CreateReleaseModal owned by AppShell (the same instance
@@ -66,6 +70,8 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
 
   const asideRef = useRef<HTMLElement | null>(null);
   const [dragging, setDragging] = useState(false);
+  // The chats list is showing in place of the conversation.
+  const [showChats, setShowChats] = useState(false);
 
   // Measured rather than assumed, and re-measured on resize: a width sized on
   // a big monitor must not survive onto a laptop, and browser zoom, OS display
@@ -296,10 +302,28 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
             UrgAns
           </p>
           <div className="flex items-center gap-1">
+            {HISTORY_ENABLED ? (
+              <button
+                type="button"
+                onClick={() => setShowChats((current) => !current)}
+                aria-pressed={showChats}
+                aria-label={showChats ? 'Back to the conversation' : 'Your chats'}
+                title={showChats ? 'Back to the conversation' : 'Chats'}
+                className={`motion-focus motion-press grid h-7 w-7 place-items-center transition-colors hover:bg-bg-hover hover:text-content-primary ${
+                  showChats ? 'text-brand' : 'text-content-tertiary'
+                }`}
+              >
+                <History className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            ) : null}
             {messages.length > 0 ? (
               <button
                 type="button"
-                onClick={reset}
+                onClick={() => {
+                  reset();
+                  // A new chat is a conversation to type into, not the list.
+                  setShowChats(false);
+                }}
                 aria-label="New conversation"
                 title="New conversation"
                 className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
@@ -334,7 +358,14 @@ export function ChappiSidePanel({ onNewRelease }: ChappiSidePanelProps) {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 px-3 pb-3 pt-2">
+        {showChats ? (
+          <div className="min-h-0 flex-1 px-2 pb-3 pt-2">
+            <ChappiHistoryList variant="panel" onDone={() => setShowChats(false)} />
+          </div>
+        ) : null}
+        {/* Hidden, never unmounted, while the list shows: its cards and any
+            reply still on its way live in it. */}
+        <div className={`min-h-0 flex-1 px-3 pb-3 pt-2 ${showChats ? 'hidden' : ''}`}>
           <ChappiConversation variant="panel" onNewRelease={onNewRelease} />
         </div>
       </div>

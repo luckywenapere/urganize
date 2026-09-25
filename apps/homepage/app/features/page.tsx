@@ -7,13 +7,12 @@ import { TrialButton } from "../components/landing/TrialButton";
 import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Features",
   description:
-    `What your ${PRODUCT_CATEGORY} does: a plan for every rollout, activities your team owns and a press kit you send as one link. Plus UrgAns.`,
+    "Everything after the music: a plan for every rollout, activities your team owns and a press kit you send as one link. Plus UrgAns.",
   path: "/features",
 });
 

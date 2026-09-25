@@ -69,6 +69,16 @@ const FILES = [
   // separator, so a pattern written for "/" alone matches nothing on Windows.
   ...walk(join(WEB, 'lib')).filter((path) => basename(path).startsWith('social-share')),
   ...walk(join(WEB, 'app', 'api', 'releases', '[releaseId]', 'share-card')),
+  // Saved UrgAns chats (2026-09-24), a new surface born under the house rules
+  // for the same reason the help pullouts were. ChappiConversation itself is
+  // deliberately NOT here: it predates the rules and still carries em dashes,
+  // which is the retrofit this guard's header rules out.
+  ...walk(join(WEB, 'app', 'api', 'urgans', 'conversations')),
+  join(WEB, 'lib', 'chappi', 'conversation-history.ts'),
+  join(WEB, 'lib', 'chappi', 'conversations-server.ts'),
+  join(WEB, 'stores', 'useChappiHistoryStore.ts'),
+  join(WEB, 'components', 'chappi', 'ChappiHistoryList.tsx'),
+  join(WEB, 'components', 'chappi', 'ChappiDeleteChatDialog.tsx'),
   // Brand colors for those images (2026-09-24): the Settings editor and its
   // route are the same new surface, so they are born under the same rules. The
   // lib half is already reached by the social-share prefix above.
