@@ -18,10 +18,12 @@
  * puts them back, so the list below has three entries again. "Small labels"
  * stays retired in the guard; "for labels" does not.
  *
- * UrgAns is the one surface that still says the old category, on purpose: the
- * founder is deciding separately how the assistant describes the product, so
- * lib/chappi/system-prompt.ts was left as it was and the guard exempts that one
- * file for that one phrase.
+ * UrgAns says it too, since 2026-09-25. It kept the old category for one day
+ * while the founder decided how the assistant describes the product; now
+ * lib/chappi/system-prompt.ts quotes CORE_LINE and CANONICAL_DESCRIPTION from
+ * here, lib/task-outcomes.ts introduces UrgAns with URGANS_LINE and
+ * CORE_CLAUSE, and the guard retires the old category everywhere, no
+ * exemptions.
  *
  * WHY A MODULE RATHER THAN THE STRING AT EACH CALL SITE. This repo has shipped
  * the display-vs-reality gap four times with prices, once with the share card's
