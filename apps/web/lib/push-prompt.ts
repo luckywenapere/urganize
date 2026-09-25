@@ -53,7 +53,7 @@ export type PushPromptDecision =
  *  - granted but not subscribed: the user said yes at some point and we lost
  *    the subscription (cleared site data, a rotated key, a failed sync).
  *    Re-subscribing needs no prompt and therefore needs no card — the same
- *    passive re-register CapacitorPushBridge already does for native.
+ *    passive re-register NativePushBridge already does for native.
  *  - default: the one state where a prompt is possible. Ask unless the user
  *    has recently said "Not now".
  */

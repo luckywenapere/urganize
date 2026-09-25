@@ -68,7 +68,7 @@ export function AssetCategoryGroup({
   };
 
   // A remote-file target="_blank" anchor commonly opens blank inside the
-  // Capacitor webview (no "new tab" concept there) — hand it to the system
+  // app webview (no "new tab" concept there) — hand it to the system
   // browser instead when running natively; on the web, let the anchor's
   // normal target="_blank" behavior proceed untouched.
   const handleOpenAsset = (event: React.MouseEvent<HTMLAnchorElement>, url: string) => {

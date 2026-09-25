@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
 import { DEVICE_PUSH_TOKENS_TABLE } from '@/lib/fcm-server';
 
-// Registers/removes this device's native push token (FCM on Android, APNs
-// on iOS via the Capacitor shell). Sibling to /api/push/subscribe, which
+// Registers/removes this device's native push token (an FCM token on both
+// platforms, from the native shell). Sibling to /api/push/subscribe, which
 // does the same job for Web Push subscriptions — kept as a separate route
 // because the two rows shapes don't overlap (a token has no p256dh/auth
 // keypair). One row per token; re-registering the same device upserts, and

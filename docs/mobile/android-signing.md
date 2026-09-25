@@ -1,85 +1,46 @@
-# Android release signing — manual steps
+# Android signing
 
-Play Store builds must be signed with an **upload keystore** that only you hold. The Gradle wiring is already done (`apps/mobile/android/app/build.gradle`); what remains needs a password, so it has to be you running it, not an assistant — nobody should type your signing password into a tool that logs its input.
+Every Android build of `com.urganize.app` must be signed with **the Urganize key you made on 2026-08-07**:
 
-Read the backup section before generating anything. Losing this file is the expensive mistake, not leaking it.
+- File: `urganize-upload-key.jks` in your user folder (`C:\Users\penta\urganize-upload-key.jks`)
+- Issued to: Urganize, Abuja, Federal Capital Territory, NG
+- SHA-256 fingerprint: `37:A4:CB:08:FB:A4:C9:63:B8:62:49:54:F6:1F:83:2F:EC:CC:57:77:43:A7:83:6F:CF:AA:AF:11:D0:C9:33:DE`
 
-## 1. Generate the keystore
+The APK on urganize.app/download (the Capacitor app, version 0.41.2) is signed with it, and a phone only installs an update signed with the same key. A build signed with any other key fails with "App not installed" until the old app is removed.
 
-Run this from anywhere. Note the output path is **outside the repo** on purpose — gitignore is a safety net, not a strategy:
+## First, save the passwords
 
-```bash
-keytool -genkeypair -v -keystore ~/urganize-upload-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias urganize-upload
-```
+The passwords for that key are in `apps/mobile/android/keystore.properties` in your main checkout, inside the Capacitor project's old Android folder. That folder leaves the repo with the Expo move, nothing regenerates the file, and `expo prebuild --clean` deletes the whole folder. So before anything else:
 
-`keytool` ships with the JDK. If it isn't on your PATH, use the one bundled with Android Studio:
+1. Copy the store password, the key alias and the key password into your password manager.
+2. Back up the `.jks` file somewhere other than this computer.
 
-```bash
-"/c/Program Files/Android/Android Studio/jbr/bin/keytool" -genkeypair -v -keystore ~/urganize-upload-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias urganize-upload
-```
+Losing either means the app on people's phones can never be updated; they would have to remove it and install a new one.
 
-It will prompt for:
+## Give the key to EAS
 
-- **Keystore password** — choose a strong one. Store it in your password manager now, not later.
-- **Name / organizational unit / city / country** — this ends up in the certificate. "Urganize" and your real city/country code are fine; none of it is shown to users.
-- **Key password** — pressing Enter reuses the keystore password, which is normal and what `keystore.properties.example` assumes.
-
-`-validity 10000` is ~27 years. Play requires a certificate valid well beyond any plausible release date; a short validity locks you out of updating your own app later.
-
-## 2. Point the build at it
+EAS builds in the cloud, so it needs its own copy. From `apps/mobile`:
 
 ```bash
-cp apps/mobile/android/keystore.properties.example apps/mobile/android/keystore.properties
+eas credentials --platform android
 ```
 
-Edit the copy with the real path, alias, and passwords. Both `keystore.properties` and `*.jks` are gitignored (`apps/mobile/android/.gitignore`) — verify with `git status` that neither appears before your next commit.
+Pick any build profile (the key is stored for the app, and every profile uses it), then **Keystore → Set up a new keystore**. Answer **No** when it offers to generate one; it then asks for the file, the alias and the two passwords.
 
-## 3. Back it up — this is the step people regret skipping
-
-If you lose this keystore **and** its password, you cannot ship another update to `com.urganize.app`, ever. Not with a support ticket, not with a new key. The recovery path is publishing a brand-new listing under a different package name and asking every installed user to migrate manually.
-
-Google Play App Signing softens this — Play holds the *app signing key* and you hold the *upload key*, so a lost upload key can be reset via Play support. Enrolling is the default for new apps and worth accepting. But that reset is a support round-trip, not a button, and it only helps if you enrolled.
-
-Minimum backup: the `.jks` file in a password manager or encrypted cloud vault (not a plain Drive folder), plus the passwords stored separately from it. Treat it like the deed to the app.
-
-## 4. Build a signed release
+Check it took: `eas credentials` shows the keystore's SHA-256 fingerprint, and it must match the one above. After the first build you can check the APK itself too:
 
 ```bash
-pnpm mobile:sync
+apksigner verify --print-certs urganize.apk
 ```
 
-Then, from `apps/mobile/android/`, with `JAVA_HOME` pointed at a JDK (Android Studio's bundled one works: `C:\Program Files\Android\Android Studio\jbr`):
+## When the app goes on Google Play
 
-```bash
-./gradlew assembleRelease
-```
+Google Play signs apps with its own key by default (Play App Signing). If it makes a new one, people who installed the APK from urganize.app/download cannot update from Play. When you set up the app in Play Console, choose to **upload your own app signing key** and give it this one. You can then keep this key as the upload key too, or let Play set up a separate upload key.
 
-Output: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk` — this is the one to sideload to testers.
+## Never commit signing files
 
-For the Play Store, build an App Bundle instead, which is what Play accepts for new apps:
+`apps/mobile/.gitignore` ignores `*.jks`, `*.keystore`, `*.p8`, `*.p12` and `credentials.json`. Check `git status` before committing if you ever handle one locally.
 
-```bash
-./gradlew bundleRelease
-```
+## The test APK from a local build is different
 
-Output: `apps/mobile/android/app/build/outputs/bundle/release/app-release.aab`.
-
-Confirm it actually got signed with your key rather than silently falling back:
-
-```bash
-"/c/Program Files/Android/Android Studio/jbr/bin/keytool" -printcert -jarfile apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-```
-
-If that errors or shows a CN of "Android Debug", `keystore.properties` was not picked up.
-
-## 5. Bump `versionCode` before every upload
-
-`versionCode` in `apps/mobile/android/app/build.gradle` must strictly increase on every build you upload to any Play track, and Play never lets a number be reused — even from a rejected or deleted build. It is currently `2` (bumped 2026-09-02 for the first build that carries native push; `1` was the 2026-08-07 debug APK, which predates the push plugin and `google-services.json`).
-
-`versionName` needs no maintenance: it reads `apps/mobile/package.json` at build time, so it tracks the changelog ledger version automatically.
-
-## Signature mismatch and the debug APK
-
-An APK signed with this key **cannot install over** the debug APK from 2026-08-07, because Android refuses to replace an app with a build carrying a different signature. Anyone holding that debug build must uninstall it first, which clears their session and requires signing in again.
-
-Worth doing once, now, rather than repeatedly: every release build from here shares this key, so upgrades work normally after this one-time break.
+A local `./gradlew assembleRelease` (see `expo-shell.md`) signs with React Native's public test key, which is the same for every React Native project. That APK is only for trying the app on your own phone, after removing the old app. Never put it on urganize.app/download: anyone could build an "update" signed with the same public key.

@@ -31,7 +31,7 @@ type ShareLoginActionsProps = {
  * choosing their own password rather than waiting on one to arrive.
  *
  * Both go through openExternalUrl, so they open in the system browser inside
- * the Capacitor shell instead of trying to load a wa.me/mailto: in the
+ * the native shell instead of trying to load a wa.me/mailto: in the
  * webview — the documented failure mode a bare target="_blank" anchor hits
  * there.
  */

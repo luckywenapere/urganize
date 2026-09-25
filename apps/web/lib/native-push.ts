@@ -1,10 +1,14 @@
 'use client';
 
-// Browser-side wiring for NATIVE push (FCM on Android, APNs on iOS via the
-// Capacitor shell in apps/mobile) — the counterpart to lib/push.ts, which
-// covers Web Push for browsers/installed PWAs. The two are separate
-// transports because a Capacitor webview has no PushManager at all; the
-// server fans out to both from one choke point (lib/push-server.ts).
+// Browser-side wiring for NATIVE push — the counterpart to lib/push.ts, which
+// covers Web Push for browsers/installed PWAs. The two are separate transports
+// because an app webview has no PushManager at all; the server fans out to
+// both from one choke point (lib/push-server.ts).
+//
+// The Expo shell (apps/mobile) owns the OS permission and the token, and this
+// module asks it for them over lib/native-bridge.ts. The token is an FCM token
+// on BOTH platforms (the shell uses React Native Firebase on iOS too), because
+// the server only sends through FCM HTTP v1 (lib/fcm-server.ts).
 //
 // A device's FCM/APNs token has no long-lived client-side handle the way a
 // Web Push PushSubscription object does (nothing like
@@ -13,8 +17,8 @@
 // lib/persisted-state.ts — that's what "disable" reads back to know which
 // server-side row to delete.
 
-import { Capacitor } from '@capacitor/core';
-import { isNativePlatform } from '@/lib/platform';
+import { getPlatform } from '@/lib/platform';
+import { request, shellSupports } from '@/lib/native-bridge';
 import { supabase } from '@/lib/supabase/client';
 import { clearPersistedState, readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import type { PushPermissionState } from '@/lib/push';
@@ -25,7 +29,7 @@ const TOKEN_STORAGE_VERSION = 1;
 export type NativePushPlatform = 'android' | 'ios';
 
 export type NativePushStatus =
-  | 'unsupported' // not a native shell, or the plugin isn't in this build
+  | 'unsupported' // not a native shell, or this shell build has no push
   | 'blocked' // the user denied the OS-level permission
   | 'enabled' // permission granted AND this device has a registered token
   | 'disabled'; // supported but not (yet) registered on this device
@@ -45,11 +49,11 @@ function clearStoredToken(): void {
 }
 
 export function isNativePushAvailable(): boolean {
-  return isNativePlatform() && Capacitor.isPluginAvailable('PushNotifications');
+  return shellSupports('push.register') && shellSupports('push.permission');
 }
 
 function toPlatform(): NativePushPlatform | null {
-  const platform = Capacitor.getPlatform();
+  const platform = getPlatform();
   return platform === 'android' || platform === 'ios' ? platform : null;
 }
 
@@ -90,18 +94,14 @@ async function unregisterToken(token: string): Promise<void> {
   }).catch(() => {});
 }
 
-/** Native counterpart to lib/push.ts's getNotificationPermission. Capacitor
- * reports two flavours of "not asked yet" ('prompt' and
- * 'prompt-with-rationale'); both collapse to 'default' because both mean the
- * OS will still show a prompt if we request one. */
+/** Native counterpart to lib/push.ts's getNotificationPermission. The shell
+ * already collapses every "not asked yet" flavour to 'default', because each
+ * means the OS will still show a prompt if we request one. */
 export async function getNativePushPermission(): Promise<PushPermissionState> {
   if (!isNativePushAvailable()) return 'denied';
   try {
-    const { PushNotifications } = await import('@capacitor/push-notifications');
-    const permission = await PushNotifications.checkPermissions();
-    if (permission.receive === 'granted') return 'granted';
-    if (permission.receive === 'denied') return 'denied';
-    return 'default';
+    const { permission } = await request('push.permission', {});
+    return permission;
   } catch {
     return 'denied';
   }
@@ -110,13 +110,25 @@ export async function getNativePushPermission(): Promise<PushPermissionState> {
 export async function getNativePushStatus(): Promise<NativePushStatus> {
   if (!isNativePushAvailable()) return 'unsupported';
   try {
-    const { PushNotifications } = await import('@capacitor/push-notifications');
-    const permission = await PushNotifications.checkPermissions();
-    if (permission.receive === 'denied') return 'blocked';
-    if (permission.receive === 'granted' && getStoredToken()) return 'enabled';
+    const { permission } = await request('push.permission', {});
+    if (permission === 'denied') return 'blocked';
+    if (permission === 'granted' && getStoredToken()) return 'enabled';
     return 'disabled';
   } catch {
     return 'disabled';
+  }
+}
+
+/** Asks the shell for this device's token. The 8 second ceiling is the same
+ * one the earlier shell used: FCM usually answers in well under a second,
+ * and a request that has not answered by then is not going to. */
+export async function registerNativePushToken(): Promise<string | null> {
+  try {
+    const { token } = await request('push.register', {}, { timeoutMs: 8000 });
+    return token || null;
+  } catch (error) {
+    console.error('[push] native registration failed', error);
+    return null;
   }
 }
 
@@ -124,28 +136,21 @@ export async function getNativePushStatus(): Promise<NativePushStatus> {
  * Returns the resulting status ('enabled' on success). */
 export async function enableNativePush(): Promise<NativePushStatus> {
   if (!isNativePushAvailable()) return 'unsupported';
-  const { PushNotifications } = await import('@capacitor/push-notifications');
 
-  let permission = await PushNotifications.checkPermissions();
-  if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
-    permission = await PushNotifications.requestPermissions();
+  let permission: PushPermissionState;
+  try {
+    ({ permission } = await request('push.permission', {}));
+    if (permission === 'default') {
+      // The OS prompt waits on a person, so no short timeout here.
+      ({ permission } = await request('push.request', {}, { timeoutMs: 120_000 }));
+    }
+  } catch {
+    return 'disabled';
   }
-  if (permission.receive === 'denied') return 'blocked';
-  if (permission.receive !== 'granted') return 'disabled';
+  if (permission === 'denied') return 'blocked';
+  if (permission !== 'granted') return 'disabled';
 
-  const token = await new Promise<string | null>((resolve) => {
-    let settled = false;
-    const settle = (value: string | null) => {
-      if (settled) return;
-      settled = true;
-      resolve(value);
-    };
-    void PushNotifications.addListener('registration', (result) => settle(result.value));
-    void PushNotifications.addListener('registrationError', () => settle(null));
-    void PushNotifications.register();
-    setTimeout(() => settle(null), 8000);
-  });
-
+  const token = await registerNativePushToken();
   if (!token) return 'disabled';
   await syncNativePushToken(token);
   return 'enabled';

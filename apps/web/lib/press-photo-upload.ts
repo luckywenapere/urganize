@@ -161,7 +161,7 @@ export async function uploadPressPhoto(params: {
  * `download` attribute: the file is on another origin, where that attribute is
  * ignored, so the filename has to come from the signed URL's own
  * content-disposition instead. That is also what makes it work inside the
- * Capacitor webview, where a bare new-tab anchor to storage is the documented
+ * app webview, where a bare new-tab anchor to storage is the documented
  * highest-risk pattern.
  */
 export async function requestPressPhotoDownload(params: {

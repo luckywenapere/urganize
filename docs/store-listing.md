@@ -107,10 +107,11 @@ under it (see `apps/homepage/scripts/generate-og-image.mjs`).
 
 ## Apple App Store — PENDING
 
-**Not ready to submit, and the blocker is not copy.** The iOS side of the
-Capacitor shell has never been built or signed: it needs a Mac, an Apple
-Developer account, the Push Notifications capability and an APNs key, none of
-which can be done from this repo. See `docs/mobile/codemagic-setup.md` and
+**Not ready to submit, and the blocker is not copy.** The iOS app has never
+been built or signed. Since the move to Expo (2026-09-24) a Mac is no longer
+needed, since EAS builds iOS in the cloud, but it still needs an Apple Developer
+account, an APNs key and Firebase's `GoogleService-Info.plist`, none of which
+can be done from this repo. See `docs/mobile/eas-setup.md` and
 `docs/mobile/push-setup.md`.
 
 The copy below is drafted against Apple's field limits so it is ready when the

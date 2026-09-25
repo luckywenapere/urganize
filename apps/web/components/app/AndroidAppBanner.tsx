@@ -19,7 +19,7 @@ const DOWNLOAD_URL = 'https://urganize.app/download';
 /**
  * Soft, dismissible prompt steering Android browser visitors toward the
  * native app instead of the mobile web. Deliberately never shown inside the
- * Capacitor native shell itself (isAndroidBrowser() excludes it) — this is
+ * native app shell itself (isAndroidBrowser() excludes it) — this is
  * about visitors who haven't installed the app yet, not the app correcting
  * itself. Renders nothing until mount so a dismissed or non-Android visitor
  * never sees a flash.

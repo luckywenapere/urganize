@@ -13,9 +13,9 @@
     "dev": "node scripts/run-turbo.cjs dev",
     "lint": "node scripts/run-turbo.cjs lint",
     "test": "node scripts/run-turbo.cjs test",
-    "mobile:sync": "pnpm --filter @urganize/mobile exec cap sync",
-    "mobile:android": "pnpm --filter @urganize/mobile exec cap sync android && pnpm --filter @urganize/mobile exec cap open android",
-    "mobile:ios-ci": "pnpm --filter @urganize/mobile exec cap sync ios"
+    "mobile:start": "pnpm --filter @urganize/mobile start",
+    "mobile:build:android": "pnpm --filter @urganize/mobile build:android",
+    "mobile:build:ios": "pnpm --filter @urganize/mobile build:ios"
   },
   "devDependencies": {
     "next": "^16.1.1",
