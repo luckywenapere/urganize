@@ -71,8 +71,6 @@ describe('persist policy', () => {
 
   it('prefetches every cacheable scene exactly once', () => {
     // Every scene the cache layer can fetch is warmed, and none twice. The
-    // plan scene is deliberately not one of them: it is an editable document
-    // rather than a snapshot, so it owns its own reads and writes. The
     // calendar joins the list only when its flag is on — with it off, its API
     // routes 404, so prefetching would burn a guaranteed-404 per release.
     // Every cacheable scene is gated on its own flag now — files and pitch
@@ -96,16 +94,21 @@ describe('persist policy', () => {
     expect(new Set(SCENE_PREFETCH_ORDER).size).toBe(SCENE_PREFETCH_ORDER.length);
   });
 
-  it('keeps the plan scene out of the cache entirely', () => {
-    // Both halves matter: not prefetched, and not persisted. A cached copy of a
-    // plan somebody is editing could overwrite newer text with older.
-    expect(isCacheableScene('plan')).toBe(false);
-    expect(shouldPersistScene('plan')).toBe(false);
+  it('has no plan scene any more (2026-09-15)', async () => {
+    // The review scene was the one scene that edited its payload, and it was
+    // kept out of the cache for that reason. It is gone: the plan is built
+    // straight into activities, so a stale `?scene=plan` in a bookmark or an
+    // old UrgAns transcript has to resolve to no scene rather than to a header
+    // with nothing under it — in every flag state, since 'plan' is gone from
+    // SCENE_NAMES itself rather than merely gated.
+    expect((SCENE_NAMES as readonly string[]).includes('plan')).toBe(false);
     expect((SCENE_PREFETCH_ORDER as readonly string[]).includes('plan')).toBe(false);
+    const { resolveActiveScene } = await loadResolver(true);
+    expect(resolveActiveScene('plan')).toBeNull();
   });
 
   it('keeps the timeline scene out of the cache entirely', () => {
-    // The opposite reason to the plan scene's: this one fetches NOTHING. It is
+    // This one fetches NOTHING. It is
     // laid out from activities TasksPanel already has in props, so there is no
     // payload to cache and a fetcher for it would have to invent a request that
     // does not exist.
@@ -275,7 +278,8 @@ describe('withinPersistBudget', () => {
 // depend on whoever ran them.
 //
 // The list grew from five to nine on 2026-09-08, when metadata / files / pitch
-// / plan gained the URL-level gate the other five always had.
+// / plan gained the URL-level gate the other five always had, and back to
+// eight on 2026-09-15 when the plan review scene was removed.
 const SCENE_FLAGS = [
   'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',
   'NEXT_PUBLIC_FEATURE_CAPTURE',
@@ -285,7 +289,6 @@ const SCENE_FLAGS = [
   'NEXT_PUBLIC_FEATURE_METADATA',
   'NEXT_PUBLIC_FEATURE_FILES',
   'NEXT_PUBLIC_FEATURE_PITCHING',
-  'NEXT_PUBLIC_FEATURE_RELEASE_PLANNER',
 ] as const;
 
 async function loadResolver(flagsOn: boolean) {
@@ -326,15 +329,15 @@ describe('resolveActiveScene', () => {
     }
   });
 
-  it('gates metadata, files, pitch and plan too (2026-09-08)', async () => {
-    // These four had NO url-level gate anywhere. The old comment here claimed
+  it('gates metadata, files and pitch too (2026-09-08)', async () => {
+    // These (with the since-removed plan scene) had NO url-level gate anywhere. The old comment here claimed
     // they "gate themselves inside ReleaseScenePanel"; that file reads no flag
     // at all and never has, so a stale bookmark or a shared link opened a
     // header with a dead fetch under it. Files has been off in production
     // since v0.16.4, so ?scene=files was that empty page for anyone holding an
     // old link. Founder call: land on the release instead.
     const { resolveActiveScene } = await loadResolver(false);
-    for (const scene of ['metadata', 'files', 'pitch', 'plan']) {
+    for (const scene of ['metadata', 'files', 'pitch']) {
       expect(resolveActiveScene(scene)).toBeNull();
     }
   });
@@ -387,9 +390,7 @@ describe('resolvePanelBody', () => {
     const { resolvePanelBody } = await loadResolver(true);
     expect(resolvePanelBody('metadata')).toBe('metadata');
     expect(resolvePanelBody('calendar')).toBe('calendar');
-    // 'plan' was never covered here, which is how a "Review your draft plan"
-    // tap could resolve to something else without a test noticing.
-    expect(resolvePanelBody('plan')).toBe('plan');
+    expect(resolvePanelBody('pitch')).toBe('pitch');
   });
 
   it('resolves every scene name to itself with the flags on', async () => {

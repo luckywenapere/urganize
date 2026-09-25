@@ -19,7 +19,7 @@ import {
 } from '@/lib/analytics';
 import { getTemplateStats } from '@/lib/release-templates/loader';
 import { suggestReleaseDate, type ReleasePlanIntake } from '@/lib/release-planning';
-import { draftReleasePlan } from '@/lib/urgans-actions/client';
+import { createReleasePlan } from '@/lib/urgans-actions/client';
 import {
   EMPTY_PLANNER_INTAKE_DRAFT,
   clearPlannerIntakeDraft,
@@ -37,7 +37,7 @@ import {
 
 /**
  * The guided intake: one question per screen, seven at most, then UrgAns
- * drafts the plan.
+ * builds the plan straight into the rollout's activities.
  *
  * Mounted once by AppShell and opened through usePlannerStore, so the workspace
  * card, a note and an UrgAns chip all reach the same instance without a
@@ -49,10 +49,12 @@ import {
  * internally so the footer is always reachable, and a footer that stacks with
  * the primary action on top below `sm`.
  *
- * On submit it does NOT wait for the model. It fires the generate call, marks
- * the release as generating in the store, and navigates to the review scene,
- * which owns the waiting experience. A manager should never watch a modal spin
- * for twenty-five seconds.
+ * On submit it does NOT wait for the model. It fires the build, marks the
+ * release as generating in the store, and closes and navigates back to the
+ * rollout, where PlanReleaseCard owns the waiting experience. A manager should
+ * never watch a modal spin for up to half a minute. There is no draft and no
+ * review step any more (founder call, 2026-09-15): finishing the questions
+ * creates the activities.
  */
 
 /** Lead time of the playbook this intake's release type will actually use.
@@ -81,6 +83,8 @@ export function PlannerIntakeModal() {
   const closeIntake = usePlannerStore((state) => state.closeIntake);
   const setGenerating = usePlannerStore((state) => state.setGenerating);
   const setLockedRefusal = usePlannerStore((state) => state.setLockedRefusal);
+  const markBuilt = usePlannerStore((state) => state.markBuilt);
+  const setBuildError = usePlannerStore((state) => state.setBuildError);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const profile = useAuthStore((state) => state.user);
   const identityArtist = useWorkspaceIdentityStore((state) => state.artist?.name);
@@ -249,7 +253,9 @@ export function PlannerIntakeModal() {
 
       // 1. The release. When the intake was opened from a note or a chip there
       //    is none yet, so it is created here — blank, so no activities appear
-      //    before the manager has approved a plan.
+      //    before the plan has landed. An existing release with no date yet
+      //    needs no separate scheduling call: createReleasePlan below writes
+      //    it itself from the intake's own release_date.
       let releaseId = intakePayload.releaseId || '';
       if (!releaseId) {
         const created = await fetch('/api/releases', {
@@ -280,14 +286,6 @@ export function PlannerIntakeModal() {
             body: JSON.stringify({ releaseId }),
           }).catch(() => undefined);
         }
-      } else if (draft.releaseDate) {
-        // 3. An existing release that had no date gets one now, through the
-        //    route that already owns date writing.
-        void fetch(`/api/releases/${releaseId}/schedule`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ releaseDate: draft.releaseDate }),
-        }).catch(() => undefined);
       }
 
       const intake: ReleasePlanIntake = {
@@ -300,50 +298,49 @@ export function PlannerIntakeModal() {
         goal: draft.goal || 'new_listeners',
         ...(draft.goalText.trim() ? { goal_text: draft.goalText.trim() } : {}),
         budget: draft.budget || 'none',
+        ...(draft.exclusions.length ? { exclusions: draft.exclusions } : {}),
         ...(draft.extraNotes.trim() ? { extra_notes: draft.extraNotes.trim() } : {}),
-        // Real answers, not the one-tap card's derived guess — see
-        // buildAutoIntake's own 'auto' value and PlanScene's notice for it.
-        intake_source: 'answered',
       };
 
-      // 4. Fire the draft and hand the wait to the review scene. Deliberately
-      //    not awaited: the model can take twenty-five seconds and nobody
-      //    should watch a modal for that. Goes through draftReleasePlan (the
-      //    gated action, falling back to this same /plan/generate route when
-      //    the flag is off) rather than a raw fetch, so a refined submission
-      //    reaches the exact same entitlement gate the one-tap card does — a
-      //    manager cannot dodge the Solo refusal by taking the longer way in.
+      // 3. Fire the build and hand the wait to the workspace card.
+      //    Deliberately not awaited: the model can take up to about half a
+      //    minute and nobody should watch a modal for that. Goes through
+      //    createReleasePlan (the gated action, falling back to this same
+      //    POST /plan route when the flag is off) rather than a raw fetch, so
+      //    this reaches the exact same entitlement gate every other entry
+      //    point does — a manager cannot dodge the Solo refusal by taking the
+      //    longer way in.
       setGenerating(releaseId, true);
-      void draftReleasePlan({
-        releaseId,
-        release: {
-          releaseType: draft.releaseType,
-          artistName: draft.artistName,
-          releaseDate: draft.releaseDate,
-        },
-        intake,
-        replace: true,
-      })
+      void createReleasePlan({ releaseId, intake })
         .then((result) => {
           if (result.ok) {
             clearPlannerIntakeDraft();
             captureAnalyticsEvent(
-              createPostHogEvent('planner_draft_generated', {
+              createPostHogEvent('planner_plan_created', {
                 source: intakePayload.source,
                 release_type: intake.release_type,
+                task_count: result.plan.tasksCreated,
+                tasks_removed: result.plan.removed.length,
+                exclusions_count: result.plan.appliedExclusions.length,
+                ai_applied: result.plan.aiApplied,
               })
             );
+            markBuilt(releaseId, result.plan);
             return;
           }
-          // The modal has already closed and navigated to the review scene by
-          // now (see below) — there is nothing local left to show an error
-          // in. A plan_required refusal goes to the shared store so
+          // The modal has already closed and navigated back to the rollout
+          // by now (see below) — there is nothing local left to show an
+          // error in. A plan_required refusal goes to the shared store so
           // WorkspaceView's one UrgansLockedSheet can render it regardless of
-          // which entry point triggered it; anything else just leaves the
-          // release back at PlanReleaseCard's fresh state, same as any other
-          // failed generation.
+          // which entry point triggered it; tailoring_unavailable means
+          // UrgAns could not read the typed notes and refused rather than
+          // guess, so the card offers the questions again with the answers
+          // still in sessionStorage; anything else just leaves the release
+          // back at PlanReleaseCard's fresh state.
           if (result.reason === 'plan_required') {
             setLockedRefusal({ releaseId, message: result.error, actionType: 'release.draft_plan' });
+          } else if (result.reason === 'tailoring_unavailable') {
+            setBuildError({ releaseId, message: result.error });
           }
         })
         .finally(() => {
@@ -352,13 +349,13 @@ export function PlannerIntakeModal() {
         });
 
       closeIntake();
-      router.push(`/dashboard?release=${releaseId}&scene=plan`);
+      router.push(`/dashboard?release=${releaseId}`);
     } catch (submitError) {
       setView('error');
       setError(
         submitError instanceof Error
           ? submitError.message
-          : 'Could not start your draft. Your answers are safe. Try again.'
+          : 'Could not start your plan. Your answers are safe. Try again.'
       );
     }
   };
@@ -481,10 +478,10 @@ export function PlannerIntakeModal() {
               {isBusy ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  Starting your draft
+                  Building your plan
                 </>
               ) : isLastStep ? (
-                'Draft my plan'
+                'Build my plan'
               ) : (
                 'Continue'
               )}
@@ -492,7 +489,7 @@ export function PlannerIntakeModal() {
           </div>
 
           <p className="mt-3 text-center text-[11px] leading-5 text-content-tertiary sm:text-left">
-            Nothing is scheduled until you approve the draft.
+            UrgAns builds the plan when you finish. You can change any activity after.
           </p>
         </div>
       </div>

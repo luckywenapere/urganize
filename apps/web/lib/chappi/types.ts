@@ -125,11 +125,11 @@ export type ChappiReply = {
 /**
  * Tool classification. Deliberately NOT the confirmation gate: whether a tool
  * needs the user's approval is driven by the presence of a `confirm` builder on
- * the registry entry, not by this field. Two reasons — `approve_release_plan`
- * and `invite_teammate` need approval without being destructive (a semantic
- * 'destructive' kind would lie about them), and the card's copy is
- * entity-specific ("Delete 'Midnight EP' and its 42 activities"), which only
- * the tool itself can build. One mechanism, not two.
+ * the registry entry, not by this field. Two reasons — `invite_teammate` needs
+ * approval without being destructive (a semantic 'destructive' kind would lie
+ * about it), and the card's copy is entity-specific ("Delete 'Midnight EP' and
+ * its 42 activities"), which only the tool itself can build. One mechanism,
+ * not two.
  */
 export type ChappiToolKind = 'read' | 'mutate';
 
@@ -176,11 +176,10 @@ export type ChappiToolName =
   | 'delete_recap'
   // share to socials (2026-09-23)
   | 'share_release'
-  // rollout planner
+  // rollout planner (since 2026-09-15, one call builds the plan; there is no
+  // approve/discard, because there is no draft left to settle)
   | 'get_release_plan'
   | 'generate_release_plan'
-  | 'approve_release_plan'
-  | 'discard_release_plan'
   // the song itself
   | 'get_song'
   | 'upload_song'

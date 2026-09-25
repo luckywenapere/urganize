@@ -14,9 +14,11 @@ import {
   MAX_GOAL_TEXT_LENGTH,
   READY_TODAY_OPTIONS,
   RELEASE_TYPE_OPTIONS,
+  isPlanScope,
   type PlanBudget,
   type PlanGoal,
   type PlanReleaseType,
+  type PlanScope,
   type ReadyItem,
 } from './release-planning';
 
@@ -30,6 +32,8 @@ export interface PlannerIntakeDraft {
   goal: PlanGoal | null;
   goalText: string;
   budget: PlanBudget | null;
+  /** Q7 chips — the kinds of work to leave out entirely. See PLAN_SCOPES. */
+  exclusions: PlanScope[];
   extraNotes: string;
   /** The release these answers belong to, so one release's answers cannot
    * resurface while planning a different one. */
@@ -45,6 +49,7 @@ export const EMPTY_PLANNER_INTAKE_DRAFT: PlannerIntakeDraft = {
   goal: null,
   goalText: '',
   budget: null,
+  exclusions: [],
   extraNotes: '',
   releaseId: '',
 };
@@ -85,6 +90,9 @@ export function loadPlannerIntakeDraft(): PlannerIntakeDraft {
       budget: BUDGETS.includes(parsed.budget as PlanBudget)
         ? (parsed.budget as PlanBudget)
         : null,
+      exclusions: Array.isArray(parsed.exclusions)
+        ? parsed.exclusions.filter((item): item is PlanScope => isPlanScope(item))
+        : [],
       extraNotes: asString(parsed.extraNotes, MAX_EXTRA_NOTES_LENGTH),
       releaseId: asString(parsed.releaseId, 64),
     };

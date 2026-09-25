@@ -7,7 +7,7 @@ import { getTemplateLeadTimeDays } from './release-templates/loader';
 import {
   applyDeltaToDraft,
   applyOwnerProposals,
-  buildAutoIntake,
+  applyScopeExclusions,
   buildDraftFromTemplate,
   buildPlannerMessages,
   computeTaskYmd,
@@ -18,12 +18,18 @@ import {
   parseDraftDoc,
   parsePlannerAiDelta,
   parseReleasePlanIntake,
-  resetPhaseToTemplate,
+  deriveIntakeExclusions,
+  isTaskInScope,
   suggestReleaseDate,
   toPromptTasks,
   validatePlannerDelta,
+  KEEP_TAGS,
+  PLAN_SCOPES,
+  PLANNER_DELTA_JSON_SCHEMA,
+  SCOPE_TAGS,
   type PlannerAiDelta,
   type PlanPhase,
+  type PlanScope,
   type ReleasePlanIntake,
 } from './release-planning';
 
@@ -55,6 +61,7 @@ const buildBaseDraft = () =>
   });
 
 const emptyDelta = (): PlannerAiDelta => ({
+  exclude_scopes: [],
   drops: [],
   adjust_offsets: [],
   role_assignments: [],
@@ -133,13 +140,9 @@ describe('parseReleasePlanIntake', () => {
     }
   });
 
-  it('accepts "unknown" for goal and budget, the one-tap draft leaves both this way', () => {
-    const result = parseReleasePlanIntake({ ...baseIntake, goal: 'unknown', budget: 'unknown' });
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.intake.goal).toBe('unknown');
-      expect(result.intake.budget).toBe('unknown');
-    }
+  it('refuses "unknown" for goal and budget: a plan is only ever built from answered questions', () => {
+    expect(parseReleasePlanIntake({ ...baseIntake, goal: 'unknown' }).ok).toBe(false);
+    expect(parseReleasePlanIntake({ ...baseIntake, budget: 'unknown' }).ok).toBe(false);
   });
 
   it('never mentions "unknown" in a validation error, so a Chappi-relayed error cannot teach the model to answer with the word', () => {
@@ -152,54 +155,197 @@ describe('parseReleasePlanIntake', () => {
     if (!budgetError.ok) expect(budgetError.error).not.toContain('unknown');
   });
 
-  it('reads intake_source, defaulting to nothing (which every existing caller treats as "answered")', () => {
-    const withSource = parseReleasePlanIntake({ ...baseIntake, intake_source: 'auto' });
-    expect(withSource.ok).toBe(true);
-    if (withSource.ok) expect(withSource.intake.intake_source).toBe('auto');
+  it('reads exclusions, deduplicated and in scope order, and omits the key when there are none', () => {
+    const withExclusions = parseReleasePlanIntake({
+      ...baseIntake,
+      exclusions: ['paid_ads', 'marketing', 'paid_ads'],
+    });
+    expect(withExclusions.ok).toBe(true);
+    if (withExclusions.ok) expect(withExclusions.intake.exclusions).toEqual(['marketing', 'paid_ads']);
 
-    const withoutSource = parseReleasePlanIntake(baseIntake);
-    expect(withoutSource.ok).toBe(true);
-    if (withoutSource.ok) expect(withoutSource.intake.intake_source).toBeUndefined();
+    const withoutExclusions = parseReleasePlanIntake({ ...baseIntake, exclusions: [] });
+    expect(withoutExclusions.ok).toBe(true);
+    if (withoutExclusions.ok) expect(withoutExclusions.intake).not.toHaveProperty('exclusions');
+  });
 
-    const garbageSource = parseReleasePlanIntake({ ...baseIntake, intake_source: 'nonsense' });
-    expect(garbageSource.ok).toBe(true);
-    if (garbageSource.ok) expect(garbageSource.intake.intake_source).toBeUndefined();
+  it('rejects an exclusion it does not know, naming the scopes it does', () => {
+    const result = parseReleasePlanIntake({ ...baseIntake, exclusions: ['merch'] });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('marketing, press, paid_ads, events, physical');
+
+    expect(parseReleasePlanIntake({ ...baseIntake, exclusions: 'marketing' }).ok).toBe(false);
   });
 });
 
-describe('buildAutoIntake', () => {
-  it('derives every field from the release row with no questions asked', () => {
-    const intake = buildAutoIntake({
-      release_type: 'ep',
-      artist_name: 'Tola',
-      release_date: '2026-10-02',
-    });
-    expect(intake).toEqual({
-      version: 2,
-      release_type: 'ep',
-      artist_name: 'Tola',
-      date_mode: 'fixed',
-      release_date: '2026-10-02',
-      ready_today: [],
-      goal: 'unknown',
-      budget: 'unknown',
-      intake_source: 'auto',
-    });
+// The scope model is what makes "a normal release, no marketing" buildable:
+// the delta contract still forbids the model from dropping a required task
+// on its own judgement, so removing a whole kind of work is a SCOPE applied
+// by code, and release-day and distribution work survive every scope.
+describe('scope exclusions', () => {
+  const keepTagged = (tags: string[]) =>
+    tags.some((tag) => (KEEP_TAGS as readonly string[]).includes(tag));
+
+  it('maps every scope to a tag the playbooks actually use', () => {
+    const vocabulary = new Set(
+      [SINGLE_RELEASE_TEMPLATE, EP_RELEASE_TEMPLATE, ALBUM_RELEASE_TEMPLATE].flatMap((template) =>
+        template.tasks.flatMap((task) => task.tags ?? [])
+      )
+    );
+    for (const scope of PLAN_SCOPES) {
+      expect(vocabulary.has(SCOPE_TAGS[scope]), scope).toBe(true);
+    }
   });
 
-  it('falls back to single for a release type the planner has no format for', () => {
-    expect(buildAutoIntake({ release_type: 'music_video' }).release_type).toBe('single');
-    expect(buildAutoIntake({ release_type: null }).release_type).toBe('single');
+  it('tags the ads and pressing steps of every playbook, so paid_ads and physical have something to remove', () => {
+    for (const template of [SINGLE_RELEASE_TEMPLATE, EP_RELEASE_TEMPLATE, ALBUM_RELEASE_TEMPLATE]) {
+      const ads = template.tasks.filter((task) => /_ads$/.test(task.id));
+      const physical = template.tasks.filter((task) => /physical_formats$/.test(task.id));
+      expect(ads.length, template.id).toBeGreaterThan(0);
+      expect(physical.length, template.id).toBeGreaterThan(0);
+      for (const task of ads) expect(task.tags, `${template.id}/${task.id}`).toContain('paid');
+      for (const task of physical) expect(task.tags, `${template.id}/${task.id}`).toContain('physical');
+    }
   });
 
-  it('suggests a date only when the release has none yet', () => {
-    expect(buildAutoIntake({ release_date: null }).date_mode).toBe('suggested');
-    expect(buildAutoIntake({ release_date: '2026-12-01' }).date_mode).toBe('fixed');
+  it('a task carrying a keep tag is never in scope, whatever else it is tagged', () => {
+    expect(isTaskInScope({ tags: ['marketing'] }, 'marketing')).toBe(true);
+    expect(isTaskInScope({ tags: ['release_day', 'marketing', 'event'] }, 'marketing')).toBe(false);
+    expect(isTaskInScope({ tags: ['release_day', 'marketing', 'event'] }, 'events')).toBe(false);
+    expect(isTaskInScope({ tags: ['distribution', 'marketing'] }, 'marketing')).toBe(false);
+    expect(isTaskInScope({ tags: ['planning'] }, 'marketing')).toBe(false);
   });
 
-  it('produces an intake parseReleasePlanIntake accepts, so it round-trips through release_context', () => {
-    const intake = buildAutoIntake({ release_type: 'single', artist_name: 'Tola', release_date: null });
-    expect(parseReleasePlanIntake(intake).ok).toBe(true);
+  it('leaving out marketing removes the whole campaign from the single playbook and keeps release-day and distribution work', () => {
+    const doc = buildBaseDraft();
+    const next = applyScopeExclusions(doc, [
+      { scope: 'marketing', by: 'intake', reason: 'You asked to leave out marketing and promo.' },
+    ]);
+
+    const removed = next.tasks.filter((task) => task.removed);
+    const expectedRemoved = doc.tasks.filter(
+      (task) => task.tags.includes('marketing') && !keepTagged(task.tags)
+    );
+    expect(removed.map((task) => task.id).sort()).toEqual(
+      expectedRemoved.map((task) => task.id).sort()
+    );
+    // This is most of the playbook and it includes required steps, which is
+    // the point of the whole change: a delta alone could never do it.
+    expect(removed.length).toBeGreaterThan(20);
+    expect(removed.some((task) => !task.optional)).toBe(true);
+
+    for (const task of next.tasks) {
+      if (keepTagged(task.tags)) expect(task.removed, task.id).toBe(false);
+    }
+    for (const task of removed) {
+      expect(task.removed_by).toBe('intake');
+      expect(task.removed_reason).toBe('You asked to leave out marketing and promo.');
+    }
+    expect(next.applied_exclusions).toEqual([
+      { scope: 'marketing', by: 'intake', reason: 'You asked to leave out marketing and promo.' },
+    ]);
+    // Soft removal only: nothing is created or destroyed.
+    expect(next.tasks).toHaveLength(doc.tasks.length);
+  });
+
+  it('paid_ads removes exactly the ads steps, and physical exactly the pressing step', () => {
+    const doc = buildBaseDraft();
+    const ads = applyScopeExclusions(doc, [
+      { scope: 'paid_ads', by: 'budget', reason: 'No promo budget.' },
+    ]);
+    expect(
+      ads.tasks
+        .filter((task) => task.removed)
+        .map((task) => task.id)
+        .sort()
+    ).toEqual(['post_w2_review_ads', 'w1_final_push_ads']);
+
+    const physical = applyScopeExclusions(doc, [
+      { scope: 'physical', by: 'intake', reason: 'You asked to leave out physical formats.' },
+    ]);
+    expect(physical.tasks.filter((task) => task.removed).map((task) => task.id)).toEqual([
+      'w7_physical_formats',
+    ]);
+  });
+
+  it('events removes the listening party and the events check, never the release-day milestones', () => {
+    const next = applyScopeExclusions(buildBaseDraft(), [
+      { scope: 'events', by: 'intake', reason: 'You asked to leave out live events.' },
+    ]);
+    const removedIds = next.tasks
+      .filter((task) => task.removed)
+      .map((task) => task.id)
+      .sort();
+    expect(removedIds).toEqual(['w2_listening_party', 'w3_confirm_release_day_events']);
+    expect(next.tasks.find((task) => task.id === 'release_day_announcement')?.removed).toBe(false);
+  });
+
+  it('applies each scope once: a second entry for the same scope is ignored and never re-stamps a task', () => {
+    const doc = buildBaseDraft();
+    const first = applyScopeExclusions(doc, [
+      { scope: 'paid_ads', by: 'intake', reason: 'You asked to leave out paid ads.' },
+    ]);
+    const second = applyScopeExclusions(first, [
+      { scope: 'paid_ads', by: 'ai', reason: 'Model reason.' },
+    ]);
+    expect(second.applied_exclusions).toHaveLength(1);
+    expect(second.applied_exclusions[0].by).toBe('intake');
+    const task = second.tasks.find((t) => t.id === 'w1_final_push_ads');
+    expect(task?.removed_by).toBe('intake');
+    expect(task?.removed_reason).toBe('You asked to leave out paid ads.');
+  });
+
+  it('leaves a task the manager added alone', () => {
+    const doc = buildBaseDraft();
+    const withUserTask = {
+      ...doc,
+      tasks: [
+        ...doc.tasks,
+        {
+          ...doc.tasks[0],
+          id: 'user_abc',
+          template_task_id: null,
+          origin: 'user' as const,
+          tags: ['marketing'],
+        },
+      ],
+    };
+    const next = applyScopeExclusions(withUserTask, [
+      { scope: 'marketing', by: 'ai', reason: 'They said no marketing.' },
+    ]);
+    expect(next.tasks.find((task) => task.id === 'user_abc')?.removed).toBe(false);
+  });
+
+  it('a scope the module does not know is ignored rather than removing anything', () => {
+    const next = applyScopeExclusions(buildBaseDraft(), [
+      { scope: 'merch' as PlanScope, by: 'ai', reason: 'x' },
+    ]);
+    expect(next.tasks.some((task) => task.removed)).toBe(false);
+    expect(next.applied_exclusions).toEqual([]);
+  });
+});
+
+describe('deriveIntakeExclusions', () => {
+  it('turns the chips into intake entries with the label in the reason', () => {
+    expect(deriveIntakeExclusions({ ...baseIntake, exclusions: ['marketing', 'events'] })).toEqual([
+      { scope: 'marketing', by: 'intake', reason: 'You asked to leave out marketing and promo.' },
+      { scope: 'events', by: 'intake', reason: 'You asked to leave out live events.' },
+    ]);
+  });
+
+  it('a budget of none leaves out paid ads on its own', () => {
+    expect(deriveIntakeExclusions({ ...baseIntake, budget: 'none' })).toEqual([
+      { scope: 'paid_ads', by: 'budget', reason: 'No promo budget.' },
+    ]);
+  });
+
+  it('the chip wins over the budget when both name paid ads', () => {
+    expect(
+      deriveIntakeExclusions({ ...baseIntake, budget: 'none', exclusions: ['paid_ads'] })
+    ).toEqual([{ scope: 'paid_ads', by: 'intake', reason: 'You asked to leave out paid ads.' }]);
+  });
+
+  it('returns nothing for a plain intake', () => {
+    expect(deriveIntakeExclusions(baseIntake)).toEqual([]);
   });
 });
 
@@ -365,6 +511,7 @@ describe('parsePlannerAiDelta', () => {
   it('parses a well-formed delta', () => {
     const parsed = parsePlannerAiDelta(
       JSON.stringify({
+        exclude_scopes: [{ scope: 'marketing', reason: '  They said no marketing.  ' }],
         drops: [{ id: 'a', reason: 'No marketing budget for this one.' }],
         adjust_offsets: [{ id: 'b', offset_days: -30.4, reason: 'Distributor is already set up.' }],
         role_assignments: [{ role: 'designer', member_user_id: TEAMMATE }],
@@ -374,6 +521,7 @@ describe('parsePlannerAiDelta', () => {
       })
     );
     expect(parsed).not.toBeNull();
+    expect(parsed?.exclude_scopes).toEqual([{ scope: 'marketing', reason: 'They said no marketing.' }]);
     expect(parsed?.drops).toEqual([{ id: 'a', reason: 'No marketing budget for this one.' }]);
     expect(parsed?.adjust_offsets[0].offset_days).toBe(-30);
     expect(parsed?.adjust_offsets[0].reason).toBe('Distributor is already set up.');
@@ -396,6 +544,19 @@ describe('parsePlannerAiDelta', () => {
       { id: 'a', reason: '' },
       { id: 'b', reason: '' },
     ]);
+  });
+
+  it('an absent exclude_scopes key parses as an empty list, so a model on the older contract still parses', () => {
+    const parsed = parsePlannerAiDelta(
+      JSON.stringify({
+        drops: [],
+        adjust_offsets: [],
+        role_assignments: [],
+        rewrite_why: [],
+        rationale: '',
+      })
+    );
+    expect(parsed?.exclude_scopes).toEqual([]);
   });
 
   it('an absent warnings key parses as an empty list rather than failing', () => {
@@ -469,6 +630,14 @@ describe('parsePlannerAiDelta', () => {
       'a non-array warnings',
       '{"drops":[],"adjust_offsets":[],"role_assignments":[],"rewrite_why":[],"warnings":"not an array"}',
     ],
+    [
+      'a non-string scope',
+      '{"exclude_scopes":[{"scope":7,"reason":"x"}],"drops":[],"adjust_offsets":[],"role_assignments":[],"rewrite_why":[]}',
+    ],
+    [
+      'an excluded scope with no reason field',
+      '{"exclude_scopes":[{"scope":"marketing"}],"drops":[],"adjust_offsets":[],"role_assignments":[],"rewrite_why":[]}',
+    ],
   ])('returns null for %s', (_label, raw) => {
     expect(parsePlannerAiDelta(raw)).toBeNull();
   });
@@ -494,9 +663,13 @@ describe('parsePlannerAiDelta', () => {
 
 describe('validatePlannerDelta', () => {
   const tasks = [
-    { id: 'required_task', optional: false },
-    { id: 'optional_task', optional: true },
+    { id: 'required_task', optional: false, tags: ['planning'] },
+    { id: 'optional_task', optional: true, tags: ['marketing'] },
+    { id: 'required_marketing', optional: false, tags: ['marketing'] },
+    { id: 'release_day_post', optional: false, tags: ['release_day', 'marketing'] },
   ];
+  const validate = (delta: PlannerAiDelta, excludedScopes: PlanScope[] = []) =>
+    validatePlannerDelta(delta, { tasks, memberUserIds: [OWNER, TEAMMATE], excludedScopes });
 
   it('accepts a delta that stays inside what it was given', () => {
     const delta: PlannerAiDelta = {
@@ -506,7 +679,7 @@ describe('validatePlannerDelta', () => {
       role_assignments: [{ role: 'designer', member_user_id: TEAMMATE }],
       rewrite_why: [{ id: 'required_task', why: 'Because the master gates everything else.' }],
     };
-    expect(validatePlannerDelta(delta, tasks, [OWNER, TEAMMATE]).ok).toBe(true);
+    expect(validate(delta).ok).toBe(true);
   });
 
   it('accepts adjust_offsets with no reason at all — a reason there is optional', () => {
@@ -514,7 +687,7 @@ describe('validatePlannerDelta', () => {
       ...emptyDelta(),
       adjust_offsets: [{ id: 'required_task', offset_days: -10, reason: null }],
     };
-    expect(validatePlannerDelta(delta, tasks, [OWNER]).ok).toBe(true);
+    expect(validate(delta).ok).toBe(true);
   });
 
   it('rejects a fabricated task id', () => {
@@ -522,31 +695,76 @@ describe('validatePlannerDelta', () => {
       ...emptyDelta(),
       drops: [{ id: 'task_that_never_existed', reason: 'Not needed.' }],
     };
-    expect(validatePlannerDelta(delta, tasks, [OWNER]).ok).toBe(false);
+    expect(validate(delta).ok).toBe(false);
   });
 
-  it('refuses to drop a required task', () => {
-    const delta = { ...emptyDelta(), drops: [{ id: 'required_task', reason: 'Not needed.' }] };
-    const result = validatePlannerDelta(delta, tasks, [OWNER]);
+  it('refuses to drop a required task the manager did not ask to leave out', () => {
+    const delta = { ...emptyDelta(), drops: [{ id: 'required_marketing', reason: 'Not needed.' }] };
+    const result = validate(delta);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain('required');
+    if (!result.ok) {
+      expect(result.error).toContain('required');
+      expect(result.error).toContain('asked to leave out');
+    }
+  });
+
+  it('accepts a required drop inside a scope the manager excluded', () => {
+    const delta = {
+      ...emptyDelta(),
+      drops: [{ id: 'required_marketing', reason: 'No marketing this time.' }],
+    };
+    expect(validate(delta, ['marketing']).ok).toBe(true);
+  });
+
+  it('accepts a required drop inside a scope the model itself excluded', () => {
+    const delta: PlannerAiDelta = {
+      ...emptyDelta(),
+      exclude_scopes: [{ scope: 'marketing', reason: 'They said no marketing.' }],
+      drops: [{ id: 'required_marketing', reason: 'Part of the campaign they ruled out.' }],
+    };
+    expect(validate(delta).ok).toBe(true);
+  });
+
+  it('never lets a keep-tagged task go, even inside an excluded scope', () => {
+    const delta = { ...emptyDelta(), drops: [{ id: 'release_day_post', reason: 'No marketing.' }] };
+    expect(validate(delta, ['marketing']).ok).toBe(false);
   });
 
   it('refuses a drop with no reason', () => {
     const delta = { ...emptyDelta(), drops: [{ id: 'optional_task', reason: '   ' }] };
-    const result = validatePlannerDelta(delta, tasks, [OWNER]);
+    const result = validate(delta);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain('reason');
   });
 
   it('refuses a drop reason longer than a manager can read at a glance', () => {
     const delta = { ...emptyDelta(), drops: [{ id: 'optional_task', reason: 'x'.repeat(200) }] };
-    expect(validatePlannerDelta(delta, tasks, [OWNER]).ok).toBe(false);
+    expect(validate(delta).ok).toBe(false);
+  });
+
+  it('rejects a scope it does not know', () => {
+    const delta = {
+      ...emptyDelta(),
+      exclude_scopes: [{ scope: 'merch' as PlanScope, reason: 'No merch.' }],
+    };
+    const result = validate(delta);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('scope');
+  });
+
+  it('refuses an excluded scope with no reason, or a reason too long to read', () => {
+    const blank = { ...emptyDelta(), exclude_scopes: [{ scope: 'events' as const, reason: '  ' }] };
+    expect(validate(blank).ok).toBe(false);
+    const long = {
+      ...emptyDelta(),
+      exclude_scopes: [{ scope: 'events' as const, reason: 'x'.repeat(200) }],
+    };
+    expect(validate(long).ok).toBe(false);
   });
 
   it('rejects an offset outside the plannable window', () => {
     const delta = { ...emptyDelta(), adjust_offsets: [{ id: 'required_task', offset_days: -400 }] };
-    expect(validatePlannerDelta(delta, tasks, [OWNER]).ok).toBe(false);
+    expect(validate(delta).ok).toBe(false);
   });
 
   it('rejects assigning work to someone who was never offered', () => {
@@ -554,7 +772,7 @@ describe('validatePlannerDelta', () => {
       ...emptyDelta(),
       role_assignments: [{ role: 'designer' as const, member_user_id: 'someone-else' }],
     };
-    expect(validatePlannerDelta(delta, tasks, [OWNER]).ok).toBe(false);
+    expect(validate(delta).ok).toBe(false);
   });
 
   it('rejects a why line longer than the model is allowed', () => {
@@ -562,7 +780,7 @@ describe('validatePlannerDelta', () => {
       ...emptyDelta(),
       rewrite_why: [{ id: 'required_task', why: 'x'.repeat(200) }],
     };
-    expect(validatePlannerDelta(delta, tasks, [OWNER]).ok).toBe(false);
+    expect(validate(delta).ok).toBe(false);
   });
 });
 
@@ -575,6 +793,7 @@ describe('applyDeltaToDraft', () => {
     expect(designerTask).toBeDefined();
 
     const next = applyDeltaToDraft(doc, {
+      exclude_scopes: [],
       drops: [{ id: optional!.id, reason: 'No budget for paid promo this time.' }],
       adjust_offsets: [
         { id: designerTask!.id, offset_days: -10, reason: 'Distributor confirmed early.' },
@@ -660,27 +879,33 @@ describe('applyDeltaToDraft', () => {
     expect(after?.offset_days).toBe(target.offset_days);
   });
 
-  it('only touches the named phase when regenerating one', () => {
+  it("applies an excluded scope as the model's removal, with its reason, before the single drops", () => {
     const doc = buildBaseDraft();
-    const setupTask = doc.tasks.find((task) => task.phase === 'setup');
-    const postTask = doc.tasks.find((task) => task.phase === 'post_release');
-    expect(setupTask).toBeDefined();
-    expect(postTask).toBeDefined();
+    const next = applyDeltaToDraft(doc, {
+      ...emptyDelta(),
+      exclude_scopes: [{ scope: 'paid_ads', reason: 'They said no ads.' }],
+      rationale: 'No ads.',
+    });
+    const ads = next.tasks.find((task) => task.id === 'w1_final_push_ads');
+    expect(ads?.removed).toBe(true);
+    expect(ads?.removed_by).toBe('ai');
+    expect(ads?.removed_reason).toBe('They said no ads.');
+    expect(next.applied_exclusions).toEqual([
+      { scope: 'paid_ads', by: 'ai', reason: 'They said no ads.' },
+    ]);
+  });
 
-    const next = applyDeltaToDraft(
-      doc,
-      {
-        ...emptyDelta(),
-        rewrite_why: [
-          { id: setupTask!.id, why: 'In scope.' },
-          { id: postTask!.id, why: 'Out of scope.' },
-        ],
-      },
-      { phaseScope: 'setup' }
-    );
-
-    expect(next.tasks.find((task) => task.id === setupTask!.id)?.why).toBe('In scope.');
-    expect(next.tasks.find((task) => task.id === postTask!.id)?.why).toBe(postTask!.why);
+  it('never re-stamps a task the answers already removed', () => {
+    const doc = applyScopeExclusions(buildBaseDraft(), [
+      { scope: 'paid_ads', by: 'budget', reason: 'No promo budget.' },
+    ]);
+    const next = applyDeltaToDraft(doc, {
+      ...emptyDelta(),
+      drops: [{ id: 'w1_final_push_ads', reason: 'Model reason.' }],
+    });
+    const ads = next.tasks.find((task) => task.id === 'w1_final_push_ads');
+    expect(ads?.removed_by).toBe('intake');
+    expect(ads?.removed_reason).toBe('No promo budget.');
   });
 });
 
@@ -723,53 +948,6 @@ describe('applyOwnerProposals', () => {
   });
 });
 
-describe('resetPhaseToTemplate', () => {
-  it('restores template wording and dates for one phase before a redraft', () => {
-    const doc = buildBaseDraft();
-    const target = doc.tasks.find((task) => task.phase === 'setup');
-    expect(target).toBeDefined();
-
-    const messy = {
-      ...doc,
-      tasks: doc.tasks.map((task) =>
-        task.id === target!.id
-          ? { ...task, why: 'A previous redraft.', removed: true, removed_by: 'ai' as const }
-          : task
-      ),
-    };
-
-    const reset = resetPhaseToTemplate(messy, SINGLE_RELEASE_TEMPLATE, 'setup', OWNER);
-    const after = reset.tasks.find((task) => task.id === target!.id);
-    expect(after?.why).toBe(target!.why);
-    expect(after?.removed).toBe(false);
-    expect(after?.removed_by).toBeNull();
-  });
-
-  it('keeps tasks the manager added', () => {
-    const doc = buildBaseDraft();
-    const withUserTask = {
-      ...doc,
-      tasks: [
-        ...doc.tasks,
-        {
-          ...doc.tasks[0],
-          id: 'user_abc',
-          template_task_id: null,
-          origin: 'user' as const,
-          title: 'Call the plugger',
-          why: 'Mine.',
-          phase: 'setup' as const,
-          offset_days: -40,
-        },
-      ],
-    };
-
-    const reset = resetPhaseToTemplate(withUserTask, SINGLE_RELEASE_TEMPLATE, 'setup', OWNER);
-    const mine = reset.tasks.find((task) => task.id === 'user_abc');
-    expect(mine?.title).toBe('Call the plugger');
-    expect(mine?.why).toBe('Mine.');
-  });
-});
 
 describe('deriveScheduleWarnings', () => {
   it('warns when no release date is set, and returns only that warning', () => {
@@ -866,6 +1044,36 @@ describe('parseDraftDoc', () => {
     expect(parseDraftDoc(tampered, { knownTemplateTaskIds }).ok).toBe(false);
   });
 
+  it('reads a schema 1 plan written before exclusions existed, as version 2 with none applied', () => {
+    const { applied_exclusions: _legacyOnly, ...legacy } = { ...buildBaseDraft(), schema_version: 1 };
+    const result = parseDraftDoc(legacy, { knownTemplateTaskIds });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.doc.schema_version).toBe(2);
+      expect(result.doc.applied_exclusions).toEqual([]);
+    }
+  });
+
+  it('carries applied exclusions and their removals through, dropping an entry it cannot read', () => {
+    const doc = applyScopeExclusions(buildBaseDraft(), [
+      { scope: 'paid_ads', by: 'budget', reason: 'No promo budget.' },
+    ]);
+    const tampered = {
+      ...doc,
+      applied_exclusions: [...doc.applied_exclusions, { scope: 'merch', by: 'ai', reason: 'x' }],
+    };
+    const result = parseDraftDoc(tampered, { knownTemplateTaskIds });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.doc.applied_exclusions).toEqual([
+        { scope: 'paid_ads', by: 'budget', reason: 'No promo budget.' },
+      ]);
+      expect(result.doc.tasks.find((task) => task.id === 'w1_final_push_ads')?.removed_by).toBe(
+        'intake'
+      );
+    }
+  });
+
   it('accepts a task the manager added', () => {
     const doc = buildBaseDraft();
     const withUserTask = {
@@ -935,7 +1143,12 @@ describe('buildPlannerMessages', () => {
     const [system, user] = messages;
     expect(system.content).toContain('Output schema:');
     expect(system.content).toContain('You cannot add tasks.');
-    expect(system.content).toContain('NEVER drop a task whose "optional" is false');
+    // The old absolute rule is gone: a required task may go when, and only
+    // when, the manager asked to leave that kind of work out.
+    expect(system.content).not.toContain('NEVER drop a task whose "optional" is false');
+    expect(system.content).toContain('plainly asked to leave that kind of work out');
+    expect(system.content).toContain('"exclude_scopes"');
+    expect(system.content).toContain('instructions, not hints');
     expect(user.content).toContain(doc.tasks[0].id);
     expect(user.content).toContain(OWNER);
   });
@@ -949,7 +1162,7 @@ describe('buildPlannerMessages', () => {
       todayYmd: '2026-08-10',
     });
     const [system] = messages;
-    expect(system.content).toContain('Every drop needs a "reason"');
+    expect(system.content).toContain('Every drop and every excluded scope needs a "reason"');
     expect(system.content).toContain(
       'A task landing before today is never by itself a reason to drop it or move it.'
     );
@@ -1013,56 +1226,132 @@ describe('buildPlannerMessages', () => {
     expect(messages[1].content).not.toContain('from the single playbook');
   });
 
-  it('scopes the prompt when regenerating one phase', () => {
-    const messages = buildPlannerMessages({
-      release: { title: 'Free', artistName: 'Tola', releaseDate: '2026-10-02' },
-      intake: baseIntake,
-      tasks: [],
-      members: [],
-      todayYmd: '2026-08-10',
-      phase: 'post_release',
-    });
-    expect(messages[0].content).toContain('only adjusting the "Post-release" phase');
+  // The guidance used to tell EVERY answered intake "No budget: drop the paid
+  // promotion tasks", whatever the budget answer was. It is keyed on the real
+  // answers now, which is the whole reason the plan can follow them.
+  it('keys the budget guidance on the answer instead of assuming no budget', () => {
+    const forBudget = (budget: ReleasePlanIntake['budget']) =>
+      buildPlannerMessages({
+        release: { title: 'Free', artistName: 'Tola', releaseDate: '2026-10-02' },
+        intake: { ...baseIntake, budget },
+        tasks: [],
+        members: [],
+        todayYmd: '2026-08-10',
+      })[1].content;
+
+    expect(forBudget('none')).toContain('paid ads work is already out of the plan');
+    expect(forBudget('none')).toContain('Never suggest paid pushes');
+    expect(forBudget('under_100k')).toContain('small budget');
+    expect(forBudget('over_500k')).toContain('start the paid work earlier');
+    expect(forBudget('over_500k')).not.toContain('already out of the plan');
   });
 
-  it('tells the model plainly when goal and budget were never stated, and never assumes the paid-promo-cut case', () => {
-    const messages = buildPlannerMessages({
+  it('speaks to what is ready, the goal, and the notes as instructions', () => {
+    const user = buildPlannerMessages({
       release: { title: 'Free', artistName: 'Tola', releaseDate: '2026-10-02' },
-      intake: buildAutoIntake({ release_type: 'single', artist_name: 'Tola', release_date: '2026-10-02' }),
+      intake: {
+        ...baseIntake,
+        ready_today: ['master', 'distributor'],
+        goal: 'press',
+        extra_notes: 'A quiet one, no listening party.',
+      },
       tasks: [],
       members: [],
       todayYmd: '2026-08-10',
-    });
-    expect(messages[1].content).toContain('not stated');
-    expect(messages[1].content).not.toContain(
-      'No budget: drop the optional paid promotion tasks and say so in the rationale.'
-    );
+    })[1].content;
+
+    expect(user).toContain('The master is done');
+    expect(user).toContain('The distributor is already set up');
+    expect(user).toContain('press coverage');
+    expect(user).toContain('A quiet one, no listening party.');
+    expect(user).toContain('return it in exclude_scopes');
   });
 
-  it('keeps the ordinary no-budget guidance for a real answered "none"', () => {
-    const messages = buildPlannerMessages({
+  it('names the scopes already left out and tells the model not to bring them back', () => {
+    const user = buildPlannerMessages({
       release: { title: 'Free', artistName: 'Tola', releaseDate: '2026-10-02' },
-      intake: { ...baseIntake, budget: 'none' },
+      intake: { ...baseIntake, exclusions: ['marketing'] },
       tasks: [],
       members: [],
       todayYmd: '2026-08-10',
-    });
-    expect(messages[1].content).toContain(
-      'No budget: drop the optional paid promotion tasks and say so in the rationale.'
-    );
+      appliedExclusions: [
+        { scope: 'marketing', by: 'intake', reason: 'You asked to leave out marketing and promo.' },
+        { scope: 'paid_ads', by: 'budget', reason: 'No promo budget.' },
+      ],
+    })[1].content;
+
+    expect(user).toContain("Already left out at the manager's request: Marketing and promo, Paid ads.");
+    expect(user).toContain('do not suggest bringing them back');
   });
 
   it('never names a model or a provider', () => {
     const messages = buildPlannerMessages({
       release: { title: 'Free', artistName: 'Tola', releaseDate: null },
-      intake: baseIntake,
+      intake: { ...baseIntake, budget: 'none', exclusions: ['events'], extra_notes: 'Keep it small.' },
       tasks: [],
       members: [],
       todayYmd: '2026-08-10',
+      appliedExclusions: [{ scope: 'events', by: 'intake', reason: 'You asked to leave out live events.' }],
     });
     const text = messages.map((m) => m.content).join('\n').toLowerCase();
     for (const name of ['claude', 'anthropic', 'openai', 'gpt', 'qwen', 'gemini']) {
       expect(text).not.toContain(name);
+    }
+  });
+});
+
+// The strict schema handed to the gateway's structured-output mode. Strict
+// mode refuses a schema with an optional property or an open object, so the
+// walker below is what keeps a future field from silently turning the whole
+// request into a 400.
+describe('PLANNER_DELTA_JSON_SCHEMA', () => {
+  type SchemaNode = {
+    type?: unknown;
+    properties?: Record<string, SchemaNode>;
+    items?: SchemaNode;
+    required?: string[];
+    additionalProperties?: unknown;
+    enum?: unknown[];
+  };
+
+  const walkObjects = (
+    node: SchemaNode,
+    path: string,
+    visit: (node: SchemaNode, path: string) => void
+  ) => {
+    if (node.type === 'object') visit(node, path);
+    for (const [key, child] of Object.entries(node.properties ?? {})) {
+      walkObjects(child, `${path}.${key}`, visit);
+    }
+    if (node.items) walkObjects(node.items, `${path}[]`, visit);
+  };
+
+  it('is strict: every object forbids extra keys and requires every property it declares', () => {
+    let objects = 0;
+    walkObjects(PLANNER_DELTA_JSON_SCHEMA as SchemaNode, '$', (node, path) => {
+      objects += 1;
+      expect(node.additionalProperties, path).toBe(false);
+      expect([...(node.required ?? [])].sort(), path).toEqual(
+        Object.keys(node.properties ?? {}).sort()
+      );
+    });
+    // The root plus the five array item shapes.
+    expect(objects).toBe(6);
+  });
+
+  it('describes exactly the delta the parser reads', () => {
+    expect(Object.keys(PLANNER_DELTA_JSON_SCHEMA.properties).sort()).toEqual(
+      Object.keys(emptyDelta()).sort()
+    );
+    expect(PLANNER_DELTA_JSON_SCHEMA.properties.exclude_scopes.items.properties.scope.enum).toEqual([
+      ...PLAN_SCOPES,
+    ]);
+  });
+
+  it('uses no length or format keywords, which strict mode ignores or rejects: those limits stay in code', () => {
+    const text = JSON.stringify(PLANNER_DELTA_JSON_SCHEMA);
+    for (const keyword of ['minLength', 'maxLength', 'pattern', 'minItems', 'maxItems', 'format']) {
+      expect(text).not.toContain(`"${keyword}"`);
     }
   });
 });

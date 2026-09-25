@@ -1,26 +1,27 @@
-// The FIRST embedded UrgAns action: draft a release's rollout plan (spec
-// 6.1, "Draft the plan"). Wraps the existing UrgAns planner
-// (lib/release-planning-actions-server.ts) — the same generate/approve/
-// discard machinery the legacy /plan/{generate,approve} routes and PUT/DELETE
-// plan/route.ts already call, gated, logged, and given one tap in instead of
-// a seven-question modal.
+// The FIRST embedded UrgAns action: build a release's rollout plan (spec 6.1,
+// "Draft the plan"). Wraps createReleasePlan (lib/release-planning-actions-
+// server.ts) — the SAME pipeline the workspace card's POST /plan call and the
+// chat interview's generate_release_plan tool both use — gated, logged, and
+// reached from inside the release rather than from a separate surface.
 //
-// TWO ENTRY POINTS SHARE ONE execute(): the one-tap "Draft the plan" button
-// (no input) derives an intake from the release row alone (buildAutoIntake);
-// the "Tell UrgAns more" refine path (the existing seven-question modal)
-// posts real answers as `input.intake`. Both reach the SAME entitlement gate
-// in ../server.ts's runUrgansAction — a refine-mode submission must not be a
-// way around it.
+// SINCE 2026-09-15 THIS ACTION IS ONE-SHOT. There used to be a Draft step here
+// (this file's own generatePlanDraft call) followed by a Review scene and a
+// separate Apply; that whole shape is gone, along with the review scene
+// itself. Finishing the intake now builds the plan straight into the
+// rollout's activities in one call, exactly like the chat door and the
+// workspace card. So `oneShot: true` (see ../types.ts) and there is no
+// apply()/discard() left to define — the run's own execute() already did the
+// whole job, and runUrgansAction logs it as already 'applied'.
 //
-// apply() IGNORES its own `output` parameter entirely and re-reads
-// release_plan_drafts fresh via approvePlanDraft. The review scene edits the
-// draft through the existing PUT /plan autosave, so the row on screen when a
-// manager taps Approve is already the row in the database — carrying a copy
-// of the run's output through this call would risk approving something
-// staler than what they saw.
+// ONE ENTRY POINT NOW, NOT TWO. The one-tap "derive everything from the
+// release row" path (buildAutoIntake) is gone with the review it used to
+// stage: every caller must already have the seven answers, collected by the
+// intake modal or the chat interview, exactly as the workspace card's own
+// POST /plan route requires. input.intake is therefore REQUIRED, not
+// optional — see execute()'s first check.
 //
 // EVERY WRITE IS SCOPED TO THE RELEASE OWNER, never the acting teammate —
-// release_plan_drafts.owner_user_id and releases.owner_user_id are already
+// createReleasePlan's own writes (release_plan_drafts, tasks) are already
 // keyed on the release's owner, matching the "child rows are stamped with the
 // release owner, never the acting teammate" rule every other team-aware scene
 // follows. Team RESOLUTION (who may be assigned) is different: that is
@@ -28,54 +29,44 @@
 // caller.
 //
 // ACCESS IS 'owner_write', NOT 'team_write' — even though the release itself
-// is visible to the whole team. release_plan_drafts and every legacy
-// /plan/* route (GET/PUT/DELETE, approve, regenerate-phase) are still
-// owner-keyed in eight places, a deliberate, RECORDED deferral (see
+// is visible to the whole team. createReleasePlan's own route
+// (app/api/releases/[releaseId]/plan/route.ts) is still owner-keyed via
+// loadOwnedRelease, a deliberate, RECORDED deferral (see
 // lib/release-access-guard.test.ts's own header: "plan is deferred"). A
-// team-write teammate could tap this button, clear the entitlement gate, and
-// then hit a 404 loading the very draft they just created, from the
-// still-owner-only GET /plan. See ../types.ts's UrgansActionAccessLevel
-// comment for the full reasoning and what a non-owner team member sees
-// instead — the same 404 a stranger would, never a 403 that would confirm
-// ownership.
-
-import type { SupabaseClient } from '@supabase/supabase-js';
+// team-write teammate could tap this action, clear the entitlement gate, and
+// then have their build 404 against the same still-owner-only route the
+// workspace card uses. See ../types.ts's UrgansActionAccessLevel comment for
+// the full reasoning and what a non-owner team member sees instead — the same
+// 404 a stranger would, never a 403 that would confirm ownership.
 
 import {
-  approvePlanDraft,
-  discardPlanDraft,
-  generatePlanDraft,
+  createReleasePlan,
   getPlannerTemplate,
+  PLANNER_DEADLINE_MS,
   type PlannerReleaseRow,
 } from '../../release-planning-actions-server';
-import { buildAutoIntake, parseReleasePlanIntake, type ReleasePlanIntake } from '../../release-planning';
+import { parseReleasePlanIntake, type CreatedPlan } from '../../release-planning';
+import { resolvePlannerModel, resolvePlannerReasoningEffort } from '../../ai/planner-model';
 import { resolveReleaseTaskWorkspace } from '../../tasks-server';
 import type { AiUsage } from '../../ai/provider';
 import type { WorkspaceMember } from '@/types/auth';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { UrgansActionDefinition } from '../types';
 
 export type ReleaseDraftPlanInput = {
-  /** Raw, untrusted intake answers from the refine-mode modal — validated by
-   *  parseReleasePlanIntake inside execute. Absent means the one-tap path:
-   *  derive everything via buildAutoIntake. */
-  intake?: unknown;
-  /** Replace an existing draft rather than refusing when one is already
-   *  there — the refine modal's re-submission case. */
-  replace?: boolean;
+  /** The seven-question answers, already collected by the intake modal or
+   *  the chat interview and shaped into a ReleasePlanIntake — parsed and
+   *  validated again here, never trusted from the caller. Required: since
+   *  this action stopped having a one-tap path, there is nothing left to
+   *  auto-derive from the release row alone. */
+  intake: unknown;
 };
 
-export type ReleaseDraftPlanOutput = {
-  draftId: string;
-  aiApplied: boolean;
-  aiFailure: string | null;
-  rationale: string | null;
-};
-
-export type ReleaseDraftPlanResult = {
-  tasksCreated: number;
-  taskIds: string[];
-  warnings: string[];
-};
+/** Since execute() now does the whole job in one call, its output IS the
+ *  final result — the same CreatedPlan shape createReleasePlan itself
+ *  returns, and the same one the chat tool and the workspace card both read.
+ *  There is no separate apply() step left to transform it. */
+export type ReleaseDraftPlanOutput = CreatedPlan;
 
 /**
  * A small, deliberate duplicate of the same select as the plan route group's
@@ -83,8 +74,8 @@ export type ReleaseDraftPlanResult = {
  * file's own header, and release-planning-actions-server.ts's, for why these
  * small private duplicates are preferred here over a lib module reaching into
  * an app/api route group's helpers. This one skips the owner-only check
- * entirely: by the time execute()/apply()/discard() run, resolveActionScope
- * has already decided whether this caller may act on this release.
+ * entirely: by the time execute() runs, resolveActionScope has already
+ * decided whether this caller may act on this release.
  */
 async function loadReleaseRow(
   admin: SupabaseClient,
@@ -100,9 +91,9 @@ async function loadReleaseRow(
 }
 
 /** The team a release's tasks may be assigned to, tolerating failure exactly
- *  as the legacy plan route group's loadPlannerTeam does — generation and
- *  the owner-history heuristic both degrade gracefully to "everything stays
- *  with the owner" rather than failing the whole run. */
+ *  as the plan route group's loadPlannerTeam does — createReleasePlan and the
+ *  owner-history heuristic both degrade gracefully to "everything stays with
+ *  the owner" rather than failing the whole run. */
 async function loadTeamForRelease(
   admin: SupabaseClient,
   releaseId: string,
@@ -124,42 +115,41 @@ const todayYmd = (): string => new Date().toISOString().slice(0, 10);
 
 export const releaseDraftPlanAction: UrgansActionDefinition<
   ReleaseDraftPlanInput,
-  ReleaseDraftPlanOutput,
-  ReleaseDraftPlanResult
+  ReleaseDraftPlanOutput
 > = {
   id: 'release.draft_plan',
-  label: 'Draft the rollout plan',
+  label: 'Build the rollout plan',
   objectTypes: ['release'],
   access: 'owner_write',
-  promptVersion: 'release.draft_plan.v1',
+  promptVersion: 'release.draft_plan.v2',
+  oneShot: true,
 
   async execute({ admin, objectId, actor, ownerUserId, input }) {
     const release = await loadReleaseRow(admin, objectId);
     if (!release) return { ok: false, status: 404, error: 'Rollout not found.' };
 
-    let intake: ReleasePlanIntake;
-    if (input?.intake !== undefined) {
-      const parsed = parseReleasePlanIntake(input.intake);
-      if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
-      intake = parsed.intake;
-    } else {
-      intake = buildAutoIntake(release);
+    if (input?.intake === undefined) {
+      return { ok: false, status: 400, error: 'Answer the planning questions first.' };
     }
+    const parsed = parseReleasePlanIntake(input.intake);
+    if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
+    const intake = parsed.intake;
 
     const { template, fallbackToSingle } = getPlannerTemplate(intake.release_type);
 
     let usage: AiUsage | null = null;
 
-    const result = await generatePlanDraft(admin, {
+    const result = await createReleasePlan(admin, {
       release,
       actor: { id: ownerUserId, email: actor.email },
       intake,
-      replace: input?.replace === true,
       todayYmd: todayYmd(),
       template,
       fallbackToSingle,
       loadTeam: () => loadTeamForRelease(admin, objectId, actor),
-      plannerModel: process.env.AI_PLANNER_MODEL || undefined,
+      plannerModel: resolvePlannerModel(),
+      reasoningEffort: resolvePlannerReasoningEffort(),
+      deadlineMs: Date.now() + PLANNER_DEADLINE_MS,
       onUsage: (reported) => {
         usage = reported;
       },
@@ -171,50 +161,20 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
 
     return {
       ok: true,
-      output: {
-        draftId: result.draft.id,
-        aiApplied: result.draft.doc.ai.applied,
-        aiFailure: result.draft.doc.ai.failure,
-        rationale: result.draft.doc.ai.rationale,
-      },
-      // A short, loggable summary — never the ~60-task document itself, which
-      // lives under its own autosave loop and would go stale in the log the
-      // instant the manager edited a row.
+      output: result.plan,
+      // A short, loggable summary — never the full plan document, which the
+      // caller already has as `output` on this same row.
       inputSummary: {
-        intakeSource: intake.intake_source ?? 'answered',
         releaseType: intake.release_type,
-        replace: input?.replace === true,
+        exclusionsCount: intake.exclusions?.length ?? 0,
       },
-      model: process.env.AI_PLANNER_MODEL || null,
+      model: resolvePlannerModel() ?? null,
       tokensIn: usage ? (usage as AiUsage).promptTokens : null,
       tokensOut: usage ? (usage as AiUsage).completionTokens : null,
     };
   },
 
-  async apply({ admin, objectId, actor, ownerUserId }) {
-    const release = await loadReleaseRow(admin, objectId);
-    if (!release) return { ok: false, status: 404, error: 'Rollout not found.' };
-
-    const result = await approvePlanDraft(admin, {
-      release,
-      actor: { id: ownerUserId },
-      loadTeam: () => loadTeamForRelease(admin, objectId, actor),
-    });
-
-    if (!result.ok) return { ok: false, status: result.status, error: result.error };
-    return {
-      ok: true,
-      result: {
-        tasksCreated: result.tasksCreated,
-        taskIds: result.taskIds,
-        warnings: result.warnings,
-      },
-    };
-  },
-
-  async discard({ admin, objectId, ownerUserId }) {
-    const result = await discardPlanDraft(admin, { releaseId: objectId, ownerUserId });
-    if (!result.ok) return { ok: false, status: result.status, error: result.error };
-    return { ok: true };
-  },
+  // No apply(), no discard(): oneShot means execute() already did the whole
+  // job. runUrgansAction logs the row as already 'applied' with `output`
+  // mirrored into `applied_result`, so there is nothing left for either to do.
 };

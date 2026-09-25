@@ -20,6 +20,17 @@
 // the flag on, an EP release really does get the EP playbook, the suggested
 // task really is in it, and the caveat is dropped. music_video has no playbook
 // at all (and no DB enum value), so it always takes the fallback path.
+//
+// SINCE 2026-09-15, "non-optional" is no longer an absolute guarantee against
+// removal elsewhere in the product: the rollout planner's scope exclusions
+// (PLAN_SCOPES in lib/release-planning.ts) can drop a REQUIRED task too, when
+// it falls inside a scope the manager plainly ruled out. Harmless to this
+// module regardless — it reads the STATIC template list, never a release
+// actually run through createReleasePlan, and nothing looks its chosen task
+// id up in a real release afterward. Onboarding releases are still created by
+// direct template instantiation (POST /api/releases), not the planner, which
+// is what keeps that true; re-check this note if onboarding ever routes
+// through the planner instead.
 
 import { ALBUM_RELEASE_TEMPLATE } from './release-templates/album';
 import { EP_RELEASE_TEMPLATE } from './release-templates/ep';

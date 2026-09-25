@@ -41,9 +41,10 @@ type ChatCounterpart = { tools: string[] } | { tools: null; because: string };
 
 const CHAT_COUNTERPARTS: Record<string, ChatCounterpart> = {
   'release.draft_plan': {
-    // generate drafts, approve and discard settle. All three log, so the
-    // console sees a chat-drafted plan through its whole life.
-    tools: ['generate_release_plan', 'approve_release_plan', 'discard_release_plan'],
+    // One tool, and one shot: since 2026-09-15 a plan is built in one call,
+    // not drafted and later approved, so generate_release_plan logs straight
+    // to 'applied' and there is nothing left to settle on a later turn.
+    tools: ['generate_release_plan'],
   },
   'presskit.draft_section': {
     // One tool, and one shot: the words are composed in the transcript and
@@ -52,13 +53,10 @@ const CHAT_COUNTERPARTS: Record<string, ChatCounterpart> = {
   },
 };
 
-/** The helpers a chat tool logs through. Any one of them counts — which one
- *  depends on whether the tool drafts or settles. */
-const LOG_HELPERS = [
-  'recordChatActionRun',
-  'markChatActionApplied',
-  'markChatActionDiscarded',
-] as const;
+/** The helper every chat tool logs through. Only recordChatActionRun exists
+ *  now — a settle step (markChatActionApplied/markChatActionDiscarded) was
+ *  deleted with the last two-step chat tool that needed one. */
+const LOG_HELPERS = ['recordChatActionRun'] as const;
 
 /**
  * One source chunk per tool, keyed by name.
@@ -177,9 +175,9 @@ describe('the log records the object type it was given', () => {
   it('runUrgansAction takes object_type from the scope, never a literal', () => {
     // This was hardcoded 'release' until 2026-09-07, so every embedded
     // press-kit draft was filed as a release — wrong in the console's own
-    // grouping, and enough that findLatestDraftedActionId (which filters on
-    // object_type) could never find a kit's drafted run. A second object type
-    // is exactly when that kind of bug stops being theoretical.
+    // grouping, and enough that a lookup filtering on object_type could never
+    // find a kit's own drafted run. A second object type is exactly when that
+    // kind of bug stops being theoretical.
     const source = stripComments(fs.readFileSync(SERVER_FILE, 'utf8'));
     expect(source).toMatch(/object_type:\s*scope\.objectType/);
     expect(

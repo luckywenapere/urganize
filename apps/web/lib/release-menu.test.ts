@@ -19,7 +19,6 @@ describe('RELEASE_MENU_ORDER', () => {
    */
   it('is the documented sequence', () => {
     expect([...RELEASE_MENU_ORDER]).toEqual([
-      'plan',
       'activities',
       'calendar',
       'pitch',
@@ -69,10 +68,9 @@ describe('RELEASE_MENU_ORDER', () => {
 
 describe('orderReleaseMenu', () => {
   it('sorts entries into the canonical order regardless of how they arrive', () => {
-    const scrambled = entriesFor(['archive', 'plan', 'capture', 'activities', 'song']);
+    const scrambled = entriesFor(['archive', 'capture', 'activities', 'song']);
 
     expect(keys(orderReleaseMenu(scrambled))).toEqual([
-      'plan',
       'activities',
       'song',
       'capture',
@@ -90,7 +88,7 @@ describe('orderReleaseMenu', () => {
   });
 
   it('does not mutate the array it was given', () => {
-    const entries = entriesFor(['archive', 'plan']);
+    const entries = entriesFor(['archive', 'activities']);
     const before = keys(entries);
 
     orderReleaseMenu(entries);
@@ -102,10 +100,10 @@ describe('orderReleaseMenu', () => {
     // Unreachable from TypeScript (ReleaseMenuKey is a closed union), so this
     // only matters if a key ever arrives untyped — and the tail is where an
     // entry nobody has ranked belongs. Landing at the front would put an
-    // unranked item above Plan, which is the one position that is argued for.
-    const entries = entriesFor(['archive', 'not-a-real-key', 'plan']);
+    // unranked item above Activities, which is the one position argued for.
+    const entries = entriesFor(['archive', 'not-a-real-key', 'activities']);
 
-    expect(keys(orderReleaseMenu(entries))).toEqual(['plan', 'archive', 'not-a-real-key']);
+    expect(keys(orderReleaseMenu(entries))).toEqual(['activities', 'archive', 'not-a-real-key']);
   });
 
   it('preserves input order among several unranked keys', () => {

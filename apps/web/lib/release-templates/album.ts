@@ -239,7 +239,7 @@ export const ALBUM_RELEASE_TEMPLATE: Template = {
       offset_days: -112,
       duration_days: 1,
       optional: true,
-      tags: ['asset_production'],
+      tags: ['asset_production', 'physical'],
     },
 
     // -----------------------------------------------------------------------
@@ -1187,7 +1187,7 @@ export const ALBUM_RELEASE_TEMPLATE: Template = {
       offset_days: -3,
       duration_days: 1,
       optional: true,
-      tags: ['marketing'],
+      tags: ['marketing', 'paid'],
     },
     {
       id: 'w1_presave_reminder',
@@ -1436,7 +1436,7 @@ export const ALBUM_RELEASE_TEMPLATE: Template = {
       offset_days: 15,
       duration_days: 1,
       optional: true,
-      tags: ['followup', 'analytics'],
+      tags: ['followup', 'analytics', 'marketing', 'paid'],
     },
     {
       id: 'post_w2_strongest_market',

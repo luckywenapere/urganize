@@ -15,13 +15,16 @@ import {
 //
 // NOT flag-gated, the admin/teams precedent exactly: with
 // NEXT_PUBLIC_FEATURE_URGANS_ACTIONS off the table simply reads empty, and the
-// founder should be able to watch it fill in from day one — including from
-// Chappi's OWN generate_release_plan/approve_release_plan tools, which write
-// to the SAME urgans_actions... no: those tools never touch this table at all
-// (they call release-planning-actions-server.ts directly, bypassing
-// runUrgansAction entirely) — a known, documented gap. This console can only
-// ever show what ran through the gated action, which is exactly the surface
-// worth watching once the flag is live.
+// founder should be able to watch it fill in from day one.
+//
+// Two doors write here, and the planner is the clean example of why the split
+// matters: the embedded action's own draft/apply cycle logs as `source:
+// 'button'`, while Chappi's generate_release_plan tool logs `source: 'chat'`
+// directly through recordChatActionRun the moment it builds the plan (a
+// one-shot: since 2026-09-15 a plan is built in one call rather than drafted
+// and approved, so `status: 'applied'` with no prior `drafted` row is the
+// normal shape for every planner row this table holds — there is no
+// approve/discard step left to leave a gap in).
 //
 // Aggregated in TypeScript, not a SQL view — see admin-summary.ts's own
 // header for why.

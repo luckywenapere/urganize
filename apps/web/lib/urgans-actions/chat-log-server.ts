@@ -140,62 +140,11 @@ export async function recordChatActionRun(
   }
 }
 
-/**
- * Move a chat-logged run out of 'drafted'.
- *
- * The `status = 'drafted'` condition is not decoration: it is what stops a
- * second approve, or an approve arriving after a discard, rewriting a row that
- * has already settled. It is deliberately NOT applyUrgansAction — that one
- * decides whether to RUN the apply and then runs it, and by the time this is
- * called the chat tool has already done the write through the ordinary REST
- * route. This only records what happened.
- */
-async function settleChatAction(
-  admin: SupabaseClient,
-  actionId: string | null | undefined,
-  status: 'applied' | 'discarded',
-  appliedResult?: unknown
-): Promise<boolean> {
-  if (!isUrgansActionsEnabled()) return false;
-  // Without an id this would be an unqualified UPDATE. Cheap guard, worst
-  // possible failure.
-  if (!actionId) return false;
-
-  try {
-    const { data, error } = await admin
-      .from(URGANS_ACTIONS_TABLE)
-      .update({
-        status,
-        applied_at: status === 'applied' ? new Date().toISOString() : null,
-        applied_result: status === 'applied' ? (appliedResult ?? null) : null,
-      })
-      .eq('id', actionId)
-      .eq('status', 'drafted')
-      .select('id')
-      .maybeSingle();
-
-    if (error) {
-      console.error(`[urgans-actions] could not mark a chat run ${status}:`, error);
-      return false;
-    }
-    return Boolean(data);
-  } catch (error) {
-    console.error(`[urgans-actions] could not mark a chat run ${status}:`, error);
-    return false;
-  }
-}
-
-export function markChatActionApplied(
-  admin: SupabaseClient,
-  actionId: string | null | undefined,
-  appliedResult?: unknown
-): Promise<boolean> {
-  return settleChatAction(admin, actionId, 'applied', appliedResult);
-}
-
-export function markChatActionDiscarded(
-  admin: SupabaseClient,
-  actionId: string | null | undefined
-): Promise<boolean> {
-  return settleChatAction(admin, actionId, 'discarded');
-}
+// A settle step (markChatActionApplied/markChatActionDiscarded) used to live
+// here, for tools that logged a 'drafted' row and settled it on a later turn.
+// The only caller was the planner's approve/discard_release_plan pair, and
+// both are gone as of 2026-09-15: a plan is built in one call now, so
+// generate_release_plan logs straight to 'applied' (see recordChatActionRun's
+// `status` option) and there is nothing left to settle later. Deleted rather
+// than kept for a future one-shot caller, since a settle function with no
+// drafted row to settle is a function nothing can safely reach for.

@@ -117,38 +117,24 @@ export interface AnalyticsEventPropertiesMap {
   time_to_first_release: { seconds_since_signup: number };
   time_to_first_completed_task: { seconds_since_signup: number };
   // UrgAns planner funnel. The question worth answering is where managers drop
-  // out of a seven-question intake, and whether they edit the draft before
-  // approving it or take it as written.
+  // out of a seven-question intake, and what the plan looked like when it
+  // landed: how much of the playbook the answers removed, and whether the
+  // model got to tailor the rest. (Until 2026-09-15 the intake produced a
+  // draft to review and approve; the scene, approve and discard events went
+  // with that step.)
   planner_intake_opened: { source: 'empty_state' | 'note' | 'chip'; has_release: boolean };
   planner_intake_step: { step: number };
   planner_intake_dismissed: { step: number };
-  planner_draft_generated: {
+  planner_plan_created: {
     source: 'empty_state' | 'note' | 'chip';
     release_type: 'single' | 'ep' | 'album';
-  };
-  planner_scene_opened: { has_draft: boolean };
-  planner_phase_regenerated: { phase: string; ok: boolean };
-  planner_draft_approved: {
     task_count: number;
     tasks_removed: number;
-    tasks_added: number;
+    /** Kinds of work left out: chips, the no-budget answer, and what the
+     *  model read in the notes, together. */
+    exclusions_count: number;
     ai_applied: boolean;
-    /** Approved from the twenty-second nudge rather than the standing bar. */
-    via_prompt: boolean;
   };
-  /** The twenty-second review nudge (2026-08-25). A manager scrolling a
-   * sixty-task plan has no natural end point, so after twenty seconds the
-   * approve bar offers to move them on. `shown` against
-   * `planner_draft_approved.via_prompt` says whether the nudge converts;
-   * `dismissed` against a later approve says whether it merely interrupts.
-   * Both are payload-free on purpose: the interesting counts already ride on
-   * the approve event, and reading them here would mean either a stale
-   * closure or restarting the timer on every keystroke. */
-  planner_review_prompt_shown: EmptyAnalyticsProperties;
-  planner_review_prompt_dismissed: EmptyAnalyticsProperties;
-  /** A manager threw away a draft plan before approving it (2026-09-03, the
-   * embedded-actions review scene's new Discard control). */
-  planner_draft_discarded: EmptyAnalyticsProperties;
   // UrgAns reply action row (2026-08-12): copy / retry / thumbs under each
   // assistant reply. Thumbs are the first structured feedback signal on
   // assistant quality — worth watching once the agent model is wired.
