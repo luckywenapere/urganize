@@ -116,6 +116,12 @@ const FILES = [
   ),
   join(WEB, 'lib', 'chappi', 'tool-families', 'shows.ts'),
   join(WEB, 'stores', 'useEventsStore.ts'),
+  // Voice input for UrgAns (2026-09-25). The composer's mic and its recorder
+  // hook, the transcribe route whose errors the person reads, and the pure
+  // module that writes the validation and offline copy.
+  join(WEB, 'lib', 'urgans-voice.ts'),
+  join(WEB, 'components', 'chappi', 'useVoiceInput.ts'),
+  ...walk(join(WEB, 'app', 'api', 'urgans', 'transcribe')),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 // Reads through `readableCopy`, not the narrower `userFacingStrings` this file

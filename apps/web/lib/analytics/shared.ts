@@ -139,6 +139,13 @@ export interface AnalyticsEventPropertiesMap {
   // assistant reply. Thumbs are the first structured feedback signal on
   // assistant quality — worth watching once the agent model is wired.
   urgans_reply_action: { action: 'copy' | 'retry' | 'thumbs_up' | 'thumbs_down' };
+  /** Voice input for UrgAns (2026-09-25). One transcription attempt and how it
+   * ended — `ok`, `empty` (nothing heard) or `error`. Carries NO transcript
+   * text, and no clip: this reports the outcome of the act, never its content. */
+  urgans_voice_used: {
+    outcome: 'ok' | 'empty' | 'error';
+    status?: number;
+  };
   /** The permission gate in use (2026-08-14). `shown` fires when UrgAns
    * proposes a gated action, the other two when the user decides. Watching the
    * approve:cancel ratio per tool is how we find out whether the assistant is

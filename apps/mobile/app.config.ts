@@ -51,6 +51,9 @@ const config: ExpoConfig = {
     entitlements: { 'aps-environment': 'production' },
     infoPlist: {
       UIBackgroundModes: ['remote-notification'],
+      // Voice input for UrgAns (NEXT_PUBLIC_FEATURE_URGANS_VOICE): iOS shows
+      // this string when the webview first asks for the microphone.
+      NSMicrophoneUsageDescription: 'Urganize uses the microphone so you can talk to UrgAns.',
       // No WKAppBoundDomains, deliberately. It is what lets a service worker
       // run in an iOS webview, and nothing needs one there today: Web Push
       // cannot reach a webview at all, and the site's offline layer
@@ -69,7 +72,16 @@ const config: ExpoConfig = {
       backgroundImage: './assets/icon-background.png',
       backgroundColor: INK,
     },
-    permissions: ['android.permission.POST_NOTIFICATIONS'],
+    // RECORD_AUDIO + MODIFY_AUDIO_SETTINGS: voice input for UrgAns
+    // (NEXT_PUBLIC_FEATURE_URGANS_VOICE). The webview records a short clip via
+    // getUserMedia; without the permission the mic hits NotAllowedError, which
+    // the composer handles with a "Allow the microphone" message — so this is
+    // only needed once the feature is switched on.
+    permissions: [
+      'android.permission.POST_NOTIFICATIONS',
+      'android.permission.RECORD_AUDIO',
+      'android.permission.MODIFY_AUDIO_SETTINGS',
+    ],
     // Expo adds these by default and this app uses none of them: the page's
     // file picker hands over files without a storage permission, downloads go
     // through the share sheet (src/share.ts), and nothing draws over other
