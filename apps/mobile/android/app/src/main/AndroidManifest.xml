@@ -50,4 +50,14 @@
          notification tray entry — see components/providers/CapacitorPushBridge.tsx
          and lib/native-push.ts. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Voice input for UrgAns (NEXT_PUBLIC_FEATURE_URGANS_VOICE). The webview
+         records a short clip via getUserMedia; Capacitor's default
+         WebChromeClient grants the mic request once this permission is
+         declared. MODIFY_AUDIO_SETTINGS lets the recorder configure the audio
+         route. Without these the mic hits NotAllowedError, which the composer
+         handles with a "Allow the microphone" message — so this is only needed
+         once the feature is switched on. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 </manifest>
