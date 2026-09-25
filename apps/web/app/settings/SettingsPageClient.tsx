@@ -15,6 +15,7 @@ import {
   type SettingsTab,
 } from '@/components/settings/useSettingsTab';
 import { DIRECTORY_SETTINGS_ANCHOR } from '@/lib/person-profile';
+import { BRAND_COLORS_SETTINGS_ANCHOR } from '@/lib/social-share-colors';
 
 import { useTeammates } from '@/components/settings/useTeammates';
 import { useWorkspaceSettings } from '@/components/settings/useWorkspaceSettings';
@@ -108,13 +109,15 @@ export default function SettingsPage() {
   // its own fetch resolves; scrolling in the same tick lands above where the
   // heading settles. `block: 'start'` rather than centre so the heading is the
   // first thing under the topbar.
+  //
+  // `/settings?tab=workspace#brand-colors` works the same way (2026-09-24):
+  // the share sheet's "Set brand colors" link lands on that section.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (window.location.hash !== `#${DIRECTORY_SETTINGS_ANCHOR}`) return;
+    const anchor = window.location.hash.slice(1);
+    if (anchor !== DIRECTORY_SETTINGS_ANCHOR && anchor !== BRAND_COLORS_SETTINGS_ANCHOR) return;
     const frame = window.requestAnimationFrame(() => {
-      document
-        .getElementById(DIRECTORY_SETTINGS_ANCHOR)
-        ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      document.getElementById(anchor)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);

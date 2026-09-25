@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { CUSTOMER_LINE } from "@/lib/positioning";
+import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-urls";
 
@@ -19,7 +19,7 @@ import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-urls";
 export const metadata: Metadata = buildPageMetadata({
   title: "Sign up",
   description:
-    `Create your Urganize account and start planning rollouts with the ${CUSTOMER_LINE}.`,
+    `${CORE_LINE} Create your account and start planning rollouts.`,
   path: "/signup",
 });
 
@@ -58,8 +58,9 @@ export default function SignupPage() {
               Who Urganize is for
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
-              Artists running their own rollouts, and managers running more
-              than one artist&apos;s at once. If you&apos;re coordinating
+              Artists running their own rollouts, managers running more than
+              one artist&apos;s at once and labels running a full roster. If
+              you&apos;re coordinating
               handoffs, files, and status across a roster, that&apos;s the
               problem this was built for. See{" "}
               <Link

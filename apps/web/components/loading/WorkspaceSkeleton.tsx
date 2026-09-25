@@ -49,6 +49,12 @@ const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 // it is reserved in the header row and deliberately not in the mobile dock.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
+// Share to socials (2026-09-23). The real Share pill sits right after Notes in
+// the desktop header row and renders for every scoped rollout, so it is
+// reserved under its flag alone. It also adds a row to the phone's release
+// menu, which is why it joins the list that reserves the menu trigger below.
+const SOCIAL_SHARE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SOCIAL_SHARE === 'true';
+
 // Timeline (2026-08-30) sits right before Metadata in the real desktop header
 // row and leads the mobile top-tabs strip. Reserved unconditionally under its
 // flag — unlike Plan and Recap, whether it renders depends only on a release
@@ -345,6 +351,11 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
   const notesPillBlock = NOTES_ENABLED ? (
     <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" />
   ) : null;
+  // Share, right after it. The same width as Notes, because the two pills are
+  // the same shape: an icon and a five-letter label.
+  const sharePillBlock = SOCIAL_SHARE_ENABLED ? (
+    <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" />
+  ) : null;
   // Content / Fan capture — the panel's outbound group, a
   // desktop-only footer row at lg+. It used to describe itself as also being
   // "the tail of the mobile dock"; the dock has carried no pills since
@@ -379,6 +390,7 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
       <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
         {primaryPillBlocks}
         {notesPillBlock}
+        {sharePillBlock}
       </div>
       <div className="min-h-0 flex-1 space-y-3 pb-4 lg:overflow-hidden">
         {/* Which body is coming. The timeline paints a legend strip and then
@@ -461,7 +473,8 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
           COVER_ART_ENABLED ||
           SONG_UPLOAD_ENABLED ||
           FILES_ENABLED ||
-          CAPTURE_ENABLED ? (
+          CAPTURE_ENABLED ||
+          SOCIAL_SHARE_ENABLED ? (
             <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
           ) : null}
         </div>

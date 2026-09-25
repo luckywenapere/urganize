@@ -24,6 +24,48 @@ const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'tru
 // Same flag the Shows page, its nav tab and the /api/events routes read.
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 'true';
+// Same flag the share sheet, the rollout's Share button and the share-card
+// route read.
+const SOCIAL_SHARE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SOCIAL_SHARE === 'true';
+
+/**
+ * "post it on instagram", "whatsapp status", "share the single", "announce it".
+ *
+ * Narrow on purpose, the same discipline the show phrases follow. Two words
+ * that look like they belong here are left out because they already mean
+ * something else in this product: a bare "status" is the status update ("share
+ * a status update with the artist" must still write one), and a bare "dm" is
+ * as likely to be a message to a producer as an announcement. WhatsApp's own
+ * status is still reached, through its name.
+ */
+const SHARE_PLATFORM_PHRASES: readonly RegExp[] = [
+  /\binstagram\b/i,
+  /\binsta\b/i,
+  /\bwhats\s?app\b/i,
+  /\bsocials\b/i,
+  /\bsocial\s+media\b/i,
+  /\bannounce\b/i,
+  // X and Snapchat (2026-09-24). "twitter" and "tweet" are what most people
+  // still say. The bare letter x is NEVER matched on its own, only after a
+  // posting verb and "on" or "to", because a lone x turns up in everything
+  // ("xlsx", "x2", a name).
+  /\btwitter\b/i,
+  /\btweet\b/i,
+  /\b(?:post|share|put)\b[\s\S]{0,30}\b(?:on|to)\s+x\b/i,
+  /\bsnap\s?chat\b/i,
+  /\bsnap\s+story\b/i,
+];
+
+/**
+ * "share the single". Generic, so unlike a platform's name it yields to the
+ * status update's own words: "share a status update on the single" is asking
+ * for the paragraph, not the posts.
+ */
+const SHARE_THE_MUSIC =
+  /\bshare\b[\s\S]{0,24}\b(rollout|release|single|ep|album|song|track|music|social)\b/i;
+
+/** "share the single with the team" is about access, not an announcement. */
+const SHARE_WITH_TEAM = /\bwith\s+(the|my|our)\s+team\b/i;
 
 /**
  * "what's the setlist", "send the dj pack", "my shows this month".
@@ -179,6 +221,19 @@ export function resolveIntent(raw: string): ChappiIntent {
   if (EVENTS_ENABLED && SHOW_PHRASES.some((pattern) => pattern.test(raw))) {
     return { kind: 'open_shows' };
   }
+  // Before the planner and release branches, which claim 'rollout', 'single'
+  // and 'song' — "share the single" is an announcement, not a new rollout. And
+  // it stands aside for the recap, whose card has its own share button: "share
+  // the recap" means that card, not this sheet.
+  if (
+    SOCIAL_SHARE_ENABLED &&
+    !has('recap') &&
+    !SHARE_WITH_TEAM.test(raw) &&
+    (SHARE_PLATFORM_PHRASES.some((pattern) => pattern.test(raw)) ||
+      (SHARE_THE_MUSIC.test(raw) && !has('update', 'report', 'summary')))
+  ) {
+    return { kind: 'share_socials' };
+  }
   // Before the 'release' branch, and only when the planner exists: "plan my
   // release" contains both words, and planning is the more specific verb.
   if (PLANNER_ENABLED && has('plan', 'rollout', 'roll out', 'campaign')) {
@@ -240,6 +295,7 @@ export function buildHelpReply(): ChappiReply {
       'Add an activity',
       ...(SONG_UPLOAD_ENABLED ? ['Upload the song'] : []),
       ...(EVENTS_ENABLED ? ['My shows'] : []),
+      ...(SOCIAL_SHARE_ENABLED ? ['Share to socials'] : []),
       ...(NOTES_ENABLED ? ['Note Call the promoter about Friday'] : []),
     ],
   };

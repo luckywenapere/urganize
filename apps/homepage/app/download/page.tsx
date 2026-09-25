@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { CUSTOMER_LINE } from "@/lib/positioning";
+import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { hasLaunched } from "@/lib/launch-gate";
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     // No "— Urganize" suffix here: the root layout's title template already
     // appends "| Urganize", and adding our own would render it twice.
     title: "Android app",
-    description: `Install the Urganize Android app, the ${CUSTOMER_LINE}.`,
+    description: `${CORE_LINE} Install the Android app.`,
     path: "/download",
   }),
   robots: { index: false, follow: false },

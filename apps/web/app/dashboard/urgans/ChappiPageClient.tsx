@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Minimize2 } from '@/components/icons';
+import { ArrowLeft, History, Minimize2 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -18,6 +18,9 @@ import { useToast } from '@/components/shared/ToastProvider';
 import { FirstReleaseWin } from '@/components/workspace/FirstReleaseWin';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
+import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
+import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
+import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
 
 // Same flag AppTopbar reads for the nav icon — if a direct link is followed
 // while the flag is off, bounce to the workspace instead of 404ing (the
@@ -47,6 +50,12 @@ const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true'
 // var name is typed once (lib/test-release.ts).
 const TEST_RELEASE_ENABLED = isTestReleaseEnabled();
 
+// Saved chats. At xl+ they sit in a column beside the conversation; below xl
+// a "Chats" toggle swaps the region between the list and the conversation.
+// xl rather than lg because the side menu already holds the left column at
+// lg. Mirrored in ChappiPageSkeleton.
+const HISTORY_ENABLED = isChappiHistoryEnabled();
+
 export default function ChappiPageClient() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
@@ -60,6 +69,8 @@ export default function ChappiPageClient() {
     resume: () => void;
   } | null>(null);
   const keyboardOpen = useKeyboardOpen();
+  // Below xl only: the chats list is showing in place of the conversation.
+  const [showChats, setShowChats] = useState(false);
 
   // iOS scrolls the document to reveal a focused field BEFORE the layout has
   // had a chance to react, and this page's own contract is that it never
@@ -142,7 +153,30 @@ export default function ChappiPageClient() {
             `?release=` from the assistant's own scope so the rail re-opens
             live-synced to whatever release the conversation was pinned to,
             exactly as if the catalog had been scoped to it. */}
-        <div className="hidden shrink-0 justify-end lg:flex">
+        {/* With chat history on this row shows at every width, because it
+            also carries the phone's only way into the chats list. */}
+        <div
+          className={
+            HISTORY_ENABLED
+              ? 'flex shrink-0 items-center justify-end'
+              : 'hidden shrink-0 justify-end lg:flex'
+          }
+        >
+          {HISTORY_ENABLED ? (
+            <button
+              type="button"
+              onClick={() => setShowChats((current) => !current)}
+              aria-pressed={showChats}
+              className="motion-focus motion-press mr-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary xl:hidden"
+            >
+              {showChats ? (
+                <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <History className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {showChats ? 'Back to chat' : 'Chats'}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => {
@@ -154,7 +188,9 @@ export default function ChappiPageClient() {
             }}
             aria-label="Collapse into the catalog"
             title="Back to the catalog"
-            className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+            className={`motion-focus motion-press ${
+              HISTORY_ENABLED ? 'hidden lg:grid' : 'grid'
+            } h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary`}
           >
             <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -163,7 +199,25 @@ export default function ChappiPageClient() {
           <InviteTeamBanner />
         </div>
         <div className="min-h-0 flex-1">
-          <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
+          {HISTORY_ENABLED ? (
+            <div className="flex h-full min-h-0 gap-4">
+              <div className="hidden w-64 shrink-0 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface xl:flex xl:flex-col">
+                <ChappiHistoryList variant="column" />
+              </div>
+              {showChats ? (
+                <div className="min-h-0 min-w-0 flex-1 xl:hidden">
+                  <ChappiHistoryList variant="panel" onDone={() => setShowChats(false)} />
+                </div>
+              ) : null}
+              {/* Hidden, never unmounted, while the list shows: the upload
+                  and recap cards, and any reply still on its way, live in it. */}
+              <div className={`min-h-0 min-w-0 flex-1 ${showChats ? 'hidden xl:block' : ''}`}>
+                <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
+              </div>
+            </div>
+          ) : (
+            <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
+          )}
         </div>
       </div>
 
@@ -178,16 +232,24 @@ export default function ChappiPageClient() {
           // TYPE-FIRST CREATE (2026-09-01): straight into the release — same
           // branch, same rationale as WorkspaceView's onCreated.
           if (TYPE_FIRST_CREATE_ENABLED) {
-            router.push(`/dashboard?release=${releaseId}`);
-            if (plannerPending) {
-              usePlannerStore.getState().openIntake({
-                source: 'empty_state',
-                releaseId,
-                ...(result?.releaseType
-                  ? { prefill: { releaseType: result.releaseType } }
-                  : {}),
-              });
-            }
+            // The first-rollout share sheet (2026-09-23) goes first here too.
+            withFirstShareOffer({
+              releaseId,
+              firstRelease: result?.firstRelease,
+              snapshot: result?.share,
+              then: () => {
+                router.push(`/dashboard?release=${releaseId}`);
+                if (plannerPending) {
+                  usePlannerStore.getState().openIntake({
+                    source: 'empty_state',
+                    releaseId,
+                    ...(result?.releaseType
+                      ? { prefill: { releaseType: result.releaseType } }
+                      : {}),
+                  });
+                }
+              },
+            })();
             return;
           }
           // Deferred continuation, mirroring WorkspaceView's onCreated: the
@@ -227,11 +289,20 @@ export default function ChappiPageClient() {
           // Creating a release from the assistant is still creating a release,
           // so it gets the same compulsory step. Skipping it here would make
           // the step's presence depend on which button you happened to use.
+          // Share to socials (2026-09-23): the first rollout's once-only share
+          // sheet slots in after the team-login step and before the rest,
+          // mirroring WorkspaceView's onCreated. See withFirstShareOffer.
+          const continueAfterAccess = withFirstShareOffer({
+            releaseId,
+            firstRelease: result?.firstRelease,
+            snapshot: result?.share,
+            then: resume,
+          });
           if (TEAM_LOGINS_ENABLED) {
-            setAccessStep({ releaseId, title: result?.title ?? null, resume });
+            setAccessStep({ releaseId, title: result?.title ?? null, resume: continueAfterAccess });
             return;
           }
-          resume();
+          continueAfterAccess();
         }}
       />
 

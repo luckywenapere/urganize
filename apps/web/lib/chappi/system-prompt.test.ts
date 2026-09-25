@@ -16,7 +16,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CUSTOMER_LINE, URGANS_LINE } from '../positioning';
+import { CANONICAL_DESCRIPTION, CORE_CLAUSE, CORE_LINE, URGANS_LINE } from '../positioning';
 import { ROLE, URGANS_COPY_RULES } from './system-prompt';
 import { CHAPPI_TOOLS } from './tools';
 
@@ -47,22 +47,25 @@ describe('the system prompt', () => {
     expect(ROLE).toMatch(/no tool call needed/i);
   });
 
-  it('describes Urganize as the category, and itself as the AI inside it', () => {
-    // The 2026-09-09 positioning's own acceptance criterion: "UrgAns describes
-    // Urganize as an AI Music Business Manager when asked what it is". Nothing
-    // type-checks a sentence, and this one is the difference between the
-    // assistant being the product and being a feature of it, so it gets an
-    // assertion rather than a review pass.
+  it('describes what Urganize is, and itself as the AI inside it', () => {
+    // UrgAns is a feature of the product, never the product, and that line is
+    // the one thing in this prompt a later rewrite is most likely to blur.
     //
-    // ASSERTED AGAINST THE SHARED CONSTANTS, not a literal copy of them. The
-    // prompt states the category as prose rather than interpolating it, which
-    // is deliberate — it is one block of instruction a person reads whole — so
-    // this is what keeps the two in step. Widening the category on 2026-09-11
-    // failed exactly here, which is the mechanism working; a literal would have
-    // had to be remembered instead.
-    expect(ROLE).toContain(CUSTOMER_LINE);
-    expect(ROLE).toContain(URGANS_LINE);
+    // Since 2026-09-25 UrgAns says the same line as the rest of the product
+    // (lib/positioning.ts). The opening sentence is PROSE, so it is held to the
+    // shared constants here: change the line in positioning.ts and this fails
+    // until somebody re-reads that sentence. The answer to "what is Urganize"
+    // quotes the founder's lines by reference, so those two assertions catch
+    // the reference being dropped, or the "word for word" instruction that
+    // stops the model rewording them.
+    expect(ROLE).toContain(`the ${URGANS_LINE} inside Urganize, ${CORE_CLAUSE}.`);
     expect(ROLE).toContain('If you are asked what Urganize is');
+    expect(ROLE).toContain(`word for word: "${CORE_LINE}"`);
+    expect(ROLE).toContain(`word for word: "${CANONICAL_DESCRIPTION}"`);
+    // The category every other surface retired on 2026-09-24. This reads the
+    // RENDERED prompt, which the positioning guard cannot: it scans source,
+    // where the quoted lines are only `${...}` holes.
+    expect(ROLE).not.toMatch(/Music Business Manager/i);
     // The word is banned everywhere a person reads it. The one place the prompt
     // may name it is the instruction that forbids it.
     expect(URGANS_COPY_RULES).toContain('workspace');
@@ -72,6 +75,17 @@ describe('the system prompt', () => {
   it('tells the model to admit it has no streaming, audience, or campaign data', () => {
     expect(ROLE).toMatch(/streaming numbers/i);
     expect(ROLE).toMatch(/say so plainly/i);
+  });
+
+  it('tells the model not to use markdown, without quoting the forbidden syntax', () => {
+    // 2026-09-24: the chat renderer now shows **bold** as bold rather than
+    // literal asterisks, so ROLE's own instruction must never demonstrate
+    // the thing it forbids — CLAUDE.md already records this exact trap for
+    // em dashes in this same paragraph, and it is worth a real assertion
+    // rather than a comment, since nothing type-checks a sentence.
+    expect(ROLE).toMatch(/plain text, not markdown/i);
+    expect(ROLE).toMatch(/asterisks/i);
+    expect(ROLE).not.toContain('**');
   });
 });
 

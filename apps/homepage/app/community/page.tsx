@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { CUSTOMER_LINE } from "@/lib/positioning";
+import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/community";
 
@@ -19,7 +19,7 @@ import { WHATSAPP_COMMUNITY_URL } from "@/lib/community";
 export const metadata: Metadata = buildPageMetadata({
   title: "Community",
   description:
-    `Join the Urganize community, a group chat for people running rollouts on the ${CUSTOMER_LINE}.`,
+    `${CORE_LINE} Join our community, a group chat for people running rollouts.`,
   path: "/community",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For executives / For managers). The page stays public

@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
-import { join } from 'path';
+import { basename, join } from 'path';
 import { describe, expect, it } from 'vitest';
 import { userFacingStrings } from './copy-scan';
 import { BANNED_COPY_CHARS, BANNED_COPY_WORDS, bannedCopyInstruction } from './press-kits';
@@ -57,6 +57,33 @@ const FILES = [
   // readability caps on top; this one supplies the em dash, the banned words
   // and the "never says workspace" rule so there is one definition of each.
   join(WEB, 'lib', 'help-copy.ts'),
+  // Share to socials (2026-09-23): the same argument as the pullouts. A new
+  // surface, so it is born under the house rules, and it is the one surface
+  // in the product whose copy is PUBLISHED by the user as their own words on
+  // Instagram and WhatsApp. The outward-copy tests in social-share.test.ts add
+  // the rules that only apply there (no "rollout", no Urganize in a caption,
+  // no date leaking out of a secret one); this supplies the em dash and the
+  // banned words, so there is one definition of each.
+  ...walk(join(WEB, 'components', 'share')),
+  // basename rather than a path pattern: walk() joins with the platform's
+  // separator, so a pattern written for "/" alone matches nothing on Windows.
+  ...walk(join(WEB, 'lib')).filter((path) => basename(path).startsWith('social-share')),
+  ...walk(join(WEB, 'app', 'api', 'releases', '[releaseId]', 'share-card')),
+  // Saved UrgAns chats (2026-09-24), a new surface born under the house rules
+  // for the same reason the help pullouts were. ChappiConversation itself is
+  // deliberately NOT here: it predates the rules and still carries em dashes,
+  // which is the retrofit this guard's header rules out.
+  ...walk(join(WEB, 'app', 'api', 'urgans', 'conversations')),
+  join(WEB, 'lib', 'chappi', 'conversation-history.ts'),
+  join(WEB, 'lib', 'chappi', 'conversations-server.ts'),
+  join(WEB, 'stores', 'useChappiHistoryStore.ts'),
+  join(WEB, 'components', 'chappi', 'ChappiHistoryList.tsx'),
+  join(WEB, 'components', 'chappi', 'ChappiDeleteChatDialog.tsx'),
+  // Brand colors for those images (2026-09-24): the Settings editor and its
+  // route are the same new surface, so they are born under the same rules. The
+  // lib half is already reached by the social-share prefix above.
+  join(WEB, 'components', 'settings', 'BrandColorsSection.tsx'),
+  ...walk(join(WEB, 'app', 'api', 'workspace', 'artists', '[artistId]', 'brand-colors')),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
 // `userFacingStrings` moved to lib/copy-scan.ts on 2026-09-09, when the

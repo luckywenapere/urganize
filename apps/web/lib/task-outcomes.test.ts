@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { CORE_CLAUSE, URGANS_LINE } from './positioning';
 import {
   OUTCOME_SUMMARY_MAX_LENGTH,
   TASK_OUTCOME_LABELS,
@@ -88,6 +89,13 @@ describe('buildOutcomeAiMessages', () => {
     expect(messages[0].content).toContain('UrgAns');
     expect(messages[0].content).toContain('JSON only');
     expect(messages[0].content).toContain('followupQuestion');
+  });
+
+  it('describes UrgAns and Urganize with the shared lines, not one of its own', () => {
+    // The main UrgAns prompt and this one say the same thing (2026-09-25).
+    // This one used to call the product "a rollout planning app".
+    expect(messages[0].content).toContain(`UrgAns, the ${URGANS_LINE} inside Urganize, ${CORE_CLAUSE}.`);
+    expect(messages[0].content).not.toMatch(/rollout planning app/i);
   });
 
   it('carries the task, the rating label, and the note', () => {

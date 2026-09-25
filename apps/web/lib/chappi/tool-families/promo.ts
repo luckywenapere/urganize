@@ -1,7 +1,12 @@
-// Promotion tools (SERVER-ONLY): playlist pitching and the release recap card.
+// Promotion tools (SERVER-ONLY): playlist pitching, the release recap card, and
+// the share sheet.
 //
 // `pitch_song` is gated for a reason unlike the deletes: it does not destroy
 // anything, it puts a message in a real curator's inbox and cannot be unsent.
+//
+// `share_release` is NOT gated, and the difference is the point: it posts
+// nothing. It opens the sheet, the user answers its questions, and anything
+// that leaves Urganize leaves from the user's own phone, by their own tap.
 //
 // The three press kit tools that used to live here were removed 2026-09-05
 // with the release-scoped EPK. The standing per-artist kit has no per-release
@@ -9,6 +14,7 @@
 // it is its own piece of work.
 
 import { MAX_PITCH_NOTE_LENGTH, PITCH_PLATFORMS } from '@/lib/pitching';
+import { isSocialShareEnabled, shareDisplayTitle } from '@/lib/social-share';
 import {
   apiError,
   argString,
@@ -20,6 +26,7 @@ import {
 
 const PITCHING_OFF = "Playlist pitching isn't enabled yet.";
 const RECAP_OFF = "Rollout recaps aren't enabled yet.";
+const SHARE_OFF = "Sharing to socials isn't switched on for your team yet.";
 
 /** Bound the browse payload — the route returns up to 200 playlists. */
 const MAX_LISTED_PLAYLISTS = 30;
@@ -304,6 +311,45 @@ export const PROMO_TOOLS: ChappiTool[] = [
       if (isFlagGateOff(res)) return fail(RECAP_OFF);
       if (!res.ok) return fail(apiError(res, 'Could not delete the recap.'));
       return { ok: true, summary: 'Deleted the recap card.' };
+    },
+  },
+  {
+    name: 'share_release',
+    kind: 'read',
+    description:
+      "Open the share sheet for a rollout. It turns the rollout into posts for Instagram, WhatsApp status, X and Snapchat, and a message the user can DM to anybody. The sheet asks four quick questions first (who is posting, whether the date can be public, a link for fans, one extra line), then the user posts from their own phone. You post nothing and cannot: this only opens the sheet. Say it is open and let them take it from there.",
+    inputSchema: {
+      type: 'object',
+      properties: { releaseId: { type: 'string' } },
+      required: ['releaseId'],
+    },
+    execute: async (ctx, args) => {
+      const releaseId = argString(args, 'releaseId');
+      if (!releaseId) return fail('releaseId is required.');
+      // Checked here rather than through a route's flag-off 404, unlike every
+      // other tool in this file: nothing this tool calls sits behind the share
+      // flag. The one route that does renders a poster, far too heavy to call
+      // just to learn whether the feature is on. A NEXT_PUBLIC_* read is
+      // inlined into the server build exactly as it is into a route, so this
+      // gives the same answer the sheet itself would.
+      if (!isSocialShareEnabled()) return fail(SHARE_OFF);
+
+      // Read first. This is the visibility check as much as it is a read: the
+      // route is team-aware and 404s for a rollout this person cannot see, so
+      // the sheet never opens on somebody else's work. It also names the
+      // rollout in the reply.
+      const res = await callInternalApi(ctx, `/api/releases/${releaseId}`, { method: 'GET' });
+      if (!res.ok) return fail(apiError(res, 'Could not find that rollout.'));
+      const release = (res.body.release ?? {}) as Record<string, unknown>;
+      const title = shareDisplayTitle(typeof release.title === 'string' ? release.title : null);
+
+      return {
+        ok: true,
+        summary: title
+          ? `Opened the share sheet for "${title}". They answer four quick questions, then post from their own phone.`
+          : 'Opened the share sheet. They answer four quick questions, then post from their own phone.',
+        clientAction: { type: 'open_share', releaseId },
+      };
     },
   },
 ];

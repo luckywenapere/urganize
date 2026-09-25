@@ -3,13 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { CUSTOMER_LINE, PROMISE } from "@/lib/positioning";
+import { CANONICAL_DESCRIPTION, CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Brand",
   description:
-    `How Urganize looks, how it speaks and what it stands for. The brand behind the ${CUSTOMER_LINE}.`,
+    `How Urganize looks, how it speaks and what it stands for. ${CORE_LINE}`,
   path: "/brand",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For executives / For managers). The page stays public
@@ -153,18 +153,17 @@ export default function BrandPage() {
                 {/* Composed from the shared constants rather than typed out.
                     This block is the one paragraph on the site whose entire job
                     is to state the positioning, so it is the last place that
-                    should be able to drift from it — and it was written out by
-                    hand until 2026-09-11, when widening the category meant
-                    finding it by grep rather than by the compiler. */}
+                    should be able to drift from it. Since 2026-09-24 it is the
+                    founder's core line, verbatim. */}
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Urganize is an {CUSTOMER_LINE}. {PROMISE}.
+                  {CORE_LINE}
                 </p>
               </div>
 
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Artists and managers. One rollout is a lot of moving parts; a roster is
+                  Artists, managers and labels. One rollout is a lot of moving parts; a roster is
                   many calendars, many rollouts at once and a pile of chats holding it
                   together. Urganize is what runs that. Teams with a bigger roster get the
                   Label plan, with the founders working alongside them.
@@ -185,16 +184,14 @@ export default function BrandPage() {
                 </ul>
               </div>
 
-              {/* Boilerplate — copy/paste block for media */}
+              {/* Boilerplate: copy/paste block for media. The founder's long
+                  description, verbatim, from the shared constant (2026-09-24),
+                  so a journalist pasting it quotes exactly what every other
+                  surface says. */}
               <div className="border border-[color:var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5">
                 <p className={sectionEyebrow}>Boilerplate · copy / paste</p>
                 <p className="mt-2 text-[var(--marketing-text)]">
-                  Urganize is an AI Music Business Manager for artists and
-                  managers. It helps music teams plan rollouts, coordinate people, manage
-                  assets and metadata, track execution and keep every part of a rollout
-                  moving from one place. Every rollout runs on a plan written by real
-                  managers, with an owner and a due date on every activity and a press
-                  kit you can send as one link.
+                  {CANONICAL_DESCRIPTION}
                 </p>
               </div>
 

@@ -47,6 +47,10 @@ export type ChappiIntentKind =
   // Intent-only for the same reason: the recap is a once-per-release moment,
   // not a standing button, and it only means anything on a finished release.
   | 'generate_recap'
+  // Intent-only as well. Sharing is a moment after a rollout exists, and every
+  // rollout already carries a Share button, so a standing chip would be a
+  // second door to the same room.
+  | 'share_socials'
   | 'help';
 
 /**
@@ -170,6 +174,8 @@ export type ChappiToolName =
   | 'get_recap'
   | 'generate_recap'
   | 'delete_recap'
+  // share to socials (2026-09-23)
+  | 'share_release'
   // rollout planner (since 2026-09-15, one call builds the plan; there is no
   // approve/discard, because there is no draft left to settle)
   | 'get_release_plan'
@@ -244,7 +250,19 @@ export type ChappiToolName =
  * for ChappiHero to execute (navigate, open a modal, re-sync the store).
  */
 export type ChappiClientAction =
-  | { type: 'navigate'; href: string }
+  | {
+      type: 'navigate';
+      href: string;
+      /**
+       * Set only by create_release, and only when that was the person's first
+       * real rollout (share to socials, 2026-09-23). The client then shows the
+       * once-only share sheet BEFORE navigating, through the same helper the
+       * three create flows use, so a first rollout made in chat is offered it
+       * exactly like one made from a button. A release id, not a boolean, so
+       * the sheet knows which rollout it is about.
+       */
+      offerFirstShareFor?: string;
+    }
   | { type: 'open_create_release' }
   | { type: 'open_quick_create'; releaseId?: string | null }
   /**
@@ -274,6 +292,15 @@ export type ChappiClientAction =
    * sitting in the transcript.
    */
   | { type: 'open_recap'; releaseId: string }
+  /**
+   * Open the share sheet for this rollout (share to socials, 2026-09-23).
+   *
+   * Same shape as open_recap for the same reason: the posts are images the
+   * user sends from their own phone, and a tool can neither post them nor hand
+   * them over as text. The sheet asks its four questions and renders the
+   * images itself, so only the id travels.
+   */
+  | { type: 'open_share'; releaseId: string }
   | { type: 'refresh' };
 
 /** Normalized outcome of a single tool execution, fed back to the model. */

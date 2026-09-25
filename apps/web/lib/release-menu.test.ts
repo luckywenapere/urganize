@@ -27,6 +27,7 @@ describe('RELEASE_MENU_ORDER', () => {
       'coverart',
       'song',
       'files',
+      'share',
       'capture',
       'change-artist',
       'archive',
@@ -55,6 +56,10 @@ describe('RELEASE_MENU_ORDER', () => {
     // pills), and that is the only revealed preference there is for it.
     expect(position('metadata')).toBeLessThan(position('note'));
     expect(position('note')).toBeLessThan(position('coverart'));
+    // Share to socials is outward, so it sits with capture, after the
+    // assets you set once and before the corrective and terminal actions.
+    expect(position('files')).toBeLessThan(position('share'));
+    expect(position('share')).toBeLessThan(position('change-artist'));
     // Everything before the corrective and terminal actions.
     expect(position('capture')).toBeLessThan(position('change-artist'));
     expect(position('change-artist')).toBeLessThan(position('archive'));

@@ -13,6 +13,7 @@ import { getChappiModelConfig } from './config';
 import { getChappiTool, getChappiToolSchemas } from './tools';
 import type { ChappiTool, ChappiToolContext } from './tools';
 import { executeToolCall } from './dispatch';
+import { stripModelMarkup } from '@/lib/model-markup';
 import type {
   ChappiClientAction,
   ChappiMessage,
@@ -40,6 +41,28 @@ type OpenAiChatMessage =
   | { role: 'system' | 'user' | 'assistant'; content: string }
   | { role: 'assistant'; content: string | null; tool_calls: OpenAiToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string };
+
+/**
+ * Converts the client's conversation history into what goes back to the
+ * model, stripping markdown syntax off the ASSISTANT's own turns only (a
+ * user's own words are never touched). Without this, UrgAns's own past
+ * "**Setup:**"-style replies stay in the conversation as an example it keeps
+ * imitating — the raw text is what's rendered on screen, so it's also what
+ * gets sent back as history on every later turn.
+ *
+ * Strip-then-drop, not drop-then-strip: a message that was ONLY markup
+ * syntax (a bare `---`, say) strips to empty and is correctly dropped, where
+ * checking blankness on the raw text first would have kept it.
+ */
+export function toModelHistory(messages: ChappiMessage[]): OpenAiChatMessage[] {
+  return messages
+    .map((m) => ({
+      role: m.role,
+      content: m.role === 'assistant' ? stripModelMarkup(m.content) : m.content,
+    }))
+    .filter((m) => m.content.trim())
+    .map((m) => ({ role: m.role, content: m.content }) as OpenAiChatMessage);
+}
 
 type OpenAiChoice = {
   message?: { content?: string | null; tool_calls?: OpenAiToolCall[] };
@@ -149,9 +172,7 @@ export async function runChappiAgent(params: {
   const tools = getChappiToolSchemas();
   const conversation: OpenAiChatMessage[] = [
     { role: 'system', content: params.system },
-    ...params.messages
-      .filter((m) => m.content.trim())
-      .map((m) => ({ role: m.role, content: m.content }) as OpenAiChatMessage),
+    ...toModelHistory(params.messages),
   ];
 
   const clientActions: ChappiClientAction[] = [];
@@ -286,9 +307,7 @@ export async function closeConfirmedAction(params: {
       model: config.model,
       messages: [
         { role: 'system', content: params.system },
-        ...params.messages
-          .filter((m) => m.content.trim())
-          .map((m) => ({ role: m.role, content: m.content }) as OpenAiChatMessage),
+        ...toModelHistory(params.messages),
         {
           role: 'user',
           content: `[The user approved the pending "${params.toolName}" action on the confirmation card, and it has now run. ${outcome} Tell them the outcome in one or two sentences. Do not call any tools.]`,

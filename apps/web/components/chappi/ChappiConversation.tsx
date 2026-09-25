@@ -23,6 +23,8 @@ import {
 } from '@/components/icons';
 import { TeamBriefNudge } from './TeamBriefNudge';
 import { BriefAttribution } from './BriefAttribution';
+import { ReplyText } from './ReplyText';
+import { stripModelMarkup } from '@/lib/model-markup';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
 import { ChappiRecapCard } from '@/components/chappi/ChappiRecapCard';
@@ -34,9 +36,23 @@ import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
+import {
+  appendToChat,
+  selectChatSaveNotice,
+  useChappiHistoryStore,
+} from '@/stores/useChappiHistoryStore';
+import {
+  CHAPPI_HISTORY_LIMIT,
+  isChappiHistoryEnabled,
+  newChatId,
+} from '@/lib/chappi/conversation-history';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useNotesStore } from '@/stores/useNotesStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
+import { useShareStore } from '@/stores/useShareStore';
+import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
+import { markPendingFirstShare } from '@/lib/social-share-offer';
+import { actionsForLeftChat, firstShareOffersIn } from '@/lib/chappi/left-chat-actions';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { supabase } from '@/lib/supabase/client';
@@ -111,14 +127,36 @@ async function getAccessToken(): Promise<string> {
   return session?.access_token || '';
 }
 
+// Saved chats (NEXT_PUBLIC_FEATURE_URGANS_HISTORY). Read once, like every
+// other flag, so Next inlines it.
+const HISTORY_ENABLED = isChappiHistoryEnabled();
+
 // Module-scope id generator: keeps impure Date.now() out of component scope
 // (react-hooks/purity), and the counter guarantees uniqueness even when two
 // turns land in the same millisecond (e.g. a chip's user+assistant pair).
+//
+// With chat history on, ids are compared position by position across tabs
+// and devices to notice two places writing one chat, so they must be unique
+// EVERYWHERE, not just in this tab — two tabs opened at once would otherwise
+// both mint `<ms>-1-u`. A random uuid then. With history off, the old form.
 let messageSeq = 0;
 function nextMessageId(role: 'u' | 'a'): string {
+  if (HISTORY_ENABLED) return newChatId();
   messageSeq += 1;
   return `${Date.now()}-${messageSeq}-${role}`;
 }
+
+/** What the composer says when the chat on screen has stopped saving. Only
+ * failures earn a line; a save in progress is silent. */
+const SAVE_NOTICE_COPY: Record<'retrying' | 'blocked' | 'too_long', string> = {
+  retrying: "Not saved yet. We'll keep trying.",
+  blocked: "This chat can't be saved right now.",
+  too_long: 'This chat is too long to save. Start a new chat.',
+};
+
+/** One request/response exchange: the store epoch it started under, and the
+ * saved chat it belongs to — see beginTurn inside the component. */
+type Turn = { epoch: number; conversationId: string | null };
 
 /**
  * Chappi's full conversation surface — lives on its own page
@@ -164,7 +202,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     setScopedReleaseId,
     pendingConfirmation,
     setPendingConfirmation,
+    epoch,
+    conversationId,
+    restoredCount,
   } = useChappiStore();
+  // One quiet line above the composer when this chat has stopped saving.
+  // Null with history off, and for every ordinary save in progress.
+  const saveNotice = useChappiHistoryStore((state) =>
+    HISTORY_ENABLED ? selectChatSaveNotice(state, conversationId) : null
+  );
   // The release the conversation is pinned to (scope picker under the
   // composer). Falls back to null if the id no longer resolves (deleted
   // release, stale store) so the scope silently degrades to "All releases".
@@ -172,7 +218,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     ? releases.find((release) => release.id === scopedReleaseId) ?? null
     : null;
   const { openQuickCreate, openTask } = useTaskUI();
-  const [isThinking, setIsThinking] = useState(false);
+  // Which transcript a request is thinking FOR, as the store epoch it started
+  // under — not a plain boolean. "New chat" (or sign-out) mid-reply bumps the
+  // epoch, so the new transcript is not thinking even though the old request
+  // is still in flight: its composer is usable immediately instead of staying
+  // disabled for up to a minute while an answer for another chat finishes.
+  const [thinkingEpoch, setThinkingEpoch] = useState<number | null>(null);
+  const isThinking = thinkingEpoch === epoch;
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // The release whose song the transcript is currently offering to upload, or
@@ -218,7 +270,20 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const lastMessageId = lastMessage?.id ?? null;
   const [prevLastMessageId, setPrevLastMessageId] = useState<string | null>(lastMessageId);
   const [revealMessageId, setRevealMessageId] = useState<string | null>(null);
-  if (lastMessageId !== prevLastMessageId) {
+  // The transcript was REPLACED rather than added to (a saved chat opened,
+  // "New chat", sign-out): the new last message did not just arrive, so it
+  // must not replay word by word, and the cards belong to the transcript that
+  // left. Checked before the arrival guard below, which would otherwise read
+  // an opened chat's last reply as brand new.
+  const [prevEpoch, setPrevEpoch] = useState(epoch);
+  if (epoch !== prevEpoch) {
+    setPrevEpoch(epoch);
+    setPrevLastMessageId(lastMessageId);
+    setRevealMessageId(null);
+    if (songUploadReleaseId) setSongUploadReleaseId(null);
+    if (coverArtReleaseId) setCoverArtReleaseId(null);
+    if (recapReleaseId) setRecapReleaseId(null);
+  } else if (lastMessageId !== prevLastMessageId) {
     setPrevLastMessageId(lastMessageId);
     // A new user turn clears the reveal (the previous reply has finished
     // animating; keeping the id would replay it if the node ever remounts).
@@ -240,9 +305,17 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
 
   const hasMessages = messages.length > 0;
 
+  // With history on, a chat that was just opened (or restored, or this
+  // surface just mounted over one) JUMPS to its end — smooth-scrolling
+  // through a long saved transcript reads as the page doing something on its
+  // own. A message arriving in the chat on screen still scrolls smoothly.
+  // Null to start, so the first run counts as an open.
+  const scrolledEpochRef = useRef<number | null>(null);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages.length, isThinking]);
+    const opened = HISTORY_ENABLED && scrolledEpochRef.current !== epoch;
+    scrolledEpochRef.current = epoch;
+    bottomRef.current?.scrollIntoView({ behavior: opened ? 'instant' : 'smooth', block: 'end' });
+  }, [messages.length, isThinking, epoch]);
 
   // Appends only the ASSISTANT side of a turn. Callers own appending the
   // user side (a chip's label, or the typed prompt) — keeps each turn
@@ -262,6 +335,52 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       ...(briefSections?.length ? { briefSections } : {}),
     });
     setReply(replyMeta ?? { text: replyText });
+  };
+
+  // Every reply that arrives AFTER an await is a late append: the transcript
+  // it was asked from may have been replaced in the meantime ("New chat",
+  // sign-out, another saved chat opened). A turn captures the store epoch and
+  // the chat id when it starts, read from the store rather than this render so
+  // a handler created before the change cannot pass off an old epoch as current.
+  const beginTurn = (): Turn => {
+    const state = useChappiStore.getState();
+    return { epoch: state.epoch, conversationId: state.conversationId };
+  };
+  const isTurnCurrent = (turn: Turn) => useChappiStore.getState().epoch === turn.epoch;
+
+  // With chat history on, an answer for a chat that has left the screen is
+  // SAVED to that chat instead of dropped (founder decision, 2026-09-24). It
+  // arrives without its suggestions, approval card or page jump: those belong
+  // to a screen nobody is looking at. appendToChat refuses anything it has
+  // nowhere to put — history off, another account, a chat deleted here.
+  const deliverToChat = (chatId: string | null, text: string, briefSections?: string[]) => {
+    if (!HISTORY_ENABLED || !chatId) return;
+    appendToChat(chatId, {
+      id: nextMessageId('a'),
+      role: 'assistant',
+      content: text,
+      ...(briefSections?.length ? { briefSections } : {}),
+    });
+  };
+
+  // Appends a late reply only if its transcript is still the one on screen,
+  // and says whether it did — callers use that to decide whether the rest of
+  // the reply (an approval card, a page jump, an opened card) still applies.
+  // A reply for a transcript that has gone is never shown under a different
+  // conversation, or a different account: with history on it is saved to its
+  // own chat, with history off it is dropped.
+  const deliverReply = (
+    turn: Turn,
+    replyText: string,
+    replyMeta?: ChappiReply,
+    briefSections?: string[]
+  ): boolean => {
+    if (!isTurnCurrent(turn)) {
+      deliverToChat(turn.conversationId, replyText, briefSections);
+      return false;
+    }
+    appendAssistantReply(replyText, replyMeta, briefSections);
+    return true;
   };
 
   // Opens a fresh, empty note on the Notes page. `?new=1` is the deep link
@@ -284,11 +403,27 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // A song upload has finished: record it as a turn, drop the card, and drop
   // the cached Song scene so the workspace shows the new file when it is next
   // opened rather than the list from before the upload.
+  //
+  // The card calls these when an upload FINISHES, which can be after its
+  // transcript was replaced ("New chat" clears the card slots, unmounting the
+  // card, but its upload keeps going). The file really did land, so the scene
+  // is invalidated either way; the transcript note goes to the transcript
+  // this card sat in — on screen if it still is, else (history on) into that
+  // saved chat, else nowhere. `epoch` and `conversationId` here are this
+  // render's, which is the render the card last received the handler from —
+  // so a card that outlived its transcript carries the old ones.
+  const cardStillCurrent = () => useChappiStore.getState().epoch === epoch;
+  const cardChatId = conversationId;
+  const reportFromCard = (text: string) => {
+    if (cardStillCurrent()) appendAssistantReply(text);
+    else deliverToChat(cardChatId, text);
+  };
+
   const handleSongUploaded = (song: ReleaseSong) => {
     setSongUploadReleaseId(null);
     invalidateScene(song.releaseId, 'song');
     const releaseTitle = releases.find((item) => item.id === song.releaseId)?.title;
-    appendAssistantReply(
+    reportFromCard(
       releaseTitle
         ? `Uploaded "${song.fileName}" to ${releaseTitle}.`
         : `Uploaded "${song.fileName}".`
@@ -304,12 +439,16 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     invalidateScene(coverArt.releaseId, 'coverart');
     void loadCommandCenter({ force: true });
     const releaseTitle = releases.find((item) => item.id === coverArt.releaseId)?.title;
-    appendAssistantReply(
+    reportFromCard(
       releaseTitle
         ? `Set "${coverArt.fileName}" as the cover art for ${releaseTitle}.`
         : `Set "${coverArt.fileName}" as the cover art.`
     );
   };
+
+  // The recap card reports "saved" / "could not save" back into the log. Same
+  // rule as the upload handlers above: only into the transcript it sat in.
+  const handleReportRecap = (message: string) => reportFromCard(message);
 
   // Deterministic intent handling — chips, and the AI-off fallback for prompts.
   const handleIntent = (intent: ChappiIntent) => {
@@ -394,6 +533,10 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         // would now aim at nothing. It calls the same route the
         // generate_status_update tool calls, which is what keeps the answer
         // identical whether or not a model is configured.
+        //
+        // Captured before the first await: the answer lands a network round
+        // trip later, by which time the transcript may have been replaced.
+        const turn = beginTurn();
         void (async () => {
           try {
             const token = await getAccessToken();
@@ -411,7 +554,8 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
               error?: string;
             };
             if (!response.ok) {
-              appendAssistantReply(
+              deliverReply(
+                turn,
                 // The route answers 404 both for the flag being off and for a
                 // release that is not yours, so it must not name a switch —
                 // the same reason the tool routes this through isFlagGateOff.
@@ -423,13 +567,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             // Same facts line the tool appends, from the same builder, so the
             // deterministic answer and the agentic one carry identical figures.
             const facts = payload.stats ? describeStatusFacts(payload.stats) : '';
-            appendAssistantReply(
+            deliverReply(
+              turn,
               [statusUpdate || 'Could not write that status update. Try again.', facts]
                 .filter(Boolean)
                 .join('\n\n')
             );
           } catch {
-            appendAssistantReply(
+            deliverReply(
+              turn,
               'Could not reach the status update generator. Check your connection and try again.'
             );
           }
@@ -456,6 +602,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         // No highlight in this path, deliberately: there is no model to hear
         // "say it went platinum", and the route treats it as optional. Anyone
         // who wants one asks in a sentence, which is the agentic path.
+        const turn = beginTurn();
         void (async () => {
           try {
             const token = await getAccessToken();
@@ -469,7 +616,8 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             });
             const payload = (await response.json().catch(() => ({}))) as { error?: string };
             if (!response.ok) {
-              appendAssistantReply(
+              deliverReply(
+                turn,
                 // The route's own wording covers both "not finished yet" and
                 // "not yours", and it must not name a switch — the same reason
                 // the tool routes this through isFlagGateOff.
@@ -478,15 +626,39 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
               return;
             }
             // The card fetches its own signed URLs on mount, so nothing from
-            // this response is carried into it.
-            setRecapReleaseId(target);
-            appendAssistantReply('Here is your recap card. Pick a size and save it.');
+            // this response is carried into it. Only opened if the reply
+            // actually landed: a card under a different conversation would be
+            // orphaned chrome.
+            if (deliverReply(turn, 'Here is your recap card. Pick a size and save it.')) {
+              setRecapReleaseId(target);
+            }
           } catch {
-            appendAssistantReply(
+            deliverReply(
+              turn,
               'Could not reach the recap builder. Check your connection and try again.'
             );
           }
         })();
+        return;
+      }
+      case 'share_socials': {
+        // No model in this path, so there is nobody to hear "the Lagos Nights
+        // one". The rollout in view, or the only one there is; anything else
+        // is a question, because opening the sheet on the wrong rollout would
+        // put the wrong title on somebody's post.
+        const target =
+          scopedRelease?.id ?? (releases.length === 1 ? releases[0]?.id : null);
+        if (!target) {
+          appendAssistantReply(
+            'Which rollout? Pick it below the prompt and ask me again.'
+          );
+          return;
+        }
+        if (openShareSheet(target)) {
+          appendAssistantReply(
+            'Opening the share sheet. Answer four quick questions and your posts are ready.'
+          );
+        }
         return;
       }
       case 'create_note': {
@@ -500,13 +672,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         // is no model to hear "put it under Best", so a scoped conversation
         // attaches its notes the same way add_task attaches its activities.
         const releaseId = scopedRelease?.id ?? null;
+        const turn = beginTurn();
         // create() resolves to null on a failed write rather than throwing, so
         // the value is the success check; catch only covers a network throw.
         void useNotesStore
           .getState()
           .create({ body, releaseId })
           .then((note) => {
-            appendAssistantReply(
+            deliverReply(
+              turn,
               note
                 ? scopedRelease
                   ? `Saved to Notes, under ${scopedRelease.title}.`
@@ -515,7 +689,8 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             );
           })
           .catch(() => {
-            appendAssistantReply(
+            deliverReply(
+              turn,
               "Couldn't save that note. Try again, or open Notes and write it there."
             );
           });
@@ -576,10 +751,35 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     handleIntent({ kind: chip.intent, plannerPreset: chip.plannerPreset });
   };
 
+  // The share sheet is mounted once, in AppShell, and opened through its store.
+  // `open` answers false only when no sheet is mounted yet (it is a lazy chunk),
+  // and then the honest reply is that it is not ready, not that it opened.
+  const openShareSheet = (releaseId: string): boolean => {
+    const opened = useShareStore.getState().open({ releaseId, source: 'urgans' });
+    if (!opened) {
+      appendAssistantReply('The share sheet is still loading. Ask me again in a moment.');
+    }
+    return opened;
+  };
+
   // Client-side actions the agent asks us to perform.
   const executeClientActions = (actions: ChappiClientAction[]) => {
     for (const action of actions) {
-      if (action.type === 'navigate') router.push(action.href);
+      if (action.type === 'navigate') {
+        const href = action.href;
+        // create_release sets this when that was the person's first rollout.
+        // The once-only share sheet then comes first and the navigation runs
+        // when it closes, exactly as it does after the create buttons.
+        if (action.offerFirstShareFor) {
+          withFirstShareOffer({
+            releaseId: action.offerFirstShareFor,
+            firstRelease: true,
+            then: () => router.push(href),
+          })();
+        } else {
+          router.push(href);
+        }
+      } else if (action.type === 'open_share') openShareSheet(action.releaseId);
       else if (action.type === 'open_create_release') onNewRelease();
       else if (action.type === 'open_quick_create')
         openQuickCreate({ releaseId: action.releaseId ?? undefined, source: 'quick_create' });
@@ -590,21 +790,40 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     }
   };
 
+  // A reply whose chat has left the screen keeps only a catalog refresh (its
+  // tools did run), and hands a first-rollout share offer to the pending
+  // marker rather than dropping it: that offer happens once, and the sheet
+  // then offers itself at a quiet moment the next time the app loads instead
+  // of over the chat the user moved to. See lib/chappi/left-chat-actions.ts.
+  const settleLeftChatActions = (actions: ChappiClientAction[]) => {
+    executeClientActions(actionsForLeftChat(actions));
+    for (const releaseId of firstShareOffersIn(actions)) markPendingFirstShare(releaseId);
+  };
+
   const runDeterministic = (prompt: string) => handleIntent(resolveIntent(prompt));
 
   const submitPrompt = async (prompt: string, historyForApi: ChappiMessage[]) => {
-    setIsThinking(true);
+    const turn = beginTurn();
+    setThinkingEpoch(turn.epoch);
+    // The router answers synchronously into whatever transcript is on screen,
+    // so after any await it only runs if that is still this turn's transcript.
+    const fallBackToRouter = () => {
+      if (isTurnCurrent(turn)) runDeterministic(prompt);
+    };
     try {
       const token = await getAccessToken();
       if (!token) {
-        runDeterministic(prompt);
+        fallBackToRouter();
         return;
       }
       const response = await fetch('/api/urgans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          messages: historyForApi,
+          // The route forwards only the last CHAPPI_HISTORY_LIMIT messages to
+          // the model, so sending more is weight with no effect — and a
+          // restored chat can be hundreds of messages long.
+          messages: historyForApi.slice(-CHAPPI_HISTORY_LIMIT),
           releaseScope: scopedRelease
             ? { id: scopedRelease.id, title: scopedRelease.title }
             : undefined,
@@ -614,7 +833,12 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       const data = (await response.json().catch(() => null)) as ChappiResponse | null;
 
       if (response.ok && data?.mode === 'agent') {
-        appendAssistantReply(data.reply, undefined, data.briefSections);
+        if (!deliverReply(turn, data.reply, undefined, data.briefSections)) {
+          // The user moved on. No approval card: it would be asking about a
+          // conversation that is no longer on screen, and nothing has run.
+          settleLeftChatActions(data.clientActions);
+          return;
+        }
         setPendingConfirmation(data.pendingConfirmation ?? null);
         if (data.pendingConfirmation) {
           captureAnalyticsEvent({
@@ -626,7 +850,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         return;
       }
       if (data?.mode === 'error') {
-        appendAssistantReply(data.error);
+        deliverReply(turn, data.error);
         return;
       }
       // A ceiling reply carries a reason. Shown before the router runs so the
@@ -634,15 +858,17 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       // silently getting a terser assistant. The typed command still works —
       // that is the point of falling through rather than refusing.
       if (data?.mode === 'deterministic' && data.notice) {
-        appendAssistantReply(data.notice);
+        deliverReply(turn, data.notice);
       }
       // Deterministic mode (model not configured) or any unexpected shape:
       // fall back to the local intent router.
-      runDeterministic(prompt);
+      fallBackToRouter();
     } catch {
-      runDeterministic(prompt);
+      fallBackToRouter();
     } finally {
-      setIsThinking(false);
+      // Only clears the indicator this turn set. If the transcript was
+      // replaced and a new turn started meanwhile, that one owns it now.
+      setThinkingEpoch((current) => (current === turn.epoch ? null : current));
     }
   };
 
@@ -671,18 +897,19 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     const historyForApi = [...messages, userMessage];
     appendMessage(userMessage);
 
-    setIsThinking(true);
+    const turn = beginTurn();
+    setThinkingEpoch(turn.epoch);
     try {
       const token = await getAccessToken();
       if (!token) {
-        appendAssistantReply('You are signed out, so nothing ran. Sign in and try again.');
+        deliverReply(turn, 'You are signed out, so nothing ran. Sign in and try again.');
         return;
       }
       const response = await fetch('/api/urgans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          messages: historyForApi,
+          messages: historyForApi.slice(-CHAPPI_HISTORY_LIMIT),
           releaseScope: scopedRelease
             ? { id: scopedRelease.id, title: scopedRelease.title }
             : undefined,
@@ -693,21 +920,27 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       const data = (await response.json().catch(() => null)) as ChappiResponse | null;
 
       if (response.ok && data?.mode === 'agent') {
-        appendAssistantReply(data.reply, undefined, data.briefSections);
-        executeClientActions(data.clientActions);
+        // The approved action HAS run by now, so its catalog refresh applies
+        // even if the user has moved on; the rest only belongs on screen.
+        if (deliverReply(turn, data.reply, undefined, data.briefSections)) {
+          executeClientActions(data.clientActions);
+        } else {
+          settleLeftChatActions(data.clientActions);
+        }
         return;
       }
       if (data?.mode === 'error') {
-        appendAssistantReply(data.error);
+        deliverReply(turn, data.error);
         return;
       }
-      appendAssistantReply('That did not go through. Nothing was changed.');
+      deliverReply(turn, 'That did not go through. Nothing was changed.');
     } catch {
-      appendAssistantReply(
+      deliverReply(
+        turn,
         'Something went wrong confirming that. Check your rollout, it may or may not have gone through.'
       );
     } finally {
-      setIsThinking(false);
+      setThinkingEpoch((current) => (current === turn.epoch ? null : current));
     }
   };
 
@@ -749,9 +982,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // turn that produced it) and re-submit the history up to that turn. Only
   // offered on the transcript's final message, and only when a user turn
   // precedes it — the standard chat-retry contract.
+  //
+  // And only on a reply added THIS session. A restored chat's last reply is
+  // yesterday's answer: regenerating it would re-run whatever tools it used
+  // and bill an action for a question the user is not asking now. With
+  // history off `restoredCount` is always 0, so this changes nothing there.
   const canRetry =
     !isThinking &&
     lastMessage?.role === 'assistant' &&
+    messages.length - 1 >= restoredCount &&
     messages.some((message) => message.role === 'user');
   const handleRetry = () => {
     if (!canRetry || !lastMessage) return;
@@ -928,7 +1167,11 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             auto-scroll below still follows the newest reply either way. */}
         <div className={`mx-auto flex w-full flex-col ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>
           {isPanel ? null : (
-            <div className="flex shrink-0 justify-end pb-3 pt-1">
+            // With history on, the page's chats column (xl+) carries its own
+            // "New chat", so this one steps aside where the column shows.
+            <div
+              className={`flex shrink-0 justify-end pb-3 pt-1 ${HISTORY_ENABLED ? 'xl:hidden' : ''}`}
+            >
               <button
                 type="button"
                 onClick={reset}
@@ -971,7 +1214,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
                 : null
             }
             onDismissRecap={() => setRecapReleaseId(null)}
-            onReportRecap={appendAssistantReply}
+            onReportRecap={handleReportRecap}
           />
         </div>
       </div>
@@ -984,6 +1227,11 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
               composer so it is visible without scrolling; the component
               itself decides whether it has anything to say. */}
           {messages.some((message) => message.role === 'assistant') ? <TeamBriefNudge /> : null}
+          {saveNotice ? (
+            <p role="status" className="mb-2 px-2 text-center text-xs text-content-tertiary">
+              {SAVE_NOTICE_COPY[saveNotice]}
+            </p>
+          ) : null}
           {inputForm}
         </div>
       </div>
@@ -1164,12 +1412,6 @@ function Transcript({
   );
 }
 
-// Per-word stagger for the reveal. The delay is capped so a long answer's
-// tail never keeps the user waiting — everything past the cap fades in
-// together, which reads as the stream "catching up".
-const REVEAL_WORD_STAGGER_MS = 24;
-const REVEAL_MAX_DELAY_MS = 1400;
-
 /**
  * One assistant reply: the (optionally revealed) text plus its action row.
  * Owns its own copy/feedback state so a transcript of many replies doesn't
@@ -1199,7 +1441,9 @@ function AssistantMessage({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(content);
+      // Clean text, not the raw reply: a copied "**Setup:**" pasted into
+      // WhatsApp or an email would show its asterisks literally there too.
+      await navigator.clipboard.writeText(stripModelMarkup(content));
       captureAnalyticsEvent({ name: 'urgans_reply_action', properties: { action: 'copy' } });
       setCopied(true);
       if (copyResetRef.current) clearTimeout(copyResetRef.current);
@@ -1225,8 +1469,8 @@ function AssistantMessage({
 
   return (
     <div>
-      <div className="whitespace-pre-wrap text-sm leading-7 text-content-primary">
-        {reveal ? <RevealedText content={content} /> : content}
+      <div className="whitespace-pre-wrap break-words text-sm leading-7 text-content-primary">
+        <ReplyText content={content} reveal={reveal} />
       </div>
       {/* Attribution sits between the answer and the action row: it belongs to
           the answer, and placing it among copy/retry/thumbs would read as a
@@ -1281,46 +1525,5 @@ function AssistantMessage({
         </button>
       </div>
     </div>
-  );
-}
-
-/**
- * Tokenizes a reply for the reveal: whitespace runs (spaces, newlines) get
- * `delay: null` and render as bare text nodes so `whitespace-pre-wrap` line
- * breaks survive untouched; word tokens carry their staggered delay. Module
- * scope and pure per call — the running word counter must not live inside
- * the component render (react-hooks/purity forbids reassignment there).
- */
-function buildRevealTokens(content: string): Array<{ token: string; delay: number | null }> {
-  let wordIndex = 0;
-  return content
-    .split(/(\s+)/)
-    .filter((token) => token !== '')
-    .map((token) => {
-      if (/^\s+$/.test(token)) return { token, delay: null };
-      const delay = Math.min(wordIndex * REVEAL_WORD_STAGGER_MS, REVEAL_MAX_DELAY_MS);
-      wordIndex += 1;
-      return { token, delay };
-    });
-}
-
-/**
- * Word-by-word fade-in for a newly arrived reply (CSS only — framer-motion
- * was removed 2026-08-08, and a stagger of opacity fades is exactly the kind
- * of motion CSS expresses fine).
- */
-function RevealedText({ content }: { content: string }) {
-  return (
-    <>
-      {buildRevealTokens(content).map(({ token, delay }, index) =>
-        delay === null ? (
-          token
-        ) : (
-          <span key={index} className="urgans-word" style={{ animationDelay: `${delay}ms` }}>
-            {token}
-          </span>
-        )
-      )}
-    </>
   );
 }

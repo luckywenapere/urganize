@@ -220,6 +220,29 @@ export interface AnalyticsEventPropertiesMap {
     status?: number;
     reason: string;
   };
+  /**
+   * Share to socials (2026-09-23). `opened` against `made` against `sent` is
+   * the whole funnel, and `source` says whether the first-rollout offer earns
+   * its interruption. NO TEXT, EVER: not the caption, not the fan link, not
+   * the extra line. Those are the person's own words about an unreleased song.
+   */
+  social_share_opened: {
+    release_id: string;
+    source: 'first_release' | 'rollout_menu' | 'urgans';
+  };
+  social_share_made: {
+    release_id: string;
+    voice: 'artist' | 'team';
+    date_mode: 'show' | 'secret';
+    has_link: boolean;
+    has_line: boolean;
+  };
+  social_share_sent: {
+    release_id: string;
+    channel: 'instagram' | 'whatsapp_status' | 'x' | 'snapchat' | 'message';
+    /** `x_intent`: opened X's own "write a post" page with the text filled in. */
+    method: 'share' | 'download' | 'copy' | 'whatsapp' | 'instagram_dm' | 'more' | 'x_intent';
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;

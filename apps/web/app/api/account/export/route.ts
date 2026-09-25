@@ -174,6 +174,7 @@ export async function GET(request: NextRequest) {
     plans,
     creditLinks,
     creditSubmissions,
+    urgansChats,
     assets,
   ] = await Promise.all([
     readSection(admin, { table: 'task_comments', column: 'task_id', values: taskIds }),
@@ -201,6 +202,12 @@ export async function GET(request: NextRequest) {
       column: 'release_id',
       values: releaseIds,
     }),
+    // Saved UrgAns chats — the user's own words and the answers to them, kept
+    // until they delete them (founder decision, 2026-09-24) and removed with
+    // the account by the auth.users cascade, so they belong here by the rule
+    // this route is scoped by. Unavailable (not empty) where the table does
+    // not exist yet.
+    readSection(admin, { table: 'urgans_conversations', column: 'owner_user_id', values: [userId] }),
     withDownloadUrls(admin, assetsRaw),
   ]);
 
@@ -254,6 +261,7 @@ export async function GET(request: NextRequest) {
       activity_outcomes: outcomes,
       files: assets,
       notes,
+      urgans_chats: urgansChats,
       content_calendars: calendars,
       content_posts: posts,
       credit_links: creditLinks,

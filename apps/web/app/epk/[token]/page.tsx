@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { SHORT_LINE } from '@/lib/positioning';
 import { notFound, redirect } from 'next/navigation';
 import { loadPublicEpk, resolveEpkSuccessorPath } from '@/lib/epk-server';
 
@@ -216,7 +217,7 @@ export default async function PublicEpkPage({ params }: PageProps) {
             className="font-mono text-[11px] uppercase tracking-[0.18em]"
             style={{ color: FAINT }}
           >
-            Made with <span style={{ color: BRAND }}>Urganize</span>, the operating system for music business
+            Made with <span style={{ color: BRAND }}>Urganize</span>. {SHORT_LINE}
           </a>
         </footer>
       </div>

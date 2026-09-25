@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { CUSTOMER_LINE } from "@/lib/positioning";
+import { CORE_CLAUSE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Team",
   description:
-    `The people building Urganize, the ${CUSTOMER_LINE}: artist managers, artists and engineers.`,
+    `The artist managers, artists and engineers building Urganize, ${CORE_CLAUSE}.`,
   path: "/team",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For executives / For managers). The page stays public

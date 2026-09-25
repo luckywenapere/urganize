@@ -81,6 +81,8 @@ import {
 import { getOnboardingAiMoment } from '@/lib/onboarding-ai-moment';
 import { getAvailableReleaseTypes } from '@/lib/release-templates/loader';
 import { isCardTrialEnabled, shouldRunAuthedOnboardingSetup } from '@/lib/trial-card';
+import { isSocialShareEnabled } from '@/lib/social-share';
+import { markPendingFirstShare } from '@/lib/social-share-offer';
 
 // ---------------------------------------------------------------------------
 // Module-level constants
@@ -623,10 +625,21 @@ export default function OnboardingPage() {
     const releasePayload = (await releaseResponse.json().catch(() => ({}))) as {
       release?: { id?: string };
       releaseId?: string;
+      firstRelease?: boolean;
       error?: string;
     };
     if (!releaseResponse.ok) {
       throw new Error(releasePayload.error || 'Could not create your rollout.');
+    }
+
+    // Share to socials (2026-09-23): this is where most people's first
+    // rollout is made, but the share sheet lives in the app, and onboarding
+    // still has the invite step and a redirect to get through. So it leaves a
+    // marker in this tab, and the sheet offers itself once they land and
+    // nothing else is open. The server's answer decides, not a guess here.
+    const createdReleaseId = releasePayload.releaseId ?? releasePayload.release?.id;
+    if (isSocialShareEnabled() && releasePayload.firstRelease === true && createdReleaseId) {
+      markPendingFirstShare(createdReleaseId);
     }
 
     // 3a. If the workspace flag is OFF, mark complete + ship to dashboard.

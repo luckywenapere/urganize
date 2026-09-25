@@ -16,7 +16,8 @@ import {
   getTemplateLeadTimeDays,
   getTemplateStats,
 } from '@/lib/release-templates/loader';
-import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
+import { DEFAULT_RELEASE_TITLE, isDbReleaseType, type DbReleaseType } from '@/types/releases';
+import type { ShareReleaseFacts } from '@/lib/social-share';
 import { isBrowserOnline } from '@/lib/offline/status';
 
 // The release types this modal can create: authored AND switched on AND
@@ -94,6 +95,12 @@ type CreateReleaseModalProps = {
        * intake as a prefill so its own type question isn't asked twice —
        * prefill only what was actually asked. */
       releaseType?: DbReleaseType | null;
+      /** The person's first real rollout (the server's answer, test rollouts
+       * excluded). The caller opens the share sheet once off the back of it. */
+      firstRelease?: boolean;
+      /** What the share sheet needs to say about the new rollout, taken from
+       * the create response, so it can open before the catalog resyncs. */
+      share?: ShareReleaseFacts;
     }
   ) => void;
   /**
@@ -113,10 +120,16 @@ type CreateReleaseResponse = {
   id?: string;
   release?: {
     id?: string;
+    title?: string;
+    artistName?: string;
+    releaseType?: string;
+    releaseDate?: string | null;
   };
   redirectTo?: string;
   /** True when the release was created ready to be planned with UrgAns. */
   plannerPending?: boolean;
+  /** True when this was the person's first real rollout. */
+  firstRelease?: boolean;
   error?: string;
 };
 
@@ -426,6 +439,15 @@ export function CreateReleaseModal({
         plannerPending: payload.plannerPending === true,
         title: input.title || null,
         releaseType: input.typeWasPicked ? input.releaseType : null,
+        firstRelease: payload.firstRelease === true,
+        share: {
+          title: payload.release?.title ?? (input.title || ''),
+          artistName: payload.release?.artistName ?? '',
+          releaseType: isDbReleaseType(payload.release?.releaseType)
+            ? payload.release.releaseType
+            : input.releaseType,
+          releaseDate: payload.release?.releaseDate ?? (input.releaseDate || null),
+        },
       });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not create rollout.');

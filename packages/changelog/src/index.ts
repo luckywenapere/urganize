@@ -20,11 +20,46 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.42.0",
-    date: "September 15, 2026",
+    version: "1.45.0",
+    date: "September 24, 2026",
     highlights: [
-      "UrgAns now builds your rollout plan the moment you finish its questions. No draft to approve first, it just lands on the rollout.",
-      "Tell it what to leave out, like marketing or paid ads, and the plan follows. It reads what you type, too.",
+      "You can now give each artist their own colors for share images, instead of Urganize's own colors. Set them in Settings, under the artist's name.",
+    ],
+  },
+  {
+    version: "1.44.0",
+    date: "September 24, 2026",
+    highlights: [
+      "UrgAns remembers your conversations now, so you can pick one back up later instead of starting fresh. Your past chats also show up in a history list, where you can reopen or delete them.",
+    ],
+  },
+  {
+    version: "1.43.1",
+    date: "September 24, 2026",
+    highlights: [
+      "Asking UrgAns to draft a press kit section for you now works, instead of failing every time.",
+    ],
+  },
+  {
+    version: "1.43.0",
+    date: "September 24, 2026",
+    highlights: [
+      "When you share a rollout, you can now also post to X or Snapchat, the same way as Instagram and WhatsApp.",
+    ],
+  },
+  {
+    version: "1.42.1",
+    date: "September 24, 2026",
+    highlights: [
+      "UrgAns replies read cleanly now. Bold words show up bold, not wrapped in stars, and copying a reply gives you clean text.",
+    ],
+  },
+  {
+    version: "1.42.0",
+    date: "September 24, 2026",
+    highlights: [
+      "Share a rollout on Instagram, as your WhatsApp status, or in a message to anyone. Answer four quick questions and we make the images and captions.",
+      "After your first rollout, the share screen opens once by itself. After that, every rollout has a Share button, and you can ask UrgAns to open it.",
     ],
   },
   {

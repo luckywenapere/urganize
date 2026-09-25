@@ -97,6 +97,12 @@ export const RELEASE_MENU_ORDER = [
   'song',
   // The general file cabinet — everything that is not the cover or the master.
   'files',
+  // Share to socials (2026-09-23). Outward-facing, so it leads the "send this
+  // outward" band below, and ahead of fan capture because every rollout gets
+  // announced while only some get a capture page. The founder made it the
+  // first thing offered after a first rollout, which is the one revealed
+  // preference about it there is.
+  'share',
   // Outward-facing, and demoted from a permanent tab in his own words: press
   // kit "isn't reached often enough to earn a permanent tab". Fan capture sits
   // with it as the other "send this outward" item — his pairing, kept from the

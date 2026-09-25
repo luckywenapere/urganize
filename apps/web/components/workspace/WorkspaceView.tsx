@@ -58,6 +58,9 @@ import { SentRequestsList } from '@/components/directory/SentRequestsList';
 import { searchReleases } from '@/lib/release-search';
 import { ReleaseSearchBar } from './ReleaseSearchBar';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
+import { isSocialShareEnabled } from '@/lib/social-share';
+import { useShareStore } from '@/stores/useShareStore';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
 
@@ -105,6 +108,9 @@ const TYPE_FIRST_CREATE_ENABLED =
 // with the delete exit while a test release is scoped. Read through the
 // predicate so the env var name is typed exactly once (lib/test-release.ts).
 const TEST_RELEASE_ENABLED = isTestReleaseEnabled();
+// Share to socials (2026-09-23): the Share button on every rollout, and the
+// once-only offer after the first one (see withFirstShareOffer).
+const SOCIAL_SHARE_ENABLED = isSocialShareEnabled();
 
 // Dynamic for the same reason AppShell already loads it that way — a static
 // import here defeated that, dragging the ~460-line modal into the /dashboard
@@ -822,6 +828,19 @@ export function WorkspaceView() {
       ? { label: 'Change artist', onClick: () => setIsChangeArtistOpen(true) }
       : null;
 
+  // Share to socials (founder request, 2026-09-23): after the first rollout's
+  // one-time offer, this is how every rollout gets shared. NOT owner-only,
+  // unlike the two actions above: making a post changes nothing, and the image
+  // route is a team READ, so any member (and a read-only guest) can use it.
+  const shareAction =
+    SOCIAL_SHARE_ENABLED && scopedReleaseId
+      ? {
+          label: 'Share',
+          onClick: () =>
+            useShareStore.getState().open({ releaseId: scopedReleaseId, source: 'rollout_menu' }),
+        }
+      : null;
+
   // With the planner on, a scoped release with no activities shows the planner
   // card as its ENTIRE body — no empty list under it, nothing above it. That is
   // what makes the main door impossible to miss.
@@ -1317,6 +1336,7 @@ export function WorkspaceView() {
                   scopedRelease={scopedReleaseSlim}
                   archiveAction={archiveAction}
                   changeArtistAction={changeArtistAction}
+                  shareAction={shareAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
                   activitiesBanner={
                     kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner
@@ -1364,6 +1384,7 @@ export function WorkspaceView() {
                 banner={newReleaseGuideBanner}
                 panelArchiveAction={archiveAction}
                 panelChangeArtistAction={changeArtistAction}
+                panelShareAction={shareAction}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
                 panelActivitiesBanner={
                   kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner
@@ -1410,16 +1431,25 @@ export function WorkspaceView() {
           // plannerPending branch is kept for safety even though the two
           // flags are documented as incompatible.
           if (TYPE_FIRST_CREATE_ENABLED) {
-            router.push(`/dashboard?release=${releaseId}`);
-            if (plannerPending) {
-              openIntake({
-                source: 'empty_state',
-                releaseId,
-                ...(result?.releaseType
-                  ? { prefill: { releaseType: result.releaseType } }
-                  : {}),
-              });
-            }
+            // The first-rollout share sheet (2026-09-23) goes first here too,
+            // then the landing. See withFirstShareOffer.
+            withFirstShareOffer({
+              releaseId,
+              firstRelease: result?.firstRelease,
+              snapshot: result?.share,
+              then: () => {
+                router.push(`/dashboard?release=${releaseId}`);
+                if (plannerPending) {
+                  openIntake({
+                    source: 'empty_state',
+                    releaseId,
+                    ...(result?.releaseType
+                      ? { prefill: { releaseType: result.releaseType } }
+                      : {}),
+                  });
+                }
+              },
+            })();
             return;
           }
 
@@ -1457,6 +1487,18 @@ export function WorkspaceView() {
             }
           };
 
+          // Share to socials (founder request, 2026-09-23): after the person's
+          // FIRST rollout, the share sheet opens once, straight after the
+          // team-login step and before the planner or the guide, so one thing
+          // is on screen at a time. Not their first, or the feature off, and
+          // this is `resume` itself.
+          const continueAfterAccess = withFirstShareOffer({
+            releaseId,
+            firstRelease: result?.firstRelease,
+            snapshot: result?.share,
+            then: resume,
+          });
+
           // The compulsory "get your team in" step (founder request,
           // 2026-08-16) goes BEFORE any of it, including the first-win reveal
           // and the planner intake: a login the manager can send is the first
@@ -1464,10 +1506,10 @@ export function WorkspaceView() {
           // and calls resume() on its single exit, so with the flag off this
           // whole block is one boolean and the original path runs unchanged.
           if (TEAM_LOGINS_ENABLED) {
-            setAccessStep({ releaseId, title: result?.title ?? null, resume });
+            setAccessStep({ releaseId, title: result?.title ?? null, resume: continueAfterAccess });
             return;
           }
-          resume();
+          continueAfterAccess();
         }}
       />
 
