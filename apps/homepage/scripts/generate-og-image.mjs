@@ -53,16 +53,23 @@ const SPRING = '#7FD99A';
 // outside the TypeScript build and cannot import it. The guard on the alt text
 // is what catches a divergence: change the line here and lib/seo.ts's alt has
 // to change too, and that one is compared against the shared constants.
-const MAIN_LINE = 'AI Music Business Manager for artists and managers.';
-const ACCENT = 'AI Music Business Manager';
-const SUB_LINE = 'Plan, organize and execute rollouts from one place.';
+//
+// 2026-09-24: the short line as the headline, the core line under it. Both are
+// the founder's words verbatim (SHORT_LINE and CORE_LINE there).
+const MAIN_LINE = 'Everything after the music.';
+const ACCENT = 'after the music';
+const SUB_LINE = 'Urganize is where your team does everything after the music is made.';
 
 const font = (file) => readFileSync(join(WEB, 'assets', 'fonts', file));
 const logo = readFileSync(join(HOMEPAGE, 'public', 'images', 'urganize-logo.png'));
 
-// The accent falls on the category, so the line is split rather than styled as
-// one run: everything after the category stays cream.
-const rest = MAIN_LINE.slice(ACCENT.length);
+// The accent can fall anywhere in the line, so it is found rather than assumed
+// to be a prefix: the words before and after it stay cream. If the accent is
+// ever missing from the line, the whole line renders cream rather than wrong.
+const accentAt = MAIN_LINE.indexOf(ACCENT);
+const before = accentAt >= 0 ? MAIN_LINE.slice(0, accentAt) : MAIN_LINE;
+const accent = accentAt >= 0 ? ACCENT : '';
+const after = accentAt >= 0 ? MAIN_LINE.slice(accentAt + ACCENT.length) : '';
 
 const card = h(
   'div',
@@ -99,8 +106,11 @@ const card = h(
           color: CREAM,
         },
       },
-      h('span', { style: { color: SPRING } }, ACCENT),
-      h('span', null, rest),
+      // Satori collapses a leading or trailing space at the edge of a span, so
+      // the space between "Everything" and the accent is a real margin.
+      before.trim() ? h('span', { style: { marginRight: '0.2em' } }, before.trim()) : null,
+      accent ? h('span', { style: { color: SPRING } }, accent) : null,
+      after ? h('span', null, after) : null,
     ),
     h(
       'div',

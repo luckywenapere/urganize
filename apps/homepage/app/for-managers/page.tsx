@@ -11,14 +11,13 @@ import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { PRODUCT_CATEGORY } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { TESTIMONIALS } from "@/content/testimonials";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "For artist managers",
   description:
-    `An ${PRODUCT_CATEGORY} for artist managers running more than one rollout at once. A plan, owners on every activity and a press kit you send as one link.`,
+    "Everything after the music, for artist managers running more than one rollout at once. A plan, owners on every activity and a press kit you send as one link.",
   path: "/for-managers",
 });
 

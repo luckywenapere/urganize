@@ -5,23 +5,27 @@ import { URGANS_COPY_RULES } from './chappi/system-prompt';
 import { readableCopy } from './copy-scan';
 import {
   AUDIENCE,
+  AUDIENCE_LINE,
   BRAND_LINE,
   CANONICAL_DESCRIPTION,
-  CUSTOMER_LINE,
+  CORE_CLAUSE,
+  CORE_LINE,
   ONE_LINER,
-  PRODUCT_CATEGORY,
-  PROMISE,
   SHORT_DESCRIPTION,
+  SHORT_LINE,
   URGANS_LINE,
 } from './positioning';
 
 /**
- * The 2026-09-09 positioning, amended 2026-09-11, enforced rather than reviewed.
+ * The positioning, enforced rather than reviewed.
  *
- * Urganize is an AI Music Business Manager. The brief retires eleven phrases
- * and asks for zero hits in "any user-facing string, meta tag, doc, image or
- * store listing" — an acceptance criterion that is a grep today and rots the
- * moment somebody writes a new page. This is that grep, kept.
+ * Since 2026-09-24: Urganize is where your team does everything after the
+ * music is made. That brief retired the category the product had been
+ * introduced by since 2026-09-09 ("AI Music Business Manager"), and every
+ * earlier brief retired phrases of its own. They all ask for zero hits in
+ * "any user-facing string, meta tag, doc, image or store listing": an
+ * acceptance criterion that is a grep today and rots the moment somebody
+ * writes a new page. This is that grep, kept.
  *
  * IT RUNS OVER BOTH APPS. `apps/homepage` has no test runner of its own
  * (vitest is configured in `apps/web` only), and the marketing site is where
@@ -124,13 +128,28 @@ const RETIRED = [
   /\bVP Operations\b/i,
   /music rollouts/i,
   /Global standard, from here/i,
+  /\bLet['’]s build\b/i,
   /\bworkspaces?\b/i,
-  // 2026-09-11 (founder call): the audience is artists and managers. The old
-  // triple, the persona page's title and the "small labels" wording retire
-  // together, so none of them can come back through a stale paste.
-  /artists, managers and labels/i,
-  /\bfor labels\b/i,
+  // 2026-09-11 retired the "small labels" wording. The same day retired the
+  // artists-managers-labels triple and "for labels"; the 2026-09-24 brief
+  // brought labels back ("For artists, managers and labels."), so those two
+  // left this list and only "small labels" stays.
   /small labels/i,
+  // 2026-09-24: the category and the lines that went with it. "AI Music
+  // Manager" is matched CASE-SENSITIVELY on purpose: the title-cased form is
+  // how the category was written in copy, while the lowercase search keyword
+  // "AI music manager" is kept in LANDING_KEYWORDS and the store tags, because
+  // nobody's search habits changed when our wording did.
+  /\bAI Music Manager\b/,
+  /Music Business AI/i,
+  /operating system for music/i,
+  /plan, organize and execute/i,
+  // The category itself. Retired everywhere on 2026-09-24 except UrgAns's
+  // system prompt, which kept saying it while the founder decided how the
+  // assistant describes the product. He decided on 2026-09-25 (the new line,
+  // like everything else), so the one-file exemption and the test that
+  // guarded it are gone and this is an ordinary retired phrase now.
+  /AI Music Business Manager/i,
 ] as const;
 
 /**
@@ -190,39 +209,52 @@ describe('positioning', () => {
     expect(SURFACES.length).toBeGreaterThan(25);
   });
 
-  it('names the category, the audience and the promise once', () => {
-    expect(PRODUCT_CATEGORY).toBe('AI Music Business Manager');
-    expect(BRAND_LINE).toBe('Urganize, AI Music Business Manager');
-    expect(CUSTOMER_LINE).toBe('AI Music Business Manager for artists and managers');
-    expect(PROMISE).toBe('Plan, organize and execute rollouts from one place');
+  it("says the founder's three lines, word for word", () => {
+    // The 2026-09-24 brief gave these verbatim. Pinned as literals, not
+    // against the module's own parts, because what matters is that the words
+    // are the founder's rather than that the module agrees with itself.
+    expect(CORE_LINE).toBe('Urganize is where your team does everything after the music is made.');
+    expect(SHORT_LINE).toBe('Everything after the music.');
+    expect(CANONICAL_DESCRIPTION).toBe(
+      'You make the music. Urganize is where your team does everything after. ' +
+        'Plan the release, assign the work, keep files and metadata in one place, pitch to curators, ' +
+        'book shows and put the release out. For artists, managers and labels.',
+    );
+    expect(CORE_LINE).toBe(`Urganize is ${CORE_CLAUSE}.`);
+    expect(BRAND_LINE).toBe('Urganize: Everything after the music');
     expect(URGANS_LINE).toBe('personal AI for music professionals');
   });
 
   it('leads the audience with artists, every time', () => {
-    // The brief: "Artists always lead the audience list." Pinned as the list
-    // rather than as a sentence containing it, so a reorder fails here rather
-    // than in review. The list was artists, managers, labels until 2026-09-11,
-    // when the founder dropped labels ("it is not for labels"); artists still
-    // lead, and the old triple is on the RETIRED list above so it cannot come
-    // back by accident.
-    expect([...AUDIENCE]).toEqual(['artists', 'managers']);
-    expect(ONE_LINER.indexOf('artists')).toBeLessThan(ONE_LINER.indexOf('managers'));
+    // Artists always lead the audience list. Pinned as the list rather than as
+    // a sentence containing it, so a reorder fails here rather than in review.
+    // Labels were dropped on 2026-09-11 and came back on 2026-09-24 with the
+    // founder's long description; artists led both times.
+    expect([...AUDIENCE]).toEqual(['artists', 'managers', 'labels']);
+    expect(AUDIENCE_LINE).toBe('artists, managers and labels');
+    expect(CANONICAL_DESCRIPTION.endsWith(`For ${AUDIENCE_LINE}.`)).toBe(true);
   });
 
   it('fits the limits other platforms enforce', () => {
-    // Under 80 for a bio or an OG line, under 160 for a meta description or a
-    // store listing. Past either, the platform truncates mid-phrase and the
+    // Under 80 for a bio or an OG line, under 160 for a manifest or a store
+    // field. Past either, the platform truncates mid-phrase and the
     // positioning is the half that gets cut.
     expect(ONE_LINER.length).toBeLessThan(80);
     expect(SHORT_DESCRIPTION.length).toBeLessThan(160);
-    expect(CANONICAL_DESCRIPTION).toContain(PRODUCT_CATEGORY);
+    // Every line says the one idea, so no surface can quote a line that
+    // forgot it.
+    for (const line of [CORE_LINE, SHORT_LINE, CANONICAL_DESCRIPTION, BRAND_LINE]) {
+      expect(line.toLowerCase()).toContain('everything after');
+    }
   });
 
   it('uses no em dash in the positioning itself', () => {
     for (const line of [
+      CORE_CLAUSE,
+      CORE_LINE,
+      SHORT_LINE,
+      AUDIENCE_LINE,
       BRAND_LINE,
-      CUSTOMER_LINE,
-      PROMISE,
       ONE_LINER,
       SHORT_DESCRIPTION,
       CANONICAL_DESCRIPTION,
@@ -298,7 +330,7 @@ describe('positioning', () => {
     expect(found).toEqual([]);
   });
 
-  it('gives every marketing page a description that names the category', () => {
+  it('gives every marketing page a description that says what Urganize is', () => {
     // The brief's acceptance criterion, and the one most likely to rot: a new
     // page is easy to add without a description, and nothing else would notice.
     const pages = walk(join(HOMEPAGE, 'app')).map(posix).filter(
@@ -311,7 +343,8 @@ describe('positioning', () => {
       const source = readFileSync(path, 'utf8');
       // A page either builds its own metadata or is a nested route that
       // legitimately inherits it. Only the ones that declare a description are
-      // checked, and a declared one has to carry the category.
+      // checked, and a declared one has to carry the positioning: "everything
+      // after the music", in words or through a shared constant.
       //
       // THE DESCRIPTION'S OWN EXPRESSION IS WHAT IS TESTED, not the file. An
       // earlier version scanned the whole source for a constant name and
@@ -323,13 +356,13 @@ describe('positioning', () => {
       );
       if (!declared) continue;
       const expression = declared[1];
-      const declaresCategory =
-        expression.includes(PRODUCT_CATEGORY) ||
+      const declaresPositioning =
+        /everything after the music/i.test(expression) ||
         // Composed from the shared constants rather than written out.
-        /SHORT_DESCRIPTION|CANONICAL_DESCRIPTION|CUSTOMER_LINE|PRODUCT_CATEGORY|LANDING_DESCRIPTION/.test(
+        /\b(?:CORE_LINE|CORE_CLAUSE|SHORT_LINE|SHORT_DESCRIPTION|CANONICAL_DESCRIPTION|ONE_LINER|LANDING_DESCRIPTION)\b/.test(
           expression,
         );
-      if (!declaresCategory) missing.push(report(path, 'description names no category'));
+      if (!declaresPositioning) missing.push(report(path, 'description does not say what Urganize is'));
     }
     expect(missing).toEqual([]);
   });

@@ -3,13 +3,13 @@ import Link from "next/link";
 import { LegalSection as Section } from "../components/marketing/LegalSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
-import { CUSTOMER_LINE } from "@/lib/positioning";
+import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Terms of Service",
   description:
-    `The terms that govern your use of Urganize, the ${CUSTOMER_LINE}: accounts, subscriptions, your content and our responsibilities.`,
+    `The terms that govern your use of Urganize: accounts, subscriptions, your content and our responsibilities. ${CORE_LINE}`,
   path: "/terms",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For executives / For managers). Noindex hides the page
@@ -48,11 +48,13 @@ export default function TermsPage() {
           <div className="mt-12">
             <Section number="01" title="Who we are">
               <p>
-                Urganize is an AI Music Business Manager for artists and
-                managers, operated by The Urganization Ltd, a company registered in
-                Nigeria (&ldquo;we&rdquo;, &ldquo;our&rdquo;,
-                &ldquo;us&rdquo;). The service runs at urganize.app and
-                app.urganize.app.
+                {/* The space is explicit on purpose: with an entity later in
+                    the same text, the compiler dropped the leading space after
+                    the expression and rendered "made.It is". */}
+                {CORE_LINE}{" "}
+                It is operated by The Urganization Ltd, a company registered in
+                Nigeria (&ldquo;we&rdquo;, &ldquo;our&rdquo;, &ldquo;us&rdquo;).
+                The service runs at urganize.app and app.urganize.app.
               </p>
             </Section>
 

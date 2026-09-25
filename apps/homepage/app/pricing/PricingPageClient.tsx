@@ -7,7 +7,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { PricingTierCards } from "../components/pricing/PricingTierCards";
 import { FOUNDING_MEMBER_LINE } from "@/content/founding-member";
-import { AUDIENCE_LINE, CUSTOMER_LINE } from "@/lib/positioning";
+import { AUDIENCE_LINE, CORE_LINE } from "@/lib/positioning";
 
 // THE PRICE TABLE IS UNCONDITIONAL. Do not put it back behind a flag.
 //
@@ -85,12 +85,12 @@ export function PricingPageClient() {
                 by the size of your roster" — true, but an abstract construction
                 where the concrete promise (one price, not per person) was buried
                 in the lead below it. The lead keeps the locked positioning
-                sentence and drops what the headline now says. Composed from
-                lib/positioning since 2026-09-11, so it cannot drift from the
-                h1 and the footer again. */}
+                sentence (the founder's core line since 2026-09-24) and drops
+                what the headline now says. Composed from lib/positioning, so it
+                cannot drift from the homepage and the footer. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              Urganize is an {CUSTOMER_LINE}. Start free on your own, or let us
-              set your roster up with you.
+              {CORE_LINE} Start free on your own, or let us set your roster up
+              with you.
             </p>
 
             <div className="hero-fade-in hero-delay-3 mt-10">

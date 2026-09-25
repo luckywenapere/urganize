@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { changelog, CURRENT_VERSION } from "../../content/changelog";
-import { CUSTOMER_LINE } from "@/lib/positioning";
+import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Updates",
   description:
-    `Every Urganize update, newest first. What changed and when in the ${CUSTOMER_LINE}.`,
+    `Every Urganize update, newest first: what changed and when. ${CORE_LINE}`,
   path: "/changelog",
   // Kept out of search so the homepage's sitelinks stay commercial
   // (Features / Pricing / For executives / For managers). The page stays public

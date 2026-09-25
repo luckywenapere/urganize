@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CUSTOMER_LINE } from "@/lib/positioning";
+import { CORE_CLAUSE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { RoadmapPageClient } from "./RoadmapPageClient";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Roadmap",
   description:
-    `Vote on what we build next in Urganize, the ${CUSTOMER_LINE}. Sign in, suggest an idea, help shape the roadmap.`,
+    `Vote on what we build next in Urganize, ${CORE_CLAUSE}. Sign in, suggest an idea, help shape the roadmap.`,
   path: "/roadmap",
 });
 

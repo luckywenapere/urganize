@@ -1,60 +1,55 @@
 # App store listings
 
-Paste-ready listing copy for the Urganize mobile app. Written 2026-09-09 for the
-AI Music Manager positioning, amended 2026-09-11 when the category widened
-to **AI Music Business Manager**, and again later that day when the audience
-narrowed to **artists and managers** (founder call: labels are no longer an
-audience).
+Paste-ready listing copy for the Urganize mobile app. Rewritten 2026-09-24 for
+the current positioning: you make the music, and Urganize is where your team
+does everything after. The listing written 2026-09-09 and amended twice on
+2026-09-11 introduced the product by a category instead; it is in git history.
 
 **Every string here comes from the same place as the product's own copy.** The
-category, the audience order and the promise are defined once in
-`apps/web/lib/positioning.ts`, and `apps/web/lib/positioning-guard.test.ts`
-scans this file for the retired phrases, so a listing that drifted from the
-product would fail the build rather than sit here quietly disagreeing with it.
+core line, the short line, the long description and the audience order are
+defined once in `apps/web/lib/positioning.ts`, and
+`apps/web/lib/positioning-guard.test.ts` scans this file for the retired
+phrases, so a listing that drifted from the product would fail the build rather
+than sit here quietly disagreeing with it.
 
-Do not reorder the audience. It is artists then managers, everywhere. Labels were
-the third entry until 2026-09-11.
+Do not reorder the audience. It is artists, then managers, then labels,
+everywhere. Labels were dropped on 2026-09-11 and came back on 2026-09-24 with
+the founder's long description.
 
 ---
 
 ## Google Play — READY TO PASTE
 
-The app is `com.urganize.app`. Every field below is inside Play's own limits,
-with one exception that is called out where it appears: the app name cannot fit
-the full category and carries a shortened form.
+The app is `com.urganize.app`. Every field below is inside Play's own limits.
 
 ### App name (30 characters max)
 
 ```
-Urganize: Music Business AI
+Urganize
 ```
 
-27 characters.
+8 characters.
 
-⚠️ **THIS IS THE ONE FIELD THE CATEGORY DOES NOT FIT, and it needs the founder's
-word before anyone submits.** "Urganize: AI Music Business Manager" is 35
-characters against a hard 30-character cap that both stores enforce, so
-something has to give and this is the least-bad thing on offer: it keeps all
-three distinctive words (music, business, AI), drops only "Manager", and reads
-as a noun phrase rather than a fragment. Every other field on this page carries
-the category in full.
-
-The reason the brand leads rather than the category is unchanged: Play shows the
-app name under the icon, so whatever follows "Urganize" is what survives the
-truncation.
+The name is the brand alone. The founder's short line ("Everything after the
+music.") is 27 characters by itself, and "Urganize: Everything after the music" is
+36 against a hard 30-character cap that both stores enforce. Rather than cut the
+line to fit, it goes where there is room for it whole: the short description
+here and the subtitle on the App Store. Play shows the app name under the icon,
+where a long name is truncated anyway.
 
 ### Short description (80 characters max)
 
 ```
-AI Music Business Manager for artists and managers.
+Urganize is where your team does everything after the music is made.
 ```
 
-51 characters. This is the one-liner from `positioning.ts` unchanged.
+68 characters. This is the core line from `positioning.ts` (`CORE_LINE`),
+unchanged.
 
 ### Full description (4000 characters max)
 
 ```
-Urganize is an AI Music Business Manager for artists and managers. It helps music teams plan rollouts, coordinate people, manage assets and metadata, track execution and keep every part moving from one place.
+You make the music. Urganize is where your team does everything after. Plan the release, assign the work, keep files and metadata in one place, pitch to curators, book shows and put the release out. For artists, managers and labels.
 
 PLAN THE ROLLOUT
 Every release starts with a real plan, not a blank board. Pick what you are putting out and Urganize lays out the whole rollout, sized to the format, with every activity dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
@@ -75,17 +70,15 @@ ASK URGANS
 UrgAns is the personal AI for music professionals inside Urganize. Ask it what is late, have it draft a rollout plan, or tell it to create an activity in plain words. You review and approve anything it drafts before it takes effect.
 
 WHO IT IS FOR
-Artists running their own releases. Managers running more than one artist at a time.
+Artists running their own releases. Managers running more than one artist at a time. Labels running a full roster.
 
 Start free for 3 days. No card needed.
 ```
 
-1,656 characters.
+1,710 characters.
 
-Recounted 2026-09-11, twice. The figure here read 1,776 for a block that
-measured 1,714 — the rollout rename had shortened it and nobody recounted — and
-then 1,656 once the audience narrowed later the same day. Measured off the
-fenced text above with `wc -m`, not estimated.
+The first paragraph is the founder's long description (`CANONICAL_DESCRIPTION`),
+unchanged. Measured off the fenced text above with `wc -m`, not estimated.
 
 ### Other Play Console fields
 
@@ -99,8 +92,8 @@ fenced text above with `wc -m`, not estimated.
 
 Graphics are not covered here. The feature graphic and screenshots are a
 separate design pass; when they are made, the text baked into them uses the
-same one-liner as the share card (see
-`apps/homepage/scripts/generate-og-image.mjs`).
+same lines as the share card: the short line as the headline and the core line
+under it (see `apps/homepage/scripts/generate-og-image.mjs`).
 
 ---
 
@@ -120,30 +113,28 @@ Connect.
 ### App name (30 characters max)
 
 ```
-Urganize: Music Business AI
+Urganize
 ```
 
-Same 30-character cap and the same compromise as Play, for the same reason. See
-the note under the Play app name above.
+Same as Play, for the same reason. See the note under the Play app name above.
 
 ### Subtitle (30 characters max)
 
 ```
-Plan and run your releases
+Everything after the music.
 ```
 
-25 characters. Apple's subtitle is shorter than Play's short description, so
-this carries the promise rather than the audience. The audience is in the first
-line of the description.
+27 characters. This is the founder's short line (`SHORT_LINE`), unchanged, and
+Apple's subtitle is the one field on either store that holds it whole.
 
 ### Promotional text (170 characters max)
 
 ```
-AI Music Business Manager for artists and managers. Plan, organize and execute rollouts from one place.
+Urganize is where your team does everything after the music is made.
 ```
 
-103 characters. This is `SHORT_DESCRIPTION` from `positioning.ts` unchanged.
-(The figure here read 110 for a string that was 111; measured this time.)
+68 characters. This is `SHORT_DESCRIPTION` from `positioning.ts`, which is the
+core line, unchanged.
 
 ### Description
 
@@ -159,17 +150,14 @@ music manager,release planning,artist manager,rollout,press kit,setlist,music te
 82 characters. No spaces after the commas: Apple counts them, and the field is
 tight.
 
-THE TAGS AND KEYWORDS DID NOT MOVE WITH THE CATEGORY on 2026-09-11, and that is
-the same call `LANDING_KEYWORDS` records in `apps/homepage/app/layout.tsx`:
-these are not read, they are typed into a store's search box, and nobody
-searches for a phrase we widened last week. "music manager" is still what a
-manager types. Revisit once the longer term has an audience.
+THE TAGS AND KEYWORDS DID NOT MOVE WITH THE 2026-09-24 LINE, and that is the
+same call `LANDING_KEYWORDS` records in `apps/homepage/app/layout.tsx`: these
+are not read, they are typed into a store's search box, and nobody searches for
+our own wording. "music manager" is still what a manager types.
 
-THE AUDIENCE NARROWING LATER THAT DAY IS THE ONE EXCEPTION: `label` left the
-Apple keywords, the way `A&R software` left `LANDING_KEYWORDS` when that audience
-went. A category rename keeps its keywords because the searcher still types the
-old word; a keyword that recruits an audience we no longer name sends the wrong
-person to a listing that tells them so.
+`label` left the Apple keywords on 2026-09-11, when labels left the audience.
+Labels are back in the audience now, so it could return; that is a founder call
+and it is not added here.
 
 ### Other App Store Connect fields
 
