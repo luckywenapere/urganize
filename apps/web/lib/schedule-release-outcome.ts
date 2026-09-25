@@ -17,8 +17,18 @@ export type ScheduleReleaseOutcome =
 export type SchedulePayload = {
   error?: string;
   activitiesCreated?: unknown;
+  /** How many existing activities moved with the date (a plan already built). */
   activitiesMoved?: unknown;
+  /** How many should have moved but could not. */
+  activitiesNotMoved?: unknown;
 };
+
+function count(value: unknown): number {
+  const parsed = Number(value || 0);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+}
+
+const activityWord = (n: number) => (n === 1 ? 'activity' : 'activities');
 
 export function interpretScheduleResponse(
   status: number,
@@ -37,20 +47,23 @@ export function interpretScheduleResponse(
       message: payload.error || 'Could not save the release date.',
     };
   }
-  const created = Number(payload.activitiesCreated || 0);
-  const moved = Number(payload.activitiesMoved || 0);
-  // A rollout with no activities yet gets some CREATED; an already-planned
-  // one moving its date gets some MOVED — the two never both apply to one
-  // save, so this reads either message rather than deciding between them.
+  const created = count(payload.activitiesCreated);
+  if (created > 0) {
+    return { kind: 'saved', message: `Release date set. ${created} activities scheduled.` };
+  }
+  const moved = count(payload.activitiesMoved);
+  const notMoved = count(payload.activitiesNotMoved);
+  if (notMoved > 0) {
+    return {
+      kind: 'saved',
+      message: `Release date set. ${moved} ${activityWord(moved)} moved with it, but ${notMoved} could not be moved. Check the timeline.`,
+    };
+  }
   if (moved > 0) {
     return {
       kind: 'saved',
-      message: `Release date set. ${moved} ${moved === 1 ? 'activity' : 'activities'} moved with it.`,
+      message: `Release date set. Your ${moved} ${activityWord(moved)} moved with it.`,
     };
   }
-  return {
-    kind: 'saved',
-    message:
-      created > 0 ? `Release date set. ${created} activities scheduled.` : 'Release date set.',
-  };
+  return { kind: 'saved', message: 'Release date set.' };
 }

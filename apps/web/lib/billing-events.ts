@@ -103,6 +103,12 @@ export const BILLING_EVENT_TYPES = [
    *  team per role per UTC day, so a manager comparing two designers produces
    *  one row and not a dozen. Read back by /admin/directory. */
   'directory_role_wanted',
+  /** One voice clip was transcribed for UrgAns (NEXT_PUBLIC_FEATURE_URGANS_VOICE).
+   *  Deliberately NOT 'urgans_action': speaking is not metered against the
+   *  monthly chat ceiling — only the send that follows is, exactly as typing
+   *  is. This row exists to enforce a per-team daily transcription cap
+   *  (VOICE_DAILY_CAP) as an abuse guard, nothing more. */
+  'urgans_voice_transcription',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];

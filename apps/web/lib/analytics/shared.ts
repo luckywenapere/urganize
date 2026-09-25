@@ -66,10 +66,12 @@ export interface AnalyticsEventPropertiesMap {
   /** `deferred` marks a date filled in AFTER creation, from the activities
    * view's SetReleaseDateCard, rather than in the create modal (URG-230).
    * `activities_created` is non-zero when that save also built a rollout
-   * plan that had been waiting on the date; `activities_moved` is non-zero
-   * when the release ALREADY had a plan and moving the date shifted its open
-   * activities with it. The two never both apply to one save. All three
-   * absent on the create path. */
+   * plan that had been waiting on the date. `activities_moved` is non-zero
+   * when the date changed on a rollout that ALREADY had a plan, and the plan
+   * moved with it (2026-09-25, lib/release-plan-dates-server.ts) — the fix for
+   * a rename silently stranding a plan behind a stale date. The three are
+   * mutually exclusive: a rollout either had no plan (created), was waiting on
+   * one (built), or already had one (moved). */
   release_date_set: {
     release_id: string;
     deferred?: boolean;
@@ -143,6 +145,13 @@ export interface AnalyticsEventPropertiesMap {
   // assistant reply. Thumbs are the first structured feedback signal on
   // assistant quality — worth watching once the agent model is wired.
   urgans_reply_action: { action: 'copy' | 'retry' | 'thumbs_up' | 'thumbs_down' };
+  /** Voice input for UrgAns (2026-09-25). One transcription attempt and how it
+   * ended — `ok`, `empty` (nothing heard) or `error`. Carries NO transcript
+   * text, and no clip: this reports the outcome of the act, never its content. */
+  urgans_voice_used: {
+    outcome: 'ok' | 'empty' | 'error';
+    status?: number;
+  };
   /** The permission gate in use (2026-08-14). `shown` fires when UrgAns
    * proposes a gated action, the other two when the user decides. Watching the
    * approve:cancel ratio per tool is how we find out whether the assistant is

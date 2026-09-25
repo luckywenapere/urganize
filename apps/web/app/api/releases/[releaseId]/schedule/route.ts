@@ -6,15 +6,13 @@ import {
   requireActiveAuthenticatedUser,
 } from '../../_shared';
 import { ensureOwnedWorkspace } from '@/lib/tasks-server';
+import { normalizeReleaseSlug } from '@/lib/release-ops';
+import { RELEASE_TITLE_MAX_LENGTH } from '@/lib/release-edit';
+import { alignPlanToReleaseDate } from '@/lib/release-plan-dates-server';
 import { readTemplatePending, writeTemplatePending } from '@/lib/release-template-pending';
 import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import { getTemplate } from '@/lib/release-templates/loader';
 import type { ReleaseType } from '@/lib/release-templates/types';
-import {
-  computeShiftedTaskDueDates,
-  daysBetweenReleaseDates,
-  type ReschedulableTask,
-} from '@/lib/release-reschedule';
 import {
   captureServerAnalyticsEvent,
   createPostHogEvent,
@@ -23,26 +21,27 @@ import {
 } from '@/lib/posthog';
 
 /**
- * Sets a release date, and builds the rollout plan if this release has been
- * waiting on one (URG-230). If the rollout ALREADY had a date and activities,
- * moving the date moves them with it — every open, dated activity shifts by
- * the same number of days the release date moved; done work stays exactly
- * where it landed. See lib/release-reschedule.ts for the pure arithmetic.
+ * Sets or changes a release date — the ONE place a rollout's date changes
+ * (PATCH /api/releases/[releaseId] refuses to, since 2026-09-25).
  *
- * Why this exists rather than reusing PATCH /api/releases/[releaseId]:
- *   1. That handler is a PUT in PATCH's clothing — it writes the whole row,
- *      so omitting `description` nulls it, and it hard-requires `title`.
- *      A date-only save through it would mean the client echoing back fields
- *      it has no business resending.
- *   2. Building 64 activities is a large, surprising side effect to bury in a
- *      generic update handler. Here it's the stated job.
+ * Two things can follow a new date, and this route owns both:
+ *   1. A plan-waiting rollout (URG-230) gets its plan BUILT. Instantiation is
+ *      the SAME `instantiateTemplate` call the create route makes — deferred,
+ *      not reimplemented — which is why the founder chose to hold the plan
+ *      rather than generate it undated and back-fill.
+ *   2. A rollout that already has a plan gets it MOVED so it still lines up
+ *      with release day (lib/release-plan-dates-server.ts). Before 2026-09-25
+ *      nothing moved: changing the date left every activity where it was, so
+ *      the timeline drew the release-day posts weeks away from release day.
+ *      Open activities the plan generated move by exactly as many days as the
+ *      date did; finished ones and ones a person added by hand stay put. When
+ *      the rollout had no date — the state UrgAns's rename bug left rollouts
+ *      in — the distance is measured from the day the plan was built for,
+ *      read back off the plan itself, so putting that day back moves nothing.
  *
- * Instantiation is the SAME `instantiateTemplate` call the create route makes
- * — deferred, not reimplemented. A release still waiting on its first date has
- * no activities yet, which is the whole reason the founder chose to hold the
- * plan rather than generate it undated and back-fill; the reschedule branch
- * above is the OTHER case, an already-planned rollout whose date moves, and
- * the two are mutually exclusive (see `templatePending` below).
+ * Why this is not PATCH /api/releases/[releaseId]: building or moving 64
+ * activities is a large side effect to bury in a generic edit. Here it is the
+ * stated job.
  */
 export async function POST(
   request: NextRequest,
@@ -77,11 +76,15 @@ export async function POST(
       );
     }
 
-    // Optional rename, ridden along on the same save: the card offers a name
-    // field when the release still carries DEFAULT_RELEASE_TITLE, and this is
-    // the only rename path in the app. Blank/absent means "leave it alone" —
-    // this route never nulls a title.
-    const titleInput = String(body?.title || '').trim().slice(0, 140);
+    // Optional rename, ridden along on the same save: the date card and the
+    // setup sheet offer a name field while the rollout still carries a default
+    // title. Blank/absent means "leave it alone" — this route never nulls a
+    // title. Cleaned exactly as the create and edit routes clean it, so three
+    // doors onto one column cannot store three shapes of title.
+    const titleInput =
+      typeof body?.title === 'string'
+        ? body.title.trim().replace(/\s+/g, ' ').slice(0, RELEASE_TITLE_MAX_LENGTH)
+        : '';
 
     const adminClient = createAdminClient(auth.supabaseUrl);
     if (!adminClient) {
@@ -95,9 +98,7 @@ export async function POST(
     // column list (used by many routes) — read them here rather than widening
     // that select. The metadata row is re-read here (not carried from the
     // client) so the clear below is a true read-modify-write and can't drop
-    // another key. `release_date` is read here too — the OLD one, before the
-    // write below overwrites it — because ensureReleaseOwnership's summary
-    // shape (toReleaseSummary) drops that column entirely.
+    // another key.
     const pendingResult = await adminClient
       .from('releases')
       .select('metadata,release_type,release_date')
@@ -117,9 +118,14 @@ export async function POST(
     > | null;
     const templatePending = readTemplatePending(existingMetadata);
     const releaseType = String(pendingResult.data?.release_type || 'single');
-    const previousReleaseDate = pendingResult.data?.release_date
+    // The date BEFORE this save — what an existing plan was lined up with.
+    const previousDate = pendingResult.data?.release_date
       ? String(pendingResult.data.release_date).slice(0, 10)
       : null;
+
+    // A rename only when the name actually changes, and then the slug moves
+    // with it, the way the edit route moves it.
+    const renaming = Boolean(titleInput) && titleInput !== ownership.release.title;
 
     // Write the date FIRST and independently of instantiation. If the plan
     // build fails below, the user still got the thing they asked for, and the
@@ -129,7 +135,12 @@ export async function POST(
       .from('releases')
       .update({
         release_date: releaseDateResult.value,
-        ...(titleInput ? { title: titleInput } : {}),
+        ...(renaming
+          ? {
+              title: titleInput,
+              slug: normalizeReleaseSlug(titleInput) || ownership.release.slug,
+            }
+          : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', releaseId)
@@ -143,68 +154,46 @@ export async function POST(
       );
     }
 
+    // The edit route mirrors a rename into release_metadata.release_title (what
+    // a distributor sees). This door did not, so a rollout named from the date
+    // card kept "Untitled rollout" in its metadata forever. Best effort: the
+    // rename itself has landed.
+    if (renaming) {
+      const metadataUpdate = await adminClient
+        .from('release_metadata')
+        .upsert(
+          {
+            release_id: releaseId,
+            release_title: titleInput,
+            primary_artist_name: ownership.release.artistName,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'release_id' }
+        );
+      if (metadataUpdate.error) {
+        console.error(
+          `Release ${releaseId}: renamed, but the metadata title could not be updated.`,
+          metadataUpdate.error.message
+        );
+      }
+    }
+
     let activitiesCreated = 0;
     let activitiesMoved = 0;
+    let activitiesNotMoved = 0;
 
-    // Moving an ALREADY-scheduled rollout's date takes its open activities
-    // with it — a release still waiting on its first date (templatePending)
-    // has no activities yet, so the two branches are mutually exclusive.
-    // Best-effort and non-fatal by the same reasoning the instantiation
-    // branch below uses: the date the user asked for is already saved: a
-    // failure here is reported, not rolled back.
-    if (!templatePending && previousReleaseDate && previousReleaseDate !== releaseDateResult.value) {
-      const daysMoved = daysBetweenReleaseDates(previousReleaseDate, releaseDateResult.value);
-      if (daysMoved) {
-        try {
-          const tasksResult = await adminClient
-            .from('tasks')
-            .select('id,status,due_date')
-            .eq('release_id', releaseId);
-          if (tasksResult.error) throw tasksResult.error;
-
-          const shifts = computeShiftedTaskDueDates(
-            (tasksResult.data || []).map(
-              (row): ReschedulableTask => ({
-                id: String(row.id),
-                status: String(row.status || ''),
-                dueDate: row.due_date ? String(row.due_date) : null,
-              })
-            ),
-            daysMoved
-          );
-
-          // One update per row: the shifts differ per task, and this repo
-          // has no raw-SQL "shift every matching row by N days" primitive to
-          // reach for instead (the boring-stack call — see release-reschedule.ts).
-          const results = await Promise.all(
-            shifts.map((shift) =>
-              adminClient.from('tasks').update({ due_date: shift.dueDate }).eq('id', shift.id)
-            )
-          );
-          const failed = results.find((result) => result.error);
-          if (failed?.error) throw failed.error;
-
-          activitiesMoved = shifts.length;
-        } catch (shiftError) {
-          console.error(
-            `Release ${releaseId}: date saved but moving its activities failed.`,
-            shiftError
-          );
-          return NextResponse.json(
-            {
-              releaseId,
-              releaseDate: releaseDateResult.value,
-              title: String(updateResult.data?.title || ''),
-              activitiesCreated: 0,
-              activitiesMoved: 0,
-              templatePending: false,
-              error:
-                'Your release date was saved, but its activities could not be moved with it. Try setting the date again.',
-            },
-            { status: 207 }
-          );
-        }
-      }
+    // An existing plan follows its release day. Skipped for a plan-waiting
+    // rollout (its plan is BUILT from the new date below, so there is nothing
+    // to move) and when the date did not actually change.
+    if (!templatePending && previousDate !== releaseDateResult.value) {
+      const alignment = await alignPlanToReleaseDate(adminClient, {
+        releaseId,
+        previousDate,
+        nextDate: releaseDateResult.value,
+        releaseType,
+      });
+      activitiesMoved = alignment.moved;
+      activitiesNotMoved = alignment.failed;
     }
 
     if (templatePending) {
@@ -265,6 +254,9 @@ export async function POST(
       title: String(updateResult.data?.title || ''),
       activitiesCreated,
       activitiesMoved,
+      // Non-zero only when some of the plan could not be moved; the caller
+      // says so rather than reporting a clean move.
+      activitiesNotMoved,
       templatePending: false,
     });
   } finally {
