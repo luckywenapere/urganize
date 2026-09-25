@@ -53,6 +53,30 @@ export function isDbReleaseType(value: unknown): value is DbReleaseType {
  */
 export const DEFAULT_RELEASE_TITLE = 'Untitled rollout';
 
+/**
+ * Every title the SERVER has ever applied to an unnamed release. The default
+ * was "Untitled release" until the 2026-09-09 rollout rename, and rows created
+ * before then still carry it, so comparing against DEFAULT_RELEASE_TITLE alone
+ * treats those rows as deliberately named. That is how the date card's name
+ * field quietly stopped appearing for them.
+ */
+export const DEFAULT_RELEASE_TITLES: readonly string[] = [DEFAULT_RELEASE_TITLE, 'Untitled release'];
+
+const DEFAULT_RELEASE_TITLE_KEYS = new Set(
+  DEFAULT_RELEASE_TITLES.map((title) => title.toLowerCase())
+);
+
+/**
+ * True when a release still carries a server-applied placeholder rather than a
+ * name somebody chose. Empty counts too: the read path renders an empty title
+ * as the default. Case and surrounding whitespace are ignored, because a title
+ * typed back as "untitled rollout" is still not a name.
+ */
+export function isDefaultReleaseTitle(title: string | null | undefined): boolean {
+  const trimmed = String(title ?? '').trim();
+  return !trimmed || DEFAULT_RELEASE_TITLE_KEYS.has(trimmed.toLowerCase());
+}
+
 export interface Release {
   id: string;
   ownerUserId: string;

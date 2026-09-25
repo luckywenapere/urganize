@@ -10,11 +10,8 @@ import {
   requireActiveAuthenticatedUser,
   isOptionalTableMissingError,
   loadReleaseCommandCenterData,
-  isValidReleaseStatus,
-  parseOptionalReleaseDate,
-  RELEASE_STATUSES,
 } from '../_shared';
-import { normalizeReleaseSlug } from '@/lib/release-ops';
+import { planReleaseEdit } from '@/lib/release-edit';
 import { isWorkspaceFeatureEnabled } from '@/lib/artists-server';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-helpers';
 import {
@@ -25,7 +22,6 @@ import {
 } from '@/lib/posthog';
 import { isReleaseActive } from '@/lib/release-activity';
 
-const trimString = (value: unknown): string => String(value || '').trim();
 const TASKS_TABLE = 'tasks';
 const ASSETS_TABLE = 'assets';
 const WORKSPACES_TABLE = 'workspaces';
@@ -210,120 +206,139 @@ export async function GET(
   });
 }
 
+/**
+ * Edits a rollout's own row: title, description, status (and artist_name only
+ * where the roster does not own it).
+ *
+ * A TRUE PARTIAL UPDATE since 2026-09-25, and that is the fix for a real bug:
+ * this handler used to write every column on every call, so an omitted field
+ * was overwritten — release_date with NULL. UrgAns's rename tool sent only a
+ * title and a description, so renaming a rollout wiped its date and the main
+ * view hid the whole plan behind "Set a release date first". The rules now live
+ * in lib/release-edit.ts (planReleaseEdit, pure and tested): a field that is not
+ * in the body is not touched, and the release date is not writable here at all.
+ * Dates go through POST /api/releases/[releaseId]/schedule, which builds a
+ * waiting plan and moves an existing one so it still lines up with release day.
+ */
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
-  const posthogServer = createServerPostHogClient();
+  const auth = await requireActiveAuthenticatedUser(request);
+  if ('error' in auth) return auth.error;
 
-  try {
-    const auth = await requireActiveAuthenticatedUser(request);
-    if ('error' in auth) return auth.error;
+  const { releaseId } = await context.params;
+  if (!releaseId) return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
 
-    const { releaseId } = await context.params;
-    if (!releaseId) return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
+  const adminClient = createAdminClient(auth.supabaseUrl);
+  const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
+  if ('error' in ownership) return ownership.error;
 
-    const adminClient = createAdminClient(auth.supabaseUrl);
-    const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
-    if ('error' in ownership) return ownership.error;
+  const body = await request.json().catch(() => null);
 
-    const body = await request.json().catch(() => ({}));
-    const title = trimString(body?.title);
-    const releaseDate = trimString(body?.releaseDate);
-    const description = trimString(body?.description);
+  // ensureReleaseOwnership's shared summary drops release_date, and the edit
+  // planner needs it to tell "the same date echoed back" (fine) from "a
+  // different date" (refused, and pointed at the schedule route).
+  const dateRow = await adminClient!
+    .from('releases')
+    .select('release_date')
+    .eq('id', releaseId)
+    .maybeSingle();
+  if (dateRow.error) {
+    return NextResponse.json(
+      { error: dateRow.error.message || 'Could not load rollout.' },
+      { status: 500 }
+    );
+  }
+
+  const plan = planReleaseEdit(
+    body,
+    {
+      title: ownership.release.title,
+      slug: ownership.release.slug,
+      releaseDate: dateRow.data?.release_date ? String(dateRow.data.release_date) : null,
+      description: ownership.release.description,
+      status: ownership.release.status,
+      artistName: ownership.release.artistName,
+    },
     // Artists are renamed via PATCH /api/workspace/artists/[artistId]
     // (renameWorkspaceArtist), which updates artists.name and write-throughs
     // the cache on every release; a release is MOVED to a different artist via
-    // POST /api/releases/[releaseId]/artist. The release-edit path must not
-    // mutate the releases.artist_name cache directly — when the workspace flag
-    // is on, ignore body.artistName entirely and keep the existing value, or
-    // the cached name silently desyncs from artist_id.
-    const artistName = isWorkspaceFeatureEnabled()
-      ? ownership.release.artistName
-      : trimString(body?.artistName) || ownership.release.artistName;
+    // POST /api/releases/[releaseId]/artist. With the workspace flag on the
+    // release row's artist_name is that cache, and writing it here would
+    // silently desync it from artist_id.
+    { artistNameEditable: !isWorkspaceFeatureEnabled() }
+  );
 
-    // status is an enumerated field with no DB CHECK constraint — reject
-    // unknown values here or arbitrary text lands in releases.status and
-    // silently breaks every statusLabel lookup and status filter downstream.
-    const statusInput = trimString(body?.status);
-    if (statusInput && !isValidReleaseStatus(statusInput)) {
-      return NextResponse.json(
-        { error: `Rollout status must be one of: ${RELEASE_STATUSES.join(', ')}.` },
-        { status: 400 }
-      );
-    }
-    const status = statusInput || ownership.release.status;
+  if (!plan.ok) {
+    return NextResponse.json({ error: plan.error, code: plan.code }, { status: 400 });
+  }
 
-    if (!title) return NextResponse.json({ error: 'Rollout title is required.' }, { status: 400 });
+  // Nothing changed: answer honestly and write nothing, so an edit that repeats
+  // the current values never bumps updated_at or fills the audit trail.
+  if (plan.changed.length === 0) {
+    return NextResponse.json({
+      status: 'saved',
+      changed: [],
+      release: { id: releaseId, title: ownership.release.title },
+    });
+  }
 
-    // Same validation the POST route runs — without it a malformed date
-    // string reached Postgres, cast-errored, and surfaced as a raw 500.
-    const releaseDateResult = parseOptionalReleaseDate(releaseDate);
-    if (releaseDateResult.error) {
-      return NextResponse.json({ error: releaseDateResult.error }, { status: 400 });
-    }
+  const releaseUpdate = await adminClient!
+    .from('releases')
+    .update({ ...plan.update, updated_at: new Date().toISOString() })
+    .eq('id', releaseId)
+    .eq('owner_user_id', auth.user.id);
 
-    const releaseUpdate = await adminClient!
-      .from('releases')
-      .update({
-        title,
-        slug: normalizeReleaseSlug(title) || ownership.release.slug,
-        release_date: releaseDateResult.value,
-        description: description || null,
-        artist_name: artistName,
-        status,
-        // state/readinessScore body fields are no longer accepted — the
-        // six-stage pipeline they belonged to was removed from the product.
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', releaseId)
-      .eq('owner_user_id', auth.user.id);
+  if (releaseUpdate.error) {
+    if (isOptionalTableMissingError(releaseUpdate.error)) return buildMissingTableResponse();
+    return NextResponse.json({ error: releaseUpdate.error.message || 'Could not update rollout.' }, { status: 500 });
+  }
 
-    if (releaseUpdate.error) {
-      if (isOptionalTableMissingError(releaseUpdate.error)) return buildMissingTableResponse();
-      return NextResponse.json({ error: releaseUpdate.error.message || 'Could not update rollout.' }, { status: 500 });
-    }
-
+  // The metadata row mirrors the title and artist a distributor sees. Written
+  // only when one of those actually moved. A failure here is logged rather than
+  // answered as a 500: the rollout WAS renamed, and telling the caller it was
+  // not is how an assistant ends up retrying a change that already landed.
+  const warnings: string[] = [];
+  if (plan.changed.includes('title') || plan.changed.includes('artistName')) {
     const metadataUpdate = await adminClient!
       .from(RELEASE_METADATA_TABLE)
       .upsert(
         {
           release_id: releaseId,
-          primary_artist_name: artistName,
-          release_title: title,
+          primary_artist_name: plan.next.artistName,
+          release_title: plan.next.title,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'release_id' }
       );
-
     if (metadataUpdate.error) {
-      if (isOptionalTableMissingError(metadataUpdate.error)) return buildMissingTableResponse();
-      return NextResponse.json({ error: metadataUpdate.error.message || 'Could not update metadata.' }, { status: 500 });
+      console.error(`[releases/patch] ${releaseId}: metadata write-through failed:`, metadataUpdate.error.message);
+      warnings.push('metadata');
     }
-
-    const eventResult = await adminClient!.from(RELEASE_EVENTS_TABLE).insert({
-      release_id: releaseId,
-      type: 'metadata_updated',
-      payload_json: { title, artistName, releaseDate },
-    });
-
-    if (eventResult.error) {
-      if (isOptionalTableMissingError(eventResult.error)) return buildMissingTableResponse();
-      return NextResponse.json({ error: eventResult.error.message || 'Could not log metadata event.' }, { status: 500 });
-    }
-
-    captureServerAnalyticsEvent(
-      posthogServer,
-      auth.user.id,
-      createPostHogEvent('release_date_set', {
-        release_id: releaseId,
-      })
-    );
-
-    return NextResponse.json({ status: 'saved' });
-  } finally {
-    await shutdownServerAnalytics(posthogServer);
   }
+
+  // The audit row records what CHANGED. It used to carry `releaseDate: ''` for
+  // every rename, which read as "the date was cleared on purpose".
+  const eventResult = await adminClient!.from(RELEASE_EVENTS_TABLE).insert({
+    release_id: releaseId,
+    type: 'metadata_updated',
+    payload_json: {
+      title: plan.next.title,
+      artistName: plan.next.artistName,
+      changed: plan.changed,
+    },
+  });
+  if (eventResult.error) {
+    console.error(`[releases/patch] ${releaseId}: could not log the edit:`, eventResult.error.message);
+  }
+
+  return NextResponse.json({
+    status: 'saved',
+    changed: plan.changed,
+    release: { id: releaseId, title: plan.next.title },
+    ...(warnings.length ? { warnings } : {}),
+  });
 }
 
 export async function DELETE(

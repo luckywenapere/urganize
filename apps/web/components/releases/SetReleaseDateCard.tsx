@@ -5,7 +5,7 @@ import { CalendarPlus, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { scheduleRelease } from '@/lib/schedule-release-client';
 import { getTemplateStats } from '@/lib/release-templates/loader';
-import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
+import { DEFAULT_RELEASE_TITLE, isDefaultReleaseTitle, type DbReleaseType } from '@/types/releases';
 
 function formatYmdLocal(date: Date): string {
   const year = date.getFullYear();
@@ -77,10 +77,14 @@ export function SetReleaseDateCard({
   // Anchored once per mount so the `min` attribute can't shift mid-interaction.
   const todayYmd = useMemo(() => formatYmdLocal(new Date()), []);
 
-  // Offer the rename only while the release still carries the server-applied
+  // Offer the rename only while the release still carries a server-applied
   // default — someone who named it already doesn't need the field, and
-  // showing it would read as "we lost your title".
-  const isUnnamed = releaseTitle === DEFAULT_RELEASE_TITLE;
+  // showing it would read as "we lost your title". isDefaultReleaseTitle
+  // (not a bare === DEFAULT_RELEASE_TITLE) is what makes this fire for a row
+  // created before the 2026-09-09 rename ("Untitled release"), not only the
+  // current default ("Untitled rollout") — a strict comparison silently
+  // stopped offering the rename to every pre-existing unnamed rollout.
+  const isUnnamed = isDefaultReleaseTitle(releaseTitle);
   const showNameField = templatePending && isUnnamed;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

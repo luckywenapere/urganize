@@ -66,11 +66,17 @@ export interface AnalyticsEventPropertiesMap {
   /** `deferred` marks a date filled in AFTER creation, from the activities
    * view's SetReleaseDateCard, rather than in the create modal (URG-230).
    * `activities_created` is non-zero when that save also built a rollout
-   * plan that had been waiting on the date. Both absent on the create path. */
+   * plan that had been waiting on the date. `activities_moved` is non-zero
+   * when the date changed on a rollout that ALREADY had a plan, and the plan
+   * moved with it (2026-09-25, lib/release-plan-dates-server.ts) — the fix for
+   * a rename silently stranding a plan behind a stale date. The three are
+   * mutually exclusive: a rollout either had no plan (created), was waiting on
+   * one (built), or already had one (moved). */
   release_date_set: {
     release_id: string;
     deferred?: boolean;
     activities_created?: number;
+    activities_moved?: number;
   };
   release_deleted: { release_id: string };
   playbook_step_completed: {
