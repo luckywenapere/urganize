@@ -8,7 +8,6 @@ import {
   latestBillingEventAtForActor,
   logBillingEvent,
 } from '@/lib/billing-events-server';
-import { buildNotifyAdminEmail } from '@/lib/billing-alert-templates';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
 import { resolveAppBaseUrl } from '@/lib/tasks-server';
 
@@ -93,17 +92,17 @@ export async function POST(request: NextRequest) {
         String(auth.user.email || '').trim() ||
         'A teammate';
 
-      const email = buildNotifyAdminEmail({
-        requesterLabel,
-        teamName: team.teamName,
-        activateUrl: `${resolveAppBaseUrl()}/locked`,
-      });
-
-      await sendEmail({
+      await sendEmail(admin, {
+        templateId: 'notify_admin',
         to: team.ownerEmail,
-        subject: email.subject,
-        html: email.html,
-        text: email.text,
+        props: {
+          requesterLabel,
+          teamName: team.teamName,
+          activateUrl: `${resolveAppBaseUrl()}/locked`,
+        },
+        trigger: 'notify_admin_sent',
+        recipientUserId: team.ownerUserId,
+        actorUserId: auth.user.id,
       });
     } catch {
       // Recorded above; never fail the click.

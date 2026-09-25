@@ -10,7 +10,6 @@ import {
 } from '@/lib/tasks-server';
 import { type WorkspaceMemberRole } from '@/lib/tasks';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
-import { buildWorkspaceInviteEmail } from '@/lib/email-templates';
 import { checkSeatAllowance, recordLimitHit } from '@/lib/seats-server';
 import {
   captureServerAnalyticsEvent,
@@ -237,17 +236,17 @@ export async function POST(request: NextRequest) {
           readString(auth.user.user_metadata?.full_name) ||
           readString(auth.user.email) ||
           'A teammate';
-        const built = buildWorkspaceInviteEmail({
-          workspaceName: access.primaryWorkspace?.name || 'their team',
-          inviterLabel,
-          inviteUrl,
-          accessLabel: WORKSPACE_ROLE_ACCESS_LABEL[role],
-        });
-        const result = await sendEmail({
+        const result = await sendEmail(adminClient, {
+          templateId: 'workspace_invite',
           to: email,
-          subject: built.subject,
-          html: built.html,
-          text: built.text,
+          props: {
+            workspaceName: access.primaryWorkspace?.name || 'their team',
+            inviterLabel,
+            inviteUrl,
+            accessLabel: WORKSPACE_ROLE_ACCESS_LABEL[role],
+          },
+          trigger: 'teammate_invited',
+          actorUserId: auth.user.id,
         });
         emailSent = result.ok;
         if (!result.ok) {

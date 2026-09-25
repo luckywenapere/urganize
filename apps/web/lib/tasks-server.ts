@@ -36,14 +36,13 @@ import { getNotificationPresets } from '@/lib/notification-presets-server';
 import type { NotificationPresets } from '@/lib/notification-presets';
 import { TEAM_TRIAL_DAYS, isHardPaywallEnabled } from '@/lib/team-billing';
 import { logBillingEvent } from '@/lib/billing-events-server';
-import { sendEmail } from '@/lib/email';
+import { isEmailConfigured, sendEmail } from '@/lib/email';
+import { APP_URL } from '@/lib/email/links';
 import {
-  APP_URL,
-  buildTaskAssignedEmail,
   formatDueDateForEmail,
   noteExcerptForEmail,
   priorityLabelForEmail,
-} from '@/lib/email-templates';
+} from '@/lib/email/format';
 import { claimPendingWorkspaceInvite } from '@/lib/invite-claims-server';
 
 export const WORKSPACES_TABLE = 'workspaces';
@@ -1992,7 +1991,7 @@ async function sendTaskAssignedEmail(
   ]);
 
   const assigneeEmail = String(assigneeResult.data?.email || '').trim();
-  if (!assigneeEmail) return;
+  if (!assigneeEmail || !isEmailConfigured()) return;
 
   const assignerLabel =
     String(actorResult.data?.name || '').trim() ||
@@ -2014,22 +2013,22 @@ async function sendTaskAssignedEmail(
     releaseTitle = String(releaseResult.data?.title || '').trim();
   }
 
-  const message = buildTaskAssignedEmail({
-    recipientName: String(assigneeResult.data?.name || ''),
-    assignerLabel,
-    taskTitle: String(task?.title || ''),
-    releaseTitle,
-    dueDateLabel: formatDueDateForEmail(task?.due_date),
-    priorityLabel: priorityLabelForEmail(task?.priority),
-    note: noteExcerptForEmail(task?.description),
-    taskUrl: releaseId ? `${APP_URL}/dashboard?release=${releaseId}` : `${APP_URL}/dashboard`,
-  });
-
-  await sendEmail({
+  await sendEmail(adminClient, {
+    templateId: 'task_assigned',
     to: assigneeEmail,
-    subject: message.subject,
-    html: message.html,
-    text: message.text,
+    props: {
+      recipientName: String(assigneeResult.data?.name || ''),
+      assignerLabel,
+      taskTitle: String(task?.title || ''),
+      releaseTitle,
+      dueDateLabel: formatDueDateForEmail(task?.due_date),
+      priorityLabel: priorityLabelForEmail(task?.priority),
+      note: noteExcerptForEmail(task?.description),
+      taskUrl: releaseId ? `${APP_URL}/dashboard?release=${releaseId}` : `${APP_URL}/dashboard`,
+    },
+    trigger: 'task_assigned',
+    recipientUserId: input.assigneeUserId,
+    actorUserId: input.actorUserId,
     // The inbox row itself reads as coming from the person who assigned it.
     fromLabel: `${assignerLabel} via Urganize`,
   });

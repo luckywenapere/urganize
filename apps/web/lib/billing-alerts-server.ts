@@ -19,11 +19,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isEmailConfigured, sendEmail } from './email';
-import {
-  buildFounderBillingAlertEmail,
-  type FounderAlertContext,
-  type FounderAlertKind,
-} from './billing-alert-templates';
+import type { FounderAlertContext, FounderAlertKind } from './email/alert-types';
 import { logBillingEvent, hasBillingEvent } from './billing-events-server';
 import { isHardPaywallEnabled, TEAM_TRIAL_PILL_THRESHOLD_DAYS } from './team-billing';
 
@@ -172,12 +168,15 @@ export async function notifyFounder(
   if (!recipient || !isEmailConfigured()) return;
 
   try {
-    const email = buildFounderBillingAlertEmail(input.kind, context);
-    await sendEmail({
+    await sendEmail(admin, {
+      templateId: 'founder_billing_alert',
       to: recipient,
-      subject: email.subject,
-      html: email.html,
-      text: email.text,
+      props: { kind: input.kind, context },
+      trigger: input.kind,
+      // Internal founder mail — the recipient is BILLING_ALERTS_EMAIL, not a
+      // user in the system, so no recipientUserId. The actor is whoever
+      // triggered the underlying event.
+      actorUserId: input.actorUserId,
     });
   } catch {
     // The row is already written; a failed alert must not surface anywhere.
