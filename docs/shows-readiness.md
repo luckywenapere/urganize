@@ -90,11 +90,28 @@ Each was applied, confirmed applied, run, and restored byte for byte.
 
 ## Manual pass
 
-The automated tests cannot see a screen. This is the pass run in the browser
-preview, and what still needs a real phone.
+The automated tests cannot see a screen. The gate below is what has been run;
+the interactive browser and phone pass is the remaining manual step.
 
-See "Browser pass" below for results.
+### Automated gate (2026-09-25, on the merged branch)
 
-### Browser pass
+- Tests: 4,168 passed, 30 skipped (`pnpm --filter @urganize/web test`), none
+  failing.
+- Lint: 3 errors, 78 warnings, all pre-existing in `WorkspaceView.tsx`; zero
+  in any Shows file.
+- Build: `next build` green by exit code; every Shows route compiles and the
+  static routes stay static.
 
-Filled in after the run.
+### Browser pass, still to do on a real session
+
+The gate cannot exercise a logged-in Shows session or a real file upload, and
+this sandbox cannot mint one. Worth one pass with the events flag on:
+
+- Book a single show and a festival (several days by artists); confirm set
+  times land at the typed clock time in the venue’s zone.
+- Build a set, add a song, upload a file, and confirm the DJ pack page and a
+  no-JS download link actually serve it.
+- Move a show’s date and confirm the run of show and the pack links re-date
+  rather than expiring early.
+- Rename a set, edit and delete a song, and confirm a sent set refuses deletion.
+- Open a pack link on a phone: turned off, cancelled, expired and reopened.
