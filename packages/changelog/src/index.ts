@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.48.1",
+    date: "September 25, 2026",
+    highlights: [
+      "Renaming a rollout used to quietly clear its release date, which could hide your whole plan and ask you to pick a date again. That's fixed now — renaming only changes the name.",
+    ],
+  },
+  {
     version: "1.48.0",
     date: "September 25, 2026",
     highlights: [
