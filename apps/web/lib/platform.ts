@@ -1,22 +1,23 @@
-import { Capacitor } from '@capacitor/core';
+import { hasShellUserAgent } from '@urganize/native-bridge';
+import { getNativeShell } from '@/lib/native-bridge';
 
 /**
- * Thin wrapper around @capacitor/core so the rest of the app never imports
- * Capacitor directly. On the web (no native shell), Capacitor.isNativePlatform()
- * always returns false and getPlatform() always returns 'web' — these are safe
- * to call unconditionally in both server and client code paths, but they only
- * mean anything client-side, so callers should gate on 'use client' contexts.
+ * Platform checks for the rest of the app, so nothing else reads the native
+ * shell directly. "Native" means the Expo shell in apps/mobile, which shows
+ * this website in a react-native-webview and describes itself through a
+ * global injected before the page loads (lib/native-bridge.ts). In a browser
+ * and on the server there is no such global, so getPlatform() is 'web' and
+ * isNativePlatform() is false. Both answer synchronously, which the iOS
+ * billing gates rely on to render correctly on the first paint.
  */
 export type NativePlatform = 'ios' | 'android' | 'web';
 
 export function getPlatform(): NativePlatform {
-  if (typeof window === 'undefined') return 'web';
-  return Capacitor.getPlatform() as NativePlatform;
+  return getNativeShell()?.platform ?? 'web';
 }
 
 export function isNativePlatform(): boolean {
-  if (typeof window === 'undefined') return false;
-  return Capacitor.isNativePlatform();
+  return getNativeShell() !== null;
 }
 
 export function isIOSApp(): boolean {
@@ -28,22 +29,27 @@ export function isAndroidApp(): boolean {
 }
 
 /**
- * True only for a plain Android browser tab — Capacitor's getPlatform()
- * reports 'web' outside the native shell, so it can't distinguish "Android
- * Chrome" from any other browser. This is a UA sniff specifically for
+ * True only for a plain Android browser tab — getPlatform() reports 'web'
+ * outside the native shell, so it can't distinguish "Android Chrome" from
+ * any other browser. This is a UA sniff specifically for
  * steering mobile-web visitors toward the installed app; it is deliberately
  * never true inside the native shell itself (isAndroidApp() covers that).
+ *
+ * The shell's user-agent token is checked as well as isNativePlatform():
+ * Android injects the shell's description as the page starts loading, not
+ * strictly before its first script, and in that gap the app would otherwise
+ * read as a phone browser and offer to install itself.
  */
 export function isAndroidBrowser(): boolean {
   if (typeof window === 'undefined') return false;
-  if (isNativePlatform()) return false;
+  if (isNativePlatform() || hasShellUserAgent(window.navigator?.userAgent)) return false;
   return /Android/i.test(window.navigator.userAgent);
 }
 
 /**
  * True only for a plain iOS browser tab — the mirror of isAndroidBrowser(),
  * and used for the same job: steering a mobile-web visitor toward an
- * installed app. Never true inside the Capacitor native shell.
+ * installed app. Never true inside the native shell.
  *
  * iPadOS 13+ is the reason this is not a one-line UA test: it reports itself
  * as "Macintosh" specifically so sites stop serving it the phone layout, so
@@ -52,7 +58,7 @@ export function isAndroidBrowser(): boolean {
  */
 export function isIOSBrowser(): boolean {
   if (typeof window === 'undefined') return false;
-  if (isNativePlatform()) return false;
+  if (isNativePlatform() || hasShellUserAgent(window.navigator?.userAgent)) return false;
   const nav = window.navigator;
   if (/iPad|iPhone|iPod/i.test(nav.userAgent)) return true;
   return nav.platform === 'MacIntel' && nav.maxTouchPoints > 1;
@@ -69,7 +75,7 @@ export function isIOSBrowser(): boolean {
  * string in some older engines.
  *
  * NOT the same question as isNativePlatform(): that one asks "are we inside
- * the Capacitor shell", this asks "did the user add us to their Home Screen".
+ * the native shell", this asks "did the user add us to their Home Screen".
  */
 export function isStandaloneDisplay(): boolean {
   if (typeof window === 'undefined') return false;

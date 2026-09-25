@@ -1,0 +1,16 @@
+# Expo generates the native projects from app.config.ts (`expo prebuild`);
+# they are build output, not source.
+/android/
+/ios/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Signing material — EAS manages credentials; never commit a local copy.
+*.jks
+*.keystore
+*.p8
+*.p12
+*.mobileprovision
+credentials.json

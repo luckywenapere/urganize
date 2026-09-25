@@ -745,7 +745,7 @@ body {
       without it this rule silently does nothing and the bug quietly returns.
    2. `(pointer: coarse)` rather than a width breakpoint: it targets the
       touch devices that actually auto-zoom, including a landscape iPad and
-      the Capacitor shell (both wider than any phone breakpoint), and leaves
+      the Android app's webview (both wider than any phone breakpoint), and leaves
       desktop rendering completely untouched.
    3. One rule instead of editing ~130 form controls by hand, which would
       regress the first time anyone adds an input.

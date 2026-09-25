@@ -35,7 +35,7 @@ The six features that constitute v1:
 
 **Scope expansion (2026-07-31):** a tenth surface, **release metadata + collaborator credit capture** (URG-108), was consciously sanctioned by the founder. Unlike content calendar or the EPK generator, this one DOES move something off the out-of-scope list below — "Credit submissions / shareable credit links" — the same move Chappi made in 2026-07-13; see the EXCEPTION note on that line. One shareable, no-login link per release lets collaborators (producers, co-writers, engineers) submit publishing/distribution credits — legal name, roles, songwriter and master splits, PRO affiliation, IPI/CAE number, publisher, socials — through a public form; the unguessable share token is the only access control, the same trust model the EPK link already established. Submissions land on an in-app **Metadata** page (reached from the release header, right after Press kit, and from the workspace's scoped header — since 2026-08-12 that scoped-header pill is the NARROW-width path, with the identity card's nav as the wide-width entry point; the exact breakpoint is conditional, see "Identity card gains a nav" below) that also lets the manager edit release-level distribution fields (ISRC, UPC, genre, subgenre, language, explicit flag, label name, (P)/(C) lines) — one page for everything a distributor handoff needs. Storage and display only, per the royalty-splits scope line below: no automation, no PDF generation, no e-signing. Submissions are submit-once by design — no edit token, no update path for collaborators; a manager corrects a bad entry by deleting it and the collaborator resubmits through the same link. Flag-gated behind `NEXT_PUBLIC_FEATURE_METADATA` (default off; the credits API routes and the public `/credits/[token]` page both 404 when off). Everything hangs off a release, honoring the release-spine principle. This is the fourth sanctioned expansion — the "do not exceed" rule still holds for everything else.
 
-**Scope expansion (2026-07-21; this entry backfilled 2026-08-07 — doc-drift, see the note at the end of this paragraph):** an eleventh surface, a **native Android/iOS app** (no Linear issue number recovered), was consciously sanctioned by the founder. Unlike content calendar or the EPK generator, this one DOES move something off the out-of-scope list below — "Native mobile apps (iOS, Android)" — the third sanctioned exception to that list (Chappi was the first, the metadata hub the second). It is not a rewrite: `apps/mobile` is a **Capacitor native shell** whose webview loads the real, continuously-deployed `https://app.urganize.app` — there is no bundled/static build of the product, no separate mobile codebase to keep in sync, and no offline mode. This keeps the release-spine principle intact by construction: every screen the app shows *is* the same release-scoped web app, not a reimplementation of it. The decision record and full webview-risk audit (why static export was rejected, the auth/OAuth deep-link fix, the Apple IAP billing exclusion, the browser-only-API fixes) lives in `docs/mobile/capacitor-audit.md`, `docs/mobile/auth-setup.md`, and `docs/mobile/codemagic-setup.md` — read those before touching `apps/mobile` or the platform-detection code paths in `apps/web` (`lib/platform.ts`, `lib/external-link.ts`, `components/providers/CapacitorAuthBridge.tsx`). This is the fifth sanctioned expansion — the "do not exceed" rule still holds for everything else. **Doc-drift note:** the shell was built and committed 2026-07-21 (native projects, Capacitor config, the audit docs, the `apps/mobile` workspace member) but this file was never updated to record the scope decision — the same failure mode flagged elsewhere in this document ("Chappi-first landing restored," "doc-drift flag" under Workspace consolidation). Surfacing it now per this file's own rule rather than silently back-filling it without a note. No Play Store/App Store release has shipped yet, so there is no changelog-ledger entry to reconcile — the Versioning section's release procedure applies once a build actually reaches users, same as any other v1 surface.
+**Scope expansion (2026-07-21; this entry backfilled 2026-08-07 — doc-drift, see the note at the end of this paragraph):** an eleventh surface, a **native Android/iOS app** (no Linear issue number recovered), was consciously sanctioned by the founder. Unlike content calendar or the EPK generator, this one DOES move something off the out-of-scope list below — "Native mobile apps (iOS, Android)" — the third sanctioned exception to that list (Chappi was the first, the metadata hub the second). It is not a rewrite: `apps/mobile` is a **Capacitor native shell** whose webview loads the real, continuously-deployed `https://app.urganize.app` — there is no bundled/static build of the product, no separate mobile codebase to keep in sync, and no offline mode. This keeps the release-spine principle intact by construction: every screen the app shows *is* the same release-scoped web app, not a reimplementation of it. The decision record and full webview-risk audit (why static export was rejected, the auth/OAuth deep-link fix, the Apple IAP billing exclusion, the browser-only-API fixes) lives in `docs/mobile/capacitor-audit.md`, `docs/mobile/auth-setup.md`, and `docs/mobile/codemagic-setup.md` — read those before touching `apps/mobile` or the platform-detection code paths in `apps/web` (`lib/platform.ts`, `lib/external-link.ts`, `components/providers/CapacitorAuthBridge.tsx`). This is the fifth sanctioned expansion — the "do not exceed" rule still holds for everything else. **Doc-drift note:** the shell was built and committed 2026-07-21 (native projects, Capacitor config, the audit docs, the `apps/mobile` workspace member) but this file was never updated to record the scope decision — the same failure mode flagged elsewhere in this document ("Chappi-first landing restored," "doc-drift flag" under Workspace consolidation). Surfacing it now per this file's own rule rather than silently back-filling it without a note. No Play Store/App Store release has shipped yet, so there is no changelog-ledger entry to reconcile — the Versioning section's release procedure applies once a build actually reaches users, same as any other v1 surface. **RE-SHAPED 2026-09-24: the Capacitor shell is replaced by an Expo shell** (founder call). This is the same sanctioned surface with the same remote-URL strategy, not a new expansion: `apps/mobile` is now an Expo app whose `react-native-webview` loads the live site. The Capacitor-era docs named above are deleted. Read `docs/mobile/expo-shell.md` instead, and see "The Expo shell" under Working notes.
 
 **Scope expansion (2026-08-08):** a twelfth surface, **genre prediction from audio**, was consciously sanctioned by the founder. It moves nothing off the out-of-scope list below — the nearest line, "third-party music platform integrations," is not crossed: the model is a bespoke classifier built for Urganize by a collaborating developer (a FastAPI service on an AWS Lambda function URL), not a DSP/platform API. It is one control on the already-sanctioned Metadata hub: next to the Genre field, "Predict from audio" lets the owner pick a local audio file, which `apps/web` proxies to the model and uses to prefill the existing free-text `release_metadata.genre` field. **Nothing is stored** — the audio is streamed through and discarded, the prediction is not persisted, and the user reviews it and saves through the existing metadata PATCH. No new table, no migration, no new object; it hangs off a release, honoring the release-spine principle. Flag-gated behind `NEXT_PUBLIC_FEATURE_GENRE_PREDICTION` (default off; the `predict-genre` API route 404s when off), configured by the server-only `GENRE_PREDICTION_URL` (+ optional `GENRE_PREDICTION_API_KEY`). **Two known external-dependency gaps at build time:** the upstream URL has no authentication (the `x-api-key` header is pre-wired for when its owner adds one) and its response schema is unpinned — the model was returning HTTP 500 on every file when this shipped, so `lib/genre-prediction.ts`'s parser is deliberately tolerant of every plausible FastAPI-classifier response shape and carries a TODO to pin it once the endpoint works and is documented. This is the sixth sanctioned expansion — the "do not exceed" rule still holds for everything else.
 
@@ -66,7 +66,7 @@ The six features that constitute v1:
 - Sync licensing
 - Merch
 - Touring / live show coordination — **EXCEPTION (2026-08-30), and a NARROW one.** Events cover a single show: its run of show, its setlists and the pack sent to the DJ. Guest lists, budgets, settlements, travel and multi-day festival routing were all named as non-goals in the spec and stay out — that is the line that stops this becoming a touring module. **Amended 2026-09-02 (founder call): a festival is a SERIES of single shows** — one show per roster artist per day, linked by a grouping key, each with its own set and pack. That is the whole of "multi-day" support; routing, travel, budgets, guest lists and outside acts that are not on the roster stay out. See "A festival is a series of shows" under Events in Working notes.
-- Native mobile apps (iOS, Android) — **EXCEPTION (2026-07-21; recorded here 2026-08-07): now being built as a Capacitor native shell around the existing web app.** The founder consciously moved this line; see "Scope expansion (2026-07-21...)" above for the full decision and `docs/mobile/capacitor-audit.md` for the technical audit. This is the third sanctioned exception to this list (Chappi below was the first, the metadata hub above the second, Notes above the fourth) — do not read it as license to add other items from this list.
+- Native mobile apps (iOS, Android) — **EXCEPTION (2026-07-21; recorded here 2026-08-07): now being built as a Capacitor native shell around the existing web app.** The founder consciously moved this line; see "Scope expansion (2026-07-21...)" above for the full decision and `docs/mobile/capacitor-audit.md` for the technical audit. This is the third sanctioned exception to this list (Chappi below was the first, the metadata hub above the second, Notes above the fourth) — do not read it as license to add other items from this list. **Re-shaped 2026-09-24:** the shell is Expo now, not Capacitor, with the same approach. See `docs/mobile/expo-shell.md`.
 - Third-party music platform integrations (DistroKid, Spotify, Apple Music, Instagram, etc.)
 - Notifications inbox (transactional email is fine; in-app inbox is v2)
 - Analytics dashboards
@@ -126,11 +126,13 @@ These are the principles that govern v1 build decisions. When in doubt, return t
 urganize/
 ├── apps/
 │   ├── homepage/      # Marketing + waitlist + admin growth (urganize.app)
-│   └── web/           # Authenticated product app (app.urganize.app)
+│   ├── web/           # Authenticated product app (app.urganize.app)
+│   └── mobile/        # Expo native shell (iOS + Android): a webview on app.urganize.app
 ├── packages/
 │   ├── ui/            # Shared React primitives (Button, Card, Input, etc.)
 │   ├── config/        # Shared tsconfig, ESLint, Tailwind preset
 │   ├── pricing/       # Single source of truth for plan tiers/prices
+│   ├── native-bridge/ # Web <-> Expo shell message protocol (pure TS)
 │   ├── lib/           # Stub placeholder
 │   └── db/            # Stub placeholder
 ├── supabase/migrations/   # SQL migrations for the web app
@@ -1267,6 +1269,8 @@ Calendar's discovery problem (buried in the release header's pill row, easy to m
 ---
 
 ## Native mobile app (2026-07-21, doc-drift backfilled 2026-08-07)
+
+> **SUPERSEDED 2026-09-24. Read "The Expo shell" near the end of this file first.** Everything below describes the Capacitor shell, which was replaced by an Expo shell with the same remote-URL strategy. It is kept as the historical record, and several details no longer hold: `capacitor.config.ts`, the committed `android/` and `ios/` projects, `CapacitorAuthBridge`, Codemagic and the hand-kept `versionCode` are all gone.
 
 The fifth sanctioned v1 scope expansion (see the 2026-07-21 note in "v1 scope") — and the moment this file should have gained an entry but didn't, until now. `apps/mobile` is a **Capacitor native shell** (`com.urganize.app`, Android + iOS) that wraps the existing product app rather than reimplementing it.
 
@@ -15633,3 +15637,101 @@ restored a real chat.
   scope on purpose.
 - The router fallback (no model configured) answering after a chat switch is
   dropped rather than routed, since it acts on the screen it runs on.
+
+---
+
+## The Expo shell (2026-09-24)
+
+Founder call: move the mobile app from Capacitor to Expo, **keeping the same
+approach** — the app still shows the live website, so every web change still
+reaches phones with no store review. Offered and declined: a native core
+(catalog, activities, UrgAns, notes as React Native screens) and a full native
+rewrite. The reasons given: a more app-like feel, easier builds and store
+releases, over-the-air updates, and offline/device features. **Not a new scope
+expansion** — the same sanctioned mobile surface (2026-07-21), re-shaped. The
+full design record is `docs/mobile/expo-shell.md`; read it before touching
+`apps/mobile` or any of the six files below.
+
+**No store release of the Capacitor shell ever shipped** (one debug APK,
+2026-08-07), so it was replaced outright with no dual support. That debug APK
+now loads the site as a plain browser would: no Google sign-in, no push.
+
+### Six things worth knowing before editing this
+
+1. **The website talks to the shell in exactly one place,
+   `apps/web/lib/native-bridge.ts`**, and six modules sit on it:
+   `lib/platform.ts`, `lib/external-link.ts`, `lib/native-push.ts`,
+   `lib/share-file.ts`, the native branch of `loginWithGoogle` in
+   `lib/auth-store.ts`, and `components/providers/NativePushBridge.tsx`
+   (`CapacitorAuthBridge` is deleted: the OAuth result comes back as the
+   answer to a request, so no listener is needed). Every other caller goes
+   through those six and did not change. Nothing else should read
+   `window.__URGANIZE_NATIVE__` or post to the webview.
+2. **The protocol is a package, `packages/native-bridge`, imported by both
+   apps**, so the two halves cannot drift. It holds the shell's dispatcher too
+   (`createShellDispatcher`), because it is pure — which is what puts the
+   native side's origin check and event queue within reach of vitest.
+   `apps/mobile/src/bridge.ts` is only a re-export. Tests:
+   `apps/web/lib/native-bridge.test.ts`.
+3. **Detection is synchronous and needs BOTH signals**: the injected
+   `window.__URGANIZE_NATIVE__` (set by `injectedJavaScriptBeforeContentLoaded`,
+   before any page script) AND `window.ReactNativeWebView.postMessage`. The iOS
+   billing gates read the platform on first render, so an async handshake
+   would flash the wrong UI; and either signal alone means something other
+   than our shell. With neither, every export is inert and the website behaves
+   exactly as before — that is the whole reason this needs no feature flag.
+4. **Capabilities, not versions.** The shell lists the request types it
+   understands; asking an older shell for something new rejects at once with
+   `UnsupportedRequestError` rather than timing out. Add a request type by
+   adding it to `BRIDGE_REQUEST_TYPES`, a handler in `App.tsx` (the
+   `BridgeHandlers` type makes a missing one a compile error), and a
+   `shellSupports()` check on the web side.
+5. **Only our own pages drive native code.** The dispatcher drops any message
+   whose page URL fails `isFirstPartyUrl` (https, `urganize.app` or a
+   subdomain), and any top-level navigation off those hosts goes to the system
+   browser or the owning app, never into the webview. Mutation-tested: removing
+   either check fails a named test.
+6. **Push is React Native Firebase, not expo-notifications**, and that is
+   forced: the server sends only through FCM HTTP v1, and Expo's iOS device
+   token is a raw APNs token FCM refuses. RN Firebase gives an FCM token on both
+   platforms, so the server did not change. Its config plugin only POINTS at a
+   notification icon, so `apps/mobile/plugins/withNotificationIcon.js` writes
+   the drawable and colour — without it the Android build fails on a missing
+   resource.
+
+### Smaller decisions
+
+- **Native projects are generated, not committed.** `apps/mobile/android` and
+  `ios` come from `app.config.ts` via `expo prebuild` and are gitignored.
+  `google-services.json` moved to the `apps/mobile` root.
+- **Builds are EAS** (`eas.json`: development / preview / production, remote
+  auto-incremented build numbers). `codemagic.yaml` is deleted, and the
+  hand-kept `versionCode` with it. The app version is still read from
+  `apps/mobile/package.json`, which mirrors the ledger. Root scripts are
+  `mobile:start`, `mobile:build:android`, `mobile:build:ios`.
+- **OTA updates reach only the shell's own JavaScript.** The website already
+  updates on deploy; anything native needs a store build.
+- **Offline:** a native offline screen replaces the webview error page on a
+  failed first load and retries when the connection returns. iOS service
+  workers need `WKAppBoundDomains` + `limitsNavigationsToAppBoundDomains`;
+  **if iOS ever refuses to run the bridge, that flag is the first suspect.**
+- **TypeScript stays on 5** in `apps/mobile` (Expo 57 recommends 6), excluded
+  from `expo-doctor`'s version check, to match the rest of the repo.
+- **Vercel installs the whole workspace**, so both web projects now install
+  React Native and Expo too. Harmless to the build (the mobile app has no
+  `build`, `lint` or `test` task), but it costs install time; filtering the
+  install command to `@urganize/web...` is a dashboard change if it matters.
+- **Known limits:** the safe-area bands are ink in both themes, Android shows no
+  notification while the app is foregrounded (as before), and pull-to-refresh
+  is deliberately off because the app's pages scroll inside panels.
+
+### Founder-only steps
+
+`eas login` and `eas init` (paste the project id into `EAS_PROJECT_ID` in
+`app.config.ts`); for iOS, add the iOS app in Firebase, commit
+`apps/mobile/GoogleService-Info.plist` (iOS builds fail at prebuild without it)
+and upload an APNs key; if a keystore was ever used for a Play upload, hand it
+to EAS (`docs/mobile/android-signing.md`). Then install a development build on a
+phone and run the manual pass in `docs/mobile/expo-shell.md`'s checklist below.
+
+### Verified

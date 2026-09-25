@@ -1,5 +1,5 @@
-import { Capacitor } from '@capacitor/core';
 import { openExternalUrl } from '@/lib/external-link';
+import { request, shellSupports } from '@/lib/native-bridge';
 import { isNativePlatform } from '@/lib/platform';
 
 /**
@@ -8,14 +8,13 @@ import { isNativePlatform } from '@/lib/platform';
  *
  * Three paths, in order of preference:
  *
- *  1. Native with the Share and Filesystem plugins present. The share sheet
- *     needs a local file URI, not a remote URL, so the bytes are written to the
- *     cache directory first.
- *  2. Native WITHOUT those plugins. Installed shells built before these plugins
- *     were added cannot share, and a webview cannot download, so the image goes
- *     to the system browser where it can be saved by long press. This is why
- *     the plugin presence is probed at runtime rather than assumed from the
- *     package.json.
+ *  1. Native, in a shell that advertises `shareFile`. The share sheet needs a
+ *     local file, not a remote URL, so the page fetches the bytes (it holds the
+ *     session a signed URL was minted for) and hands them to the shell as
+ *     base64; the shell writes them to its cache directory and shares that.
+ *  2. Native WITHOUT that capability. A webview cannot download, so the image
+ *     goes to the system browser where it can be saved by long press. This is
+ *     why the capability is checked at runtime rather than assumed.
  *  3. Web. The image lives on Supabase Storage, so a plain `download` attribute
  *     is ignored (cross origin). Fetching to a blob and clicking an object URL
  *     is the only thing that actually saves a file.
@@ -60,28 +59,22 @@ export async function shareOrDownloadImage({
   title?: string;
 }): Promise<ShareOutcome> {
   const native = isNativePlatform();
-  const canShareNatively =
-    native && Capacitor.isPluginAvailable('Share') && Capacitor.isPluginAvailable('Filesystem');
+  const canShareNatively = native && shellSupports('shareFile');
 
   if (canShareNatively) {
     try {
-      const [{ Share }, { Filesystem, Directory }] = await Promise.all([
-        import('@capacitor/share'),
-        import('@capacitor/filesystem'),
-      ]);
-
       const response = await fetch(url);
       if (!response.ok) throw new Error(`Could not fetch the image (${response.status}).`);
-      const base64 = await blobToBase64(await response.blob());
+      const blob = await response.blob();
+      const base64 = await blobToBase64(blob);
 
-      const written = await Filesystem.writeFile({
-        path: fileName,
-        data: base64,
-        directory: Directory.Cache,
-      });
-
-      await Share.share({ title, files: [written.uri] });
-      return 'shared';
+      const { outcome } = await request(
+        'shareFile',
+        { kind: 'base64', data: base64, fileName, mimeType: blob.type || 'image/png', title },
+        // Includes the time the share sheet sits open waiting on a person.
+        { timeoutMs: 300_000 }
+      );
+      return outcome;
     } catch (error) {
       // Dismissing the share sheet rejects. That is a normal user action, not a
       // failure, so it must not fall through to opening a browser tab.
@@ -132,13 +125,9 @@ function isAbort(error: unknown): boolean {
   return CANCELLED_PATTERN.test(message);
 }
 
-function hasNativeSharePlugins(): boolean {
-  return Capacitor.isPluginAvailable('Share') && Capacitor.isPluginAvailable('Filesystem');
-}
-
 /**
- * Can this device hand a file to other apps? True inside the app with the
- * share plugins, and in a TOUCH browser whose share sheet accepts files.
+ * Can this device hand a file to other apps? True inside an app build whose
+ * shell can share files, and in a TOUCH browser whose share sheet accepts files.
  *
  * Desktop browsers implement the same API, but the menu they open (AirDrop,
  * Mail, a Windows share panel) has no Instagram and no WhatsApp status in it,
@@ -146,7 +135,7 @@ function hasNativeSharePlugins(): boolean {
  * `pointer: coarse` rather than a width, so a landscape iPad still shares.
  */
 export function canShareFilesToApps(file: File): boolean {
-  if (isNativePlatform()) return hasNativeSharePlugins();
+  if (isNativePlatform()) return shellSupports('shareFile');
   if (typeof navigator === 'undefined' || typeof window === 'undefined') return false;
   if (typeof navigator.share !== 'function' || typeof navigator.canShare !== 'function') return false;
   const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
@@ -174,22 +163,27 @@ export async function shareFileToApps({
   text?: string;
 }): Promise<ShareFileOutcome> {
   if (isNativePlatform()) {
-    // An installed shell built before these plugins cannot share a file, and a
-    // webview cannot download one, so this is the honest answer rather than a
-    // silent no-op. The caller says to update the app or use the browser.
-    if (!hasNativeSharePlugins()) return 'unsupported';
+    // A shell build that cannot share files, in a webview that cannot
+    // download one: this is the honest answer rather than a silent no-op. The
+    // caller says to update the app or use the browser.
+    if (!shellSupports('shareFile')) return 'unsupported';
     try {
-      const [{ Share }, { Filesystem, Directory }] = await Promise.all([
-        import('@capacitor/share'),
-        import('@capacitor/filesystem'),
-      ]);
-      const written = await Filesystem.writeFile({
-        path: file.name,
-        data: await blobToBase64(file),
-        directory: Directory.Cache,
-      });
-      await Share.share({ title, text, files: [written.uri], dialogTitle: title });
-      return 'shared';
+      // `text` does not travel. The app's share sheet takes a file OR text on
+      // Android, not both, so a caption rides the clipboard instead; the share
+      // sheet copies it before it calls this, on every path.
+      const { outcome } = await request(
+        'shareFile',
+        {
+          kind: 'base64',
+          data: await blobToBase64(file),
+          fileName: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          title,
+        },
+        // Includes the time the share sheet sits open waiting on a person.
+        { timeoutMs: 300_000 }
+      );
+      return outcome;
     } catch (error) {
       if (isAbort(error)) return 'cancelled';
       console.error('[share] native file share failed', error);
@@ -227,11 +221,10 @@ export async function shareTextToApps({
   title?: string;
 }): Promise<'shared' | 'cancelled' | 'unsupported'> {
   if (isNativePlatform()) {
-    if (!Capacitor.isPluginAvailable('Share')) return 'unsupported';
+    if (!shellSupports('shareText')) return 'unsupported';
     try {
-      const { Share } = await import('@capacitor/share');
-      await Share.share({ title, text, dialogTitle: title });
-      return 'shared';
+      const { outcome } = await request('shareText', { text, title }, { timeoutMs: 300_000 });
+      return outcome;
     } catch (error) {
       return isAbort(error) ? 'cancelled' : 'unsupported';
     }
@@ -247,7 +240,7 @@ export async function shareTextToApps({
 
 /** Whether a text-only share sheet exists here at all. */
 export function canShareTextToApps(): boolean {
-  if (isNativePlatform()) return Capacitor.isPluginAvailable('Share');
+  if (isNativePlatform()) return shellSupports('shareText');
   return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 }
 
@@ -278,9 +271,9 @@ export async function copyText(text: string): Promise<boolean> {
  * The three paths mirror the image helper, and the middle one is the honest
  * failure this feature has to have:
  *
- *  1. Native with Share and Filesystem present — write to the cache directory
- *     and open the share sheet, so the file can go to Files, Drive or a mail.
- *  2. Native WITHOUT those plugins. A webview cannot download and there is no
+ *  1. Native with `shareFile` — the shell writes to its cache directory and
+ *     opens the share sheet, so the file can go to Files, Drive or a mail.
+ *  2. Native WITHOUT that capability. A webview cannot download and there is no
  *     URL to open, so this genuinely cannot save a file. It returns
  *     'unsupported' rather than pretending: the caller tells the user to use
  *     the web app. Silently doing nothing on a "get my data out" button would
@@ -301,25 +294,16 @@ export async function shareOrDownloadTextFile({
   title?: string;
 }): Promise<SaveTextOutcome> {
   const native = isNativePlatform();
-  const canShareNatively =
-    native && Capacitor.isPluginAvailable('Share') && Capacitor.isPluginAvailable('Filesystem');
+  const canShareNatively = native && shellSupports('shareFile');
 
   if (canShareNatively) {
     try {
-      const [{ Share }, { Filesystem, Directory, Encoding }] = await Promise.all([
-        import('@capacitor/share'),
-        import('@capacitor/filesystem'),
-      ]);
-
-      const written = await Filesystem.writeFile({
-        path: fileName,
-        data: contents,
-        directory: Directory.Cache,
-        encoding: Encoding.UTF8,
-      });
-
-      await Share.share({ title, files: [written.uri] });
-      return 'shared';
+      const { outcome } = await request(
+        'shareFile',
+        { kind: 'text', data: contents, fileName, mimeType, title },
+        { timeoutMs: 300_000 }
+      );
+      return outcome;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (CANCELLED_PATTERN.test(message)) return 'cancelled';

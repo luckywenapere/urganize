@@ -50,7 +50,7 @@ const isBoolean = (value: unknown): value is boolean => typeof value === "boolea
 // Urganize's own social profiles (both @urganize), shown in the card's footer
 // row (founder request, 2026-08-26). Buttons through openExternalUrl rather
 // than target="_blank" anchors so they open the system browser inside the
-// Capacitor shell — the same reasoning ShareLoginActions records. The marks
+// native shell — the same reasoning ShareLoginActions records. The marks
 // come from react-icons/si, the exact set the content calendar's platform
 // tabs already use, so the two surfaces can't drift on what X and Instagram
 // look like.

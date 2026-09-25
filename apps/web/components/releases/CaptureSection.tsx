@@ -267,7 +267,7 @@ export function CaptureSection({ releaseId, onToast }: CaptureSectionProps) {
         'success'
       );
     } catch {
-      // Clipboard rather than a file download on purpose: the Capacitor shell
+      // Clipboard rather than a file download on purpose: the native shell
       // blocks script-started downloads outright, and a button that silently
       // does nothing on the mobile app is worse than one that pastes.
       onToast?.('Could not copy the list. Try again from a desktop browser.', 'warning');

@@ -97,7 +97,7 @@ export function CaptureLeadForm({
       setReward({ url: data.destinationUrl, label });
 
       // Hand the link over immediately, without waiting for a second tap.
-      // Routed through openExternalUrl so this works inside the Capacitor
+      // Routed through openExternalUrl so this works inside the native
       // webview, where a bare new-tab anchor commonly opens blank. A popup
       // blocker can still stop it — which is exactly why the tappable link
       // below is rendered too, rather than being a fallback nobody sees.

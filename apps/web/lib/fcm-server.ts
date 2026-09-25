@@ -2,7 +2,7 @@
 // server modules (push-server.ts, tasks-server.ts, cron), never from
 // 'use client' code.
 //
-// Native push transport (FCM HTTP v1) for the Capacitor shell (apps/mobile).
+// Native push transport (FCM HTTP v1) for the native shell (apps/mobile).
 // Web Push (push-server.ts / push.ts) can't reach Android/iOS webviews —
 // neither has a PushManager — so this is a second transport fanned out to
 // from the same choke point (sendPushToUsers / sendPushToAllUsers in

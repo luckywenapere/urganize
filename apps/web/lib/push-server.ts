@@ -10,7 +10,7 @@ import { sendFcmToTokens, isFcmConfigured, DEVICE_PUSH_TOKENS_TABLE } from '@/li
 // buildFcmMessage (lib/fcm.ts) maps onto for native devices.
 //
 // Two transports fan out from here: Web Push (this file's original job —
-// browsers and installed PWAs) and FCM (lib/fcm-server.ts — the Capacitor
+// browsers and installed PWAs) and FCM (lib/fcm-server.ts — the Expo
 // native shell, which has no PushManager and so cannot use Web Push at all).
 // Every caller (task notifications, the engagement drip, admin broadcast)
 // goes through sendPushToUsers/sendPushToAllUsers and gets both transports

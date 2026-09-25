@@ -165,7 +165,7 @@ export function PushPermissionPrompt() {
       }
 
       // Silent repair of a granted-but-unsubscribed device. Web only: on
-      // native, CapacitorPushBridge already re-registers a granted device on
+      // native, NativePushBridge already re-registers a granted device on
       // every load, and a second call here would duplicate that work.
       if (decision === 'auto-enable' && !native) {
         try {

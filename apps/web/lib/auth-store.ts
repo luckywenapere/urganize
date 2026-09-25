@@ -9,6 +9,8 @@ import { isAllowlistedEmail } from './paywall-allowlist';
 import { isCardTrialEnabled, resolveCardTrialDestination } from './trial-card';
 import { isHardPaywallEnabled } from './team-billing';
 import { isNativePlatform } from './platform';
+import { request as nativeRequest } from './native-bridge';
+import { oauthRedirectToPath } from '@urganize/native-bridge';
 import { resetSceneData } from '@/stores/useSceneDataStore';
 import { resetSceneMemory } from '@/lib/scene-memory';
 import { resetCatalogIntent } from '@/lib/catalog-intent';
@@ -25,8 +27,8 @@ import {
 } from '@/lib/auth-failure';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 
-// Custom URL scheme registered in the native shell's Info.plist /
-// AndroidManifest.xml (apps/mobile) — see docs/mobile/auth-setup.md. Google
+// Custom URL scheme registered by the Expo shell (apps/mobile/app.config.ts,
+// `scheme`) — see docs/mobile/auth-setup.md. Google
 // blocks its OAuth consent screen inside embedded/non-system webviews, so on
 // native the flow opens in the system browser and returns via this scheme
 // instead of a plain https redirect back into the webview.
@@ -682,9 +684,9 @@ export const useAuthStore = create<AuthState>()(
             // https redirect would land back in the SYSTEM browser (where we
             // just opened the consent screen), not back inside the app.
             // skipBrowserRedirect keeps supabase-js from navigating the
-            // current (webview) window at all; we open the returned
-            // authorize URL in the system browser ourselves instead.
-            const { Browser } = await import('@capacitor/browser');
+            // current (webview) window at all; the shell opens the authorize
+            // URL in an auth session (expo-web-browser) and hands back the
+            // URL it was redirected to.
             const { data, error } = await supabase.auth.signInWithOAuth({
               provider: 'google',
               options: {
@@ -693,9 +695,24 @@ export const useAuthStore = create<AuthState>()(
               },
             });
             if (error) throw error;
-            if (data?.url) {
-              await Browser.open({ url: data.url });
+            if (!data?.url) throw new Error('Could not start Google sign-in.');
+
+            // The consent screen waits on a person, so the ceiling is long.
+            const result = await nativeRequest(
+              'oauth',
+              { url: data.url, redirectPrefix: NATIVE_OAUTH_SCHEME },
+              { timeoutMs: 600_000 }
+            );
+            if (result.outcome === 'cancelled') {
+              set({ isLoading: false });
+              return;
             }
+            // Hand the redirect to the existing /auth/callback page, which
+            // already does the PKCE and hash-token exchange — the code verifier
+            // it needs is in this webview's storage.
+            const path = oauthRedirectToPath(result.redirectUrl, NATIVE_OAUTH_SCHEME);
+            if (!path) throw new Error('Google sign-in returned somewhere unexpected.');
+            window.location.href = path;
             return;
           }
 

@@ -2,26 +2,49 @@
   "name": "@urganize/mobile",
   "version": "1.43.1",
   "private": true,
-  "description": "Capacitor native shell (iOS + Android) for Urganize, the AI Music Business Manager for artists and managers. Loads the production web app remotely; see docs/mobile/capacitor-audit.md for the strategy decision.",
+  "description": "Expo native shell (iOS + Android) for Urganize, the AI Music Business Manager for artists and managers. Shows the live web app in a webview and bridges the device features it needs; see docs/mobile/expo-shell.md.",
+  "main": "index.ts",
   "scripts": {
-    "cap": "cap",
-    "sync": "cap sync",
-    "open:android": "cap open android",
-    "open:ios": "cap open ios",
-    "ios-ci": "cap sync ios"
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild --clean",
+    "doctor": "expo-doctor",
+    "typecheck": "tsc --noEmit",
+    "build:android": "eas build --platform android",
+    "build:ios": "eas build --platform ios",
+    "update": "eas update"
   },
   "dependencies": {
-    "@capacitor/android": "^7.0.0",
-    "@capacitor/app": "^7.0.0",
-    "@capacitor/browser": "^7.0.0",
-    "@capacitor/core": "^7.0.0",
-    "@capacitor/filesystem": "^7.0.0",
-    "@capacitor/ios": "^7.0.0",
-    "@capacitor/push-notifications": "^7.0.0",
-    "@capacitor/share": "^7.0.0"
+    "@react-native-firebase/app": "26.4.0",
+    "@react-native-firebase/messaging": "26.4.0",
+    "@urganize/native-bridge": "workspace:*",
+    "expo": "~57.0.25",
+    "expo-build-properties": "~57.0.22",
+    "expo-constants": "~57.0.19",
+    "expo-dev-client": "~57.0.19",
+    "expo-file-system": "~57.0.7",
+    "expo-network": "~57.0.2",
+    "expo-sharing": "~57.0.22",
+    "expo-splash-screen": "~57.0.9",
+    "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.4",
+    "expo-updates": "~57.0.23",
+    "expo-web-browser": "~57.0.3",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-webview": "13.16.1"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^7.0.0"
+    "@types/react": "~19.2.0",
+    "typescript": "^5"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "typescript"
+      ]
+    }
   }
 }

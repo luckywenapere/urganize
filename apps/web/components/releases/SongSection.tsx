@@ -226,7 +226,7 @@ function SongRow({
               type="button"
               // Routed through openExternalUrl rather than a target="_blank"
               // anchor: a bare new-tab link to a remote Storage URL commonly
-              // opens blank inside the Capacitor webview.
+              // opens blank inside the app webview.
               onClick={() => void openExternalUrl(song.downloadUrl as string)}
               aria-label={`Download ${song.fileName}`}
               className="motion-focus inline-flex h-8 w-8 items-center justify-center text-content-tertiary transition-colors hover:text-content-primary"
