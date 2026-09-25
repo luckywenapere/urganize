@@ -14,7 +14,6 @@ import { SongSection } from '@/components/releases/SongSection';
 import { CoverArtSection } from '@/components/releases/CoverArtSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
 import { PitchScene } from '@/components/pitching/PitchScene';
-import { PlanScene } from '@/components/planner/PlanScene';
 import { TimelineScene } from '@/components/releases/TimelineScene';
 import { calendarFontVariables } from '@/components/content-calendar/calendar-fonts';
 
@@ -75,7 +74,6 @@ const SCENE_LABELS: Record<SceneName, string> = {
   // same icon until that icon became a microphone in the same pass.
   calendar: 'Content',
   pitch: 'Playlist pitches',
-  plan: 'Plan',
   capture: 'Fan capture',
   song: 'Song',
   coverart: 'Cover art',
@@ -87,9 +85,6 @@ type ReleaseScenePanelProps = {
   release: Pick<Release, 'id' | 'title' | 'artistName' | 'releaseDate'>;
   onClose: () => void;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
-  /** Activities already on this release, so the plan scene can say that
-   * approving adds to them rather than replacing them. */
-  existingTaskCount?: number;
   /** The scoped release's activities. Only the Timeline scene reads these:
    * unlike every other scene it fetches nothing, laying itself out from the
    * rows the workspace is already holding. */
@@ -99,10 +94,6 @@ type ReleaseScenePanelProps = {
   onOpenTask?: (taskId: string) => void;
   /** A timeline drag changed an activity's date; re-read the workspace. */
   onTaskRescheduled?: () => void;
-  /** The plan was approved: its tasks now exist. */
-  onPlanApproved?: () => void;
-  /** Start the intake, for a plan scene reached without a draft. */
-  onStartPlanIntake?: () => void;
 };
 
 /** Shared "get me back to the activity list" control. Reads as a return
@@ -136,12 +127,9 @@ export function ReleaseScenePanel({
   release,
   onClose,
   onToast,
-  existingTaskCount = 0,
   tasks = [],
   onOpenTask,
   onTaskRescheduled,
-  onPlanApproved,
-  onStartPlanIntake,
 }: ReleaseScenePanelProps) {
   // Feature-discovery analytics used to ride the route change (a
   // featureRouteMatchers entry for the old /metadata path). With no route change
@@ -169,22 +157,6 @@ export function ReleaseScenePanel({
   // gets the island wrapper and none of the generic chrome. WorkspaceView
   // additionally hides the release rails for this scene only, so the month grid
   // gets the width it needs (founder call).
-  // The plan scene brings its own header (it needs the save indicator and the
-  // task count beside it), so it skips the generic chrome the same way the
-  // calendar does.
-  if (scene === 'plan') {
-    return (
-      <PlanScene
-        release={release}
-        existingTaskCount={existingTaskCount}
-        onClose={onClose}
-        onToast={onToast}
-        onApproved={onPlanApproved ?? onClose}
-        onStartIntake={onStartPlanIntake ?? onClose}
-      />
-    );
-  }
-
   if (scene === 'calendar') {
     return (
       <section
@@ -198,7 +170,7 @@ export function ReleaseScenePanel({
 
   // Every scene this generic section knows how to fill. `activities` is a
   // SceneName with no body here on purpose — it IS the main view, so nothing
-  // routes it to this panel — and `plan` / `calendar` returned above.
+  // routes it to this panel — and `calendar` returned above.
   //
   // The bail matters because the failure without it is silent: an unhandled
   // scene rendered this header with `SCENE_LABELS[scene]` resolving to

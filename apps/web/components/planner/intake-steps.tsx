@@ -7,11 +7,13 @@ import {
   GOAL_OPTIONS,
   MAX_EXTRA_NOTES_LENGTH,
   MAX_GOAL_TEXT_LENGTH,
+  PLAN_SCOPE_OPTIONS,
   READY_TODAY_OPTIONS,
   RELEASE_TYPE_OPTIONS,
   type PlanBudget,
   type PlanGoal,
   type PlanReleaseType,
+  type PlanScope,
   type ReadyItem,
 } from '@/lib/release-planning';
 import type { PlannerIntakeDraft } from '@/lib/planner-intake-draft';
@@ -43,7 +45,7 @@ export const INTAKE_STEPS: Record<StepIndex, { title: string }> = {
   3: { title: "What's already done?" },
   4: { title: 'What matters most this time?' },
   5: { title: "What's the promo budget?" },
-  6: { title: 'Anything else UrgAns should know?' },
+  6: { title: 'Anything to leave out?' },
 };
 
 /**
@@ -343,15 +345,37 @@ function BudgetStep({ draft, patch, disabled }: StepBodyProps) {
 function ExtrasStep({ draft, patch, disabled, fromNote }: StepBodyProps) {
   const remaining = MAX_EXTRA_NOTES_LENGTH - draft.extraNotes.length;
 
+  const toggleExclusion = (scope: PlanScope) => {
+    patch({
+      exclusions: draft.exclusions.includes(scope)
+        ? draft.exclusions.filter((value) => value !== scope)
+        : [...draft.exclusions, scope],
+    });
+  };
+
   return (
     <>
-      <label className="block">
-        <span className="sr-only">Anything else UrgAns should know?</span>
+      <PlannerCheckboxGroup<PlanScope>
+        legend="Anything to leave out?"
+        options={PLAN_SCOPE_OPTIONS}
+        value={draft.exclusions}
+        onToggle={toggleExclusion}
+        disabled={disabled}
+      />
+      <p className={helperClass}>
+        Pick as many as apply. UrgAns leaves that kind of work out of the plan
+        completely. Release day and getting it to stores stay either way.
+      </p>
+
+      <label className="mt-5 block">
+        <span className="mb-2 block text-sm font-medium text-content-primary">
+          Anything else UrgAns should know?
+        </span>
         <textarea
           value={draft.extraNotes}
           onChange={(event) => patch({ extraNotes: event.target.value.slice(0, MAX_EXTRA_NOTES_LENGTH) })}
           disabled={disabled}
-          rows={6}
+          rows={5}
           className={`${inputClass} resize-y leading-6`}
           placeholder="Deadlines, collaborators, plans already in motion"
           maxLength={MAX_EXTRA_NOTES_LENGTH}

@@ -298,7 +298,6 @@ function buildNavItems(
             Icon: ShowsIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/shows"),
             help: "nav.shows",
-            beta: true,
           } satisfies NavItem,
         ]
       : []),

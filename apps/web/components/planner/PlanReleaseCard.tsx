@@ -11,59 +11,59 @@ import { Button } from '@urganize/ui';
  * `bannerReplacesEmptyState`, so it IS the panel body rather than a card above
  * one. That is what makes it unmissable: there is nothing else there.
  *
- * ONE TAP IS THE PRIMARY PATH (spec 6.1, Decision B, 2026-09-03): the button
- * drafts immediately from what the release row already knows — no questions
- * asked first (buildAutoIntake derives release type, artist and date
- * server-side). The seven-question modal survives as a SECONDARY "Answer a
- * few questions first" link, for a manager who wants to steer the draft (a
- * real budget, a real goal, which tracks are ready) before UrgAns ever calls
- * a model, rather than as the only door in.
+ * THE QUESTIONS ARE THE ONLY DOOR (founder call, 2026-09-12). Until then the
+ * primary button drafted a plan from the release row alone and a review scene
+ * followed; both are gone. Answering the planning questions now BUILDS the
+ * plan — every activity lands on the rollout at once, shaped to the answers —
+ * and the manager edits those activities like any other. So there is nothing
+ * to steer before and nothing to approve after, which is why this card has one
+ * primary action in every state and no secondary "answer a few questions
+ * first" link: that IS the primary.
+ *
+ * Three states, all read off the planner store by WorkspaceView:
+ *   fresh      — nothing has happened yet.
+ *   generating — the intake fired the build (up to about half a minute on the
+ *                model); the card holds the room until the activities arrive.
+ *   failed     — UrgAns could not read the typed notes and refused rather
+ *                than guess (nothing created, the answers are kept). The only
+ *                way out is the questions again, which is the retry.
  */
 
+export type PlanReleaseCardState = 'fresh' | 'generating' | 'failed';
+
 type PlanReleaseCardProps = {
-  /** A draft already exists, so the primary action is "review it". */
-  hasDraft: boolean;
-  /** UrgAns is drafting right now. */
-  isGenerating: boolean;
-  /** One tap: draft immediately from what the release row already knows. */
-  onDraftNow: () => void;
-  /** The seven-question refine path — steer the draft before it exists. */
-  onRefine: () => void;
-  onReview: () => void;
+  state: PlanReleaseCardState;
+  /** The server's own sentence for a refused build, shown in the failed state. */
+  failureMessage?: string | null;
+  /** Open the planning questions — the primary action, and the retry. */
+  onPlan: () => void;
   onAddActivity: () => void;
 };
 
-export function PlanReleaseCard({
-  hasDraft,
-  isGenerating,
-  onDraftNow,
-  onRefine,
-  onReview,
-  onAddActivity,
-}: PlanReleaseCardProps) {
-  const state = isGenerating ? 'generating' : hasDraft ? 'draft' : 'fresh';
-
+export function PlanReleaseCard({ state, failureMessage, onPlan, onAddActivity }: PlanReleaseCardProps) {
   const copy = {
     fresh: {
       headline: "Let's plan this rollout.",
-      body: 'UrgAns drafts your rollout from the playbook that delivers rollouts, using what this rollout already tells us. You approve every task before anything is scheduled.',
-      cta: 'Draft the plan',
-    },
-    draft: {
-      headline: 'Your draft plan is waiting.',
-      body: 'Review it, change anything and approve when it looks right.',
-      cta: 'Review your draft plan',
+      body: 'Answer a few questions and UrgAns builds the plan from the playbook, shaped to your answers. Change anything after it lands.',
+      cta: 'Plan the rollout',
     },
     generating: {
-      headline: 'UrgAns is drafting your plan.',
-      body: 'It will be ready in a moment. You can watch it come together.',
-      cta: 'See the draft',
+      headline: 'UrgAns is building your plan.',
+      body: 'About half a minute. It lands here when it is done.',
+      cta: null,
+    },
+    failed: {
+      headline: 'UrgAns could not read your notes just now.',
+      body: failureMessage
+        ? `${failureMessage} Nothing was created. Your answers are saved.`
+        : 'Nothing was created. Your answers are saved.',
+      cta: 'Try again',
     },
   }[state];
 
   return (
     <div className="rounded-xl border border-brand/30 bg-brand/5 p-5 sm:p-6">
-      {isGenerating ? (
+      {state === 'generating' ? (
         <span className="mb-4 grid h-11 w-11 place-items-center rounded-xl bg-brand/10 text-brand">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
         </span>
@@ -75,29 +75,20 @@ export function PlanReleaseCard({
       <h3 className="mt-1 font-display text-xl font-semibold leading-tight text-content-primary">
         {copy.headline}
       </h3>
-      <p className="mt-2 max-w-prose text-sm leading-6 text-content-secondary">{copy.body}</p>
+      <p className="mt-2 max-w-prose text-sm leading-6 text-content-secondary" aria-live="polite">
+        {copy.body}
+      </p>
 
-      <Button
-        type="button"
-        onClick={state === 'fresh' ? onDraftNow : onReview}
-        // Guided-tour anchor (lib/tours.ts); inert without the flag.
-        data-tour="plan-rollout"
-        className="mt-5 h-11 w-full justify-center sm:w-auto"
-      >
-        {copy.cta}
-      </Button>
-
-      {state === 'fresh' ? (
-        <p className="mt-3 text-xs leading-5 text-content-secondary">
-          <button
-            type="button"
-            onClick={onRefine}
-            className="motion-focus font-medium text-content-primary underline decoration-stroke-strong underline-offset-2 transition-colors hover:decoration-brand"
-          >
-            Answer a few questions first
-          </button>{' '}
-          to steer the draft.
-        </p>
+      {copy.cta ? (
+        <Button
+          type="button"
+          onClick={onPlan}
+          // Guided-tour anchor (lib/tours.ts); inert without the flag.
+          data-tour="plan-rollout"
+          className="mt-5 h-11 w-full justify-center sm:w-auto"
+        >
+          {copy.cta}
+        </Button>
       ) : null}
 
       <div className="mt-5 border-t border-brand/20 pt-4">
@@ -110,7 +101,7 @@ export function PlanReleaseCard({
           >
             Add an activity yourself
           </button>{' '}
-          and skip the draft.
+          and skip the questions.
         </p>
       </div>
     </div>

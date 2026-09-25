@@ -49,6 +49,24 @@ export function extractAiUsage(payload: Record<string, unknown>): AiUsage | null
   return null;
 }
 
+/**
+ * How hard a reasoning model thinks before it answers. Only the GPT-5 and
+ * o-series families accept the parameter (see supportsReasoningEffort); it is
+ * never sent to anything else, so a caller can pass it unconditionally.
+ */
+export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high';
+export const REASONING_EFFORTS: readonly ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high'];
+
+/**
+ * A JSON schema the gateway should hold the model to (OpenAI "structured
+ * outputs"). Sent as `response_format: { type: 'json_schema', strict: true }`
+ * on the OpenAI-protocol gateways. Strict mode has its own rules — every
+ * property listed in `required`, `additionalProperties: false` on every
+ * object, nullable fields as type unions, no length keywords — and the
+ * provider does not check them; the schema's own test does.
+ */
+export type AiJsonSchema = { name: string; schema: Record<string, unknown> };
+
 type GenerateStructuredAiOutputOptions<T> = {
   messages: AiMessage[];
   temperature?: number;
@@ -56,9 +74,10 @@ type GenerateStructuredAiOutputOptions<T> = {
   maxRetries?: number;
   /**
    * Upstream model id. Defaults per gateway: 'openrouter/free' on openrouter.ai,
-   * Claude Haiku on rodiumai.io, otherwise the Zuplo gateway's qwen2.5:3b. Lets a
-   * caller route a specific request to a different model (e.g., the rollout
-   * planner via AI_PLANNER_MODEL) provided the gateway serves that model id.
+   * openai/gpt-4o-mini on rodiumai.io, otherwise the Zuplo gateway's qwen2.5:3b.
+   * Lets a caller route a specific request to a different model (e.g., the
+   * rollout planner via AI_PLANNER_MODEL) provided the gateway serves that
+   * model id.
    */
   model?: string;
   parse: (raw: string) => T | null;
@@ -67,6 +86,29 @@ type GenerateStructuredAiOutputOptions<T> = {
    *  not `parse` accepted it — the model spent tokens either way. Additive:
    *  every existing caller passes nothing and is byte-for-byte unaffected. */
   onUsage?: (usage: AiUsage) => void;
+  /**
+   * Hold the model to this schema instead of plain JSON mode. If the gateway
+   * answers 400 naming the schema parameter, the request is resent ONCE in
+   * plain JSON mode, and that resend does not count against maxRetries: the
+   * gateway's support for the parameter is a fact about the gateway, not
+   * about this attempt. Ignored on the Ollama-protocol gateway.
+   */
+  jsonSchema?: AiJsonSchema;
+  /**
+   * Sent as `reasoning_effort` only when the resolved model accepts it. Same
+   * one-shot fallback as jsonSchema: a 400 naming the parameter drops it and
+   * resends once.
+   */
+  reasoningEffort?: ReasoningEffort;
+  /**
+   * An absolute time (ms since epoch) by which the call must have returned.
+   * Each attempt's timeout is cut to what the deadline leaves minus a small
+   * guard, and no retry starts with under MIN_RETRY_BUDGET_MS remaining: a
+   * retry that cannot finish only burns the caller's own ceiling. Callers
+   * running inside a route with a fixed maxDuration set this from the moment
+   * the route started.
+   */
+  deadlineMs?: number;
 };
 
 const DEFAULT_AI_API_BASE = 'https://urganize-main-34fd8f6.d2.zuplo.dev';
@@ -84,6 +126,33 @@ const DEFAULT_TIMEOUT_MS = 90_000;
 const DEFAULT_MAX_RETRIES = 3;
 const RETRYABLE_STATUS_CODES = new Set([408, 409, 425, 429, 500, 502, 503, 504]);
 
+/** Headroom kept between an attempt's timeout and the caller's deadline, so
+ *  the abort fires (and the caller can answer) before the route's own
+ *  ceiling kills the request with nothing to say. */
+const DEADLINE_GUARD_MS = 1_000;
+/** The least time worth starting another attempt in. Under this, a retry
+ *  spends the backoff sleep and a truncated attempt to learn nothing. */
+const MIN_RETRY_BUDGET_MS = 8_000;
+/** Below this window a first attempt is not made at all: a 50ms timeout is a
+ *  guaranteed abort dressed up as a request. */
+const MIN_ATTEMPT_WINDOW_MS = 250;
+
+/** A 400 whose message names the structured-output parameter. */
+const SCHEMA_REJECTION = /response_format|json_schema|\bschema\b/i;
+/** A 400 whose message names the reasoning parameter. Checked before the
+ *  schema pattern, since it is the more specific of the two. */
+const EFFORT_REJECTION = /reasoning/i;
+
+/**
+ * Whether a model id accepts `reasoning_effort`: the GPT-5 family and the
+ * o-series, with or without the `openai/` vendor prefix RodiumAi's catalogue
+ * uses. Anything else (gpt-4o, llama, qwen, an unset model) rejects the
+ * parameter outright, so it is never sent there.
+ */
+export function supportsReasoningEffort(model?: string | null): boolean {
+  return /^(openai\/)?(gpt-5|o\d)/i.test(String(model ?? '').trim());
+}
+
 class AiProviderError extends Error {
   status?: number;
   code?: string;
@@ -100,15 +169,29 @@ class AiProviderError extends Error {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const getAiGatewayConfig = () => {
-  const apiKey = String(process.env.AI_API_KEY || '').trim();
+/**
+ * Which gateway AI_API_BASE points at. Independent of the key on purpose:
+ * "which gateway is this" is a question about the base URL alone, and a
+ * default-model decision (see lib/ai/planner-model.ts) has to be answerable
+ * before anyone knows whether a key is set.
+ */
+const resolveGateway = () => {
   const apiBase = String(process.env.AI_API_BASE || DEFAULT_AI_API_BASE).trim().replace(/\/+$/, '');
-
-  if (!apiKey) return null;
-
   const hostname = safeHostname(apiBase);
   const isOpenRouter = /(^|\.)openrouter\.ai$/i.test(hostname);
   const isRodium = /(^|\.)rodiumai\.io$/i.test(hostname);
+  return { apiBase, isOpenRouter, isRodium };
+};
+
+/** True when AI_API_BASE points at RodiumAi, key or no key. */
+export const isRodiumGateway = (): boolean => resolveGateway().isRodium;
+
+const getAiGatewayConfig = () => {
+  const apiKey = String(process.env.AI_API_KEY || '').trim();
+
+  if (!apiKey) return null;
+
+  const { apiBase, isOpenRouter, isRodium } = resolveGateway();
 
   return {
     apiKey,
@@ -236,6 +319,8 @@ const requestAiGateway = async ({
   model,
   format = 'json',
   onUsage,
+  jsonSchema,
+  reasoningEffort,
 }: {
   messages: AiMessage[];
   timeoutMs: number;
@@ -247,6 +332,10 @@ const requestAiGateway = async ({
    */
   format?: 'json' | 'text';
   onUsage?: (usage: AiUsage) => void;
+  /** Narrows 'json' to a strict schema on the OpenAI-protocol gateways. */
+  jsonSchema?: AiJsonSchema;
+  /** Sent only when the resolved model accepts it; see supportsReasoningEffort. */
+  reasoningEffort?: ReasoningEffort;
 }): Promise<string> => {
   const config = getAiGatewayConfig();
   if (!config) {
@@ -254,6 +343,13 @@ const requestAiGateway = async ({
   }
 
   const resolvedModel = model || config.defaultModel;
+  const effort = reasoningEffort && supportsReasoningEffort(resolvedModel) ? reasoningEffort : undefined;
+  const responseFormat =
+    format !== 'json'
+      ? null
+      : jsonSchema
+        ? { type: 'json_schema', json_schema: { name: jsonSchema.name, strict: true, schema: jsonSchema.schema } }
+        : { type: 'json_object' };
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -277,7 +373,8 @@ const requestAiGateway = async ({
         model: resolvedModel,
         messages,
         stream: false,
-        ...(format === 'json' ? { response_format: { type: 'json_object' } } : {}),
+        ...(responseFormat ? { response_format: responseFormat } : {}),
+        ...(effort ? { reasoning_effort: effort } : {}),
       }
     : {
         model: resolvedModel,
@@ -324,6 +421,23 @@ const requestAiGateway = async ({
 
 export const isAiConfigured = (): boolean => Boolean(getAiGatewayConfig());
 
+/**
+ * How long the next attempt may run: the caller's timeout, cut to what the
+ * deadline leaves after the guard. Null when the window is too small to be a
+ * real attempt (see MIN_ATTEMPT_WINDOW_MS), which the caller treats as the
+ * deadline having passed.
+ */
+const attemptTimeoutFor = (timeoutMs: number, deadlineMs: number | undefined, now: number): number | null => {
+  if (deadlineMs === undefined) return timeoutMs;
+  const window = deadlineMs - now - DEADLINE_GUARD_MS;
+  if (window < MIN_ATTEMPT_WINDOW_MS) return null;
+  return Math.min(timeoutMs, window);
+};
+
+/** Whether another attempt can still finish before the deadline. */
+const hasRetryBudget = (deadlineMs: number | undefined, now: number): boolean =>
+  deadlineMs === undefined || deadlineMs - now >= MIN_RETRY_BUDGET_MS;
+
 export async function generateStructuredAiOutput<T>({
   messages,
   temperature = 0.25,
@@ -333,6 +447,9 @@ export async function generateStructuredAiOutput<T>({
   parse,
   invalidFormatMessage = 'Model returned invalid JSON format',
   onUsage,
+  jsonSchema,
+  reasoningEffort,
+  deadlineMs,
 }: GenerateStructuredAiOutputOptions<T>): Promise<T> {
   const config = getAiGatewayConfig();
   if (!config) {
@@ -350,9 +467,37 @@ export async function generateStructuredAiOutput<T>({
 
   void temperature;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+  // The two one-shot fallbacks. Each flips at most once, on a 400 whose
+  // message names its parameter, and the resend it triggers is not counted
+  // as a retry: whether the gateway accepts the parameter is a property of the
+  // gateway, learned once, not a transient failure of this attempt.
+  let useSchema = Boolean(jsonSchema);
+  let useEffort = Boolean(reasoningEffort);
+
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    attempt += 1;
+
+    const attemptTimeout = attemptTimeoutFor(timeoutMs, deadlineMs, Date.now());
+    if (attemptTimeout === null) {
+      if (!lastError) {
+        lastError = new AiProviderError('AI request deadline passed before the model was asked', {
+          code: 'deadline',
+          retryable: false,
+        });
+      }
+      break;
+    }
+
     try {
-      const raw = await requestAiGateway({ messages, timeoutMs, model, onUsage });
+      const raw = await requestAiGateway({
+        messages,
+        timeoutMs: attemptTimeout,
+        model,
+        onUsage,
+        jsonSchema: useSchema ? jsonSchema : undefined,
+        reasoningEffort: useEffort ? reasoningEffort : undefined,
+      });
       const parsed = parse(raw);
       if (!parsed) {
         throw new AiProviderError(invalidFormatMessage, { retryable: isFreeAutoRouter });
@@ -360,6 +505,19 @@ export async function generateStructuredAiOutput<T>({
       return parsed;
     } catch (error) {
       lastError = error;
+
+      if (error instanceof AiProviderError && error.status === 400) {
+        if (useEffort && EFFORT_REJECTION.test(error.message)) {
+          useEffort = false;
+          attempt -= 1;
+          continue;
+        }
+        if (useSchema && SCHEMA_REJECTION.test(error.message)) {
+          useSchema = false;
+          attempt -= 1;
+          continue;
+        }
+      }
       // A client-side abort (our own timeout firing) never went through
       // parseProviderError, so it reaches here as a bare DOMException/Error
       // rather than an AiProviderError — and would otherwise fall back to
@@ -379,7 +537,10 @@ export async function generateStructuredAiOutput<T>({
               { retryable: isFreeAutoRouter || isAbort }
             );
 
-      const shouldRetry = (isFreeAutoRouter || isAbort || typedError.retryable) && attempt < maxRetries;
+      const shouldRetry =
+        (isFreeAutoRouter || isAbort || typedError.retryable) &&
+        attempt < maxRetries &&
+        hasRetryBudget(deadlineMs, Date.now());
       if (shouldRetry) {
         await sleep(Math.min(1500 * attempt, 4000));
         continue;

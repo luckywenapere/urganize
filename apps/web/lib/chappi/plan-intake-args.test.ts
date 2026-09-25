@@ -62,6 +62,33 @@ describe('buildPlanIntake', () => {
     if (result.ok) expect(result.intake.ready_today).toEqual([]);
   });
 
+  it('carries exclusions through, deduped and in canonical scope order', () => {
+    const result = buildPlanIntake({
+      ...valid,
+      exclusions: ['physical', 'marketing', 'marketing'],
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.intake.exclusions).toEqual(['marketing', 'physical']);
+  });
+
+  it('omits exclusions when the model sends an empty array, matching an intake written before the field existed', () => {
+    const result = buildPlanIntake({ ...valid, exclusions: [] });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.intake.exclusions).toBeUndefined();
+  });
+
+  it('omits exclusions when the model does not send the field at all', () => {
+    const result = buildPlanIntake(valid);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.intake.exclusions).toBeUndefined();
+  });
+
+  it('names the field when an exclusion is not a real scope', () => {
+    const result = buildPlanIntake({ ...valid, exclusions: ['merch'] });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/exclusions/);
+  });
+
   it('carries optional free text through, trimmed', () => {
     const result = buildPlanIntake({
       ...valid,

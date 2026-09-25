@@ -11,9 +11,7 @@
 import { AdminBarChart, type AdminBar } from '@/components/admin/AdminBarChart';
 import type { AccountMonthsSummary } from '@/lib/account-months';
 import { pluralize } from '@/lib/recap-copy';
-
-export type WaitlistWeek = { weekLabel: string; totalUsers: number };
-export type WaitlistSummary = { total: number; weeks: WaitlistWeek[] };
+import { summarizeWaitlistWeeks, type WaitlistSummary } from '@/lib/waitlist-weeks';
 
 export type SectionState<T> = { kind: 'ok'; data: T } | { kind: 'error'; message: string };
 
@@ -158,10 +156,9 @@ export function WaitlistSection({ state }: { state: SectionState<WaitlistSummary
 
 function WaitlistBody({ data }: { data: WaitlistSummary }) {
   const { weeks, total } = data;
-  // Unchanged from before the page gained its accounts section. Note it spans
-  // 11 weeks of growth, not 12: each point is the running total at the END of
-  // its week, so the first week's own sign-ups are not in the difference.
-  const growthThisWindow = weeks.length >= 2 ? weeks[weeks.length - 1].totalUsers - weeks[0].totalUsers : 0;
+  // Growth over all 12 weeks, and each week's own sign-ups, both measured from
+  // the count before the first week began (lib/waitlist-weeks.ts has why).
+  const { growth: growthThisWindow, weeks: weekRows } = summarizeWaitlistWeeks(weeks, data.beforeWindow);
 
   const bars: AdminBar[] = weeks.map((week) => ({
     key: week.weekLabel,
@@ -200,9 +197,8 @@ function WaitlistBody({ data }: { data: WaitlistSummary }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stroke-subtle bg-bg-surface">
-                {weeks.map((week, index) => {
-                  const previous = index > 0 ? weeks[index - 1].totalUsers : week.totalUsers;
-                  const change = week.totalUsers - previous;
+                {weekRows.map((week) => {
+                  const { change } = week;
                   return (
                     <tr key={week.weekLabel}>
                       <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-content-secondary">

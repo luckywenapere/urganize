@@ -94,12 +94,45 @@ type CuratorStore = {
     displayName?: string;
     bio?: string;
     photoPath?: string | null;
+    slug?: string;
   }) => Promise<void>;
+  /** Put her public page live, minting a handle on the first call. */
+  publishPage: () => Promise<void>;
+  /** Take it down. The handle is kept, so publishing again restores the URL. */
+  unpublishPage: () => Promise<void>;
   createPlaylist: (input: PlaylistInput) => Promise<void>;
   updatePlaylist: (playlistId: string, patch: Partial<PlaylistInput>) => Promise<void>;
   removePlaylist: (playlistId: string) => Promise<void>;
   setPitchStatus: (pitchId: string, status: PitchStatus, reply?: string) => Promise<void>;
 };
+
+/**
+ * Publish or unpublish, then let loadProfile be the one thing that decides what
+ * the page shows. The route answers with the slug and the timestamp, but
+ * re-reading keeps ONE shape of profile in the store rather than a second,
+ * thinner one patched in from here.
+ */
+async function setPagePublished(method: 'POST' | 'DELETE', signedOutMessage: string) {
+  const { accessToken } = await getSession();
+  if (!accessToken) throw new Error(signedOutMessage);
+
+  let response: Response;
+  try {
+    response = await fetch('/api/curator/profile/publish', {
+      method,
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  } catch {
+    throw new Error(CURATOR_NETWORK_ERROR);
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(
+      describeCuratorFailure({ status: response.status, serverMessage: payload?.error })
+    );
+  }
+}
 
 async function getSession() {
   const {
@@ -373,6 +406,16 @@ export const useCuratorStore = create<CuratorStore>((set, get) => ({
       profileLoadedAt = Date.now();
       set({ profile: payload.profile });
     }
+  },
+
+  publishPage: async () => {
+    await setPagePublished('POST', 'Sign in again to publish your page.');
+    await useCuratorStore.getState().loadProfile({ force: true });
+  },
+
+  unpublishPage: async () => {
+    await setPagePublished('DELETE', 'Sign in again to take your page down.');
+    await useCuratorStore.getState().loadProfile({ force: true });
   },
 
   createPlaylist: async (input) => {

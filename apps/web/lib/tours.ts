@@ -175,7 +175,7 @@ export function resolveCatalogTourCta(input: {
     return {
       anchor: 'plan-rollout',
       title: 'Plan this rollout.',
-      body: 'Answer a few questions and UrgAns lays out every step. You approve it before anything is scheduled.',
+      body: 'Answer a few questions and UrgAns lays out every step, shaped to your answers. Change anything after.',
       ctaLabel: 'Plan it',
       action: 'open-intake',
     };

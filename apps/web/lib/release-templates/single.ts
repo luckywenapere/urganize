@@ -177,7 +177,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       offset_days: -49,
       duration_days: 1,
       optional: true,
-      tags: ['asset_production'],
+      tags: ['asset_production', 'physical'],
     },
 
     // -----------------------------------------------------------------------
@@ -556,7 +556,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       offset_days: -3,
       duration_days: 1,
       optional: true,
-      tags: ['marketing'],
+      tags: ['marketing', 'paid'],
     },
     {
       id: 'w1_presave_reminder',
@@ -784,7 +784,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       offset_days: 15,
       duration_days: 1,
       optional: true,
-      tags: ['analytics', 'marketing', 'followup'],
+      tags: ['analytics', 'marketing', 'paid', 'followup'],
     },
     {
       id: 'post_w2_identify_market',

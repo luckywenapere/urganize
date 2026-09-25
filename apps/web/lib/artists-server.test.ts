@@ -203,7 +203,7 @@ describe('reassignReleaseArtist', () => {
 
 describe('describeArtistDeletionBlock', () => {
   it('allows a removal that loses nothing', () => {
-    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 0 })).toBeNull();
+    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 0, shows: 0 })).toBeNull();
   });
 
   // FAILS CLOSED, unlike every other count in this module. Being wrong here
@@ -216,7 +216,7 @@ describe('describeArtistDeletionBlock', () => {
   });
 
   it('names how many releases are in the way, and what to do', () => {
-    const message = describeArtistDeletionBlock({ releases: 3, scopedMembers: 0 }) ?? '';
+    const message = describeArtistDeletionBlock({ releases: 3, scopedMembers: 0, shows: 0 }) ?? '';
     expect(message).toContain('3');
     expect(message).toMatch(/move/i);
   });
@@ -226,19 +226,43 @@ describe('describeArtistDeletionBlock', () => {
   // silent removal promotes a scoped teammate to seeing every release. The copy
   // has to say that, not just refuse.
   it('says what happens to a scoped teammate rather than only refusing', () => {
-    const message = describeArtistDeletionBlock({ releases: 0, scopedMembers: 2 }) ?? '';
+    const message = describeArtistDeletionBlock({ releases: 0, scopedMembers: 2, shows: 0 }) ?? '';
     expect(message).toContain('2');
     expect(message).toMatch(/every rollout/i);
   });
 
   it('covers both blockers in one message when both apply', () => {
-    const message = describeArtistDeletionBlock({ releases: 1, scopedMembers: 1 }) ?? '';
+    const message = describeArtistDeletionBlock({ releases: 1, scopedMembers: 1, shows: 0 }) ?? '';
     expect(message).toMatch(/rollout/i);
     expect(message).toMatch(/access/i);
   });
 
+  // Shows joined the blockers on 2026-09-25. Before that, an artist with a show
+  // hit the database's restrict and read back "This artist has rollouts now" —
+  // wrong, and unfixable from anywhere the message pointed.
+  it('names the shows in the way, and says to delete them', () => {
+    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 0, shows: 1 })).toBe(
+      'This artist has 1 show. Delete the show first.'
+    );
+    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 0, shows: 4 })).toBe(
+      'This artist has 4 shows. Delete the shows first.'
+    );
+  });
+
+  it('lists every blocker in one sentence, without an Oxford comma', () => {
+    expect(describeArtistDeletionBlock({ releases: 2, scopedMembers: 0, shows: 3 })).toBe(
+      'This artist has 2 rollouts and 3 shows. Move or archive the rollouts and delete the shows first.'
+    );
+    expect(describeArtistDeletionBlock({ releases: 1, scopedMembers: 2, shows: 1 })).toBe(
+      'This artist has 1 rollout, 1 show and 2 people who can only see this artist. Move or archive the rollout, delete the show and change that access first.'
+    );
+    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 1, shows: 2 })).toBe(
+      'This artist has 2 shows and 1 person who can only see this artist. Delete the shows and change that access first.'
+    );
+  });
+
   it('reads naturally for one of each', () => {
-    expect(describeArtistDeletionBlock({ releases: 1, scopedMembers: 0 })).toContain('1 rollout.');
-    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 1 })).toContain('1 person');
+    expect(describeArtistDeletionBlock({ releases: 1, scopedMembers: 0, shows: 0 })).toContain('1 rollout.');
+    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 1, shows: 0 })).toContain('1 person');
   });
 });

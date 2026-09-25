@@ -23,7 +23,6 @@ export type SceneName =
   | 'files'
   | 'calendar'
   | 'pitch'
-  | 'plan'
   | 'capture'
   | 'song'
   | 'coverart'
@@ -35,7 +34,6 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'files',
   'calendar',
   'pitch',
-  'plan',
   'capture',
   'song',
   'coverart',
@@ -54,15 +52,14 @@ const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
-const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
  *
- * 'plan' is deliberately absent. It is the one scene that EDITS its payload
- * under an autosave queue, so a cached copy is a corruption risk rather than a
- * speedup, and it only exists for releases with no plan yet — prefetching it
- * would 404 on almost every release. It fetches its own draft directly.
+ * (Until 2026-09-15 a 'plan' scene existed and was deliberately absent here,
+ * because it edited its payload under an autosave queue. The review step is
+ * gone: the plan is built straight into activities, and the summary the
+ * manager reads afterwards is a plain GET the PlanBuiltBanner makes itself.)
  *
  * 'calendar' and 'capture' are present only when their feature flags are on,
  * for the same would-always-404 reason.
@@ -104,7 +101,8 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
  * change with founder sign-off (2026-09-08) rather than a tidy-up.
  *
  * This used to gate five scenes and deliberately skip metadata / files / pitch
- * / plan, on the reasoning that "those scenes gate themselves inside
+ * / plan (the review scene, gone since 2026-09-15), on the reasoning that
+ * "those scenes gate themselves inside
  * ReleaseScenePanel and their own pills". The second half was true; THE FIRST
  * HALF WAS NOT — ReleaseScenePanel reads no feature flag at all, and never
  * has. So those four had no URL-level gate anywhere: a stale bookmark, a
@@ -115,7 +113,7 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
  *
  * Founder call: an old link to something since switched off should quietly
  * open the release instead. That is what resolvePanelBody's fallback already
- * did for the other five, so this makes the ten consistent rather than
+ * did for the other five, so this makes the set consistent rather than
  * inventing anything.
  */
 export function resolveActiveScene(rawParam: string | null): SceneName | null {
@@ -129,7 +127,6 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   if (scene === 'metadata' && !METADATA_ENABLED) return null;
   if (scene === 'files' && !FILES_ENABLED) return null;
   if (scene === 'pitch' && !PITCHING_ENABLED) return null;
-  if (scene === 'plan' && !PLANNER_ENABLED) return null;
   return scene;
 }
 
@@ -233,21 +230,15 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
 /**
  * The scenes whose payload the cache layer knows how to fetch and store.
  *
- * 'plan' is a scene in every other sense — it has a pill, a URL and a panel —
- * but it owns its own reads and writes (see usePlanDraft) because it is an
- * editable document rather than a snapshot. Keeping it out of this type means
- * the store cannot be given a meaningless fetcher for it, and the compiler
- * enforces that rather than a comment.
- *
- * 'timeline' is out for the opposite reason: it fetches NOTHING. It is laid out
+ * 'timeline' is out because it fetches NOTHING. It is laid out
  * entirely from the activities TasksPanel already has in props, so there is no
  * payload to cache, no route to prefetch, and a fetcher for it would have to
  * invent a request that does not exist.
  */
-export type CacheableSceneName = Exclude<SceneName, 'plan' | 'timeline' | 'activities'>;
+export type CacheableSceneName = Exclude<SceneName, 'timeline' | 'activities'>;
 
 export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName =>
-  scene !== 'plan' && scene !== 'timeline' && scene !== 'activities';
+  scene !== 'timeline' && scene !== 'activities';
 
 /**
  * Which scenes may touch localStorage.
@@ -266,10 +257,6 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   // Plain JSON: pitch rows carry a song link the pitcher typed, not a signed
   // one, so nothing here expires on disk.
   pitch: true,
-  // The plan draft is a document being edited, not a read. Painting a cached
-  // copy under live edits could overwrite newer text with older, so it never
-  // goes to disk or memory — see SCENE_PREFETCH_ORDER.
-  plan: false,
   // Never to disk, for a reason unlike any other scene here: the payload
   // carries fans' EMAIL ADDRESSES. localStorage is readable by any script that
   // ever runs on this origin and survives sign-out on a shared machine, and

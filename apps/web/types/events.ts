@@ -53,6 +53,11 @@ export type Setlist = {
   name: string;
   createdAt: string;
   updatedAt: string;
+  /** How many people this set was ever sent to (turned-off links included).
+   *  A set sent to anyone is kept rather than deleted — it is the record of
+   *  who downloaded what. Null when the count could not be read; absent from
+   *  responses that do not compute it (rename, create). */
+  sentTo?: number | null;
 };
 
 export type SetlistItemType = 'song' | 'talk' | 'interlude' | 'break';

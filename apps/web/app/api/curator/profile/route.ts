@@ -9,6 +9,7 @@ import {
   flagOffResponse,
   isPitchingFeatureEnabled,
   parseBio,
+  parseCuratorSlug,
   parseDisplayName,
   requireCuratorUser,
 } from '../_shared';
@@ -36,6 +37,8 @@ async function buildProfile(
     bio: typeof row.bio === 'string' ? row.bio : '',
     photoUrl,
     photoPath,
+    slug: typeof row.slug === 'string' && row.slug ? row.slug : null,
+    publishedAt: row.published_at ? String(row.published_at) : null,
     createdAt: String(row.created_at || ''),
     updatedAt: String(row.updated_at || ''),
   };
@@ -116,6 +119,14 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
+  // slug: a handle she typed for her public page. Absent leaves it alone, and
+  // there is no null branch on purpose — see parseCuratorSlug.
+  if ('slug' in payload) {
+    const parsed = parseCuratorSlug(payload.slug);
+    if ('error' in parsed) return parsed.error;
+    updates.slug = parsed.value;
+  }
+
   if (!Object.keys(updates).length) {
     return NextResponse.json({ error: 'Nothing to save.' }, { status: 400 });
   }
@@ -128,6 +139,12 @@ export async function PATCH(request: NextRequest) {
     .maybeSingle();
 
   if (error) {
+    // A handle SHE typed, on a field she can see. Unlike the one the publish
+    // route suggests for her, this collision is hers to act on, so it is worth
+    // telling her about rather than quietly picking something else.
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'That link is taken. Try another one.' }, { status: 409 });
+    }
     return NextResponse.json(
       { error: error.message || 'Could not save your profile.' },
       { status: 500 }

@@ -312,11 +312,10 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
     // so it reserves the same width as Files rather than a tagged pill's.
     ...(PITCHING_ENABLED ? ['w-16'] : []), // Pitch
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
-    // The Plan pill is deliberately NOT reserved. Whether it renders depends on
-    // the release's activity count and whether a draft exists — data this
-    // skeleton is showing precisely because it does not have it yet. Guessing
-    // would make the row jump for every release that has a plan already, which
-    // is most of them.
+    // (A Plan pill led this row until 2026-09-15 and was deliberately not
+    // reserved, since whether it rendered depended on the release's activity
+    // count — data this skeleton never has. The review scene it opened is
+    // gone, and with it the pill.)
   ];
   // The header row's pills (New activity, Timeline, Metadata, then one per
   // enabled flag). DESKTOP ONLY — the real buttons these stand in for stopped
@@ -447,18 +446,17 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
             is a far better guess than any flag combination — the skeleton has
             no task data to check. A genuinely activity-less release (the
             planner's plan-first flow) briefly reserves one 32px circle that
-            never arrives, the same magnitude of imprecision Plan and Recap
-            already accept below.
+            never arrives, the same magnitude of imprecision Recap already
+            accepts below.
           - THE MENU keeps a flag-known check, but it now spans every release
             surface rather than the six that were folded away — Timeline,
             Content, Pitch and Metadata joined the list the day the top tabs
             were removed, so leaving them out of this condition would have
             un-reserved the trigger in exactly the flag combination production
             runs (calendar + metadata on, the asset flags off). Notes joined
-            2026-09-08 with the "Note this" entry. Plan and Recap
-            stay excluded for the reason Plan is excluded from `pillWidths`
-            above: whether either renders depends on release/draft/task data
-            this skeleton doesn't have yet. */}
+            2026-09-08 with the "Note this" entry. Recap stays excluded:
+            whether it renders depends on release/task data this skeleton
+            doesn't have yet. */}
       <div
         className={`sticky z-20 -mx-4 flex items-center gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >

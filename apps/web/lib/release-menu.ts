@@ -45,10 +45,12 @@
  * TasksPanel's own comments at the time he gave them.
  */
 export const RELEASE_MENU_ORDER = [
-  // Conditional and self-removing (only while the release has no activities or
-  // a draft is waiting), so it costs the list nothing to put it first: "A
-  // release with no activities has exactly one job, and this is it."
-  'plan',
+  // (Until 2026-09-15 a 'plan' entry led this list, conditional and
+  // self-removing while a release had no activities. The review scene it
+  // opened is gone: the plan is built straight into activities from the
+  // planning questions, and the questions' only door is the card that fills
+  // the empty panel, which needs no menu row.)
+  //
   // The OTHER main view, whichever one is not currently showing. Until
   // 2026-09-06 this slot was 'timeline' — the same activities seen a different
   // way, "closest to Activities", leading both rows. It swapped when the

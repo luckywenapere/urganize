@@ -38,7 +38,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "Can I change the plan it gives me?",
     answer:
-      "Yes. Edit or delete any activity, and UrgAns tailors the draft to your rollout before you approve it.",
+      "Yes. UrgAns builds the plan from your answers, and you can edit or delete any activity after.",
   },
   {
     question: "Will UrgAns do things without asking?",

@@ -1,7 +1,14 @@
 import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { buildPackFileName, resolveItemDuration, type SongVersionLabel } from '@/lib/setlist';
-import { isPackExpired } from '@/lib/dj-pack';
+import {
+  NON_SONG_ITEM_COPY,
+  buildPackFileName,
+  resolveItemDuration,
+  resolveRowVersion,
+  type SetlistItemType,
+  type SongVersionLabel,
+} from '@/lib/setlist';
+import { decidePackGate } from '@/lib/dj-pack';
 import { formatShowDateTime, shortTimezoneLabel } from '@/lib/events';
 
 /**
@@ -13,13 +20,21 @@ import { formatShowDateTime, shortTimezoneLabel } from '@/lib/events';
  * anything else lets a stranger probe for live links — and it must not 500 in
  * front of a DJ standing in a venue.
  *
- * `expired` is the one state that IS distinguished, because it is the one the
- * recipient can act on: they were given a real link and it has lapsed, so the
- * page tells them to ask for a new one rather than implying they were never
- * meant to have it.
+ * `expired` and `cancelled` are the two states that ARE distinguished, because
+ * they are the ones the recipient can act on: they were given a real link, and
+ * it has lapsed or the show is off, so the page says so rather than implying
+ * they were never meant to have it. A cancelled show serves no files — there is
+ * nothing to play, and an unreleased track should not stay downloadable for a
+ * night that is not happening.
  */
 
 export type PackTrack = {
+  /** 'song' rows are files. 'cue' rows are the talk, interludes and breaks
+   *  between them — shown in the running order so the DJ knows where the
+   *  pauses are, never downloadable. */
+  kind: 'song' | 'cue';
+  /** 1-based place among the SONGS (cues are not numbered), matching the
+   *  number the downloaded file starts with. 0 for a cue. */
   position: number;
   title: string;
   versionLabel: SongVersionLabel | null;
@@ -39,20 +54,25 @@ export type PackTrack = {
 export type PublicPack =
   | { state: 'unavailable' }
   | { state: 'expired'; showTitle: string }
+  | { state: 'cancelled'; showTitle: string }
   | {
       state: 'ok';
       recipientId: string;
       recipientName: string;
       packId: string;
-      requiresPasscode: boolean;
       showTitle: string;
       artistName: string;
       venue: string;
+      /** False while the promoter has not confirmed a time; setTime then
+       *  carries the "to be confirmed" wording. */
+      setTimeKnown: boolean;
       setTime: string;
       timezoneLabel: string;
       stage: string | null;
       setLengthMinutes: number;
       tracks: PackTrack[];
+      /** Songs in the set with no file to download yet. */
+      missingFiles: number;
     };
 
 const UNAVAILABLE: PublicPack = { state: 'unavailable' };
@@ -89,7 +109,7 @@ export async function loadPublicPack(token: string): Promise<PublicPack> {
 
     const packResult = await client
       .from('dj_packs')
-      .select('id,event_id,setlist_id,passcode,expires_at')
+      .select('id,event_id,setlist_id,expires_at')
       .eq('id', String(recipient.pack_id))
       .maybeSingle();
 
@@ -98,7 +118,9 @@ export async function loadPublicPack(token: string): Promise<PublicPack> {
 
     const eventResult = await client
       .from('events')
-      .select('id,artist_id,title,venue_name,city,country,timezone,set_start_at,set_length_minutes,stage')
+      .select(
+        'id,artist_id,title,venue_name,city,country,timezone,set_start_at,set_length_minutes,stage,status'
+      )
       .eq('id', String(pack.event_id))
       .maybeSingle();
 
@@ -107,9 +129,14 @@ export async function loadPublicPack(token: string): Promise<PublicPack> {
 
     const showTitle = String(event.title || 'the show');
 
-    if (isPackExpired(pack.expires_at ? String(pack.expires_at) : null)) {
-      return { state: 'expired', showTitle };
-    }
+    const gate = decidePackGate({
+      recipientRevokedAt: recipient.revoked_at ? String(recipient.revoked_at) : null,
+      eventStatus: event.status ? String(event.status) : null,
+      packExpiresAt: pack.expires_at ? String(pack.expires_at) : null,
+    });
+    if (gate === 'unavailable') return UNAVAILABLE;
+    if (gate === 'cancelled') return { state: 'cancelled', showTitle };
+    if (gate === 'expired') return { state: 'expired', showTitle };
 
     const itemsResult = await client
       .from('setlist_items')
@@ -120,9 +147,6 @@ export async function loadPublicPack(token: string): Promise<PublicPack> {
     const items = (itemsResult.data || []).map(row);
 
     const songIds = [...new Set(items.map((item) => String(item.song_id || '')).filter(Boolean))];
-    const versionIds = [
-      ...new Set(items.map((item) => String(item.song_version_id || '')).filter(Boolean)),
-    ];
 
     const songs = new Map<string, Record<string, unknown>>();
     if (songIds.length > 0) {
@@ -136,15 +160,31 @@ export async function loadPublicPack(token: string): Promise<PublicPack> {
       }
     }
 
-    const versions = new Map<string, Record<string, unknown>>();
-    if (versionIds.length > 0) {
+    // Every file on those songs: a row that chose none sends its song's
+    // default, the rule the set builder shows (resolveRowVersion). Before
+    // 2026-09-25 only an explicitly chosen file was read, and nothing chose
+    // one, so every track here read "No file".
+    const filesBySong = new Map<
+      string,
+      { id: string; label: string; fileName: string; durationSeconds: number | null; createdAt: string | null }[]
+    >();
+    if (songIds.length > 0) {
       const result = await client
         .from('song_versions')
-        .select('id,label,file_name,duration_seconds')
-        .in('id', versionIds);
+        .select('id,song_id,label,file_name,duration_seconds,created_at')
+        .in('song_id', songIds);
       for (const entry of result.data || []) {
-        const version = row(entry);
-        versions.set(String(version.id), version);
+        const file = row(entry);
+        const songId = String(file.song_id || '');
+        const list = filesBySong.get(songId) || [];
+        list.push({
+          id: String(file.id || ''),
+          label: String(file.label || 'original'),
+          fileName: String(file.file_name || ''),
+          durationSeconds: asSeconds(file.duration_seconds),
+          createdAt: file.created_at ? String(file.created_at) : null,
+        });
+        filesBySong.set(songId, list);
       }
     }
 
@@ -154,21 +194,45 @@ export async function loadPublicPack(token: string): Promise<PublicPack> {
     // of a missing warning is higher than the cost of an unnecessary one.
     const artistName = await resolveArtistName(client, String(event.artist_id || ''));
 
+    const totalTracks = items.filter((item) => String(item.item_type || '') === 'song').length;
     let position = 0;
+    let missingFiles = 0;
     const tracks: PackTrack[] = [];
     for (const item of items) {
-      // Only songs are downloadable. Talk and breaks matter to the running
-      // order, not to a DJ's USB stick.
-      if (String(item.item_type || '') !== 'song') continue;
+      const itemType = String(item.item_type || 'song') as SetlistItemType;
+
+      // Talk, interludes and breaks matter to the running order, not to a
+      // DJ's USB stick: shown as cues, never numbered, never downloadable.
+      if (itemType !== 'song') {
+        tracks.push({
+          kind: 'cue',
+          position: 0,
+          title: item.label ? String(item.label) : NON_SONG_ITEM_COPY[itemType] || 'Break',
+          versionLabel: null,
+          bpm: null,
+          musicalKey: null,
+          cueNote: item.cue_note ? String(item.cue_note) : null,
+          durationSeconds: asSeconds(item.duration_seconds),
+          downloadName: '',
+          versionId: null,
+          isUnreleased: false,
+        });
+        continue;
+      }
       position += 1;
 
       const song = songs.get(String(item.song_id || '')) || null;
-      const version = versions.get(String(item.song_version_id || '')) || null;
+      const { version } = resolveRowVersion(
+        item.song_version_id ? String(item.song_version_id) : null,
+        song ? filesBySong.get(String(song.id)) || [] : []
+      );
+      if (!version) missingFiles += 1;
       const label = version ? (String(version.label || 'original') as SongVersionLabel) : null;
       const title = song ? String(song.title || 'Untitled') : 'Untitled';
-      const extension = version ? String(version.file_name || '').split('.').pop() || '' : '';
+      const extension = version ? String(version.fileName || '').split('.').pop() || '' : '';
 
       tracks.push({
+        kind: 'song',
         position,
         title,
         versionLabel: label,
@@ -177,11 +241,12 @@ export async function loadPublicPack(token: string): Promise<PublicPack> {
         cueNote: item.cue_note ? String(item.cue_note) : null,
         durationSeconds: resolveItemDuration({
           itemSeconds: asSeconds(item.duration_seconds),
-          versionSeconds: version ? asSeconds(version.duration_seconds) : null,
+          versionSeconds: version ? version.durationSeconds : null,
           songSeconds: song ? asSeconds(song.duration_seconds) : null,
         }).seconds,
         downloadName: buildPackFileName({
           position,
+          totalTracks,
           artistName,
           songTitle: title,
           versionLabel: label,
@@ -189,7 +254,7 @@ export async function loadPublicPack(token: string): Promise<PublicPack> {
           musicalKey: song && song.musical_key ? String(song.musical_key) : null,
           extension,
         }),
-        versionId: version ? String(version.id) : null,
+        versionId: version ? version.id : null,
         isUnreleased: !song || !song.release_id,
       });
     }
@@ -199,24 +264,25 @@ export async function loadPublicPack(token: string): Promise<PublicPack> {
       .map(String)
       .join(', ');
 
+    const setStartAt = event.set_start_at ? String(event.set_start_at) : null;
     return {
       state: 'ok',
       recipientId: String(recipient.id),
       recipientName: String(recipient.recipient_name || ''),
       packId: String(pack.id),
-      requiresPasscode: Boolean(pack.passcode),
       showTitle,
       artistName,
       venue,
-      setTime: formatShowDateTime(
-        event.set_start_at ? String(event.set_start_at) : null,
-        String(event.timezone || 'UTC')
-      ),
+      setTimeKnown: Boolean(setStartAt),
+      setTime: setStartAt
+        ? formatShowDateTime(setStartAt, String(event.timezone || 'UTC'))
+        : 'To be confirmed',
       timezoneLabel: shortTimezoneLabel(String(event.timezone || '')),
       stage: event.stage ? String(event.stage) : null,
       setLengthMinutes:
         typeof event.set_length_minutes === 'number' ? event.set_length_minutes : 30,
       tracks,
+      missingFiles,
     };
   } catch {
     // Never surface an infrastructure failure to a stranger, and never 500 in

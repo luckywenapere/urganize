@@ -1,34 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
-  PLAN_DRAFTS_TABLE,
   createAdminClient,
-  getDraftTemplate,
+  getPlannerTemplate,
   isReleasePlannerEnabled,
+  loadCreatedPlan,
   loadOwnedRelease,
-  loadPlanDraft,
+  loadPlannerTeam,
   requireActiveAuthenticatedUser,
-  toPlanDraftResponse,
+  toPlanResponse,
+  todayYmd,
 } from './_shared';
-import { parseDraftDoc, parseReleasePlanIntake } from '@/lib/release-planning';
-import { discardPlanDraft } from '@/lib/release-planning-actions-server';
-import { findLatestDraftedActionId } from '@/lib/urgans-actions/server';
+import { parseReleasePlanIntake } from '@/lib/release-planning';
+import { PLANNER_DEADLINE_MS, createReleasePlan } from '@/lib/release-planning-actions-server';
+import { resolvePlannerModel, resolvePlannerReasoningEffort } from '@/lib/ai/planner-model';
 
 /**
- * The plan draft itself: read it, autosave the manager's edits into it, or
- * throw it away.
+ * The rollout plan: build it (POST) or read back what was built (GET).
  *
- * Generation, per-phase redrafting and approval each live in their own child
- * route because they do materially different work.
+ * Until 2026-09-15 this group also held a draft to autosave (PUT), discard
+ * (DELETE) and approve, plus a per-phase redraft. The review step is gone: the
+ * answers to the planning questions are the decision, and the plan lands as
+ * activities the manager edits like any other. See createReleasePlan's own
+ * header for the order of operations and why it is the design.
  */
 
+// The model call's budget is sized against this ceiling — Vercel's Hobby-plan
+// maximum, which code cannot raise. createReleasePlan hands the provider a
+// deadline PLANNER_DEADLINE_MS (52s) after the route starts, so the last
+// attempt aborts with time left to write the activities and answer. Auth and
+// the DB pre-work take a second or two; the three budget constants live
+// beside createReleasePlan and moving one means re-checking this arithmetic.
+export const maxDuration = 60;
+
 /**
- * GET — the draft plus the saved intake answers.
+ * GET — the plan that was built for this rollout, plus the saved answers.
  *
- * The intake comes back separately from the draft so the wizard can prefill
- * from a previous run even when there is no draft yet (the manager generated,
- * discarded, and came back). Answers stored by the superseded tailor-plan
- * feature are a different shape and simply parse to null.
+ * `plan` is null until a plan has been built. The answers come back
+ * separately so the questions can be prefilled from a previous run — a build
+ * that was refused because UrgAns could not read the notes leaves the answers
+ * saved and nothing built, and the manager comes back to them filled in.
+ * Answers stored by the superseded tailor-plan feature are a different shape
+ * and simply parse to null.
  */
 export async function GET(
   request: NextRequest,
@@ -54,49 +67,40 @@ export async function GET(
   const loaded = await loadOwnedRelease(adminClient, releaseId, auth.user.id);
   if ('error' in loaded) return loaded.error;
 
-  const draftResult = await loadPlanDraft(adminClient, releaseId, auth.user.id);
-  if ('error' in draftResult) return draftResult.error;
+  const planResult = await loadCreatedPlan(adminClient, releaseId);
+  if ('error' in planResult) return planResult.error;
 
   const savedIntake = parseReleasePlanIntake(loaded.release.release_context);
 
-  // Re-derived on every load rather than threaded through client state, so a
-  // reload, a deep link, or a draft started on another device all resolve the
-  // same answer. Only looked up for a live draft — an approved one has
-  // nothing left to apply/discard, and findLatestDraftedActionId itself
-  // fails to null on every error (flag off, migration not yet applied), so
-  // this can never break loading the draft it accompanies.
-  const actionId =
-    draftResult.draft && draftResult.draft.status === 'draft'
-      ? await findLatestDraftedActionId(adminClient, {
-          objectType: 'release',
-          objectId: releaseId,
-          actionType: 'release.draft_plan',
-        })
-      : null;
-
   return NextResponse.json({
-    draft: draftResult.draft ? toPlanDraftResponse(draftResult.draft) : null,
+    plan: planResult.plan ? toPlanResponse(planResult.plan) : null,
     intake: savedIntake.ok ? savedIntake.intake : null,
     releaseDate: loaded.release.release_date,
-    actionId,
   });
 }
 
 /**
- * PUT — autosave the whole draft document.
+ * POST — build the plan from the intake answers, straight into activities.
  *
- * The document is written whole rather than patched task by task: the review
- * scene holds the entire plan in memory and debounces, so a partial update
- * protocol would buy nothing and could interleave into a half-applied plan.
+ * A thin HTTP wrapper: auth, params and body validation stay here (the
+ * 400-before-500 precedence), everything from "does this rollout already have
+ * a plan" onward is lib/release-planning-actions-server.ts's
+ * createReleasePlan, the one implementation the release.draft_plan embedded
+ * action also calls. Owner-only through loadOwnedRelease, matching the
+ * planning card's own gate.
  *
- * Assignees are NOT checked against workspace membership here. Membership can
- * change while a draft sits open, and failing an autosave over it would throw
- * away the manager's typing. Approval settles assignees instead.
+ * Answers: 201 with the plan summary; 400 for a bad body or a rollout with no
+ * date; 409 `tasks_exist` when a plan already exists and `plan_in_progress`
+ * when another call is building one; 503 `tailoring_unavailable` when the
+ * manager typed notes and the model could not read them (nothing is created,
+ * the answers are saved).
  */
-export async function PUT(
+export async function POST(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  const startedAt = Date.now();
+
   if (!isReleasePlannerEnabled()) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
@@ -109,26 +113,16 @@ export async function PUT(
     return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
   }
 
-  const body = (await request.json().catch(() => null)) as { doc?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { intake?: unknown } | null;
   if (!body) {
-    return NextResponse.json({ error: 'A JSON body with a doc is required.' }, { status: 400 });
+    return NextResponse.json({ error: 'A JSON body with intake answers is required.' }, { status: 400 });
   }
 
-  // Flag-BLIND, and read from the doc the client is saving rather than from the
-  // release row: the template is only here to supply the set of legitimate
-  // template task ids. An EP draft generated while the EP flag was on carries
-  // ep_v0.1 ids, and if the flag is rolled back mid-draft a flag-aware lookup
-  // would fall back to the single playbook, call every one of those ids forged,
-  // and 400 every autosave — losing the manager's edits.
-  const template = getDraftTemplate(
-    (body.doc as { release_type?: unknown } | null)?.release_type as string | null
-  );
-  const parsed = parseDraftDoc(body.doc, {
-    knownTemplateTaskIds: new Set(template.tasks.map((task) => task.id)),
-  });
-  if (!parsed.ok) {
-    return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const intakeResult = parseReleasePlanIntake(body.intake);
+  if (!intakeResult.ok) {
+    return NextResponse.json({ error: intakeResult.error }, { status: 400 });
   }
+  const intake = intakeResult.intake;
 
   const adminClient = createAdminClient(auth.supabaseUrl);
   if (!adminClient) {
@@ -137,77 +131,29 @@ export async function PUT(
 
   const loaded = await loadOwnedRelease(adminClient, releaseId, auth.user.id);
   if ('error' in loaded) return loaded.error;
+  const release = loaded.release;
 
-  // Ownership and status are both in the statement, so there is no window
-  // between checking and writing (the notes route convention). An approved
-  // plan is frozen: its tasks already exist.
-  const { data, error } = await adminClient
-    .from(PLAN_DRAFTS_TABLE)
-    .update({ doc: parsed.doc })
-    .eq('release_id', releaseId)
-    .eq('owner_user_id', auth.user.id)
-    .eq('status', 'draft')
-    .select('id,updated_at');
+  const { template, fallbackToSingle } = getPlannerTemplate(intake.release_type);
 
-  if (error) {
+  const result = await createReleasePlan(adminClient, {
+    release,
+    actor: auth.user,
+    intake,
+    todayYmd: todayYmd(),
+    template,
+    fallbackToSingle,
+    loadTeam: () => loadPlannerTeam(adminClient, releaseId, auth.user),
+    plannerModel: resolvePlannerModel(),
+    reasoningEffort: resolvePlannerReasoningEffort(),
+    deadlineMs: startedAt + PLANNER_DEADLINE_MS,
+  });
+
+  if (!result.ok) {
     return NextResponse.json(
-      { error: error.message || 'Could not save the plan.' },
-      { status: 500 }
+      { error: result.error, ...(result.code ? { code: result.code } : {}) },
+      { status: result.status }
     );
   }
 
-  const updated = (data || [])[0] as { id: string; updated_at: string | null } | undefined;
-  if (!updated) {
-    // Either there is no draft or it has been approved. Tell the two apart so
-    // the scene can reload rather than silently dropping the edit.
-    const existing = await loadPlanDraft(adminClient, releaseId, auth.user.id);
-    if ('error' in existing) return existing.error;
-    if (existing.draft && existing.draft.status === 'approved') {
-      return NextResponse.json({ error: 'This plan was already approved.' }, { status: 409 });
-    }
-    return NextResponse.json({ error: 'No plan draft to save.' }, { status: 404 });
-  }
-
-  return NextResponse.json({ updatedAt: updated.updated_at || '' });
-}
-
-/**
- * DELETE — discard a draft the manager never approved. Idempotent, and refuses
- * to touch an approved one (deleting that would erase the provenance of tasks
- * that already exist).
- *
- * A thin wrapper around lib/release-planning-actions-server.ts's
- * discardPlanDraft, the one implementation the new release.draft_plan
- * embedded action's discard step also calls.
- */
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ releaseId: string }> }
-) {
-  if (!isReleasePlannerEnabled()) {
-    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
-  }
-
-  const auth = await requireActiveAuthenticatedUser(request);
-  if ('error' in auth) return auth.error;
-
-  const { releaseId } = await context.params;
-  if (!releaseId) {
-    return NextResponse.json({ error: 'Rollout id is required.' }, { status: 400 });
-  }
-
-  const adminClient = createAdminClient(auth.supabaseUrl);
-  if (!adminClient) {
-    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
-
-  const loaded = await loadOwnedRelease(adminClient, releaseId, auth.user.id);
-  if ('error' in loaded) return loaded.error;
-
-  const result = await discardPlanDraft(adminClient, { releaseId, ownerUserId: auth.user.id });
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: result.status });
-  }
-
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ plan: result.plan }, { status: 201 });
 }

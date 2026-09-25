@@ -123,7 +123,7 @@ export const PRESS_KIT_TOOLS: ChappiTool[] = [
       const sections = (res.body.sections || []) as PressKitSection[];
       return {
         ok: true,
-        summary: `${kit.artistName}'s press kit — ${kit.state}${
+        summary: `${kit.artistName}'s press kit: ${kit.state}${
           kit.publishedAt ? ', live' : ''
         }.`,
         data: {

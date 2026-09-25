@@ -96,7 +96,19 @@ const SURFACES = [
   join(WEB, 'app', 'layout.tsx'),
   join(WEB, 'app', 'manifest.ts'),
   join(WEB, 'lib', 'positioning.ts'),
-  join(WEB, 'lib', 'email-templates.ts'),
+  // The customer-facing email copy. Was lib/email-templates.ts until the
+  // 2026-09 react-email split moved every template into its own file; the
+  // founder billing alert is internal (a lead sheet to the founder, not a
+  // customer) and stays out, the way billing-alert-templates.ts always did.
+  join(WEB, 'lib', 'email', 'templates', 'Layout.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'components.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'WelcomeEmail.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'WorkspaceInviteEmail.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'CreditSubmissionEmail.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'TaskAssignedEmail.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'WorkRequestEmail.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'WorkRequestAnswerEmail.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'NotifyAdminEmail.tsx'),
   join(WEB, 'lib', 'chappi', 'system-prompt.ts'),
   join(WEB, 'lib', 'help-copy.ts'),
 ];

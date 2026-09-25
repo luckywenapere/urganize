@@ -28,7 +28,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getNotificationPresets } from '@/lib/notification-presets-server';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
-import { buildCreditSubmissionEmail } from '@/lib/email-templates';
 import { sendPushToUsers } from '@/lib/push-server';
 import { resolveAppBaseUrl } from '@/lib/tasks-server';
 import {
@@ -89,7 +88,7 @@ export async function notifyCreditSubmission(
         url: push.url,
         tag: push.tag,
       }),
-      sendCreditEmail(ownerEmail, notice),
+      sendCreditEmail(client, ownerEmail, notice, input.ownerUserId),
     ]);
   } catch (error) {
     // Swallowed on purpose — see rule 1 in the header.
@@ -101,22 +100,24 @@ export async function notifyCreditSubmission(
 }
 
 async function sendCreditEmail(
+  client: SupabaseClient,
   ownerEmail: string,
-  notice: CreditSubmissionNotice
+  notice: CreditSubmissionNotice,
+  ownerUserId: string
 ): Promise<void> {
   if (!ownerEmail || !isEmailConfigured()) return;
   try {
-    const email = buildCreditSubmissionEmail({
-      collaboratorLabel: collaboratorLabel(notice),
-      releaseTitle: releaseLabel(notice.releaseTitle),
-      rows: buildCreditDetailRows(notice),
-      metadataUrl: `${resolveAppBaseUrl()}${creditSubmissionUrl(notice.releaseId)}`,
-    });
-    await sendEmail({
+    await sendEmail(client, {
+      templateId: 'credit_submission',
       to: ownerEmail,
-      subject: email.subject,
-      html: email.html,
-      text: email.text,
+      props: {
+        collaboratorLabel: collaboratorLabel(notice),
+        releaseTitle: releaseLabel(notice.releaseTitle),
+        rows: buildCreditDetailRows(notice),
+        metadataUrl: `${resolveAppBaseUrl()}${creditSubmissionUrl(notice.releaseId)}`,
+      },
+      trigger: 'credit_submitted',
+      recipientUserId: ownerUserId,
     });
   } catch (error) {
     // Caught here as well as in the caller so a failing email can never stop
