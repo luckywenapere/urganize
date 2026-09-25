@@ -96,8 +96,8 @@ function LegacyLockedPage() {
   // Apple IAP policy forbids linking to external payment for a digital
   // subscription from inside a reviewed iOS app — defaults to false (the
   // normal web paywall) so server-rendered HTML and the pre-hydration client
-  // render match; flips true post-mount once Capacitor's native bridge is
-  // actually present (see docs/mobile/capacitor-audit.md, section 4).
+  // render match; flips true post-mount once the native shell's bridge is
+  // actually present (see docs/mobile/expo-shell.md, "iOS: no payment links").
   const [isIOSNativeApp, setIsIOSNativeApp] = useState(false);
 
   useEffect(() => {
@@ -277,7 +277,7 @@ function LegacyLockedPage() {
                 // digital subscription from inside a reviewed iOS app. Plan
                 // pricing and the Subscribe button never render here — only
                 // a pointer to manage billing on the web, opened in the
-                // system browser (see docs/mobile/capacitor-audit.md, §4).
+                // system browser (see docs/mobile/expo-shell.md, "iOS: no payment links").
                 <div className="rounded-lg border border-stroke-default bg-bg-elevated p-4 text-sm text-content-secondary">
                   <p>
                     Subscriptions are managed on the web. Visit{' '}

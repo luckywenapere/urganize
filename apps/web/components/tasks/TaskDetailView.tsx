@@ -673,7 +673,7 @@ export function TaskDetailView({
                         className="min-w-0 flex-1 text-left"
                         onClick={(event) => {
                           // A remote-file target="_blank" anchor commonly opens
-                          // blank inside the Capacitor webview — hand it to the
+                          // blank inside the app webview — hand it to the
                           // system browser instead when running natively.
                           if (isNativePlatform()) {
                             event.preventDefault();

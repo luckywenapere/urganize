@@ -24,8 +24,8 @@ import { usePlannerStore } from '@/stores/usePlannerStore';
 import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge';
 import { CardTrialGate } from '@/components/providers/CardTrialGate';
 import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
-import { CapacitorAuthBridge } from '@/components/providers/CapacitorAuthBridge';
-import { CapacitorPushBridge } from '@/components/providers/CapacitorPushBridge';
+import { NativePushBridge } from '@/components/providers/NativePushBridge';
+import { NativeAppearanceBridge } from '@/components/providers/NativeAppearanceBridge';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
 import { ChappiHistoryBridge } from '@/components/chappi/ChappiHistoryBridge';
 import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
@@ -96,7 +96,7 @@ const ReportIssueDialog = dynamic(
 );
 // The first-login push ask. Dynamic + flag-gated for the same reason the
 // planner modal is: while the flag is off its chunk is never requested, and
-// this one pulls in the Web Push + Capacitor push clients behind it.
+// this one pulls in the Web Push + native push clients behind it.
 const PushPermissionPrompt = dynamic(
   () => import('@/components/app/PushPermissionPrompt').then((m) => m.PushPermissionPrompt),
   { ssr: false }
@@ -508,8 +508,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         otherwise presents as "the page scrolls but nothing is clickable"
         after a Back navigation. Renders nothing — see lib/chunk-recovery.ts. */}
     <ChunkRecoveryBridge />
-    <CapacitorAuthBridge />
-    <CapacitorPushBridge />
+    <NativePushBridge />
+    <NativeAppearanceBridge />
     {/* Publishes on-screen-keyboard state to CSS — see globals.css's
         keyboard-aware assistant column block. Renders nothing. */}
     <KeyboardViewportBridge />

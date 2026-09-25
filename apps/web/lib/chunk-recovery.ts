@@ -167,7 +167,7 @@ export type LinkClick = {
  *
  * Narrow on purpose: the recorded href is somewhere we may later send the
  * browser, so anything that is not plainly an in-app route change is refused.
- * Non-http protocols (mailto:, tel:, the Capacitor deep-link scheme) are
+ * Non-http protocols (mailto:, tel:, the app deep-link scheme) are
  * rejected by the protocol check before the origin check can see them.
  */
 export function isInAppNavigationClick(click: LinkClick, currentHref: string): boolean {

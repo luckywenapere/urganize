@@ -144,7 +144,7 @@ describe('isInAppNavigationClick', () => {
       ['another origin', linkClick({ href: 'https://urganize.app/pricing' })],
       ['mailto', linkClick({ href: 'mailto:contact@urganize.app' })],
       ['tel', linkClick({ href: 'tel:+2347067367057' })],
-      ['capacitor deep link', linkClick({ href: 'com.urganize.app://auth/callback' })],
+      ['app deep link', linkClick({ href: 'com.urganize.app://auth/callback' })],
       ['javascript url', linkClick({ href: 'javascript:void(0)' })],
       ['unparseable', linkClick({ href: 'http://[' })],
     ];
