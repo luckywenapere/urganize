@@ -38,6 +38,27 @@ describe('interpretScheduleResponse', () => {
     });
   });
 
+  it('200 that moved an existing plan → says the plan moved with the date', () => {
+    expect(interpretScheduleResponse(200, { activitiesMoved: 58 })).toEqual({
+      kind: 'saved',
+      message: 'Release date set. Your 58 activities moved with it.',
+    });
+    expect(interpretScheduleResponse(200, { activitiesMoved: 1 })).toEqual({
+      kind: 'saved',
+      message: 'Release date set. Your 1 activity moved with it.',
+    });
+  });
+
+  it('200 where some of the plan could not move → says so instead of a clean move', () => {
+    expect(
+      interpretScheduleResponse(200, { activitiesMoved: 50, activitiesNotMoved: 8 })
+    ).toEqual({
+      kind: 'saved',
+      message:
+        'Release date set. 50 activities moved with it, but 8 could not be moved. Check the timeline.',
+    });
+  });
+
   it('4xx/5xx → error, preferring the server sentence', () => {
     expect(interpretScheduleResponse(400, { error: 'Release date is required.' })).toEqual({
       kind: 'error',

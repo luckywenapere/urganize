@@ -6,6 +6,9 @@ import {
   requireActiveAuthenticatedUser,
 } from '../../_shared';
 import { ensureOwnedWorkspace } from '@/lib/tasks-server';
+import { normalizeReleaseSlug } from '@/lib/release-ops';
+import { RELEASE_TITLE_MAX_LENGTH } from '@/lib/release-edit';
+import { alignPlanToReleaseDate } from '@/lib/release-plan-dates-server';
 import { readTemplatePending, writeTemplatePending } from '@/lib/release-template-pending';
 import { instantiateTemplate } from '@/lib/release-templates/instantiate';
 import { getTemplate } from '@/lib/release-templates/loader';
@@ -18,21 +21,27 @@ import {
 } from '@/lib/posthog';
 
 /**
- * Sets a release date, and builds the rollout plan if this release has been
- * waiting on one (URG-230).
+ * Sets or changes a release date — the ONE place a rollout's date changes
+ * (PATCH /api/releases/[releaseId] refuses to, since 2026-09-25).
  *
- * Why this exists rather than reusing PATCH /api/releases/[releaseId]:
- *   1. That handler is a PUT in PATCH's clothing — it writes the whole row,
- *      so omitting `description` nulls it, and it hard-requires `title`.
- *      A date-only save through it would mean the client echoing back fields
- *      it has no business resending.
- *   2. Building 64 activities is a large, surprising side effect to bury in a
- *      generic update handler. Here it's the stated job.
+ * Two things can follow a new date, and this route owns both:
+ *   1. A plan-waiting rollout (URG-230) gets its plan BUILT. Instantiation is
+ *      the SAME `instantiateTemplate` call the create route makes — deferred,
+ *      not reimplemented — which is why the founder chose to hold the plan
+ *      rather than generate it undated and back-fill.
+ *   2. A rollout that already has a plan gets it MOVED so it still lines up
+ *      with release day (lib/release-plan-dates-server.ts). Before 2026-09-25
+ *      nothing moved: changing the date left every activity where it was, so
+ *      the timeline drew the release-day posts weeks away from release day.
+ *      Open activities the plan generated move by exactly as many days as the
+ *      date did; finished ones and ones a person added by hand stay put. When
+ *      the rollout had no date — the state UrgAns's rename bug left rollouts
+ *      in — the distance is measured from the day the plan was built for,
+ *      read back off the plan itself, so putting that day back moves nothing.
  *
- * Instantiation is the SAME `instantiateTemplate` call the create route makes
- * — deferred, not reimplemented. Nothing is re-dated and no existing activity
- * is touched, which is the whole reason the founder chose to hold the plan
- * rather than generate it undated and back-fill.
+ * Why this is not PATCH /api/releases/[releaseId]: building or moving 64
+ * activities is a large side effect to bury in a generic edit. Here it is the
+ * stated job.
  */
 export async function POST(
   request: NextRequest,
@@ -67,11 +76,15 @@ export async function POST(
       );
     }
 
-    // Optional rename, ridden along on the same save: the card offers a name
-    // field when the release still carries DEFAULT_RELEASE_TITLE, and this is
-    // the only rename path in the app. Blank/absent means "leave it alone" —
-    // this route never nulls a title.
-    const titleInput = String(body?.title || '').trim().slice(0, 140);
+    // Optional rename, ridden along on the same save: the date card and the
+    // setup sheet offer a name field while the rollout still carries a default
+    // title. Blank/absent means "leave it alone" — this route never nulls a
+    // title. Cleaned exactly as the create and edit routes clean it, so three
+    // doors onto one column cannot store three shapes of title.
+    const titleInput =
+      typeof body?.title === 'string'
+        ? body.title.trim().replace(/\s+/g, ' ').slice(0, RELEASE_TITLE_MAX_LENGTH)
+        : '';
 
     const adminClient = createAdminClient(auth.supabaseUrl);
     if (!adminClient) {
@@ -88,7 +101,7 @@ export async function POST(
     // another key.
     const pendingResult = await adminClient
       .from('releases')
-      .select('metadata,release_type')
+      .select('metadata,release_type,release_date')
       .eq('id', releaseId)
       .maybeSingle();
 
@@ -105,6 +118,14 @@ export async function POST(
     > | null;
     const templatePending = readTemplatePending(existingMetadata);
     const releaseType = String(pendingResult.data?.release_type || 'single');
+    // The date BEFORE this save — what an existing plan was lined up with.
+    const previousDate = pendingResult.data?.release_date
+      ? String(pendingResult.data.release_date).slice(0, 10)
+      : null;
+
+    // A rename only when the name actually changes, and then the slug moves
+    // with it, the way the edit route moves it.
+    const renaming = Boolean(titleInput) && titleInput !== ownership.release.title;
 
     // Write the date FIRST and independently of instantiation. If the plan
     // build fails below, the user still got the thing they asked for, and the
@@ -114,7 +135,12 @@ export async function POST(
       .from('releases')
       .update({
         release_date: releaseDateResult.value,
-        ...(titleInput ? { title: titleInput } : {}),
+        ...(renaming
+          ? {
+              title: titleInput,
+              slug: normalizeReleaseSlug(titleInput) || ownership.release.slug,
+            }
+          : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', releaseId)
@@ -128,7 +154,47 @@ export async function POST(
       );
     }
 
+    // The edit route mirrors a rename into release_metadata.release_title (what
+    // a distributor sees). This door did not, so a rollout named from the date
+    // card kept "Untitled rollout" in its metadata forever. Best effort: the
+    // rename itself has landed.
+    if (renaming) {
+      const metadataUpdate = await adminClient
+        .from('release_metadata')
+        .upsert(
+          {
+            release_id: releaseId,
+            release_title: titleInput,
+            primary_artist_name: ownership.release.artistName,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'release_id' }
+        );
+      if (metadataUpdate.error) {
+        console.error(
+          `Release ${releaseId}: renamed, but the metadata title could not be updated.`,
+          metadataUpdate.error.message
+        );
+      }
+    }
+
     let activitiesCreated = 0;
+    let activitiesMoved = 0;
+    let activitiesNotMoved = 0;
+
+    // An existing plan follows its release day. Skipped for a plan-waiting
+    // rollout (its plan is BUILT from the new date below, so there is nothing
+    // to move) and when the date did not actually change.
+    if (!templatePending && previousDate !== releaseDateResult.value) {
+      const alignment = await alignPlanToReleaseDate(adminClient, {
+        releaseId,
+        previousDate,
+        nextDate: releaseDateResult.value,
+        releaseType,
+      });
+      activitiesMoved = alignment.moved;
+      activitiesNotMoved = alignment.failed;
+    }
 
     if (templatePending) {
       try {
@@ -178,6 +244,7 @@ export async function POST(
         // set-at-creation case the create route already reports.
         deferred: true,
         activities_created: activitiesCreated,
+        activities_moved: activitiesMoved,
       })
     );
 
@@ -186,6 +253,10 @@ export async function POST(
       releaseDate: releaseDateResult.value,
       title: String(updateResult.data?.title || ''),
       activitiesCreated,
+      activitiesMoved,
+      // Non-zero only when some of the plan could not be moved; the caller
+      // says so rather than reporting a clean move.
+      activitiesNotMoved,
       templatePending: false,
     });
   } finally {
