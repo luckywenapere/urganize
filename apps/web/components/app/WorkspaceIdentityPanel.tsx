@@ -317,7 +317,6 @@ function buildNavItems(
             Icon: PitchingIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/pitching"),
             help: "nav.pitching",
-            beta: true,
           } satisfies NavItem,
         ]
       : []),
