@@ -20,11 +20,20 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.46.0",
+    version: "1.47.0",
     date: "September 25, 2026",
     highlights: [
       "UrgAns now builds your rollout plan the moment you finish answering its questions, instead of showing you a draft to approve first.",
       "Tell it what to leave out, like marketing or paid ads, and the plan follows what you asked for. It reads what you type, too.",
+    ],
+  },
+  {
+    version: "1.46.0",
+    date: "September 25, 2026",
+    highlights: [
+      "Shows is out of beta. The DJ pack you send now carries the actual tracks, and your run of show is yours to edit.",
+      "Move a show's date and its links move with it, so your DJ's downloads keep working instead of going dead.",
+      "Rename a set, fix a song's title or length, and see who already has a pack before you send it again.",
     ],
   },
   {

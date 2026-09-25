@@ -36,6 +36,15 @@ type PitchComposerProps = {
   initialSongTitle: string;
   /** True when this release already has the maximum waiting on a reply. */
   atLimit: boolean;
+  /**
+   * Narrows the list to one curator, set when an artist arrives from her public
+   * page at /pitch/{slug}. Empty for everyone else, which is the ordinary
+   * global browse.
+   */
+  curatorSlug?: string;
+  /** Drops that narrowing. Required whenever curatorSlug can be set, because a
+   *  pre-filtered list with no way out reads as a broken browse. */
+  onClearCurator?: () => void;
   onSent: (pitch: SentPitch) => void;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
 };
@@ -55,6 +64,8 @@ export function PitchComposer({
   releaseId,
   initialSongTitle,
   atLimit,
+  curatorSlug,
+  onClearCurator,
   onSent,
   onToast,
 }: PitchComposerProps) {
@@ -62,6 +73,7 @@ export function PitchComposer({
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const [platformFilter, setPlatformFilter] = useState('');
   const [genreFilter, setGenreFilter] = useState('');
+  const curatorFilter = (curatorSlug || '').trim();
 
   const [selectedPlaylistId, setSelectedPlaylistId] = useState('');
   const [songTitle, setSongTitle] = useState(initialSongTitle);
@@ -83,6 +95,7 @@ export function PitchComposer({
         const params = new URLSearchParams();
         if (platformFilter) params.set('platform', platformFilter);
         if (genreFilter.trim()) params.set('genre', genreFilter.trim());
+        if (curatorFilter) params.set('curator', curatorFilter);
         const query = params.toString();
         const response = await fetch(`/api/pitching/playlists${query ? `?${query}` : ''}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -101,7 +114,7 @@ export function PitchComposer({
     return () => {
       cancelled = true;
     };
-  }, [genreFilter, platformFilter]);
+  }, [curatorFilter, genreFilter, platformFilter]);
 
   const detectedPlatform = detectPitchPlatform(songUrl);
   const canSend =
@@ -159,6 +172,23 @@ export function PitchComposer({
         </p>
       ) : null}
 
+      {curatorFilter ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand/10 px-3 py-2">
+          <p className="text-sm text-content-primary">
+            Showing one playlist owner, because you came from their page.
+          </p>
+          {onClearCurator ? (
+            <button
+              type="button"
+              onClick={onClearCurator}
+              className="text-sm underline underline-offset-4 text-content-secondary hover:text-content-primary"
+            >
+              See everyone
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-2 sm:flex-row">
         <select
           aria-label="Filter by platform"
@@ -186,7 +216,9 @@ export function PitchComposer({
         <CuratorCardListSkeleton rows={2} />
       ) : playlists.length === 0 ? (
         <p className="rounded-xl border border-stroke-default bg-bg-surface p-4 text-sm text-content-secondary">
-          No playlists match that. Clear the filters to see everything on offer.
+          {curatorFilter
+            ? 'This playlist owner has nothing listed right now. See everyone to keep looking.'
+            : 'No playlists match that. Clear the filters to see everything on offer.'}
         </p>
       ) : (
         <ul className="space-y-2">

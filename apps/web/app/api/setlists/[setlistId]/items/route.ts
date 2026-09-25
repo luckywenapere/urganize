@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   parseSetlistItemCreate,
   resolveItemDuration,
+  resolveRowVersion,
   summarizeSetlist,
   type SetlistSummaryItem,
 } from '@/lib/setlist';
@@ -16,7 +17,16 @@ import {
   eventsDisabledResponse,
   isEventsFeatureEnabled,
   requireActiveAuthenticatedUser,
+  versionBelongsToSong,
 } from '@/app/api/events/_shared';
+
+type SongFile = {
+  id: string;
+  label: string;
+  fileName: string;
+  durationSeconds: number | null;
+  createdAt: string | null;
+};
 
 /**
  * The set, in order, with everything the running total needs already
@@ -60,12 +70,9 @@ export async function GET(
 
   const rows = (data || []).map((row) => asRow(row));
 
-  // Two batched reads rather than a join per row. Only the ids actually
-  // referenced, so a set of talk items costs nothing.
+  // Two batched reads rather than a join per row. Only the songs actually in
+  // the set, so a set of talk items costs nothing.
   const songIds = [...new Set(rows.map((row) => String(row.song_id || '')).filter(Boolean))];
-  const versionIds = [
-    ...new Set(rows.map((row) => String(row.song_version_id || '')).filter(Boolean)),
-  ];
 
   const songs = new Map<string, Record<string, unknown>>();
   if (songIds.length > 0) {
@@ -79,15 +86,30 @@ export async function GET(
     }
   }
 
-  const versions = new Map<string, Record<string, unknown>>();
-  if (versionIds.length > 0) {
+  // EVERY file on those songs, not only the ones a row named. A row that has
+  // not chosen a file plays its song's default (resolveRowVersion), and the
+  // row's picker needs the song's whole list to offer a choice.
+  const filesBySong = new Map<string, SongFile[]>();
+  if (songIds.length > 0) {
     const result = await adminClient!
       .from(SONG_VERSIONS_TABLE)
-      .select('id,label,duration_seconds')
-      .in('id', versionIds);
+      .select('id,song_id,label,file_name,duration_seconds,created_at')
+      .in('song_id', songIds);
     for (const row of result.data || []) {
-      const version = asRow(row);
-      versions.set(String(version.id), version);
+      const file = asRow(row);
+      const songId = String(file.song_id || '');
+      const list = filesBySong.get(songId) || [];
+      list.push({
+        id: String(file.id || ''),
+        label: String(file.label || 'original'),
+        fileName: String(file.file_name || ''),
+        durationSeconds:
+          typeof file.duration_seconds === 'number' && file.duration_seconds > 0
+            ? file.duration_seconds
+            : null,
+        createdAt: file.created_at ? String(file.created_at) : null,
+      });
+      filesBySong.set(songId, list);
     }
   }
 
@@ -96,11 +118,16 @@ export async function GET(
 
   const items = rows.map((row) => {
     const song = songs.get(String(row.song_id || '')) || null;
-    const version = versions.get(String(row.song_version_id || '')) || null;
+    const files = song ? filesBySong.get(String(song.id)) || [] : [];
+    const { version, chosen } = resolveRowVersion(
+      row.song_version_id ? String(row.song_version_id) : null,
+      files
+    );
 
     const inputs: SetlistSummaryItem = {
+      itemType: String(row.item_type || 'song') as SetlistSummaryItem['itemType'],
       itemSeconds: asSeconds(row.duration_seconds),
-      versionSeconds: version ? asSeconds(version.duration_seconds) : null,
+      versionSeconds: version ? version.durationSeconds : null,
       songSeconds: song ? asSeconds(song.duration_seconds) : null,
     };
     const resolved = resolveItemDuration(inputs);
@@ -124,13 +151,22 @@ export async function GET(
             bpm: typeof song.bpm === 'number' ? song.bpm : null,
           }
         : null,
+      // The file this row will SEND, chosen or defaulted. Null means the song
+      // has no file at all yet, which the page and the pack both say out loud.
       version: version
         ? {
-            id: String(version.id),
-            label: String(version.label || 'original'),
-            durationSeconds: asSeconds(version.duration_seconds),
+            id: version.id,
+            label: version.label || 'original',
+            fileName: version.fileName,
+            durationSeconds: version.durationSeconds,
           }
         : null,
+      /** True when the row picked this file; false when it is the default. */
+      versionChosen: chosen,
+      /** Every file on the song, newest first, for the row's picker. */
+      files: [...files]
+        .sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''))
+        .map(({ createdAt: _createdAt, ...file }) => file),
       // Surfaced so the row can say WHERE its number came from — a length
       // typed by hand should be distinguishable from one read off a file.
       resolvedDurationSeconds: resolved.seconds,
@@ -200,6 +236,21 @@ export async function POST(
         { error: 'That song is not in this artist’s catalog.' },
         { status: 404 }
       );
+    }
+  }
+
+  // A chosen file has to be one of THAT song's files. Without this, any
+  // version id at all could be attached — including another team's — and the
+  // public pack would then hand it out, because the download route trusts the
+  // set it resolved the token to.
+  if (parsed.columns.song_version_id) {
+    const owned = await versionBelongsToSong(
+      adminClient!,
+      parsed.columns.song_version_id,
+      parsed.columns.song_id ?? null
+    );
+    if (!owned) {
+      return NextResponse.json({ error: 'That file is not on this song.' }, { status: 404 });
     }
   }
 

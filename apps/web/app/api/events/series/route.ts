@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
+import { decideReleaseAccess } from '@/lib/release-access';
+import { buildReadOnlyResponse, loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { listWorkspaceArtists } from '@/lib/artists-server';
 import {
   buildDefaultRunOfShow,
@@ -10,6 +11,7 @@ import {
   toIsoInZone,
 } from '@/lib/events';
 import {
+  ARTIST_NOT_ON_ROSTER_MESSAGE,
   EVENTS_TABLE,
   EVENT_COLUMNS,
   RUN_OF_SHOW_TABLE,
@@ -71,7 +73,29 @@ export async function POST(request: NextRequest) {
   const roster = await listWorkspaceArtists(adminClient, access.primaryWorkspaceId);
   const artists = series.artistIds.map((id) => roster.find((candidate) => candidate.id === id));
   if (artists.some((artist) => !artist)) {
-    return NextResponse.json({ error: 'That artist is not on your roster.' }, { status: 404 });
+    return NextResponse.json({ error: ARTIST_NOT_ON_ROSTER_MESSAGE }, { status: 404 });
+  }
+
+  // And the caller must be able to WRITE for every one of them — the rule the
+  // single-show create enforces through ensureArtistAccess (a guest is
+  // read-only, an artist-scoped teammate books only their own artist). One
+  // artist out of scope refuses the whole booking rather than booking the
+  // rest, because a festival missing an act is not what was asked for.
+  for (const artist of artists) {
+    if (!artist) continue;
+    const decision = decideReleaseAccess({
+      releaseOwnerId: artist.ownerUserId || auth.user.id,
+      releaseArtistId: artist.id,
+      userId: auth.user.id,
+      access,
+      write: true,
+    });
+    if (decision === 'not_found') {
+      return NextResponse.json({ error: ARTIST_NOT_ON_ROSTER_MESSAGE }, { status: 404 });
+    }
+    if (decision === 'read_only') {
+      return buildReadOnlyResponse();
+    }
   }
 
   const seriesId = randomUUID();

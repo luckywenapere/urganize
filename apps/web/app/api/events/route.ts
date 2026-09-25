@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decideReleaseAccess } from '@/lib/release-access';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
-import { listWorkspaceArtists } from '@/lib/artists-server';
+import { listWorkspaceArtists, type WorkspaceArtist } from '@/lib/artists-server';
 import { buildDefaultRunOfShow, parseEventCreate } from '@/lib/events';
 import {
   EVENTS_LIST_LIMIT,
@@ -9,8 +9,10 @@ import {
   EVENT_COLUMNS,
   RUN_OF_SHOW_TABLE,
   createAdminClient,
+  ensureArtistAccess,
   eventsDisabledResponse,
   isEventsFeatureEnabled,
+  listBookableArtistIds,
   requireActiveAuthenticatedUser,
   toShowEvent,
   asRow,
@@ -56,11 +58,12 @@ export async function GET(request: NextRequest) {
   // Resolved from the caller's own roster, which also means a show whose
   // artist somehow sits outside it renders with a blank name rather than
   // leaking one.
+  const roster: WorkspaceArtist[] = access.primaryWorkspaceId
+    ? await listWorkspaceArtists(adminClient, access.primaryWorkspaceId)
+    : [];
   const artistNames = new Map<string, string>();
-  if (access.primaryWorkspaceId) {
-    for (const artist of await listWorkspaceArtists(adminClient, access.primaryWorkspaceId)) {
-      artistNames.set(artist.id, artist.name);
-    }
+  for (const artist of roster) {
+    artistNames.set(artist.id, artist.name);
   }
 
   const events = (data || [])
@@ -77,7 +80,13 @@ export async function GET(request: NextRequest) {
     )
     .map((row) => toShowEvent(row, artistNames.get(String(row.artist_id || '')) || ''));
 
-  return NextResponse.json({ events });
+  return NextResponse.json({
+    events,
+    // Who "Book a show" may offer. Computed with the same rule the create
+    // route enforces, so the form never offers an artist it would refuse and a
+    // guest sees no button at all.
+    bookableArtistIds: listBookableArtistIds(roster, auth.user, access),
+  });
 }
 
 /**
@@ -116,21 +125,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Server environment is not configured.' }, { status: 500 });
   }
 
-  const access = await loadWorkspaceAccessContext(adminClient, auth.user);
-  if (!access.primaryWorkspaceId) {
-    return NextResponse.json({ error: 'No team found.' }, { status: 400 });
-  }
-
-  // The artist has to be on the CALLER'S roster. Resolving it this way rather
-  // than reading the artist row and comparing workspaces afterwards means an
-  // artist on someone else's team is indistinguishable from one that does not
-  // exist, so this cannot be used to probe for ids — the shape the release
-  // artist routes already use.
-  const roster = await listWorkspaceArtists(adminClient, access.primaryWorkspaceId);
-  const artist = roster.find((candidate) => candidate.id === artistId);
-  if (!artist) {
-    return NextResponse.json({ error: 'That artist is not on your roster.' }, { status: 404 });
-  }
+  // The artist has to be on the CALLER'S roster, AND the caller has to be able
+  // to write for it: a guest is read-only and an artist-scoped teammate only
+  // books for their own artist (ensureArtistAccess). An artist on someone
+  // else's team is indistinguishable from one that does not exist, so this
+  // cannot be used to probe for ids.
+  const resolved = await ensureArtistAccess(adminClient, auth.user, artistId, true);
+  if ('error' in resolved) return resolved.error;
+  const { artist } = resolved;
 
   // STAMPED WITH THE ARTIST'S OWNER, never the acting teammate — the same rule
   // the release scenes follow for their child rows, and here it is what makes
@@ -138,7 +140,7 @@ export async function POST(request: NextRequest) {
   // event owned by the teammate who created it would sit in a workspace nobody
   // else belongs to, and the team owner would never see the show they were
   // told about.
-  const ownerUserId = artist.ownerUserId || auth.user.id;
+  const ownerUserId = resolved.ownerUserId;
 
   const { data, error } = await adminClient
     .from(EVENTS_TABLE)

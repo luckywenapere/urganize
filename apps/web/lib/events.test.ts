@@ -171,10 +171,13 @@ describe('formatShowDateTime', () => {
     expect(formatShowDateTime(iso, 'Asia/Tokyo')).toContain('05:30');
   });
 
-  it('says the time is unconfirmed rather than inventing one', () => {
-    expect(formatShowDateTime(null, 'Africa/Lagos')).toBe('Time to confirm');
-    expect(formatShowDateTime('', 'Africa/Lagos')).toBe('Time to confirm');
-    expect(formatShowDateTime('not a date', 'Africa/Lagos')).toBe('Time to confirm');
+  // With no date at all, it is the DATE that is to confirm; "Time to confirm"
+  // under a missing date read as though the day were known.
+  it('says the date is unconfirmed rather than inventing one', () => {
+    expect(formatShowDateTime(null, 'Africa/Lagos')).toBe('Date to confirm');
+    expect(formatShowDateTime('', 'Africa/Lagos')).toBe('Date to confirm');
+    expect(formatShowDateTime('not a date', 'Africa/Lagos')).toBe('Date to confirm');
+    expect(formatShowDateTime(null, 'Africa/Lagos', { includeDate: false })).toBe('Time to confirm');
   });
 
   // Degrades one line rather than taking down the page.

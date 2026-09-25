@@ -83,6 +83,7 @@ import { getAvailableReleaseTypes } from '@/lib/release-templates/loader';
 import { isCardTrialEnabled, shouldRunAuthedOnboardingSetup } from '@/lib/trial-card';
 import { isSocialShareEnabled } from '@/lib/social-share';
 import { markPendingFirstShare } from '@/lib/social-share-offer';
+import { resolvePostSignupDestination, takePitchIntent } from '@/lib/pitch-intent';
 
 // ---------------------------------------------------------------------------
 // Module-level constants
@@ -571,10 +572,19 @@ export default function OnboardingPage() {
     if (persisted) {
       clearOnboardingDraft();
     }
-    // Card-before-trial: the card+trial page is the first thing after
-    // onboarding — one line covers every exit into this tail (send invites,
-    // skip, workspace-off, invite-token fallbacks).
-    router.replace(CARD_TRIAL_ENABLED ? '/start-trial' : HOME_PATH);
+    // Where they land, decided in one pure place so the ORDER is checkable
+    // rather than a reading of one line inside this file. Card trial first
+    // (money), then a curator whose public page sent them here, then the
+    // ordinary landing. One line still covers every exit into this tail (send
+    // invites, skip, workspace-off, invite-token fallbacks).
+    router.replace(
+      resolvePostSignupDestination({
+        cardTrialEnabled: CARD_TRIAL_ENABLED,
+        cardTrialPath: '/start-trial',
+        pitchCuratorSlug: takePitchIntent(),
+        homePath: HOME_PATH,
+      })
+    );
   };
 
   // Trial → release → onboarding-complete chain. Runs the same SQL writes

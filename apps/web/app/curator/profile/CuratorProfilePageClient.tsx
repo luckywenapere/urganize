@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { Camera, Check } from '@/components/icons';
 import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
+import { CuratorPublicPageSection } from '@/components/curator/CuratorPublicPageSection';
 import { useCuratorStore } from '@/stores/useCuratorStore';
 import { supabase } from '@/lib/supabase/client';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
@@ -31,6 +32,10 @@ const initialsOf = (name: string): string =>
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || '')
     .join('') || 'P';
+
+// Her share link. Its own flag, so the page can merge dark while the rest of
+// the curator surface stays live.
+const CURATOR_PAGE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CURATOR_PAGE === 'true';
 
 export function CuratorProfilePageClient() {
   const profile = useCuratorStore((state) => state.profile);
@@ -257,6 +262,8 @@ export function CuratorProfilePageClient() {
               onRetry={() => void loadProfile({ force: true })}
             />
           ) : null}
+
+          {CURATOR_PAGE_ENABLED ? <CuratorPublicPageSection /> : null}
 
           <form
             onSubmit={handleSave}

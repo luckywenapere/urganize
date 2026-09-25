@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-helpers';
-import { isKnownVersionLabel, validateSongVersionUpload } from '@/lib/song-versions';
+import {
+  isKnownVersionLabel,
+  resolveSongVersionMimeType,
+  validateSongVersionUpload,
+} from '@/lib/song-versions';
 import {
   SONG_VERSIONS_TABLE,
   SONG_VERSION_COLUMNS,
@@ -129,7 +133,9 @@ export async function POST(
       label,
       file_name: fileName,
       file_size: fileSize,
-      mime_type: mimeType,
+      // Stored as the one canonical type, so the file is served back the same
+      // way whichever browser uploaded it (see resolveSongVersionMimeType).
+      mime_type: resolveSongVersionMimeType(fileName, mimeType) ?? mimeType,
       storage_bucket: RELEASE_ASSETS_BUCKET,
       storage_path: storagePath,
       duration_seconds: durationSeconds,

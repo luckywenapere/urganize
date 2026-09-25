@@ -13,9 +13,10 @@ import type { ShowEvent } from '@/types/events';
  * notebook is opened constantly and can be long. Add one when a real load
  * feels slow, not before (principle 6).
  *
- * The event DETAIL screen deliberately does not live here. Its state (run of
- * show, setlists, items) is used by exactly one page, so a global store would
- * add coordination for no sharing.
+ * The event DETAIL screen keeps its own state (run of show, sets, items), used
+ * by exactly one page. It writes back here through `upsertLocal` when a show's
+ * own fields change, so the list is right the moment you go back to it, and
+ * reads the list for a festival's other days.
  */
 
 type CreateShowInput = {
@@ -42,8 +43,31 @@ type CreateSeriesInput = {
   timezone?: string;
 };
 
+/** A sparse edit, in the API's own field names (PATCH /api/events/[id]). */
+export type ShowPatch = Partial<{
+  title: string;
+  venueName: string | null;
+  city: string | null;
+  country: string | null;
+  timezone: string;
+  setStartAt: string | null;
+  setLengthMinutes: number;
+  stage: string | null;
+  promoterName: string | null;
+  promoterPhone: string | null;
+  status: ShowEvent['status'];
+  notes: string | null;
+}>;
+
 type EventsStore = {
   events: ShowEvent[];
+  /**
+   * The artists this person may book a show for (GET /api/events computes it
+   * with the same rule POST enforces). Null until a load has answered: the
+   * shows page waits rather than guessing, so a guest never sees "Book a show"
+   * flash in and out.
+   */
+  bookableArtistIds: string[] | null;
   /** True until the first load settles, so a later visit renders rows rather
    *  than a skeleton. */
   isInitialLoading: boolean;
@@ -51,7 +75,12 @@ type EventsStore = {
   load: (options?: { force?: boolean }) => Promise<void>;
   create: (input: CreateShowInput) => Promise<{ event: ShowEvent } | { error: string }>;
   createSeries: (input: CreateSeriesInput) => Promise<{ events: ShowEvent[] } | { error: string }>;
+  update: (eventId: string, patch: ShowPatch) => Promise<{ event: ShowEvent } | { error: string }>;
   remove: (eventId: string) => Promise<{ error: string } | null>;
+  removeSeries: (seriesId: string) => Promise<{ deleted: number } | { error: string }>;
+  /** Reflect a show the detail page already saved, keeping its artist name
+   *  (the PATCH response carries none). */
+  upsertLocal: (event: ShowEvent) => void;
 };
 
 // Recency guard + in-flight coalescing, mirroring useNotesStore. Mutations
@@ -59,6 +88,10 @@ type EventsStore = {
 const EVENTS_FRESH_MS = 15_000;
 let loadedAt = 0;
 let inFlight: Promise<void> | null = null;
+/** Bumped on sign-out. A load still in flight when the account changes checks
+ *  it before committing, so account A's schedule can never land after B has
+ *  signed in (the reset alone could not stop a request already on the wire). */
+let epoch = 0;
 
 async function authHeaders(): Promise<HeadersInit | null> {
   const {
@@ -81,8 +114,12 @@ async function readError(response: Response, fallback: string): Promise<string> 
   return fallback;
 }
 
+const SIGNED_OUT = 'You are signed out. Sign in and try again.';
+const OFFLINE = 'Could not reach the server. Check your connection.';
+
 export const useEventsStore = create<EventsStore>((set, get) => ({
   events: [],
+  bookableArtistIds: null,
   isInitialLoading: true,
   error: null,
 
@@ -93,6 +130,7 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
       return;
     }
 
+    const startedIn = epoch;
     const run = (async () => {
       try {
         const headers = await authHeaders();
@@ -109,16 +147,20 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
           return;
         }
         const body = await response.json();
+        if (startedIn !== epoch) return;
         loadedAt = Date.now();
         set({
           events: Array.isArray(body.events) ? body.events : [],
+          bookableArtistIds: Array.isArray(body.bookableArtistIds)
+            ? (body.bookableArtistIds as string[])
+            : [],
           error: null,
           isInitialLoading: false,
         });
       } catch {
         // A dropped connection is the common case on the networks this product
         // runs on. Surface it rather than rejecting into an unhandled promise.
-        set({ error: 'Could not reach the server. Check your connection.', isInitialLoading: false });
+        set({ error: OFFLINE, isInitialLoading: false });
       } finally {
         inFlight = null;
       }
@@ -131,7 +173,7 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
   create: async (input) => {
     try {
       const headers = await authHeaders();
-      if (!headers) return { error: 'You are signed out. Sign in and try again.' };
+      if (!headers) return { error: SIGNED_OUT };
 
       const response = await fetch('/api/events', {
         method: 'POST',
@@ -145,14 +187,14 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
       await get().load({ force: true });
       return { event: body.event as ShowEvent };
     } catch {
-      return { error: 'Could not reach the server. Check your connection.' };
+      return { error: OFFLINE };
     }
   },
 
   createSeries: async (input) => {
     try {
       const headers = await authHeaders();
-      if (!headers) return { error: 'You are signed out. Sign in and try again.' };
+      if (!headers) return { error: SIGNED_OUT };
 
       const response = await fetch('/api/events/series', {
         method: 'POST',
@@ -166,14 +208,36 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
       await get().load({ force: true });
       return { events: Array.isArray(body.events) ? (body.events as ShowEvent[]) : [] };
     } catch {
-      return { error: 'Could not reach the server. Check your connection.' };
+      return { error: OFFLINE };
+    }
+  },
+
+  update: async (eventId, patch) => {
+    try {
+      const headers = await authHeaders();
+      if (!headers) return { error: SIGNED_OUT };
+
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(patch),
+      });
+      if (!response.ok) {
+        return { error: await readError(response, 'Could not save the show.') };
+      }
+      const body = await response.json();
+      const saved = body.event as ShowEvent;
+      get().upsertLocal(saved);
+      return { event: { ...saved, artistName: saved.artistName || findArtistName(get().events, eventId) } };
+    } catch {
+      return { error: OFFLINE };
     }
   },
 
   remove: async (eventId) => {
     try {
       const headers = await authHeaders();
-      if (!headers) return { error: 'You are signed out. Sign in and try again.' };
+      if (!headers) return { error: SIGNED_OUT };
 
       const response = await fetch(`/api/events/${eventId}`, { method: 'DELETE', headers });
       if (!response.ok) {
@@ -182,7 +246,63 @@ export const useEventsStore = create<EventsStore>((set, get) => ({
       set({ events: get().events.filter((event) => event.id !== eventId) });
       return null;
     } catch {
-      return { error: 'Could not reach the server. Check your connection.' };
+      return { error: OFFLINE };
     }
   },
+
+  removeSeries: async (seriesId) => {
+    try {
+      const headers = await authHeaders();
+      if (!headers) return { error: SIGNED_OUT };
+
+      const response = await fetch(`/api/events/series/${seriesId}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!response.ok) {
+        return { error: await readError(response, 'Could not delete the festival.') };
+      }
+      const body = await response.json().catch(() => ({}));
+      set({ events: get().events.filter((event) => event.seriesId !== seriesId) });
+      return { deleted: typeof body.deleted === 'number' ? body.deleted : 0 };
+    } catch {
+      return { error: OFFLINE };
+    }
+  },
+
+  upsertLocal: (event) => {
+    const events = get().events;
+    const index = events.findIndex((entry) => entry.id === event.id);
+    if (index === -1) {
+      set({ events: [...events, event] });
+      return;
+    }
+    const merged = { ...event, artistName: event.artistName || events[index].artistName };
+    set({ events: events.map((entry, position) => (position === index ? merged : entry)) });
+  },
 }));
+
+function findArtistName(events: readonly ShowEvent[], eventId: string): string {
+  return events.find((event) => event.id === eventId)?.artistName || '';
+}
+
+/**
+ * Forget the signed-in account's shows. Called on SIGNED_OUT (lib/auth-store.ts).
+ *
+ * This store is module-level, so a client-side navigation to /auth never tears
+ * it down: before 2026-09-25, signing out and back in as another account in the
+ * same tab painted account A's schedule for account B — and within the 15
+ * second freshness window, load() returned early and never replaced it. The
+ * recency clock and the in-flight promise go too, so the next load is real.
+ */
+export function resetEventsStore(): void {
+  epoch += 1;
+  loadedAt = 0;
+  inFlight = null;
+  useEventsStore.setState({
+    events: [],
+    bookableArtistIds: null,
+    isInitialLoading: true,
+    error: null,
+  });
+}

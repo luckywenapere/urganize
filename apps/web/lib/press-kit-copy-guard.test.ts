@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { basename, join } from 'path';
 import { describe, expect, it } from 'vitest';
-import { userFacingStrings } from './copy-scan';
+import { readableCopy } from './copy-scan';
 import { BANNED_COPY_CHARS, BANNED_COPY_WORDS, bannedCopyInstruction } from './press-kits';
 
 /**
@@ -84,12 +84,48 @@ const FILES = [
   // lib half is already reached by the social-share prefix above.
   join(WEB, 'components', 'settings', 'BrandColorsSection.tsx'),
   ...walk(join(WEB, 'app', 'api', 'workspace', 'artists', '[artistId]', 'brand-colors')),
+  // A curator's public page and the block she copies her link from
+  // (2026-09-15). Another NEW outward-facing surface, so it is born under these
+  // rules: /pitch/{slug} is read by an artist deciding whether to make an
+  // account, and the invented-number rule matters there in particular, because
+  // a follower count is self-reported and belongs in a row rather than in a
+  // sentence. The lib files are NAMED rather than left to the walk's regex,
+  // which would not match either of them — the same reason the two tool
+  // families above are named.
+  ...walk(join(WEB, 'app', 'pitch')),
+  ...walk(join(WEB, 'components', 'curator')),
+  ...walk(join(WEB, 'app', 'api', 'curator', 'profile', 'publish')),
+  join(WEB, 'lib', 'curator-public.ts'),
+  join(WEB, 'lib', 'curator-public-server.ts'),
+  join(WEB, 'lib', 'pitch-intent.ts'),
+  join(WEB, 'components', 'shared', 'CopyLinkButton.tsx'),
+  // Shows (2026-09-25), when it came out of Beta. Every screen was rewritten
+  // for that, so the whole surface is born under the house rules: the pages,
+  // the DJ's own pack page, the routes whose errors a manager reads, the pure
+  // modules that write the sentences, and the assistant's tools for shows.
+  ...walk(join(WEB, 'components', 'events')),
+  ...walk(join(WEB, 'app', 'dashboard', 'shows')),
+  ...walk(join(WEB, 'app', 'pack')),
+  ...walk(join(WEB, 'app', 'api', 'events')),
+  ...walk(join(WEB, 'app', 'api', 'setlists')),
+  ...walk(join(WEB, 'app', 'api', 'songs')),
+  ...walk(join(WEB, 'app', 'api', 'packs')),
+  ...walk(join(WEB, 'app', 'api', 'pack')),
+  ...['events.ts', 'setlist.ts', 'dj-pack.ts', 'dj-pack-server.ts', 'song-versions.ts', 'song-version-upload.ts', 'song-catalog.ts'].map(
+    (file) => join(WEB, 'lib', file)
+  ),
+  join(WEB, 'lib', 'chappi', 'tool-families', 'shows.ts'),
+  join(WEB, 'stores', 'useEventsStore.ts'),
 ].filter((path) => /\.tsx?$/.test(path) && !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
 
-// `userFacingStrings` moved to lib/copy-scan.ts on 2026-09-09, when the
-// positioning guard needed the same reader. It is unchanged; this file's own
-// header already argued that two guards sharing a rule should not carry two
-// copies of it.
+// Reads through `readableCopy`, not the narrower `userFacingStrings` this file
+// used until 2026-09-15. That one only sees quoted string literals, and every
+// surface this guard covers is majority JSX PROSE — the press kit's own "Press
+// kit" heading and the curator page's whole body render as text between tags,
+// never a string. So the guard had been checking almost nothing in the pages it
+// exists to check. `readableCopy` also catches template literals, which
+// `userFacingStrings` never did either. Same extractor the positioning and
+// rollout-vocabulary guards use, for the identical reason.
 
 const report = (path: string, value: string) =>
   `${path.replace(`${WEB}/`, '')}: ${value}`;
@@ -103,7 +139,7 @@ describe('press kit copy', () => {
   it('uses no em dash', () => {
     const found: string[] = [];
     for (const path of FILES) {
-      for (const value of userFacingStrings(readFileSync(path, 'utf8'))) {
+      for (const value of readableCopy(readFileSync(path, 'utf8'))) {
         if (BANNED_COPY_CHARS.some((char) => value.includes(char))) {
           found.push(report(path, value));
         }
@@ -123,7 +159,7 @@ describe('press kit copy', () => {
     const pattern = new RegExp(`\\b(${BANNED_COPY_WORDS.join('|')})\\b`, 'i');
     const found: string[] = [];
     for (const path of FILES) {
-      for (const value of userFacingStrings(readFileSync(path, 'utf8'))) {
+      for (const value of readableCopy(readFileSync(path, 'utf8'))) {
         if (value === allowed) continue;
         if (pattern.test(value)) found.push(report(path, value));
       }
@@ -136,7 +172,7 @@ describe('press kit copy', () => {
     // copy, where a manager would have to work out what it means.
     const found: string[] = [];
     for (const path of FILES) {
-      for (const value of userFacingStrings(readFileSync(path, 'utf8'))) {
+      for (const value of readableCopy(readFileSync(path, 'utf8'))) {
         if (/\bworkspaces?\b/i.test(value)) found.push(report(path, value));
       }
     }
@@ -155,7 +191,7 @@ describe('press kit copy', () => {
     ];
     const found: string[] = [];
     for (const path of FILES) {
-      for (const value of userFacingStrings(readFileSync(path, 'utf8'))) {
+      for (const value of readableCopy(readFileSync(path, 'utf8'))) {
         if (suspicious.some((pattern) => pattern.test(value))) found.push(report(path, value));
       }
     }
@@ -166,7 +202,7 @@ describe('press kit copy', () => {
     // Plain job titles. "Operation heads", not "VP Operations".
     const found: string[] = [];
     for (const path of FILES) {
-      for (const value of userFacingStrings(readFileSync(path, 'utf8'))) {
+      for (const value of readableCopy(readFileSync(path, 'utf8'))) {
         if (/\b(VP|SVP|C[ETMOF]O|stakeholder|synerg)/.test(value)) found.push(report(path, value));
       }
     }

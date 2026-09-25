@@ -14,9 +14,13 @@
 // still one tap from the release you are working on, and both surfaces render
 // the same two components, so they cannot drift apart.
 //
-// Reads NO search params, deliberately: this page is reached from app-wide
-// chrome, so pulling useSearchParams in would drag it behind a Suspense
-// boundary for nothing (the trap recorded for /auth and MobileNavBar).
+// NEVER useSearchParams, deliberately: this page is reached from app-wide
+// chrome, so pulling that hook in would drag it behind a Suspense boundary and
+// ship loading.tsx as its server HTML (the trap recorded for /auth and
+// MobileNavBar). It does read ONE param — ?curator=, set when an artist
+// arrives from a curator's public page — and reads it the way this repo's
+// other static pages do: imperatively, once, in a pre-paint layout effect.
+// Check /dashboard/pitching is still `○ Static` in the build if this changes.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -33,6 +37,8 @@ import {
   groupPitchesByRelease,
 } from '@/lib/pitching';
 import { PitchComposer } from '@/components/pitching/PitchComposer';
+import { isValidCuratorSlug } from '@/lib/curator-public';
+import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { SentPitchRow } from '@/components/pitching/SentPitchRow';
 import { useToast } from '@/components/shared/ToastProvider';
 
@@ -41,7 +47,29 @@ import { useToast } from '@/components/shared/ToastProvider';
 // since the flag is inlined at build time (the shows and press kits precedent).
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
+/**
+ * The curator an artist arrived to pitch, read once from the URL.
+ *
+ * Imperative and pre-paint rather than useSearchParams — see the header. The
+ * value is re-validated because it is a URL somebody can type, and it goes on
+ * to filter a server query.
+ */
+function readCuratorParam(): string {
+  try {
+    const raw = new URLSearchParams(window.location.search).get('curator') || '';
+    const slug = raw.trim().toLowerCase();
+    return isValidCuratorSlug(slug) ? slug : '';
+  } catch {
+    return '';
+  }
+}
+
 export default function PitchingPageClient() {
+  // Set when an artist arrives from /pitch/{slug}. Empty for everyone else, so
+  // the composer browses the whole inventory exactly as it always has.
+  const [curatorSlug, setCuratorSlug] = useState('');
+  useIsomorphicLayoutEffect(() => setCuratorSlug(readCuratorParam()), []);
+
   const router = useRouter();
   const { isLoading: authLoading } = useAuthStore();
   const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
@@ -210,6 +238,8 @@ export default function PitchingPageClient() {
 
             <PitchComposer
               releaseId={releaseId}
+              curatorSlug={curatorSlug}
+              onClearCurator={() => setCuratorSlug('')}
               initialSongTitle={selectedRelease?.title || ''}
               atLimit={waitingForSelected >= MAX_WAITING_PITCHES_PER_RELEASE}
               // Prepend rather than refetch: the route hands back the whole

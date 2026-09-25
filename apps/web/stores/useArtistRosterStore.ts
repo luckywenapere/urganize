@@ -94,3 +94,16 @@ export const useArtistRosterStore = create<ArtistRosterStore>((set) => ({
     set({ artists, loaded: true });
   },
 }));
+
+/**
+ * Forget the signed-in account's roster. Called on SIGNED_OUT (lib/auth-store.ts),
+ * for the same reason as resetPressKitsStore: these are artist NAMES held in a
+ * module-level store, and a same-tab account switch would otherwise offer
+ * account B account A's artists — in the create-release picker and in "Book a
+ * show" — until a reload.
+ */
+export function resetArtistRosterStore(): void {
+  rosterLoadedAt = 0;
+  rosterInFlight = null;
+  useArtistRosterStore.setState({ artists: [], loaded: false });
+}
