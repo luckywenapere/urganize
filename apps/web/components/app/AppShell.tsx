@@ -94,6 +94,15 @@ const ReportIssueDialog = dynamic(
   () => import('@/components/support/ReportIssueDialog').then((m) => m.ReportIssueDialog),
   { ssr: false }
 );
+// The settings pop-up (2026-09-29). Mounted once for the whole app because its
+// entry points (the topbar, the identity card, the workspace menu, and links from
+// the share sheet, the directory and UrgAns) live in different ownership islands,
+// and it opens from the URL (`?settings=`), so they all just navigate. Lazy, so
+// nobody downloads the nine segments until somebody opens it.
+const SettingsModalHost = dynamic(
+  () => import('@/components/settings/SettingsModal').then((m) => m.SettingsModalHost),
+  { ssr: false }
+);
 // The first-login push ask. Dynamic + flag-gated for the same reason the
 // planner modal is: while the flag is off its chunk is never requested, and
 // this one pulls in the Web Push + native push clients behind it.
@@ -700,6 +709,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       {SOCIAL_SHARE_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <ShareSheet />
       ) : null}
+      {/* Settings. Same gate as the share sheet: signed in, auth resolved, on a
+          page with app chrome. showWorkspaceChrome already excludes a
+          curator-only account, whose settings live under /curator. */}
+      {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? <SettingsModalHost /> : null}
       {/* "What's new" (founder request, 2026-07-23): announces changelog
           entries this device hasn't seen yet, once per release, on signed-in
           app surfaces only.

@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { UserPlus, X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
+import { useOpenSettings } from '@/components/settings/useOpenSettings';
 
 // Dismissal is remembered per browser (PostHog's home-banner behavior): the
 // banner stays gone once closed rather than nagging every visit.
@@ -22,7 +22,7 @@ const isPersistedDismissed = (value: unknown): value is boolean => typeof value 
  * dismissal is persisted.
  */
 export function InviteTeamBanner() {
-  const router = useRouter();
+  const openSettings = useOpenSettings();
   const user = useAuthStore((state) => state.user);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -50,7 +50,7 @@ export function InviteTeamBanner() {
           this is the direct route. */}
       <button
         type="button"
-        onClick={() => router.push('/settings?tab=team')}
+        onClick={() => openSettings({ segment: 'team', section: 'teammates' })}
         className="motion-focus motion-press inline-flex h-auto min-h-8 shrink-0 items-center gap-1.5 self-stretch border border-stroke-default bg-bg-elevated px-3 py-1.5 text-left text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover sm:self-auto"
       >
         <UserPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

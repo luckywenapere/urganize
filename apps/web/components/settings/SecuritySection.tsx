@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
+import { useReportDirty } from './useReportDirty';
 
 export function SecuritySection() {
   const [newPassword, setNewPassword] = useState('');
@@ -12,6 +13,10 @@ export function SecuritySection() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Half a new password typed and the pop-up closed is worth a question: the
+  // person may believe it was changed.
+  useReportDirty('security.password', newPassword !== '' || confirmPassword !== '');
 
   const handleSave = async () => {
     setError('');
@@ -43,8 +48,8 @@ export function SecuritySection() {
   };
 
   return (
-    <section className={panelClass}>
-      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Security</h2>
+    <section id="password" className={`${panelClass} scroll-mt-4`}>
+      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Password</h2>
       <div className="space-y-4">
         <label className="block">
           <span className="mb-1 block text-sm text-content-secondary">New password</span>

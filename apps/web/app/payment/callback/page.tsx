@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { settingsDeepLink } from '@/lib/settings-nav';
 import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
@@ -206,7 +207,7 @@ function PaymentCallbackContent() {
             </button>
             <button
               type="button"
-              onClick={() => router.push('/settings')}
+              onClick={() => router.push(settingsDeepLink({ segment: 'billing' }))}
               className="min-h-11 rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover"
             >
               Billing

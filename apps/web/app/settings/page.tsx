@@ -1,13 +1,12 @@
 import type { Metadata } from 'next';
-import SettingsPageClient from './SettingsPageClient';
+import SettingsRedirect from './SettingsRedirect';
 
-// Thin server wrapper so this route gets a real browser-tab title through the
-// root layout's '%s | Urganize' template — the page itself is a client
-// component and cannot export metadata.
+// Kept only as a redirect stub: Settings is a pop-up now (see SettingsRedirect).
+// The title still applies for the one paint before the hop.
 export const metadata: Metadata = {
   title: 'Settings',
 };
 
 export default function SettingsPage() {
-  return <SettingsPageClient />;
+  return <SettingsRedirect />;
 }

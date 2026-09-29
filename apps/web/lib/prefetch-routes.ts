@@ -36,8 +36,10 @@ const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
 
-/** The three destinations every signed-in team account has. */
-const BASE_ROUTES = ['/dashboard', '/dashboard/urgans', '/settings'] as const;
+/** The two destinations every signed-in team account has. Settings left this
+ *  list on 2026-09-29: it is a pop-up over these pages now, so there is no
+ *  route to warm, and /settings is only a redirect stub. */
+const BASE_ROUTES = ['/dashboard', '/dashboard/urgans'] as const;
 
 export type PrefetchAudience = {
   /**

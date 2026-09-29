@@ -12,7 +12,6 @@ import {
   type TouchEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
 // The real brand marks, the same set the content calendar's platform tabs use:
 // a person looking for the X or Snapchat button is looking for that logo.
 import { SiSnapchat, SiX } from 'react-icons/si';
@@ -69,7 +68,8 @@ import {
   type ShareImageChannel,
   type ShareReleaseFacts,
 } from '@/lib/social-share';
-import { BRAND_COLORS_SETTINGS_HREF, isBrandColorsEnabled } from '@/lib/social-share-colors';
+import { BRAND_COLORS_SETTINGS_ANCHOR, isBrandColorsEnabled } from '@/lib/social-share-colors';
+import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import {
   clearPendingFirstShare,
   hasOfferedFirstShare,
@@ -202,7 +202,7 @@ function usePendingFirstShareOffer() {
 
 function ShareDialog({ request }: { request: ShareRequest }) {
   const close = useShareStore((state) => state.close);
-  const router = useRouter();
+  const openSettings = useOpenSettings();
   const userId = useAuthStore((state) => state.user?.id ?? null);
   const role = useAuthStore((state) => state.user?.role ?? null);
   const storeRelease = useReleaseStore(
@@ -486,9 +486,10 @@ function ShareDialog({ request }: { request: ShareRequest }) {
                 isBrandColorsEnabled()
                   ? () => {
                       // Close first: the sheet is mounted app-wide, so it would
-                      // otherwise sit open on top of Settings.
+                      // otherwise sit open on top of Settings. Settings opens over
+                      // the page in place, so the rollout stays scoped behind it.
                       close();
-                      router.push(BRAND_COLORS_SETTINGS_HREF);
+                      openSettings({ segment: 'artists', section: BRAND_COLORS_SETTINGS_ANCHOR });
                     }
                   : null
               }

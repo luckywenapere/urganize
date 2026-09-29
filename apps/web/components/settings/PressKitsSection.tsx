@@ -28,7 +28,7 @@ export function PressKitsSection() {
   if (!PRESS_KITS_ENABLED) return null;
 
   return (
-    <section className={panelClass}>
+    <section id="press-kits" className={`${panelClass} scroll-mt-4`}>
       <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Press kits
       </h2>

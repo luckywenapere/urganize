@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { settingsDeepLink } from '@/lib/settings-nav';
+import { useSettingsLinkClick } from '@/components/settings/useOpenSettings';
 import { ChevronDown, Layers, Plus } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useEventsStore } from '@/stores/useEventsStore';
@@ -252,6 +254,8 @@ function ListSkeleton() {
 
 export default function ShowsPageClient() {
   const router = useRouter();
+  // "Add an artist" opens Settings over this page rather than leaving it.
+  const openSettingsOnClick = useSettingsLinkClick({ segment: 'artists', section: 'artists' });
   const { isLoading: authLoading } = useAuthStore();
   const { events, bookableArtistIds, isInitialLoading, error, load } = useEventsStore();
   const { artists, loaded: rosterLoaded, load: loadRoster } = useArtistRosterStore();
@@ -374,7 +378,8 @@ export default function ShowsPageClient() {
               description="Every show belongs to an artist. Add one in Settings, then book their first date."
               action={
                 <Link
-                  href="/settings?tab=workspace"
+                  href={settingsDeepLink({ segment: 'artists', section: 'artists' })}
+                  onClick={openSettingsOnClick}
                   className="motion-focus motion-press inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
                 >
                   Add an artist

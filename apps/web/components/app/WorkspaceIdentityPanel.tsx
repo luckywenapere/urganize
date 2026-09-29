@@ -18,6 +18,8 @@ import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState } from "@/lib/persisted-state";
 import { leaveReleaseForCatalog } from "@/lib/catalog-intent";
 import { HelpTipPanel } from "@/components/shared/HelpTip";
+import { settingsDeepLink } from "@/lib/settings-nav";
+import { useSettingsLinkClick } from "@/components/settings/useOpenSettings";
 import type { HelpKey } from "@/lib/help-copy";
 import { useSidebarStore } from "@/stores/useSidebarStore";
 import { RAIL_GUTTER } from "@/lib/rail-width";
@@ -91,9 +93,10 @@ type NavItem = {
    *  rail: a 64px column has no room for a second level, the same reason the
    *  Beta pill folds into the tooltip there. */
   children?: NavChild[];
-  /** Side effect to run as the row is followed. Only Catalog sets one — see
-   *  forgetScopedReleaseScene. */
-  onNavigate?: () => void;
+  /** Side effect to run as the row is followed. Catalog sets one (see
+   *  forgetScopedReleaseScene) and so does Settings, which uses the click to
+   *  open its pop-up in place instead of following the link. */
+  onNavigate?: (event: React.MouseEvent<HTMLElement>) => void;
   /** Marks a surface that shipped flag-off and hasn't been used against a real
    *  team yet (founder call, 2026-08-31 — Shows is the first to carry this
    *  since the app-wide Beta cleanup on 2026-08-16; that cleanup dropped the
@@ -206,14 +209,19 @@ const TOUR_ANCHOR_BY_HREF: Record<string, string | undefined> = {
   "/dashboard/home": "nav-home",
   "/dashboard": "nav-catalog",
   "/dashboard/urgans": "nav-urgans",
-  "/settings": "nav-settings",
+  // Keyed by the deep link now that the row opens the settings pop-up.
+  [settingsDeepLink()]: "nav-settings",
 };
 
 const SETTINGS_ITEM: NavItem = {
-  href: "/settings",
+  // A real link to a URL that opens the pop-up on a fresh load, so a new tab
+  // works; a plain click is intercepted in WorkspaceNavList to open it in place.
+  href: settingsDeepLink(),
   label: "Settings",
   Icon: GearIcon,
-  isActive: (pathname: string) => pathname.startsWith("/settings"),
+  // Never "the current page" any more: Settings is a pop-up over whatever page
+  // this is, and it covers this card while it is open.
+  isActive: () => false,
   help: "nav.settings",
 };
 
@@ -510,6 +518,8 @@ function ScopedArtistLine({ fallbackLabel }: { fallbackLabel: string }) {
  * as documentation for whichever one came first — moved here 2026-09-09.
  */
 export function WorkspaceIdentityPanel() {
+  // The team header is a second way into Settings, opening the pop-up in place.
+  const openSettingsOnClick = useSettingsLinkClick();
   const name = useWorkspaceIdentityStore((state) => state.name);
   const artist = useWorkspaceIdentityStore((state) => state.artist);
   const artistCount = useWorkspaceIdentityStore((state) => state.artistCount);
@@ -899,7 +909,8 @@ export function WorkspaceIdentityPanel() {
 
       <div className="flex h-full flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface">
         <Link
-          href="/settings"
+          href={settingsDeepLink()}
+          onClick={openSettingsOnClick}
           title={collapsed ? name || "Your team" : undefined}
           className={`motion-focus block shrink-0 transition-colors hover:bg-bg-hover ${
             collapsed ? "px-2 py-4" : "p-4"
@@ -1121,6 +1132,7 @@ function WorkspaceNavList({
   // release: the founder asked for an arrow you open, and a nav that expands
   // itself on every load buries Settings below a roster on a short viewport.
   const [expandedHref, setExpandedHref] = useState<string | null>(null);
+  const openSettingsOnClick = useSettingsLinkClick();
   // ONE panel for the whole list, not one per row. Only a single tip is ever
   // visible, and the rows are built by the `renderRow` closure below inside a
   // `.map`, where a per-row hook would break the rules of hooks. So the rows
@@ -1261,7 +1273,7 @@ function WorkspaceNavList({
         than shifting it. */}
       <div className="mt-2 shrink-0 border-t border-stroke-subtle pt-2">
         {isAdmin ? renderRow(ADMIN_ITEM) : null}
-        {renderRow(SETTINGS_ITEM)}
+        {renderRow({ ...SETTINGS_ITEM, onNavigate: openSettingsOnClick })}
       </div>
 
       {/* Portals to the body, so it renders nothing here and this fragment

@@ -28,12 +28,11 @@ afterEach(() => {
 });
 
 describe('buildPrefetchRoutes', () => {
-  it('always warms the three destinations every account has', async () => {
+  it('always warms the two destinations every account has', async () => {
     const { buildPrefetchRoutes } = await loadRoutes(ALL_OFF);
     expect(buildPrefetchRoutes({ hasCuratorProfile: false })).toEqual([
       '/dashboard',
       '/dashboard/urgans',
-      '/settings',
     ]);
   });
 
@@ -45,7 +44,6 @@ describe('buildPrefetchRoutes', () => {
     expect(buildPrefetchRoutes({ hasCuratorProfile: true })).toEqual([
       '/dashboard',
       '/dashboard/urgans',
-      '/settings',
       '/dashboard/home',
       '/dashboard/notes',
       '/dashboard/shows',
@@ -139,7 +137,9 @@ describe('buildPrefetchRoutes', () => {
   it('puts the shared destinations first, so a dying link warms those', async () => {
     const { buildPrefetchRoutes } = await loadRoutes(ALL_ON);
     const routes = buildPrefetchRoutes({ hasCuratorProfile: true });
-    expect(routes.slice(0, 3)).toEqual(['/dashboard', '/dashboard/urgans', '/settings']);
+    expect(routes.slice(0, 2)).toEqual(['/dashboard', '/dashboard/urgans']);
+    // Settings is a pop-up now; /settings is a redirect stub and worth no bytes.
+    expect(routes).not.toContain('/settings');
   });
 
   it('never returns a duplicate, so no chunk is asked for twice', async () => {

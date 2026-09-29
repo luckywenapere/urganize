@@ -19,6 +19,8 @@
  * (inlined at build time). Each mirrors the gate the nav itself uses: with the
  * flag off these pages bounce or 404, so offering one as a search result would
  * be a dead end. */
+import { settingsDeepLink } from '@/lib/settings-nav';
+
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
@@ -182,7 +184,7 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
   pages.push({
     key: 'settings',
     label: 'Settings',
-    href: '/settings',
+    href: settingsDeepLink(),
     // The sections Settings contains. Someone hunting for their card details
     // types "billing", and no page in this app is called that.
     //

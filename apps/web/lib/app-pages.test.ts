@@ -69,7 +69,9 @@ describe('buildAppPages — always present', () => {
     const byKey = new Map(buildAppPages({ hasCuratorProfile: false }).map((p) => [p.key, p.href]));
     expect(byKey.get('catalog')).toBe('/dashboard');
     expect(byKey.get('urgans')).toBe('/dashboard/urgans');
-    expect(byKey.get('settings')).toBe('/settings');
+    // Settings is a pop-up over the dashboard now, so its entry is the URL that
+    // opens it, not a page of its own.
+    expect(byKey.get('settings')).toBe('/dashboard?settings=menu');
   });
 
   it('marks ONLY the catalog as leaving the release', async () => {

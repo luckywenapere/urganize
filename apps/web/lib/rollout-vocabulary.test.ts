@@ -64,6 +64,14 @@ const GUARDED_FILES = [
   'lib/notification-presets.ts',
   'lib/help-copy.ts',
   'lib/tours.ts',
+  // The settings pop-up (2026-09-29). settings-search.ts is deliberately absent:
+  // its keywords are words people TYPE, and people still type "release".
+  'lib/settings-nav.ts',
+  'components/settings/SettingsModal.tsx',
+  'components/settings/SettingsNav.tsx',
+  'components/settings/segments/GeneralSegment.tsx',
+  'components/settings/segments/SecuritySegment.tsx',
+  'components/settings/segments/ArtistsBrandSegment.tsx',
   '../../packages/pricing/src/index.ts',
 ];
 

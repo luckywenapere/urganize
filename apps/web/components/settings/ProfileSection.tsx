@@ -5,6 +5,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { errorMessage } from '@/lib/errors';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
+import { useReportDirty } from './useReportDirty';
 
 /**
  * Calls the store's `updateProfileName` action, which patches `user`
@@ -20,6 +21,10 @@ export function ProfileSection() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // An unsaved edit makes the pop-up ask before it closes. Compared trimmed,
+  // the way Save stores it, so a stray trailing space is not an "edit".
+  useReportDirty('profile.name', Boolean(user) && name.trim() !== (user?.name || '').trim());
 
   if (!user) return null;
 
@@ -43,8 +48,8 @@ export function ProfileSection() {
   };
 
   return (
-    <section className={panelClass}>
-      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Profile</h2>
+    <section id="name" className={`${panelClass} scroll-mt-4`}>
+      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Your details</h2>
       <div className="space-y-4">
         <label className="block">
           <span className="mb-1 block text-sm text-content-secondary">Name</span>
