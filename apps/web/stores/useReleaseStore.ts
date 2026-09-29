@@ -266,10 +266,23 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
     }
   },
   loadCommandCenterVia: async (fetchData) => {
-    if (commandCenterInFlight) {
-      return commandCenterInFlight;
-    }
-
+    // Deliberately does NOT piggyback on an in-flight `commandCenterInFlight`
+    // the way loadCommandCenter does. That early-return is safe ONLY when
+    // the in-flight run is itself carrying whatever this caller needs — true
+    // for a plain loadCommandCenter() piggybacking on a Via run (Via's
+    // payload is a strict superset), but false in reverse: a Via caller
+    // needs its own side-payload (today, /api/home's `home` field), which a
+    // plain /api/command-center response can never contain. Returning the
+    // OTHER call's promise here meant `fetchData` was simply never invoked
+    // whenever AppShell's or WorkspaceIdentityPanel's mount-time
+    // loadCommandCenter() won the race — silently starving useHomeStore of
+    // its /api/home response and leaving HomePageClient on its skeleton
+    // forever (it never reads useReleaseStore's `error`, and this store's
+    // own loading state cleared normally, so nothing looked stuck from the
+    // outside). Always running its own fetch keeps the one-directional
+    // optimization the comment above describes (a normal loadCommandCenter()
+    // call still piggybacks on an in-flight Via run) without the unsafe
+    // reverse case.
     const mySeq = ++commandCenterRunSeq;
     const hasData = get().releases.length > 0;
     set(hasData ? { isRefreshing: true, error: '' } : { isInitialLoading: true, error: '' });
