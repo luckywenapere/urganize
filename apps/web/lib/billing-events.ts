@@ -103,6 +103,30 @@ export const BILLING_EVENT_TYPES = [
    *  team per role per UTC day, so a manager comparing two designers produces
    *  one row and not a dozen. Read back by /admin/directory. */
   'directory_role_wanted',
+  /** One voice clip was transcribed for UrgAns (NEXT_PUBLIC_FEATURE_URGANS_VOICE).
+   *  Deliberately NOT 'urgans_action': speaking is not metered against the
+   *  monthly chat ceiling — only the send that follows is, exactly as typing
+   *  is. This row exists to enforce a per-team daily transcription cap
+   *  (VOICE_DAILY_CAP) as an abuse guard, nothing more. */
+  'urgans_voice_transcription',
+  /** Curator pitch payments (2026-09-25): the moments that need the founder.
+   *  Mostly about a CURATOR, who may have no team, which is why these rows can
+   *  carry a null workspace_id. Each one also emails BILLING_ALERTS_EMAIL — see
+   *  alertFounderPitchPayments in lib/pitch-payments-server.ts. */
+  /** A curator's bank account name did not match their profile, so it waits
+   *  for a human before any money is routed to it. */
+  'payout_needs_review',
+  /** A paid checkout did not match its quote, or paid for pitches that were no
+   *  longer waiting. No pitch was sent. */
+  'pitch_payment_needs_review',
+  /** A missed-window refund could not be made. The artist is still owed. */
+  'pitch_refund_failed',
+  /** The daily Paystack reconcile found a gap. */
+  'pitch_reconcile_mismatch',
+  /** A checkout took more recovery off a curator share than they still owed. */
+  'pitch_recovery_unmatched',
+  /** A curator reached the strike limit and their inbox is paused. */
+  'curator_inbox_paused',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];

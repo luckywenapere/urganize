@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { readableCopy, userFacingStrings, userFacingTemplates } from './copy-scan';
+import {
+  readableCopy,
+  readableCopySegments,
+  userFacingStrings,
+  userFacingTemplates,
+} from './copy-scan';
 
 /**
  * The extractor under two guards, so its contract is pinned rather than
@@ -115,5 +120,43 @@ describe('readableCopy', () => {
     const source = 'const a = `AI ${word} for executives`;';
     expect(userFacingTemplates(source)).toEqual(['AI   for executives']);
     expect(readableCopy(source)).toEqual(['AI for executives']);
+  });
+});
+
+describe('readableCopySegments', () => {
+  const source = [
+    'const title = "The release plan";',
+    'const line = `An ${CATEGORY} for everyone`;',
+    'export const El = () => <p>One link per artist.</p>;',
+  ].join('\n');
+
+  it('tags every piece with the reader that found it', () => {
+    expect(readableCopySegments(source)).toEqual([
+      { text: 'The release plan', from: 'string' },
+      { text: 'An for everyone', from: 'template' },
+      { text: 'One link per artist.', from: 'jsx' },
+    ]);
+  });
+
+  it('is exactly what readableCopy returns, in the same order', () => {
+    // readableCopy is built from this, and two guards read readableCopy. A
+    // piece dropped, added or reordered here would change what they check.
+    const mixed = [
+      source,
+      "const cls = 'flex items-center gap-2';",
+      '<span>Every release you run</span>',
+      'const x = `one ${a} two ${b} three`;',
+    ].join('\n');
+    expect(readableCopySegments(mixed).map((segment) => segment.text)).toEqual(readableCopy(mixed));
+  });
+
+  it('marks code the JSX reader misread as jsx, never as a string', () => {
+    // The `>` of the arrow starts a "JSX text" span that runs to the next tag.
+    // Knowing it came from the JSX reader is what lets a guard treat it as
+    // code without skipping real copy in strings and templates.
+    const code = 'const r = rs.find((r) => r.id === releaseId); if (!release) return null; return (<div>Hi</div>);';
+    expect(readableCopySegments(code)).toEqual([
+      { text: 'r.id === releaseId); if (!release) return null; return (', from: 'jsx' },
+    ]);
   });
 });

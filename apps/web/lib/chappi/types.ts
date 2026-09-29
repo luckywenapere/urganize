@@ -179,6 +179,7 @@ export type ChappiToolName =
   // rollout planner (since 2026-09-15, one call builds the plan; there is no
   // approve/discard, because there is no draft left to settle)
   | 'get_release_plan'
+  | 'preview_release_plan'
   | 'generate_release_plan'
   // the song itself
   | 'get_song'

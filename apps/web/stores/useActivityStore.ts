@@ -24,3 +24,13 @@ export const useActivityStore = create<ActivityStore>((set) => ({
       ].slice(0, 20),
     })),
 }));
+
+/**
+ * Forget the signed-in account's activity feed. Called on SIGNED_OUT
+ * (lib/auth-store.ts) — the same exposure as the release and task stores it
+ * loads alongside: module-level, so a same-tab account switch would otherwise
+ * leave account A's recent activity on screen for account B.
+ */
+export function resetActivityStore(): void {
+  useActivityStore.setState({ activity: [] });
+}

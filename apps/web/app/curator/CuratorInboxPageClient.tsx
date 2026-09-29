@@ -5,6 +5,13 @@
 // to decide (song, artist, who sent it, the note), the link opens in one tap,
 // and the four statuses are one tap each. The reply box only appears once a
 // decision is made, because that is the only moment a reply means anything.
+//
+// A PAID pitch (curator pitch payments, 2026-09-25) gets its own card, because
+// the artist bought something specific: a listen and a written reply inside the
+// window. So it leads with the deadline and what replying earns, and the
+// decision is Accept or Pass TOGETHER with the reply, once. Which card a pitch
+// gets follows the row, never the feature flag, so a pitch somebody paid for
+// keeps asking for its reply even if paid pitching is switched off later.
 
 import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Inbox } from '@/components/icons';
@@ -18,7 +25,25 @@ import {
   PITCH_STATUSES,
   PITCH_STATUS_LABELS,
   acceptsPitchReply,
+  pitchStateLabel,
 } from '@/lib/pitching';
+import {
+  MAX_PAID_FEEDBACK_LENGTH,
+  MIN_PAID_FEEDBACK_WORDS,
+  countWords,
+  isReplyWindowClosed,
+  validatePaidFeedback,
+} from '@/lib/pitch-payments';
+import {
+  ACCEPT_LABEL,
+  FEEDBACK_PROMPT,
+  PASS_LABEL,
+  WINDOW_CLOSED,
+  feedbackWordCount,
+  formatPitchDeadline,
+  inboxCard,
+  replyDueLine,
+} from '@/lib/pitch-payment-copy';
 import type { CuratorPitch, PitchStatus } from '@/types/pitching';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { openExternalUrl } from '@/lib/external-link';
@@ -189,6 +214,181 @@ function PitchCard({ pitch }: { pitch: CuratorPitch }) {
   );
 }
 
+/** The two statuses a curator sets on a paid pitch before deciding. */
+const PAID_BOOKKEEPING_STATUSES = ['new', 'listened'] as const;
+
+function PaidPitchCard({ pitch }: { pitch: CuratorPitch }) {
+  const setPitchStatus = useCuratorStore((state) => state.setPitchStatus);
+  const [feedback, setFeedback] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const decided = pitch.status === 'added' || pitch.status === 'passed';
+  // Said before the curator writes, not after: a reply the server would turn
+  // away is a reply somebody took the time to write for nothing. The server
+  // still decides, so a card left open past the deadline is refused there.
+  const closed = !decided && isReplyWindowClosed(pitch.responseDueAt);
+  const deadline = formatPitchDeadline(pitch.responseDueAt);
+  const words = countWords(feedback);
+  const platformLabel = pitch.songPlatform ? PITCH_PLATFORM_LABELS[pitch.songPlatform] : '';
+
+  const mark = async (status: (typeof PAID_BOOKKEEPING_STATUSES)[number]) => {
+    if (status === pitch.status) return;
+    setError('');
+    setIsSaving(true);
+    try {
+      await setPitchStatus(pitch.id, status);
+    } catch (statusError) {
+      setError(statusError instanceof Error ? statusError.message : 'Could not save that.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const decide = async (status: 'added' | 'passed') => {
+    // The same check the server makes, run first so a short reply is caught
+    // without a round trip and without the card flickering to a decision.
+    const check = validatePaidFeedback(feedback);
+    if (!check.ok) {
+      setError(check.error);
+      return;
+    }
+    setError('');
+    setIsSaving(true);
+    try {
+      await setPitchStatus(pitch.id, status, check.value);
+      setFeedback('');
+    } catch (statusError) {
+      setError(statusError instanceof Error ? statusError.message : 'Could not save your reply.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
+            {pitch.playlistName}
+          </p>
+          <h2 className="mt-1 truncate text-base font-semibold text-content-primary">
+            {pitch.songTitle}
+          </h2>
+          <p className="truncate text-sm text-content-secondary">{pitch.artistName}</p>
+        </div>
+        <span className="shrink-0 font-mono text-[11px] text-content-tertiary">
+          {formatRelativeTime(pitch.createdAt)}
+        </span>
+      </div>
+
+      {!decided ? (
+        <p
+          className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+            closed ? 'bg-bg-elevated text-content-secondary' : 'bg-brand/10 text-content-primary'
+          }`}
+        >
+          {closed
+            ? WINDOW_CLOSED
+            : typeof pitch.shareKobo === 'number'
+              ? inboxCard(pitch.artistName, pitch.songTitle, deadline, pitch.shareKobo)
+              : replyDueLine(deadline)}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={() => void openExternalUrl(pitch.songUrl)}
+        className="mt-3 inline-flex h-10 max-w-full items-center gap-2 rounded-xl border border-stroke-default bg-bg-elevated px-3 text-sm font-semibold text-content-primary transition-colors hover:border-stroke-strong"
+      >
+        <ExternalLink className="h-4 w-4 shrink-0 text-content-tertiary" />
+        <span className="truncate">Listen{platformLabel ? ` on ${platformLabel}` : ''}</span>
+      </button>
+
+      {pitch.note ? (
+        <p className="mt-3 whitespace-pre-wrap text-sm text-content-secondary">{pitch.note}</p>
+      ) : null}
+
+      <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.12em] text-content-tertiary">
+        Sent by {pitch.pitcherName}
+      </p>
+
+      {decided ? (
+        // Final. The artist has been told, so there is nothing to edit.
+        <div className="mt-4 space-y-2">
+          <span className={statusChipClass(pitch.status, true)}>{pitchStateLabel(pitch.status, 'paid')}</span>
+          {pitch.reply ? (
+            <p className="whitespace-pre-wrap rounded-xl border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-secondary">
+              {pitch.reply}
+            </p>
+          ) : null}
+        </div>
+      ) : closed ? null : (
+        <>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {PAID_BOOKKEEPING_STATUSES.map((status) => (
+              <button
+                key={status}
+                type="button"
+                disabled={isSaving}
+                aria-pressed={pitch.status === status}
+                onClick={() => void mark(status)}
+                className={statusChipClass(status, pitch.status === status)}
+              >
+                {PITCH_STATUS_LABELS[status]}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <label htmlFor={`feedback-${pitch.id}`} className="block text-sm text-content-secondary">
+              {FEEDBACK_PROMPT}
+            </label>
+            <textarea
+              id={`feedback-${pitch.id}`}
+              rows={4}
+              value={feedback}
+              maxLength={MAX_PAID_FEEDBACK_LENGTH}
+              onChange={(event) => setFeedback(event.target.value)}
+              className="w-full rounded-xl border border-stroke-default bg-bg-base px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+            />
+            <p
+              aria-live="polite"
+              className={`text-xs ${words >= MIN_PAID_FEEDBACK_WORDS ? 'text-brand' : 'text-content-tertiary'}`}
+            >
+              {feedbackWordCount(words)}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() => void decide('added')}
+                className="inline-flex h-10 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50"
+              >
+                {ACCEPT_LABEL}
+              </button>
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() => void decide('passed')}
+                className="inline-flex h-10 items-center rounded-xl border border-stroke-default px-4 text-sm font-semibold text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary disabled:opacity-50"
+              >
+                {PASS_LABEL}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {error ? (
+        <p role="alert" className="mt-3 text-sm text-status-error">
+          {error}
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
 export function CuratorInboxPageClient() {
   const pitches = useCuratorStore((state) => state.pitches);
   const isLoading = useCuratorStore((state) => state.isLoadingPitches);
@@ -283,9 +483,13 @@ export function CuratorInboxPageClient() {
             </div>
           ) : (
             <div className="space-y-3">
-              {visible.map((pitch) => (
-                <PitchCard key={pitch.id} pitch={pitch} />
-              ))}
+              {visible.map((pitch) =>
+                pitch.paymentKind === 'paid' ? (
+                  <PaidPitchCard key={pitch.id} pitch={pitch} />
+                ) : (
+                  <PitchCard key={pitch.id} pitch={pitch} />
+                )
+              )}
             </div>
           )}
         </div>

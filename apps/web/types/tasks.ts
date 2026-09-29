@@ -228,6 +228,12 @@ export interface TaskOutcome {
 
 export interface TaskDetail extends Task {
   comments: TaskComment[];
+  /** Whether the CURRENT viewer may post/edit/delete in this task's thread
+   * (see hasTaskThreadAccess in lib/tasks-server.ts) — narrower than general
+   * task visibility. `comments` is already empty when this is false, so the
+   * UI never has to duplicate the access rule to decide whether to render a
+   * composer: it just reads this flag. */
+  canComment: boolean;
   attachments: TaskAttachment[];
   activity: TaskActivityEntry[];
   outcome: TaskOutcome | null;

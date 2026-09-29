@@ -3,6 +3,7 @@ import { createAdminClient, createDueDateNotificationsForAllUsers } from '@/lib/
 import { sendWeeklyMotivationalNudges } from '@/lib/motivation-server';
 import { runTrialEndingSweep } from '@/lib/billing-alerts-server';
 import { runDeliveryReconcile } from '@/lib/delivery-records-server';
+import { runPitchWindowSweep } from '@/lib/pitch-payments-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -65,5 +66,13 @@ export async function GET(request: NextRequest) {
   // reads what it writes.
   const directorySweep = await runDeliveryReconcile(adminClient);
 
-  return NextResponse.json({ ok: true, trialSweep, directorySweep });
+  // Curator pitch payments (2026-09-25): the missed-window sweep, as a
+  // BACKSTOP. It runs every 15 minutes from Supabase pg_cron
+  // (/api/cron/pitch-payments); running it here too means a paused pg_cron
+  // costs a day, never a refund. Every step in it is conditional, so running
+  // it twice is harmless. Not behind the feature flag, for the reason that
+  // route gives, and it never throws.
+  const pitchSweep = await runPitchWindowSweep(adminClient);
+
+  return NextResponse.json({ ok: true, trialSweep, directorySweep, pitchSweep });
 }

@@ -25,6 +25,27 @@ export function isChappiEnabled(): boolean {
   return process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 }
 
+/** Voice input for UrgAns (NEXT_PUBLIC_FEATURE_URGANS_VOICE). Only meaningful
+ * alongside NEXT_PUBLIC_FEATURE_CHAPPI, since the mic lives in the composer.
+ * When off, the mic is hidden and /api/urgans/transcribe 404s. */
+export function isUrgansVoiceEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_FEATURE_URGANS_VOICE === 'true';
+}
+
+/** Resolve the transcription transport, or null when not fully configured.
+ * Reuses the RodiumAi key and base UrgAns already uses (one vendor, founder
+ * call). The model is a separate env var because the transcription model id
+ * differs from the chat model id. */
+export function getTranscriptionConfig(): { apiKey: string; model: string; baseURL: string } | null {
+  const apiKey = String(process.env.CHAPPI_API_KEY || '').trim();
+  const model = String(process.env.URGANS_TRANSCRIBE_MODEL || '').trim();
+  if (!apiKey || !model) return null;
+
+  const baseURL =
+    String(process.env.CHAPPI_API_BASE || '').trim().replace(/\/+$/, '') || DEFAULT_CHAPPI_API_BASE;
+  return { apiKey, model, baseURL };
+}
+
 /** Resolve the model transport config, or null when not fully configured. */
 export function getChappiModelConfig(): ChappiModelConfig | null {
   const apiKey = String(process.env.CHAPPI_API_KEY || '').trim();

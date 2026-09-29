@@ -8,7 +8,21 @@
 
 export type PitchPlatform = 'spotify' | 'apple_music' | 'audiomack' | 'youtube' | 'other';
 
+/** What a CURATOR can set a pitch to. Deliberately not every state a pitch can
+ *  be in: the two below are the system's to set, and the status route
+ *  validates against this list, so a curator can never move a pitch into or
+ *  out of them. */
 export type PitchStatus = 'new' | 'listened' | 'added' | 'passed';
+
+/**
+ * Every state a pitch can be in, as the SENDING team sees it. Curator pitch
+ * payments (2026-09-25) added two: 'awaiting_payment' (the pitch is saved but
+ * nobody has paid, so no curator can see it) and 'expired' (a paid pitch whose
+ * reply window closed, refunded automatically).
+ */
+export type PitchState = PitchStatus | 'awaiting_payment' | 'expired';
+
+export type PitchPaymentKind = 'free' | 'paid';
 
 /** The curator's own profile. */
 export interface CuratorProfile {
@@ -48,6 +62,12 @@ export interface BrowsablePlaylist {
   genres: string[];
   followerCount: number | null;
   url: string;
+  /** The curator's live pitch price in kobo, or null for a free pitch. Only
+   *  present while curator pitch payments are switched on, so the payload is
+   *  byte-identical with the feature off. */
+  pitchPriceKobo?: number | null;
+  /** The reply window for a paid pitch. Present alongside pitchPriceKobo. */
+  responseWindowHours?: number | null;
 }
 
 /** A pitch in the curator's inbox. */
@@ -64,6 +84,12 @@ export interface CuratorPitch {
   reply: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Present while curator pitch payments are switched on. A paid pitch needs
+   *  an Accept or Pass with at least 15 words, once, before responseDueAt. */
+  paymentKind?: PitchPaymentKind;
+  responseDueAt?: string | null;
+  /** What the curator earns for replying (their share, before any recovery). */
+  shareKobo?: number | null;
 }
 
 /** A pitch as the sending team sees it, on the release or on the Pitching page. */
@@ -85,11 +111,16 @@ export interface SentPitch {
   songUrl: string;
   songPlatform: PitchPlatform | null;
   note: string;
-  status: PitchStatus;
+  status: PitchState;
   reply: string | null;
   pitcherName: string;
   createdAt: string;
   updatedAt: string;
+  /** Present while curator pitch payments are switched on. */
+  paymentKind?: PitchPaymentKind;
+  responseDueAt?: string | null;
+  /** What was paid for this pitch, in kobo, when it was paid. */
+  priceKobo?: number | null;
 }
 
 /** Body of POST /api/pitching/pitches. */

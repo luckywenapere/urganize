@@ -90,6 +90,9 @@ type TaskDetailRenderState = {
   onDeleteTask: () => Promise<void>;
   onUploadAttachment: (file: File) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
+  onSendComment: (content: string) => Promise<void>;
+  onEditComment: (commentId: string, content: string) => Promise<void>;
+  onDeleteComment: (commentId: string) => Promise<void>;
 };
 
 const TaskDetailRenderContext = createContext<TaskDetailRenderState | null>(null);
@@ -361,6 +364,11 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         setTask({
           ...storeTask,
           comments: [],
+          // Safe default until the real fetch resolves and tells us for
+          // certain — the composer stays hidden for this one frame rather
+          // than briefly offering to post before hasTaskThreadAccess's real
+          // answer arrives.
+          canComment: false,
           attachments: [],
           activity: [],
           outcome: null,
@@ -723,6 +731,48 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     await refreshOpenTask();
   };
 
+  // The task's chat thread (Release & Task Chat, Phase 1). All three go
+  // through the existing /comments routes — already-shipped backend, narrowed
+  // by ensureTaskThreadAccess — and refresh the open task the same way every
+  // other mutation here does, rather than optimistically patching
+  // state.task.comments: a thread's own ordering/author data is cheap to
+  // re-fetch and this keeps one source of truth.
+  const sendComment = async (content: string) => {
+    if (!activeTaskId) {
+      return;
+    }
+
+    await requestJson<{ comments: TaskDetail['comments'] }>(`/api/tasks/${activeTaskId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+    await refreshOpenTask();
+  };
+
+  const editComment = async (commentId: string, content: string) => {
+    if (!activeTaskId) {
+      return;
+    }
+
+    await requestJson<{ comments: TaskDetail['comments'] }>(
+      `/api/tasks/${activeTaskId}/comments/${commentId}`,
+      { method: 'PATCH', body: JSON.stringify({ content }) }
+    );
+    await refreshOpenTask();
+  };
+
+  const deleteComment = async (commentId: string) => {
+    if (!activeTaskId) {
+      return;
+    }
+
+    await requestJson<{ comments: TaskDetail['comments'] }>(
+      `/api/tasks/${activeTaskId}/comments/${commentId}`,
+      { method: 'DELETE' }
+    );
+    await refreshOpenTask();
+  };
+
   const contextValue = useMemo<TaskUIContextValue>(
     () => ({
       openTask,
@@ -772,6 +822,9 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     onDeleteTask: deleteTask,
     onUploadAttachment: uploadAttachment,
     onDeleteAttachment: deleteAttachment,
+    onSendComment: sendComment,
+    onEditComment: editComment,
+    onDeleteComment: deleteComment,
   };
 
   return (
@@ -902,6 +955,9 @@ function TaskDetailModal() {
             onDeleteTask={state.onDeleteTask}
             onUploadAttachment={state.onUploadAttachment}
             onDeleteAttachment={state.onDeleteAttachment}
+            onSendComment={state.onSendComment}
+            onEditComment={state.onEditComment}
+            onDeleteComment={state.onDeleteComment}
           />
         </div>
       </div>

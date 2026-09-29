@@ -20,6 +20,7 @@ describe('RELEASE_MENU_ORDER', () => {
   it('is the documented sequence', () => {
     expect([...RELEASE_MENU_ORDER]).toEqual([
       'activities',
+      'chat',
       'calendar',
       'pitch',
       'metadata',
@@ -43,6 +44,10 @@ describe('RELEASE_MENU_ORDER', () => {
   it('puts the surfaces a rollout returns to above the ones it visits once', () => {
     const position = (key: string) => RELEASE_MENU_ORDER.indexOf(key as never);
 
+    // The rollout's own chat thread sits with Activities, above every
+    // promoted tab — it is the coordination surface itself, not a place you
+    // visit to plan or send something outward.
+    expect(position('chat')).toBeLessThan(position('calendar'));
     // Marketing is the biggest block of a rollout, asset production is a
     // handful of touches early on.
     expect(position('calendar')).toBeLessThan(position('coverart'));

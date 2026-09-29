@@ -5,7 +5,7 @@
  * pattern). No node-only imports.
  */
 
-import type { PitchPlatform, PitchStatus, SentPitch } from '@/types/pitching';
+import type { PitchPaymentKind, PitchPlatform, PitchState, PitchStatus, SentPitch } from '@/types/pitching';
 
 /**
  * The spam brake: how many pitches may be waiting on a reply per release.
@@ -83,6 +83,24 @@ export const isPitchPlatform = (value: unknown): value is PitchPlatform =>
 
 export const isPitchStatus = (value: unknown): value is PitchStatus =>
   typeof value === 'string' && (PITCH_STATUSES as string[]).includes(value);
+
+/** Every state a pitch row can hold, including the two only the system sets. */
+export const PITCH_STATES: PitchState[] = [...PITCH_STATUSES, 'awaiting_payment', 'expired'];
+
+export const isPitchState = (value: unknown): value is PitchState =>
+  typeof value === 'string' && (PITCH_STATES as string[]).includes(value);
+
+/**
+ * The pill on a sent pitch. A PAID pitch's decision reads "Accepted", never
+ * "Added": the curator said they intend to add it, which is not a guarantee,
+ * and the spec is explicit that nothing in the product calls it one.
+ */
+export function pitchStateLabel(state: PitchState, paymentKind: PitchPaymentKind = 'free'): string {
+  if (state === 'awaiting_payment') return 'Not paid';
+  if (state === 'expired') return 'No reply';
+  if (paymentKind === 'paid' && state === 'added') return 'Accepted';
+  return PITCH_STATUS_LABELS[state];
+}
 
 export const acceptsPitchReply = (status: PitchStatus): boolean =>
   REPLYABLE_PITCH_STATUSES.includes(status);
@@ -178,8 +196,9 @@ export function formatFollowerCount(count: number | null | undefined): string {
   return `${millions < 10 ? millions.toFixed(1).replace(/\.0$/, '') : Math.floor(millions)}m`;
 }
 
-/** How many of these pitches are still waiting on a reply. */
-export const countWaitingPitches = (statuses: Array<{ status: PitchStatus }>): number =>
+/** How many of these pitches are still waiting on a reply. A pitch waiting for
+ *  PAYMENT is not counted: no curator has it yet. */
+export const countWaitingPitches = (statuses: Array<{ status: PitchState }>): number =>
   statuses.filter((entry) => entry.status === 'new').length;
 
 /**

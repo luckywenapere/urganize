@@ -36,6 +36,9 @@ import { buildTaskDetailSubtitle } from '@/lib/task-detail-summary';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { isNativePlatform } from '@/lib/platform';
 import { openExternalUrl } from '@/lib/external-link';
+import { ThreadMessageList } from '@/components/threads/ThreadMessageList';
+import { ThreadComposer } from '@/components/threads/ThreadComposer';
+import type { ThreadMessage } from '@/types/thread';
 
 // Feature flag (URG-203): task attachments stay dark until
 // NEXT_PUBLIC_FEATURE_TASK_ATTACHMENTS is 'true' (URG-182 precedent — same
@@ -117,6 +120,9 @@ type TaskDetailViewProps = {
   onDeleteTask: () => Promise<void>;
   onUploadAttachment: (file: File) => Promise<void>;
   onDeleteAttachment: (attachmentId: string) => Promise<void>;
+  onSendComment: (content: string) => Promise<void>;
+  onEditComment: (commentId: string, content: string) => Promise<void>;
+  onDeleteComment: (commentId: string) => Promise<void>;
 };
 
 function toDateTimeLocalValue(value: string | null): string {
@@ -159,6 +165,9 @@ export function TaskDetailView({
   onDeleteTask,
   onUploadAttachment,
   onDeleteAttachment,
+  onSendComment,
+  onEditComment,
+  onDeleteComment,
 }: TaskDetailViewProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -607,6 +616,50 @@ export function TaskDetailView({
               Add notes
             </button>
           )}
+
+          {/* The task's chat thread (Release & Task Chat, Phase 1). Scoped to
+              the assignee, the creator, and workspace owners/admins by
+              default — narrower than general task visibility, see
+              hasTaskThreadAccess in lib/tasks-server.ts. task.canComment is
+              the server's own answer to that check, so this never has to
+              re-derive it client-side; a viewer without thread access simply
+              sees no composer here (comments always arrive empty for them
+              too, so the section still renders, just with nothing to post
+              into). */}
+          <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
+            <h3 className="text-sm font-semibold text-content-primary">Chat</h3>
+            <div className="mt-3">
+              <ThreadMessageList
+                messages={task.comments.map(
+                  (comment): ThreadMessage => ({
+                    id: comment.id,
+                    userId: comment.userId,
+                    content: comment.content,
+                    createdAt: comment.createdAt,
+                    editedAt: comment.editedAt,
+                    authorName: comment.authorName,
+                    authorEmail: comment.authorEmail,
+                    authorInitials: comment.authorInitials,
+                    isOwnMessage: comment.isOwnComment,
+                  })
+                )}
+                isLoading={false}
+                loadError=""
+                onRetry={() => {}}
+                onEdit={onEditComment}
+                onDelete={onDeleteComment}
+                emptyTitle="No messages yet."
+                emptyBody={
+                  task.canComment
+                    ? 'Coordinate on this activity right here.'
+                    : 'Only the assignee and your team’s managers can post here.'
+                }
+              />
+            </div>
+            {task.canComment ? (
+              <ThreadComposer onSend={onSendComment} placeholder="Message about this activity…" />
+            ) : null}
+          </section>
 
           {/* How the last completion went, captured by the check-in sheet.
               Read-only and kept even after a reopen: it is the record of

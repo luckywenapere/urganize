@@ -17,6 +17,9 @@ import { resetCatalogIntent } from '@/lib/catalog-intent';
 import { resetPressKitsStore } from '@/stores/usePressKitsStore';
 import { resetEventsStore } from '@/stores/useEventsStore';
 import { resetArtistRosterStore } from '@/stores/useArtistRosterStore';
+import { resetReleaseStore } from '@/stores/useReleaseStore';
+import { resetTaskStore } from '@/stores/useTaskStore';
+import { resetActivityStore } from '@/stores/useActivityStore';
 import { clearKitDetailCache } from '@/lib/press-kit-detail-cache';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { resetChappiHistory } from '@/stores/useChappiHistoryStore';
@@ -1132,6 +1135,18 @@ if (typeof window !== 'undefined') {
       // session when the flag was on must still go.
       resetChappiHistory();
       useChappiStore.getState().resetForSignOut();
+      // The catalog, its tasks and its activity feed are the sharpest version
+      // of this same exposure: the whole workspace, held in three
+      // module-level stores that a client-side navigation to /auth never
+      // tears down. Before this, a same-tab sign-out then sign-in as another
+      // account could paint account A's rollouts, tasks and activity feed
+      // for account B — and within useReleaseStore's 10 second recency
+      // window, loadCommandCenter() would return early and never replace
+      // them. The recency clocks and in-flight promises go too, so the next
+      // load is real.
+      resetReleaseStore();
+      resetTaskStore();
+      resetActivityStore();
       // A first-rollout share offer still waiting (share to socials) names
       // account A's rollout but not account A. Left behind, it would open for
       // account B on the next load, on a rollout B cannot see, and spend B's

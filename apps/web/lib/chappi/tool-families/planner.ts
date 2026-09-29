@@ -33,12 +33,19 @@
 // the build.
 
 import {
+  PLAN_PRESET_LABELS,
+  PLAN_PRESETS,
   PLAN_SCOPE_LABELS,
+  RELEASE_TYPE_OPTIONS,
+  buildPlanPreview,
+  isPlanPreset,
   isReleasePlannerEnabled,
   parseReleasePlanIntake,
+  type PlanReleaseType,
   type PlanScope,
   type ReleasePlanIntake,
 } from '@/lib/release-planning';
+import { getPlannerTemplate } from '@/lib/release-planning-actions-server';
 import { recordChatActionRun } from '@/lib/urgans-actions/chat-log-server';
 import {
   apiError,
@@ -93,6 +100,9 @@ export function buildPlanIntake(
   }
   if (typeof args.extra_notes === 'string' && args.extra_notes.trim()) {
     candidate.extra_notes = args.extra_notes.trim();
+  }
+  if (typeof args.preset === 'string' && args.preset.trim()) {
+    candidate.preset = args.preset.trim();
   }
   return parseReleasePlanIntake(candidate);
 }
@@ -170,10 +180,95 @@ export const PLANNER_TOOLS: ChappiTool[] = [
     },
   },
   {
+    name: 'preview_release_plan',
+    kind: 'read',
+    description:
+      "What the preview UrgAns reads its read-back from. Call this with whatever of the intake answers are collected so far, right before saying \"Here's what I'll build\" — it returns the REAL activity count, the resolved release date (fixed, or the deterministic suggestion when none was given yet), how many activities would already be dated before today, and, for an EP or album, the derived date(s) of the staggered single(s). Read these numbers back rather than guessing them; the model's own tailoring runs later and can only remove further, never add, so this is already the floor the manager can trust. Does not create anything.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        release_type: {
+          type: 'string',
+          enum: RELEASE_TYPE_OPTIONS.map((option) => option.value),
+        },
+        release_date: {
+          type: 'string',
+          description: 'YYYY-MM-DD, only if the user already gave one.',
+        },
+        ready_today: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        preset: { type: 'string', enum: [...PLAN_PRESETS] },
+        exclusions: { type: 'array', items: { type: 'string' } },
+        budget: { type: 'string' },
+      },
+      required: ['release_type'],
+    },
+    execute: async (_ctx, args) => {
+      const releaseTypeArg = argString(args, 'release_type');
+      const releaseType = RELEASE_TYPE_OPTIONS.some((option) => option.value === releaseTypeArg)
+        ? (releaseTypeArg as PlanReleaseType)
+        : null;
+      if (!releaseType) {
+        return fail(
+          `release_type must be one of: ${RELEASE_TYPE_OPTIONS.map((o) => o.value).join(', ')}.`
+        );
+      }
+
+      const { template, fallbackToSingle } = getPlannerTemplate(releaseType);
+      const preset = isPlanPreset(args.preset) ? args.preset : undefined;
+      const readyToday = Array.isArray(args.ready_today)
+        ? args.ready_today.filter((item): item is string => typeof item === 'string')
+        : [];
+      const exclusions = Array.isArray(args.exclusions)
+        ? args.exclusions.filter((item): item is string => typeof item === 'string')
+        : undefined;
+      const releaseDate = argString(args, 'release_date') || null;
+      const budget = argString(args, 'budget') || undefined;
+
+      const preview = buildPlanPreview({
+        template,
+        input: {
+          release_date: releaseDate,
+          // Garbage or unrecognized values simply match nothing below — the
+          // underlying tag/id checks are all `.includes()` lookups, never a
+          // throw — so nothing here needs to reject a bad string itself.
+          ready_today: readyToday as ReleasePlanIntake['ready_today'],
+          preset,
+          exclusions: exclusions as PlanScope[] | undefined,
+          budget: budget as ReleasePlanIntake['budget'] | undefined,
+        },
+        todayYmd: new Date().toISOString().slice(0, 10),
+      });
+
+      const dateLine = preview.dateWasSuggested
+        ? `${preview.releaseDate} (a suggestion — nothing fixed yet)`
+        : preview.releaseDate;
+      const singleLine = preview.singleDates.length
+        ? ` ${preview.singleDates.map((entry) => `${entry.label} on ${entry.date}`).join(', ')}.`
+        : '';
+      const lateLine =
+        preview.lateCount > 0
+          ? ` ${preview.lateCount} of those would already be dated before today — they land in Catch up, not a failure.`
+          : '';
+      const fallbackLine = fallbackToSingle
+        ? ` (Planned from the single playbook — ${releaseType === 'ep' ? 'the EP' : 'the album'} playbook is not switched on here.)`
+        : '';
+      const presetLine = preset ? ` This is a ${PLAN_PRESET_LABELS[preset]}.` : '';
+
+      return {
+        ok: true,
+        summary: `${preview.activityCount} of ${preview.totalTemplateTasks} activities.${presetLine} Release date: ${dateLine}.${singleLine}${lateLine}${fallbackLine}`,
+        data: { ...preview, fallbackToSingle },
+      };
+    },
+  },
+  {
     name: 'generate_release_plan',
     kind: 'mutate',
     description:
-      "Build the rollout's plan from the hand-crafted playbook straight into its activities, tailored to the seven intake answers. Collect all seven in conversation first and read them back before calling this. Omit releaseId to create the rollout and build its plan in one call — the usual case for a brand-new rollout. This creates the activities immediately; there is no draft to approve afterward, so only call it once the answers are settled.",
+      "Build the rollout's plan from the hand-crafted playbook straight into its activities, tailored to the intake answers. Collect the answers in conversation first, call preview_release_plan to get the real numbers, and read those back before calling this. Recognize \"quiet rollout\"/\"low-key\"/\"soft launch\"/\"no noise\" as the quiet preset, and a release day under 7 days away as the surprise preset, BEFORE running the full interview — either one only needs the artist, the date, and what is ready; skip the goal and budget questions and set goal to \"catalog\", budget to \"none\". Omit releaseId to create the rollout and build its plan in one call — the usual case for a brand-new rollout. This creates the activities immediately; there is no draft to approve afterward, so only call it once the answers are settled.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -236,6 +331,12 @@ export const PLANNER_TOOLS: ChappiTool[] = [
           type: 'string',
           description:
             'Q7 — anything else worth knowing. Read as instructions: something ruled out here becomes an excluded scope in the plan.',
+        },
+        preset: {
+          type: 'string',
+          enum: [...PLAN_PRESETS],
+          description:
+            'A whole plan shape, recognized from the user\'s own words BEFORE the interview — "quiet rollout", "low-key", "soft launch", "no noise" mean quiet; release day under 7 days away means surprise. When a preset is set, only artist_name, date_mode/release_date and ready_today matter — do not ask about goal or budget, and set goal to "catalog" and budget to "none". Omit for the ordinary full-interview plan.',
         },
       },
       required: ['release_type', 'artist_name', 'ready_today', 'goal', 'budget'],
@@ -335,6 +436,9 @@ export const PLANNER_TOOLS: ChappiTool[] = [
       });
 
       const labels = scopeLabels(appliedExclusions);
+      const presetLine = parsed.intake.preset
+        ? ` It's a ${PLAN_PRESET_LABELS[parsed.intake.preset]}.`
+        : '';
       const leftOutLine = labels.length
         ? ` Left out: ${labels.join(', ')}.`
         : removed.length > 0
@@ -346,7 +450,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
 
       return {
         ok: true,
-        summary: `${createdHere ? 'Created the rollout and built' : 'Built'} ${tasksCreated} activities.${leftOutLine}${worthALookLine}${fullBreakdownLine}`,
+        summary: `${createdHere ? 'Created the rollout and built' : 'Built'} ${tasksCreated} activities.${presetLine}${leftOutLine}${worthALookLine}${fullBreakdownLine}`,
         data: {
           releaseId,
           tasksCreated,

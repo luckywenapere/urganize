@@ -71,6 +71,20 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.notifyAdminSubject(p.requesterLabel, p.teamName),
     };
   },
+  pitch_notice: async () => {
+    const m = await import('./PitchNoticeEmail');
+    return {
+      element: (p) => createElement(m.PitchNoticeEmail, p),
+      subject: (p) => m.pitchNoticeSubject(p.subject),
+    };
+  },
+  founder_ops_alert: async () => {
+    const m = await import('./FounderOpsAlertEmail');
+    return {
+      element: (p) => createElement(m.FounderOpsAlertEmail, p),
+      subject: (p) => m.founderOpsAlertSubject(p.subject),
+    };
+  },
 };
 
 export async function loadEmailTemplate<Id extends EmailTemplateId>(

@@ -12,6 +12,8 @@ import {
 import { isPitchPlatform, normalizeGenreTags } from '@/lib/pitching';
 import { isValidCuratorSlug } from '@/lib/curator-public';
 import { isCuratorPageFeatureEnabled } from '@/lib/curator-public-server';
+import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
+import { loadCuratorPaymentStates } from '@/lib/pitch-payments-server';
 
 /**
  * Every playlist a team can pitch to, with optional platform and genre filters.
@@ -26,6 +28,11 @@ import { isCuratorPageFeatureEnabled } from '@/lib/curator-public-server';
  * what keeps the promise above intact: the id is resolved here and stays here,
  * so the response shape does not change and nothing hands a team a curator's
  * auth id. Do not add one to BrowsablePlaylist to make this easier.
+ *
+ * With curator pitch payments switched on, each playlist also carries its
+ * curator's live price (null for a free pitch) and reply window, and a curator
+ * whose inbox is paused is left out entirely: three missed windows in 90 days
+ * means no new pitches, paid or free, until an admin reviews them.
  */
 export async function GET(request: NextRequest) {
   if (!isPitchingFeatureEnabled()) return flagOffResponse();
@@ -87,15 +94,34 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const rows = (data || []) as Array<Record<string, unknown>>;
+  const allRows = (data || []) as Array<Record<string, unknown>>;
+  const withPayments = isPitchPaymentsEnabled();
+  const states = withPayments
+    ? await loadCuratorPaymentStates(
+        auth.adminClient,
+        allRows.map((row) => String(row.curator_user_id || ''))
+      )
+    : null;
+  const rows = states
+    ? allRows.filter((row) => !states.get(String(row.curator_user_id || ''))?.paused)
+    : allRows;
+
   const names = await loadCuratorNames(
     auth.adminClient,
     rows.map((row) => String(row.curator_user_id || ''))
   );
 
   return NextResponse.json({
-    playlists: rows.map((row) =>
-      toBrowsablePlaylist(row, names.get(String(row.curator_user_id || '')) || 'Playlist owner')
-    ),
+    playlists: rows.map((row) => {
+      const curatorId = String(row.curator_user_id || '');
+      const state = states?.get(curatorId);
+      return toBrowsablePlaylist(
+        row,
+        names.get(curatorId) || 'Playlist owner',
+        states
+          ? { priceKobo: state?.priceKobo ?? null, responseWindowHours: state?.responseWindowHours ?? 0 }
+          : null
+      );
+    }),
   });
 }

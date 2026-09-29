@@ -23,6 +23,8 @@ import {
   extractReusableAuthorization,
   isCardTrialPlan,
 } from '@/lib/trial-card';
+import { isPitchPaymentReference } from '@/lib/pitch-payments';
+import { handlePitchChargeEvent, handlePitchRefundEvent } from '@/lib/pitch-payments-server';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Paystack webhook — recurring billing edition.
@@ -1095,6 +1097,40 @@ async function handleInvoicePaymentFailed(payload: PaystackWebhookPayload) {
   return ack({ event: 'invoice.payment_failed', subscription_code: subscriptionCode });
 }
 
+// ─── curator pitch payments ──────────────────────────────────────────────────
+//
+// Pitch checkouts (2026-09-25) carry references that start with
+// PITCH_REFERENCE_PREFIX, so they are recognised on the reference alone and
+// routed away before any subscription handling reads them. They never touch
+// the payments table. The work lives in lib/pitch-payments-server.ts; these two
+// wrappers only turn its answer into a response.
+//
+// NOT BEHIND THE FEATURE FLAG, on the cancel-trial precedent: a pitch somebody
+// paid for must still settle, and its refund still land, if paid pitching is
+// switched off afterwards. With nothing ever paid, neither finds a row.
+//
+// Unlike the rest of this file, a pitch charge that fails for a TRANSIENT
+// reason answers 500, so Paystack redelivers it. Its event row is recorded
+// before processing and only marked processed once it succeeds, so a
+// redelivery is processed again rather than skipped.
+
+async function handlePitchCharge(payload: PaystackWebhookPayload) {
+  const admin = createAdminClient();
+  if (!admin) {
+    console.error('[paystack-webhook] Missing Supabase env vars for a pitch charge');
+    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  }
+  const result = await handlePitchChargeEvent(admin, (payload.data || {}) as Record<string, unknown>);
+  return NextResponse.json(result.body, { status: result.status });
+}
+
+async function handlePitchRefund(event: string, payload: PaystackWebhookPayload) {
+  const admin = createAdminClient();
+  if (!admin) return ack({ event });
+  const result = await handlePitchRefundEvent(admin, event, (payload.data || {}) as Record<string, unknown>);
+  return NextResponse.json(result.body, { status: result.status });
+}
+
 // ─── entrypoint ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -1118,6 +1154,14 @@ export async function POST(req: NextRequest) {
   }
 
   const event = payload.event || '';
+
+  if (event === 'charge.success' && isPitchPaymentReference(payload.data?.reference)) {
+    return handlePitchCharge(payload);
+  }
+  // Refunds from any other flow (the card-trial check) are acknowledged there.
+  if (event.startsWith('refund.')) {
+    return handlePitchRefund(event, payload);
+  }
 
   switch (event) {
     case 'charge.success':

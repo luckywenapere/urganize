@@ -28,6 +28,13 @@ describe('interpretScheduleResponse', () => {
     });
   });
 
+  it('tolerates a non-numeric activitiesMoved', () => {
+    expect(interpretScheduleResponse(200, { activitiesMoved: 'garbage' })).toEqual({
+      kind: 'saved',
+      message: 'Release date set.',
+    });
+  });
+
   it('207 → partial, preferring the server sentence — the date IS saved', () => {
     expect(
       interpretScheduleResponse(207, { error: 'Plan build failed upstream.' })
@@ -35,6 +42,27 @@ describe('interpretScheduleResponse', () => {
     expect(interpretScheduleResponse(207, {})).toEqual({
       kind: 'partial',
       message: 'Your release date was saved, but the plan could not be built.',
+    });
+  });
+
+  it('200 that moved an existing plan → says the plan moved with the date', () => {
+    expect(interpretScheduleResponse(200, { activitiesMoved: 58 })).toEqual({
+      kind: 'saved',
+      message: 'Release date set. Your 58 activities moved with it.',
+    });
+    expect(interpretScheduleResponse(200, { activitiesMoved: 1 })).toEqual({
+      kind: 'saved',
+      message: 'Release date set. Your 1 activity moved with it.',
+    });
+  });
+
+  it('200 where some of the plan could not move → says so instead of a clean move', () => {
+    expect(
+      interpretScheduleResponse(200, { activitiesMoved: 50, activitiesNotMoved: 8 })
+    ).toEqual({
+      kind: 'saved',
+      message:
+        'Release date set. 50 activities moved with it, but 8 could not be moved. Check the timeline.',
     });
   });
 

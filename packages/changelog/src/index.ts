@@ -20,6 +20,28 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.49.0",
+    date: "September 29, 2026",
+    highlights: [
+      "Every rollout now has its own chat. Anyone on the team with access to it can talk there, and every activity has its own smaller chat too, for the people working on just that one thing.",
+    ],
+  },
+  {
+    version: "1.48.1",
+    date: "September 25, 2026",
+    highlights: [
+      "Renaming a rollout used to quietly clear its release date, which could hide your whole plan and ask you to pick a date again. That's fixed now — renaming only changes the name.",
+    ],
+  },
+  {
+    version: "1.48.0",
+    date: "September 25, 2026",
+    highlights: [
+      "You can now talk to UrgAns instead of typing. Tap the mic, say what you need, and your words drop into the box to check and send.",
+      "Nothing is sent until you tap send, so you can fix a name or a title first.",
+    ],
+  },
+  {
     version: "1.47.0",
     date: "September 25, 2026",
     highlights: [
