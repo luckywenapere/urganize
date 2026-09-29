@@ -67,6 +67,11 @@ const FILES = [
   // readability caps on top; this one supplies the em dash, the banned words
   // and the "never says workspace" rule so there is one definition of each.
   join(WEB, 'lib', 'help-copy.ts'),
+  // Chappi Speaks (2026-09-29): the daily line on a quiet Home. Chappi's voice
+  // is the brand's voice, so it is born under the same house rules.
+  join(WEB, 'lib', 'home', 'chappi-speaks.ts'),
+  join(WEB, 'components', 'home', 'ChappiSpeaksCard.tsx'),
+  join(WEB, 'components', 'home', 'ManagerQuietView.tsx'),
   // Share to socials (2026-09-23): the same argument as the pullouts. A new
   // surface, so it is born under the house rules, and it is the one surface
   // in the product whose copy is PUBLISHED by the user as their own words on

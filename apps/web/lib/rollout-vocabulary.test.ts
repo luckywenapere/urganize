@@ -63,6 +63,8 @@ const GUARDED_FILES = [
   'lib/email/templates/NotifyAdminEmail.tsx',
   'lib/notification-presets.ts',
   'lib/help-copy.ts',
+  'lib/home/chappi-speaks.ts',
+  'components/home/ManagerQuietView.tsx',
   'lib/tours.ts',
   // The settings pop-up (2026-09-29). settings-search.ts is deliberately absent:
   // its keywords are words people TYPE, and people still type "release".

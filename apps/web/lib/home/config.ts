@@ -25,3 +25,9 @@ export const LABEL_ROSTER_GAP_DAYS = 90;
 
 /** "Due this week" window, matching the catalog's own week bucket. */
 export const DUE_THIS_WEEK_DAYS = 7;
+
+/** "A release this week or next", counted from today: a release dated today
+ * through this many days ahead makes Chappi Speaks talk about THAT release
+ * instead of the day-of-the-week line. 13 = today plus the next thirteen days,
+ * i.e. this week and the coming one. */
+export const CHAPPI_SPEAKS_RELEASE_WINDOW_DAYS = 13;

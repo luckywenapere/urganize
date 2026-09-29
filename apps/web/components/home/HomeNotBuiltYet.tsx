@@ -33,7 +33,7 @@ export function HomeNotBuiltYet({ home }: { home: HomePayload }) {
       <HomeHeaderRow header={home.header} />
       <EmptyState
         title="This part of Home isn't built yet."
-        description={`Your account resolved to ${STATE_LABEL[home.state]}. Step 2 only builds the manager, mid-release screen. The rest lands in later steps.`}
+        description={`Your account resolved to ${STATE_LABEL[home.state]}. So far Home is built for a manager mid-release, between rollouts, or with nothing outstanding. The rest lands in later steps.`}
         action={
           <Link
             href="/dashboard"
