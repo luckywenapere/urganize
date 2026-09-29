@@ -10,6 +10,7 @@
 
 import type { DbReleaseType } from '@/types/releases';
 import type { TaskPriority, TaskStatus } from '@/types/tasks';
+import type { PitchState } from '@/types/pitching';
 
 export type HomeRole = 'manager' | 'artist' | 'label';
 
@@ -116,7 +117,14 @@ export type HomeReleaseSummary = {
   teamSize: number;
 };
 
-export type PitchStatusValue = 'new' | 'listened' | 'added' | 'passed';
+// Derived from the canonical PitchState (types/pitching.ts) rather than a
+// second hand-rolled union, so a state that type adds later (curator pitch
+// payments' 'awaiting_payment'/'expired', flag-off as of 2026-09-25) can't
+// silently drift out of sync here again — buildPlacements (lib/home/
+// placements.ts) already treats anything that isn't 'added'/'new'/'listened'
+// the same way it treats 'passed': visible on neither list, still reachable
+// from the team's own Pitching page.
+export type PitchStatusValue = PitchState;
 
 export type HomePitchItem = {
   id: string;
