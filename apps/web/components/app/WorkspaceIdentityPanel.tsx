@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } fr
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, ClipboardList, Home, Inbox, PanelLeftClose, PanelLeftOpen, Radio, ShieldCheck, Users } from '@/components/icons';
+import { ChevronDown, Home, Inbox, PanelLeftClose, PanelLeftOpen, ShieldCheck, Users } from '@/components/icons';
 import { SiInstagram, SiX } from "react-icons/si";
 import { openExternalUrl } from "@/lib/external-link";
 import { useAuthStore } from "@/lib/auth-store";
@@ -12,7 +12,7 @@ import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import type { WorkspaceIdentityLogo } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
-import { CatalogIcon, ChappiIcon, GearIcon, NotesIcon } from "@/components/app/BrandIcons";
+import { CatalogIcon, ChappiIcon, GearIcon } from "@/components/app/BrandIcons";
 import { MicVocal } from '@/components/icons';
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState } from "@/lib/persisted-state";
@@ -57,14 +57,7 @@ const isBoolean = (value: unknown): value is boolean => typeof value === "boolea
 const INSTAGRAM_URL = "https://instagram.com/urganize";
 const X_URL = "https://x.com/urganize";
 
-// Same flag TasksPanel's scene pill and MetadataSection read. At `lg`+ this
-// card is the primary entry point ("Metadata" below); TasksPanel's
-// own pill keeps a below-`lg` copy alive, since this card never renders on
-// small viewports and dropping the pill there with no replacement would make
-// Metadata unreachable on phones/tablets (2026-08-12).
-const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === "true";
-
-// The card's nav (URG-229). Same three global surfaces the topbar exposes,
+// The card's nav (URG-229). The global surfaces the topbar exposes,
 // using the SAME hand-drawn marks (BrandIcons) so the two entry points read
 // as one system. Active matching mirrors AppTopbar's — including, since
 // 2026-08-31, its `isAtRest` treatment of the catalog: a scoped release no
@@ -114,20 +107,14 @@ type NavItem = {
   help?: HelpKey;
 };
 
-// Same flag AppTopbar reads for its Notes icon — the two entry points appear
-// and disappear together.
-const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === "true";
-
-// Shows. Same flag AppTopbar reads for its own entry point, so the two cannot
-// disagree about whether the surface exists.
+// Shows.
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === "true";
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === "true";
 
-// Playlist pitching, which this card carries TWICE for one account and in two
-// directions. The team row (/dashboard/pitching) is every pitch the team sent
-// and is shown to every team account. The crossing at the base of the list
-// (/curator) is the inbox for playlists the account owns, so it is shown only
+// Playlist pitching. The team row (/dashboard/pitching) left this card
+// 2026-09-29 (founder call: Pitching is reached from inside each release). The
+// crossing at the base of the list (/curator) stays: it is the inbox for playlists the account owns, so it is shown only
 // when the account actually holds a curator profile (auth store's
 // hasCuratorProfile); the /curator shell enforces the same thing for anyone
 // who types the URL.
@@ -145,10 +132,6 @@ const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === "true";
 // function components' signature); lucide-react's ForwardRefExoticComponent
 // types its call signature as `ReactElement | null`, so it can't be assigned
 // to that field directly — these thin wrappers close the gap.
-function MetadataIcon({ className }: { className?: string }) {
-  return <ClipboardList className={className} />;
-}
-
 function HomeNavIcon({ className }: { className?: string }) {
   return <Home className={className} aria-hidden="true" />;
 }
@@ -160,14 +143,6 @@ function HomeNavIcon({ className }: { className?: string }) {
 // deprecated alias of this same icon — do not reach for it.
 function ShowsIcon({ className }: { className?: string }) {
   return <MicVocal className={className} aria-hidden="true" />;
-}
-
-// The same glyph the release Pitch pill uses, so the release scene and this
-// row read as one feature. Deliberately NOT Inbox, which PitchesIcon below
-// uses for the curator crossing — the two rows point in opposite directions
-// and must not share a mark.
-function PitchingIcon({ className }: { className?: string }) {
-  return <Radio className={className} aria-hidden="true" />;
 }
 
 function DirectoryIcon({ className }: { className?: string }) {
@@ -219,17 +194,12 @@ const SETTINGS_ITEM: NavItem = {
 
 /**
  * Built per-render (not a module constant like the old NAV_ITEMS) because the
- * "Metadata" entry needs runtime state: it targets the release
- * currently scoped in the URL, so it can't be a static href like its
- * neighbours. Added here 2026-08-12 as this card's persistent home for the
- * feature — Metadata is release-scoped, so unlike Catalog/UrgAns/Notes this
- * item only appears once a release is scoped (?release=), the
- * same gate TasksPanel's below-`lg` pill uses (`METADATA_ENABLED &&
- * scopedRelease`) so the two can't disagree about when the feature exists.
+ * Catalog row's submenu needs runtime state: which release is scoped in the
+ * URL. Metadata, Notes and Pitching used to have rows here and no longer do
+ * (2026-09-29, founder call): they are reached from inside each release.
  */
 function buildNavItems(
   scopedReleaseId: string | null,
-  activeScene: string | null,
   hasCuratorProfile: boolean,
   releases: { id: string; title: string }[]
 ): NavItem[] {
@@ -297,20 +267,7 @@ function buildNavItems(
         isActive: release.id === scopedReleaseId,
       })),
     },
-    // Exact match, like its neighbours: usePathname excludes the query string,
-    // so a ?release= / ?note= deep link still lights this up.
-    ...(NOTES_ENABLED
-      ? [
-          {
-            href: "/dashboard/notes",
-            label: "Notes",
-            Icon: NotesIcon,
-            isActive: (pathname: string) => pathname === "/dashboard/notes",
-            help: "nav.notes",
-          } satisfies NavItem,
-        ]
-      : []),
-    // Shows sit beside Notes as the other global surface: a release is not
+    // Shows is a global surface: a release is not
     // involved, so this is not a release scene and never carries ?release=.
     // Prefix match rather than exact, because a show's own page lives one
     // level deeper and should keep the rail lit.
@@ -325,27 +282,7 @@ function buildNavItems(
           } satisfies NavItem,
         ]
       : []),
-    // Pitching — the TEAM side, in the slot Press kits held until 2026-09-09
-    // (founder call: "Playlist pitching should be accessible app wide ... on
-    // desktop on the side menu and top menu"). Before this the team side of
-    // pitching existed only as a release scene, so it could not be reached
-    // without scoping a release first.
-    //
-    // Distinct from Playlist pitches at the base of this list, which is the
-    // other direction: the inbox for playlists this account owns.
-    ...(PITCHING_ENABLED
-      ? [
-          {
-            href: "/dashboard/pitching",
-            label: "Pitching",
-            Icon: PitchingIcon,
-            isActive: (pathname: string) => pathname.startsWith("/dashboard/pitching"),
-            help: "nav.pitching",
-          } satisfies NavItem,
-        ]
-      : []),
-    // Beside Pitching, as the other standing surface that belongs to nobody's
-    // release. Prefix match so a person's page keeps the row lit.
+    // A standing surface that belongs to nobody's release. Prefix match so a person's page keeps the row lit.
     //
     // DESKTOP ONLY, and that is a known gap rather than an oversight: a phone
     // reaches this through the search surface (lib/app-pages.ts carries the
@@ -360,21 +297,6 @@ function buildNavItems(
             Icon: DirectoryIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/directory"),
             help: "nav.directory",
-          } satisfies NavItem,
-        ]
-      : []),
-    // Fourth, after Notes (founder call, moved off its earlier "right after
-    // UrgAns" placement). Active when the URL names this exact scene, not
-    // just /dashboard, since Catalog above already owns the bare
-    // scoped-release view.
-    ...(METADATA_ENABLED && scopedReleaseId
-      ? [
-          {
-            href: `/dashboard?release=${scopedReleaseId}&scene=metadata`,
-            label: "Metadata",
-            Icon: MetadataIcon,
-            isActive: (pathname: string) => pathname === "/dashboard" && activeScene === "metadata",
-            help: "nav.metadata",
           } satisfies NavItem,
         ]
       : []),
@@ -964,7 +886,7 @@ export function WorkspaceIdentityPanel() {
           className="flex min-h-0 flex-1 flex-col border-t border-stroke-subtle p-2"
         >
           {/* WorkspaceNavLinks needs useSearchParams (to find the currently
-            scoped release for "Metadata"), and this panel is mounted
+            scoped release for the Catalog submenu), and this panel is mounted
             from layout-level chrome (AppShell) rather than a page — same
             reason AppTopbar's ContextTitle/CatalogTopbarAction/ChappiTopbarAction
             each get their own Suspense boundary. Fallback renders the nav
@@ -974,7 +896,7 @@ export function WorkspaceIdentityPanel() {
           <Suspense
             fallback={
               <WorkspaceNavList
-                navItems={buildNavItems(null, null, hasCuratorProfile === true, releases)}
+                navItems={buildNavItems(null, hasCuratorProfile === true, releases)}
                 pathname={pathname}
                 isAdmin={isAdmin}
                 collapsed={collapsed}
@@ -1066,12 +988,11 @@ function WorkspaceNavLinks({
   releases: { id: string; title: string }[];
 }) {
   const searchParams = useSearchParams();
-  // Same `?release=` / `?scene=` params useReleaseScope / useSceneOverlay own
-  // — read directly here (not via those hooks) since this component only
-  // needs them to build one nav href, not to read or write scene state.
+  // Same `?release=` param useReleaseScope owns, read directly here (not via
+  // that hook) since this component only needs it to mark the active submenu
+  // row, not to read or write scope state.
   const scopedReleaseId = searchParams.get("release");
-  const activeScene = searchParams.get("scene");
-  const navItems = buildNavItems(scopedReleaseId, activeScene, hasCuratorProfile, releases);
+  const navItems = buildNavItems(scopedReleaseId, hasCuratorProfile, releases);
   return (
     <WorkspaceNavList
       navItems={navItems}

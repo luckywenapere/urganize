@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Inbox, MicVocal, Plus, Radio } from '@/components/icons';
+import { Inbox, Plus } from '@/components/icons';
 import { Logo } from '@urganize/ui';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -12,7 +12,7 @@ import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
-import { CatalogIcon, ChappiIcon, NotesIcon, ProfileIcon } from '@/components/app/BrandIcons';
+import { CatalogIcon, ChappiIcon, ProfileIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 
@@ -20,16 +20,6 @@ import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 // prefix) so the icon only appears once Chappi's own dedicated page is
 // reachable.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
-
-// Same flag NotesPageClient and the /api/notes routes read. Deliberately
-// gated on its own, OUTSIDE the Chappi pair below: notes have nothing to do
-// with the assistant, and burying them in that fragment would hide them
-// whenever the assistant is switched off.
-const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
-
-// Shows. Same flag WorkspaceIdentityPanel reads for its own nav row, so the
-// two entry points cannot disagree about whether the surface exists.
-const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 
 // The crossing point into the playlist-owner side, for an account that holds
 // BOTH capabilities. Gated on the flag AND on the account actually owning a
@@ -426,15 +416,16 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-stroke-subtle bg-bg-base/88 backdrop-blur-xl">
-      {/* Tighter gap/padding below sm only. With Notes added, the phone-width
-          bar carries logo + 3 nav icons + bell + account = 80 + 5x40 + gaps.
+      {/* Tighter gap/padding below sm only. Before Notes, Shows and Pitching left this
+          bar (2026-09-29, desktop menu reorganization) the phone-width bar
+          carried logo + 3 nav icons + bell + account = 80 + 5x40 + gaps.
           At gap-3/px-4 that totals 352px against 343px of usable width at
           375px — a real overflow. gap-2/px-3 buys it back (328 vs 351) and
           still clears 360px; every value is restored from sm up, where the
           bar has ample slack. The 40px hit targets are the app-wide touch
           standard and are NOT what gives here.
           With NEXT_PUBLIC_FEATURE_MOBILE_NAV on, this math is moot below lg:
-          the nav icons, Notes and the account trigger all move to
+          the nav icons and the account trigger all move to
           MobileNavBar, leaving only the logo, the (now-visible) release
           context and the bell up here — comfortably under budget.
           A dual account (team + playlist owner) adds an EIGHTH control, which
@@ -578,74 +569,8 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           </>
         ) : null}
 
-        {/* Notes — a plain destination, deliberately NOT part of the
-            Catalog/UrgAns toggle pair above. Those two are mutual toggles
-            because they're a binary (you're in one or the other); a third
-            surface breaks that metaphor, so this is an ordinary link that
-            lights up on its own route. Reads no search params, so unlike its
-            neighbours it needs no Suspense boundary. */}
-        {NOTES_ENABLED ? (
-          <Link
-            href="/dashboard/notes"
-            aria-label="Notes"
-            title="Notes"
-            className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
-              pathname === '/dashboard/notes'
-                ? 'bg-brand/10 text-brand'
-                : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
-            }`}
-          >
-            <NotesIcon className="h-[18px] w-[18px]" />
-          </Link>
-        ) : null}
-
-        {/* Shows — the other global surface, beside Notes and for the same
-            reason: an ordinary link rather than part of the Catalog/UrgAns
-            toggle pair. Prefix match, because a show's own page lives one
-            level deeper and should keep this lit. Reads no search params, so
-            it needs no Suspense boundary. */}
-        {EVENTS_ENABLED ? (
-          <Link
-            href="/dashboard/shows"
-            aria-label="Shows"
-            title="Shows"
-            className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
-              pathname?.startsWith('/dashboard/shows')
-                ? 'bg-brand/10 text-brand'
-                : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
-            }`}
-          >
-            <MicVocal className="h-[18px] w-[18px]" aria-hidden />
-          </Link>
-        ) : null}
-
-        {/* Pitching — the TEAM side, in the slot Press kits held until
-            2026-09-09 (founder call: press kits moved to Settings, pitching
-            became app-wide). Every team account, not only a dual one: before
-            this the team side of pitching could only be reached by scoping a
-            release first. Distinct from Playlist pitches below, which is the
-            curator inbox for playlists this account owns.
-
-            Swapping one icon for another keeps the control count flat, so the
-            width budget noted above is unchanged. Below lg this is `hidden`
-            via NAV_ICON_DISPLAY and MobileNavBar carries it instead. */}
-        {PITCHING_ENABLED ? (
-          <Link
-            href="/dashboard/pitching"
-            aria-label="Pitching"
-            title="Pitching"
-            className={`motion-focus motion-press ${NAV_ICON_DISPLAY} h-10 w-10 shrink-0 place-items-center rounded-full transition-colors ${
-              pathname?.startsWith('/dashboard/pitching')
-                ? 'bg-brand/10 text-brand'
-                : 'text-content-tertiary hover:bg-bg-hover hover:text-content-primary'
-            }`}
-          >
-            <Radio className="h-[18px] w-[18px]" aria-hidden />
-          </Link>
-        ) : null}
-
         {/* Playlist pitches — the crossing point for a dual account (team +
-            playlist owner). Like Notes it's a plain destination outside the
+            playlist owner). It is a plain destination outside the
             Catalog/UrgAns toggle pair, and it leaves the team app entirely
             (/curator is a standalone route with its own shell), so it lights
             up on a prefix match rather than an exact one. */}
