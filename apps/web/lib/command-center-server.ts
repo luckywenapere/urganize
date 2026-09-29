@@ -19,6 +19,8 @@ import { ReleaseService } from '@/lib/services/release-service';
 import type { ActivityLogEntry, CommandCenterData, ExecutionTask } from '@/lib/execution-types';
 import type { Timings } from '@/lib/server-timing';
 
+type WorkspaceAccessContext = Awaited<ReturnType<typeof loadWorkspaceAccessContext>>;
+
 const ACTIVITY_LOG_TABLE = 'activity_logs';
 
 // activity_logs has no actor_name column — the actor is actor_user_id, plus a
@@ -60,8 +62,15 @@ const toActivity = (
 export async function loadCommandCenterData(
   adminClient: SupabaseClient,
   user: User,
-  timings?: Timings
+  options: {
+    timings?: Timings;
+    /** An access context the caller already resolved for this same request.
+     * Passing it skips a second full lookup (invite activation, workspace
+     * resolve, role read); omitting it resolves one exactly as before. */
+    access?: WorkspaceAccessContext;
+  } = {}
 ): Promise<CommandCenterData> {
+  const { timings } = options;
   // Optional Server-Timing recorder: when absent the work just runs.
   const step = <T>(name: string, work: () => Promise<T>): Promise<T> =>
     timings ? timings.time(name, work) : work();
@@ -71,7 +80,8 @@ export async function loadCommandCenterData(
 
   // Access first: its releaseOwnerIds drive whole-workspace release
   // visibility (a teammate sees the shared catalog, not just their own).
-  const access = await step('cc_access', () => loadWorkspaceAccessContext(adminClient, user));
+  const access =
+    options.access ?? (await step('cc_access', () => loadWorkspaceAccessContext(adminClient, user)));
 
   // Releases, tasks, and activity are independent reads — they used to run
   // as three serial round trips (plus the actor-profile lookup nested in
@@ -83,7 +93,7 @@ export async function loadCommandCenterData(
     (async (): Promise<ExecutionTask[]> => {
       if (!access.workspaceIds.length || !access.membershipIds.length) return [];
       return (await step('cc_tasks', () =>
-        taskService.getTasksForUser(user.id, access.workspaceIds)
+        taskService.getTasksForUser(user.id, access.workspaceIds, {}, timings)
       )) as ExecutionTask[];
     })(),
     step('cc_activity', async (): Promise<ActivityLogEntry[]> => {
