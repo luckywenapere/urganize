@@ -12,9 +12,9 @@ import {
 import { getTaskCompletionBlocker } from '@/lib/release-execution';
 import { shouldPromptCoverArtUpload } from '@/lib/cover-art-tasks';
 import { type TaskPriority, type TaskStatus } from '@/lib/tasks';
-// Read at completion time via getState() — no subscription, no render
-// coupling. The auth store does not import this one, so there is no cycle.
-import { useAuthStore } from '@/lib/auth-store';
+// Read straight off the auth store's persisted blob rather than importing
+// useAuthStore — see lib/task-outcome-prompt.ts's header for why.
+import { readAskAfterTasks } from '@/lib/task-outcome-prompt';
 
 type TaskCreateInput = {
   title: string;
@@ -451,7 +451,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       !shouldPromptCoverArt &&
       TASK_OUTCOMES_ENABLED &&
       Boolean(optimisticDone.releaseId) &&
-      useAuthStore.getState().user?.ask_after_tasks !== false;
+      readAskAfterTasks();
 
     const shouldShowToast = !shouldPromptCoverArt && !shouldPromptOutcome;
 
@@ -729,3 +729,33 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     set((state) => (state.outcomePrompt ? { outcomePrompt: null } : state));
   },
 }));
+
+/**
+ * Forget the signed-in account's tasks and every open bottom-surface prompt.
+ * Called on SIGNED_OUT (lib/auth-store.ts).
+ *
+ * This store is module-level, so a client-side navigation to /auth never
+ * tears it down: before this, signing out and back in as another account in
+ * the same tab could paint account A's task list for account B — and, within
+ * useReleaseStore's command-center recency window, the next load would
+ * return early and never replace it. The timers and in-flight guards go too,
+ * so a completion PATCH still settling from the session that just ended
+ * cannot be mistaken for one belonging to the account that just signed in.
+ */
+export function resetTaskStore(): void {
+  for (const timer of pendingBeatTimers.values()) clearTimeout(timer);
+  pendingBeatTimers.clear();
+  for (const timer of completionToastTimers.values()) clearTimeout(timer);
+  completionToastTimers.clear();
+  inFlightCompletionIds.clear();
+  inFlightCompletionPatches.clear();
+  useTaskStore.setState({
+    tasks: [],
+    selectedTaskId: null,
+    error: '',
+    pendingCompletionIds: {},
+    completionToast: null,
+    outcomePrompt: null,
+    coverArtPrompt: null,
+  });
+}
