@@ -10,6 +10,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   ListMusic,
+  Mail,
   Mic,
   PiggyBank,
   Radio,
@@ -40,6 +41,7 @@ const ITEMS: Array<{
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/admin', exact: true },
   { key: 'onboarding', label: 'Onboarding', icon: ClipboardList, href: '/admin/onboarding' },
   { key: 'broadcast', label: 'Broadcast', icon: Radio, href: '/admin/broadcast' },
+  { key: 'emails', label: 'Emails', icon: Mail, href: '/admin/emails' },
   { key: 'notifications', label: 'Notifications', icon: BellRing, href: '/admin/notifications' },
   {
     key: 'pricing-validation',
