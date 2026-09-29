@@ -1,5 +1,5 @@
 import { EmailLayout } from './Layout';
-import { AccentLink, Paragraph } from './components';
+import { AccentLink, Paragraph, UnsubscribeFooter } from './components';
 import { Text } from 'react-email';
 import { MUTED_TEXT } from './theme';
 import { firstNameFrom } from '../format';
@@ -9,6 +9,8 @@ export type WelcomeEmailProps = {
   /** The recipient's stored display name — may be a full name, an email handle,
    *  or blank. Only the first word is used, and only when it reads like a name. */
   recipientName: string;
+  /** Added by sendEmail for unsubscribable categories; the footer link. */
+  unsubscribeUrl?: string;
 };
 
 // The founder-note welcome, sent once when a self-signup finishes onboarding.
@@ -19,12 +21,15 @@ export type WelcomeEmailProps = {
 // small "Urganize" wordmark the shared Layout puts at the top (the brief asked
 // for the name at the top); do not add a heavy banner or a CTA button. Copy is
 // kept verbatim from the original lib/email-templates.ts buildWelcomeEmail.
-export function WelcomeEmail({ recipientName }: WelcomeEmailProps) {
+export function WelcomeEmail({ recipientName, unsubscribeUrl }: WelcomeEmailProps) {
   const firstName = firstNameFrom(recipientName);
   const greeting = firstName ? `Hey ${firstName},` : 'Hey,';
 
   return (
-    <EmailLayout preview="A note from Lucky, the founder of Urganize.">
+    <EmailLayout
+      preview="A note from Lucky, the founder of Urganize."
+      footer={unsubscribeUrl ? <UnsubscribeFooter url={unsubscribeUrl} /> : undefined}
+    >
       <Paragraph>{greeting}</Paragraph>
       <Paragraph>
         Lucky here &mdash; I&rsquo;m the founder of Urganize. Thanks for signing up.

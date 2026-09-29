@@ -18,6 +18,15 @@ import { getEmailTemplateMeta } from './registry';
 import { insertPendingEmailLog, insertTerminalEmailLog, markEmailLogFailed, markEmailLogSent } from './log-server';
 import { loadEmailTemplate } from './templates/loaders';
 import { sendViaResend } from './transport';
+import { APP_URL } from './links';
+import { isSuppressed } from './suppression-server';
+import {
+  buildUnsubscribeHeaders,
+  buildUnsubscribeUrl,
+  readUnsubscribeSecret,
+  signUnsubscribeToken,
+  unsubscribeScopeFor,
+} from './unsubscribe';
 import type { EmailTemplateId, EmailTemplateProps } from './templates/props';
 
 export { isEmailConfigured } from './config';
@@ -59,6 +68,17 @@ export async function sendEmail<Id extends EmailTemplateId>(
   const meta = getEmailTemplateMeta(params.templateId);
   const config = readEmailConfig();
 
+  // Optional categories (onboarding, reminders, announcements) carry an
+  // unsubscribe link and the one-click headers. Without a signing secret no link
+  // can be made; the send degrades to going out without one rather than a
+  // welcome email silently stopping.
+  const scope = unsubscribeScopeFor(meta.category);
+  const secret = scope ? readUnsubscribeSecret() : null;
+  const token = scope && secret ? signUnsubscribeToken(secret, params.to, scope) : null;
+  if (scope && !token) console.warn('[email] no unsubscribe secret; sending without a link', params.templateId);
+  const unsubscribeUrl = token ? buildUnsubscribeUrl(APP_URL, token) : null;
+  const unsubscribeHeaders = token ? buildUnsubscribeHeaders(APP_URL, token) : {};
+
   // Subject building is pure and cheap (the loader's dynamic import only pulls
   // react-email's declarative components; the heavy render.ts stays out until we
   // actually send). Wrapped so a subject builder can never throw a send.
@@ -66,8 +86,9 @@ export async function sendEmail<Id extends EmailTemplateId>(
   let element: ReactElement | null = null;
   try {
     const loaded = await loadEmailTemplate(params.templateId);
-    subject = loaded.subject(params.props);
-    element = loaded.element(params.props);
+    const props = (unsubscribeUrl ? { ...params.props, unsubscribeUrl } : params.props) as typeof params.props;
+    subject = loaded.subject(props);
+    element = loaded.element(props);
   } catch (error) {
     console.error('[email] template load failed', params.templateId, error instanceof Error ? error.message : error);
     return { ok: false, error: 'template_load_failed' };
@@ -102,6 +123,14 @@ export async function sendEmail<Id extends EmailTemplateId>(
     return { ok: false, skipped: true };
   }
 
+  // An address that unsubscribed from this category, bounced or complained is
+  // not sent optional mail. Transactional and internal mail never reaches here.
+  if (scope && (await isSuppressed(admin, params.to, scope))) {
+    console.info('[email] suppressed — skipping', params.templateId, '->', params.to);
+    await insertTerminalEmailLog(admin, logBase, 'unsubscribed', 'suppressed');
+    return { ok: false, skipped: true };
+  }
+
   // Render (heavy) — react-dom/server is pulled in only here, only when a send
   // is actually happening.
   let html: string;
@@ -129,7 +158,7 @@ export async function sendEmail<Id extends EmailTemplateId>(
     html,
     text,
     replyTo: replyToResolved,
-    headers: params.headers,
+    headers: { ...unsubscribeHeaders, ...params.headers },
     idempotencyKey: params.idempotencyKey,
   });
 
