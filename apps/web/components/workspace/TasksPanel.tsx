@@ -46,45 +46,11 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { useSceneOverlay, type SceneName } from './useSceneOverlay';
 import { resolveActiveScene, resolvePanelBody } from '@/lib/scene-cache';
 
-// Metadata entry point (URG-108). This flag also gates the identity panel's
-// "Metadata" nav item (WorkspaceIdentityPanel) — the two must never
-// disagree about whether the feature exists, only about WHICH surface shows
-// it at a given viewport.
+// Metadata entry point (URG-108). Metadata is reached ONLY from inside a
+// release (founder call, 2026-09-29): this header pill on desktop and the
+// release menu on a phone. The identity card's nav row that used to carry it at
+// wide widths is gone, so the pill no longer retreats at any breakpoint.
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
-
-// Mirrors AppShell's own gate for the identity card, which is what hosts the
-// "Metadata" nav item this pill defers to at wide widths. Read here
-// because the pill may only step aside where that card actually renders —
-// both flags default to false and are independent of METADATA above, so
-// without this check a metadata-on / identity-panel-off environment (the
-// DEFAULT combination) would hide the pill at `lg`+ with nothing replacing
-// it, making Metadata unreachable on desktop entirely.
-const IDENTITY_PANEL_ENABLED =
-  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
-  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
-
-// The identity card hides itself at `lg`-`xl` whenever the UrgAns rail is open
-// (see WorkspaceIdentityPanel's railIsCompeting), so with the assistant on
-// there is no width below `xl` where the card is GUARANTEED to be present.
-// Rather than duplicate that runtime rail state here — the kind of mirrored
-// condition that silently drifts — the pill retreats one breakpoint later
-// when Chappi is on. Cost: a redundant second control at `lg`-`xl` while the
-// rail happens to be closed. That is strictly better than a viewport band
-// where the feature has no entry point at all.
-//
-// Only takes effect at `lg`+ (both values are min-width breakpoints), which is
-// why it was safe on the mobile top tabs while they existed and is equally
-// irrelevant to the release menu that replaced them (2026-08-31): below `lg`
-// this class has never hidden anything. Metadata's narrow-width entry point is
-// that menu now — this button is desktop-only.
-// Exported so WorkspaceSkeleton reserves the placeholder at exactly the same
-// breakpoints (the loading-skeleton-sync rule that file documents; it has
-// already drifted from this row once).
-export const METADATA_PILL_HIDE_CLASS = !IDENTITY_PANEL_ENABLED
-  ? ''
-  : process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true'
-    ? 'xl:hidden'
-    : 'lg:hidden';
 
 // Content calendar entry point (URG-157). Same flag that gates the calendar
 // API routes. It has been a dock pill, then a permanent mobile top tab
@@ -574,13 +540,9 @@ export function TasksPanel({
   // note where that row used to render). On a phone both are entries in the
   // release menu at the base of the panel instead.
   //
-  // Metadata (URG-108) is additionally NARROW-widths-only on desktop, since the
-  // identity panel's "Metadata" nav item is this release's persistent entry
-  // point at wide widths (WorkspaceIdentityPanel) and two controls for one
-  // scene is noise — see METADATA_PILL_HIDE_CLASS above for exactly where it
-  // retreats. That class only ever fires at/above `lg`, so it was inert in the
-  // mobile row and is inert in the menu entry too; what keeps Metadata
-  // reachable on a phone now is the menu, not this button.
+  // Metadata (URG-108) shows at every desktop width now: the identity panel's
+  // "Metadata" nav row was removed 2026-09-29, so this pill is its only desktop
+  // entry point. What keeps it reachable on a phone is the release menu.
   //
   // "Activities" leads the row for the reason "Timeline" used to until
   // 2026-09-06: it is the same work seen a different way, so it reads as a view
@@ -606,7 +568,7 @@ export function TasksPanel({
         type="button"
         onClick={() => toggleScene('metadata', scopedRelease.id)}
         aria-pressed={activeScene === 'metadata'}
-        className={`${pillClass('metadata')} ${METADATA_PILL_HIDE_CLASS}`}
+        className={pillClass('metadata')}
       >
         <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
         Metadata
@@ -704,12 +666,10 @@ export function TasksPanel({
    * which would rest on Tailwind's internal ordering of two competing base
    * `display` utilities.
    *
-   * Nothing becomes unreachable: below `lg` Notes has its own tab in
-   * `MobileNavBar`, and with that bar flagged off `AppTopbar` renders its nav
-   * icons (Notes among them) at every width instead — so the surface has an
-   * entry point on a phone in either flag state. What the phone loses is the
-   * `?release=` PRE-FILTER those two entry points don't carry; filtering to
-   * this release is then a tap inside the notes page rather than on the way in.
+   * This link and the release menu are now the ONLY entry points to Notes: the
+   * topbar icon and the identity-card row both left on 2026-09-29 (founder
+   * call: Notes is reached from inside each release). The notes page stays
+   * pre-filtered to this release on the way in.
    *
    * Deliberately a plain LINK, not a scene toggle like its neighbours: notes
    * are a global surface that happens to filter by release, not a per-release
@@ -865,10 +825,8 @@ export function TasksPanel({
           isActive: activeScene === 'pitch',
         }
       : null,
-    // Metadata carries no hide class here, unlike its desktop pill: that class
-    // only ever fires at `lg`+ (see METADATA_PILL_HIDE_CLASS), and this list is
-    // below `lg`. With the top tabs gone this menu IS Metadata's narrow-width
-    // entry point, which is what keeps the feature reachable on a phone.
+    // With the top tabs gone this menu IS Metadata's narrow-width entry point,
+    // which is what keeps the feature reachable on a phone.
     METADATA_ENABLED && scopedRelease
       ? {
           key: 'metadata',
