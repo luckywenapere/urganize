@@ -5,6 +5,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { errorMessage } from '@/lib/errors';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
+import { saveButtonVisible } from '@/lib/settings-dirty';
 import { useReportDirty } from './useReportDirty';
 
 /** Self-gates on `user.role === 'artist'`, returns null otherwise — the
@@ -29,12 +30,11 @@ export function ArtistProfileSection() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useReportDirty(
-    'profile.artistName',
+  const artistNameDirty =
     Boolean(user) &&
-      user?.role === 'artist' &&
-      artistProfileName.trim() !== String(user?.artist_name || '').trim()
-  );
+    user?.role === 'artist' &&
+    artistProfileName.trim() !== String(user?.artist_name || '').trim();
+  useReportDirty('profile.artistName', artistNameDirty);
 
   if (!user || user.role !== 'artist') return null;
 
@@ -80,14 +80,16 @@ export function ArtistProfileSection() {
         </label>
         {error && <p className={feedbackErrorClass}>{error}</p>}
         {success && <p className={feedbackSuccessClass}>{success}</p>}
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={isSaving}
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-        >
-          {isSaving ? 'Saving...' : 'Save artist name'}
-        </button>
+        {saveButtonVisible({ dirty: artistNameDirty, saving: isSaving }) ? (
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={isSaving}
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+          >
+            {isSaving ? 'Saving...' : 'Save artist name'}
+          </button>
+        ) : null}
       </div>
     </section>
   );

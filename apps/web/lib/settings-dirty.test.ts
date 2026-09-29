@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decideSettingsClose, hasUnsavedEdits, withDirtyKey } from './settings-dirty';
+import { decideSettingsClose, hasUnsavedEdits, saveButtonVisible, withDirtyKey } from './settings-dirty';
 
 describe('withDirtyKey', () => {
   it('marks a field as edited', () => {
@@ -60,5 +60,25 @@ describe('decideSettingsClose', () => {
     // a field its section is no longer on screen for.
     const dirty = withDirtyKey({}, 'brief.section', true);
     expect(decideSettingsClose(dirty)).toBe('confirm');
+  });
+});
+
+describe('saveButtonVisible', () => {
+  it('is hidden on a field nobody has touched', () => {
+    expect(saveButtonVisible({ dirty: false, saving: false })).toBe(false);
+  });
+
+  it('appears once the field is edited', () => {
+    expect(saveButtonVisible({ dirty: true, saving: false })).toBe(true);
+  });
+
+  it('stays while the save is in flight, even though the field now matches what is stored', () => {
+    expect(saveButtonVisible({ dirty: false, saving: true })).toBe(true);
+  });
+
+  it('is the same fact as the discard prompt: a visible Save means closing asks first', () => {
+    const marked = withDirtyKey({}, 'profile.name', true);
+    expect(saveButtonVisible({ dirty: true, saving: false })).toBe(decideSettingsClose(marked) === 'confirm');
+    expect(saveButtonVisible({ dirty: false, saving: false })).toBe(decideSettingsClose({}) === 'confirm');
   });
 });

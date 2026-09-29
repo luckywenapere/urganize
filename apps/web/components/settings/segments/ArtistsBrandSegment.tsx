@@ -29,12 +29,11 @@ export function ArtistsBrandSegment({ workspace }: { workspace: WorkspaceSetting
   // input, so its "unsaved" answer is computed here, against what the always-
   // mounted identity card holds.
   const savedName = useWorkspaceIdentityStore((state) => state.name);
-  useReportDirty(
-    'team.name',
+  const nameDirty =
     IDENTITY_PANEL_ENABLED &&
-      workspace.identityHydrated &&
-      workspace.nameInput.trim() !== savedName.trim()
-  );
+    workspace.identityHydrated &&
+    workspace.nameInput.trim() !== savedName.trim();
+  useReportDirty('team.name', nameDirty);
 
   return (
     <div className="divide-y divide-stroke-subtle">
@@ -50,6 +49,7 @@ export function ArtistsBrandSegment({ workspace }: { workspace: WorkspaceSetting
             onInputChange={workspace.setNameInput}
             isLoading={!workspace.identityHydrated}
             isSaving={workspace.isSavingName}
+            isDirty={nameDirty}
             message={workspace.nameMessage}
             error={workspace.nameError}
             onSave={workspace.saveName}

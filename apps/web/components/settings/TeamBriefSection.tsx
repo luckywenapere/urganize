@@ -16,6 +16,7 @@ import {
   type TeamBriefSection as SectionKey,
 } from '@/lib/team-brief';
 import { HelpTip } from '@/components/shared/HelpTip';
+import { saveButtonVisible } from '@/lib/settings-dirty';
 import { useReportDirty } from './useReportDirty';
 
 /**
@@ -289,6 +290,7 @@ export function TeamBriefSection() {
                         Skip
                       </button>
                     ) : null}
+                    {inGuide || saveButtonVisible({ dirty, saving: savingSection === section }) ? (
                     <button
                       type="button"
                       disabled={(!dirty && !inGuide) || over || savingSection === section}
@@ -314,6 +316,7 @@ export function TeamBriefSection() {
                             : 'Save and next'
                           : 'Save'}
                     </button>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
