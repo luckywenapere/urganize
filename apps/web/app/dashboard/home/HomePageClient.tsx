@@ -13,6 +13,7 @@ import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { ManagerMidReleaseView } from '@/components/home/ManagerMidReleaseView';
 import { HomeNotBuiltYet } from '@/components/home/HomeNotBuiltYet';
+import { ManagerQuietView } from '@/components/home/ManagerQuietView';
 
 // Same loop-guard reasoning as HOME_PATH (lib/home-path.ts) and
 // ChappiPageClient's own CHAPPI_ENABLED read: the route itself has no
@@ -78,6 +79,8 @@ export default function HomePageClient() {
     <>
       {home.role === 'manager' && home.state === 'manager_mid_release' ? (
         <ManagerMidReleaseView home={home} viewerId={user?.id ?? ''} />
+      ) : home.state === 'manager_all_clear' || home.state === 'manager_between' ? (
+        <ManagerQuietView home={home} onNewRollout={() => setIsCreateModalOpen(true)} />
       ) : (
         <HomeNotBuiltYet home={home} />
       )}
