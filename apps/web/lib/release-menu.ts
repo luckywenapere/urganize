@@ -60,6 +60,15 @@ export const RELEASE_MENU_ORDER = [
   // the timeline flag either way, because with that flag off the timeline is
   // unavailable AND the buckets are already the default, so neither belongs.
   'activities',
+  // The rollout's own chat thread (Release & Task Chat, Phase 1). Ranked
+  // second, ahead of the other promoted tabs, because it is the raw
+  // coordination surface the PRD built this feature to replace WhatsApp
+  // with — closer in kind to the activity list itself than to a planning
+  // surface you visit for a specific task. No usage data exists for this
+  // one either (see the note above); it is a reasoned placement, not a
+  // measured one, and is the first thing worth reordering once real numbers
+  // exist.
+  'chat',
   // Marketing is 37 of the playbook's 64 activities, the largest block by a
   // wide margin, and the content calendar is where that work gets planned.
   // Promoted to a permanent tab 2026-08-16.

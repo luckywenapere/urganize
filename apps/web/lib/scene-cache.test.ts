@@ -85,6 +85,7 @@ describe('persist policy', () => {
       coverart: 'NEXT_PUBLIC_FEATURE_COVER_ART',
       files: 'NEXT_PUBLIC_FEATURE_FILES',
       pitch: 'NEXT_PUBLIC_FEATURE_PITCHING',
+      chat: 'NEXT_PUBLIC_FEATURE_RELEASE_CHAT',
     };
     const cacheable = [...SCENE_NAMES].filter(isCacheableScene).filter((scene) => {
       const flag = flagFor[scene];
@@ -278,8 +279,9 @@ describe('withinPersistBudget', () => {
 // depend on whoever ran them.
 //
 // The list grew from five to nine on 2026-09-08, when metadata / files / pitch
-// / plan gained the URL-level gate the other five always had, and back to
-// eight on 2026-09-15 when the plan review scene was removed.
+// / plan gained the URL-level gate the other five always had, back to eight
+// on 2026-09-15 when the plan review scene was removed, and to nine again
+// with the release chat scene (Release & Task Chat, Phase 1).
 const SCENE_FLAGS = [
   'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',
   'NEXT_PUBLIC_FEATURE_CAPTURE',
@@ -289,6 +291,7 @@ const SCENE_FLAGS = [
   'NEXT_PUBLIC_FEATURE_METADATA',
   'NEXT_PUBLIC_FEATURE_FILES',
   'NEXT_PUBLIC_FEATURE_PITCHING',
+  'NEXT_PUBLIC_FEATURE_RELEASE_CHAT',
 ] as const;
 
 async function loadResolver(flagsOn: boolean) {
@@ -340,6 +343,11 @@ describe('resolveActiveScene', () => {
     for (const scene of ['metadata', 'files', 'pitch']) {
       expect(resolveActiveScene(scene)).toBeNull();
     }
+  });
+
+  it('gates the release chat scene too (Release & Task Chat, Phase 1)', async () => {
+    const { resolveActiveScene } = await loadResolver(false);
+    expect(resolveActiveScene('chat')).toBeNull();
   });
 
   it('leaves activities open in every flag state', async () => {

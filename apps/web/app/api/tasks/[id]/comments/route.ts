@@ -3,7 +3,7 @@ import {
   buildTaskSchemaResponse,
   createAdminClient,
   createTaskNotification,
-  ensureTaskAccess,
+  ensureTaskThreadAccess,
   requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadTaskComments,
@@ -62,7 +62,7 @@ export async function POST(
     const { adminClient } = auth;
 
     const { id } = await context.params;
-    const access = await ensureTaskAccess(adminClient, id, auth.user);
+    const access = await ensureTaskThreadAccess(adminClient, id, auth.user);
     if ('error' in access) {
       return access.error;
     }
