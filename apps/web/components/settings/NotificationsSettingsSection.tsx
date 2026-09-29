@@ -21,10 +21,9 @@ import { MotivationalNudgesSection } from './MotivationalNudgesSection';
  */
 export function NotificationsSettingsSection() {
   return (
+    // No kicker of its own since 2026-09-29: the pop-up's pane already carries
+    // the segment title, and "Notifications" twice in a row is noise.
     <section className={panelClass}>
-      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-        Notifications
-      </h2>
       <div className="divide-y divide-stroke-subtle">
         <PushNotificationsSection />
         <TaskCheckInSection />

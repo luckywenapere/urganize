@@ -14,6 +14,8 @@ import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
 import { CatalogIcon, ChappiIcon, ProfileIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
+import { settingsDeepLink } from '@/lib/settings-nav';
+import { useSettingsLinkClick } from '@/components/settings/useOpenSettings';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 
 // Same flag ChappiPageClient reads. Inlined at build time (NEXT_PUBLIC_
@@ -377,6 +379,9 @@ function ChappiTopbarAction() {
 // which points at the Git integration/webhook rather than the code.
 export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
   const pathname = usePathname();
+  // The "You" link opens the settings pop-up in place. It stays a real link (to
+  // a URL that opens the pop-up on a fresh load), so a new tab still works.
+  const openSettingsOnClick = useSettingsLinkClick();
   const routeTitle = getRouteTitle(pathname);
   const { openQuickCreate } = useTaskUI();
   // Tri-state: null means the capability probe is still in flight, so the
@@ -470,7 +475,8 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             unconditionally. Do not make it conditional without leaving another
             way in. */}
         <Link
-          href="/settings"
+          href={settingsDeepLink()}
+          onClick={openSettingsOnClick}
           aria-label="You"
           title="You"
           data-tour="nav-settings"

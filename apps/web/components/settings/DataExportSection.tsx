@@ -87,7 +87,7 @@ export function DataExportSection() {
     'rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-semibold text-content-primary hover:border-brand disabled:opacity-55';
 
   return (
-    <section className={panelClass}>
+    <section id="export" className={`${panelClass} scroll-mt-4`}>
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Your data
       </h2>

@@ -18,6 +18,7 @@ import {
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 import type { WorkspaceArtist } from './WorkspaceArtistSection';
+import { useReportDirty } from './useReportDirty';
 
 type BrandColorsSectionProps = {
   artists: WorkspaceArtist[] | undefined;
@@ -48,7 +49,7 @@ export function BrandColorsSection({
   onSave,
 }: BrandColorsSectionProps) {
   return (
-    <section id={BRAND_COLORS_SETTINGS_ANCHOR} className={panelClass}>
+    <section id={BRAND_COLORS_SETTINGS_ANCHOR} className={`${panelClass} scroll-mt-4`}>
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Brand colors
       </h2>
@@ -105,6 +106,7 @@ function BrandColorsRow({
   const palette = resolveSharePalette(current);
   const warning = describeBrandColorWarning(current);
   const dirty = draft !== undefined && !sameBrandColors(draft, saved);
+  useReportDirty(`brand-colors:${artist.id}`, dirty);
   const hasSaved = saved.background !== null || saved.accent !== null;
 
   const setSlot = (slot: keyof BrandColors, hex: string) => setDraft({ ...current, [slot]: hex });

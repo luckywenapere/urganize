@@ -19,6 +19,7 @@ import { SentRequestsList } from '@/components/directory/SentRequestsList';
 import { WorkRequestsInbox } from './WorkRequestsInbox';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { HelpTip } from '@/components/shared/HelpTip';
+import { useReportDirty } from './useReportDirty';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const REQUESTS_ENABLED =
@@ -50,6 +51,11 @@ export function DirectoryProfileSection() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [name, setName] = useState('');
+  // The three free-text fields. Each still saves when you leave it, exactly as
+  // before; they are held here (not left uncontrolled) so the pop-up can tell
+  // that one was typed into and never left, which is what pressing Escape
+  // while the cursor is in the bio does. `undefined` means "not edited yet".
+  const [drafts, setDrafts] = useState<{ bio?: string; city?: string; country?: string }>({});
 
   const authHeaders = useCallback(async (): Promise<Record<string, string> | null> => {
     const { data } = await supabase.auth.getSession();
@@ -129,6 +135,13 @@ export function DirectoryProfileSection() {
     }
   };
 
+  const hasUnsavedText =
+    profile !== null &&
+    ((drafts.bio !== undefined && drafts.bio.trim() !== (profile.bio ?? '')) ||
+      (drafts.city !== undefined && drafts.city.trim() !== (profile.city ?? '')) ||
+      (drafts.country !== undefined && drafts.country.trim() !== (profile.country ?? '')));
+  useReportDirty('directory.text', hasUnsavedText);
+
   if (!DIRECTORY_ENABLED) return null;
 
   const claimed = new Set(profile?.roles ?? []);
@@ -147,7 +160,7 @@ export function DirectoryProfileSection() {
     // a bare /settings, which lands at the TOP of a twelve-section tab with
     // this one fifth down — on a phone that reads as a button that did
     // nothing, which is exactly how it was reported (2026-09-06).
-    <section id={DIRECTORY_SETTINGS_ANCHOR} className={panelClass}>
+    <section id={DIRECTORY_SETTINGS_ANCHOR} className={`${panelClass} scroll-mt-4`}>
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Your directory record
       </h2>
@@ -282,7 +295,8 @@ export function DirectoryProfileSection() {
               A line about you. Optional.
             </span>
             <textarea
-              defaultValue={profile.bio ?? ''}
+              value={drafts.bio ?? profile.bio ?? ''}
+              onChange={(event) => setDrafts((current) => ({ ...current, bio: event.target.value }))}
               disabled={busy}
               rows={3}
               maxLength={PERSON_BIO_MAX_CHARS}
@@ -299,7 +313,10 @@ export function DirectoryProfileSection() {
               <label key={field} className="block">
                 <span className="mb-1 block text-xs capitalize text-content-tertiary">{field}</span>
                 <input
-                  defaultValue={profile[field] ?? ''}
+                  value={drafts[field] ?? profile[field] ?? ''}
+                  onChange={(event) =>
+                    setDrafts((current) => ({ ...current, [field]: event.target.value }))
+                  }
                   disabled={busy}
                   onBlur={(event) => {
                     const next = event.target.value.trim();

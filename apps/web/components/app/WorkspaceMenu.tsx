@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ExitIcon, GearIcon, ProfileIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
+import { useOpenSettings } from '@/components/settings/useOpenSettings';
 
 type WorkspaceMenuProps = {
   /** Display name shown in the menu's identity header. The trigger itself
@@ -40,6 +41,7 @@ type WorkspaceMenuProps = {
  */
 export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
   const router = useRouter();
+  const openSettings = useOpenSettings();
   const logout = useAuthStore((state) => state.logout);
   // URG-214: the identity card (mounted app-wide) keeps this store hydrated
   // with the real team name. Falls back to a generic "Your team" when the
@@ -121,7 +123,7 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
 
   const handleSettings = () => {
     setOpen(false);
-    router.push('/settings');
+    openSettings();
   };
 
   const handleSignOut = async () => {

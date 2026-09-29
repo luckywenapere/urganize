@@ -5,6 +5,7 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 import { HelpTip } from '@/components/shared/HelpTip';
+import { useReportDirty } from './useReportDirty';
 import type { BrandColors } from '@/lib/social-share-colors';
 
 export type WorkspaceArtist = {
@@ -73,6 +74,8 @@ function ArtistRow({
   // name. Same shape the curator profile form had to adopt for this reason.
   const value = draft ?? artist.name;
   const dirty = draft !== undefined && draft.trim() !== artist.name;
+  // Renaming an artist and closing the pop-up before Save would lose it.
+  useReportDirty(`artist:${artist.id}`, dirty);
 
   return (
     <div className="flex items-end gap-2">
@@ -138,13 +141,14 @@ export function WorkspaceArtistSection({
   onRemove,
 }: WorkspaceArtistSectionProps) {
   const [newName, setNewName] = useState('');
+  useReportDirty('artist:new', newName.trim() !== '');
 
   const count = artists?.length ?? 0;
   // A disabled Add is a courtesy, not a gate — the server refuses either way.
   const atLimit = artistLimit !== null && count >= artistLimit;
 
   return (
-    <section className={panelClass}>
+    <section id="artists" className={`${panelClass} scroll-mt-4`}>
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Artists
       </h2>

@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { Loader2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import {
@@ -74,6 +75,7 @@ function DirectoryFrame() {
 
 function DirectoryBody() {
   const router = useRouter();
+  const openSettings = useOpenSettings();
   // Read ONCE, into the initial state, never mirrored. The role gaps panel
   // links here pre-filtered (?role=…&availability=open), and after that the
   // filters belong to whoever is typing — keeping them in sync with the URL
@@ -293,7 +295,9 @@ function DirectoryBody() {
               onDropRole={() => patch({ role: null })}
               onDropCity={() => patch({ city: null })}
               onShowOpen={() => setFilters({ ...NO_FILTERS, availability: 'open' })}
-              onListMe={() => router.push(`/settings#${DIRECTORY_SETTINGS_ANCHOR}`)}
+              onListMe={() =>
+                openSettings({ segment: 'directory', section: DIRECTORY_SETTINGS_ANCHOR })
+              }
             />
           ) : (
             <ul className="space-y-3">

@@ -5,6 +5,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { errorMessage } from '@/lib/errors';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
+import { useReportDirty } from './useReportDirty';
 
 /** Self-gates on `user.role === 'artist'`, returns null otherwise — the
  * component checks its own visibility condition rather than the parent
@@ -27,6 +28,13 @@ export function ArtistProfileSection() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useReportDirty(
+    'profile.artistName',
+    Boolean(user) &&
+      user?.role === 'artist' &&
+      artistProfileName.trim() !== String(user?.artist_name || '').trim()
+  );
 
   if (!user || user.role !== 'artist') return null;
 
@@ -58,7 +66,7 @@ export function ArtistProfileSection() {
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Your artist name</h2>
       <p className="mb-4 text-sm text-content-secondary">
         The artist name on your own profile, reused wherever the app greets you.
-        The team&apos;s artist is set under Profile.
+        The team&apos;s artists are set under Artists &amp; brand.
       </p>
       <div className="space-y-3">
         <label className="block">

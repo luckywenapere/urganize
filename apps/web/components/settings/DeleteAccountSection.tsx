@@ -53,7 +53,7 @@ export function DeleteAccountSection() {
   // kicker carry the warning; no filled box (Brand Bible: hairlines over
   // panels).
   return (
-    <section className="relative border-l-2 border-status-error/50 py-9 pl-5">
+    <section id="delete-account" className="relative scroll-mt-4 border-l-2 border-status-error/50 py-9 pl-5">
       <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-status-error">Delete account</h2>
       <p className="mb-4 text-sm text-content-secondary">
         This permanently deletes your account. This action cannot be undone.

@@ -27,6 +27,8 @@
  * never promise a poster the route does not draw.
  */
 
+import { settingsDeepLink } from '@/lib/settings-nav';
+
 export const isBrandColorsEnabled = (): boolean =>
   process.env.NEXT_PUBLIC_FEATURE_BRAND_COLORS === 'true';
 
@@ -38,7 +40,10 @@ export const SHARE_PALETTE_HEADER = 'X-Share-Palette';
 
 /** Where Settings keeps the editor, so the share sheet can link straight to it. */
 export const BRAND_COLORS_SETTINGS_ANCHOR = 'brand-colors';
-export const BRAND_COLORS_SETTINGS_HREF = `/settings?tab=workspace#${BRAND_COLORS_SETTINGS_ANCHOR}`;
+export const BRAND_COLORS_SETTINGS_HREF = settingsDeepLink({
+  segment: 'artists',
+  section: BRAND_COLORS_SETTINGS_ANCHOR,
+});
 
 /** What an artist has chosen. null means "use Urganize's color" for that slot. */
 export type BrandColors = { background: string | null; accent: string | null };

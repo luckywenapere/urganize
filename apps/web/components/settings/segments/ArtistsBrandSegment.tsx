@@ -1,14 +1,13 @@
 'use client';
 
+import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
+import { isBrandColorsEnabled } from '@/lib/social-share-colors';
+import { BrandColorsSection } from '../BrandColorsSection';
+import { PressKitsSection } from '../PressKitsSection';
+import { WorkspaceArtistSection } from '../WorkspaceArtistSection';
 import { WorkspaceIdentitySection } from '../WorkspaceIdentitySection';
 import { WorkspaceLogoSection } from '../WorkspaceLogoSection';
-import { WorkspaceArtistSection } from '../WorkspaceArtistSection';
-import { BrandColorsSection } from '../BrandColorsSection';
-import { isBrandColorsEnabled } from '@/lib/social-share-colors';
-import { ReleasesSection } from '../ReleasesSection';
-import { PressKitsSection } from '../PressKitsSection';
-import { TeamBriefSection } from '../TeamBriefSection';
-import { isTeamBriefEnabled } from '@/lib/team-brief';
+import { useReportDirty } from '../useReportDirty';
 import {
   IDENTITY_PANEL_ENABLED,
   LOGO_MIME_ALLOWLIST,
@@ -17,30 +16,35 @@ import {
   type WorkspaceSettingsState,
 } from '../useWorkspaceSettings';
 
-type WorkspaceTabProps = {
-  workspace: WorkspaceSettingsState;
-};
-
 /**
- * The workspace itself — how it's identified, who it's for, and what's in it.
+ * How the team is presented: its name and logo, the artists it works with, the
+ * colors their share images use, and their press kits.
  *
- * State lives in `useWorkspaceSettings`, called at page level, because these
- * three editors are presentational by design (see WorkspaceArtistSection's
- * note) and their fetches must not wait for this tab to open.
- *
- * ReleasesSection is the only place a release can be deleted (URG-163). It sits
- * here rather than in Account because a release belongs to the workspace, and
- * it's last in the tab for the same reason Delete account is last in Account:
- * destructive, rarely used.
+ * State lives in `useWorkspaceSettings`, called once by the pop-up, because
+ * these editors are presentational by design and their fetches must not wait
+ * for this segment to be opened.
  */
-export function WorkspaceTab({ workspace }: WorkspaceTabProps) {
+export function ArtistsBrandSegment({ workspace }: { workspace: WorkspaceSettingsState }) {
+  // The team name is the one field here that saves through a parent-owned
+  // input, so its "unsaved" answer is computed here, against what the always-
+  // mounted identity card holds.
+  const savedName = useWorkspaceIdentityStore((state) => state.name);
+  useReportDirty(
+    'team.name',
+    IDENTITY_PANEL_ENABLED &&
+      workspace.identityHydrated &&
+      workspace.nameInput.trim() !== savedName.trim()
+  );
+
   return (
     <div className="divide-y divide-stroke-subtle">
-      {/* Workspace identity + logo share one row (founder call, 2026-08-05):
-          a natural pair — both just feed the workspace card shown across the
-          app. */}
+      {/* Team name and logo share a row: a natural pair, since both only feed
+          the team card shown across the app (founder call, 2026-08-05). */}
       {IDENTITY_PANEL_ENABLED && (
-        <div className="grid gap-x-10 divide-y divide-stroke-subtle sm:grid-cols-2 sm:divide-y-0">
+        <div
+          id="team-identity"
+          className="grid scroll-mt-4 gap-x-10 divide-y divide-stroke-subtle sm:grid-cols-2 sm:divide-y-0"
+        >
           <WorkspaceIdentitySection
             input={workspace.nameInput}
             onInputChange={workspace.setNameInput}
@@ -81,7 +85,7 @@ export function WorkspaceTab({ workspace }: WorkspaceTabProps) {
       )}
 
       {/* Right under the artists the colors belong to. The share sheet links
-          straight here (BRAND_COLORS_SETTINGS_HREF). */}
+          straight here (`?settings=artists&section=brand-colors`). */}
       {WORKSPACE_FEATURE_ENABLED && isBrandColorsEnabled() && (
         <BrandColorsSection
           artists={workspace.artists}
@@ -93,15 +97,9 @@ export function WorkspaceTab({ workspace }: WorkspaceTabProps) {
         />
       )}
 
-      {/* After the artist rows, because a kit belongs to an artist on the
-          roster. This is press kits' only entry point (founder call,
-          2026-09-09) — it left every menu the same day. */}
+      {/* A kit belongs to an artist on the roster, and this is press kits' only
+          entry point (founder call, 2026-09-09). */}
       <PressKitsSection />
-
-      {/* Before ReleasesSection, which is destructive and stays last. */}
-      {isTeamBriefEnabled() && <TeamBriefSection />}
-
-      <ReleasesSection />
     </div>
   );
 }

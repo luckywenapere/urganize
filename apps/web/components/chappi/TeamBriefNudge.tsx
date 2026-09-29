@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { X } from '@/components/icons';
+import { settingsDeepLink } from '@/lib/settings-nav';
+import { useSettingsLinkClick } from '@/components/settings/useOpenSettings';
 import { supabase } from '@/lib/supabase/client';
 import { isTeamBriefEmpty, isTeamBriefEnabled, type TeamBrief } from '@/lib/team-brief';
 import {
@@ -49,6 +51,7 @@ function cacheEmptiness(empty: boolean): void {
 }
 
 export function TeamBriefNudge() {
+  const openSettingsOnClick = useSettingsLinkClick({ segment: 'urgans', section: 'team-brief' });
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -108,7 +111,8 @@ export function TeamBriefNudge() {
       <p className="min-w-0 text-xs text-content-secondary">
         UrgAns doesn&apos;t know your team yet.{' '}
         <Link
-          href="/settings?tab=workspace"
+          href={settingsDeepLink({ segment: 'urgans', section: 'team-brief' })}
+          onClick={openSettingsOnClick}
           className="motion-focus font-medium text-brand underline-offset-2 hover:underline"
         >
           Tell it once

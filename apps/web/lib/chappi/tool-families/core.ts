@@ -7,6 +7,7 @@
 
 import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { TaskService } from '@/lib/services/task-service';
+import { settingsDeepLink } from '@/lib/settings-nav';
 import { listVisibleReleases } from '../release-scope';
 import type { ChappiClientAction } from '../types';
 import {
@@ -427,7 +428,7 @@ export const CORE_TOOLS: ChappiTool[] = [
       const target = argString(args, 'target');
       const releaseId = argString(args, 'releaseId');
       let href = '/dashboard';
-      if (target === 'settings') href = '/settings';
+      if (target === 'settings') href = settingsDeepLink();
       else if (target === 'release') {
         if (!releaseId) return fail('releaseId is required to open a release.');
         href = `/dashboard?release=${releaseId}`;

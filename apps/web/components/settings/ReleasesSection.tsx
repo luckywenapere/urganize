@@ -67,8 +67,8 @@ export function ReleasesSection() {
 
   return (
     <>
-      <section className={panelClass}>
-        <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Rollouts</h2>
+      <section id="delete-rollouts" className={`${panelClass} scroll-mt-4`}>
+        <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Delete rollouts</h2>
         {/* Used to say "only available here" (URG-163). Narrowed at the
             test-path flip (2026-09-01, v1.16.0): a TEST release's own banner
             can delete it too, so "only" stopped being true. This is still the

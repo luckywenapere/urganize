@@ -31,6 +31,16 @@ const FILES = [
   // gained a rule.
   ...walk(join(WEB, 'lib')).filter((path) => /press-kit|press-photo|directory-|delivery-records|role-gaps/.test(path)),
   ...walk(join(WEB, 'components', 'press-kits')),
+  // The settings pop-up (2026-09-29): a new surface born under the house rules.
+  // ArtistsBrandSegment is left out: it is all wiring for the `workspace` state
+  // object and holds no copy, and the JSX-text reader mistakes that prop name
+  // for prose.
+  ...walk(join(WEB, 'components', 'settings', 'segments')).filter(
+    (path) => !path.endsWith('ArtistsBrandSegment.tsx')
+  ),
+  'components/settings/SettingsModal.tsx',
+  'components/settings/SettingsNav.tsx',
+  'lib/settings-nav.ts',
   ...walk(join(WEB, 'app', 'k')),
   ...walk(join(WEB, 'app', 'api', 'press-kits')),
   ...walk(join(WEB, 'app', 'dashboard', 'press-kits')),

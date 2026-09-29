@@ -16,6 +16,7 @@ import {
   type TeamBriefSection as SectionKey,
 } from '@/lib/team-brief';
 import { HelpTip } from '@/components/shared/HelpTip';
+import { useReportDirty } from './useReportDirty';
 
 /**
  * The team brief editor.
@@ -58,6 +59,20 @@ export function TeamBriefSection() {
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  // The brief is the longest thing anyone types into Settings, and the pop-up
+  // closes on Escape or a tap outside — so a section edited and not saved has
+  // to make it ask first. A read-only viewer has no draft to lose.
+  const hasUnsavedBrief =
+    brief !== null &&
+    brief.canEdit &&
+    TEAM_BRIEF_SECTIONS.some((section) => {
+      const draft = drafts[section];
+      if (draft === undefined) return false;
+      const saved = brief.entries.find((entry) => entry.section === section)?.content ?? '';
+      return draft !== saved;
+    });
+  useReportDirty('team-brief', hasUnsavedBrief);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,7 +137,7 @@ export function TeamBriefSection() {
 
   if (isLoading) {
     return (
-      <section className={panelClass}>
+      <section id="team-brief" className={`${panelClass} scroll-mt-4`}>
         <Heading />
         <div className="mt-4 space-y-4">
           <SkeletonBlock className="h-24 w-full" />
@@ -134,7 +149,7 @@ export function TeamBriefSection() {
 
   if (loadError || !brief) {
     return (
-      <section className={panelClass}>
+      <section id="team-brief" className={`${panelClass} scroll-mt-4`}>
         <Heading />
         <p className={`mt-4 ${feedbackErrorClass}`}>{loadError || 'Could not load the brief.'}</p>
       </section>
@@ -161,7 +176,7 @@ export function TeamBriefSection() {
     : TEAM_BRIEF_SECTIONS;
 
   return (
-    <section className={panelClass}>
+    <section id="team-brief" className={`${panelClass} scroll-mt-4`}>
       <Heading />
       {/* Five sentences until 2026-09-08, and the longest intro in Settings.
           The rest moved into the pullout, which also drops the em dash the old
