@@ -34,6 +34,7 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
 
 /** The three destinations every signed-in team account has. */
 const BASE_ROUTES = ['/dashboard', '/dashboard/urgans', '/settings'] as const;
@@ -60,6 +61,10 @@ export type PrefetchAudience = {
 export function buildPrefetchRoutes({ hasCuratorProfile }: PrefetchAudience): string[] {
   const routes: string[] = [...BASE_ROUTES];
 
+  // FIRST, ahead of every other push below: with the flag on this is the new
+  // landing destination (HOME_PATH), so it is the single most likely page a
+  // signed-in account reaches right after the three base routes above warm.
+  if (HOME_ENABLED) routes.push('/dashboard/home');
   if (NOTES_ENABLED) routes.push('/dashboard/notes');
   if (EVENTS_ENABLED) routes.push('/dashboard/shows');
   // The team side of pitching, in the nav for every team account since

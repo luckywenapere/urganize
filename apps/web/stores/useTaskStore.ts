@@ -121,6 +121,14 @@ type TaskStore = {
    */
   dismissCoverArtPrompt: () => void;
   tasksForRelease: (releaseId: string) => ExecutionTask[];
+  /**
+   * True while this task's complete/reopen PATCH is still in the air. Read-
+   * only window onto the module-scoped inFlightCompletionIds guard below —
+   * used by useReleaseStore's command-center apply logic to keep an
+   * optimistic row instead of letting a concurrent background refresh's
+   * stale data overwrite a tick that hasn't settled yet.
+   */
+  hasInFlightCompletion: (taskId: string) => boolean;
 };
 
 /**
@@ -170,6 +178,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   setTasks: (tasks) => set({ tasks, error: '' }),
   selectTask: (taskId) => set({ selectedTaskId: taskId }),
   tasksForRelease: (releaseId) => get().tasks.filter((task) => task.releaseId === releaseId),
+  hasInFlightCompletion: (taskId) => inFlightCompletionIds.has(taskId),
   createTask: async (input) => {
     const accessToken = await getAccessToken();
     if (!accessToken) {

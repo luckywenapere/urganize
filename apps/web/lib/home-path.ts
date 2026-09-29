@@ -26,16 +26,28 @@
 // now assistant) — the reason this constant exists is that every entry point
 // moves together, so each reversal is this one line.
 //
-// THE FLAG READ IS NOT OPTIONAL. ChappiPageClient bounces to '/dashboard'
-// when NEXT_PUBLIC_FEATURE_CHAPPI is off, so an unconditional
-// '/dashboard/urgans' would send every flag-off deployment through a bounce
-// on every sign-in. Resolving to '/dashboard' here matches that bounce, so
-// there is no round trip either way.
+// Home tab (NEXT_PUBLIC_FEATURE_HOME, built flag-off): when on, Home is the
+// front door and takes precedence over the assistant — UrgAns stays one tap
+// away (the topbar icon, the side menu row), the same relationship the
+// assistant itself has always had with the catalog. Checked FIRST, before
+// the Chappi flag, so a deployment that has both on lands on Home rather
+// than UrgAns.
+//
+// THE FLAG READS ARE NOT OPTIONAL. HomePageClient bounces to '/dashboard'
+// when NEXT_PUBLIC_FEATURE_HOME is off (mirroring ChappiPageClient's own
+// bounce for its flag), so an unconditional '/dashboard/home' would send
+// every flag-off deployment through a bounce on every sign-in. Falling
+// through to the Chappi check — and finally to '/dashboard' — matches those
+// bounces exactly, so there is no round trip in any flag combination.
 //
 // It is inlined at build time like every other NEXT_PUBLIC_* read, so a flag
 // flip needs a deploy that actually rebuilds apps/web before this moves.
 export const HOME_PATH =
-  process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true' ? '/dashboard/urgans' : '/dashboard';
+  process.env.NEXT_PUBLIC_FEATURE_HOME === 'true'
+    ? '/dashboard/home'
+    : process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true'
+      ? '/dashboard/urgans'
+      : '/dashboard';
 
 /** Where a curator-only account lands. That surface has no team chrome at all. */
 export const CURATOR_HOME_PATH = '/curator';

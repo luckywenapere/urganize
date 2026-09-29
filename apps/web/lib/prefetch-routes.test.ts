@@ -6,16 +6,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // explicitly rather than read from the ambient environment: vitest does not
 // load .env.local, and leaving any of them to chance would make these
 // assertions depend on whoever ran them.
-async function loadRoutes(options: { notes: boolean; events: boolean; pitching: boolean }) {
+async function loadRoutes(options: {
+  notes: boolean;
+  events: boolean;
+  pitching: boolean;
+  home?: boolean;
+}) {
   vi.resetModules();
   vi.stubEnv('NEXT_PUBLIC_FEATURE_NOTES', options.notes ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_EVENTS', options.events ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCHING', options.pitching ? 'true' : 'false');
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_HOME', options.home ? 'true' : 'false');
   return import('./prefetch-routes');
 }
 
-const ALL_ON = { notes: true, events: true, pitching: true };
-const ALL_OFF = { notes: false, events: false, pitching: false };
+const ALL_ON = { notes: true, events: true, pitching: true, home: true };
+const ALL_OFF = { notes: false, events: false, pitching: false, home: false };
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -40,11 +46,35 @@ describe('buildPrefetchRoutes', () => {
       '/dashboard',
       '/dashboard/urgans',
       '/settings',
+      '/dashboard/home',
       '/dashboard/notes',
       '/dashboard/shows',
       '/dashboard/pitching',
       '/curator',
     ]);
+  });
+
+  // The newest landing destination: the same bug this module exists for,
+  // caught before it could happen this time — /dashboard/home is warmed the
+  // moment its own flag is on, with no dependency on any of the others.
+  it('warms the Home tab when its flag is on, and nothing else has to be', async () => {
+    const { buildPrefetchRoutes } = await loadRoutes({
+      notes: false,
+      events: false,
+      pitching: false,
+      home: true,
+    });
+    expect(buildPrefetchRoutes({ hasCuratorProfile: false })).toContain('/dashboard/home');
+  });
+
+  it('leaves Home cold when its flag is off, even with everything else on', async () => {
+    const { buildPrefetchRoutes } = await loadRoutes({
+      notes: true,
+      events: true,
+      pitching: true,
+      home: false,
+    });
+    expect(buildPrefetchRoutes({ hasCuratorProfile: true })).not.toContain('/dashboard/home');
   });
 
   // The team side of pitching needs only the flag, unlike the crossing below

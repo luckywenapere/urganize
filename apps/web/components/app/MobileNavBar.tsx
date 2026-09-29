@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Inbox, MicVocal, Radio, Users } from '@/components/icons';
+import { Home as HomeIcon, Inbox, MicVocal, Radio, Users } from '@/components/icons';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
@@ -17,6 +17,7 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
+const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
 
 /**
  * One tab's look, shared by every destination in the bar (2026-08-31). It used
@@ -87,8 +88,16 @@ function NavTab({
  * reaches on a phone, and stands in for the ChappiDock launcher (which retires
  * on this same viewport range — see ChappiDock.tsx).
  *
- * Slots: Home (Catalog) · UrgAns · Notes · Shows · Pitching · Directory, plus
+ * Slots: Home · Catalog · UrgAns · Notes · Shows · Pitching · Directory, plus
  * Playlist pitches for a dual account.
+ *
+ * HOME (NEXT_PUBLIC_FEATURE_HOME) LEADS THE BAR. Until this flag, "Home" was
+ * this bar's own name for the catalog tab, below — the plain lucide house
+ * mark, since a hand-drawn house glyph is a separate design decision this
+ * flag doesn't make. The catalog tab is renamed Catalog here (its
+ * `dataTour="nav-catalog"` and its behaviour are unchanged) so the two never
+ * share a label. Flag off, this tab renders nowhere and the bar is exactly
+ * what it was.
  *
  * EVERY TAB IS ALWAYS VISIBLE (founder call, 2026-09-05). Which tabs EXIST is
  * decided by feature flags and, for the curator crossing, by whether the
@@ -202,7 +211,11 @@ export function MobileNavBar() {
   const pathname = usePathname();
   const keyboardOpen = useKeyboardOpen();
 
-  const isHome = pathname === '/dashboard';
+  // Renamed from isHome now that a real Home route exists — this is still
+  // exactly "is the catalog at rest", unchanged in meaning, just no longer
+  // sharing a name with the new tab below.
+  const isCatalog = pathname === '/dashboard';
+  const isDashboardHome = pathname === '/dashboard/home';
   const isUrgAns = pathname === '/dashboard/urgans';
   const isNotes = pathname === '/dashboard/notes';
   const isShows = pathname?.startsWith('/dashboard/shows') ?? false;
@@ -243,7 +256,7 @@ export function MobileNavBar() {
   // recorded from every page, because the page it is recorded from is precisely
   // the page whose remount would otherwise auto-scope the user straight back
   // into their only release. See lib/catalog-intent.ts.
-  const handleHomeClick = () => {
+  const handleCatalogClick = () => {
     leaveReleaseForCatalog();
   };
 
@@ -253,7 +266,7 @@ export function MobileNavBar() {
     // renders below lg, so there is no rail-toggle branch to mirror too.
     // Reading location.search directly (rather than useSearchParams) keeps
     // this whole component Suspense-free.
-    if (typeof window === 'undefined' || !isHome) return;
+    if (typeof window === 'undefined' || !isCatalog) return;
     const releaseId = new URLSearchParams(window.location.search).get('release');
     if (releaseId) {
       useChappiStore.getState().setScopedReleaseId(releaseId);
@@ -274,13 +287,23 @@ export function MobileNavBar() {
             top-right corner (founder call), so there is nothing to centre and
             nothing to flank: every tab is one `flex-1` slot again. */}
         <ul className="flex w-full items-stretch">
+          {HOME_ENABLED ? (
+            <NavTab
+              href="/dashboard/home"
+              label="Home"
+              dataTour="nav-home"
+              Icon={HomeIcon}
+              isActive={isDashboardHome}
+            />
+          ) : null}
+
           <NavTab
             href="/dashboard"
-            label="Home"
+            label="Catalog"
             dataTour="nav-catalog"
             Icon={CatalogIcon}
-            isActive={isHome}
-            onClick={handleHomeClick}
+            isActive={isCatalog}
+            onClick={handleCatalogClick}
           />
 
           {CHAPPI_ENABLED ? (

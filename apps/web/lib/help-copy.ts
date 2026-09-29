@@ -149,6 +149,10 @@ export const HELP_COPY = {
   // ---------------------------------------------------------------- side menu
   // The screenshot's own case. These rows had no explanation at all in the
   // expanded card; only the collapsed icon rail carried a native title.
+  'nav.home': {
+    label: 'Home',
+    text: 'What needs your attention today, across every rollout you run.',
+  },
   'nav.catalog': {
     label: 'Catalog',
     text: 'Every rollout you are working on, in one list. Tap one to open it.',

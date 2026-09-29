@@ -23,6 +23,7 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
+const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
 
 export type AppPage = {
   key: string;
@@ -72,12 +73,27 @@ export type AppPageAudience = {
  * release, and the search surface already offers them as release tools.
  */
 export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[] {
-  const pages: AppPage[] = [
+  const pages: AppPage[] = [];
+
+  // FIRST — the new landing destination. 'home' used to sit as a keyword on
+  // Catalog, back when this bar's own tab used that name for it; now that a
+  // literal Home page exists, that keyword moved here so it points at the
+  // page it actually names.
+  if (HOME_ENABLED) {
+    pages.push({
+      key: 'home',
+      label: 'Home',
+      href: '/dashboard/home',
+      keywords: ['brief', 'today', 'what needs me'],
+    });
+  }
+
+  pages.push(
     {
       key: 'catalog',
       label: 'Catalog',
       href: '/dashboard',
-      keywords: ['rollouts', 'releases', 'home', 'all rollouts', 'all releases'],
+      keywords: ['rollouts', 'releases', 'all rollouts', 'all releases'],
       leavesRelease: true,
     },
     {
@@ -85,8 +101,8 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       label: 'UrgAns',
       href: '/dashboard/urgans',
       keywords: ['assistant', 'chat', 'ai', 'ask'],
-    },
-  ];
+    }
+  );
 
   if (NOTES_ENABLED) {
     pages.push({

@@ -435,6 +435,33 @@ html[data-theme='light'] .cc-island {
   }
 }
 
+/* Home tab (built flag-off, NEXT_PUBLIC_FEATURE_HOME). Same container-query
+   mechanism as the calendar and timeline below, for the same reason: the
+   UrgAns rail and the identity card narrow Home's own content column without
+   narrowing the viewport, so a 1280px window with both open can still leave
+   Home under 45rem of real width — a `lg:` gate would wrongly promise two
+   columns there. Two columns only when the CONTAINER actually has the room. */
+.home-scene-container {
+  container-type: inline-size;
+}
+.home-two-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@container (min-width: 48rem) {
+  .home-two-col {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@supports not (container-type: inline-size) {
+  @media (min-width: 1024px) {
+    .home-two-col {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+}
+
 /* Timeline scene (2026-08-30). Same container-query mechanism as the calendar
    above, and for the same recorded reason: the UrgAns rail and the identity
    card are AppShell flex siblings that narrow the centre column without
