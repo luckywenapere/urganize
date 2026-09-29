@@ -144,6 +144,34 @@ urganize/
 
 ---
 
+## Multi-platform architecture: a Tauri desktop client, and native-first mobile (2026-09-29, founder decision)
+
+**Scope expansion (2026-09-29):** the founder decided the platform strategy
+going forward is web (Next.js, unchanged) + mobile (Expo, evolving toward
+native-first) + a new **desktop client (Tauri + Rust)**, all sharing the one
+Supabase backend. The full strategy is written up at `docs/architecture.md`
+— read it before touching mobile's platform-detection code or starting any
+desktop work.
+
+**This is a conscious, explicit exception to two standing principles above,
+not an accidental conflict with them:** #5 "Boring stack... no new
+languages... unless solving a documented problem the existing stack can't
+handle" and #6 "Build for the case we have... do not design for scale...
+until the problem is real." Nothing about those principles is wrong for v1's
+existing surfaces — they still bind everything else in this file exactly as
+written. This decision is the founder choosing to take on a new language
+(Rust) and a new client (desktop) as the deliberate next step beyond v1, the
+same kind of explicit override this file already records for Chappi, Events,
+and the mobile shell each moving something off (or, here, adding something
+beyond) the standing defaults.
+
+- **Web is unchanged.** Next.js remains the primary product; nothing here touches it.
+- **Mobile's current implementation is unchanged too, and this decision does not ask for an immediate rewrite.** `apps/mobile` stays the Expo webview shell described under "The Expo shell" below and in `docs/mobile/expo-shell.md` (deliberate, shipped 2026-09-24/25, precisely so every web change reaches phones with no store review). What is now decided is the **long-term destination**: a genuinely native-first mobile client. The path there is incremental — native screens land surface by surface, as each one earns it, each still recorded here with its own dated decision when it actually ships — not a wholesale rewrite starting now.
+- **Desktop is new and nothing is built yet.** No `apps/desktop` package exists. `docs/architecture.md` records the authorized shape: a Tauri shell, React/TypeScript UI (reusing `packages/ui` and existing frontend concepts where practical — **never a Rust rewrite of the frontend**), and Rust scoped narrowly to native OS capabilities (filesystem access and watching, large/local file operations, local indexing and hashing, background workers, OS integration, secure local credential handling, offline/local sync). The long-term product idea — connecting to a user's own project folders on disk, watching and indexing them, syncing relevant info back to Urganize — is explicitly a future direction to build incrementally, not a spec to implement all at once.
+- **Both new platforms extend `packages/native-bridge`** (the protocol package the Expo shell already uses to talk to `apps/web`) rather than inventing a second bridge mechanism, so the web app interacts with one abstraction regardless of which shell it runs inside.
+
+---
+
 ## Databases
 
 Two separate databases, one per app. They do not share schema. This is a known limitation (see "Known issues" below).
