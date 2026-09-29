@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.50.0",
+    date: "September 29, 2026",
+    highlights: [
+      "Settings is now a pop-up. It opens right over the page you're on, with a short list of topics on the left, so you never lose your place.",
+      "Type in the search box to jump straight to what you need, like your password or inviting someone.",
+      "On your phone it fills the screen. Pick a topic, then tap the arrow to go back.",
+      "If you close it while something you typed isn't saved yet, it asks first.",
+    ],
+  },
+  {
     version: "1.49.0",
     date: "September 29, 2026",
     highlights: [
