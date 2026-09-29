@@ -537,12 +537,6 @@ export function CreateReleaseModal({
                       ? 'New rollout'
                       : 'How do you want to start?'}
               </h2>
-              {TYPE_FIRST_CREATE_ENABLED ? (
-                <p className="mt-2 max-w-xl text-sm leading-6 text-content-secondary">
-                  Tap one and your rollout is created — you can name it and set the
-                  date inside.
-                </p>
-              ) : null}
               {/* First-run context, echoing the onboarding wizard's own line
                   so the two first-run surfaces sound like one product. */}
               {isFirstRelease ? (
