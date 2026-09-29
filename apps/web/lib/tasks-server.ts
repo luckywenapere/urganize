@@ -1,3 +1,4 @@
+import type { Timings } from '@/lib/server-timing';
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import {
@@ -1389,31 +1390,44 @@ export async function loadTasks(
     // so the same workspace_members + profiles queries don't run twice in
     // one request. Workspaces not in the map are still fetched.
     membersByWorkspaceId?: Map<string, WorkspaceMember[]>;
-  }
+  },
+  timings?: Timings
 ): Promise<Task[]> {
+  const step = <T>(name: string, work: () => Promise<T>): Promise<T> =>
+    timings ? timings.time(name, work) : work();
   const workspaceIds = Array.from(new Set(rows.map((row) => row.workspace_id).filter(Boolean)));
 
   // Everything here is independent — releases, groups, members, and both
   // count lookups used to run as up to 5+ serial awaits per call.
   const [releaseById, groupById, memberLists, commentCountByTaskId, attachmentCountByTaskId] =
     await Promise.all([
-      loadReleaseSummaries(
-        adminClient,
-        rows.map((row) => row.release_id || '').filter(Boolean)
-      ),
-      loadTaskGroups(
-        adminClient,
-        rows.map((row) => row.group_id || '').filter(Boolean)
-      ),
-      Promise.all(
-        workspaceIds.map(
-          (workspaceId) =>
-            preloaded?.membersByWorkspaceId?.get(workspaceId) ??
-            loadWorkspaceMembers(adminClient, workspaceId, currentUserId)
+      step('t_releases', () =>
+        loadReleaseSummaries(
+          adminClient,
+          rows.map((row) => row.release_id || '').filter(Boolean)
         )
       ),
-      loadTaskCounts(adminClient, TASK_COMMENTS_TABLE, rows.map((row) => row.id)),
-      loadTaskCounts(adminClient, TASK_ATTACHMENTS_TABLE, rows.map((row) => row.id)),
+      step('t_groups', () =>
+        loadTaskGroups(
+          adminClient,
+          rows.map((row) => row.group_id || '').filter(Boolean)
+        )
+      ),
+      step('t_members', () =>
+        Promise.all(
+          workspaceIds.map(
+            (workspaceId) =>
+              preloaded?.membersByWorkspaceId?.get(workspaceId) ??
+              loadWorkspaceMembers(adminClient, workspaceId, currentUserId)
+          )
+        )
+      ),
+      step('t_comments', () =>
+        loadTaskCounts(adminClient, TASK_COMMENTS_TABLE, rows.map((row) => row.id))
+      ),
+      step('t_attach', () =>
+        loadTaskCounts(adminClient, TASK_ATTACHMENTS_TABLE, rows.map((row) => row.id))
+      ),
     ]);
 
   const memberById = new Map<string, WorkspaceMember>();

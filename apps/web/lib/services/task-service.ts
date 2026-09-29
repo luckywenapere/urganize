@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import type { Timings } from '@/lib/server-timing';
 import {
   TASKS_TABLE,
   TASKS_SELECT_COLUMNS,
@@ -46,7 +47,7 @@ export class TaskService {
     priority?: string;
     status?: string;
     mineOnly?: boolean;
-  } = {}) {
+  } = {}, timings?: Timings) {
     let query = this.adminClient
       .from(TASKS_TABLE)
       .select(TASKS_SELECT_COLUMNS)
@@ -60,7 +61,7 @@ export class TaskService {
     if (filters.priority) query = query.eq('priority', filters.priority);
     if (filters.status) query = query.eq('status', filters.status);
 
-    const { data, error } = await query;
+    const { data, error } = await (timings ? timings.time('t_rows', async () => await query) : query);
     if (error) throw error;
 
     if ((data || []).length === TASK_LIST_MAX_ROWS) {
@@ -69,7 +70,7 @@ export class TaskService {
       );
     }
 
-    return loadTasks(this.adminClient, (data || []) as TaskRow[], userId);
+    return loadTasks(this.adminClient, (data || []) as TaskRow[], userId, undefined, timings);
   }
 
   async getWorkspaceTasks(workspaceId: string, userId: string, filters: {
