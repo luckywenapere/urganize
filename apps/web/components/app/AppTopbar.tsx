@@ -87,6 +87,29 @@ const routeTitles = [
   { match: (pathname: string) => pathname.startsWith('/settings'), title: '', eyebrow: '' },
 ];
 
+/** The wordmark with a quiet ALPHA badge beside it. The badge is deliberately
+ *  outlined and tertiary-coloured so the brand stays the dominant element, and
+ *  it is positioned absolutely to the wordmark's right rather than sitting in
+ *  the flow: the mobile logo is centred in the bar, and an in-flow badge would
+ *  push the wordmark off true centre by half its own width. It also adds no
+ *  width to the row's documented budget. Desktop is left-anchored, so
+ *  there the badge simply sits in the flow. The badge lives here and not in
+ *  `Logo`, which auth, invite and paywall pages share. Remove at beta. */
+function BrandMark({ centered = false }: { centered?: boolean }) {
+  return (
+    <span className="relative inline-flex items-center gap-1.5">
+      <Logo size="sm" priority className="opacity-90" />
+      <span
+        className={`pointer-events-none select-none rounded-full border border-stroke-default px-1.5 py-px text-[9px] font-semibold uppercase leading-none tracking-[0.14em] text-content-tertiary ${
+          centered ? 'absolute left-full top-1/2 ml-1.5 -translate-y-1/2' : ''
+        }`}
+      >
+        Alpha
+      </span>
+    </span>
+  );
+}
+
 function getRouteTitle(pathname: string | null) {
   const safePathname = pathname || '/dashboard';
   return routeTitles.find((item) => item.match(safePathname)) || routeTitles[0];
@@ -452,10 +475,10 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             div's own `relative` is its containing block. */}
         <Link
           href={LOGO_HREF}
-          aria-label="Urganize home"
+          aria-label="Urganize home (alpha)"
           className="motion-focus absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity hover:opacity-80 lg:hidden"
         >
-          <Logo size="sm" priority className="opacity-90" />
+          <BrandMark centered />
         </Link>
 
         {/* Mobile: the account link, anchored top-LEFT (founder call,
@@ -496,10 +519,10 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             itself is the brand. */}
         <Link
           href={LOGO_HREF}
-          aria-label="Urganize home"
+          aria-label="Urganize home (alpha)"
           className="motion-focus hidden shrink-0 transition-opacity hover:opacity-80 lg:inline-flex"
         >
-          <Logo size="sm" priority className="opacity-90" />
+          <BrandMark />
         </Link>
 
         {/* Spacer takes flex-1 so the right-side controls stay flush right;
