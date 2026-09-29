@@ -360,7 +360,6 @@ function buildNavItems(
             Icon: DirectoryIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/directory"),
             help: "nav.directory",
-            beta: true,
           } satisfies NavItem,
         ]
       : []),
