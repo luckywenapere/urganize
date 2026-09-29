@@ -26,7 +26,12 @@ export type SceneName =
   | 'capture'
   | 'song'
   | 'coverart'
-  | 'timeline';
+  | 'timeline'
+  // Release chat (Release & Task Chat, Phase 1) — a thread scoped to the
+  // release, visible to anyone with release access. Not "chat", the object
+  // renamed to "rollout" in user-facing copy (2026-09-09), but scene NAMES
+  // are identifiers like every other entry here, not copy.
+  | 'chat';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'activities',
@@ -38,6 +43,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'song',
   'coverart',
   'timeline',
+  'chat',
 ];
 
 // Inlined at build time, same read every UI gate uses. Both consumers below
@@ -52,6 +58,7 @@ const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+const RELEASE_CHAT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
@@ -78,6 +85,7 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   ...(CONTENT_CALENDAR_ENABLED ? (['calendar'] as const) : []),
   ...(PITCHING_ENABLED ? (['pitch'] as const) : []),
   ...(CAPTURE_ENABLED ? (['capture'] as const) : []),
+  ...(RELEASE_CHAT_ENABLED ? (['chat'] as const) : []),
 ];
 
 /**
@@ -127,6 +135,7 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   if (scene === 'metadata' && !METADATA_ENABLED) return null;
   if (scene === 'files' && !FILES_ENABLED) return null;
   if (scene === 'pitch' && !PITCHING_ENABLED) return null;
+  if (scene === 'chat' && !RELEASE_CHAT_ENABLED) return null;
   return scene;
 }
 
@@ -271,6 +280,8 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   // workspace already holds, so it has no payload of its own. See
   // CacheableSceneName.
   timeline: false,
+  // Plain JSON, no signed URLs or credentials — same reasoning as pitch.
+  chat: true,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of
