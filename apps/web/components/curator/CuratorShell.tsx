@@ -22,18 +22,29 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@urganize/ui';
-import { Inbox, ListMusic, LayoutGrid, LogOut, UserCircle } from '@/components/icons';
+import { Inbox, ListMusic, LayoutGrid, LogOut, PiggyBank, UserCircle } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { HOME_PATH } from '@/lib/home-path';
+import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
 
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
+// Read once at module scope: a NEXT_PUBLIC_ flag is inlined at build time, so
+// it cannot change under a mounted shell.
+const PAYMENTS_ENABLED = isPitchPaymentsEnabled();
 
-const TABS = [
+const BASE_TABS = [
   { href: '/curator', label: 'Pitches', icon: Inbox },
   { href: '/curator/playlists', label: 'Playlists', icon: ListMusic },
   { href: '/curator/profile', label: 'Profile', icon: UserCircle },
 ] as const;
+
+// Earnings only exists once paid pitching does. Appended rather than spliced
+// in by position, so a five-tab row never briefly renders with a gap while
+// the flag is being checked.
+const TABS = PAYMENTS_ENABLED
+  ? [...BASE_TABS, { href: '/curator/earnings', label: 'Earnings', icon: PiggyBank }]
+  : BASE_TABS;
 
 export function CuratorShell({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -135,7 +146,7 @@ export function CuratorShell({ children }: { children: ReactNode }) {
                   className="inline-flex h-9 items-center gap-1.5 rounded-full border border-stroke-default px-3 text-xs font-semibold text-content-secondary transition-colors hover:border-stroke-strong hover:text-content-primary"
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
-                  Your releases
+                  Your rollouts
                 </Link>
               )}
               <button

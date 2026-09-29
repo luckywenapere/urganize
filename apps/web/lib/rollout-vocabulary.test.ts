@@ -42,6 +42,12 @@ const GUARDED_FILES = [
   'components/chappi/ChappiConversation.tsx',
   'components/share/ShareSheet.tsx',
   'components/settings/BrandColorsSection.tsx',
+  // Curator pitch payments (2026-09-25) found the drift while adding an
+  // Earnings tab right beside it: the dual-account link back to the team side
+  // read "Your releases", the pre-rollout-rename wording. Fixed and pinned here
+  // rather than left as a one-off — this is the curator-side nav chrome, the
+  // same category the topbar and mobile bar are already on this list for.
+  'components/curator/CuratorShell.tsx',
   'lib/chappi/intent-router.ts',
   'lib/chappi/system-prompt.ts',
   // Customer-facing email copy (was lib/email-templates.ts before the 2026-09

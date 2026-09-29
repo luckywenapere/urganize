@@ -17,6 +17,16 @@ import { describe, expect, it } from 'vitest';
  *
  * A comment cannot stop that edit. This can.
  *
+ * Extended 2026-09-25 for the payment columns curator pitch payments added
+ * (CURATOR_PITCH_PAYMENT_COLUMNS / SENT_PITCH_PAYMENT_COLUMNS). They are two
+ * MORE lists that happen to read identically today — both are just
+ * `payment_kind,response_due_at` — which is the exact same "share one constant"
+ * temptation the base pair already carries, and the exact same reason not to:
+ * the base pair proves that identical-looking lists genuinely diverge once a
+ * side gets a field the other must never have (release_id landed on the team
+ * side and nowhere near the curator side). Nothing stops a future payment field
+ * from doing the same.
+ *
  * It reads the real source rather than importing the constants: the curator
  * module pulls in server-only auth helpers, and the property under test is
  * textual anyway.
@@ -35,11 +45,12 @@ function columnList(source: string, constant: string): string {
 }
 
 describe('pitch column lists', () => {
-  const curator = columnList(
-    readSource('app/api/curator/_shared.ts'),
-    'CURATOR_PITCH_COLUMNS'
-  );
-  const team = columnList(readSource('app/api/pitching/_shared.ts'), 'SENT_PITCH_COLUMNS');
+  const curatorSource = readSource('app/api/curator/_shared.ts');
+  const teamSource = readSource('app/api/pitching/_shared.ts');
+  const curator = columnList(curatorSource, 'CURATOR_PITCH_COLUMNS');
+  const team = columnList(teamSource, 'SENT_PITCH_COLUMNS');
+  const curatorPayment = columnList(curatorSource, 'CURATOR_PITCH_PAYMENT_COLUMNS');
+  const teamPayment = columnList(teamSource, 'SENT_PITCH_PAYMENT_COLUMNS');
 
   it('never lets the curator read a release, owner or playlist id', () => {
     for (const forbidden of ['release_id', 'owner_user_id', 'playlist_id', 'created_by']) {
@@ -63,5 +74,28 @@ describe('pitch column lists', () => {
     for (const needed of ['song_title', 'artist_name', 'pitcher_name', 'status', 'note']) {
       expect(curator.split(',')).toContain(needed);
     }
+  });
+
+  // The payment additions carry the same base-pair invariant: whatever the
+  // curator's own payment columns add, none of it may be a release, owner or
+  // playlist id.
+  it('never lets the curator payment columns read a release, owner or playlist id', () => {
+    for (const forbidden of ['release_id', 'owner_user_id', 'playlist_id', 'created_by']) {
+      expect(curatorPayment.split(',')).not.toContain(forbidden);
+    }
+  });
+
+  // What each side's card needs from the payment fields: the curator needs the
+  // deadline to enforce and display; the team needs to know a pitch was paid
+  // for at all (it reads what was actually paid from pitch_payments separately,
+  // never from this list).
+  it('gives each side response_due_at, which both need to show a deadline', () => {
+    expect(curatorPayment.split(',')).toContain('response_due_at');
+    expect(teamPayment.split(',')).toContain('response_due_at');
+  });
+
+  it('gives each side payment_kind, so a free pitch never reads as paid', () => {
+    expect(curatorPayment.split(',')).toContain('payment_kind');
+    expect(teamPayment.split(',')).toContain('payment_kind');
   });
 });

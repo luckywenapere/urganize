@@ -3,24 +3,23 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   CURATOR_PLAYLISTS_TABLE,
   PITCHES_TABLE,
-  SENT_PITCH_COLUMNS,
   SENT_PITCH_LIST_LIMIT,
   ensureReleaseVisible,
   flagOffResponse,
   isPitchingFeatureEnabled,
   loadCuratorNames,
+  parsePitchSongFields,
   requireTeamUser,
+  resolvePitcherName,
+  sentPitchColumns,
   toSentPitch,
 } from '../_shared';
-import {
-  MAX_PITCH_NOTE_LENGTH,
-  MAX_SONG_TITLE_LENGTH,
-  MAX_WAITING_PITCHES_PER_RELEASE,
-  detectPitchPlatform,
-  isValidSongUrl,
-} from '@/lib/pitching';
+import { MAX_WAITING_PITCHES_PER_RELEASE, detectPitchPlatform } from '@/lib/pitching';
 import { decideReleaseAccess } from '@/lib/release-access';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
+import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
+import { CURATOR_NOW_PAID, CURATOR_UNAVAILABLE, UNPAID_PITCH_EXISTS } from '@/lib/pitch-payment-copy';
+import { PAYMENTS_TABLE, loadCuratorPaymentStates } from '@/lib/pitch-payments-server';
 
 /**
  * Pitches this team has sent, newest first.
@@ -46,6 +45,12 @@ import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
  * A pitch whose release was deleted (`release_id` null) survives the filter on
  * the owner check alone: it is this team's own pitch, the curator may still be
  * sitting on it, and hiding it would lose the answer. The page labels it.
+ *
+ * A paid pitch also carries its deadline and what was paid for it. The price is
+ * the team's own payment, so it is theirs to see; what the curator was actually
+ * sent never is. Like the curator inbox, that follows the ROW rather than the
+ * feature flag: an artist who paid for a pitch keeps seeing its deadline and
+ * its refund even if paid pitching is switched off afterwards.
  */
 export async function GET(request: NextRequest) {
   if (!isPitchingFeatureEnabled()) return flagOffResponse();
@@ -59,12 +64,14 @@ export async function GET(request: NextRequest) {
     const visible = await ensureReleaseVisible(auth.adminClient, releaseId, auth.user);
     if ('error' in visible) return visible.error;
 
-    const { data, error } = await auth.adminClient
-      .from(PITCHES_TABLE)
-      .select(SENT_PITCH_COLUMNS)
-      .eq('release_id', releaseId)
-      .order('created_at', { ascending: false })
-      .limit(SENT_PITCH_LIST_LIMIT);
+    const { data, error } = await readWithPaymentColumns((columns) =>
+      auth.adminClient
+        .from(PITCHES_TABLE)
+        .select(columns)
+        .eq('release_id', releaseId)
+        .order('created_at', { ascending: false })
+        .limit(SENT_PITCH_LIST_LIMIT)
+    );
 
     if (error) {
       return NextResponse.json(
@@ -73,18 +80,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const rows = (data || []) as Array<Record<string, unknown>>;
-    const names = await loadCuratorNames(
-      auth.adminClient,
-      rows.map((row) => String(row.curator_user_id || ''))
-    );
+    const rows = (data || []) as unknown as Array<Record<string, unknown>>;
+    const [names, prices] = await Promise.all([
+      loadCuratorNames(
+        auth.adminClient,
+        rows.map((row) => String(row.curator_user_id || ''))
+      ),
+      loadPaidPrices(auth.adminClient, rows),
+    ]);
 
     return NextResponse.json({
       pitches: rows.map((row) =>
         toSentPitch(
           row,
           names.get(String(row.curator_user_id || '')) || 'Playlist owner',
-          visible.title || null
+          visible.title || null,
+          { priceKobo: prices.get(String(row.id)) ?? null }
         )
       ),
     });
@@ -93,12 +104,14 @@ export async function GET(request: NextRequest) {
   const access = await loadWorkspaceAccessContext(auth.adminClient, auth.user as never);
   const ownerIds = access.releaseOwnerIds.length ? access.releaseOwnerIds : [auth.user.id];
 
-  const { data, error } = await auth.adminClient
-    .from(PITCHES_TABLE)
-    .select(SENT_PITCH_COLUMNS)
-    .in('owner_user_id', ownerIds)
-    .order('created_at', { ascending: false })
-    .limit(SENT_PITCH_LIST_LIMIT);
+  const { data, error } = await readWithPaymentColumns((columns) =>
+    auth.adminClient
+      .from(PITCHES_TABLE)
+      .select(columns)
+      .in('owner_user_id', ownerIds)
+      .order('created_at', { ascending: false })
+      .limit(SENT_PITCH_LIST_LIMIT)
+  );
 
   if (error) {
     return NextResponse.json(
@@ -107,7 +120,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const rows = (data || []) as Array<Record<string, unknown>>;
+  const rows = (data || []) as unknown as Array<Record<string, unknown>>;
   const releases = await loadPitchReleases(
     auth.adminClient,
     rows.map((row) => String(row.release_id || ''))
@@ -134,23 +147,57 @@ export async function GET(request: NextRequest) {
     );
   });
 
-  const names = await loadCuratorNames(
-    auth.adminClient,
-    readable.map((row) => String(row.curator_user_id || ''))
-  );
+  const [names, prices] = await Promise.all([
+    loadCuratorNames(
+      auth.adminClient,
+      readable.map((row) => String(row.curator_user_id || ''))
+    ),
+    loadPaidPrices(auth.adminClient, readable),
+  ]);
 
   return NextResponse.json({
     pitches: readable.map((row) =>
       toSentPitch(
         row,
         names.get(String(row.curator_user_id || '')) || 'Playlist owner',
-        releases.get(String(row.release_id || ''))?.title || null
+        releases.get(String(row.release_id || ''))?.title || null,
+        { priceKobo: prices.get(String(row.id)) ?? null }
       )
     ),
     // The list is capped, so say when it was cut rather than letting the page
     // imply it is showing everything.
     truncated: rows.length >= SENT_PITCH_LIST_LIMIT,
   });
+}
+
+type PitchRead = { data: unknown; error: { code?: string | null; message?: string } | null };
+
+/**
+ * Read the list with the payment columns, falling back to the columns it always
+ * read when the database answers that they do not exist (42703). That is only
+ * ever a database the payments migration has not reached yet; after it is
+ * applied the fallback is never taken. Nothing is reported to the user and
+ * there is no SQL to run, so this is not the retired schema-missing pattern.
+ */
+async function readWithPaymentColumns(read: (columns: string) => PromiseLike<PitchRead>): Promise<PitchRead> {
+  const first = await read(sentPitchColumns(true));
+  if (first.error?.code === '42703') return read(sentPitchColumns(false));
+  return first;
+}
+
+/** What was paid for each paid pitch in the list, from the payment rows. */
+async function loadPaidPrices(
+  adminClient: SupabaseClient,
+  rows: Array<Record<string, unknown>>
+): Promise<Map<string, number>> {
+  const prices = new Map<string, number>();
+  const ids = rows.filter((row) => row.payment_kind === 'paid').map((row) => String(row.id));
+  if (!ids.length) return prices;
+  const { data } = await adminClient.from(PAYMENTS_TABLE).select('pitch_id,price_kobo').in('pitch_id', ids);
+  for (const row of (data || []) as Array<Record<string, unknown>>) {
+    prices.set(String(row.pitch_id), Number(row.price_kobo) || 0);
+  }
+  return prices;
 }
 
 /** The releases a set of pitches point at, for the access filter and the title. */
@@ -178,7 +225,7 @@ async function loadPitchReleases(
 }
 
 /**
- * Sends one pitch.
+ * Sends one FREE pitch.
  *
  * Everything the curator card renders is written here, denormalized: the song
  * title and artist name, the playlist name, and who sent it. That is what keeps
@@ -189,10 +236,16 @@ async function loadPitchReleases(
  * per playlist (a unique partial index, so a race loses at the database rather
  * than slipping through).
  *
- * Pitching to your OWN playlist is allowed and needs no guard: a dual account
- * (team + playlist owner) simply matches both of playlist_pitches' select
- * policies on the same row, and every cap above still applies. It is also the
- * cheapest way to try the round trip end to end.
+ * With curator pitch payments switched on, this route refuses a curator who
+ * charges (the paid way is POST /api/pitching/quote, then checkout) and one
+ * whose inbox is paused. A curator with no live price keeps taking free pitches
+ * exactly as before (founder call: paid pitching is opt-in).
+ *
+ * Pitching to your OWN playlist is allowed for a free pitch and needs no guard:
+ * a dual account (team + playlist owner) simply matches both of
+ * playlist_pitches' select policies on the same row, and every cap above still
+ * applies. It is also the cheapest way to try the round trip end to end. Paying
+ * yourself is the thing the quote route refuses.
  */
 export async function POST(request: NextRequest) {
   if (!isPitchingFeatureEnabled()) return flagOffResponse();
@@ -213,32 +266,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Pick a rollout and a playlist.' }, { status: 400 });
   }
 
-  const songTitle = typeof payload.songTitle === 'string' ? payload.songTitle.trim() : '';
-  if (!songTitle) {
-    return NextResponse.json({ error: 'Add the song title.' }, { status: 400 });
-  }
-  if (songTitle.length > MAX_SONG_TITLE_LENGTH) {
-    return NextResponse.json(
-      { error: `Song title must be under ${MAX_SONG_TITLE_LENGTH} characters.` },
-      { status: 400 }
-    );
-  }
-
-  const songUrl = typeof payload.songUrl === 'string' ? payload.songUrl.trim() : '';
-  if (!isValidSongUrl(songUrl)) {
-    return NextResponse.json(
-      { error: 'Add a link to the song, starting with https.' },
-      { status: 400 }
-    );
-  }
-
-  const note = typeof payload.note === 'string' ? payload.note.trim() : '';
-  if (note.length > MAX_PITCH_NOTE_LENGTH) {
-    return NextResponse.json(
-      { error: `Keep the note under ${MAX_PITCH_NOTE_LENGTH} characters.` },
-      { status: 400 }
-    );
-  }
+  const song = parsePitchSongFields(payload);
+  if ('error' in song) return song.error;
 
   const visible = await ensureReleaseVisible(auth.adminClient, releaseId, auth.user);
   if ('error' in visible) return visible.error;
@@ -257,6 +286,20 @@ export async function POST(request: NextRequest) {
   }
   if (!playlist) {
     return NextResponse.json({ error: 'Playlist not found.' }, { status: 404 });
+  }
+
+  const curatorUserId = String(playlist.curator_user_id || '');
+  const withPayments = isPitchPaymentsEnabled();
+
+  if (withPayments) {
+    const states = await loadCuratorPaymentStates(auth.adminClient, [curatorUserId]);
+    const state = states.get(curatorUserId);
+    if (state?.paused) {
+      return NextResponse.json({ error: CURATOR_UNAVAILABLE, code: 'curator_paused' }, { status: 409 });
+    }
+    if (state && state.priceKobo !== null) {
+      return NextResponse.json({ error: CURATOR_NOW_PAID, code: 'curator_paid' }, { status: 409 });
+    }
   }
 
   // The waiting-pitch cap. There is a small window between this count and the
@@ -292,23 +335,31 @@ export async function POST(request: NextRequest) {
       owner_user_id: visible.ownerUserId,
       created_by: auth.user.id,
       pitcher_name: pitcherName,
-      curator_user_id: String(playlist.curator_user_id || ''),
+      curator_user_id: curatorUserId,
       playlist_id: playlistId,
       playlist_name: String(playlist.name || ''),
-      song_title: songTitle,
+      song_title: song.songTitle,
       artist_name: visible.artistName || visible.title || 'Unknown artist',
-      song_url: songUrl,
-      song_platform: detectPitchPlatform(songUrl),
-      note,
+      song_url: song.songUrl,
+      song_platform: detectPitchPlatform(song.songUrl),
+      note: song.note,
     })
-    .select(SENT_PITCH_COLUMNS)
+    .select(sentPitchColumns(withPayments))
     .maybeSingle();
 
   if (error) {
-    // 23505: the one-waiting-pitch-per-playlist index caught a duplicate.
+    // 23505: the one-waiting-pitch-per-playlist index caught a duplicate. The
+    // pitch in the way may be an unpaid one the team started, which is asked
+    // whether or not payments are on now: an unpaid pitch left over from when
+    // they were is still in the way, and the team can remove it.
     if (error.code === '23505') {
+      const unpaid = await hasUnpaidPitch(auth.adminClient, releaseId, playlistId);
       return NextResponse.json(
-        { error: 'This playlist already has a pitch waiting for this rollout.' },
+        {
+          error: unpaid
+            ? UNPAID_PITCH_EXISTS
+            : 'This playlist already has a pitch waiting for this rollout.',
+        },
         { status: 409 }
       );
     }
@@ -321,35 +372,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not send the pitch.' }, { status: 500 });
   }
 
-  const names = await loadCuratorNames(auth.adminClient, [String(playlist.curator_user_id || '')]);
+  const names = await loadCuratorNames(auth.adminClient, [curatorUserId]);
 
   return NextResponse.json(
     {
       pitch: toSentPitch(
-        data as Record<string, unknown>,
-        names.get(String(playlist.curator_user_id || '')) || 'Playlist owner',
+        data as unknown as Record<string, unknown>,
+        names.get(curatorUserId) || 'Playlist owner',
         // So a pitch sent from the Pitching page lands in the right group
         // without waiting for a refetch.
-        visible.title || null
+        visible.title || null,
+        withPayments ? { priceKobo: null } : null
       ),
     },
     { status: 201 }
   );
 }
 
-/** The name the curator sees on the card. Falls back to the email handle. */
-async function resolvePitcherName(
-  adminClient: SupabaseClient,
-  user: { id: string; email?: string | null }
-): Promise<string> {
+async function hasUnpaidPitch(adminClient: SupabaseClient, releaseId: string, playlistId: string) {
   const { data } = await adminClient
-    .from('profiles')
-    .select('name')
-    .eq('id', user.id)
+    .from(PITCHES_TABLE)
+    .select('id')
+    .eq('release_id', releaseId)
+    .eq('playlist_id', playlistId)
+    .eq('status', 'awaiting_payment')
+    .limit(1)
     .maybeSingle();
-
-  const name = typeof data?.name === 'string' ? data.name.trim() : '';
-  if (name) return name.slice(0, 120);
-  const handle = String(user.email || '').split('@')[0];
-  return (handle || 'A manager').slice(0, 120);
+  return Boolean(data);
 }
