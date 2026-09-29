@@ -116,6 +116,25 @@ const FILES = [
   ),
   join(WEB, 'lib', 'chappi', 'tool-families', 'shows.ts'),
   join(WEB, 'stores', 'useEventsStore.ts'),
+  // Curator pitch payments (2026-09-25). Scoped to the sentences a CURATOR or
+  // an ARTIST actually reads — the copy module every screen quotes from, the
+  // legal terms, and the customer-facing screens themselves — the same line
+  // this guard already draws around outward product surfaces rather than
+  // internal ones. Deliberately EXCLUDED: /admin/pitch-payments (an internal
+  // founder console, the same category as /admin/teams and /admin/urgans,
+  // neither of which is walked either), the cron route, and the raw API
+  // route handlers — none of this feature's siblings brings its own route
+  // error strings into scope, and doing it for this one alone would be an
+  // arbitrary line rather than a considered one.
+  join(WEB, 'lib', 'pitch-payment-copy.ts'),
+  join(WEB, 'lib', 'pitch-payment-terms.ts'),
+  join(WEB, 'components', 'pitching', 'PitchCheckoutPanel.tsx'),
+  join(WEB, 'components', 'pitching', 'PitchTerms.tsx'),
+  join(WEB, 'components', 'pitching', 'PitchPayments.tsx'),
+  join(WEB, 'components', 'pitching', 'SentPitchRow.tsx'),
+  ...walk(join(WEB, 'app', 'dashboard', 'pitching', 'paid')),
+  ...walk(join(WEB, 'app', 'curator', 'earnings')),
+  join(WEB, 'app', 'curator', 'CuratorInboxPageClient.tsx'),
   // Voice input for UrgAns (2026-09-25). The composer's mic and its recorder
   // hook, the transcribe route whose errors the person reads, and the pure
   // module that writes the validation and offline copy.

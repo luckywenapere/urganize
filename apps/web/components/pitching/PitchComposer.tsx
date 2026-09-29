@@ -11,6 +11,16 @@
 // It is deliberately RELEASE-AGNOSTIC in shape: it takes a releaseId rather
 // than a release, so the page can hand it whichever release the manager picked
 // without pretending to be scoped to one.
+//
+// PAID CURATORS (2026-09-25). With curator pitch payments switched on, a
+// curator who charges shows their price on the card, and a manager can pick up
+// to five of them to pay for in one checkout. A free curator is still one pitch
+// at a time, sent straight away, exactly as before: paid pitching is opt-in per
+// curator, so nothing about the free path changes. The two never mix in one
+// selection, because one is a payment and the other is not.
+//
+// The price on a card is for reading only. The quote route prices everything
+// again on the server, and that is the number the artist pays.
 
 import { useEffect, useState } from 'react';
 import { ExternalLink, Send } from '@/components/icons';
@@ -28,6 +38,16 @@ import {
 } from '@/lib/pitching';
 import { openExternalUrl } from '@/lib/external-link';
 import { CuratorCardListSkeleton } from '@/components/loading/CuratorSkeleton';
+import { MAX_PITCHES_PER_CHECKOUT, isPitchPaymentsEnabled } from '@/lib/pitch-payments';
+import {
+  PAY_ON_THE_WEB,
+  REVIEW_AND_PAY,
+  TOO_MANY_IN_ONE_CHECKOUT,
+  curatorCardPrice,
+} from '@/lib/pitch-payment-copy';
+import { canPayForPitchesHere, requestPitchQuote } from '@/lib/pitch-payments-client';
+import type { PitchQuote } from '@/types/pitch-payments';
+import { PitchCheckoutPanel } from './PitchCheckoutPanel';
 
 type PitchComposerProps = {
   /** The release this pitch belongs to. Empty disables the whole composer. */
@@ -46,6 +66,9 @@ type PitchComposerProps = {
    *  pre-filtered list with no way out reads as a broken browse. */
   onClearCurator?: () => void;
   onSent: (pitch: SentPitch) => void;
+  /** Something changed that a returned row does not describe: a paid pitch was
+   *  saved and is waiting for payment. The caller reloads its sent list. */
+  onChanged?: () => void;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
 };
 
@@ -67,15 +90,20 @@ export function PitchComposer({
   curatorSlug,
   onClearCurator,
   onSent,
+  onChanged,
   onToast,
 }: PitchComposerProps) {
+  const paymentsOn = isPitchPaymentsEnabled();
   const [playlists, setPlaylists] = useState<BrowsablePlaylist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const [platformFilter, setPlatformFilter] = useState('');
   const [genreFilter, setGenreFilter] = useState('');
   const curatorFilter = (curatorSlug || '').trim();
 
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState('');
+  // Several ids only when they are all paid curators (up to
+  // MAX_PITCHES_PER_CHECKOUT); a free pick is always a list of one.
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [quote, setQuote] = useState<PitchQuote | null>(null);
   const [songTitle, setSongTitle] = useState(initialSongTitle);
   const [songUrl, setSongUrl] = useState('');
   const [note, setNote] = useState('');
@@ -116,10 +144,36 @@ export function PitchComposer({
     };
   }, [curatorFilter, genreFilter, platformFilter]);
 
+  const isPaidPlaylist = (playlist: BrowsablePlaylist | null | undefined): boolean =>
+    Boolean(paymentsOn && playlist && typeof playlist.pitchPriceKobo === 'number');
+
+  const selectedPlaylists = selectedIds
+    .map((id) => playlists.find((playlist) => playlist.id === id))
+    .filter((playlist): playlist is BrowsablePlaylist => Boolean(playlist));
+  const paidSelection = selectedPlaylists.length > 0 && isPaidPlaylist(selectedPlaylists[0]);
+
+  const toggleSelection = (playlist: BrowsablePlaylist) => {
+    setError('');
+    if (selectedIds.includes(playlist.id)) {
+      setSelectedIds(selectedIds.filter((id) => id !== playlist.id));
+      return;
+    }
+    // A free pitch goes on its own, and a paid one never joins a free pick.
+    if (!isPaidPlaylist(playlist) || !paidSelection) {
+      setSelectedIds([playlist.id]);
+      return;
+    }
+    if (selectedIds.length >= MAX_PITCHES_PER_CHECKOUT) {
+      setError(TOO_MANY_IN_ONE_CHECKOUT(MAX_PITCHES_PER_CHECKOUT));
+      return;
+    }
+    setSelectedIds([...selectedIds, playlist.id]);
+  };
+
   const detectedPlatform = detectPitchPlatform(songUrl);
   const canSend =
     Boolean(releaseId) &&
-    Boolean(selectedPlaylistId) &&
+    selectedPlaylists.length > 0 &&
     songTitle.trim().length > 0 &&
     isValidSongUrl(songUrl) &&
     !atLimit &&
@@ -128,6 +182,11 @@ export function PitchComposer({
   const handleSend = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
+    if (paidSelection) {
+      await handleQuote();
+      return;
+    }
+    const selectedPlaylistId = selectedPlaylists[0]?.id || '';
     setIsSending(true);
     try {
       const token = await getAccessToken();
@@ -150,7 +209,7 @@ export function PitchComposer({
       if (!response.ok) throw new Error(payload?.error || 'Could not send the pitch.');
 
       onToast('Pitch sent.', 'success');
-      setSelectedPlaylistId('');
+      setSelectedIds([]);
       setNote('');
       if (payload?.pitch) onSent(payload.pitch);
     } catch (sendError) {
@@ -161,7 +220,59 @@ export function PitchComposer({
     }
   };
 
-  const selectedPlaylist = playlists.find((playlist) => playlist.id === selectedPlaylistId) || null;
+  // A paid selection is saved as pitches waiting for payment and priced on the
+  // server; nothing reaches a curator until Paystack confirms the payment.
+  async function handleQuote() {
+    if (!canPayForPitchesHere()) {
+      setError(PAY_ON_THE_WEB);
+      return;
+    }
+    setIsSending(true);
+    try {
+      const result = await requestPitchQuote({
+        releaseId,
+        playlistIds: selectedPlaylists.map((playlist) => playlist.id),
+        songTitle: songTitle.trim(),
+        songUrl: songUrl.trim(),
+        note: note.trim(),
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setQuote(result.data.quote);
+      onChanged?.();
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  const selectionLine = (() => {
+    if (!selectedPlaylists.length) {
+      return paymentsOn
+        ? `Pick a playlist above to pitch to. You can pick up to ${MAX_PITCHES_PER_CHECKOUT} that charge and pay once.`
+        : 'Pick a playlist above to pitch to.';
+    }
+    if (selectedPlaylists.length === 1) return `Pitching to ${selectedPlaylists[0].name}.`;
+    return `Pitching to ${selectedPlaylists.length} playlists.`;
+  })();
+
+  if (quote) {
+    return (
+      <PitchCheckoutPanel
+        quote={quote}
+        songTitle={songTitle.trim()}
+        onCancel={() => {
+          // The pitches stay saved and waiting for payment, so they can be paid
+          // later from the sent list, or removed there.
+          setQuote(null);
+          setSelectedIds([]);
+          onChanged?.();
+        }}
+      />
+    );
+  }
+
 
   return (
     <>
@@ -223,8 +334,12 @@ export function PitchComposer({
       ) : (
         <ul className="space-y-2">
           {playlists.map((playlist) => {
-            const isSelected = playlist.id === selectedPlaylistId;
+            const isSelected = selectedIds.includes(playlist.id);
             const followers = formatFollowerCount(playlist.followerCount);
+            const price =
+              isPaidPlaylist(playlist) && typeof playlist.pitchPriceKobo === 'number'
+                ? curatorCardPrice(playlist.pitchPriceKobo, playlist.responseWindowHours || undefined)
+                : '';
             return (
               <li key={playlist.id}>
                 <div
@@ -238,7 +353,7 @@ export function PitchComposer({
                     <button
                       type="button"
                       aria-pressed={isSelected}
-                      onClick={() => setSelectedPlaylistId(isSelected ? '' : playlist.id)}
+                      onClick={() => toggleSelection(playlist)}
                       className="min-w-0 flex-1 text-left"
                     >
                       <p className="truncate text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
@@ -251,6 +366,9 @@ export function PitchComposer({
                       <p className="truncate text-xs text-content-secondary">
                         {playlist.curatorName}
                       </p>
+                      {price ? (
+                        <p className="mt-1 truncate font-mono text-[11px] font-semibold text-brand">{price}</p>
+                      ) : null}
                     </button>
                     <button
                       type="button"
@@ -284,11 +402,7 @@ export function PitchComposer({
         onSubmit={handleSend}
         className="space-y-4 rounded-xl border border-stroke-default bg-bg-surface p-4"
       >
-        <p className="text-sm text-content-secondary">
-          {selectedPlaylist
-            ? `Pitching to ${selectedPlaylist.name}.`
-            : 'Pick a playlist above to pitch to.'}
-        </p>
+        <p className="text-sm text-content-secondary">{selectionLine}</p>
 
         <div className="space-y-1.5">
           <label className={labelClass} htmlFor="pitch-song-title">
@@ -355,7 +469,13 @@ export function PitchComposer({
           className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50 sm:w-auto"
         >
           <Send className="h-4 w-4" />
-          {isSending ? 'Sending…' : 'Send pitch'}
+          {isSending
+            ? paidSelection
+              ? 'Getting the price…'
+              : 'Sending…'
+            : paidSelection
+              ? REVIEW_AND_PAY
+              : 'Send pitch'}
         </button>
       </form>
     </>

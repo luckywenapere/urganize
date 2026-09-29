@@ -91,6 +91,23 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description: 'A walled teammate asking their admin to activate the plan.',
     placeholderCopy: false,
   },
+  pitch_notice: {
+    id: 'pitch_notice',
+    category: 'transactional',
+    name: 'Paid pitch update',
+    description:
+      'Curator pitch payments: a paid pitch arriving, the reply reminder, a missed window, a reply reaching the artist, an automatic refund.',
+    // The sentences are the spec's own copy (lib/pitch-payment-copy.ts), so not
+    // placeholder. The feature is switched off until launch regardless.
+    placeholderCopy: false,
+  },
+  founder_ops_alert: {
+    id: 'founder_ops_alert',
+    category: 'internal',
+    name: 'Pitch payments alert',
+    description: 'Curator pitch payment problems that need the founder: reviews, mismatches, failed refunds.',
+    placeholderCopy: false,
+  },
 };
 
 const UNSUBSCRIBABLE: ReadonlySet<EmailCategory> = new Set<EmailCategory>([

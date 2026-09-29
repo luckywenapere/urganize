@@ -84,3 +84,28 @@ export function CuratorProfileSkeleton() {
     </div>
   );
 }
+
+/** Curator pitch payments (2026-09-25): the bank-account card, the price card,
+ *  and a few earnings rows. */
+export function CuratorEarningsSkeleton() {
+  return (
+    <div className="space-y-6" aria-busy="true">
+      <SectionHeader />
+      <div className="space-y-3 rounded-xl border border-stroke-default bg-bg-surface p-4">
+        <Line className="h-4 w-40" />
+        <Line className="h-11 w-full rounded-xl" />
+        <Line className="h-9 w-full rounded-xl sm:w-40" />
+      </div>
+      <div className="space-y-3 rounded-xl border border-stroke-default bg-bg-surface p-4">
+        <Line className="h-4 w-32" />
+        <Line className="h-11 w-full rounded-xl" />
+      </div>
+      <div className="space-y-2">
+        <Line className="h-4 w-28" />
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Line key={index} className="h-14 w-full rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}

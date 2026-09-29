@@ -9,6 +9,8 @@ import type { WorkRequestEmailProps } from './WorkRequestEmail';
 import type { WorkRequestAnswerEmailProps } from './WorkRequestAnswerEmail';
 import type { FounderBillingAlertEmailProps } from './FounderBillingAlertEmail';
 import type { NotifyAdminEmailProps } from './NotifyAdminEmail';
+import type { PitchNoticeEmailProps } from './PitchNoticeEmail';
+import type { FounderOpsAlertEmailProps } from './FounderOpsAlertEmail';
 
 export type EmailTemplateProps = {
   welcome: WelcomeEmailProps;
@@ -19,6 +21,8 @@ export type EmailTemplateProps = {
   work_request_answer: WorkRequestAnswerEmailProps;
   founder_billing_alert: FounderBillingAlertEmailProps;
   notify_admin: NotifyAdminEmailProps;
+  pitch_notice: PitchNoticeEmailProps;
+  founder_ops_alert: FounderOpsAlertEmailProps;
 };
 
 export type EmailTemplateId = keyof EmailTemplateProps;

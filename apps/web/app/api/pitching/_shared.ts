@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
-import { isPitchPlatform } from '@/lib/pitching';
+import {
+  MAX_PITCH_NOTE_LENGTH,
+  MAX_SONG_TITLE_LENGTH,
+  isPitchPlatform,
+  isPitchState,
+  isValidSongUrl,
+} from '@/lib/pitching';
 import type { BrowsablePlaylist, SentPitch } from '@/types/pitching';
 
 // Shared helpers for the team side of playlist pitching.
@@ -33,6 +39,17 @@ export const CURATOR_PROFILES_TABLE = 'curator_profiles';
  */
 export const SENT_PITCH_COLUMNS =
   'id,release_id,playlist_id,playlist_name,curator_user_id,song_title,song_url,song_platform,note,status,curator_reply,pitcher_name,created_at,updated_at';
+
+/**
+ * What a paid pitch adds for the sending team: whether it was paid for and when
+ * the curator's reply is due. Selected ONLY while curator pitch payments are
+ * switched on, so the list keeps working on a database the payments migration
+ * has not reached yet.
+ */
+export const SENT_PITCH_PAYMENT_COLUMNS = 'payment_kind,response_due_at';
+
+export const sentPitchColumns = (withPayments: boolean): string =>
+  withPayments ? `${SENT_PITCH_COLUMNS},${SENT_PITCH_PAYMENT_COLUMNS}` : SENT_PITCH_COLUMNS;
 
 export const BROWSE_LIST_LIMIT = 200;
 export const SENT_PITCH_LIST_LIMIT = 200;
@@ -97,18 +114,31 @@ export async function ensureReleaseVisible(
   };
 }
 
+/**
+ * A playlist as a browsing team sees it. `price` is passed only while curator
+ * pitch payments are switched on: its presence adds the two price keys, and its
+ * absence leaves the payload exactly what it was before payments existed.
+ */
 export const toBrowsablePlaylist = (
   row: Record<string, unknown>,
-  curatorName: string
-): BrowsablePlaylist => ({
-  id: String(row.id || ''),
-  name: typeof row.name === 'string' ? row.name : '',
-  curatorName,
-  platform: isPitchPlatform(row.platform) ? row.platform : 'other',
-  genres: Array.isArray(row.genres) ? row.genres.map((tag) => String(tag)) : [],
-  followerCount: typeof row.follower_count === 'number' ? row.follower_count : null,
-  url: typeof row.url === 'string' ? row.url : '',
-});
+  curatorName: string,
+  price?: { priceKobo: number | null; responseWindowHours: number } | null
+): BrowsablePlaylist => {
+  const playlist: BrowsablePlaylist = {
+    id: String(row.id || ''),
+    name: typeof row.name === 'string' ? row.name : '',
+    curatorName,
+    platform: isPitchPlatform(row.platform) ? row.platform : 'other',
+    genres: Array.isArray(row.genres) ? row.genres.map((tag) => String(tag)) : [],
+    followerCount: typeof row.follower_count === 'number' ? row.follower_count : null,
+    url: typeof row.url === 'string' ? row.url : '',
+  };
+  if (price) {
+    playlist.pitchPriceKobo = price.priceKobo;
+    playlist.responseWindowHours = price.priceKobo === null ? null : price.responseWindowHours;
+  }
+  return playlist;
+};
 
 /**
  * One pitch as the sending team sees it.
@@ -123,27 +153,96 @@ export const toBrowsablePlaylist = (
 export const toSentPitch = (
   row: Record<string, unknown>,
   curatorName: string,
-  releaseTitle: string | null = null
-): SentPitch => ({
-  id: String(row.id || ''),
-  releaseId: row.release_id ? String(row.release_id) : null,
-  releaseTitle,
-  playlistId: row.playlist_id ? String(row.playlist_id) : null,
-  playlistName: typeof row.playlist_name === 'string' ? row.playlist_name : '',
-  curatorName,
-  songTitle: typeof row.song_title === 'string' ? row.song_title : '',
-  songUrl: typeof row.song_url === 'string' ? row.song_url : '',
-  songPlatform: isPitchPlatform(row.song_platform) ? row.song_platform : null,
-  note: typeof row.note === 'string' ? row.note : '',
-  status:
-    row.status === 'listened' || row.status === 'added' || row.status === 'passed'
-      ? row.status
-      : 'new',
-  reply: typeof row.curator_reply === 'string' && row.curator_reply ? row.curator_reply : null,
-  pitcherName: typeof row.pitcher_name === 'string' ? row.pitcher_name : '',
-  createdAt: String(row.created_at || ''),
-  updatedAt: String(row.updated_at || ''),
-});
+  releaseTitle: string | null = null,
+  payment?: { priceKobo: number | null } | null
+): SentPitch => {
+  const pitch: SentPitch = {
+    id: String(row.id || ''),
+    releaseId: row.release_id ? String(row.release_id) : null,
+    releaseTitle,
+    playlistId: row.playlist_id ? String(row.playlist_id) : null,
+    playlistName: typeof row.playlist_name === 'string' ? row.playlist_name : '',
+    curatorName,
+    songTitle: typeof row.song_title === 'string' ? row.song_title : '',
+    songUrl: typeof row.song_url === 'string' ? row.song_url : '',
+    songPlatform: isPitchPlatform(row.song_platform) ? row.song_platform : null,
+    note: typeof row.note === 'string' ? row.note : '',
+    // Every state, including the two only the system sets. Reading an unpaid
+    // or refunded pitch as 'new' would tell a team a curator has it when no
+    // curator does.
+    status: isPitchState(row.status) ? row.status : 'new',
+    reply: typeof row.curator_reply === 'string' && row.curator_reply ? row.curator_reply : null,
+    pitcherName: typeof row.pitcher_name === 'string' ? row.pitcher_name : '',
+    createdAt: String(row.created_at || ''),
+    updatedAt: String(row.updated_at || ''),
+  };
+  // Payment fields only when they were selected, so the payload is unchanged
+  // with pitch payments switched off.
+  if ('payment_kind' in row) {
+    const paid = row.payment_kind === 'paid';
+    pitch.paymentKind = paid ? 'paid' : 'free';
+    pitch.responseDueAt = paid && typeof row.response_due_at === 'string' ? row.response_due_at : null;
+    pitch.priceKobo = paid ? payment?.priceKobo ?? null : null;
+  }
+  return pitch;
+};
+
+/**
+ * The song fields of a pitch, validated once for both ways of sending one: the
+ * free POST /api/pitching/pitches and the paid POST /api/pitching/quote.
+ */
+export function parsePitchSongFields(
+  payload: Record<string, unknown>
+): { error: NextResponse } | { songTitle: string; songUrl: string; note: string } {
+  const songTitle = typeof payload.songTitle === 'string' ? payload.songTitle.trim() : '';
+  if (!songTitle) {
+    return { error: NextResponse.json({ error: 'Add the song title.' }, { status: 400 }) };
+  }
+  if (songTitle.length > MAX_SONG_TITLE_LENGTH) {
+    return {
+      error: NextResponse.json(
+        { error: `Song title must be under ${MAX_SONG_TITLE_LENGTH} characters.` },
+        { status: 400 }
+      ),
+    };
+  }
+
+  const songUrl = typeof payload.songUrl === 'string' ? payload.songUrl.trim() : '';
+  if (!isValidSongUrl(songUrl)) {
+    return {
+      error: NextResponse.json({ error: 'Add a link to the song, starting with https.' }, { status: 400 }),
+    };
+  }
+
+  const note = typeof payload.note === 'string' ? payload.note.trim() : '';
+  if (note.length > MAX_PITCH_NOTE_LENGTH) {
+    return {
+      error: NextResponse.json(
+        { error: `Keep the note under ${MAX_PITCH_NOTE_LENGTH} characters.` },
+        { status: 400 }
+      ),
+    };
+  }
+
+  return { songTitle, songUrl, note };
+}
+
+/** The name the curator sees on the card. Falls back to the email handle. */
+export async function resolvePitcherName(
+  adminClient: SupabaseClient,
+  user: { id: string; email?: string | null }
+): Promise<string> {
+  const { data } = await adminClient
+    .from('profiles')
+    .select('name')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const name = typeof data?.name === 'string' ? data.name.trim() : '';
+  if (name) return name.slice(0, 120);
+  const handle = String(user.email || '').split('@')[0];
+  return (handle || 'A manager').slice(0, 120);
+}
 
 /**
  * Curator display names for a set of user ids.

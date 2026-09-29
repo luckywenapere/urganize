@@ -39,6 +39,27 @@ export const CURATOR_PLAYLIST_COLUMNS =
 export const CURATOR_PITCH_COLUMNS =
   'id,playlist_name,song_title,artist_name,pitcher_name,song_url,song_platform,note,status,curator_reply,created_at,updated_at';
 
+/**
+ * What a paid pitch adds to the inbox card: whether it was paid for and when the
+ * reply is due. The inbox read asks for these and falls back to the list above
+ * when the database answers that they do not exist, which is only ever a
+ * database the payments migration has not reached yet (see
+ * curator/pitches/route.ts). Like the list above, it names no release, owner or
+ * playlist id, and the column guard test checks that.
+ */
+export const CURATOR_PITCH_PAYMENT_COLUMNS = 'payment_kind,response_due_at';
+
+export const curatorPitchColumns = (withPayments: boolean): string =>
+  withPayments ? `${CURATOR_PITCH_COLUMNS},${CURATOR_PITCH_PAYMENT_COLUMNS}` : CURATOR_PITCH_COLUMNS;
+
+/**
+ * The statuses a curator's inbox holds. The two the system sets are never in
+ * it: a pitch waiting for payment has not been paid for, and an expired one was
+ * taken back and refunded. Filtered whether or not payments are on, because
+ * toCuratorPitch would otherwise read either as 'new'.
+ */
+export const CURATOR_INBOX_STATUSES = ['new', 'listened', 'added', 'passed'];
+
 /** A curator's own list caps. Well above any real inventory or inbox. */
 export const CURATOR_PLAYLIST_LIST_LIMIT = 100;
 export const CURATOR_PITCH_LIST_LIMIT = 200;
@@ -122,23 +143,44 @@ export const toCuratorPlaylist = (row: Record<string, unknown>): CuratorPlaylist
   updatedAt: String(row.updated_at || ''),
 });
 
-export const toCuratorPitch = (row: Record<string, unknown>): CuratorPitch => ({
-  id: String(row.id || ''),
-  playlistName: typeof row.playlist_name === 'string' ? row.playlist_name : '',
-  songTitle: typeof row.song_title === 'string' ? row.song_title : '',
-  artistName: typeof row.artist_name === 'string' ? row.artist_name : '',
-  pitcherName: typeof row.pitcher_name === 'string' ? row.pitcher_name : '',
-  songUrl: typeof row.song_url === 'string' ? row.song_url : '',
-  songPlatform: isPitchPlatform(row.song_platform) ? row.song_platform : null,
-  note: typeof row.note === 'string' ? row.note : '',
-  status:
-    row.status === 'listened' || row.status === 'added' || row.status === 'passed'
-      ? row.status
-      : 'new',
-  reply: typeof row.curator_reply === 'string' && row.curator_reply ? row.curator_reply : null,
-  createdAt: String(row.created_at || ''),
-  updatedAt: String(row.updated_at || ''),
-});
+/**
+ * A pitch as its curator sees it, built field by field.
+ *
+ * The payment fields are added only when the row carries `payment_kind`, which
+ * it does only when the payment columns were selected. So on a database the
+ * payments migration has not reached, the payload is exactly what it was before
+ * they existed. `payment.shareKobo` is the curator's own nominal share of a
+ * paid pitch.
+ */
+export const toCuratorPitch = (
+  row: Record<string, unknown>,
+  payment?: { shareKobo: number | null } | null
+): CuratorPitch => {
+  const pitch: CuratorPitch = {
+    id: String(row.id || ''),
+    playlistName: typeof row.playlist_name === 'string' ? row.playlist_name : '',
+    songTitle: typeof row.song_title === 'string' ? row.song_title : '',
+    artistName: typeof row.artist_name === 'string' ? row.artist_name : '',
+    pitcherName: typeof row.pitcher_name === 'string' ? row.pitcher_name : '',
+    songUrl: typeof row.song_url === 'string' ? row.song_url : '',
+    songPlatform: isPitchPlatform(row.song_platform) ? row.song_platform : null,
+    note: typeof row.note === 'string' ? row.note : '',
+    status:
+      row.status === 'listened' || row.status === 'added' || row.status === 'passed'
+        ? row.status
+        : 'new',
+    reply: typeof row.curator_reply === 'string' && row.curator_reply ? row.curator_reply : null,
+    createdAt: String(row.created_at || ''),
+    updatedAt: String(row.updated_at || ''),
+  };
+  if ('payment_kind' in row) {
+    const paid = row.payment_kind === 'paid';
+    pitch.paymentKind = paid ? 'paid' : 'free';
+    pitch.responseDueAt = paid && typeof row.response_due_at === 'string' ? row.response_due_at : null;
+    pitch.shareKobo = paid ? payment?.shareKobo ?? null : null;
+  }
+  return pitch;
+};
 
 type TextFieldRules = { label: string; max: number; required: boolean };
 

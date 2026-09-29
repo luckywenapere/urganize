@@ -40,7 +40,10 @@ import { PitchComposer } from '@/components/pitching/PitchComposer';
 import { isValidCuratorSlug } from '@/lib/curator-public';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { SentPitchRow } from '@/components/pitching/SentPitchRow';
+import { PitchPayments } from '@/components/pitching/PitchPayments';
 import { useToast } from '@/components/shared/ToastProvider';
+import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
+import { PAYMENT_FAILED } from '@/lib/pitch-payment-copy';
 
 // Same flag every /api/pitching route reads. A direct link followed while the
 // flag is off bounces to the workspace — the route has no server-side gate,
@@ -54,6 +57,19 @@ const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
  * value is re-validated because it is a URL somebody can type, and it goes on
  * to filter a server query.
  */
+/**
+ * Paystack sends an artist who cancels on its page back here with
+ * ?payment=cancelled (the checkout's cancel_action). Read the same way as the
+ * curator param, and for the same reason.
+ */
+function readPaymentCancelled(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('payment') === 'cancelled';
+  } catch {
+    return false;
+  }
+}
+
 function readCuratorParam(): string {
   try {
     const raw = new URLSearchParams(window.location.search).get('curator') || '';
@@ -68,7 +84,12 @@ export default function PitchingPageClient() {
   // Set when an artist arrives from /pitch/{slug}. Empty for everyone else, so
   // the composer browses the whole inventory exactly as it always has.
   const [curatorSlug, setCuratorSlug] = useState('');
-  useIsomorphicLayoutEffect(() => setCuratorSlug(readCuratorParam()), []);
+  const [paymentCancelled, setPaymentCancelled] = useState(false);
+  useIsomorphicLayoutEffect(() => {
+    setCuratorSlug(readCuratorParam());
+    setPaymentCancelled(readPaymentCancelled());
+  }, []);
+  const paymentsOn = isPitchPaymentsEnabled();
 
   const router = useRouter();
   const { isLoading: authLoading } = useAuthStore();
@@ -180,6 +201,15 @@ export default function PitchingPageClient() {
         ) : null}
       </header>
 
+      {paymentsOn && paymentCancelled ? (
+        <p
+          role="status"
+          className="mt-6 rounded-lg border border-status-warning/30 bg-status-warning/10 p-4 text-sm text-status-warning"
+        >
+          {PAYMENT_FAILED}
+        </p>
+      ) : null}
+
       {error ? (
         <div className="mt-6 rounded-lg border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
           <p>{error}</p>
@@ -247,6 +277,9 @@ export default function PitchingPageClient() {
               // its group immediately. Unlike the scene there is no shared
               // cache here that would go stale.
               onSent={(pitch) => setPitches((current) => [pitch, ...current])}
+              // A paid pitch is saved as waiting for payment rather than sent,
+              // so there is no row to prepend: reload the list instead.
+              onChanged={() => void load()}
               onToast={(message, tone) => pushToast(message, tone)}
             />
           </>
@@ -299,7 +332,7 @@ export default function PitchingPageClient() {
                 </div>
                 <ul className="space-y-2">
                   {group.pitches.map((pitch) => (
-                    <SentPitchRow key={pitch.id} pitch={pitch} />
+                    <SentPitchRow key={pitch.id} pitch={pitch} onChanged={() => void load()} />
                   ))}
                 </ul>
               </div>
@@ -307,6 +340,13 @@ export default function PitchingPageClient() {
           </div>
         )}
       </section>
+
+      {paymentsOn ? (
+        <section aria-label="Payments" className="mt-10 space-y-4">
+          <h2 className="text-sm font-semibold text-content-primary">Payments</h2>
+          <PitchPayments />
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -72,7 +72,7 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
         ) : (
           <ul className="space-y-2">
             {pitches.map((pitch) => (
-              <SentPitchRow key={pitch.id} pitch={pitch} />
+              <SentPitchRow key={pitch.id} pitch={pitch} onChanged={() => void refreshPitches(true)} />
             ))}
           </ul>
         )}
@@ -90,6 +90,7 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
           // the new pitch. Appending locally would leave the cached copy a
           // pitch behind for the rest of the session.
           onSent={() => void refreshPitches(true)}
+          onChanged={() => void refreshPitches(true)}
           onToast={onToast}
         />
       </section>
