@@ -17,6 +17,7 @@ import { loadWorkspaceAccessContext, loadProfilesByIds } from '@/lib/tasks-serve
 import { TaskService } from '@/lib/services/task-service';
 import { ReleaseService } from '@/lib/services/release-service';
 import type { ActivityLogEntry, CommandCenterData, ExecutionTask } from '@/lib/execution-types';
+import type { Timings } from '@/lib/server-timing';
 
 const ACTIVITY_LOG_TABLE = 'activity_logs';
 
@@ -58,25 +59,34 @@ const toActivity = (
  */
 export async function loadCommandCenterData(
   adminClient: SupabaseClient,
-  user: User
+  user: User,
+  timings?: Timings
 ): Promise<CommandCenterData> {
+  // Optional Server-Timing recorder: when absent the work just runs.
+  const step = <T>(name: string, work: () => Promise<T>): Promise<T> =>
+    timings ? timings.time(name, work) : work();
+
   const releaseService = new ReleaseService(adminClient);
   const taskService = new TaskService(adminClient);
 
   // Access first: its releaseOwnerIds drive whole-workspace release
   // visibility (a teammate sees the shared catalog, not just their own).
-  const access = await loadWorkspaceAccessContext(adminClient, user);
+  const access = await step('cc_access', () => loadWorkspaceAccessContext(adminClient, user));
 
   // Releases, tasks, and activity are independent reads — they used to run
   // as three serial round trips (plus the actor-profile lookup nested in
   // activity). Fanned out, the request costs the slowest one, not the sum.
   const [releases, rawTasks, activity] = await Promise.all([
-    releaseService.getReleasesForUser(user.id, access.releaseOwnerIds, access.artistScopeByOwnerId),
+    step('cc_releases', () =>
+      releaseService.getReleasesForUser(user.id, access.releaseOwnerIds, access.artistScopeByOwnerId)
+    ),
     (async (): Promise<ExecutionTask[]> => {
       if (!access.workspaceIds.length || !access.membershipIds.length) return [];
-      return (await taskService.getTasksForUser(user.id, access.workspaceIds)) as ExecutionTask[];
+      return (await step('cc_tasks', () =>
+        taskService.getTasksForUser(user.id, access.workspaceIds)
+      )) as ExecutionTask[];
     })(),
-    (async (): Promise<ActivityLogEntry[]> => {
+    step('cc_activity', async (): Promise<ActivityLogEntry[]> => {
       // owner_user_id is NOT NULL, so a plain eq matches everything this
       // user owns and rides activity_logs_owner_created_idx (owner_user_id,
       // created_at desc) exactly.
@@ -104,7 +114,7 @@ export async function loadCommandCenterData(
         rows.map((row) => (row.actor_user_id ? String(row.actor_user_id) : ''))
       );
       return rows.map((row) => toActivity(row, actorProfileById));
-    })(),
+    }),
   ]);
 
   // Artist-scoped members only see activities for THEIR releases — the

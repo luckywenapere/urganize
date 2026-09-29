@@ -18,6 +18,7 @@
 // aggregate queries on top — never touching or modifying the three routes
 // themselves.
 
+import type { Timings } from '@/lib/server-timing';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
@@ -457,19 +458,25 @@ export type HomeLoadResult = {
   home: HomePayload;
 };
 
-export async function loadHomeData(adminClient: SupabaseClient, user: User): Promise<HomeLoadResult> {
+export async function loadHomeData(
+  adminClient: SupabaseClient,
+  user: User,
+  timings?: Timings
+): Promise<HomeLoadResult> {
   const now = new Date();
+  const step = <T>(name: string, work: () => Promise<T>): Promise<T> =>
+    timings ? timings.time(name, work) : work();
 
   const [commandCenter, access] = await Promise.all([
-    loadCommandCenterData(adminClient, user),
-    loadWorkspaceAccessContext(adminClient, user),
+    step('cc_total', () => loadCommandCenterData(adminClient, user, timings)),
+    step('home_access', () => loadWorkspaceAccessContext(adminClient, user)),
   ]);
   const { releases, tasks } = commandCenter;
 
   const [roleFacts, visibleShows, pitches] = await Promise.all([
-    loadRoleFacts(adminClient, user, access),
-    loadVisibleShows(adminClient, user, access, now),
-    loadTeamPitches(adminClient, user, access, releases),
+    step('home_role', () => loadRoleFacts(adminClient, user, access)),
+    step('home_shows', () => loadVisibleShows(adminClient, user, access, now)),
+    step('home_pitches', () => loadTeamPitches(adminClient, user, access, releases)),
   ]);
 
   const { role, teamName, primaryOwnerId, roster, viewerName } = roleFacts;
@@ -522,7 +529,9 @@ export async function loadHomeData(adminClient: SupabaseClient, user: User): Pro
     now
   );
 
-  const packWaits = await loadShowPackWaits(adminClient, visibleShows, primaryOwnerId, now);
+  const packWaits = await step('home_packs', () =>
+    loadShowPackWaits(adminClient, visibleShows, primaryOwnerId, now)
+  );
 
   const nextShowRow = selectNextShow(
     visibleShows.map((show) => ({ ...show })) as Array<ShowRow & SchedulableShow>,
