@@ -1498,6 +1498,62 @@ export async function ensureTaskAccess(
   return { task, access };
 }
 
+/**
+ * The pure decision behind `ensureTaskThreadAccess` below — no I/O, so every
+ * caller that already has a task row and an access context in hand (the GET
+ * and PATCH single-task routes) can reuse it without a second DB round trip.
+ *
+ * Task THREADS are narrower than general task visibility (Release & Task
+ * Chat, Phase 1): scoped by default to the task's assignee, whoever created
+ * it, and workspace owners/admins — not every workspace member who can see
+ * the release.
+ *
+ * `ensureTaskAccess` deliberately does NOT do this — task visibility was
+ * corrected from assignee-based to workspace-based years ago (founder
+ * decision, 2026-06), and that stays true for the task's other data
+ * (attachments, outcome, dependencies). But reusing it as-is for the chat
+ * would make a task thread exactly as wide as the release thread, which
+ * defeats the PRD's whole distinction between the two — so this is a
+ * genuinely new, narrower rule, not a reuse.
+ *
+ * `created_by` is included because a regular team member who creates a task
+ * and assigns it to someone else would otherwise be locked out of the very
+ * thread they set the task up in.
+ *
+ * Phase 2 (task_thread_members) adds a fourth OR-branch here: an explicit
+ * invite for someone who is neither the assignee, the creator, nor a
+ * manager. This only ever WIDENS access beyond the default below — it never
+ * narrows it.
+ */
+export function hasTaskThreadAccess(
+  task: Pick<TaskRow, 'workspace_id' | 'assigned_to_user_id' | 'created_by'>,
+  access: WorkspaceAccessContext,
+  userId: string
+): boolean {
+  if (task.assigned_to_user_id && task.assigned_to_user_id === userId) return true;
+  if (task.created_by && task.created_by === userId) return true;
+  const membership = access.memberships.find((member) => member.workspaceId === task.workspace_id);
+  return membership?.role === 'owner' || membership?.role === 'admin';
+}
+
+export async function ensureTaskThreadAccess(
+  adminClient: SupabaseClient,
+  taskId: string,
+  user: DatabaseUser
+): Promise<{ task: TaskRow; access: WorkspaceAccessContext } | { error: NextResponse }> {
+  const result = await ensureTaskAccess(adminClient, taskId, user);
+  if ('error' in result) {
+    return result;
+  }
+
+  const { task, access } = result;
+  if (!hasTaskThreadAccess(task, access, user.id)) {
+    return { error: NextResponse.json({ error: 'Task not found.' }, { status: 404 }) };
+  }
+
+  return { task, access };
+}
+
 export async function createDefaultReleaseTaskGroups(
   adminClient: SupabaseClient,
   workspaceId: string,
@@ -1806,11 +1862,28 @@ export async function loadTaskOutcome(
 export async function loadTaskDetail(
   adminClient: SupabaseClient,
   taskRow: TaskRow,
-  currentUserId: string
+  currentUserId: string,
+  options?: {
+    /**
+     * Whether the caller has THREAD access (see hasTaskThreadAccess) —
+     * narrower than general task visibility. Defaults to true: the two
+     * callers where this matters (the single-task GET and PATCH routes)
+     * pass it explicitly; the narrow fallback paths (task creation, and
+     * TaskService.getTaskById's rare no-row-returned recovery branch) do
+     * not carry a WorkspaceAccessContext to check against, and defaulting
+     * open there is a deliberately small, low-risk gap rather than plumbing
+     * an access context through call sites that already passed a courser
+     * check upstream.
+     */
+    includeComments?: boolean;
+  }
 ): Promise<TaskDetail> {
+  const includeComments = options?.includeComments ?? true;
   const [tasks, comments, attachments, activity, outcome] = await Promise.all([
     loadTasks(adminClient, [taskRow], currentUserId),
-    loadTaskComments(adminClient, taskRow.id, currentUserId),
+    includeComments
+      ? loadTaskComments(adminClient, taskRow.id, currentUserId)
+      : Promise.resolve([]),
     loadTaskAttachments(adminClient, taskRow.id),
     loadTaskActivity(adminClient, taskRow.id),
     loadTaskOutcome(adminClient, taskRow.id),
@@ -1820,6 +1893,7 @@ export async function loadTaskDetail(
   return {
     ...task,
     comments,
+    canComment: includeComments,
     attachments,
     activity,
     outcome,

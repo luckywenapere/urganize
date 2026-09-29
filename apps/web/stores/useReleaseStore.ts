@@ -277,3 +277,25 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
     }));
   },
 }));
+
+/**
+ * Forget the signed-in account's rollouts and today's directive. Called on
+ * SIGNED_OUT (lib/auth-store.ts) — the same exposure as resetPressKitsStore /
+ * resetArtistRosterStore / resetEventsStore: this store is module-level, so a
+ * client-side navigation to /auth never tears it down, and within
+ * COMMAND_CENTER_FRESH_MS the recency guard would otherwise skip the next
+ * account's load and leave account A's catalog on screen for account B. The
+ * disk cache needs no clearing here — it is already keyed by session user id
+ * and a mismatched read is ignored (see isCommandCenterCache above).
+ */
+export function resetReleaseStore(): void {
+  commandCenterLoadedAt = 0;
+  commandCenterInFlight = null;
+  useReleaseStore.setState({
+    releases: [],
+    todaysDirective: null,
+    isInitialLoading: true,
+    isRefreshing: false,
+    error: '',
+  });
+}

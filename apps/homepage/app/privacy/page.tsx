@@ -20,7 +20,7 @@ export const metadata: Metadata = buildPageMetadata({
 // Keep this date REAL. It only moves when the policy text actually changes —
 // never wire it to new Date() (the old version did, which made the policy
 // claim it was updated every day).
-const LAST_UPDATED = "July 18, 2026";
+const LAST_UPDATED = "September 25, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Privacy%20question%20-%20Urganize";
@@ -207,6 +207,12 @@ export default function PrivacyPolicy() {
                 release context (release details, task progress, not your
                 uploaded files) is sent through our AI gateway to a third-party
                 AI model provider solely to generate the output you asked for.
+              </p>
+              <p>
+                If you talk to UrgAns instead of typing, the voice clip is sent
+                to the same AI provider to turn into text, and the clip is not
+                stored. The text lands in the message box for you to read and
+                edit before anything is sent.
               </p>
               <p>
                 We do not use your content to train AI models, and we use

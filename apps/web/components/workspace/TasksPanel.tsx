@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   Mail,
   Menu,
+  MessageCircle,
   Music,
   NotebookPen,
   Archive,
@@ -126,6 +127,10 @@ const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 // is off. The scene has no API routes to gate — it lays itself out from the
 // activities this panel already has in props.
 const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
+
+// Release chat entry point (Release & Task Chat, Phase 1). Same flag gates
+// the /messages API routes and the ?scene=chat URL param in scene-cache.ts.
+const RELEASE_CHAT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true';
 
 // Notes entry point: same flag AppTopbar and the identity panel read.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
@@ -675,6 +680,21 @@ export function TasksPanel({
       </button>
     ) : null;
 
+  // The rollout's own chat thread (Release & Task Chat, Phase 1). Desktop
+  // header row and the mobile folded menu, same as the other scene pills.
+  const chatButton =
+    RELEASE_CHAT_ENABLED && scopedRelease ? (
+      <button
+        type="button"
+        onClick={() => toggleScene('chat', scopedRelease.id)}
+        aria-pressed={activeScene === 'chat'}
+        className={pillClass('chat')}
+      >
+        <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+        Chat
+      </button>
+    ) : null;
+
   /**
    * Notes for this release — DESKTOP ONLY (founder call, 2026-08-15: notes
    * should not be one of the mobile pills), which is why it is its own
@@ -905,6 +925,15 @@ export function TasksPanel({
           isActive: activeScene === 'files',
         }
       : null,
+    RELEASE_CHAT_ENABLED && scopedRelease
+      ? {
+          key: 'chat',
+          label: 'Chat',
+          icon: MessageCircle,
+          onClick: () => toggleScene('chat', scopedRelease.id),
+          isActive: activeScene === 'chat',
+        }
+      : null,
     // No `isActive` on the three modal-shaped rows below: they open over the
     // page rather than swapping this panel's body, so there is no open scene
     // for a lit row to report.
@@ -1065,6 +1094,7 @@ export function TasksPanel({
         {songButton}
         {pitchButton}
         {filesButton}
+        {chatButton}
         {notesPill}
         {shareButton}
         {changeArtistButton}

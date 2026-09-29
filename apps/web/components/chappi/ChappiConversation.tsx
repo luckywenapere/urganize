@@ -12,6 +12,7 @@ import {
   Disc3,
   Layers,
   Loader2,
+  Mic,
   NotebookPen,
   RotateCcw,
   Rocket,
@@ -54,6 +55,9 @@ import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { markPendingFirstShare } from '@/lib/social-share-offer';
 import { actionsForLeftChat, firstShareOffersIn } from '@/lib/chappi/left-chat-actions';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { useVoiceInput } from '@/components/chappi/useVoiceInput';
+import { isUrgansVoiceEnabled } from '@/lib/chappi/config';
+import { mergeTranscript } from '@/lib/urgans-voice';
 import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { supabase } from '@/lib/supabase/client';
 import { CHAPPI_CHIPS, buildHelpReply, resolveIntent } from '@/lib/chappi/intent-router';
@@ -130,6 +134,14 @@ async function getAccessToken(): Promise<string> {
 // Saved chats (NEXT_PUBLIC_FEATURE_URGANS_HISTORY). Read once, like every
 // other flag, so Next inlines it.
 const HISTORY_ENABLED = isChappiHistoryEnabled();
+const VOICE_ENABLED = isUrgansVoiceEnabled();
+
+// "Listening… 0:07" — mm:ss, single-digit minutes are enough for a 60s cap.
+const formatElapsed = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
 
 // Module-scope id generator: keeps impure Date.now() out of component scope
 // (react-hooks/purity), and the counter guarantees uniqueness even when two
@@ -226,6 +238,25 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const [thinkingEpoch, setThinkingEpoch] = useState<number | null>(null);
   const isThinking = thinkingEpoch === epoch;
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Voice input (NEXT_PUBLIC_FEATURE_URGANS_VOICE). The transcript is MERGED
+  // into whatever is typed — never replacing it, never sending. Reading the
+  // input from getState avoids a stale closure at transcribe time (a clip can
+  // land many seconds after recording started).
+  const voice = useVoiceInput({
+    enabled: VOICE_ENABLED,
+    onTranscript: (text) => {
+      setInput(mergeTranscript(useChappiStore.getState().input, text));
+      inputRef.current?.focus();
+    },
+    getHints: () =>
+      scopedRelease
+        ? { releaseTitle: scopedRelease.title, artistName: scopedRelease.artistName }
+        : {},
+  });
+  const isRecording = voice.state === 'recording';
+  const isTranscribing = voice.state === 'transcribing';
 
   // The release whose song the transcript is currently offering to upload, or
   // null. Component state rather than the store, unlike pendingConfirmation:
@@ -1022,20 +1053,56 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           scopedReleaseId={scopedReleaseId}
           onSelect={setScopedReleaseId}
         />
-        <input
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Ask UrgAns…"
-          aria-label="Message UrgAns"
-          disabled={isThinking}
-          // 16px below sm is deliberate: anything smaller makes iOS zoom the
-          // page on focus, which is its own kind of layout jump.
-          className="min-w-0 flex-1 bg-transparent px-2 text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60 sm:text-sm"
-        />
+        {isRecording ? (
+          // The field is replaced by a live "Listening…" readout while
+          // recording. Same 16px/px-2 metrics as the input so the row height
+          // does not jump.
+          <div
+            role="status"
+            className="flex min-w-0 flex-1 items-center gap-2 px-2 text-[16px] text-content-secondary sm:text-sm"
+          >
+            <span
+              className="h-2 w-2 shrink-0 rounded-full bg-status-error motion-safe:animate-pulse"
+              aria-hidden="true"
+            />
+            Listening… {formatElapsed(voice.elapsed)}
+          </div>
+        ) : (
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder={isTranscribing ? 'Turning your voice into text…' : 'Ask UrgAns…'}
+            aria-label="Message UrgAns"
+            disabled={isThinking || isTranscribing}
+            // 16px below sm is deliberate: anything smaller makes iOS zoom the
+            // page on focus, which is its own kind of layout jump.
+            className="min-w-0 flex-1 bg-transparent px-2 text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60 sm:text-sm"
+          />
+        )}
+        {voice.supported ? (
+          <button
+            type="button"
+            onClick={voice.toggle}
+            aria-pressed={isRecording}
+            aria-label={isRecording ? 'Stop recording' : 'Talk to UrgAns'}
+            // Ghost style so Send stays the primary action.
+            disabled={isThinking || isTranscribing || voice.state === 'requesting'}
+            className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 aria-pressed:text-status-error"
+          >
+            {isTranscribing || voice.state === 'requesting' ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : isRecording ? (
+              <span className="h-3 w-3 rounded-[3px] bg-current" aria-hidden="true" />
+            ) : (
+              <Mic className="h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+        ) : null}
         <button
           type="submit"
           aria-label="Send"
-          disabled={!input.trim() || isThinking}
+          disabled={!input.trim() || isThinking || isRecording || isTranscribing}
           className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
         >
           {isThinking ? (
@@ -1045,6 +1112,11 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           )}
         </button>
       </div>
+      {voice.error ? (
+        <p role="status" className="mt-2 px-2 text-center text-xs text-content-tertiary">
+          {voice.error}
+        </p>
+      ) : null}
     </form>
   );
 

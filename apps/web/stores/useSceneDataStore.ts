@@ -27,6 +27,7 @@ import type { ReleaseCaptureLead, ReleaseCapturePage } from '@/types/capture';
 import type { ReleaseSong } from '@/types/song';
 import type { ReleaseCoverArt } from '@/types/cover-art';
 import type { Asset } from '@/components/releases/AssetSection';
+import type { ReleaseMessage } from '@/types/release-message';
 
 /**
  * Cache + background-prefetch layer for the four release scenes.
@@ -73,6 +74,9 @@ export type SongScenePayload = { songs: ReleaseSong[] };
  * single nullable slot rather than a list. */
 export type CoverArtScenePayload = { coverArt: ReleaseCoverArt | null };
 
+/** Oldest first — a chat thread reads top-to-bottom. */
+export type ChatScenePayload = { messages: ReleaseMessage[] };
+
 export type ScenePayloadMap = {
   metadata: MetadataScenePayload;
   files: FilesScenePayload;
@@ -81,6 +85,7 @@ export type ScenePayloadMap = {
   calendar: CalendarScenePayload;
   pitch: PitchScenePayload;
   capture: CaptureScenePayload;
+  chat: ChatScenePayload;
 };
 
 type SceneStateEntry = {
@@ -296,6 +301,14 @@ const FETCHERS: Record<CacheableSceneName, SceneFetcher> = {
       leadCount: typeof data.leadCount === 'number' ? data.leadCount : 0,
       hasGraphic: data.hasGraphic === true,
     } satisfies CaptureScenePayload;
+  },
+  chat: async (releaseId, token, prefetch) => {
+    const data = await readJson(
+      await fetch(`/api/releases/${releaseId}/messages`, requestInit(token, prefetch))
+    );
+    return {
+      messages: Array.isArray(data.messages) ? (data.messages as ReleaseMessage[]) : [],
+    } satisfies ChatScenePayload;
   },
 };
 

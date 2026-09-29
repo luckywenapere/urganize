@@ -49,6 +49,7 @@ import {
   activeDraftTasks,
   applyDeltaToDraft,
   applyOwnerProposals,
+  applyPreset,
   applyScopeExclusions,
   buildDraftFromTemplate,
   buildPlannerMessages,
@@ -422,8 +423,15 @@ export async function createReleasePlan(
   });
   doc = applyOwnerProposals(doc, proposals);
 
-  // --- 5. The manager's own exclusions, by code ------------------------------
+  // --- 5. A named preset, then the manager's own exclusions, by code ---------
 
+  // Applied first and unconditionally when named: a preset is a much more
+  // restrictive keep-list than any combination of scope exclusions, so
+  // running it before the exclusions below just means those find nothing
+  // further to remove — never that they disagree.
+  if (intake.preset) {
+    doc = applyPreset(doc, intake.preset);
+  }
   doc = applyScopeExclusions(doc, deriveIntakeExclusions(intake));
 
   // --- 6. The model's delta over what is left --------------------------------

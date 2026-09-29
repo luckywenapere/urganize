@@ -1,4 +1,4 @@
-import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
+import { isDefaultReleaseTitle, type DbReleaseType } from '@/types/releases';
 
 /**
  * Share to socials: the words and the rules behind the things a manager or an
@@ -249,17 +249,14 @@ export function releaseNoun(releaseType: DbReleaseType): 'single' | 'EP' | 'albu
 }
 
 // The server default for an untitled release, both before and after the
-// 2026-09-09 rename. Rows created before it still carry the old string, and
-// neither must ever reach a fan.
-const PLACEHOLDER_TITLES = new Set(
-  [DEFAULT_RELEASE_TITLE, 'Untitled release'].map((title) => title.toLowerCase())
-);
+// 2026-09-09 rename, lives in isDefaultReleaseTitle (types/releases.ts) — one
+// list, so the share sheet and the date card cannot disagree about what counts
+// as "not named yet". Neither placeholder must ever reach a fan.
 
 /** The title a fan should see, or null when there is no real one yet. */
 export function shareDisplayTitle(title: string | null | undefined): string | null {
-  const trimmed = String(title ?? '').trim();
-  if (!trimmed || PLACEHOLDER_TITLES.has(trimmed.toLowerCase())) return null;
-  return trimmed;
+  if (isDefaultReleaseTitle(title)) return null;
+  return String(title ?? '').trim();
 }
 
 /**

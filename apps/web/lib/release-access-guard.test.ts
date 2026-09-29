@@ -49,6 +49,10 @@ const TEAM_ACCESS_GROUPS = [
   'generate-status',
   'content-calendars',
   'content-posts',
+  // Release chat (Release & Task Chat, Phase 1, 2026-09-29). Visible to
+  // everyone with release access, same as this whole list — unlike a task
+  // thread, which is narrower (hasTaskThreadAccess in tasks-server.ts).
+  'messages',
 ];
 
 const BANNED = /ensureReleaseOwnership|ensureOwnedRelease/;
@@ -78,7 +82,7 @@ describe('release scene route groups use the shared team-aware access check', ()
   );
 
   it('collects a plausible file set (guards the walker)', () => {
-    // 11 groups, each with at least a route.ts — an empty or tiny sweep
+    // 12 groups, each with at least a route.ts — an empty or tiny sweep
     // means the directory layout moved and this guard went blind.
     expect(files.length).toBeGreaterThanOrEqual(TEAM_ACCESS_GROUPS.length);
     expect(files.some((file) => file.endsWith('route.ts'))).toBe(true);

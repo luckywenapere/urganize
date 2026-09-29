@@ -64,7 +64,11 @@ describe('buildTaskRowsFromDraft', () => {
       expect(row.release_id).toBe(RELEASE_ID);
       expect(row.workspace_id).toBe(WORKSPACE_ID);
       expect(row.auto_generated).toBe(true);
-      expect(row.status).toBe('todo');
+      // The fixture's own intake answers "master" is ready today, which
+      // completes exactly w8_lock_master (see the "marking finished work
+      // done" tests below) — every other row is still open work.
+      const draftTaskId = (row.metadata.planner as { draft_task_id: string }).draft_task_id;
+      expect(row.status, draftTaskId).toBe(draftTaskId === 'w8_lock_master' ? 'done' : 'todo');
       expect(row.state).toBe('planning');
     }
   });
@@ -284,5 +288,61 @@ describe('buildTaskRowsFromDraft', () => {
       tasks: doc.tasks.map((task) => ({ ...task, removed: true, removed_by: 'user' as const })),
     };
     expect(() => build(allRemoved)).toThrow(PlanApprovalError);
+  });
+
+  describe('marking finished work done (ready_today)', () => {
+    const rowFor = (rows: ReturnType<typeof buildTaskRowsFromDraft>['rows'], draftTaskId: string) =>
+      rows.find(
+        (row) => (row.metadata.planner as { draft_task_id: string }).draft_task_id === draftTaskId
+      );
+
+    it('marks the brief/draft/approval trio done when artwork is already ready, and nothing else', () => {
+      const doc = buildDraftFromTemplate({
+        template: SINGLE_RELEASE_TEMPLATE,
+        intake: { ...intake, ready_today: ['artwork'] },
+        ownerUserId: OWNER,
+        generatedAt: '2026-07-30T09:00:00.000Z',
+      });
+      const { rows } = build(doc);
+
+      const doneIds = ['w7_brief_designer', 'w6_cover_art_first_draft', 'w5_cover_art_final_approved'];
+      for (const id of doneIds) {
+        expect(rowFor(rows, id)?.status, id).toBe('done');
+      }
+      // The upload steps are a different kind of ready — having the art does
+      // not mean it has been sent to the distributor yet.
+      expect(rowFor(rows, 'w6_upload_cover_art')?.status).toBe('todo');
+      expect(rowFor(rows, 'w8_lock_master')?.status).toBe('todo');
+    });
+
+    it('marks nothing done when nothing is ready', () => {
+      const doc = buildDraftFromTemplate({
+        template: SINGLE_RELEASE_TEMPLATE,
+        intake: { ...intake, ready_today: ['none'] },
+        ownerUserId: OWNER,
+        generatedAt: '2026-07-30T09:00:00.000Z',
+      });
+      const { rows } = build(doc);
+      expect(rows.every((row) => row.status === 'todo')).toBe(true);
+    });
+
+    it('never marks a manager-added task done, even if its id happened to match a completed one', () => {
+      const doc = buildDoc();
+      // Swap the real template row out for a manager-added one carrying the
+      // SAME id — the guard in buildTaskRowsFromDraft checks task.origin,
+      // not just whether the id is in the ready-completion map, so this
+      // must stay 'todo' despite ready_today including 'master'.
+      const withUserTaskInstead = {
+        ...doc,
+        tasks: doc.tasks.map((task) =>
+          task.id === 'w8_lock_master'
+            ? { ...task, template_task_id: null, origin: 'user' as const }
+            : task
+        ),
+      };
+      const { rows } = build(withUserTaskInstead);
+      const row = rowFor(rows, 'w8_lock_master');
+      expect(row?.status).toBe('todo');
+    });
   });
 });

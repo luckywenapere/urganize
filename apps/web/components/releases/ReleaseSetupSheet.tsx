@@ -7,7 +7,7 @@ import { CalendarPlus, X } from '@/components/icons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { scheduleRelease } from '@/lib/schedule-release-client';
 import { getTemplateStats } from '@/lib/release-templates/loader';
-import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
+import { DEFAULT_RELEASE_TITLE, isDefaultReleaseTitle, type DbReleaseType } from '@/types/releases';
 
 const SWIPE_DISMISS_PX = 80;
 
@@ -92,7 +92,12 @@ export function ReleaseSetupSheet({
   // Anchored once per mount so the `min` attribute can't shift mid-interaction.
   const todayYmd = useMemo(() => formatYmdLocal(new Date()), []);
 
-  const showNameField = releaseTitle === DEFAULT_RELEASE_TITLE;
+  // isDefaultReleaseTitle, not a bare === DEFAULT_RELEASE_TITLE — see the
+  // identical fix in SetReleaseDateCard for why: a rollout titled "Untitled
+  // release" (the pre-2026-09-09 default) is still unnamed and still needs
+  // this field, and a strict comparison against only the current default
+  // string was silently hiding it for every such row.
+  const showNameField = isDefaultReleaseTitle(releaseTitle);
   const typeLabel = RELEASE_TYPE_LABELS[releaseType] ?? 'release';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

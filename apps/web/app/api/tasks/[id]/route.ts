@@ -8,6 +8,7 @@ import {
   buildTaskSchemaResponse,
   createTaskNotification,
   ensureTaskAccess,
+  hasTaskThreadAccess,
   isReadOnlyWorkspaceMember,
   loadTaskDetail,
   requireAuthenticatedAdmin,
@@ -84,8 +85,11 @@ export async function GET(
     if ('error' in access) return access.error;
 
     // ensureTaskAccess already fetched the row — hydrate from it instead of
-    // re-selecting the same task.
-    const task = await loadTaskDetail(adminClient, access.task, auth.user.id);
+    // re-selecting the same task. Comments are narrower than general task
+    // visibility (Release & Task Chat) — see hasTaskThreadAccess.
+    const task = await loadTaskDetail(adminClient, access.task, auth.user.id, {
+      includeComments: hasTaskThreadAccess(access.task, access.access, auth.user.id),
+    });
     return NextResponse.json({ task });
   } catch (error) {
     if (isTaskSchemaMissingError(error)) return buildTaskSchemaResponse();
@@ -182,7 +186,9 @@ export async function PATCH(
     // would be STALE here; it predates the update.)
     const updatedRow = await taskService.updateTask(id, auth.user.id, mapped.updates);
     const task = updatedRow
-      ? await loadTaskDetail(adminClient, updatedRow as TaskRow, auth.user.id)
+      ? await loadTaskDetail(adminClient, updatedRow as TaskRow, auth.user.id, {
+          includeComments: hasTaskThreadAccess(updatedRow as TaskRow, access.access, auth.user.id),
+        })
       : await taskService.getTaskById(id, auth.user.id);
 
     // Notification types defined for these two events but never fired

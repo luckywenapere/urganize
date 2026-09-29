@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   buildTaskSchemaResponse,
-  ensureTaskAccess,
+  ensureTaskThreadAccess,
   requireAuthenticatedAdmin,
   isTaskSchemaMissingError,
   loadTaskComments,
@@ -30,7 +30,7 @@ export async function PATCH(
   const { id, commentId } = await context.params;
 
   try {
-    const access = await ensureTaskAccess(adminClient, id, auth.user);
+    const access = await ensureTaskThreadAccess(adminClient, id, auth.user);
     if ('error' in access) {
       return access.error;
     }
@@ -93,7 +93,7 @@ export async function DELETE(
   const { id, commentId } = await context.params;
 
   try {
-    const access = await ensureTaskAccess(adminClient, id, auth.user);
+    const access = await ensureTaskThreadAccess(adminClient, id, auth.user);
     if ('error' in access) {
       return access.error;
     }

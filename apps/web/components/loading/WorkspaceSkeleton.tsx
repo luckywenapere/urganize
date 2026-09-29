@@ -49,6 +49,10 @@ const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 // it is reserved in the header row and deliberately not in the mobile dock.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
+// The rollout's own chat thread (Release & Task Chat, Phase 1). Sits right
+// after Files in the real row, before Notes.
+const RELEASE_CHAT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true';
+
 // Share to socials (2026-09-23). The real Share pill sits right after Notes in
 // the desktop header row and renders for every scoped rollout, so it is
 // reserved under its flag alone. It also adds a row to the phone's release
@@ -312,6 +316,7 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
     // so it reserves the same width as Files rather than a tagged pill's.
     ...(PITCHING_ENABLED ? ['w-16'] : []), // Pitch
     ...(FILES_ENABLED ? ['w-16'] : []), // Files
+    ...(RELEASE_CHAT_ENABLED ? ['w-16'] : []), // Chat
     // (A Plan pill led this row until 2026-09-15 and was deliberately not
     // reserved, since whether it rendered depended on the release's activity
     // count — data this skeleton never has. The review scene it opened is
@@ -474,6 +479,7 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
           SONG_UPLOAD_ENABLED ||
           FILES_ENABLED ||
           CAPTURE_ENABLED ||
+          RELEASE_CHAT_ENABLED ||
           SOCIAL_SHARE_ENABLED ? (
             <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
           ) : null}
