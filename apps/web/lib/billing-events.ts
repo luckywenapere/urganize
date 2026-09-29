@@ -103,6 +103,12 @@ export const BILLING_EVENT_TYPES = [
    *  team per role per UTC day, so a manager comparing two designers produces
    *  one row and not a dozen. Read back by /admin/directory. */
   'directory_role_wanted',
+  /** One voice clip was transcribed for UrgAns (NEXT_PUBLIC_FEATURE_URGANS_VOICE).
+   *  Deliberately NOT 'urgans_action': speaking is not metered against the
+   *  monthly chat ceiling — only the send that follows is, exactly as typing
+   *  is. This row exists to enforce a per-team daily transcription cap
+   *  (VOICE_DAILY_CAP) as an abuse guard, nothing more. */
+  'urgans_voice_transcription',
   /** Curator pitch payments (2026-09-25): the moments that need the founder.
    *  Mostly about a CURATOR, who may have no team, which is why these rows can
    *  carry a null workspace_id. Each one also emails BILLING_ALERTS_EMAIL — see
