@@ -14,7 +14,6 @@ import {
   getAvailableReleaseTypes,
   getTemplate,
   getTemplateLeadTimeDays,
-  getTemplateStats,
 } from '@/lib/release-templates/loader';
 import { DEFAULT_RELEASE_TITLE, isDbReleaseType, type DbReleaseType } from '@/types/releases';
 import type { ShareReleaseFacts } from '@/lib/social-share';
@@ -567,8 +566,8 @@ export function CreateReleaseModal({
           {/* Type-first create (founder call, 2026-09-01): ONE screen, one
               card per playbook, and the tap creates the release on the spot.
               No plan chooser (dropped — every type-first release is a rollout
-              release), no fields. Each card quotes its own playbook's real
-              numbers, the same stats SetReleaseDateCard quotes. */}
+              release), no fields. Each card is just the type's name; the
+              playbook numbers were dropped (founder call, 2026-09-29). */}
           {TYPE_FIRST_CREATE_ENABLED ? (
             <div
               className={`grid gap-3 p-4 sm:p-5 ${
@@ -576,7 +575,6 @@ export function CreateReleaseModal({
               }`}
             >
               {CREATABLE_RELEASE_TYPES.map((option) => {
-                const stats = getTemplateStats(option);
                 const isBusy = isSubmitting && releaseType === option;
                 return (
                   <button
@@ -591,10 +589,6 @@ export function CreateReleaseModal({
                       {isBusy ? (
                         <Loader2 className="h-4 w-4 animate-spin text-brand" aria-hidden="true" />
                       ) : null}
-                    </span>
-                    <span className="text-sm leading-6 text-content-secondary">
-                      {stats.activityCount} activities across ~{stats.spanWeeks} weeks,
-                      built the moment you set a date.
                     </span>
                   </button>
                 );
