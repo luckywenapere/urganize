@@ -161,25 +161,13 @@ export const HELP_COPY = {
     label: 'UrgAns',
     text: 'Ask for help in plain words. It can make a plan or answer questions about your work.',
   },
-  'nav.notes': {
-    label: 'Notes',
-    text: 'A quick place to write something down mid call. You can link it to a rollout later.',
-  },
   'nav.shows': {
     label: 'Shows',
     text: 'Every live date, with its running order, its set and the tracks your DJ needs.',
   },
-  'nav.pitching': {
-    label: 'Pitching',
-    text: 'Send a song to a music list and see what the person running it said.',
-  },
   'nav.directory': {
     label: 'Directory',
     text: 'Find people who have done this work before, like a designer or an engineer.',
-  },
-  'nav.metadata': {
-    label: 'Metadata',
-    text: 'The details music stores ask for before a song goes out, like genre and language.',
   },
   'nav.pitches': {
     label: 'Playlist pitches',

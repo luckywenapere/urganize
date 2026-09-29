@@ -2,10 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useChappiStore } from '@/stores/useChappiStore';
-import {
-  METADATA_PILL_HIDE_CLASS,
-  TASKS_PILL_DOCK_OFFSET_CLASS,
-} from '@/components/workspace/TasksPanel';
+import { TASKS_PILL_DOCK_OFFSET_CLASS } from '@/components/workspace/TasksPanel';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
 import {
@@ -30,10 +27,8 @@ type PanelBody = SceneName | ReleaseMainView;
 // Fan capture appear per flag, in that order (2026-08-04 — the release detail
 // page and its "Overview" pill were removed; Calendar left this row entirely
 // on 2026-08-13, see the sticky-pill placeholder further down). Metadata
-// (2026-08-12) moved to the identity panel's left-hand nav at `lg`+ (see
-// WorkspaceIdentityPanel), but its pill survives BELOW `lg` (that panel never
-// renders there), so it's still reserved here, just viewport-restricted like
-// its real counterpart.
+// is reserved at every width (its identity-panel nav row was removed
+// 2026-09-29, so the pill is the desktop entry point).
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
@@ -334,17 +329,11 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
       {TIMELINE_ENABLED ? (
         <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
       ) : null}
-      {/* Metadata — narrow widths only, carrying the SAME hide class the
-          real pill computes (see TasksPanel.tsx's METADATA_PILL_HIDE_CLASS:
-          empty when the identity panel is flagged off, else xl/lg depending
-          on Chappi) so the reserved footprint matches at every breakpoint.
-          w-24 since the 2026-08-31 rename from "Collect metadata" — eight
-          characters in a pill with a 14px icon. It used to be described as
-          "the same width as Calendar"; that pill's label shortened to
-          "Content" later the same day, so Metadata is now the wider of the
-          two and keeps w-24 on its own merit. */}
+      {/* Metadata — w-24 since the 2026-08-31 rename from "Collect metadata"
+          (eight characters in a pill with a 14px icon), and it is wider than
+          the Content pill beside it. */}
       {METADATA_ENABLED ? (
-        <SkeletonBlock className={`h-8 w-24 shrink-0 rounded-full ${METADATA_PILL_HIDE_CLASS}`} />
+        <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
       ) : null}
       {pillWidths.map((width, index) => (
         <SkeletonBlock key={`pill-${index}`} className={`h-8 ${width} shrink-0 rounded-full`} />

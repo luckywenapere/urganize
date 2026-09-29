@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthenticatedAdmin } from '@/lib/tasks-server';
 import { errorMessage } from '@/lib/errors';
 import { loadHomeData } from '@/lib/home-server';
+import { createTimings } from '@/lib/server-timing';
 
 /**
  * The Home tab stays dark until NEXT_PUBLIC_FEATURE_HOME is 'true'. Checked
@@ -16,12 +17,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await requireAuthenticatedAdmin(request);
+  const timings = createTimings();
+  const auth = await timings.time('auth', () => requireAuthenticatedAdmin(request));
   if ('error' in auth) return auth.error;
 
   try {
-    const data = await loadHomeData(auth.adminClient, auth.user);
-    return NextResponse.json(data);
+    const data = await timings.time('total_data', () => loadHomeData(auth.adminClient, auth.user, timings));
+    return NextResponse.json(data, { headers: { 'Server-Timing': timings.header() } });
   } catch (error) {
     // A brand new route, deliberately WITHOUT the deprecated schema-missing
     // detection command-center's own route still carries (it is grandfathered

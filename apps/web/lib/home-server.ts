@@ -18,6 +18,7 @@
 // aggregate queries on top — never touching or modifying the three routes
 // themselves.
 
+import type { Timings } from '@/lib/server-timing';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
@@ -387,7 +388,7 @@ async function loadTeamPitches(
   adminClient: SupabaseClient,
   user: User,
   access: WorkspaceAccessContext,
-  releases: readonly ExecutionRelease[]
+  releasesPromise: Promise<readonly ExecutionRelease[]>
 ): Promise<SentPitch[]> {
   if (!isPitchingFeatureEnabled()) return [];
 
@@ -401,7 +402,7 @@ async function loadTeamPitches(
   readErr('pitches', error);
 
   const rows = (data || []) as Array<Record<string, unknown>>;
-  const releaseById = new Map(releases.map((release) => [release.id, release]));
+  const releaseById = new Map((await releasesPromise).map((release) => [release.id, release]));
 
   // Same double-filter as the team-wide GET /api/pitching/pitches: owner ids
   // are a team boundary, not a per-release one, so an artist-scoped teammate
@@ -457,20 +458,37 @@ export type HomeLoadResult = {
   home: HomePayload;
 };
 
-export async function loadHomeData(adminClient: SupabaseClient, user: User): Promise<HomeLoadResult> {
+export async function loadHomeData(
+  adminClient: SupabaseClient,
+  user: User,
+  timings?: Timings
+): Promise<HomeLoadResult> {
   const now = new Date();
+  const step = <T>(name: string, work: () => Promise<T>): Promise<T> =>
+    timings ? timings.time(name, work) : work();
 
-  const [commandCenter, access] = await Promise.all([
-    loadCommandCenterData(adminClient, user),
-    loadWorkspaceAccessContext(adminClient, user),
+  // Access is resolved ONCE and shared. It used to run twice in parallel (here
+  // and again inside loadCommandCenterData), and everything Home adds waited
+  // for the whole catalog load even though role, shows and pitches need only
+  // the access context. Now the catalog load, the role read and the shows read
+  // all start as soon as access lands, so Home costs about the catalog load
+  // plus nothing, instead of the catalog load plus a serial second stage.
+  const access = await step('home_access', () => loadWorkspaceAccessContext(adminClient, user));
+
+  const commandCenterPromise = step('cc_total', () =>
+    loadCommandCenterData(adminClient, user, { timings, access })
+  );
+  // Pitches need the releases only to filter and label rows AFTER their own
+  // query, so the query starts now and waits for the releases at that point.
+  const releasesPromise = commandCenterPromise.then((data) => data.releases);
+
+  const [commandCenter, roleFacts, visibleShows, pitches] = await Promise.all([
+    commandCenterPromise,
+    step('home_role', () => loadRoleFacts(adminClient, user, access)),
+    step('home_shows', () => loadVisibleShows(adminClient, user, access, now)),
+    step('home_pitches', () => loadTeamPitches(adminClient, user, access, releasesPromise)),
   ]);
   const { releases, tasks } = commandCenter;
-
-  const [roleFacts, visibleShows, pitches] = await Promise.all([
-    loadRoleFacts(adminClient, user, access),
-    loadVisibleShows(adminClient, user, access, now),
-    loadTeamPitches(adminClient, user, access, releases),
-  ]);
 
   const { role, teamName, primaryOwnerId, roster, viewerName } = roleFacts;
 
@@ -522,7 +540,9 @@ export async function loadHomeData(adminClient: SupabaseClient, user: User): Pro
     now
   );
 
-  const packWaits = await loadShowPackWaits(adminClient, visibleShows, primaryOwnerId, now);
+  const packWaits = await step('home_packs', () =>
+    loadShowPackWaits(adminClient, visibleShows, primaryOwnerId, now)
+  );
 
   const nextShowRow = selectNextShow(
     visibleShows.map((show) => ({ ...show })) as Array<ShowRow & SchedulableShow>,
