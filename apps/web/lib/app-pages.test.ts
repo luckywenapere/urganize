@@ -20,6 +20,7 @@ async function loadPages(env: Record<string, string | undefined> = {}) {
   vi.stubEnv('NEXT_PUBLIC_FEATURE_EVENTS', env.NEXT_PUBLIC_FEATURE_EVENTS ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCHING', env.NEXT_PUBLIC_FEATURE_PITCHING ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_PRESS_KITS', env.NEXT_PUBLIC_FEATURE_PRESS_KITS ?? '');
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_HOME', env.NEXT_PUBLIC_FEATURE_HOME ?? '');
   return (await import('./app-pages')) as PagesModule;
 }
 
@@ -31,6 +32,7 @@ const ALL_ON = {
   // left the catalog 2026-09-09): a case asserting its ABSENCE has to be able
   // to turn the flag on.
   NEXT_PUBLIC_FEATURE_PRESS_KITS: 'true',
+  NEXT_PUBLIC_FEATURE_HOME: 'true',
 };
 
 afterEach(() => {
@@ -43,6 +45,23 @@ describe('buildAppPages — always present', () => {
     const { buildAppPages } = await loadPages();
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
     expect(keys).toEqual(['catalog', 'urgans', 'settings']);
+  });
+
+  it('offers Home first, ahead of the catalog, when its flag is on', async () => {
+    const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_HOME: 'true' });
+    const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
+    expect(keys).toEqual(['home', 'catalog', 'urgans', 'settings']);
+  });
+
+  it('leaves Home out when its flag is off, and drops it as a Catalog keyword', async () => {
+    const { buildAppPages, appPageHaystack } = await loadPages();
+    const pages = buildAppPages({ hasCuratorProfile: false });
+    expect(pages.map((page) => page.key)).not.toContain('home');
+    const catalog = pages.find((page) => page.key === 'catalog');
+    expect(catalog).toBeDefined();
+    // 'home' used to be a keyword here, back when this WAS the app's only
+    // "home" — it moved to the real Home page's own entry above.
+    expect(appPageHaystack(catalog!)).not.toMatch(/\bhome\b/i);
   });
 
   it('points each of them at the route the nav uses', async () => {

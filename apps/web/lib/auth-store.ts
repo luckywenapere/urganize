@@ -24,6 +24,7 @@ import { clearKitDetailCache } from '@/lib/press-kit-detail-cache';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { resetChappiHistory } from '@/stores/useChappiHistoryStore';
 import { clearPendingFirstShare } from '@/lib/social-share-offer';
+import { useHomeStore } from '@/stores/useHomeStore';
 import {
   classifyAuthFailure,
   isProfileReadTransientError,
@@ -1151,6 +1152,10 @@ if (typeof window !== 'undefined') {
       // account B on the next load, on a rollout B cannot see, and spend B's
       // once-only offer on an error.
       clearPendingFirstShare();
+      // Home's role, state and brief are account A's too — a same-tab
+      // sign-out/sign-in must not paint account B's landing screen with the
+      // previous account's "Good morning, Ada" header for a frame.
+      useHomeStore.getState().reset();
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,

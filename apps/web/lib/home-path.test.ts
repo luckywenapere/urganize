@@ -1,15 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * HOME_PATH reads NEXT_PUBLIC_FEATURE_CHAPPI at MODULE SCOPE, so every case
- * re-imports the module with the env stubbed first (the documented
- * flag-dependent pattern — stubbing after import is too late, because the
- * value is already computed).
+ * HOME_PATH reads NEXT_PUBLIC_FEATURE_HOME and NEXT_PUBLIC_FEATURE_CHAPPI at
+ * MODULE SCOPE, so every case re-imports the module with both env vars
+ * stubbed first (the documented flag-dependent pattern — stubbing after
+ * import is too late, because the value is already computed).
  */
-async function loadHomePath(chappi: string | undefined) {
+async function loadHomePath(chappi: string | undefined, home: string | undefined = undefined) {
   vi.resetModules();
-  if (chappi === undefined) vi.stubEnv('NEXT_PUBLIC_FEATURE_CHAPPI', '');
-  else vi.stubEnv('NEXT_PUBLIC_FEATURE_CHAPPI', chappi);
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_CHAPPI', chappi === undefined ? '' : chappi);
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_HOME', home === undefined ? '' : home);
   return import('./home-path');
 }
 
@@ -37,6 +37,38 @@ describe('HOME_PATH', () => {
     ['a non-"true" value', '1'],
   ])('lands on the catalog when the assistant is %s, so the bounce cannot loop', async (_label, value) => {
     const { HOME_PATH } = await loadHomePath(value);
+    expect(HOME_PATH).toBe('/dashboard');
+  });
+
+  it('lands on Home when it is switched on, regardless of the assistant flag', async () => {
+    const onHome = await loadHomePath('true', 'true');
+    expect(onHome.HOME_PATH).toBe('/dashboard/home');
+
+    const homeOnlyResult = await loadHomePath('false', 'true');
+    expect(homeOnlyResult.HOME_PATH).toBe('/dashboard/home');
+  });
+
+  /**
+   * The same loop guard as the assistant's, for Home: HomePageClient bounces
+   * to '/dashboard' when NEXT_PUBLIC_FEATURE_HOME is off, so this must never
+   * resolve to '/dashboard/home' in that state.
+   */
+  it.each([
+    ['unset', undefined],
+    ['false', 'false'],
+    ['a non-"true" value', '1'],
+  ])('never lands on Home when it is %s, whatever the assistant flag says', async (_label, value) => {
+    expect((await loadHomePath('true', value)).HOME_PATH).not.toBe('/dashboard/home');
+    expect((await loadHomePath('false', value)).HOME_PATH).not.toBe('/dashboard/home');
+  });
+
+  it('falls through to the assistant when Home is off and the assistant is on', async () => {
+    const { HOME_PATH } = await loadHomePath('true', 'false');
+    expect(HOME_PATH).toBe('/dashboard/urgans');
+  });
+
+  it('falls through to the catalog when both Home and the assistant are off', async () => {
+    const { HOME_PATH } = await loadHomePath('false', 'false');
     expect(HOME_PATH).toBe('/dashboard');
   });
 });

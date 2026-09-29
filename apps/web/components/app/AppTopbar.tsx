@@ -48,6 +48,12 @@ const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
 const NAV_ICON_DISPLAY = MOBILE_NAV_ENABLED ? 'hidden lg:grid' : 'grid';
 
+// Home tab. The logo's "go home" affordance points at /dashboard/home when
+// this is on, and /dashboard (the catalog) when it's off — byte-identical to
+// before the flag existed.
+const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
+const LOGO_HREF = HOME_ENABLED ? '/dashboard/home' : '/dashboard';
+
 // The mobile create button, and it is the exact complement of the labelled
 // pill below: that one is `lg:inline-flex` under this flag, so this fills
 // everything under lg and the two can never both be on screen.
@@ -449,7 +455,7 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
             take part in the flex flow the rest of this row uses; the parent
             div's own `relative` is its containing block. */}
         <Link
-          href="/dashboard"
+          href={LOGO_HREF}
           aria-label="Urganize home"
           className="motion-focus absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity hover:opacity-80 lg:hidden"
         >
@@ -487,12 +493,12 @@ export function AppTopbar({ onNewRelease, userName }: AppTopbarProps) {
           <ProfileIcon className="h-[18px] w-[18px]" aria-hidden />
         </Link>
 
-        {/* Desktop: logo anchored left, as before. Links back to /dashboard
-            so the top-left "click the logo" affordance still gets users home
-            from any inner route. No text label — the mark itself is the
-            brand. */}
+        {/* Desktop: logo anchored left, as before. Links back to home
+            (LOGO_HREF) so the top-left "click the logo" affordance still
+            gets users home from any inner route. No text label — the mark
+            itself is the brand. */}
         <Link
-          href="/dashboard"
+          href={LOGO_HREF}
           aria-label="Urganize home"
           className="motion-focus hidden shrink-0 transition-opacity hover:opacity-80 lg:inline-flex"
         >

@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Inbox, MicVocal } from '@/components/icons';
+import { Home as HomeIcon, Inbox, MicVocal } from '@/components/icons';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useAuthStore } from '@/lib/auth-store';
@@ -17,6 +17,7 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // team side of pitching no longer has a tab of its own in this bar.
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
+const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
 
 /**
  * One tab's look, shared by every destination in the bar (2026-08-31). It used
@@ -87,7 +88,7 @@ function NavTab({
  * reaches on a phone, and stands in for the ChappiDock launcher (which retires
  * on this same viewport range — see ChappiDock.tsx).
  *
- * Slots: Home (Catalog) · UrgAns · Shows, plus Playlist pitches for a dual
+ * Slots: Home · Catalog · UrgAns · Shows, plus Playlist pitches for a dual
  * account. Notes, the team side of Pitching, and Directory are deliberately
  * NOT here — three founder calls in quick succession on 2026-09-25: "remove
  * pitch from the general bottom menu, it should only appear inside the menu
@@ -99,6 +100,14 @@ function NavTab({
  * crossing below, "Playlist pitches", stays: it has no release to fold into
  * either, but it is also the only mobile path to that inbox at all, which
  * the founder has not touched.
+ *
+ * HOME (NEXT_PUBLIC_FEATURE_HOME) LEADS THE BAR, AND IS A GENUINELY SEPARATE
+ * TAB FROM CATALOG — not a rename of it. Until this flag existed, "Home" was
+ * this bar's own name for what is now the Catalog tab below; that tab kept
+ * its icon and its `dataTour="nav-catalog"`, only its label changed, so the
+ * two never share one. Flag off, the Home tab renders nowhere and the bar
+ * (Catalog, UrgAns, Shows, Playlist pitches) is exactly what it was before
+ * this flag existed.
  *
  * EVERY TAB IS ALWAYS VISIBLE (founder call, 2026-09-05). Which tabs EXIST is
  * decided by feature flags and, for the curator crossing, by whether the
@@ -194,16 +203,19 @@ function NavTab({
  *
  * THE WIDTH BUDGET HAS MORE ROOM THAN EVER, now that Notes, the team side of
  * Pitching, and Directory are all gone (2026-09-25). At most four tabs
- * remain — Home, UrgAns, Shows, and Playlist pitches for a dual account —
- * which is 375 / 4 ≈ 94px a slot; a non-curator account sees three. The old
- * "three per side" ceiling, and the dual-account exclusion Directory carried
- * for one day back when it still had a tab here, were both artefacts of the
- * centred "+" this bar no longer has and are moot at this count regardless.
+ * remain without NEXT_PUBLIC_FEATURE_HOME — Catalog, UrgAns, Shows, and
+ * Playlist pitches for a dual account — and five with it, since Home (above)
+ * is an addition rather than a rename of any of these. Four is 375 / 4 ≈
+ * 94px a slot, five is 75px; a non-curator account sees one fewer of each.
+ * The old "three per side" ceiling, and the dual-account exclusion Directory
+ * carried for one day back when it still had a tab here, were both
+ * artefacts of the centred "+" this bar no longer has and are moot at this
+ * count regardless.
  *
  * WHICH SIDE a tab sat on used to be a width decision. It is now purely an
- * ORDERING one, left to right: Home, UrgAns, Shows, and Playlist pitches for
- * a dual account — working surfaces first, the crossing into the other side
- * of the product last.
+ * ORDERING one, left to right: Home (flagged), Catalog, UrgAns, Shows, and
+ * Playlist pitches for a dual account — working surfaces first, the
+ * crossing into the other side of the product last.
  *
  * The ceiling for adding something NEW here is still about eight tabs at
  * 375px (~47px each); past that an overflow sheet is the honest answer rather
@@ -222,7 +234,11 @@ export function MobileNavBar() {
   const pathname = usePathname();
   const keyboardOpen = useKeyboardOpen();
 
-  const isHome = pathname === '/dashboard';
+  // Renamed from isHome now that a real Home route exists — this is still
+  // exactly "is the catalog at rest", unchanged in meaning, just no longer
+  // sharing a name with the new tab below.
+  const isCatalog = pathname === '/dashboard';
+  const isDashboardHome = pathname === '/dashboard/home';
   const isUrgAns = pathname === '/dashboard/urgans';
   const isShows = pathname?.startsWith('/dashboard/shows') ?? false;
   // Tri-state — `null` means the probe is still in flight, and it is null on
@@ -258,7 +274,7 @@ export function MobileNavBar() {
   // recorded from every page, because the page it is recorded from is precisely
   // the page whose remount would otherwise auto-scope the user straight back
   // into their only release. See lib/catalog-intent.ts.
-  const handleHomeClick = () => {
+  const handleCatalogClick = () => {
     leaveReleaseForCatalog();
   };
 
@@ -268,7 +284,7 @@ export function MobileNavBar() {
     // renders below lg, so there is no rail-toggle branch to mirror too.
     // Reading location.search directly (rather than useSearchParams) keeps
     // this whole component Suspense-free.
-    if (typeof window === 'undefined' || !isHome) return;
+    if (typeof window === 'undefined' || !isCatalog) return;
     const releaseId = new URLSearchParams(window.location.search).get('release');
     if (releaseId) {
       useChappiStore.getState().setScopedReleaseId(releaseId);
@@ -289,13 +305,23 @@ export function MobileNavBar() {
             top-right corner (founder call), so there is nothing to centre and
             nothing to flank: every tab is one `flex-1` slot again. */}
         <ul className="flex w-full items-stretch">
+          {HOME_ENABLED ? (
+            <NavTab
+              href="/dashboard/home"
+              label="Home"
+              dataTour="nav-home"
+              Icon={HomeIcon}
+              isActive={isDashboardHome}
+            />
+          ) : null}
+
           <NavTab
             href="/dashboard"
-            label="Home"
+            label="Catalog"
             dataTour="nav-catalog"
             Icon={CatalogIcon}
-            isActive={isHome}
-            onClick={handleHomeClick}
+            isActive={isCatalog}
+            onClick={handleCatalogClick}
           />
 
           {CHAPPI_ENABLED ? (

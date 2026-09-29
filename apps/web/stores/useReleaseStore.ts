@@ -17,6 +17,19 @@ type ReleaseStore = {
   isRefreshing: boolean;
   error: string;
   loadCommandCenter: (options?: { force?: boolean }) => Promise<CommandCenterData | null>;
+  /**
+   * Applies a command-center-SHAPED payload obtained from somewhere OTHER
+   * than /api/command-center — today, /api/home, whose response already
+   * embeds the same {releases, tasks, activity, todaysDirective} the catalog
+   * needs. Shares loadCommandCenter's in-flight slot, so a concurrent
+   * non-forced loadCommandCenter() call (e.g. WorkspaceIdentityPanel's own
+   * mount-time load) piggybacks on THIS request instead of firing a second
+   * /api/command-center fetch — the reason a navigation from Home to the
+   * catalog costs no second round trip. `fetchData` is expected to return
+   * null on a handled failure (never throw for a network blip); the store's
+   * own error/loading state is set exactly as loadCommandCenter's is.
+   */
+  loadCommandCenterVia: (fetchData: () => Promise<CommandCenterData | null>) => Promise<CommandCenterData | null>;
   createRelease: (title: string) => Promise<ExecutionRelease | null>;
   /** Drops a release (and its tasks) from local state after the server
    * confirmed deletion. The caller is expected to follow up with
@@ -42,6 +55,15 @@ const getAccessToken = async () => {
 const COMMAND_CENTER_FRESH_MS = 10_000;
 let commandCenterLoadedAt = 0;
 let commandCenterInFlight: Promise<CommandCenterData | null> | null = null;
+
+// Stale-response guard, shared by loadCommandCenter and loadCommandCenterVia.
+// Each run captures the sequence number current when IT started; if a NEWER
+// run has since started by the time this one is ready to apply its result,
+// this one's data is silently dropped rather than overwriting whatever the
+// newer run will (or already did) write. Without this, an older, slower
+// response landing after a newer forced refresh could revert the screen to
+// stale data for a frame.
+let commandCenterRunSeq = 0;
 
 // Cache-first hydration (founder call, 2026-07-23: "persistent state
 // throughout the app, like a proper mobile app"). The last successful
@@ -70,6 +92,62 @@ const isCommandCenterCache = (value: unknown): value is CommandCenterCache => {
   );
 };
 
+/**
+ * Merges a freshly-fetched task list against what's already in useTaskStore,
+ * keeping the CURRENT (optimistic) row for any task whose complete/reopen
+ * PATCH is still in flight. Without this, a background refresh resolving
+ * mid-tick would blind-overwrite an optimistic completion with the
+ * pre-completion row the server captured before (or racing) the PATCH — the
+ * checkbox would visibly un-tick itself. Home's initial load is another
+ * source of exactly this kind of background refresh, which is why this
+ * guard is shared by both apply paths rather than being Home-specific.
+ */
+function mergeIncomingTasks(incoming: ExecutionTask[]): ExecutionTask[] {
+  if (!incoming.length) return incoming;
+  const taskStore = useTaskStore.getState();
+  const currentById = new Map(taskStore.tasks.map((task) => [task.id, task]));
+  return incoming.map((task) => {
+    if (taskStore.hasInFlightCompletion(task.id)) {
+      const current = currentById.get(task.id);
+      if (current) return current;
+    }
+    return task;
+  });
+}
+
+/** The success-path apply: writes tasks/activity/releases/cache, guarded by
+ *  the sequence check above. Shared by loadCommandCenter and
+ *  loadCommandCenterVia so both get the same stale-response and
+ *  mid-tick protections. */
+function applyCommandCenterData(
+  set: (partial: Partial<ReleaseStore>) => void,
+  data: CommandCenterData,
+  sessionUserId: string,
+  mySeq: number
+): void {
+  useTaskStore.getState().setTasks(mergeIncomingTasks(data.tasks || []));
+  // Remember the roster size so the catalog skeleton can render THIS user's
+  // shape on the next fresh load (see WorkspaceSkeleton).
+  writePersistedState('urganize.workspace.release-count', 1, data.releases.length);
+  if (sessionUserId) {
+    writePersistedState<CommandCenterCache>(COMMAND_CENTER_CACHE_KEY, COMMAND_CENTER_CACHE_VERSION, {
+      userId: sessionUserId,
+      releases: data.releases,
+      tasks: data.tasks || [],
+      todaysDirective: data.todaysDirective ?? null,
+    });
+  }
+  useActivityStore.getState().setActivity(data.activity || []);
+  commandCenterLoadedAt = Date.now();
+
+  if (mySeq !== commandCenterRunSeq) {
+    // A newer run has since started; that one owns the final applied state.
+    // isInitialLoading/isRefreshing are left for the newer run to clear.
+    return;
+  }
+  set({ releases: data.releases, todaysDirective: data.todaysDirective ?? null, isInitialLoading: false, isRefreshing: false, error: '' });
+}
+
 export const useReleaseStore = create<ReleaseStore>((set, get) => ({
   releases: [],
   todaysDirective: null,
@@ -95,6 +173,8 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
         return null;
       }
     }
+
+    const mySeq = ++commandCenterRunSeq;
 
     const run = (async (): Promise<CommandCenterData | null> => {
       // Session first: its user id keys the cache. The AUTH STORE's user is
@@ -172,23 +252,58 @@ export const useReleaseStore = create<ReleaseStore>((set, get) => ({
         return null;
       }
 
-      useTaskStore.getState().setTasks((payload.tasks || []) as CommandCenterData['tasks']);
-      // Remember the roster size so the catalog skeleton can render THIS
-      // user's shape on the next fresh load (see WorkspaceSkeleton).
-      writePersistedState('urganize.workspace.release-count', 1, payload.releases.length);
-      // Refresh the cache-first record for the next mount.
-      if (sessionUserId) {
-        writePersistedState<CommandCenterCache>(COMMAND_CENTER_CACHE_KEY, COMMAND_CENTER_CACHE_VERSION, {
-          userId: sessionUserId,
-          releases: payload.releases,
-          tasks: (payload.tasks || []) as ExecutionTask[],
-          todaysDirective: payload.todaysDirective || null,
-        });
-      }
-      useActivityStore.getState().setActivity(payload.activity || []);
-      commandCenterLoadedAt = Date.now();
-      set({ releases: payload.releases, todaysDirective: payload.todaysDirective || null, isInitialLoading: false, isRefreshing: false, error: '' });
+      applyCommandCenterData(set, payload as CommandCenterData, sessionUserId, mySeq);
       return payload as CommandCenterData;
+    })();
+
+    commandCenterInFlight = run;
+    try {
+      return await run;
+    } finally {
+      if (commandCenterInFlight === run) {
+        commandCenterInFlight = null;
+      }
+    }
+  },
+  loadCommandCenterVia: async (fetchData) => {
+    if (commandCenterInFlight) {
+      return commandCenterInFlight;
+    }
+
+    const mySeq = ++commandCenterRunSeq;
+    const hasData = get().releases.length > 0;
+    set(hasData ? { isRefreshing: true, error: '' } : { isInitialLoading: true, error: '' });
+
+    const run = (async (): Promise<CommandCenterData | null> => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const sessionUserId = session?.user?.id || '';
+
+      let data: CommandCenterData | null;
+      try {
+        data = await fetchData();
+      } catch (fetchError) {
+        if (isNetworkFailure(fetchError)) {
+          set((state) => ({
+            isInitialLoading: false,
+            isRefreshing: false,
+            error: state.releases.length > 0 ? '' : "You're offline. Reconnect to load your rollouts.",
+          }));
+          return null;
+        }
+        throw fetchError;
+      }
+
+      if (!data) {
+        if (mySeq === commandCenterRunSeq) {
+          set({ isInitialLoading: false, isRefreshing: false });
+        }
+        return null;
+      }
+
+      applyCommandCenterData(set, data, sessionUserId, mySeq);
+      return data;
     })();
 
     commandCenterInFlight = run;

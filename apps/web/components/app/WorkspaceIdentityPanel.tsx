@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } fr
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, ClipboardList, Inbox, PanelLeftClose, PanelLeftOpen, Radio, ShieldCheck, Users } from '@/components/icons';
+import { ChevronDown, ClipboardList, Home, Inbox, PanelLeftClose, PanelLeftOpen, Radio, ShieldCheck, Users } from '@/components/icons';
 import { SiInstagram, SiX } from "react-icons/si";
 import { openExternalUrl } from "@/lib/external-link";
 import { useAuthStore } from "@/lib/auth-store";
@@ -137,12 +137,20 @@ const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === "true";
 // Settings alone; the pages did not move.
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === "true";
 
+// The Home tab (step 2 of its own build). Gates this row the same way every
+// other flagged row here does — its own flag, checked once.
+const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === "true";
+
 // NavItem.Icon must always return a ReactElement (matching the BrandIcons
 // function components' signature); lucide-react's ForwardRefExoticComponent
 // types its call signature as `ReactElement | null`, so it can't be assigned
 // to that field directly — these thin wrappers close the gap.
 function MetadataIcon({ className }: { className?: string }) {
   return <ClipboardList className={className} />;
+}
+
+function HomeNavIcon({ className }: { className?: string }) {
+  return <Home className={className} aria-hidden="true" />;
 }
 
 // A handheld stage microphone, not a calendar (founder call, 2026-08-31: on
@@ -195,6 +203,7 @@ const ADMIN_ITEM: NavItem = {
 /** The three nav rows a guided tour points at (lib/tours.ts). Keyed by href so
  *  it stays in step with where the row actually goes. */
 const TOUR_ANCHOR_BY_HREF: Record<string, string | undefined> = {
+  "/dashboard/home": "nav-home",
   "/dashboard": "nav-catalog",
   "/dashboard/urgans": "nav-urgans",
   "/settings": "nav-settings",
@@ -225,7 +234,22 @@ function buildNavItems(
   releases: { id: string; title: string }[]
 ): NavItem[] {
   return [
-    // FIRST, above Catalog (founder call, 2026-09-09), and the same call that
+    // FIRST of all, above UrgAns (step 2's own scope: "a Home row at the top,
+    // above UrgAns"). Gated on its own flag for the same reason UrgAns below
+    // is: with the flag off, HOME_PATH never routes here and this row would
+    // otherwise bounce (see app/dashboard/home/HomePageClient.tsx).
+    ...(HOME_ENABLED
+      ? [
+          {
+            href: "/dashboard/home",
+            label: "Home",
+            Icon: HomeNavIcon,
+            isActive: (pathname: string) => pathname === "/dashboard/home",
+            help: "nav.home" as const,
+          },
+        ]
+      : []),
+    // Above Catalog (founder call, 2026-09-09), and the same call that
     // made the assistant the post-auth landing again (lib/home-path.ts). The
     // row you land on is the row that leads the list.
     //
