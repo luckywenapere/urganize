@@ -85,3 +85,16 @@ export function FootnoteText({ children }: { children: ReactNode }) {
     </Text>
   );
 }
+
+/** The footer line for optional mail (welcome, reminders, announcements). */
+export function UnsubscribeFooter({ url }: { url: string }) {
+  return (
+    <Text style={{ margin: '6px 0 0', color: MUTED_TEXT, fontSize: '12px', lineHeight: '1.6' }}>
+      Don&rsquo;t want emails like this?{' '}
+      <Link href={url} style={{ color: MUTED_TEXT, textDecoration: 'underline' }}>
+        Unsubscribe
+      </Link>
+      .
+    </Text>
+  );
+}

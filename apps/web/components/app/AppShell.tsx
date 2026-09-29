@@ -243,6 +243,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isCuratorRoute = pathname?.startsWith('/curator');
   const isPublicStandaloneRoute =
     pathname === '/' ||
+    // The unsubscribe link in an email, opened by someone who may not be signed in.
+    pathname === '/unsubscribe' ||
     pathname?.startsWith('/credits/') ||
     pathname?.startsWith('/listen/') ||
     pathname?.startsWith('/epk/') ||
