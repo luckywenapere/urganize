@@ -3,12 +3,16 @@
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
+import { saveButtonVisible } from '@/lib/settings-dirty';
 
 type WorkspaceIdentitySectionProps = {
   input: string;
   onInputChange: (value: string) => void;
   isLoading: boolean;
   isSaving: boolean;
+  /** True once the input differs from the saved name. Owned by the parent, since
+   *  the saved name lives in the identity store rather than here. */
+  isDirty: boolean;
   message: string;
   error: string;
   onSave: () => void;
@@ -27,6 +31,7 @@ export function WorkspaceIdentitySection({
   onInputChange,
   isLoading,
   isSaving,
+  isDirty,
   message,
   error,
   onSave,
@@ -60,14 +65,16 @@ export function WorkspaceIdentitySection({
           </label>
           {message && <p className={feedbackSuccessClass}>{message}</p>}
           {error && <p className={feedbackErrorClass}>{error}</p>}
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={isSaving}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-          >
-            {isSaving ? 'Saving…' : 'Save team name'}
-          </button>
+          {saveButtonVisible({ dirty: isDirty, saving: isSaving }) ? (
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={isSaving}
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+            >
+              {isSaving ? 'Saving…' : 'Save team name'}
+            </button>
+          ) : null}
         </div>
       )}
     </section>

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
+import { saveButtonVisible } from '@/lib/settings-dirty';
 import { useReportDirty } from './useReportDirty';
 
 export function SecuritySection() {
@@ -16,7 +17,8 @@ export function SecuritySection() {
 
   // Half a new password typed and the pop-up closed is worth a question: the
   // person may believe it was changed.
-  useReportDirty('security.password', newPassword !== '' || confirmPassword !== '');
+  const passwordDirty = newPassword !== '' || confirmPassword !== '';
+  useReportDirty('security.password', passwordDirty);
 
   const handleSave = async () => {
     setError('');
@@ -71,14 +73,16 @@ export function SecuritySection() {
         </label>
         {error && <p className={feedbackErrorClass}>{error}</p>}
         {success && <p className={feedbackSuccessClass}>{success}</p>}
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={isSaving}
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-        >
-          {isSaving ? 'Updating...' : 'Update password'}
-        </button>
+        {saveButtonVisible({ dirty: passwordDirty, saving: isSaving }) ? (
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={isSaving}
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+          >
+            {isSaving ? 'Updating...' : 'Update password'}
+          </button>
+        ) : null}
       </div>
     </section>
   );

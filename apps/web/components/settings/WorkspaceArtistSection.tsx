@@ -5,6 +5,7 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 import { HelpTip } from '@/components/shared/HelpTip';
+import { saveButtonVisible } from '@/lib/settings-dirty';
 import { useReportDirty } from './useReportDirty';
 import type { BrandColors } from '@/lib/social-share-colors';
 
@@ -90,17 +91,19 @@ function ArtistRow({
           disabled={disabled}
         />
       </label>
-      <button
-        type="button"
-        onClick={() => {
-          onRename(artist.id, value);
-          setDraft(undefined);
-        }}
-        disabled={disabled || isSaving || !dirty}
-        className="shrink-0 whitespace-nowrap rounded-lg border border-stroke-subtle px-3 py-2 text-sm font-semibold text-content-primary hover:border-brand disabled:opacity-50"
-      >
-        {isSaving ? 'Saving…' : 'Save'}
-      </button>
+      {saveButtonVisible({ dirty, saving: isSaving }) ? (
+        <button
+          type="button"
+          onClick={() => {
+            onRename(artist.id, value);
+            setDraft(undefined);
+          }}
+          disabled={disabled || isSaving || !dirty}
+          className="shrink-0 whitespace-nowrap rounded-lg border border-stroke-subtle px-3 py-2 text-sm font-semibold text-content-primary hover:border-brand disabled:opacity-50"
+        >
+          {isSaving ? 'Saving…' : 'Save'}
+        </button>
+      ) : null}
       {canRemove ? (
         <button
           type="button"

@@ -18,6 +18,7 @@ import {
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 import type { WorkspaceArtist } from './WorkspaceArtistSection';
+import { saveButtonVisible } from '@/lib/settings-dirty';
 import { useReportDirty } from './useReportDirty';
 
 type BrandColorsSectionProps = {
@@ -146,17 +147,19 @@ function BrandColorsRow({
         ) : null}
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              onSave(artist.id, current);
-              setDraft(undefined);
-            }}
-            disabled={disabled || isSaving || !dirty}
-            className="shrink-0 whitespace-nowrap rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-          >
-            {isSaving ? 'Saving…' : 'Save'}
-          </button>
+          {saveButtonVisible({ dirty, saving: isSaving }) ? (
+            <button
+              type="button"
+              onClick={() => {
+                onSave(artist.id, current);
+                setDraft(undefined);
+              }}
+              disabled={disabled || isSaving || !dirty}
+              className="shrink-0 whitespace-nowrap rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+            >
+              {isSaving ? 'Saving…' : 'Save'}
+            </button>
+          ) : null}
           {hasSaved || draft ? (
             <button
               type="button"

@@ -5,6 +5,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { errorMessage } from '@/lib/errors';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
+import { saveButtonVisible } from '@/lib/settings-dirty';
 import { useReportDirty } from './useReportDirty';
 
 /**
@@ -24,7 +25,8 @@ export function ProfileSection() {
 
   // An unsaved edit makes the pop-up ask before it closes. Compared trimmed,
   // the way Save stores it, so a stray trailing space is not an "edit".
-  useReportDirty('profile.name', Boolean(user) && name.trim() !== (user?.name || '').trim());
+  const nameDirty = Boolean(user) && name.trim() !== (user?.name || '').trim();
+  useReportDirty('profile.name', nameDirty);
 
   if (!user) return null;
 
@@ -69,14 +71,16 @@ export function ProfileSection() {
         </label>
         {error && <p className={feedbackErrorClass}>{error}</p>}
         {success && <p className={feedbackSuccessClass}>{success}</p>}
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={isSaving}
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
-        >
-          {isSaving ? 'Saving...' : 'Save profile'}
-        </button>
+        {saveButtonVisible({ dirty: nameDirty, saving: isSaving }) ? (
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={isSaving}
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+          >
+            {isSaving ? 'Saving...' : 'Save profile'}
+          </button>
+        ) : null}
       </div>
     </section>
   );

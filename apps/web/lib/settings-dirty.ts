@@ -27,6 +27,20 @@ export function withDirtyKey(current: DirtyKeys, key: string, dirty: boolean): D
   return rest;
 }
 
+/**
+ * Whether a text field's Save button shows. Founder call (2026-09-29): Save
+ * appears only once the field has been edited, so a screen of untouched settings
+ * has no buttons to wonder about. It stays up while a save is in flight, or it
+ * would vanish under the person's finger the instant they pressed it and the
+ * "Saving…" state would never be seen.
+ *
+ * Also means the "Discard changes?" prompt and a visible Save button are the
+ * same fact: the prompt appears exactly when a Save button is on screen.
+ */
+export function saveButtonVisible(state: { dirty: boolean; saving: boolean }): boolean {
+  return state.dirty || state.saving;
+}
+
 export function hasUnsavedEdits(current: DirtyKeys): boolean {
   return Object.keys(current).length > 0;
 }
