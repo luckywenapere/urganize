@@ -61,7 +61,8 @@ const KIND_OPTIONS: Array<{ value: AudienceKind; label: string; hint: string }> 
   { value: 'waitlist', label: 'The waitlist', hint: 'People who joined the waitlist but have no account.' },
 ];
 
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+/** '1 person', '107 people'. Never 'persons'. */
+const people = (count: number) => `${count} ${count === 1 ? 'person' : 'people'}`;
 
 const formatDate = (value: string | null): string => {
   if (!value) return '';
@@ -78,14 +79,14 @@ function describeProgress(counts: BroadcastCounts | null, run: SendRun | null, b
   const skipped = counts?.skipped ?? 0;
   const failed = counts?.failed ?? 0;
   const extras = [
-    skipped ? `${plural(skipped, 'person')} had unsubscribed.` : '',
+    skipped ? `${people(skipped)} had unsubscribed.` : '',
     failed ? `${failed} could not be sent (see the Emails page).` : '',
   ]
     .filter(Boolean)
     .join(' ');
 
   if (waiting === 0) {
-    return { tone: 'done' as const, finished: true, message: `Done. Sent to ${plural(sent, 'person')}. ${extras}`.trim() };
+    return { tone: 'done' as const, finished: true, message: `Done. Sent to ${people(sent)}. ${extras}`.trim() };
   }
   if (run?.stoppedReason === 'limit' || run?.stoppedReason === 'rate_limited') {
     const limit = budget?.dailyLimit ?? 100;
@@ -460,9 +461,9 @@ export default function ComposeEmailPageClient() {
             <span className="text-status-error">{audienceError}</span>
           ) : audienceInfo ? (
             <>
-              Goes to <strong className="text-content-primary">{plural(audienceInfo.count, 'person')}</strong>.
+              Goes to <strong className="text-content-primary">{people(audienceInfo.count)}</strong>.
               {audienceInfo.suppressedCount
-                ? ` ${plural(audienceInfo.suppressedCount, 'person')} who unsubscribed ${audienceInfo.suppressedCount === 1 ? 'is' : 'are'} left out.`
+                ? ` ${people(audienceInfo.suppressedCount)} who unsubscribed ${audienceInfo.suppressedCount === 1 ? 'is' : 'are'} left out.`
                 : ''}
               {audienceInfo.sample.length ? (
                 <span className="block text-xs text-content-tertiary">
@@ -583,8 +584,8 @@ export default function ComposeEmailPageClient() {
             {creating
               ? 'Saving…'
               : confirming
-                ? `Yes, send to ${plural(recipientCount, 'person')}`
-                : `Send to ${plural(recipientCount, 'person')}`}
+                ? `Yes, send to ${people(recipientCount)}`
+                : `Send to ${people(recipientCount)}`}
           </button>
           {confirming ? (
             <button
