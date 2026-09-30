@@ -1,6 +1,8 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -22,6 +24,8 @@ import { settingsDeepLink } from "@/lib/settings-nav";
 import { useSettingsLinkClick } from "@/components/settings/useOpenSettings";
 import type { HelpKey } from "@/lib/help-copy";
 import { useSidebarStore } from "@/stores/useSidebarStore";
+import { menuShowsChats } from "@/lib/chats-menu";
+import { isChappiHistoryEnabled } from "@/lib/chappi/conversation-history";
 import { selectMenuPresent, useRailMenuStore } from "@/stores/useRailMenuStore";
 import { railColumnTotal, railColumnWidth } from "@/lib/rail-width";
 import {
@@ -161,6 +165,28 @@ function AdminIcon({ className }: { className?: string }) {
 function PitchesIcon({ className }: { className?: string }) {
   return <Inbox className={className} aria-hidden="true" />;
 }
+
+
+/** The saved-chats list, shown in the menu on the assistant page only. Loaded
+ * on demand: this panel is mounted app-wide and the list (with its delete
+ * dialog) is code no other page needs. Client-only — it reads the chat store,
+ * which has nothing to say on the server. */
+const ChappiHistoryList = dynamic(
+  () => import("@/components/chappi/ChappiHistoryList").then((m) => m.ChappiHistoryList),
+  {
+    ssr: false,
+    // While the chunk loads, the list's own loading rows, so the space under
+    // the nav does not sit empty and then fill.
+    loading: () => (
+      <div className="space-y-2.5 px-2.5 py-2" aria-hidden="true">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <SkeletonBlock key={`chats-menu-loading-${index}`} className="h-4 w-4/5" />
+        ))}
+      </div>
+    ),
+  }
+);
+const CHAT_HISTORY_ENABLED = isChappiHistoryEnabled();
 
 /**
  * The two rows pinned to the BASE of the nav rather than sitting in the
@@ -508,6 +534,17 @@ export function WorkspaceIdentityPanel() {
   // becomes the rail under the pointer and the gesture reads as continuous.
   const [previewCollapsed, setPreviewCollapsed] = useState<boolean | null>(null);
   const collapsed = previewCollapsed ?? storedCollapsed;
+  // The saved chats sit in the free space under the nav rows, on the assistant
+  // page only (the Cursor layout). While the card is the 64px rail there is no
+  // room, so the page keeps its own Chats toggle instead — same rule, one place
+  // (lib/chats-menu.ts), so the page and this card cannot disagree.
+  const chatsSlot: ReactNode = menuShowsChats({
+    pathname,
+    historyOn: CHAT_HISTORY_ENABLED,
+    collapsed,
+  }) ? (
+    <ChappiHistoryList variant="menu" />
+  ) : null;
 
   useEffect(() => {
     const persistedCollapsed = readPersistedState(
@@ -935,6 +972,7 @@ export function WorkspaceIdentityPanel() {
                 pathname={pathname}
                 isAdmin={isAdmin}
                 collapsed={collapsed}
+                chats={chatsSlot}
               />
             }
           >
@@ -942,6 +980,7 @@ export function WorkspaceIdentityPanel() {
               pathname={pathname}
               isAdmin={isAdmin}
               collapsed={collapsed}
+              chats={chatsSlot}
               hasCuratorProfile={hasCuratorProfile === true}
               releases={releases}
             />
@@ -1013,12 +1052,14 @@ function WorkspaceNavLinks({
   pathname,
   isAdmin,
   collapsed,
+  chats,
   hasCuratorProfile,
   releases,
 }: {
   pathname: string | null;
   isAdmin: boolean;
   collapsed: boolean;
+  chats: ReactNode;
   hasCuratorProfile: boolean;
   releases: { id: string; title: string }[];
 }) {
@@ -1034,6 +1075,7 @@ function WorkspaceNavLinks({
       pathname={pathname}
       isAdmin={isAdmin}
       collapsed={collapsed}
+      chats={chats}
     />
   );
 }
@@ -1065,11 +1107,14 @@ function WorkspaceNavList({
   pathname,
   isAdmin,
   collapsed,
+  chats,
 }: {
   navItems: NavItem[];
   pathname: string | null;
   isAdmin: boolean;
   collapsed: boolean;
+  /** The saved-chats list, or null anywhere it does not belong. */
+  chats: ReactNode;
 }) {
   // Which row's sub-list is open, by href — at most one at a time, and shut on
   // arrival. Deliberately NOT persisted and not auto-opened for the scoped
@@ -1201,7 +1246,19 @@ function WorkspaceNavList({
       {/* The release surfaces: they take the leftover height and scroll, so a
         short viewport clips this list rather than pushing Admin/Settings off
         the base of the card. */}
-      <div className="min-h-0 flex-1 overflow-y-auto">{navItems.map(renderRow)}</div>
+      <div className={`min-h-0 overflow-y-auto ${chats ? "" : "flex-1"}`}>
+        {navItems.map(renderRow)}
+      </div>
+
+      {/* The saved chats, in the space the nav rows leave (the Cursor layout).
+        The rows above keep their natural height and only shrink, and scroll,
+        on a viewport too short for both; this takes whatever is left and
+        scrolls inside itself, so Admin and Settings stay pinned below it. */}
+      {chats ? (
+        <div className="mt-2 flex min-h-[6rem] flex-1 flex-col border-t border-stroke-subtle pt-2">
+          {chats}
+        </div>
+      ) : null}
 
       {/* Pinned to the base, Admin above Settings (founder call, 2026-08-13).
         Its own top divider separates the account/operator rows from the

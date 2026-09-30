@@ -3,6 +3,7 @@
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownResumableChat } from './known-counts';
 import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
+import { CHATS_MENU_ON } from '@/lib/chats-menu';
 
 // Mirrors ChappiPageClient's own flag reads — keep them in sync (CLAUDE.md's
 // loading-skeleton rule).
@@ -31,8 +32,9 @@ const HISTORY_ENABLED = isChappiHistoryEnabled();
  *
  * The header row is reserved to match the real page: desktop-only with
  * history off (the collapse button), every width with history on (it also
- * carries the phone's "Chats" toggle). With history on the xl+ chats column
- * is reserved too.
+ * carries the phone's "Chats" toggle). The chats list itself is NOT reserved
+ * here: on a desktop it lives in the left menu (lib/chats-menu.ts), which is
+ * chrome and has its own placeholder, and elsewhere it is behind that toggle.
  *
  * Deliberately NOT reserved: the invite-teammates banner — it's
  * manager-gated and dismissal-persisted, so the skeleton can't know whether
@@ -107,20 +109,13 @@ export function ChappiPageSkeleton() {
   return (
     <div className={shellClass} aria-hidden="true">
       <div className="flex h-7 shrink-0 items-center justify-end">
-        <SkeletonBlock className="mr-auto h-6 w-16 rounded-full xl:hidden" />
+        <SkeletonBlock
+          className={`mr-auto h-6 w-16 rounded-full ${CHATS_MENU_ON ? 'lg:hidden' : ''}`}
+        />
         <SkeletonBlock className="hidden h-7 w-7 lg:block" />
       </div>
       <div className="min-h-0 flex-1">
-        <div className="flex h-full min-h-0 gap-4">
-          <div className="hidden w-64 shrink-0 flex-col gap-3 rounded-2xl border border-stroke-default bg-bg-surface px-3.5 py-3 xl:flex">
-            <SkeletonBlock className="h-3 w-12" />
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div key={`chappi-chat-row-${index}`} className="space-y-1.5">
-                <SkeletonBlock className="h-4 w-4/5" />
-                <SkeletonBlock className="h-3 w-16" />
-              </div>
-            ))}
-          </div>
+        <div className="flex h-full min-h-0">
           <div className="min-h-0 min-w-0 flex-1">
             {resumableMessages > 0 ? transcript : emptyState('flex h-full min-h-0')}
           </div>
