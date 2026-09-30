@@ -70,6 +70,11 @@ const GUARDED_FILES = [
   'lib/email/templates/WorkRequestEmail.tsx',
   'lib/email/templates/WorkRequestAnswerEmail.tsx',
   'lib/email/templates/NotifyAdminEmail.tsx',
+  // The onboarding sequence (2026-09-30).
+  'lib/email/onboarding-sequence.ts',
+  'lib/email/templates/FounderNote.tsx',
+  'lib/email/templates/OnboardingStepEmail.tsx',
+  'lib/email/templates/AnnouncementEmail.tsx',
   'lib/notification-presets.ts',
   'lib/help-copy.ts',
   'lib/home/chappi-speaks.ts',

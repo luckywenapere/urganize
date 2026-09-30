@@ -29,9 +29,32 @@ export function Paragraph({ children }: { children: ReactNode }) {
   );
 }
 
+// A link inside a sentence. Underlined, because in a founder note the link IS
+// the call to action (there is no button), and colour alone does not mark it
+// out: #1e5c38 sits close to the body text.
+//
+// Wrapping: a word inside a link must never be split. `word-break: break-all`
+// (the value here until 2026-09-30) splits wherever the line ends, so on a
+// 375px phone "message me on WhatsApp" rendered as "Whats" / "App". The pair
+// below only breaks inside a word that cannot fit on a line by itself, which
+// means a long bare URL, and leaves ordinary words whole.
+//
+// react-email's Link sets `textDecorationLine: 'none'` and spreads our style
+// after it, so that key is overridden IN PLACE here (leaving no `none` in the
+// output for a mail client to pick), and the shorthand rides along for
+// clients that only read `text-decoration`.
 export function AccentLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} style={{ color: '#1e5c38', wordBreak: 'break-all' }}>
+    <Link
+      href={href}
+      style={{
+        color: '#1e5c38',
+        textDecorationLine: 'underline',
+        textDecoration: 'underline',
+        overflowWrap: 'anywhere',
+        wordBreak: 'break-word',
+      }}
+    >
       {children}
     </Link>
   );

@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { verifyAdmin } from '../_shared';
-import {
-  isHardPaywallEnabled,
-  lapsedFromPayment,
-  resolveTeamAccess,
-  computeExtendedTrialEnd,
-} from '@/lib/team-billing';
+import { isHardPaywallEnabled, computeExtendedTrialEnd } from '@/lib/team-billing';
+import { resolveAdminTeamAccess } from '@/lib/admin-team-access';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
-import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
 import { ACTION_EVENT_TYPE, parseTeamAdminAction } from '@/lib/admin-teams';
 import { logBillingEvent } from '@/lib/billing-events-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
@@ -142,36 +137,15 @@ export async function GET(request: NextRequest) {
     const profile = row.owner_id ? profiles.get(row.owner_id) : undefined;
     const subscription = row.owner_id ? subscriptions.get(row.owner_id) : undefined;
 
-    const expiresMs = subscription?.expires_at ? Date.parse(subscription.expires_at) : Number.NaN;
-    const inPeriod = Number.isFinite(expiresMs) ? expiresMs > now.getTime() : false;
-    const subscriptionActive =
-      Boolean(subscription) &&
-      ['active', 'trialing', 'past_due', 'cancelled'].includes(String(subscription?.status)) &&
-      inPeriod;
-
-    // The is_subscribed back-compat branch grants paid access forever with no
-    // subscription row; the list must show that the same way the resolver sees
-    // it, or a grandfathered team would look walled here and fine in the app.
-    const ownerHasAccess = subscriptionActive || profile?.is_subscribed === true;
-    const ownerAllowlisted = isAllowlistedEmail(profile?.email);
-
-    const resolution = resolveTeamAccess({
-      ownerHasAccess,
-      ownerAllowlisted,
-      // Same input the app's own resolver computes, from the same column, so
-      // this console cannot disagree with the product about whether a team is
-      // read-only or walled.
-      ownerLapsedFromPayment: lapsedFromPayment({
-        ownerHasAccess,
-        ownerPaidAt: profile?.paid_at ?? null,
-      }),
-      team: {
-        trialStartedAt: row.trial_started_at,
-        trialEndsAt: row.trial_ends_at,
-        compedAt: row.comped_at,
-        billingPlan: row.billing_plan,
-        billingLockedAmount: row.billing_locked_amount,
-      },
+    // Shared with the admin email composer's billing groups (lib/admin-team-access.ts),
+    // so this console and "email the teams on a trial" cannot disagree about who
+    // is on a trial. It folds in the is_subscribed back-compat branch (a
+    // grandfathered team must not look walled here and fine in the app) and the
+    // same lapsedFromPayment input the app's own resolver computes.
+    const { resolution, subscriptionActive, ownerAllowlisted } = resolveAdminTeamAccess({
+      workspace: row,
+      profile,
+      subscription,
       now,
     });
 

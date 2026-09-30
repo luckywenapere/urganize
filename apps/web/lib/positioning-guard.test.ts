@@ -109,6 +109,12 @@ const SURFACES = [
   join(WEB, 'lib', 'email', 'templates', 'WorkRequestEmail.tsx'),
   join(WEB, 'lib', 'email', 'templates', 'WorkRequestAnswerEmail.tsx'),
   join(WEB, 'lib', 'email', 'templates', 'NotifyAdminEmail.tsx'),
+  // The onboarding sequence (2026-09-30): the five emails' words live in
+  // onboarding-sequence.ts, laid out by the founder-note templates.
+  join(WEB, 'lib', 'email', 'onboarding-sequence.ts'),
+  join(WEB, 'lib', 'email', 'templates', 'FounderNote.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'OnboardingStepEmail.tsx'),
+  join(WEB, 'lib', 'email', 'templates', 'AnnouncementEmail.tsx'),
   join(WEB, 'lib', 'chappi', 'system-prompt.ts'),
   join(WEB, 'lib', 'help-copy.ts'),
 ];

@@ -29,7 +29,7 @@ export const parseAdminEmails = (): string[] => {
 // any direct field access off .maybeSingle(), fails to type check. Keep the
 // annotation.
 export const verifyAdmin = async (req: NextRequest): Promise<
-  | { ok: true; supabaseAdmin: SupabaseClient; userId: string }
+  | { ok: true; supabaseAdmin: SupabaseClient; userId: string; email: string }
   | { ok: false; response: NextResponse }
 > => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -75,5 +75,7 @@ export const verifyAdmin = async (req: NextRequest): Promise<
     ok: true,
     supabaseAdmin: createClient(supabaseUrl, serviceRoleKey),
     userId: user.id,
+    // The admin's own address: where the email composer sends a test.
+    email: normalizedEmail,
   };
 };

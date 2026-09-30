@@ -85,6 +85,20 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.founderOpsAlertSubject(p.subject),
     };
   },
+  onboarding_step: async () => {
+    const m = await import('./OnboardingStepEmail');
+    return {
+      element: (p) => createElement(m.OnboardingStepEmail, p),
+      subject: (p) => m.onboardingStepSubject(p.step),
+    };
+  },
+  announcement: async () => {
+    const m = await import('./AnnouncementEmail');
+    return {
+      element: (p) => createElement(m.AnnouncementEmail, p),
+      subject: (p) => m.announcementSubject(p.subject),
+    };
+  },
 };
 
 export async function loadEmailTemplate<Id extends EmailTemplateId>(

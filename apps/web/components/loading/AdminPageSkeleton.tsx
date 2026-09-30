@@ -47,8 +47,10 @@ type AdminPageSkeletonProps = SkeletonGroup & {
   titleWidth: string;
   /** Number of description lines under the title (most pages: 1; a couple: 2). */
   descriptionLines?: 1 | 2;
-  /** The admin hub's own 6-card link grid, in place of a table. */
-  hubGrid?: boolean;
+  /** The admin hub's own link grid, in place of a table. A number is how many
+   *  cards to reserve; the hub passes its real card count so the two cannot
+   *  drift (they had: 8 placeholders for 9 cards, 2026-09-30). */
+  hubGrid?: boolean | number;
   /** A stacked form (Broadcast page) instead of a table. */
   formFields?: number;
   /** Headed data sections, rendered after everything above. */
@@ -181,7 +183,7 @@ export function AdminPageSkeleton({
 
       {hubGrid ? (
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {Array.from({ length: 8 }).map((_, index) => (
+          {Array.from({ length: typeof hubGrid === 'number' ? hubGrid : 8 }).map((_, index) => (
             <div
               key={`hub-card-${index}`}
               className="flex items-start gap-4 rounded-lg border border-stroke-default bg-bg-surface p-5"
