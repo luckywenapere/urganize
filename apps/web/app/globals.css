@@ -468,20 +468,27 @@ html[data-theme='light'] .cc-island {
 .home-scene-container {
   container-type: inline-size;
 }
+/* `minmax(0, 1fr)`, never a bare `1fr`: `1fr` is `minmax(auto, 1fr)`, so the
+   column's floor is its widest content. Every Home row holds a nowrap
+   `truncate` title, which contributes its full width to that floor, so on a
+   phone the single column grew to the longest task title (a card 504px wide in
+   a 361px space) and the page clipped the right edge. A zero floor makes the
+   column exactly the width it is given and lets `truncate` do its job.
+   lib/home-layout-guard.test.ts holds this. */
 .home-two-col {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
 }
 @container (min-width: 48rem) {
   .home-two-col {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 @supports not (container-type: inline-size) {
   @media (min-width: 1024px) {
     .home-two-col {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     }
   }
 }

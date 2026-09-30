@@ -21,7 +21,7 @@ function SectionSkeleton({ rows = 3 }: { rows?: number }) {
  * HomePageClient's own guard while useHomeStore is still loading. */
 export function HomeSkeleton() {
   return (
-    <div className="space-y-5">
+    <div className="home-scene-container space-y-5">
       <div className="flex items-baseline justify-between">
         <div>
           <SkeletonBlock className="h-3 w-28" />
@@ -34,7 +34,7 @@ export function HomeSkeleton() {
         <SkeletonBlock className="h-8 w-20 rounded-full" />
         <SkeletonBlock className="h-8 w-28 rounded-full" />
       </div>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="home-two-col">
         <div className="space-y-5">
           <SectionSkeleton rows={3} />
           <SectionSkeleton rows={2} />
