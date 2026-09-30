@@ -17848,10 +17848,15 @@ unsubscribe link already sent.
 
 ### Verified
 
-vitest: 263 files and 5,352 tests passed, 68 skipped. `eslint .`: 3 errors and
-83 warnings, the same as before, with zero new findings (the one warning on
-`EmailsAdminPageClient.tsx` is the same one its committed copy carries, checked
-by linting HEAD's version). `tsc --noEmit`: only the 8 documented
+Rebased onto v1.54.0, whose accessibility pass (#647) added checks this work had
+to meet: `field-border-guard` flagged the composer's five fields for the old
+hairline outline (now `border-stroke-control`, like every field), and the two
+pages' status messages now go through one always-mounted `aria-live` region
+(that pass's rule 6), with a sequence test's result shown under its own email
+rather than at the top of the page. After that: vitest 282 files and 5,516
+tests passed, 68 skipped. ESLint: zero new findings, checked file by file for
+all 51 changed files against `main`'s copies (the one warning on
+`EmailsAdminPageClient.tsx` is the one `main` already carries). `tsc --noEmit`: only the 8 documented
 `confirmed-action.test.ts` errors. `next build` green by exit code, with
 `/auth`, `/dashboard`, `/locked`, `/onboarding` and `/settings` still static,
 the three new admin pages static and the new API routes dynamic. On the dev

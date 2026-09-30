@@ -31,7 +31,11 @@ export default function SequencePageClient() {
   const [openStep, setOpenStep] = useState<OnboardingStepKey | null>(null);
   const [previews, setPreviews] = useState<Partial<Record<OnboardingStepKey, string>>>({});
   const [busy, setBusy] = useState<string | null>(null);
-  const [notice, setNotice] = useState<{ tone: 'done' | 'error'; text: string } | null>(null);
+  // Shown under the email it is about, so a test sent from day 7 reports beside
+  // day 7 rather than at the top of the page, off screen.
+  const [notice, setNotice] = useState<{ tone: 'done' | 'error'; text: string; step: OnboardingStepKey } | null>(
+    null
+  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -66,7 +70,7 @@ export default function SequencePageClient() {
     });
     setBusy(null);
     if (result.ok) setPreviews((current) => ({ ...current, [step]: result.data.html }));
-    else setNotice({ tone: 'error', text: result.error });
+    else setNotice({ tone: 'error', text: result.error, step });
   };
 
   const sendTest = async (step: OnboardingStepKey) => {
@@ -79,8 +83,8 @@ export default function SequencePageClient() {
     setBusy(null);
     setNotice(
       result.ok
-        ? { tone: 'done', text: `Test sent to ${result.data.to}. Check your inbox.` }
-        : { tone: 'error', text: result.error }
+        ? { tone: 'done', text: `Test sent to ${result.data.to}. Check your inbox.`, step }
+        : { tone: 'error', text: result.error, step }
     );
   };
 
@@ -130,18 +134,11 @@ export default function SequencePageClient() {
       {payload?.countsError ? (
         <p className="mt-3 text-sm text-status-error">{payload.countsError}</p>
       ) : null}
-      {notice ? (
-        <p
-          className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
-            notice.tone === 'done'
-              ? 'border-brand/35 bg-brand/10 text-brand'
-              : 'border-status-error/35 bg-status-error/10 text-status-error'
-          }`}
-          aria-live="polite"
-        >
-          {notice.text}
-        </p>
-      ) : null}
+      {/* Always mounted, so a screen reader hears each result; the visible copy
+          sits under its own email and is not live itself. */}
+      <p className="sr-only" aria-live="polite">
+        {notice?.text ?? ''}
+      </p>
 
       <ol className="mt-6 space-y-3">
         {payload?.steps.map((step) => {
@@ -183,6 +180,17 @@ export default function SequencePageClient() {
                   Send me a test
                 </button>
               </div>
+              {notice?.step === step.key ? (
+                <p
+                  className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+                    notice.tone === 'done'
+                      ? 'border-brand/35 bg-brand/10 text-brand'
+                      : 'border-status-error/35 bg-status-error/10 text-status-error'
+                  }`}
+                >
+                  {notice.text}
+                </p>
+              ) : null}
               {openStep === step.key && previews[step.key] ? (
                 <iframe
                   title={`Day ${step.day} email preview`}

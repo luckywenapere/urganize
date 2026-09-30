@@ -336,6 +336,11 @@ export default function ComposeEmailPageClient() {
   }
 
   const budget = overview?.budget;
+  // One always-mounted live region reads out whatever just happened (a form
+  // error, a test result, sending progress). A region that only mounts with its
+  // text is often not announced at all (the 2026-09-30 accessibility pass,
+  // rule 6), so the visible messages below are not live themselves.
+  const liveMessage = formError ?? testMessage?.text ?? progress?.message ?? '';
   const toneClass: Record<Progress['tone'], string> = {
     info: 'border-stroke-default bg-bg-surface text-content-secondary',
     done: 'border-brand/35 bg-brand/10 text-brand',
@@ -374,6 +379,10 @@ export default function ComposeEmailPageClient() {
         </p>
       ) : null}
 
+      <p className="sr-only" aria-live="polite">
+        {liveMessage}
+      </p>
+
       <section className="mt-8">
         <h2 className="text-sm font-semibold text-content-primary">Who gets it</h2>
         <div role="radiogroup" aria-label="Who gets it" className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -408,7 +417,7 @@ export default function ComposeEmailPageClient() {
               value={group}
               onChange={(event) => chooseAudience({ group: event.target.value as GroupKey })}
               aria-label="Which group"
-              className="input h-10 max-w-sm rounded-lg border-stroke-default bg-bg-elevated"
+              className="input h-10 max-w-sm rounded-lg border-stroke-control bg-bg-elevated"
             >
               {AUDIENCE_GROUPS.map((key) => (
                 <option key={key} value={key}>
@@ -425,7 +434,7 @@ export default function ComposeEmailPageClient() {
                   max={365}
                   value={days}
                   onChange={(event) => chooseAudience({ days: event.target.value })}
-                  className="input h-10 w-20 rounded-lg border-stroke-default bg-bg-elevated"
+                  className="input h-10 w-20 rounded-lg border-stroke-control bg-bg-elevated"
                 />
                 days
               </label>
@@ -440,7 +449,7 @@ export default function ComposeEmailPageClient() {
             onChange={(event) => chooseAudience({ personEmail: event.target.value })}
             placeholder="name@example.com"
             aria-label="Their email address"
-            className="input mt-3 max-w-sm rounded-lg border-stroke-default bg-bg-elevated"
+            className="input mt-3 max-w-sm rounded-lg border-stroke-control bg-bg-elevated"
           />
         ) : null}
 
@@ -483,7 +492,7 @@ export default function ComposeEmailPageClient() {
             }}
             maxLength={ANNOUNCEMENT_SUBJECT_MAX}
             placeholder="Something new in Urganize"
-            className="input rounded-lg border-stroke-default bg-bg-elevated"
+            className="input rounded-lg border-stroke-control bg-bg-elevated"
           />
         </label>
 
@@ -498,7 +507,7 @@ export default function ComposeEmailPageClient() {
             maxLength={ANNOUNCEMENT_BODY_MAX}
             rows={12}
             placeholder={'Write it the way you would write to one person.\n\nA blank line starts a new paragraph.'}
-            className="input rounded-lg border-stroke-default bg-bg-elevated"
+            className="input rounded-lg border-stroke-control bg-bg-elevated"
           />
           <span className="mt-1 block text-xs text-content-tertiary">
             A blank line starts a new paragraph. To add a link, paste it, or write [the words](https://the-link).
@@ -589,7 +598,7 @@ export default function ComposeEmailPageClient() {
         </div>
 
         {progress ? (
-          <p className={`rounded-lg border px-3 py-2 text-sm ${toneClass[progress.tone]}`} aria-live="polite">
+          <p className={`rounded-lg border px-3 py-2 text-sm ${toneClass[progress.tone]}`}>
             {progress.running ? <Loader2 className="mr-2 inline h-4 w-4 animate-spin" aria-hidden="true" /> : null}
             {progress.message}
           </p>
