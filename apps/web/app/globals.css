@@ -2616,8 +2616,9 @@ body:focus-within .keyboard-hint,
    Below lg every scoped-release pill collects into ONE wrapping block at the
    base of the tasks panel — no top row, no separate footer row — stuck to the
    bottom of the viewport while the activity list scrolls behind it. At lg+ the
-   dock is `hidden` and the desktop header/footer rows render instead, so these
-   offsets never apply there and need no desktop reset.
+   dock is `hidden` and the rollout menu in the right-hand column (2026-09-30,
+   RolloutMenu.tsx) takes its place, so these offsets never apply there and
+   need no desktop reset.
 
    The offset clears whatever fixed surface already owns the screen's bottom
    edge, which is why there are two of them and why TasksPanel picks between

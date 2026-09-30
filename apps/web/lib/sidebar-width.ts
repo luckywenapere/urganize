@@ -116,6 +116,40 @@ export function isSidebarResizable(viewportWidth: number): boolean {
   return Number.isFinite(viewportWidth) && viewportWidth >= LG_BREAKPOINT;
 }
 
+/** Tailwind's xl. Where an EXPANDED card comes back while the right-hand column
+ *  is on screen; see `sidebarIsOnScreen`. */
+const XL_BREAKPOINT = 1280;
+
+/**
+ * Whether the card is actually painted at this width, the same rule as its own
+ * className: `hidden lg:block`, or `hidden xl:block` when the right-hand column
+ * is competing for the row and the card is expanded (a collapsed 64px card costs
+ * about 176px less, so it stays from lg).
+ *
+ * WHY A RULE FOR "IS IT VISIBLE". The card corrects a stored width it cannot
+ * afford by writing the clamped number back to the store (and to disk). That is
+ * right for a card somebody is looking at and wrong for one that is not: an
+ * off-screen card is not subject to the bounds, so writing the clamp back turns
+ * one visit to a narrow window into a permanently narrower menu on the next wide
+ * one. It used to need the chat open at 1024 to 1279px to happen. It happens on
+ * every rollout there now, because the menu-only right-hand column is enough to
+ * push the card off screen. Found by looking at the layout at 1100px and then
+ * back at 1440.
+ *
+ * Not reading the viewport the way a media query does: `clientWidth` leaves out
+ * a classic scrollbar, so within about 15px of a breakpoint this can say "off
+ * screen" for a card that is showing. That only skips the write-back, which the
+ * next resize fixes, and it can never say "on screen" for a card that is hidden.
+ */
+export function sidebarIsOnScreen(
+  viewportWidth: number,
+  input: { competing: boolean; collapsed: boolean }
+): boolean {
+  if (!Number.isFinite(viewportWidth)) return false;
+  const breakpoint = input.competing && !input.collapsed ? XL_BREAKPOINT : LG_BREAKPOINT;
+  return viewportWidth >= breakpoint;
+}
+
 /**
  * What the card plus its margins takes out of the row right now — the number
  * the rail reserves.

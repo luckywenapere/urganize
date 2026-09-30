@@ -15,6 +15,11 @@ import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
 import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
+// Static, unlike the identity card and the rest: this column has to be in the
+// server HTML as a (closed, zero-width) element so the menu's slot exists the
+// moment a rollout mounts, and it holds only layout code. Its heavy half, the
+// UrgAns chat card, is still its own async chunk inside it.
+import { RightRail } from '@/components/app/RightRail';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { NavigationTracker } from '@/components/app/NavigationTracker';
@@ -59,10 +64,6 @@ const ChappiDock = dynamic(
 );
 const MobileNavBar = dynamic(
   () => import('@/components/app/MobileNavBar').then((m) => m.MobileNavBar),
-  { ssr: false }
-);
-const ChappiSidePanel = dynamic(
-  () => import('@/components/chappi/ChappiSidePanel').then((m) => m.ChappiSidePanel),
   { ssr: false }
 );
 const WorkspaceIdentityPanel = dynamic(
@@ -587,10 +588,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 the capped tier yet. */}
             <UrgansUsageStrip />
             <AppTopbar onNewRelease={openCreateRelease} userName={workspaceUserName} />
-            {/* <main> + the UrgAns side rail share a flex row so the rail is
+            {/* <main> + the right-hand column share a flex row so the column is
                 a layout-flow column (content narrows; nothing is covered) on
-                every chrome page. The rail renders nowhere on the assistant
-                page itself — that page IS the chat. */}
+                every chrome page. It holds the rollout's menu on top and the
+                UrgAns chat under it, and renders nowhere on the assistant page
+                itself — that page IS the chat. */}
             {/* The two side columns are wrapped because they are OUTSIDE
                 app/error.tsx's reach — it renders inside this layout, so a throw
                 out here escapes to global-error.tsx and takes the whole app with
@@ -606,9 +608,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${mainPaddingClass}`}>
                 {children}
               </main>
-              {CHAPPI_ENABLED && !isChappiRoute ? (
-                <ErrorBoundary name="urgans-rail" onError={reportBoundaryError}>
-                  <ChappiSidePanel onNewRelease={openCreateRelease} />
+              {/* NOT gated on the assistant flag any more: with UrgAns off the
+                  column still carries the rollout menu. RightRail decides for
+                  itself whether the chat card exists. */}
+              {!isChappiRoute ? (
+                <ErrorBoundary name="right-rail" onError={reportBoundaryError}>
+                  <RightRail onNewRelease={openCreateRelease} />
                 </ErrorBoundary>
               ) : null}
             </div>

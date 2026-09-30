@@ -11,6 +11,7 @@ import {
   isSidebarResizable,
   parsePersistedSidebarWidth,
   resolveSidebarBounds,
+  sidebarIsOnScreen,
   sidebarStateFromDrag,
   sidebarStateFromStep,
   sidebarTotalWidth,
@@ -311,5 +312,44 @@ describe('isSidebarResizable', () => {
   it('matches the lg breakpoint the card itself renders at', () => {
     expect(isSidebarResizable(1023)).toBe(false);
     expect(isSidebarResizable(1024)).toBe(true);
+  });
+});
+
+describe('sidebarIsOnScreen', () => {
+  // The card's own className is `hidden lg:block`, or `hidden xl:block` while the
+  // right-hand column is competing for the row and the card is expanded. This
+  // says the same thing in a place a test can reach, so the write-back that
+  // corrects a stored width only ever runs for a card somebody can see.
+  const states = [
+    { competing: false, collapsed: false },
+    { competing: false, collapsed: true },
+    { competing: true, collapsed: false },
+    { competing: true, collapsed: true },
+  ];
+
+  it('is never on screen below lg, whatever else is true', () => {
+    for (const state of states) expect(sidebarIsOnScreen(1023, state)).toBe(false);
+  });
+
+  it('is on screen from lg while nothing is competing for the row', () => {
+    expect(sidebarIsOnScreen(1024, { competing: false, collapsed: false })).toBe(true);
+  });
+
+  it('steps aside until xl while the right-hand column is on screen', () => {
+    const competing = { competing: true, collapsed: false };
+    expect(sidebarIsOnScreen(1024, competing)).toBe(false);
+    expect(sidebarIsOnScreen(1279, competing)).toBe(false);
+    expect(sidebarIsOnScreen(1280, competing)).toBe(true);
+  });
+
+  it('lets a collapsed card sit beside the column from lg', () => {
+    expect(sidebarIsOnScreen(1024, { competing: true, collapsed: true })).toBe(true);
+  });
+
+  it('is off screen for a viewport that has not been measured', () => {
+    for (const state of states) {
+      expect(sidebarIsOnScreen(0, state)).toBe(false);
+      expect(sidebarIsOnScreen(Number.NaN, state)).toBe(false);
+    }
   });
 });

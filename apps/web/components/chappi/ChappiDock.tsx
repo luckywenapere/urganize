@@ -27,8 +27,9 @@ type ChappiDockProps = {
 /**
  * Floating UrgAns dock — the Linear-"Ask Linear"-style bottom-right chat
  * surface for viewports BELOW lg (both pill and panel carry `lg:hidden`).
- * At lg+ the side rail (ChappiSidePanel, mounted app-wide by AppShell) owns
- * the assistant instead — URG-210 retired this dock's desktop role, which
+ * At lg+ the right-hand column (RightRail, mounted app-wide by AppShell, with
+ * the chat card ChappiSidePanel under the rollout menu) owns the assistant
+ * instead — URG-210 retired this dock's desktop role, which
  * also retired its old catalog-only `?chat=1` special-casing. Closed: an
  * "Ask UrgAns" launcher pill. Open: a fixed panel hosting ChappiConversation
  * in its compact `panel` variant.

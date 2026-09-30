@@ -8,9 +8,13 @@ import {
   DEFAULT_RAIL_WIDTH,
   MAX_RAIL_WIDTH,
   MIN_RAIL_WIDTH,
+  RAIL_GUTTER,
+  RAIL_MENU_ONLY_WIDTH,
   clampRailWidth,
   isRailResizable,
   parsePersistedRailWidth,
+  railColumnTotal,
+  railColumnWidth,
   railWidthFromDrag,
   resolveRailBounds,
 } from './rail-width';
@@ -185,5 +189,79 @@ describe('isRailResizable', () => {
   it('matches the lg breakpoint the rail itself renders at', () => {
     expect(isRailResizable(1023)).toBe(false);
     expect(isRailResizable(1024)).toBe(true);
+  });
+});
+
+describe('railColumnWidth', () => {
+  // The right-hand column now holds TWO cards: the rollout menu on top and the
+  // UrgAns chat under it. Its width is whichever is wider, and the chat is the
+  // wide one — so "how wide is the column" has to be ONE answer, because the
+  // side menu, the drag bounds and <main> all reserve room for it.
+  it('is the chat width whenever the chat is open, menu or no menu', () => {
+    expect(railColumnWidth({ chatOpen: true, menuPresent: true, chatWidth: 420 })).toBe(420);
+    expect(railColumnWidth({ chatOpen: true, menuPresent: false, chatWidth: 420 })).toBe(420);
+  });
+
+  it('shrinks to the menu-only width when the chat is closed but a menu is showing', () => {
+    expect(railColumnWidth({ chatOpen: false, menuPresent: true, chatWidth: 420 })).toBe(
+      RAIL_MENU_ONLY_WIDTH
+    );
+  });
+
+  it('is nothing at all when the chat is closed and there is no menu', () => {
+    // A closed chat on a page with no rollout open must reserve zero pixels,
+    // exactly as the old `w-0` closed rail did — otherwise every page without a
+    // rollout would grow an empty gutter.
+    expect(railColumnWidth({ chatOpen: false, menuPresent: false, chatWidth: 420 })).toBe(0);
+  });
+
+  it('ignores the stored chat width while the chat is closed', () => {
+    // A width the user dragged to is kept for when the chat reopens; it must
+    // not leak into the menu-only column.
+    for (const chatWidth of [MIN_RAIL_WIDTH, DEFAULT_RAIL_WIDTH, MAX_RAIL_WIDTH]) {
+      expect(railColumnWidth({ chatOpen: false, menuPresent: true, chatWidth })).toBe(
+        RAIL_MENU_ONLY_WIDTH
+      );
+    }
+  });
+});
+
+describe('RAIL_MENU_ONLY_WIDTH', () => {
+  it('is narrower than the narrowest chat, because it is not a chat width', () => {
+    // The menu-only column is never handed to clampRailWidth / resolveRailBounds:
+    // those are the CHAT's bounds. If this ever reached MIN_RAIL_WIDTH the two
+    // states would be indistinguishable and the drag handle's "chat is open"
+    // condition would be the only thing telling them apart.
+    expect(RAIL_MENU_ONLY_WIDTH).toBeLessThan(MIN_RAIL_WIDTH);
+  });
+
+  it('is a whole number, so the column never sits on a half pixel', () => {
+    expect(Number.isInteger(RAIL_MENU_ONLY_WIDTH)).toBe(true);
+  });
+});
+
+describe('railColumnTotal', () => {
+  it('adds the rail’s own mr-8 to a column that is on screen', () => {
+    expect(railColumnTotal(RAIL_MENU_ONLY_WIDTH)).toBe(RAIL_MENU_ONLY_WIDTH + RAIL_GUTTER);
+    expect(railColumnTotal(420)).toBe(420 + RAIL_GUTTER);
+  });
+
+  it('adds NOTHING for a column that is not there', () => {
+    // The gutter belongs to the column. A closed, menu-less rail used to be
+    // `mr-0 w-0`; reserving 32px for it would shift every page by a gutter.
+    expect(railColumnTotal(0)).toBe(0);
+  });
+
+  it('treats nonsense as an absent column rather than a NaN reservation', () => {
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, -1, -420]) {
+      expect(railColumnTotal(bad)).toBe(0);
+    }
+  });
+
+  it('agrees with railColumnWidth for the three states', () => {
+    const open = railColumnTotal(railColumnWidth({ chatOpen: true, menuPresent: true, chatWidth: 420 }));
+    const menu = railColumnTotal(railColumnWidth({ chatOpen: false, menuPresent: true, chatWidth: 420 }));
+    const none = railColumnTotal(railColumnWidth({ chatOpen: false, menuPresent: false, chatWidth: 420 }));
+    expect([open, menu, none]).toEqual([452, 240, 0]);
   });
 });

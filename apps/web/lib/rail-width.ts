@@ -43,6 +43,53 @@ export const RAIL_KEYBOARD_STEP_LARGE = 64;
 /** The rail's own mr-8. */
 export const RAIL_GUTTER = 32;
 
+/**
+ * How wide the right-hand column is when the rollout menu is the ONLY thing in
+ * it (the chat closed, a rollout open). It is not a chat width and is never
+ * handed to the bounds below: those are the CHAT's, and this sits under
+ * MIN_RAIL_WIDTH on purpose so the two states can never be mistaken for each
+ * other.
+ *
+ * WHY 208 AND NOT MORE. It is the side menu's own minimum, it fits the longest
+ * label in the menu ("Change artist", roughly 155px with its icon and padding),
+ * and it is the widest the column can be while the content calendar's month
+ * grid survives a 1440px window (that grid needs 720px of centre column;
+ * 208 leaves it about 26px of slack). At 256 the grid flips to the agenda
+ * list at exactly that width. lib/layout-columns.test.ts pins the consequence
+ * rather than this number, so raising it has to be a decision.
+ */
+export const RAIL_MENU_ONLY_WIDTH = 208;
+
+/**
+ * The right-hand column's width right now: the chat's width whenever the chat
+ * is open, the menu-only width when it is closed but a rollout menu is showing,
+ * and nothing when neither is.
+ *
+ * `chatOpen` means the chat is enabled AND open (the caller folds the feature
+ * flag in), and `chatWidth` is the value already clamped to this viewport's
+ * bounds. It is one function because four things reserve room for this column
+ * — the side menu, the drag bounds, `<main>` and the column's own width — and
+ * they must agree on a single answer.
+ */
+export function railColumnWidth(input: {
+  chatOpen: boolean;
+  menuPresent: boolean;
+  chatWidth: number;
+}): number {
+  if (input.chatOpen) return input.chatWidth;
+  return input.menuPresent ? RAIL_MENU_ONLY_WIDTH : 0;
+}
+
+/**
+ * What the column plus its gutter takes out of the row — the number the side
+ * menu reserves. The gutter belongs to the column: an absent column (the old
+ * closed rail was `w-0 mr-0`) must reserve nothing at all, or every page
+ * without a rollout would grow an empty strip.
+ */
+export function railColumnTotal(width: number): number {
+  return Number.isFinite(width) && width > 0 ? width + RAIL_GUTTER : 0;
+}
+
 /** Tailwind's lg. The rail is `hidden lg:block`, so there is nothing to drag
  *  below it — asserted rather than assumed, because the handle must not exist
  *  on a phone. */

@@ -36,6 +36,15 @@ const GUARDED_FILES = [
   'components/releases/CreateReleaseModal.tsx',
   'components/workspace/WorkspaceView.tsx',
   'components/workspace/TasksPanel.tsx',
+  // The rollout menu (2026-09-30). Its row labels, the "On <title>" header and
+  // the New activity button left TasksPanel.tsx for these files, so that entry
+  // alone would silently stop covering the copy it used to hold.
+  'components/workspace/WorkspaceDesktopFocused.tsx',
+  'components/workspace/RolloutMenu.tsx',
+  'components/workspace/RolloutMenuPortal.tsx',
+  'components/workspace/useRolloutMenuActions.ts',
+  'components/app/RightRail.tsx',
+  'lib/rollout-menu.ts',
   'components/app/MobileNavBar.tsx',
   'components/app/AppTopbar.tsx',
   'components/releases/ReleaseScenePanel.tsx',

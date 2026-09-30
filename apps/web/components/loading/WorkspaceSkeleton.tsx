@@ -1,8 +1,9 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { useChappiStore } from '@/stores/useChappiStore';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { TASKS_PILL_DOCK_OFFSET_CLASS } from '@/components/workspace/TasksPanel';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
+import { RolloutMenuSkeletonPortal } from './RolloutMenuSkeleton';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
 import {
@@ -13,69 +14,36 @@ import {
 
 // Same URL param useReleaseScope reads (`?release=`). Knowing this at
 // skeleton-render time (before release data has loaded) lets the skeleton
-// reserve the FOCUSED 3-column shape instead of always assuming the at-rest
-// grid — the two are visually very different, and landing on a scoped URL
-// (a release deep link, a notification click, a refresh) is a common path.
+// reserve the FOCUSED shape instead of always assuming the at-rest grid — the
+// two are visually very different, and landing on a scoped URL (a release deep
+// link, a notification click, a refresh) is a common path.
 const SCOPE_PARAM = 'release';
 
 /** What `resolvePanelBody` answers: a scene, or one of the two main views. */
 type PanelBody = SceneName | ReleaseMainView;
 
-// Same build-time flags TasksPanel reads for its scoped-header pills. The
-// skeleton renders one placeholder pill per REAL pill so the row doesn't
-// change width when content swaps in: New activity is always present; Files /
-// Fan capture appear per flag, in that order (2026-08-04 — the release detail
-// page and its "Overview" pill were removed; Calendar left this row entirely
-// on 2026-08-13, see the sticky-pill placeholder further down). Metadata
-// is reserved at every width (its identity-panel nav row was removed
-// 2026-09-29, so the pill is the desktop entry point).
+// The feature switches below decide ONE thing now: whether the phone's release
+// menu trigger is reserved at the base of the panel (its rows are every one of
+// these, plus Share). They used to also size a row of placeholder pills at the
+// top of the desktop panel and a footer row under it. Both rows became the
+// rollout menu, a card at the top of the right-hand column (2026-09-30), and
+// that card's placeholder counts its own rows from the real builder — see
+// RolloutMenuSkeleton.tsx.
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
-// The Song pill sits between Metadata and Pitch in the real row.
 const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
-// Notes' scoped-release link (TasksPanel) — added 2026-08-10; this
-// reservation was missing even though the real pill has rendered behind the
-// flag since Notes shipped, an existing skeleton/real mismatch found while
-// fixing the mobile pill-row overflow bug. DESKTOP ONLY since 2026-08-15, so
-// it is reserved in the header row and deliberately not in the mobile dock.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
-
-// The rollout's own chat thread (Release & Task Chat, Phase 1). Sits right
-// after Files in the real row, before Notes.
 const RELEASE_CHAT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true';
-
-// Share to socials (2026-09-23). The real Share pill sits right after Notes in
-// the desktop header row and renders for every scoped rollout, so it is
-// reserved under its flag alone. It also adds a row to the phone's release
-// menu, which is why it joins the list that reserves the menu trigger below.
 const SOCIAL_SHARE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SOCIAL_SHARE === 'true';
-
-// Timeline (2026-08-30) sits right before Metadata in the real desktop header
-// row and leads the mobile top-tabs strip. Reserved unconditionally under its
-// flag — unlike Plan and Recap, whether it renders depends only on a release
-// being scoped, which this skeleton already knows.
 const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
 
-// Same flag AppTopbar/ChappiDock read. The UrgAns side rail renders itself
-// beside AppShell's <main> (URG-210) — including while this skeleton shows —
-// so the skeleton no longer reserves a panel slot of its own; it only needs
-// the rail's open state to mirror the focused view's hideRails behavior.
-const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
-
-// Mirrors WorkspaceDesktopFocused's own IDENTITY_PANEL_ENABLED const — the
-// focused rails there wait for xl (and drop the 260px xl bump) once the
-// identity card is on, so this skeleton's grid must reserve that same shape.
-const IDENTITY_PANEL_ENABLED =
-  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
-  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
-
-// Two pills used to be reserved at the end of this header row, and BOTH were
-// removed on 2026-09-07 (founder calls): the status update first, then the
-// release recap. Both features live in the UrgAns conversation now — you ask
+// Two pills used to be reserved at the end of the old desktop header row, and
+// BOTH were removed on 2026-09-07 (founder calls): the status update first, then
+// the release recap. Both features live in the UrgAns conversation now — you ask
 // for them and it answers, the recap by putting the poster inline — so neither
 // has a placeholder, and neither NEXT_PUBLIC_FEATURE_STATUS_UPDATE nor
 // NEXT_PUBLIC_FEATURE_RELEASE_RECAP is read here at all.
@@ -97,12 +65,14 @@ const IDENTITY_PANEL_ENABLED =
  *    block, including the Motion label row above the progress bar)
  *  - the FOCUSED shape when `?release=` is present: mobile back-header +
  *    task list (`WorkspaceView`'s mobile branch), desktop the
- *    viewport-locked 3-column rail/center/rail frame (`WorkspaceDesktopFocused`)
- *    — the page never scrolls there, so this skeleton reserves the same
+ *    viewport-locked single-column frame (`WorkspaceDesktopFocused`), with the
+ *    rollout menu's placeholder drawn into the right-hand column by
+ *    `RolloutMenuSkeletonPortal` (2026-09-30: the rails and the row of scene
+ *    pills are gone, the menu is a card above the UrgAns chat) — the page never
+ *    scrolls there, so this skeleton reserves the same
  *    `h-[calc(100dvh-9.25rem-1px)]` height instead of a shorter unbounded stack
- *  - the tasks panel's pills — a right-aligned header row at lg+, one sticky
- *    wrapping dock at the panel's base below it — and its bucket-list body
- *    (`TasksPanel`)
+ *  - the tasks panel's phone dock — the search and menu buttons at the panel's
+ *    base, below lg — and its bucket-list body (`TasksPanel`)
  *
  * Large content regions (art squares, the task list area) stay static dim
  * boxes rather than shimmering — same convention as `ReleaseDetailSkeleton`
@@ -112,28 +82,14 @@ const IDENTITY_PANEL_ENABLED =
  */
 export function WorkspaceSkeleton() {
   const searchParams = useSearchParams();
-  const isRailOpen = useChappiStore((state) => state.railOpen);
-  // Mirrors WorkspaceView's hideRailsForLayout exactly: the rails hide while
-  // ANY scene is open, and a refresh on a `?scene=…` URL used to paint
-  // 3-column rails here that vanished the moment data resolved. Widened from
-  // calendar-only alongside the real view (2026-08-25) — the two read the same
-  // the same `resolvePanelBody`, so they cannot disagree about whether a
-  // stale flag-off param counts as an open scene — the expression is now
-  // literally the same one, which is what closes the `?scene=activities`
-  // case where a `resolveMainView()`-only check would have hidden the rails
-  // here and shown them there.
-  // Since 2026-09-06 this also covers the timeline being the MAIN view: there
-  // is no scene param then, but WorkspaceView hides the rails for it anyway
-  // (it needs the width more than a form does — its grid/list swap is a 34rem
-  // container query). Expressed as "the body is not the buckets" so the two
-  // read the same way. Flag off, `resolveMainView()` is 'activities' and this
-  // is byte-identical to the line it replaces.
-  // ONE read, threaded to both consumers. The rails decision and the body
-  // decision have to be the same value or the skeleton contradicts itself —
-  // which is exactly what it did until 2026-09-08, hiding the rails for a scene
-  // and then reserving a timeline body underneath.
+  // ONE read, threaded to every consumer below: the body decision and the
+  // "is a New activity button coming" decision have to be the same value or the
+  // skeleton contradicts itself — which is what it did until 2026-09-08, hiding
+  // the rails for a scene and then reserving a timeline body underneath. (The
+  // rails are gone since 2026-09-30, but the rule stands: read the param once.)
   const panelBody = resolvePanelBody(searchParams.get('scene'));
-  const hideRails = (CHAPPI_ENABLED && isRailOpen) || panelBody !== 'activities';
+  const pathname = usePathname();
+  const isDesktopViewport = useIsDesktopViewport();
   const knownCount = useKnownReleaseCount();
   // `?release=` is the normal signal, but a single-release workspace scopes
   // itself in an effect, so the URL is still bare while WorkspaceView holds
@@ -188,11 +144,7 @@ export function WorkspaceSkeleton() {
 
           <section className="hidden lg:block">
             {isFocused ? (
-              <DesktopFocusedSkeleton
-                knownCount={knownCount}
-                hideRails={hideRails}
-                panelBody={panelBody}
-              />
+              <DesktopFocusedSkeleton panelBody={panelBody} />
             ) : (
               // Matches WorkspaceDesktopGrid's current template exactly
               // (240px max track + the 1008px structural cap — see that
@@ -203,6 +155,17 @@ export function WorkspaceSkeleton() {
               />
             )}
           </section>
+
+          {/* The rollout menu's placeholder, drawn into the right-hand column.
+              Only where a menu is genuinely coming: a desktop viewport (the
+              phone's menu is a hamburger, which reserves nothing here), on
+              /dashboard itself (this skeleton is also the segment fallback for
+              the pages under it, some of which carry a `?release=` of their
+              own, like the notes page), and on a rollout. Reserving a column
+              anywhere else would open a blank strip for nothing. */}
+          {isFocused && isDesktopViewport && pathname === '/dashboard' ? (
+            <RolloutMenuSkeletonPortal />
+          ) : null}
       </div>
     </main>
   );
@@ -283,139 +246,37 @@ function ReleaseCardSkeleton() {
   );
 }
 
-/** Tasks pills + collapsed bucket-row placeholders. Structurally mirrors
- * TasksPanel's real `<aside>` (flex column, desktop-only header row, a
- * flex-1 scrolling body, then the sticky mobile pill dock) so it can stretch to fill the locked focused
- * column on desktop, or sit inert in mobile's plain document flow — same
- * "flex-1 is inert without a flex parent" property the real component
- * documents. Pill count mirrors the real containers exactly: New activity
- * always, then one per enabled flag in order (Pitch / Files — see TasksPanel;
- * Calendar left this row 2026-08-13 and Press kit 2026-08-14, see the outbound
- * placeholders below), then Notes on DESKTOP ONLY (2026-08-15), then the AI
- * action pill WorkspaceView appends — which both containers carry.
- * Widths approximate each label so the row's footprint matches ("Status
- * update", shortened 2026-08-10 to fit a chip row — see WorkspaceView).
- * No left label (2026-08-05, #218 — the real row is `justify-end` only).
- * Container/wrapper classes below are kept byte-for-byte in sync with
- * TasksPanel.tsx's real row (2026-08-10 bug fix: this file's inner wrapper
- * had already drifted to `flex-wrap` when the real one had none — the
- * loading-skeleton-sync rule this file otherwise follows). */
+/** The activity list's placeholders. Structurally mirrors TasksPanel's real
+ * `<aside>` (flex column, a flex-1 scrolling body, then the sticky mobile pill
+ * dock) so it can stretch to fill the locked focused column on desktop, or sit
+ * inert in mobile's plain document flow — same "flex-1 is inert without a flex
+ * parent" property the real component documents.
+ *
+ * It carried a right-aligned header row of placeholder pills at lg+ and a
+ * footer row of two more until 2026-09-30, when those became the rollout menu in
+ * the right-hand column (see RolloutMenuSkeleton). Nothing here reserves them
+ * any more: the real panel stopped rendering them, and a placeholder for a row
+ * that no longer exists would push the list down and then snap it back up when
+ * the real one arrived. */
 function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
-  const pillWidths = [
-    // Cover art comes right after Metadata in the real row, before Song.
-    ...(COVER_ART_ENABLED ? ['w-24'] : []), // Cover art
-    // Song comes before Pitch in the real row — you cannot pitch a release
-    // whose audio nobody has uploaded.
-    ...(SONG_UPLOAD_ENABLED ? ['w-20'] : []), // Song
-    // Pitch leads the row (founder call, 2026-08-10) and carries no Beta tag,
-    // so it reserves the same width as Files rather than a tagged pill's.
-    ...(PITCHING_ENABLED ? ['w-16'] : []), // Pitch
-    ...(FILES_ENABLED ? ['w-16'] : []), // Files
-    ...(RELEASE_CHAT_ENABLED ? ['w-16'] : []), // Chat
-    // (A Plan pill led this row until 2026-09-15 and was deliberately not
-    // reserved, since whether it rendered depended on the release's activity
-    // count — data this skeleton never has. The review scene it opened is
-    // gone, and with it the pill.)
-  ];
-  // The header row's pills (New activity, Timeline, Metadata, then one per
-  // enabled flag). DESKTOP ONLY — the real buttons these stand in for stopped
-  // rendering below `lg` on 2026-08-31, when the mobile top tabs were folded
-  // into the release menu, so there is no second container to feed. (This
-  // comment described them as shared by "both layouts" for a while after the
-  // real component had already stopped doing that.)
-  const primaryPillBlocks = (
-    <>
-      <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" />
-      {TIMELINE_ENABLED ? (
-        <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
-      ) : null}
-      {/* Metadata — w-24 since the 2026-08-31 rename from "Collect metadata"
-          (eight characters in a pill with a 14px icon), and it is wider than
-          the Content pill beside it. */}
-      {METADATA_ENABLED ? (
-        <SkeletonBlock className="h-8 w-24 shrink-0 rounded-full" />
-      ) : null}
-      {pillWidths.map((width, index) => (
-        <SkeletonBlock key={`pill-${index}`} className={`h-8 ${width} shrink-0 rounded-full`} />
-      ))}
-    </>
-  );
-  // Notes is DESKTOP ONLY (founder call, 2026-08-15), mirroring the real
-  // `notesPill` — reserved in the header row and nowhere else.
-  const notesPillBlock = NOTES_ENABLED ? (
-    <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" />
-  ) : null;
-  // Share, right after it. The same width as Notes, because the two pills are
-  // the same shape: an icon and a five-letter label.
-  const sharePillBlock = SOCIAL_SHARE_ENABLED ? (
-    <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" />
-  ) : null;
-  // Content / Fan capture — the panel's outbound group, a
-  // desktop-only footer row at lg+. It used to describe itself as also being
-  // "the tail of the mobile dock"; the dock has carried no pills since
-  // 2026-08-17 and, since 2026-08-31, these reach a phone only through
-  // the release menu, which reserves nothing per entry. Press kit left this
-  // row entirely on 2026-09-05, when the release-scoped EPK was retired for
-  // the standing per-artist kit.
-  // NO pill in this row carries a Beta tag any more (Calendar lost its stamp
-  // 2026-08-15, the other two on 2026-08-16), so each width is now just its
-  // label: px-3 + a 14px icon + gap-1.5 + the text at 12px semibold. Widths
-  // are per-label rather than uniform, and each rounds DOWN to the nearest
-  // step: a placeholder wider than the real pill shifts every neighbour left
-  // when the labels arrive, where a narrower one shifts them right, which is
-  // the tolerated direction.
-  //
-  // Content (was "Calendar" until 2026-08-31) is the shorter of the two at
-  // seven characters and steps down to w-20 accordingly — at w-24 it would
-  // have been the one case this row forbids, a placeholder wider than the pill
-  // it stands in for. Fan capture keeps w-28 as the longer.
-  const outboundPillBlocks = (
-    <>
-      {CONTENT_CALENDAR_ENABLED ? <SkeletonBlock className="h-8 w-20 shrink-0 rounded-full" /> : null}
-      {CAPTURE_ENABLED ? <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" /> : null}
-    </>
-  );
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {/* Desktop header row — `hidden lg:flex`, matching the real row's
-          wrapper classes byte-for-byte (2026-08-14: the row stopped being
-          sticky-on-mobile when every pill moved to the dock at the panel's
-          base; see TasksPanel.tsx's header comment). */}
-      <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex">
-        {primaryPillBlocks}
-        {notesPillBlock}
-        {sharePillBlock}
-      </div>
       <div className="min-h-0 flex-1 space-y-3 pb-4 lg:overflow-hidden">
         {/* Which body is coming. The timeline paints a legend strip and then
             week groups, nothing like the bucket cards, so reserving the wrong
             one is a guaranteed shift on first data. */}
         {(() => {
-          // Read the REAL `?scene=` param, not just the main view. `hideRails`
-          // above already does, and the two disagreeing is what made every
-          // scene URL reserve a timeline (or bucket) body and then paint a
-          // scene over it — the exact shift the comment above says this is
-          // here to prevent. A scene gets a neutral block: its own section
-          // owns the internal skeleton, so guessing its shape here would just
-          // be a second wrong answer.
+          // Read the REAL `?scene=` param, not just the main view: the two
+          // disagreeing is what made every scene URL reserve a timeline (or
+          // bucket) body and then paint a scene over it. A scene gets a neutral
+          // block: its own section owns the internal skeleton, so guessing its
+          // shape here would just be a second wrong answer.
           const body = panelBody;
           if (body === 'timeline') return <TimelineBodySkeleton />;
           if (body === 'activities') return <BucketBodySkeleton />;
           return <SceneBodySkeleton />;
         })()}
       </div>
-      {/* Desktop footer placeholders — Calendar (2026-08-13) and
-          Fan capture (2026-08-14); see the real block's comment in
-          TasksPanel.tsx for the full history of those moves out of the header
-          pill row. A sibling
-          AFTER the flex-1 body, matching the real row's wrapper classes
-          exactly, so the reserved footprint sits pinned at the panel's base
-          and doesn't shift when content resolves. */}
-      {CONTENT_CALENDAR_ENABLED || CAPTURE_ENABLED ? (
-        <div className="hidden shrink-0 items-center gap-2 pb-2 pt-3 lg:flex">
-          {outboundPillBlocks}
-        </div>
-      ) : null}
       {/* The mobile top-tabs strip reserved here (Content / Metadata / Pitch,
           plus Timeline once that flag landed) went away with the real row on
           2026-08-31 — founder call, everything moved into the release menu at
@@ -514,77 +375,42 @@ function MobileFocusedSkeleton({ panelBody }: { panelBody: PanelBody }) {
 /**
  * Desktop focused shape (≥ lg): mirrors `WorkspaceDesktopFocused` exactly,
  * including its VIEWPORT LOCK (2026-07-23 founder call — the page never
- * scrolls in focused mode; long rails/lists scroll inside their own
- * columns). Same fixed `h-[calc(100dvh-9.25rem-1px)]` frame and the same
- * `grid-rows-[minmax(0,1fr)] overflow-hidden` grid, plus rail widths at the
- * real breakpoints (220px at lg, 260px at xl, or the `IDENTITY_PANEL_ENABLED`
- * xl-only variant) so the center column doesn't visibly resize — or the
- * page suddenly start/stop scrolling — when content replaces the skeleton.
+ * scrolls in focused mode; a long list scrolls inside its own column). Same
+ * fixed `h-[calc(100dvh-9.25rem-1px)]` frame, so the page doesn't suddenly
+ * start or stop scrolling when content replaces the skeleton.
+ *
+ * It was a three-column grid with two rails of other-release placeholders until
+ * 2026-09-30 and is one centre column now, like the real one: the rails went
+ * with the row of scene pills, and the menu that replaced the pills is a card in
+ * the right-hand column that RolloutMenuSkeletonPortal fills.
  */
-function DesktopFocusedSkeleton({
-  knownCount,
-  hideRails = false,
-  panelBody,
-}: {
-  knownCount: number;
-  hideRails?: boolean;
-  panelBody: PanelBody;
-}) {
-  // Rails mirror WorkspaceDesktopFocused's split of the NON-selected
-  // releases: ceiling on the left, floor on the right (count-aware,
-  // founder call 2026-07-23). Capped at 3 per rail — beyond that the rail
-  // scrolls anyway, so more placeholders add nothing.
-  const nonSelected = Math.max(0, knownCount - 1);
-  const leftCount = Math.min(3, Math.ceil(nonSelected / 2));
-  const rightCount = Math.min(3, Math.floor(nonSelected / 2));
+function DesktopFocusedSkeleton({ panelBody }: { panelBody: PanelBody }) {
+  // The New activity button is only there while the main view is showing, the
+  // real component's own rule. A named scene has taken the panel otherwise.
+  const showNewActivity = panelBody === 'timeline' || panelBody === 'activities';
   return (
     <div className="flex h-[calc(100dvh-9.25rem-1px)] min-h-[24rem] flex-col gap-4">
       {/* Compact back button + motion tracker strip (h-1.5, matching the
-          2026-08-04 contrast fix). */}
+          2026-08-04 contrast fix) + the New activity button at the far end.
+          w-28 for the button: px-3 + a 14px icon + gap-1.5 + "New activity" at
+          11px semibold comes to roughly 114px, and a placeholder rounds DOWN,
+          because one wider than the real pill shifts the tracker left when the
+          label arrives where a narrower one shifts it right. */}
       <div className="flex shrink-0 items-center gap-4">
         <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
         <SkeletonBlock className="h-2.5 w-14" />
         <SkeletonBlock className="h-1.5 flex-1 rounded-full" />
         <SkeletonBlock className="h-2.5 w-8" />
+        {showNewActivity ? <SkeletonBlock className="h-8 w-28 shrink-0 rounded-full" /> : null}
       </div>
 
-      <div
-        className={`grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-6 overflow-hidden ${
-          hideRails
-            ? 'grid-cols-[minmax(0,1fr)]'
-            : IDENTITY_PANEL_ENABLED
-              ? 'grid-cols-[minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_220px]'
-              : 'lg:grid-cols-[220px_minmax(0,1fr)_220px] xl:grid-cols-[260px_minmax(0,1fr)_260px]'
-        }`}
-      >
-        {hideRails ? null : (
-          <div
-            className={`min-h-0 min-w-0 space-y-3 overflow-hidden ${IDENTITY_PANEL_ENABLED ? 'hidden xl:block' : ''}`}
-          >
-            {Array.from({ length: leftCount }).map((_, index) => (
-              <ReleaseCardSkeleton key={`rail-left-${index}`} />
-            ))}
-          </div>
-        )}
-
-        {/* Center column — a plain flex-column frame, same as the real
-            WorkspaceDesktopFocused (2026-08-05): TasksPanelSkeleton's own
-            flex-1 stretches to fill the remaining grid-track height. No
-            banner slot — the one-time NewReleaseGuide never shows during
-            an initial load. */}
-        <div className="flex min-h-0 min-w-0 flex-col">
-          <TasksPanelSkeleton panelBody={panelBody} />
-        </div>
-
-        {hideRails ? null : (
-          <div
-            className={`min-h-0 min-w-0 space-y-3 overflow-hidden ${IDENTITY_PANEL_ENABLED ? 'hidden xl:block' : ''}`}
-          >
-            {Array.from({ length: rightCount }).map((_, index) => (
-              <ReleaseCardSkeleton key={`rail-right-${index}`} />
-            ))}
-          </div>
-        )}
+      {/* Centre column — a plain flex-column frame, same as the real
+          WorkspaceDesktopFocused: TasksPanelSkeleton's own flex-1 stretches to
+          fill the remaining height, and `overflow-hidden` holds the viewport
+          lock. No banner slot — the one-time NewReleaseGuide never shows during
+          an initial load. */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <TasksPanelSkeleton panelBody={panelBody} />
       </div>
     </div>
   );
