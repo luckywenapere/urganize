@@ -62,13 +62,17 @@ type ChappiStore = {
    * prompt box; null = all releases. Survives `reset` deliberately — picking
    * a release is a working-context choice, not part of one conversation. */
   scopedReleaseId: string | null;
-  /** Whether the UrgAns side rail (the layout-flow right column mounted by
-   * AppShell on every chrome page at lg+) is open. Survives navigation by
-   * living here and reloads via localStorage; deliberately NOT part of
+  /** Whether the UrgAns chat card in the right-hand column (RightRail, mounted
+   * by AppShell on every chrome page at lg+; the rollout menu shares that
+   * column and stays whether or not this is open) is open. Survives navigation
+   * by living here and reloads via localStorage; deliberately NOT part of
    * `reset` — closing a conversation shouldn't collapse the layout. */
   railOpen: boolean;
-  /** Side-rail width in px. Always a whole number inside the absolute range;
-   * the component clamps it again to whatever THIS viewport can pay for. */
+  /** Width in px of the right-hand column WHILE THE CHAT IS OPEN. Always a whole
+   * number inside the absolute range; RightRail clamps it again to whatever THIS
+   * viewport can pay for. With the chat closed the column is not this wide (it
+   * is the menu-only width, lib/rail-width.ts's RAIL_MENU_ONLY_WIDTH), and this
+   * number is kept so reopening the chat restores the width that was dragged. */
   railWidth: number;
   /** An action the model has PROPOSED and the user has not yet approved.
    * Nothing has run while this is set. Cleared by `reset`, by

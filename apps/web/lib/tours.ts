@@ -90,7 +90,7 @@ export const ROLLOUT_TOUR_STEPS: readonly TourStep[] = [
     id: 'menu',
     anchor: 'rollout-menu',
     title: 'Everything else about this rollout.',
-    body: 'Metadata, content posts, the press kit and more live in this menu.',
+    body: 'Metadata, content posts, cover art, sharing and more live in this menu.',
   },
   {
     id: 'team',

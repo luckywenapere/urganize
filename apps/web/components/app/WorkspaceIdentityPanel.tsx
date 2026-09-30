@@ -22,7 +22,8 @@ import { settingsDeepLink } from "@/lib/settings-nav";
 import { useSettingsLinkClick } from "@/components/settings/useOpenSettings";
 import type { HelpKey } from "@/lib/help-copy";
 import { useSidebarStore } from "@/stores/useSidebarStore";
-import { RAIL_GUTTER } from "@/lib/rail-width";
+import { selectMenuPresent, useRailMenuStore } from "@/stores/useRailMenuStore";
+import { railColumnTotal, railColumnWidth } from "@/lib/rail-width";
 import {
   COLLAPSED_SIDEBAR_WIDTH,
   DEFAULT_SIDEBAR_WIDTH,
@@ -35,6 +36,7 @@ import {
   clampSidebarWidth,
   parsePersistedSidebarWidth,
   resolveSidebarBounds,
+  sidebarIsOnScreen,
   sidebarStateFromDrag,
   sidebarStateFromStep,
 } from "@/lib/sidebar-width";
@@ -43,8 +45,8 @@ import type { SidebarState } from "@/lib/sidebar-width";
 // Collapsed state and the expanded WIDTH both live in useSidebarStore now,
 // persisted there on write. They were local component state, on the reasoning
 // that "nothing outside this panel toggles it" — still true of writes, no
-// longer true of reads: ChappiSidePanel has to know how much room this column
-// is taking to compute its own maximum, and that answer depends on both
+// longer true of reads: RightRail has to know how much room this column is
+// taking to compute the chat's own maximum, and that answer depends on both
 // values. Bounds, clamping and the storage validators are all in
 // lib/sidebar-width.ts.
 const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
@@ -328,8 +330,8 @@ function buildNavItems(
   ];
 }
 
-// Same inline flag read AppShell uses for the UrgAns rail — needed here too
-// so this panel knows whether a rail could even be competing for width.
+// Same inline flag read AppShell uses for the UrgAns chat — needed here too
+// so this panel knows whether an open chat could be competing for width.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === "true";
 
 /**
@@ -430,10 +432,11 @@ function ScopedArtistLine({ fallbackLabel }: { fallbackLabel: string }) {
  * edited in Settings -> Profile, never here.
  *
  * Mounted once by AppShell as a layout-flow LEFT column sibling of <main>
- * (mirroring ChappiSidePanel's right column), so it appears on every chrome
- * page without per-page wiring. Hidden below `lg`; AppShell additionally
- * hides it at lg-xl while the UrgAns rail is open (see the width-budget note
- * there) since two rails plus main would squeeze the center content.
+ * (mirroring RightRail's right column), so it appears on every chrome page
+ * without per-page wiring. Hidden below `lg`; and at lg-xl it steps aside
+ * whenever the right-hand column is on screen (the rollout menu, or the UrgAns
+ * chat, or both), since two side columns plus main would squeeze the center
+ * content there.
  *
  * This doc block sat stranded above the helpers for a while, which made it read
  * as documentation for whichever one came first — moved here 2026-09-09.
@@ -458,13 +461,25 @@ export function WorkspaceIdentityPanel() {
   const railWidth = useChappiStore((state) => state.railWidth);
   const pathname = usePathname();
 
-  // The UrgAns rail (see ChappiSidePanel) renders nowhere on its own page —
-  // there, no width contest exists and this panel behaves like any other
-  // chrome page. Everywhere else, an OPEN rail plus this panel plus <main>
-  // would squeeze the center content at lg-xl (1024-1279px), so the rail
-  // wins there and this panel waits for xl+ to reappear.
+  // The right-hand column (see RightRail) renders nowhere on the assistant's own
+  // page — there, no width contest exists and this panel behaves like any other
+  // chrome page. Everywhere else, that column plus this panel plus <main> would
+  // squeeze the center content at lg-xl (1024-1279px), so the column wins there
+  // and this panel waits for xl+ to reappear.
+  //
+  // "The column is on screen" is `railColumnWidth() > 0`, and it counts a
+  // rollout menu with the chat CLOSED as well as an open chat: the menu-only
+  // column is 208px, which is enough to squeeze main at lg-xl all the same.
+  // `menuPresent` is false on the assistant page because RightRail is not
+  // mounted there, so its slot is null.
   const isChappiRoute = pathname === "/dashboard/urgans";
-  const railIsCompeting = CHAPPI_ENABLED && !isChappiRoute && railOpen;
+  const menuPresent = useRailMenuStore(selectMenuPresent);
+  const railColumn = railColumnWidth({
+    chatOpen: CHAPPI_ENABLED && !isChappiRoute && railOpen,
+    menuPresent,
+    chatWidth: railWidth,
+  });
+  const railIsCompeting = railColumn > 0;
 
   // A signed logo URL can expire while the tab stays open (see
   // ASSET_SIGNED_URL_TTL_SECONDS); onError below falls back to the Urganize
@@ -519,7 +534,7 @@ export function WorkspaceIdentityPanel() {
   // Measured rather than assumed, and re-measured on resize: a width sized on
   // a big monitor must not survive onto a laptop, and browser zoom, OS display
   // scaling and a rotating tablet all arrive through this same event. Same
-  // measurement ChappiSidePanel takes, including using
+  // measurement RightRail takes, including using
   // documentElement.clientWidth rather than innerWidth — this repo has already
   // been burned measuring the wrong one, and innerWidth counts a classic
   // scrollbar that is not layout space.
@@ -542,16 +557,17 @@ export function WorkspaceIdentityPanel() {
     };
   }, []);
 
-  // What the rail is taking out of the row right now — 0 whenever it is not on
-  // screen, which railIsCompeting above already answers exactly (flag off,
-  // closed, or the assistant page where the rail renders nowhere).
+  // What the right-hand column is taking out of the row right now — 0 whenever
+  // it is not on screen, which railColumn above already answers exactly (no
+  // rollout menu and the chat closed or flagged off, or the assistant page
+  // where the column renders nowhere).
   //
-  // The store's raw railWidth is used rather than the rail's own clamped one.
-  // They converge on the next frame (the rail writes its clamp back), and while
-  // they disagree this OVER-reserves, which is the safe direction: it makes our
-  // maximum smaller, never main's floor thinner. Every clamp on either side
-  // only ever shrinks, so the two columns settle instead of oscillating.
-  const railTotal = railIsCompeting ? railWidth + RAIL_GUTTER : 0;
+  // The store's raw railWidth is used rather than the chat's own clamped one.
+  // They converge on the next frame (the column writes its clamp back), and
+  // while they disagree this OVER-reserves, which is the safe direction: it
+  // makes our maximum smaller, never main's floor thinner. Every clamp on either
+  // side only ever shrinks, so the two columns settle instead of oscillating.
+  const railTotal = railColumnTotal(railColumn);
   const bounds = resolveSidebarBounds(viewport, railTotal);
   // UNTIL THE VIEWPORT HAS BEEN MEASURED, the stored width renders unclamped.
   // A viewport of 0 is "not known yet", not "too small", and the locked
@@ -568,9 +584,17 @@ export function WorkspaceIdentityPanel() {
   // on the page agrees with. Skipped while collapsed: the card is 64px then, so
   // the stored expanded width is not on screen and must not be rewritten by a
   // bound it is not currently subject to.
+  //
+  // Skipped while the card is not painted at all, for the same reason. At 1024
+  // to 1279px the right-hand column (the rollout menu, even with the chat
+  // closed) takes the card's place, so a card that is not there must not have
+  // its stored width clamped and saved by a bound it is not subject to: that
+  // turned one visit to a narrow window into a permanently narrower menu on the
+  // next wide one. The rendered `width` above is still clamped either way.
+  const onScreen = sidebarIsOnScreen(viewport, { competing: railIsCompeting, collapsed });
   useEffect(() => {
-    if (viewport > 0 && !collapsed && width !== storedWidth) setWidth(width);
-  }, [viewport, collapsed, width, storedWidth, setWidth]);
+    if (viewport > 0 && !collapsed && onScreen && width !== storedWidth) setWidth(width);
+  }, [viewport, collapsed, onScreen, width, storedWidth, setWidth]);
 
   // The one place a resolved state reaches the store. A COLLAPSED state carries
   // no width by construction (see SidebarState), so the width the user dragged
@@ -734,7 +758,7 @@ export function WorkspaceIdentityPanel() {
       // anything a person reads). Single-word strings are invisible to
       // lib/copy-scan.ts by design, so this one was found by reading.
       aria-label="Your team"
-      // Height calc is copied from ChappiSidePanel so the two columns are the
+      // Height calc is copied from RightRail so the two columns are the
       // same length: topbar 4rem + 1px border + <main>'s pt-5 (1.25rem) =
       // 5.25rem top offset; 100dvh minus that minus main's md:pb-10 (2.5rem)
       // = 7.75rem total. Founder call (2026-08-06): the card runs to the base
@@ -758,10 +782,10 @@ export function WorkspaceIdentityPanel() {
       // Reachable by DRAGGING the handle past SIDEBAR_COLLAPSE_AT as well as by
       // the footer button (founder call, 2026-09-09).
       //
-      // The rail-competition rule (see railIsCompeting) is relaxed while
+      // The competition rule (see railIsCompeting) is relaxed while
       // collapsed — the width-budget note it defends is about THREE full
       // columns squeezing the centre; a 64px rail costs ~176px less, so at
-      // lg-xl a collapsed card and an open UrgAns rail coexist fine. That
+      // lg-xl a collapsed card and the right-hand column coexist fine. That
       // makes collapsing the user's own fix for the squeeze.
       ref={asideRef}
       // NO `relative` here, deliberately: `sticky` is already a positioned

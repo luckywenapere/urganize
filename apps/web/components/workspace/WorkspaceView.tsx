@@ -39,6 +39,7 @@ import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
 import { TimelineScene } from '@/components/releases/TimelineScene';
 import { WorkspaceDesktopGrid } from './WorkspaceDesktopGrid';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
+import { RolloutMenuPortal } from './RolloutMenuPortal';
 import { useReleaseScope } from './useReleaseScope';
 import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
 import { usePlannerStore } from '@/stores/usePlannerStore';
@@ -69,10 +70,10 @@ const TASKS_PANEL_ID = 'workspace-tasks';
 // Inlined at build time. Off in prod until validated.
 const FIRST_WIN_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FIRST_WIN === 'true';
 
-// Same flag AppTopbar/ChappiDock read. The UrgAns side rail itself is
-// mounted by AppShell now (URG-210 — it rides every chrome page, not just
-// the catalog); this view only needs the flag to gate its rail-aware
-// behaviors (hideRails + the scope live-sync below).
+// Same flag AppTopbar/ChappiDock read. The right-hand column (the rollout menu
+// with the UrgAns chat under it) is mounted by AppShell now (URG-210 — it rides
+// every chrome page, not just the catalog); this view only needs the flag to
+// gate its chat-aware behavior (the scope live-sync below).
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 // The UrgAns planner. When on, a release with no activities shows the planner
@@ -184,9 +185,9 @@ export function WorkspaceView() {
   // TasksPanel's header open instantly instead of each costing a round trip.
   // Skipped entirely on Data Saver / 2g — see useScenePrefetch.
   useScenePrefetch(scopedReleaseId, !isInitialLoading);
-  // Same global quick-create TasksPanel's header pill opens — the date card's
-  // "add an activity yourself" action routes here so both entry points land
-  // in one modal (URG-233).
+  // Same global quick-create the New activity button beside the Motion bar
+  // opens — the date card's "add an activity yourself" action routes here so
+  // both entry points land in one modal (URG-233).
   const { openQuickCreate, openTask } = useTaskUI();
   const isRailOpen = useChappiStore((state) => state.railOpen);
   // The intake modal is mounted once by AppShell; this opens it. Building the
@@ -662,29 +663,21 @@ export function WorkspaceView() {
       </div>
     ) : null;
 
-  // Centered-focus split: take the non-selected releases in grid order and
-  // slice them into left + right rails. Ceiling on the left, floor on the
-  // right, per spec — same release always lands on the same side across
-  // reselects because the underlying releaseCards order doesn't change with
-  // the selection. `selectedCard` is the centered focus card; null when
-  // the URL points at a release that doesn't exist in this user's data
-  // (stale link, deleted release) and we fall back to the grid below.
-  const { selectedCard, leftRail, rightRail } = useMemo(() => {
-    if (!scopedReleaseId) {
-      return { selectedCard: null as ReleaseCardData | null, leftRail: [], rightRail: [] };
-    }
-    const selected = releaseCards.find((c) => c.release.id === scopedReleaseId) ?? null;
-    if (!selected) {
-      return { selectedCard: null as ReleaseCardData | null, leftRail: [], rightRail: [] };
-    }
-    const nonSelected = releaseCards.filter((c) => c.release.id !== scopedReleaseId);
-    const leftCount = Math.ceil(nonSelected.length / 2);
-    return {
-      selectedCard: selected,
-      leftRail: nonSelected.slice(0, leftCount),
-      rightRail: nonSelected.slice(leftCount),
-    };
-  }, [releaseCards, scopedReleaseId]);
+  // The focused release's card. `selectedCard` is null when the URL points
+  // at a release that doesn't exist in this user's data (stale link, deleted
+  // release) and we fall back to the grid below.
+  //
+  // (Until 2026-09-30 this also split the OTHER releases into a left and a right
+  // rail of cards either side of the focused one. Those rails are gone — the
+  // right-hand column carries the rollout menu and the UrgAns chat now, and the
+  // catalog is one press of the back arrow away.)
+  const selectedCard = useMemo(
+    () =>
+      scopedReleaseId
+        ? (releaseCards.find((c) => c.release.id === scopedReleaseId) ?? null)
+        : null,
+    [releaseCards, scopedReleaseId]
+  );
 
   // Desktop focused mode is gated on BOTH the URL scope and a successful
   // lookup. URL pointing at a stale release id → fall back to the grid
@@ -695,9 +688,9 @@ export function WorkspaceView() {
   // The catalog's "Search release" bar (2026-08-31, founder request).
   //
   // The filter is applied ONLY to the two catalog surfaces below. It must never
-  // touch `releaseCards` itself, which also feeds `selectedCard`, `leftRail`
-  // and `rightRail` — filtering those would make a scoped release vanish from
-  // its own focused view while someone typed, and empty the rails beside it.
+  // touch `releaseCards` itself, which also feeds `selectedCard` — filtering it
+  // would make a scoped release vanish from its own focused view while someone
+  // typed.
   const [releaseQuery, setReleaseQuery] = useState('');
   const catalogReleases = useMemo(
     () => searchReleases(releaseCards, releaseQuery),
@@ -738,41 +731,6 @@ export function WorkspaceView() {
     openIntake({ source: 'empty_state', releaseId: scopedReleaseId });
   };
 
-
-  // ANY open scene gets the release rails out of the way — the same treatment
-  // the UrgAns rail already triggers.
-  //
-  // This used to be calendar-ONLY, on the recorded reasoning that "the other
-  // scenes fit the normal centre column, so they leave the rails alone (founder
-  // call)". A founder report on Collect metadata (2026-08-25, screenshot)
-  // retires that: at xl+ the two rails plus their gaps take 220 + 24 + 24 + 220
-  // = 488px of the surface, so a 1280px viewport with the identity card on left
-  // the scene about 450px — and on a ONE-RELEASE account both rails are
-  // literally empty `<div aria-hidden>` (see RailColumn), so nearly half the
-  // surface was blank while an 8-field form was crushed beside it. The clipped
-  // "Regener…" button in that screenshot is the same width shortage one level
-  // down.
-  //
-  // The rails' own documented purpose — "so the centered card sits in the
-  // middle, not flush against the viewport edge" — is about the release-CARD
-  // view. A scene REPLACES the activity list with a working surface (forms,
-  // a month grid, a file list, a press-kit preview), and every one of those
-  // wants the width more than a sibling release card does. The back arrow and
-  // the catalog are still one press away.
-  //
-  // Boolean(activeScene) and not `!== null` on the raw URL param on purpose:
-  // `activeScene` is already flag-gated above, so a stale `?scene=capture` URL
-  // with that flag off correctly counts as no scene and keeps the rails.
-  //
-  // `panelBody !== 'activities'` rather than `Boolean(activeScene)` since
-  // 2026-09-06: with the timeline as the main view there is no scene param, but
-  // it needs the width MORE than any form does, not less. Its grid/list swap is
-  // a container query at 34rem — leave the rails in and a 1280px desktop hands
-  // the timeline ~450px, which silently degrades the week grid to the phone's
-  // vertical list. Flag off, `panelBody` can only be 'activities' or a real
-  // scene, so this is byte-identical to the line it replaces.
-  const hideRailsForLayout =
-    (CHAPPI_ENABLED && isRailOpen) || panelBody !== 'activities';
 
   // "Has this release actually happened", via the SAME
   // lib/recap-eligibility.ts predicate the recap route gates on rather than a
@@ -941,7 +899,8 @@ export function WorkspaceView() {
   );
 
   // The open release scene's body, handed to TasksPanel so it replaces the
-  // activity buckets in place while the pill row above stays put. Null unless
+  // activity buckets in place, while the rollout menu in the right-hand column
+  // (RolloutMenuPortal, below) stays put and lights the open scene. Null unless
   // the URL names a scene AND the release resolved — same guard the panels use.
   // Handed to ONE branch only (isDesktopViewport below): both layout branches
   // are always in the DOM, and giving this node to both mounted every scene
@@ -1049,9 +1008,8 @@ export function WorkspaceView() {
   //     in a chrome button bought nothing and made both feel unreliable.
   //
   // Closing a scene without leaving the release is still a tap: every scene's
-  // own entry point is a toggle (the lit mobile top tab, the lit desktop pill),
-  // and desktop additionally carries a dedicated "Activities" button in
-  // TasksPanel's header row.
+  // own entry point is a toggle (the lit row in the rollout menu, on a phone
+  // and on a desktop alike), and each scene carries its own back control.
   //
   // Still NOT router.back(), for the reason it never was: a legacy-route
   // redirect can make a scene URL the FIRST history entry in a tab, so back()
@@ -1174,7 +1132,7 @@ export function WorkspaceView() {
           plain content wrapper again. */}
       {/* lg:pt-0 (2026-08-05, URG-224 + URG-226): at lg+, this wrapper's own
           pt-6 stacked on top of <main>'s shared pt-5, pushing the release grid
-          44px below WorkspaceIdentityPanel and ChappiSidePanel. Both of those
+          44px below WorkspaceIdentityPanel and RightRail. Both of those
           are flex siblings of <main> pinned at `sticky top-[calc(5.25rem+1px)]`
           = 85px, which is exactly the topbar (65px) PLUS main's pt-5 (20px) —
           i.e. they align to main's PADDED content top, not to the topbar. So
@@ -1373,18 +1331,18 @@ export function WorkspaceView() {
           <div className="hidden lg:block">
             {isDesktopFocusedMode && selectedCard && scopedReleaseSlim ? (
               <WorkspaceDesktopFocused
-                leftRail={leftRail}
-                rightRail={rightRail}
                 scopedTasks={scopedTasks}
                 scopedRelease={scopedReleaseSlim}
-                onSelect={handleSelect}
                 onClose={goBack}
                 closeLabel={backLabel}
-                hideRails={hideRailsForLayout}
+                // Only while the main view is showing, as the "New activity"
+                // pill always was: a scene has taken the panel otherwise.
+                onNewActivity={
+                  bodyIsMainView
+                    ? () => openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })
+                    : undefined
+                }
                 banner={newReleaseGuideBanner}
-                panelArchiveAction={archiveAction}
-                panelChangeArtistAction={changeArtistAction}
-                panelShareAction={shareAction}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
                 panelActivitiesBanner={
                   kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner
@@ -1403,6 +1361,26 @@ export function WorkspaceView() {
             )}
           </div>
       </div>
+
+      {/* The rollout menu, rendered HERE and drawn into the right-hand column.
+          It is mounted from exactly this one place, and only when the desktop
+          branch is the one on screen: WorkspaceDesktopFocused and TasksPanel
+          both exist twice (the mobile and desktop branches are both always in
+          the DOM, one merely hidden by CSS), so mounting it from either would
+          put two menus in the column. It lives here rather than inside the
+          column because Share, Change artist and Archive depend on state that
+          lives here — who owns the rollout, how many artists the team has,
+          whether it is finished, whether each dialog is open. See
+          stores/useRailMenuStore.ts. */}
+      {isDesktopFocusedMode && isDesktopViewport && scopedReleaseSlim ? (
+        <RolloutMenuPortal
+          releaseId={scopedReleaseSlim.id}
+          releaseTitle={scopedReleaseSlim.title}
+          share={shareAction}
+          changeArtist={changeArtistAction}
+          archive={archiveAction}
+        />
+      ) : null}
 
       <CreateReleaseModal
         open={isCreateModalOpen}
