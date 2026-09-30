@@ -241,6 +241,185 @@ describe('generateStructuredAiOutput: structured outputs, reasoning effort and t
   });
 });
 
+// The model router can send a plain-text request to a GPT-5 family model (a
+// fallback, or the press-kit drafting rung), and those models default to a
+// slow, expensive amount of thinking unless told otherwise.
+describe('generatePlainTextAiOutput: reasoning effort', () => {
+  const okText = (content: string) => ({
+    ok: true,
+    text: async () => JSON.stringify({ choices: [{ message: { content } }] }),
+  });
+  const badRequest = (message: string) => ({
+    ok: false,
+    status: 400,
+    text: async () => JSON.stringify({ error: { message } }),
+  });
+  const bodyOf = (fetchMock: ReturnType<typeof vi.fn>, call: number) =>
+    JSON.parse((fetchMock.mock.calls[call][1] as { body: string }).body) as Record<string, unknown>;
+
+  beforeEach(() => {
+    vi.stubEnv('AI_API_KEY', 'test-key');
+    vi.stubEnv('AI_API_BASE', 'https://api.rodiumai.io');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('sends reasoning_effort only to a model that accepts it', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okText('A paragraph.'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const run = (model: string) =>
+      generatePlainTextAiOutput({
+        messages: [{ role: 'user', content: 'hi' }],
+        model,
+        maxRetries: 1,
+        reasoningEffort: 'low',
+      });
+
+    await run('openai/gpt-5.4-mini');
+    expect(bodyOf(fetchMock, 0).reasoning_effort).toBe('low');
+
+    await run('openai/gpt-4o-mini');
+    expect(bodyOf(fetchMock, 1)).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('sends nothing extra when no effort is asked for, as before', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okText('A paragraph.'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await generatePlainTextAiOutput({
+      messages: [{ role: 'user', content: 'hi' }],
+      model: 'openai/gpt-5.4-mini',
+      maxRetries: 1,
+    });
+
+    expect(bodyOf(fetchMock, 0)).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('retries once without reasoning_effort when the gateway names it in a 400', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(badRequest('Unrecognized request argument supplied: reasoning_effort'))
+      .mockResolvedValueOnce(okText('A paragraph.'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await generatePlainTextAiOutput({
+      messages: [{ role: 'user', content: 'hi' }],
+      model: 'openai/gpt-5.4-mini',
+      maxRetries: 1,
+      reasoningEffort: 'low',
+    });
+
+    expect(result).toBe('A paragraph.');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(bodyOf(fetchMock, 1)).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('does not loop forever if the gateway keeps rejecting it', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(badRequest('Unrecognized request argument supplied: reasoning_effort'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      generatePlainTextAiOutput({
+        messages: [{ role: 'user', content: 'hi' }],
+        model: 'openai/gpt-5.4-mini',
+        maxRetries: 1,
+        reasoningEffort: 'low',
+      })
+    ).rejects.toThrow();
+
+    // One try with the parameter, one without, and then it gives up.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// A routed request can be handed to a second model, and the second model has to
+// fit in the same route ceiling as the first. That only works if each model's own
+// retry loop respects the deadline, the way the structured generator's does.
+describe('generatePlainTextAiOutput: the deadline', () => {
+  beforeEach(() => {
+    vi.stubEnv('AI_API_KEY', 'test-key');
+    vi.stubEnv('AI_API_BASE', 'https://api.rodiumai.io');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  // A fetch that never answers on its own: it only ever rejects when the
+  // request's own signal aborts, so the observed duration IS the timeout.
+  const hangUntilAborted = () =>
+    vi.fn(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener('abort', () => reject(makeAbortError()));
+        })
+    );
+
+  it('shortens an attempt to what the deadline leaves, and does not retry into a spent budget', async () => {
+    const fetchMock = hangUntilAborted();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const started = Date.now();
+    await expect(
+      generatePlainTextAiOutput({
+        messages: [{ role: 'user', content: 'hi' }],
+        model: 'openai/gpt-4o-mini',
+        maxRetries: 3,
+        timeoutMs: 20_000,
+        deadlineMs: started + 1_400,
+      })
+    ).rejects.toThrow();
+
+    // 1.4s deadline minus the 1s guard: the attempt was cut to ~400ms rather
+    // than the 20s timeout, and with under 8s left there was no second one.
+    expect(Date.now() - started).toBeLessThan(3_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not ask the model at all once the deadline has passed', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      generatePlainTextAiOutput({
+        messages: [{ role: 'user', content: 'hi' }],
+        model: 'openai/gpt-4o-mini',
+        maxRetries: 2,
+        deadlineMs: Date.now() - 1,
+      })
+    ).rejects.toThrow(/deadline/i);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('still retries a timeout when there is plenty of time', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(makeAbortError())
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify({ choices: [{ message: { content: 'In time.' } }] }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await generatePlainTextAiOutput({
+      messages: [{ role: 'user', content: 'hi' }],
+      model: 'openai/gpt-4o-mini',
+      maxRetries: 2,
+      timeoutMs: 1_000,
+      deadlineMs: Date.now() + 60_000,
+    });
+
+    expect(result).toBe('In time.');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('supportsReasoningEffort', () => {
   it.each([
     ['openai/gpt-5.4', true],
@@ -267,5 +446,44 @@ describe('isRodiumGateway', () => {
     expect(isRodiumGateway()).toBe(true);
     vi.stubEnv('AI_API_BASE', 'https://openrouter.ai/api/v1');
     expect(isRodiumGateway()).toBe(false);
+  });
+});
+
+describe('buildOpenAiRequestBody', () => {
+  const messages = [{ role: 'user' as const, content: 'hi' }];
+  const schema = { name: 'probe', schema: { type: 'object', properties: { ok: { type: 'boolean' } } } };
+
+  it('keeps the body single-shot features have always sent: no output cap, key for key', async () => {
+    const { buildOpenAiRequestBody } = await import('./provider');
+    const body = buildOpenAiRequestBody({ model: 'openai/gpt-4o-mini', messages, format: 'json' });
+    expect(Object.keys(body)).toEqual(['model', 'messages', 'stream', 'response_format']);
+    expect(body.response_format).toEqual({ type: 'json_object' });
+    expect('max_tokens' in body).toBe(false);
+    expect('max_completion_tokens' in body).toBe(false);
+  });
+
+  it('sends a strict json_schema when it is given one', async () => {
+    const { buildOpenAiRequestBody } = await import('./provider');
+    const body = buildOpenAiRequestBody({ model: 'openai/gpt-5.4', messages, format: 'json', jsonSchema: schema });
+    expect(body.response_format).toEqual({
+      type: 'json_schema',
+      json_schema: { name: 'probe', strict: true, schema: schema.schema },
+    });
+  });
+
+  it('sends no response_format for plain text', async () => {
+    const { buildOpenAiRequestBody } = await import('./provider');
+    const body = buildOpenAiRequestBody({ model: 'openai/gpt-4o-mini', messages, format: 'text' });
+    expect('response_format' in body).toBe(false);
+    expect(Object.keys(body)).toEqual(['model', 'messages', 'stream']);
+  });
+
+  it('sends reasoning_effort only to a model that accepts it, and after response_format', async () => {
+    const { buildOpenAiRequestBody } = await import('./provider');
+    const yes = buildOpenAiRequestBody({ model: 'openai/gpt-5.6-terra', messages, format: 'json', reasoningEffort: 'low' });
+    expect(yes.reasoning_effort).toBe('low');
+    expect(Object.keys(yes)).toEqual(['model', 'messages', 'stream', 'response_format', 'reasoning_effort']);
+    const no = buildOpenAiRequestBody({ model: 'openai/gpt-4o-mini', messages, format: 'json', reasoningEffort: 'low' });
+    expect('reasoning_effort' in no).toBe(false);
   });
 });

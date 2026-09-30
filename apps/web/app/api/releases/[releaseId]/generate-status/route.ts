@@ -5,7 +5,8 @@ import {
   isOptionalTableMissingError,
 } from '../../_shared';
 import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
-import { generatePlainTextAiOutput, isAiConfigured } from '@/lib/ai/provider';
+import { isAiConfigured } from '@/lib/ai/provider';
+import { generateRoutedPlainText } from '@/lib/ai/routed';
 import {
   buildStatusMessages,
   stripMarkdownWrappers,
@@ -18,6 +19,11 @@ const RELEASES_TABLE = 'releases';
 const TASKS_TABLE = 'tasks';
 const ASSETS_TABLE = 'assets';
 const STATUS_TIMEOUT_MS = 20_000;
+// The whole request, measured from when the handler starts, sized against the
+// 60s ceiling below with time left to answer. It bounds each model's own retries
+// and decides whether the model router may hand the request to another model:
+// a second model is only worth trying if it can finish inside this.
+const STATUS_DEADLINE_MS = 52_000;
 const MS_PER_DAY = 86_400_000;
 
 // Without this, Vercel's plan-default function timeout (10-15s) kills the
@@ -133,6 +139,8 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
+  const startedAt = Date.now();
+
   if (!isStatusUpdateEnabled()) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
@@ -227,11 +235,16 @@ export async function POST(
   // --- Call the model ---------------------------------------------------------
   let raw: string;
   try {
-    raw = await generatePlainTextAiOutput({
+    // Routed: with the model router off this is the call the route always made
+    // (AI_STATUS_MODEL, or the gateway's own default). A status paragraph needs
+    // no strength, so it starts on the cheapest rung and only moves to a sibling
+    // or a stronger model if that one fails.
+    raw = await generateRoutedPlainText({
+      surface: 'status',
       messages,
       timeoutMs: STATUS_TIMEOUT_MS,
       maxRetries: 2,
-      model: process.env.AI_STATUS_MODEL || undefined,
+      deadlineMs: startedAt + STATUS_DEADLINE_MS,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Status generation failed.';

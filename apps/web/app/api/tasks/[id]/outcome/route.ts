@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { generateStructuredAiOutput, isAiConfigured } from '@/lib/ai/provider';
+import { isAiConfigured } from '@/lib/ai/provider';
+import { generateRoutedStructuredOutput } from '@/lib/ai/routed';
 import {
   OUTCOME_NOTE_MAX_LENGTH,
   buildOutcomeAiMessages,
@@ -100,7 +101,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     if (note && isAiConfigured()) {
       try {
-        const result = await generateStructuredAiOutput<OutcomeAiResult>({
+        // Routed, but this surface never changes model on a failure: the sheet
+        // gives the model three seconds in all, and a second attempt cannot fit.
+        // With the router off it is the call it always was.
+        const result = await generateRoutedStructuredOutput<OutcomeAiResult>({
+          surface: 'outcome',
           messages: buildOutcomeAiMessages({ taskTitle: access.task.title, outcome, note }),
           timeoutMs: AI_OUTCOME_TIMEOUT_MS,
           // Total attempts, not extra ones. One attempt keeps the whole call
@@ -108,7 +113,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           // failure (including our own abort) counts as retryable, so a
           // higher number would stack backoffs on top of the timeout.
           maxRetries: 1,
-          model: process.env.AI_OUTCOME_MODEL || process.env.AI_STATUS_MODEL || undefined,
           parse: parseOutcomeAiResponse,
         });
         summary = result.summary;

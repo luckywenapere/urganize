@@ -4,6 +4,15 @@ import { isChappiEnabled, isChappiModelConfigured } from '@/lib/chappi/config';
 import { executeToolCall, resolveChappiContext } from '@/lib/chappi/dispatch';
 import { buildChappiSystemPrompt } from '@/lib/chappi/system-prompt';
 import { closeConfirmedAction, runChappiAgent } from '@/lib/chappi/runner';
+import {
+  AGENT_ALERT_LOG_LINES,
+  completeShadowTrace,
+  describeAgentError,
+  planChatRouting,
+  planCloseoutRouting,
+  routingMetadata,
+} from '@/lib/chappi/routing';
+import { logRoutingTrace } from '@/lib/ai/routing-log';
 import { getChappiTool } from '@/lib/chappi/tools';
 import type {
   ChappiConfirmedAction,
@@ -141,6 +150,8 @@ export async function POST(request: NextRequest) {
         messages: messages.slice(-MAX_MESSAGES),
         toolName: confirmedAction.toolName,
         result,
+        // Undefined unless the router is live, so this is the call it always was.
+        routing: planCloseoutRouting(),
       });
       return NextResponse.json({
         mode: 'agent',
@@ -194,11 +205,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { reply, clientActions, pendingConfirmation } = await runChappiAgent({
+    // Which model answers. With AI_ROUTER unset this is { mode: 'off' } and the
+    // turn below runs exactly as it did before the router existed; in shadow it
+    // only records what the router would have chosen; live, it decides. The team
+    // is read for its plan ceiling, and by `state` as well as `tier`: `tier`
+    // alone reports the uncapped flagship for a trial (see resolveCeiling).
+    const trimmed = messages.slice(-MAX_MESSAGES);
+    const plan = planChatRouting({ messages: trimmed, team });
+
+    const { reply, clientActions, pendingConfirmation, trace } = await runChappiAgent({
       ctx,
       system,
-      messages: messages.slice(-MAX_MESSAGES),
+      messages: trimmed,
+      ...(plan.mode === 'on' ? { routing: plan.routing } : {}),
     });
+
+    // The record of what the router did (or, in shadow, would have done). Absent
+    // for a turn it did not touch, so that row is what it always was.
+    const routed =
+      plan.mode === 'on' ? trace : plan.mode === 'shadow' ? (trace ? completeShadowTrace(plan.trace, trace) : plan.trace) : undefined;
+    if (plan.mode === 'shadow' && routed) logRoutingTrace(routed, false);
+    const metadata = routed ? routingMetadata(routed) : undefined;
 
     // Counted after the turn succeeded, so a gateway failure is never charged.
     if (team.primaryWorkspaceId) {
@@ -206,6 +233,7 @@ export async function POST(request: NextRequest) {
         workspaceId: team.primaryWorkspaceId,
         ownerUserId: team.ownerUserId,
         actorUserId: auth.user.id,
+        ...(metadata ? { metadata } : {}),
       });
     }
 
@@ -217,27 +245,16 @@ export async function POST(request: NextRequest) {
       briefSections: built.briefSections,
     } satisfies ChappiResponse);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'UrgAns failed.';
-    const status = (error as { status?: number } | null)?.status;
-    const isAbort =
-      (error as { name?: string } | null)?.name === 'AbortError' || /abort|timeout/i.test(message);
+    const described = describeAgentError(error);
 
-    if (isAbort) {
-      return NextResponse.json(
-        { mode: 'error', error: 'UrgAns took too long. Try again.' } satisfies ChappiResponse,
-        { status: 504 }
-      );
-    }
-    if (status === 429 || /rate[- ]limit/i.test(message)) {
-      return NextResponse.json(
-        { mode: 'error', error: 'UrgAns is busy. Try again in a moment.' } satisfies ChappiResponse,
-        { status: 503 }
-      );
-    }
-    console.error('[chappi] agent run failed:', error);
-    return NextResponse.json(
-      { mode: 'error', error: 'UrgAns is unavailable right now.' } satisfies ChappiResponse,
-      { status: 503 }
-    );
+    // A slow model or a busy gateway is ordinary and logs nothing. An empty
+    // balance and a rejected key are things no model can route around and only a
+    // person can fix: the user is told the same thing either way, and the log is
+    // where it has to be loud.
+    if (described.alert) console.error(AGENT_ALERT_LOG_LINES[described.alert], error);
+
+    return NextResponse.json({ mode: 'error', error: described.message } satisfies ChappiResponse, {
+      status: described.status,
+    });
   }
 }

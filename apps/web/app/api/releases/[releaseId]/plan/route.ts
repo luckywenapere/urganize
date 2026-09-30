@@ -13,7 +13,8 @@ import {
 } from './_shared';
 import { parseReleasePlanIntake } from '@/lib/release-planning';
 import { PLANNER_DEADLINE_MS, createReleasePlan } from '@/lib/release-planning-actions-server';
-import { resolvePlannerModel, resolvePlannerReasoningEffort } from '@/lib/ai/planner-model';
+import { resolvePlannerReasoningEffort } from '@/lib/ai/planner-model';
+import { loadTeamForRouting } from '@/lib/ai/routing-team-server';
 
 /**
  * The rollout plan: build it (POST) or read back what was built (GET).
@@ -143,7 +144,9 @@ export async function POST(
     template,
     fallbackToSingle,
     loadTeam: () => loadPlannerTeam(adminClient, releaseId, auth.user),
-    plannerModel: resolvePlannerModel(),
+    // Undefined unless the model router is on (or in shadow): the plan ceiling is
+    // the only thing it is for, and the model itself is chosen inside.
+    routingTeam: await loadTeamForRouting('planner', auth.user),
     reasoningEffort: resolvePlannerReasoningEffort(),
     deadlineMs: startedAt + PLANNER_DEADLINE_MS,
   });

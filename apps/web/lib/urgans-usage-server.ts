@@ -113,15 +113,27 @@ export async function checkUrgansAllowance(
  *
  * Called AFTER a turn succeeds, so a gateway failure is not charged to the
  * user. Never throws — `logBillingEvent` swallows its own failures, and losing
- * a count is better than failing a turn the user already paid for in patience. */
+ * a count is better than failing a turn the user already paid for in patience.
+ *
+ * `metadata` rides on the same event and is how the model router's decisions
+ * (which model, why, how many hops, tokens) are kept: the type stays
+ * `urgans_action`, so the monthly count above is unaffected, and no migration is
+ * needed. It is left off entirely when there is none, so a turn the router did
+ * not touch stores exactly what it always did. */
 export async function recordUrgansAction(
   client: SupabaseClient,
-  input: { workspaceId: string; ownerUserId: string | null; actorUserId: string }
+  input: {
+    workspaceId: string;
+    ownerUserId: string | null;
+    actorUserId: string;
+    metadata?: Record<string, unknown>;
+  }
 ): Promise<void> {
   await logBillingEvent(client, {
     workspaceId: input.workspaceId,
     ownerUserId: input.ownerUserId,
     actorUserId: input.actorUserId,
     type: 'urgans_action',
+    ...(input.metadata ? { metadata: input.metadata } : {}),
   });
 }

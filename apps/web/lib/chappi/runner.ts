@@ -8,12 +8,35 @@
 // see getChappiModelConfig's comment. openai/gpt-4o-mini is the verified-working
 // substitute, served through /v1/chat/completions with OpenAI-style
 // tools/tool_calls. Plain fetch, no SDK dependency. Non-streaming this phase.
+//
+// Model routing (2026-09-29): a caller may hand this loop a RouteDecision from
+// lib/ai/model-router.ts. Without one the loop behaves exactly as it did before
+// the router existed: the configured model, no reasoning parameter, the same
+// request body. With one, the decision picks the model and its settings, and
+// the loop asks the router what to do when a call fails, when the tools keep
+// failing, and when the clock is running out. The decisions are the router's
+// (and pure); this file only carries them out.
 
 import { getChappiModelConfig } from './config';
 import { getChappiTool, getChappiToolSchemas } from './tools';
 import type { ChappiTool, ChappiToolContext } from './tools';
 import { executeToolCall } from './dispatch';
 import { stripModelMarkup } from '@/lib/model-markup';
+import { GatewayError, classifyAiFailure, gatewayErrorFromResponse } from '@/lib/ai/gateway-error';
+import { usesMaxCompletionTokens } from '@/lib/ai/model-ladder';
+import {
+  addTraceUsage,
+  fitToDeadline,
+  nextAfterFailure,
+  noteModelCalled,
+  startTrace,
+  startUnroutedTrace,
+  type RouteDecision,
+  type RoutingFailure,
+  type RoutingTrace,
+} from '@/lib/ai/model-router';
+import { logRoutingTrace } from '@/lib/ai/routing-log';
+import { extractAiUsage, supportsReasoningEffort, type AiUsage, type ReasoningEffort } from '@/lib/ai/provider';
 import type {
   ChappiClientAction,
   ChappiMessage,
@@ -29,6 +52,19 @@ const MAX_ROUNDS = 5;
 const MAX_TOKENS = 1024;
 const REQUEST_TIMEOUT_MS = 45_000;
 
+// A routed request is given up on shortly before the turn's deadline rather
+// than being allowed to run out the full 45 seconds past it.
+const MIN_REQUEST_TIMEOUT_MS = 1_000;
+const ABORT_MARGIN_MS = 250;
+
+// Two failed tool calls in one turn say the model is struggling with the job.
+// One is ordinary (a stale id, a missing record) and not worth a dearer model.
+const TOOL_FAILURES_BEFORE_ESCALATION = 2;
+
+const DEADLINE_MESSAGE =
+  'That took longer than I had time for, so I stopped part-way. Ask me to carry on and I will pick it up.';
+const DEADLINE_NOTE = 'I ran out of time before I could finish. Ask me to carry on and I will.';
+
 // ── OpenAI chat-completions wire shapes (minimal structural views) ─────────
 
 type OpenAiToolCall = {
@@ -37,7 +73,7 @@ type OpenAiToolCall = {
   function: { name: string; arguments: string };
 };
 
-type OpenAiChatMessage =
+export type OpenAiChatMessage =
   | { role: 'system' | 'user' | 'assistant'; content: string }
   | { role: 'assistant'; content: string | null; tool_calls: OpenAiToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string };
@@ -69,13 +105,86 @@ type OpenAiChoice = {
   finish_reason?: string;
 };
 
-function parseToolArguments(raw: string): Record<string, unknown> {
+type ChatCompletion = { choice: OpenAiChoice; usage: AiUsage | null };
+
+/**
+ * Tool arguments as the model sent them. `valid` is false when a non-empty
+ * string did not parse to an object: the call still runs, with empty arguments,
+ * exactly as it always has, but the router counts it as the model struggling.
+ * An empty string is valid: some models send `""` for a tool with no
+ * parameters, and that is not a mistake.
+ */
+export function parseToolArguments(raw: string): { args: Record<string, unknown>; valid: boolean } {
+  if (!raw.trim()) return { args: {}, valid: true };
   try {
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+    if (parsed && typeof parsed === 'object') return { args: parsed as Record<string, unknown>, valid: true };
+    return { args: {}, valid: false };
   } catch {
-    return {};
+    return { args: {}, valid: false };
   }
+}
+
+// ── Request parameters the gateway may reject ───────────────────────────────
+
+export type TokenParam = 'max_tokens' | 'max_completion_tokens';
+
+/**
+ * The token-cap parameter a model is sent before the gateway has said otherwise.
+ * Exported so the evaluation (lib/ai/model-eval.integration.test.ts) asks the
+ * gateway the question the runner will really ask, not a copy of it.
+ */
+export const defaultTokenParam = (model: string): TokenParam =>
+  usesMaxCompletionTokens(model) ? 'max_completion_tokens' : 'max_tokens';
+
+const otherTokenParam = (param: TokenParam): TokenParam =>
+  param === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
+
+const PARAM_REJECTION =
+  /unsupported|unrecognized|not supported|unknown (request )?(parameter|argument|field)|not allowed|not permitted|extra inputs/i;
+const NAMED_PARAM =
+  /(?:unsupported|unrecognized|unknown|not allowed)[^.]{0,80}?\b(max_completion_tokens|max_tokens)\b/i;
+const EFFORT_REJECTION = /reasoning/i;
+
+/**
+ * If a 400 says the token-cap parameter we sent is not accepted, the one to send
+ * instead; otherwise null. OpenAI's own wording names both parameters ("'max_tokens'
+ * is not supported with this model. Use 'max_completion_tokens' instead"), so the
+ * one it calls unsupported is read out first and only that one counts.
+ */
+export function tokenParamAfterRejection(sent: TokenParam, message: string): TokenParam | null {
+  if (!PARAM_REJECTION.test(message)) return null;
+  const named = NAMED_PARAM.exec(message)?.[1]?.toLowerCase();
+  const rejected = named ?? (new RegExp(`\\b${sent}\\b`, 'i').test(message) ? sent : null);
+  return rejected === sent ? otherTokenParam(sent) : null;
+}
+
+/** What one turn has learned about a model's parameters, so it asks each question once. */
+type Quirks = { noEffort: Set<string>; tokenParam: Map<string, TokenParam> };
+const newQuirks = (): Quirks => ({ noEffort: new Set(), tokenParam: new Map() });
+
+/**
+ * The request body for one chat round. Pure, and the only place it is built, so
+ * what the evaluation sends is what a turn sends. The key order is part of the
+ * contract: with no router and no effort it is `model, messages, max_tokens,
+ * stream, tools`, the body this loop has always sent, and a test pins it.
+ */
+export function buildChatCompletionBody(params: {
+  model: string;
+  messages: OpenAiChatMessage[];
+  tools?: ReturnType<typeof getChappiToolSchemas>;
+  maxOutputTokens: number;
+  tokenParam: TokenParam;
+  reasoningEffort: ReasoningEffort | null;
+}): Record<string, unknown> {
+  return {
+    model: params.model,
+    messages: params.messages,
+    [params.tokenParam]: params.maxOutputTokens,
+    ...(params.reasoningEffort ? { reasoning_effort: params.reasoningEffort } : {}),
+    stream: false,
+    ...(params.tools?.length ? { tools: params.tools } : {}),
+  };
 }
 
 async function requestChatCompletion(params: {
@@ -84,9 +193,13 @@ async function requestChatCompletion(params: {
   model: string;
   messages: OpenAiChatMessage[];
   tools?: ReturnType<typeof getChappiToolSchemas>;
-}): Promise<OpenAiChoice> {
+  maxOutputTokens: number;
+  tokenParam: TokenParam;
+  reasoningEffort: ReasoningEffort | null;
+  timeoutMs?: number;
+}): Promise<ChatCompletion> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), params.timeoutMs ?? REQUEST_TIMEOUT_MS);
 
   try {
     const response = await fetch(`${params.baseURL.replace(/\/+$/, '')}/chat/completions`, {
@@ -95,29 +208,70 @@ async function requestChatCompletion(params: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${params.apiKey}`,
       },
-      body: JSON.stringify({
-        model: params.model,
-        messages: params.messages,
-        max_tokens: MAX_TOKENS,
-        stream: false,
-        ...(params.tools?.length ? { tools: params.tools } : {}),
-      }),
+      body: JSON.stringify(buildChatCompletionBody(params)),
       signal: controller.signal,
     });
 
     if (!response.ok) {
       const rawText = await response.text().catch(() => '');
-      throw new Error(`Chappi gateway request failed (${response.status}): ${rawText.slice(0, 300)}`);
+      throw gatewayErrorFromResponse({
+        status: response.status,
+        rawText,
+        retryAfter: response.headers?.get?.('retry-after') ?? null,
+      });
     }
 
-    const payload = (await response.json().catch(() => null)) as {
-      choices?: OpenAiChoice[];
-    } | null;
+    const payload = (await response.json().catch(() => null)) as
+      | ({ choices?: OpenAiChoice[] } & Record<string, unknown>)
+      | null;
     const choice = payload?.choices?.[0];
     if (!choice) throw new Error('Chappi gateway returned no choices');
-    return choice;
+    return { choice, usage: payload ? extractAiUsage(payload) : null };
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * One completion, recovering from a 400 that only says a parameter was not
+ * accepted. Each recovery is spent once per model per turn (the quirks), so a
+ * gateway that keeps saying 400 cannot keep this looping: at most three requests.
+ * Nothing else is retried here; a failure the router might route around is
+ * thrown to the caller as it is.
+ */
+async function completeChat(params: {
+  apiKey: string;
+  baseURL: string;
+  model: string;
+  messages: OpenAiChatMessage[];
+  tools?: ReturnType<typeof getChappiToolSchemas>;
+  maxOutputTokens: number;
+  reasoningEffort: ReasoningEffort | null;
+  timeoutMs?: number;
+  quirks: Quirks;
+}): Promise<ChatCompletion> {
+  for (let attempt = 0; ; attempt += 1) {
+    const tokenParam: TokenParam = params.quirks.tokenParam.get(params.model) ?? defaultTokenParam(params.model);
+    const reasoningEffort = params.quirks.noEffort.has(params.model) ? null : params.reasoningEffort;
+
+    try {
+      return await requestChatCompletion({ ...params, tokenParam, reasoningEffort });
+    } catch (error) {
+      if (error instanceof GatewayError && error.status === 400 && attempt < 2) {
+        if (reasoningEffort && EFFORT_REJECTION.test(error.message)) {
+          params.quirks.noEffort.add(params.model);
+          continue;
+        }
+        const swapped = params.quirks.tokenParam.has(params.model)
+          ? null
+          : tokenParamAfterRejection(tokenParam, error.message);
+        if (swapped) {
+          params.quirks.tokenParam.set(params.model, swapped);
+          continue;
+        }
+      }
+      throw error;
+    }
   }
 }
 
@@ -157,17 +311,70 @@ export function resolveToolInvocation(
 const PROPOSED_NOT_EXECUTED =
   'PROPOSED, NOT EXECUTED. A confirmation card is now showing for the user. Tell them to approve or cancel it. Do not call this tool again, and do not say the action is done.';
 
+// ── Routing ─────────────────────────────────────────────────────────────────
+
+export type ChatRouting = {
+  /** The rung the turn's tool rounds start on. */
+  decision: RouteDecision;
+  /**
+   * The rung for the no-tools summary that ends a turn cut off by the round
+   * cap. Defaults to `decision`; the caller normally passes the cheap one, since
+   * summarising what already happened needs no strength.
+   */
+  closeoutDecision?: RouteDecision;
+  /** Epoch ms by which the turn must be finished. Without it there is no clock. */
+  deadlineMs?: number;
+  /** Injectable clock for tests. */
+  now?: () => number;
+  /** The env the decision was made under, so a hop reads the same ladder. */
+  env?: Record<string, string | undefined>;
+};
+
+export type ChappiAgentResult = {
+  reply: string;
+  clientActions: ChappiClientAction[];
+  pendingConfirmation: ChappiPendingConfirmation | null;
+  trace: RoutingTrace;
+};
+
+/** The decision in force for one call, held so a hop can replace it. */
+type DecisionHolder = { decision: RouteDecision | null };
+
+type CallSettings = { model: string; maxOutputTokens: number; reasoningEffort: ReasoningEffort | null };
+
+/** What to send for a decision. With none, exactly what was sent before the router existed. */
+function settingsFor(decision: RouteDecision | null, configuredModel: string): CallSettings {
+  if (!decision) return { model: configuredModel, maxOutputTokens: MAX_TOKENS, reasoningEffort: null };
+  return {
+    model: decision.model,
+    maxOutputTokens: decision.maxOutputTokens,
+    // The effort is a property of the rung, but only some models take it.
+    reasoningEffort: supportsReasoningEffort(decision.model) ? decision.reasoningEffort : null,
+  };
+}
+
+const textOf = (choice: OpenAiChoice): string => String(choice.message?.content || '').trim();
+const toolCallsOf = (choice: OpenAiChoice): OpenAiToolCall[] =>
+  Array.isArray(choice.message?.tool_calls) ? (choice.message?.tool_calls ?? []) : [];
+
 export async function runChappiAgent(params: {
   ctx: ChappiToolContext;
   system: string;
   messages: ChappiMessage[];
-}): Promise<{
-  reply: string;
-  clientActions: ChappiClientAction[];
-  pendingConfirmation: ChappiPendingConfirmation | null;
-}> {
+  routing?: ChatRouting;
+}): Promise<ChappiAgentResult> {
   const config = getChappiModelConfig();
   if (!config) throw new Error('Chappi model is not configured');
+
+  const routing = params.routing;
+  const clock = routing?.now ?? Date.now;
+  const env = routing?.env ?? process.env;
+  const deadlineMs = routing?.deadlineMs;
+  const startedAt = clock();
+
+  const trace = routing ? startTrace(routing.decision, 'on') : startUnroutedTrace('chat', config.model);
+  const quirks = newQuirks();
+  const main: DecisionHolder = { decision: routing?.decision ?? null };
 
   const tools = getChappiToolSchemas();
   const conversation: OpenAiChatMessage[] = [
@@ -180,103 +387,225 @@ export async function runChappiAgent(params: {
   // At most one card per turn: the client has a single slot for it, and two
   // competing "are you sure?" asks would be incoherent.
   let pendingConfirmation: ChappiPendingConfirmation | null = null;
+  let toolFailures = 0;
+  let rounds = 0;
+  let degraded: 'deadline' | null = null;
 
-  for (let round = 0; round < MAX_ROUNDS; round += 1) {
-    const choice = await requestChatCompletion({
-      apiKey: config.apiKey,
-      baseURL: config.baseURL,
-      model: config.model,
-      messages: conversation,
-      tools,
-    });
+  /** Move `holder` to whatever the router says follows `failure`. False means stay. */
+  const hop = (holder: DecisionHolder, failure: RoutingFailure): boolean => {
+    const from = holder.decision;
+    if (!from) return false;
+    const next = nextAfterFailure({ decision: from, failure, deadlineMs, now: clock(), env });
+    if (!next) return false;
+    trace.hops.push({ from: from.model, to: next.model, kind: failure.kind });
+    trace.endTier = next.tier;
+    holder.decision = next;
+    return true;
+  };
 
-    const text = String(choice.message?.content || '').trim();
-    if (text) finalText = text;
+  const timeoutMs = (): number =>
+    deadlineMs === undefined
+      ? REQUEST_TIMEOUT_MS
+      : Math.max(MIN_REQUEST_TIMEOUT_MS, Math.min(REQUEST_TIMEOUT_MS, deadlineMs - clock() - ABORT_MARGIN_MS));
 
-    const toolCalls = Array.isArray(choice.message?.tool_calls) ? choice.message.tool_calls : [];
-    if (toolCalls.length === 0) break;
+  /**
+   * One completion under `holder`'s decision, moving to another model when the
+   * router says to. `isUnusable` lets the caller call an answer that arrived but
+   * is no use (nothing said, nothing done) a failure worth a stronger model.
+   */
+  const complete = async (
+    holder: DecisionHolder,
+    messages: OpenAiChatMessage[],
+    withTools: boolean,
+    isUnusable?: (choice: OpenAiChoice) => boolean
+  ): Promise<ChatCompletion> => {
+    for (;;) {
+      const settings = settingsFor(holder.decision, config.model);
+      noteModelCalled(trace, settings.model);
 
-    // Record the assistant's tool-call turn verbatim, then run each tool and
-    // feed the results back as role:"tool" messages keyed by tool_call_id.
-    conversation.push({
-      role: 'assistant',
-      content: choice.message?.content ?? null,
-      tool_calls: toolCalls,
-    });
-
-    for (const toolCall of toolCalls) {
-      const toolName = String(toolCall.function?.name || '');
-      const toolArgs = parseToolArguments(String(toolCall.function?.arguments || ''));
-      const tool = getChappiTool(toolName);
-      const decision = resolveToolInvocation(tool, pendingConfirmation !== null);
-
-      let result: ChappiToolResult;
-      if (decision.action === 'refuse') {
-        result = { ok: false, summary: decision.summary };
-      } else if (decision.action === 'propose') {
-        // Gated: build the card and stop. Nothing is mutated on this path.
-        // A throw here must not take down the turn — mirror dispatch's
-        // normalize-into-a-failure discipline.
-        try {
-          const outcome = await tool!.confirm!(params.ctx, toolArgs);
-          if (outcome.ok) {
-            pendingConfirmation = {
-              toolName: toolName as ChappiToolName,
-              args: toolArgs,
-              title: outcome.title,
-              detail: outcome.detail,
-              confirmLabel: outcome.confirmLabel,
-            };
-            result = { ok: true, summary: PROPOSED_NOT_EXECUTED };
-          } else {
-            // The proposal itself was invalid (bad id, missing precondition).
-            // Relay it as an ordinary failure so the model can correct and retry.
-            result = { ok: false, summary: outcome.summary };
-          }
-        } catch (error) {
-          console.error(`[chappi] confirm builder for "${toolName}" failed:`, error);
-          result = {
-            ok: false,
-            summary: 'Could not prepare that action for confirmation. Nothing was changed.',
-          };
-        }
-      } else {
-        result = await executeToolCall(params.ctx, toolName, toolArgs);
+      let completion: ChatCompletion;
+      try {
+        completion = await completeChat({
+          apiKey: config.apiKey,
+          baseURL: config.baseURL,
+          model: settings.model,
+          messages,
+          tools: withTools ? tools : undefined,
+          maxOutputTokens: settings.maxOutputTokens,
+          reasoningEffort: settings.reasoningEffort,
+          timeoutMs: timeoutMs(),
+          quirks,
+        });
+      } catch (error) {
+        const failure = classifyAiFailure(error);
+        if (hop(holder, { kind: failure.kind, retryAfterMs: failure.retryAfterMs })) continue;
+        throw error;
       }
 
-      if (result.clientAction) clientActions.push(result.clientAction);
-      conversation.push({
-        role: 'tool',
-        tool_call_id: String(toolCall.id),
-        content: JSON.stringify({
-          ok: result.ok,
-          summary: result.summary,
-          data: result.data ?? null,
-        }),
-      });
+      addTraceUsage(trace, completion.usage);
+      if (isUnusable?.(completion.choice) && hop(holder, { kind: 'bad_output' })) continue;
+      return completion;
     }
+  };
 
-    if (round === MAX_ROUNDS - 1) {
-      // Hit the round cap mid-tool-use — ask for a final summary with no tools
-      // so the user still gets a coherent close instead of a dangling turn.
-      const closing = await requestChatCompletion({
-        apiKey: config.apiKey,
-        baseURL: config.baseURL,
-        model: config.model,
-        messages: [
-          ...conversation,
-          {
-            role: 'user',
-            content: 'Summarize what you did in one or two sentences. Do not call any more tools.',
-          },
-        ],
+  try {
+    for (let round = 0; round < MAX_ROUNDS; round += 1) {
+      // Hold the rung to the time left. Between rounds, "nothing fits" means stop:
+      // the tools already run stay run, and the user is told where it got to.
+      if (main.decision && deadlineMs !== undefined) {
+        const fitted = fitToDeadline(main.decision, { deadlineMs, now: clock(), env });
+        if (fitted === null) {
+          // The first round has to try regardless (the user asked something) and
+          // is protected by the clipped request timeout instead.
+          if (round > 0) {
+            degraded = 'deadline';
+            break;
+          }
+        } else if (fitted !== main.decision) {
+          trace.reasons.push(...fitted.reasons.slice(main.decision.reasons.length));
+          trace.endTier = fitted.tier;
+          main.decision = fitted;
+        }
+      }
+
+      const { choice } = await complete(main, conversation, true, (candidate) => {
+        // Nothing said and nothing asked for. A reasoning model that spends its
+        // whole token cap thinking looks exactly like this, and so does a model
+        // that simply gave up. Not when an earlier round already said something.
+        const empty = !textOf(candidate) && toolCallsOf(candidate).length === 0;
+        return empty && (candidate.finish_reason === 'length' || !finalText);
       });
-      const closingText = String(closing.message?.content || '').trim();
-      if (closingText) finalText = closingText;
+      rounds += 1;
+
+      const text = textOf(choice);
+      if (text) finalText = text;
+
+      const toolCalls = toolCallsOf(choice);
+      if (toolCalls.length === 0) break;
+
+      // Record the assistant's tool-call turn verbatim, then run each tool and
+      // feed the results back as role:"tool" messages keyed by tool_call_id.
+      conversation.push({
+        role: 'assistant',
+        content: choice.message?.content ?? null,
+        tool_calls: toolCalls,
+      });
+
+      for (const toolCall of toolCalls) {
+        const toolName = String(toolCall.function?.name || '');
+        const parsed = parseToolArguments(String(toolCall.function?.arguments || ''));
+        const toolArgs = parsed.args;
+        const tool = getChappiTool(toolName);
+        const decision = resolveToolInvocation(tool, pendingConfirmation !== null);
+
+        let result: ChappiToolResult;
+        if (decision.action === 'refuse') {
+          result = { ok: false, summary: decision.summary };
+        } else if (decision.action === 'propose') {
+          // Gated: build the card and stop. Nothing is mutated on this path.
+          // A throw here must not take down the turn — mirror dispatch's
+          // normalize-into-a-failure discipline.
+          try {
+            const outcome = await tool!.confirm!(params.ctx, toolArgs);
+            if (outcome.ok) {
+              pendingConfirmation = {
+                toolName: toolName as ChappiToolName,
+                args: toolArgs,
+                title: outcome.title,
+                detail: outcome.detail,
+                confirmLabel: outcome.confirmLabel,
+              };
+              result = { ok: true, summary: PROPOSED_NOT_EXECUTED };
+            } else {
+              // The proposal itself was invalid (bad id, missing precondition).
+              // Relay it as an ordinary failure so the model can correct and retry.
+              result = { ok: false, summary: outcome.summary };
+            }
+          } catch (error) {
+            console.error(`[chappi] confirm builder for "${toolName}" failed:`, error);
+            result = {
+              ok: false,
+              summary: 'Could not prepare that action for confirmation. Nothing was changed.',
+            };
+          }
+        } else {
+          result = await executeToolCall(params.ctx, toolName, toolArgs);
+        }
+
+        if (!parsed.valid || !result.ok) toolFailures += 1;
+        if (result.clientAction) clientActions.push(result.clientAction);
+        conversation.push({
+          role: 'tool',
+          tool_call_id: String(toolCall.id),
+          content: JSON.stringify({
+            ok: result.ok,
+            summary: result.summary,
+            data: result.data ?? null,
+          }),
+        });
+      }
+
+      // The tools keep failing: move up for the rest of the turn, if the plan and
+      // the clock allow. Only worth doing when another round is coming.
+      if (toolFailures >= TOOL_FAILURES_BEFORE_ESCALATION && round < MAX_ROUNDS - 1) {
+        if (hop(main, { kind: 'tool_errors' })) toolFailures = 0;
+      }
+
+      if (round === MAX_ROUNDS - 1) {
+        // Hit the round cap mid-tool-use — ask for a final summary with no tools
+        // so the user still gets a coherent close instead of a dangling turn.
+        const closeout: DecisionHolder = { decision: routing ? (routing.closeoutDecision ?? main.decision) : null };
+        const fitted =
+          closeout.decision && deadlineMs !== undefined
+            ? fitToDeadline(closeout.decision, { deadlineMs, now: clock(), env })
+            : closeout.decision;
+
+        // No time left for a summary is not a failure: the work is done and the
+        // last thing the model said (or "Done.") stands.
+        if (fitted !== null || !closeout.decision) {
+          closeout.decision = fitted;
+          try {
+            const closing = await complete(
+              closeout,
+              [
+                ...conversation,
+                {
+                  role: 'user',
+                  content: 'Summarize what you did in one or two sentences. Do not call any more tools.',
+                },
+              ],
+              false
+            );
+            const closingText = textOf(closing.choice);
+            if (closingText) finalText = closingText;
+          } catch (error) {
+            // Unrouted, this is thrown exactly as it always was. Routed, the tools
+            // have run and the router has already tried another model: a missing
+            // summary must not turn a finished turn into an error.
+            if (!routing) throw error;
+            console.error('[chappi] closing summary failed:', error);
+          }
+        }
+      }
     }
+  } catch (error) {
+    trace.latencyMs = clock() - startedAt;
+    trace.rounds = rounds;
+    logRoutingTrace(trace, true);
+    throw error;
   }
 
-  return { reply: finalText || 'Done.', clientActions, pendingConfirmation };
+  trace.rounds = rounds;
+  trace.latencyMs = clock() - startedAt;
+  if (degraded) trace.degraded = degraded;
+  logRoutingTrace(trace, false);
+
+  const reply = degraded
+    ? finalText
+      ? `${finalText}\n\n${DEADLINE_NOTE}`
+      : DEADLINE_MESSAGE
+    : finalText || 'Done.';
+  return { reply, clientActions, pendingConfirmation, trace };
 }
 
 /**
@@ -292,6 +621,7 @@ export async function closeConfirmedAction(params: {
   messages: ChappiMessage[];
   toolName: string;
   result: ChappiToolResult;
+  routing?: Pick<ChatRouting, 'decision' | 'deadlineMs' | 'now' | 'env'>;
 }): Promise<string> {
   const config = getChappiModelConfig();
   if (!config) return '';
@@ -300,21 +630,54 @@ export async function closeConfirmedAction(params: {
     ? `It succeeded: ${params.result.summary}`
     : `It failed: ${params.result.summary}`;
 
+  const messages: OpenAiChatMessage[] = [
+    { role: 'system', content: params.system },
+    ...toModelHistory(params.messages),
+    {
+      role: 'user',
+      content: `[The user approved the pending "${params.toolName}" action on the confirmation card, and it has now run. ${outcome} Tell them the outcome in one or two sentences. Do not call any tools.]`,
+    },
+  ];
+
+  const clock = params.routing?.now ?? Date.now;
+  const env = params.routing?.env ?? process.env;
+  const deadlineMs = params.routing?.deadlineMs;
+  const quirks = newQuirks();
+  let decision: RouteDecision | null = params.routing?.decision ?? null;
+
   try {
-    const choice = await requestChatCompletion({
-      apiKey: config.apiKey,
-      baseURL: config.baseURL,
-      model: config.model,
-      messages: [
-        { role: 'system', content: params.system },
-        ...toModelHistory(params.messages),
-        {
-          role: 'user',
-          content: `[The user approved the pending "${params.toolName}" action on the confirmation card, and it has now run. ${outcome} Tell them the outcome in one or two sentences. Do not call any tools.]`,
-        },
-      ],
-    });
-    return String(choice.message?.content || '').trim();
+    for (;;) {
+      const settings = settingsFor(decision, config.model);
+      try {
+        const { choice } = await completeChat({
+          apiKey: config.apiKey,
+          baseURL: config.baseURL,
+          model: settings.model,
+          messages,
+          maxOutputTokens: settings.maxOutputTokens,
+          reasoningEffort: settings.reasoningEffort,
+          timeoutMs:
+            deadlineMs === undefined
+              ? undefined
+              : Math.max(MIN_REQUEST_TIMEOUT_MS, Math.min(REQUEST_TIMEOUT_MS, deadlineMs - clock() - ABORT_MARGIN_MS)),
+          quirks,
+        });
+        return textOf(choice);
+      } catch (error) {
+        const failure = classifyAiFailure(error);
+        const next = decision
+          ? nextAfterFailure({
+              decision,
+              failure: { kind: failure.kind, retryAfterMs: failure.retryAfterMs },
+              deadlineMs,
+              now: clock(),
+              env,
+            })
+          : null;
+        if (!next) throw error;
+        decision = next;
+      }
+    }
   } catch (error) {
     console.error('[chappi] closing message after confirmation failed:', error);
     return '';
