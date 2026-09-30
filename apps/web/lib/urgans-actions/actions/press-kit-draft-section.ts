@@ -1,5 +1,7 @@
 import type { AiUsage } from '@/lib/ai/provider';
-import { generateStructuredAiOutput, isAiConfigured } from '@/lib/ai/provider';
+import { isAiConfigured } from '@/lib/ai/provider';
+import { generateRoutedStructuredOutput } from '@/lib/ai/routed';
+import { legacyModelFor, summarizeTrace, type RoutingTrace } from '@/lib/ai/model-router';
 import { deriveSectionStatus } from '@/lib/press-kits';
 import { applyAnswerToContent } from '@/lib/press-kit-interview';
 import {
@@ -47,6 +49,11 @@ const NOT_CONFIGURED =
   'UrgAns cannot write for you yet. Fill this in yourself for now.';
 
 const MAX_NOTES_LENGTH = 2000;
+
+// How long a draft may take in all, measured from when it starts. Sized like the
+// planner's in the same route (PLANNER_DEADLINE_MS): inside a 60 second ceiling
+// with time left to answer.
+const DRAFT_DEADLINE_MS = 52_000;
 
 type Input = {
   section: PressKitSectionKey;
@@ -133,17 +140,28 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
     const notes = text(input?.notes).slice(0, MAX_NOTES_LENGTH);
 
     let usage: AiUsage | null = null;
+    let routed: RoutingTrace | null = null;
     let content: PressKitSectionContent;
     try {
-      content = await generateStructuredAiOutput<PressKitSectionContent>({
+      // Routed: with the model router off this is the call it always was
+      // (AI_PRESSKIT_MODEL, else AI_STATUS_MODEL, else the gateway's default).
+      // Press copy has to read well, so it starts a rung above the cheapest.
+      content = await generateRoutedStructuredOutput<PressKitSectionContent>({
+        surface: 'press_kit',
         messages: buildDraftMessages(section, context, notes),
         // Press copy that reads the same twice is worth more than a surprising
         // turn of phrase, and a redraft is one tap away when it is flat.
         temperature: 0.4,
-        model: process.env.AI_PRESSKIT_MODEL || process.env.AI_STATUS_MODEL || undefined,
         parse: (raw) => parseDraftAiResponse(section, raw),
+        // Bounds each model's own retries and decides whether the router may hand
+        // the request to another. Without one, the provider's defaults (90s a
+        // try, three tries) put no limit on how long a second model could take.
+        deadlineMs: Date.now() + DRAFT_DEADLINE_MS,
         onUsage: (reported) => {
           usage = reported;
+        },
+        onTrace: (trace) => {
+          routed = trace;
         },
       });
     } catch {
@@ -154,13 +172,22 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
       };
     }
 
+    const trace = routed as RoutingTrace | null;
     return {
       ok: true,
       output: { section, content, sectionUpdatedAt: target.updatedAt },
       // The section and whether there were notes, never the draft itself: the
-      // copy is edited after this and the log would go stale immediately.
-      inputSummary: { section, hasNotes: notes.length > 0 },
-      model: process.env.AI_PRESSKIT_MODEL || process.env.AI_STATUS_MODEL || null,
+      // copy is edited after this and the log would go stale immediately. When
+      // the model router acted, what it did rides along (bounded, and absent
+      // otherwise).
+      inputSummary: {
+        section,
+        hasNotes: notes.length > 0,
+        ...(trace ? { routing: summarizeTrace(trace) } : {}),
+      },
+      // The model that ANSWERED: the last one the router called, or, with the
+      // router off, the one this action has always named.
+      model: trace?.models[trace.models.length - 1] ?? legacyModelFor('press_kit') ?? null,
       tokensIn: usage ? (usage as AiUsage).promptTokens : null,
       tokensOut: usage ? (usage as AiUsage).completionTokens : null,
     };

@@ -72,12 +72,9 @@ import {
 // (pure) the day the browser needed the same list for the plan summary.
 export { summarizeRemovedTasks };
 export type { CreatedPlan, RemovedTaskSummary };
-import {
-  generateStructuredAiOutput,
-  isAiConfigured,
-  type AiUsage,
-  type ReasoningEffort,
-} from './ai/provider';
+import { isAiConfigured, type AiUsage, type ReasoningEffort } from './ai/provider';
+import { generateRoutedStructuredOutput } from './ai/routed';
+import type { RoutingTrace, TeamForRouting } from './ai/model-router';
 import { getTemplate } from './release-templates/loader';
 import type { Template } from './release-templates/types';
 import { instantiateDraftPlan, PlanApprovalError } from './release-planning-server';
@@ -313,8 +310,14 @@ export async function createReleasePlan(
     template: Template;
     fallbackToSingle: boolean;
     loadTeam: () => Promise<{ ok: true; workspaceId: string; members: WorkspaceMember[] } | { ok: false }>;
-    /** Resolved by the caller through lib/ai/planner-model.ts. */
-    plannerModel?: string;
+    /**
+     * The team's billing state and tier, for the model router's plan ceiling
+     * (lib/ai/routing-team-server.ts reads it). Only the router looks at it: with
+     * the router off, or without this, the model is exactly what
+     * lib/ai/planner-model.ts resolves, as before.
+     */
+    routingTeam?: TeamForRouting;
+    /** An explicit effort (AI_PLANNER_REASONING_EFFORT) beats the rung's own. */
     reasoningEffort?: ReasoningEffort;
     /** Absolute; the route passes its own start plus PLANNER_DEADLINE_MS. */
     deadlineMs?: number;
@@ -322,6 +325,10 @@ export async function createReleasePlan(
      *  returned a payload (see lib/ai/provider.ts's own contract) — for the
      *  embedded action's urgans_actions logging. */
     onUsage?: (usage: AiUsage) => void;
+    /** What the model router did for the tailoring call, once, when it did
+     *  anything (never with the router off). Which model really answered is
+     *  the last entry of `models`. */
+    onTrace?: (trace: RoutingTrace) => void;
   }
 ): Promise<CreateReleasePlanResult> {
   const {
@@ -332,10 +339,11 @@ export async function createReleasePlan(
     template,
     fallbackToSingle,
     loadTeam,
-    plannerModel,
+    routingTeam,
     reasoningEffort,
     deadlineMs,
     onUsage,
+    onTrace,
   } = params;
   const releaseId = release.id;
 
@@ -459,17 +467,23 @@ export async function createReleasePlan(
     });
 
     try {
-      delta = await generateStructuredAiOutput<PlannerAiDelta>({
+      // Routed: with the router off this is the call the planner always made
+      // (the model lib/ai/planner-model.ts resolves, the same schema, effort
+      // and deadline). With it on, the planner starts no lower than the pro
+      // rung and may move to a sibling or a stronger model if that one fails.
+      delta = await generateRoutedStructuredOutput<PlannerAiDelta>({
+        surface: 'planner',
+        team: routingTeam,
         messages,
         timeoutMs: PLANNER_TIMEOUT_MS,
         maxRetries: PLANNER_MAX_RETRIES,
-        model: plannerModel || undefined,
         parse: parsePlannerAiDelta,
         invalidFormatMessage: 'The response was not the expected JSON.',
         jsonSchema: { name: 'planner_delta', schema: PLANNER_DELTA_JSON_SCHEMA },
         reasoningEffort,
         deadlineMs,
         onUsage,
+        onTrace,
       });
     } catch (error) {
       failure = classifyPlannerFailure(error);
