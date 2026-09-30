@@ -160,3 +160,73 @@ describe('readableCopySegments', () => {
     ]);
   });
 });
+
+describe('readableCopy: text next to an expression container', () => {
+  // The blind spot closed on 2026-09-30. The plain reader takes text between a
+  // `>` and a `<`, so a sentence bounded by `{` or `}` was invisible, and a
+  // whole-app sweep found an em dash hiding in exactly that shape.
+  it('reads text that ends at an expression container', () => {
+    expect(readableCopy("<p>Signed in as your account. Not you?{' '}<a>Sign out</a></p>")).toContain(
+      'Signed in as your account. Not you?',
+    );
+  });
+
+  it('reads text that starts after an expression container', () => {
+    expect(readableCopy('<p>{intro} You can keep working. Changes will sync.</p>')).toContain(
+      'You can keep working. Changes will sync.',
+    );
+  });
+
+  it('reads text sitting between two expression containers', () => {
+    expect(readableCopy('<p>{count} rollouts are waiting on {name}</p>')).toContain('rollouts are waiting on');
+  });
+
+  it('does not report a run the plain reader already has, twice', () => {
+    const hits = readableCopy('<p>One link per artist.</p>').filter((text) => text === 'One link per artist.');
+    expect(hits).toHaveLength(1);
+  });
+
+  it('keeps code out: control flow, imports and calls are not prose', () => {
+    const code = [
+      "import { a } from '@/lib/a';",
+      "import { b } from '@/lib/b';",
+      'function go() {',
+      '  if (ready) {',
+      '    run();',
+      '  } else if (later) {',
+      '    wait();',
+      '  }',
+      '}',
+    ].join('\n');
+    const copy = readableCopy(code).join(' | ');
+    expect(copy).not.toMatch(/else if|from '@|run\(\)|wait\(\)/);
+  });
+
+  it('does not read a lone keyword or type name as a sentence', () => {
+    // `interface Workspace {` sits between a `}` and a `{`. Reading it as copy
+    // would make every type named after the banned word a violation.
+    const types = ['const a = 1;', '}', 'interface Workspace {', '  id: string;', '}'].join('\n');
+    expect(readableCopy(types).join(' | ')).not.toContain('interface Workspace');
+    expect(readableCopy(['}', '} else {', '}'].join('\n'))).toEqual([]);
+  });
+
+  it('still reads a short question or exclamation next to a container', () => {
+    expect(readableCopy('<p>{a}Not you?{b}</p>')).toContain('Not you?');
+  });
+});
+
+describe('readableCopy: entities inside prose', () => {
+  it('reads a sentence that uses an HTML entity, next to a container', () => {
+    // `&rsquo;` ends in a semicolon, which is also what marks a statement in
+    // code. The code filter used to see it and throw the whole sentence away,
+    // which hid an em dash from every guard in the file that held it.
+    const source = "<p>{ok}You can keep working. Changes will sync when you&rsquo;re back online.</p>";
+    expect(readableCopy(source)).toContain(
+      'You can keep working. Changes will sync when you&rsquo;re back online.',
+    );
+  });
+
+  it('still rejects a statement that happens to contain an entity-shaped token', () => {
+    expect(readableCopy('}\nconst a = b &amp;&amp; c;\n{').join(' | ')).not.toContain('const a');
+  });
+});

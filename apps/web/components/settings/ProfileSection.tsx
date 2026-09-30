@@ -58,7 +58,7 @@ export function ProfileSection() {
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+            className="w-full rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
           />
         </label>
         <label className="block">
@@ -66,11 +66,11 @@ export function ProfileSection() {
           <input
             value={user.email}
             disabled
-            className="w-full rounded-lg border border-stroke-subtle bg-bg-overlay px-3 py-2 text-content-secondary"
+            className="w-full rounded-lg border border-stroke-control bg-bg-overlay px-3 py-2 text-content-secondary"
           />
         </label>
-        {error && <p className={feedbackErrorClass}>{error}</p>}
-        {success && <p className={feedbackSuccessClass}>{success}</p>}
+        {error && <p role="alert" className={feedbackErrorClass}>{error}</p>}
+        {success && <p role="status" className={feedbackSuccessClass}>{success}</p>}
         {saveButtonVisible({ dirty: nameDirty, saving: isSaving }) ? (
           <button
             type="button"

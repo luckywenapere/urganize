@@ -42,12 +42,12 @@ export const ONBOARDING_WHERE_STUCK_OPTIONS: Array<{ value: OnboardingWhereStuck
 // The labels are written so a user can pick the one that matches their
 // reality without overthinking — short, in their voice.
 export const ONBOARDING_STAGE_OPTIONS: Array<{ value: OnboardingStage; label: string }> = [
-  { value: 'just_starting', label: "Just starting — still writing or recording" },
+  { value: 'just_starting', label: "Just starting: still writing or recording" },
   { value: 'recorded', label: 'Tracks recorded, working on mix and master' },
-  { value: 'preparing', label: 'Preparing the rollout — assets, splits, distribution' },
+  { value: 'preparing', label: 'Preparing the rollout: assets, splits, distribution' },
   { value: 'date_set', label: 'Release date is set, working on promo' },
-  { value: 'promoting', label: 'Actively promoting — teasers and curator outreach' },
-  { value: 'post_release', label: "Already out — running the post-release plan" },
+  { value: 'promoting', label: 'Actively promoting: teasers and curator outreach' },
+  { value: 'post_release', label: "Already out: running the post-release plan" },
 ];
 
 export interface OnboardingDraft {

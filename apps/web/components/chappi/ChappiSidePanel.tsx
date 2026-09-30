@@ -90,7 +90,6 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
             <button
               type="button"
               onClick={() => setShowChats((current) => !current)}
-              aria-pressed={showChats}
               aria-label={showChats ? 'Back to the conversation' : 'Your chats'}
               title={showChats ? 'Back to the conversation' : 'Chats'}
               className={`motion-focus motion-press grid h-7 w-7 place-items-center transition-colors hover:bg-bg-hover hover:text-content-primary ${

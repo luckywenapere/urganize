@@ -62,7 +62,7 @@ import type { PaystackBank } from '@/lib/paystack-server';
 import type { CuratorEarnings } from '@/types/pitch-payments';
 
 const inputClass =
-  'h-11 w-full rounded-xl border border-stroke-default bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
+  'h-11 w-full rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
 const primaryButtonClass =
   'inline-flex h-10 items-center justify-center rounded-xl bg-brand px-4 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50';
 const secondaryButtonClass =

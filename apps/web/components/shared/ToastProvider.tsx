@@ -10,12 +10,11 @@ import {
   type ReactNode,
 } from 'react';
 import { Toast } from './Toast';
+import { toastDismissMs, type ToastTone } from '@/lib/toast-timing';
 
 // When on, MobileNavBar occupies the bottom 4rem below lg — raise the stack
 // above it there instead of letting it land on the bar.
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
-
-type ToastTone = 'success' | 'error' | 'warning';
 
 type ToastItem = {
   id: string;
@@ -48,8 +47,6 @@ export function useToast(): ToastContextValue {
   return context;
 }
 
-const DEFAULT_DISMISS_MS = 4000;
-
 type ToastProviderProps = {
   children: ReactNode;
 };
@@ -70,7 +67,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
       const handle = setTimeout(() => {
         setItems((prev) => prev.filter((item) => item.id !== id));
         timersRef.current.delete(id);
-      }, DEFAULT_DISMISS_MS);
+      }, toastDismissMs(tone, message));
       timersRef.current.set(id, handle);
     },
     []
@@ -89,25 +86,29 @@ export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <ToastContext.Provider value={{ pushToast }}>
       {children}
-      {items.length ? (
-        // aria-live="polite" so SR users get the message without interrupting
-        // any other speech. The container itself is pointer-events-none so it
-        // never blocks clicks on the page behind it; each toast re-enables
-        // pointer events on its own row.
-        <div
-          aria-live="polite"
-          aria-atomic="false"
-          className={`pointer-events-none fixed inset-x-4 z-[200] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6 ${
-            MOBILE_NAV_ENABLED ? 'mobile-nav-raise lg:bottom-6' : 'bottom-6'
-          }`}
-        >
-          {items.map((item) => (
-            <div key={item.id} className="pointer-events-auto animate-enter w-full max-w-sm">
-              <Toast message={item.message} tone={item.tone} />
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {/* Always mounted, and that is the point: a live region that is inserted
+          together with its text is often not announced at all, because screen
+          readers only watch for CHANGES inside a region they already know
+          about. So the region exists from the start and toasts appear inside
+          it. It has no size while empty.
+          aria-live="polite" so SR users get the message without interrupting
+          any other speech. The container itself is pointer-events-none so it
+          never blocks clicks on the page behind it; each toast re-enables
+          pointer events on its own row. */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="false"
+        className={`pointer-events-none fixed inset-x-4 z-[200] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6 ${
+          MOBILE_NAV_ENABLED ? 'mobile-nav-raise lg:bottom-6' : 'bottom-6'
+        }`}
+      >
+        {items.map((item) => (
+          <div key={item.id} className="pointer-events-auto animate-enter w-full max-w-sm">
+            <Toast message={item.message} tone={item.tone} />
+          </div>
+        ))}
+      </div>
     </ToastContext.Provider>
   );
 }

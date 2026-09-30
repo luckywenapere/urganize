@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   if (snapshot.accountStatus === 'paid') {
     return NextResponse.json(
       {
-        error: 'Your account already has full access — no code needed.',
+        error: 'Your account already has full access. No code is needed.',
         accountStatus: snapshot.accountStatus,
       },
       { status: 409 }

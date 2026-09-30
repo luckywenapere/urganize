@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Loader2, Plus, Trash2 } from '@/components/icons';
+import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
 import { supabase } from '@/lib/supabase/client';
 import {
   MAX_RUN_OF_SHOW_LABEL_LENGTH,
@@ -202,7 +203,7 @@ export function RunOfShowCard({ event, items, canEdit, onItemsChange, onEditShow
   };
 
   const fieldClass =
-    'w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-sm text-content-primary outline-none focus:border-brand disabled:opacity-50';
+    'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-sm text-content-primary outline-none focus:border-brand disabled:opacity-50';
 
   const editor = (row: (typeof rows)[number] | null) => {
     const followsShow = Boolean(row?.followsShow);
@@ -253,13 +254,25 @@ export function RunOfShowCard({ event, items, canEdit, onItemsChange, onEditShow
                 className={`${fieldClass} mt-1 w-32`}
               />
             </label>
-            <div role="radiogroup" aria-label="Which day" className="flex gap-1 rounded-lg border border-stroke-default p-1">
+            <div
+              role="radiogroup"
+              aria-label="Which day"
+              onKeyDown={(keyEvent) =>
+                onRadioGroupKeyDown(
+                  keyEvent,
+                  DAY_CHOICES.findIndex((choice) => choice.value === draft.dayOffset),
+                  (index) => setDraft((current) => ({ ...current, dayOffset: DAY_CHOICES[index].value }))
+                )
+              }
+              className="flex gap-1 rounded-lg border border-stroke-default p-1"
+            >
               {DAY_CHOICES.map((choice) => (
                 <button
                   key={choice.value}
                   type="button"
                   role="radio"
                   aria-checked={draft.dayOffset === choice.value}
+                  tabIndex={draft.dayOffset === choice.value ? 0 : -1}
                   onClick={() => setDraft((current) => ({ ...current, dayOffset: choice.value }))}
                   className={`motion-focus rounded-md px-2.5 py-1 text-xs font-semibold ${
                     draft.dayOffset === choice.value

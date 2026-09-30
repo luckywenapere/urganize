@@ -36,6 +36,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
+import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT } from '@/lib/password-rules';
 
 // Profile role for invited teammates. 'artist-team' positions them as a
 // member of someone else's team — matches the standalone signup vocabulary
@@ -247,7 +248,7 @@ export default function InviteAcceptPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         setSuccessMessage(
-          `Account created. Check your email to confirm it, then sign in — you'll join ${displayWorkspace} automatically.`
+          `Account created. Check your email to confirm it, then sign in. You'll join ${displayWorkspace} automatically.`
         );
         setIsSubmitting(false);
         return;
@@ -259,7 +260,7 @@ export default function InviteAcceptPage() {
         // their next request, so this is a delay, not a dead end — the copy
         // must not read like one.
         throw new Error(
-          `${result.message || 'Could not finish joining.'} Your account was created — sign in and you'll join ${displayWorkspace} automatically.`
+          `${result.message || 'Could not finish joining.'} Your account was created. Sign in and you'll join ${displayWorkspace} automatically.`
         );
       }
       setSuccessMessage('Joined! Taking you in…');
@@ -405,7 +406,7 @@ export default function InviteAcceptPage() {
                   This invite has expired
                 </h1>
                 <p className="text-sm text-content-secondary">
-                  Ask {displayInviter} to send a fresh invite link from their workspace
+                  Ask {displayInviter} to send a fresh invite link from their
                   Settings → Teammates.
                 </p>
               </div>
@@ -436,9 +437,9 @@ export default function InviteAcceptPage() {
                         </p>
                         {showSwitchAccountHelper ? (
                           <p className="mt-1 text-xs text-content-tertiary">
-                            This invite was sent to {metadata.invitedEmail}. Token-based
-                            acceptance works regardless — but you can switch if you meant a
-                            different account.
+                            This invite was sent to {metadata.invitedEmail}. It works with any
+                            account you are signed in to, but you can switch if you meant a
+                            different one.
                           </p>
                         ) : null}
                       </div>
@@ -546,14 +547,14 @@ export default function InviteAcceptPage() {
                           and no password ever travels through a chat. */}
                       <Input
                         label="Choose your password"
-                        hint="You're setting this yourself — nobody else sees it. At least 6 characters."
+                        hint={`You're setting this yourself. Nobody else sees it. ${PASSWORD_LENGTH_HINT}`}
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete="new-password"
                         leftIcon={<Lock className="w-4 h-4" />}
                         disabled={isSubmitting || isGoogleRedirecting}
-                        minLength={6}
+                        minLength={MIN_PASSWORD_LENGTH}
                         required
                       />
                       <Button

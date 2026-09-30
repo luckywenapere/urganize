@@ -112,7 +112,7 @@ export function OfflineBanner() {
 
   const reconnectMessage =
     syncingCount > 0
-      ? `Back online — syncing ${syncingCount} ${syncingCount === 1 ? 'change' : 'changes'}…`
+      ? `Back online. Syncing ${syncingCount} ${syncingCount === 1 ? 'change' : 'changes'}…`
       : 'Back online.';
 
   return (
@@ -127,7 +127,7 @@ export function OfflineBanner() {
         ) : (
           <>
             <span className="font-medium text-content-primary">You&rsquo;re offline.</span>{' '}
-            You can keep working — changes will sync when you&rsquo;re back online.
+            You can keep working. Changes will sync when you&rsquo;re back online.
           </>
         )}
       </p>

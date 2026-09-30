@@ -19,6 +19,13 @@
  *    user-facing SINGLE word slips through, so an `aria-label="Workspace"` is
  *    invisible here and has to be found by reading. Loosening this makes every
  *    guard that uses it unusable.
+ *
+ * ONE BLIND SPOT THAT WAS CLOSED (2026-09-30): JSX text that sits right next to
+ * an expression container, as in `Not you?{' '}` or `{count} items left`. The
+ * plain reader only takes text between a `>` and a `<`, so a sentence bounded
+ * by a `{` or a `}` was invisible, and a whole-app sweep found it hiding an em
+ * dash in a sentence the guard listed as clean. `adjacentJsxText` reads those
+ * runs, with a filter that keeps code out (see it).
  */
 
 /** Source with block and line comments removed. The `[^:]` guard on the line
@@ -53,6 +60,52 @@ export function userFacingTemplates(source: string): string[] {
 }
 
 /**
+ * Is this run of characters, found between two braces or tags, code rather than
+ * prose?
+ *
+ * `} else if (ready) {` and `} from './x';` both sit between a `}` and a `{`,
+ * exactly where a sentence next to an expression container sits, so the shape of
+ * the boundary cannot tell them apart. The content can: code carries operators,
+ * calls and statement ends, prose carries words. Prose is required to look like
+ * prose (three words, or two with sentence punctuation, or one word with a
+ * question or exclamation mark), which also keeps a lone keyword or a type name
+ * (`interface Workspace {`) from being read as a sentence that says "workspace".
+ *
+ * The cost is a missed sentence that happens to contain parentheses or `=`,
+ * which is the safe way to be wrong for a reader whose failure mode is a false
+ * alarm on somebody's code.
+ */
+function isProseRun(text: string): boolean {
+  // An HTML entity ends in the very `;` that marks a statement in code, and
+  // JSX prose is full of them (`you&rsquo;re`), so they are blanked first.
+  const run = text.replace(/&#?\w+;/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/[=;()[\]]|&&|\|\||=>/.test(run)) return false;
+  const words = run.split(' ').filter((word) => /[A-Za-z]/.test(word));
+  if (words.length >= 3) return true;
+  if (words.length === 2 && /[.,?!:]/.test(run)) return true;
+  return words.length === 1 && /[?!]$/.test(run);
+}
+
+/**
+ * JSX text bounded by an expression container on at least one side.
+ *
+ * The plain `>...<` reader cannot see `Not you?` in `...</b>. Not you?{' '}<a>`
+ * because the run ends at a `{`, or the text after `{count}` in `{count} items
+ * left`, because it starts at a `}`. Runs that ARE fully bounded by a tag on
+ * both sides are skipped here, since the plain reader already has them and
+ * reporting one twice would double every finding.
+ */
+function adjacentJsxText(source: string): string[] {
+  const found: string[] = [];
+  for (const match of source.matchAll(/([>}])([^<>{}]+)(?=([<{]))/g)) {
+    const [, open, text, close] = match;
+    if (open === '>' && close === '<') continue;
+    if (isProseRun(text)) found.push(text);
+  }
+  return found;
+}
+
+/**
  * One piece of readable copy, and which of the three readers found it.
  *
  * `from` matters for exactly one reason: JSX text is the only reader that can
@@ -76,7 +129,10 @@ export function readableCopySegments(source: string): CopySegment[] {
   // JSX text nodes: what sits between a `>` and the next `<`. Anything holding
   // a `{` is an expression container rather than prose, so it is dropped and
   // its own string literals are caught by the two readers above.
-  const jsxText = (withoutComments.match(/>[^<>{}]+</g) || []).map((raw) => raw.slice(1, -1));
+  const jsxText = [
+    ...(withoutComments.match(/>[^<>{}]+</g) || []).map((raw) => raw.slice(1, -1)),
+    ...adjacentJsxText(withoutComments),
+  ];
 
   const found: CopySegment[] = [
     ...userFacingStrings(source).map((text) => ({ text, from: 'string' as const })),

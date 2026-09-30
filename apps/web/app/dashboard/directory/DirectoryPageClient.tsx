@@ -48,7 +48,7 @@ type Person = DirectoryEntry & { slug: string | null; isPublic: boolean };
 const NO_FILTERS: DirectoryFilters = { query: '', role: null, city: null, availability: null };
 
 const controlClass =
-  'h-11 rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none';
+  'h-11 rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none';
 
 export function DirectoryPageClient() {
   return (
@@ -230,7 +230,7 @@ function DirectoryBody() {
           Opening the directory
         </div>
       ) : error ? (
-        <p className="text-sm text-status-error">{error}</p>
+        <p role="alert" className="text-sm text-status-error">{error}</p>
       ) : (
         <>
           <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

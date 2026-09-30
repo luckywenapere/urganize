@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div role="main" className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background effects */}
       <div className="absolute inset-0 bg-bg-base" />
       <div className="urg-blob absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px]" />
@@ -66,9 +66,9 @@ export default function ForgotPasswordPage() {
                 </Link>
                 
                 <div className="text-center">
-                  <h2 className="text-xl font-semibold text-content-primary mb-1">
+                  <h1 className="text-xl font-semibold text-content-primary mb-1">
                     Forgot password?
-                  </h2>
+                  </h1>
                   <p className="text-sm text-content-tertiary">
                     We&apos;ll send you a reset link.
                   </p>
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
               </div>
 
               {error && (
-                <div className="p-3 rounded-lg bg-status-error/10 border border-status-error/20 text-status-error text-sm animate-bounce-in">
+                <div role="alert" className="p-3 rounded-lg bg-status-error/10 border border-status-error/20 text-status-error text-sm animate-bounce-in">
                   {error}
                 </div>
               )}
@@ -102,9 +102,9 @@ export default function ForgotPasswordPage() {
               </div>
               
               <div>
-                <h2 className="text-xl font-semibold text-content-primary mb-1">
+                <h1 className="text-xl font-semibold text-content-primary mb-1">
                   Check your email
-                </h2>
+                </h1>
               <p className="text-sm text-content-tertiary">
                 We sent a reset link to
               </p>
@@ -118,7 +118,7 @@ export default function ForgotPasswordPage() {
                 <button
                   type="button"
                   onClick={() => setIsSubmitted(false)}
-                  className="text-brand hover:underline font-medium"
+                  className="text-brand underline underline-offset-2 font-medium"
                 >
                   Resend
                 </button>
@@ -135,7 +135,7 @@ export default function ForgotPasswordPage() {
           )}
         </Card>
 
-        <p className="text-center text-xs text-content-quaternary mt-6">
+        <p className="text-center text-xs text-content-tertiary mt-6">
           By continuing, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>

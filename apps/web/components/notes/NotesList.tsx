@@ -159,7 +159,7 @@ export function NotesList({
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search notes"
           aria-label="Search notes"
-          className="h-9 w-full rounded-full border border-stroke-default bg-bg-surface pl-9 pr-3 text-lg text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-brand"
+          className="h-9 w-full rounded-full border border-stroke-control bg-bg-surface pl-9 pr-3 text-lg text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-brand"
         />
       </div>
 
@@ -223,7 +223,7 @@ export function NotesList({
                 ? `Search only covers the ${loadedCount} notes loaded so far. Load older notes and try again.`
                 : isFiltering
                   ? 'Nothing here matches your search. Try fewer words, or clear the rollout filter to search everything.'
-                  : 'Try fewer words — search matches the title and the body, in any order.'
+                  : 'Try fewer words. Search matches the title and the body, in any order.'
             }
             action={
               <div className="flex flex-wrap items-center justify-center gap-2">

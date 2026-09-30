@@ -22,7 +22,7 @@ import { MAX_CURATOR_BIO_LENGTH, MAX_CURATOR_DISPLAY_NAME_LENGTH } from '@/lib/p
 import { prepareAvatarImage } from '@/lib/downscale-image';
 
 const inputClass =
-  'h-11 w-full rounded-xl border border-stroke-default bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
+  'h-11 w-full rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
 const labelClass = 'block text-[11px] uppercase tracking-[0.16em] text-content-tertiary';
 
 const initialsOf = (name: string): string =>
@@ -344,7 +344,7 @@ export function CuratorProfilePageClient() {
                 maxLength={MAX_CURATOR_BIO_LENGTH}
                 onChange={(event) => setBioDraft(event.target.value)}
                 placeholder="What you look for. How often you refresh your playlists."
-                className="w-full rounded-xl border border-stroke-default bg-bg-base p-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+                className="w-full rounded-xl border border-stroke-control bg-bg-base p-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
               />
               <p className="text-right font-mono text-[11px] text-content-tertiary">
                 {bio.length}/{MAX_CURATOR_BIO_LENGTH}

@@ -128,7 +128,7 @@ export function ChappiRecapCard({
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            Release recap
+            Rollout recap
           </p>
           <p className="mt-1 truncate font-display text-base font-semibold text-content-primary">
             {releaseTitle}

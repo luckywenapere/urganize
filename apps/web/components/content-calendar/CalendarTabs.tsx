@@ -195,7 +195,7 @@ export function CalendarTabs({ releaseId, calendars, activeCalendarId, onSelect,
                 value={platform}
                 onChange={(event) => setPlatform(event.target.value as SocialPlatform)}
                 disabled={isCreating}
-                className="h-9 w-full border border-[var(--cc-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)]"
+                className="h-9 w-full border border-[var(--cc-field-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)]"
               >
                 {SOCIAL_PLATFORM_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -214,7 +214,7 @@ export function CalendarTabs({ releaseId, calendars, activeCalendarId, onSelect,
                 maxLength={80}
                 disabled={isCreating}
                 placeholder="Main account (optional)"
-                className="h-9 w-full border border-[var(--cc-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)]"
+                className="h-9 w-full border border-[var(--cc-field-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)]"
               />
             </label>
             <div className="flex gap-2">

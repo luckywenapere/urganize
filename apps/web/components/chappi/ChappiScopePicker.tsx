@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronDown, Disc3 } from '@/components/icons';
+import { Check, ChevronDown, Disc3 } from '@/components/icons';
 import type { ExecutionRelease } from '@/lib/execution-types';
 
 type ChappiScopePickerProps = {
@@ -50,6 +50,7 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
 
   const scoped = scopedReleaseId
     ? releases.find((release) => release.id === scopedReleaseId) ?? null
@@ -96,9 +97,11 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
-        aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={scoped ? `Conversation scoped to ${scoped.title}` : 'Choose a rollout for this conversation'}
+        aria-controls={open ? panelId : undefined}
+        // Both names contain the words on the button, which is what lets a
+        // voice-control user who says what they see reach it.
+        aria-label={scoped ? `Conversation scoped to ${scoped.title}` : 'All rollouts. Choose one for this conversation.'}
         className="motion-focus inline-flex max-w-full items-center gap-1.5 rounded-full bg-bg-elevated px-2 py-1.5 text-xs text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
       >
         {scoped ? (
@@ -127,22 +130,25 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
       </button>
 
       {open ? (
+        // A group, not a role="listbox": these rows are buttons reached with
+        // Tab, and a listbox promises arrow-key movement they never had.
         <div
-          role="listbox"
+          id={panelId}
+          role="group"
           aria-label="Scope this conversation to a rollout"
           className="absolute bottom-full left-0 z-50 mb-2 max-h-72 w-64 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain rounded-xl border border-stroke-default bg-bg-surface py-1 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           <button
             type="button"
-            role="option"
-            aria-selected={!scoped}
+            aria-current={!scoped ? 'true' : undefined}
             onClick={() => choose(null)}
             className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-bg-hover ${
               !scoped ? 'text-content-primary' : 'text-content-secondary'
             }`}
           >
             <Disc3 className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
-            All rollouts
+            <span className="min-w-0 flex-1">All rollouts</span>
+            {!scoped ? <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /> : null}
           </button>
           {releases.map((release) => {
             const selected = release.id === scopedReleaseId;
@@ -150,8 +156,7 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
               <button
                 key={release.id}
                 type="button"
-                role="option"
-                aria-selected={selected}
+                aria-current={selected ? 'true' : undefined}
                 onClick={() => choose(release.id)}
                 className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-bg-hover ${
                   selected ? 'text-content-primary' : 'text-content-secondary'
@@ -166,6 +171,7 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
                     )}
                   </span>
                 ) : null}
+                {selected ? <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /> : null}
               </button>
             );
           })}

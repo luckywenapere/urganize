@@ -35,7 +35,7 @@ export function NewReleaseGuide({ onDismiss, releaseType = 'single' }: NewReleas
         <p className="text-sm font-semibold text-content-primary">Your rollout is set up</p>
         <p className="mt-1 text-sm leading-6 text-content-secondary">
           This rollout plans ~{spanWeeks} weeks of work, starting {leadWeeks} weeks before
-          release. It&apos;s a starting point — edit any activity, add your own, or reassign
+          release. It&apos;s a starting point. Edit any activity, add your own or reassign
           them to your team. Invite artists, freelancers and team members any time from Settings.
         </p>
       </div>

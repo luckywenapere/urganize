@@ -61,7 +61,7 @@ export function ChappiSongUploadCard({
           </p>
           <p className="mt-1.5 text-sm leading-6 text-content-secondary">
             {SONG_FORMATS_LABEL}, up to {formatFileSize(SONG_MAX_BYTES)}. It uploads straight from
-            this device — only your team can hear it.
+            this device. Only your team can hear it.
           </p>
         </div>
         <button
@@ -77,7 +77,7 @@ export function ChappiSongUploadCard({
 
       {upload.queued ? (
         <p className="mt-3 text-xs text-content-secondary" role="status">
-          You&rsquo;re offline — this will upload when you&rsquo;re back online.
+          You&rsquo;re offline. This will upload when you&rsquo;re back online.
         </p>
       ) : null}
 

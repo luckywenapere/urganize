@@ -1656,7 +1656,7 @@ export async function resolveReleaseTaskWorkspace(
     .find((id) => id && access.workspaceIds.includes(id));
 
   if (!releaseWorkspaceId) {
-    throw new Error('Could not find the team for this release.');
+    throw new Error('Could not find the team for this rollout.');
   }
 
   // Artist-scoped members only reach boards for THEIR artist's releases.
@@ -1665,7 +1665,7 @@ export async function resolveReleaseTaskWorkspace(
     artistScope &&
     String((releaseResult.data as { artist_id?: unknown }).artist_id || '') !== artistScope
   ) {
-    throw new Error('Could not find the team for this release.');
+    throw new Error('Could not find the team for this rollout.');
   }
 
   await createDefaultReleaseTaskGroups(adminClient, releaseWorkspaceId, releaseId);

@@ -56,14 +56,14 @@ export function ArtistNameGate() {
                   if (error) setError('');
                 }}
                 placeholder="e.g. Tems"
-                className="w-full rounded-xl border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+                className="w-full rounded-xl border border-stroke-control bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
                 autoFocus
                 disabled={isSaving}
                 required
               />
             </label>
             {error && (
-              <p className="rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+              <p role="alert" className="rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
                 {error}
               </p>
             )}

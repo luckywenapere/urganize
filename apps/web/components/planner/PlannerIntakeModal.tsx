@@ -7,6 +7,7 @@ import { Loader2, Sparkles, X } from '@/components/icons';
 import { Button, IconButton } from '@urganize/ui';
 
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useAuthStore } from '@/lib/auth-store';
@@ -96,8 +97,14 @@ export function PlannerIntakeModal() {
   const [hydrated, setHydrated] = useState(false);
 
   const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const open = Boolean(intakePayload);
   const isBusy = view === 'starting';
+
+  // Declared BEFORE the heading-focus effect below so the element that opened
+  // the planner is remembered before the heading takes focus. 'none' because
+  // this modal already moves focus to each question itself.
+  useDialogFocus(open, panelRef, { initialFocus: 'none' });
 
   // When the release type arrived as a prefill — the create modal's picker or
   // an UrgAns chip preset already asked — the intake starts past question 1
@@ -368,6 +375,7 @@ export function PlannerIntakeModal() {
 
   const modal = (
     <div
+      ref={panelRef}
       className="fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center px-4 py-4 sm:py-8"
       role="dialog"
       aria-modal="true"
@@ -448,7 +456,7 @@ export function PlannerIntakeModal() {
           </p>
 
           {error ? (
-            <p className="mt-4 rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs leading-5 text-status-error">
+            <p role="alert" className="mt-4 rounded-lg border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs leading-5 text-status-error">
               {error}
             </p>
           ) : null}

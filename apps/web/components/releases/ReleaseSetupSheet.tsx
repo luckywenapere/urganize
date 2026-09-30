@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { createPortal } from 'react-dom';
 import { CalendarPlus, X } from '@/components/icons';
 
@@ -144,6 +145,9 @@ export function ReleaseSetupSheet({
     setDragOffset(0);
   };
 
+  const panelRef = useRef<HTMLFormElement>(null);
+  useDialogFocus(true, panelRef);
+
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -154,6 +158,8 @@ export function ReleaseSetupSheet({
       }}
     >
       <form
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Finish setting up this rollout"
@@ -195,7 +201,7 @@ export function ReleaseSetupSheet({
             {showNameField ? `Name your ${typeLabel} and pick the day` : 'Pick your release day'}
           </h2>
           <p className="mt-1.5 text-sm leading-6 text-content-secondary">
-            Your rollout plan is ready to build — {activityCount} activities across ~
+            Your rollout plan is ready to build. It has {activityCount} activities across ~
             {spanWeeks} weeks, all dated from your release day. Set the date and the whole
             plan appears.
           </p>
@@ -203,7 +209,7 @@ export function ReleaseSetupSheet({
           {showNameField ? (
             <label className="mt-4 block">
               <span className="mb-1.5 flex items-baseline gap-2 text-xs font-medium text-content-primary">
-                Release name
+                Title
                 <span className="font-normal text-content-tertiary">Optional</span>
               </span>
               <input
@@ -212,7 +218,7 @@ export function ReleaseSetupSheet({
                 disabled={isSaving}
                 maxLength={140}
                 placeholder={DEFAULT_RELEASE_TITLE}
-                className="input h-10 rounded-lg border-stroke-default bg-bg-elevated"
+                className="input h-10 rounded-lg border-stroke-control bg-bg-elevated"
               />
             </label>
           ) : null}
@@ -228,11 +234,11 @@ export function ReleaseSetupSheet({
               onChange={(event) => setReleaseDate(event.target.value)}
               disabled={isSaving}
               aria-label="Release date"
-              className="input h-10 rounded-lg border-stroke-default bg-bg-elevated"
+              className="input h-10 rounded-lg border-stroke-control bg-bg-elevated"
             />
           </label>
 
-          {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
+          {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
 
           <button
             type="submit"

@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, KeyRound, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { useAuthStore } from '@/lib/auth-store';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { getAccessToken } from '@/components/settings/getAccessToken';
@@ -84,8 +85,13 @@ export function ReleaseAccessStep({ releaseId, releaseTitle, onDone }: ReleaseAc
     void generate();
   }, [generate]);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, panelRef);
+
   const overlay = (
     <div
+      ref={panelRef}
+      tabIndex={-1}
       className="fixed inset-0 z-[170] flex items-end justify-center bg-black/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
@@ -137,7 +143,7 @@ export function ReleaseAccessStep({ releaseId, releaseTitle, onDone }: ReleaseAc
                 variant="full"
               />
               <p className="mt-3 text-xs leading-5 text-content-tertiary">
-                Whoever opens this link picks their own password — you never have to send one.
+                Whoever opens this link picks their own password. You never have to send one.
                 You can create more logins any time in Settings → Team.
               </p>
             </>
@@ -145,7 +151,7 @@ export function ReleaseAccessStep({ releaseId, releaseTitle, onDone }: ReleaseAc
 
           {state.kind === 'failed' ? (
             <div className="rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-3">
-              <p className="flex items-start gap-2 text-sm text-status-error">
+              <p role="alert" className="flex items-start gap-2 text-sm text-status-error">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                 {state.message}
               </p>
@@ -168,7 +174,7 @@ export function ReleaseAccessStep({ releaseId, releaseTitle, onDone }: ReleaseAc
             still lets them through, and Settings → Team is where they finish
             the job. */}
         <Button type="button" className="mt-6 w-full" onClick={onDone}>
-          {state.kind === 'failed' ? 'Continue without a login' : 'Done — go to the rollout'}
+          {state.kind === 'failed' ? 'Continue without a login' : 'Go to the rollout'}
         </Button>
       </div>
     </div>

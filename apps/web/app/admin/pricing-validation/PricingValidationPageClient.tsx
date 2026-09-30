@@ -186,7 +186,7 @@ export default function PricingValidationPageClient() {
       </p>
 
       {error ? (
-        <p className="mt-4 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+        <p role="alert" className="mt-4 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
           {error}
         </p>
       ) : null}

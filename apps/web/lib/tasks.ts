@@ -451,7 +451,7 @@ export function getTaskSectionDescription(section: TaskSectionKey): string {
     case 'overdue':
       return 'Hard deadlines that already slipped. Clear these first so the rollout does not drift.';
     case 'catch_up':
-      return 'These tasks were already in the past when this rollout was created — a compressed timeline, not slippage. Start here.';
+      return 'These tasks were already in the past when this rollout was created. It is a compressed timeline, not slippage. Start here.';
     case 'today':
       return 'What needs action before the day closes.';
     case 'week':

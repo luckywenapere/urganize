@@ -174,8 +174,8 @@ export function classifyTrialCardFailure(
  * the honest next step is to reach us. */
 export function describeTrialCardFailure(kind: TrialCardFailureKind): string {
   return kind === 'card'
-    ? "That card can't be saved for future billing, so we can't start a trial on it. The ₦100 check is refunded automatically — try a different card."
-    : "Your card is fine and the ₦100 check is refunded automatically — this one is on us. Something went wrong setting up the trial itself, so retrying with another card won't help. Email contact@urganize.app and we'll sort it out.";
+    ? "That card can't be saved for future billing, so we can't start a trial on it. The ₦100 check is refunded automatically. Try a different card."
+    : "Your card is fine and the ₦100 check is refunded automatically. This one is on us. Something went wrong setting up the trial itself, so retrying with another card won't help. Email contact@urganize.app and we'll sort it out.";
 }
 
 export type DelayedSubscriptionPayload = {

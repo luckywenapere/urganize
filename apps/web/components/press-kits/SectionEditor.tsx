@@ -18,7 +18,7 @@ type Props = {
 };
 
 const inputClass =
-  'w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-content-primary ' +
+  'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-content-primary ' +
   'placeholder:text-content-tertiary focus:border-brand focus:outline-none disabled:opacity-60';
 
 const labelClass =

@@ -46,7 +46,7 @@ export function SettingRow({ icon, title, description, action, error }: SettingR
       {/* Bare, not the boxed feedback style the form sections use: a bordered
           block inside a compact row reads as heavier than the row it belongs
           to. */}
-      {error ? <p className="mt-2 text-sm text-status-error">{error}</p> : null}
+      {error ? <p role="alert" className="mt-2 text-sm text-status-error">{error}</p> : null}
     </div>
   );
 }

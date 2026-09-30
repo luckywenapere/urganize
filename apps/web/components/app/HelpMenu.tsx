@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { openExternalUrl } from '@/lib/external-link';
 import { CommunityIcon, ContactIcon, DocsIcon, ReportIcon, TourIcon } from '@/components/app/BrandIcons';
@@ -54,7 +54,6 @@ function HelpMenuItem({
   return (
     <button
       type="button"
-      role="menuitem"
       onClick={onClick}
       className="group flex min-h-[40px] w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left text-xs text-content-secondary transition hover:bg-bg-hover hover:text-content-primary"
     >
@@ -67,6 +66,8 @@ function HelpMenuItem({
 export function HelpMenu() {
   const pathname = usePathname();
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
   const [isOpen, setIsOpen] = useState(false);
 
   const openReportIssue = useReportIssueStore((state) => state.openReportIssue);
@@ -170,6 +171,8 @@ export function HelpMenu() {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsOpen(false);
+        // Back to the button, so a keyboard user is not dropped at the top.
+        triggerRef.current?.focus();
       }
     };
 
@@ -194,20 +197,26 @@ export function HelpMenu() {
   // menu drops DOWN instead of up.
   return (
     <div ref={containerRef} className="relative hidden shrink-0 md:block">
+      {/* A disclosure, not a role="menu": a menu promises arrow-key movement
+          between its items, which this list never had, and a screen reader
+          switches into menu behaviour on the strength of the role. */}
       <button
+        ref={triggerRef}
         type="button"
         aria-label="Open help menu"
-        aria-haspopup="menu"
         aria-expanded={isOpen}
+        aria-controls={isOpen ? panelId : undefined}
         onClick={() => setIsOpen((current) => !current)}
-        className="motion-focus grid h-10 w-10 place-items-center rounded-full font-mono text-[11px] text-content-quaternary transition-colors hover:bg-bg-hover hover:text-content-secondary"
+        className="motion-focus grid h-10 w-10 place-items-center rounded-full font-mono text-[11px] text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
       >
         ?
       </button>
 
       {isOpen ? (
         <div
-          role="menu"
+          id={panelId}
+          role="group"
+          aria-label="Help"
           className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-64 origin-top-right rounded-xl border border-stroke-default bg-bg-elevated p-2 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           {menuGroups.map((group, groupIndex) => (

@@ -12,6 +12,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { type Task } from '@/lib/tasks';
+import { toastDismissMs } from '@/lib/toast-timing';
 import type { Release } from '@/types/releases';
 import { Toast } from '@/components/shared/Toast';
 import { NewReleaseGuide } from '@/components/releases/NewReleaseGuide';
@@ -443,8 +444,7 @@ export function WorkspaceView() {
 
   useEffect(() => {
     if (!toast) return;
-    const dismissAfterMs = toast.tone === 'warning' ? 6000 : 2600;
-    const timeout = window.setTimeout(() => setToast(null), dismissAfterMs);
+    const timeout = window.setTimeout(() => setToast(null), toastDismissMs(toast.tone, toast.message));
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
@@ -1114,7 +1114,11 @@ export function WorkspaceView() {
   // activity list instead of letting the page grow. At lg+ every one of these
   // reverts to the block layout the desktop views have always assumed.
   return (
-    <main className="flex min-h-full flex-col text-content-primary lg:block">
+    <div className="flex min-h-full flex-col text-content-primary lg:block">
+      {/* The catalog has no visible page title, so it would have no top-level
+          heading at all. A scoped rollout is named by the topbar and its own
+          header, so this is only for the catalog at rest. */}
+      {!scopedReleaseId ? <h1 className="sr-only">Your rollouts</h1> : null}
       {/* Mobile gutter comes from AppShell's <main> (px-4). Layering another
           px-4 here on mobile compounded to 32px each side, eating content
           area on phones where TasksPanel fills the screen full-width. The
@@ -1168,14 +1172,15 @@ export function WorkspaceView() {
           </div>
 
           {error ? (
-            <div className="mb-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
+            <div role="alert" className="mb-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>{error}</p>
             </div>
           ) : null}
 
           {toast ? (
-            <div className="mb-6">
+            // A failure is announced at once (alert); a confirmation politely.
+            <div className="mb-6" role={toast.tone === 'success' ? 'status' : 'alert'}>
               <Toast message={toast.message} tone={toast.tone} />
             </div>
           ) : null}
@@ -1608,6 +1613,6 @@ export function WorkspaceView() {
         actionType={lockedRefusal?.actionType || 'release.draft_plan'}
         onClose={() => setLockedRefusal(null)}
       />
-    </main>
+    </div>
   );
 }

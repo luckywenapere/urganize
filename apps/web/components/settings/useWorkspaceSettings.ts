@@ -458,7 +458,7 @@ export function useWorkspaceSettings(userId: string, accessToken: string): Works
       // rename reached further than this page.
       const releasesNote =
         typeof payload.releasesUpdated === 'number' && payload.releasesUpdated > 0
-          ? ` (${payload.releasesUpdated} release${payload.releasesUpdated === 1 ? '' : 's'} updated)`
+          ? ` (${payload.releasesUpdated} rollout${payload.releasesUpdated === 1 ? '' : 's'} updated)`
           : '';
       setArtistMessage(`Artist renamed${releasesNote}.`);
     } catch (err) {

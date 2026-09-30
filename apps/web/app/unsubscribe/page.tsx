@@ -43,7 +43,7 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
             Stop sending {UNSUBSCRIBE_SCOPE_LABELS[verified.scope]} to {verified.email}?
           </p>
           {error ? (
-            <p className="mt-3 text-status-error">
+            <p role="alert" className="mt-3 text-status-error">
               That did not save. Please try again.
             </p>
           ) : null}

@@ -133,7 +133,7 @@ export function NoteEditor({
     if (saveState === 'error') {
       return (
         <>
-          <span className="text-status-error">Couldn&rsquo;t save</span>
+          <span role="alert" className="text-status-error">Couldn&rsquo;t save</span>
           <button
             type="button"
             onClick={onRetry}
@@ -149,7 +149,10 @@ export function NoteEditor({
 
   return (
     <>
-      <div className="flex shrink-0 items-center gap-2 pb-3">
+      {/* Wraps: the fixed controls (back, activity, plan, save state, pin,
+          archive, delete) add up to more than a 375px phone offers, and every
+          one is shrink-0, so without a wrap they ran off the right edge. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-2 pb-3">
         <button
           type="button"
           onClick={onBack}
@@ -253,19 +256,21 @@ export function NoteEditor({
       </div>
 
       <div className="min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">
-        <div className="mx-auto w-full max-w-[46rem]">
+        {/* The line under the text is the focus indicator: the writing surface
+            lighting up with a full ring would be noise, but a keyboard user
+            still needs to see where they are. */}
+        <div className="mx-auto w-full max-w-[46rem] border-b-2 border-transparent transition-colors focus-within:border-brand">
           <textarea
             ref={bodyRef}
             value={draft}
             onChange={(event) => onDraftChange(event.target.value)}
             onBlur={onFlush}
-            placeholder="Start writing — the first line becomes the title"
+            placeholder="Start writing. The first line becomes the title."
             aria-label="Note body"
             rows={1}
             // 16px keeps iOS from zooming on focus, and a note body wants the
-            // larger reading size on desktop anyway. No focus ring here: the
-            // whole writing surface lighting up would be noise, and every
-            // control around it carries motion-focus.
+            // larger reading size on desktop anyway. No outline of its own: the
+            // wrapper draws the focus line.
             className="w-full resize-none bg-transparent text-[16px] leading-7 text-content-primary placeholder:text-content-tertiary focus:outline-none"
           />
         </div>

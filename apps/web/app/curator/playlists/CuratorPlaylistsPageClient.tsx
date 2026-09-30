@@ -23,7 +23,7 @@ import type { CuratorPlaylist, PitchPlatform } from '@/types/pitching';
 import { openExternalUrl } from '@/lib/external-link';
 
 const inputClass =
-  'h-11 w-full rounded-xl border border-stroke-default bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
+  'h-11 w-full rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
 const labelClass = 'block text-[11px] uppercase tracking-[0.16em] text-content-tertiary';
 
 type FormState = {

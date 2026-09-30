@@ -250,7 +250,7 @@ const buildReleaseTypeNote = (
   // task is genuinely in their release and there is nothing to apologize for.
   if (!usedFallback) return null;
   const label = draft.releaseType === 'music_video' ? 'music-video' : draft.releaseType;
-  return `This entry task comes from our single-release playbook — the ${label} playbook is coming. Your rollout will be created, and you can build the task list manually until the matching template lands.`;
+  return `This entry task comes from our single-release playbook. The ${label} playbook is coming. Your rollout will be created, and you can build the task list manually until the matching template lands.`;
 };
 
 export function getOnboardingAiMoment(draft: OnboardingDraft): OnboardingAiMoment | null {

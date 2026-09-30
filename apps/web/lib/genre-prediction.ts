@@ -60,7 +60,7 @@ export function validateGenrePredictionUpload(
     const fileSizeMib = (attrs.fileSize / MIB).toFixed(1);
     return {
       ok: false,
-      error: `File is ${fileSizeMib} MiB — the limit is 4 MiB. Try an MP3 instead of a WAV master.`,
+      error: `File is ${fileSizeMib} MiB. The limit is 4 MiB. Try an MP3 instead of a WAV master.`,
     };
   }
 

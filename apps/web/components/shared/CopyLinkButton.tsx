@@ -59,7 +59,7 @@ export function CopyLinkButton({ value, label = 'Copy link', className = '' }: P
         {copied ? 'Copied' : label}
       </button>
       {failed ? (
-        <p className="mt-2 text-xs text-status-error">
+        <p role="alert" className="mt-2 text-xs text-status-error">
           Could not copy. Select the link and copy it by hand.
         </p>
       ) : null}

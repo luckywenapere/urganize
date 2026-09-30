@@ -43,8 +43,9 @@ export function ThreadComposer({ onSend, placeholder }: ThreadComposerProps) {
           value={content}
           onChange={(event) => setContent(event.target.value)}
           placeholder={placeholder}
+          aria-label="Message"
           rows={2}
-          className="motion-focus min-h-[44px] w-full flex-1 resize-y rounded-lg border border-stroke-default bg-bg-surface px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary"
+          className="motion-focus min-h-[44px] w-full flex-1 resize-y rounded-lg border border-stroke-control bg-bg-surface px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary"
         />
         <button
           type="button"

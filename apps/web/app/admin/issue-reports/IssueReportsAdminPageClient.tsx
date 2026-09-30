@@ -205,7 +205,7 @@ export default function IssueReportsAdminPageClient() {
       </p>
 
       {error ? (
-        <p className="mt-4 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
+        <p role="alert" className="mt-4 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
           {error}
         </p>
       ) : null}

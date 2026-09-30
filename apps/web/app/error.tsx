@@ -60,7 +60,7 @@ export default function AppError({
           This page stopped working
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-content-secondary">
-          Not something you did. Try it again — if it keeps happening, the rest of
+          Not something you did. Try it again. If it keeps happening, the rest of
           your work is still fine, so head back and carry on there.
         </p>
 
@@ -83,7 +83,7 @@ export default function AppError({
         {error.digest ? (
           <p className="mt-6 border-t border-stroke-subtle pt-4 text-xs leading-relaxed text-content-tertiary">
             If you report this, quote{' '}
-            <span className="font-mono text-content-secondary">{error.digest}</span> — it
+            <span className="font-mono text-content-secondary">{error.digest}</span>. It
             points us at the exact failure.
           </p>
         ) : null}

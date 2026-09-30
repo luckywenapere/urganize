@@ -31,7 +31,13 @@ const preset = {
         stroke: {
           subtle: "rgb(var(--color-stroke) / 0.04)",
           default: "rgb(var(--color-stroke) / 0.06)",
-          strong: "rgb(var(--color-stroke) / 0.1)"
+          strong: "rgb(var(--color-stroke) / 0.1)",
+          // The boundary of a form control (input, select, textarea). The three
+          // tiers above are hairlines for cards and dividers and sit near 1.1:1
+          // on purpose; a field that has to be FOUND needs 3:1 (WCAG 1.4.11).
+          // An opaque colour, not an alpha, so the ratio holds on every ground.
+          // lib/text-contrast.test.ts holds the values to 3:1.
+          control: "rgb(var(--color-stroke-control))"
         },
         status: {
           success: withOpacity("--color-status-success"),

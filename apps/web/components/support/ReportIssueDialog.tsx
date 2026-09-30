@@ -6,6 +6,7 @@ import { AlertCircle, Check, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { getAccessToken } from '@/components/settings/getAccessToken';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import {
   ISSUE_KINDS,
   MAX_ISSUE_BODY_LENGTH,
@@ -93,6 +94,12 @@ export function ReportIssueDialog() {
     return lockBodyScroll();
   }, [isOpen]);
 
+  // Declared before the title-focus effect so the opener is remembered first.
+  // 'none': the title field takes focus below, and the sent state has its own
+  // controls, so this only adds the Tab trap and the return of focus.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen && isMounted, panelRef, { initialFocus: 'none' });
+
   useEffect(() => {
     if (!isOpen || isSent) return;
     titleRef.current?.focus();
@@ -162,6 +169,7 @@ export function ReportIssueDialog() {
       />
 
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-issue-title"
@@ -238,7 +246,7 @@ export function ReportIssueDialog() {
                   maxLength={MAX_ISSUE_TITLE_LENGTH}
                   placeholder={copy.titleHint}
                   onChange={(event) => setTitle(event.target.value)}
-                  className="mt-1.5 w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2.5 text-content-primary placeholder:text-content-quaternary focus:border-brand focus:outline-none"
+                  className="mt-1.5 w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2.5 text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
                 />
               </label>
 
@@ -249,7 +257,7 @@ export function ReportIssueDialog() {
                   rows={5}
                   maxLength={MAX_ISSUE_BODY_LENGTH}
                   onChange={(event) => setBody(event.target.value)}
-                  className="mt-1.5 w-full resize-y rounded-lg border border-stroke-default bg-bg-base px-3 py-2.5 text-content-primary placeholder:text-content-quaternary focus:border-brand focus:outline-none"
+                  className="mt-1.5 w-full resize-y rounded-lg border border-stroke-control bg-bg-base px-3 py-2.5 text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
                 />
               </label>
 
@@ -260,7 +268,7 @@ export function ReportIssueDialog() {
             </div>
 
             {error ? (
-              <div className="mx-5 mb-4 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error sm:mx-6">
+              <div role="alert" className="mx-5 mb-4 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error sm:mx-6">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>{error}</p>
               </div>

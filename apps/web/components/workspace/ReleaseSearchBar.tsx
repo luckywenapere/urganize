@@ -69,7 +69,7 @@ export function ReleaseSearchBar({
           onChange={(event) => onChange(event.target.value)}
           placeholder="Search rollout"
           aria-label="Search rollout"
-          className="motion-focus h-11 w-full rounded-full border border-stroke-default bg-bg-surface pl-10 pr-10 text-lg text-content-primary placeholder:text-content-tertiary"
+          className="motion-focus h-11 w-full rounded-full border border-stroke-control bg-bg-surface pl-10 pr-10 text-lg text-content-primary placeholder:text-content-tertiary"
         />
         {filtering ? (
           <button

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { AlertCircle } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -42,7 +43,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState('');
-  const cancelRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
@@ -67,9 +68,10 @@ export function ConfirmDialog({
     return lockBodyScroll();
   }, [open]);
 
-  useEffect(() => {
-    if (open) cancelRef.current?.focus();
-  }, [open]);
+  // Focus starts on the first control, which is Cancel (it comes first in the
+  // DOM even though the row is reversed on phones), and Tab stays in the
+  // dialog. Focus returns to the button that opened it. See lib/use-dialog-focus.
+  useDialogFocus(open, panelRef);
 
   // Only ever opened by a tap, so it never renders on the server; the guard is
   // for safety, not for hydration.
@@ -102,6 +104,7 @@ export function ConfirmDialog({
         }}
       />
       <div
+        ref={panelRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="shows-confirm-title"
@@ -118,14 +121,14 @@ export function ConfirmDialog({
         ) : null}
 
         {error ? (
-          <p className="mt-3 flex items-start gap-2 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
+          <p role="alert" className="mt-3 flex items-start gap-2 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <span>{error}</span>
           </p>
         ) : null}
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button ref={cancelRef} type="button" variant="secondary" onClick={onClose} disabled={isWorking}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isWorking}>
             Cancel
           </Button>
           <Button

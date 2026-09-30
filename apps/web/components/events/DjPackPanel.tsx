@@ -275,7 +275,7 @@ export function DjPackPanel({
           {active.map((receipt) => (
             <li key={receipt.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-content-primary">
+                <p className="line-clamp-2 break-words text-sm font-semibold text-content-primary">
                   {receipt.name}
                   {receipt.role ? (
                     <span className="ml-1.5 font-normal text-content-tertiary">{receipt.role}</span>
@@ -376,7 +376,7 @@ export function DjPackPanel({
             onChange={(changeEvent) => setName(changeEvent.target.value)}
             placeholder={active.length === 0 ? 'Who gets the tracks? Start with the DJ' : 'Add someone'}
             aria-label="Name"
-            className="h-10 min-w-0 flex-[2] basis-48 rounded-lg border border-stroke-default bg-bg-base px-3 text-content-primary outline-none focus:border-brand"
+            className="h-10 min-w-0 flex-[2] basis-48 rounded-lg border border-stroke-control bg-bg-base px-3 text-content-primary outline-none focus:border-brand"
           />
           <input
             value={role}
@@ -385,7 +385,7 @@ export function DjPackPanel({
             placeholder="Role"
             aria-label="Role"
             list={rolesListId}
-            className="h-10 min-w-0 flex-1 basis-28 rounded-lg border border-stroke-default bg-bg-base px-3 text-content-primary outline-none focus:border-brand"
+            className="h-10 min-w-0 flex-1 basis-28 rounded-lg border border-stroke-control bg-bg-base px-3 text-content-primary outline-none focus:border-brand"
           />
           <datalist id={rolesListId}>
             {COMMON_RECIPIENT_ROLES.map((option) => (

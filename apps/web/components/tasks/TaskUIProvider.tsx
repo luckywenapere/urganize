@@ -21,6 +21,7 @@ import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type WorkspaceMember } from '@/lib/tasks';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { supabase } from '@/lib/supabase/client';
 import { isNetworkFailure } from '@/lib/offline/network-error';
 import { isBrowserOnline } from '@/lib/offline/status';
@@ -920,6 +921,14 @@ function TaskDetailModal() {
     return lockBodyScroll();
   }, [isOpen]);
 
+  // Focus goes to the pop-up itself rather than its first control: the panel
+  // is long, and landing on a control would announce a checkbox before the
+  // person has heard which activity this is. Tab then enters it. The stack in
+  // lib/dialog-stack.ts is what lets the completion sheet open ABOVE this and
+  // take Tab without the two trapping against each other.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen, panelRef, { initialFocus: 'panel' });
+
   if (!state || !state.isOpen) {
     return null;
   }
@@ -934,10 +943,12 @@ function TaskDetailModal() {
       }}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Activity detail"
-        className="urg-cartouche flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface sm:rounded-2xl shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200 sm:max-h-[85dvh] sm:max-w-2xl sm:border"
+        className="urg-cartouche flex max-h-[92dvh] focus:outline-none w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface sm:rounded-2xl shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200 sm:max-h-[85dvh] sm:max-w-2xl sm:border"
       >
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6">
           <TaskDetailView

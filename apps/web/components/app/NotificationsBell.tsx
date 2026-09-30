@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { SignalIcon } from '@/components/app/BrandIcons';
 import { supabase } from '@/lib/supabase/client';
@@ -63,6 +63,7 @@ export function NotificationsBell() {
   const { pushToast } = useToast();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const panelId = useId();
 
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<TaskNotification[]>([]);
@@ -175,7 +176,7 @@ export function NotificationsBell() {
             : 'New notification';
           const body =
             matched && matched.taskTitle
-              ? `${headline} — ${matched.taskTitle}`
+              ? `${headline}: ${matched.taskTitle}`
               : headline;
           pushToast(body);
         }
@@ -273,7 +274,7 @@ export function NotificationsBell() {
       });
       if (!response.ok) throw new Error('Server rejected the request.');
     } catch {
-      pushToast('Could not mark as read — please try again.', 'error');
+      pushToast('Could not mark as read. Please try again.', 'error');
       void fetchNotifications();
     }
   }, [fetchNotifications, pushToast]);
@@ -292,7 +293,7 @@ export function NotificationsBell() {
       });
       if (!response.ok) throw new Error('Server rejected the request.');
     } catch {
-      pushToast('Could not clear notifications — please try again.', 'error');
+      pushToast('Could not clear notifications. Please try again.', 'error');
       void fetchNotifications();
     }
   }, [fetchNotifications, pushToast]);
@@ -360,8 +361,8 @@ export function NotificationsBell() {
         ref={triggerRef}
         type="button"
         onClick={handleToggle}
-        aria-haspopup="menu"
         aria-expanded={isOpen}
+        aria-controls={isOpen ? panelId : undefined}
         aria-label={
           hasUnread ? `Notifications, ${unreadCount} unread` : 'Notifications'
         }
@@ -381,7 +382,10 @@ export function NotificationsBell() {
       {isOpen ? (
         <div
           ref={menuRef}
-          role="menu"
+          id={panelId}
+          // A group, not a role="menu": these rows are buttons reached with
+          // Tab, and a menu promises arrow-key movement they never had.
+          role="group"
           aria-label="Notifications"
           // Below `sm` the panel pins to the viewport (inset-x-4 under the
           // 4rem topbar) instead of anchoring to the trigger — a 360px panel
@@ -435,7 +439,6 @@ export function NotificationsBell() {
                   <li key={notification.id}>
                     <button
                       type="button"
-                      role="menuitem"
                       onClick={() => handleSelect(notification)}
                       className={`motion-focus flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-bg-hover ${
                         notification.read ? '' : 'bg-brand/5'

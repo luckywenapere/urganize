@@ -100,7 +100,7 @@ export function SongSection({ releaseId, onToast }: SongSectionProps) {
             </p>
             <p className="mt-1 text-xs text-content-secondary">
               {SONG_FORMATS_LABEL}, up to {formatFileSize(SONG_MAX_BYTES)}. Only your team can hear
-              it — nothing here is public.
+              it. Nothing here is public.
             </p>
           </div>
 
@@ -174,7 +174,7 @@ export function SongSection({ releaseId, onToast }: SongSectionProps) {
             <Music className="mx-auto h-5 w-5 text-content-tertiary" aria-hidden="true" />
             <p className="mt-3 text-sm text-content-primary">No song on this rollout yet.</p>
             <p className="mt-1 text-xs text-content-secondary">
-              Upload the master and it travels with the rollout — ready when you pitch it or hand it
+              Upload the master and it travels with the rollout. It is ready when you pitch it or hand it
               to a distributor.
             </p>
           </div>

@@ -93,10 +93,10 @@ export function SentPitchRow({ pitch, onChanged }: SentPitchRowProps) {
     <li className="rounded-xl border border-stroke-default bg-bg-surface p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-content-primary">
+          <p className="line-clamp-2 break-words text-sm font-semibold text-content-primary">
             {pitch.playlistName}
           </p>
-          <p className="truncate text-xs text-content-secondary">
+          <p className="line-clamp-2 break-words text-xs text-content-secondary">
             {pitch.curatorName} · {pitch.songTitle}
           </p>
         </div>

@@ -215,9 +215,23 @@ export function HelpTip({
         onPointerLeave={() => {
           if (pointerCanHover()) setOpen(false);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={(event) => {
+          // Only KEYBOARD focus opens it. A tap or a click also focuses the
+          // button, and then the click toggled it straight back shut, so on an
+          // Android phone the tip flashed and vanished. `:focus-visible` is
+          // true for a keyboard arrival and false for a pointer one.
+          let keyboardArrival = true;
+          try {
+            keyboardArrival = event.currentTarget.matches(':focus-visible');
+          } catch {
+            // An engine without the selector: keep the old behaviour.
+          }
+          if (keyboardArrival) setOpen(true);
+        }}
         onBlur={() => setOpen(false)}
-        className={`motion-focus inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary ${className}`}
+        // The circle is 20px, which is a hard thing to hit with a thumb. The
+        // pseudo-element widens the target to 44px without moving anything.
+        className={`motion-focus relative inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-content-tertiary transition-colors before:absolute before:-inset-3 before:content-[''] hover:bg-bg-hover hover:text-content-primary ${className}`}
       >
         <Info className="h-3.5 w-3.5" aria-hidden="true" />
       </button>

@@ -41,7 +41,7 @@ const SEGMENT_ICONS: Record<SettingsSegment, ComponentType<LucideProps>> = {
  *  cream, and its radius outranks `rounded-xl` (the ShareSheet found both). A
  *  bg-base well reads as a field in either theme. */
 const SEARCH_CLASS =
-  'block h-10 w-full rounded-xl border border-stroke-default bg-bg-base pl-9 pr-9 text-sm text-content-primary transition-[border-color,box-shadow] duration-200 placeholder:text-content-tertiary hover:border-stroke-strong focus:border-brand focus:outline-none focus:ring-[3px] focus:ring-brand/15';
+  'block h-10 w-full rounded-xl border border-stroke-control bg-bg-base pl-9 pr-9 text-sm text-content-primary transition-[border-color,box-shadow] duration-200 placeholder:text-content-tertiary hover:border-content-secondary focus:border-brand focus:outline-none focus:ring-[3px] focus:ring-brand/15';
 
 type SettingsNavProps = {
   visible: readonly SettingsSegment[];

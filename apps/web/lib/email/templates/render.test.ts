@@ -74,7 +74,7 @@ describe('WorkspaceInviteEmail', () => {
 describe('WelcomeEmail', () => {
   it('keeps the founder-note register: no button, no dark banner', async () => {
     const { html } = await render(WelcomeEmail({ recipientName: 'Lucky' }));
-    expect(WELCOME_SUBJECT).toBe('Welcome to Urganize — a note from Lucky');
+    expect(WELCOME_SUBJECT).toBe('Welcome to Urganize: a note from Lucky');
     expect(/background-color:#0d120e/i.test(html)).toBe(false);
     expectMailSafe(html);
   });

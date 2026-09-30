@@ -49,7 +49,7 @@ export default function DashboardPage() {
 function LegacyDashboardSkeleton() {
   const knownCount = useKnownReleaseCount();
   return (
-    <main className="text-content-primary" aria-hidden="true">
+    <div className="text-content-primary" aria-hidden="true">
       <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-10 sm:px-6">
         <div className="space-y-2">
           <SkeletonBlock className="h-7 w-56" />
@@ -84,7 +84,7 @@ function LegacyDashboardSkeleton() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -118,7 +118,7 @@ function LegacyDashboard() {
     .slice(0, 5);
 
   return (
-    <main className="text-content-primary">
+    <div className="text-content-primary">
       <div className="mx-auto max-w-[1200px] px-4 pb-24 pt-10 sm:px-6">
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-content-primary sm:text-3xl">
@@ -132,7 +132,7 @@ function LegacyDashboard() {
         </div>
 
         {error ? (
-          <div className="mt-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
+          <div role="alert" className="mt-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>{error}</p>
           </div>
@@ -197,6 +197,6 @@ function LegacyDashboard() {
           </section>
         ) : null}
       </div>
-    </main>
+    </div>
   );
 }

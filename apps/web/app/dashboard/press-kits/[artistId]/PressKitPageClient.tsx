@@ -28,6 +28,7 @@ import { PRESS_KIT_SECTION_LABELS, deriveSectionStatus } from '@/lib/press-kits'
 import { countInterviewGaps } from '@/lib/press-kit-interview';
 import type { AutofillSummary as AutofillCounts } from '@/lib/press-kit-autofill';
 import { AutofillSummary } from '@/components/press-kits/AutofillSummary';
+import { DialogPanel } from '@/components/shared/DialogPanel';
 import { SectionDraftCard } from '@/components/press-kits/SectionDraftCard';
 import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
 import { applyRunAction, discardRunAction } from '@/lib/urgans-actions/client';
@@ -499,7 +500,7 @@ export default function PressKitPageClient() {
         Saved
       </>
     ) : autosave.saveState === 'error' ? (
-      <span className="text-status-error">Could not save</span>
+      <span role="alert" className="text-status-error">Could not save</span>
     ) : active ? (
       <>Edited {relative(active.updatedAt)}</>
     ) : null;
@@ -515,7 +516,7 @@ export default function PressKitPageClient() {
       </Link>
 
       {error ? (
-        <div className="mb-4 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
+        <div role="alert" className="mb-4 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
           {error}
         </div>
       ) : null}
@@ -673,7 +674,7 @@ export default function PressKitPageClient() {
                         {draftBusy ? 'UrgAns is writing' : 'Ask UrgAns to write this'}
                       </button>
                       {draftError ? (
-                        <p className="mt-2 text-sm text-status-error">{draftError}</p>
+                        <p role="alert" className="mt-2 text-sm text-status-error">{draftError}</p>
                       ) : null}
                     </div>
                   ) : null}
@@ -725,7 +726,11 @@ export default function PressKitPageClient() {
                 onClick={() => setSheetOpen(false)}
                 className="absolute inset-0 bg-black/50"
               />
-              <div className="absolute inset-x-0 bottom-0 max-h-[70dvh] overflow-y-auto rounded-t-2xl border-t border-stroke-default bg-bg-surface p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+              <DialogPanel
+                label="Press kit sections"
+                onClose={() => setSheetOpen(false)}
+                className="absolute inset-x-0 bottom-0 max-h-[70dvh] overflow-y-auto rounded-t-2xl border-t border-stroke-default bg-bg-surface p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
+              >
                 <ul className="space-y-0.5">
                   {sections.map((section) => (
                     <li key={section.id}>
@@ -749,7 +754,7 @@ export default function PressKitPageClient() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </DialogPanel>
             </div>,
             document.body
           )
@@ -764,7 +769,11 @@ export default function PressKitPageClient() {
                 onClick={() => setHistoryOpen(false)}
                 className="absolute inset-0 bg-black/50"
               />
-              <div className="relative w-full max-w-md rounded-xl border border-stroke-default bg-bg-surface p-4">
+              <DialogPanel
+                label="What this said before"
+                onClose={() => setHistoryOpen(false)}
+                className="relative w-full max-w-md rounded-xl border border-stroke-default bg-bg-surface p-4"
+              >
                 <h3 className="font-display text-base font-semibold text-content-primary">
                   What this said before
                 </h3>
@@ -809,7 +818,7 @@ export default function PressKitPageClient() {
                 >
                   Close
                 </button>
-              </div>
+              </DialogPanel>
             </div>,
             document.body
           )

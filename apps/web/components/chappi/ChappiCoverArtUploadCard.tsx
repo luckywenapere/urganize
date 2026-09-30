@@ -80,7 +80,7 @@ export function ChappiCoverArtUploadCard({
 
       {upload.queued ? (
         <p className="mt-3 text-xs text-content-secondary" role="status">
-          You&rsquo;re offline — this will upload when you&rsquo;re back online.
+          You&rsquo;re offline. This will upload when you&rsquo;re back online.
         </p>
       ) : null}
 

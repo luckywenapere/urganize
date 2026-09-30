@@ -15,7 +15,7 @@ import {
   toIsoInZone,
 } from '@/lib/events';
 import { TimezoneSelect } from './TimezoneSelect';
-import { trapTabKey } from './focusTrap';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import type { ShowEvent } from '@/types/events';
 
 type EditShowSheetProps = {
@@ -67,6 +67,8 @@ export function EditShowSheet({ event, onClose, onSaved, onRequestDelete }: Edit
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const dialogRef = useRef<HTMLFormElement>(null);
+  // Focus moves in, Tab stays in, and focus returns to the opener on close.
+  useDialogFocus(true, dialogRef);
 
   useEffect(() => {
     const onKeyDown = (keyEvent: KeyboardEvent) => {
@@ -133,11 +135,11 @@ export function EditShowSheet({ event, onClose, onSaved, onRequestDelete }: Edit
   };
 
   const fieldClass =
-    'w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-content-primary outline-none transition-colors focus:border-brand';
+    'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-content-primary outline-none transition-colors focus:border-brand';
   const labelClass = 'block text-xs font-semibold text-content-secondary';
   const groupClass = 'space-y-3 rounded-xl border border-stroke-subtle p-3';
   const errorText = (message?: string) =>
-    showErrors && message ? <span className="mt-1 block text-xs text-status-error">{message}</span> : null;
+    showErrors && message ? <span role="alert" className="mt-1 block text-xs text-status-error">{message}</span> : null;
 
   return createPortal(
     <div className="fixed inset-0 z-[170] flex items-end justify-center sm:items-center">
@@ -154,7 +156,6 @@ export function EditShowSheet({ event, onClose, onSaved, onRequestDelete }: Edit
         aria-modal="true"
         aria-labelledby="edit-show-title"
         onSubmit={handleSubmit}
-        onKeyDown={(keyEvent) => trapTabKey(keyEvent, dialogRef.current)}
         noValidate
         className="relative flex max-h-[92dvh] w-full flex-col rounded-t-2xl border border-stroke-default bg-bg-surface sm:max-w-lg sm:rounded-2xl"
       >

@@ -62,6 +62,7 @@ import { Chappi } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { HOME_PATH } from '@/lib/home-path';
+import { describeNextBlocker } from '@/lib/onboarding-next-hint';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import { ONBOARDING_PLANNING_PREFERENCE_LABELS, type OnboardingPlanningPreference } from '@/lib/onboarding';
@@ -86,6 +87,7 @@ import { shouldStartOnboardingTrial } from '@/lib/onboarding-trial';
 import { isSocialShareEnabled } from '@/lib/social-share';
 import { markPendingFirstShare } from '@/lib/social-share-offer';
 import { resolvePostSignupDestination, takePitchIntent } from '@/lib/pitch-intent';
+import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT, isPasswordLongEnough } from '@/lib/password-rules';
 
 // ---------------------------------------------------------------------------
 // Module-level constants
@@ -329,7 +331,7 @@ const cardShell =
   'border border-stroke-default bg-bg-surface px-5 py-5 sm:px-6 sm:py-6';
 
 const inputBase =
-  'block w-full border border-stroke-default bg-bg-elevated px-3 py-2.5 text-base text-content-primary placeholder:text-content-tertiary outline-none transition-colors duration-fast ease-standard focus:border-brand';
+  'block w-full border border-stroke-control bg-bg-elevated px-3 py-2.5 text-base text-content-primary placeholder:text-content-tertiary outline-none transition-colors duration-fast ease-standard focus:border-brand';
 
 const labelBase = 'block text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary';
 
@@ -496,7 +498,7 @@ export default function OnboardingPage() {
       // Email/password path requires all three fields plus, if the user
       // picked 'artist', an artistName. The Google button is gated
       // separately and bypasses the email/password requirement.
-      const hasEmailPasswordFields = Boolean(name.trim() && email.trim() && password.length >= 6);
+      const hasEmailPasswordFields = Boolean(name.trim() && email.trim() && isPasswordLongEnough(password));
       const hasRequiredArtistName = role !== 'artist' || artistName.trim().length > 0;
       return hasEmailPasswordFields && hasRequiredArtistName;
     }
@@ -504,6 +506,23 @@ export default function OnboardingPage() {
     if (step === 6) return true;
     return false;
   }, [draft, name, email, password, role, artistName, step]);
+
+  // What the main button is waiting for, in a sentence, shown beside it. A
+  // disabled button that does not say why is a button people tap and abandon.
+  const nextHint = describeNextBlocker({
+    step,
+    releaseTypeAvailable: isReleaseTypeAvailable(draft.releaseType),
+    whereStuckCount: draft.whereStuck.length,
+    hasStage: Boolean(draft.stage),
+    hasTitle: draft.title.trim().length > 0,
+    dateValid: isReleaseDateValid(draft.releaseDate),
+    hasName: Boolean(name.trim()),
+    hasEmail: Boolean(email.trim()),
+    passwordLongEnough: isPasswordLongEnough(password),
+    needsArtistName: role === 'artist',
+    hasArtistName: artistName.trim().length > 0,
+  });
+  const nextHintId = !canAdvance && nextHint ? 'onboarding-next-hint' : undefined;
 
   // Google button has its own gate — doesn't require name/email/password
   // (Google provides those) but DOES require a complete draft and the
@@ -1057,11 +1076,10 @@ export default function OnboardingPage() {
           {step === 0 ? (
             <div className="mt-5 space-y-4">
               <p className="text-sm leading-relaxed text-content-secondary">
-                Urganize is built around a single artist. Pick the rollout for that artist. Only rollout
-                types backed by a working playbook are selectable; others are marked &quot;coming soon&quot;
-                until their template is ready.
+                Pick the kind of rollout you are planning first. You can add more artists and more
+                rollouts later.
               </p>
-              <div className="space-y-2">
+              <div role="radiogroup" aria-labelledby="onboarding-step-heading" className="space-y-2">
                 {ONBOARDING_RELEASE_TYPES.map((option) => {
                   const available = AVAILABLE_RELEASE_TYPE_SET.has(option.value);
                   const selected = draft.releaseType === option.value;
@@ -1109,7 +1127,7 @@ export default function OnboardingPage() {
                 Select every one that fits. We use this to decide what to put in front of you first. It
                 doesn&apos;t lock you in.
               </p>
-              <div className="space-y-2">
+              <div role="group" aria-labelledby="onboarding-step-heading" className="space-y-2">
                 {ONBOARDING_WHERE_STUCK_OPTIONS.map((option) => {
                   const checked = draft.whereStuck.includes(option.value);
                   return (
@@ -1174,7 +1192,7 @@ export default function OnboardingPage() {
           {step === 3 ? (
             <div className="mt-5 space-y-5">
               <p className="text-sm leading-relaxed text-content-secondary">
-                What&apos;s the release called, and when is it going out?
+                What&apos;s the rollout called, and when is the release date?
               </p>
               <label className="block space-y-1.5">
                 <span className={labelBase}>Title</span>
@@ -1434,11 +1452,11 @@ export default function OnboardingPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   autoComplete="new-password"
-                  minLength={6}
+                  minLength={MIN_PASSWORD_LENGTH}
                   className={inputBase}
                   required
                 />
-                <span className="block text-xs text-content-tertiary">At least 6 characters.</span>
+                <span className="block text-xs text-content-tertiary">{PASSWORD_LENGTH_HINT}</span>
               </label>
             </div>
           ) : null}
@@ -1447,7 +1465,7 @@ export default function OnboardingPage() {
           {step === 6 ? (
             <div className="mt-5 space-y-5">
               <p className="text-sm leading-relaxed text-content-secondary">
-                Optional. Bring the people who&apos;ll touch this release with you. We&apos;ll email them
+                Optional. Bring the people who&apos;ll touch this rollout with you. We&apos;ll email them
                 an invite to join your team. You can do this later from Settings.
               </p>
               <div className="space-y-3">
@@ -1505,7 +1523,7 @@ export default function OnboardingPage() {
                       <p className="mt-2 text-xs text-status-success">{row.message}</p>
                     ) : null}
                     {row.status === 'error' ? (
-                      <p className="mt-2 text-xs text-status-error">{row.message}</p>
+                      <p role="alert" className="mt-2 text-xs text-status-error">{row.message}</p>
                     ) : null}
                     {row.status === 'sending' ? (
                       <p className="mt-2 text-xs text-content-tertiary">Sending…</p>
@@ -1537,6 +1555,11 @@ export default function OnboardingPage() {
           {progressMessage ? (
             <p className="mt-5 text-sm text-content-tertiary">{progressMessage}</p>
           ) : null}
+          {nextHintId ? (
+            <p id={nextHintId} className="mt-5 text-sm text-content-secondary">
+              {nextHint}
+            </p>
+          ) : null}
 
           {/* Footer / nav */}
           <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1567,6 +1590,7 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={() => void handleCreateAccount()}
                 disabled={!canAdvance || isSubmitting || isGoogleRedirecting}
+                aria-describedby={nextHintId}
                 className={primaryButton}
               >
                 {isSubmitting ? 'Working…' : 'Create account & rollout'}
@@ -1589,6 +1613,7 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={() => void handleAuthedSetupFinish()}
                 disabled={!canAdvance || isSubmitting}
+                aria-describedby={nextHintId}
                 className={primaryButton}
               >
                 {isSubmitting ? 'Working…' : 'Create my rollout'}
@@ -1598,9 +1623,10 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={handleNext}
                 disabled={!canAdvance || isSubmitting}
+                aria-describedby={nextHintId}
                 className={primaryButton}
               >
-                {step === 4 ? 'Save my workflow' : 'Next'}
+                {step === 4 ? 'Continue' : 'Next'}
               </button>
             )}
           </div>
