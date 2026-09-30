@@ -1,29 +1,16 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState, type ComponentType, type ReactNode } from 'react';
-import Link from 'next/link';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
   ArrowRight,
   CalendarDays,
   ChevronDown,
-  ClipboardList,
-  FolderOpen,
-  Image as ImageIcon,
-  Mail,
   Menu,
-  MessageCircle,
-  Music,
-  NotebookPen,
-  Archive,
-  Users,
   Plus,
-  Radio,
   Search,
-  Share2,
   X,
-  type LucideProps,
   ListChecks,
 } from '@/components/icons';
 import {
@@ -35,7 +22,6 @@ import {
 } from '@/lib/tasks';
 import { matchesSearchTerms, parseSearchTerms, searchTasks } from '@/lib/task-search';
 import { appPageHaystack, buildAppPages, type AppPage } from '@/lib/app-pages';
-import { orderReleaseMenu, type ReleaseMenuKey } from '@/lib/release-menu';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { useAuthStore } from '@/lib/auth-store';
 import type { Release } from '@/types/releases';
@@ -43,91 +29,45 @@ import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
-import { useSceneOverlay, type SceneName } from './useSceneOverlay';
-import { resolveActiveScene, resolvePanelBody } from '@/lib/scene-cache';
+import { resolvePanelBody } from '@/lib/scene-cache';
+import { useSceneOverlay } from './useSceneOverlay';
+import {
+  useRolloutMenuActions,
+  type RolloutMenuAction,
+  type RolloutMenuDialogInput,
+} from './useRolloutMenuActions';
 
-// Metadata entry point (URG-108). Metadata is reached ONLY from inside a
-// release (founder call, 2026-09-29): this header pill on desktop and the
-// release menu on a phone. The identity card's nav row that used to carry it at
-// wide widths is gone, so the pill no longer retreats at any breakpoint.
-const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
+// (The per-feature switches for the rollout's surfaces — Metadata, Content,
+// Files, Song, Cover art, Fan capture, Timeline, Chat, Notes, Pitching — used
+// to be read here, because this file built the row of pills at the top of the
+// panel and the folded list on a phone. Both are one builder now:
+// lib/rollout-menu.ts, drawn by useRolloutMenuActions. The desktop menu is the
+// card at the top of the right-hand column (RolloutMenu); what is left in this
+// file is the phone's release menu, the activity list and the search.)
 
-// Content calendar entry point (URG-157). Same flag that gates the calendar
-// API routes. It has been a dock pill, then a permanent mobile top tab
-// (2026-08-16), and since 2026-08-31 an entry in the release menu — ranked
-// right behind the other main view, because marketing is 37 of the
-// playbook's 64 activities and this is where that work gets planned.
-const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
-
-// Files entry point (URG-182): same flag gates the assets API routes and the
-// release detail page's Asset section.
-const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
-
-// Song entry point. Deliberately its OWN flag rather than FILES above: the
-// founder switched the general file cabinet off, and the song is a different
-// ask ("attach the master to this release") that happens to share the same
-// storage underneath. Same flag gates the /song API routes, the `?scene=song`
-// URL param in WorkspaceView, and UrgAns's upload card.
-const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
-
-// Cover art entry point. Its own flag, same reasoning as Song above: the
-// general file cabinet is off, and "update this release's cover image" is a
-// different, more central ask than "bring the file manager back" — even
-// though both share the same assets table and release-assets bucket.
-const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
-
-// The release-scoped press kit (EPK) was retired 2026-09-05 in favour of the
-// standing per-artist one, which since 2026-09-09 is reached from Settings
-// alone (founder call — it left the topbar, the side menu and the mobile bar
-// that day). Either way not from a release: no pill here, and
-// NEXT_PUBLIC_FEATURE_EPK now only decides whether an old /epk/[token] link
-// still resolves.
-
-// Fan capture entry point (2026-08-14). On mobile this lives in the folded
-// "more" menu rather than the top tabs — see the 2026-08-16 mobile redesign
-// note below for why it isn't one of the four permanent tabs.
-const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
-
-// Timeline entry point (2026-08-30). Same flag gates the ?scene=timeline URL
-// param in lib/scene-cache.ts, so a stale bookmark reads as no-scene when it
-// is off. The scene has no API routes to gate — it lays itself out from the
-// activities this panel already has in props.
-const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
-
-// Release chat entry point (Release & Task Chat, Phase 1). Same flag gates
-// the /messages API routes and the ?scene=chat URL param in scene-cache.ts.
-const RELEASE_CHAT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true';
-
-// Notes entry point: same flag AppTopbar and the identity panel read.
-const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
-
-// Playlist pitching entry point: same flag gates the curator surface, the
-// /api/pitching routes and the /api/curator routes.
-const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
-
-// Same flag AppShell/MobileNavBar read. Below `lg` the panel now shows two
-// rows (top tabs, then the standalone-pills-plus-menu dock at the base — see
-// the 2026-08-16 mobile redesign note), and how far up the dock has to sit
-// still depends on which fixed surface already owns the screen's bottom
-// edge — the nav bar when this is on, the floating UrgAns/support launcher
-// when it isn't. Precomputed to a class so the dock's className stays a
-// one-token swap, the same shape AppShell uses for <main>'s bottom padding.
-// Both rules live in globals.css.
+// Same flag AppShell/MobileNavBar read. Below `lg` the panel shows the dock at
+// the base (search and the release menu — see the 2026-08-16 mobile redesign
+// note), and how far up the dock has to sit depends on which fixed surface
+// already owns the screen's bottom edge — the nav bar when this is on, the
+// floating UrgAns/support launcher when it isn't. Precomputed to a class so the
+// dock's className stays a one-token swap, the same shape AppShell uses for
+// <main>'s bottom padding. Both rules live in globals.css.
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
 export const TASKS_PILL_DOCK_OFFSET_CLASS = MOBILE_NAV_ENABLED
   ? 'tasks-pill-dock-nav'
   : 'tasks-pill-dock';
 
 /**
- * The scene-pill row's neutral (never-lit) pill treatment — hoisted to
- * module scope and exported as the one source of truth. Every action
- * WorkspaceView hands down (see `TaskPanelAction`) renders through this class
- * rather than a hand-rolled copy — that copy had already drifted once (missing
- * `shrink-0 whitespace-nowrap`), which is how "Get your release recap" ended up
- * wrapping across three lines inside a fixed 32px pill (2026-08-10 bug fix).
- * `shrink-0 whitespace-nowrap` still matter for the same reason in every new
- * container this pill can land in: a flex child without them compresses and
- * breaks its own label mid-phrase instead of moving whole onto the next row.
+ * The neutral (never-lit) pill treatment, exported as the one source of truth
+ * for a pill beside the activity list. Its one consumer since 2026-09-30 is
+ * WorkspaceDesktopFocused's "New activity" button; the row of scene pills it
+ * used to style became the vertical menu in the right-hand column.
+ *
+ * `shrink-0 whitespace-nowrap` still matter for the reason that first put them
+ * here (2026-08-10 bug fix): a flex child without them compresses and breaks its
+ * own label mid-phrase instead of moving whole onto the next row, which is how
+ * "Get your release recap" ended up wrapping across three lines inside a fixed
+ * 32px pill.
  */
 export const taskPanelPillClass =
   'motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
@@ -162,23 +102,20 @@ function describeDescriptionMatch(description: string | null): string | null {
 }
 
 /**
- * An action WorkspaceView owns and this panel places — modal-shaped rather
+ * An action WorkspaceView owns and the rollout menu places — modal-shaped rather
  * than a scene toggle, so it never lights up. Structured rather than
- * pre-rendered ReactNode: this component puts each one in a different spot at
- * each width (the desktop header row, or the mobile release menu), and the
+ * pre-rendered ReactNode: the menu draws each one in a different spot at each
+ * width (the right-hand column's card, or the mobile release menu), and the
  * mobile search surface needs a real label to filter against — a rendered
  * `<button>` blob can't be introspected for its text.
  *
  * It carried the two flag-gated AI actions ported from the removed release
  * detail page until 2026-09-07, when both moved into the UrgAns conversation
  * on a founder call — the status update first, then the recap. What arrives
- * through it now is archiving and moving a release to another artist.
+ * through it now is sharing, archiving and moving a release to another artist.
+ * The shape itself is defined beside the menu hook that consumes it.
  */
-export type TaskPanelAction = {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-};
+export type TaskPanelAction = RolloutMenuDialogInput;
 
 // Live work first, then the un-started pipeline by date, then the parked and
 // terminal states (founder call, 2026-08-15 — status groups joined the time
@@ -250,32 +187,30 @@ type TasksPanelProps = {
    * layout is stacked (below lg) and a release card is tapped. */
   id?: string;
   /**
-   * The Status update AI action, ported from the removed release detail
-   * page. Structured (see `TaskPanelAction`) so this component can render it
-   * in the right place at each width — see the type's own doc comment.
-   * `null`/undefined when the feature is off or no release is scoped.
+   * The three dialog-shaped rows of the PHONE's release menu: shelve a
+   * finished release (or restore an archived one), move it to another artist,
+   * and share it to socials (2026-09-23). Modal-shaped, so they never light up.
+   * Structured (see `TaskPanelAction`) so the menu can draw them and the mobile
+   * search can match on their labels. On a desktop the same three rows are drawn
+   * by the rollout menu in the right-hand column, which WorkspaceView renders
+   * itself, so only the mobile mount of this panel is handed them.
    */
-  /** Shelve a finished release, or restore an archived one. Modal-shaped, so
-   *  it renders through the same neutral pill and the same menu row a scene
-   *  toggle would — see `TaskPanelAction`. */
   archiveAction?: TaskPanelAction | null;
   changeArtistAction?: TaskPanelAction | null;
-  /** Share to socials (2026-09-23): opens the share sheet for this rollout.
-   *  Modal-shaped like the two above, so it never lights up. */
   shareAction?: TaskPanelAction | null;
   /**
-   * When set, replaces the activity buckets with this content while keeping the
-   * header row of pills above it (2026-08-05, founder call). That row is the
-   * scene switcher, so it has to survive the swap — the pills are the
-   * navigation, the body is what they drive.
+   * When set, replaces the activity buckets with this content. The rollout menu
+   * (the card in the right-hand column on a desktop, the hamburger on a phone)
+   * is the scene switcher and it stays put across the swap — the menu is the
+   * navigation, this body is what it drives.
    *
    * WorkspaceView builds this (a ReleaseScenePanel) from the `?scene=` param.
    */
   sceneContent?: ReactNode;
   /**
-   * Rendered at the top of the ACTIVITIES list only — above the buckets,
-   * below the header pills (2026-08-06, URG-230: the SetReleaseDateCard for a
-   * release with no date yet).
+   * Rendered at the top of the ACTIVITIES list only — above the buckets
+   * (2026-08-06, URG-230: the SetReleaseDateCard for a release with no date
+   * yet).
    *
    * Deliberately inside the activities branch rather than above the body: a
    * scene (Calendar / Files / Press kit) is its own task, and a
@@ -288,8 +223,8 @@ type TasksPanelProps = {
    *
    * Deliberately NOT the banner slot above, which is a single slot with four
    * claimants already. A list of rows is not a banner and should not fight one
-   * for the space; and unlike the footer pill row below, this scrolls with the
-   * content rather than taking pinned height from it.
+   * for the space; and it scrolls with the content rather than taking pinned
+   * height from it.
    *
    * Gated on `bodyIsMainView`, not on the buckets branch: since 2026-09-06 the
    * main view can be the timeline, and a footer left inside the buckets would
@@ -312,26 +247,16 @@ type TasksPanelProps = {
  * release surface on a phone, not just the folded overflow — the top-tabs
  * strip is gone and this list replaced it (founder call, below).
  *
- * Data, not JSX, for two reasons now: the mobile SEARCH surface matches these
- * on `label`, which a pre-rendered button can't be introspected for; and
+ * Data, not JSX, for two reasons: the mobile SEARCH surface matches these on
+ * `label`, which a pre-rendered button can't be introspected for; and
  * `lib/release-menu.ts` sorts them, which needs a `key` it can read.
  *
- * `key` is the closed `ReleaseMenuKey` union deliberately: a new entry that
- * hasn't been given a position in RELEASE_MENU_ORDER fails to type-check,
- * which is what stops the next scene silently landing at the bottom. */
-type MoreMenuAction = {
-  key: ReleaseMenuKey;
-  label: string;
-  icon: ComponentType<LucideProps>;
-  onClick: () => void;
-  disabled?: boolean;
-  /** Lit when this entry's scene is the open one. It replaces what the top
-   *  tabs used to say with `aria-pressed`: which surface you are looking at,
-   *  and that tapping it again closes it. Only the scene toggles set it —
-   *  the modal actions (Status update, Recap, Archive, Change artist) open
-   *  something over the page and have no lit state to report. */
-  isActive?: boolean;
-};
+ * The shape and the builder moved to useRolloutMenuActions on 2026-09-30, when
+ * the desktop menu (the card in the right-hand column) started drawing the same
+ * rows. `key` is still the closed `ReleaseMenuKey` union: a new entry that
+ * hasn't been given a position in RELEASE_MENU_ORDER fails to type-check, which
+ * is what stops the next scene silently landing at the bottom. */
+type MoreMenuAction = RolloutMenuAction;
 
 export function TasksPanel({
   tasks,
@@ -360,20 +285,13 @@ export function TasksPanel({
   // is briefly unsearchable for a dual account.
   const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
 
-  // The pills below swap this panel's body between the activity buckets and a
-  // release scene (Calendar / Files / Press kit), in place — they
-  // were nav links to separate pages until 2026-08-04, then briefly modal
-  // overlays, and are now an inline swap per the founder's correction. Clicking
-  // the pill of the scene that's already open closes it, back to activities.
-  const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
-  // Shared with WorkspaceView (which builds the scene body) and
-  // WorkspaceSkeleton (which reserves its layout) rather than mirrored here:
-  // with a flag off, a stale `?scene=…` URL must not flip the leading pill to
-  // "Activities" for a scene that isn't rendering. This used to be a local copy
-  // of the same four-flag expression and it had drifted — 'song' and 'coverart'
-  // were missing from it for a while — which is exactly why it now lives in
-  // lib/scene-cache.ts.
-  const activeScene = resolveActiveScene(urlScene);
+  // The rollout menu's rows swap this panel's body between the main view and a
+  // release scene (Calendar / Files / Song / …), in place — they were nav links
+  // to separate pages until 2026-08-04, then briefly modal overlays, and are an
+  // inline swap per the founder's correction. Pressing the row of the scene
+  // that's already open closes it. This panel only needs to know WHICH body is
+  // showing; opening and closing is the menu hook's job.
+  const { activeScene: urlScene } = useSceneOverlay();
 
   /**
    * Whether the panel body is the release's MAIN VIEW — the timeline, or the
@@ -393,36 +311,6 @@ export function TasksPanel({
     const body = resolvePanelBody(urlScene);
     return body === 'activities' || body === 'timeline';
   })();
-
-  /**
-   * Pill classes, lit when that scene is the open one. `shrink-0
-   * whitespace-nowrap` (2026-08-10 bug fix): a flex child is free to
-   * compress and break its own label mid-phrase rather than moving whole onto
-   * the next row without these — which is exactly how "Get your release
-   * recap" used to spill across three lines inside a fixed 32px pill.
-   */
-  const pillClass = (scene: SceneName) =>
-    `motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors ${
-      activeScene === scene
-        ? 'border-brand bg-brand/10 text-content-primary'
-        : 'border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
-    }`;
-
-  // Shared with the New activity / Activities toggle below — same neutral
-  // (never-lit) treatment regardless of which of the two states it's in.
-  // Hoisted to module scope as the exported `taskPanelPillClass` (above the
-  // component) so WorkspaceView's Status update / Recap actions use the real
-  // thing instead of a hand-rolled copy.
-  const neutralPillClass = taskPanelPillClass;
-
-  /** Open the scene, or close it if it's the one already showing. */
-  const toggleScene = (scene: SceneName, releaseId: string) => {
-    if (activeScene === scene) {
-      closeScene();
-      return;
-    }
-    openScene(scene, releaseId);
-  };
 
   // The ?priority= / ?status= filter dropdowns were removed entirely
   // (founder call, 2026-07-23) — the bucket structure IS the filter now.
@@ -494,271 +382,6 @@ export function TasksPanel({
   };
 
   /**
-   * "New activity" opens Quick Create while the activity list is showing.
-   * Once a scene (Calendar / Files / Press kit / Song / …) has taken this
-   * slot, this button renders nothing — the workspace's dedicated back arrow
-   * (WorkspaceView's goBack, case 1) already closes the open scene, and a
-   * second "Activities" pill doing the same thing was redundant chrome
-   * (removed 2026-08-25, founder call: "weird ... with a left arrow").
-   *
-   * Desktop header row ONLY as of 2026-08-17 — mobile dropped this entirely
-   * (see the base-dock comment further down): the center "+" in
-   * `MobileNavBar` now opens Quick Create directly when a release is scoped,
-   * so a dedicated mobile pill for that action is redundant, and closing a
-   * scene on mobile works by re-tapping its own top-tab/folded-menu entry
-   * (every scene entry point is already a toggle).
-   */
-  //
-  // `bodyIsMainView` and not `!activeScene` since 2026-09-06: the activity
-  // buckets are a scene of their own now (`?scene=activities`), and "New
-  // activity" is exactly as useful standing over the list as it is over the
-  // timeline. Gating on activeScene would have hidden it on the one view it
-  // most obviously belongs to.
-  const activitiesToggleButton = !bodyIsMainView ? null : (
-    <button
-      type="button"
-      onClick={() =>
-        openQuickCreate({
-          releaseId: scopedRelease?.id || undefined,
-          source: 'inline',
-        })
-      }
-      className={neutralPillClass}
-    >
-      <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-      New activity
-    </button>
-  );
-
-  // (Until 2026-09-15 a "Plan" pill led this row while a release had no
-  // activities, opening the draft review scene. The review step is gone:
-  // the plan is built straight into activities from the planning questions,
-  // and the card that fills the empty panel is the questions' only door.)
-
-  // Timeline and Metadata — DESKTOP HEADER ROW ONLY since 2026-08-31, when the
-  // mobile top-tabs strip these two also fed was removed (founder call; see the
-  // note where that row used to render). On a phone both are entries in the
-  // release menu at the base of the panel instead.
-  //
-  // Metadata (URG-108) shows at every desktop width now: the identity panel's
-  // "Metadata" nav row was removed 2026-09-29, so this pill is its only desktop
-  // entry point. What keeps it reachable on a phone is the release menu.
-  //
-  // "Activities" leads the row for the reason "Timeline" used to until
-  // 2026-09-06: it is the same work seen a different way, so it reads as a view
-  // switch rather than another release surface. The label flipped when the
-  // timeline became the main view — this pill has always pointed at whichever
-  // of the two you are NOT looking at, and re-tapping it while lit closes back
-  // to the other one.
-  const activitiesButton =
-    TIMELINE_ENABLED && scopedRelease ? (
-      <button
-        type="button"
-        onClick={() => toggleScene('activities', scopedRelease.id)}
-        aria-pressed={activeScene === 'activities'}
-        className={pillClass('activities')}
-      >
-        Activities
-      </button>
-    ) : null;
-
-  const metadataButton =
-    METADATA_ENABLED && scopedRelease ? (
-      <button
-        type="button"
-        onClick={() => toggleScene('metadata', scopedRelease.id)}
-        aria-pressed={activeScene === 'metadata'}
-        className={pillClass('metadata')}
-      >
-        <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
-        Metadata
-      </button>
-    ) : null;
-
-  // Cover art: the release's visual identity — shown on its workspace card,
-  // its press kit, and anywhere else the release is displayed. Desktop
-  // header row only — on mobile it lives in the folded "more" menu, right
-  // beside Song (both are the release's core identity assets).
-  const coverArtButton =
-    COVER_ART_ENABLED && scopedRelease ? (
-      <button
-        type="button"
-        onClick={() => toggleScene('coverart', scopedRelease.id)}
-        aria-pressed={activeScene === 'coverart'}
-        className={pillClass('coverart')}
-      >
-        <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
-        Cover art
-      </button>
-    ) : null;
-
-  // Song: the master itself. Desktop header row only — on mobile it lives in
-  // the folded "more" menu.
-  const songButton =
-    SONG_UPLOAD_ENABLED && scopedRelease ? (
-      <button
-        type="button"
-        onClick={() => toggleScene('song', scopedRelease.id)}
-        aria-pressed={activeScene === 'song'}
-        className={pillClass('song')}
-      >
-        <Music className="h-3.5 w-3.5" aria-hidden="true" />
-        Song
-      </button>
-    ) : null;
-
-  // Playlist pitching: browse curator playlists and send this release's song,
-  // with each curator's answer shown beside it. Desktop header row only since
-  // 2026-08-31 (the top-tabs strip it used to feed is gone). It still ranks
-  // high in the mobile menu — fourth, above Metadata — because the reason it
-  // earned a permanent tab in the first place holds: pitching is frequent, and
-  // marketing is 37 of the playbook's 64 activities.
-  const pitchButton =
-    PITCHING_ENABLED && scopedRelease ? (
-      <button
-        type="button"
-        onClick={() => toggleScene('pitch', scopedRelease.id)}
-        aria-pressed={activeScene === 'pitch'}
-        className={pillClass('pitch')}
-      >
-        <Radio className="h-3.5 w-3.5" aria-hidden="true" />
-        Pitch
-      </button>
-    ) : null;
-
-  // Files link: its own scene (URG-165), not a segment nested under the task
-  // list — files are a peer of tasks, not a child of them. Desktop header row
-  // only — on mobile it lives in the folded "more" menu.
-  const filesButton =
-    FILES_ENABLED && scopedRelease ? (
-      <button
-        type="button"
-        onClick={() => toggleScene('files', scopedRelease.id)}
-        aria-pressed={activeScene === 'files'}
-        className={pillClass('files')}
-      >
-        <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
-        Files
-      </button>
-    ) : null;
-
-  // The rollout's own chat thread (Release & Task Chat, Phase 1). Desktop
-  // header row and the mobile folded menu, same as the other scene pills.
-  const chatButton =
-    RELEASE_CHAT_ENABLED && scopedRelease ? (
-      <button
-        type="button"
-        onClick={() => toggleScene('chat', scopedRelease.id)}
-        aria-pressed={activeScene === 'chat'}
-        className={pillClass('chat')}
-      >
-        <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-        Chat
-      </button>
-    ) : null;
-
-  /**
-   * Notes for this release — DESKTOP ONLY (founder call, 2026-08-15: notes
-   * should not be one of the mobile pills), which is why it is its own
-   * variable rather than composed alongside the buttons above: it is rendered
-   * into the desktop header row and simply never handed to mobile. Kept as a
-   * placement decision in JSX rather than a `hidden lg:inline-flex` class,
-   * which would rest on Tailwind's internal ordering of two competing base
-   * `display` utilities.
-   *
-   * This link and the release menu are now the ONLY entry points to Notes: the
-   * topbar icon and the identity-card row both left on 2026-09-29 (founder
-   * call: Notes is reached from inside each release). The notes page stays
-   * pre-filtered to this release on the way in.
-   *
-   * Deliberately a plain LINK, not a scene toggle like its neighbours: notes
-   * are a global surface that happens to filter by release, not a per-release
-   * panel body — so this navigates to the notes page pre-filtered rather than
-   * swapping this panel's contents. (Not a regression of the 2026-08-05
-   * "scenes render inline, not as pages" call: that call was about the
-   * release scenes, which stay inline.)
-   */
-  const notesPill =
-    NOTES_ENABLED && scopedRelease ? (
-      <Link href={`/dashboard/notes?release=${scopedRelease.id}`} className={neutralPillClass}>
-        <NotebookPen className="h-3.5 w-3.5" aria-hidden="true" />
-        Notes
-      </Link>
-    ) : null;
-
-  // Calendar, Press kit — the desktop footer row's outbound pair. Fan
-  // capture used to sit alongside them here; on mobile it moved to the
-  // folded "more" menu (2026-08-16), so it's built separately below rather
-  // than as a third member of this pair.
-  const calendarButton = CONTENT_CALENDAR_ENABLED ? (
-    <button
-      type="button"
-      onClick={() => scopedRelease && toggleScene('calendar', scopedRelease.id)}
-      aria-pressed={activeScene === 'calendar'}
-      className={pillClass('calendar')}
-    >
-      {/* Keeps the calendar glyph: this scene IS a month grid of planned
-          posts, so the icon is right even though the label shortened. What
-          changed is Shows, which was using this same glyph for a live date
-          and now uses a microphone. */}
-      <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-      Content
-    </button>
-  ) : null;
-
-  const captureButton = CAPTURE_ENABLED ? (
-    <button
-      type="button"
-      onClick={() => scopedRelease && toggleScene('capture', scopedRelease.id)}
-      aria-pressed={activeScene === 'capture'}
-      className={pillClass('capture')}
-    >
-      <Mail className="h-3.5 w-3.5" aria-hidden="true" />
-      Fan capture
-    </button>
-  ) : null;
-
-  const outboundPills = (
-    <>
-      {calendarButton}
-      {captureButton}
-    </>
-  );
-
-  /**
-   * Hidden once a scene is open: the "Activities" pill above is already the
-   * way back, and a Calendar entry while Calendar (or any scene) is showing
-   * is redundant chrome pointed at the thing already on screen. Desktop
-   * footer row only — the mobile top tabs and folded menu below deliberately
-   * do NOT carry this restriction (see their own comments for why).
-   */
-  const showOutboundPills =
-    (CONTENT_CALENDAR_ENABLED || CAPTURE_ENABLED) &&
-    Boolean(scopedRelease) &&
-    !sceneContent;
-
-  const archiveButton = archiveAction ? (
-    <button type="button" onClick={archiveAction.onClick} className={neutralPillClass}>
-      <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-      {archiveAction.label}
-    </button>
-  ) : null;
-
-  const shareButton = shareAction ? (
-    <button type="button" onClick={shareAction.onClick} className={neutralPillClass}>
-      <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-      {shareAction.label}
-    </button>
-  ) : null;
-
-  const changeArtistButton = changeArtistAction ? (
-    <button type="button" onClick={changeArtistAction.onClick} className={neutralPillClass}>
-      <Users className="h-3.5 w-3.5" aria-hidden="true" />
-      {changeArtistAction.label}
-    </button>
-  ) : null;
-
-  /**
    * The mobile release menu — EVERY release surface on a phone since
    * 2026-08-31, not just the overflow it used to be.
    *
@@ -776,169 +399,23 @@ export function TasksPanel({
    * losing them costs the ability to switch scene A → scene B in one tap,
    * which now takes two (open the menu, pick).
    *
-   * ORDER is `lib/release-menu.ts`, which carries the full argument — including
-   * the honest note that there is no usage data to base it on (PostHog is
-   * unset in production, so no click has ever been counted) and what was used
-   * instead. Do not re-rank these here; that module is the source of truth and
-   * the sort below is what actually decides.
+   * WHAT IS IN IT, AND IN WHAT ORDER, is lib/rollout-menu.ts and
+   * lib/release-menu.ts, the second of which carries the full argument for the
+   * order — including the honest note that there is no usage data to base it on.
+   * Since 2026-09-30 the desktop's menu, the card at the top of the right-hand
+   * column, is drawn from the same builder, and the only difference between the
+   * two is the `phone` variant here, which turns the Notes row into "Note this"
+   * and asks for a blank note straight away.
    *
-   * Data, not JSX, so the search surface can match on a real label. Deliberately
-   * NOT memoized: each entry's onClick closes over `toggleScene`, which closes
-   * over the current `activeScene` — memoizing risks serving a stale closure
-   * (tap "Song" after switching scenes without this array's own deps changing,
-   * and it would toggle against a scene that is no longer the open one). It is
-   * fourteen items at most, so recomputing it every render costs nothing worth
-   * guarding against.
+   * Data, not JSX, so the search surface below can match on a real label.
    */
-  const moreMenuActionsRaw: (MoreMenuAction | null)[] = [
-    // The four below were the top tabs until 2026-08-31. They keep the labels
-    // and icons their pills carry on desktop, so a user moving between a phone
-    // and a laptop sees the same names in the same order.
-    TIMELINE_ENABLED && scopedRelease
-      ? {
-          key: 'activities',
-          label: 'Activities',
-          // The desktop pill has no icon (it is the only one in that row
-          // without one); a menu row needs one, and a checklist is what the
-          // buckets are. This slot held a Gantt mark while it pointed at the
-          // timeline — see RELEASE_MENU_ORDER for why the two swapped.
-          icon: ListChecks,
-          onClick: () => toggleScene('activities', scopedRelease.id),
-          isActive: activeScene === 'activities',
-        }
-      : null,
-    CONTENT_CALENDAR_ENABLED && scopedRelease
-      ? {
-          key: 'calendar',
-          label: 'Content',
-          icon: CalendarDays,
-          onClick: () => toggleScene('calendar', scopedRelease.id),
-          isActive: activeScene === 'calendar',
-        }
-      : null,
-    PITCHING_ENABLED && scopedRelease
-      ? {
-          key: 'pitch',
-          label: 'Pitch',
-          icon: Radio,
-          onClick: () => toggleScene('pitch', scopedRelease.id),
-          isActive: activeScene === 'pitch',
-        }
-      : null,
-    // With the top tabs gone this menu IS Metadata's narrow-width entry point,
-    // which is what keeps the feature reachable on a phone.
-    METADATA_ENABLED && scopedRelease
-      ? {
-          key: 'metadata',
-          label: 'Metadata',
-          icon: ClipboardList,
-          onClick: () => toggleScene('metadata', scopedRelease.id),
-          isActive: activeScene === 'metadata',
-        }
-      : null,
-    // Capture a note about THIS release. The only entry in this menu that
-    // navigates away instead of swapping the panel body, and the only one
-    // that exists purely for the phone: the desktop pill above already
-    // carries `?release=`, and the notes page pre-links a new note from that
-    // filter, so a laptop is two clicks. MobileNavBar's Notes tab carries no
-    // release, so without this a phone user has to find it in a picker.
-    //
-    // `&new=1` is consumed once by the notes page, which then strips the
-    // param so a refresh cannot mint a second note, and leaves `?release=`
-    // in place so the list stays filtered. No `isActive`: it is not a scene,
-    // so there is no lit state to report.
-    NOTES_ENABLED && scopedRelease
-      ? {
-          key: 'note',
-          label: 'Note this',
-          icon: NotebookPen,
-          onClick: () =>
-            router.push(`/dashboard/notes?release=${scopedRelease.id}&new=1`),
-        }
-      : null,
-    COVER_ART_ENABLED && scopedRelease
-      ? {
-          key: 'coverart',
-          label: 'Cover art',
-          icon: ImageIcon,
-          onClick: () => toggleScene('coverart', scopedRelease.id),
-          isActive: activeScene === 'coverart',
-        }
-      : null,
-    SONG_UPLOAD_ENABLED && scopedRelease
-      ? {
-          key: 'song',
-          label: 'Song',
-          icon: Music,
-          onClick: () => toggleScene('song', scopedRelease.id),
-          isActive: activeScene === 'song',
-        }
-      : null,
-    FILES_ENABLED && scopedRelease
-      ? {
-          key: 'files',
-          label: 'Files',
-          icon: FolderOpen,
-          onClick: () => toggleScene('files', scopedRelease.id),
-          isActive: activeScene === 'files',
-        }
-      : null,
-    RELEASE_CHAT_ENABLED && scopedRelease
-      ? {
-          key: 'chat',
-          label: 'Chat',
-          icon: MessageCircle,
-          onClick: () => toggleScene('chat', scopedRelease.id),
-          isActive: activeScene === 'chat',
-        }
-      : null,
-    // No `isActive` on the three modal-shaped rows below: they open over the
-    // page rather than swapping this panel's body, so there is no open scene
-    // for a lit row to report.
-    CAPTURE_ENABLED && scopedRelease
-      ? {
-          key: 'capture',
-          label: 'Fan capture',
-          icon: Mail,
-          onClick: () => toggleScene('capture', scopedRelease.id),
-          isActive: activeScene === 'capture',
-        }
-      : null,
-    // Share to socials: modal-shaped like the two below, so no isActive.
-    shareAction
-      ? {
-          key: 'share',
-          label: shareAction.label,
-          icon: Share2,
-          onClick: shareAction.onClick,
-          disabled: shareAction.disabled,
-        }
-      : null,
-    changeArtistAction
-      ? {
-          key: 'change-artist',
-          label: changeArtistAction.label,
-          icon: Users,
-          onClick: changeArtistAction.onClick,
-          disabled: changeArtistAction.disabled,
-        }
-      : null,
-    archiveAction
-      ? {
-          key: 'archive',
-          label: archiveAction.label,
-          icon: Archive,
-          onClick: archiveAction.onClick,
-          disabled: archiveAction.disabled,
-        }
-      : null,
-  ];
-  // The array above is already written in canonical order so the two agree on
-  // sight, but this sort is what decides — so an entry inserted next to a
-  // related one still comes out where it was ranked.
-  const moreMenuActions = orderReleaseMenu(
-    moreMenuActionsRaw.filter((item): item is MoreMenuAction => item !== null)
-  );
+  const moreMenuActions = useRolloutMenuActions({
+    releaseId: scopedRelease?.id ?? null,
+    variant: 'phone',
+    share: shareAction,
+    changeArtist: changeArtistAction,
+    archive: archiveAction,
+  });
 
   // Which bucket each activity sits in, derived from the SAME grouping pass
   // the buckets above render from rather than by re-deriving it per result —
@@ -963,9 +440,9 @@ export function TasksPanel({
     searchTerms.length > 0
       ? moreMenuActions.filter((action) => matchesSearchTerms(action.label, searchTerms))
       : [];
-  // Rebuilt per render rather than memoized, matching moreMenuActionsRaw above
-  // and for a weaker version of the same reason: it is a handful of literals
-  // and one store read, so a stale-closure risk is not worth trading for.
+  // Rebuilt per render rather than memoized, matching the menu hook above and
+  // for a weaker version of the same reason: it is a handful of literals and
+  // one store read, so a stale-closure risk is not worth trading for.
   const pageMatches =
     searchTerms.length > 0
       ? buildAppPages({ hasCuratorProfile }).filter((page) =>
@@ -1027,37 +504,11 @@ export function TasksPanel({
     // (see WorkspaceDesktopFocused) — on mobile, where it's an ordinary block
     // child in normal page flow, `flex: 1 1 0%` on a non-flex-item is inert.
     <aside id={id} data-tour="activities" className="flex min-h-0 min-w-0 flex-1 flex-col scroll-mt-20">
-      {/* Desktop header row (lg+ ONLY). Below `lg` none of these buttons
-          render at all as of 2026-08-31: every one of them is an entry in the
-          release menu at the base of the panel instead (founder call — the
-          mobile top-tabs strip that used to carry four of them is gone; see
-          the note where it used to be, and `moreMenuActionsRaw` for the
-          entries).
-
-          It needs no sticky treatment of its own: at lg+ this panel lives
-          inside WorkspaceDesktopFocused's viewport-locked, `overflow-hidden`
-          grid, so this row sits OUTSIDE the scrolling body and is always
-          visible by construction.
-
-          Right-aligned and wrapping, exactly as it has rendered at lg+ since
-          2026-08-05. */}
-      <div
-        data-tour="rollout-menu"
-        className="hidden shrink-0 flex-wrap items-center justify-end gap-2 pb-3 pt-1 lg:flex"
-      >
-        {activitiesToggleButton}
-        {activitiesButton}
-        {metadataButton}
-        {coverArtButton}
-        {songButton}
-        {pitchButton}
-        {filesButton}
-        {chatButton}
-        {notesPill}
-        {shareButton}
-        {changeArtistButton}
-        {archiveButton}
-      </div>
+      {/* (The desktop's row of scene pills that sat here until 2026-09-30 is
+          the rollout menu now: a vertical card at the top of the right-hand
+          column, above the UrgAns chat, rendered by WorkspaceView and drawn from
+          the same builder as the phone's release menu below. "New activity" moved
+          up beside the Motion bar. Founder call, from Cursor's agent window.) */}
 
       {/* The mobile top-tabs strip that used to sit here — Timeline / Content
           / Metadata / Pitch, a Vercel-style tab bar from 2026-08-16 — was
@@ -1078,8 +529,8 @@ export function TasksPanel({
           ReleaseScenePanel, which brings its own heading naming the scene and
           its own "Activities" back control at every width, so the tabs were
           neither the way out of a scene nor the only thing saying which one
-          was open. Desktop is untouched: the same four buttons still render in
-          the header row above. */}
+          was open. (On a desktop the same rows are the card at the top of the
+          right-hand column.) */}
 
       {/* Scrollable body — desktop-only internal scroll box (`lg:` prefix).
           On desktop this box gets a real bounded height from the ancestor
@@ -1120,7 +571,7 @@ export function TasksPanel({
         {/* Every bucket empty: the buckets below have all suppressed
             themselves, so this stands in for the whole list.
             Actionable rather than a muted line (URG-233) — an empty panel
-            whose only affordance is a small pill in the header row reads as
+            whose only affordance is a small pill elsewhere reads as
             "nothing to do here" instead of "start here". Skipped when the
             banner already covers both jobs. */}
         {!bannerReplacesEmptyState &&
@@ -1264,16 +715,9 @@ export function TasksPanel({
       ) : null}
       </div>
 
-      {/* Desktop footer row (lg+ ONLY) — Calendar, then Press kit beside it.
-          A sibling AFTER the flex-1 scroll body, which pins it to the bottom
-          of the panel whether or not the task list overflows — the list
-          scrolls behind it, this row never moves. Mobile has its own,
-          differently-organized rows above and below instead (2026-08-16). */}
-      {showOutboundPills ? (
-        <div className="hidden shrink-0 items-center gap-2 pb-2 pt-3 lg:flex">
-          {outboundPills}
-        </div>
-      ) : null}
+      {/* (The desktop footer row that held Content and Fan capture, hidden the
+          moment any scene opened, is gone with the pills above: both are rows
+          in the rollout menu now and stay there whichever scene is open.) */}
 
       {/* Mobile base dock (below `lg` ONLY) — redesigned 2026-08-16 (founder
           request, screenshot reference) from "every pill in one wrapping
@@ -1396,7 +840,7 @@ export function TasksPanel({
 
         {/* The menu: the plain list, no field. Since 2026-08-31 this is every
             release surface on a phone, not an overflow — see
-            `moreMenuActionsRaw` above, and lib/release-menu.ts for the order.
+            `moreMenuActions` above, and lib/release-menu.ts for the order.
 
             `50dvh` rather than the old fixed `max-h-60` (240px, about five
             rows): the list is up to fourteen entries now, and the top of it is

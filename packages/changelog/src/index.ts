@@ -20,6 +20,23 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.52.0",
+    date: "September 30, 2026",
+    highlights: [
+      "Your UrgAns chats now sit in the menu on the left, right under the pages. Tap one to open it.",
+      "The plus at the top of the list starts a new chat.",
+    ],
+  },
+  {
+    version: "1.51.0",
+    date: "September 30, 2026",
+    highlights: [
+      "On a computer, everything for your rollout now sits in one menu on the right, with UrgAns right under it.",
+      "New activity moved next to your progress bar.",
+      "The small cards for your other rollouts are gone. Tap the back arrow to pick a different one.",
+    ],
+  },
+  {
     version: "1.50.0",
     date: "September 29, 2026",
     highlights: [

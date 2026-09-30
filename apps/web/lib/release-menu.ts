@@ -1,6 +1,14 @@
 /**
- * The order of the release menu on a phone — the folded "more" list behind the
- * hamburger at the base of TasksPanel.
+ * The order of the rollout menu, on both surfaces that show it: the folded
+ * "more" list behind the hamburger at the base of TasksPanel on a phone, and,
+ * since 2026-09-30, the vertical card at the top of the right-hand column on a
+ * desktop (RolloutMenu.tsx). lib/rollout-menu.ts builds both from this one
+ * order, so they cannot rank the same rows two ways.
+ *
+ * (Everything below was written about the phone's list and says so; the
+ * reasoning is unchanged by the desktop sharing it. The desktop's own row of
+ * pills used a different order, which is why sharing this one MOVED Chat,
+ * Content and Pitch up and Metadata, Cover art, Song and Files down there.)
  *
  * Why this is a module rather than the incidental order of an array literal:
  * on 2026-08-31 the founder removed the mobile top-tabs strip and asked for
@@ -82,13 +90,11 @@ export const RELEASE_MENU_ORDER = [
   'metadata',
   // Capture, and the only entry here that LEAVES the panel rather than
   // swapping its body — it opens the notebook with this release already
-  // filtered and a blank note waiting. It exists because the phone is the
-  // one place the loop is broken: the desktop pill carries `?release=` and
-  // "New note" pre-links from that filter, so a laptop is two clicks, while
-  // MobileNavBar's Notes tab carries no release at all and leaves you
-  // hunting for it in a picker. TasksPanel's own notesPill comment already
-  // conceded that gap ("what the phone loses is the `?release=` PRE-FILTER");
-  // this closes it.
+  // filtered (and, on a phone, a blank note waiting). It exists because the
+  // phone is the one place the loop is broken: on a laptop the menu's Notes
+  // row carries `?release=` and "New note" pre-links from that filter, so it
+  // is two clicks, while MobileNavBar's Notes tab carries no release at all
+  // and leaves you hunting for it in a picker. This row closes that gap.
   //
   // Placed here rather than higher because a note is taken repeatedly across
   // a rollout — during a call, mid-DM — so it belongs in the band you return

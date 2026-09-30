@@ -448,15 +448,19 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
           had as a page. No horizontal padding below sm: AppShell's <main>
           already carries px-4 on phones, and layering another px-4 here
           compounded to 32px a side (the same bug WorkspaceView documents on
-          its own wrapper). WorkspaceView still hides the release rails while
-          this is open so the grid has room at lg. */}
+          its own wrapper). The grid's room at lg+ is a width budget rather
+          than a layout switch now: the release rails are gone (2026-09-30), and
+          with UrgAns closed the right-hand column is only the 208px menu, which
+          keeps the month grid at a 1440px window (lib/layout-columns.ts pins
+          it). With UrgAns open the container query below swaps to the agenda. */}
       <div className="mx-auto max-w-[1200px] pb-8 pt-6 sm:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            {/* The way back to the activity list is the sticky "Activities"
-                pill in TasksPanel's header row above — the tiny duplicate back
-                link this header used to carry (~16px tall, unreachable on
-                touch) was removed 2026-08-10. */}
+            {/* The way back to the activity list is the lit Content row in the
+                rollout menu (pressing it again closes the scene) — the tiny
+                duplicate back link this header used to carry (~16px tall,
+                unreachable on touch) was removed 2026-08-10. The row of pills
+                that held the button became that menu on 2026-09-30. */}
             <p className="font-[family-name:var(--font-cc-mono)] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cc-accent)]">
               {formatArtistName(release.artistName)}
             </p>

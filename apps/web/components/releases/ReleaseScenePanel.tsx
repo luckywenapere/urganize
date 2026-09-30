@@ -156,10 +156,11 @@ export function ReleaseScenePanel({
   }, [scene, release.title]);
 
   // The calendar is its own brand island (URG.001 ink/cream/spring, theme-
-  // flipped) and brings its own header, month nav, and back control — so it
-  // gets the island wrapper and none of the generic chrome. WorkspaceView
-  // additionally hides the release rails for this scene only, so the month grid
-  // gets the width it needs (founder call).
+  // flipped) and brings its own header and month nav — so it gets the island
+  // wrapper and none of the generic chrome. Its way back is the lit Content row
+  // in the rollout menu. The month grid's width is a budget now, not a layout
+  // switch: the release rails are gone (2026-09-30) and, with UrgAns closed, the
+  // right-hand column is only the narrow menu (see CalendarScene).
   if (scene === 'calendar') {
     return (
       <section

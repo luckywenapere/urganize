@@ -260,7 +260,7 @@ REST-style Next.js Route Handlers at `app/api/**/route.ts`. No tRPC, no GraphQL.
 
 **Provider routing layer:** `apps/web/lib/ai/provider.ts` — handles retry + timeout. Routes through one of three OpenAI/Ollama-protocol gateways depending on `AI_API_BASE`'s hostname: the Zuplo gateway (`qwen2.5:3b`, Ollama-style `/api/chat`), OpenRouter (`openrouter/free`, OpenAI-style `/api/v1/chat/completions`), or **RodiumAi** (`api.rodiumai.io`, same OpenAI-style protocol at `/v1/chat/completions`) — added 2026-08-13, see the RodiumAi note below.
 
-**2026-08-13 cost decision (founder call): route through RodiumAi, cheapest-working-model-first, explicitly NOT Anthropic.** `AI_API_BASE=https://api.rodiumai.io` + an `rd_sk_…` key as `AI_API_KEY`. Default model is `openai/gpt-4o-mini`; override per feature with `AI_PLANNER_MODEL` / `AI_STATUS_MODEL` / `AI_OUTCOME_MODEL`. This supersedes the "Claude Sonnet / Claude Haiku" guidance below, which is stale: no code enforces a model, so the .env is the actual source of truth for what's live.
+**2026-08-13 cost decision (founder call): route through RodiumAi, cheapest-working-model-first, explicitly NOT Anthropic.** `AI_API_BASE=https://api.rodiumai.io` + an `rd_sk_…` key as `AI_API_KEY`. Default model is `openai/gpt-4o-mini`; override per feature with `AI_PLANNER_MODEL` / `AI_STATUS_MODEL` / `AI_OUTCOME_MODEL`. This supersedes the "Claude Sonnet / Claude Haiku" guidance below, which is stale: no code enforces a model, so the .env is the actual source of truth for what's live. **One exception since 2026-09-30:** with the server-only `AI_ROUTER` set to `shadow` or `on`, code chooses the model per request from a four-rung ladder (gpt-4o-mini up to the GPT-5.6 family), capped by plan; see "The model router" near the end of this file. Unset, which is how it ships, everything in this section is exactly as described.
 
 **RodiumAi's free tier (six `meta/llama-*` models, 1M tokens/day) was tried FIRST and rejected — do not default back to it.** Confirmed live against the API 2026-08-13: every free-tier model is served via AWS Bedrock, and Bedrock's Meta license blocks the account's region outright (`"Access to Meta Llama models is not allowed from unsupported countries, regions, or territories"`, `code: ValidationException`) — not a RodiumAi bug, not a code bug, an upstream licensing wall. `openai/gpt-4o-mini` was verified working in the same session (real `tool_calls`, correct arguments) and is the fallback: not free, but cheap (~$0.15/$0.60 per 1M in RODI terms) and OpenAI's function-calling is a known quantity rather than an open question the way Bedrock's Llama tool support was. If a future session is tempted to switch back to a free `meta/llama-*` model for cost reasons, re-test the geo-block first — it may be specific to this account's region, but nothing here proves it will lift for a different account.
 - **Release rollout planner:** structured-JSON delta contract against a 64-task list — needs a model that reliably holds JSON shape. Per-call override env: `AI_PLANNER_MODEL`.
@@ -296,7 +296,7 @@ It still honors the "AI is removable" principle: with no capable model configure
 - **Prompt-injection note:** the gate covers irreversible actions only. Reversible mutations (create/update/complete) remain callable by the model directly, so hostile text in workspace data could in principle nudge one. Accepted: they are all visible and undoable in-app, and gating everything would make the assistant unusable. `create_note` (2026-08-13) is the one tool gated on a feature OTHER than Chappi's own: rather than filtering the registry (a `NEXT_PUBLIC_*` read would be inlined at build time), it translates the notes route's flag-off 404 into a polite refusal at call time — the `generate_status_update` precedent. It matches the flag gate's exact `'Not found.'` body so the route's OTHER 404, `'Release not found.'` from the ownership check, still reaches the model intact. Mutating tools call the existing REST endpoints via internal fetch — preserving template instantiation, assignee validation, and notifications rather than reimplementing them — EXCEPT completion, which goes through the new `TaskService.completeTaskWithCascade` (+ `reopenTask`). That method replicates the dependency-blocker gate + cascade-unlock that otherwise lived only in `useTaskStore.completeTask`, so a Chappi-driven completion can't bypass it. Every mutating tool re-validates the model's ids against live rows server-side; the system-prompt workspace snapshot is a hint, not the guard.
 - **Frontend:** `app/dashboard/urgans/{page.tsx,ChappiPageClient.tsx}` (the route — auth guard + its own `CreateReleaseModal` instance, mirroring `WorkspaceView`), `components/chappi/ChappiConversation.tsx` (the conversation surface itself — empty-state quick-action cards when `messages` is empty, a scrolling transcript once it isn't; takes `variant: 'page' | 'panel'`), `stores/useChappiStore.ts`, `lib/chappi/{types,intent-router}.ts`. Chips run deterministic actions instantly (no round-trip) and are recorded as a turn either way; free-text sends the full `messages` history to the agent, falling back to the intent-router on failure or deterministic mode. The "Today's focus" chip opens the task cross-page (`router.push('/dashboard?release=...')` then `openTask(id)`, same pattern `NotificationsBell` uses) since the task detail view renders on the workspace page, not here.
 - **Floating dock (2026-07-15, URG-137):** `components/chappi/ChappiDock.tsx` — a Linear-"Ask Linear"-style bottom-right panel mounted app-wide by `AppShell` (flag on → dock replaces the SupportChat pill; the WhatsApp founder link moves into the dock footer). Hosts `ChappiConversation variant="panel"`; shares the SAME global `useChappiStore` conversation as the page, so the expand control (→ `/dashboard/urgans`) carries the transcript. Open state persists via `lib/persisted-state.ts` (`urganize.chappi.dock-open`); `Ctrl/Cmd+J` toggles (listed in HelpMenu shortcuts); renders `null` on `/dashboard/urgans` itself. Z-tiers: launcher `z-50`, open panel `z-[130]` — deliberately below the modals (`z-[170]`+) Chappi can open, and NO Escape-to-close (modals own Escape). **Since 2026-08-03 (URG-210) the dock is the BELOW-lg surface only** (pill + panel carry `lg:hidden`); at lg+ the side rail below owns the assistant and `Ctrl/Cmd+J` routes to it.
-- **UrgAns side rail (2026-08-03, URG-210):** `components/chappi/ChappiSidePanel.tsx` — originally the catalog-only `?chat=1` slide-in (2026-07); now a layout-flow right column mounted by `AppShell` beside `<main>` on EVERY chrome page at lg+ (content narrows, nothing is covered; renders nowhere on `/dashboard/urgans` — the page IS the chat). Open state is `useChappiStore.railOpen`, persisted at `urganize.chappi.rail-open` and hydrated by AppShell; the first assistant-page visit of a session (the login landing when the flag is on) ARMS it open once per session (sessionStorage `urganize.chappi.rail-armed`), and a user close sticks for the rest of the session. The topbar UrgAns icon toggles the rail at lg+ / navigates to the page below lg; the rail carries expand / new-conversation / close controls plus the WhatsApp founder footer. `useChatPanel.ts` and the `?chat=1` param were deleted (a URL param can't survive navigation). **Also 2026-08-03 (URG-210): the assistant's user-facing name is `UrgAns`** — every user-visible string (headers, launcher, page title, placeholders, aria-labels, API error copy, system-prompt self-reference) says UrgAns; files, components, stores, env vars (`CHAPPI_*`, `NEXT_PUBLIC_FEATURE_CHAPPI`), and storage keys deliberately keep their Chappi names (zero deployment risk). "Chappi" in code identifiers is expected; in rendered copy it's a bug. **URG-212 (2026-08-04) went one step further and renamed the URLs too:** `/dashboard/chappi` → `/dashboard/urgans` and `/api/chappi` → `/api/urgans` (the old dashboard path 308-redirects, since the flag was already live in production when this shipped — see the note below). Everything else named above (files, components, stores, env vars, storage keys) still deliberately keeps its Chappi name.
+- **UrgAns side rail (2026-08-03, URG-210; AMENDED 2026-09-30: the column is `components/app/RightRail.tsx` now and holds the rollout menu above the chat card, mounted whether or not the assistant flag is on, see the section at the end of this file, and `ChappiSidePanel.tsx` is only the chat card):** `components/chappi/ChappiSidePanel.tsx` — originally the catalog-only `?chat=1` slide-in (2026-07); now a layout-flow right column mounted by `AppShell` beside `<main>` on EVERY chrome page at lg+ (content narrows, nothing is covered; renders nowhere on `/dashboard/urgans` — the page IS the chat). Open state is `useChappiStore.railOpen`, persisted at `urganize.chappi.rail-open` and hydrated by AppShell; the first assistant-page visit of a session (the login landing when the flag is on) ARMS it open once per session (sessionStorage `urganize.chappi.rail-armed`), and a user close sticks for the rest of the session. The topbar UrgAns icon toggles the rail at lg+ / navigates to the page below lg; the rail carries expand / new-conversation / close controls plus the WhatsApp founder footer. `useChatPanel.ts` and the `?chat=1` param were deleted (a URL param can't survive navigation). **Also 2026-08-03 (URG-210): the assistant's user-facing name is `UrgAns`** — every user-visible string (headers, launcher, page title, placeholders, aria-labels, API error copy, system-prompt self-reference) says UrgAns; files, components, stores, env vars (`CHAPPI_*`, `NEXT_PUBLIC_FEATURE_CHAPPI`), and storage keys deliberately keep their Chappi names (zero deployment risk). "Chappi" in code identifiers is expected; in rendered copy it's a bug. **URG-212 (2026-08-04) went one step further and renamed the URLs too:** `/dashboard/chappi` → `/dashboard/urgans` and `/api/chappi` → `/api/urgans` (the old dashboard path 308-redirects, since the flag was already live in production when this shipped — see the note below). Everything else named above (files, components, stores, env vars, storage keys) still deliberately keeps its Chappi name.
 - **Status:** live in production (flag on, `CHAPPI_MODEL`/`CHAPPI_API_KEY` set — see the RodiumAi notes above). Delete tools + the confirmation gate landed 2026-08-14, closing the two longest-standing deferred items. **Song upload landed 2026-08-16** (`get_song` + `upload_song`), partly closing the file-upload item this list had deferred — the transport constraint it named is real and unchanged (no tool can ever be handed a file), so the tool resolves the release and the BROWSER uploads, via a picker card the assistant puts in the transcript. See "Song upload" in Working notes. Deletion from chat is still deferred, and other asset categories still have no tool. **Cross-session persistence is BUILT, flag-off (2026-09-24):** behind `NEXT_PUBLIC_FEATURE_URGANS_HISTORY`, chats are saved to the browser and to `urgans_conversations`, a chat used in the last six hours comes back on reopen, and past chats are listed — see "Saved UrgAns chats" near the end of this file. With that flag off the conversation is still ephemeral (a reload starts fresh), and a confirmation card is never saved even with it on (a reload drops it; safe, since nothing ran). **Still deferred:** file DELETE tools and uploads for asset categories other than the song, task-outcome writes (a deliberately human moment — the agent must never author one), and batching several proposals into one card (one gated proposal per turn today).
 
 ---
@@ -1275,6 +1275,14 @@ A founder call on the identity card's nav, layout-only — no flags, no routes, 
 ---
 
 ## Calendar's entry point: three wrong tries, then a footer of the tasks panel (2026-08-13)
+
+> **SUPERSEDED 2026-09-30, for the placement.** The footer row this section
+> arrives at is gone, along with every other desktop pill: Content is a row in
+> the rollout menu now, a card at the top of the right-hand column, and it stays
+> there while any scene is open. See "The rollout menu moves to the right, and
+> UrgAns sits under it" at the end of this file. What is still worth reading
+> below is the lesson, which is about arrows and default states rather than
+> about that footer.
 
 Calendar's discovery problem (buried in the release header's pill row, easy to miss) went through four placements the same day, each corrected by the founder from a screenshot with a hand-drawn arrow. The final answer is nothing like the first ones — worth reading in full before touching this again, so the same misreadings don't repeat.
 
@@ -7649,6 +7657,13 @@ Collect metadata, confirm three closed cards with correct statuses, open Step
 
 ## An open scene gets the whole surface (2026-08-25)
 
+> **SUPERSEDED 2026-09-30, for Fault 1's mechanism.** The release rails, the
+> `hideRailsForLayout` decision and `WorkspaceSkeleton`'s mirror of it are all
+> deleted: the side cards they held were removed, so an open scene has the
+> centre column to itself by construction and there is nothing left to hide.
+> The width it needs is a budget now, pinned in `lib/layout-columns.test.ts`.
+> Fault 2 (the link-card button row's `sm:shrink-0`) is untouched.
+
 Founder, next day, screenshot of Collect metadata on a desktop: "fix this bug on
 desktop view." Two faults, both width, one screenshot.
 
@@ -13166,6 +13181,14 @@ solved. It is also why every uncertainty in the script ends in a build.
 
 ## The UrgAns rail is draggable (2026-09-07)
 
+> **AMENDED 2026-09-30.** The rail is one column with two cards now, the rollout
+> menu on top and the chat under it, and the layout code below moved verbatim
+> into `components/app/RightRail.tsx` (the chat card, `ChappiSidePanel.tsx`, is
+> only the card). Two things changed and everything else still holds. The
+> handle is withheld while the chat is closed, and `resolveRailBounds` bounds
+> the CHAT's width only: with the chat closed the column is a fixed 208px menu
+> that is not subject to them. Points 1 to 6 below still describe the chat.
+
 Founder: make the AI window adjustable in width. The rail was a fixed
 `clamp(360px, 31vw, 460px)`, which is a thin strip on a 2560px monitor and a
 third of the screen on a 1280px laptop. Its left edge is a drag handle now,
@@ -13306,6 +13329,13 @@ a real thumb, and the bar at seven tabs, are both unobserved.
 ---
 
 ## The timeline becomes the release's main view (2026-09-06, flag-off)
+
+> **AMENDED 2026-09-30.** Point 4 below (the rails hide for the timeline) is
+> moot: the release rails were deleted with the row of pills when the rollout
+> menu moved into the right-hand column, so the timeline's grid gets its room
+> from the width budget instead. The Activities row now lives in that menu (and
+> in the phone's release menu), still gated on the timeline flag. Everything
+> else here stands.
 
 Founder, with a phone screenshot of a scoped release (`Ohema`, MOTION 9/63):
 *"Let's retire the view and let the Timeline view be the main view — it
@@ -16976,7 +17006,658 @@ links are the remaining manual browser and phone pass (checklist in the ledger).
 
 ---
 
-## Accessibility and copy pass (2026-09-30, uncommitted, no flag)
+## The model router (2026-09-30, built off; nothing changes until `AI_ROUTER` is set)
+
+Founder ask: *"set up a model switcher that automatically routes ai request to
+the suitable model ranging from the one it's currently using to the gpt 5.6, we
+would decide the models once we check what the provider has available first."*
+Until this, every AI call used ONE fixed model picked by an env var: UrgAns chat
+on `CHAPPI_MODEL` (`openai/gpt-4o-mini`), the planner on `openai/gpt-5.4`, and
+the other three single-shot features on `AI_STATUS_MODEL` or the gateway's
+default. Now a router chooses the model per request from a four-rung ladder and,
+when a model fails, moves the request sideways, down or up.
+
+**Not a scope expansion.** It changes which model answers, not what exists.
+**No migration, no client flag** (server-only env, read at request time), and
+**no changelog entry or version bump at merge**: with `AI_ROUTER` unset nothing
+a person sees changes, so by the EPK precedent an entry, if the flip is worth
+announcing at all, lands at the flip.
+
+**Two founder decisions, asked before building:** keep `openai/gpt-4o-mini` as
+the floor rather than starting every request on a stronger model, and cap by
+plan so cost follows what a team pays. **Three defaults were chosen and stated,
+not asked:** automatic only (no model picker for users); every AI surface goes
+through the one router but only chat chooses per request, the rest have fixed
+policies with fallbacks; and shadow mode before live.
+
+### What the provider has (public catalogue, read 2026-09-29)
+
+`GET https://api.rodiumai.io/v1/models` is public and needs no key: 125 entries,
+122 available. Prices are RODI per 1M tokens, and RODI is about 743 to the US
+dollar (it holds for gpt-4o-mini, 5.4, 5.5 and Luna's published dollar prices).
+
+| Model | In / out | Against 4o-mini | rpm / rpd | Note |
+|---|---|---|---|---|
+| `openai/gpt-4o-mini` | 111 / 446 | 1x | 60 / 5,000 | today's model, no reasoning |
+| `openai/gpt-5.6-luna` | 149 / 891 | 1.3x / 2x | 30 / 2,000 | cheap frontier tier |
+| `openai/gpt-5.4-mini` | 557 / 3,341 | 5x / 7.5x | 60 / 5,000 | |
+| `openai/gpt-5.6-terra` | 1,485 / 8,910 | 13x / 20x | **10 / 500** | balanced tier |
+| `openai/gpt-5.4` | 1,856 / 11,137 | 17x / 25x | 30 / 2,000 | the planner's model today |
+| `openai/gpt-5.5` | 3,712 / 22,274 | 33x / 50x | 30 / 2,000 | same price as Sol, three times the room |
+| `openai/gpt-5.6-sol` | 3,712 / 22,274 | 33x / 50x | **10 / 500** | flagship; the provider's `gpt-5.6` alias is Sol |
+
+"gpt-5.6" is three models, not one. The provider also sells routers of its own
+(`rodiumai/smart`, `rodium/{auto,basic,fast,pro,max}`) and they are **deliberately
+not used**: they are opaque (no documented mapping, they may pick non-OpenAI
+models) and one adds a billed hop, where our own router keeps model choice,
+JSON-schema and tool behaviour under our control. `gpt-6-astra` exists and is out
+of scope.
+
+### The ladder and the policy
+
+Four rungs, cheapest first, each `[primary, same-tier sibling]`. Model ids live in
+`lib/ai/model-ladder.ts` and nowhere else in the router; every rung is
+overridable by env, no deploy of code.
+
+| Rung | Primary | Sibling | Output cap | Typical latency |
+|---|---|---|---|---|
+| quick | `gpt-4o-mini` | `gpt-5.6-luna` | 1,024 | 3s |
+| standard | `gpt-5.4-mini` | `gpt-5.6-luna` | 4,096 | 6s |
+| pro | `gpt-5.6-terra` | `gpt-5.4` | 4,096 | 12s |
+| max | `gpt-5.6-sol` | `gpt-5.5` | 8,192 | 25s |
+
+The latency column is a starting guess used only to decide whether a hop can
+still finish in time; the evaluation below is where it gets measured.
+
+| Surface | Starts | Floor | Max hops | Note |
+|---|---|---|---|---|
+| UrgAns chat turn | quick to max, by rules | quick | 2 | `CHAPPI_MODEL` is the quick rung's primary |
+| chat close-out (`closeConfirmedAction`, round-cap summary) | quick | quick | 1 | no tools; the action already ran |
+| rollout planner | pro | pro | 2 | the floor beats any plan ceiling |
+| status update | quick | quick | 2 | |
+| task outcome | quick | quick | 0 | a 3s budget cannot fit a second attempt |
+| press-kit draft | standard | standard | 2 | |
+
+### Things worth knowing before editing this
+
+1. **Off means unchanged, and only the literal words switch it on.**
+   `AI_ROUTER=on` routes, `shadow` decides and records but never changes which
+   model answers (no hops either), anything else is off; `true`, `1` and `yes`
+   deliberately do not count, so a habit from the `NEXT_PUBLIC_` flags cannot
+   change what every request costs. It is also off whatever it says on a gateway
+   that is not `rodiumai.io`, because the ladder is a list of RodiumAi catalogue
+   ids: chat reads `CHAPPI_API_BASE` (default RodiumAi), the single-shot features
+   read `AI_API_BASE`, whose default is NOT RodiumAi. **Off is not byte-identical
+   in five small ways**, all deliberate and all covered by tests: a
+   GPT-5-family `CHAPPI_MODEL` now gets `max_completion_tokens` (it was being
+   rejected); a 400 that says a parameter was not accepted is retried once per
+   model per turn with the other parameter, routed or not; a whitespace-only model
+   env counts as unset; UrgAns's error mapping uses the typed classifier, so the
+   gateway's own `rate_limit_exceeded` now reads "busy" and a gateway 504 or 408
+   "took too long"; and the status and press-kit calls carry a 52 second deadline
+   they never had.
+2. **The plan ceiling reads `state` AND `tier`, never `tier` alone.**
+   `resolveTeamTier` deliberately reports `label`, the uncapped flagship, for a
+   trial, a grace period, a comped team, a grandfathered deal and anything
+   unknown, so seat and release limits never bite during an evaluation. A cap read
+   from `tier` alone would hand every 3-day trial the most expensive model. Only
+   `state === 'paid'` gets its plan's ceiling (Solo to standard, Manager to pro,
+   Label to max); everyone else, and any caller that did not say, is held at
+   `AI_ROUTER_CEILING_TRIAL` (default pro). There is a named test for it, and it
+   is mutation-tested. A consequence worth knowing when watching cost: a team on a
+   legacy plan resolves to `label`, so it gets the max ceiling.
+3. **A floor beats a ceiling.** `routeModel` lifts the ceiling to the surface's
+   floor rather than leaving them contradicting each other, so the planner can
+   never be capped below pro by a Solo plan: plan quality is a feature
+   requirement, not something to trade for cost.
+4. **A pinned model bypasses routing, and an existing pin stays a pin.**
+   `AI_PLANNER_MODEL`, `AI_STATUS_MODEL`, `AI_OUTCOME_MODEL` (falling back to
+   `AI_STATUS_MODEL`) and `AI_PRESSKIT_MODEL` (likewise) keep meaning "use exactly
+   this": zero hops, no reasoning parameter from the router. Chat has no pin;
+   `AI_ROUTER=off` holds it on `CHAPPI_MODEL`. **Check which pins exist in
+   Vercel before the flip**, or the surfaces you expect to route will not.
+5. **Chat is classified by rules, not by a model.** No extra request and no added
+   latency, and fully testable. An analysis or strategy cue, a multi-step ask, a
+   long creative brief, input over 600 characters and a correction after a first
+   answer each add a point; a short question that opens like a lookup stays on
+   quick; the score picks the rung (0 quick, 1 standard, 2 pro, 3 or more max) and
+   the ceiling clamps it. Every threshold is a starting value to calibrate against
+   the shadow log and the evaluation. **A turn stays on the rung it starts on
+   unless something fails**, which protects the prompt-cache discount: every round
+   carries about 14,000 tokens of fixed prompt (UrgAns's instructions plus 91 tool
+   schemas, measured 14,851 and 42,817 characters).
+6. **Failure handling is `nextAfterFailure`, pure and tested.** A rate limit, an
+   unavailable model or a server error goes sideways to the same-tier sibling
+   first (it has its own limit), then down; a timeout goes down first, since a
+   same-speed sibling will not be faster; a bad answer or two failed tool rounds
+   goes up one rung, within the ceiling and only if the slower rung can finish in
+   time; a bad key, an empty balance or a malformed request stops (no other model
+   fixes those). It never revisits a model, never goes below the floor, and is
+   capped by the surface's max hops. **Terra and Sol are limited by the provider to
+   10 requests a minute and 500 a day**, which is why each has a sibling with three
+   times the room, and why real traffic will hit those limits early: ask RodiumAi
+   to raise them before `on`.
+7. **The turn has a deadline, because slow rungs make the 60 second route ceiling
+   real.** `TURN_BUDGET_MS` is 52 seconds against `maxDuration = 60`, so there is
+   still time to record the turn and answer. A hop must fit the rung's typical
+   latency plus 1.5 seconds; between rounds `fitToDeadline` steps down (not counted
+   as a hop) or stops with `degraded: 'deadline'` and a plain "I ran out of time"
+   reply; each request's own timeout is clipped to the time left. The single-shot
+   features pass `deadlineMs` so a model's own retry loop leaves the next model
+   time.
+8. **Request shape follows the model family.** `max_completion_tokens` for the
+   GPT-5 family and the o-series, `max_tokens` for everything else, and
+   `reasoning_effort` only to models that accept it. The single-shot features send
+   NO output cap and never have; the router does not add one. **What was UNKNOWN
+   when this was built, and only the live evaluation can answer:** whether
+   RodiumAi accepts `reasoning_effort` together with `tools` on the GPT-5 models,
+   and whether it takes `max_tokens` on them at all.
+9. **What a routed turn leaves behind.** `billing_events.metadata.routing` on the
+   ordinary `urgans_action` event (the type is unchanged, so the monthly 40/150
+   count is untouched, and there is no migration), and `inputSummary.routing` plus
+   the real `model` on the two embedded actions' `urgans_actions` rows. It is in
+   the database because Vercel Hobby keeps logs briefly. A console line
+   (`[ai-router]`) is written for every shadow turn and, when live, only for a
+   turn with a hop, a failure or a missed deadline. The query that reads a shadow
+   run is in `apps/web/.env.example`.
+10. **Bugs this exposed and fixed.** `/api/urgans` detected a rate limit with
+    `/rate[- ]limit/i`, which never matched the gateway's own
+    `rate_limit_exceeded`, so a real 429 was reported as "unavailable"; the
+    mapping now comes from a typed classifier (`describeAgentError`).
+    `parseToolArguments` silently turned malformed tool arguments into `{}`; the
+    call still runs with `{}` exactly as before, but it now counts as the model
+    struggling, and two such rounds escalate once.
+11. **Nothing can quietly go around it.** `lib/ai/model-router-guard.test.ts` scans
+    the real source: a model id is written in exactly three files (the ladder,
+    `provider.ts`, `planner-model.ts`); the provider's two generators are called
+    from `routed.ts` only; the per-feature model env vars and the router's own
+    switches are read in the router (and the two files that already owned them);
+    and `chat/completions` is spoken to by exactly two files. `legacy-model-
+    agreement.test.ts` pins what each surface used before the router (35 cases
+    against `resolvePlannerModel()` and the old inline env expressions), so "off"
+    cannot drift.
+
+### The evaluation, and how to run it
+
+`lib/ai/model-eval.integration.test.ts` is the one router test that needs the
+network and a key, and it is opt-in (`ROUTER_EVAL=1`); `pnpm test` never runs it.
+It answers the two things the router can only guess at, against UrgAns's REAL
+system prompt and all 91 REAL tool schemas: **shape probes** (does the gateway
+accept, on each rung's model, exactly what chat sends and exactly what the
+single-shot features send, built by the same code that builds them in production)
+and **tool choice** (28 cases in `lib/ai/model-eval-cases.ts`, each scored on
+whether the model's first move is right; reports accuracy, latency percentiles,
+tokens, cache share and cost per model, plus a case-by-model grid showing which
+rung the router's rules would start each case on). A spending cap
+(`ROUTER_EVAL_MAX_USD`, default 8) stops it; the default run costs a few dollars.
+The key is read from `ROUTER_EVAL_API_KEY` (or `CHAPPI_API_KEY`, `AI_API_KEY`),
+sent only as a header, and scrubbed from anything that comes back; the header of
+the test file has the PowerShell to set it for one process without echoing it.
+
+The scoring is pure (`lib/ai/model-eval.ts`, mutation-tested) and the cases are
+tied to the live registry by an offline test, so a renamed tool fails a normal
+test run instead of quietly scoring every model wrong. **The harness itself was
+rehearsed against a local fake gateway** (a 429 with Retry-After, an empty answer,
+a request that echoes the caller's key back, a low spending cap) and the fake key
+appeared nowhere in the output or the JSON file.
+
+### Deliberately not built
+
+A user-facing model picker; a model-based classifier (an extra hop on every turn);
+the provider's own routers; a per-team model override; an admin view of routing in
+`/admin/urgans` (the data is in `billing_events.metadata` for it, and the query is
+in `.env.example`); per-team cost budgets; `gpt-6-astra`.
+
+**Noticed and not fixed:** `app/api/urgans/actions/route.ts` exports no
+`maxDuration`, so on the Hobby plan its default function timeout applies to the
+planner's 52 second deadline. It is dark behind `NEXT_PUBLIC_FEATURE_URGANS_ACTIONS`;
+add `export const maxDuration = 60` when that track activates.
+
+### Verified
+
+**Full suite:** 251 test files passed and 4 skipped, 5,182 tests passed and 68
+skipped, none failing (`vitest run --testTimeout=90000`). The router's own 16 new
+test files hold 361 running tests, plus 38 that are opt-in (the 36-case live
+catalogue check and the 2 live-evaluation tests); `provider.test.ts` grew too.
+At the default 5 second limit, a parallel full run on this Windows machine times
+out 7 tests in six whole-tree-scanning or bash-spawning guards
+(`icons-registry`, `press-kit-copy-guard`, `schema-fallback-guard`,
+`settings-links-guard`, `textile-ground-guard`, `vercel-ignore-build`); every one
+passes on its own, so that is load on this box, not an assertion.
+
+**Static checks:** `eslint .` at 3 errors / 83 warnings, which is the same number
+on this base: the 11 modified tracked files lint at 0/0 at HEAD (checked by
+linting the committed copies) and at 0/0 now, and none of the new files has a
+finding, so nothing was added. (The 78 recorded elsewhere in this file is older;
+main has grown since.) `tsc --noEmit` is clean apart from the 8 documented
+`confirmed-action.test.ts` errors. `next build` is green by exit code with
+`/auth`, `/dashboard`, `/locked`, `/onboarding` and `/settings` still `○ Static`.
+
+**Route probes** on `next start`, with the router unset, `shadow`, `on` and a
+wrong word (`true`), gave identical answers in all four: `POST /api/urgans` 401
+unauthenticated (auth runs before any routing, assistant flag on), the control
+route 401, `/api/version` 200. The generate-status, plan and outcome routes
+answer the exact flag-gate 404 body, because their own feature flags are off in
+that build; they were not probed with the flag on.
+
+**Mutation-tested,** each mutation confirmed to have applied before its result
+was believed and each file restored afterwards: the runner 41/41 killed, the
+API-route glue 17/17, the structural guard 8/8, the evaluation's scoring, cost
+and empty-answer arithmetic 16/16, and its case checks 5/5. The survivors met
+along the way were real test gaps (a custom-error-message path in the router, a
+`trace.endTier` assertion in the runner) and were closed, not excused.
+
+**The evaluation harness was rehearsed end to end against a local fake gateway**,
+three ways: the full 7-model run (a 429 with Retry-After retried and answered,
+28 probes, 196 cases), a cases-only run in which an empty answer is scored as a
+failure, and a $0.05 cap that stopped the run and reported what it had skipped.
+The fake key appears nowhere in the output or the JSON, including in a request
+the fake made fail with the key echoed back.
+
+**The live catalogue check** (`ROUTER_CATALOG_CHECK=1`) passed against the real
+public catalogue on 2026-09-30: every ladder model is available and lists tool
+and JSON support, takes `reasoning_effort` exactly when the router thinks it
+does, and allows at least the output tokens its rung asks for; the rung primaries
+rise in price; Terra and Sol are still 10 requests a minute and 500 a day.
+
+### Not verified, and it is the whole risk
+
+**No real model has been called with this code.** This sandbox has no RodiumAi key
+and the live evaluation has not been run, so three things rest on reasoning and
+tests alone: that the GPT-5 rungs accept the request shape chat sends (item 8),
+that the classifier's starting thresholds send the right cases to the right rungs,
+and that the rungs' latency figures are close enough for the deadline logic. The
+catalogue check (`ROUTER_CATALOG_CHECK=1`) does confirm every ladder model is
+available and lists tools and JSON mode. Nothing has run against a real database
+either, so no `routing` metadata has been written to a real `billing_events` row.
+
+### Activation
+
+1. In Vercel `Web` (Production), confirm `AI_API_BASE=https://api.rodiumai.io`,
+   `CHAPPI_API_KEY` and `CHAPPI_MODEL`, and list any pins (item 4); remove the ones
+   you want routed.
+2. Run the live evaluation once with the key: `ROUTER_EVAL_PHASES=probes` first and
+   read the shape table. If a rung's shape is rejected, fix the ladder with
+   `AI_LADDER_*` (env only) before anything else. Then the cases, starting with
+   `ROUTER_EVAL_MAX_CASES=8`, and adjust the ladder, effort and ceilings from the
+   grid.
+3. Ask RodiumAi to raise the Terra and Sol limits.
+4. Set `AI_ROUTER=shadow` and redeploy (Vercel snapshots env per deployment). Let
+   it collect for a few days and read it with the query in `.env.example`.
+5. Set `AI_ROUTER=on` and redeploy. Watch the RODI balance, the `[ai-router]`
+   lines, p90 latency against the 60 second ceiling, and support reports. To back
+   out, set it to `off` (or unset it) and redeploy: every surface returns to its
+   fixed model.
+6. Changelog entry and version bump only if the flip is worth announcing.
+
+---
+
+## The rollout menu moves to the right, and UrgAns sits under it (2026-09-30, v1.51.0)
+
+Founder, with a screenshot of Cursor's agent window (the chat in the centre, a
+small vertical menu headed "On urganize" at the far right): *"chat should go
+under the other right hand menu, ref cursor's ui."* On a desktop two things sat
+at the "right hand": the full-height UrgAns card at the far right, and the
+rollout's row of pills, a right-aligned row at the top of the centre column with
+two more pills in a footer row under the activity list. They are ONE column now:
+the rollout menu is a card at its top and the UrgAns chat is directly beneath
+it, both on screen.
+
+**Desktop only (lg+).** A phone keeps the folded release menu behind its
+hamburger, unchanged in behaviour. **Not a scope expansion, no feature flag, no
+migration**: the mobile-scene-nav and back-arrow precedent for a founder-driven
+rework of a shipped surface. Revert is `git revert`, and the way to see it
+before merging is the PR's Vercel preview.
+
+### What was decided (asked before building)
+
+| Question | Answer |
+|---|---|
+| Which menu | The rollout pills, including the footer pair (Content, Fan capture) |
+| Which chat | UrgAns, not the team Chat |
+| "Under" | Stacked, both visible |
+| Phones | Unchanged |
+| UrgAns closed | The menu stays as a narrow labelled column |
+| Menu shape | Two columns of rows while the chat is open, one when it is not |
+| New activity | A small button beside the Motion bar |
+| Side cards of other rollouts | Removed, with their code |
+
+Defaults chosen without asking, and worth challenging: 208px for the menu-only
+width (not the ~256 first quoted), ONE row order shared with the phone, the
+header "On {rollout title}", and no rename of the "Chat" row (see Open points).
+
+### Ten things worth knowing before editing this
+
+1. **The layout lives in `components/app/RightRail.tsx`, and it moved there
+   verbatim.** The sticky, height-locked column, the viewport measure,
+   `--urgans-rail-width`, the drag handle and its keyboard twin. The chat card,
+   `ChappiSidePanel.tsx`, is only the card now. The handle is withheld while
+   the chat is closed (nothing to resize), and `resolveRailBounds` bounds the
+   CHAT's width only: the menu-only column is a fixed `RAIL_MENU_ONLY_WIDTH` =
+   208, narrower than the narrowest chat on purpose.
+2. **The menu is rendered by `WorkspaceView` and portalled into a slot the
+   column exposes.** Share, Change artist and Archive depend on state that
+   lives in `WorkspaceView` (the owner check, roster length, recap eligibility,
+   the dialogs' open flags, the toast), so a rail-hosted copy would lag the URL
+   by a frame and could offer Archive for the wrong rollout. `RightRail` puts
+   an empty `div` in the column and hands it to `stores/useRailMenuStore.ts`
+   through the store's own `setSlot`, NOT an inline callback: that is a new
+   function every render and would unmount the portalled menu each time.
+3. **`RolloutMenuPortal` is mounted from exactly one place**: `WorkspaceView`,
+   guarded by `isDesktopFocusedMode && isDesktopViewport && scopedReleaseSlim`.
+   Not from `WorkspaceDesktopFocused` or `TasksPanel`, which both exist twice
+   (the mobile and desktop branches are always both in the DOM and one is only
+   CSS-hidden), so a second mount would fight for the slot.
+4. **A claim, not a flag.** The column has to know a menu is coming so it can
+   size itself, so the portal claims the slot in `useIsomorphicLayoutEffect`
+   (before paint, so no frame paints at the old width), and the store keeps a
+   LIST of owners keyed by `useId()`: `menuPresent = slot !== null &&
+   owners.length > 0`. A list and not a boolean because the skeleton and the
+   real menu overlap for a moment during the hand-over, and one of them
+   releasing must not collapse the column for a frame. The claim depends on
+   there being ROWS: with every optional feature off and no Share, Archive or
+   Change artist, an empty menu must not reserve a blank 208px strip. If the
+   menu throws, `GiveSlotBackOnCrash` releases the claim.
+5. **One answer for the column's width, shared with the side menu.**
+   `railColumnWidth({ chatOpen, menuPresent, chatWidth })` is the chat's width,
+   or 208, or 0, and `railColumnTotal` adds the 32px gutter only above zero.
+   `WorkspaceIdentityPanel` reads the same two functions, so the left card and
+   the right column cannot disagree about how much room the column takes.
+   **Consequence, planned and accepted:** at 1024 to 1279px, with a rollout
+   scoped, the left card now steps aside whenever the column is on screen, where
+   it used to step aside only while the chat was open. There is no room for a
+   304px card and a 240px column beside a workspace that needs 560.
+6. **The transition rule.** The width animates only when the column stays
+   visible across the change. Opening a rollout mounts the menu, and a 280ms
+   slide there would reflow `<main>` frame by frame and flip the timeline and
+   calendar container queries mid-animation, so a change of `menuPresent` alone
+   is instant; the chat opening or closing keeps its slide exactly as the old
+   rail had it. It is state adjusted DURING render (`seen`) rather than a ref or
+   an effect: a ref read in render is a lint ERROR in this repo's config, and an
+   effect would paint one frame with the wrong answer first.
+7. **The chat card stays mounted while closed**, `invisible` + `inert` +
+   `aria-hidden`, never `display: none`: the transcript's scroll, the upload and
+   recap cards and any reply still on its way live in it. **`RightRail` must NOT
+   call `useSearchParams`.** It is mounted app-wide, and that hook in a
+   statically prerendered client component bails the page out to its nearest
+   Suspense boundary, which is what keeps `/auth`, `/onboarding`, `/settings` and
+   `/dashboard` `○ Static`. Everything URL-shaped lives in the menu, which
+   `WorkspaceView` renders. The rail is imported statically (so the slot is in
+   the server HTML as a closed, zero-width element); the heavy chat card is
+   still its own `dynamic({ ssr: false })` chunk.
+8. **Two boundaries, one per card.** A chat crash closes the chat
+   (`CloseChatOnCrash` subscribes to the open state, so the topbar icon does not
+   reopen an empty hole) and leaves the menu standing. The menu has its own
+   boundary because it is portalled OUT of the workspace but is still a React
+   child of it, so a throw in the menu would otherwise take the whole
+   workspace's boundary with it.
+9. **One builder for the phone's list and the desktop's card.**
+   `lib/rollout-menu.ts` (`buildRolloutMenu`, pure, flags passed in so its tests
+   need no `stubEnv`) returns the ordered rows, and `useRolloutMenuActions` maps
+   them to icons and click handlers (it is `moreMenuActionsRaw` extracted from
+   `TasksPanel`, not rewritten). Both surfaces call it with a `variant`, and the
+   only difference is the Notes row: "Note this" with `&new=1` on a phone,
+   "Notes" as a plain link (`/dashboard/notes?release=<id>`) on a desktop.
+   **The desktop order changed**, from sharing `RELEASE_MENU_ORDER`: Activities,
+   Chat, Content, Pitch, Metadata, Notes, Cover art, Song, Files, Share, Fan
+   capture, Change artist, Archive. Chat, Content and Pitch moved up, and
+   Metadata, Cover art, Song and Files moved down. **Content and Fan capture now
+   stay visible while a scene is open**; the old footer row hid them.
+10. **Two columns of rows while the chat is open.** With the chat open the
+    column is 320 to 720px wide and the chat needs about 22rem of its height, and
+    thirteen rows in one column would leave it roughly 273px on a 900px-high
+    window. The slot is capped at `clamp(9rem, 100% - 22.75rem, 50%)` (the chat's
+    `min-h-[22rem]` plus the 0.75rem the menu card carries below itself) and the
+    card scrolls inside it. The card is padded in on the left (`pl-3`) because the
+    drag handle's 12px hit area runs the column's full height and would otherwise
+    sit over the icons of the first rows.
+
+### The width budget, and why 208
+
+The drag bounds and `MAIN_MINIMUM` = 560 are unchanged. What is new is a budget
+pinned in `lib/layout-columns.test.ts`, from `appFrameWidth`
+(`min(1440, viewport - 2 * clamp(24, 3vw, 56))`) and the container-query
+thresholds in `globals.css` (544px for the timeline grid, 720px for the
+calendar's):
+
+| Viewport | Main content, chat open | Main content, menu only (208) |
+|---|---|---|
+| 1024 | 447 | 659 |
+| 1280 | about 419 (the rail clamps to 384) | 595 |
+| 1440 | 534 (the list, as today) | 746 (the calendar grid, 26px to spare) |
+| 1920 | 620 | 832 |
+
+**208 is not a taste number.** It is the side menu's own minimum width, it fits
+every label (about 155px needed) and it keeps the Content calendar's month grid
+at a 1440 window. 256, the first figure quoted, would have flipped the calendar
+to its agenda list there, and a test now fails if anyone raises the number
+without noticing. **Accepted regression:** at 1280 with UrgAns CLOSED the
+calendar drops to the agenda list (it was a grid, 835px wide, while the rails
+were hidden for it); collapsing the left card gives it back.
+
+### What was removed
+
+- The row of pills at the top of `TasksPanel` and its footer row (Content, Fan
+  capture), with every pill builder, `showOutboundPills` and the local flag
+  constants. `taskPanelPillClass` stays, its one consumer being New activity.
+- **The side cards for other rollouts**, with everything only they used:
+  `RailColumn`, the three-column grid, `hideRails` / `hideRailsForLayout`,
+  `leftRail` / `rightRail`, `onSelect`, and the `panel*Action` props on
+  `WorkspaceDesktopFocused` (its Archive, Change artist and Share now arrive
+  through the portal). Switching to another rollout is the back arrow to the
+  catalog and then a tap.
+- **New activity moved** to the right end of the back-arrow and Motion row. It
+  shows only while the main view is showing (`resolvePanelBody`), and calls
+  `openQuickCreate({ releaseId, source: 'inline' })` as before.
+
+### Loading state
+
+`WorkspaceSkeleton` lost its header pill placeholders, footer placeholders,
+rails and `hideRails`, and gained a New activity block on the top row.
+`RolloutMenuSkeletonPortal` claims the same slot and draws a placeholder card
+with the real card's classes, counting its rows from the REAL builder with the
+same flags. Share's presence is known from a flag; Archive and Change artist
+depend on data the skeleton does not have and are not reserved, which grows
+downward on arrival, the direction this file already prefers. It mounts only for
+a focused desktop view on `/dashboard`, because that skeleton is also the
+segment fallback for the pages under it, some of which carry a `?release=` of
+their own (the notes page).
+
+### Guards and copy
+
+`lib/rollout-vocabulary.test.ts` lists the new menu files and
+`WorkspaceDesktopFocused.tsx`, because the labels left `TasksPanel.tsx` and its
+own entry would have silently stopped covering them. The rollout tour's menu step
+no longer names the press kit, which left that menu on 2026-09-09.
+
+### Open points, and follow-ups
+
+- **The "Chat" row still says "Chat"**, on both surfaces. It is the rollout's
+  TEAM chat, and it now sits directly above the UrgAns card with the same
+  speech-bubble icon. Renaming it "Team chat" is a one-line change in
+  `lib/rollout-menu.ts` and was left for the founder to decide.
+- **At 1024 to 1279px the left card is hidden whenever a rollout is open, even
+  with UrgAns closed.** The right-hand column, menu-only, is now always there on
+  a rollout, and the card has always stepped aside at `lg` to `xl` while a right
+  column is on screen, so its links are gone at those widths until the window is
+  1280px or wider. The topbar still carries Catalog, UrgAns and (through the
+  account menu) Settings, so what has no other desktop route while a rollout is
+  open at those widths is **Shows and Directory**. Both are one tap away: the
+  back arrow returns to the catalog, where the menu is absent, the column is
+  closed and the card comes back (unless UrgAns is open, in which case the card
+  has always been hidden at these widths, on any page). This is the price of the
+  menu being permanent; it used to need UrgAns open. A follow-up, if wanted, is to
+  collapse the card to its 64px rail there instead of hiding it. Measured, that
+  keeps the timeline grid from about 1040px (the centre column is 531px at exactly
+  1024, 13px under the timeline's 544px threshold) and leaves the calendar as the
+  agenda list either way, so it is a real trade rather than a free win.
+- `resolveRailBounds` and `resolveSidebarBounds` read the raw viewport and
+  ignore the `.app-layout` gutters and the 1440 frame cap, so at 1920 a 720px
+  chat leaves `<main>` near 384px. Pre-existing, and out of scope here.
+
+### Verified
+
+`vitest run`: **4877 passed, 30 skipped**, against 4810 on a clean tree, so 67
+new tests (the new `rollout-menu`, `rail-menu-store` and `layout-columns` test
+files, the extended `rail-width` and `sidebar-width` ones, and six new entries
+in the vocabulary guard). `eslint .`: **3 errors / 83 warnings, the same as the
+clean tree**, and compared per file rather than by the totals: every file has
+the same number of findings as on the clean tree, and the only differences are
+line numbers moving with the edits (`WorkspaceView.tsx` carries five, the three
+pre-existing ref-in-render errors and two warnings; `WorkspaceIdentityPanel.tsx`,
+`ChappiDock.tsx` and `TasksPanel.tsx` one warning each). `tsc --noEmit`: only
+the 8 documented `confirmed-action.test.ts` errors. `next build` green **by exit code** with the layout flags on, and with
+`/auth`, `/onboarding`, `/settings`, `/dashboard`, `/dashboard/urgans` and
+`/locked` all still `○ Static`, and green again with every one of those flags
+off. The new arbitrary values were checked in the COMPILED css rather than the
+source: Tailwind rewrites the slot's cap to `clamp(9rem,100% - 22.75rem,50%)`,
+dropping the inner `calc(`, which is valid inside `clamp`.
+
+**Nineteen mutations, each confirmed applied and each killed by a named test**
+(the lit row inverted, the phone and desktop Notes rows swapped, Content hiding
+while a scene is open, an empty menu no longer empty, the id not URL-encoded,
+two rows ignoring their flags, the menu-only column with no width, an open chat
+ignoring its width, the gutter added to an absent column, 208 raised to 240, the
+frame cap removed, the main padding forgotten, the slot ignored by
+`menuPresent`, a non-idempotent claim, one release emptying every owner, and
+three on the on-screen rule below). The harness that ran them prints
+`APPLIED` before running and compares the file byte for byte after restoring
+it, because a mutation that never landed reads as a survivor.
+
+### Found by looking at it: the harness pass
+
+**The layout WAS looked at, through a throwaway page**, which is the
+Share-to-socials precedent and found something the tests could not. A page under
+`/pitch/` (AppShell renders that prefix bare, so the page drew AppShell's own
+frame classes itself) mounted the REAL `RightRail`, `RolloutMenuPortal`,
+`RolloutMenu`, `ChappiSidePanel` and `WorkspaceIdentityPanel` in a fake topbar
+and main. The flags were forced through a wrapper that sets `process.env` before
+requiring Next's own bin (the preview launcher rejects `--env-file` in
+`NODE_OPTIONS`), so no `.env` file was touched. The page, the temporary launch
+entry and the stale `.next` are all gone: leaving `.next` behind would leave a
+generated type reference to the deleted route, and the next `tsc` would fail on
+it.
+
+- **Every width matched the table above, to the pixel**: menu only at 1024, 1280,
+  1440 and 1920 gave a centre column of 659, 595, 746 and 832; chat open gave 534
+  at 1440 (the default 420px chat) and 419 at 1280.
+- **The two-column menu fits at the narrowest chat.** At 320px the columns are
+  148px and no label is clipped, "Archive rollout" and "Change artist" included.
+- **The drag works**: the handle sits over the column's left edge at full height,
+  dragging it left by 151px widened the chat from 320 to 471px, that width was
+  saved, and the body cursor reset on release. `End` went to the minimum and the
+  handle read `aria-valuenow` 320.
+- **The rows behave**: 13 of them in the shared order, `aria-pressed` on the scene
+  rows only, Notes a real link to `/dashboard/notes?release=rel-1`, and Share,
+  Change artist and Archive with no `aria-pressed` at all. Pressing Song lit only
+  Song and put `?release=rel-1&scene=song` in the URL, and pressing it again
+  cleared both.
+- **The transition rule holds at the class level**: toggling the chat left the
+  0.28s width transition on, toggling only the menu removed it.
+- **A real regression, found and fixed**: the left card's stored width was
+  clamped and SAVED while the card was not on screen. At 1024 to 1279px the
+  right-hand column, even menu-only, takes the card's place, but the card's
+  effect still ran, so one visit to a narrow window turned a 240px menu into a
+  208px one for good. It used to need the chat open at that width; it happens on
+  every rollout there now. `sidebarIsOnScreen` in `lib/sidebar-width.ts` is the
+  same rule as the card's own `hidden lg:block` / `hidden xl:block`, five tests
+  pin it, three mutations (ignoring the competing column, ignoring the collapsed
+  exemption, using xl for everyone) each kill exactly their own, and the write-back
+  in `WorkspaceIdentityPanel` now waits for it. Re-run through 1440, 1024, 1100,
+  1279, 1280, 1920 and back to 1440: nothing is saved and the card is 240px again.
+  The guard in the panel is comment-guarded rather than test-guarded, since this
+  repo has no component tests.
+- **The skeleton card is the real card minus the two rows it does not reserve**:
+  414.1px against 482.5px for 13 rows, once its header was matched to the real
+  header's measured 24.5px (it was 4px short). The chat card lands at the same
+  offset under either.
+
+**A caveat for the next session that uses the Browser pane.** While the pane is
+hidden, `requestAnimationFrame`, `ResizeObserver` and CSS transitions do not
+run, so a readout driven by any of them goes stale and a `rAF`-based script never
+settles (and keeps running in the page after the tool times out, which then
+interleaves with the next script). What worked: a fresh navigation per viewport
+size, an injected `transition: none` rule, and `getBoundingClientRect` for the
+numbers. `tabs_context` says whether the pane is hidden, and `show_pane` cannot
+show it (its panes are the diff, a file, the terminal, the PR, tasks, the plan
+and artifacts).
+
+### Not verified, and it is the real visual risk
+
+**No real session has seen this.** The pass above used the real column, menu and
+chat components, but inside a throwaway page with a faked rollout and faked
+callbacks. This sandbox cannot mint an authenticated session and has no route to
+app.urganize.app, so what has never run is `WorkspaceView` itself wired to a real
+rollout: the real Share, Archive and Change artist dialogs and the owner and
+artist-count checks that decide whether their rows show, the slot claim on a real
+navigation, and a hard refresh on `?release=` or `?scene=` with the skeleton
+handing over to the real menu. Also unseen: the width animation (the pane was
+hidden, so transitions did not run, and only the class that switches them was
+checked), the phone widths (the menu and column are `lg` and up, and a phone was
+not opened), the rollout tour's highlight on the new card, and an UrgAns reply in
+flight while the column opens and closes. The PR's Vercel preview is where to
+look.
+
+A pass on the preview, in this order: 1024, 1280, 1440 and 1920 with UrgAns open
+and closed; toggling UrgAns through the X, the topbar icon and Ctrl/Cmd+J, and
+the drag handle present only while the chat is open; every row, including Notes,
+Share, Archive and Change artist on an owner account with more than one artist;
+a hard refresh on `?release=` and on `?scene=`; an UrgAns draft and a reply in
+flight surviving the column opening and closing; each row's flag off in turn
+(`CHAPPI`, `TIMELINE`, `RELEASE_CHAT`, and the rest); below 1024, no duplicate
+menu; Tour B highlighting the menu card; the tab order (menu, then chat); and
+light and dark.
+
+### Merge record
+
+`v1.51.0` (the ledger entry and all 11 `package.json` files) was committed and
+merged on 2026-09-30, after a rebase onto #644. The version number was re-read on
+`origin/main` immediately before merging, as version numbers on this repo are
+perishable.
+
+---
+
+## Saved chats move into the left menu (2026-09-30, v1.52.0)
+
+Founder, with a screenshot of the left menu and a green line under the nav rows:
+put the chat history there, the way Cursor places it. **This supersedes the
+"xl+ chats column" in "Saved UrgAns chats" above**, which described a separate
+256px column beside the conversation; that column is deleted. Everything else
+in that section (the save engine, resume, conflicts, the panel variant) is
+unchanged. No migration, no new flag: it rides `NEXT_PUBLIC_FEATURE_URGANS_HISTORY`.
+
+- **Where it shows.** On `/dashboard/urgans` only, in the free space between the
+  nav rows and the pinned Admin/Settings group of `WorkspaceIdentityPanel`, under
+  its own top divider. The nav rows keep their natural height and only shrink,
+  and scroll, on a viewport too short for both; the list takes what is left and
+  scrolls inside itself, so Admin and Settings stay pinned. Elsewhere the menu
+  is exactly what it was.
+- **One rule, one file.** `lib/chats-menu.ts` decides whether the menu carries
+  the list (history on, the menu's own two flags on, the menu expanded). The
+  menu, the page and the page skeleton all read it, so they cannot disagree.
+- **The 64px icon rail has no room for a list**, so collapsing the menu hands
+  chats back to the page: its own "Chats" toggle shows again. The toggle is
+  `lg:hidden` while the menu carries the list, and shows at every width when it
+  does not (menu flag off, menu collapsed, or below lg where the menu is hidden).
+  The panel it opens uses the same rule, so a phone still has its way in.
+- **`ChappiHistoryList` has a `menu` variant** (replacing `column`): one compact
+  line per chat like the nav rows, the age moved into the tooltip, an icon-only
+  new-chat button, and delete on hover. The `panel` variant is untouched.
+- **Loaded on demand.** The menu is mounted app-wide, so the list is a
+  `next/dynamic` client-only import shown only on the assistant page, with
+  loading rows in the meantime.
+- **The skeleton no longer reserves a column.** `ChappiPageSkeleton` lost its
+  chats column; the menu is chrome with its own placeholder.
+
+Verified: type-check clean (apart from the documented pre-existing errors), lint
+clean on every touched file, the chat tests green, and the list rendered in a
+throwaway harness page (deleted) inside a mock of the menu. **Not verified: the
+real menu on the real page with a real account and real saved chats, at the
+collapsed state, or on a phone.**
+
+---
+
+## Accessibility and copy pass (2026-09-30, no flag)
 
 Origin: the `better-interface` skill (with the `shadcn/ui` and `jakubkrehel` skill packs, installed globally) was run over every screen by six read-only agents. Every area came back Block. What follows is what was fixed and the rules that keep it fixed. **No flag, no migration, no changelog entry or version bump**: it is internal polish plus visible wording, and a version bump wants to be the last commit before merge.
 

@@ -1,4 +1,4 @@
-type AiMessage = {
+export type AiMessage = {
   role: 'system' | 'user' | 'assistant';
   content: string;
 };
@@ -313,6 +313,40 @@ const parseProviderError = (status: number, payload: Record<string, unknown> | n
   });
 };
 
+/**
+ * The request body for an OpenAI-protocol gateway. Exported so the model
+ * evaluation (model-eval.integration.test.ts) probes the shape production really
+ * sends, not a copy of it. Note what is NOT in it: an output cap. These features
+ * have never sent one, and adding one would change every model's behaviour, which
+ * is not something the model router should do on the side.
+ */
+export function buildOpenAiRequestBody(params: {
+  model: string;
+  messages: AiMessage[];
+  format: 'json' | 'text';
+  jsonSchema?: AiJsonSchema;
+  reasoningEffort?: ReasoningEffort;
+}): Record<string, unknown> {
+  const effort =
+    params.reasoningEffort && supportsReasoningEffort(params.model) ? params.reasoningEffort : undefined;
+  const responseFormat =
+    params.format !== 'json'
+      ? null
+      : params.jsonSchema
+        ? {
+            type: 'json_schema',
+            json_schema: { name: params.jsonSchema.name, strict: true, schema: params.jsonSchema.schema },
+          }
+        : { type: 'json_object' };
+  return {
+    model: params.model,
+    messages: params.messages,
+    stream: false,
+    ...(responseFormat ? { response_format: responseFormat } : {}),
+    ...(effort ? { reasoning_effort: effort } : {}),
+  };
+}
+
 const requestAiGateway = async ({
   messages,
   timeoutMs,
@@ -343,13 +377,6 @@ const requestAiGateway = async ({
   }
 
   const resolvedModel = model || config.defaultModel;
-  const effort = reasoningEffort && supportsReasoningEffort(resolvedModel) ? reasoningEffort : undefined;
-  const responseFormat =
-    format !== 'json'
-      ? null
-      : jsonSchema
-        ? { type: 'json_schema', json_schema: { name: jsonSchema.name, strict: true, schema: jsonSchema.schema } }
-        : { type: 'json_object' };
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -369,13 +396,7 @@ const requestAiGateway = async ({
         'x-api-key': config.apiKey,
       };
   const body = config.usesOpenAiProtocol
-    ? {
-        model: resolvedModel,
-        messages,
-        stream: false,
-        ...(responseFormat ? { response_format: responseFormat } : {}),
-        ...(effort ? { reasoning_effort: effort } : {}),
-      }
+    ? buildOpenAiRequestBody({ model: resolvedModel, messages, format, jsonSchema, reasoningEffort })
     : {
         model: resolvedModel,
         messages,
@@ -560,6 +581,13 @@ type GeneratePlainTextAiOutputOptions = {
   model?: string;
   /** See GenerateStructuredAiOutputOptions.onUsage — same contract. */
   onUsage?: (usage: AiUsage) => void;
+  /** See GenerateStructuredAiOutputOptions.reasoningEffort — same contract,
+   *  including the one-shot resend without it on a 400 that names it. */
+  reasoningEffort?: ReasoningEffort;
+  /** See GenerateStructuredAiOutputOptions.deadlineMs — same contract. Needed
+   *  once a request can be handed to a second model: each model's own retry
+   *  loop has to leave the next one time to finish. */
+  deadlineMs?: number;
 };
 
 /**
@@ -576,6 +604,8 @@ export async function generatePlainTextAiOutput({
   maxRetries = DEFAULT_MAX_RETRIES,
   model,
   onUsage,
+  reasoningEffort,
+  deadlineMs,
 }: GeneratePlainTextAiOutputOptions): Promise<string> {
   const config = getAiGatewayConfig();
   if (!config) {
@@ -585,10 +615,31 @@ export async function generatePlainTextAiOutput({
   const isFreeAutoRouter = !model && config.isOpenRouter;
 
   let lastError: unknown = null;
+  // Flips at most once, like the structured generator's: whether the gateway
+  // accepts the parameter is a fact about the gateway, not about this attempt.
+  let useEffort = Boolean(reasoningEffort);
 
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    const attemptTimeout = attemptTimeoutFor(timeoutMs, deadlineMs, Date.now());
+    if (attemptTimeout === null) {
+      if (!lastError) {
+        lastError = new AiProviderError('AI request deadline passed before the model was asked', {
+          code: 'deadline',
+          retryable: false,
+        });
+      }
+      break;
+    }
+
     try {
-      const raw = await requestAiGateway({ messages, timeoutMs, model, format: 'text', onUsage });
+      const raw = await requestAiGateway({
+        messages,
+        timeoutMs: attemptTimeout,
+        model,
+        format: 'text',
+        onUsage,
+        reasoningEffort: useEffort ? reasoningEffort : undefined,
+      });
       const trimmed = raw.trim();
       if (!trimmed) {
         throw new AiProviderError('Model returned empty content', { retryable: isFreeAutoRouter });
@@ -596,6 +647,16 @@ export async function generatePlainTextAiOutput({
       return trimmed;
     } catch (error) {
       lastError = error;
+      if (
+        useEffort &&
+        error instanceof AiProviderError &&
+        error.status === 400 &&
+        EFFORT_REJECTION.test(error.message)
+      ) {
+        useEffort = false;
+        attempt -= 1;
+        continue;
+      }
       // Same reasoning as generateStructuredAiOutput's identical block: a
       // client-side abort must count as retryable on its own, not only under
       // the free auto-router, or a pinned model never gets its second attempt.
@@ -608,7 +669,10 @@ export async function generatePlainTextAiOutput({
               { retryable: isFreeAutoRouter || isAbort }
             );
 
-      const shouldRetry = (isFreeAutoRouter || isAbort || typedError.retryable) && attempt < maxRetries;
+      const shouldRetry =
+        (isFreeAutoRouter || isAbort || typedError.retryable) &&
+        attempt < maxRetries &&
+        hasRetryBudget(deadlineMs, Date.now());
       if (shouldRetry) {
         await sleep(Math.min(1500 * attempt, 4000));
         continue;

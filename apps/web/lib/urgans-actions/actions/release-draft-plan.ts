@@ -47,6 +47,8 @@ import {
 } from '../../release-planning-actions-server';
 import { parseReleasePlanIntake, type CreatedPlan } from '../../release-planning';
 import { resolvePlannerModel, resolvePlannerReasoningEffort } from '../../ai/planner-model';
+import { loadTeamForRouting } from '../../ai/routing-team-server';
+import { summarizeTrace, type RoutingTrace } from '../../ai/model-router';
 import { resolveReleaseTaskWorkspace } from '../../tasks-server';
 import type { AiUsage } from '../../ai/provider';
 import type { WorkspaceMember } from '@/types/auth';
@@ -138,6 +140,7 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
     const { template, fallbackToSingle } = getPlannerTemplate(intake.release_type);
 
     let usage: AiUsage | null = null;
+    let routed: RoutingTrace | null = null;
 
     const result = await createReleasePlan(admin, {
       release,
@@ -147,11 +150,18 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
       template,
       fallbackToSingle,
       loadTeam: () => loadTeamForRelease(admin, objectId, actor),
-      plannerModel: resolvePlannerModel(),
+      // The RELEASE OWNER's team decides the ceiling, not the acting teammate's
+      // (the same rule as the tier gate). No email: the owner's is not known
+      // here, and the only thing an email does is the staff allowlist, which
+      // must not be granted to the owner on the actor's say-so.
+      routingTeam: await loadTeamForRouting('planner', { id: ownerUserId, email: null }),
       reasoningEffort: resolvePlannerReasoningEffort(),
       deadlineMs: Date.now() + PLANNER_DEADLINE_MS,
       onUsage: (reported) => {
         usage = reported;
+      },
+      onTrace: (trace) => {
+        routed = trace;
       },
     });
 
@@ -159,16 +169,21 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
       return { ok: false, status: result.status, error: result.error };
     }
 
+    const trace = routed as RoutingTrace | null;
     return {
       ok: true,
       output: result.plan,
       // A short, loggable summary — never the full plan document, which the
-      // caller already has as `output` on this same row.
+      // caller already has as `output` on this same row. When the model router
+      // acted, what it did rides along (bounded, and absent otherwise).
       inputSummary: {
         releaseType: intake.release_type,
         exclusionsCount: intake.exclusions?.length ?? 0,
+        ...(trace ? { routing: summarizeTrace(trace) } : {}),
       },
-      model: resolvePlannerModel() ?? null,
+      // The model that ANSWERED: the last one the router called, or, with the
+      // router off, the one the planner has always used.
+      model: trace?.models[trace.models.length - 1] ?? resolvePlannerModel() ?? null,
       tokensIn: usage ? (usage as AiUsage).promptTokens : null,
       tokensOut: usage ? (usage as AiUsage).completionTokens : null,
     };

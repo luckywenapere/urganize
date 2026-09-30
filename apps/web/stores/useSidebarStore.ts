@@ -19,7 +19,7 @@ import {
  * WHY A STORE, when `collapsed` deliberately lived as local component state
  * until now. That note said it stayed local "because nothing outside this
  * panel toggles it", which was true and is the condition that just changed:
- * ChappiSidePanel has to READ the menu's effective width to compute its own
+ * RightRail has to READ the menu's effective width to compute the chat's own
  * maximum, and the effective width is 64px whenever the menu is collapsed. So
  * the rail needs both values, and a second copy of either — mirrored from a
  * prop or re-read from storage — is the drift this repo keeps correcting.
