@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { settingsDeepLink } from '@/lib/settings-nav';
 import { useSettingsLinkClick } from '@/components/settings/useOpenSettings';
-import { ChevronDown, Layers, Plus } from '@/components/icons';
+import { Check, ChevronDown, Layers, Plus } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useEventsStore } from '@/stores/useEventsStore';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
@@ -333,7 +333,7 @@ export default function ShowsPageClient() {
       </header>
 
       {error ? (
-        <div className="mt-6 rounded-lg border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
+        <div role="alert" className="mt-6 rounded-lg border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
           <p>{error}</p>
           <button
             type="button"
@@ -355,12 +355,13 @@ export default function ShowsPageClient() {
                 type="button"
                 aria-pressed={active}
                 onClick={() => setArtistFilter(artist.id)}
-                className={`motion-focus rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                className={`motion-focus inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
                   active
                     ? 'border-brand bg-brand/10 text-brand'
                     : 'border-stroke-default text-content-secondary hover:text-content-primary'
                 }`}
               >
+                {active ? <Check className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
                 {artist.name}
               </button>
             );

@@ -22,7 +22,7 @@ export type UnsubscribeScope = Extract<EmailCategory, 'onboarding' | 'reminders'
 
 export const UNSUBSCRIBE_SCOPE_LABELS: Record<UnsubscribeScope, string> = {
   onboarding: 'getting-started emails',
-  reminders: 'release reminders',
+  reminders: 'rollout reminders',
   announcements: 'product announcements',
 };
 

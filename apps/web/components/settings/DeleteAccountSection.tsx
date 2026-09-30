@@ -67,7 +67,7 @@ export function DeleteAccountSection() {
             className="w-full rounded-lg border border-status-error/35 bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-status-error"
           />
         </label>
-        {error && <p className="text-sm text-status-error">{error}</p>}
+        {error && <p role="alert" className="text-sm text-status-error">{error}</p>}
         <button
           type="button"
           onClick={() => void handleDeleteNow()}

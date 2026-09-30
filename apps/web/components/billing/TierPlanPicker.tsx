@@ -8,6 +8,7 @@ import {
   type BillingInterval,
   type PricingTierId,
 } from '@urganize/pricing';
+import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
 
 /**
  * The pricing-v2 plan picker: pick a tier, and how often you pay.
@@ -71,6 +72,11 @@ export function TierPlanPicker({
         <div
           role="radiogroup"
           aria-label="Choose how often you pay"
+          onKeyDown={(event) =>
+            onRadioGroupKeyDown(event, SELLABLE_INTERVALS.indexOf(selectedInterval), (index) =>
+              onSelectInterval(SELLABLE_INTERVALS[index])
+            )
+          }
           className="inline-flex overflow-hidden rounded-full border border-stroke-default bg-bg-elevated p-1"
         >
           {SELLABLE_INTERVALS.map((option) => {
@@ -81,6 +87,7 @@ export function TierPlanPicker({
                 type="button"
                 role="radio"
                 aria-checked={isActive}
+                tabIndex={isActive ? 0 : -1}
                 disabled={disabled}
                 onClick={() => onSelectInterval(option)}
                 className={`min-h-9 rounded-full px-4 text-xs font-semibold transition-colors ${

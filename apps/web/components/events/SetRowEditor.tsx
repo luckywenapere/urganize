@@ -266,7 +266,7 @@ export function SetRowEditor({
   };
 
   const fieldClass =
-    'w-full rounded-lg border border-stroke-default bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand disabled:opacity-50';
+    'w-full rounded-lg border border-stroke-control bg-bg-surface px-3 py-2 text-sm text-content-primary outline-none focus:border-brand disabled:opacity-50';
   const labelClass = 'block text-xs font-semibold text-content-secondary';
   const blurOnEnter = (keyEvent: React.KeyboardEvent<HTMLInputElement>) => {
     if (keyEvent.key === 'Enter') {
@@ -320,7 +320,7 @@ export function SetRowEditor({
         </label>
         <p id={`length-help-${item.id}`} className="mt-1 text-xs text-content-tertiary">
           {lengthError ? (
-            <span className="text-status-error">{lengthError}</span>
+            <span role="alert" className="text-status-error">{lengthError}</span>
           ) : item.durationSource ? (
             <>
               {sourceCopy[item.durationSource]}
@@ -372,7 +372,7 @@ export function SetRowEditor({
                         className="h-4 w-4 accent-[rgb(var(--color-brand))]"
                       />
                       <span className="min-w-0">
-                        <span className="block truncate text-sm text-content-primary">{file.fileName}</span>
+                        <span className="line-clamp-2 break-words text-sm text-content-primary">{file.fileName}</span>
                         {file.durationSeconds ? (
                           <span className="block text-xs text-content-tertiary">
                             {formatDuration(file.durationSeconds)}
@@ -385,7 +385,7 @@ export function SetRowEditor({
                       disabled={saving}
                       aria-label={`Which version ${file.fileName} is`}
                       onChange={(changeEvent) => void relabelFile(file, changeEvent.target.value)}
-                      className="h-8 rounded-md border border-stroke-default bg-bg-surface px-2 text-xs text-content-primary outline-none focus:border-brand"
+                      className="h-8 rounded-md border border-stroke-control bg-bg-surface px-2 text-xs text-content-primary outline-none focus:border-brand"
                     >
                       {SONG_VERSION_LABELS.map((option) => (
                         <option key={option} value={option}>
@@ -433,7 +433,7 @@ export function SetRowEditor({
 
           {upload.state.status === 'uploading' ? (
             <div className="mt-2" aria-live="polite">
-              <p className="truncate text-xs text-content-secondary">Uploading {upload.state.fileName}</p>
+              <p className="line-clamp-2 break-words text-xs text-content-secondary">Uploading {upload.state.fileName}</p>
               <div
                 role="progressbar"
                 aria-valuemin={0}

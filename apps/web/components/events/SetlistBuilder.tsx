@@ -405,7 +405,7 @@ export function SetlistBuilder({
       </div>
 
       {loadError ? (
-        <div className="mt-3 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
+        <div role="alert" className="mt-3 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
           {loadError}{' '}
           <button type="button" onClick={() => void loadItems()} className="font-semibold underline">
             Try again
@@ -445,7 +445,7 @@ export function SetlistBuilder({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span
-                    className={`block truncate text-sm font-semibold ${
+                    className={`line-clamp-2 break-words text-sm font-semibold ${
                       isSong ? 'text-content-primary' : 'text-content-secondary'
                     }`}
                   >
@@ -465,7 +465,7 @@ export function SetlistBuilder({
                     {isSong && !item.version ? (
                       <span className="font-semibold text-status-warning">No file</span>
                     ) : null}
-                    {item.cueNote ? <span className="truncate italic">{item.cueNote}</span> : null}
+                    {item.cueNote ? <span className="line-clamp-2 break-words italic">{item.cueNote}</span> : null}
                   </span>
                 </span>
               </>

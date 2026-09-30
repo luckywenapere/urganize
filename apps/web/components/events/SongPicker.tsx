@@ -109,7 +109,7 @@ export function SongPicker({ catalog, inSetIds, busy, onPick, onCreate }: SongPi
               }
             }
           }}
-          className="h-10 w-full rounded-lg border border-stroke-default bg-bg-base pl-9 pr-9 text-content-primary outline-none transition-colors focus:border-brand"
+          className="h-10 w-full rounded-lg border border-stroke-control bg-bg-base pl-9 pr-9 text-content-primary outline-none transition-colors focus:border-brand"
         />
         {busy ? (
           <Loader2

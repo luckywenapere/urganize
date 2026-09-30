@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from 'react';
 import { AlertCircle } from '@/components/icons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { ReleaseCombobox } from '@/components/shared/ReleaseCombobox';
 import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import { type ReleaseOption } from '@/lib/release-helpers';
@@ -64,6 +65,15 @@ export function TaskQuickCreateModal({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const headingId = useId();
 
+  // Tab stays inside the dialog while it is open (the page behind the overlay
+  // is inert to keyboard users, matching what the backdrop says visually) and
+  // focus returns to whatever opened it. Declared before the title-focus
+  // effect so the opener is remembered first; 'none' because the title field
+  // takes focus itself just below. This replaced a hand-rolled window-level
+  // trap that had to be kept in step with every other modal's, and that
+  // fought any modal opened above it.
+  useDialogFocus(isOpen, cardRef, { initialFocus: 'none' });
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -76,10 +86,7 @@ export function TaskQuickCreateModal({
   }, [isOpen]);
 
   // Escape closes (guarded while saving so a mid-flight create isn't
-  // abandoned by accident), and Tab is trapped inside the dialog — the page
-  // behind the overlay is inert to keyboard users, matching what the
-  // backdrop already communicates visually. Same effect structure as
-  // CreateReleaseModal.
+  // abandoned by accident).
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -96,29 +103,6 @@ export function TaskQuickCreateModal({
           return;
         }
         onClose();
-        return;
-      }
-
-      if (event.key === 'Tab' && cardRef.current) {
-        const focusables = Array.from(
-          cardRef.current.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
-          )
-        ).filter((element) => element.offsetParent !== null);
-        if (!focusables.length) {
-          return;
-        }
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        const active = document.activeElement as HTMLElement | null;
-
-        if (event.shiftKey && (active === first || !cardRef.current.contains(active))) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && (active === last || !cardRef.current.contains(active))) {
-          event.preventDefault();
-          first.focus();
-        }
       }
     };
 

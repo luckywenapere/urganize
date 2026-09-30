@@ -19,7 +19,7 @@ import { errorMessage } from '@/lib/errors';
 
 // What redeeming actually unlocks — kept honest to the shipped product.
 const PERKS = [
-  'A hand-crafted rollout rollout plan',
+  'A hand-crafted rollout plan',
   'Tasks with owners, due dates, and dependencies',
   'Every rollout file in one place',
   'Milestones on your rollout timeline',
@@ -119,7 +119,7 @@ export default function RedeemPageClient() {
                 <CheckCircle2 className="size-10 text-brand" />
                 <h1 className="font-display text-xl font-semibold text-content-primary">
                   You&apos;re in
-                  {success.freeDays ? ` — ${success.freeDays} days of full access` : ''}
+                  {success.freeDays ? `: ${success.freeDays} days of full access` : ''}
                 </h1>
                 <p className="text-sm text-content-secondary">
                   {success.label ? `${success.label}. ` : ''}Taking you in…
@@ -136,7 +136,7 @@ export default function RedeemPageClient() {
                       Unlock your free access
                     </h1>
                     <p className="mt-1 text-sm text-content-secondary">
-                      Enter your promo code to get full Urganize access — free, no card.
+                      Enter your promo code to get full Urganize access. It is free and needs no card.
                     </p>
                   </div>
                 </div>
@@ -199,7 +199,7 @@ export default function RedeemPageClient() {
                 )}
 
                 {error ? (
-                  <div className="mt-4 flex items-start gap-2 text-sm text-status-error">
+                  <div role="alert" className="mt-4 flex items-start gap-2 text-sm text-status-error">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                     <span>{error}</span>
                   </div>

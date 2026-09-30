@@ -154,7 +154,7 @@ export function RolloutBanner({
               The proposal describes a real difference between the kit and the
               product, so it comes back next time rather than being buried by a
               tap somebody does not remember making. */}
-          {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
+          {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
         </div>
       </div>
     </section>

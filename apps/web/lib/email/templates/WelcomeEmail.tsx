@@ -32,11 +32,11 @@ export function WelcomeEmail({ recipientName, unsubscribeUrl }: WelcomeEmailProp
     >
       <Paragraph>{greeting}</Paragraph>
       <Paragraph>
-        Lucky here &mdash; I&rsquo;m the founder of Urganize. Thanks for signing up.
+        Lucky here. I&rsquo;m the founder of Urganize. Thanks for signing up.
       </Paragraph>
       <Paragraph>
         I built this because running a rollout across group chats and spreadsheets kept breaking my
-        own team. In Urganize you create a rollout and get a full rollout plan &mdash; every task,
+        own team. In Urganize you create a rollout and get a full rollout plan with every task,
         in order, with dates. You just work the plan.
       </Paragraph>
       <Paragraph>
@@ -48,7 +48,7 @@ export function WelcomeEmail({ recipientName, unsubscribeUrl }: WelcomeEmailProp
         When you&rsquo;re ready, <AccentLink href={APP_URL}>set up your first rollout</AccentLink>.
       </Paragraph>
       <Text style={{ margin: '24px 0 0', color: '#1e2621', fontSize: '15px', lineHeight: '1.65' }}>
-        &mdash; Lucky
+        Lucky
         <br />
         <span style={{ color: MUTED_TEXT, fontSize: '13px' }}>Founder, Urganize</span>
       </Text>
@@ -56,4 +56,4 @@ export function WelcomeEmail({ recipientName, unsubscribeUrl }: WelcomeEmailProp
   );
 }
 
-export const WELCOME_SUBJECT = 'Welcome to Urganize — a note from Lucky';
+export const WELCOME_SUBJECT = 'Welcome to Urganize: a note from Lucky';

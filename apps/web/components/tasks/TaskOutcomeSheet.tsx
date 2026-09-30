@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageCircle, X } from '@/components/icons';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
+import { Check, MessageCircle, X } from '@/components/icons';
 
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
@@ -63,6 +64,8 @@ function OutcomeSheetBody({
 
   const dragStartY = useRef<number | null>(null);
   const isMounted = useRef(true);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, panelRef);
 
   useEffect(() => lockBodyScroll(), []);
 
@@ -174,6 +177,8 @@ function OutcomeSheetBody({
       }}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="How did it go"
@@ -226,8 +231,9 @@ function OutcomeSheetBody({
                 onChange={(event) => setAnswer(event.target.value.slice(0, OUTCOME_NOTE_MAX_LENGTH))}
                 rows={2}
                 autoFocus
+                aria-label={question}
                 placeholder="Your answer"
-                className="mt-3 w-full resize-none rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+                className="mt-3 w-full resize-none rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
               <button
                 type="button"
@@ -254,12 +260,13 @@ function OutcomeSheetBody({
                       type="button"
                       aria-pressed={isSelected}
                       onClick={() => setRating(option)}
-                      className={`motion-focus motion-press inline-flex h-10 items-center rounded-full border px-4 text-sm font-semibold transition-colors ${
+                      className={`motion-focus motion-press inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors ${
                         isSelected
                           ? 'border-brand bg-brand/10 text-content-primary'
                           : 'border-stroke-default bg-bg-surface text-content-primary hover:bg-bg-hover'
                       }`}
                     >
+                      {isSelected ? <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : null}
                       {TASK_OUTCOME_LABELS[option]}
                     </button>
                   );
@@ -270,12 +277,17 @@ function OutcomeSheetBody({
                 value={note}
                 onChange={(event) => setNote(event.target.value.slice(0, OUTCOME_NOTE_MAX_LENGTH))}
                 rows={3}
+                aria-label="What happened"
                 placeholder="Tell UrgAns what happened"
-                className="mt-4 w-full resize-none rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+                className="mt-4 w-full resize-none rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
               <p className="mt-1 text-xs text-content-tertiary">Optional</p>
 
-              {saveError ? <p className="mt-3 text-sm text-status-error">{saveError}</p> : null}
+              {saveError ? (
+                <p role="alert" className="mt-3 text-sm text-status-error">
+                  {saveError}
+                </p>
+              ) : null}
 
               <button
                 type="button"

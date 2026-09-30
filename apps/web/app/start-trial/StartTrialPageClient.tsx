@@ -64,7 +64,7 @@ type AccessSnapshot = {
 const VALUE_BULLETS = [
   'A full rollout plan for your rollout, built from a proven playbook.',
   'Every activity, file and teammate for the rollout in one place.',
-  'You will not be charged during the trial — cancel anytime in Settings.',
+  'You will not be charged during the trial. Cancel anytime in Settings.',
 ];
 
 export default function StartTrialPageClient() {
@@ -221,8 +221,8 @@ export default function StartTrialPageClient() {
               Start your {TRIAL_DAYS}-day free trial.
             </h1>
             <p className="text-sm text-content-secondary">
-              Everything you need to run a rollout — the plan, the tasks, the
-              team — free for {TRIAL_DAYS} days. Add a card to begin; nothing
+              Everything you need to run a rollout, from the plan to the tasks to the
+              team, is free for {TRIAL_DAYS} days. Add a card to begin. Nothing
               is charged until your trial ends.
             </p>
             <ul className="flex flex-col gap-3">
@@ -269,7 +269,7 @@ export default function StartTrialPageClient() {
                     Pick your plan
                   </h2>
                   <p className="mt-1 text-xs text-content-secondary">
-                    Your trial is free either way — this is what starts when it
+                    Your trial is free either way. This is what starts when it
                     ends.
                   </p>
                 </div>
@@ -310,10 +310,10 @@ export default function StartTrialPageClient() {
                   </div>
                   <p className="text-xs text-content-tertiary">
                     We place a ₦{TRIAL_CARD_VERIFICATION_DISPLAY_NGN} card check to
-                    verify your card — refunded immediately.
+                    verify your card. It is refunded immediately.
                   </p>
                   <p className="text-xs text-content-tertiary">
-                    Trial ends {trialEndDate} — then{' '}
+                    Trial ends {trialEndDate}, then{' '}
                     {formatPlanCyclePrice(selectedPlan, 'NGN')} unless you cancel.
                     Cancel anytime in Settings → Billing.
                   </p>
@@ -331,7 +331,7 @@ export default function StartTrialPageClient() {
                 </Button>
 
                 {checkoutError ? (
-                  <div className="flex items-start gap-2 text-sm text-status-error">
+                  <div role="alert" className="flex items-start gap-2 text-sm text-status-error">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                     <span>{checkoutError}</span>
                   </div>
@@ -341,7 +341,7 @@ export default function StartTrialPageClient() {
                   <p className="text-xs text-content-tertiary">
                     Signed in as{' '}
                     <span className="text-content-secondary">{user.email}</span>. Card
-                    details are entered on Paystack&apos;s secure page — we never see
+                    details are entered on Paystack&apos;s secure page. We never see
                     them.
                   </p>
                 ) : null}

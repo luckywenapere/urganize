@@ -91,6 +91,9 @@ export function TeammatesSection({
   }, [artists, releases]);
 
   const [inviteEmail, setInviteEmail] = useState('');
+  // Removing a teammate revokes their access on the spot, so the button asks
+  // once, inline, before it does anything.
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const [inviteRole, setInviteRole] = useState('viewer');
   const [inviteArtistId, setInviteArtistId] = useState('');
   const [isInviting, setIsInviting] = useState(false);
@@ -174,7 +177,7 @@ export function TeammatesSection({
         setTeammateMessage(
           payload.emailSent
             ? 'Invite sent by email. You can also share this link directly.'
-            : 'Invite link created — share it with your teammate.'
+            : 'Invite link created. Share it with your teammate.'
         );
       } else {
         setTeammateMessage('Already on this team.');
@@ -224,8 +227,8 @@ export function TeammatesSection({
         : null;
       setTeammateMessage(
         scopedArtistName
-          ? `Artist invite link created — whoever joins with it only sees ${scopedArtistName}'s rollouts. Valid for ${payload.ttlDays ?? 7} days.`
-          : `Invite link created — anyone with it joins as a Team Member. Valid for ${payload.ttlDays ?? 7} days.`
+          ? `Artist invite link created. Whoever joins with it only sees ${scopedArtistName}'s rollouts. Valid for ${payload.ttlDays ?? 7} days.`
+          : `Invite link created. Anyone with it joins as a Team Member. Valid for ${payload.ttlDays ?? 7} days.`
       );
       try {
         await navigator.clipboard.writeText(payload.inviteUrl);
@@ -242,6 +245,7 @@ export function TeammatesSection({
   };
 
   const handleRemoveTeammate = async (memberId: string) => {
+    setConfirmRemoveId(null);
     setTeammateError('');
     setTeammateMessage('');
     try {
@@ -279,12 +283,14 @@ export function TeammatesSection({
           value={inviteEmail}
           onChange={(event) => setInviteEmail(event.target.value)}
           placeholder="teammate@email.com"
-          className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+          aria-label="Teammate email"
+          className="rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
         />
         <select
           value={inviteRole}
           onChange={(event) => setInviteRole(event.target.value)}
-          className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+          aria-label="Role"
+          className="rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
         >
           <option value="manager">Manager</option>
           <option value="artist">Artist</option>
@@ -298,7 +304,7 @@ export function TeammatesSection({
             value={inviteArtistId}
             onChange={(event) => setInviteArtistId(event.target.value)}
             aria-label="Which artist is this invite for?"
-            className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+            className="rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
           >
             <option value="">Which artist?</option>
             {rosterArtists.map((artist) => (
@@ -339,15 +345,16 @@ export function TeammatesSection({
       ) : null}
 
       {teammateMessage && (
-        <div className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
+        <div role="status" className="mt-3 rounded-lg border border-status-info/35 bg-status-info/10 px-3 py-2 text-sm text-status-info">
           <p>{teammateMessage}</p>
           {inviteUrl && (
             <div className="mt-2 flex items-center gap-2">
               <input
                 readOnly
                 value={inviteUrl}
+                aria-label="Invite link"
                 onFocus={(event) => event.target.select()}
-                className="min-w-0 flex-1 truncate rounded-lg border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-secondary"
+                className="min-w-0 flex-1 truncate rounded-lg border border-stroke-control bg-bg-elevated px-2 py-1 text-xs text-content-secondary"
               />
               <button
                 type="button"
@@ -362,7 +369,7 @@ export function TeammatesSection({
         </div>
       )}
       {teammateError && (
-        <p className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+        <p role="alert" className="mt-3 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
           {teammateError}
         </p>
       )}
@@ -403,13 +410,34 @@ export function TeammatesSection({
                   {(member.role || 'viewer').replace(/-/g, ' ')}
                 </span>
                 {canManage && member.userId !== user.id && (
-                  <button
-                    type="button"
-                    onClick={() => void handleRemoveTeammate(member.id)}
-                    className="text-xs text-status-error hover:underline"
-                  >
-                    Remove
-                  </button>
+                  confirmRemoveId === member.id ? (
+                    <span role="group" aria-label={`Remove ${member.name || 'this teammate'}?`} className="flex items-center gap-2 text-xs">
+                      <span className="text-content-secondary">They lose access now.</span>
+                      <button
+                        type="button"
+                        onClick={() => void handleRemoveTeammate(member.id)}
+                        className="min-h-8 rounded-lg border border-status-error/40 px-2 font-semibold text-status-error hover:bg-status-error/10"
+                      >
+                        Remove
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmRemoveId(null)}
+                        className="min-h-8 rounded-lg border border-stroke-default px-2 text-content-primary hover:bg-bg-hover"
+                      >
+                        Keep
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmRemoveId(member.id)}
+                      aria-label={`Remove ${member.name || member.email || 'teammate'}`}
+                      className="min-h-8 px-1 text-xs text-status-error hover:underline"
+                    >
+                      Remove
+                    </button>
+                  )
                 )}
               </div>
             </div>

@@ -10,6 +10,7 @@ import { Logo } from '@urganize/ui';
 import { ArrowLeft, Lock, CheckCircle, AlertCircle } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from "@/lib/errors";
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT_ERROR, isPasswordLongEnough } from '@/lib/password-rules';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -56,8 +57,8 @@ export default function ResetPasswordPage() {
     }
 
     // Validate password length
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (!isPasswordLongEnough(password)) {
+      setError(PASSWORD_TOO_SHORT_ERROR);
       return;
     }
 
@@ -86,7 +87,7 @@ export default function ResetPasswordPage() {
   // Loading state while checking session
   if (isValidSession === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div role="main" className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-bg-base" />
         <div className="urg-blob absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-brand/3 rounded-full blur-[100px]" />
@@ -103,7 +104,7 @@ export default function ResetPasswordPage() {
   // Invalid or expired link
   if (isValidSession === false) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div role="main" className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-bg-base" />
         <div className="urg-blob absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-brand/3 rounded-full blur-[100px]" />
@@ -124,9 +125,9 @@ export default function ResetPasswordPage() {
               </div>
               
               <div>
-                <h2 className="text-xl font-semibold text-content-primary mb-1">
+                <h1 className="text-xl font-semibold text-content-primary mb-1">
                   Invalid or expired link
-                </h2>
+                </h1>
                 <p className="text-sm text-content-tertiary">
                   This reset link is invalid or expired. Request a new one.
                 </p>
@@ -153,7 +154,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div role="main" className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background effects */}
       <div className="absolute inset-0 bg-bg-base" />
       <div className="urg-blob absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px]" />
@@ -174,23 +175,24 @@ export default function ResetPasswordPage() {
           {!isSuccess ? (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="text-center mb-6">
-                <h2 className="text-xl font-semibold text-content-primary mb-1">
+                <h1 className="text-xl font-semibold text-content-primary mb-1">
                   Set new password
-                </h2>
+                </h1>
                 <p className="text-sm text-content-tertiary">
-                  Your new password must be at least 8 characters.
+                  Your new password must be at least {MIN_PASSWORD_LENGTH} characters.
                 </p>
               </div>
 
               {error && (
-                <div className="p-3 rounded-lg bg-status-error/10 border border-status-error/20 text-status-error text-sm animate-bounce-in">
+                <div role="alert" className="p-3 rounded-lg bg-status-error/10 border border-status-error/20 text-status-error text-sm animate-bounce-in">
                   {error}
                 </div>
               )}
 
               <Input
-                label="New Password"
+                label="New password"
                 type="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -199,8 +201,9 @@ export default function ResetPasswordPage() {
               />
 
               <Input
-                label="Confirm Password"
+                label="Confirm password"
                 type="password"
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
@@ -209,7 +212,7 @@ export default function ResetPasswordPage() {
               />
 
               <Button type="submit" className="w-full" isLoading={isLoading}>
-                Reset Password
+                Reset password
               </Button>
             </form>
           ) : (
@@ -219,9 +222,9 @@ export default function ResetPasswordPage() {
               </div>
               
               <div>
-                <h2 className="text-xl font-semibold text-content-primary mb-1">
+                <h1 className="text-xl font-semibold text-content-primary mb-1">
                   Password reset successful
-                </h2>
+                </h1>
                 <p className="text-sm text-content-tertiary">
                   Your password has been updated. Redirecting to login...
                 </p>
@@ -236,7 +239,7 @@ export default function ResetPasswordPage() {
           )}
         </Card>
 
-        <p className="text-center text-xs text-content-quaternary mt-6">
+        <p className="text-center text-xs text-content-tertiary mt-6">
           By continuing, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>

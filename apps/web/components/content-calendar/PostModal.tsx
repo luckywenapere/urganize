@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, Loader2, X } from '@/components/icons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { getAccessToken } from './get-access-token';
 import { calendarFontVariables } from './calendar-fonts';
 import {
@@ -139,20 +140,18 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
     return lockBodyScroll();
   }, [open]);
 
-  // Minimal dialog focus contract (2026-08-10): focus lands on the title
-  // input when the modal opens (the date is usually pre-filled by the tapped
-  // day) and returns to the opener on close. Not a full trap — the backdrop
-  // button is tabIndex={-1} so Tab can't land outside the dialog's visible
-  // controls by accident.
+  // Focus lands on the title input when the modal opens (the date is usually
+  // pre-filled by the tapped day), stays inside while it is open, and returns
+  // to the opener on close. The hook is declared first so it remembers the
+  // opener before the title takes focus, and is told to leave the initial
+  // move to the title.
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocus(open && isMounted, panelRef, { initialFocus: 'none' });
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
-    if (!open) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!open || !isMounted) return;
     titleInputRef.current?.focus();
-    return () => {
-      opener?.focus();
-    };
-  }, [open]);
+  }, [open, isMounted]);
 
   const isBusy = isSaving || isDeleting;
   const canSubmit = useMemo(
@@ -233,7 +232,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
         // The post itself saved, but the link PATCH failed — saying nothing
         // would be a silent data drop. AFTER onSaved, so this warning wins
         // over its "Post saved" toast in the single toast slot.
-        onToast?.('Post saved, but the link didn’t stick — open the post and add it again.', 'warning');
+        onToast?.('Post saved, but the link didn’t stick. Open the post and add it again.', 'warning');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save post.');
@@ -292,7 +291,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
         }}
       />
 
-      <div role="dialog" aria-modal="true" aria-labelledby="post-modal-title" className="relative mx-auto w-full max-w-lg">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="post-modal-title" className="relative mx-auto w-full max-w-lg">
         <form
           onSubmit={(event) => void handleSubmit(event)}
           className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden border border-[var(--cc-border)] bg-[var(--cc-ground)] text-[var(--cc-text)] shadow-2xl sm:max-h-[calc(100dvh-4rem)]"
@@ -326,7 +325,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                 value={scheduledDate}
                 onChange={(event) => setScheduledDate(event.target.value)}
                 disabled={isBusy}
-                className="h-10 w-full border border-[var(--cc-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                className="h-10 w-full border border-[var(--cc-field-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
               />
             </label>
 
@@ -342,7 +341,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                 maxLength={MAX_TITLE_LENGTH}
                 disabled={isBusy}
                 placeholder="Teaser clip"
-                className="h-10 w-full border border-[var(--cc-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                className="h-10 w-full border border-[var(--cc-field-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
               />
             </label>
 
@@ -357,7 +356,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                 disabled={isBusy}
                 rows={4}
                 placeholder="Optional caption"
-                className="min-h-24 w-full resize-none border border-[var(--cc-border)] bg-transparent px-3 py-2 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                className="min-h-24 w-full resize-none border border-[var(--cc-field-border)] bg-transparent px-3 py-2 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
               />
             </label>
 
@@ -370,7 +369,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                   value={format}
                   onChange={(event) => setFormat(event.target.value as ContentPostFormat)}
                   disabled={isBusy}
-                  className="h-10 w-full border border-[var(--cc-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                  className="h-10 w-full border border-[var(--cc-field-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
                 >
                   {CONTENT_POST_FORMAT_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -388,7 +387,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                   value={pillar}
                   onChange={(event) => setPillar(event.target.value as ContentPostPillar | '')}
                   disabled={isBusy}
-                  className="h-10 w-full border border-[var(--cc-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                  className="h-10 w-full border border-[var(--cc-field-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
                 >
                   <option value="">None</option>
                   {CONTENT_POST_PILLAR_OPTIONS.map((option) => (
@@ -407,7 +406,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                   value={status}
                   onChange={(event) => setStatus(event.target.value as ContentPostStatus)}
                   disabled={isBusy}
-                  className="h-10 w-full border border-[var(--cc-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                  className="h-10 w-full border border-[var(--cc-field-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
                 >
                   {CONTENT_POST_STATUS_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -429,7 +428,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                   onChange={(event) => setPostedUrl(event.target.value)}
                   disabled={isBusy}
                   placeholder="https://..."
-                  className="h-10 w-full border border-[var(--cc-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                  className="h-10 w-full border border-[var(--cc-field-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
                 />
               </label>
             ) : null}

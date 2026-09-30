@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { AlertCircle, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
@@ -61,6 +62,9 @@ export function NoteDeleteDialog({ open, noteTitle, onClose, onConfirm }: NoteDe
     return lockBodyScroll();
   }, [open]);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(open && isMounted, panelRef);
+
   if (!open || !isMounted) {
     return null;
   }
@@ -94,6 +98,8 @@ export function NoteDeleteDialog({ open, noteTitle, onClose, onConfirm }: NoteDe
       />
 
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-note-title"
@@ -115,7 +121,7 @@ export function NoteDeleteDialog({ open, noteTitle, onClose, onConfirm }: NoteDe
         </div>
 
         {error ? (
-          <div className="mx-4 mb-4 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error sm:mx-5">
+          <div role="alert" className="mx-4 mb-4 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error sm:mx-5">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>{error}</p>
           </div>

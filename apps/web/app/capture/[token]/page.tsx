@@ -117,7 +117,7 @@ export default async function PublicCapturePage({ params }: PageProps) {
               {page.isPaused ? 'This list is closed for now.' : 'This page is not ready yet.'}
             </p>
             <p className="mt-1 text-sm" style={{ color: MUTED }}>
-              Check back soon — or follow {page.artistName || 'the artist'} for the announcement.
+              Check back soon, or follow {page.artistName || 'the artist'} for the announcement.
             </p>
           </div>
         )}

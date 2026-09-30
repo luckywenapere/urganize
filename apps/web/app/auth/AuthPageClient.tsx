@@ -1,5 +1,6 @@
 'use client';
 
+import { describeCallbackError } from '@/lib/auth-callback-error';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -128,6 +129,8 @@ export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  // Set by /auth/callback when Google sign-in cannot finish (see lib/auth-callback-error).
+  const callbackError = describeCallbackError(searchParams?.get('error'));
   // False on the server AND on the client's first render, so both render the
   // same thing (the form) and hydration matches. Flipped pre-paint, which is
   // what lets the session check below hide the form without the user ever
@@ -409,7 +412,7 @@ export default function AuthPage() {
         <LoadingScreen variant="shell" title="Opening Urganize" asPage={false} />
       </div>
 
-      <div className="auth-form-shell relative flex min-h-screen flex-col px-6 pt-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+      <main className="auth-form-shell relative flex min-h-screen flex-col px-6 pt-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
         {/* Gold-thread ray fan (NEXT_PUBLIC_FEATURE_TEXTILE). Renders nothing
             unless <html> carries `urg-textile`, and is aria-hidden and
             pointer-events-none either way, so the entrance is unchanged for
@@ -511,7 +514,7 @@ export default function AuthPage() {
                 <Input
                   ref={emailInputRef}
                   type="email"
-                  aria-label="Email"
+                  label="Email"
                   value={email}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const value = e.target.value;
@@ -541,7 +544,7 @@ export default function AuthPage() {
 
                 {emailStage === 'password' && accountHint === 'google-only' && (
                   <p className="text-center text-sm text-content-secondary">
-                    This account was created with Google — you can use
+                    This account was created with Google. You can use
                     &ldquo;Continue with Google&rdquo; above, or enter your
                     password below.
                   </p>
@@ -550,10 +553,10 @@ export default function AuthPage() {
                 {emailStage === 'password' && accountHint === 'unknown' && (
                   <p className="text-center text-sm text-content-secondary">
                     We couldn&apos;t check this email just now. New to Urganize?{' '}
-                    <Link href={signupHref} className="text-brand hover:underline">
+                    <Link href={signupHref} className="text-brand underline underline-offset-2">
                       Create your account
                     </Link>{' '}
-                    — otherwise enter your password below.
+                    or, if you already have an account, enter your password below.
                   </p>
                 )}
 
@@ -562,7 +565,7 @@ export default function AuthPage() {
                     <Input
                       ref={passwordInputRef}
                       type="password"
-                      aria-label="Password"
+                      label="Password"
                       value={password}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         setPassword(e.target.value);
@@ -576,7 +579,7 @@ export default function AuthPage() {
                       required
                     />
                     <p className="text-right text-sm">
-                      <Link href="/auth/forgot-password" className="text-brand hover:underline">
+                      <Link href="/auth/forgot-password" className="text-brand underline underline-offset-2">
                         Forgot password?
                       </Link>
                     </p>
@@ -595,8 +598,8 @@ export default function AuthPage() {
               </form>
             )}
 
-            {error && (
-              <p className="text-center text-sm text-status-error">{error}</p>
+            {(error || callbackError) && (
+              <p role="alert" className="text-center text-sm text-status-error">{error || callbackError}</p>
             )}
           </div>
         </div>
@@ -608,12 +611,12 @@ export default function AuthPage() {
             onClick={() => {
               void openExternalUrl(SUPPORT_WHATSAPP_URL);
             }}
-            className="font-semibold text-brand hover:underline"
+            className="font-semibold text-brand underline underline-offset-2"
           >
             Contact us
           </button>
         </p>
-      </div>
+      </main>
     </>
   );
 }

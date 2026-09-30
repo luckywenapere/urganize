@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ChevronDown, UserCircle2 } from '@/components/icons';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { Check, ChevronDown, UserCircle2 } from '@/components/icons';
 import { getInitials, type WorkspaceMember } from '@/lib/tasks';
 
 type TaskMemberSelectProps = {
@@ -21,14 +21,14 @@ type TaskMemberSelectProps = {
    */
   density?: 'comfortable' | 'compact';
   /**
-   * Rendered at the base of the open menu, BELOW and OUTSIDE the listbox.
+   * Rendered at the base of the open menu, BELOW and OUTSIDE the list.
    * TaskDetailView passes its invite-a-teammate form here (2026-09-05): the
    * moment you want someone who is not on the list is the moment you are
    * looking at the list, so the form belongs here rather than sitting
    * permanently in the activity body.
    *
-   * Outside the listbox is not a style choice — a role="listbox" may only
-   * contain role="option" children, so a form inside it is invalid markup.
+   * Outside the list is not a style choice: the list scrolls on its own, so an
+   * expanded form squeezes it instead of being pushed off the bottom.
    */
   footer?: ReactNode;
 };
@@ -48,9 +48,11 @@ type TaskMemberSelectProps = {
 // same field.
 //
 // Structurally NoteReleasePicker (components/notes/NoteReleasePicker.tsx): a
-// button trigger over a role="listbox" panel, outside-click to close, Escape
-// closes only the menu and returns focus. Options are real buttons, so Tab
-// and Enter work without a roving-focus implementation.
+// button trigger over a panel, outside-click to close, Escape closes only the
+// menu and returns focus. Rows are real buttons, so Tab and Enter work without
+// a roving-focus implementation. It is a disclosure and not a role="listbox"
+// on purpose: a listbox promises arrow-key movement between its options, and
+// these never had it.
 
 // When on, the menu shows every non-removed member the API returns (matching
 // Settings) and renders invited-but-not-joined rows disabled. When off, the
@@ -91,6 +93,7 @@ export function TaskMemberSelect({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
 
   const visibleMembers = WORKSPACE_FEATURE_ENABLED
     ? members
@@ -146,9 +149,10 @@ export function TaskMemberSelect({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
-        aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={selectedMember ? `${label}: ${selectedMember.name}` : label}
+        aria-controls={open ? panelId : undefined}
+        // Carries the words shown on the button, so voice control can reach it.
+        aria-label={selectedMember ? `${label}: ${selectedMember.name}` : `${label}: ${placeholder}`}
         className={triggerClass}
       >
         {selectedMember ? (
@@ -179,7 +183,8 @@ export function TaskMemberSelect({
         // outrun a short phone.
         <div className="absolute left-0 right-0 top-[calc(100%+0.4rem)] z-50 flex max-h-[min(24rem,60dvh)] flex-col overflow-hidden rounded-[18px] border border-stroke-default bg-bg-surface shadow-[0_28px_70px_-40px_rgb(var(--shadow-ink)/calc(0.78*var(--shadow-alpha-scale)))]">
           <div
-            role="listbox"
+            id={panelId}
+            role="group"
             aria-label={label}
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1"
           >
@@ -189,8 +194,7 @@ export function TaskMemberSelect({
 
             <button
               type="button"
-              role="option"
-              aria-selected={!selectedMember}
+              aria-current={!selectedMember ? 'true' : undefined}
               onClick={() => choose(null)}
               className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-bg-hover ${
                 !selectedMember ? 'text-content-primary' : 'text-content-secondary'
@@ -199,7 +203,8 @@ export function TaskMemberSelect({
               <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-dashed border-stroke-default text-[10px] text-content-tertiary">
                 --
               </span>
-              Unassigned
+              <span className="min-w-0 flex-1">Unassigned</span>
+              {!selectedMember ? <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /> : null}
             </button>
 
             {visibleMembers.map((member) => {
@@ -209,8 +214,7 @@ export function TaskMemberSelect({
                 <button
                   key={member.id}
                   type="button"
-                  role="option"
-                  aria-selected={selected}
+                  aria-current={selected ? 'true' : undefined}
                   aria-disabled={!selectable || undefined}
                   onClick={() => choose(member)}
                   className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
@@ -230,7 +234,7 @@ export function TaskMemberSelect({
                     </span>
                     {!selectable ? (
                       <span className="mt-0.5 block truncate text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
-                        Pending invite — can&apos;t assign yet
+                        Pending invite. Can&apos;t assign yet.
                       </span>
                     ) : (
                       <span className="mt-0.5 block truncate text-xs text-content-secondary">
@@ -238,6 +242,7 @@ export function TaskMemberSelect({
                       </span>
                     )}
                   </span>
+                  {selected ? <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /> : null}
                 </button>
               );
             })}

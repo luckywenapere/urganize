@@ -254,7 +254,7 @@ export function CaptureSection({ releaseId, onToast }: CaptureSectionProps) {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
     } catch {
-      onToast?.('Could not copy — select the link and copy it manually.', 'warning');
+      onToast?.('Could not copy. Select the link and copy it by hand.', 'warning');
     }
   };
 
@@ -283,8 +283,8 @@ export function CaptureSection({ releaseId, onToast }: CaptureSectionProps) {
           Fan capture
         </h2>
         <p className="mt-1 text-sm text-content-secondary">
-          One page that trades a link for an email address. Share it from a bio, a story, or a DM —
-          fans get the link the second they sign up.
+          One page that trades a link for an email address. Share it from a bio, a story or a DM.
+          Fans get the link the second they sign up.
         </p>
       </div>
 
@@ -292,7 +292,7 @@ export function CaptureSection({ releaseId, onToast }: CaptureSectionProps) {
         <ShareLinkCardSkeleton />
       ) : loadError ? (
         <div className="mt-4 flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-status-error">Couldn&rsquo;t load the capture page.</p>
+          <p role="alert" className="text-sm text-status-error">Couldn&rsquo;t load the capture page.</p>
           <button
             type="button"
             onClick={() => void reload()}
@@ -387,7 +387,7 @@ export function CaptureSection({ releaseId, onToast }: CaptureSectionProps) {
             <p className="mt-3 text-xs text-content-tertiary">
               {readiness.isSendReady
                 ? 'Ready to send. Anyone with this link can sign up.'
-                : 'Not ready to send yet — see what’s missing below.'}{' '}
+                : 'Not ready to send yet. See what’s missing below.'}{' '}
               A new link kills the old one instantly; your sign-ups stay.
             </p>
           </div>

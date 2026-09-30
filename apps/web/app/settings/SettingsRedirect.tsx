@@ -34,5 +34,5 @@ export default function SettingsRedirect() {
   // Nothing worth painting: the redirect is one client-side hop. The empty
   // block keeps the page from collapsing to zero height under the app chrome
   // for that frame.
-  return <main className="min-h-[50dvh]" aria-busy="true" />;
+  return <div className="min-h-[50dvh]" aria-busy="true" />;
 }

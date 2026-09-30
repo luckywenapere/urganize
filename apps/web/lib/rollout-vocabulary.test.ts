@@ -80,6 +80,19 @@ const GUARDED_FILES = [
   'lib/settings-nav.ts',
   'components/settings/SettingsModal.tsx',
   'components/settings/SettingsNav.tsx',
+  // The 2026-09-30 copy pass. Each of these had a screen or an error that
+  // still called the object a release; they are pinned here so it stays fixed.
+  // CaptureEditor is deliberately absent: it previews the sentence a FAN reads
+  // on the public page, and fans do not know our word for it.
+  'app/dashboard/pitching/PitchingPageClient.tsx',
+  'app/onboarding/OnboardingPageClient.tsx',
+  'components/pitching/PitchComposer.tsx',
+  'components/releases/ReleaseSetupSheet.tsx',
+  'components/releases/SetReleaseDateCard.tsx',
+  'components/workspace/ChangeReleaseArtistDialog.tsx',
+  'components/chappi/ChappiRecapCard.tsx',
+  'components/settings/useWorkspaceSettings.ts',
+  'lib/email/unsubscribe.ts',
   'components/settings/segments/GeneralSegment.tsx',
   'components/settings/segments/SecuritySegment.tsx',
   'components/settings/segments/ArtistsBrandSegment.tsx',

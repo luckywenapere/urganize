@@ -33,6 +33,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled || isLoading}
+        // While it works the button says so, and keeps its own name (below).
+        aria-busy={isLoading || undefined}
         className={clsx(
           // Base
           'group inline-flex items-center justify-center gap-2 rounded-full font-semibold tracking-[-0.01em]',
@@ -92,7 +94,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 'h-3 w-16': size === 'lg',
               })}
             />
-            <span className="sr-only">Loading</span>
+            {/* The button's own name, not the word "Loading": that swapped
+                "Save" for a different label the moment it was pressed, so a
+                screen reader heard the button turn into something else. */}
+            <span className="sr-only">{children}</span>
           </>
         ) : (
           <>

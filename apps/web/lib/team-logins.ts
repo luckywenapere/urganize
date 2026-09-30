@@ -84,13 +84,13 @@ export function buildLoginShareMessage(params: {
   releaseTitle?: string | null;
   inviterName?: string | null;
 }): string {
-  const workspace = String(params.workspaceName || '').trim();
+  const teamName = String(params.workspaceName || '').trim();
   const release = String(params.releaseTitle || '').trim();
   const inviter = String(params.inviterName || '').trim();
 
   const opening = inviter
-    ? `${inviter} has added you to ${workspace || 'their team'} on Urganize.`
-    : `You've been added to ${workspace || 'a team'} on Urganize.`;
+    ? `${inviter} has added you to ${teamName || 'their team'} on Urganize.`
+    : `You've been added to ${teamName || 'a team'} on Urganize.`;
 
   const context = release ? ` We're running ${release} in there.` : '';
 
@@ -100,7 +100,7 @@ export function buildLoginShareMessage(params: {
     'Open this link to set up your login:',
     params.url,
     '',
-    "You'll pick your own password on that page — nobody else sees it.",
+    "You'll pick your own password on that page. Nobody else sees it.",
   ].join('\n');
 }
 
@@ -113,7 +113,7 @@ export function buildWhatsAppShareUrl(message: string): string {
 
 /** mailto: with a subject and the same body. */
 export function buildEmailShareUrl(message: string, workspaceName?: string | null): string {
-  const workspace = String(workspaceName || '').trim();
-  const subject = workspace ? `Your login for ${workspace} on Urganize` : 'Your Urganize login';
+  const teamName = String(workspaceName || '').trim();
+  const subject = teamName ? `Your login for ${teamName} on Urganize` : 'Your Urganize login';
   return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
 }

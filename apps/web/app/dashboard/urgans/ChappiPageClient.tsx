@@ -177,7 +177,6 @@ export default function ChappiPageClient() {
             <button
               type="button"
               onClick={() => setShowChats((current) => !current)}
-              aria-pressed={showChats}
               className={`motion-focus motion-press mr-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary ${
                 menuHostsChats ? 'lg:hidden' : ''
               }`}

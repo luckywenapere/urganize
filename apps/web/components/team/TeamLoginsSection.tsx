@@ -75,7 +75,7 @@ export function TeamLoginsSection() {
       </h2>
       <p className="mb-5 max-w-prose text-sm leading-6 text-content-secondary">
         Create as many logins as you need and send one to each person on WhatsApp or by
-        email. They open the link, pick their own password, and they&apos;re in — you never
+        email. They open the link, pick their own password, and they&apos;re in. You never
         have to send a password yourself.
       </p>
 
@@ -84,9 +84,9 @@ export function TeamLoginsSection() {
           value={label}
           onChange={(event) => setLabel(event.target.value)}
           maxLength={MAX_LOGIN_LABEL_LENGTH}
-          placeholder="Who's this for? (optional — e.g. Tolu, publicist)"
+          placeholder="Who's this for? (optional, e.g. Tolu, publicist)"
           aria-label="Who is this login for?"
-          className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+          className="rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
         />
         <button
           type="button"
@@ -116,8 +116,8 @@ export function TeamLoginsSection() {
 
       {degraded ? (
         <p className="mt-3 rounded-lg border border-status-warning/35 bg-status-warning/10 px-3 py-2 text-sm text-status-warning">
-          Saved logins aren&apos;t available in this environment yet. New links still work —
-          copy one as soon as you create it.
+          Saved logins aren&apos;t available in this environment yet. New links still work.
+          Copy one as soon as you create it.
         </p>
       ) : null}
 

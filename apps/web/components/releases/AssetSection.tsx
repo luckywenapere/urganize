@@ -121,9 +121,9 @@ export function AssetSection({ releaseId, onToast }: AssetSectionProps) {
         </div>
       ) : loadError && assets.length === 0 ? (
         <div className="mt-4 border border-status-error/30 bg-status-error/10 p-4 text-center">
-          <p className="text-sm text-status-error">Couldn&rsquo;t load files: {loadError}</p>
+          <p role="alert" className="text-sm text-status-error">Couldn&rsquo;t load files: {loadError}</p>
           <p className="mt-1 text-xs text-content-secondary">
-            Your files are safe — this is a loading problem, not a missing-files problem.
+            Your files are safe. This is a loading problem, not a missing-files problem.
           </p>
           <button
             type="button"

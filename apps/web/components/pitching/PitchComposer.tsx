@@ -23,7 +23,7 @@
 // again on the server, and that is the number the artist pays.
 
 import { useEffect, useState } from 'react';
-import { ExternalLink, Send } from '@/components/icons';
+import { Check, ExternalLink, Send } from '@/components/icons';
 import type { BrowsablePlaylist, SentPitch } from '@/types/pitching';
 import { supabase } from '@/lib/supabase/client';
 import {
@@ -73,7 +73,7 @@ type PitchComposerProps = {
 };
 
 const inputClass =
-  'h-11 w-full rounded-xl border border-stroke-default bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
+  'h-11 w-full rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
 const labelClass = 'block text-[11px] uppercase tracking-[0.16em] text-content-tertiary';
 
 async function getAccessToken(): Promise<string> {
@@ -278,7 +278,7 @@ export function PitchComposer({
     <>
       {atLimit ? (
         <p className="rounded-xl border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-sm text-status-warning">
-          This release has {MAX_WAITING_PITCHES_PER_RELEASE} pitches waiting. Wait for replies
+          This rollout has {MAX_WAITING_PITCHES_PER_RELEASE} pitches waiting. Wait for replies
           before sending more.
         </p>
       ) : null}
@@ -356,9 +356,12 @@ export function PitchComposer({
                       onClick={() => toggleSelection(playlist)}
                       className="min-w-0 flex-1 text-left"
                     >
-                      <p className="truncate text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
-                        {PITCH_PLATFORM_LABELS[playlist.platform]}
-                        {followers ? ` · ${followers} followers` : ''}
+                      <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
+                        {isSelected ? <Check className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" /> : null}
+                        <span className="truncate">
+                          {PITCH_PLATFORM_LABELS[playlist.platform]}
+                          {followers ? ` · ${followers} followers` : ''}
+                        </span>
                       </p>
                       <p className="mt-0.5 truncate text-sm font-semibold text-content-primary">
                         {playlist.name}
@@ -446,7 +449,7 @@ export function PitchComposer({
           <textarea
             id="pitch-note"
             rows={3}
-            className="w-full rounded-xl border border-stroke-default bg-bg-base p-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+            className="w-full rounded-xl border border-stroke-control bg-bg-base p-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
             value={note}
             maxLength={MAX_PITCH_NOTE_LENGTH}
             onChange={(event) => setNote(event.target.value)}

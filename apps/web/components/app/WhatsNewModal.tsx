@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from '@/components/icons';
 import { changelog, CURRENT_VERSION } from '@urganize/changelog';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 
 // "What's new" on the first login after an update (founder request,
@@ -74,6 +75,9 @@ export function WhatsNewModal() {
     return lockBodyScroll();
   }, [open]);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(open, panelRef);
+
   if (!open) return null;
 
   const modal = (
@@ -88,6 +92,7 @@ export function WhatsNewModal() {
         onClick={dismiss}
       />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="whats-new-title"

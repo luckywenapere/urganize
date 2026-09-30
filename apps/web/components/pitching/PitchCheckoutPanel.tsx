@@ -83,8 +83,8 @@ export function PitchCheckoutPanel({ quote: initialQuote, songTitle, onCancel }:
         {quote.lines.map((line) => (
           <li key={line.pitchId} className="flex items-center justify-between gap-3 px-3 py-2.5">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-content-primary">{line.curatorName}</p>
-              <p className="truncate text-xs text-content-secondary">{line.playlistName}</p>
+              <p className="line-clamp-2 break-words text-sm font-semibold text-content-primary">{line.curatorName}</p>
+              <p className="line-clamp-2 break-words text-xs text-content-secondary">{line.playlistName}</p>
             </div>
             <span className="shrink-0 font-mono text-sm text-content-primary">{formatNaira(line.priceKobo)}</span>
           </li>

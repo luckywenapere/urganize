@@ -39,7 +39,7 @@ type CaptureEditorProps = {
 };
 
 const inputClass =
-  'w-full border border-stroke-default bg-bg-base px-3 py-2 text-sm text-content-primary outline-none placeholder:text-content-tertiary focus:border-brand/60';
+  'w-full border border-stroke-control bg-bg-base px-3 py-2 text-sm text-content-primary outline-none placeholder:text-content-tertiary focus:border-brand/60';
 
 function SaveIndicator({ state }: { state: CaptureSaveState }) {
   if (state === 'saving') {
@@ -56,7 +56,7 @@ function SaveIndicator({ state }: { state: CaptureSaveState }) {
   if (state === 'error') {
     // Stays until the next edit or a successful retry — a failed save must not
     // decay quietly into looking like a saved one.
-    return <span className="text-xs text-status-error">Couldn’t save — keep typing to retry</span>;
+    return <span role="alert" className="text-xs text-status-error">Couldn’t save. Keep typing to retry</span>;
   }
   if (state === 'dirty') {
     return <span className="text-xs text-content-tertiary">Unsaved</span>;
@@ -118,7 +118,7 @@ export function CaptureEditor({
             <p className="text-sm text-content-secondary">
               {hasGraphic
                 ? 'Using this rollout’s cover art. Change the artwork to change the page.'
-                : 'No artwork on this rollout yet — the page will show text only.'}
+                : 'No artwork on this rollout yet. The page will show text only.'}
             </p>
           </div>
           <Hint>{FIELD_GUIDANCE.graphic}</Hint>
@@ -228,7 +228,7 @@ export function CaptureEditor({
             debounce: a toggle is a decision, and watching "Unsaved" sit there
             after flipping one reads as the switch not having worked. */}
         <div className="space-y-4 border-t border-stroke-subtle pt-5">
-          <div className="flex items-start justify-between gap-4">
+          <label className="flex cursor-pointer items-start justify-between gap-4">
             <div className="min-w-0">
               <span className="text-sm font-medium text-content-primary">Also ask for a name</span>
               <Hint>{FIELD_GUIDANCE.collectName}</Hint>
@@ -243,9 +243,9 @@ export function CaptureEditor({
               aria-label="Also ask for a name"
               className="mt-1 h-4 w-4 shrink-0 accent-[rgb(var(--color-brand))]"
             />
-          </div>
+          </label>
 
-          <div className="flex items-start justify-between gap-4">
+          <label className="flex cursor-pointer items-start justify-between gap-4">
             <div className="min-w-0">
               <span className="text-sm font-medium text-content-primary">Pause sign-ups</span>
               <Hint>
@@ -263,7 +263,7 @@ export function CaptureEditor({
               aria-label="Pause sign-ups"
               className="mt-1 h-4 w-4 shrink-0 accent-[rgb(var(--color-brand))]"
             />
-          </div>
+          </label>
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 import { saveButtonVisible } from '@/lib/settings-dirty';
 import { useReportDirty } from './useReportDirty';
+import { PASSWORD_TOO_SHORT_ERROR, isPasswordLongEnough } from '@/lib/password-rules';
 
 export function SecuritySection() {
   const [newPassword, setNewPassword] = useState('');
@@ -23,8 +24,8 @@ export function SecuritySection() {
   const handleSave = async () => {
     setError('');
     setSuccess('');
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (!isPasswordLongEnough(newPassword)) {
+      setError(PASSWORD_TOO_SHORT_ERROR);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -57,22 +58,24 @@ export function SecuritySection() {
           <span className="mb-1 block text-sm text-content-secondary">New password</span>
           <input
             type="password"
+            autoComplete="new-password"
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
-            className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+            className="w-full rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
           />
         </label>
         <label className="block">
           <span className="mb-1 block text-sm text-content-secondary">Confirm new password</span>
           <input
             type="password"
+            autoComplete="new-password"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
-            className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+            className="w-full rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
           />
         </label>
-        {error && <p className={feedbackErrorClass}>{error}</p>}
-        {success && <p className={feedbackSuccessClass}>{success}</p>}
+        {error && <p role="alert" className={feedbackErrorClass}>{error}</p>}
+        {success && <p role="status" className={feedbackSuccessClass}>{success}</p>}
         {saveButtonVisible({ dirty: passwordDirty, saving: isSaving }) ? (
           <button
             type="button"

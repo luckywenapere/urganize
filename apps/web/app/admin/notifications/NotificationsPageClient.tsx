@@ -149,7 +149,7 @@ export default function NotificationsPageClient() {
       </p>
 
       {error ? (
-        <p className="mt-6 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+        <p role="alert" className="mt-6 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
           {error}
         </p>
       ) : null}
@@ -184,6 +184,7 @@ export default function NotificationsPageClient() {
                 after creation
               </p>
               <input
+                aria-label={`Reminder ${index + 1} title`}
                 value={step.title}
                 onChange={(event) => {
                   const steps = [...presets.releaseReminders.steps];
@@ -191,9 +192,10 @@ export default function NotificationsPageClient() {
                   setPresets({ ...presets, releaseReminders: { ...presets.releaseReminders, steps } });
                 }}
                 maxLength={80}
-                className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+                className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
               />
               <textarea
+                aria-label={`Reminder ${index + 1} message`}
                 value={step.body}
                 onChange={(event) => {
                   const steps = [...presets.releaseReminders.steps];
@@ -202,7 +204,7 @@ export default function NotificationsPageClient() {
                 }}
                 maxLength={300}
                 rows={2}
-                className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+                className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
               />
               <p className="mt-1 text-[11px] text-content-tertiary">
                 Use <code>{'{releaseTitle}'}</code> to insert the rollout’s title.
@@ -240,6 +242,7 @@ export default function NotificationsPageClient() {
           {presets.motivational.pool.map((nudge, index) => (
             <div key={nudge.id} className="rounded-lg border border-stroke-subtle p-4">
               <input
+                aria-label={`Nudge ${index + 1} title`}
                 value={nudge.title}
                 onChange={(event) => {
                   const pool = [...presets.motivational.pool];
@@ -247,9 +250,10 @@ export default function NotificationsPageClient() {
                   setPresets({ ...presets, motivational: { ...presets.motivational, pool } });
                 }}
                 maxLength={80}
-                className="input rounded-lg border-stroke-default bg-bg-elevated"
+                className="input rounded-lg border-stroke-control bg-bg-elevated"
               />
               <textarea
+                aria-label={`Nudge ${index + 1} message`}
                 value={nudge.body}
                 onChange={(event) => {
                   const pool = [...presets.motivational.pool];
@@ -258,7 +262,7 @@ export default function NotificationsPageClient() {
                 }}
                 maxLength={300}
                 rows={2}
-                className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+                className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
               />
             </div>
           ))}
@@ -299,6 +303,7 @@ export default function NotificationsPageClient() {
               <div key={tier} className="rounded-lg border border-stroke-subtle p-4">
                 <p className="font-mono text-[10px] uppercase tracking-wide text-content-tertiary">{label}</p>
                 <input
+                  aria-label={`${label} title`}
                   value={copy.title}
                   onChange={(event) =>
                     setPresets({
@@ -313,9 +318,10 @@ export default function NotificationsPageClient() {
                     })
                   }
                   maxLength={80}
-                  className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+                  className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
                 />
                 <textarea
+                  aria-label={`${label} message`}
                   value={copy.body}
                   onChange={(event) =>
                     setPresets({
@@ -331,7 +337,7 @@ export default function NotificationsPageClient() {
                   }
                   maxLength={300}
                   rows={2}
-                  className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+                  className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
                 />
                 <p className="mt-1 text-[11px] text-content-tertiary">
                   Use <code>{'{taskTitle}'}</code> to insert the activity’s title.
@@ -380,6 +386,7 @@ export default function NotificationsPageClient() {
             Push notification
           </p>
           <input
+            aria-label="New credit submission title"
             value={presets.creditSubmissions.copy.title}
             onChange={(event) =>
               setPresets({
@@ -391,9 +398,10 @@ export default function NotificationsPageClient() {
               })
             }
             maxLength={80}
-            className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+            className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
           />
           <textarea
+            aria-label="New credit submission message"
             value={presets.creditSubmissions.copy.body}
             onChange={(event) =>
               setPresets({
@@ -406,7 +414,7 @@ export default function NotificationsPageClient() {
             }
             maxLength={300}
             rows={2}
-            className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+            className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
           />
           <p className="mt-1 text-[11px] text-content-tertiary">
             Use <code>{'{collaboratorName}'}</code> for who sent it and{' '}

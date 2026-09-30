@@ -20,6 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.53.0",
+    date: "September 30, 2026",
+    highlights: [
+      "Boxes you type in have a clearer outline, and small grey text is darker, so both are easier to see.",
+      "You can pinch to zoom on your phone again.",
+      "New passwords need at least 8 characters wherever you make one. Your current password still works to sign in.",
+      "Menus, pop-ups and error messages work better with a keyboard and a screen reader.",
+      "A greyed-out Next button in setup now tells you what is missing.",
+    ],
+  },
+  {
     version: "1.52.0",
     date: "September 30, 2026",
     highlights: [

@@ -423,14 +423,14 @@ function LegacyLockedPage() {
               </div>
 
               {checkoutError ? (
-                <div className="flex items-start gap-2 text-sm text-status-error">
+                <div role="alert" className="flex items-start gap-2 text-sm text-status-error">
                   <AlertTriangle className="size-4 mt-0.5 shrink-0" />
                   <span>{checkoutError}</span>
                 </div>
               ) : null}
 
               {trialError ? (
-                <div className="flex items-start gap-2 text-sm text-status-error">
+                <div role="alert" className="flex items-start gap-2 text-sm text-status-error">
                   <AlertTriangle className="size-4 mt-0.5 shrink-0" />
                   <span>{trialError}</span>
                 </div>
@@ -441,7 +441,7 @@ function LegacyLockedPage() {
                   Signed in as <span className="text-content-secondary">{user.email}</span>.{' '}
                   {isIOSNativeApp
                     ? 'Your subscription is bound to this account automatically.'
-                    : 'Paystack will charge the card you enter at checkout — your subscription is bound to this account automatically.'}
+                    : 'Paystack will charge the card you enter at checkout. Your subscription is tied to this account automatically.'}
                 </p>
               ) : null}
             </>

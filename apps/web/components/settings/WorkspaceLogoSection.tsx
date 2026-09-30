@@ -108,8 +108,8 @@ export function WorkspaceLogoSection({
           {/* rounded-lg, matching WorkspaceIdentitySection (2026-08-13): these
               two sections sit in the same two-column row, and this one had been
               rendering sharp corners against its sibling's rounded ones. */}
-          {message && <p className={feedbackSuccessClass}>{message}</p>}
-          {error && <p className={feedbackErrorClass}>{error}</p>}
+          {message && <p role="status" className={feedbackSuccessClass}>{message}</p>}
+          {error && <p role="alert" className={feedbackErrorClass}>{error}</p>}
           <label
             className={`inline-flex cursor-pointer items-center rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover ${
               isSaving ? 'cursor-not-allowed opacity-60' : ''

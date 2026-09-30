@@ -51,7 +51,7 @@ export function SearchableGenreSelect({
           setIsOpen((current) => !current);
           setQuery('');
         }}
-        className={`flex w-full items-center justify-between rounded-2xl border border-stroke-subtle bg-bg-elevated/70 px-4 py-3 text-left text-base text-content-primary outline-none transition focus:border-brand ${className}`}
+        className={`flex w-full items-center justify-between rounded-2xl border border-stroke-control bg-bg-elevated/70 px-4 py-3 text-left text-base text-content-primary outline-none transition focus:border-brand ${className}`}
       >
         <span className={value ? 'text-content-primary' : 'text-content-quaternary'}>{value || 'Select genre'}</span>
         <span className={`text-content-secondary transition ${isOpen ? 'rotate-180' : ''}`}>⌄</span>
@@ -65,7 +65,7 @@ export function SearchableGenreSelect({
               onChange={(event) => setQuery(event.target.value)}
               placeholder={placeholder}
               autoFocus
-              className="w-full rounded-xl border border-stroke-subtle bg-bg-elevated/70 px-3 py-2 text-sm text-content-primary outline-none placeholder:text-content-quaternary focus:border-brand"
+              className="w-full rounded-xl border border-stroke-control bg-bg-elevated/70 px-3 py-2 text-sm text-content-primary outline-none placeholder:text-content-quaternary focus:border-brand"
             />
           </div>
           <div className="max-h-64 overflow-auto py-2">

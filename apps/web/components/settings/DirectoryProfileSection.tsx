@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2 } from '@/components/icons';
+import { Check, Loader2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import {
   DIRECTORY_SETTINGS_ANCHOR,
@@ -187,7 +187,7 @@ export function DirectoryProfileSection() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="e.g. Ada Obi"
-              className="h-11 w-full rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
+              className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
             />
           </label>
           <button
@@ -208,7 +208,7 @@ export function DirectoryProfileSection() {
               value={profile.visibility}
               disabled={busy}
               onChange={(event) => void save({ visibility: event.target.value })}
-              className="h-11 w-full rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
+              className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
             >
               {PERSON_VISIBILITIES.map((value) => (
                 <option key={value} value={value}>
@@ -227,7 +227,7 @@ export function DirectoryProfileSection() {
               value={profile.availability}
               disabled={busy}
               onChange={(event) => void save({ availability: event.target.value })}
-              className="h-11 w-full rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
+              className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
             >
               {PERSON_AVAILABILITIES.map((value) => (
                 <option key={value} value={value}>
@@ -254,12 +254,13 @@ export function DirectoryProfileSection() {
                     disabled={busy}
                     aria-pressed={on}
                     onClick={() => toggleRole(role)}
-                    className={`motion-focus rounded-full border px-3 py-1.5 text-sm disabled:opacity-60 ${
+                    className={`motion-focus inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm disabled:opacity-60 ${
                       on
                         ? 'border-brand bg-brand/10 text-brand'
                         : 'border-stroke-default text-content-secondary hover:border-brand'
                     }`}
                   >
+                    {on ? <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : null}
                     {DIRECTORY_ROLE_LABELS[role]}
                   </button>
                 );
@@ -304,7 +305,7 @@ export function DirectoryProfileSection() {
                 const next = event.target.value.trim();
                 if (next !== (profile.bio ?? '')) void save({ bio: next || null });
               }}
-              className="w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
+              className="w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
             />
           </label>
 
@@ -322,7 +323,7 @@ export function DirectoryProfileSection() {
                     const next = event.target.value.trim();
                     if (next !== (profile[field] ?? '')) void save({ [field]: next || null });
                   }}
-                  className="h-11 w-full rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
+                  className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
                 />
               </label>
             ))}
@@ -330,7 +331,7 @@ export function DirectoryProfileSection() {
         </div>
       )}
 
-      {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
+      {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
 
       {/* Requests waiting for you. Rendered only once you have a record —
           nobody can ask somebody who is not listed — and the inbox itself

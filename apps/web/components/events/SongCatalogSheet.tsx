@@ -8,7 +8,7 @@ import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { MAX_SONG_TITLE_LENGTH } from '@/lib/song-catalog';
 import { formatDuration } from '@/lib/setlist';
 import { ConfirmDialog } from './ConfirmDialog';
-import { trapTabKey } from './focusTrap';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import type { CatalogSong } from './SongPicker';
 
 type SongCatalogSheetProps = {
@@ -51,6 +51,8 @@ export function SongCatalogSheet({ artistName, songs, onClose, onChanged }: Song
   const [error, setError] = useState('');
   const [pendingDelete, setPendingDelete] = useState<CatalogSong | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  // Focus moves in, Tab stays in, and focus returns to the opener on close.
+  useDialogFocus(true, dialogRef);
 
   useEffect(() => {
     const onKeyDown = (keyEvent: KeyboardEvent) => {
@@ -97,7 +99,6 @@ export function SongCatalogSheet({ artistName, songs, onClose, onChanged }: Song
         role="dialog"
         aria-modal="true"
         aria-labelledby="song-catalog-title"
-        onKeyDown={(keyEvent) => trapTabKey(keyEvent, dialogRef.current)}
         className="relative flex max-h-[85dvh] w-full flex-col rounded-t-2xl border border-stroke-default bg-bg-surface sm:max-w-md sm:rounded-2xl"
       >
         <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle px-5 py-3">

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Loader2, X } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import {
   applyAnswerToContent,
   buildInterviewQuestions,
@@ -54,6 +55,12 @@ export function PressKitInterviewModal({ sections, onSave, onClose }: Props) {
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Focus lands on the dialog when it opens (the per-step effect below only
+  // runs when the step changes, so it never covered the first question), stays
+  // inside while it is open, and returns to the button that opened it.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(mounted && questions.length > 0, panelRef, { initialFocus: 'panel' });
 
   useEffect(() => lockBodyScroll(), []);
 
@@ -132,7 +139,9 @@ export function PressKitInterviewModal({ sections, onSave, onClose }: Props) {
 
   return createPortal(
     <div
-      className="fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center px-4 py-4 sm:py-8"
+      ref={panelRef}
+      tabIndex={-1}
+      className="fixed inset-x-0 top-0 z-[220] flex h-[100dvh] items-center justify-center px-4 py-4 focus:outline-none sm:py-8"
       role="dialog"
       aria-modal="true"
       aria-labelledby="press-kit-interview-heading"
@@ -188,7 +197,7 @@ export function PressKitInterviewModal({ sections, onSave, onClose }: Props) {
             answer={answerFor(question.section)}
             patch={patch}
           />
-          {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
+          {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
         </div>
 
         <div className="flex flex-col-reverse gap-2 border-t border-stroke-default px-5 py-4 sm:flex-row sm:items-center sm:justify-between">

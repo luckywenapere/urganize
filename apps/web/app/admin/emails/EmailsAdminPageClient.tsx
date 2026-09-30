@@ -160,13 +160,13 @@ export default function EmailsAdminPageClient() {
       </p>
 
       {error ? (
-        <p className="mt-4 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
+        <p role="alert" className="mt-4 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
           {error}
         </p>
       ) : null}
 
       {payload?.logError ? (
-        <p className="mt-4 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
+        <p role="alert" className="mt-4 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
           Could not read the send log: {payload.logError}
         </p>
       ) : null}
@@ -215,7 +215,7 @@ export default function EmailsAdminPageClient() {
               value={template}
               onChange={(event) => setTemplate(event.target.value)}
               aria-label="Filter by email type"
-              className="rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-semibold text-content-secondary"
+              className="rounded-full border border-stroke-control bg-bg-surface px-3 py-1.5 text-xs font-semibold text-content-secondary"
             >
               <option value="all">All types</option>
               {summary.byTemplate.map((entry) => (
@@ -277,7 +277,7 @@ export default function EmailsAdminPageClient() {
         email is never sent to these. Emails about someone&rsquo;s account or team still are.
       </p>
       {payload?.suppressionsError ? (
-        <p className="mt-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
+        <p role="alert" className="mt-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
           Could not read suppressions: {payload.suppressionsError}
         </p>
       ) : suppressions.length === 0 ? (

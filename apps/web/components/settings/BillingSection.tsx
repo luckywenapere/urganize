@@ -191,7 +191,7 @@ export function BillingSection() {
     return (
       <section className={panelClass}>
         {heading}
-        <div className={feedbackErrorClass}>{error}</div>
+        <div role="alert" className={feedbackErrorClass}>{error}</div>
         <button
           type="button"
           onClick={() => void load()}
@@ -302,7 +302,7 @@ export function BillingSection() {
               Cancel trial
             </button>
           )}
-          {cancelError ? <div className={`${feedbackErrorClass} mt-2`}>{cancelError}</div> : null}
+          {cancelError ? <div role="alert" className={`${feedbackErrorClass} mt-2`}>{cancelError}</div> : null}
         </div>
       ) : null}
     </section>

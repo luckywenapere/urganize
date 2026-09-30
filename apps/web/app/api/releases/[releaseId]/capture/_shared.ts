@@ -192,7 +192,7 @@ export async function ensureGraphicAsset(
   if (!(PUBLIC_IMAGE_ASSET_CATEGORIES as readonly string[]).includes(category)) {
     return {
       error: NextResponse.json(
-        { error: 'Pick an image — only artwork and promo images can go on a public page.' },
+        { error: 'Pick an image. Only artwork and promo images can go on a public page.' },
         { status: 400 }
       ),
     };

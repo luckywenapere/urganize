@@ -211,7 +211,7 @@ export default function PitchingPageClient() {
       ) : null}
 
       {error ? (
-        <div className="mt-6 rounded-lg border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
+        <div role="alert" className="mt-6 rounded-lg border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
           <p>{error}</p>
           <button
             type="button"
@@ -231,7 +231,7 @@ export default function PitchingPageClient() {
 
         {releases.length === 0 ? (
           <p className="rounded-xl border border-stroke-default bg-bg-surface p-4 text-sm text-content-secondary">
-            You need a release before you can pitch a song from it.{' '}
+            You need a rollout before you can pitch a song from it.{' '}
             <Link href="/dashboard" className="font-semibold text-brand underline">
               Go to your catalog
             </Link>
@@ -244,11 +244,11 @@ export default function PitchingPageClient() {
                 className="block text-[11px] uppercase tracking-[0.16em] text-content-tertiary"
                 htmlFor="pitching-release"
               >
-                Which release
+                Which rollout
               </label>
               <select
                 id="pitching-release"
-                className="h-11 w-full appearance-none rounded-xl border border-stroke-default bg-bg-base px-3 text-sm text-content-primary focus:border-brand focus:outline-none"
+                className="h-11 w-full appearance-none rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary focus:border-brand focus:outline-none"
                 value={releaseId}
                 onChange={(event) => setChosenReleaseId(event.target.value)}
               >
@@ -262,7 +262,7 @@ export default function PitchingPageClient() {
               </select>
               <p className="font-mono text-[11px] text-content-tertiary">
                 {waitingForSelected}/{MAX_WAITING_PITCHES_PER_RELEASE} waiting on a reply for this
-                release
+                rollout
               </p>
             </div>
 
@@ -302,7 +302,7 @@ export default function PitchingPageClient() {
           <div className="rounded-xl border border-stroke-default bg-bg-surface p-6 text-center">
             <Radio className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden />
             <p className="mt-3 text-sm text-content-secondary">
-              Nothing pitched yet. Pick a release above, choose a playlist and send your first
+              Nothing pitched yet. Pick a rollout above, choose a playlist and send your first
               song.
             </p>
           </div>
@@ -323,7 +323,7 @@ export default function PitchingPageClient() {
                     // are real and a curator may still answer, so they are
                     // named rather than hidden.
                     <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-                      Release removed
+                      Rollout removed
                     </p>
                   )}
                   <span className="shrink-0 font-mono text-[11px] text-content-tertiary">

@@ -12,8 +12,12 @@ import { BANNED_COPY_CHARS, BANNED_COPY_WORDS, bannedCopyInstruction } from './p
  * at least once during the eight phases that built this feature and was caught
  * by reading; this is what stops the ninth.
  *
- * Scope is the press kit and directory surfaces only. The rest of the product
- * predates these rules and is not in scope for a retrofit.
+ * Scope is the surfaces NAMED below, which get every rule in this file. The
+ * older screens were retrofitted on 2026-09-30 and are held to the em dash,
+ * ship, workspace and pronoun rules by lib/house-copy-ratchet.test.ts, which
+ * sweeps every component and page so a screen is covered without being listed.
+ * What this file adds is the rules that only make sense on these surfaces (the
+ * invented-number and job-title rules) and the lib modules a person reads.
  */
 
 const WEB = join(__dirname, '..');
@@ -86,8 +90,8 @@ const FILES = [
   ...walk(join(WEB, 'app', 'api', 'releases', '[releaseId]', 'share-card')),
   // Saved UrgAns chats (2026-09-24), a new surface born under the house rules
   // for the same reason the help pullouts were. ChappiConversation itself is
-  // deliberately NOT here: it predates the rules and still carries em dashes,
-  // which is the retrofit this guard's header rules out.
+  // held to the em dash rule by lib/house-copy-ratchet.test.ts, which sweeps
+  // every component, so it does not need listing here.
   ...walk(join(WEB, 'app', 'api', 'urgans', 'conversations')),
   join(WEB, 'lib', 'chappi', 'conversation-history.ts'),
   join(WEB, 'lib', 'chappi', 'conversations-server.ts'),

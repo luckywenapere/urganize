@@ -26,6 +26,7 @@ import { TeamBriefNudge } from './TeamBriefNudge';
 import { BriefAttribution } from './BriefAttribution';
 import { ReplyText } from './ReplyText';
 import { stripModelMarkup } from '@/lib/model-markup';
+import { describeTranscriptAnnouncement } from '@/lib/chappi/transcript-announcement';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
 import { ChappiRecapCard } from '@/components/chappi/ChappiRecapCard';
@@ -112,7 +113,7 @@ const CHIP_DESCRIPTIONS: Record<string, string> = {
   // themselves: CHAPPI_CHIPS folded them into one 'plan-release' chip, so a
   // description keyed on 'plan-single-6w' would never be looked up. Their
   // rename of the object is kept — "rollouts", never "releases".
-  'plan-release': 'Answer a few questions and get a draft rollout plan',
+  'plan-release': 'Answer a few questions and get your rollout plan',
   'status-update': 'A paragraph on where the rollout stands, ready to send',
   'add-task': 'Create an activity for one of your rollouts',
   'take-note': 'Park a thought before it gets away',
@@ -345,7 +346,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   useEffect(() => {
     const opened = HISTORY_ENABLED && scrolledEpochRef.current !== epoch;
     scrolledEpochRef.current = epoch;
-    bottomRef.current?.scrollIntoView({ behavior: opened ? 'instant' : 'smooth', block: 'end' });
+    // An explicit `behavior: 'smooth'` overrides the CSS scroll-behavior the
+    // reduced-motion rule sets, so the preference has to be honoured here.
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    bottomRef.current?.scrollIntoView({
+      behavior: opened || reduceMotion ? 'instant' : 'smooth',
+      block: 'end',
+    });
   }, [messages.length, isThinking, epoch]);
 
   // Appends only the ASSISTANT side of a turn. Callers own appending the
@@ -486,7 +493,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     switch (intent.kind) {
       case 'new_release':
         onNewRelease();
-        appendAssistantReply("Let's set up a new rollout — the form is open.");
+        appendAssistantReply("Let's set up a new rollout. The form is open.");
         return;
       case 'plan_release': {
         const preset = intent.plannerPreset;
@@ -513,7 +520,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           },
         });
         appendAssistantReply(
-          "Let's plan it. Seven quick questions, then I'll draft your rollout."
+          "Let's plan it. A few quick questions, then I'll build your rollout plan."
         );
         return;
       }
@@ -543,7 +550,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           openTask(todaysDirective.id);
           appendAssistantReply(`Today's focus: "${todaysDirective.title}". I've opened it for you.`);
         } else {
-          appendAssistantReply("You're all caught up — nothing needs your attention right now.");
+          appendAssistantReply("You're all caught up. Nothing needs your attention right now.");
         }
         return;
       case 'generate_status': {
@@ -985,7 +992,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     });
     setPendingConfirmation(null);
     appendMessage({ id: nextMessageId('u'), role: 'user', content: 'Cancel that.' });
-    appendAssistantReply('Cancelled — nothing was changed.');
+    appendAssistantReply('Cancelled. Nothing was changed.');
   };
 
   // Appends the user turn immediately (so it appears without waiting on the
@@ -1084,11 +1091,14 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           <button
             type="button"
             onClick={voice.toggle}
-            aria-pressed={isRecording}
+            // The label carries the state ("Stop recording" / "Talk to UrgAns"),
+            // so no aria-pressed as well: announcing both reads as a double
+            // negative. The recording colour keys off a data attribute.
+            data-recording={isRecording ? 'true' : undefined}
             aria-label={isRecording ? 'Stop recording' : 'Talk to UrgAns'}
             // Ghost style so Send stays the primary action.
             disabled={isThinking || isTranscribing || voice.state === 'requesting'}
-            className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 aria-pressed:text-status-error"
+            className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error"
           >
             {isTranscribing || voice.state === 'requesting' ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -1480,6 +1490,18 @@ function Transcript({
       ) : null}
 
       <div ref={bottomRef} />
+
+      {/* Screen readers: the transcript changes under a composer that keeps
+          focus, so one stable live region carries what just happened. It is
+          the last child so the visible column's spacing is untouched. */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {describeTranscriptAnnouncement({
+          isThinking,
+          pendingConfirmation: pendingConfirmation ?? null,
+          lastAssistantContent:
+            [...messages].reverse().find((message) => message.role === 'assistant')?.content ?? null,
+        })}
+      </div>
     </div>
   );
 }
@@ -1568,7 +1590,7 @@ function AssistantMessage({
           <button
             type="button"
             onClick={onRetry}
-            aria-label="Retry — regenerate this reply"
+            aria-label="Regenerate this reply"
             title="Retry"
             className={actionButtonClass}
           >
@@ -1583,7 +1605,12 @@ function AssistantMessage({
           title="Good reply"
           className={`${actionButtonClass} ${feedback === 'up' ? 'text-brand' : ''}`}
         >
-          <ThumbsUp className="h-3.5 w-3.5" aria-hidden="true" />
+          {/* Filled when chosen, so the state is not carried by colour alone. */}
+          <ThumbsUp
+            className="h-3.5 w-3.5"
+            fill={feedback === 'up' ? 'currentColor' : 'none'}
+            aria-hidden="true"
+          />
         </button>
         <button
           type="button"
@@ -1593,7 +1620,11 @@ function AssistantMessage({
           title="Poor reply"
           className={`${actionButtonClass} ${feedback === 'down' ? 'text-brand' : ''}`}
         >
-          <ThumbsDown className="h-3.5 w-3.5" aria-hidden="true" />
+          <ThumbsDown
+            className="h-3.5 w-3.5"
+            fill={feedback === 'down' ? 'currentColor' : 'none'}
+            aria-hidden="true"
+          />
         </button>
       </div>
     </div>

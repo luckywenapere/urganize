@@ -242,7 +242,7 @@ export function AssetUploadControl({ releaseId, onUploaded, onToast }: AssetUplo
             value={category}
             onChange={handleCategoryChange}
             disabled={isUploading}
-            className="motion-focus h-10 w-full border border-stroke-default bg-bg-elevated px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-stroke-strong focus:border-brand disabled:cursor-not-allowed disabled:opacity-60"
+            className="motion-focus h-10 w-full border border-stroke-control bg-bg-elevated px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-content-secondary focus:border-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
             {ASSET_CATEGORIES.map((cat) => (
               <option key={cat} value={cat} className="bg-bg-elevated text-content-primary">
@@ -293,7 +293,7 @@ export function AssetUploadControl({ releaseId, onUploaded, onToast }: AssetUplo
       </div>
 
       {inlineError ? (
-        <p className="mt-3 text-xs text-status-error">{inlineError}</p>
+        <p role="alert" className="mt-3 text-xs text-status-error">{inlineError}</p>
       ) : null}
     </div>
   );
