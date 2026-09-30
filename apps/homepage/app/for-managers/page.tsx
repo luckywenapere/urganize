@@ -15,7 +15,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import { TESTIMONIALS } from "@/content/testimonials";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "For artist managers",
+  title: "Release planning software for artist managers",
   description:
     "Everything after the music, for artist managers running more than one rollout at once. A plan, owners on every activity and a press kit you send as one link.",
   path: "/for-managers",

@@ -10,7 +10,7 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Features",
+  title: "Music release plan, tasks and press kit",
   description:
     "Everything after the music: a plan for every rollout, activities your team owns and a press kit you send as one link. Plus UrgAns.",
   path: "/features",

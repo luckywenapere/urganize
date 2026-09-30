@@ -55,4 +55,13 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
     answer:
       "Yes, in your browser. Add it to your home screen, and Android users are offered the app inside Urganize.",
   },
+  // Added 2026-09-30 (global-branding pass). "urganize" is one letter from
+  // "urbanize" and a respelling of "organize", and a search for the brand
+  // returned dictionary pages for the wrong word. This is the one place the
+  // spelling is said as a question a person actually asks, and because this
+  // list feeds the FAQPage JSON-LD it is also said to the search engine.
+  {
+    question: "How do I spell Urganize?",
+    answer: "Urganize, with a G, like organize. It is not urbanize.",
+  },
 ];

@@ -7,7 +7,7 @@ import {
   Roboto_Mono,
 } from "next/font/google";
 import "./globals.css";
-import { LANDING_DESCRIPTION, LANDING_TITLE } from "@/lib/seo";
+import { LANDING_DESCRIPTION, LANDING_TITLE, ORGANIZATION_ID } from "@/lib/seo";
 import { PRICING_TIER_ORDER, getTierPrice } from "@urganize/pricing";
 import { Suspense } from "react";
 import FormbricksProvider from "./formbricks-provider";
@@ -95,8 +95,6 @@ const robotoMono = Roboto_Mono({
 // machine-readable. Do not add a street address, employee count or founder
 // list without the founder confirming them: a knowledge panel repeats
 // whatever this says.
-const ORGANIZATION_ID = `${SITE_URL}/#organization`;
-
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",

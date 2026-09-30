@@ -48,6 +48,7 @@ const ROADMAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ROADMAP === "true";
 // Product pages (Features, Pricing, Why Urganize, Privacy) are deliberately
 // absent — they live only in the header's ProductMenu dropdown (URG-161).
 const footerLinks = [
+  { href: "/guides", label: "Guides" },
   { href: "/team", label: "Team" },
   { href: "/community", label: "Community" },
   { href: "/brand", label: "Brand" },

@@ -13,7 +13,7 @@ import { PricingPageClient } from "./PricingPageClient";
 // sitelink candidate, that negative rendered right beneath the homepage in
 // search.
 export const metadata: Metadata = buildPageMetadata({
-  title: "Pricing",
+  title: "Pricing for artists, managers and labels",
   description:
     "Everything after the music, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to book a demo with the founders.",
   path: "/pricing",
