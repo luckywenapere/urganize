@@ -134,7 +134,7 @@ const FOCUSABLE =
  * so the whole sheet shares one idea of "something you set".
  */
 const FIELD_CLASS =
-  'block w-full rounded-xl border border-stroke-default bg-bg-base px-4 text-[15px] text-content-primary transition-[border-color,box-shadow] duration-200 placeholder:text-content-tertiary hover:border-stroke-strong focus:border-brand focus:outline-none focus:ring-[3px] focus:ring-brand/15';
+  'block w-full rounded-xl border border-stroke-control bg-bg-base px-4 text-[15px] text-content-primary transition-[border-color,box-shadow] duration-200 placeholder:text-content-tertiary hover:border-content-secondary focus:border-brand focus:outline-none focus:ring-[3px] focus:ring-brand/15';
 
 /**
  * The track behind the toggles and the tabs. The house pattern (the Shows

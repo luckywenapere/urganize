@@ -126,7 +126,7 @@ export function WorkRequestSheet({
           <select
             value={role}
             onChange={(event) => setRole(event.target.value as DirectoryRole)}
-            className="h-11 w-full rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
+            className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
           >
             {DIRECTORY_ROLES.map((value) => (
               <option key={value} value={value}>
@@ -145,7 +145,7 @@ export function WorkRequestSheet({
             onChange={(event) => setNote(event.target.value.slice(0, WORK_REQUEST_NOTE_MAX_CHARS))}
             rows={4}
             placeholder="What the job is, and roughly when."
-            className="w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-base text-content-primary focus:border-brand focus:outline-none"
+            className="w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary focus:border-brand focus:outline-none"
           />
         </label>
 

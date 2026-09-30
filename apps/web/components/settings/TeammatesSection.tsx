@@ -284,13 +284,13 @@ export function TeammatesSection({
           onChange={(event) => setInviteEmail(event.target.value)}
           placeholder="teammate@email.com"
           aria-label="Teammate email"
-          className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+          className="rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
         />
         <select
           value={inviteRole}
           onChange={(event) => setInviteRole(event.target.value)}
           aria-label="Role"
-          className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+          className="rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
         >
           <option value="manager">Manager</option>
           <option value="artist">Artist</option>
@@ -304,7 +304,7 @@ export function TeammatesSection({
             value={inviteArtistId}
             onChange={(event) => setInviteArtistId(event.target.value)}
             aria-label="Which artist is this invite for?"
-            className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
+            className="rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand sm:col-span-2"
           >
             <option value="">Which artist?</option>
             {rosterArtists.map((artist) => (
@@ -354,7 +354,7 @@ export function TeammatesSection({
                 value={inviteUrl}
                 aria-label="Invite link"
                 onFocus={(event) => event.target.select()}
-                className="min-w-0 flex-1 truncate rounded-lg border border-stroke-subtle bg-bg-elevated px-2 py-1 text-xs text-content-secondary"
+                className="min-w-0 flex-1 truncate rounded-lg border border-stroke-control bg-bg-elevated px-2 py-1 text-xs text-content-secondary"
               />
               <button
                 type="button"

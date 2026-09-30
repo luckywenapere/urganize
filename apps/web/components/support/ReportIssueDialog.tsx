@@ -246,7 +246,7 @@ export function ReportIssueDialog() {
                   maxLength={MAX_ISSUE_TITLE_LENGTH}
                   placeholder={copy.titleHint}
                   onChange={(event) => setTitle(event.target.value)}
-                  className="mt-1.5 w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2.5 text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+                  className="mt-1.5 w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2.5 text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
                 />
               </label>
 
@@ -257,7 +257,7 @@ export function ReportIssueDialog() {
                   rows={5}
                   maxLength={MAX_ISSUE_BODY_LENGTH}
                   onChange={(event) => setBody(event.target.value)}
-                  className="mt-1.5 w-full resize-y rounded-lg border border-stroke-default bg-bg-base px-3 py-2.5 text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+                  className="mt-1.5 w-full resize-y rounded-lg border border-stroke-control bg-bg-base px-3 py-2.5 text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
                 />
               </label>
 

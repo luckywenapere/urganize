@@ -150,7 +150,7 @@ function ThreadMessageRow({
               aria-label="Edit message"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              className="motion-focus min-h-[60px] w-full resize-y rounded-lg border border-stroke-default bg-bg-elevated px-2 py-1.5 text-sm text-content-primary"
+              className="motion-focus min-h-[60px] w-full resize-y rounded-lg border border-stroke-control bg-bg-elevated px-2 py-1.5 text-sm text-content-primary"
             />
             <div className="mt-1.5 flex gap-2">
               <button

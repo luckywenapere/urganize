@@ -187,7 +187,7 @@ export function DirectoryProfileSection() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="e.g. Ada Obi"
-              className="h-11 w-full rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
+              className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
             />
           </label>
           <button
@@ -208,7 +208,7 @@ export function DirectoryProfileSection() {
               value={profile.visibility}
               disabled={busy}
               onChange={(event) => void save({ visibility: event.target.value })}
-              className="h-11 w-full rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
+              className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
             >
               {PERSON_VISIBILITIES.map((value) => (
                 <option key={value} value={value}>
@@ -227,7 +227,7 @@ export function DirectoryProfileSection() {
               value={profile.availability}
               disabled={busy}
               onChange={(event) => void save({ availability: event.target.value })}
-              className="h-11 w-full rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
+              className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
             >
               {PERSON_AVAILABILITIES.map((value) => (
                 <option key={value} value={value}>
@@ -305,7 +305,7 @@ export function DirectoryProfileSection() {
                 const next = event.target.value.trim();
                 if (next !== (profile.bio ?? '')) void save({ bio: next || null });
               }}
-              className="w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
+              className="w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
             />
           </label>
 
@@ -323,7 +323,7 @@ export function DirectoryProfileSection() {
                     const next = event.target.value.trim();
                     if (next !== (profile[field] ?? '')) void save({ [field]: next || null });
                   }}
-                  className="h-11 w-full rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
+                  className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
                 />
               </label>
             ))}

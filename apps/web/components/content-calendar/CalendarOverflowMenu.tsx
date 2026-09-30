@@ -198,7 +198,7 @@ export function CalendarOverflowMenu({ releaseId, calendar, onRenamed, onDeleted
                       void handleRename();
                     }
                   }}
-                  className="h-9 w-full border border-[var(--cc-border)] bg-transparent px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)]"
+                  className="h-9 w-full border border-[var(--cc-field-border)] bg-transparent px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)]"
                 />
               </label>
               <div className="mt-2 flex justify-end gap-2">

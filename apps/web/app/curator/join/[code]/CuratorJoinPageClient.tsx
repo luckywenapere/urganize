@@ -24,6 +24,7 @@ import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
 import type { CuratorInviteState } from '@/types/pitching';
 import type { CuratorInviteLookup } from '@/lib/curator-invite-server';
+import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT } from '@/lib/password-rules';
 
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
@@ -502,13 +503,14 @@ export function CuratorJoinPageClient({
                       />
                       <Input
                         label="Password"
+                        hint={PASSWORD_LENGTH_HINT}
                         type="password"
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
                         autoComplete="new-password"
                         leftIcon={<Lock className="h-4 w-4" />}
                         disabled={busy}
-                        minLength={6}
+                        minLength={MIN_PASSWORD_LENGTH}
                         required
                       />
                       <Button type="submit" className="w-full" disabled={busy}>

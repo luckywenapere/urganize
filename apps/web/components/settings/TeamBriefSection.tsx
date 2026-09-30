@@ -266,7 +266,7 @@ export function TeamBriefSection() {
                 onChange={(event) =>
                   setDrafts((prev) => ({ ...prev, [section]: event.target.value }))
                 }
-                className="motion-focus mt-2 w-full resize-y rounded-lg border border-stroke-default bg-bg-surface px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary read-only:opacity-70"
+                className="motion-focus mt-2 w-full resize-y rounded-lg border border-stroke-control bg-bg-surface px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary read-only:opacity-70"
               />
 
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">

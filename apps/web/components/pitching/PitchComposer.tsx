@@ -73,7 +73,7 @@ type PitchComposerProps = {
 };
 
 const inputClass =
-  'h-11 w-full rounded-xl border border-stroke-default bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
+  'h-11 w-full rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
 const labelClass = 'block text-[11px] uppercase tracking-[0.16em] text-content-tertiary';
 
 async function getAccessToken(): Promise<string> {
@@ -449,7 +449,7 @@ export function PitchComposer({
           <textarea
             id="pitch-note"
             rows={3}
-            className="w-full rounded-xl border border-stroke-default bg-bg-base p-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+            className="w-full rounded-xl border border-stroke-control bg-bg-base p-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
             value={note}
             maxLength={MAX_PITCH_NOTE_LENGTH}
             onChange={(event) => setNote(event.target.value)}

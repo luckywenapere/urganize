@@ -28,6 +28,7 @@ import { openExternalUrl } from '@/lib/external-link';
 
 const SURFACE = 'var(--capture-surface)';
 const STROKE = 'var(--capture-border)';
+const FIELD_STROKE = 'var(--capture-field-border)';
 const CREAM = 'var(--capture-text)';
 const MUTED = 'var(--capture-text-muted)';
 const FAINT = 'var(--capture-text-faint)';
@@ -35,7 +36,7 @@ const BRAND = 'var(--capture-accent)';
 const INK = 'var(--capture-ground)';
 
 function inputStyle(): CSSProperties {
-  return { backgroundColor: SURFACE, borderColor: STROKE, color: CREAM };
+  return { backgroundColor: SURFACE, borderColor: FIELD_STROKE, color: CREAM };
 }
 
 type CaptureLeadFormProps = {

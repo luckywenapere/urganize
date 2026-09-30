@@ -122,7 +122,7 @@ export function SetReleaseDateCard({
       onChange={(event) => setReleaseDate(event.target.value)}
       disabled={isSaving}
       aria-label="Release date"
-      className="input h-10 rounded-lg border-stroke-default bg-bg-elevated sm:w-[11.5rem]"
+      className="input h-10 rounded-lg border-stroke-control bg-bg-elevated sm:w-[11.5rem]"
     />
   );
 
@@ -197,7 +197,7 @@ export function SetReleaseDateCard({
               disabled={isSaving}
               maxLength={140}
               placeholder={DEFAULT_RELEASE_TITLE}
-              className="input h-10 rounded-lg border-stroke-default bg-bg-elevated sm:max-w-[22rem]"
+              className="input h-10 rounded-lg border-stroke-control bg-bg-elevated sm:max-w-[22rem]"
             />
           </label>
         ) : null}

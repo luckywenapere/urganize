@@ -135,7 +135,7 @@ export function EditShowSheet({ event, onClose, onSaved, onRequestDelete }: Edit
   };
 
   const fieldClass =
-    'w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-content-primary outline-none transition-colors focus:border-brand';
+    'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-content-primary outline-none transition-colors focus:border-brand';
   const labelClass = 'block text-xs font-semibold text-content-secondary';
   const groupClass = 'space-y-3 rounded-xl border border-stroke-subtle p-3';
   const errorText = (message?: string) =>

@@ -62,7 +62,7 @@ export function getStepKicker(step: StepIndex, firstStep: StepIndex): string {
 
 const helperClass = 'mt-3 text-xs leading-5 text-content-secondary';
 const inputClass =
-  'w-full rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2.5 text-[16px] text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-brand';
+  'w-full rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2.5 text-[16px] text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-brand';
 
 function formatYmdLabel(ymd: string): string {
   const parsed = new Date(`${ymd}T00:00:00.000Z`);

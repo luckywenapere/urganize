@@ -1141,7 +1141,7 @@ function Field({
       placeholder={placeholder}
       aria-describedby={helpText ? hintId : undefined}
       onChange={(event) => onChange(event.target.value)}
-      className="mt-1 w-full border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+      className="mt-1 w-full border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
     />
   );
   const srHint = helpText ? (

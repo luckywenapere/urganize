@@ -373,7 +373,7 @@ export default function WaitlistAdminPageClient() {
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search email, name, phone, role…"
           aria-label="Search the waitlist"
-          className="motion-focus h-10 min-w-0 flex-1 rounded-lg border border-stroke-default bg-bg-elevated px-3 text-sm text-content-primary placeholder:text-content-tertiary hover:border-stroke-strong focus:border-brand"
+          className="motion-focus h-10 min-w-0 flex-1 rounded-lg border border-stroke-control bg-bg-elevated px-3 text-sm text-content-primary placeholder:text-content-tertiary hover:border-content-secondary focus:border-brand"
         />
         <button
           type="submit"
@@ -467,7 +467,7 @@ export default function WaitlistAdminPageClient() {
                         onChange={(event) =>
                           void handleStatusChange(row.id, event.target.value as ContactStatus)
                         }
-                        className="motion-focus h-8 rounded-md border border-stroke-default bg-bg-elevated px-2 text-xs text-content-primary hover:border-stroke-strong focus:border-brand disabled:opacity-60"
+                        className="motion-focus h-8 rounded-md border border-stroke-control bg-bg-elevated px-2 text-xs text-content-primary hover:border-content-secondary focus:border-brand disabled:opacity-60"
                       >
                         {Object.entries(contactStatusLabels).map(([value, label]) => (
                           <option key={value} value={value}>
@@ -484,7 +484,7 @@ export default function WaitlistAdminPageClient() {
                             value={notesDraft}
                             onChange={(event) => setNotesDraft(event.target.value)}
                             rows={2}
-                            className="motion-focus w-full min-w-[200px] rounded-md border border-stroke-default bg-bg-elevated px-2 py-1 text-xs text-content-primary focus:border-brand"
+                            className="motion-focus w-full min-w-[200px] rounded-md border border-stroke-control bg-bg-elevated px-2 py-1 text-xs text-content-primary focus:border-brand"
                             autoFocus
                           />
                           <div className="flex gap-2">

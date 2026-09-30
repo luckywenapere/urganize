@@ -192,7 +192,7 @@ export default function NotificationsPageClient() {
                   setPresets({ ...presets, releaseReminders: { ...presets.releaseReminders, steps } });
                 }}
                 maxLength={80}
-                className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+                className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
               />
               <textarea
                 aria-label={`Reminder ${index + 1} message`}
@@ -204,7 +204,7 @@ export default function NotificationsPageClient() {
                 }}
                 maxLength={300}
                 rows={2}
-                className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+                className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
               />
               <p className="mt-1 text-[11px] text-content-tertiary">
                 Use <code>{'{releaseTitle}'}</code> to insert the rollout’s title.
@@ -250,7 +250,7 @@ export default function NotificationsPageClient() {
                   setPresets({ ...presets, motivational: { ...presets.motivational, pool } });
                 }}
                 maxLength={80}
-                className="input rounded-lg border-stroke-default bg-bg-elevated"
+                className="input rounded-lg border-stroke-control bg-bg-elevated"
               />
               <textarea
                 aria-label={`Nudge ${index + 1} message`}
@@ -262,7 +262,7 @@ export default function NotificationsPageClient() {
                 }}
                 maxLength={300}
                 rows={2}
-                className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+                className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
               />
             </div>
           ))}
@@ -318,7 +318,7 @@ export default function NotificationsPageClient() {
                     })
                   }
                   maxLength={80}
-                  className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+                  className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
                 />
                 <textarea
                   aria-label={`${label} message`}
@@ -337,7 +337,7 @@ export default function NotificationsPageClient() {
                   }
                   maxLength={300}
                   rows={2}
-                  className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+                  className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
                 />
                 <p className="mt-1 text-[11px] text-content-tertiary">
                   Use <code>{'{taskTitle}'}</code> to insert the activity’s title.
@@ -398,7 +398,7 @@ export default function NotificationsPageClient() {
               })
             }
             maxLength={80}
-            className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+            className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
           />
           <textarea
             aria-label="New credit submission message"
@@ -414,7 +414,7 @@ export default function NotificationsPageClient() {
             }
             maxLength={300}
             rows={2}
-            className="input mt-2 rounded-lg border-stroke-default bg-bg-elevated"
+            className="input mt-2 rounded-lg border-stroke-control bg-bg-elevated"
           />
           <p className="mt-1 text-[11px] text-content-tertiary">
             Use <code>{'{collaboratorName}'}</code> for who sent it and{' '}

@@ -355,7 +355,7 @@ export function TaskDetailView({
               value={inviteEmail}
               onChange={(event) => setInviteEmail(event.target.value)}
               placeholder="teammate@email.com"
-              className="motion-focus h-9 w-full rounded-lg border border-stroke-default bg-bg-elevated px-2 text-sm text-content-primary transition-colors focus:border-brand"
+              className="motion-focus h-9 w-full rounded-lg border border-stroke-control bg-bg-elevated px-2 text-sm text-content-primary transition-colors focus:border-brand"
             />
           </label>
           <button

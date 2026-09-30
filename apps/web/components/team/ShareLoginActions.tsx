@@ -72,7 +72,7 @@ export function ShareLoginActions({
           value={url}
           aria-label="Login link"
           onFocus={(event) => event.target.select()}
-          className="w-full truncate rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 font-mono text-xs text-content-secondary"
+          className="w-full truncate rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 font-mono text-xs text-content-secondary"
         />
       ) : null}
 

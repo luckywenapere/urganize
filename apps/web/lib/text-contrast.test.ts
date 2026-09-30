@@ -98,3 +98,102 @@ describe('the faint tier on the dark-locked public pages', () => {
     expect(contrast(blend([26, 22, 17], cream, Number(light![1])), cream)).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe('the legacy text tiers cannot drift from the rgb tokens', () => {
+  // There were two hand-kept sets: the rgb triples Tailwind reads and a hex set
+  // the older CSS classes read (.field-label, .saas-eyebrow, .kbd, .icon-btn).
+  // Only the first was corrected, so light tertiary sat at 2.6:1 and dark at
+  // 3.5:1 in the second. Deriving the hex set from the rgb one leaves nothing
+  // to keep in step.
+  for (const [label, selector] of THEMES) {
+    it(`--text-secondary and --text-tertiary are derived on ${label}`, () => {
+      const scope = block(selector);
+      expect(scope).toMatch(/--text-secondary:\s*rgb\(var\(--color-text-secondary\)\);/);
+      expect(scope).toMatch(/--text-tertiary:\s*rgb\(var\(--color-text-tertiary\)\);/);
+    });
+  }
+});
+
+// A form field's boundary must be findable: 3:1 against what it sits on
+// (WCAG 1.4.11). The hairline strokes are ~1.1:1 by design, for cards and
+// dividers, and had been copied onto every input. lib/field-border-guard.test.ts
+// keeps fields on the token; this keeps the token honest.
+const CONTROL_GROUNDS = [
+  'color-bg-base',
+  'color-bg-sidebar',
+  'color-bg-surface',
+  'color-bg-elevated',
+  'color-bg-overlay',
+  'color-bg-hover',
+  'color-bg-active',
+];
+
+describe('form-control borders keep 3:1 on every ground', () => {
+  for (const [label, selector] of THEMES) {
+    it(`--color-stroke-control on ${label}`, () => {
+      const scope = block(selector);
+      const border = token(scope, 'color-stroke-control');
+      for (const ground of CONTROL_GROUNDS) {
+        expect(contrast(border, token(scope, ground)), `${ground} on ${label}`).toBeGreaterThanOrEqual(3);
+      }
+    });
+
+    it(`the legacy --border-control follows it on ${label}`, () => {
+      expect(block(selector)).toMatch(/--border-control:\s*rgb\(var\(--color-stroke-control\)\);/);
+    });
+  }
+
+  const bare = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const inputRule = (state: string) =>
+    new RegExp(`(?:^|\\n)\\.input${state}\\s*\\{([^}]*)\\}`).exec(bare);
+
+  it('the .input placeholder is a readable tier, not the decorative one', () => {
+    // Placeholder text is read, so it needs 4.5:1. It was quaternary, near 2:1 on ink.
+    const rule = inputRule('::placeholder');
+    expect(rule).not.toBeNull();
+    expect(rule![1]).toMatch(/color:\s*var\(--text-tertiary\)/);
+    expect(rule![1]).not.toMatch(/quaternary/);
+  });
+
+  it('the .input hover border is never one of the hairline tiers', () => {
+    // --border-strong is ~1.26:1; using it on hover made the outline fade when
+    // the field was pointed at.
+    const rule = inputRule(':hover');
+    expect(rule).not.toBeNull();
+    expect(rule![1]).not.toMatch(/--border-(?:subtle|default|strong)/);
+  });
+
+  it('the hairline tiers stay faint, so cards and dividers keep their quiet look', () => {
+    // If someone "fixes" the contrast by strengthening these, every card in
+    // the app grows a heavy outline. The control token is the one to use.
+    expect(css).toMatch(/--border-default:\s*rgba\(245, 240, 230, 0\.06\);/);
+    expect(css).toMatch(/--border-default:\s*rgba\(26, 22, 17, 0\.09\);/);
+  });
+});
+
+describe('field borders on the dark-locked pages and the calendar', () => {
+  const ink: Rgb = [13, 18, 14];
+  const surface: Rgb = [24, 29, 25];
+  const cream: Rgb = [245, 240, 230];
+  const inkText: Rgb = [26, 22, 17];
+
+  for (const name of ['credits', 'capture']) {
+    it(`--${name}-field-border is 3:1 on the ground and on the field fill`, () => {
+      const match = css.match(new RegExp(`--${name}-field-border:\\s*rgba\\(245, 240, 230, ([\\d.]+)\\);`));
+      expect(match).not.toBeNull();
+      // The border is painted over the field's own surface fill; outside it is the ground.
+      const border = blend(cream, surface, Number(match![1]));
+      expect(contrast(border, ink)).toBeGreaterThanOrEqual(3);
+      expect(contrast(border, surface)).toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  it('the calendar field border is 3:1 in both themes', () => {
+    const dark = css.match(/\.cc-island \{[^}]*--cc-field-border:\s*rgba\(245, 240, 230, ([\d.]+)\)/);
+    const light = css.match(/html\[data-theme='light'\] \.cc-island \{[^}]*--cc-field-border:\s*rgba\(26, 22, 17, ([\d.]+)\)/);
+    expect(dark).not.toBeNull();
+    expect(light).not.toBeNull();
+    expect(contrast(blend(cream, ink, Number(dark![1])), ink)).toBeGreaterThanOrEqual(3);
+    expect(contrast(blend(inkText, cream, Number(light![1])), cream)).toBeGreaterThanOrEqual(3);
+  });
+});

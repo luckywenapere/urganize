@@ -215,7 +215,7 @@ export default function EmailsAdminPageClient() {
               value={template}
               onChange={(event) => setTemplate(event.target.value)}
               aria-label="Filter by email type"
-              className="rounded-full border border-stroke-default bg-bg-surface px-3 py-1.5 text-xs font-semibold text-content-secondary"
+              className="rounded-full border border-stroke-control bg-bg-surface px-3 py-1.5 text-xs font-semibold text-content-secondary"
             >
               <option value="all">All types</option>
               {summary.byTemplate.map((entry) => (

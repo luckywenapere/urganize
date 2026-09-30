@@ -10,6 +10,7 @@ import { Logo } from '@urganize/ui';
 import { ArrowLeft, Lock, CheckCircle, AlertCircle } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from "@/lib/errors";
+import { MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT_ERROR, isPasswordLongEnough } from '@/lib/password-rules';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -56,8 +57,8 @@ export default function ResetPasswordPage() {
     }
 
     // Validate password length
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (!isPasswordLongEnough(password)) {
+      setError(PASSWORD_TOO_SHORT_ERROR);
       return;
     }
 
@@ -178,7 +179,7 @@ export default function ResetPasswordPage() {
                   Set new password
                 </h1>
                 <p className="text-sm text-content-tertiary">
-                  Your new password must be at least 8 characters.
+                  Your new password must be at least {MIN_PASSWORD_LENGTH} characters.
                 </p>
               </div>
 

@@ -248,7 +248,7 @@ export default function PitchingPageClient() {
               </label>
               <select
                 id="pitching-release"
-                className="h-11 w-full appearance-none rounded-xl border border-stroke-default bg-bg-base px-3 text-sm text-content-primary focus:border-brand focus:outline-none"
+                className="h-11 w-full appearance-none rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary focus:border-brand focus:outline-none"
                 value={releaseId}
                 onChange={(event) => setChosenReleaseId(event.target.value)}
               >

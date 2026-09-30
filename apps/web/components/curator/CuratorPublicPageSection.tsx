@@ -138,7 +138,7 @@ export function CuratorPublicPageSection() {
               id="curator-slug"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              className="h-9 min-w-0 flex-1 rounded-lg border border-stroke-default bg-bg-base px-3 text-sm text-content-primary"
+              className="h-9 min-w-0 flex-1 rounded-lg border border-stroke-control bg-bg-base px-3 text-sm text-content-primary"
               autoComplete="off"
               spellCheck={false}
             />

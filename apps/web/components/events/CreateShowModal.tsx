@@ -203,7 +203,7 @@ export function CreateShowModal({ artists, onClose, onCreated, onCreatedSeries }
   };
 
   const fieldClass =
-    'w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-content-primary outline-none transition-colors focus:border-brand';
+    'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-content-primary outline-none transition-colors focus:border-brand';
   const labelClass = 'block text-xs font-semibold text-content-secondary';
   const errorText = (message?: string) =>
     showErrors && message ? <span role="alert" className="mt-1 block text-xs text-status-error">{message}</span> : null;

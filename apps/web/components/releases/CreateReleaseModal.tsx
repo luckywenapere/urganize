@@ -666,7 +666,7 @@ export function CreateReleaseModal({
                   <select
                     value={selectedArtistId}
                     onChange={(event) => setArtistId(event.target.value)}
-                    className="w-full rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+                    className="w-full rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
                   >
                     {artists.map((option) => (
                       <option key={option.id} value={option.id}>
@@ -729,7 +729,7 @@ export function CreateReleaseModal({
                   ref={titleInputRef}
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  className="input rounded-lg border-stroke-default bg-bg-elevated"
+                  className="input rounded-lg border-stroke-control bg-bg-elevated"
                   placeholder={DEFAULT_RELEASE_TITLE}
                   maxLength={140}
                   aria-invalid={Boolean(errors.title)}
@@ -758,7 +758,7 @@ export function CreateReleaseModal({
                   min={todayYmd}
                   value={releaseDate}
                   onChange={(event) => setReleaseDate(event.target.value)}
-                  className="input rounded-lg border-stroke-default bg-bg-elevated"
+                  className="input rounded-lg border-stroke-control bg-bg-elevated"
                   aria-invalid={Boolean(errors.releaseDate)}
                 />
                 {errors.releaseDate ? (

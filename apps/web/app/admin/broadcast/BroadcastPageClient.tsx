@@ -145,7 +145,7 @@ export default function BroadcastPageClient() {
               onChange={(event) => setTitle(event.target.value)}
               maxLength={80}
               placeholder="New in Urganize"
-              className="input rounded-lg border-stroke-default bg-bg-elevated"
+              className="input rounded-lg border-stroke-control bg-bg-elevated"
             />
           </label>
 
@@ -157,7 +157,7 @@ export default function BroadcastPageClient() {
               maxLength={300}
               rows={4}
               placeholder="Invite links, artist-scoped teammates, and a cleaner mobile catalog just shipped."
-              className="input rounded-lg border-stroke-default bg-bg-elevated"
+              className="input rounded-lg border-stroke-control bg-bg-elevated"
             />
             <span className="mt-1 block text-right font-mono text-[10px] text-content-tertiary">
               {message.length}/300
@@ -172,7 +172,7 @@ export default function BroadcastPageClient() {
               value={link}
               onChange={(event) => setLink(event.target.value)}
               placeholder="/dashboard"
-              className="input rounded-lg border-stroke-default bg-bg-elevated"
+              className="input rounded-lg border-stroke-control bg-bg-elevated"
             />
           </label>
 

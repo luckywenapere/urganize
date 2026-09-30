@@ -914,7 +914,7 @@ export function TasksPanel({
                 autoFocus
                 placeholder="Search…"
                 aria-label="Search activities, tools and pages"
-                className="motion-focus h-9 w-full rounded-full border border-stroke-default bg-bg-elevated pl-9 pr-10 text-lg text-content-primary placeholder:text-content-tertiary"
+                className="motion-focus h-9 w-full rounded-full border border-stroke-control bg-bg-elevated pl-9 pr-10 text-lg text-content-primary placeholder:text-content-tertiary"
               />
               <button
                 type="button"

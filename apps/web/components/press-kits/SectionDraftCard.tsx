@@ -87,7 +87,7 @@ export function SectionDraftCard({
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             placeholder="They just came off a tour, and the record is about coming home."
-            className="mt-1.5 w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+            className="mt-1.5 w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
           />
           <p className="mt-1 text-xs text-content-tertiary">
             Rough notes are fine. UrgAns turns them into press copy.

@@ -58,6 +58,7 @@ import {
 
 const SURFACE = 'var(--credits-surface)';
 const STROKE = 'var(--credits-border)';
+const FIELD_STROKE = 'var(--credits-field-border)';
 const CREAM = 'var(--credits-text)';
 const MUTED = 'var(--credits-text-muted)';
 const FAINT = 'var(--credits-text-faint)';
@@ -88,7 +89,7 @@ function labelStyle(): CSSProperties {
 }
 
 function inputStyle(): CSSProperties {
-  return { backgroundColor: SURFACE, borderColor: STROKE, color: CREAM };
+  return { backgroundColor: SURFACE, borderColor: FIELD_STROKE, color: CREAM };
 }
 
 function SectionHeading({ children }: { children: ReactNode }) {

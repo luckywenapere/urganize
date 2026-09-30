@@ -39,7 +39,7 @@ type CaptureEditorProps = {
 };
 
 const inputClass =
-  'w-full border border-stroke-default bg-bg-base px-3 py-2 text-sm text-content-primary outline-none placeholder:text-content-tertiary focus:border-brand/60';
+  'w-full border border-stroke-control bg-bg-base px-3 py-2 text-sm text-content-primary outline-none placeholder:text-content-tertiary focus:border-brand/60';
 
 function SaveIndicator({ state }: { state: CaptureSaveState }) {
   if (state === 'saving') {

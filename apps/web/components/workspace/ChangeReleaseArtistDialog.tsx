@@ -170,7 +170,7 @@ export function ChangeReleaseArtistDialog({
             value={selectedId}
             onChange={(event) => setSelectedId(event.target.value)}
             disabled={isSaving}
-            className="w-full rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+            className="w-full rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
           >
             {artists.length === 0 ? (
               <option value="">Loading your artists…</option>

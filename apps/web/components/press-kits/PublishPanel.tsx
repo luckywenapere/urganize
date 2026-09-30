@@ -38,7 +38,7 @@ const VISIBILITY_OPTIONS: { value: PressKitVisibility; label: string; hint: stri
 ];
 
 const selectClass =
-  'w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-sm text-content-primary ' +
+  'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-sm text-content-primary ' +
   'focus:border-brand focus:outline-none disabled:opacity-60';
 
 export function PublishPanel({

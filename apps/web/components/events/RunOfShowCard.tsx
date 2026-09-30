@@ -203,7 +203,7 @@ export function RunOfShowCard({ event, items, canEdit, onItemsChange, onEditShow
   };
 
   const fieldClass =
-    'w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-sm text-content-primary outline-none focus:border-brand disabled:opacity-50';
+    'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-sm text-content-primary outline-none focus:border-brand disabled:opacity-50';
 
   const editor = (row: (typeof rows)[number] | null) => {
     const followsShow = Boolean(row?.followsShow);

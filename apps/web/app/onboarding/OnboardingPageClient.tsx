@@ -87,6 +87,7 @@ import { shouldStartOnboardingTrial } from '@/lib/onboarding-trial';
 import { isSocialShareEnabled } from '@/lib/social-share';
 import { markPendingFirstShare } from '@/lib/social-share-offer';
 import { resolvePostSignupDestination, takePitchIntent } from '@/lib/pitch-intent';
+import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT, isPasswordLongEnough } from '@/lib/password-rules';
 
 // ---------------------------------------------------------------------------
 // Module-level constants
@@ -330,7 +331,7 @@ const cardShell =
   'border border-stroke-default bg-bg-surface px-5 py-5 sm:px-6 sm:py-6';
 
 const inputBase =
-  'block w-full border border-stroke-default bg-bg-elevated px-3 py-2.5 text-base text-content-primary placeholder:text-content-tertiary outline-none transition-colors duration-fast ease-standard focus:border-brand';
+  'block w-full border border-stroke-control bg-bg-elevated px-3 py-2.5 text-base text-content-primary placeholder:text-content-tertiary outline-none transition-colors duration-fast ease-standard focus:border-brand';
 
 const labelBase = 'block text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary';
 
@@ -497,7 +498,7 @@ export default function OnboardingPage() {
       // Email/password path requires all three fields plus, if the user
       // picked 'artist', an artistName. The Google button is gated
       // separately and bypasses the email/password requirement.
-      const hasEmailPasswordFields = Boolean(name.trim() && email.trim() && password.length >= 6);
+      const hasEmailPasswordFields = Boolean(name.trim() && email.trim() && isPasswordLongEnough(password));
       const hasRequiredArtistName = role !== 'artist' || artistName.trim().length > 0;
       return hasEmailPasswordFields && hasRequiredArtistName;
     }
@@ -517,7 +518,7 @@ export default function OnboardingPage() {
     dateValid: isReleaseDateValid(draft.releaseDate),
     hasName: Boolean(name.trim()),
     hasEmail: Boolean(email.trim()),
-    passwordLongEnough: password.length >= 6,
+    passwordLongEnough: isPasswordLongEnough(password),
     needsArtistName: role === 'artist',
     hasArtistName: artistName.trim().length > 0,
   });
@@ -1451,11 +1452,11 @@ export default function OnboardingPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   autoComplete="new-password"
-                  minLength={6}
+                  minLength={MIN_PASSWORD_LENGTH}
                   className={inputBase}
                   required
                 />
-                <span className="block text-xs text-content-tertiary">At least 6 characters.</span>
+                <span className="block text-xs text-content-tertiary">{PASSWORD_LENGTH_HINT}</span>
               </label>
             </div>
           ) : null}

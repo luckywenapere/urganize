@@ -369,7 +369,7 @@ export default function TeamsAdminPageClient() {
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search team, owner or email"
           aria-label="Search teams"
-          className="h-10 w-full max-w-sm rounded-lg border border-stroke-default bg-bg-elevated px-3 text-sm text-content-primary placeholder:text-content-tertiary outline-none focus:border-brand"
+          className="h-10 w-full max-w-sm rounded-lg border border-stroke-control bg-bg-elevated px-3 text-sm text-content-primary placeholder:text-content-tertiary outline-none focus:border-brand"
         />
       </div>
 

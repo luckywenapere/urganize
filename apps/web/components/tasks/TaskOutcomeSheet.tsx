@@ -233,7 +233,7 @@ function OutcomeSheetBody({
                 autoFocus
                 aria-label={question}
                 placeholder="Your answer"
-                className="mt-3 w-full resize-none rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                className="mt-3 w-full resize-none rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
               <button
                 type="button"
@@ -279,7 +279,7 @@ function OutcomeSheetBody({
                 rows={3}
                 aria-label="What happened"
                 placeholder="Tell UrgAns what happened"
-                className="mt-4 w-full resize-none rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                className="mt-4 w-full resize-none rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
               <p className="mt-1 text-xs text-content-tertiary">Optional</p>
 

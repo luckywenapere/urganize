@@ -14,6 +14,8 @@
  * Returns null when nothing is in the way, and for the steps that never block
  * (the last question and the invite step).
  */
+import { MIN_PASSWORD_LENGTH } from './password-rules';
+
 export type NextBlockerInput = {
   step: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   releaseTypeAvailable: boolean;
@@ -47,7 +49,7 @@ export function describeNextBlocker(input: NextBlockerInput): string | null {
       const missing: string[] = [];
       if (!input.hasName) missing.push('your name');
       if (!input.hasEmail) missing.push('your email');
-      if (!input.passwordLongEnough) missing.push('a password of 6 or more characters');
+      if (!input.passwordLongEnough) missing.push(`a password of ${MIN_PASSWORD_LENGTH} or more characters`);
       if (input.needsArtistName && !input.hasArtistName) missing.push('your artist name');
       if (missing.length === 0) return null;
       // Email only: the Google button beside it needs none of these.

@@ -31,6 +31,10 @@
   --color-text-quaternary: 69 71 66;
   --color-text-inverse: 13 18 14;
   --color-stroke: 245 240 230;
+  /* Form-control boundary: 3:1 or better on every ground (WCAG 1.4.11). The
+     stroke tiers above are hairlines for cards and dividers; a field that has
+     to be found needs more. lib/text-contrast.test.ts holds it. */
+  --color-stroke-control: 110 111 105;
   /* Forest/spring blend, not a plain carry of either: forest alone fails
      contrast on ink, and plain spring would be visually identical to
      --color-brand. This gives success its own legible, distinct hue. */
@@ -103,14 +107,15 @@
   --brand-primary-subtle: rgba(127, 217, 154, 0.08);
 
   --text-primary: #f5f0e6;
-  --text-secondary: #a1a098;
-  --text-tertiary: #6a6b64;
+  --text-secondary: rgb(var(--color-text-secondary));
+  --text-tertiary: rgb(var(--color-text-tertiary));
   --text-quaternary: #454742;
   --text-inverse: #0d120e;
 
   --border-subtle: rgba(245, 240, 230, 0.04);
   --border-default: rgba(245, 240, 230, 0.06);
   --border-strong: rgba(245, 240, 230, 0.1);
+  --border-control: rgb(var(--color-stroke-control));
   --border-focus: #7fd99a;
 
   --status-success: #4a9f6a;
@@ -157,11 +162,17 @@
   --shadow-md: 0 20px 48px rgba(0, 0, 0, 0.34);
   --shadow-lg: 0 32px 80px rgba(0, 0, 0, 0.46);
 
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-2xl: 0px;
+  /* The corner scale. These match packages/config/tailwind/preset.js (the
+     Tailwind rounded-* classes), and lib/radius-tokens.test.ts fails if they
+     drift. They were all 0px from the first commit (2026-05-03) while every
+     component asked for rounded corners, so the one place that read them, the
+     .input class, quietly overrode its callers and drew square fields. The
+     Brand Bible sets no rule on corner shape; the July restyle kept this scale. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
   --radius-full: 9999px;
 
   /* Motion tokens — ONE source of truth.
@@ -250,6 +261,7 @@ html[data-theme='light'] {
   --color-text-inverse: 245 240 230;
 
   --color-stroke: 26 22 17;
+  --color-stroke-control: 127 122 115;
 
   --color-status-success: 20 100 58;
   /* Deepened from #b2690c (2026-08-14), the same fix as --color-status-error
@@ -304,14 +316,15 @@ html[data-theme='light'] {
   --brand-primary-subtle: rgba(20, 100, 58, 0.08);
 
   --text-primary: #1a1611;
-  --text-secondary: #69655e;
-  --text-tertiary: #9d9991;
+  --text-secondary: rgb(var(--color-text-secondary));
+  --text-tertiary: rgb(var(--color-text-tertiary));
   --text-quaternary: #c0bcb3;
   --text-inverse: #f5f0e6;
 
   --border-subtle: rgba(26, 22, 17, 0.05);
   --border-default: rgba(26, 22, 17, 0.09);
   --border-strong: rgba(26, 22, 17, 0.15);
+  --border-control: rgb(var(--color-stroke-control));
   --border-focus: #247648;
 
   --status-success: #14643a;
@@ -386,6 +399,8 @@ html[data-theme='light'] .app-mark-invert {
   --cc-text-muted: rgba(245, 240, 230, 0.64);
   --cc-text-faint: rgba(245, 240, 230, 0.55);
   --cc-border: rgba(245, 240, 230, 0.12);
+  /* A field's boundary, not a divider: 3:1 on the island ground (WCAG 1.4.11). */
+  --cc-field-border: rgba(245, 240, 230, 0.42);
   --cc-on-fill: #f5f0e6;
   --cc-on-fill-muted: rgba(245, 240, 230, 0.64);
   --cc-chip-accent: #7fd99a;
@@ -400,6 +415,7 @@ html[data-theme='light'] .cc-island {
   --cc-text-muted: rgba(26, 22, 17, 0.64);
   --cc-text-faint: rgba(26, 22, 17, 0.62);
   --cc-border: rgba(26, 22, 17, 0.14);
+  --cc-field-border: rgba(26, 22, 17, 0.54);
   --cc-on-fill: #f5f0e6;
   --cc-on-fill-muted: rgba(245, 240, 230, 0.64);
   --cc-chip-accent: #7fd99a;
@@ -547,6 +563,8 @@ html[data-theme='light'] .cc-island {
   --credits-text-muted: rgba(245, 240, 230, 0.64);
   --credits-text-faint: rgba(245, 240, 230, 0.55);
   --credits-border: rgba(245, 240, 230, 0.12);
+  /* Form fields only; the line above stays a divider. 3:1 on the ink ground. */
+  --credits-field-border: rgba(245, 240, 230, 0.42);
 }
 
 /* Public fan-capture island (2026-08-14). Third instance of the pattern above,
@@ -568,6 +586,7 @@ html[data-theme='light'] .cc-island {
   --capture-text-muted: rgba(245, 240, 230, 0.64);
   --capture-text-faint: rgba(245, 240, 230, 0.55);
   --capture-border: rgba(245, 240, 230, 0.12);
+  --capture-field-border: rgba(245, 240, 230, 0.42);
 }
 
 /* Public press kit island (2026-09-05). Fourth instance of the pattern above,
@@ -683,6 +702,10 @@ html[data-theme='dark'] {
   --color-text-quaternary: 69 71 66;
   --color-text-inverse: 13 18 14;
   --color-stroke: 245 240 230;
+  /* Form-control boundary: 3:1 or better on every ground (WCAG 1.4.11). The
+     stroke tiers above are hairlines for cards and dividers; a field that has
+     to be found needs more. lib/text-contrast.test.ts holds it. */
+  --color-stroke-control: 110 111 105;
   --color-skeleton-base: 26 31 27;
   --color-skeleton-highlight: 40 46 41;
 
@@ -701,14 +724,15 @@ html[data-theme='dark'] {
   --brand-primary-subtle: rgba(127, 217, 154, 0.08);
 
   --text-primary: #f5f0e6;
-  --text-secondary: #a1a098;
-  --text-tertiary: #6a6b64;
+  --text-secondary: rgb(var(--color-text-secondary));
+  --text-tertiary: rgb(var(--color-text-tertiary));
   --text-quaternary: #454742;
   --text-inverse: #0d120e;
 
   --border-subtle: rgba(245, 240, 230, 0.04);
   --border-default: rgba(245, 240, 230, 0.06);
   --border-strong: rgba(245, 240, 230, 0.1);
+  --border-control: rgb(var(--color-stroke-control));
 }
 
 /* Default hover transition for every interactive. Scoped to color
@@ -762,7 +786,13 @@ html {
      Tailwind's `overflow-x-auto`) still opt back into horizontal panning
      below. */
   overscroll-behavior-x: none;
-  touch-action: pan-y;
+  /* `pan-y pinch-zoom`, not `pan-y` alone (2026-09-30). A reader with low
+     vision has to be able to enlarge the page, and this value was the only
+     thing stopping them (the viewport meta sets no scale limit). One-finger
+     horizontal panning and double-tap zoom stay closed, so the swipe-drift
+     fix and the stiff feel are unchanged. lib/touch-zoom-guard.test.ts keeps
+     it that way. */
+  touch-action: pan-y pinch-zoom;
 }
 
 html::-webkit-scrollbar {
@@ -778,7 +808,7 @@ body {
   letter-spacing: -0.01em;
   overflow-x: hidden;
   overscroll-behavior-x: none;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 /* Opt back into horizontal touch panning for the app's intentional
@@ -787,7 +817,7 @@ body {
    descendant wins over the ancestor for touches starting inside it, so this
    does not reopen the whole-document swipe the rule above closes. */
 .overflow-x-auto {
-  touch-action: pan-x;
+  touch-action: pan-x pinch-zoom;
 }
 
 /* No zoom when a field is tapped (founder report, 2026-08-29: "the app does a
@@ -813,10 +843,11 @@ body {
    3. One rule instead of editing ~130 form controls by hand, which would
       regress the first time anyone adds an input.
 
-   The OTHER two ways a page can zoom — pinch and double-tap — are already
-   closed by `touch-action: pan-y` on `html`/`body` above (and `pan-x` on
-   `.overflow-x-auto`), since neither value admits a zoom gesture. This rule
-   is the remaining piece, because focus auto-zoom is not a touch gesture and
+   The OTHER way a page can zoom by accident, double-tap, stays closed by
+   `touch-action: pan-y pinch-zoom` on `html`/`body` above (and `pan-x
+   pinch-zoom` on `.overflow-x-auto`), since neither value admits it. A
+   deliberate two-finger pinch is open on purpose. This rule is the
+   remaining piece, because focus auto-zoom is not a touch gesture and
    `touch-action` has no say over it. */
 @media (pointer: coarse) {
   input:not([type='checkbox']):not([type='radio']):not([type='range']),
@@ -1637,8 +1668,10 @@ html[data-theme='dark'] .card-interactive:hover {
   font-size: var(--text-base);
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-control);
+  /* No border-radius here on purpose. Every caller passes its own rounded-*,
+     and a radius declared in this rule beat those utilities, so the fields
+     came out square whatever they asked for. */
   transition: all var(--motion-fast) var(--motion-out);
 }
 
@@ -1663,11 +1696,15 @@ input:-webkit-autofill:focus {
 }
 
 .input::placeholder {
-  color: var(--text-quaternary);
+  /* Placeholder text is read, so it gets the tier that clears 4.5:1. It was
+     quaternary, the decorative tier, which sits near 2:1 on ink. */
+  color: var(--text-tertiary);
 }
 
 .input:hover {
-  border-color: var(--border-strong);
+  /* One step stronger than the resting control border. --border-strong is a
+     hairline, so using it here made the field's outline fade when pointed at. */
+  border-color: var(--text-secondary);
 }
 
 .input:focus {

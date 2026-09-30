@@ -573,7 +573,7 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
                         value={emptyPlatform}
                         onChange={(event) => setEmptyPlatform(event.target.value as SocialPlatform)}
                         disabled={isCreatingEmpty}
-                        className="h-10 w-full border border-[var(--cc-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)]"
+                        className="h-10 w-full border border-[var(--cc-field-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)]"
                       >
                         {SOCIAL_PLATFORM_OPTIONS.map((option) => (
                           <option key={option} value={option}>
@@ -592,7 +592,7 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
                         maxLength={80}
                         disabled={isCreatingEmpty}
                         placeholder="Main account (optional)"
-                        className="h-10 w-full border border-[var(--cc-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)]"
+                        className="h-10 w-full border border-[var(--cc-field-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)]"
                       />
                     </label>
                     <div className="flex gap-2">

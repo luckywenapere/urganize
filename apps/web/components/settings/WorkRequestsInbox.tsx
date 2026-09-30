@@ -151,7 +151,7 @@ export function WorkRequestsInbox() {
                     }))
                   }
                   placeholder="A line back, if you want (optional)"
-                  className="mt-3 h-11 w-full rounded-lg border border-stroke-default bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
+                  className="mt-3 h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
                 />
                 <div className="mt-2 flex gap-2">
                   <button

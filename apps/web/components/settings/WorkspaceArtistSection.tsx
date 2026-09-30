@@ -36,7 +36,7 @@ type WorkspaceArtistSectionProps = {
 };
 
 const inputClass =
-  'w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand';
+  'w-full rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand';
 
 /**
  * The team's artist roster.

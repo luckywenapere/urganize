@@ -271,7 +271,7 @@ function ColorField({
           aria-invalid={invalid ? true : undefined}
           aria-describedby={invalid ? hintId : undefined}
           aria-label={`${label} color code for ${artistName}`}
-          className="w-[5.5rem] rounded-md border border-stroke-subtle bg-bg-elevated px-2 py-1 font-mono text-xs uppercase text-content-primary outline-none focus:border-brand aria-[invalid=true]:border-status-error"
+          className="w-[5.5rem] rounded-md border border-stroke-control bg-bg-elevated px-2 py-1 font-mono text-xs uppercase text-content-primary outline-none focus:border-brand aria-[invalid=true]:border-status-error"
         />
         {invalid ? (
           <span role="alert" id={hintId} className="mt-1 text-xs text-status-error">

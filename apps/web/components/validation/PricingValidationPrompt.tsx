@@ -159,7 +159,7 @@ export function PricingValidationPrompt({
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               placeholder="Optional: tell us what would make the monthly subscription feel justified."
-              className="min-h-[110px] w-full rounded-2xl border border-stroke-default bg-bg-elevated/70 px-4 py-3 text-sm text-content-primary outline-none transition placeholder:text-content-tertiary focus:border-brand"
+              className="min-h-[110px] w-full rounded-2xl border border-stroke-control bg-bg-elevated/70 px-4 py-3 text-sm text-content-primary outline-none transition placeholder:text-content-tertiary focus:border-brand"
             />
           </label>
         </div>

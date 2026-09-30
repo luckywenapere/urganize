@@ -28,7 +28,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <div
           className={clsx(
             'group flex items-center gap-3 rounded-[22px] border bg-white/[0.04] px-4 py-3 backdrop-blur-sm transition-all duration-fast ease-out',
-            'border-stroke-default focus-within:border-brand focus-within:bg-white/[0.05] focus-within:shadow-[0_0_0_3px_rgba(62,207,142,0.12)]',
+            'border-stroke-control focus-within:border-brand focus-within:bg-white/[0.05] focus-within:shadow-[0_0_0_3px_rgba(62,207,142,0.12)]',
             error && 'border-status-error/40 focus-within:border-status-error focus-within:shadow-[0_0_0_3px_rgba(240,106,106,0.12)]'
           )}
         >

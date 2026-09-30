@@ -218,7 +218,7 @@ export function ReleaseSetupSheet({
                 disabled={isSaving}
                 maxLength={140}
                 placeholder={DEFAULT_RELEASE_TITLE}
-                className="input h-10 rounded-lg border-stroke-default bg-bg-elevated"
+                className="input h-10 rounded-lg border-stroke-control bg-bg-elevated"
               />
             </label>
           ) : null}
@@ -234,7 +234,7 @@ export function ReleaseSetupSheet({
               onChange={(event) => setReleaseDate(event.target.value)}
               disabled={isSaving}
               aria-label="Release date"
-              className="input h-10 rounded-lg border-stroke-default bg-bg-elevated"
+              className="input h-10 rounded-lg border-stroke-control bg-bg-elevated"
             />
           </label>
 

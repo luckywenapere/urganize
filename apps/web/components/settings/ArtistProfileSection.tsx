@@ -74,7 +74,7 @@ export function ArtistProfileSection() {
           <input
             value={artistProfileName}
             onChange={(event) => setArtistProfileName(event.target.value)}
-            className="w-full rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
+            className="w-full rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-content-primary outline-none focus:border-brand"
             placeholder="e.g. Tems"
           />
         </label>

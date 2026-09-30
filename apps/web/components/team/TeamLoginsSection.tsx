@@ -86,7 +86,7 @@ export function TeamLoginsSection() {
           maxLength={MAX_LOGIN_LABEL_LENGTH}
           placeholder="Who's this for? (optional, e.g. Tolu, publicist)"
           aria-label="Who is this login for?"
-          className="rounded-lg border border-stroke-subtle bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
+          className="rounded-lg border border-stroke-control bg-bg-elevated px-3 py-2 text-sm text-content-primary outline-none focus:border-brand"
         />
         <button
           type="button"

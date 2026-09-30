@@ -325,7 +325,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                 value={scheduledDate}
                 onChange={(event) => setScheduledDate(event.target.value)}
                 disabled={isBusy}
-                className="h-10 w-full border border-[var(--cc-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                className="h-10 w-full border border-[var(--cc-field-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
               />
             </label>
 
@@ -341,7 +341,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                 maxLength={MAX_TITLE_LENGTH}
                 disabled={isBusy}
                 placeholder="Teaser clip"
-                className="h-10 w-full border border-[var(--cc-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                className="h-10 w-full border border-[var(--cc-field-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
               />
             </label>
 
@@ -356,7 +356,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                 disabled={isBusy}
                 rows={4}
                 placeholder="Optional caption"
-                className="min-h-24 w-full resize-none border border-[var(--cc-border)] bg-transparent px-3 py-2 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                className="min-h-24 w-full resize-none border border-[var(--cc-field-border)] bg-transparent px-3 py-2 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
               />
             </label>
 
@@ -369,7 +369,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                   value={format}
                   onChange={(event) => setFormat(event.target.value as ContentPostFormat)}
                   disabled={isBusy}
-                  className="h-10 w-full border border-[var(--cc-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                  className="h-10 w-full border border-[var(--cc-field-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
                 >
                   {CONTENT_POST_FORMAT_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -387,7 +387,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                   value={pillar}
                   onChange={(event) => setPillar(event.target.value as ContentPostPillar | '')}
                   disabled={isBusy}
-                  className="h-10 w-full border border-[var(--cc-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                  className="h-10 w-full border border-[var(--cc-field-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
                 >
                   <option value="">None</option>
                   {CONTENT_POST_PILLAR_OPTIONS.map((option) => (
@@ -406,7 +406,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                   value={status}
                   onChange={(event) => setStatus(event.target.value as ContentPostStatus)}
                   disabled={isBusy}
-                  className="h-10 w-full border border-[var(--cc-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                  className="h-10 w-full border border-[var(--cc-field-border)] bg-[var(--cc-ground)] px-2 text-sm text-[var(--cc-text)] focus:border-[var(--cc-accent)] disabled:opacity-60"
                 >
                   {CONTENT_POST_STATUS_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -428,7 +428,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                   onChange={(event) => setPostedUrl(event.target.value)}
                   disabled={isBusy}
                   placeholder="https://..."
-                  className="h-10 w-full border border-[var(--cc-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                  className="h-10 w-full border border-[var(--cc-field-border)] bg-transparent px-3 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
                 />
               </label>
             ) : null}

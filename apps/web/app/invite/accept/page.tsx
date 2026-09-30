@@ -36,6 +36,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { HOME_PATH } from '@/lib/home-path';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
+import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT } from '@/lib/password-rules';
 
 // Profile role for invited teammates. 'artist-team' positions them as a
 // member of someone else's team — matches the standalone signup vocabulary
@@ -546,14 +547,14 @@ export default function InviteAcceptPage() {
                           and no password ever travels through a chat. */}
                       <Input
                         label="Choose your password"
-                        hint="You're setting this yourself. Nobody else sees it. At least 6 characters."
+                        hint={`You're setting this yourself. Nobody else sees it. ${PASSWORD_LENGTH_HINT}`}
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete="new-password"
                         leftIcon={<Lock className="w-4 h-4" />}
                         disabled={isSubmitting || isGoogleRedirecting}
-                        minLength={6}
+                        minLength={MIN_PASSWORD_LENGTH}
                         required
                       />
                       <Button
