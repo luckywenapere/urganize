@@ -17657,9 +17657,9 @@ collapsed state, or on a phone.**
 
 ---
 
-## Accessibility and copy pass (2026-09-30, no flag)
+## Accessibility and copy pass (2026-09-30, v1.53.0, no flag)
 
-Origin: the `better-interface` skill (with the `shadcn/ui` and `jakubkrehel` skill packs, installed globally) was run over every screen by six read-only agents. Every area came back Block. What follows is what was fixed and the rules that keep it fixed. **No flag, no migration, no changelog entry or version bump**: it is internal polish plus visible wording, and a version bump wants to be the last commit before merge.
+Origin: the `better-interface` skill (with the `shadcn/ui` and `jakubkrehel` skill packs, installed globally) was run over every screen by six read-only agents. Every area came back Block. What follows is what was fixed and the rules that keep it fixed. **No flag and no migration.** It shipped as v1.53.0 because people can see it: clearer field outlines, pinch-zoom, one password rule and the wording fixes.
 
 **Everything decidable was pulled into `lib/` and tested first**, because vitest reaches `lib/` and nothing else. The pure halves are `text-contrast`, `dialog-focus`, `dialog-stack`, `radio-group-keys`, `row-activation`, `toast-timing`, `oauth-consent`, `onboarding-next-hint`, `auth-callback-error`, and `chappi/{confirmation-tone,transcript-announcement}`.
 
