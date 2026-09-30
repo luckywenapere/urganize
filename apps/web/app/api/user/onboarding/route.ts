@@ -15,6 +15,8 @@ import {
   type UpdateOnboardingBody,
 } from '@/lib/onboarding';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
+import { isOnboardingSequenceEnabled } from '@/lib/email/onboarding-sequence';
+import { startOnboardingSequence } from '@/lib/email/sequence-server';
 
 type ProfileOnboardingRecord = {
   id: string;
@@ -619,7 +621,20 @@ export async function PATCH(request: NextRequest) {
     body.onboardingCompleted === true && !profileResult.profile.onboarding_completed;
   if (isFirstCompletion && isEmailConfigured()) {
     const recipient = profileResult.profile.email || auth.user.email || '';
-    if (recipient) {
+    if (recipient && isOnboardingSequenceEnabled()) {
+      // The five-email onboarding sequence (2026-09-30): day 1 now, days 2 to 7
+      // queued for the morning cron. Its day 1 replaces the welcome note below.
+      const { dayOne, queued } = await startOnboardingSequence(auth.adminClient, {
+        userId: auth.user.id,
+        email: recipient,
+        name: profileResult.profile.name || '',
+      });
+      if (!dayOne.ok && !dayOne.skipped) {
+        console.error(`[onboarding-sequence] day 1 failed for ${recipient}`, dayOne.error);
+      } else if (dayOne.ok) {
+        console.info(`[onboarding-sequence] day 1 sent to ${recipient}, ${queued ?? 0} queued`);
+      }
+    } else if (recipient) {
       const result = await sendEmail(auth.adminClient, {
         templateId: 'welcome',
         to: recipient,

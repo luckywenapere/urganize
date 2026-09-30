@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
@@ -158,6 +159,20 @@ export default function EmailsAdminPageClient() {
       <p className="mt-2 max-w-2xl text-sm text-content-secondary">
         Every email Urganize sends, newest first, and what happened to it after Resend took it.
       </p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link
+          href="/admin/emails/new"
+          className="motion-focus motion-press inline-flex items-center rounded-full bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+        >
+          Write an email
+        </Link>
+        <Link
+          href="/admin/emails/sequence"
+          className="motion-focus inline-flex items-center rounded-full border border-stroke-default px-4 py-2 text-sm font-medium text-content-primary hover:border-stroke-strong"
+        >
+          Onboarding emails
+        </Link>
+      </div>
 
       {error ? (
         <p role="alert" className="mt-4 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">

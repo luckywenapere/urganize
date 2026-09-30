@@ -49,7 +49,7 @@ describe('sendEmail unsubscribe and suppression', () => {
   it('does not send optional mail to a suppressed address, and logs it', async () => {
     isSuppressed.mockResolvedValue(true);
     const result = await sendWelcome();
-    expect(result).toEqual({ ok: false, skipped: true });
+    expect(result).toEqual({ ok: false, skipped: true, reason: 'suppressed' });
     expect(sendViaResend).not.toHaveBeenCalled();
     expect(insertTerminal.mock.calls[0][2]).toBe('unsubscribed');
   });

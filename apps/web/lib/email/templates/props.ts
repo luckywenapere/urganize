@@ -11,6 +11,8 @@ import type { FounderBillingAlertEmailProps } from './FounderBillingAlertEmail';
 import type { NotifyAdminEmailProps } from './NotifyAdminEmail';
 import type { PitchNoticeEmailProps } from './PitchNoticeEmail';
 import type { FounderOpsAlertEmailProps } from './FounderOpsAlertEmail';
+import type { OnboardingStepEmailProps } from './OnboardingStepEmail';
+import type { AnnouncementEmailProps } from './AnnouncementEmail';
 
 export type EmailTemplateProps = {
   welcome: WelcomeEmailProps;
@@ -23,6 +25,8 @@ export type EmailTemplateProps = {
   notify_admin: NotifyAdminEmailProps;
   pitch_notice: PitchNoticeEmailProps;
   founder_ops_alert: FounderOpsAlertEmailProps;
+  onboarding_step: OnboardingStepEmailProps;
+  announcement: AnnouncementEmailProps;
 };
 
 export type EmailTemplateId = keyof EmailTemplateProps;

@@ -51,6 +51,10 @@ export type SendEmailParams<Id extends EmailTemplateId> = {
   /** Row-level dedupe key (PR-2 jobs); Resend's own idempotency header. */
   dedupeKey?: string | null;
   idempotencyKey?: string;
+  /** Groups a dashboard broadcast's rows on the log. */
+  batchId?: string | null;
+  /** Put in front of the subject, e.g. "[Test] " for a test send to the admin. */
+  subjectPrefix?: string;
 };
 
 export type EmailSendResult = {
@@ -58,6 +62,9 @@ export type EmailSendResult = {
   /** True when email simply isn't configured — distinct from a real failure, so
    *  callers can word copy honestly ("link created" vs "emailed"). */
   skipped?: boolean;
+  /** Why a skipped send was skipped. The outbox reads this: an unsubscribed
+   *  address is done for good, while "not configured" should be tried again. */
+  reason?: 'not_configured' | 'suppressed';
   error?: string;
 };
 
@@ -87,7 +94,7 @@ export async function sendEmail<Id extends EmailTemplateId>(
   try {
     const loaded = await loadEmailTemplate(params.templateId);
     const props = (unsubscribeUrl ? { ...params.props, unsubscribeUrl } : params.props) as typeof params.props;
-    subject = loaded.subject(props);
+    subject = `${params.subjectPrefix ?? ''}${loaded.subject(props)}`;
     element = loaded.element(props);
   } catch (error) {
     console.error('[email] template load failed', params.templateId, error instanceof Error ? error.message : error);
@@ -113,6 +120,7 @@ export async function sendEmail<Id extends EmailTemplateId>(
     trigger: params.trigger,
     actorUserId: params.actorUserId ?? null,
     dedupeKey: params.dedupeKey ?? null,
+    batchId: params.batchId ?? null,
   } as const;
 
   // Not configured: an environment without a key is expected (local dev, and
@@ -120,7 +128,7 @@ export async function sendEmail<Id extends EmailTemplateId>(
   if (!config) {
     console.info('[email] not configured — skipping', params.templateId, '->', params.to);
     await insertTerminalEmailLog(admin, logBase, 'skipped', 'not_configured');
-    return { ok: false, skipped: true };
+    return { ok: false, skipped: true, reason: 'not_configured' };
   }
 
   // An address that unsubscribed from this category, bounced or complained is
@@ -128,7 +136,7 @@ export async function sendEmail<Id extends EmailTemplateId>(
   if (scope && (await isSuppressed(admin, params.to, scope))) {
     console.info('[email] suppressed — skipping', params.templateId, '->', params.to);
     await insertTerminalEmailLog(admin, logBase, 'unsubscribed', 'suppressed');
-    return { ok: false, skipped: true };
+    return { ok: false, skipped: true, reason: 'suppressed' };
   }
 
   // Render (heavy) — react-dom/server is pulled in only here, only when a send

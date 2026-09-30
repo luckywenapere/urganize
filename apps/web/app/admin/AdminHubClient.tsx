@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ClipboardList,
   ListMusic,
+  Mail,
   Mic,
   Radio,
   TrendingUp,
@@ -40,6 +41,12 @@ const SECTIONS: Array<{
     label: 'Broadcast',
     description: 'Send a push notification to every device with notifications turned on.',
     icon: Radio,
+  },
+  {
+    href: '/admin/emails',
+    label: 'Emails',
+    description: 'Everything Urganize emails, write your own to any group, and the onboarding emails.',
+    icon: Mail,
   },
   {
     href: '/admin/notifications',
@@ -127,7 +134,7 @@ export default function AdminHubClient() {
   }, [authLoading, router, user]);
 
   if (authLoading || !user || !checked) {
-    return <AdminPageSkeleton titleWidth="w-64" descriptionLines={2} hubGrid />;
+    return <AdminPageSkeleton titleWidth="w-64" descriptionLines={2} hubGrid={SECTIONS.length} />;
   }
 
   return (

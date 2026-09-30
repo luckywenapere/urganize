@@ -108,6 +108,23 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description: 'Curator pitch payment problems that need the founder: reviews, mismatches, failed refunds.',
     placeholderCopy: false,
   },
+  onboarding_step: {
+    id: 'onboarding_step',
+    category: 'onboarding',
+    name: 'Getting started (days 1 to 7)',
+    description:
+      'The five-email onboarding sequence: day 1 at signup, then days 2, 3, 5 and 7 from the morning cron. Copy in lib/email/onboarding-sequence.ts.',
+    // Drafted for the founder's approval; it only goes out once
+    // EMAIL_ONBOARDING_SEQUENCE=on, which is the approval.
+    placeholderCopy: false,
+  },
+  announcement: {
+    id: 'announcement',
+    category: 'announcements',
+    name: 'Written in the admin',
+    description: 'An email the founder wrote and sent from /admin/emails/new.',
+    placeholderCopy: false,
+  },
 };
 
 const UNSUBSCRIBABLE: ReadonlySet<EmailCategory> = new Set<EmailCategory>([
