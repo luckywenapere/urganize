@@ -18,7 +18,8 @@ import {
   toIsoInZone,
 } from '@/lib/events';
 import { TimezoneSelect } from './TimezoneSelect';
-import { trapTabKey } from './focusTrap';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
+import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
 import type { ShowEvent } from '@/types/events';
 
 type RosterArtist = { id: string; name: string };
@@ -89,6 +90,8 @@ export function CreateShowModal({ artists, onClose, onCreated, onCreatedSeries }
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const dialogRef = useRef<HTMLFormElement>(null);
+  // Focus moves in, Tab stays in, and focus returns to the opener on close.
+  useDialogFocus(true, dialogRef);
   // When the sheet opened: close enough to "now" for a note about a past date.
   const [openedAt] = useState(() => Date.now());
 
@@ -203,7 +206,7 @@ export function CreateShowModal({ artists, onClose, onCreated, onCreatedSeries }
     'w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-content-primary outline-none transition-colors focus:border-brand';
   const labelClass = 'block text-xs font-semibold text-content-secondary';
   const errorText = (message?: string) =>
-    showErrors && message ? <span className="mt-1 block text-xs text-status-error">{message}</span> : null;
+    showErrors && message ? <span role="alert" className="mt-1 block text-xs text-status-error">{message}</span> : null;
   const segmentClass = (active: boolean) =>
     `motion-focus flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
       active ? 'bg-bg-surface text-content-primary shadow-sm' : 'text-content-secondary hover:text-content-primary'
@@ -228,7 +231,6 @@ export function CreateShowModal({ artists, onClose, onCreated, onCreatedSeries }
         aria-modal="true"
         aria-labelledby="book-show-title"
         onSubmit={handleSubmit}
-        onKeyDown={(keyEvent) => trapTabKey(keyEvent, dialogRef.current)}
         noValidate
         className="relative max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-stroke-default bg-bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:rounded-2xl"
       >
@@ -250,12 +252,16 @@ export function CreateShowModal({ artists, onClose, onCreated, onCreatedSeries }
         <div
           role="radiogroup"
           aria-label="What are you booking?"
+          onKeyDown={(keyEvent) =>
+            onRadioGroupKeyDown(keyEvent, isSeries ? 1 : 0, (index) => setMode(index === 0 ? 'single' : 'series'))
+          }
           className="mt-4 flex gap-1 rounded-lg border border-stroke-default bg-bg-base p-1"
         >
           <button
             type="button"
             role="radio"
             aria-checked={!isSeries}
+            tabIndex={!isSeries ? 0 : -1}
             onClick={() => setMode('single')}
             className={segmentClass(!isSeries)}
           >
@@ -265,6 +271,7 @@ export function CreateShowModal({ artists, onClose, onCreated, onCreatedSeries }
             type="button"
             role="radio"
             aria-checked={isSeries}
+            tabIndex={isSeries ? 0 : -1}
             onClick={() => setMode('series')}
             className={segmentClass(isSeries)}
           >
@@ -303,7 +310,7 @@ export function CreateShowModal({ artists, onClose, onCreated, onCreatedSeries }
               maxLength={MAX_EVENT_TITLE_LENGTH}
               onChange={(changeEvent) => setTitle(changeEvent.target.value)}
               placeholder={isSeries ? 'Flytime Fest' : 'Eko Hotel, New Year’s Eve'}
-              autoFocus
+              data-autofocus
               aria-invalid={showErrors && Boolean(errors.title)}
               className={`${fieldClass} mt-1`}
             />

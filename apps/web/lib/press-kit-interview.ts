@@ -111,7 +111,7 @@ const QUESTIONS: (InterviewQuestion & {
     title: 'Why is this release worth writing about?',
     caption: 'One or two lines. This is what an editor decides on.',
     kind: 'text',
-    placeholder: 'The first song he wrote after moving back to Lagos.',
+    placeholder: 'The first song they wrote after moving back to Lagos.',
     // Only worth asking once autofill has found a release to hook. With no
     // release there is nothing for the answer to be about.
     isGap: (sections) => {

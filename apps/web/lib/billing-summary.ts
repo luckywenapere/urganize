@@ -300,7 +300,7 @@ export function summarizeBilling(
     if (expires) {
       details.push(
         snapshot.rawStatus === 'cancelled'
-          ? `Cancelled — access until ${expires}.`
+          ? `Cancelled. Access until ${expires}.`
           : `Active until ${expires}.`
       );
     }

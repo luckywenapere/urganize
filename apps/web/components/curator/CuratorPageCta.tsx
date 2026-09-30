@@ -79,8 +79,8 @@ export function CuratorPageCta({ slug, displayName, hasPlaylists }: Props) {
             so a number written into it would go stale where nobody is looking.
             What it says instead is mechanical and cannot. */}
         {hasPlaylists
-          ? 'You make an account, then send your song straight to her.'
-          : 'Make an account and you can send her your song.'}
+          ? `You make an account, then send your song straight to ${displayName}.`
+          : `Make an account and you can send ${displayName} your song.`}
       </p>
     </div>
   );

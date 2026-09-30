@@ -81,7 +81,7 @@ function ArtistRow({
   return (
     <div className="flex items-end gap-2">
       <label className="block flex-1">
-        <span className="sr-only">Artist name</span>
+        <span className="sr-only">Artist name, {artist.name}</span>
         <input
           value={value}
           onChange={(event) => setDraft(event.target.value)}
@@ -98,6 +98,7 @@ function ArtistRow({
             onRename(artist.id, value);
             setDraft(undefined);
           }}
+          aria-label={`Save name for ${artist.name}`}
           disabled={disabled || isSaving || !dirty}
           className="shrink-0 whitespace-nowrap rounded-lg border border-stroke-subtle px-3 py-2 text-sm font-semibold text-content-primary hover:border-brand disabled:opacity-50"
         >
@@ -120,6 +121,7 @@ function ArtistRow({
               onRemove(artist.id);
             }
           }}
+          aria-label={`Remove ${artist.name}`}
           disabled={disabled || isRemoving}
           className="shrink-0 whitespace-nowrap rounded-lg border border-stroke-subtle px-3 py-2 text-sm font-semibold text-content-secondary hover:border-status-error hover:text-status-error disabled:opacity-50"
         >
@@ -204,8 +206,8 @@ export function WorkspaceArtistSection({
             </div>
           )}
 
-          {message && <p className={feedbackSuccessClass}>{message}</p>}
-          {error && <p className={feedbackErrorClass}>{error}</p>}
+          {message && <p role="status" className={feedbackSuccessClass}>{message}</p>}
+          {error && <p role="alert" className={feedbackErrorClass}>{error}</p>}
 
           <div className="flex items-end gap-2 border-t border-stroke-subtle pt-3">
             <label className="block flex-1">

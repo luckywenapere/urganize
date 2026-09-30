@@ -16,6 +16,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, hint, error, leftIcon, rightIcon, className, inputClassName, id, ...props }, ref) => {
     const generatedId = React.useId();
     const inputId = id || generatedId;
+    const messageId = `${inputId}-message`;
 
     return (
       <div className={clsx('space-y-2', className)}>
@@ -35,8 +36,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error || hint ? messageId : undefined}
             className={clsx(
-              'min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-content-primary outline-none placeholder:text-content-quaternary',
+              // focus-visible:outline-none is not redundant: the app-wide :focus-visible
+              // ring outranks a bare outline-none, so without it a square ring was
+              // drawn INSIDE this pill on top of the pill's own focus border.
+              'min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-content-primary outline-none focus-visible:outline-none placeholder:text-content-tertiary',
               inputClassName
             )}
             {...props}
@@ -44,9 +50,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {rightIcon ? <span className="shrink-0 text-content-tertiary">{rightIcon}</span> : null}
         </div>
         {error ? (
-          <p className="text-sm text-status-error">{error}</p>
+          <p id={messageId} role="alert" className="text-sm text-status-error">{error}</p>
         ) : hint ? (
-          <p className="text-sm text-content-secondary">{hint}</p>
+          <p id={messageId} className="text-sm text-content-secondary">{hint}</p>
         ) : null}
       </div>
     );

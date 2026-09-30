@@ -151,7 +151,7 @@ export function SetReleaseDateCard({
             </Button>
           </div>
         </div>
-        {error ? <p className="mt-2 text-xs text-status-error">{error}</p> : null}
+        {error ? <p role="alert" className="mt-2 text-xs text-status-error">{error}</p> : null}
       </form>
     );
   }
@@ -174,7 +174,7 @@ export function SetReleaseDateCard({
             Set your release date
           </h3>
           <p className="mt-1.5 text-sm leading-6 text-content-secondary">
-            Your rollout plan is ready to build — {activityCount} activities across ~
+            Your rollout plan is ready to build. It has {activityCount} activities across ~
             {spanWeeks} weeks, starting {leadWeeks} weeks before release day. Every one of
             them is dated from your release date, so pick it and the whole plan appears.
           </p>
@@ -188,7 +188,7 @@ export function SetReleaseDateCard({
         {showNameField ? (
           <label className="mb-3 block">
             <span className="mb-1.5 flex items-baseline gap-2 text-xs font-medium text-content-primary">
-              Release name
+              Title
               <span className="font-normal text-content-tertiary">Optional</span>
             </span>
             <input
@@ -214,7 +214,7 @@ export function SetReleaseDateCard({
           </Button>
         </div>
 
-        {error ? <p className="mt-2.5 text-xs text-status-error">{error}</p> : null}
+        {error ? <p role="alert" className="mt-2.5 text-xs text-status-error">{error}</p> : null}
 
         {/* The escape hatch (URG-233). A hairline separates it from the
             primary action so it reads as "or, instead" rather than a second
@@ -232,8 +232,8 @@ export function SetReleaseDateCard({
               className="motion-focus rounded font-medium text-content-primary underline decoration-content-tertiary underline-offset-4 transition-colors hover:decoration-content-primary"
             >
               Add an activity yourself
-            </button>{' '}
-            — you don&apos;t need a release date for that.
+            </button>
+            . You don&apos;t need a release date for that.
           </p>
         </div>
       </div>

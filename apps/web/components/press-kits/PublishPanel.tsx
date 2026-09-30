@@ -293,7 +293,7 @@ export function PublishPanel({
         </span>
       </label>
 
-      {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
+      {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
     </section>
   );
 }

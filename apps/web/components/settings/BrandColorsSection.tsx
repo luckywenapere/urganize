@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { AlertCircle } from '@/components/icons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import {
@@ -81,8 +81,8 @@ export function BrandColorsSection({
         </div>
       )}
 
-      {message && <p className={`mt-3 ${feedbackSuccessClass}`}>{message}</p>}
-      {error && <p className={`mt-3 ${feedbackErrorClass}`}>{error}</p>}
+      {message && <p role="status" className={`mt-3 ${feedbackSuccessClass}`}>{message}</p>}
+      {error && <p role="alert" className={`mt-3 ${feedbackErrorClass}`}>{error}</p>}
     </section>
   );
 }
@@ -233,6 +233,7 @@ function ColorField({
   // so a half-typed code never overwrites the swatch and blurring tidies it.
   const [text, setText] = useState<string | null>(null);
   const shown = text ?? value;
+  const hintId = useId();
   const invalid = text !== null && text.trim() !== '' && normalizeHexColor(text) === null;
 
   return (
@@ -268,9 +269,15 @@ function ColorField({
           autoComplete="off"
           maxLength={7}
           aria-invalid={invalid ? true : undefined}
+          aria-describedby={invalid ? hintId : undefined}
           aria-label={`${label} color code for ${artistName}`}
           className="w-[5.5rem] rounded-md border border-stroke-subtle bg-bg-elevated px-2 py-1 font-mono text-xs uppercase text-content-primary outline-none focus:border-brand aria-[invalid=true]:border-status-error"
         />
+        {invalid ? (
+          <span role="alert" id={hintId} className="mt-1 text-xs text-status-error">
+            Use a code like #1A2B3C.
+          </span>
+        ) : null}
       </label>
     </div>
   );

@@ -314,7 +314,7 @@ export default function TeamsAdminPageClient() {
       ) : null}
 
       {error ? (
-        <p className="mt-4 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+        <p role="alert" className="mt-4 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
           {error}
         </p>
       ) : null}
@@ -368,6 +368,7 @@ export default function TeamsAdminPageClient() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search team, owner or email"
+          aria-label="Search teams"
           className="h-10 w-full max-w-sm rounded-lg border border-stroke-default bg-bg-elevated px-3 text-sm text-content-primary placeholder:text-content-tertiary outline-none focus:border-brand"
         />
       </div>

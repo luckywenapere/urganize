@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2 } from '@/components/icons';
+import { Check, Loader2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import {
   DIRECTORY_SETTINGS_ANCHOR,
@@ -254,12 +254,13 @@ export function DirectoryProfileSection() {
                     disabled={busy}
                     aria-pressed={on}
                     onClick={() => toggleRole(role)}
-                    className={`motion-focus rounded-full border px-3 py-1.5 text-sm disabled:opacity-60 ${
+                    className={`motion-focus inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm disabled:opacity-60 ${
                       on
                         ? 'border-brand bg-brand/10 text-brand'
                         : 'border-stroke-default text-content-secondary hover:border-brand'
                     }`}
                   >
+                    {on ? <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : null}
                     {DIRECTORY_ROLE_LABELS[role]}
                   </button>
                 );
@@ -330,7 +331,7 @@ export function DirectoryProfileSection() {
         </div>
       )}
 
-      {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
+      {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
 
       {/* Requests waiting for you. Rendered only once you have a record —
           nobody can ask somebody who is not listed — and the inbox itself

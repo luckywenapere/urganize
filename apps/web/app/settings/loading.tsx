@@ -5,5 +5,5 @@
  * mark flashing for a route that is about to redirect.
  */
 export default function SettingsLoading() {
-  return <main className="min-h-[50dvh]" aria-busy="true" />;
+  return <div className="min-h-[50dvh]" aria-busy="true" />;
 }

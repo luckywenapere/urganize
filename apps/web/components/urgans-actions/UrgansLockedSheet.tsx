@@ -7,6 +7,7 @@ import { Lock, X } from '@/components/icons';
 import { Button } from '@urganize/ui';
 
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { trackUpgradeClicked } from '@/lib/urgans-actions/client';
 
 /**
@@ -68,6 +69,9 @@ export function UrgansLockedSheet({ open, message, actionType, onClose }: Urgans
     if (open) setDragOffset(0);
   }, [open]);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(open && isMounted, panelRef);
+
   if (!open || !isMounted) return null;
 
   const handleUpgrade = () => {
@@ -105,6 +109,7 @@ export function UrgansLockedSheet({ open, message, actionType, onClose }: Urgans
       }}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label="UrgAns is not available on your plan"

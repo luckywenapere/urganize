@@ -106,6 +106,7 @@ export function TeamWall() {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
+  const logout = useAuthStore((state) => state.logout);
 
   const [team, setTeam] = useState<TeamAccessClientSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -620,7 +621,7 @@ export function TeamWall() {
                   ) : null}
 
                   {checkoutError ? (
-                    <p className="flex items-start gap-2 text-sm text-status-error">
+                    <p role="alert" className="flex items-start gap-2 text-sm text-status-error">
                       <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                       <span>{checkoutError}</span>
                     </p>
@@ -700,7 +701,7 @@ export function TeamWall() {
             </div>
 
             {notifyError ? (
-              <p className="flex items-start gap-2 text-sm text-status-error">
+              <p role="alert" className="flex items-start gap-2 text-sm text-status-error">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                 <span>{notifyError}</span>
               </p>
@@ -711,7 +712,19 @@ export function TeamWall() {
         <p className="text-center text-xs text-content-tertiary">
           {user?.email ? (
             <>
-              Signed in as <span className="text-content-secondary">{user.email}</span>.{' '}
+              Signed in as <span className="text-content-secondary">{user.email}</span>. Not you?{' '}
+              {/* This page has no app chrome, so without this a person on the
+                  wrong account had no way off it. */}
+              <button
+                type="button"
+                onClick={() => {
+                  void logout().then(() => router.push('/auth'));
+                }}
+                className="underline text-content-secondary hover:text-content-primary"
+              >
+                Sign out
+              </button>
+              .{' '}
             </>
           ) : null}
           Need a hand?{' '}

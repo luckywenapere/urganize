@@ -72,7 +72,7 @@ export default function PressKitsPageClient() {
           CuratorLoadError split, and the fix MetadataSection needed for the
           same reason. */}
       {error ? (
-        <div className="mb-4 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
+        <div role="alert" className="mb-4 rounded-lg border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error">
           {error}{' '}
           <button
             type="button"
@@ -110,10 +110,10 @@ export default function PressKitsPageClient() {
                 className="motion-focus flex items-center justify-between gap-3 rounded-xl border border-stroke-default bg-bg-surface p-4 transition-colors hover:border-stroke-strong"
               >
                 <div className="min-w-0">
-                  <h2 className="truncate font-display text-base font-semibold text-content-primary">
+                  <h2 className="line-clamp-2 break-words font-display text-base font-semibold text-content-primary">
                     {entry.artistName}
                   </h2>
-                  <p className="mt-1 truncate text-xs text-content-secondary">
+                  <p className="mt-1 line-clamp-2 break-words text-xs text-content-secondary">
                     {entry.kit ? `urganize.app/k/${entry.kit.slug}` : 'No kit yet'}
                   </p>
                 </div>

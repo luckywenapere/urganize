@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { AlertCircle, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
@@ -91,6 +92,9 @@ export function ChangeReleaseArtistDialog({
     return lockBodyScroll();
   }, [open]);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(open && isMounted && Boolean(release), panelRef);
+
   if (!open || !isMounted || !release) return null;
 
   const target = artists.find((artist) => artist.id === selectedId) ?? null;
@@ -141,6 +145,8 @@ export function ChangeReleaseArtistDialog({
       />
 
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="change-release-artist-title"
@@ -182,13 +188,13 @@ export function ChangeReleaseArtistDialog({
             consequence of this choice and not as boilerplate. */}
         {!unchanged ? (
           <p className="mt-3 text-xs leading-5 text-content-tertiary">
-            Anyone who only sees {release.artistName || 'this artist'} will lose this release, and
+            Anyone who only sees {release.artistName || 'this artist'} will lose this rollout, and
             anyone who only sees {target?.name} will gain it.
           </p>
         ) : null}
 
         {error ? (
-          <p className="mt-4 flex items-start gap-2 text-sm text-status-error">
+          <p role="alert" className="mt-4 flex items-start gap-2 text-sm text-status-error">
             <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </p>

@@ -573,6 +573,15 @@ export function AppShell({ children }: { children: ReactNode }) {
               enough to shift the whole page and reveal it. 100dvh tracks the
               real visible viewport instead, so there is no residual slack. */}
           <div className="app-shell-frame mx-auto flex min-h-dvh w-full max-w-[1440px] flex-col">
+            {/* First stop for a keyboard user on every page: the topbar and the
+                side menu come before the content, so without this every page
+                costs a dozen Tab presses to reach. Hidden until focused. */}
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[300] focus:rounded-full focus:bg-brand focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-content-inverse"
+            >
+              Skip to content
+            </a>
             {/* Trial indicator, above the topbar rather than in it: the
                 topbar's right cluster has a documented width budget that
                 already overflows a 375px phone, so a countdown there would
@@ -603,7 +612,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <WorkspaceIdentityPanel />
                 </ErrorBoundary>
               ) : null}
-              <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-5 md:px-6 lg:px-8 ${mainPaddingClass}`}>
+              <main
+                id="main-content"
+                tabIndex={-1}
+                className={`min-w-0 flex-1 px-4 pt-5 focus:outline-none sm:px-5 md:px-6 lg:px-8 ${mainPaddingClass}`}
+              >
                 {children}
               </main>
               {CHAPPI_ENABLED && !isChappiRoute ? (

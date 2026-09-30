@@ -14,7 +14,7 @@
 // keeps asking for its reply even if paid pitching is switched off later.
 
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Inbox } from '@/components/icons';
+import { Check, ExternalLink, Inbox } from '@/components/icons';
 import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorInboxSkeleton } from '@/components/loading/CuratorSkeleton';
 import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
@@ -58,7 +58,7 @@ const FILTERS: Array<{ key: FilterKey; label: string }> = [
 
 const statusChipClass = (status: PitchStatus, isActive: boolean): string => {
   const base =
-    'inline-flex h-9 min-w-[4.5rem] items-center justify-center rounded-full border px-3 text-xs font-semibold transition-colors disabled:opacity-50';
+    'inline-flex h-9 min-w-[4.5rem] items-center justify-center gap-1 rounded-full border px-3 text-xs font-semibold transition-colors disabled:opacity-50';
   if (!isActive) {
     return `${base} border-stroke-default text-content-secondary hover:border-stroke-strong hover:text-content-primary`;
   }
@@ -102,13 +102,13 @@ function PitchCard({ pitch }: { pitch: CuratorPitch }) {
     <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
+          <p className="line-clamp-2 break-words text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
             {pitch.playlistName}
           </p>
-          <h2 className="mt-1 truncate text-base font-semibold text-content-primary">
+          <h2 className="mt-1 line-clamp-2 break-words text-base font-semibold text-content-primary">
             {pitch.songTitle}
           </h2>
-          <p className="truncate text-sm text-content-secondary">{pitch.artistName}</p>
+          <p className="line-clamp-2 break-words text-sm text-content-secondary">{pitch.artistName}</p>
         </div>
         <span className="shrink-0 font-mono text-[11px] text-content-tertiary">
           {formatRelativeTime(pitch.createdAt)}
@@ -142,6 +142,7 @@ function PitchCard({ pitch }: { pitch: CuratorPitch }) {
             onClick={() => void applyStatus(status)}
             className={statusChipClass(status, pitch.status === status)}
           >
+            {pitch.status === status ? <Check className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
             {PITCH_STATUS_LABELS[status]}
           </button>
         ))}
@@ -269,13 +270,13 @@ function PaidPitchCard({ pitch }: { pitch: CuratorPitch }) {
     <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
+          <p className="line-clamp-2 break-words text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
             {pitch.playlistName}
           </p>
-          <h2 className="mt-1 truncate text-base font-semibold text-content-primary">
+          <h2 className="mt-1 line-clamp-2 break-words text-base font-semibold text-content-primary">
             {pitch.songTitle}
           </h2>
-          <p className="truncate text-sm text-content-secondary">{pitch.artistName}</p>
+          <p className="line-clamp-2 break-words text-sm text-content-secondary">{pitch.artistName}</p>
         </div>
         <span className="shrink-0 font-mono text-[11px] text-content-tertiary">
           {formatRelativeTime(pitch.createdAt)}
@@ -335,6 +336,7 @@ function PaidPitchCard({ pitch }: { pitch: CuratorPitch }) {
                 onClick={() => void mark(status)}
                 className={statusChipClass(status, pitch.status === status)}
               >
+                {pitch.status === status ? <Check className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
                 {PITCH_STATUS_LABELS[status]}
               </button>
             ))}
@@ -446,12 +448,13 @@ export function CuratorInboxPageClient() {
                 type="button"
                 aria-pressed={filter === entry.key}
                 onClick={() => setFilter(entry.key)}
-                className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold transition-colors ${
+                className={`inline-flex h-8 items-center gap-1 rounded-full border px-3 text-xs font-semibold transition-colors ${
                   filter === entry.key
                     ? 'border-brand bg-brand/10 text-brand'
                     : 'border-stroke-default text-content-secondary hover:border-stroke-strong'
                 }`}
               >
+                {filter === entry.key ? <Check className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
                 {entry.label}
               </button>
             ))}

@@ -120,7 +120,7 @@ export function WorkRequestsInbox() {
           : 'People who asked about work'}
       </h3>
 
-      {error ? <p className="mt-2 text-sm text-status-error">{error}</p> : null}
+      {error ? <p role="alert" className="mt-2 text-sm text-status-error">{error}</p> : null}
 
       <ul className="mt-3 space-y-3">
         {requests.map((request) => (

@@ -78,7 +78,7 @@ export const DEFAULT_NOTIFICATION_PRESETS: NotificationPresets = {
         id: '1d',
         delayMinutes: 24 * 60,
         title: 'Your rollout is waiting',
-        body: '“{releaseTitle}” could use some attention — pick one activity and push it forward.',
+        body: '“{releaseTitle}” could use some attention. Pick one activity and push it forward.',
       },
       {
         id: '3d',
@@ -104,17 +104,17 @@ export const DEFAULT_NOTIFICATION_PRESETS: NotificationPresets = {
       {
         id: 'focus',
         title: 'One thing at a time',
-        body: 'Pick the next activity on your list and give it five minutes. That’s how rollouts ship.',
+        body: 'Pick the next activity on your list and give it five minutes. That’s how rollouts get delivered.',
       },
       {
         id: 'discipline',
         title: 'Discipline beats motivation',
-        body: 'You don’t need to feel ready — just open the app and do the next thing.',
+        body: 'You don’t need to feel ready. Just open the app and do the next thing.',
       },
       {
         id: 'teamwork',
         title: 'Your team is counting on you',
-        body: 'Check in on your rollouts — a quick update keeps everyone aligned.',
+        body: 'Check in on your rollouts. A quick update keeps everyone aligned.',
       },
       {
         id: 'finish-line',
@@ -128,7 +128,7 @@ export const DEFAULT_NOTIFICATION_PRESETS: NotificationPresets = {
     copy: {
       task_due_7d: {
         title: 'An activity is due in 7 days',
-        body: '{taskTitle} is due in a week. Plenty of time — get ahead of it.',
+        body: '{taskTitle} is due in a week. Plenty of time. Get ahead of it.',
       },
       task_due_3d: {
         title: 'An activity is due in 3 days',

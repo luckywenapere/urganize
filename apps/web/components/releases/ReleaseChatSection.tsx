@@ -99,7 +99,7 @@ export function ReleaseChatSection({ releaseId, onToast }: ReleaseChatSectionPro
         onEdit={handleEdit}
         onDelete={handleDelete}
         emptyTitle="No messages yet."
-        emptyBody="Start the conversation — anyone with access to this rollout can see it here."
+        emptyBody="Start the conversation. Anyone with access to this rollout can see it here."
       />
       <ThreadComposer onSend={handleSend} placeholder="Message the team about this rollout…" />
     </div>

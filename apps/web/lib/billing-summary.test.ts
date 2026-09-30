@@ -170,7 +170,7 @@ describe('summarizeBilling', () => {
         expiresAt: '2026-09-15T00:00:00.000Z',
       })
     );
-    expect(result.details[0]).toContain('Cancelled — access until ');
+    expect(result.details[0]).toContain('Cancelled. Access until ');
     expect(result.secondaryCta).toBeNull();
   });
 

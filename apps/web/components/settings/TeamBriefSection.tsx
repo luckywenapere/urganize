@@ -152,7 +152,7 @@ export function TeamBriefSection() {
     return (
       <section id="team-brief" className={`${panelClass} scroll-mt-4`}>
         <Heading />
-        <p className={`mt-4 ${feedbackErrorClass}`}>{loadError || 'Could not load the brief.'}</p>
+        <p role="alert" className={`mt-4 ${feedbackErrorClass}`}>{loadError || 'Could not load the brief.'}</p>
       </section>
     );
   }
@@ -226,7 +226,7 @@ export function TeamBriefSection() {
         </div>
       ) : null}
 
-      {error ? <p className={`mt-4 ${feedbackErrorClass}`}>{error}</p> : null}
+      {error ? <p role="alert" className={`mt-4 ${feedbackErrorClass}`}>{error}</p> : null}
 
       <div className="mt-6 space-y-8">
         {visibleSections.map((section) => {

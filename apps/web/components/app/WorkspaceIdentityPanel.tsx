@@ -801,7 +801,7 @@ export function WorkspaceIdentityPanel() {
         <div
           role="separator"
           aria-orientation="vertical"
-          aria-label="Resize workspace menu"
+          aria-label="Resize side menu"
           // Reports the rail's own width while collapsed rather than the stored
           // expanded one, so the announced value is what is on screen. The
           // minimum is the rail, not MIN_SIDEBAR_WIDTH: collapsing is reachable

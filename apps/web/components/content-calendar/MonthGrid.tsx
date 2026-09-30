@@ -12,6 +12,7 @@ import {
 } from '@/lib/content-calendar';
 import type { ContentPost } from '@/types/content-calendar';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { PostChip } from './PostChip';
 import { StatusMark } from './StatusMark';
 
@@ -133,13 +134,17 @@ function DayCell({
         // activation; this div needs its own so the two cell types share one
         // interaction contract. stopPropagation keeps the grid-level Enter
         // handler from double-firing.
+        // Only for a key pressed ON the cell. Enter or Space on a post chip or
+        // its status toggle inside the cell bubbles up here, and swallowing it
+        // would open the day list instead of the post the person chose.
+        if (event.target !== event.currentTarget) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           event.stopPropagation();
           onOpenDayList(day.date);
         }
       }}
-      aria-label={`${dayPosts.length} post${dayPosts.length === 1 ? '' : 's'} on ${monthDayLabel} — press Enter to view`}
+      aria-label={`${dayPosts.length} post${dayPosts.length === 1 ? '' : 's'} on ${monthDayLabel}. Press Enter to view.`}
       className={`flex min-h-[72px] flex-col gap-1 border-b border-r p-1.5 text-left transition-colors hover:bg-[var(--cc-text)]/[0.03] ${borderClass} ${
         isReleaseDay ? 'border-[var(--cc-accent)]' : ''
       }`}
@@ -207,7 +212,7 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
   }
 
   const [dayListDate, setDayListDate] = useState<string | null>(null);
-  const dayListCloseRef = useRef<HTMLButtonElement | null>(null);
+  const dayListPanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!dayListDate) return;
@@ -223,23 +228,18 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
     return lockBodyScroll();
   }, [dayListDate]);
 
-  // Minimal dialog focus contract: focus moves in on open and returns to the
-  // opener (the focused grid cell) on close. Not a full trap — same baseline
-  // treatment PostModal gets.
-  useEffect(() => {
-    if (!dayListDate) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dayListCloseRef.current?.focus();
-    return () => {
-      opener?.focus();
-    };
-  }, [dayListDate]);
+  // Focus moves in on open, stays inside while it is open, and returns to the
+  // opener (the focused grid cell) on close.
+  useDialogFocus(dayListDate !== null, dayListPanelRef);
 
   const handleGridKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const currentIndex = flatDates.indexOf(focusedDate);
     if (currentIndex === -1) return;
 
     if (event.key === 'Enter') {
+      // Same rule as the cell itself: an Enter that came from a post chip or
+      // its toggle belongs to that control, not to the grid.
+      if ((event.target as HTMLElement).getAttribute('role') !== 'gridcell') return;
       const dayPosts = byDay.get(focusedDate) ?? [];
       if (dayPosts.length === 0) {
         // Empty cells are real <button>s: native Enter/Space activation
@@ -343,6 +343,7 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
             onClick={() => setDayListDate(null)}
           />
           <div
+            ref={dayListPanelRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="day-list-title"
@@ -357,7 +358,6 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
               </h2>
               <button
                 type="button"
-                ref={dayListCloseRef}
                 onClick={() => setDayListDate(null)}
                 aria-label="Close"
                 className="-m-2 flex h-9 w-9 items-center justify-center text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"

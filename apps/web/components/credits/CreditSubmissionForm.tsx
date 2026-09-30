@@ -127,6 +127,7 @@ function TextField({
   type = 'text',
   required,
   hint,
+  autoComplete,
 }: {
   label: string;
   value: string;
@@ -135,6 +136,8 @@ function TextField({
   type?: string;
   required?: boolean;
   hint?: string;
+  /** What the browser may fill in. Left off for fields it has no name for. */
+  autoComplete?: string;
 }) {
   return (
     <label className="block text-sm">
@@ -148,6 +151,7 @@ function TextField({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         required={required}
+        autoComplete={autoComplete}
         className="mt-1.5 w-full border px-3 py-2 text-lg outline-none"
         style={inputStyle()}
       />
@@ -401,6 +405,7 @@ export function CreditSubmissionForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField
             label="Legal name"
+            autoComplete="name"
             required
             hint="Your real name, the way it appears on your ID. This is what goes on the paperwork."
             value={input.legalName}
@@ -445,6 +450,7 @@ export function CreditSubmissionForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <TextField
             label="Email"
+            autoComplete="email"
             type="email"
             required
             // Says the resubmission rule out loud, which also guards the
@@ -456,6 +462,7 @@ export function CreditSubmissionForm({
           />
           <TextField
             label="Phone"
+            autoComplete="tel"
             type="tel"
             hint="Optional."
             value={input.phone || ''}
@@ -463,6 +470,7 @@ export function CreditSubmissionForm({
           />
           <TextField
             label="Country"
+            autoComplete="country-name"
             hint="Where you live."
             value={input.country || ''}
             onChange={(v) => setInput((c) => ({ ...c, country: v }))}

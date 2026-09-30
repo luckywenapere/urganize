@@ -1,5 +1,6 @@
 'use client';
 
+import { shouldActivateRow } from '@/lib/row-activation';
 import { CalendarDays, Lock } from '@/components/icons';
 import {
   formatMilestoneDate,
@@ -97,7 +98,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
     role: onClick ? ('button' as const) : undefined,
     tabIndex: onClick ? 0 : undefined,
     onKeyDown: (event: React.KeyboardEvent) => {
-      if ((event.key === 'Enter' || event.key === ' ') && onClick) {
+      if (onClick && shouldActivateRow(event)) {
         event.preventDefault();
         onClick(task);
       }
@@ -162,7 +163,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
           {isLocked ? (
             <Lock
               className="h-3 w-3 text-content-tertiary"
-              aria-label="Locked — waiting on a prerequisite"
+              aria-label="Locked. Waiting on an earlier activity."
             />
           ) : null}
         </div>
@@ -192,7 +193,7 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
           {isLocked ? (
             <Lock
               className="h-3.5 w-3.5 shrink-0 text-content-tertiary"
-              aria-label="Locked — waiting on a prerequisite"
+              aria-label="Locked. Waiting on an earlier activity."
             />
           ) : isMilestone ? (
             <CalendarDays

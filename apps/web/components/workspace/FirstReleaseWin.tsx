@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowRight, Check, Loader2, Sparkles } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { getTemplate, getTemplateSpanDays } from '@/lib/release-templates/loader';
@@ -124,11 +125,16 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
     }
   };
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isMounted, panelRef);
+
   if (!isMounted) return null;
 
   const overlay = (
     <div className="fixed inset-x-0 top-0 z-[230] grid h-[100dvh] place-items-center bg-black/80 px-4 py-8 backdrop-blur-sm">
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Your first rollout is planned"
@@ -177,7 +183,7 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
                 First up:{' '}
                 <span className="text-content-primary">{firstTask.title}</span>
                 {formatDueLabel(firstTask.dueDate ?? null)
-                  ? ` — due ${formatDueLabel(firstTask.dueDate ?? null)}`
+                  ? `, due ${formatDueLabel(firstTask.dueDate ?? null)}`
                   : ''}
                 .
               </p>
@@ -217,7 +223,7 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
             </h2>
             <p className="mt-2 text-sm text-content-secondary">
               Invite an artist, freelancer or team member to “{release?.title || 'this rollout'}” so you
-              can hand off activities — or do it later from Settings.
+              can hand off activities, or do it later from Settings.
             </p>
 
             {invitedEmail ? (
@@ -244,11 +250,11 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="teammate@email.com"
                     autoFocus
-                    className="w-full border border-stroke-default bg-bg-base px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+                    className="w-full border border-stroke-default bg-bg-base px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                   />
                 </label>
                 {inviteError ? (
-                  <p className="mt-2 text-xs text-status-error">{inviteError}</p>
+                  <p role="alert" className="mt-2 text-xs text-status-error">{inviteError}</p>
                 ) : null}
                 <div className="mt-5 flex flex-col gap-2 sm:flex-row">
                   <Button

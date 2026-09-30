@@ -170,6 +170,10 @@ function SettingsDialog({
 
   // ── Focus, keyboard ───────────────────────────────────────────────────────
   const panelRef = useRef<HTMLDivElement>(null);
+  // The "Discard changes?" prompt sits inside this panel, so while it is up it
+  // is the dialog that owns Tab. Trapping against the whole panel let Tab walk
+  // off the prompt into the settings behind its scrim.
+  const discardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     panelRef.current?.focus();
@@ -183,9 +187,10 @@ function SettingsDialog({
       else requestClose();
       return;
     }
-    if (event.key !== 'Tab' || !panelRef.current) return;
+    const container = (confirmingDiscard ? discardRef.current : null) ?? panelRef.current;
+    if (event.key !== 'Tab' || !container) return;
     // Keep Tab inside: the page behind is inert while this is open.
-    const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
       (el) => el.offsetParent !== null
     );
     if (focusable.length === 0) return;
@@ -359,6 +364,7 @@ function SettingsDialog({
             }}
           >
             <div
+              ref={discardRef}
               role="alertdialog"
               aria-modal="true"
               aria-labelledby="settings-discard-title"

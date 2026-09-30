@@ -97,7 +97,7 @@ export function useSongUpload(params: {
           blob: file,
         });
         setQueued(true);
-        onToast?.("You're offline — this will upload when you're back online.", 'warning');
+        onToast?.("You're offline. This will upload when you're back online.", 'warning');
         return;
       }
 
@@ -125,7 +125,7 @@ export function useSongUpload(params: {
           blob: file,
         });
         setQueued(true);
-        onToast?.("You're offline — this will upload when you're back online.", 'warning');
+        onToast?.("You're offline. This will upload when you're back online.", 'warning');
         return;
       }
 

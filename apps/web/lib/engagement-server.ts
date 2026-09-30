@@ -45,7 +45,7 @@ type DripStep = {
 export const WELCOME_STEP: DripStep = {
   kind: 'welcome',
   delayMinutes: 0,
-  title: 'You showed up — that’s the hard part',
+  title: 'You showed up. That’s the hard part',
   body: 'Your rollouts are lined up and listening. Knock one activity out while you’re here.',
   url: '/dashboard',
 };
@@ -82,7 +82,7 @@ export const DRIP_STEPS: DripStep[] = [
   {
     kind: 'comeback_30d',
     delayMinutes: 30 * 24 * 60,
-    title: 'Great rollouts don’t ship themselves',
+    title: 'Great rollouts don’t deliver themselves',
     body: 'It’s been a month. Open Urganize, pick one activity, and get the machine moving.',
     url: '/dashboard',
   },

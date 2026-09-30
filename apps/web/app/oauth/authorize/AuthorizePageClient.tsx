@@ -23,6 +23,7 @@ import { Loader2, ShieldCheck } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { getAccessToken } from '@/components/settings/getAccessToken';
+import { describeRedirectTarget } from '@/lib/oauth-consent';
 
 
 // Read inline at module scope rather than through lib/mcp/config's
@@ -183,6 +184,10 @@ export default function AuthorizePageClient() {
   }
 
   const missingParams = paramsReady && (!params.clientId || !params.redirectUri);
+  // Where an approval sends the person. The app's own registered name is not
+  // shown: it is whatever the client typed, so it would look verified when it
+  // is not. See lib/oauth-consent.ts.
+  const redirectTarget = params.redirectUri ? describeRedirectTarget(params.redirectUri) : null;
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12">
@@ -202,9 +207,15 @@ export default function AuthorizePageClient() {
       <p className="mt-2 text-sm leading-relaxed text-content-secondary">
         You can disconnect it any time in Settings.
       </p>
+      {redirectTarget ? (
+        <p className="mt-2 text-sm leading-relaxed text-content-secondary">
+          If you allow it, you will be sent back to{' '}
+          <span className="font-semibold text-content-primary">{redirectTarget}</span>.
+        </p>
+      ) : null}
 
       {missingParams ? (
-        <p className="mt-6 rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+        <p role="alert" className="mt-6 rounded-lg border border-status-error/40 bg-status-error/10 px-3 py-2 text-sm text-status-error">
           That link is incomplete. Start the connection again from the app you are connecting.
         </p>
       ) : null}

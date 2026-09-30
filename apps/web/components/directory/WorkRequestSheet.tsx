@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, X } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
 import { WORK_REQUEST_NOTE_MAX_CHARS } from '@/lib/work-requests';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 
 /**
  * Asking somebody to work on a release.
@@ -39,6 +40,12 @@ export function WorkRequestSheet({
   const [error, setError] = useState('');
 
   useEffect(() => setMounted(true), []);
+
+  // A real dialog for assistive tech: named, modal, with focus moved in and
+  // returned. Focus lands on the sheet itself so the title is read first.
+  const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(mounted, panelRef, { initialFocus: 'panel' });
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -87,10 +94,17 @@ export function WorkRequestSheet({
         onClick={onClose}
         className="absolute inset-0 bg-black/50"
       />
-      <div className="relative w-full max-w-md rounded-t-2xl border border-stroke-default bg-bg-surface p-5 sm:rounded-2xl">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative w-full max-w-md rounded-t-2xl border border-stroke-default bg-bg-surface p-5 focus:outline-none sm:rounded-2xl"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-content-primary">
+            <h2 id={titleId} className="text-base font-semibold text-content-primary">
               Ask {person.displayName}
             </h2>
             <p className="mt-1 text-sm text-content-secondary">
@@ -135,7 +149,11 @@ export function WorkRequestSheet({
           />
         </label>
 
-        {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="mt-3 text-sm text-status-error">
+            {error}
+          </p>
+        ) : null}
 
         <div className="mt-4 flex gap-2">
           <button

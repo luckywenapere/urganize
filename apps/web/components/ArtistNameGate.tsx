@@ -63,7 +63,7 @@ export function ArtistNameGate() {
               />
             </label>
             {error && (
-              <p className="rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
+              <p role="alert" className="rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
                 {error}
               </p>
             )}

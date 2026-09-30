@@ -65,6 +65,17 @@ const TONE_LABEL: Record<TimelineTone, string> = {
   scheduled: 'Scheduled',
 };
 
+/** The states worth a WORD beside the title, not just a colour on the bar.
+ * Overdue and in-progress differ only by red versus green on the grid, and red
+ * versus green is the pair colour-blind readers confuse most; catch-up and
+ * blocked also share one amber. Saying the state in text is what keeps the grid
+ * readable without hue. Done, cancelled and scheduled are the quiet defaults. */
+const TONE_TAG_CLASS: Partial<Record<TimelineTone, string>> = {
+  overdue: 'text-status-error',
+  catch_up: 'text-status-warning',
+  blocked: 'text-status-warning',
+};
+
 /** Row height, shared by the grid rows and their labels so the two columns
  * stay locked together without a table. */
 const ROW_CLASS = 'h-8';
@@ -400,9 +411,14 @@ function PhaseLabels({
               {item.isMilestone ? (
                 <Flag className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />
               ) : null}
-              <span className="min-w-0 truncate text-[11px] text-content-secondary">
+              <span className="min-w-0 flex-1 truncate text-[11px] text-content-secondary">
                 {item.title}
               </span>
+              {TONE_TAG_CLASS[item.tone] ? (
+                <span className={`shrink-0 text-[11px] font-semibold ${TONE_TAG_CLASS[item.tone]}`}>
+                  {TONE_LABEL[item.tone]}
+                </span>
+              ) : null}
             </button>
           ))}
     </div>
@@ -538,7 +554,7 @@ function TimelineRow({
     window.addEventListener('pointercancel', handleUp);
   };
 
-  const label = `${item.title} — ${TONE_LABEL[item.tone]}${startIso ? `, ${startIso}` : ''}`;
+  const label = `${item.title}: ${TONE_LABEL[item.tone]}${startIso ? `, ${startIso}` : ''}`;
 
   return (
     <div className={`relative ${ROW_CLASS}`}>

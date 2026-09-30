@@ -395,7 +395,7 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
         typeof data.confidence === 'number'
           ? ` (${Math.round(data.confidence * 100)}% confidence)`
           : '';
-      onToast?.(`Predicted genre: ${genre}${confidenceSuffix} — review and save.`, 'success');
+      onToast?.(`Predicted genre: ${genre}${confidenceSuffix}. Review and save.`, 'success');
     } catch (err) {
       onToast?.(err instanceof Error ? err.message : 'Could not predict a genre.', 'error');
     } finally {
@@ -511,7 +511,7 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
     } catch {
-      onToast?.('Could not copy — select the link and copy it manually.', 'warning');
+      onToast?.('Could not copy. Select the link and copy it by hand.', 'warning');
     }
   };
 
@@ -633,7 +633,7 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
         // hiding a perfectly good payload behind it (the CuratorLoadError
         // blocking-vs-banner split).
         <div className="flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-status-error">{loadError}</p>
+          <p role="alert" className="text-sm text-status-error">{loadError}</p>
           <button
             type="button"
             onClick={() => void reloadScene()}
@@ -649,8 +649,8 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
             // screen (the store keeps it on a failed revalidate). Keep the
             // cards; say so above them.
             <div className="flex flex-col gap-3 border border-status-error/30 bg-status-error/10 p-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-status-error">
-                Couldn&rsquo;t refresh this page &mdash; showing what we have. {loadError}
+              <p role="alert" className="text-xs text-status-error">
+                Couldn&rsquo;t refresh this page. Showing what we have. {loadError}
               </p>
               <button
                 type="button"

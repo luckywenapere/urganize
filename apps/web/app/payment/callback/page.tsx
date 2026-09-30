@@ -33,7 +33,11 @@ import { LoadingMark, LoadingScreen } from '@urganize/ui';
 // "trial started" instead of "subscription active", and the failure state
 // points back at /start-trial instead of the plans page.
 
-type PaymentStatus = 'verifying' | 'success' | 'failed';
+// 'pending' is its own state, not a flavour of 'failed': we stopped WAITING, we
+// did not learn that anything went wrong. The money has likely been charged and
+// the webhook is just slow, so the screen must not tell a paying customer their
+// payment failed.
+type PaymentStatus = 'verifying' | 'success' | 'failed' | 'pending';
 
 type VerifyResponse = {
   status?: string;
@@ -130,15 +134,10 @@ function PaymentCallbackContent() {
         }
 
         if (Date.now() - start >= POLL_TIMEOUT_MS) {
-          // We timed out waiting for the webhook. Tell the user — they can
-          // refresh, and the gate will reflect reality once the webhook
-          // eventually lands. Not a hard failure (their money has likely
-          // been charged); just a UI wait that overran.
-          setStatus('failed');
-          setResult({
-            error:
-              "We're still finalizing your payment. Refresh in a moment — your access will unlock as soon as Paystack confirms.",
-          });
+          // We timed out waiting for the webhook. Not a failure (their money
+          // has likely been charged); just a UI wait that overran. The gate
+          // reflects reality once the webhook eventually lands.
+          setStatus('pending');
           return;
         }
 
@@ -176,7 +175,7 @@ function PaymentCallbackContent() {
       )}
 
       {status === 'success' && (
-        <div className="text-center">
+        <div role="status" className="text-center">
           <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-brand-muted text-2xl text-brand">
             ✓
           </div>
@@ -216,8 +215,36 @@ function PaymentCallbackContent() {
         </div>
       )}
 
+      {status === 'pending' && (
+        <div role="status" className="text-center">
+          <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-bg-elevated text-2xl text-content-secondary">
+            …
+          </div>
+          <p className="text-xl font-semibold text-content-primary">Still confirming your payment</p>
+          <p className="mt-2 text-sm text-content-secondary">
+            This can take a minute. Your access unlocks as soon as Paystack confirms.
+          </p>
+          <div className="mt-6 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="min-h-11 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+            >
+              Check again
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(HOME_PATH)}
+              className="min-h-11 rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary hover:bg-bg-hover"
+            >
+              Open dashboard
+            </button>
+          </div>
+        </div>
+      )}
+
       {status === 'failed' && (
-        <div className="text-center">
+        <div role="alert" className="text-center">
           <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-status-error/20 text-2xl text-status-error">
             !
           </div>

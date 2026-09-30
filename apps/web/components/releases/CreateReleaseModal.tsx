@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, ArrowLeft, CalendarDays, Loader2, X } from '@/components/icons';
+import { AlertCircle, ArrowLeft, CalendarDays, Check, Loader2, X } from '@/components/icons';
 import { Button, IconButton } from '@urganize/ui';
 import { BlankSheetIllustration, PlanIllustration } from '@/components/app/BrandIcons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
+import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
@@ -176,7 +178,7 @@ export function CreateReleaseModal({
   // is still read here so a first release keeps its warmer framing below.
   const isFirstRelease = useFirstReleaseRequired();
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const cardRef = useRef<HTMLFormElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState('');
   const [releaseDate, setReleaseDate] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -238,6 +240,13 @@ export function CreateReleaseModal({
     void loadRoster();
   }, [open, loadRoster]);
 
+  // Focus lands on the dialog when it opens (the type chooser has no field to
+  // focus, and the title input only exists once a plan is picked), stays inside
+  // while it is open, and returns to the button that opened it. This replaced a
+  // hand-rolled window-level Tab trap that never moved focus in at all, and
+  // that fought any modal opened above it (the quick-create modal can be).
+  useDialogFocus(open && isMounted, panelRef, { initialFocus: 'panel' });
+
   useEffect(() => {
     if (!open || !plan) {
       return;
@@ -256,32 +265,6 @@ export function CreateReleaseModal({
       // Escape closes, unless a create is in flight.
       if (event.key === 'Escape' && !isSubmitting) {
         onClose();
-        return;
-      }
-
-      // Trap Tab inside the dialog: the page behind the overlay is inert to
-      // keyboard users, matching what the backdrop already communicates
-      // visually. Same implementation as TaskQuickCreateModal's trap.
-      if (event.key === 'Tab' && cardRef.current) {
-        const focusables = Array.from(
-          cardRef.current.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
-          )
-        ).filter((element) => element.offsetParent !== null);
-        if (!focusables.length) {
-          return;
-        }
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        const active = document.activeElement as HTMLElement | null;
-
-        if (event.shiftKey && (active === first || !cardRef.current.contains(active))) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && (active === last || !cardRef.current.contains(active))) {
-          event.preventDefault();
-          first.focus();
-        }
       }
     };
 
@@ -383,7 +366,7 @@ export function CreateReleaseModal({
     // useful to queue, so say so plainly instead of firing a request that
     // can only time out.
     if (!isBrowserOnline()) {
-      setSubmitError("You're offline — creating a rollout needs a connection. Try again once you're back online.");
+      setSubmitError("You're offline. Creating a rollout needs a connection. Try again once you're back online.");
       return;
     }
 
@@ -500,13 +483,14 @@ export function CreateReleaseModal({
       />
 
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-release-title"
-        className="relative mx-auto w-full max-w-3xl"
+        className="relative mx-auto w-full max-w-3xl focus:outline-none"
       >
         <form
-          ref={cardRef}
           onSubmit={(event) => void handleSubmit(event)}
           className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden urg-cartouche rounded-2xl border border-stroke-default bg-bg-surface shadow-[0_30px_90px_-46px_rgb(var(--shadow-ink)/calc(0.76*var(--shadow-alpha-scale)))] sm:max-h-[calc(100dvh-4rem)]"
         >
@@ -612,7 +596,7 @@ export function CreateReleaseModal({
                 <span className="text-sm leading-6 text-content-secondary">
                   {PLANNER_ENABLED
                     ? 'Plan it with UrgAns. A few questions, then a draft rollout you can edit before anything is scheduled.'
-                    : 'Start with the proven rollout plan — every activity from first prep to release day, scheduled around your date and ready to edit. No date yet? It waits for one.'}
+                    : 'Start with the proven rollout plan. Every activity from first prep to release day is scheduled around your date and ready to edit. No date yet? It waits for one.'}
                 </span>
               </button>
 
@@ -629,7 +613,7 @@ export function CreateReleaseModal({
                 </span>
                 <span className="text-sm leading-6 text-content-secondary">
                   An empty rollout with no plan attached. Add your own
-                  activities as you go — you know your process.
+                  activities as you go. You know your process.
                 </span>
               </button>
 
@@ -694,7 +678,15 @@ export function CreateReleaseModal({
               ) : null}
 
               {SHOW_TYPE_PICKER ? (
-                <div role="radiogroup" aria-label="Rollout type">
+                <div
+                  role="radiogroup"
+                  aria-label="Format"
+                  onKeyDown={(event) =>
+                    onRadioGroupKeyDown(event, CREATABLE_RELEASE_TYPES.indexOf(releaseType), (index) =>
+                      setReleaseType(CREATABLE_RELEASE_TYPES[index])
+                    )
+                  }
+                >
                   <span className="mb-2 block text-sm font-medium text-content-primary">
                     Format
                   </span>
@@ -707,13 +699,15 @@ export function CreateReleaseModal({
                           type="button"
                           role="radio"
                           aria-checked={isSelected}
+                          tabIndex={isSelected ? 0 : -1}
                           onClick={() => setReleaseType(option)}
-                          className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                             isSelected
                               ? 'border-brand bg-brand/10 text-content-primary'
                               : 'border-stroke-default bg-bg-elevated text-content-secondary hover:text-content-primary'
                           }`}
                         >
+                          {isSelected ? <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : null}
                           {RELEASE_TYPE_LABELS[option]}
                         </button>
                       );
@@ -741,7 +735,7 @@ export function CreateReleaseModal({
                   aria-invalid={Boolean(errors.title)}
                 />
                 {errors.title ? (
-                  <p className="mt-2 text-xs text-status-error">{errors.title}</p>
+                  <p role="alert" className="mt-2 text-xs text-status-error">{errors.title}</p>
                 ) : (
                   <p className="mt-2 text-xs leading-5 text-content-secondary">
                     Skip it and we&apos;ll call it &ldquo;{DEFAULT_RELEASE_TITLE}&rdquo;. You can
@@ -768,10 +762,10 @@ export function CreateReleaseModal({
                   aria-invalid={Boolean(errors.releaseDate)}
                 />
                 {errors.releaseDate ? (
-                  <p className="mt-2 text-xs text-status-error">{errors.releaseDate}</p>
+                  <p role="alert" className="mt-2 text-xs text-status-error">{errors.releaseDate}</p>
                 ) : compressedNote && plan === 'template' ? (
                   <p className="mt-2 text-xs leading-5 text-content-secondary">
-                    Heads up — a {compressedNote.displayDate} release compresses the first ~
+                    Heads up. A release date of {compressedNote.displayDate} compresses the first ~
                     {compressedNote.compressedWeeks}{' '}
                     {compressedNote.compressedWeeks === 1 ? 'week' : 'weeks'} of prep. Those
                     early tasks will show as &ldquo;Catch up&rdquo; so you can prioritize them.
@@ -784,7 +778,7 @@ export function CreateReleaseModal({
                     {plan === 'template'
                       ? PLANNER_ENABLED
                         ? "Don't have one yet? Skip it. UrgAns can suggest a date while you plan."
-                        : "Don't have one yet? Skip it — your rollout plan gets built the moment you set a date."
+                        : "Don't have one yet? Skip it. Your rollout plan gets built the moment you set a date."
                       : "Don't have one yet? Skip it and add it whenever it's confirmed."}
                   </p>
                 ) : null}
@@ -792,7 +786,7 @@ export function CreateReleaseModal({
           </div>
 
           {submitError ? (
-            <div className="mx-4 mb-4 flex shrink-0 items-start gap-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error sm:mx-5">
+            <div role="alert" className="mx-4 mb-4 flex shrink-0 items-start gap-3 border border-status-error/30 bg-status-error/10 p-3 text-sm text-status-error sm:mx-5">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <p>{submitError}</p>
             </div>

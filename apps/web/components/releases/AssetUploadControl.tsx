@@ -293,7 +293,7 @@ export function AssetUploadControl({ releaseId, onUploaded, onToast }: AssetUplo
       </div>
 
       {inlineError ? (
-        <p className="mt-3 text-xs text-status-error">{inlineError}</p>
+        <p role="alert" className="mt-3 text-xs text-status-error">{inlineError}</p>
       ) : null}
     </div>
   );

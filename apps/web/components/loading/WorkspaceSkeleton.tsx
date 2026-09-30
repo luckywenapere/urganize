@@ -145,7 +145,7 @@ export function WorkspaceSkeleton() {
   const isFocused = Boolean(searchParams.get(SCOPE_PARAM)) || knownCount === 1;
 
   return (
-    <main
+    <div
       className="flex min-h-full flex-col text-content-primary lg:block"
       aria-hidden="true"
     >
@@ -204,7 +204,7 @@ export function WorkspaceSkeleton() {
             )}
           </section>
       </div>
-    </main>
+    </div>
   );
 }
 

@@ -223,7 +223,7 @@ export function NotesList({
                 ? `Search only covers the ${loadedCount} notes loaded so far. Load older notes and try again.`
                 : isFiltering
                   ? 'Nothing here matches your search. Try fewer words, or clear the rollout filter to search everything.'
-                  : 'Try fewer words — search matches the title and the body, in any order.'
+                  : 'Try fewer words. Search matches the title and the body, in any order.'
             }
             action={
               <div className="flex flex-wrap items-center justify-center gap-2">

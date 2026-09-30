@@ -80,7 +80,7 @@ export function WorkspaceDesktopGrid({
                   {testRelease.isStarting ? 'Setting up your test rollout…' : 'Try a test rollout'}
                 </button>
                 {testRelease.error ? (
-                  <p className="text-xs text-status-error">{testRelease.error}</p>
+                  <p role="alert" className="text-xs text-status-error">{testRelease.error}</p>
                 ) : null}
               </div>
             ) : (

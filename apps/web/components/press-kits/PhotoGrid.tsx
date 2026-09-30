@@ -198,7 +198,7 @@ export function PhotoGrid({
         </div>
       )}
 
-      {error ? <p className="text-sm text-status-error">{error}</p> : null}
+      {error ? <p role="alert" className="text-sm text-status-error">{error}</p> : null}
 
       {assets.length === 0 ? (
         <p className="text-sm text-content-tertiary">

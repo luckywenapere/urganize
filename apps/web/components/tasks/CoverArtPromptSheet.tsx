@@ -2,6 +2,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { Image as ImageIcon, Loader2, Upload, X } from '@/components/icons';
 
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
@@ -63,6 +64,8 @@ function CoverArtPromptBody({
   const [isDone, setIsDone] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const dragStartY = useRef<number | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, panelRef);
 
   // Whether the release already has cover art is resolved HERE rather than
   // guessed in the store: `Release.coverArtUrl` falls back to the workspace
@@ -128,6 +131,8 @@ function CoverArtPromptBody({
       }}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Add the cover art"
@@ -248,7 +253,7 @@ function CoverArtPromptBody({
 
               {upload.queued ? (
                 <p className="mt-3 text-xs text-content-secondary" role="status">
-                  You&rsquo;re offline — this will upload when you&rsquo;re back online.
+                  You&rsquo;re offline. This will upload when you&rsquo;re back online.
                 </p>
               ) : upload.error ? (
                 <p className="mt-3 text-xs text-status-error" role="alert">

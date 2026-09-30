@@ -291,7 +291,7 @@ export function TaskDetailView({
       setInviteEmail('');
       if (payload.inviteUrl) {
         setInviteUrl(payload.inviteUrl);
-        setInviteMessage('Invite link created — share it with your teammate.');
+        setInviteMessage('Invite link created. Share it with your teammate.');
       } else {
         setInviteMessage('Already on this team.');
       }
@@ -425,7 +425,7 @@ export function TaskDetailView({
       </div>
 
       {error && !task ? (
-        <div className="rounded-[24px] border border-status-error/30 bg-status-error/10 px-4 py-4 text-sm text-status-error">
+        <div role="alert" className="rounded-[24px] border border-status-error/30 bg-status-error/10 px-4 py-4 text-sm text-status-error">
           {error}
         </div>
       ) : task ? (

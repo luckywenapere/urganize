@@ -230,7 +230,7 @@ function DirectoryBody() {
           Opening the directory
         </div>
       ) : error ? (
-        <p className="text-sm text-status-error">{error}</p>
+        <p role="alert" className="text-sm text-status-error">{error}</p>
       ) : (
         <>
           <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

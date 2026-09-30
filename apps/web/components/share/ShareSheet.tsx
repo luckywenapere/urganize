@@ -83,6 +83,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useShareStore, type ShareRequest } from '@/stores/useShareStore';
 import { tourBlocksPrompts } from '@/stores/useTourStore';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
+import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
 import { useShareImages, type ShareImageState } from './useShareImages';
 
 /**
@@ -628,7 +629,7 @@ function AskStep({
             className={`${FIELD_CLASS} h-11 aria-[invalid=true]:border-status-error`}
           />
           {linkError ? (
-            <p id="share-fan-link-error" className="mt-1.5 flex items-start gap-1.5 text-xs text-status-error">
+            <p role="alert" id="share-fan-link-error" className="mt-1.5 flex items-start gap-1.5 text-xs text-status-error">
               <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               {linkError}
             </p>
@@ -758,7 +759,17 @@ function Segmented<Value extends string>({
   options: Array<{ value: Value; label: string }>;
 }) {
   return (
-    <div role="radiogroup" className={`grid grid-cols-2 ${TRACK_CLASS}`}>
+    <div
+      role="radiogroup"
+      onKeyDown={(event) =>
+        onRadioGroupKeyDown(
+          event,
+          options.findIndex((option) => option.value === value),
+          (index) => onChange(options[index].value)
+        )
+      }
+      className={`grid grid-cols-2 ${TRACK_CLASS}`}
+    >
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -767,6 +778,7 @@ function Segmented<Value extends string>({
             type="button"
             role="radio"
             aria-checked={selected}
+            tabIndex={selected ? 0 : -1}
             name={name}
             onClick={() => onChange(option.value)}
             className={`motion-focus motion-press h-9 truncate rounded-full px-3 text-sm font-medium transition-[background-color,color,box-shadow] duration-200 ${
@@ -1332,7 +1344,7 @@ function ImagePanel({
           </p>
         ) : null}
         {tab === 'x' && xOver ? (
-          <p className="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-status-error">
+          <p role="status" className="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-status-error">
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             X allows {X_MAX_POST_WEIGHT} characters. Make it a little shorter.
           </p>

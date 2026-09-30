@@ -1,3 +1,4 @@
+import { Check } from '@/components/icons';
 import type { HomeArtistChip } from '@/lib/home/types';
 
 type ArtistFilterChipsProps = {
@@ -15,7 +16,7 @@ export function ArtistFilterChips({ artists, selectedArtistId, onSelect }: Artis
   if (artists.length <= 1) return null;
 
   const chipClass = (active: boolean) =>
-    `motion-focus shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+    `motion-focus inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
       active
         ? 'border-brand bg-brand/10 text-brand'
         : 'border-stroke-default bg-bg-surface text-content-secondary hover:border-stroke-strong hover:text-content-primary'
@@ -29,6 +30,7 @@ export function ArtistFilterChips({ artists, selectedArtistId, onSelect }: Artis
         onClick={() => onSelect(null)}
         className={chipClass(selectedArtistId === null)}
       >
+        {selectedArtistId === null ? <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : null}
         All artists
       </button>
       {artists.map((artist) => (
@@ -39,6 +41,7 @@ export function ArtistFilterChips({ artists, selectedArtistId, onSelect }: Artis
           onClick={() => onSelect(artist.id)}
           className={chipClass(selectedArtistId === artist.id)}
         >
+          {selectedArtistId === artist.id ? <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : null}
           {artist.name}
         </button>
       ))}

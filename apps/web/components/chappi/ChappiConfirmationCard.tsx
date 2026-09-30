@@ -1,7 +1,8 @@
 'use client';
 
-import { AlertTriangle, Loader2 } from '@/components/icons';
+import { AlertTriangle, Info, Loader2 } from '@/components/icons';
 import { Button } from '@urganize/ui';
+import { confirmationTone } from '@/lib/chappi/confirmation-tone';
 import type { ChappiPendingConfirmation } from '@/lib/chappi/types';
 
 type ChappiConfirmationCardProps = {
@@ -29,17 +30,22 @@ export function ChappiConfirmationCard({
   onCancel,
   isBusy,
 }: ChappiConfirmationCardProps) {
+  const danger = confirmationTone(pending.toolName) === 'danger';
+
   return (
     <div
       role="group"
       aria-label="Confirm this action"
-      className="mt-4 border border-status-error/30 bg-status-error/5 p-4"
+      className={`mt-4 border p-4 ${
+        danger ? 'border-status-error/30 bg-status-error/5' : 'border-stroke-default bg-bg-elevated'
+      }`}
     >
       <div className="flex items-start gap-3">
-        <AlertTriangle
-          className="mt-0.5 h-4 w-4 shrink-0 text-status-error"
-          aria-hidden="true"
-        />
+        {danger ? (
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-status-error" aria-hidden="true" />
+        ) : (
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-content-secondary" aria-hidden="true" />
+        )}
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-semibold leading-snug text-content-primary">
             {pending.title}
@@ -56,7 +62,7 @@ export function ChappiConfirmationCard({
         </Button>
         <Button
           type="button"
-          variant="danger"
+          variant={danger ? 'danger' : 'primary'}
           onClick={onApprove}
           disabled={isBusy}
           isLoading={isBusy}

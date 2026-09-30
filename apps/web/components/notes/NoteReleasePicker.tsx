@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ChevronDown, Disc3 } from '@/components/icons';
+import { Check, ChevronDown, Disc3 } from '@/components/icons';
 import type { ExecutionRelease } from '@/lib/execution-types';
 
 type NoteReleasePickerProps = {
@@ -55,6 +55,7 @@ export function NoteReleasePicker({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
 
   const linked = linkedReleaseId
     ? releases.find((release) => release.id === linkedReleaseId) ?? null
@@ -99,9 +100,11 @@ export function NoteReleasePicker({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
-        aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={linked ? `Linked to ${linked.title}` : 'Link this note to a rollout'}
+        aria-controls={open ? panelId : undefined}
+        // The visible words are the name's first part, so a voice-control user
+        // who says what they see ("Link rollout") reaches it.
+        aria-label={linked ? `Linked to ${linked.title}` : 'Link rollout to this note'}
         className={`motion-focus inline-flex h-8 max-w-full items-center gap-1.5 rounded-full px-2.5 text-xs transition-colors ${
           linked
             ? 'border border-brand/25 bg-brand/10 font-medium text-brand hover:bg-brand/15'
@@ -121,22 +124,25 @@ export function NoteReleasePicker({
       </button>
 
       {open ? (
+        // A group, not a role="listbox": these rows are buttons reached with
+        // Tab, and a listbox promises arrow-key movement they never had.
         <div
-          role="listbox"
+          id={panelId}
+          role="group"
           aria-label="Link this note to a rollout"
           className="absolute left-0 top-full z-50 mt-2 max-h-72 w-64 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain rounded-xl border border-stroke-default bg-bg-surface py-1 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           <button
             type="button"
-            role="option"
-            aria-selected={!linked}
+            aria-current={!linked ? 'true' : undefined}
             onClick={() => choose(null)}
             className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-bg-hover ${
               !linked ? 'text-content-primary' : 'text-content-secondary'
             }`}
           >
             <Disc3 className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
-            No rollout
+            <span className="min-w-0 flex-1">No rollout</span>
+            {!linked ? <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /> : null}
           </button>
           {releases.map((release) => {
             const selected = release.id === linkedReleaseId;
@@ -144,8 +150,7 @@ export function NoteReleasePicker({
               <button
                 key={release.id}
                 type="button"
-                role="option"
-                aria-selected={selected}
+                aria-current={selected ? 'true' : undefined}
                 onClick={() => choose(release.id)}
                 className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-bg-hover ${
                   selected ? 'text-content-primary' : 'text-content-secondary'
@@ -160,6 +165,7 @@ export function NoteReleasePicker({
                     )}
                   </span>
                 ) : null}
+                {selected ? <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /> : null}
               </button>
             );
           })}

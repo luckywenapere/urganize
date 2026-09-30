@@ -63,8 +63,8 @@ export function WorkspaceIdentitySection({
               maxLength={80}
             />
           </label>
-          {message && <p className={feedbackSuccessClass}>{message}</p>}
-          {error && <p className={feedbackErrorClass}>{error}</p>}
+          {message && <p role="status" className={feedbackSuccessClass}>{message}</p>}
+          {error && <p role="alert" className={feedbackErrorClass}>{error}</p>}
           {saveButtonVisible({ dirty: isDirty, saving: isSaving }) ? (
             <button
               type="button"

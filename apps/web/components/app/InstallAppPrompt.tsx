@@ -43,7 +43,7 @@ const COPY: Record<
 > = {
   ios: {
     title: 'Keep Urganize on your Home Screen',
-    body: 'It opens full screen, straight to your work — and it is the only way an iPhone will let us send you reminders.',
+    body: 'It opens full screen, straight to your work. It is also the only way an iPhone will let us send you reminders.',
     // Not an action, and deliberately worded so it does not read as one. See
     // the iOS note in the component docblock.
     action: 'Close',

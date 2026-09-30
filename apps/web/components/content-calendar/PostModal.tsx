@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, Loader2, X } from '@/components/icons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { getAccessToken } from './get-access-token';
 import { calendarFontVariables } from './calendar-fonts';
 import {
@@ -139,20 +140,18 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
     return lockBodyScroll();
   }, [open]);
 
-  // Minimal dialog focus contract (2026-08-10): focus lands on the title
-  // input when the modal opens (the date is usually pre-filled by the tapped
-  // day) and returns to the opener on close. Not a full trap — the backdrop
-  // button is tabIndex={-1} so Tab can't land outside the dialog's visible
-  // controls by accident.
+  // Focus lands on the title input when the modal opens (the date is usually
+  // pre-filled by the tapped day), stays inside while it is open, and returns
+  // to the opener on close. The hook is declared first so it remembers the
+  // opener before the title takes focus, and is told to leave the initial
+  // move to the title.
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocus(open && isMounted, panelRef, { initialFocus: 'none' });
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
-    if (!open) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!open || !isMounted) return;
     titleInputRef.current?.focus();
-    return () => {
-      opener?.focus();
-    };
-  }, [open]);
+  }, [open, isMounted]);
 
   const isBusy = isSaving || isDeleting;
   const canSubmit = useMemo(
@@ -233,7 +232,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
         // The post itself saved, but the link PATCH failed — saying nothing
         // would be a silent data drop. AFTER onSaved, so this warning wins
         // over its "Post saved" toast in the single toast slot.
-        onToast?.('Post saved, but the link didn’t stick — open the post and add it again.', 'warning');
+        onToast?.('Post saved, but the link didn’t stick. Open the post and add it again.', 'warning');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save post.');
@@ -292,7 +291,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
         }}
       />
 
-      <div role="dialog" aria-modal="true" aria-labelledby="post-modal-title" className="relative mx-auto w-full max-w-lg">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="post-modal-title" className="relative mx-auto w-full max-w-lg">
         <form
           onSubmit={(event) => void handleSubmit(event)}
           className="relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden border border-[var(--cc-border)] bg-[var(--cc-ground)] text-[var(--cc-text)] shadow-2xl sm:max-h-[calc(100dvh-4rem)]"

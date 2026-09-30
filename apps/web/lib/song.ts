@@ -66,7 +66,7 @@ export function validateSongFile(file: {
       ok: false,
       // Names the actual way out. The ceiling is the Supabase Free plan's
       // per-upload headroom, so "compress it" is the real advice, not "upgrade".
-      error: `That file is ${formatFileSize(file.size)} — songs have to be under ${formatFileSize(
+      error: `That file is ${formatFileSize(file.size)}. Songs have to be under ${formatFileSize(
         SONG_MAX_BYTES
       )}. Upload an MP3 rather than the WAV master.`,
     };

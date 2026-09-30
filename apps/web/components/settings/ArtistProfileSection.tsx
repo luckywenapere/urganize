@@ -78,8 +78,8 @@ export function ArtistProfileSection() {
             placeholder="e.g. Tems"
           />
         </label>
-        {error && <p className={feedbackErrorClass}>{error}</p>}
-        {success && <p className={feedbackSuccessClass}>{success}</p>}
+        {error && <p role="alert" className={feedbackErrorClass}>{error}</p>}
+        {success && <p role="status" className={feedbackSuccessClass}>{success}</p>}
         {saveButtonVisible({ dirty: artistNameDirty, saving: isSaving }) ? (
           <button
             type="button"

@@ -164,7 +164,7 @@ export const PLANNER_TOOLS: ChappiTool[] = [
         return {
           ok: true,
           summary: releaseDate
-            ? 'No rollout plan yet. Collect the seven questions and build one with generate_release_plan.'
+            ? 'No rollout plan yet. Collect the interview answers and build one with generate_release_plan.'
             : 'No plan yet, and the rollout has no date. A plan needs one before it can be built.',
           data: { hasPlan: false, releaseDate },
         };

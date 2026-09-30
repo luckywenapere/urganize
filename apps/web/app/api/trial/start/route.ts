@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   if (snapshot.accountStatus === 'paid') {
     return NextResponse.json(
       {
-        error: 'Account already has paid access — no trial needed.',
+        error: 'Account already has paid access. No trial is needed.',
         accountStatus: snapshot.accountStatus,
       },
       { status: 409 }

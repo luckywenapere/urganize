@@ -86,7 +86,7 @@ export function SectionDraftCard({
             rows={3}
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
-            placeholder="He just came off a tour, and the record is about coming home."
+            placeholder="They just came off a tour, and the record is about coming home."
             className="mt-1.5 w-full rounded-lg border border-stroke-default bg-bg-base px-3 py-2 text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
           />
           <p className="mt-1 text-xs text-content-tertiary">
@@ -95,7 +95,7 @@ export function SectionDraftCard({
         </div>
       ) : null}
 
-      {error ? <p className="mt-3 text-sm text-status-error">{error}</p> : null}
+      {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button

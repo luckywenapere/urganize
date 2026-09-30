@@ -56,7 +56,7 @@ export function validateCoverArtFile(file: {
   if (file.size > COVER_ART_MAX_BYTES) {
     return {
       ok: false,
-      error: `That image is ${formatFileSize(file.size)} — cover art has to be under ${formatFileSize(
+      error: `That image is ${formatFileSize(file.size)}. Cover art has to be under ${formatFileSize(
         COVER_ART_MAX_BYTES
       )}.`,
     };

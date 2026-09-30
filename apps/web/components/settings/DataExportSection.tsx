@@ -117,8 +117,8 @@ export function DataExportSection() {
           {busyFormat === 'csv' ? 'Preparing...' : 'Download activities'}
         </button>
       </div>
-      {notice && <p className={`mt-4 ${feedbackSuccessClass}`}>{notice}</p>}
-      {error && <p className={`mt-4 ${feedbackErrorClass}`}>{error}</p>}
+      {notice && <p role="status" className={`mt-4 ${feedbackSuccessClass}`}>{notice}</p>}
+      {error && <p role="alert" className={`mt-4 ${feedbackErrorClass}`}>{error}</p>}
     </section>
   );
 }

@@ -16973,3 +16973,46 @@ each caught — see the ledger.
 file upload, and no session is mintable here — so booking a show, uploading a
 file, sending a pack and opening it on a phone, and a reschedule re-dating the
 links are the remaining manual browser and phone pass (checklist in the ledger).
+
+---
+
+## Accessibility and copy pass (2026-09-30, uncommitted, no flag)
+
+Origin: the `better-interface` skill (with the `shadcn/ui` and `jakubkrehel` skill packs, installed globally) was run over every screen by six read-only agents. Every area came back Block. What follows is what was fixed and the rules that keep it fixed. **No flag, no migration, no changelog entry or version bump**: it is internal polish plus visible wording, and a version bump wants to be the last commit before merge.
+
+**Everything decidable was pulled into `lib/` and tested first**, because vitest reaches `lib/` and nothing else. The pure halves are `text-contrast`, `dialog-focus`, `dialog-stack`, `radio-group-keys`, `row-activation`, `toast-timing`, `oauth-consent`, `onboarding-next-hint`, `auth-callback-error`, and `chappi/{confirmation-tone,transcript-announcement}`.
+
+### Rules worth not undoing
+
+1. **Text contrast is a test, not a taste.** `lib/text-contrast.test.ts` parses the shipped `globals.css` and asserts 4.5:1 for secondary and tertiary text on every ground in all three theme blocks, plus the dark-locked island faint tokens. The tokens were deepened to meet it (light secondary `75 71 64`, tertiary `106 102 95`; dark tertiary `135 136 129`).
+2. **One dialog contract.** `useDialogFocus` (with `lib/dialog-focus.ts` and `lib/dialog-stack.ts`) moves focus in, traps Tab, restores focus to the opener, and lets only the **topmost** dialog trap. A dialog yields if focus is inside a different `[aria-modal]` it does not contain. Mark the control to focus with `data-autofocus`, never React's `autoFocus`: `autoFocus` fires during commit, before the hook has noticed which element opened the dialog, so focus could never go back. About 25 overlays use it; `components/shared/DialogPanel.tsx` is the wrapper for the simple ones. The old `components/events/focusTrap.ts` is deleted.
+3. **A button-based radio group needs the keys too.** `lib/radio-group-keys.ts` gives arrows, Home and End with a roving tab stop. Native `<input type="radio">` already has them.
+4. **Do not claim a role you did not build.** `role="menu"` and `role="listbox"` promise arrow-key movement. `HelpMenu`, `NotificationsBell`, the Show page menu and the three rollout/assignee pickers only ever had Tab, so they are disclosures now (`aria-expanded` + `aria-controls`, a `role="group"` panel, `aria-current` plus a check mark on the chosen row). `WorkspaceMenu` and `CalendarOverflowMenu` really implement the keys and keep `role="menu"`. `ReleaseCombobox` and `SongPicker` are real comboboxes.
+5. **State is never colour alone.** Selected chips, the timeline tones, thumbs and the recording mic all carry an icon or a word.
+6. **Live regions exist before their text.** `ToastProvider`'s container is always mounted; the UrgAns transcript has an always-mounted sr-only status; about 80 inline error messages now carry `role="alert"`. Toast lifetime is `toastDismissMs` (longer for errors and long messages).
+7. **Landmarks.** `AppShell` renders a skip link and `<main id="main-content" tabIndex={-1}>`; `WorkspaceView`'s nested `<main>` became a `<div>`. The auth pages have a `<main>`, one `<h1>` and a real tab title (a `layout.tsx` beside each client page).
+8. **A disabled button says why.** The onboarding wizard shows `describeNextBlocker`'s sentence beside a disabled Next and points `aria-describedby` at it.
+9. **The OAuth consent screen shows where the approval goes (`describeRedirectTarget`), not the app's registered name.** That name is whatever the client typed at open dynamic registration, so showing it would lend borrowed trust to anyone who calls themselves "Claude". The redirect host is where the code is actually sent, and the server has already validated it.
+10. **The dark public pages get their own focus ring** (`.epk-island`, `.credits-island`, `.capture-island`, `.kit-island`): the global ring follows the viewer's theme, which is forest green for a light-theme visitor and about 2.6:1 on the locked ink ground.
+11. **Public pages no longer show a blank tab or Next's default 404.** `app/not-found.tsx` is new, and `/k`, `/p`, `/pack` got `loading.tsx`.
+12. **`Button isLoading` keeps its own name** (`aria-busy`, and the label stays as sr-only text) instead of turning into "Loading". `Input` drops the square inner focus ring that the app-wide `:focus-visible` rule drew inside its rounded pill. `HelpTip` opens on keyboard focus only (a tap used to open it and then toggle it shut on Android) and has a 44px hit area.
+13. **A sign-out on the paywall page.** `TeamWall` has no chrome, and gave someone on the wrong account no way off it.
+
+### Copy: the sweep and its ratchet
+
+- An audit found 186 em dashes, 34 uses of the banned product word, and sentences that assumed a person's gender, all in screens nobody had listed in a guard. They are fixed, along with the object word on the pitching, onboarding and date screens and the stale "draft the plan" wording.
+- **`lib/house-copy-ratchet.test.ts` sweeps every component and page** for the em dash (including `&mdash;`), "ship", "workspace" and gendered pronouns, so a new file is covered the day it is written. Its `BASELINE` is frozen and can only shrink (a second test fails if an entry becomes clean). Out of scope on purpose: `app/api` and `app/admin` (server log lines look like copy to this reader), and `lib/` (tool schemas, prompts and playbooks are read by a model or are versioned data). `lib/press-kit-copy-guard.test.ts` still holds the named surfaces to the stricter invented-number and job-title rules.
+- **`lib/copy-scan.ts` was widened.** It used to miss JSX text bounded by `{` or `}` (`Not you?{' '}`, `{count} items left`), which is where an em dash was hiding in a sentence a guard listed as clean. `adjacentJsxText` reads those runs with `isProseRun`, which rejects code and blanks HTML entities first (an entity ends in the `;` that marks a statement). Mutation-tested through all four rules against a real sentence.
+- **A mutation must be confirmed to have applied.** The em dash mutation first "survived" because bash's ANSI-C quoting of the character's escape did not produce it on this platform. The tool layer also collapses a doubled backslash inside inputs, which broke two scripts, and truncates a command past about 8k characters; build such text from a file write, not a long heredoc.
+
+### Still open (not done, deliberately)
+
+- **Founder calls, not touched:** the pinch-zoom lock (`touch-action: pan-y` on `html`/`body`), rounded modals against the square Brand Bible look, control border contrast (about 1.1 to 1.4:1), and the password minimum (sign-up and invite say 6, reset says 8, so someone can create a 6-character password they cannot re-enter on reset).
+- **Not built:** 44px targets on the `TaskDetailView` icons, the tasks-panel dock icons and `TourOfferCard` (they clear the 24px AA minimum); `<form>` wrappers on the Settings sections; a save cue and cap message on `DirectoryProfileSection`; the UrgAns system prompt still carries about 26 em dashes (it is instruction to a model, and rewriting it is a mechanical follow-up the structural test makes safe).
+- **Metadata, capture and the content calendar** are still switched off in production (v1.21.0).
+
+### Verified, and what is not
+
+4896 tests pass, ESLint holds the 3-error / 83-warning baseline (the three are the known `react-hooks/refs` reads at `WorkspaceView.tsx:1120`), `tsc` is clean apart from the 8 documented `confirmed-action.test.ts` errors, and `next build` is green with `/auth`, `/onboarding`, `/settings`, `/dashboard`, `/locked`, both password pages and the OAuth screen still `○ Static` (and `/k`, `/p`, `/pack` `ƒ`). Rendered in a browser: `/auth` (label, underline, no inner ring), the forgot-password page (one `<main>`, one `<h1>`, a title) and the 404 page.
+
+**Never exercised, because no authenticated session can be minted here:** every dialog's focus trap and restore, the disclosure menus, the radio keys, the toast and error announcements, the skip link, the onboarding hint and the paywall sign-out. No screen reader was used at all. Two source-scanning tests (`body-scroll-lock-guard`, `icons-registry`) each failed once in a full run and passed alone and on three re-runs; cause not found, likely load.
