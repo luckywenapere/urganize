@@ -11,7 +11,8 @@ export type TrialButtonLocation =
   | "for_executives_hero"
   | "for_executives_cta"
   | "for_ai_artists_hero"
-  | "for_ai_artists_cta";
+  | "for_ai_artists_cta"
+  | "guide_cta";
 
 // The site's one primary ask (2026-09-02). Three mounts on the homepage
 // (hero, pricing, final — RosterSection carried a fourth, "roster", until it

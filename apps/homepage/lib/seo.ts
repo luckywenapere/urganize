@@ -6,8 +6,16 @@ import {
   SHORT_DESCRIPTION,
 } from "./positioning";
 
-const SITE_URL = "https://urganize.app";
+export const SITE_URL = "https://urganize.app";
 const SITE_NAME = "Urganize";
+
+// The Organization node every other schema points at (publisher, provider,
+// author). Defined here rather than in app/layout.tsx because a layout cannot
+// export anything but its metadata, and the guide pages need the same id.
+export const ORGANIZATION_ID = `${SITE_URL}/#organization`;
+
+// The share image, for schemas that want an image URL.
+export const SHARE_IMAGE_URL = `${SITE_URL}/opengraph-image.png`;
 
 // The landing page's title and description live here, not in the two files
 // that render them: app/layout.tsx needs them for the four JSON-LD schemas

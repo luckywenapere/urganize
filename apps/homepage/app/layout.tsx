@@ -7,7 +7,8 @@ import {
   Roboto_Mono,
 } from "next/font/google";
 import "./globals.css";
-import { LANDING_DESCRIPTION, LANDING_TITLE } from "@/lib/seo";
+import { LANDING_DESCRIPTION, LANDING_TITLE, ORGANIZATION_ID } from "@/lib/seo";
+import { PRICING_TIER_ORDER, getTierPrice } from "@urganize/pricing";
 import { Suspense } from "react";
 import FormbricksProvider from "./formbricks-provider";
 import CursorRefresher from "./components/CursorRefresher";
@@ -84,11 +85,24 @@ const robotoMono = Roboto_Mono({
 });
 
 // JSON-LD Schema Data
+// Entity facts (2026-09-30, global-branding pass). A brand search for
+// "urganize" is ambiguous to a search engine: it is one letter from "urbanize"
+// and "organize", and the only things that say which entity this is are the
+// facts attached to it. `@id` gives the other schemas below a stable node to
+// point at (publisher, provider); `foundingDate` is the "Started December 2025"
+// the brand page already states; the country is the registration the terms
+// already state. Nothing here is new information, it is existing copy made
+// machine-readable. Do not add a street address, employee count or founder
+// list without the founder confirming them: a knowledge panel repeats
+// whatever this says.
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": ORGANIZATION_ID,
   "name": "Urganize",
   "legalName": LEGAL_NAME,
+  "foundingDate": "2025-12",
+  "address": { "@type": "PostalAddress", "addressCountry": "NG" },
   "url": SITE_URL,
   "logo": "https://urganize.app/images/urganize-logo.png",
   "description": LANDING_DESCRIPTION,
@@ -111,7 +125,13 @@ const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "Urganize",
+  // Google builds the site name shown above a result from this pair. The bare
+  // domain is how people type and say the brand, so it is offered as the
+  // alternate form.
+  "alternateName": "urganize.app",
   "url": SITE_URL,
+  "inLanguage": "en",
+  "publisher": { "@id": ORGANIZATION_ID },
   "description": LANDING_DESCRIPTION
 } as const;
 
@@ -134,10 +154,17 @@ const homepageSchema = {
   }
 } as const;
 
-// Price left out deliberately: @urganize/pricing is the source of truth for
-// amounts and they can change independently of a deploy that touches this
-// file. Point at the pricing page instead of hardcoding a number that could
-// drift from what a shopper actually sees.
+// The offer states a price range, and the range is COMPUTED from
+// @urganize/pricing rather than written here, so it cannot drift from what the
+// pricing page shows. It was a bare Offer with no price until 2026-09-30, which
+// Google's structured-data report flags as invalid (an Offer must carry a
+// price), so the rich-result eligibility this schema exists for was never
+// actually available. Monthly figures, because monthly is the price each tier
+// declares; the yearly one is arithmetic on top of it.
+const monthlyPrices = PRICING_TIER_ORDER.map(
+  (id) => getTierPrice(id, "monthly")?.amount
+).filter((amount): amount is number => typeof amount === "number");
+
 const softwareApplicationSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
@@ -152,9 +179,13 @@ const softwareApplicationSchema = {
   "operatingSystem": "Web",
   "description": LANDING_DESCRIPTION,
   "url": SITE_URL,
+  "provider": { "@id": ORGANIZATION_ID },
   "offers": {
-    "@type": "Offer",
+    "@type": "AggregateOffer",
     "url": `${SITE_URL}/pricing`,
+    "lowPrice": Math.min(...monthlyPrices),
+    "highPrice": Math.max(...monthlyPrices),
+    "offerCount": monthlyPrices.length,
     // NGN, not USD. Every price Urganize actually charges is in Naira: the
     // pricing tiers carry NGN amounts only, the Paystack account offers NGN
     // alone in plan creation, and USD checkout has never worked. This said USD

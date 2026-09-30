@@ -6,15 +6,20 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CANONICAL_DESCRIPTION, CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
+// INDEXED since 2026-09-30 (it was noindex before, to keep the homepage's
+// sitelinks commercial). Reversed on evidence from a brand search: the results
+// for "urganize" were led by third-party listings (RocketReach) and dictionary
+// pages for "urbanize", because nothing on the site we control states, in one
+// crawlable place, what the company is, what it is called and how it is
+// spelled. This page already held the company facts and the boilerplate; it
+// now also carries the name, so it is the page a search engine should treat as
+// the answer to "what is Urganize". The cost is that Google may offer it as a
+// sitelink; that is accepted, and it is one line to reverse (noIndex: true).
 export const metadata: Metadata = buildPageMetadata({
-  title: "Brand",
+  title: "About Urganize: name, brand and press assets",
   description:
-    `How Urganize looks, how it speaks and what it stands for. ${CORE_LINE}`,
+    `What Urganize is, how to spell it, and the logos and words to use when you write about us. ${CORE_LINE}`,
   path: "/brand",
-  // Kept out of search so the homepage's sitelinks stay commercial
-  // (Features / Pricing / For executives / For managers). The page stays public
-  // and footer-linked — it just never competes as a search result.
-  noIndex: true,
 });
 
 const VOICE_PILLARS = [
@@ -182,6 +187,19 @@ export default function BrandPage() {
                     or distribution. We stay focused on the rollout.
                   </li>
                 </ul>
+              </div>
+
+              {/* The name (2026-09-30). The brand is one letter from "urbanize" and
+                  a respelling of "organize", so a search engine and a person
+                  both need it said outright. The facts below are the ones the
+                  terms and the footer already state; nothing here is new. */}
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--marketing-text)]">The name</h3>
+                <p className={`mt-1.5 ${bodyText}`}>
+                  Urganize is spelled with a G, like organize. It is not urbanize. The company
+                  behind it is The Urganization Ltd, registered in Nigeria and started in December
+                  2025. The product lives at urganize.app.
+                </p>
               </div>
 
               {/* Boilerplate: copy/paste block for media. The founder's long

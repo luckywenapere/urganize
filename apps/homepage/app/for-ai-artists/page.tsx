@@ -14,7 +14,7 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "For AI artists",
+  title: "Release planning for AI artists",
   description:
     "Making the song got fast. The rollout did not. Urganize is everything after the music: a full rollout plan per drop, an owner on every activity and a press kit you send as one link.",
   path: "/for-ai-artists",

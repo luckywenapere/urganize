@@ -15,7 +15,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import { TESTIMONIALS } from "@/content/testimonials";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "For roster teams",
+  title: "Release planning for teams running a roster",
   description:
     "Urganize is everything after the music, for teams running a roster. Every rollout runs on the same plan, every activity has an owner and you see where all of them stand without chasing anyone.",
   path: "/for-executives",

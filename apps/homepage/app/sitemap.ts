@@ -1,4 +1,5 @@
 import { MetadataRoute } from "next";
+import { GUIDES } from "@/content/guides";
 
 const SITE_URL = "https://urganize.app";
 
@@ -67,15 +68,36 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
-    // /press was listed here until 2026-08-14 and should not come back: the
-    // route is a 308 redirect to /brand (the press kit was folded in), and
-    // /brand is one of the noindexed pages below. So the entry asked crawlers
-    // to index a URL that resolves to a page telling them not to — the exact
-    // contradiction the comment below warns about, arriving by redirect
-    // instead of directly.
+    // /brand is indexed and listed since 2026-09-30: it is the one page that
+    // states what the company is, what it is called and how it is spelled, and
+    // a brand search was being answered by third-party listings because no page
+    // we control did. /press is NOT listed and should not come back: it is a
+    // 308 redirect to /brand, so the entry would ask crawlers to index a URL
+    // that resolves somewhere else.
+    {
+      url: `${SITE_URL}/brand`,
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    // The guides (2026-09-30): plain answers to what a stranger searches before
+    // they know Urganize exists. Unlike the pages above these DO carry a real
+    // lastModified, because each guide has one and it only moves when the
+    // guide's own text does. The "omit it" rule at the top of this file is about
+    // not stamping the build time on everything; this is the opposite case.
+    {
+      url: `${SITE_URL}/guides`,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    ...GUIDES.map((guide) => ({
+      url: `${SITE_URL}/guides/${guide.slug}`,
+      lastModified: guide.dateModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
     //
     // Deliberately absent, and it must stay that way: /privacy, /team,
-    // /community, /brand, /changelog, /terms and /subprocessors all emit
+    // /community, /changelog, /terms and /subprocessors all emit
     // `noindex` (see lib/seo.ts) so the homepage's sitelinks stay commercial.
     // Listing a noindexed URL here would ask crawlers to index the very page
     // that tells them not to. They stay crawlable via robots.txt and their
