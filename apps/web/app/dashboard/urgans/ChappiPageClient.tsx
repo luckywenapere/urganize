@@ -21,6 +21,8 @@ import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
 import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
+import { CHATS_MENU_ON, chatsLiveInMenu } from '@/lib/chats-menu';
+import { useSidebarStore } from '@/stores/useSidebarStore';
 
 // Same flag AppTopbar reads for the nav icon — if a direct link is followed
 // while the flag is off, bounce to the workspace instead of 404ing (the
@@ -71,6 +73,15 @@ export default function ChappiPageClient() {
   const keyboardOpen = useKeyboardOpen();
   // Below xl only: the chats list is showing in place of the conversation.
   const [showChats, setShowChats] = useState(false);
+  // Where the saved chats live: in the left menu when it can carry them (the
+  // Cursor layout), otherwise behind this page's own Chats toggle. The menu
+  // is hidden below lg, so the toggle stays at phone widths either way.
+  const menuCollapsed = useSidebarStore((state) => state.collapsed);
+  const menuHostsChats = chatsLiveInMenu({
+    historyOn: HISTORY_ENABLED,
+    menuOn: CHATS_MENU_ON,
+    collapsed: menuCollapsed,
+  });
 
   // iOS scrolls the document to reveal a focused field BEFORE the layout has
   // had a chance to react, and this page's own contract is that it never
@@ -167,7 +178,9 @@ export default function ChappiPageClient() {
               type="button"
               onClick={() => setShowChats((current) => !current)}
               aria-pressed={showChats}
-              className="motion-focus motion-press mr-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary xl:hidden"
+              className={`motion-focus motion-press mr-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary ${
+                menuHostsChats ? 'lg:hidden' : ''
+              }`}
             >
               {showChats ? (
                 <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
@@ -201,17 +214,18 @@ export default function ChappiPageClient() {
         <div className="min-h-0 flex-1">
           {HISTORY_ENABLED ? (
             <div className="flex h-full min-h-0 gap-4">
-              <div className="hidden w-64 shrink-0 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface xl:flex xl:flex-col">
-                <ChappiHistoryList variant="column" />
-              </div>
               {showChats ? (
-                <div className="min-h-0 min-w-0 flex-1 xl:hidden">
+                <div className={`min-h-0 min-w-0 flex-1 ${menuHostsChats ? 'lg:hidden' : ''}`}>
                   <ChappiHistoryList variant="panel" onDone={() => setShowChats(false)} />
                 </div>
               ) : null}
               {/* Hidden, never unmounted, while the list shows: the upload
                   and recap cards, and any reply still on its way, live in it. */}
-              <div className={`min-h-0 min-w-0 flex-1 ${showChats ? 'hidden xl:block' : ''}`}>
+              <div
+                className={`min-h-0 min-w-0 flex-1 ${
+                  showChats ? (menuHostsChats ? 'hidden lg:block' : 'hidden') : ''
+                }`}
+              >
                 <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
               </div>
             </div>

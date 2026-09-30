@@ -12,11 +12,14 @@ import { ChappiDeleteChatDialog } from './ChappiDeleteChatDialog';
 
 type ChappiHistoryListProps = {
   /**
-   * - 'column': the xl+ column beside the conversation on the UrgAns page.
-   * - 'panel': shown IN PLACE of the conversation — the page below xl and
-   *   the side rail — so `onDone` hands the space back once a chat is chosen.
+   * - 'menu': inside the left menu, in the space under the nav rows (the
+   *   Cursor layout), where a chat is one compact line and nothing needs
+   *   handing back.
+   * - 'panel': shown IN PLACE of the conversation — the page wherever the
+   *   menu cannot carry the list, and the side rail — so `onDone` hands the
+   *   space back once a chat is chosen.
    */
-  variant: 'column' | 'panel';
+  variant: 'menu' | 'panel';
   /** Called after a chat opens or a new one starts. */
   onDone?: () => void;
 };
@@ -63,47 +66,65 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
     onDone?.();
   };
 
-  const isColumn = variant === 'column';
+  const isMenu = variant === 'menu';
   const showSkeleton = summaries.length === 0 && (listStatus === 'idle' || listStatus === 'loading');
 
   return (
     <nav aria-label="Saved chats" className="flex h-full min-h-0 flex-col">
       <div
         className={`flex shrink-0 items-center justify-between gap-2 ${
-          isColumn ? 'px-3.5 pb-2 pt-3' : 'px-1 pb-2'
+          isMenu ? 'px-2.5 pb-1' : 'px-1 pb-2'
         }`}
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
           Chats
         </p>
-        <button
-          type="button"
-          onClick={handleNewChat}
-          className="motion-focus motion-press inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-        >
-          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-          New chat
-        </button>
+        {isMenu ? (
+          <button
+            type="button"
+            onClick={handleNewChat}
+            aria-label="New chat"
+            title="New chat"
+            className="motion-focus motion-press grid h-6 w-6 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleNewChat}
+            className="motion-focus motion-press inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            New chat
+          </button>
+        )}
       </div>
 
       {openError ? (
-        <p role="alert" className="mx-3.5 mb-2 shrink-0 text-xs text-status-error">
+        <p
+          role="alert"
+          className={`mb-2 shrink-0 text-xs text-status-error ${isMenu ? 'mx-2.5' : 'mx-3.5'}`}
+        >
           {openError}
         </p>
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {showSkeleton ? (
-          <div className="space-y-3 px-3.5 py-2" aria-hidden="true">
+          <div
+            className={`py-2 ${isMenu ? 'space-y-2.5 px-2.5' : 'space-y-3 px-3.5'}`}
+            aria-hidden="true"
+          >
             {Array.from({ length: 4 }).map((_, index) => (
               <div key={`chat-skeleton-${index}`} className="space-y-1.5">
                 <SkeletonBlock className="h-4 w-4/5" />
-                <SkeletonBlock className="h-3 w-16" />
+                {isMenu ? null : <SkeletonBlock className="h-3 w-16" />}
               </div>
             ))}
           </div>
         ) : summaries.length === 0 && listStatus === 'error' ? (
-          <div className="px-3.5 py-3 text-sm text-content-secondary">
+          <div className={`py-3 text-sm text-content-secondary ${isMenu ? 'px-2.5' : 'px-3.5'}`}>
             <p>Couldn&rsquo;t load your chats.</p>
             <button
               type="button"
@@ -113,6 +134,10 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
               Try again
             </button>
           </div>
+        ) : summaries.length === 0 && isMenu ? (
+          <p className="px-2.5 py-2 text-xs leading-relaxed text-content-tertiary">
+            Your chats with UrgAns show up here.
+          </p>
         ) : summaries.length === 0 ? (
           <div className="px-3.5 py-2">
             <EmptyState
@@ -121,7 +146,7 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
             />
           </div>
         ) : (
-          <ul className="pb-2">
+          <ul className={isMenu ? 'space-y-0.5 pb-1' : 'pb-2'}>
             {summaries.map((summary) => {
               const title = summary.title || CHAT_TITLE_FALLBACK;
               const isCurrent = summary.id === currentId;
@@ -131,19 +156,45 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
                     type="button"
                     onClick={() => void handleOpen(summary.id)}
                     aria-current={isCurrent ? 'true' : undefined}
-                    className={`motion-focus block min-w-0 flex-1 py-2.5 pl-3.5 pr-10 text-left transition-colors ${
-                      isCurrent ? 'bg-brand/10' : 'hover:bg-bg-hover'
-                    }`}
+                    className={`motion-focus block min-w-0 flex-1 text-left transition-colors ${
+                      isMenu ? 'rounded-lg py-1.5 pl-2.5 pr-8' : 'py-2.5 pl-3.5 pr-10'
+                    } ${isCurrent ? 'bg-brand/10' : 'hover:bg-bg-hover'}`}
                   >
-                    <p className="truncate text-sm font-semibold text-content-primary" title={title}>
-                      {title}
-                    </p>
-                    <span className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] text-content-tertiary">
-                      {formatRelativeTime(summary.lastMessageAt)}
-                      {openingId === summary.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                      ) : null}
-                    </span>
+                    {isMenu ? (
+                      // One line, like the nav rows above it. The age moves
+                      // into the tooltip: a column of "8h ago" under every
+                      // title is what made the old list read as a second page.
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className={`truncate text-[13px] ${
+                            isCurrent
+                              ? 'font-medium text-content-primary'
+                              : 'text-content-secondary'
+                          }`}
+                          title={`${title} · ${formatRelativeTime(summary.lastMessageAt)}`}
+                        >
+                          {title}
+                        </span>
+                        {openingId === summary.id ? (
+                          <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden="true" />
+                        ) : null}
+                      </span>
+                    ) : (
+                      <>
+                        <p
+                          className="truncate text-sm font-semibold text-content-primary"
+                          title={title}
+                        >
+                          {title}
+                        </p>
+                        <span className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] text-content-tertiary">
+                          {formatRelativeTime(summary.lastMessageAt)}
+                          {openingId === summary.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                          ) : null}
+                        </span>
+                      </>
+                    )}
                   </button>
                   {/* A sibling of the row, never inside it: a button inside a
                       button is invalid and swallows the click. Revealed on
@@ -154,7 +205,9 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
                     onClick={() => setPendingDelete(summary)}
                     aria-label={`Delete chat: ${title}`}
                     title="Delete chat"
-                    className="motion-focus absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full text-content-tertiary transition-opacity hover:bg-bg-hover hover:text-status-error focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+                    className={`motion-focus absolute top-1/2 grid -translate-y-1/2 place-items-center rounded-full text-content-tertiary transition-opacity hover:bg-bg-hover hover:text-status-error focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 ${
+                      isMenu ? 'right-1 h-6 w-6' : 'right-2 h-7 w-7'
+                    }`}
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
