@@ -18,8 +18,8 @@ describe('the default ladder', () => {
     expect([...MODEL_TIERS]).toEqual(['quick', 'standard', 'pro', 'max']);
     expect(DEFAULT_LADDER.quick.models[0]).toBe('openai/gpt-4o-mini');
     expect(DEFAULT_LADDER.standard.models[0]).toBe('openai/gpt-5.4-mini');
-    expect(DEFAULT_LADDER.pro.models[0]).toBe('openai/gpt-5.6-terra');
-    expect(DEFAULT_LADDER.max.models[0]).toBe('openai/gpt-5.6-sol');
+    expect(DEFAULT_LADDER.pro.models[0]).toBe('openai/gpt-5.4');
+    expect(DEFAULT_LADDER.max.models[0]).toBe('openai/gpt-5.5');
   });
 
   it('gives every rung a same-tier fallback that differs from its primary', () => {
@@ -33,8 +33,8 @@ describe('the default ladder', () => {
   it('puts the same-price, higher-limit siblings behind the rate-limited rungs', () => {
     // Terra and Sol are capped at 10 requests a minute by the provider; these
     // are the models that carry the same work at three times the limit.
-    expect(DEFAULT_LADDER.pro.models[1]).toBe('openai/gpt-5.4');
-    expect(DEFAULT_LADDER.max.models[1]).toBe('openai/gpt-5.5');
+    expect(DEFAULT_LADDER.pro.models[1]).toBe('openai/gpt-5.6-terra');
+    expect(DEFAULT_LADDER.max.models[1]).toBe('openai/gpt-5.6-sol');
   });
 
   it('gives each rung a positive token cap and a positive typical latency', () => {

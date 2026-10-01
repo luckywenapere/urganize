@@ -153,6 +153,19 @@ export function supportsReasoningEffort(model?: string | null): boolean {
   return /^(openai\/)?(gpt-5|o\d)/i.test(String(model ?? '').trim());
 }
 
+/**
+ * The effort to send on a request that carries function tools. The GPT-5.6
+ * family (luna, terra, sol) answers 400 "Function tools with reasoning_effort
+ * are not supported" to any effort but 'none' on /chat/completions; measured
+ * against RodiumAi 2026-09-30 (model-eval probes). 'none' and omitting it are
+ * both accepted, and 'none' is sent so the request says what it means. Every
+ * other model, and every request without tools, keeps the effort asked for.
+ */
+export function effortForTools(model: string | null | undefined, effort: ReasoningEffort | null): ReasoningEffort | null {
+  if (!effort || effort === 'none') return effort;
+  return /^(openai\/)?gpt-5\.6/i.test(String(model ?? '').trim()) ? 'none' : effort;
+}
+
 class AiProviderError extends Error {
   status?: number;
   code?: string;

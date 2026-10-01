@@ -111,7 +111,7 @@ describe('planChatRouting', () => {
     if (plan.mode !== 'shadow') return;
     expect('routing' in plan).toBe(false);
     expect(plan.trace.mode).toBe('shadow');
-    expect(plan.trace.wouldUseModel).toBe('openai/gpt-5.6-sol');
+    expect(plan.trace.wouldUseModel).toBe('openai/gpt-5.5');
     expect(plan.trace.startTier).toBe('max');
   });
 });
@@ -134,7 +134,7 @@ describe('completeShadowTrace', () => {
     expect(done).toMatchObject({
       mode: 'shadow',
       startTier: 'max',
-      wouldUseModel: 'openai/gpt-5.6-sol',
+      wouldUseModel: 'openai/gpt-5.5',
       models: ['openai/gpt-4o-mini'],
       tokensIn: 900,
       tokensOut: 40,
