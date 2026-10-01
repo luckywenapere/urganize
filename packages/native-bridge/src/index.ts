@@ -39,6 +39,8 @@ export type BridgeRequestType =
   | 'openExternal'
   | 'oauth'
   | 'appleSignIn'
+  | 'lock.status'
+  | 'lock.set'
   | 'push.permission'
   | 'push.request'
   | 'push.register'
@@ -53,6 +55,8 @@ export const BRIDGE_REQUEST_TYPES: readonly BridgeRequestType[] = [
   'openExternal',
   'oauth',
   'appleSignIn',
+  'lock.status',
+  'lock.set',
   'push.permission',
   'push.request',
   'push.register',
@@ -103,6 +107,14 @@ export interface BridgeRequestMap {
         }
       | { outcome: 'cancelled' };
   };
+  /**
+   * The app lock: Face ID, fingerprint or the phone's passcode when Urganize is
+   * opened. The shell owns it (a native screen sits over the page until the
+   * phone says yes), so the page only asks whether it is available and flips
+   * the switch. Off until someone turns it on.
+   */
+  'lock.status': { payload: Record<string, never>; result: AppLockStatus };
+  'lock.set': { payload: { enabled: boolean }; result: AppLockStatus };
   'push.permission': { payload: Record<string, never>; result: { permission: PushPermission } };
   'push.request': { payload: Record<string, never>; result: { permission: PushPermission } };
   'push.register': { payload: Record<string, never>; result: { token: string } };
@@ -123,6 +135,13 @@ export interface BridgeRequestMap {
   'share.done': { payload: { id: string }; result: { ok: true } };
   /** The page's ground colour, so the bars above and below it can match. */
   appearance: { payload: Appearance; result: { ok: true } };
+}
+
+export interface AppLockStatus {
+  /** The phone has a way to check (Face ID, fingerprint or a passcode). */
+  supported: boolean;
+  /** The person has turned the lock on. Never true when unsupported. */
+  enabled: boolean;
 }
 
 export type StatusBarStyle = 'light' | 'dark';
@@ -515,6 +534,30 @@ export function shouldRetryAfterReconnect(state: {
   reachable: boolean | null | undefined;
 }): boolean {
   return state.loadFailed && state.reachable === true && state.previous !== true;
+}
+
+/** How long the app can sit in the background before the lock asks again. */
+export const APP_LOCK_GRACE_MS = 30_000;
+
+/**
+ * Should the lock screen be put back after the app returns from the
+ * background? Only when the lock is on AND the person was away longer than the
+ * grace period: asking again after a two-second glance at a notification is
+ * what makes people turn a lock off. An unknown leave time (`null`) locks, the
+ * safe side for a feature whose job is keeping things private.
+ */
+export function shouldLockAfterBackground(state: {
+  enabled: boolean;
+  leftAtMs: number | null;
+  nowMs: number;
+  graceMs?: number;
+}): boolean {
+  if (!state.enabled) return false;
+  if (state.leftAtMs === null) return true;
+  const away = state.nowMs - state.leftAtMs;
+  // A clock that went backwards counts as away: lock rather than trust it.
+  if (away < 0) return true;
+  return away >= (state.graceMs ?? APP_LOCK_GRACE_MS);
 }
 
 const SHARE_FILE_NAME_LIMIT = 120;
