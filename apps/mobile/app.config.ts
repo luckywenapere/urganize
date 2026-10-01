@@ -66,6 +66,12 @@ const config: ExpoConfig = {
       // Voice input for UrgAns (NEXT_PUBLIC_FEATURE_URGANS_VOICE): iOS shows
       // this string when the webview first asks for the microphone.
       NSMicrophoneUsageDescription: 'Urganize uses the microphone so you can talk to AI.',
+      // Choosing a file in the page (cover art, a song, a press photo) opens the
+      // phone's own picker, which offers "Take Photo". Without this string the
+      // app CRASHES the moment someone taps it, and Apple rejects an app that
+      // does not explain why it wants the camera or photos.
+      NSCameraUsageDescription: 'Urganize uses the camera so you can take a photo to add to a rollout, like cover art.',
+      NSPhotoLibraryUsageDescription: 'Urganize uses your photos so you can pick artwork and images to add to a rollout.',
       // No WKAppBoundDomains, deliberately. It is what lets a service worker
       // run in an iOS webview, and nothing needs one there today: Web Push
       // cannot reach a webview at all, and the site's offline layer

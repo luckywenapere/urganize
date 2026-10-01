@@ -19,7 +19,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 // Keep this date real — it moves only when the list changes.
-const LAST_UPDATED = "October 19, 2026";
+const LAST_UPDATED = "November 15, 2026";
 
 // Rule: this list reflects services actually in use. Add entries in the same
 // PR that introduces a new provider; remove them when the integration is
@@ -61,10 +61,20 @@ const subprocessors = [
     data: "Survey answers you choose to submit",
   },
   {
-    name: "AI model provider (via our gateway)",
+    name: "OpenAI, through the RodiumAi gateway",
     purpose:
       "Powering AI, only when you use it",
     data: "Release context (details, task progress). Never your uploaded files, and never used to train models",
+  },
+  {
+    name: "Apple",
+    purpose: "Sign in with Apple, for people who choose it in the iPhone app",
+    data: "Your name and email (or a private relay address) the first time you sign in",
+  },
+  {
+    name: "Google Firebase",
+    purpose: "Delivering push notifications to the mobile apps",
+    data: "A device token and the notification text",
   },
   {
     name: "Sentry",
