@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { aiConsentRefusal } from '@/lib/ai-consent-server';
 
 import {
   createAdminClient,
@@ -130,6 +131,10 @@ export async function POST(
   if (!adminClient) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
+
+  // Building the plan sends the answers and rollout details to an AI.
+  const consentRefusal = await aiConsentRefusal(adminClient, auth.user.id);
+  if (consentRefusal) return consentRefusal;
 
   const loaded = await loadOwnedRelease(adminClient, releaseId, auth.user.id);
   if ('error' in loaded) return loaded.error;

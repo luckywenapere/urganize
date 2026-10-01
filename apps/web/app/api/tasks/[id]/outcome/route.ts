@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { isAiConfigured } from '@/lib/ai/provider';
+import { hasUserAiConsent } from '@/lib/ai-consent-server';
 import { generateRoutedStructuredOutput } from '@/lib/ai/routed';
 import { legacyModelFor } from '@/lib/ai/model-router';
 import { recordRequestUsage } from '@/lib/ai/usage-log-server';
@@ -103,7 +104,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     let summary = buildTemplateOutcomeSummary(outcome, note);
     let followupQuestion: string | null = null;
 
-    if (note && isAiConfigured()) {
+    // The AI part is optional here: without permission the template summary
+    // stands and nothing is sent, and the person is not interrupted to be asked.
+    if (note && isAiConfigured() && (await hasUserAiConsent(adminClient, auth.user.id))) {
       // What the call used, for the AI usage log. Task outcomes are not metered, so
       // nothing is charged; the log is where this cost shows up at all, and a
       // failed call may still have been billed.

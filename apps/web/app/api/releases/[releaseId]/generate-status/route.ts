@@ -6,6 +6,7 @@ import {
 } from '../../_shared';
 import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import { isAiConfigured } from '@/lib/ai/provider';
+import { aiConsentRefusal } from '@/lib/ai-consent-server';
 import { generateRoutedPlainText } from '@/lib/ai/routed';
 import { legacyModelFor } from '@/lib/ai/model-router';
 import { recordRequestUsage } from '@/lib/ai/usage-log-server';
@@ -171,6 +172,9 @@ export async function POST(
   if (!adminClient) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
+
+  const consentRefusal = await aiConsentRefusal(adminClient, auth.user.id);
+  if (consentRefusal) return consentRefusal;
 
   // Team WRITE gate (uniform non-GET rule): any non-guest member may generate
   // a status update; guests get the view-only 403 rather than spending AI

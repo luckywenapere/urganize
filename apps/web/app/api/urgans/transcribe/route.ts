@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { aiConsentRefusal } from '@/lib/ai-consent-server';
 import { createAdminClient } from '@/app/api/_shared/auth';
 import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { getTranscriptionConfig, isChappiEnabled, isUrgansVoiceEnabled } from '@/lib/chappi/config';
@@ -49,6 +50,10 @@ export async function POST(request: NextRequest) {
   if (!adminClient) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
+
+  // A voice clip goes to an AI to be turned into text: same permission as chat.
+  const consentRefusal = await aiConsentRefusal(adminClient, auth.user.id);
+  if (consentRefusal) return consentRefusal;
 
   const formData = await request.formData().catch(() => null);
   if (!formData) {

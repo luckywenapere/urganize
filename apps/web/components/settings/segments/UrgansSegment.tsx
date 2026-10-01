@@ -1,19 +1,23 @@
 'use client';
 
 import { memo } from 'react';
+import { AiConsentSection } from '../AiConsentSection';
 import { TeamBriefSection } from '../TeamBriefSection';
 import { WhatsappChasingSection } from '../WhatsappChasingSection';
 import { isTeamBriefEnabled } from '@/lib/team-brief';
 
 /**
- * What UrgAns knows about the team. Today that is the team brief; it is its own
- * segment, rather than a long form at the bottom of another one, so there is
- * room for more of UrgAns's own preferences later without reshuffling. The
- * pop-up hides the segment while the brief is switched off.
+ * What UrgAns knows about the team, and whether it may use AI at all. The team
+ * brief is its own segment, rather than a long form at the bottom of another
+ * one, so there is room for UrgAns's own preferences without reshuffling. The
+ * pop-up hides the segment only when BOTH the brief and the AI switch are off,
+ * so each section checks its own switch here: the brief must not render a form
+ * for a feature that is off just because the AI row brought the segment up.
  */
 function UrgansSegmentView() {
   return (
     <div className="divide-y divide-stroke-subtle">
+      <AiConsentSection />
       {isTeamBriefEnabled() ? <TeamBriefSection /> : null}
       <WhatsappChasingSection />
     </div>
