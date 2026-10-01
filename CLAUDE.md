@@ -17063,8 +17063,10 @@ overridable by env, no deploy of code.
 |---|---|---|---|---|
 | quick | `gpt-4o-mini` | `gpt-5.6-luna` | 1,024 | 3s |
 | standard | `gpt-5.4-mini` | `gpt-5.6-luna` | 4,096 | 6s |
-| pro | `gpt-5.6-terra` | `gpt-5.4` | 4,096 | 12s |
-| max | `gpt-5.6-sol` | `gpt-5.5` | 8,192 | 25s |
+| pro | `gpt-5.4` | `gpt-5.6-terra` | 4,096 | 12s |
+| max | `gpt-5.5` | `gpt-5.6-sol` | 8,192 | 25s |
+
+(Pro and max were `terra` then `5.4` and `sol` then `5.5` until 2026-10-01; see "What the live evaluation found" below.)
 
 The latency column is a starting guess used only to decide whether a hop can
 still finish in time; the evaluation below is where it gets measured.
@@ -17134,9 +17136,10 @@ still finish in time; the evaluation below is where it gets measured.
    time; a bad key, an empty balance or a malformed request stops (no other model
    fixes those). It never revisits a model, never goes below the floor, and is
    capped by the surface's max hops. **Terra and Sol are limited by the provider to
-   10 requests a minute and 500 a day**, which is why each has a sibling with three
-   times the room, and why real traffic will hit those limits early: ask RodiumAi
-   to raise them before `on`.
+   10 requests a minute and 500 a day**, where gpt-5.4 and gpt-5.5 allow 30 and
+   2,000. That is why 5.4 and 5.5 are the primaries on pro and max and Terra and
+   Sol their fallbacks. The founder decided not to ask RodiumAi to raise the
+   limits (2026-10-01), so the ladder works within them.
 7. **The turn has a deadline, because slow rungs make the 60 second route ceiling
    real.** `TURN_BUDGET_MS` is 52 seconds against `maxDuration = 60`, so there is
    still time to record the turn and answer. A hop must fit the rung's typical
@@ -17281,7 +17284,9 @@ either, so no `routing` metadata has been written to a real `billing_events` row
    `AI_LADDER_*` (env only) before anything else. Then the cases, starting with
    `ROUTER_EVAL_MAX_CASES=8`, and adjust the ladder, effort and ceilings from the
    grid.
-3. Ask RodiumAi to raise the Terra and Sol limits.
+3. ~~Ask RodiumAi to raise the Terra and Sol limits~~ (decided against; the ladder
+   was reordered instead). **Top up the RODI balance first**: see "What the live
+   evaluation found".
 4. Set `AI_ROUTER=shadow` and redeploy (Vercel snapshots env per deployment). Let
    it collect for a few days and read it with the query in `.env.example`.
 5. Set `AI_ROUTER=on` and redeploy. Watch the RODI balance, the `[ai-router]`
@@ -17291,6 +17296,16 @@ either, so no `routing` metadata has been written to a real `billing_events` row
 6. Changelog entry and version bump only if the flip is worth announcing.
 
 ---
+
+### What the live evaluation found (2026-10-01)
+
+The evaluation was run for the first time, against RodiumAi, from the founder's terminal (the key is only ever set for that one process). Probes first, then 8 of the 28 cases. Both runs are in `apps/web/router-eval-*.json` on the founder's machine and are not committed.
+
+1. **The 5.6 models (luna, terra, sol) reject function tools with any `reasoning_effort` but `'none'`** (400, "Function tools with reasoning_effort are not supported ... set reasoning_effort to 'none'"). The router sent `'low'` on every rung, so every chat turn on those rungs would have failed. `effortForTools` in `lib/ai/provider.ts` now turns any effort into `'none'` when tools are sent to a 5.6 model, and it sits inside `buildChatCompletionBody` so the evaluation and a real turn send the same body. Tool-less requests keep the effort asked for (the close-out round, and every single-shot feature, which all passed their probes). `'none'` and omitting the parameter were both accepted. The runner's old retry-without-effort on a 400 mentioning "reasoning" would only have covered this at the cost of a wasted request per turn.
+2. **The ladder was reordered**: pro is `gpt-5.4` then Terra, max is `gpt-5.5` then Sol. On the real chat prompt (14.6k tokens, 91 tool schemas) gpt-5.4 picked a right first tool 6 of 8 times against Terra's 4 of 8 (a small sample), billed 4.2 RODI per call against Terra's 4.5, and has three times the request room. 5.5 is priced like Sol with the same room advantage. The quick rung was left alone: `CHAPPI_MODEL` already controls its primary, and luna scored the same as gpt-4o-mini on 8 cases.
+3. **Billed cost per call on the real chat prompt** (RODI; about 743 to the dollar): gpt-4o-mini 0.57, luna 0.68, gpt-5.4-mini 0.85, gpt-5.4 4.2, terra 4.5. Sol and gpt-5.5 were never measured on it; at list price they are estimated near 60 RODI per call. A chat turn can make several calls.
+4. **The account holds very little.** The wallet showed 91.0 RODI (about $0.12) with 499 RODI (about $0.67) ever recharged and 408 spent; its low-balance threshold is 500. **The provider reserves the full output cap against the balance before answering**, which is why Sol and gpt-5.5 returned 402 "Insufficient RODI balance" on every real-prompt case (and Sol on the chat probe at an 8,192 cap, while a 256 cap was accepted), and why gpt-5.4-mini and Terra started failing late in the run. **Before `AI_ROUTER=on`, top up**, or the dearer rungs will 402 and the router, which stops on a 402, will not fall back. Reading the balance and usage: the RodiumAi dashboard's `/api/v1/wallet` and `/api/v1/usage` answer to the logged-in session.
+5. **Not yet known:** whether the top-rung models are worth their price on tool choice (the 8-case sample could not reach them), the real latencies, and how the classifier's thresholds line up with the cases. A full run that skips Sol (`ROUTER_EVAL_MODELS` takes a comma list) is budgeted at about $2.
 
 ## The rollout menu moves to the right, and UrgAns sits under it (2026-09-30, v1.51.0)
 

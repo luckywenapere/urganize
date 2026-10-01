@@ -236,7 +236,7 @@ describe('routeModel: UrgAns chat', () => {
       team: paid('manager'),
       env: {},
     });
-    expect(d).toMatchObject({ tier: 'pro', model: 'openai/gpt-5.6-terra' });
+    expect(d).toMatchObject({ tier: 'pro', model: 'openai/gpt-5.4' });
   });
 
   it('holds a Solo team at standard however hard the request is', () => {
@@ -248,7 +248,7 @@ describe('routeModel: UrgAns chat', () => {
 
   it('lets a paid Label team reach the top rung', () => {
     const d = routeModel({ surface: 'chat', chat: turn(HEAVY, 4), team: paid('label'), env: {} });
-    expect(d).toMatchObject({ tier: 'max', model: 'openai/gpt-5.6-sol' });
+    expect(d).toMatchObject({ tier: 'max', model: 'openai/gpt-5.5' });
   });
 
   it('never gives a trial the top rung, even though its tier reads as Label', () => {
@@ -282,7 +282,7 @@ describe('routeModel: the other surfaces', () => {
   it('holds the planner at pro for every plan: a floor beats a ceiling', () => {
     const solo = routeModel({ surface: 'planner', team: paid('solo'), env: {} });
     expect(solo.tier).toBe('pro');
-    expect(solo.model).toBe('openai/gpt-5.6-terra');
+    expect(solo.model).toBe('openai/gpt-5.4');
     expect(solo.floor).toBe('pro');
     // The ceiling is lifted to the floor rather than left contradicting it.
     expect(solo.ceiling).toBe('pro');
@@ -308,9 +308,9 @@ describe('routeModel: the other surfaces', () => {
       pinned: true,
       model: 'openai/gpt-5.4-nano',
     });
-    expect(routeModel({ surface: 'press_kit', env: { AI_PRESSKIT_MODEL: 'openai/gpt-5.4' } })).toMatchObject({
+    expect(routeModel({ surface: 'press_kit', env: { AI_PRESSKIT_MODEL: 'openai/gpt-5.6-terra' } })).toMatchObject({
       pinned: true,
-      model: 'openai/gpt-5.4',
+      model: 'openai/gpt-5.6-terra',
     });
   });
 
@@ -339,24 +339,24 @@ describe('nextAfterFailure', () => {
   describe('when the model was rate limited or unavailable', () => {
     it('goes to the same-tier sibling first', () => {
       const d = next(at('pro'), 'rate_limited');
-      expect(d).toMatchObject({ tier: 'pro', model: 'openai/gpt-5.4', hops: 1 });
-      expect(d?.tried).toEqual(['openai/gpt-5.6-terra', 'openai/gpt-5.4']);
+      expect(d).toMatchObject({ tier: 'pro', model: 'openai/gpt-5.6-terra', hops: 1 });
+      expect(d?.tried).toEqual(['openai/gpt-5.4', 'openai/gpt-5.6-terra']);
     });
 
     it('goes to the sibling for an unavailable model and a server error too', () => {
-      expect(next(at('max'), 'model_unavailable')?.model).toBe('openai/gpt-5.5');
+      expect(next(at('max'), 'model_unavailable')?.model).toBe('openai/gpt-5.6-sol');
       expect(next(at('standard'), 'server')?.model).toBe('openai/gpt-5.6-luna');
     });
 
     it('steps down a rung once the siblings are used up', () => {
-      const exhausted = at('pro', { tried: ['openai/gpt-5.6-terra', 'openai/gpt-5.4'], hops: 1 });
+      const exhausted = at('pro', { tried: ['openai/gpt-5.4', 'openai/gpt-5.6-terra'], hops: 1 });
       const d = next(exhausted, 'rate_limited');
       expect(d).toMatchObject({ tier: 'standard', model: 'openai/gpt-5.4-mini', hops: 2 });
     });
 
     it('never steps below the surface floor, so a plan is never built on a weaker model', () => {
       const planner = decisionForTier({ surface: 'planner', tier: 'pro', ceiling: 'pro', env: {} });
-      const exhausted = { ...planner, tried: ['openai/gpt-5.6-terra', 'openai/gpt-5.4'], hops: 1 };
+      const exhausted = { ...planner, tried: ['openai/gpt-5.4', 'openai/gpt-5.6-terra'], hops: 1 };
       expect(next(exhausted, 'rate_limited')).toBeNull();
     });
 
@@ -369,7 +369,7 @@ describe('nextAfterFailure', () => {
 
   describe('when the model was too slow', () => {
     it('steps DOWN, skipping the sibling, because a same-speed model will not be faster', () => {
-      expect(next(at('max'), 'timeout')).toMatchObject({ tier: 'pro', model: 'openai/gpt-5.6-terra' });
+      expect(next(at('max'), 'timeout')).toMatchObject({ tier: 'pro', model: 'openai/gpt-5.4' });
     });
 
     it('falls to the sibling when there is nowhere lower to go', () => {
@@ -380,7 +380,7 @@ describe('nextAfterFailure', () => {
   describe('when the answer was bad', () => {
     it('escalates one rung', () => {
       expect(next(at('quick'), 'bad_output')).toMatchObject({ tier: 'standard', model: 'openai/gpt-5.4-mini', hops: 1 });
-      expect(next(at('standard'), 'tool_errors')).toMatchObject({ tier: 'pro', model: 'openai/gpt-5.6-terra' });
+      expect(next(at('standard'), 'tool_errors')).toMatchObject({ tier: 'pro', model: 'openai/gpt-5.4' });
     });
 
     it('stops at the plan ceiling', () => {
@@ -413,7 +413,7 @@ describe('nextAfterFailure', () => {
     });
 
     it('never hops a pinned model', () => {
-      const pinned = routeModel({ surface: 'planner', env: { AI_PLANNER_MODEL: 'openai/gpt-5.4' } });
+      const pinned = routeModel({ surface: 'planner', env: { AI_PLANNER_MODEL: 'openai/gpt-5.6-terra' } });
       expect(next(pinned, 'rate_limited')).toBeNull();
     });
 
@@ -462,8 +462,8 @@ describe('summarizeTrace', () => {
     startTier: 'standard',
     endTier: 'pro',
     ceiling: 'pro',
-    models: ['openai/gpt-5.4-mini', 'openai/gpt-5.6-terra'],
-    hops: [{ from: 'openai/gpt-5.4-mini', to: 'openai/gpt-5.6-terra', kind: 'tool_errors' }],
+    models: ['openai/gpt-5.4-mini', 'openai/gpt-5.4'],
+    hops: [{ from: 'openai/gpt-5.4-mini', to: 'openai/gpt-5.4', kind: 'tool_errors' }],
     reasons: ['analysis cue'],
     rounds: 3,
     tokensIn: 1200,
@@ -478,7 +478,7 @@ describe('summarizeTrace', () => {
       surface: 'chat',
       start_tier: 'standard',
       end_tier: 'pro',
-      models: ['openai/gpt-5.4-mini', 'openai/gpt-5.6-terra'],
+      models: ['openai/gpt-5.4-mini', 'openai/gpt-5.4'],
       hop_count: 1,
       rounds: 3,
       tokens_in: 1200,

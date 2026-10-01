@@ -53,12 +53,12 @@ describe('logRoutingTrace', () => {
   });
 
   it('writes one tagged JSON line built from the bounded summary', () => {
-    logRoutingTrace(live({ mode: 'shadow', wouldUseModel: 'openai/gpt-5.6-terra' }), false);
+    logRoutingTrace(live({ mode: 'shadow', wouldUseModel: 'openai/gpt-5.4' }), false);
 
     expect(console.info).toHaveBeenCalledTimes(1);
     const [tag, line] = (console.info as ReturnType<typeof vi.fn>).mock.calls[0] as [string, string];
     expect(tag).toBe('[ai-router]');
-    expect(JSON.parse(line)).toMatchObject({ mode: 'shadow', would_use_model: 'openai/gpt-5.6-terra', tokens_in: 100 });
+    expect(JSON.parse(line)).toMatchObject({ mode: 'shadow', would_use_model: 'openai/gpt-5.4', tokens_in: 100 });
   });
 
   it('writes nothing for a quiet request', () => {

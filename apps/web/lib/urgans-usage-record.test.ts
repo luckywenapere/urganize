@@ -34,13 +34,13 @@ describe('recordUrgansAction', () => {
   });
 
   it('carries routing metadata onto the same event without changing its type', async () => {
-    await recordUrgansAction(client, { ...base, metadata: { routing: { end_tier: 'pro', models: ['openai/gpt-5.6-terra'] } } });
+    await recordUrgansAction(client, { ...base, metadata: { routing: { end_tier: 'pro', models: ['openai/gpt-5.4'] } } });
 
     expect(logBillingEvent).toHaveBeenCalledTimes(1);
     const input = logBillingEvent.mock.calls[0][1] as Record<string, unknown>;
     // The monthly ceiling counts type 'urgans_action'. A different type here
     // would silently stop counting these turns.
     expect(input.type).toBe('urgans_action');
-    expect(input.metadata).toEqual({ routing: { end_tier: 'pro', models: ['openai/gpt-5.6-terra'] } });
+    expect(input.metadata).toEqual({ routing: { end_tier: 'pro', models: ['openai/gpt-5.4'] } });
   });
 });
