@@ -191,7 +191,8 @@ describe('with routing on', () => {
     const body = bodyOf(0);
     expect(body.model).toBe('openai/gpt-5.6-terra');
     expect(body.max_completion_tokens).toBe(4096);
-    expect(body.reasoning_effort).toBe('low');
+    // The rung asks for 'low', but the 5.6 family rejects any effort but 'none' when tools are sent.
+    expect(body.reasoning_effort).toBe('none');
     expect(body).not.toHaveProperty('max_tokens');
     expect(result.trace).toMatchObject({ mode: 'on', startTier: 'pro', endTier: 'pro', models: ['openai/gpt-5.6-terra'] });
   });
@@ -240,14 +241,14 @@ describe('with routing on', () => {
       .mockResolvedValueOnce(reply({ error: { message: 'Unsupported parameter: reasoning_effort' } }, 400))
       .mockResolvedValueOnce(say('Fine.'));
 
-    const result = await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision: at('pro'), now: () => T0 } });
+    const result = await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision: at('standard'), now: () => T0 } });
 
     expect(result.reply).toBe('Fine.');
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(bodyOf(0).reasoning_effort).toBe('low');
     expect(bodyOf(1)).not.toHaveProperty('reasoning_effort');
     // Same model: a rejected parameter is not a reason to change model.
-    expect(modelsCalled()).toEqual(['openai/gpt-5.6-terra', 'openai/gpt-5.6-terra']);
+    expect(modelsCalled()).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.4-mini']);
   });
 
   it('swaps the token-cap parameter once when the gateway rejects the one it sent', async () => {
@@ -852,6 +853,47 @@ describe('buildChatCompletionBody', () => {
       reasoningEffort: null,
     });
     expect('reasoning_effort' in without).toBe(false);
+  });
+
+  it("sends effort 'none' with tools on the 5.6 family, which rejects any other effort there", () => {
+    const tools = [{ type: 'function', function: { name: 't', description: 'd', parameters: { type: 'object' } } }] as never;
+    for (const model of ['openai/gpt-5.6-luna', 'openai/gpt-5.6-terra', 'openai/gpt-5.6-sol', 'gpt-5.6-sol']) {
+      const body = buildChatCompletionBody({
+        model,
+        messages,
+        tools,
+        maxOutputTokens: 100,
+        tokenParam: 'max_completion_tokens',
+        reasoningEffort: 'low',
+      });
+      expect(body.reasoning_effort, model).toBe('none');
+    }
+  });
+
+  it('keeps the effort asked for on the 5.6 family when there are no tools (the close-out round)', () => {
+    const body = buildChatCompletionBody({
+      model: 'openai/gpt-5.6-terra',
+      messages,
+      maxOutputTokens: 100,
+      tokenParam: 'max_completion_tokens',
+      reasoningEffort: 'low',
+    });
+    expect(body.reasoning_effort).toBe('low');
+  });
+
+  it('keeps the effort asked for with tools on models that accept it', () => {
+    const tools = [{ type: 'function', function: { name: 't', description: 'd', parameters: { type: 'object' } } }] as never;
+    for (const model of ['openai/gpt-5.4', 'openai/gpt-5.4-mini', 'openai/gpt-5.5']) {
+      const body = buildChatCompletionBody({
+        model,
+        messages,
+        tools,
+        maxOutputTokens: 100,
+        tokenParam: 'max_completion_tokens',
+        reasoningEffort: 'low',
+      });
+      expect(body.reasoning_effort, model).toBe('low');
+    }
   });
 
   it('leaves tools out when there are none, including an empty list', () => {

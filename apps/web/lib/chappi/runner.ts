@@ -36,7 +36,7 @@ import {
   type RoutingTrace,
 } from '@/lib/ai/model-router';
 import { logRoutingTrace } from '@/lib/ai/routing-log';
-import { extractAiUsage, supportsReasoningEffort, type AiUsage, type ReasoningEffort } from '@/lib/ai/provider';
+import { effortForTools, extractAiUsage, supportsReasoningEffort, type AiUsage, type ReasoningEffort } from '@/lib/ai/provider';
 import type {
   ChappiClientAction,
   ChappiMessage,
@@ -177,11 +177,13 @@ export function buildChatCompletionBody(params: {
   tokenParam: TokenParam;
   reasoningEffort: ReasoningEffort | null;
 }): Record<string, unknown> {
+  const hasTools = Boolean(params.tools?.length);
+  const effort = hasTools ? effortForTools(params.model, params.reasoningEffort) : params.reasoningEffort;
   return {
     model: params.model,
     messages: params.messages,
     [params.tokenParam]: params.maxOutputTokens,
-    ...(params.reasoningEffort ? { reasoning_effort: params.reasoningEffort } : {}),
+    ...(effort ? { reasoning_effort: effort } : {}),
     stream: false,
     ...(params.tools?.length ? { tools: params.tools } : {}),
   };
