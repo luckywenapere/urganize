@@ -221,12 +221,35 @@ function probesFor(model: string): Probe[] {
   const say = [{ role: 'user' as const, content: 'Reply with the single word: ok' }];
   const json = [{ role: 'user' as const, content: 'Reply with a JSON object: {"ok": true}' }];
   const otherParam: TokenParam = tokenParam === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
+  // Alternatives to try where the effort the rung asks for is rejected with tools
+  // (the 5.6 models say: use 'none'). Informational: they decide what chat sends.
+  const alternatives: Probe[] =
+    effort === null
+      ? []
+      : [
+          {
+            name: "chat: tools with reasoning_effort 'none'",
+            mustPass: false,
+            body: buildChatCompletionBody({ model, messages: say, tools: PROBE_TOOLS, maxOutputTokens, tokenParam, reasoningEffort: 'none' }),
+          },
+          {
+            name: 'chat: tools with no reasoning_effort',
+            mustPass: false,
+            body: buildChatCompletionBody({ model, messages: say, tools: PROBE_TOOLS, maxOutputTokens, tokenParam, reasoningEffort: null }),
+          },
+          {
+            name: 'chat: tools, effort none, small cap (256)',
+            mustPass: false,
+            body: buildChatCompletionBody({ model, messages: say, tools: PROBE_TOOLS, maxOutputTokens: 256, tokenParam, reasoningEffort: 'none' }),
+          },
+        ];
   return [
     {
       name: 'chat: what UrgAns sends',
       mustPass: true,
       body: buildChatCompletionBody({ model, messages: say, tools: PROBE_TOOLS, maxOutputTokens, tokenParam, reasoningEffort: effort }),
     },
+    ...alternatives,
     {
       name: 'chat: the other token cap',
       mustPass: false,
