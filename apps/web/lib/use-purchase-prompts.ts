@@ -24,7 +24,11 @@ import { isIOSApp } from '@/lib/platform';
 const subscribe = () => () => {};
 const serverSnapshot = () => false;
 
+/** True only inside the iPhone app (false on the server and in a browser). */
+export function useIsIOSApp(): boolean {
+  return useSyncExternalStore(subscribe, isIOSApp, serverSnapshot);
+}
+
 export function usePurchasePromptsAllowed(): boolean {
-  const insideIOSApp = useSyncExternalStore(subscribe, isIOSApp, serverSnapshot);
-  return !insideIOSApp;
+  return !useIsIOSApp();
 }

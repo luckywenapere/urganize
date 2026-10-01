@@ -21,7 +21,7 @@ export const metadata: Metadata = buildPageMetadata({
 // Keep this date REAL. It only moves when the policy text actually changes —
 // never wire it to new Date() (the old version did, which made the policy
 // claim it was updated every day).
-const LAST_UPDATED = "November 10, 2026";
+const LAST_UPDATED = "November 15, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Privacy%20question%20-%20Urganize";
@@ -116,9 +116,12 @@ export default function PrivacyPolicy() {
                 <strong className="text-[var(--marketing-text)]">
                   Account data.
                 </strong>{" "}
-                Email address and password (or your Google account email if you
-                sign in with Google), your name and role if you provide them,
-                and your team settings.
+                Email address and password (or the email on your Google or Apple
+                account if you sign in that way), your name and role if you
+                provide them, and your team settings. If you choose Sign in with
+                Apple and hide your email, Apple gives us a private address that
+                forwards to you; we use it like any other email address.
+                Apple also tells us your name the first time you sign in.
               </p>
               <p>
                 <strong className="text-[var(--marketing-text)]">
