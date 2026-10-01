@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { isBrowserOnline } from '@/lib/offline/status';
+import { ensureAiConsent } from '@/stores/useAiConsentStore';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import {
   MAX_VOICE_CLIP_SECONDS,
@@ -191,6 +192,9 @@ export function useVoiceInput(options: {
       setError('You are offline. Voice needs a connection.');
       return;
     }
+    // The recording is sent to an AI to be turned into text: ask first, and
+    // do not even open the microphone if the answer is no.
+    if (!(await ensureAiConsent())) return;
     setState('requesting');
     let stream: MediaStream;
     try {

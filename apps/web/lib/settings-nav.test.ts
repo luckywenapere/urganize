@@ -24,6 +24,7 @@ const ALL_ON: SettingsFlags = {
   pressKits: true,
   mcpConnect: true,
   dataExport: true,
+  aiConsent: true,
 };
 
 const ALL_OFF: SettingsFlags = {
@@ -33,6 +34,7 @@ const ALL_OFF: SettingsFlags = {
   pressKits: false,
   mcpConnect: false,
   dataExport: false,
+  aiConsent: false,
 };
 
 const params = (query: string) => new URLSearchParams(query);
@@ -121,8 +123,8 @@ describe('visibleSettingsSegments', () => {
     expect(visibleSettingsSegments({ role: 'manager' }, { ...ALL_ON, teamBrief: false })).toContain('urgans');
   });
 
-  it('hides AI from a non-manager while the team brief is off', () => {
-    expect(visibleSettingsSegments({ role: 'artist' }, { ...ALL_ON, teamBrief: false })).not.toContain('urgans');
+  it('hides AI from a non-manager while the team brief and the AI permission switch are off', () => {
+    expect(visibleSettingsSegments({ role: 'artist' }, { ...ALL_ON, teamBrief: false, aiConsent: false })).not.toContain('urgans');
   });
 
   it('keeps Artists & brand while the roster exists; press kits alone no longer fill it (Oct 17, 2026)', () => {
@@ -377,5 +379,23 @@ describe('settingsLeaveHref', () => {
     expect(settingsLeaveHref({ href: '/x', download: true }, base)).toBeNull();
     expect(settingsLeaveHref({ href: 'https://example.com/x' }, base)).toBeNull();
     expect(settingsLeaveHref({ href: '/dashboard?settings=team' }, base)).toBeNull();
+  });
+});
+
+describe('the UrgAns segment and AI permission', () => {
+  it('shows when only the AI switch is on, so people can withdraw permission', () => {
+    expect(
+      visibleSettingsSegments({ role: 'artist' }, { ...ALL_OFF, aiConsent: true })
+    ).toContain('urgans');
+  });
+
+  it('shows when only the team brief is on', () => {
+    expect(
+      visibleSettingsSegments({ role: 'artist' }, { ...ALL_OFF, teamBrief: true })
+    ).toContain('urgans');
+  });
+
+  it('is hidden when both are off', () => {
+    expect(visibleSettingsSegments({ role: 'artist' }, ALL_OFF)).not.toContain('urgans');
   });
 });

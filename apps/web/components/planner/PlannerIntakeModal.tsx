@@ -30,6 +30,7 @@ import { FIRST_PLAN_FREE_LINE } from '@/lib/credits/first-plan';
 import { invalidateUrgansUsage } from '@/components/app/useUrgansUsage';
 import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
 import { buildDraftDiscardPath } from '@/lib/release-draft-discard';
+import { ensureAiConsent } from '@/stores/useAiConsentStore';
 import {
   EMPTY_PLANNER_INTAKE_DRAFT,
   clearPlannerIntakeDraft,
@@ -375,6 +376,12 @@ function PlannerIntakeModalV1() {
 
   const submit = async () => {
     if (!intakePayload) return;
+    // The answers go to an AI. Ask BEFORE the rollout is created, so a "no"
+    // leaves nothing half-made.
+    if (!(await ensureAiConsent())) {
+      setError('Turn on AI to build a plan. You can also add the activities yourself.');
+      return;
+    }
     setView('starting');
     setError('');
 

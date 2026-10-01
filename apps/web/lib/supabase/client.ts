@@ -194,6 +194,9 @@ export type Profile = {
   /** The Settings view override (URG-260, lib/role-views.ts). Null or missing
    * (rows before the column existed) = automatic, from the persona and role. */
   role_view?: 'artist_manager' | 'label' | 'solo_artist' | 'artist_team' | 'other' | null;
+  /** When this person agreed to send their words to our AI partners
+   * (lib/ai-consent.ts). Null or absent = not agreed. */
+  ai_consent_at?: string | null;
   created_at: string;
   updated_at: string;
   is_subscribed?: boolean; 

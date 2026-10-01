@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { aiConsentRefusal } from '@/lib/ai-consent-server';
 
 import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { isUrgansActionsEnabled, runUrgansAction } from '@/lib/urgans-actions/server';
@@ -38,6 +39,9 @@ export async function POST(request: NextRequest) {
 
   const auth = await requireUrgansAccess(request);
   if ('error' in auth) return auth.error;
+
+  const consentRefusal = await aiConsentRefusal(auth.adminClient, auth.user.id);
+  if (consentRefusal) return consentRefusal;
 
   const body = (await request.json().catch(() => null)) as
     | { actionType?: unknown; objectId?: unknown; input?: unknown }

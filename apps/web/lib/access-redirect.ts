@@ -7,8 +7,15 @@
 // would require touching every call site. The monkey-patch catches them all
 // in one place, including future ones.
 //
+// It also listens for one other answer: a 403 carrying `ai_consent_required`
+// (lib/ai-consent.ts). That is not a payment problem and never redirects;
+// it fires a browser event that opens the AI permission screen, so an AI
+// path nobody wired up still asks instead of failing silently.
+//
 // Imported (for side effects) from apps/web/lib/auth-store.ts so the
 // interceptor installs as soon as any client-side code touches auth.
+
+import { AI_CONSENT_EVENT, isAiConsentRefusal } from '@/lib/ai-consent';
 
 const SAFE_PATHS = new Set([
   '/locked',
@@ -154,6 +161,17 @@ export function installAccessRedirect(): void {
 
     if (response.status === 409 && isSameOrigin(input) && !isPrefetchRequest(input, init)) {
       void announceUpgradeLimit(response);
+    }
+
+    if (response.status === 403 && isSameOrigin(input) && !isPrefetchRequest(input, init)) {
+      try {
+        const payload = await response.clone().json().catch(() => null);
+        if (isAiConsentRefusal(response.status, payload)) {
+          window.dispatchEvent(new CustomEvent(AI_CONSENT_EVENT));
+        }
+      } catch {
+        // Never let a hook break the caller's own response handling.
+      }
     }
 
     return response;

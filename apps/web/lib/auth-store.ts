@@ -475,6 +475,7 @@ interface AuthState {
   updateArtistName: (artistName: string) => Promise<void>;
   updateProfileName: (name: string) => Promise<void>;
   updateAskAfterTasks: (enabled: boolean) => Promise<void>;
+  updateAiConsent: (agreed: boolean) => Promise<void>;
   updateMotivationalNudges: (enabled: boolean) => Promise<void>;
   /** The morning brief's off switch (#1207). */
   updateMorningBrief: (enabled: boolean) => Promise<void>;
@@ -1061,6 +1062,28 @@ export const useAuthStore = create<AuthState>()(
         const { data: updatedProfile, error } = await supabase
           .from('profiles')
           .update({ ask_after_tasks: enabled, updated_at: new Date().toISOString() })
+          .eq('id', currentUser.id)
+          .select('*')
+          .single();
+
+        if (error) {
+          throw new Error(handleSupabaseError(error));
+        }
+
+        set({ user: updatedProfile, error: null });
+      },
+
+      // AI permission (Apple 5.1.2(i)): stamps the moment this person agreed to
+      // send their words to our AI partners, or clears it when they withdraw.
+      // Same direct own-row update as updateAskAfterTasks.
+      updateAiConsent: async (agreed: boolean) => {
+        const currentUser = get().user;
+        if (!currentUser) throw new Error('User not found');
+
+        const now = new Date().toISOString();
+        const { data: updatedProfile, error } = await supabase
+          .from('profiles')
+          .update({ ai_consent_at: agreed ? now : null, updated_at: now })
           .eq('id', currentUser.id)
           .select('*')
           .single();

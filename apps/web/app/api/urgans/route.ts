@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { aiConsentRefusal } from '@/lib/ai-consent-server';
 import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { mintPassForUser } from '@/lib/urgans-pass-server';
 import { getChappiModelConfig, isChappiEnabled, isChappiModelConfigured } from '@/lib/chappi/config';
@@ -129,6 +130,12 @@ export async function POST(request: NextRequest) {
   if (!isChappiModelConfigured()) {
     return NextResponse.json({ mode: 'deterministic' } satisfies ChappiResponse);
   }
+
+  // Past this point the person's words go to an AI. Apple's rule 5.1.2(i): they
+  // must have agreed first. (The deterministic reply above uses no AI, so it
+  // needs no permission.)
+  const consentRefusal = await aiConsentRefusal(auth.adminClient, auth.user.id);
+  if (consentRefusal) return consentRefusal;
 
   const body = await request.json().catch(() => null);
   const messages = parseMessages(body);

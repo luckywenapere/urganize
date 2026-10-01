@@ -163,6 +163,10 @@ const TourOverlay = dynamic(
 // the once-only first-rollout offer on Home, which live in different ownership
 // islands. Lazy and
 // flag-gated, so with the flag off its chunk is never requested.
+const AiConsentSheet = dynamic(
+  () => import('@/components/ai/AiConsentSheet').then((m) => m.AiConsentSheet),
+  { ssr: false }
+);
 const ShareSheet = dynamic(
   () => import('@/components/share/ShareSheet').then((m) => m.ShareSheet),
   { ssr: false }
@@ -605,6 +609,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       {PLANNER_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <PlannerIntakeModal />
       ) : null}
+      {/* AI permission (Apple 5.1.2(i)). Mounted for every signed-in page so a
+          server refusal on any screen can open it; the component renders
+          nothing unless the feature is on and something asked. */}
+      {isAuthenticated && !isAuthLoading ? <AiConsentSheet /> : null}
       {/* Share to socials. Same gate as the intake above: a rollout to share
           only exists for a signed-in team, on a page with app chrome, and
           showWorkspaceChrome already excludes a curator-only account. */}

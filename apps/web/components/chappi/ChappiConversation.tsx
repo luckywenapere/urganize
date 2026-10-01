@@ -54,6 +54,8 @@ import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { ensureAiConsent } from '@/stores/useAiConsentStore';
+import { AI_CONSENT_COPY } from '@/lib/ai-consent';
 import {
   appendToChat,
   selectChatSaveNotice,
@@ -1226,6 +1228,13 @@ export function ChappiConversation({
       if (!sentAttachments) {
         const command = parseTaskStatusCommand(prompt);
         if (command && (await runTaskStatusCommand(turn, command))) return;
+      }
+      // Apple 5.1.2(i): the words go to an AI, so they must have agreed. If
+      // they say no, quick commands still work through the local router.
+      if (!(await ensureAiConsent())) {
+        if (isTurnCurrent(turn)) deliverReply(turn, AI_CONSENT_COPY.declined);
+        fallBackToRouter();
+        return;
       }
       const token = await getAccessToken();
       if (!token) {

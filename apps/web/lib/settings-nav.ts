@@ -89,6 +89,8 @@ export type SettingsFlags = {
   pressKits: boolean;
   mcpConnect: boolean;
   dataExport: boolean;
+  /** AI permission (lib/ai-consent.ts): the withdraw switch lives in UrgAns. */
+  aiConsent: boolean;
 };
 
 /**
@@ -103,6 +105,7 @@ export function readSettingsFlags(): SettingsFlags {
     pressKits: process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true',
     mcpConnect: process.env.NEXT_PUBLIC_FEATURE_MCP_CONNECT === 'true',
     dataExport: process.env.NEXT_PUBLIC_FEATURE_DATA_EXPORT === 'true',
+    aiConsent: process.env.NEXT_PUBLIC_FEATURE_AI_CONSENT === 'true',
   };
 }
 
@@ -147,7 +150,7 @@ export function visibleSettingsSegments(
     artists: isManager && flags.workspace,
     // WhatsApp chasing lives here too (2026-10-26), and it is the manager's, so
     // the segment no longer waits on the team brief flag.
-    urgans: isManager || flags.teamBrief,
+    urgans: isManager || flags.teamBrief || flags.aiConsent,
     // Directory profile left Settings Nov 1, 2026 (founder). The key, the
     // segment and DirectorySegment stay, so an old ?settings=directory link
     // opens the menu; set this back to `flags.directory` to restore it.
