@@ -130,26 +130,81 @@ describe('only the chat route charges, and only after the confirmation branch', 
   });
 });
 
+describe('nothing sells credits yet', () => {
+  it('keeps the naira rates inside the credits module, so no checkout can quietly use them', () => {
+    const users = [...sources]
+      .filter(([file, source]) => !file.startsWith('lib/credits/') && /NAIRA_PER_CREDIT|topupNairaPerCredit/.test(source))
+      .map(([file]) => file);
+    expect(users).toEqual([]);
+  });
+
+  it('keeps the buy wording off until purchasing exists', () => {
+    expect(sources.get('lib/credits/copy.ts')).toMatch(/CREDITS_PURCHASABLE\s*=\s*false/);
+  });
+
+  it('writes a top-up row only by hand: nothing but the admin adjustment inserts into the top-up source', () => {
+    const server = sources.get('lib/credits/credits-server.ts') ?? '';
+    expect(server.match(/kind:\s*'topup'/g) ?? []).toEqual([]);
+  });
+});
+
+describe('credits are tagged and never expire', () => {
+  it('writes only the three sources, and never a window on a spend', () => {
+    const server = sources.get('lib/credits/credits-server.ts') ?? '';
+    const pools = [...server.matchAll(/pool:\s*'([a-z]+)'/g)].map((m) => m[1]);
+    expect(new Set(pools)).toEqual(new Set(['allowance', 'trial', 'topup']));
+    const spend = server.slice(server.indexOf("kind: 'spend'") - 400, server.indexOf("kind: 'spend'") + 400);
+    expect(spend).not.toMatch(/window_start/);
+  });
+
+  it('removes credits in one place, only from the trial source, and only through the guarded helper', () => {
+    const server = sources.get('lib/credits/credits-server.ts') ?? '';
+    expect([...server.matchAll(/kind:\s*'expire'/g)]).toHaveLength(1);
+    const expire = server.slice(server.indexOf("kind: 'expire'") - 200, server.indexOf("kind: 'expire'") + 100);
+    expect(expire).toMatch(/pool:\s*'trial'/);
+    // The only caller sits behind the purchase check.
+    expect(server).toMatch(/!purchased\s*&&[^;]*expireTrialCredits\(/);
+  });
+});
+
 describe('the table', () => {
-  const migration = readFileSync(join(APP_ROOT, '..', '..', 'supabase', 'migrations', '20261001120000_credit_ledger.sql'), 'utf8');
-  const sql = migration.replace(/--.*$/gm, '');
+  const dir = join(APP_ROOT, '..', '..', 'supabase', 'migrations');
+  const strip = (name: string): string => readFileSync(join(dir, name), 'utf8').replace(/--.*$/gm, '');
+  const base = strip('20261001120000_credit_ledger.sql');
+  const sources_ = strip('20261001130000_credit_ledger_sources.sql');
 
   it('has row level security and no policy for anyone', () => {
-    expect(sql).toMatch(/alter table public\.credit_ledger enable row level security/i);
-    expect(sql).not.toMatch(/create policy/i);
+    expect(base).toMatch(/alter table public\.credit_ledger enable row level security/i);
+    expect(`${base}\n${sources_}`).not.toMatch(/create policy/i);
   });
 
   it('refuses a charge delivered twice, by a unique key', () => {
-    expect(sql).toMatch(/create unique index[^;]*credit_ledger_dedupe_key[^;]*\(dedupe_key\)[^;]*where dedupe_key is not null/i);
+    expect(base).toMatch(/create unique index[^;]*credit_ledger_dedupe_key[^;]*\(dedupe_key\)[^;]*where dedupe_key is not null/i);
   });
 
   it('keeps the balance function to the service role', () => {
-    expect(sql).toMatch(/revoke all on function public\.credit_balances[^;]*from public/i);
-    expect(sql).toMatch(/grant execute on function public\.credit_balances[^;]*to service_role/i);
+    expect(sources_).toMatch(/revoke all on function public\.credit_balances[^;]*from public/i);
+    expect(sources_).toMatch(/grant execute on function public\.credit_balances[^;]*to service_role/i);
   });
 
-  it('never allows a zero movement, and ties a window to the allowance pool alone', () => {
-    expect(sql).toMatch(/credits <> 0/);
-    expect(sql).toMatch(/\(pool = 'allowance'\) = \(window_start is not null\)/);
+  it('never allows a zero movement', () => {
+    expect(base).toMatch(/credits <> 0/);
+  });
+
+  it('knows the three sources and the two new kinds', () => {
+    expect(sources_).toMatch(/pool in \('trial', 'allowance', 'topup'\)/);
+    expect(sources_).toMatch(/kind in \('trial', 'allowance', 'topup', 'spend', 'adjust', 'refund', 'expire'\)/);
+  });
+
+  it('lets a window sit on an allowance row alone, and no longer ties the balance to one', () => {
+    expect(sources_).toMatch(/drop constraint if exists credit_ledger_window_matches_pool/i);
+    expect(sources_).toMatch(/check \(pool = 'allowance' or window_start is null\)/);
+  });
+
+  it('sums every source across all time, with no window argument', () => {
+    expect(sources_).toMatch(/function public\.credit_balances\(p_workspace uuid\)/i);
+    expect(sources_).toMatch(/drop function if exists public\.credit_balances\(uuid, date\)/i);
+    const body = sources_.slice(sources_.indexOf('create or replace function'), sources_.indexOf('revoke all'));
+    expect(body).not.toMatch(/window_start/);
   });
 });

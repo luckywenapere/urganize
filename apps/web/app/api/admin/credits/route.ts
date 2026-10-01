@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { verifyAdmin } from '../_shared';
-import { adjustCredits, getCreditSnapshot } from '@/lib/credits/credits-server';
-import type { TeamForAllowance } from '@/lib/credits/allowance';
+import { adjustCredits, readBalances } from '@/lib/credits/credits-server';
 
 // GET  /api/admin/credits?workspaceId=<uuid>  a team's balances and its last
 //                                              movements, for checking a charge.
@@ -15,8 +14,9 @@ import type { TeamForAllowance } from '@/lib/credits/allowance';
 // the /api/admin/teams precedent, so it works before the feature is switched on
 // and a grant made today is waiting when it is.
 //
-// Writes the TOP-UP pool, which does not expire (see the ledger migration), and
-// never touches the allowance, which belongs to the plan.
+// Writes the TOP-UP source, the one no rule ever takes back (see allowance.ts), and
+// never touches the allowance or the trial credits, which belong to the plan and
+// the trial. This is also how a "Group" (custom) account is given its credits.
 
 const MAX_GRANT = 100_000;
 const RECENT_ROWS = 25;
@@ -42,10 +42,11 @@ export async function GET(request: NextRequest) {
   const workspace = await loadWorkspace(client, workspaceId);
   if (!workspace) return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
 
-  // The allowance depends on the plan, which is not known here; show the balances
-  // as the ledger holds them, treating the team as unpaid for the granted figure.
-  const team: TeamForAllowance = { state: 'trial', tier: null };
-  const snapshot = await getCreditSnapshot(client, { workspaceId, ownerUserId: workspace.owner_id, team });
+  // Read-only on purpose: the balances exactly as the ledger holds them. This
+  // must NOT go through getCreditSnapshot, which GRANTS what a team is owed and
+  // takes back an ended trial, and an admin looking at a team is not a reason to
+  // do either (the plan is not known here anyway).
+  const balances = await readBalances(client, workspaceId);
 
   const { data: rows, error } = await client
     .from('credit_ledger')
@@ -57,9 +58,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     team: { id: workspace.id, name: workspace.name },
-    balances: snapshot
-      ? { allowance: snapshot.allowance, topup: snapshot.topup, total: snapshot.total, resetsAt: snapshot.resetsAt }
-      : null,
+    balances,
     recent: rows ?? [],
   });
 }

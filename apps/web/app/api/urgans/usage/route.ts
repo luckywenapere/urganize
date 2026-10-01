@@ -18,9 +18,10 @@ import { getCreditSnapshot } from '@/lib/credits/credits-server';
 //
 // With credits switched on a `credits` object rides along, and the old action
 // count is reported as uncapped: credits replace that ceiling, so the banner
-// must not warn about both. Reading the balance also grants the window's
-// allowance if this is the first look of the window, which is what keeps a team
-// that never chats from needing a row it will never use.
+// must not warn about both. Reading the balance also grants what the team is
+// owed (a subscriber's allowance for this window, or a trial's one-off credits)
+// on the first look, which is what keeps a team that never chats from needing a
+// row it will never use.
 
 export async function GET(request: NextRequest) {
   if (!isChappiEnabled()) {
@@ -49,11 +50,13 @@ export async function GET(request: NextRequest) {
       approaching: false,
       credits: {
         total: credits.total,
+        trial: credits.trial,
         allowance: credits.allowance,
         topup: credits.topup,
+        account: credits.account,
         monthlyAllowance: credits.monthlyAllowance,
-        resetsAt: credits.resetsAt,
-        low: isLowOnCredits(credits.total, credits.monthlyAllowance),
+        nextGrantAt: credits.nextGrantAt,
+        low: isLowOnCredits(credits.total, credits.referenceCredits),
       },
     });
   }

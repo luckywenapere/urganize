@@ -1,13 +1,25 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { monthlyAllowanceCredits, splitSpend, type TeamForAllowance } from './allowance';
+import {
+  CREDIT_SOURCES,
+  TRIAL_CREDITS,
+  creditAccount,
+  monthlyAllowanceCredits,
+  splitSpend,
+  type CreditAccount,
+  type SourceBalances,
+  type TeamForAllowance,
+} from './allowance';
 import type { TurnCharge, UsageCall } from './pricing';
 import { readBillingAnchor } from '@/lib/urgans-usage-server';
 import { resolveUsageWindow } from '@/lib/urgans-usage';
 
 /**
- * The credit ledger: reading what a team has, granting the monthly allowance,
- * and charging a turn. The ledger itself is described in
- * supabase/migrations/20261001120000_credit_ledger.sql.
+ * The credit ledger: reading what a team has, granting what it is owed, and
+ * charging a turn. The ledger itself is described in
+ * supabase/migrations/20261001120000_credit_ledger.sql and reshaped by
+ * 20261001130000_credit_ledger_sources.sql, which is the version this code
+ * assumes: ONE balance that never expires, in three tagged sources (see
+ * allowance.ts for the rules).
  *
  * FAILS OPEN, consistent with the seat cap, the release cap and the old monthly
  * ceiling: an unreadable balance means "do not block the turn". A database blip
@@ -16,6 +28,10 @@ import { resolveUsageWindow } from '@/lib/urgans-usage';
  * quietly is a LOST CHARGE, so every write here logs loudly, and the turn's cost
  * is also written onto its billing event (metadata.credits) where it can be
  * reconciled against the ledger.
+ *
+ * The one exception to "fail open" runs the other way on purpose: REMOVING credits
+ * (the leftover trial) only happens when we positively know nothing was bought.
+ * If that cannot be established, nothing is taken.
  *
  * NEVER THROWS, for the same reason `recordUrgansAction` does not: the turn the
  * user waited for has already succeeded.
@@ -32,15 +48,16 @@ import { resolveUsageWindow } from '@/lib/urgans-usage';
 const TABLE = 'credit_ledger';
 const UNIQUE_VIOLATION = '23505';
 
-export type CreditBalances = { allowance: number; topup: number; total: number };
+export type CreditBalances = SourceBalances & { total: number };
 
 export type CreditSnapshot = CreditBalances & {
-  /** This window's allowance as granted, for "x of y". */
+  account: CreditAccount;
+  /** The plan's monthly grant, or 0 for an account with no subscription. */
   monthlyAllowance: number;
-  /** First day of the window the allowance belongs to, YYYY-MM-DD (UTC). */
-  windowStart: string;
-  /** When the allowance resets, ISO. */
-  resetsAt: string;
+  /** What "low" is measured against: the monthly grant, or the trial grant when there is none. */
+  referenceCredits: number;
+  /** When the next monthly grant lands, ISO. Null unless the account is a subscriber. */
+  nextGrantAt: string | null;
 };
 
 const toDay = (date: Date): string => date.toISOString().slice(0, 10);
@@ -50,41 +67,58 @@ const asNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-/** Both balances for a team, or null when they cannot be read. */
-export async function readBalances(
-  client: SupabaseClient,
-  workspaceId: string,
-  windowStart: string
-): Promise<CreditBalances | null> {
+/** Every source's balance for a team, or null when they cannot be read. */
+export async function readBalances(client: SupabaseClient, workspaceId: string): Promise<CreditBalances | null> {
   try {
-    const { data, error } = await client.rpc('credit_balances', { p_workspace: workspaceId, p_window: windowStart });
+    const { data, error } = await client.rpc('credit_balances', { p_workspace: workspaceId });
     if (error) {
       console.error('[credits] could not read the balance:', error.message);
       return null;
     }
-    const row = (Array.isArray(data) ? data[0] : data) as { allowance?: unknown; topup?: unknown } | null | undefined;
-    if (!row) return { allowance: 0, topup: 0, total: 0 };
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | { trial?: unknown; allowance?: unknown; topup?: unknown }
+      | null
+      | undefined;
+    if (!row) return { trial: 0, allowance: 0, topup: 0, total: 0 };
+    const trial = asNumber(row.trial);
     const allowance = asNumber(row.allowance);
     const topup = asNumber(row.topup);
-    return { allowance, topup, total: allowance + topup };
+    return { trial, allowance, topup, total: trial + allowance + topup };
   } catch (error) {
     console.error('[credits] could not read the balance:', error);
     return null;
   }
 }
 
+/** Insert one grant, tolerating the unique key that makes a grant happen once. */
+async function insertOnce(client: SupabaseClient, row: Record<string, unknown>, what: string): Promise<boolean> {
+  try {
+    const { error } = await client.from(TABLE).insert(row);
+    if (error && error.code !== UNIQUE_VIOLATION) {
+      console.error(`[credits] could not ${what}:`, error.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(`[credits] could not ${what}:`, error);
+    return false;
+  }
+}
+
 /**
- * Give a team its allowance for the window, once. The dedupe key is what makes it
- * once: every request tries, the first wins, and the rest hit the unique index
- * (23505) and count as success. Returns false only when the grant could not be
- * written and is not already there.
+ * Give a subscriber its allowance for the billing window, once. The dedupe key is
+ * what makes it once: every request tries, the first wins, and the rest hit the
+ * unique index (23505) and count as success. The grant ADDS to the balance, so
+ * what was not used last month is still there. Returns false only when the grant
+ * could not be written and is not already there.
  */
 export async function ensureAllowance(
   client: SupabaseClient,
   input: { workspaceId: string; ownerUserId: string | null; windowStart: string; credits: number }
 ): Promise<boolean> {
-  try {
-    const { error } = await client.from(TABLE).insert({
+  return insertOnce(
+    client,
+    {
       workspace_id: input.workspaceId,
       owner_user_id: input.ownerUserId,
       pool: 'allowance',
@@ -93,42 +127,136 @@ export async function ensureAllowance(
       window_start: input.windowStart,
       dedupe_key: `allowance:${input.workspaceId}:${input.windowStart}`,
       metadata: { source: 'monthly_allowance' },
-    });
-    if (error && error.code !== UNIQUE_VIOLATION) {
-      console.error('[credits] could not grant the monthly allowance:', error.message);
-      return false;
-    }
+    },
+    'grant the monthly allowance'
+  );
+}
+
+/** Give a trial its one-off credits, once per team, ever. */
+export async function ensureTrialGrant(
+  client: SupabaseClient,
+  input: { workspaceId: string; ownerUserId: string | null }
+): Promise<boolean> {
+  return insertOnce(
+    client,
+    {
+      workspace_id: input.workspaceId,
+      owner_user_id: input.ownerUserId,
+      pool: 'trial',
+      kind: 'trial',
+      credits: TRIAL_CREDITS,
+      dedupe_key: `trial:${input.workspaceId}`,
+      metadata: { source: 'trial_grant' },
+    },
+    'grant the trial credits'
+  );
+}
+
+/**
+ * Whether this team has ever paid for anything: a plan (the owner's `paid_at`,
+ * which only a real charge writes) or a top-up (a ledger row of kind `topup`; an
+ * admin adjustment is not a purchase). FAILS TOWARD "yes": the answer decides
+ * whether credits are TAKEN AWAY, so anything that cannot be established means
+ * nothing is removed.
+ */
+export async function hasEverPurchased(
+  client: SupabaseClient,
+  input: { workspaceId: string; ownerUserId: string | null }
+): Promise<boolean> {
+  if (!input.ownerUserId) return true;
+  try {
+    const profile = await client.from('profiles').select('paid_at').eq('id', input.ownerUserId).maybeSingle();
+    if (profile.error) return true;
+    if ((profile.data as { paid_at?: string | null } | null)?.paid_at) return true;
+
+    const topup = await client
+      .from(TABLE)
+      .select('id')
+      .eq('workspace_id', input.workspaceId)
+      .eq('kind', 'topup')
+      .limit(1);
+    if (topup.error) return true;
+    return (topup.data?.length ?? 0) > 0;
+  } catch {
     return true;
-  } catch (error) {
-    console.error('[credits] could not grant the monthly allowance:', error);
-    return false;
   }
 }
 
 /**
- * A team's credits right now: finds the billing window it is in, grants the
- * allowance for it if this is the first look this window, and reads both pools.
- * Null when the balance cannot be read, which callers treat as "do not enforce".
+ * Take back what is left of a trial that ended with nothing bought. One row, once
+ * (its key names the team), tagged to the trial source so no other credit is
+ * touched. Never removes more than is left.
+ */
+export async function expireTrialCredits(
+  client: SupabaseClient,
+  input: { workspaceId: string; ownerUserId: string | null; credits: number }
+): Promise<boolean> {
+  const credits = Math.floor(input.credits);
+  if (!(credits > 0)) return false;
+  return insertOnce(
+    client,
+    {
+      workspace_id: input.workspaceId,
+      owner_user_id: input.ownerUserId,
+      pool: 'trial',
+      kind: 'expire',
+      credits: -credits,
+      dedupe_key: `expire:trial:${input.workspaceId}`,
+      metadata: { source: 'trial_ended_without_purchase' },
+    },
+    'remove the leftover trial credits'
+  );
+}
+
+/**
+ * A team's credits right now. Grants what it is owed first (a subscriber's
+ * allowance for this billing window, or a trial's one-off credits), takes back an
+ * ended trial's leftovers if nothing was bought, then reads the balance. Null when
+ * the balance cannot be read, which callers treat as "do not enforce".
+ *
+ * The trial removal happens HERE, lazily, rather than in a job: a team whose trial
+ * ended is walled, and the first time anything looks at its credits afterwards is
+ * the only moment the removal matters.
  */
 export async function getCreditSnapshot(
   client: SupabaseClient,
   input: { workspaceId: string; ownerUserId: string | null; team: TeamForAllowance; now?: Date }
 ): Promise<CreditSnapshot | null> {
-  const anchorIso = await readBillingAnchor(client, input.ownerUserId);
-  const window = resolveUsageWindow({ now: input.now ?? new Date(), anchorIso });
-  const windowStart = toDay(window.start);
+  const account = creditAccount(input.team);
   const monthlyAllowance = monthlyAllowanceCredits(input.team);
+  let nextGrantAt: string | null = null;
 
-  await ensureAllowance(client, {
-    workspaceId: input.workspaceId,
-    ownerUserId: input.ownerUserId,
-    windowStart,
-    credits: monthlyAllowance,
-  });
+  if (monthlyAllowance > 0) {
+    const anchorIso = await readBillingAnchor(client, input.ownerUserId);
+    const window = resolveUsageWindow({ now: input.now ?? new Date(), anchorIso });
+    nextGrantAt = window.end.toISOString();
+    await ensureAllowance(client, {
+      workspaceId: input.workspaceId,
+      ownerUserId: input.ownerUserId,
+      windowStart: toDay(window.start),
+      credits: monthlyAllowance,
+    });
+  } else if (account === 'trial') {
+    await ensureTrialGrant(client, { workspaceId: input.workspaceId, ownerUserId: input.ownerUserId });
+  }
 
-  const balances = await readBalances(client, input.workspaceId, windowStart);
+  let balances = await readBalances(client, input.workspaceId);
   if (!balances) return null;
-  return { ...balances, monthlyAllowance, windowStart, resetsAt: window.end.toISOString() };
+
+  if (input.team.state === 'walled' && balances.trial > 0) {
+    const purchased = await hasEverPurchased(client, input);
+    if (!purchased && (await expireTrialCredits(client, { ...input, credits: balances.trial }))) {
+      balances = { ...balances, trial: 0, total: balances.allowance + balances.topup };
+    }
+  }
+
+  return {
+    ...balances,
+    account,
+    monthlyAllowance,
+    referenceCredits: monthlyAllowance > 0 ? monthlyAllowance : TRIAL_CREDITS,
+    nextGrantAt,
+  };
 }
 
 export type SettleInput = {
@@ -137,27 +265,23 @@ export type SettleInput = {
   actorUserId: string;
   /** Identifies this turn, so charging it twice charges it once. */
   requestId: string;
-  windowStart: string;
   charge: TurnCharge;
   calls: readonly UsageCall[];
   /** The balances the turn started with, to split the charge. Read again when absent. */
-  balances?: CreditBalances | null;
+  balances?: SourceBalances | null;
 };
 
 /**
- * Charge a turn: one ledger row per pool it drew on. Never throws. A turn that
- * cost nothing writes nothing.
+ * Charge a turn: one ledger row per source it drew on, trial first. Never throws.
+ * A turn that cost nothing writes nothing.
  */
 export async function settleTurn(client: SupabaseClient, input: SettleInput): Promise<void> {
   if (input.charge.credits <= 0) return;
   try {
-    const balances = input.balances ?? (await readBalances(client, input.workspaceId, input.windowStart));
-    // Unreadable: put it on the allowance pool, where nearly every turn lands, so
+    const balances = input.balances ?? (await readBalances(client, input.workspaceId));
+    // Unreadable: put it on the allowance source, where nearly every turn lands, so
     // a charge is recorded somewhere rather than dropped.
-    const { fromAllowance, fromTopup } = splitSpend(
-      input.charge.credits,
-      balances ?? { allowance: input.charge.credits, topup: 0 }
-    );
+    const split = splitSpend(input.charge.credits, balances ?? { trial: 0, allowance: input.charge.credits, topup: 0 });
 
     const models = [...new Set(input.calls.map((call) => call.model))];
     const metadata = {
@@ -170,46 +294,27 @@ export async function settleTurn(client: SupabaseClient, input: SettleInput): Pr
       charge_credits: input.charge.credits,
     };
 
-    const rows: Array<Record<string, unknown>> = [];
-    const base = {
-      workspace_id: input.workspaceId,
-      owner_user_id: input.ownerUserId,
-      actor_user_id: input.actorUserId,
-      kind: 'spend',
-      metadata,
-    };
-    // The provider cost belongs to the turn, not to either half of it, so it rides on
-    // the first row written and the second carries the share it covers.
+    // The provider cost belongs to the turn, not to any one source, so each row
+    // carries the share it covers.
     const costFor = (credits: number): number =>
       Math.round(input.charge.rodi * (credits / input.charge.credits) * 1000) / 1000;
 
-    if (fromAllowance > 0) {
-      rows.push({
-        ...base,
-        pool: 'allowance',
-        credits: -fromAllowance,
-        window_start: input.windowStart,
-        dedupe_key: `spend:${input.requestId}:allowance`,
-        provider_cost_rodi: costFor(fromAllowance),
+    for (const source of CREDIT_SOURCES) {
+      const credits = split[source];
+      if (credits <= 0) continue;
+      const { error } = await client.from(TABLE).insert({
+        workspace_id: input.workspaceId,
+        owner_user_id: input.ownerUserId,
+        actor_user_id: input.actorUserId,
+        pool: source,
+        kind: 'spend',
+        credits: -credits,
+        dedupe_key: `spend:${input.requestId}:${source}`,
+        provider_cost_rodi: costFor(credits),
+        metadata,
       });
-    }
-    if (fromTopup > 0) {
-      rows.push({
-        ...base,
-        pool: 'topup',
-        credits: -fromTopup,
-        dedupe_key: `spend:${input.requestId}:topup`,
-        provider_cost_rodi: costFor(fromTopup),
-      });
-    }
-
-    for (const row of rows) {
-      const { error } = await client.from(TABLE).insert(row);
       if (error && error.code !== UNIQUE_VIOLATION) {
-        console.error(
-          `[credits] LOST CHARGE: could not record ${String(row.credits)} credits for ${input.requestId}:`,
-          error.message
-        );
+        console.error(`[credits] LOST CHARGE: could not record ${credits} credits for ${input.requestId}:`, error.message);
       }
     }
   } catch (error) {
@@ -221,8 +326,8 @@ const sum = (values: Array<number | null>): number => values.reduce<number>((tot
 
 /**
  * Add or take away top-up credits by hand (the admin route): a purchase later,
- * a goodwill grant or a correction today. Written to the top-up pool because that
- * is the pool that does not expire. Never throws; returns whether it landed.
+ * a goodwill grant or a correction today. Written to the top-up source because
+ * that is the one no rule ever takes back. Never throws; returns whether it landed.
  */
 export async function adjustCredits(
   client: SupabaseClient,

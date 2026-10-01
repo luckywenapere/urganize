@@ -26,6 +26,17 @@ export const CREDIT_USD = 0.01;
 /** What a charge is multiplied by over the provider's cost. */
 export const MARKUP = 3;
 
+/**
+ * What a credit costs to BUY, in naira, fixed (founder, 2026-10-01): 1,500 naira
+ * to the dollar, so a credit worth a cent is 15 naira. That is the price for a
+ * subscriber, of any plan; an account with no subscription pays double. Recorded
+ * here so the numbers exist in one place, but NOTHING sells credits yet (pack
+ * sizes are undecided and there is no checkout), so no code charges these.
+ */
+export const NAIRA_PER_USD = 1500;
+export const NAIRA_PER_CREDIT_SUBSCRIBER = NAIRA_PER_USD * CREDIT_USD;
+export const NAIRA_PER_CREDIT_CREDITS_ONLY = NAIRA_PER_CREDIT_SUBSCRIBER * 2;
+
 /** One call to the gateway, as the runner saw it. A field is null when the gateway did not say. */
 export type UsageCall = {
   model: string;

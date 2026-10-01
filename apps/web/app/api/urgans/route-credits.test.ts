@@ -107,12 +107,14 @@ const turn = (over: Record<string, unknown> = {}) => ({
 });
 
 const snapshot = (over: Record<string, unknown> = {}) => ({
+  trial: 0,
   allowance: 500,
   topup: 0,
   total: 500,
+  account: 'subscriber',
   monthlyAllowance: 660,
-  windowStart: '2026-10-01',
-  resetsAt: '2026-11-01T00:00:00.000Z',
+  referenceCredits: 660,
+  nextGrantAt: '2026-11-01T00:00:00.000Z',
   ...over,
 });
 
@@ -194,7 +196,6 @@ describe('with credits on', () => {
       workspaceId: 'ws-1',
       ownerUserId: 'owner-1',
       actorUserId: 'user-1',
-      windowStart: '2026-10-01',
     });
     expect(typeof input.requestId).toBe('string');
     expect((input.requestId as string).length).toBeGreaterThan(10);
@@ -253,7 +254,7 @@ describe('with credits on', () => {
 describe('refusing a turn the team cannot pay for', () => {
   beforeEach(creditsOn);
 
-  it('answers like the old ceiling did: 429, typed commands still work, and says when credits come back', async () => {
+  it('answers like the old ceiling did: 429, typed commands still work, and says when the next credits arrive', async () => {
     getCreditSnapshot.mockResolvedValue(snapshot({ allowance: 0, total: 0 }));
 
     const response = await POST(post({ messages }));
@@ -262,9 +263,21 @@ describe('refusing a turn the team cannot pay for', () => {
     expect(response!.status).toBe(429);
     expect(body.mode).toBe('deterministic');
     expect(body.notice).toMatch(/out of UrgAns credits/);
-    expect(body.notice).toMatch(/1 November/);
+    expect(body.notice).toMatch(/next monthly credits arrive on 1 November/);
+    expect(body.notice).not.toMatch(/come back|reset/i);
     expect(runChappiAgent).not.toHaveBeenCalled();
     expect(settleTurn).not.toHaveBeenCalled();
+  });
+
+  it('promises a credits-only account no date, because it has no monthly grant', async () => {
+    getCreditSnapshot.mockResolvedValue(
+      snapshot({ account: 'credits_only', allowance: 0, total: 0, monthlyAllowance: 0, nextGrantAt: null, referenceCredits: 50 })
+    );
+
+    const body = await (await POST(post({ messages })))!.json();
+
+    expect(body.notice).toMatch(/out of UrgAns credits/);
+    expect(body.notice).not.toMatch(/November|arrive/);
   });
 
   it('records the refusal as a limit hit, the buy signal the product already collects', async () => {
@@ -276,7 +289,7 @@ describe('refusing a turn the team cannot pay for', () => {
     expect(logBillingEvent.mock.calls[0][1]).toMatchObject({
       workspaceId: 'ws-1',
       type: 'limit_hit',
-      metadata: { entitlement: 'urgans_credits', limit: 660, current: 0 },
+      metadata: { entitlement: 'urgans_credits', limit: 660, current: 0, account: 'subscriber' },
     });
   });
 

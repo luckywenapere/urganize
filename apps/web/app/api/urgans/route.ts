@@ -212,12 +212,20 @@ export async function POST(request: NextRequest) {
           ownerUserId: team.ownerUserId,
           actorUserId: auth.user.id,
           type: 'limit_hit',
-          metadata: { entitlement: 'urgans_credits', limit: credits.monthlyAllowance, current: credits.total },
+          metadata: {
+            entitlement: 'urgans_credits',
+            limit: credits.referenceCredits,
+            current: credits.total,
+            account: credits.account,
+          },
         });
         // 'deterministic' with a notice and a 429, exactly as the old ceiling
         // answered: typed commands and chips still work and cost nothing.
         return NextResponse.json(
-          { mode: 'deterministic', notice: outOfCreditsNotice(credits.resetsAt) } satisfies ChappiResponse,
+          {
+            mode: 'deterministic',
+            notice: outOfCreditsNotice({ account: credits.account, nextGrantAt: credits.nextGrantAt }),
+          } satisfies ChappiResponse,
           { status: 429 }
         );
       }
@@ -284,7 +292,6 @@ export async function POST(request: NextRequest) {
         ownerUserId: team.ownerUserId,
         actorUserId: auth.user.id,
         requestId: randomUUID(),
-        windowStart: credits.windowStart,
         charge,
         calls: usageCalls,
         balances: credits,

@@ -6,7 +6,8 @@ import { useAuthStore } from '@/lib/auth-store';
 import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
 import { isChappiEnabled } from '@/lib/chappi/config';
 import { supabase } from '@/lib/supabase/client';
-import { creditsLeftLine, creditsResetLine } from '@/lib/credits/copy';
+import { creditsLeftLine, creditsNextLine } from '@/lib/credits/copy';
+import type { CreditAccount } from '@/lib/credits/allowance';
 
 // The assistant-usage indicator. One calm line above the topbar once a team has
 // spent 80% of its monthly UrgAns actions, and nothing at all before that.
@@ -43,7 +44,10 @@ const CHAPPI_ENABLED = isChappiEnabled();
  *  and the request is one indexed count. */
 const CACHE_TTL_MS = 15 * 1000;
 
-type CreditsView = { total: number; resetsAt: string; low: boolean };
+type CreditsView = { total: number; account: CreditAccount; nextGrantAt: string | null; low: boolean };
+
+const isAccount = (value: unknown): value is CreditAccount =>
+  value === 'trial' || value === 'subscriber' || value === 'credits_only';
 
 type UsageSnapshot = { used: number; limit: number | null; approaching: boolean; credits?: CreditsView };
 
@@ -71,8 +75,13 @@ async function fetchUsage(): Promise<UsageSnapshot | null> {
 
     const rawCredits = (payload as { credits?: Partial<CreditsView> }).credits;
     const credits: CreditsView | undefined =
-      rawCredits && typeof rawCredits.total === 'number' && typeof rawCredits.resetsAt === 'string'
-        ? { total: rawCredits.total, resetsAt: rawCredits.resetsAt, low: Boolean(rawCredits.low) }
+      rawCredits && typeof rawCredits.total === 'number' && isAccount(rawCredits.account)
+        ? {
+            total: rawCredits.total,
+            account: rawCredits.account,
+            nextGrantAt: typeof rawCredits.nextGrantAt === 'string' ? rawCredits.nextGrantAt : null,
+            low: Boolean(rawCredits.low),
+          }
         : undefined;
 
     return {
@@ -134,7 +143,8 @@ export function UrgansUsageStrip() {
   if (!CHAPPI_ENABLED) return null;
 
   // Credits replace the action count. Calm, like the line below: it says how many
-  // are left and when they come back, and it stays quiet until they run low.
+  // are left and, for a subscriber, when the next monthly credits arrive (credits
+  // never expire, so nothing "comes back"), and it stays quiet until they run low.
   if (usage?.credits) {
     if (!usage.credits.low) return null;
     const credits = Math.max(0, usage.credits.total);
@@ -142,7 +152,7 @@ export function UrgansUsageStrip() {
       <div className="flex items-center justify-center gap-3 border-b border-stroke-subtle bg-bg-surface px-4 py-2 text-center">
         <p className="text-sm text-content-secondary">
           <span className="font-medium text-content-primary">{creditsLeftLine(credits)}</span>{' '}
-          {creditsResetLine(credits, usage.credits.resetsAt)}
+          {creditsNextLine(credits, { account: usage.credits.account, nextGrantAt: usage.credits.nextGrantAt })}
         </p>
         <Link
           href="/locked?intent=upgrade"
