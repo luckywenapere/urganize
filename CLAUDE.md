@@ -17307,6 +17307,54 @@ The evaluation was run for the first time, against RodiumAi, from the founder's 
 4. **The account holds very little.** The wallet showed 91.0 RODI (about $0.12) with 499 RODI (about $0.67) ever recharged and 408 spent; its low-balance threshold is 500. **The provider reserves the full output cap against the balance before answering**, which is why Sol and gpt-5.5 returned 402 "Insufficient RODI balance" on every real-prompt case (and Sol on the chat probe at an 8,192 cap, while a 256 cap was accepted), and why gpt-5.4-mini and Terra started failing late in the run. **Before `AI_ROUTER=on`, top up**, or the dearer rungs will 402 and the router, which stops on a 402, will not fall back. Reading the balance and usage: the RodiumAi dashboard's `/api/v1/wallet` and `/api/v1/usage` answer to the logged-in session.
 5. **Not yet known:** whether the top-rung models are worth their price on tool choice (the 8-case sample could not reach them), the real latencies, and how the classifier's thresholds line up with the cases. A full run that skips Sol (`ROUTER_EVAL_MODELS` takes a comma list) is budgeted at about $2.
 
+## UrgAns credits (2026-10-01, built flag-off)
+
+Founder ask: work out what a chat turn really costs so a credits system can charge for it, so that "no one will be able to run anything without properly paying for the actual credits and cost they will incur". Not a scope expansion: it meters the already-sanctioned assistant. Behind `NEXT_PUBLIC_FEATURE_URGANS_CREDITS` (default off). Migration `20261001120000_credit_ledger.sql`, **not applied anywhere yet**. **Chat turns only**: the planner, press-kit drafts, status update, task outcome and voice transcription are NOT metered yet, and **there is no way to buy credits yet** (an admin grants them by hand).
+
+**The founder's numbers (2026-10-01):** a credit is worth **$0.01** (about 15 naira); a turn is charged at **3x** the provider's billed cost, rounded **up** to whole credits; monthly allowance by plan **Solo 150, Manager 660, Label 1,500**; a trial or unpaid team gets 150 (the one number he did not set: the smallest paid amount, see `TRIAL_ALLOWANCE_CREDITS`). Sized so an allowance costs about 15% of the plan price, assuming about 1,500 naira to the dollar: if the real rate is worse, shrink the allowances.
+
+### How it works
+
+- **`lib/credits/`** is the money maths, pure and tested: `model-prices.ts` (the provider's per-model prices in RODI, copied from the public catalogue on 2026-10-01), `pricing.ts` (cost of a call, credits for a cost, the charge for a turn, the hold), `allowance.ts` (allowance by plan, and how a charge splits across pools), `copy.ts` (what people read), `config.ts` (the flag), `credits-server.ts` (the ledger reads and writes).
+- **A charge is worked out from the tokens a turn really used**, not a flat price per action. The runner now reports every gateway call it made (`ChappiAgentResult.usageCalls`: model, prompt tokens, completion tokens, **cached tokens**), whether or not the router is on. Cached tokens come from `usage.prompt_tokens_details.cached_tokens` (`extractCachedTokens` in `provider.ts`), which matters a great deal: a cached prompt token costs 10% of a fresh one on the GPT-5 models, so the same turn costs about 5x more cold than warm.
+- **Two pools per team, in one append-only ledger** (`credit_ledger`): the monthly **allowance** (granted once per billing window, gone at its end, no rollover) and the **top-up** pool (never expires). A turn draws the allowance first. The balance is a SQL sum (`credit_balances`, service role only), never a column two requests could both write.
+- **The route** (`/api/urgans`): with the flag on, credits REPLACE the 40/150 monthly action ceiling. Before the turn it reads the balance (granting the window's allowance on first look) and refuses to START a turn if the balance is below the **hold**: the credits for one cold call, 12k tokens in and 1.5k out, on the model the turn is about to use (the router's choice when it is on). After a turn that succeeded it settles one ledger row per pool. Refusal answers exactly as the old ceiling did, 429 and `mode: 'deterministic'` with a notice, so typed commands keep working. With the flag off the route is exactly what it was.
+- **Display:** `GET /api/urgans/usage` returns a `credits` object when the flag is on (and reports the old count as uncapped so the two cannot both warn), and `UrgansUsageStrip` shows a calm line once credits fall to a fifth of the monthly amount or ten.
+- **Admin:** `POST /api/admin/credits { workspaceId, credits, note }` grants or removes top-up credits, `GET ?workspaceId=` reads balances and the last 25 movements. Admin only, not flag-gated.
+
+### Things worth knowing before editing this
+
+1. **The prices were checked against 123 real bills, and the gateway adds about 0.15 RODI per call** on top of tokens (the bill is also rounded up to a tenth). `PER_CALL_OVERHEAD_RODI` is that, measured: without it a quick turn (about 1.4 RODI) is charged about 10% low. One `gpt-5.4` call billed 8 RODI under the table, probably a cache effect; that errs in our favour.
+2. **An unknown model is priced as the DEAREST one, never as free or cheapest**, and a call whose usage the gateway did not report is charged as a nominal call (12k in, 400 out), both flagged `assumed`. `model-prices.test.ts` fails if a model on the router's ladder has no price, so a new rung cannot ship unpriced; the model-id guard now allows four files to name models (the price table is the fourth).
+3. **A failed turn is never charged**, even though the provider billed its earlier rounds: settling happens only after the runner returned. Approving a confirmation card is never charged either: the credit check sits after the approve branch has returned, same placement and same reason as the old ceiling. A structural guard pins both.
+4. **It fails open**: an unreadable balance means do not block, consistent with every other counter here. A LOST CHARGE (ledger write failed) logs loudly with the request id, and every turn's cost is also written onto its billing event (`metadata.credits`) so it can be reconciled.
+5. **Known limit, accepted:** no lock between the check and the charge. Ten parallel messages all see the same balance and all pass, so a team can overshoot by the cost of the turns in flight; it lands as a negative top-up balance that blocks the next turn. A real hold would need a reserve row per turn.
+6. **The ledger is append-only** and a guard enforces it: nothing updates, upserts or deletes a row; corrections are new rows. A charge delivered twice is refused by the unique `dedupe_key` (`spend:<request>:<pool>`, `allowance:<workspace>:<window>`).
+7. **Read `state` AND `tier` for the allowance**, never `tier` alone: `resolveTeamTier` reports the uncapped `label` for a trial so seat limits never bite, and reading that as a plan would give every three-day trial the biggest allowance. Same trap as the router's ceiling.
+8. **`RODI_PER_USD = 743`** is the rate the provider's dollar-listed models imply, not a published rate. The founder's own top-up is the check on it; if it is wrong, credits are mispriced by the same fraction.
+
+### Verified
+
+Full suite **5,633 passing** (about 120 new across `lib/credits/*`, `app/api/urgans/route-credits.test.ts`, `lib/chappi/runner-usage.test.ts` and `provider-usage.test.ts`); `eslint .` at the baseline of 3 errors / 83 warnings with nothing new; `tsc` clean apart from the documented `confirmed-action.test.ts` errors; `next build` green in both flag states with `/auth`, `/dashboard`, `/dashboard/urgans`, `/locked`, `/onboarding` and `/settings` still static. **Eleven mutations: ten killed**; the one that survived is the explicit one-credit minimum, which is redundant by construction (every call carries the overhead, so any turn that ran already rounds up to a credit). The migration was applied twice to a real Postgres engine (PGlite) and **21 checks passed**: each constraint, the once-only keys, both balances and their windows, an overshoot going negative, row level security with no policies, the browser roles being unable to run the balance function, and a deleted team keeping its ledger rows.
+
+### Not verified
+
+No turn has been charged against a real database or a real gateway; the migration has not been applied to Supabase; the banner has not rendered in a browser. The dollar-to-RODI rate rests on the catalogue, not on the founder's top-up (it had not shown in the wallet when this was written).
+
+### Not built (and what each needs)
+
+1. **Buying credits** (a Paystack one-off charge, packs, a receipt). Needs a pack-size and price decision and a Settings surface. The `topup` pool and `kind: 'topup'` are ready for it.
+2. **Metering the other AI features.** The planner, press-kit drafts and status update go through `lib/ai/routed.ts`, not the runner, so they need the same per-call capture there; the planner is the dear one (estimated at about 12 credits a run, a guess until it is measured). `urgans_actions` does not exist in production yet, so there is no real data for them.
+3. **A credits line in Settings, and showing the user what a turn cost.** The strip only appears when credits are low.
+4. **Charging the closing line after approving a card** (a small, cheap call that is absorbed today).
+
+### Activation
+
+1. Apply `20261001120000_credit_ledger.sql`.
+2. Grant yourself some credits so the first real turn does not meet an empty balance: `POST /api/admin/credits` with your team id. (A team with no allowance row yet gets its first grant on its first look, so this is only needed for top-ups.)
+3. Set `NEXT_PUBLIC_FEATURE_URGANS_CREDITS=true` in Vercel `Web` Production **with a commit that rebuilds `apps/web`** (the `turbo-ignore` trap: `NEXT_PUBLIC_*` is inlined at build time). The changelog entry and version bump land at the flip, not at merge.
+4. Turn one real turn into a check: send a message, then `GET /api/admin/credits?workspaceId=...` and compare the spend row's `provider_cost_rodi` with the same call in RodiumAi's usage log (`/dashboard/usage`).
+
 ## The rollout menu moves to the right, and UrgAns sits under it (2026-09-30, v1.51.0)
 
 Founder, with a screenshot of Cursor's agent window (the chat in the centre, a

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
-import { isChappiEnabled, isChappiModelConfigured } from '@/lib/chappi/config';
+import { getChappiModelConfig, isChappiEnabled, isChappiModelConfigured } from '@/lib/chappi/config';
 import { executeToolCall, resolveChappiContext } from '@/lib/chappi/dispatch';
 import { buildChappiSystemPrompt } from '@/lib/chappi/system-prompt';
 import { closeConfirmedAction, runChappiAgent } from '@/lib/chappi/runner';
@@ -22,6 +22,12 @@ import type {
 } from '@/lib/chappi/types';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { checkUrgansAllowance, recordUrgansAction } from '@/lib/urgans-usage-server';
+import { logBillingEvent } from '@/lib/billing-events-server';
+import { isCreditsEnabled } from '@/lib/credits/config';
+import { outOfCreditsNotice } from '@/lib/credits/copy';
+import { getCreditSnapshot, settleTurn, type CreditSnapshot } from '@/lib/credits/credits-server';
+import { canStartTurn, holdCredits, turnCharge } from '@/lib/credits/pricing';
+import { randomUUID } from 'node:crypto';
 import { recordLimitHit } from '@/lib/seats-server';
 import { CHAPPI_HISTORY_LIMIT } from '@/lib/chappi/conversation-history';
 
@@ -173,13 +179,58 @@ export async function POST(request: NextRequest) {
     // The billable unit is one TURN, not one gateway round: runChappiAgent
     // loops up to MAX_ROUNDS times per turn.
     const team = await getTeamAccessForUser(auth.user.id, auth.user.email);
-    const capped = team.primaryWorkspaceId
-      ? await checkUrgansAllowance(auth.adminClient, {
+
+    // Which model answers. With AI_ROUTER unset this is { mode: 'off' } and the
+    // turn below runs exactly as it did before the router existed; in shadow it
+    // only records what the router would have chosen; live, it decides. The team
+    // is read for its plan ceiling, and by `state` as well as `tier`: `tier`
+    // alone reports the uncapped flagship for a trial (see resolveCeiling).
+    // Decided BEFORE the credit check because that check is for the model the
+    // turn is about to start on; it is a pure decision and costs nothing.
+    const trimmed = messages.slice(-MAX_MESSAGES);
+    const plan = planChatRouting({ messages: trimmed, team });
+
+    // Credits, when switched on, REPLACE the monthly action ceiling: a turn is
+    // paid for in credits worked out from the tokens it really used (see
+    // lib/credits). With the flag off nothing below this line reads a credit and
+    // the ceiling counts turns exactly as it always did. The check sits here for
+    // the same reason the ceiling did: after the confirmation branch has
+    // returned, so approving a card is never billed.
+    const creditsOn = isCreditsEnabled();
+    let credits: CreditSnapshot | null = null;
+    if (creditsOn && team.primaryWorkspaceId) {
+      credits = await getCreditSnapshot(auth.adminClient, {
+        workspaceId: team.primaryWorkspaceId,
+        ownerUserId: team.ownerUserId,
+        team,
+      });
+      // Unreadable (null) means do not enforce: see credits-server.ts.
+      const holdModel = plan.mode === 'on' ? plan.routing.decision.model : (getChappiModelConfig()?.model ?? '');
+      if (credits && !canStartTurn(credits.total, holdCredits(holdModel))) {
+        await logBillingEvent(auth.adminClient, {
           workspaceId: team.primaryWorkspaceId,
           ownerUserId: team.ownerUserId,
-          tier: team.tier,
-        })
-      : null;
+          actorUserId: auth.user.id,
+          type: 'limit_hit',
+          metadata: { entitlement: 'urgans_credits', limit: credits.monthlyAllowance, current: credits.total },
+        });
+        // 'deterministic' with a notice and a 429, exactly as the old ceiling
+        // answered: typed commands and chips still work and cost nothing.
+        return NextResponse.json(
+          { mode: 'deterministic', notice: outOfCreditsNotice(credits.resetsAt) } satisfies ChappiResponse,
+          { status: 429 }
+        );
+      }
+    }
+
+    const capped =
+      !creditsOn && team.primaryWorkspaceId
+        ? await checkUrgansAllowance(auth.adminClient, {
+            workspaceId: team.primaryWorkspaceId,
+            ownerUserId: team.ownerUserId,
+            tier: team.tier,
+          })
+        : null;
 
     if (capped && !capped.allowed) {
       await recordLimitHit(auth.adminClient, {
@@ -205,15 +256,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Which model answers. With AI_ROUTER unset this is { mode: 'off' } and the
-    // turn below runs exactly as it did before the router existed; in shadow it
-    // only records what the router would have chosen; live, it decides. The team
-    // is read for its plan ceiling, and by `state` as well as `tier`: `tier`
-    // alone reports the uncapped flagship for a trial (see resolveCeiling).
-    const trimmed = messages.slice(-MAX_MESSAGES);
-    const plan = planChatRouting({ messages: trimmed, team });
-
-    const { reply, clientActions, pendingConfirmation, trace } = await runChappiAgent({
+    const { reply, clientActions, pendingConfirmation, trace, usageCalls } = await runChappiAgent({
       ctx,
       system,
       messages: trimmed,
@@ -225,7 +268,28 @@ export async function POST(request: NextRequest) {
     const routed =
       plan.mode === 'on' ? trace : plan.mode === 'shadow' ? (trace ? completeShadowTrace(plan.trace, trace) : plan.trace) : undefined;
     if (plan.mode === 'shadow' && routed) logRoutingTrace(routed, false);
-    const metadata = routed ? routingMetadata(routed) : undefined;
+    let metadata: Record<string, unknown> | undefined = routed ? routingMetadata(routed) : undefined;
+
+    // Charged after the turn succeeded, so a gateway failure is never charged.
+    // The cost is written onto the turn's billing event as well as the ledger, so
+    // a charge the ledger failed to take can be found and reconciled from here.
+    if (creditsOn && credits && team.primaryWorkspaceId) {
+      const charge = turnCharge(usageCalls);
+      metadata = {
+        ...(metadata ?? {}),
+        credits: { charged: charge.credits, rodi: Math.round(charge.rodi * 1000) / 1000, assumed: charge.assumed },
+      };
+      await settleTurn(auth.adminClient, {
+        workspaceId: team.primaryWorkspaceId,
+        ownerUserId: team.ownerUserId,
+        actorUserId: auth.user.id,
+        requestId: randomUUID(),
+        windowStart: credits.windowStart,
+        charge,
+        calls: usageCalls,
+        balances: credits,
+      });
+    }
 
     // Counted after the turn succeeded, so a gateway failure is never charged.
     if (team.primaryWorkspaceId) {

@@ -50,6 +50,24 @@ export function extractAiUsage(payload: Record<string, unknown>): AiUsage | null
 }
 
 /**
+ * The part of a call's prompt the provider served from its cache, which it
+ * bills at a fraction of the input price (`usage.prompt_tokens_details.
+ * cached_tokens` in the OpenAI shape). Null when it is not reported, which is
+ * not the same as zero: a caller pricing the call treats null as nothing cached,
+ * the dearer way. Kept apart from extractAiUsage so that type, and everything
+ * that stores it, stays as it was.
+ */
+export function extractCachedTokens(payload: Record<string, unknown>): number | null {
+  const usage = payload.usage && typeof payload.usage === 'object' ? (payload.usage as Record<string, unknown>) : null;
+  const details =
+    usage?.prompt_tokens_details && typeof usage.prompt_tokens_details === 'object'
+      ? (usage.prompt_tokens_details as Record<string, unknown>)
+      : null;
+  const cached = details?.cached_tokens;
+  return typeof cached === 'number' && Number.isFinite(cached) && cached >= 0 ? cached : null;
+}
+
+/**
  * How hard a reasoning model thinks before it answers. Only the GPT-5 and
  * o-series families accept the parameter (see supportsReasoningEffort); it is
  * never sent to anything else, so a caller can pass it unconditionally.

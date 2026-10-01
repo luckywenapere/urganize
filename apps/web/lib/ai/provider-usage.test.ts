@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractAiUsage } from './provider';
+import { extractAiUsage, extractCachedTokens } from './provider';
 
 describe('extractAiUsage', () => {
   it('reads the OpenAI protocol shape (OpenRouter, RodiumAi)', () => {
@@ -55,5 +55,27 @@ describe('extractAiUsage', () => {
         eval_count: 999,
       })
     ).toEqual({ promptTokens: 10, completionTokens: 5 });
+  });
+});
+
+describe('extractCachedTokens', () => {
+  it('reads the cached part of the prompt out of the OpenAI shape', () => {
+    expect(
+      extractCachedTokens({ usage: { prompt_tokens: 10_800, prompt_tokens_details: { cached_tokens: 10_624 } } })
+    ).toBe(10_624);
+  });
+
+  it('keeps a real zero apart from a missing count', () => {
+    expect(extractCachedTokens({ usage: { prompt_tokens_details: { cached_tokens: 0 } } })).toBe(0);
+    expect(extractCachedTokens({ usage: { prompt_tokens: 100 } })).toBeNull();
+    expect(extractCachedTokens({})).toBeNull();
+  });
+
+  it('is null for anything that is not a usable number', () => {
+    for (const cached_tokens of ['12', -1, Number.NaN, null, {}]) {
+      expect(extractCachedTokens({ usage: { prompt_tokens_details: { cached_tokens } } }), String(cached_tokens)).toBeNull();
+    }
+    expect(extractCachedTokens({ usage: { prompt_tokens_details: 'x' } })).toBeNull();
+    expect(extractCachedTokens({ usage: 'x' })).toBeNull();
   });
 });
