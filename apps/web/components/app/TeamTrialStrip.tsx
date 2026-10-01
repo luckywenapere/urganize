@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
+import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 import {
   TEAM_TRIAL_PILL_THRESHOLD_DAYS,
   isHardPaywallEnabled,
@@ -38,6 +39,7 @@ import {
 const HARD_PAYWALL_ENABLED = isHardPaywallEnabled();
 
 export function TeamTrialStrip() {
+  const purchasePromptsAllowed = usePurchasePromptsAllowed();
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthLoading = useAuthStore((state) => state.isLoading);
@@ -76,11 +78,13 @@ export function TeamTrialStrip() {
     <div className="flex items-center justify-center gap-3 border-b border-stroke-subtle bg-bg-surface px-4 py-2 text-center">
       <p className="text-sm text-content-secondary">
         <span className="font-medium text-content-primary">Trial: {dayLabel}.</span>{' '}
-        {team.isOwnerOrAdmin
-          ? 'Activate your plan whenever you are ready.'
-          : 'Your team admin can activate the plan any time.'}
+        {!purchasePromptsAllowed
+          ? null
+          : team.isOwnerOrAdmin
+            ? 'Activate your plan whenever you are ready.'
+            : 'Your team admin can activate the plan any time.'}
       </p>
-      {team.isOwnerOrAdmin ? (
+      {purchasePromptsAllowed && team.isOwnerOrAdmin ? (
         <Link
           href="/locked?intent=activate"
           className="shrink-0 text-sm font-medium text-brand underline-offset-4 hover:underline"

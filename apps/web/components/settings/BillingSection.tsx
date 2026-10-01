@@ -17,6 +17,7 @@ import { isCreditsEnabled } from '@/lib/credits/config';
 import { isCancelFlowEnabled } from '@/lib/cancel-flow';
 import { READ_ONLY_REACTIVATE_HREF } from '@/lib/team-billing';
 import { CardTrialBillingCard } from './CardTrialBillingCard';
+import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 import { feedbackErrorClass } from './feedback';
 import { getAccessToken } from './getAccessToken';
 import { panelClass } from './panelClass';
@@ -79,6 +80,9 @@ export function BillingSection({ variant = 'panel' }: { variant?: 'panel' | 'des
   const desk = variant === 'desk';
   const frameClass = desk ? 'rounded-2xl border border-stroke-default bg-bg-surface p-5' : panelClass;
   const router = useRouter();
+  // Inside the iPhone app nothing here may lead to buying (Apple 3.1.1): the
+  // status and dates stay, the buttons that go to the wall or to sales do not.
+  const purchasePromptsAllowed = usePurchasePromptsAllowed();
   const [snapshot, setSnapshot] = useState<BillingSnapshot | null>(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -313,7 +317,7 @@ export function BillingSection({ variant = 'panel' }: { variant?: 'panel' | 'des
           ))}
         </div>
 
-        {cta === 'contact' ? (
+        {!purchasePromptsAllowed ? null : cta === 'contact' ? (
           // A Label deal is scoped and quoted per roster by the founders and has
           // no wired self-serve checkout, so /locked's picker would be a dead
           // end for it.

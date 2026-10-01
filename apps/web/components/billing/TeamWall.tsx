@@ -166,10 +166,6 @@ export function TeamWall() {
   const [summarySettled, setSummarySettled] = useState(false);
   // "See all plans": the four cards as they were before #1258.
   const [showAllPlans, setShowAllPlans] = useState(false);
-  // iPhone app: emailing the owner a link to pay on the web.
-  const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
-  const [linkEmail, setLinkEmail] = useState<string | null>(null);
-  const [linkError, setLinkError] = useState<string | null>(null);
   const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [notifyError, setNotifyError] = useState<string | null>(null);
 
@@ -499,27 +495,6 @@ export function TeamWall() {
     }
   }, [trackTalkToUs]);
 
-  const handleEmailLink = useCallback(async () => {
-    setLinkError(null);
-    setLinkState('sending');
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) throw new Error('Sign in again and retry.');
-      const response = await fetch('/api/billing/email-pay-link', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
-      const payload = (await response.json().catch(() => ({}))) as { error?: string; email?: string };
-      if (!response.ok) throw new Error(payload.error || 'Could not send that.');
-      setLinkEmail(payload.email ?? null);
-      setLinkState('sent');
-    } catch (error) {
-      setLinkError(errorMessage(error, 'Could not send that.'));
-      setLinkState('error');
-    }
-  }, []);
-
   const handleNotifyAdmin = useCallback(async () => {
     setNotifyError(null);
     setNotifyState('sending');
@@ -565,6 +540,58 @@ export function TeamWall() {
           <Button variant="primary" onClick={() => router.push('/auth?next=/locked')}>
             Sign in
           </Button>
+        </div>
+      </main>
+    );
+  }
+
+  // Inside the iPhone app Apple's rules (3.1.1, 3.1.3) bar any pointer to a
+  // payment: no price, no plan picker, no "talk to us", no link to the website
+  // to subscribe. So this is the whole screen there: say where things stand,
+  // let them check again (a plan fixed elsewhere unlocks on the next check),
+  // and let them sign out. Everything below is the web, Android and browser
+  // wall, unchanged.
+  if (isIOSNativeApp) {
+    return (
+      <main className="min-h-screen px-4 py-12">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+          <Logo />
+          <header className="flex flex-col gap-3">
+            <h1 className="font-display text-2xl font-semibold text-content-primary">
+              {isReadOnlyTeam ? 'Your plan has ended.' : 'Your trial has ended.'}
+            </h1>
+            <p className="text-base leading-7 text-content-secondary">
+              {isReadOnlyTeam
+                ? 'Your team can still see everything it made.'
+                : 'Your rollouts, tasks and files are safe and waiting.'}
+            </p>
+          </header>
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => {
+              if (userId) void getTeamAccessClient(userId, { force: true }).then(setTeam);
+            }}
+          >
+            Check again
+          </Button>
+          <p className="text-center text-xs text-content-tertiary">
+            {user?.email ? (
+              <>
+                Signed in as <span className="text-content-secondary">{user.email}</span>. Not you?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    void logout().then(() => router.push('/auth'));
+                  }}
+                  className="underline text-content-secondary hover:text-content-primary"
+                >
+                  Sign out
+                </button>
+                .
+              </>
+            ) : null}
+          </p>
         </div>
       </main>
     );
@@ -764,49 +791,7 @@ export function TeamWall() {
                   <HelpTip helpKey="wall.plan" />
                 </div>
 
-                {isIOSNativeApp ? (
-                  <div className="flex flex-col gap-3">
-                    {/* Apple does not let an app take payment, so the pay step happens
-                        on the web. One tap emails the owner the link, which keeps it a
-                        button and not a set of instructions. */}
-                    <Button
-                      variant="primary"
-                      className="min-h-14 w-full text-base"
-                      disabled={linkState === 'sending' || linkState === 'sent'}
-                      onClick={handleEmailLink}
-                    >
-                      {linkState === 'sending'
-                        ? 'Sending'
-                        : linkState === 'sent'
-                          ? 'Link sent'
-                          : 'Email me the link'}
-                    </Button>
-                    {linkState === 'sent' ? (
-                      <p className="text-center text-sm text-content-secondary">
-                        Sent{linkEmail ? ` to ${linkEmail}` : ''}.
-                      </p>
-                    ) : null}
-                    {linkError ? (
-                      <p role="alert" className="flex items-start gap-2 text-sm text-status-error">
-                        <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                        <span>{linkError}</span>
-                      </p>
-                    ) : null}
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        type="button"
-                        className="motion-focus min-h-11 text-center text-sm font-medium text-content-secondary underline underline-offset-4 hover:text-content-primary"
-                        onClick={() => {
-                          if (userId) void getTeamAccessClient(userId, { force: true }).then(setTeam);
-                        }}
-                      >
-                        I have paid, check again
-                      </button>
-                      <HelpTip helpKey="wall.ios" />
-                    </div>
-                  </div>
-                ) : (
-                  <>
+                <>
                     {PRICING_V2 && !canCheckOut ? (
                       // Nothing is mintable in this environment. Say so plainly
                       // rather than rendering an empty fieldset above a button
@@ -918,8 +903,7 @@ export function TeamWall() {
                         <span>{changeResult}</span>
                       </p>
                     ) : null}
-                  </>
-                )}
+                </>
               </Card>
             )}
 

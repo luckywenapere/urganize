@@ -9,6 +9,7 @@ import { Button } from '@urganize/ui';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { trackUpgradeClicked } from '@/lib/urgans-actions/client';
+import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 
 /**
  * The sheet a Solo team sees when an embedded UrgAns action refuses them —
@@ -42,6 +43,7 @@ const SWIPE_DISMISS_PX = 80;
 
 export function UrgansLockedSheet({ open, message, actionType, onClose }: UrgansLockedSheetProps) {
   const router = useRouter();
+  const purchasePromptsAllowed = usePurchasePromptsAllowed();
   const [isMounted, setIsMounted] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const dragStartYRef = useRef<number | null>(null);
@@ -150,11 +152,13 @@ export function UrgansLockedSheet({ open, message, actionType, onClose }: Urgans
 
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="ghost" onClick={onClose} className="justify-center">
-              Not now
+              {purchasePromptsAllowed ? 'Not now' : 'Close'}
             </Button>
-            <Button type="button" onClick={handleUpgrade} className="justify-center">
-              Upgrade
-            </Button>
+            {purchasePromptsAllowed ? (
+              <Button type="button" onClick={handleUpgrade} className="justify-center">
+                Upgrade
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
