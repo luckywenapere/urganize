@@ -36,6 +36,7 @@
 // 2026-08-13), so the URL is read imperatively after mount, never through
 // useSearchParams.
 
+import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
@@ -937,6 +938,14 @@ export default function OnboardingPage() {
             </p>
           </noscript>
 
+          {/* Apple: only inside the iPhone app, above Google as Apple asks. */}
+          <AppleSignInButton
+            nextPath="/onboarding"
+            disabled={googleBusy || creating}
+            onBeforeStart={rememberReferral}
+            className={`${secondaryButtonClass} mt-[22px] lg:mt-7 lg:text-[14px]`}
+            onError={(message) => setAccountError({ kind: 'message', text: message })}
+          />
           <button
             type="button"
             onClick={() => void continueWithGoogle()}

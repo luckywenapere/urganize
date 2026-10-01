@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 import { IN_LIST_CHUNK, inChunks, readAllPages, type PageResult } from '@/lib/paged-rows';
+import { revokeAppleSignInForUser } from '@/lib/apple-token-server';
 import { TASK_ATTACHMENTS_BUCKET } from '@/lib/tasks-server';
 import { withThumbPaths } from '@/lib/image-thumb';
 import { listAccountPhotoObjects } from '@/lib/account-photo-server';
@@ -268,6 +269,10 @@ export async function POST(req: NextRequest) {
     .neq('plan', 'trial_claim')
     .neq('plan', 'trial_card');
   await supabaseAdmin.from('subscriptions').delete().eq('user_id', user.id);
+
+  // Apple requires the Sign in with Apple link be revoked when an account is
+  // deleted. Never blocks the deletion: it logs and carries on.
+  await revokeAppleSignInForUser(supabaseAdmin, user.id);
 
   // Must run before the releases delete: the asset / task_attachment rows
   // holding the storage paths cascade away with the releases.

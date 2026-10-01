@@ -13,6 +13,7 @@
 // next=/curator/join/<code>, so the callback returns here and the resume effect
 // finishes the join. Same pattern as /invite/accept.
 
+import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clearPendingConfirmation, firstNameOf, writePendingConfirmation } from '@/lib/email-confirmation';
 import { CheckInbox } from '@/components/auth/EmailConfirmation';
@@ -483,6 +484,11 @@ export function CuratorJoinPageClient({
                     better trade than everyone seeing nothing. */}
                 {!hasMounted || !isAuthenticated ? (
                   <div className="space-y-4">
+                    <AppleSignInButton
+                      nextPath={`/curator/join/${encodeURIComponent(code)}`}
+                      disabled={busy}
+                      onError={(message: string) => setError(message)}
+                    />
                     <button
                       type="button"
                       onClick={() => void handleGoogleSignup()}

@@ -19,6 +19,13 @@ import { oauthRedirectToPath } from '@urganize/native-bridge';
 import { runSignOutResets } from '@/lib/sign-out-resets';
 import { SCENE_CACHE_KEY } from '@/lib/scene-cache';
 import { clearChatCache } from '@/lib/chappi/conversation-cache-clear';
+import {
+  canSignInWithApple,
+  formatAppleName,
+  generateRawNonce,
+  linkAppleAccount,
+  sha256Hex,
+} from './apple-sign-in';
 import { resetSceneMemory } from '@/lib/scene-memory';
 import { resetCatalogIntent } from '@/lib/catalog-intent';
 import { clearDeferredFirstShare, clearFirstSession } from '@/lib/first-run-storage';
@@ -454,6 +461,9 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (nextPath?: string) => Promise<void>;
+  /** Resolves true when signed in (the page is then navigating on), false
+   * when the person closed Apple's sheet. */
+  loginWithApple: (nextPath?: string) => Promise<boolean>;
   signup: (
     email: string,
     password: string,
@@ -805,6 +815,60 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (error) throw error;
+        } catch (error) {
+          const errorMessage = handleSupabaseError(error);
+          set({ isLoading: false, error: errorMessage });
+          throw new Error(errorMessage);
+        }
+      },
+
+      // Sign in with Apple (Apple rule 4.8). Inside the iPhone app only: the
+      // shell shows Apple's own sheet and hands back an identity token, which
+      // Supabase verifies against the raw nonce kept here. Then it joins the
+      // same path every other sign-in takes, /auth/callback, which creates the
+      // profile and decides where to land.
+      loginWithApple: async (nextPath = '/dashboard') => {
+        try {
+          if (!isNativePlatform() || !canSignInWithApple()) {
+            throw new Error('Sign in with Apple is only available in the iPhone app.');
+          }
+          set({ isLoading: true, error: null });
+
+          const rawNonce = generateRawNonce();
+          const hashedNonce = await sha256Hex(rawNonce);
+          const result = await nativeRequest(
+            'appleSignIn',
+            { hashedNonce },
+            { timeoutMs: 600_000 }
+          );
+          if (result.outcome === 'cancelled') {
+            set({ isLoading: false });
+            return false;
+          }
+
+          const { data, error } = await supabase.auth.signInWithIdToken({
+            provider: 'apple',
+            token: result.identityToken,
+            nonce: rawNonce,
+          });
+          if (error) throw error;
+
+          // Apple gives the name only on the very first sign-in, so it is saved
+          // now; /auth/callback builds the profile from this. Best effort: a
+          // missing name falls back to the email, it never blocks sign-in.
+          const fullName = formatAppleName(result);
+          if (fullName) {
+            await supabase.auth
+              .updateUser({ data: { full_name: fullName, name: fullName } })
+              .catch(() => undefined);
+          }
+          if (result.authorizationCode && data.session?.access_token) {
+            void linkAppleAccount(data.session.access_token, result.authorizationCode);
+          }
+
+          const nextQuery = nextPath ? `?next=${encodeURIComponent(nextPath)}` : '';
+          window.location.href = `/auth/callback${nextQuery}`;
+          return true;
         } catch (error) {
           const errorMessage = handleSupabaseError(error);
           set({ isLoading: false, error: errorMessage });
