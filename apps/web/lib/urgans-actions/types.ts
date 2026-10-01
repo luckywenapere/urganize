@@ -19,6 +19,7 @@
 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { PricingTierId } from '@urganize/pricing';
+import type { UsageCall } from '../credits/pricing';
 
 /**
  * What an action can act on. 'press_kit' is the second, added when the press
@@ -81,6 +82,9 @@ export type UrgansActionRunOutcome<Output> =
       model: string | null;
       tokensIn: number | null;
       tokensOut: number | null;
+      /** Every model call the run made, for credits and for the stored usage
+       *  summary. Absent for an action that made none. */
+      usageCalls?: UsageCall[];
     }
   | { ok: false; status: number; error: string };
 

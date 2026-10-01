@@ -33,6 +33,8 @@ import { SectionDraftCard } from '@/components/press-kits/SectionDraftCard';
 import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
 import { applyRunAction, discardRunAction } from '@/lib/urgans-actions/client';
 import { isDraftableSection } from '@/lib/press-kit-draft';
+import { isCreditsEnabled } from '@/lib/credits/config';
+import { embeddedEstimateLine } from '@/lib/credits/copy';
 import { supabase } from '@/lib/supabase/client';
 import { PressKitInterviewModal } from '@/components/press-kits/PressKitInterviewModal';
 import { PhotoGrid } from '@/components/press-kits/PhotoGrid';
@@ -673,6 +675,9 @@ export default function PressKitPageClient() {
                         )}
                         {draftBusy ? 'UrgAns is writing' : 'Ask UrgAns to write this'}
                       </button>
+                      {isCreditsEnabled() ? (
+                        <p className="mt-2 text-xs text-content-tertiary">{embeddedEstimateLine('presskit.draft_section')}</p>
+                      ) : null}
                       {draftError ? (
                         <p role="alert" className="mt-2 text-sm text-status-error">{draftError}</p>
                       ) : null}

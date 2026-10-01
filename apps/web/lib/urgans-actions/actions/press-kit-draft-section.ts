@@ -1,4 +1,4 @@
-import type { AiUsage } from '@/lib/ai/provider';
+import { createUsageCollector, sumTokens } from '@/lib/credits/embedded';
 import { isAiConfigured } from '@/lib/ai/provider';
 import { generateRoutedStructuredOutput } from '@/lib/ai/routed';
 import { legacyModelFor, summarizeTrace, type RoutingTrace } from '@/lib/ai/model-router';
@@ -139,7 +139,8 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
     const context = buildDraftContext(text(asRow(artistResult.data).name), sections);
     const notes = text(input?.notes).slice(0, MAX_NOTES_LENGTH);
 
-    let usage: AiUsage | null = null;
+    // Every model call the run makes, retries and hops included (credits/embedded.ts).
+    const collector = createUsageCollector(legacyModelFor('press_kit') ?? null);
     let routed: RoutingTrace | null = null;
     let content: PressKitSectionContent;
     try {
@@ -157,9 +158,7 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
         // the request to another. Without one, the provider's defaults (90s a
         // try, three tries) put no limit on how long a second model could take.
         deadlineMs: Date.now() + DRAFT_DEADLINE_MS,
-        onUsage: (reported) => {
-          usage = reported;
-        },
+        onUsage: collector.onUsage,
         onTrace: (trace) => {
           routed = trace;
         },
@@ -188,8 +187,9 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
       // The model that ANSWERED: the last one the router called, or, with the
       // router off, the one this action has always named.
       model: trace?.models[trace.models.length - 1] ?? legacyModelFor('press_kit') ?? null,
-      tokensIn: usage ? (usage as AiUsage).promptTokens : null,
-      tokensOut: usage ? (usage as AiUsage).completionTokens : null,
+      tokensIn: sumTokens(collector.calls.map((call) => call.promptTokens)),
+      tokensOut: sumTokens(collector.calls.map((call) => call.completionTokens)),
+      usageCalls: collector.calls,
     };
   },
 

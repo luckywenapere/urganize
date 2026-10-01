@@ -1,4 +1,5 @@
 import type { CreditAccount } from './allowance';
+import { EMBEDDED_ESTIMATE_CREDITS, EMBEDDED_HOLD_CREDITS, embeddedEstimateCredits } from './embedded';
 
 /**
  * What a person reads about their credits. One module so the chat's refusal, the
@@ -46,6 +47,28 @@ function whatNext({ account, nextGrantAt }: NoticeInput, purchasable: boolean): 
 export function outOfCreditsNotice(input: NoticeInput, purchasable: boolean = CREDITS_PURCHASABLE): string {
   const next = whatNext(input, purchasable);
   return `You are out of UrgAns credits. Quick commands still work.${next ? ` ${next}` : ''}`;
+}
+
+/**
+ * Said BEFORE an embedded action runs: what it will cost, so nobody is surprised.
+ * An action with its own estimate says "about N"; one without (the press-kit draft)
+ * says "up to" the hold, which is the most it can cost.
+ */
+export function embeddedEstimateLine(actionId: string): string {
+  const credits = embeddedEstimateCredits(actionId);
+  return actionId in EMBEDDED_ESTIMATE_CREDITS
+    ? `This uses about ${credits} UrgAns credits.`
+    : `This uses up to ${EMBEDDED_HOLD_CREDITS} UrgAns credits.`;
+}
+
+/** Said when an embedded action (the planner, a press-kit draft) cannot start: the hold is more than the balance. */
+export function embeddedRefusalNotice(
+  input: NoticeInput & { needed: number; left: number },
+  purchasable: boolean = CREDITS_PURCHASABLE
+): string {
+  const left = Math.max(0, Math.floor(input.left));
+  const next = whatNext(input, purchasable);
+  return `This needs up to ${input.needed} UrgAns credits and you have ${left}.${next ? ` ${next}` : ''}`;
 }
 
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;

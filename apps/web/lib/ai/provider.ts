@@ -9,6 +9,11 @@ export type AiMessage = {
 export type AiUsage = {
   promptTokens: number | null;
   completionTokens: number | null;
+  /** The part of the prompt the provider served from its cache. Present only on
+   *  what requestAiGateway reports, and null when the gateway did not say. */
+  cachedTokens?: number | null;
+  /** The model that answered this call, as sent. Same provenance as above. */
+  model?: string | null;
 };
 
 /**
@@ -460,7 +465,7 @@ const requestAiGateway = async ({
     // producing whatever it returned, even when that turns out to be nothing
     // usable.
     const usage = extractAiUsage(payload);
-    if (usage && onUsage) onUsage(usage);
+    if (usage && onUsage) onUsage({ ...usage, cachedTokens: extractCachedTokens(payload), model: resolvedModel });
     const content = extractMessageContent(payload);
     if (!content) {
       throw new Error('Model returned empty content');

@@ -73,7 +73,7 @@ describe('the ledger is append-only', () => {
 });
 
 describe('the money maths is pure', () => {
-  const pure = ['pricing', 'allowance', 'model-prices', 'copy', 'config'];
+  const pure = ['pricing', 'allowance', 'model-prices', 'copy', 'config', 'embedded', 'packs'];
 
   it('imports only its own siblings', () => {
     for (const name of pure) {
@@ -127,6 +127,46 @@ describe('only the chat route charges, and only after the confirmation branch', 
   it('keeps the old ceiling for the flag-off path', () => {
     expect(route).toMatch(/!creditsOn\s*&&/);
     expect(route).toMatch(/checkUrgansAllowance\(/);
+  });
+});
+
+describe('every door onto an embedded action is metered, and only after it succeeded', () => {
+  const doors = ['lib/urgans-actions/server.ts', 'app/api/releases/[releaseId]/plan/route.ts'];
+
+  it('is the only place outside the credits module that holds or settles a run', () => {
+    const callers = [...sources]
+      .filter(([file, source]) => !file.startsWith('lib/credits/') && /\b(beginEmbeddedRun|settleEmbeddedRun)\s*\(/.test(source))
+      .map(([file]) => file)
+      .sort();
+    expect(callers).toEqual([...doors].sort());
+  });
+
+  it('holds before the run and settles after it, in both doors', () => {
+    const run: Record<string, string> = {
+      'lib/urgans-actions/server.ts': 'action.execute(',
+      'app/api/releases/[releaseId]/plan/route.ts': 'createReleasePlan(',
+    };
+    for (const door of doors) {
+      const source = sources.get(door) ?? '';
+      const ran = source.indexOf(run[door]);
+      expect(ran, door).toBeGreaterThan(0);
+      expect(source.indexOf('beginEmbeddedRun('), door).toBeGreaterThan(0);
+      expect(source.indexOf('beginEmbeddedRun('), door).toBeLessThan(ran);
+      expect(source.indexOf('settleEmbeddedRun('), door).toBeGreaterThan(ran);
+    }
+  });
+
+  it('refuses with 429 and never 402, which the browser turns into a redirect to the paywall', () => {
+    for (const door of doors) {
+      const source = sources.get(door) ?? '';
+      const refusal = source.slice(source.indexOf('gate.metered && !gate.ok'));
+      expect(refusal.slice(0, 300), door).toMatch(/429/);
+      expect(refusal.slice(0, 300), door).not.toMatch(/402/);
+    }
+  });
+
+  it('keeps the monthly action meter out of it, as for any embedded action', () => {
+    expect(sources.get('lib/credits/embedded-server.ts')).not.toMatch(/urgans_action'/);
   });
 });
 

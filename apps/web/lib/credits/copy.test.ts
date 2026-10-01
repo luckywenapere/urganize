@@ -4,6 +4,8 @@ import {
   CREDITS_PURCHASABLE,
   creditsLeftLine,
   creditsNextLine,
+  embeddedEstimateLine,
+  embeddedRefusalNotice,
   formatGrantDay,
   isLowOnCredits,
   outOfCreditsNotice,
@@ -120,5 +122,40 @@ describe('isLowOnCredits', () => {
   it('is on when the balance is empty or overdrawn', () => {
     expect(isLowOnCredits(0, 660)).toBe(true);
     expect(isLowOnCredits(-12, 660)).toBe(true);
+  });
+});
+
+describe('the estimate shown before an embedded action runs', () => {
+  it('says "about 12" for the planner, which has an estimate', () => {
+    expect(embeddedEstimateLine('release.draft_plan')).toBe('This uses about 12 UrgAns credits.');
+  });
+
+  it('says "up to 25" for the press-kit draft, which has none yet, because that is the most it can cost', () => {
+    expect(embeddedEstimateLine('presskit.draft_section')).toBe('This uses up to 25 UrgAns credits.');
+  });
+
+  it('keeps to the house rules, and says nothing about buying', () => {
+    for (const line of [embeddedEstimateLine('release.draft_plan'), embeddedEstimateLine('x')]) {
+      expect(line, line).not.toMatch(/—|–|workspace|\b(buy|purchase|top up)\b/i);
+    }
+  });
+});
+
+describe('the refusal when a run cannot start', () => {
+  const input = { account: 'subscriber', nextGrantAt: NEXT, needed: 25, left: 7 } as const;
+
+  it('says what it needs and what the team has, and when the next credits arrive', () => {
+    const line = embeddedRefusalNotice(input);
+    expect(line).toBe('This needs up to 25 UrgAns credits and you have 7. Your next monthly credits arrive on 12 November.');
+  });
+
+  it('never shows a negative balance, and promises a date only to a subscriber', () => {
+    expect(embeddedRefusalNotice({ ...input, left: -9 })).toContain('you have 0');
+    expect(embeddedRefusalNotice({ account: 'credits_only', nextGrantAt: null, needed: 25, left: 3 })).not.toMatch(/arrive|November/);
+  });
+
+  it('only mentions buying when purchasing exists', () => {
+    expect(embeddedRefusalNotice(input)).not.toMatch(/buy/i);
+    expect(embeddedRefusalNotice(input, true)).toMatch(/buy more credits/i);
   });
 });

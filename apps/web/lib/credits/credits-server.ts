@@ -269,6 +269,9 @@ export type SettleInput = {
   calls: readonly UsageCall[];
   /** The balances the turn started with, to split the charge. Read again when absent. */
   balances?: SourceBalances | null;
+  /** Extra facts written onto every row, for a charge that is not a chat turn
+   *  (an embedded action says which one, and whether it was capped). */
+  context?: Record<string, unknown>;
 };
 
 /**
@@ -292,6 +295,7 @@ export async function settleTurn(client: SupabaseClient, input: SettleInput): Pr
       tokens_cached: sum(input.calls.map((call) => call.cachedTokens)),
       assumed: input.charge.assumed,
       charge_credits: input.charge.credits,
+      ...(input.context ?? {}),
     };
 
     // The provider cost belongs to the turn, not to any one source, so each row
