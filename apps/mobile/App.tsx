@@ -34,11 +34,13 @@ import {
 } from '@urganize/native-bridge';
 import { createNativeBridge } from './src/bridge';
 import { appleSignIn } from './src/apple';
+import { LockScreen } from './src/LockScreen';
 import { INK, PAPER, OfflineScreen } from './src/OfflineScreen';
 import { getPushPermission, getPushToken, requestPushPermission, watchPush } from './src/push';
 import { shareFile, shareText } from './src/share';
 import { finishShare, readSharedChunk, registerShare } from './src/shareIntent';
 import { useShareIntent } from 'expo-share-intent';
+import { useAppLock } from './src/useAppLock';
 
 const APP_URL = 'https://team.urganize.app';
 const SHELL_VERSION = Constants.expoConfig?.version ?? 'unknown';
@@ -98,6 +100,8 @@ export default function App() {
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
   const wasReachableRef = useRef(network.isInternetReachable);
 
+  const lock = useAppLock();
+
   const hideSplash = useCallback(() => {
     if (splashHiddenRef.current) return;
     splashHiddenRef.current = true;
@@ -126,6 +130,8 @@ export default function App() {
             return { outcome: 'cancelled' };
           },
           appleSignIn: async (payload) => appleSignIn(payload),
+          'lock.status': async () => lock.status(),
+          'lock.set': async ({ enabled }) => lock.change(enabled),
           'push.permission': async () => ({ permission: await getPushPermission() }),
           'push.request': async () => ({ permission: await requestPushPermission() }),
           'push.register': async () => ({ token: await getPushToken() }),
@@ -301,6 +307,9 @@ export default function App() {
           </SafeAreaView>
         ) : null}
       </SafeAreaView>
+      {/* Over everything, status bar included. Shown only when the person turned
+          the lock on in Settings (see src/useAppLock.ts). */}
+      {lock.showCover ? <LockScreen locked={lock.locked} onUnlock={() => void lock.unlock()} /> : null}
     </SafeAreaProvider>
   );
 }

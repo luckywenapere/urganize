@@ -141,6 +141,11 @@ const config: ExpoConfig = {
       },
     ],
     'expo-apple-authentication',
+    [
+      'expo-local-authentication',
+      { faceIDPermission: 'Urganize uses Face ID to unlock the app when you turn on the app lock.' },
+    ],
+    'expo-secure-store',
     'expo-updates',
     '@react-native-firebase/app',
     [

@@ -8,6 +8,21 @@ Status key: **BUILT** (exists today), **GAP** (not built, work to do), **YOU** (
 
 ---
 
+## Progress (updated 2026-10-01)
+
+| Item | State |
+|---|---|
+| 3. Payments on iOS | DONE in code. No purchase link, price or upgrade prompt in the iPhone app. A guard test blocks new ones. |
+| 2. AI consent | DONE in code, off until `NEXT_PUBLIC_FEATURE_AI_CONSENT=true`. Needs `ai_consent_at` migration applied first. |
+| 1. Sign in with Apple | DONE in code. Needs the `apple_sign_in_tokens` migration, Apple keys, Supabase provider and 4 env vars (see section 1). Untested on a real iPhone. |
+| 5. Housekeeping (repo) | DONE: iPad off, camera and photo permission text, encryption answer was already set, privacy page and subprocessors updated, unfinished options hidden in the iPhone app, App Store Connect guide written (`docs/mobile/app-store-connect.md`). |
+| 4. Face ID / passcode lock | DONE in code (shell lock screen, Settings > Security row). Untested on a real phone. |
+| 4. Native photo picker | Covered by the phone's own picker (camera and photo text added). No extra code needed unless review asks. |
+| 4. Native tab bar | Held back, as planned. |
+| Founder steps (Apple account, keys, Firebase, Supabase, demo account, screenshots) | Not started. |
+
+---
+
 ## 0. What already exists (do not redo)
 
 | Item | State |

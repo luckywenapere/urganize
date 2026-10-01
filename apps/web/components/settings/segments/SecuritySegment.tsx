@@ -2,6 +2,7 @@
 
 import { memo } from 'react';
 import { DataExportSection } from '../DataExportSection';
+import { AppLockSection } from '../AppLockSection';
 import { DeleteAccountSection } from '../DeleteAccountSection';
 import { LeaveTeamSection } from '../LeaveTeamSection';
 import { SecuritySection } from '../SecuritySection';
@@ -25,6 +26,8 @@ function SecuritySegmentView() {
     <div>
       <SecuritySection />
       <DataExportSection />
+      {/* Phone app only; renders nothing in a browser. */}
+      <AppLockSection />
       <div className="mt-6 border border-status-error/40 bg-status-error/5 p-4 sm:p-5">
         <h2 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-status-error">
           Danger zone
