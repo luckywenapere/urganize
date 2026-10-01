@@ -33,6 +33,7 @@ import {
   type Appearance,
 } from '@urganize/native-bridge';
 import { createNativeBridge } from './src/bridge';
+import { appleSignIn } from './src/apple';
 import { INK, PAPER, OfflineScreen } from './src/OfflineScreen';
 import { getPushPermission, getPushToken, requestPushPermission, watchPush } from './src/push';
 import { shareFile, shareText } from './src/share';
@@ -124,6 +125,7 @@ export default function App() {
             }
             return { outcome: 'cancelled' };
           },
+          appleSignIn: async (payload) => appleSignIn(payload),
           'push.permission': async () => ({ permission: await getPushPermission() }),
           'push.request': async () => ({ permission: await requestPushPermission() }),
           'push.register': async () => ({ token: await getPushToken() }),

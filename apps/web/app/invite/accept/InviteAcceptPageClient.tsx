@@ -27,6 +27,7 @@
 // the redirect and read-and-cleared on return. Same pattern as the
 // /onboarding Google path.
 
+import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -589,6 +590,11 @@ export default function InviteAcceptPageClient({
                 {/* Unauthed sub-flow: Google or email/password signup. */}
                 {!signedIn ? (
                   <div className="space-y-4">
+                    <AppleSignInButton
+                      nextPath={`/invite/accept?token=${encodeURIComponent(token)}`}
+                      disabled={isGoogleRedirecting || isSubmitting}
+                      onError={(message: string) => setError(message)}
+                    />
                     <button
                       type="button"
                       onClick={() => void handleGoogleSignup()}

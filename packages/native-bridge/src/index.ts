@@ -38,6 +38,7 @@ export type BridgeRequestType =
   | 'ready'
   | 'openExternal'
   | 'oauth'
+  | 'appleSignIn'
   | 'push.permission'
   | 'push.request'
   | 'push.register'
@@ -51,6 +52,7 @@ export const BRIDGE_REQUEST_TYPES: readonly BridgeRequestType[] = [
   'ready',
   'openExternal',
   'oauth',
+  'appleSignIn',
   'push.permission',
   'push.request',
   'push.register',
@@ -78,6 +80,28 @@ export interface BridgeRequestMap {
   oauth: {
     payload: { url: string; redirectPrefix: string };
     result: { outcome: 'success'; redirectUrl: string } | { outcome: 'cancelled' };
+  };
+  /**
+   * The iPhone's own Sign in with Apple sheet (Apple rule 4.8: an app that
+   * offers Google must offer this too). The page makes the random nonce and
+   * sends only its SHA-256 here; the identity token that comes back is bound to
+   * it, and Supabase checks it against the raw nonce the page kept. Apple gives
+   * the person's name ONLY the first time they ever sign in, so it travels back
+   * here too. iOS only: the Android shell answers with an error.
+   */
+  appleSignIn: {
+    payload: { hashedNonce: string };
+    result:
+      | {
+          outcome: 'success';
+          identityToken: string;
+          /** One-use code the server exchanges so the sign-in can be revoked
+           * when the account is deleted. Null if Apple did not send one. */
+          authorizationCode: string | null;
+          givenName: string | null;
+          familyName: string | null;
+        }
+      | { outcome: 'cancelled' };
   };
   'push.permission': { payload: Record<string, never>; result: { permission: PushPermission } };
   'push.request': { payload: Record<string, never>; result: { permission: PushPermission } };

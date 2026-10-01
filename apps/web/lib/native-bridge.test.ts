@@ -462,6 +462,7 @@ describe('createShellDispatcher (the shell side)', () => {
     return {
       openExternal: async () => ({ ok: true }),
       oauth: async () => ({ outcome: 'cancelled' }),
+      appleSignIn: async () => ({ outcome: 'cancelled' }),
       'push.permission': async () => ({ permission: 'granted' }),
       'push.request': async () => ({ permission: 'granted' }),
       'push.register': async () => ({ token: 'fcm-token' }),

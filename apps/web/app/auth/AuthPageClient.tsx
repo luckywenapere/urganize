@@ -1,5 +1,6 @@
 'use client';
 
+import { AppleSignInButton } from '@/components/auth/AppleSignInButton';
 import { describeCallbackError } from '@/lib/auth-callback-error';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -543,6 +544,13 @@ export default function AuthPage() {
                   />
                 ) : (
                   <>
+                    {/* Apple: only inside the iPhone app, above Google as Apple asks. */}
+                    <AppleSignInButton
+                      nextPath={nextPath}
+                      disabled={busy}
+                      className={`${googleButtonClass} mb-3`}
+                      onError={() => setError('Sign in with Apple failed. Please try again.')}
+                    />
                     <button type="button" onClick={handleGoogleLogin} disabled={busy} className={googleButtonClass}>
                       {isGoogleLoading ? (
                         <>

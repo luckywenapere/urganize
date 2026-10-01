@@ -53,7 +53,12 @@ const config: ExpoConfig = {
   extra: EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : undefined,
   ios: {
     bundleIdentifier: 'com.urganize.app',
-    supportsTablet: true,
+    // Sign in with Apple (Apple rule 4.8, since the site offers Google): turns on
+    // the capability on the App ID and in the build's entitlements.
+    usesAppleSignIn: true,
+    // Phone only for now. Saying 'true' means Apple expects iPad screenshots and
+    // an iPad layout that has been tested, and an iPad bug is a rejection.
+    supportsTablet: false,
     googleServicesFile: hasIosFirebase ? IOS_FIREBASE_CONFIG : undefined,
     entitlements: { 'aps-environment': 'production' },
     infoPlist: {
@@ -129,6 +134,7 @@ const config: ExpoConfig = {
         androidMultiIntentFilters: ['*/*'],
       },
     ],
+    'expo-apple-authentication',
     'expo-updates',
     '@react-native-firebase/app',
     [
