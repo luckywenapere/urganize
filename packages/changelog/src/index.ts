@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.55.0",
+    date: "October 1, 2026",
+    highlights: [
+      "UrgAns now uses credits. Every team starts with 50 free credits to try it.",
+      "Credits never run out on their own. What you don't use stays with you.",
+      "You see an estimate before UrgAns drafts a plan or a press kit section.",
+    ],
+  },
+  {
     version: "1.54.0",
     date: "September 30, 2026",
     highlights: [
