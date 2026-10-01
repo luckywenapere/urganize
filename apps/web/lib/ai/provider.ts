@@ -9,6 +9,11 @@ export type AiMessage = {
 export type AiUsage = {
   promptTokens: number | null;
   completionTokens: number | null;
+  /** The part of the prompt the provider served from its cache. Present only on
+   *  what requestAiGateway reports, and null when the gateway did not say. */
+  cachedTokens?: number | null;
+  /** The model that answered this call, as sent. Same provenance as above. */
+  model?: string | null;
 };
 
 /**
@@ -47,6 +52,24 @@ export function extractAiUsage(payload: Record<string, unknown>): AiUsage | null
   }
 
   return null;
+}
+
+/**
+ * The part of a call's prompt the provider served from its cache, which it
+ * bills at a fraction of the input price (`usage.prompt_tokens_details.
+ * cached_tokens` in the OpenAI shape). Null when it is not reported, which is
+ * not the same as zero: a caller pricing the call treats null as nothing cached,
+ * the dearer way. Kept apart from extractAiUsage so that type, and everything
+ * that stores it, stays as it was.
+ */
+export function extractCachedTokens(payload: Record<string, unknown>): number | null {
+  const usage = payload.usage && typeof payload.usage === 'object' ? (payload.usage as Record<string, unknown>) : null;
+  const details =
+    usage?.prompt_tokens_details && typeof usage.prompt_tokens_details === 'object'
+      ? (usage.prompt_tokens_details as Record<string, unknown>)
+      : null;
+  const cached = details?.cached_tokens;
+  return typeof cached === 'number' && Number.isFinite(cached) && cached >= 0 ? cached : null;
 }
 
 /**
@@ -442,7 +465,7 @@ const requestAiGateway = async ({
     // producing whatever it returned, even when that turns out to be nothing
     // usable.
     const usage = extractAiUsage(payload);
-    if (usage && onUsage) onUsage(usage);
+    if (usage && onUsage) onUsage({ ...usage, cachedTokens: extractCachedTokens(payload), model: resolvedModel });
     const content = extractMessageContent(payload);
     if (!content) {
       throw new Error('Model returned empty content');

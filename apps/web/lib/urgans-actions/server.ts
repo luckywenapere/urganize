@@ -18,6 +18,7 @@
 //    and writes 'applied' second, unconditionally, would recreate the exact
 //    race decideApplyClaim exists to close.
 
+import { randomUUID } from 'node:crypto';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import type { PricingTierId } from '@urganize/pricing';
@@ -34,6 +35,9 @@ import {
 } from '../release-access-server';
 import { ensurePressKitAccess } from '../press-kit-access-server';
 import { checkEmbeddedActionsGuard } from './guard-server';
+import { getTeamAccessForUser } from '../team-billing-server';
+import { beginEmbeddedRun, settleEmbeddedRun } from '../credits/embedded-server';
+import { embeddedCharge, embeddedUsageSummary } from '../credits/embedded';
 import { decideApplyClaim, type UrgansActionRowForClaim } from './claim';
 import { getUrgansAction } from './registry';
 import type { UrgansActionAccessLevel, UrgansActionObjectType } from './types';
@@ -227,7 +231,7 @@ export type RunActionResult =
       error: string;
       /** Set only on the entitlement refusal, so the client can render the
        *  locked sheet rather than a generic error. */
-      reason?: 'plan_required';
+      reason?: 'plan_required' | 'out_of_credits';
       minimumPlan?: PricingTierId;
     };
 
@@ -281,6 +285,20 @@ export async function runUrgansAction(
     }
   }
 
+  // Credits, when switched on: the hold. The run starts only if the balance
+  // covers it (embedded.ts), and is charged only if it succeeds, so a refusal
+  // here costs nothing. 429 and not 402, which the browser turns into a redirect
+  // to the paywall. Which team pays: the OWNER's, the same as the entitlement.
+  const ownerTeam = await getTeamAccessForUser(scope.ownerUserId, null);
+  const gate = await beginEmbeddedRun(admin, {
+    workspaceId: ownerTeam.primaryWorkspaceId ?? scope.workspaceId,
+    ownerUserId: scope.ownerUserId,
+    team: ownerTeam,
+  });
+  if (gate.metered && !gate.ok) {
+    return { ok: false, status: 429, error: gate.message, reason: 'out_of_credits' };
+  }
+
   const outcome = await action.execute({
     admin,
     objectId: params.objectId,
@@ -317,7 +335,15 @@ export async function runUrgansAction(
       object_type: scope.objectType,
       object_id: params.objectId,
       status: outcome.ok ? (oneShot ? 'applied' : 'drafted') : 'failed',
-      input_summary: outcome.ok ? outcome.inputSummary : {},
+      // What the run used goes on EVERY run (credits on or off), so flat prices
+      // can be decided later from real runs: model, input, cached and output
+      // tokens per call, and what was charged.
+      input_summary: outcome.ok
+        ? {
+            ...outcome.inputSummary,
+            usage: embeddedUsageSummary(outcome.usageCalls ?? [], embeddedCharge(outcome.usageCalls ?? [])),
+          }
+        : {},
       output: outcome.ok ? outcome.output : null,
       applied_result: oneShot ? (outcome as { output: unknown }).output : null,
       applied_at: oneShot ? new Date().toISOString() : null,
@@ -338,6 +364,15 @@ export async function runUrgansAction(
       // would be a worse failure than a thin audit trail. An empty actionId
       // means apply/discard cannot target THIS run; the legacy plan routes
       // (PUT/DELETE /plan) still reach the same underlying draft directly.
+      await settleEmbeddedRun(admin, {
+        gate,
+        workspaceId: ownerTeam.primaryWorkspaceId ?? scope.workspaceId,
+        ownerUserId: scope.ownerUserId,
+        actorUserId: params.actor.id,
+        requestId: `embedded:${randomUUID()}`,
+        actionId: action.id,
+        calls: outcome.usageCalls ?? [],
+      });
       return { ok: true, actionId: '', output: outcome.output };
     }
     return { ok: false, status: outcome.status, error: outcome.error };
@@ -348,6 +383,17 @@ export async function runUrgansAction(
   if (!outcome.ok) {
     return { ok: false, status: outcome.status, error: outcome.error };
   }
+
+  // Charged AFTER success, once (the run's own id is the dedupe key).
+  await settleEmbeddedRun(admin, {
+    gate,
+    workspaceId: ownerTeam.primaryWorkspaceId ?? scope.workspaceId,
+    ownerUserId: scope.ownerUserId,
+    actorUserId: params.actor.id,
+    requestId: `embedded:${actionId}`,
+    actionId: action.id,
+    calls: outcome.usageCalls ?? [],
+  });
 
   if (scope.workspaceId) {
     // Billed AFTER success — the chat-ceiling precedent

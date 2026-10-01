@@ -36,7 +36,15 @@ import {
   type RoutingTrace,
 } from '@/lib/ai/model-router';
 import { logRoutingTrace } from '@/lib/ai/routing-log';
-import { effortForTools, extractAiUsage, supportsReasoningEffort, type AiUsage, type ReasoningEffort } from '@/lib/ai/provider';
+import {
+  effortForTools,
+  extractAiUsage,
+  extractCachedTokens,
+  supportsReasoningEffort,
+  type AiUsage,
+  type ReasoningEffort,
+} from '@/lib/ai/provider';
+import type { UsageCall } from '@/lib/credits/pricing';
 import type {
   ChappiClientAction,
   ChappiMessage,
@@ -105,7 +113,7 @@ type OpenAiChoice = {
   finish_reason?: string;
 };
 
-type ChatCompletion = { choice: OpenAiChoice; usage: AiUsage | null };
+type ChatCompletion = { choice: OpenAiChoice; usage: AiUsage | null; cachedTokens: number | null };
 
 /**
  * Tool arguments as the model sent them. `valid` is false when a non-empty
@@ -228,7 +236,11 @@ async function requestChatCompletion(params: {
       | null;
     const choice = payload?.choices?.[0];
     if (!choice) throw new Error('Chappi gateway returned no choices');
-    return { choice, usage: payload ? extractAiUsage(payload) : null };
+    return {
+      choice,
+      usage: payload ? extractAiUsage(payload) : null,
+      cachedTokens: payload ? extractCachedTokens(payload) : null,
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -333,6 +345,12 @@ export type ChatRouting = {
 };
 
 export type ChappiAgentResult = {
+  /**
+   * Every gateway call this turn made, with the model that answered and the
+   * tokens it reported. What a credits charge is worked out from; empty when
+   * nothing was called. Collected whether or not the router is on.
+   */
+  usageCalls: UsageCall[];
   reply: string;
   clientActions: ChappiClientAction[];
   pendingConfirmation: ChappiPendingConfirmation | null;
@@ -385,6 +403,7 @@ export async function runChappiAgent(params: {
   ];
 
   const clientActions: ChappiClientAction[] = [];
+  const usageCalls: UsageCall[] = [];
   let finalText = '';
   // At most one card per turn: the client has a single slot for it, and two
   // competing "are you sure?" asks would be incoherent.
@@ -445,6 +464,12 @@ export async function runChappiAgent(params: {
       }
 
       addTraceUsage(trace, completion.usage);
+      usageCalls.push({
+        model: settings.model,
+        promptTokens: completion.usage?.promptTokens ?? null,
+        completionTokens: completion.usage?.completionTokens ?? null,
+        cachedTokens: completion.cachedTokens,
+      });
       if (isUnusable?.(completion.choice) && hop(holder, { kind: 'bad_output' })) continue;
       return completion;
     }
@@ -607,7 +632,7 @@ export async function runChappiAgent(params: {
       ? `${finalText}\n\n${DEADLINE_NOTE}`
       : DEADLINE_MESSAGE
     : finalText || 'Done.';
-  return { reply, clientActions, pendingConfirmation, trace };
+  return { reply, clientActions, pendingConfirmation, trace, usageCalls };
 }
 
 /**

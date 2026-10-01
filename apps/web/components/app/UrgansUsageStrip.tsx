@@ -6,6 +6,8 @@ import { useAuthStore } from '@/lib/auth-store';
 import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
 import { isChappiEnabled } from '@/lib/chappi/config';
 import { supabase } from '@/lib/supabase/client';
+import { creditsLeftLine, creditsNextLine } from '@/lib/credits/copy';
+import type { CreditAccount } from '@/lib/credits/allowance';
 
 // The assistant-usage indicator. One calm line above the topbar once a team has
 // spent 80% of its monthly UrgAns actions, and nothing at all before that.
@@ -42,7 +44,12 @@ const CHAPPI_ENABLED = isChappiEnabled();
  *  and the request is one indexed count. */
 const CACHE_TTL_MS = 15 * 1000;
 
-type UsageSnapshot = { used: number; limit: number | null; approaching: boolean };
+type CreditsView = { total: number; account: CreditAccount; nextGrantAt: string | null; low: boolean };
+
+const isAccount = (value: unknown): value is CreditAccount =>
+  value === 'trial' || value === 'subscriber' || value === 'credits_only';
+
+type UsageSnapshot = { used: number; limit: number | null; approaching: boolean; credits?: CreditsView };
 
 type CacheEntry = { userId: string; snapshot: UsageSnapshot | null; fetchedAt: number };
 
@@ -66,10 +73,22 @@ async function fetchUsage(): Promise<UsageSnapshot | null> {
     const payload = (await response.json().catch(() => ({}))) as Partial<UsageSnapshot>;
     if (typeof payload.used !== 'number') return null;
 
+    const rawCredits = (payload as { credits?: Partial<CreditsView> }).credits;
+    const credits: CreditsView | undefined =
+      rawCredits && typeof rawCredits.total === 'number' && isAccount(rawCredits.account)
+        ? {
+            total: rawCredits.total,
+            account: rawCredits.account,
+            nextGrantAt: typeof rawCredits.nextGrantAt === 'string' ? rawCredits.nextGrantAt : null,
+            low: Boolean(rawCredits.low),
+          }
+        : undefined;
+
     return {
       used: payload.used,
       limit: typeof payload.limit === 'number' ? payload.limit : null,
       approaching: Boolean(payload.approaching),
+      ...(credits ? { credits } : {}),
     };
   } catch {
     // Fail quiet. Null means "we do not know", and nothing renders on null.
@@ -111,7 +130,9 @@ export function UrgansUsageStrip() {
       const fresh = cache && cache.userId === userId && Date.now() - cache.fetchedAt < CACHE_TTL_MS;
       const snapshot = fresh ? cache!.snapshot : await fetchUsage();
       if (!fresh) cache = { userId, snapshot, fetchedAt: Date.now() };
-      if (snapshot && snapshot.limit === null) noCeiling.current = true;
+      // A credit balance changes on every turn, so it never latches: only a team
+      // with neither a ceiling nor credits is done being asked.
+      if (snapshot && snapshot.limit === null && !snapshot.credits) noCeiling.current = true;
       if (!cancelled) setUsage(snapshot);
     })();
     return () => {
@@ -120,6 +141,29 @@ export function UrgansUsageStrip() {
   }, [isAuthLoading, isAuthenticated, userId, user?.role, turnCount]);
 
   if (!CHAPPI_ENABLED) return null;
+
+  // Credits replace the action count. Calm, like the line below: it says how many
+  // are left and, for a subscriber, when the next monthly credits arrive (credits
+  // never expire, so nothing "comes back"), and it stays quiet until they run low.
+  if (usage?.credits) {
+    if (!usage.credits.low) return null;
+    const credits = Math.max(0, usage.credits.total);
+    return (
+      <div className="flex items-center justify-center gap-3 border-b border-stroke-subtle bg-bg-surface px-4 py-2 text-center">
+        <p className="text-sm text-content-secondary">
+          <span className="font-medium text-content-primary">{creditsLeftLine(credits)}</span>{' '}
+          {creditsNextLine(credits, { account: usage.credits.account, nextGrantAt: usage.credits.nextGrantAt })}
+        </p>
+        <Link
+          href="/locked?intent=upgrade"
+          className="shrink-0 text-sm font-medium text-brand underline-offset-4 hover:underline"
+        >
+          See plans
+        </Link>
+      </div>
+    );
+  }
+
   if (!usage || usage.limit === null || !usage.approaching) return null;
 
   const left = Math.max(0, usage.limit - usage.used);

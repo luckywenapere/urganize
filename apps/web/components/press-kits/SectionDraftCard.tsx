@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Loader2, RotateCcw, Sparkles } from '@/components/icons';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
 import { DRAFT_ALLOWED_FIELDS } from '@/lib/press-kit-draft';
+import { isCreditsEnabled } from '@/lib/credits/config';
+import { embeddedEstimateLine } from '@/lib/credits/copy';
 
 /**
  * UrgAns proposes, a person accepts.
@@ -96,6 +98,10 @@ export function SectionDraftCard({
       ) : null}
 
       {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
+
+      {isCreditsEnabled() ? (
+        <p className="mt-3 text-xs text-content-tertiary">Another try: {embeddedEstimateLine('presskit.draft_section')}</p>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button

@@ -21,6 +21,8 @@ import {
 import { getTemplateStats } from '@/lib/release-templates/loader';
 import { suggestReleaseDate, type ReleasePlanIntake } from '@/lib/release-planning';
 import { createReleasePlan } from '@/lib/urgans-actions/client';
+import { isCreditsEnabled } from '@/lib/credits/config';
+import { embeddedEstimateLine } from '@/lib/credits/copy';
 import {
   EMPTY_PLANNER_INTAKE_DRAFT,
   clearPlannerIntakeDraft,
@@ -498,6 +500,7 @@ export function PlannerIntakeModal() {
 
           <p className="mt-3 text-center text-[11px] leading-5 text-content-tertiary sm:text-left">
             UrgAns builds the plan when you finish. You can change any activity after.
+            {isCreditsEnabled() ? ` ${embeddedEstimateLine('release.draft_plan')}` : ''}
           </p>
         </div>
       </div>

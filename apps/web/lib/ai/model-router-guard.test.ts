@@ -11,9 +11,12 @@ import { describe, expect, it } from 'vitest';
 // This scans the real source rather than asserting a fixed list, so a NEW file
 // that breaks a rule fails too. Modelled on lib/release-access-guard.test.ts.
 //
-//   1. A gateway model id is written in exactly three files: the ladder (the
-//      point of it), provider.ts (the gateway default with the router off) and
-//      planner-model.ts (the planner's default with the router off).
+//   1. A gateway model id is written in exactly four files: the ladder (the
+//      point of it), provider.ts (the gateway default with the router off),
+//      planner-model.ts (the planner's default with the router off) and
+//      credits/model-prices.ts (what each model costs, which is knowledge about
+//      a specific model; model-prices.test.ts fails if a ladder model has no
+//      price, so the two cannot drift).
 //   2. The provider's two generators are called from one place: routed.ts. A
 //      call site that reaches for them directly is a request the router cannot
 //      see, route or record.
@@ -104,15 +107,20 @@ describe('the scanner itself', () => {
   });
 });
 
-describe('a gateway model id is written in exactly three files', () => {
+const MODEL_ID_FILES = [
+  'lib/ai/model-ladder.ts',
+  'lib/ai/provider.ts',
+  'lib/ai/planner-model.ts',
+  'lib/credits/model-prices.ts',
+];
+
+describe('a gateway model id is written in exactly four files', () => {
   it('finds it nowhere else', () => {
-    expect(
-      offenders(MODEL_ID_LITERAL, ['lib/ai/model-ladder.ts', 'lib/ai/provider.ts', 'lib/ai/planner-model.ts'])
-    ).toEqual([]);
+    expect(offenders(MODEL_ID_LITERAL, MODEL_ID_FILES)).toEqual([]);
   });
 
-  it('still finds it in each of the three (so this rule is checking something)', () => {
-    for (const file of ['lib/ai/model-ladder.ts', 'lib/ai/provider.ts', 'lib/ai/planner-model.ts']) {
+  it('still finds it in each of the four (so this rule is checking something)', () => {
+    for (const file of MODEL_ID_FILES) {
       expect(sources.get(file)?.some((line) => MODEL_ID_LITERAL.test(line))).toBe(true);
     }
   });

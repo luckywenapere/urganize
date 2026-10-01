@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
@@ -15,6 +16,10 @@ import { parseReleasePlanIntake } from '@/lib/release-planning';
 import { PLANNER_DEADLINE_MS, createReleasePlan } from '@/lib/release-planning-actions-server';
 import { resolvePlannerReasoningEffort } from '@/lib/ai/planner-model';
 import { loadTeamForRouting } from '@/lib/ai/routing-team-server';
+import { resolvePlannerModel } from '@/lib/ai/planner-model';
+import { getTeamAccessForUser } from '@/lib/team-billing-server';
+import { beginEmbeddedRun, settleEmbeddedRun } from '@/lib/credits/embedded-server';
+import { createUsageCollector } from '@/lib/credits/embedded';
 
 /**
  * The rollout plan: build it (POST) or read back what was built (GET).
@@ -136,6 +141,23 @@ export async function POST(
 
   const { template, fallbackToSingle } = getPlannerTemplate(intake.release_type);
 
+  // Credits, when switched on. THIS ROUTE IS THE DOOR the chat assistant and the
+  // ungated fallback both use to build a plan, and the plan's model call is the
+  // expensive one, so it is metered here exactly as release.draft_plan is (hold
+  // before, real cost after, never above the hold; credits/embedded.ts). Without
+  // this a plan asked for in chat would be free. 429 and not 402, which the
+  // browser turns into a redirect to the paywall.
+  const ownerTeam = await getTeamAccessForUser(auth.user.id, auth.user.email);
+  const gate = await beginEmbeddedRun(adminClient, {
+    workspaceId: ownerTeam.primaryWorkspaceId,
+    ownerUserId: ownerTeam.ownerUserId,
+    team: ownerTeam,
+  });
+  if (gate.metered && !gate.ok) {
+    return NextResponse.json({ error: gate.message, code: 'out_of_credits' }, { status: 429 });
+  }
+  const collector = createUsageCollector(resolvePlannerModel() ?? null);
+
   const result = await createReleasePlan(adminClient, {
     release,
     actor: auth.user,
@@ -149,6 +171,7 @@ export async function POST(
     routingTeam: await loadTeamForRouting('planner', auth.user),
     reasoningEffort: resolvePlannerReasoningEffort(),
     deadlineMs: startedAt + PLANNER_DEADLINE_MS,
+    onUsage: collector.onUsage,
   });
 
   if (!result.ok) {
@@ -157,6 +180,17 @@ export async function POST(
       { status: result.status }
     );
   }
+
+  // Charged only now: a plan that could not be built costs nothing.
+  await settleEmbeddedRun(adminClient, {
+    gate,
+    workspaceId: ownerTeam.primaryWorkspaceId,
+    ownerUserId: ownerTeam.ownerUserId,
+    actorUserId: auth.user.id,
+    requestId: `embedded:${randomUUID()}`,
+    actionId: 'release.draft_plan',
+    calls: collector.calls,
+  });
 
   return NextResponse.json({ plan: result.plan }, { status: 201 });
 }

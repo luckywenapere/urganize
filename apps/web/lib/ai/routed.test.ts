@@ -386,7 +386,15 @@ describe('with the router on', () => {
     await generateRoutedPlainText({ surface: 'status', messages, maxRetries: 1, onUsage, onTrace: (t) => traces.push(t) });
 
     expect(onUsage).toHaveBeenCalledTimes(1);
-    expect(onUsage).toHaveBeenCalledWith({ promptTokens: 300, completionTokens: 40 });
+    // The provider layer also reports which model answered and how much of the prompt
+    // was cached (null: this response did not say), which is what the credits charge
+    // is worked out from.
+    expect(onUsage).toHaveBeenCalledWith({
+      promptTokens: 300,
+      completionTokens: 40,
+      cachedTokens: null,
+      model: expect.stringMatching(/^openai\//),
+    });
     expect(traces[0]).toMatchObject({ tokensIn: 300, tokensOut: 40 });
   });
 

@@ -32,7 +32,7 @@ export type UsageSnapshot = {
 
 /** Anchor the window on the owner's billing day. Only the DAY-OF-MONTH is used
  * — see lib/urgans-usage.ts for why walking back from `expires_at` is unsound. */
-async function readBillingAnchor(
+export async function readBillingAnchor(
   client: SupabaseClient,
   ownerUserId: string | null
 ): Promise<string | null> {

@@ -50,7 +50,7 @@ import { resolvePlannerModel, resolvePlannerReasoningEffort } from '../../ai/pla
 import { loadTeamForRouting } from '../../ai/routing-team-server';
 import { summarizeTrace, type RoutingTrace } from '../../ai/model-router';
 import { resolveReleaseTaskWorkspace } from '../../tasks-server';
-import type { AiUsage } from '../../ai/provider';
+import { createUsageCollector, sumTokens } from '../../credits/embedded';
 import type { WorkspaceMember } from '@/types/auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { UrgansActionDefinition } from '../types';
@@ -139,7 +139,9 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
 
     const { template, fallbackToSingle } = getPlannerTemplate(intake.release_type);
 
-    let usage: AiUsage | null = null;
+    // Every model call the run makes, retries and hops included: each is billed
+    // by the provider, so the credits charge sums them (credits/embedded.ts).
+    const collector = createUsageCollector(resolvePlannerModel() ?? null);
     let routed: RoutingTrace | null = null;
 
     const result = await createReleasePlan(admin, {
@@ -157,9 +159,7 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
       routingTeam: await loadTeamForRouting('planner', { id: ownerUserId, email: null }),
       reasoningEffort: resolvePlannerReasoningEffort(),
       deadlineMs: Date.now() + PLANNER_DEADLINE_MS,
-      onUsage: (reported) => {
-        usage = reported;
-      },
+      onUsage: collector.onUsage,
       onTrace: (trace) => {
         routed = trace;
       },
@@ -184,8 +184,9 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
       // The model that ANSWERED: the last one the router called, or, with the
       // router off, the one the planner has always used.
       model: trace?.models[trace.models.length - 1] ?? resolvePlannerModel() ?? null,
-      tokensIn: usage ? (usage as AiUsage).promptTokens : null,
-      tokensOut: usage ? (usage as AiUsage).completionTokens : null,
+      tokensIn: sumTokens(collector.calls.map((call) => call.promptTokens)),
+      tokensOut: sumTokens(collector.calls.map((call) => call.completionTokens)),
+      usageCalls: collector.calls,
     };
   },
 
