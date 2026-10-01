@@ -180,10 +180,6 @@ export const HELP_COPY = {
     label: 'Pick your plan',
     text: 'One price covers your whole team, paid in naira. Cancel any time in settings.',
   },
-  'wall.ios': {
-    label: 'Why pay on the web',
-    text: 'Apple does not allow payment inside the app. We send you a link to finish on the web.',
-  },
   'wall.talk': {
     label: 'Talk to us',
     text: 'Running a bigger roster, or want an invoice? We set it up by hand.',

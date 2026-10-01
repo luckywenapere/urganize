@@ -283,20 +283,13 @@ function LegacyLockedPage() {
               {isIOSNativeApp ? (
                 // Apple IAP policy: no linking to external payment for a
                 // digital subscription from inside a reviewed iOS app. Plan
-                // pricing and the Subscribe button never render here — only
-                // a pointer to manage billing on the web, opened in the
-                // system browser (see docs/mobile/expo-shell.md, "iOS: no payment links").
+                // pricing, the Subscribe button AND any pointer to pay
+                // elsewhere never render here: not even a plain link to the
+                // website (see docs/mobile/ios-submission-plan.md, section 3).
                 <div className="rounded-lg border border-stroke-default bg-bg-elevated p-4 text-sm text-content-secondary">
                   <p>
-                    Subscriptions are managed on the web. Visit{' '}
-                    <button
-                      type="button"
-                      onClick={() => openExternalUrl('https://team.urganize.app/locked')}
-                      className="underline text-content-primary hover:text-brand"
-                    >
-                      team.urganize.app
-                    </button>{' '}
-                    in your browser to subscribe, or start a free trial below.
+                    Your account doesn&rsquo;t have an active plan right now. If you
+                    haven&rsquo;t used your free trial yet, you can start it below.
                   </p>
                 </div>
               ) : (

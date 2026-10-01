@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { creditsLeftLine, creditsNextLine } from '@/lib/credits/copy';
 import { isCreditsPurchasable } from '@/lib/credits/config';
 import { useUrgansUsage } from './useUrgansUsage';
+import { usePurchasePromptsAllowed } from '@/lib/use-purchase-prompts';
 
 // The assistant-usage indicator. One calm line above the topbar once a team has
 // spent 80% of its monthly UrgAns actions, or once its credits run low, and
@@ -18,6 +19,7 @@ import { useUrgansUsage } from './useUrgansUsage';
 // surprise, which is the entire purpose).
 
 export function UrgansUsageStrip() {
+  const purchasePromptsAllowed = usePurchasePromptsAllowed();
   const usage = useUrgansUsage();
 
 
@@ -37,14 +39,16 @@ export function UrgansUsageStrip() {
           href="/dashboard/credits"
           className="shrink-0 text-sm font-medium text-content-secondary underline-offset-4 hover:underline"
         >
-          {isCreditsPurchasable() ? 'Buy credits' : 'History'}
+          {purchasePromptsAllowed && isCreditsPurchasable() ? 'Buy credits' : 'History'}
         </Link>
-        <Link
-          href="/locked?intent=upgrade&need=urgans_monthly_actions"
-          className="shrink-0 text-sm font-medium text-brand underline-offset-4 hover:underline"
-        >
-          See plans
-        </Link>
+        {purchasePromptsAllowed ? (
+          <Link
+            href="/locked?intent=upgrade&need=urgans_monthly_actions"
+            className="shrink-0 text-sm font-medium text-brand underline-offset-4 hover:underline"
+          >
+            See plans
+          </Link>
+        ) : null}
       </div>
     );
   }
@@ -66,12 +70,14 @@ export function UrgansUsageStrip() {
           ? 'Quick commands still work, and your actions reset on your billing day.'
           : 'They reset on your billing day.'}
       </p>
-      <Link
-        href="/locked?intent=upgrade&need=urgans_monthly_actions"
-        className="shrink-0 text-sm font-medium text-brand underline-offset-4 hover:underline"
-      >
-        See plans
-      </Link>
+      {purchasePromptsAllowed ? (
+        <Link
+          href="/locked?intent=upgrade&need=urgans_monthly_actions"
+          className="shrink-0 text-sm font-medium text-brand underline-offset-4 hover:underline"
+        >
+          See plans
+        </Link>
+      ) : null}
     </div>
   );
 }

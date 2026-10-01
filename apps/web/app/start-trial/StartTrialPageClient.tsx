@@ -242,20 +242,12 @@ export default function StartTrialPageClient() {
               // only a pointer to finish on the web + a re-check button.
               <>
                 <h2 className="text-lg font-semibold text-content-primary">
-                  Finish setting up your trial on the web
+                  Your trial
                 </h2>
                 <div className="rounded-lg border border-stroke-default bg-bg-elevated p-4 text-sm text-content-secondary">
                   <p>
-                    Trials are set up on the web. Visit{' '}
-                    <button
-                      type="button"
-                      onClick={() => openExternalUrl('https://team.urganize.app/start-trial')}
-                      className="underline text-content-primary hover:text-brand"
-                    >
-                      team.urganize.app
-                    </button>{' '}
-                    in your browser to add a card and start your {TRIAL_DAYS}-day
-                    free trial, then come back here.
+                    A free trial can&rsquo;t be started from this screen. Tap
+                    Check again once your account is ready.
                   </p>
                 </div>
                 <Button variant="secondary" className="w-full" onClick={() => void loadSnapshot()}>
