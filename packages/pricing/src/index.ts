@@ -389,7 +389,10 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   solo: {
     id: 'solo',
     label: 'Solo',
-    audience: 'For a manager running one artist.',
+    // "Independent artists" since 2026-10-02 (strategy doc, section 8). It read
+    // "For a manager running one artist." until Solo became one seat the same
+    // day; a single seat is somebody working on their own.
+    audience: 'For an independent artist.',
     // Monthly only. The yearly price is ten months of this — see monthlyPrice.
     monthlyPrice: tierPrice(5_000),
     // ONE seat since 2026-10-02 (strategy doc, section 8: "Solo ... One seat").
