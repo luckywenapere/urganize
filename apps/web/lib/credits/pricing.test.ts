@@ -9,7 +9,10 @@ import {
   RODI_PER_USD,
   canStartTurn,
   creditsForRodi,
+  HOLD_COMPLETION_CEILING,
+  HOLD_COMPLETION_TOKENS,
   holdCredits,
+  holdOutputTokens,
   providerCostRodi,
   rodiToUsd,
   turnCharge,
@@ -175,6 +178,28 @@ describe('the hold', () => {
     expect(holdCredits('openai/gpt-4o-mini')).toBe(1);
     expect(holdCredits('openai/gpt-5.4-mini')).toBeLessThan(holdCredits('openai/gpt-5.4'));
     expect(holdCredits('openai/gpt-5.4')).toBeLessThan(holdCredits('openai/gpt-5.5'));
+  });
+
+  it('assumes the answer the turn may write, between a floor and a ceiling', () => {
+    expect(holdOutputTokens(undefined)).toBe(HOLD_COMPLETION_TOKENS);
+    expect(holdOutputTokens(Number.NaN)).toBe(HOLD_COMPLETION_TOKENS);
+    // A cap below the floor does not lower the hold: it is a guard, and 1,500 was always the least.
+    expect(holdOutputTokens(1_024)).toBe(HOLD_COMPLETION_TOKENS);
+    expect(holdOutputTokens(3_000)).toBe(3_000);
+    // A cap no reply can reach before the deadline does not demand its price.
+    expect(holdOutputTokens(8_192)).toBe(HOLD_COMPLETION_CEILING);
+    expect(HOLD_COMPLETION_CEILING).toBeGreaterThan(HOLD_COMPLETION_TOKENS);
+  });
+
+  it('is unchanged when no answer length is given, so a turn the router did not touch holds what it did', () => {
+    expect(holdCredits('openai/gpt-5.5')).toBe(holdCredits('openai/gpt-5.5', HOLD_COMPLETION_TOKENS));
+  });
+
+  it('holds more for a longer answer on a dear model, and stays cheap on the quick one', () => {
+    expect(holdCredits('openai/gpt-5.5', HOLD_COMPLETION_CEILING)).toBeGreaterThan(holdCredits('openai/gpt-5.5'));
+    expect(holdCredits('openai/gpt-5.4', HOLD_COMPLETION_CEILING)).toBeGreaterThan(holdCredits('openai/gpt-5.4'));
+    // Rounded up to whole credits, so the quick model's longest hold is still only a couple.
+    expect(holdCredits('openai/gpt-4o-mini', HOLD_COMPLETION_CEILING)).toBeLessThanOrEqual(2);
   });
 
   it('an unknown model is held as the dearest', () => {

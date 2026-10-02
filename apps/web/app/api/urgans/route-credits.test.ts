@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-import { holdCredits, turnCharge, type UsageCall } from '@/lib/credits/pricing';
+import { holdCredits, holdOutputTokens, turnCharge, type UsageCall } from '@/lib/credits/pricing';
+import { URGANS_STREAM_HEADER } from '@/lib/chappi/stream-protocol';
 import { startUnroutedTrace } from '@/lib/ai/model-router';
 
 // How /api/urgans uses credits. The invariant that matters most is the boring
@@ -78,10 +79,10 @@ vi.mock('@/lib/credits/credits-server', () => ({
 
 import { POST } from './route';
 
-const post = (body: Record<string, unknown>) =>
+const post = (body: Record<string, unknown>, extraHeaders: Record<string, string> = {}) =>
   new NextRequest('https://app.test/api/urgans', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer jwt' },
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer jwt', ...extraHeaders },
     body: JSON.stringify(body),
   });
 
@@ -315,6 +316,63 @@ describe('refusing a turn the team cannot pay for', () => {
     // The same balance is plenty for a short question, which starts on the quick rung.
     const easy = await POST(post({ messages }));
     expect(easy!.status).toBe(200);
+  });
+
+  describe('holding for the answer the turn may write', () => {
+    // A hard question: the router sends it to a dear rung, which is where a long
+    // answer costs enough to matter. Which rung is the router's business, so the
+    // tests read the model and cap off the turn itself and work the hold from those.
+    const hard = { messages: [{ id: 'm1', role: 'user', content: HEAVY }] };
+
+    const run = async (total: number, headers: Record<string, string> = {}) => {
+      getCreditSnapshot.mockResolvedValue(snapshot({ total }));
+      runChappiAgent.mockClear();
+      const response = (await POST(post(hard, headers)))!;
+      const decision = runChappiAgent.mock.calls[0]?.[0]?.routing?.decision as
+        | { model: string; maxOutputTokens: number; streaming?: boolean }
+        | undefined;
+      return { status: response.status, decision };
+    };
+
+    /** The turn's model and cap, learned from a turn that is certain to start. */
+    const learn = async (headers: Record<string, string> = {}) => {
+      const { decision } = await run(1_000_000, headers);
+      if (!decision) throw new Error('expected a routed turn');
+      return decision;
+    };
+
+    it('holds a plain turn for its output cap, which is more than the old flat answer', async () => {
+      vi.stubEnv('AI_ROUTER', 'on');
+      const decision = await learn();
+      const hold = holdCredits(decision.model, holdOutputTokens(decision.maxOutputTokens));
+
+      expect(hold).toBeGreaterThan(holdCredits(decision.model));
+      expect((await run(hold)).status).toBe(200);
+      expect((await run(hold - 1)).status).toBe(429);
+    });
+
+    it('holds a streamed turn for its larger cap, held at the ceiling', async () => {
+      vi.stubEnv('AI_ROUTER', 'on');
+      vi.stubEnv('URGANS_STREAM', 'on');
+      const ask = { [URGANS_STREAM_HEADER]: '1' };
+      const plain = await learn();
+      const streamed = await learn(ask);
+      const streamedHold = holdCredits(streamed.model, holdOutputTokens(streamed.maxOutputTokens));
+      const plainHold = holdCredits(plain.model, holdOutputTokens(plain.maxOutputTokens));
+
+      expect(streamed.streaming).toBe(true);
+      expect(streamedHold).toBeGreaterThan(plainHold);
+      expect((await run(streamedHold, ask)).status).toBe(200);
+      expect((await run(streamedHold - 1, ask)).status).toBe(429);
+      // The same balance still starts a turn that is not streamed.
+      expect((await run(streamedHold - 1)).status).toBe(200);
+    });
+
+    it('holds a turn the router did not touch for the flat answer it always did', async () => {
+      const hold = holdCredits('openai/gpt-4o-mini');
+      getCreditSnapshot.mockResolvedValue(snapshot({ total: hold }));
+      expect((await POST(post(hard)))!.status).toBe(200);
+    });
   });
 
   it('does not enforce when the balance cannot be read, the way every other counter here fails open', async () => {
