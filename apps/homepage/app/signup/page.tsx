@@ -59,10 +59,9 @@ export default function SignupPage() {
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
               Artists running their own rollouts, managers running more than
-              one artist&apos;s at once and labels running a full roster. If
-              you&apos;re coordinating
-              handoffs, files, and status across a roster, that&apos;s the
-              problem this was built for. See{" "}
+              one artist at once, small management teams and small labels. If
+              you&apos;re coordinating handoffs, files and status across a
+              roster, that&apos;s the problem this was built for. See{" "}
               <Link
                 href="/features"
                 className="underline underline-offset-4 hover:text-[var(--marketing-text)]"
