@@ -20,8 +20,8 @@ import {
  * overflow sheet. The email is what actually reaches somebody; this is where
  * they answer.
  *
- * NOT GATED ON A TIER. Searching is Manager and up; being listed and answering
- * are free on every plan, which is the supply-free/demand-paid rule. Gating
+ * NOT GATED ON A TIER. Searching, being listed and answering are open on every
+ * plan (strategy doc, section 10, 2026-10-02). Gating
  * the answer would make the directory unusable for the people it needs most.
  */
 

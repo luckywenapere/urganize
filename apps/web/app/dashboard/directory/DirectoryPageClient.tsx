@@ -105,7 +105,6 @@ function DirectoryBody() {
   });
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
-  const [locked, setLocked] = useState('');
   const [truncated, setTruncated] = useState(false);
   const [asking, setAsking] = useState<Person | null>(null);
   const [sent, setSent] = useState('');
@@ -132,10 +131,6 @@ function DirectoryBody() {
 
         if (cancelled) return;
 
-        if (response.status === 403 && body?.reason === 'plan_required') {
-          setLocked(typeof body.error === 'string' ? body.error : 'Searching is on a higher plan.');
-          return;
-        }
         if (!response.ok) {
           setError(typeof body.error === 'string' ? body.error : 'Could not open the directory.');
           return;
@@ -166,7 +161,7 @@ function DirectoryBody() {
   // question that durable row exists to answer.
   const reportedRef = useRef('');
   useEffect(() => {
-    if (!loaded || locked || error) return;
+    if (!loaded || error) return;
 
     const timer = window.setTimeout(() => {
       const signature = JSON.stringify([filters.query.trim(), filters.role, filters.city, filters.availability]);
@@ -190,7 +185,7 @@ function DirectoryBody() {
     }, 600);
 
     return () => window.clearTimeout(timer);
-  }, [filters, results.length, loaded, locked, error, arrivedFromRoleGaps]);
+  }, [filters, results.length, loaded, error, arrivedFromRoleGaps]);
 
   const counts = useMemo(() => fallbackCounts(people, filters), [people, filters]);
   const cities = useMemo(() => availableCities(people), [people]);
@@ -211,20 +206,7 @@ function DirectoryBody() {
         </p>
       </header>
 
-      {locked ? (
-        <div className="rounded-xl border border-stroke-default p-6">
-          <h2 className="text-base font-semibold text-content-primary">{locked}</h2>
-          <p className="mt-2 text-sm text-content-secondary">
-            Being listed stays free. You can add yourself in Settings whatever plan you are on.
-          </p>
-          <Link
-            href="/locked?intent=upgrade"
-            className="motion-focus mt-4 inline-flex rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse"
-          >
-            See plans
-          </Link>
-        </div>
-      ) : !loaded ? (
+      {!loaded ? (
         <div className="flex items-center gap-2 text-sm text-content-secondary">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           Opening the directory
