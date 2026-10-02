@@ -11,7 +11,17 @@
 //     cannot establish is a refusal, and the founder can still tag by hand.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { randomInt } from 'node:crypto';
 import { logBillingEvent } from './billing-events-server';
+import { adjustCredits } from './credits/credits-server';
+import {
+  buildReferralStats,
+  decideReward,
+  generatePersonalCode,
+  isReferralCreditsEnabled,
+  rewardDedupeKey,
+  type ReferralStats,
+} from './referral-credits';
 import {
   buildPartnerStatement,
   decideAttach,
@@ -106,7 +116,7 @@ type PartnerRow = {
 };
 
 export type AttachResult =
-  | { ok: true; partnerId: string; partnerName: string }
+  | { ok: true; kind: 'partner' | 'team'; partnerId: string; partnerName: string }
   | { ok: false; reason: AttachRefusal; message: string };
 
 function refused(reason: AttachRefusal): AttachResult {
@@ -114,9 +124,15 @@ function refused(reason: AttachRefusal): AttachResult {
 }
 
 /**
- * Tags a person's own team to a partner. Used by the signup link (the caller is
+ * Tags a person's own team to whoever the code on their signup link belongs to:
+ * a commission partner (team_referrals) or, when referral credits are on, another
+ * team's personal code (user_referrals). Used by the signup link (the caller is
  * the new account) and, with `byAdmin`, by the founder for a team that missed
  * the link.
+ *
+ * A team is tagged once, ever, across both tables. A partner's code is looked up
+ * first, so the two kinds of code can share the one `?ref=` link without
+ * ambiguity.
  */
 export async function attachReferral(
   admin: SupabaseClient,
@@ -135,6 +151,25 @@ export async function attachReferral(
     if (partnerResult.error) return refused('unknown_code');
     const partner = (partnerResult.data as Pick<PartnerRow, 'id' | 'code' | 'name' | 'active'> | null) ?? null;
 
+    // Only look for a team's personal code when it is not a partner's, and only
+    // while referral credits are on.
+    let referrer: { workspaceId: string; name: string } | null = null;
+    if (!partner && isReferralCreditsEnabled()) {
+      const codeResult = await admin
+        .from('referral_codes')
+        .select('workspace_id')
+        .eq('code', code)
+        .maybeSingle();
+      const referrerId = (codeResult.data as { workspace_id: string } | null)?.workspace_id ?? null;
+      if (!codeResult.error && referrerId) {
+        const nameResult = await admin.from('workspaces').select('name').eq('id', referrerId).maybeSingle();
+        referrer = {
+          workspaceId: referrerId,
+          name: (nameResult.data as { name: string | null } | null)?.name || 'another team',
+        };
+      }
+    }
+
     const workspaceResult = await admin
       .from('workspaces')
       .select('id,created_at')
@@ -146,8 +181,11 @@ export async function attachReferral(
     let alreadyTagged = false;
     let joinedByInvite = false;
     if (workspace) {
-      const [taggedResult, memberResult] = await Promise.all([
+      const [partnerTag, teamTag, memberResult] = await Promise.all([
         admin.from('team_referrals').select('workspace_id').eq('workspace_id', workspace.id).maybeSingle(),
+        // Absent before the credits migration is applied; that must not stop a
+        // partner tag, so an error here counts as "not tagged this way".
+        admin.from('user_referrals').select('referred_workspace_id').eq('referred_workspace_id', workspace.id).maybeSingle(),
         admin
           .from('workspace_members')
           .select('workspace_id')
@@ -159,49 +197,198 @@ export async function attachReferral(
       ]);
       // A read that fails is treated as the worse answer for the caller: tagged,
       // and an invitee. Tagging decides who is paid, so it fails closed.
-      alreadyTagged = taggedResult.error ? true : Boolean(taggedResult.data);
+      alreadyTagged = partnerTag.error ? true : Boolean(partnerTag.data) || Boolean(teamTag.data);
       joinedByInvite = memberResult.error ? true : ((memberResult.data as unknown[] | null) ?? []).length > 0;
     }
 
     const decision = decideAttach({
       codeWasValid: true,
-      partner: partner ? { active: partner.active } : null,
+      partner: partner ? { active: partner.active } : referrer ? { active: true } : null,
       workspace: workspace ? { createdAt: workspace.created_at } : null,
       alreadyTagged,
+      selfReferral: Boolean(referrer && workspace && referrer.workspaceId === workspace.id),
       joinedByInvite,
       now,
       skipSelfServiceChecks: Boolean(input.byAdmin),
     });
     if (!decision.ok) return refused(decision.reason);
-    if (!partner || !workspace) return refused('unknown_code');
+    if (!workspace) return refused('no_team');
 
-    const { error } = await admin.from('team_referrals').insert({
-      workspace_id: workspace.id,
-      partner_id: partner.id,
-      code_used: code,
-      source: input.byAdmin ? 'admin' : 'link',
-      attached_at: now.toISOString(),
-      attached_by: input.byAdmin?.userId ?? null,
-    });
-    if (error) {
-      // 23505 is the primary key: two requests raced and the other one won.
-      if ((error as { code?: string }).code === '23505') return refused('already_tagged');
-      console.error('[referrals] could not tag a team:', error.message);
-      return refused('no_team');
+    if (partner) {
+      const { error } = await admin.from('team_referrals').insert({
+        workspace_id: workspace.id,
+        partner_id: partner.id,
+        code_used: code,
+        source: input.byAdmin ? 'admin' : 'link',
+        attached_at: now.toISOString(),
+        attached_by: input.byAdmin?.userId ?? null,
+      });
+      if (error) {
+        // 23505 is the primary key: two requests raced and the other one won.
+        if ((error as { code?: string }).code === '23505') return refused('already_tagged');
+        console.error('[referrals] could not tag a team:', error.message);
+        return refused('no_team');
+      }
+      void logBillingEvent(admin, {
+        workspaceId: workspace.id,
+        ownerUserId: input.ownerUserId,
+        actorUserId: input.byAdmin?.userId ?? input.ownerUserId,
+        type: 'referral_attached',
+        metadata: { kind: 'partner', partnerId: partner.id, code, source: input.byAdmin ? 'admin' : 'link' },
+      });
+      return { ok: true, kind: 'partner', partnerId: partner.id, partnerName: partner.name };
     }
 
-    void logBillingEvent(admin, {
-      workspaceId: workspace.id,
-      ownerUserId: input.ownerUserId,
-      actorUserId: input.byAdmin?.userId ?? input.ownerUserId,
-      type: 'referral_attached',
-      metadata: { partnerId: partner.id, code, source: input.byAdmin ? 'admin' : 'link' },
-    });
+    if (referrer) {
+      const { error } = await admin.from('user_referrals').insert({
+        referred_workspace_id: workspace.id,
+        referrer_workspace_id: referrer.workspaceId,
+        code_used: code,
+        attached_at: now.toISOString(),
+      });
+      if (error) {
+        if ((error as { code?: string }).code === '23505') return refused('already_tagged');
+        console.error('[referrals] could not record an invite:', error.message);
+        return refused('no_team');
+      }
+      void logBillingEvent(admin, {
+        workspaceId: workspace.id,
+        ownerUserId: input.ownerUserId,
+        actorUserId: input.byAdmin?.userId ?? input.ownerUserId,
+        type: 'referral_attached',
+        metadata: { kind: 'team', referrerWorkspaceId: referrer.workspaceId, code, source: input.byAdmin ? 'admin' : 'link' },
+      });
+      return { ok: true, kind: 'team', partnerId: referrer.workspaceId, partnerName: referrer.name };
+    }
 
-    return { ok: true, partnerId: partner.id, partnerName: partner.name };
+    return refused('unknown_code');
   } catch (error) {
     console.error('[referrals] tagging threw:', error);
     return refused('no_team');
+  }
+}
+
+// -------------------------------------------------------- personal codes and rewards
+
+/** The team's own invite code and what it has earned. Creates the code the first
+ *  time it is asked for. Returns null when it cannot be established. */
+export async function getOrCreatePersonalReferral(
+  admin: SupabaseClient,
+  workspaceId: string
+): Promise<{ code: string; stats: ReferralStats } | null> {
+  try {
+    let code: string | null = null;
+    const existing = await admin.from('referral_codes').select('code').eq('workspace_id', workspaceId).maybeSingle();
+    if (existing.error) return null;
+    code = (existing.data as { code: string } | null)?.code ?? null;
+
+    for (let attempt = 0; !code && attempt < 5; attempt += 1) {
+      const candidate = generatePersonalCode((max) => randomInt(max));
+      // A code lives in the same namespace as a partner's, so one that a partner
+      // already holds is skipped rather than racing the unique index.
+      const taken = await admin.from('referral_partners').select('id').eq('code', candidate).maybeSingle();
+      if (taken.error || taken.data) continue;
+      const inserted = await admin.from('referral_codes').insert({ workspace_id: workspaceId, code: candidate });
+      if (!inserted.error) {
+        code = candidate;
+        break;
+      }
+      if ((inserted.error as { code?: string }).code === '23505') {
+        // Either another request created this team's code first, or the random
+        // code collided. Read again; if the team now has one, use it.
+        const again = await admin.from('referral_codes').select('code').eq('workspace_id', workspaceId).maybeSingle();
+        code = (again.data as { code: string } | null)?.code ?? null;
+        continue;
+      }
+      console.error('[referrals] could not create a personal code:', inserted.error.message);
+      return null;
+    }
+    if (!code) return null;
+
+    const rows = await admin
+      .from('user_referrals')
+      .select('rewarded_at,reward_credits')
+      .eq('referrer_workspace_id', workspaceId);
+    if (rows.error) return null;
+    const stats = buildReferralStats(
+      ((rows.data as Array<{ rewarded_at: string | null; reward_credits: number | null }> | null) ?? []).map((row) => ({
+        rewardedAt: row.rewarded_at,
+        rewardCredits: row.reward_credits,
+      }))
+    );
+    return { code, stats };
+  } catch (error) {
+    console.error('[referrals] could not read a personal code:', error);
+    return null;
+  }
+}
+
+/**
+ * Pays the inviting team when the team it invited makes its first payment.
+ * Called from the payment webhook, so it never throws and does nothing while the
+ * switch is off. Idempotent: the credit has a ledger key naming the invited
+ * team, so a redelivered payment cannot pay twice.
+ *
+ * The credit is written BEFORE the row is marked rewarded. The other order could
+ * mark a reward paid and then fail to pay it; this order can at worst leave a
+ * paid reward unmarked, and the ledger key stops a second payment.
+ */
+export async function rewardReferrerOnFirstPayment(
+  admin: SupabaseClient,
+  input: { payerUserId: string; reference: string }
+): Promise<void> {
+  if (!isReferralsEnabled() || !isReferralCreditsEnabled()) return;
+  try {
+    const workspace = await admin.from('workspaces').select('id').eq('owner_id', input.payerUserId).maybeSingle();
+    const referredId = (workspace.data as { id: string } | null)?.id;
+    if (!referredId) return;
+
+    const referral = await admin
+      .from('user_referrals')
+      .select('referrer_workspace_id,rewarded_at')
+      .eq('referred_workspace_id', referredId)
+      .maybeSingle();
+    if (referral.error || !referral.data) return;
+    const row = referral.data as { referrer_workspace_id: string; rewarded_at: string | null };
+
+    const paid = await admin
+      .from('user_referrals')
+      .select('referred_workspace_id', { count: 'exact', head: true })
+      .eq('referrer_workspace_id', row.referrer_workspace_id)
+      .not('rewarded_at', 'is', null);
+
+    const decision = decideReward({
+      referral: { rewardedAt: row.rewarded_at },
+      rewardsAlreadyPaid: paid.error ? null : (paid.count ?? 0),
+    });
+    if (!decision.reward) return;
+
+    const referrer = await admin.from('workspaces').select('owner_id').eq('id', row.referrer_workspace_id).maybeSingle();
+    const referrerOwner = (referrer.data as { owner_id: string | null } | null)?.owner_id ?? null;
+    if (!referrerOwner) return;
+
+    const granted = await adjustCredits(admin, {
+      workspaceId: row.referrer_workspace_id,
+      ownerUserId: referrerOwner,
+      actorUserId: input.payerUserId,
+      credits: decision.credits,
+      source: 'referral',
+      note: 'A team you invited subscribed.',
+      dedupeKey: rewardDedupeKey(referredId),
+    });
+    // A false here is either a real failure or "already paid" (the ledger key
+    // refused a second row). Either way there is nothing more to do now; the
+    // row is marked below only when the grant landed.
+    if (!granted) return;
+
+    const marked = await admin
+      .from('user_referrals')
+      .update({ rewarded_at: new Date().toISOString(), reward_credits: decision.credits })
+      .eq('referred_workspace_id', referredId)
+      .is('rewarded_at', null);
+    if (marked.error) console.error('[referrals] reward paid but not marked:', marked.error.message, input.reference);
+  } catch (error) {
+    console.error('[referrals] rewarding a referrer threw:', error);
   }
 }
 
@@ -358,6 +545,11 @@ export async function applyReferralAdminAction(
 ): Promise<AdminActionResult> {
   switch (action.type) {
     case 'create_partner': {
+      // A signup link can carry a partner's code or a team's personal code, so a
+      // partner may not take one a team already holds. (Personal codes are
+      // checked against partners the same way when they are made.)
+      const personal = await admin.from('referral_codes').select('workspace_id').eq('code', action.code).maybeSingle();
+      if (personal.data) return { ok: false, status: 409, error: 'That code is already taken.' };
       const { error } = await admin.from('referral_partners').insert({
         code: action.code,
         name: action.name,
@@ -399,7 +591,13 @@ export async function applyReferralAdminAction(
         byAdmin: { userId: adminUserId },
       });
       if (!result.ok) return { ok: false, status: 409, error: result.message };
-      return { ok: true, message: `Tagged to ${result.partnerName}. Only payments from now on earn commission.` };
+      return {
+        ok: true,
+        message:
+          result.kind === 'partner'
+            ? `Tagged to ${result.partnerName}. Only payments from now on earn commission.`
+            : `Recorded as invited by ${result.partnerName}. They earn credits when this team first pays.`,
+      };
     }
 
     case 'exclude_charge': {

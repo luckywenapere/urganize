@@ -3,6 +3,7 @@
 import type { WorkspaceMember } from '@/types/auth';
 import { TeamLoginsSection } from '@/components/team/TeamLoginsSection';
 import { TeammatesSection } from '../TeammatesSection';
+import { ReferralInviteSection } from '../ReferralInviteSection';
 
 type TeamSegmentProps = {
   teammates: WorkspaceMember[];
@@ -43,6 +44,7 @@ export function TeamSegment({
         artists={artists}
       />
       <TeamLoginsSection />
+      <ReferralInviteSection />
     </div>
   );
 }

@@ -44,7 +44,7 @@ Found on 2026-10-02 by reading the code against the doc. Each is a fix to make, 
 | 8 | "where music teams do everything after the music is made" | **Fixed 2026-10-02.** `CORE_CLAUSE` says "music teams" in both copies of the module, UrgAns's instructions, the share image (regenerated, `SHARE_IMAGE_VERSION` bumped), the package descriptions and the store listing draft. The long description (`CANONICAL_DESCRIPTION`) followed the same day, founder call, in both module copies, the README and the store listing draft | `apps/web/lib/positioning.ts` and its homepage mirror |
 | 9 | Uses "small labels" to describe who we sell to | **Fixed 2026-10-02.** "small labels" is no longer on the positioning guard's retired list, so site and app copy may use it. It now appears in the Label plan's line ("For small labels and management teams.", on /pricing, the homepage and the in-app wall) and in /signup's "Who Urganize is for" | `apps/web/lib/positioning-guard.test.ts` |
 | 10 | The scoreboard: weekly active paying teams (2 or more members active in 7 days, on Manager, Label or Group), second-release rate, week 4 retention, trial to paid | **Built 2026-10-02** at `/admin/scoreboard`; see "The company scoreboard" at the end of this file. Task edits were recorded nowhere before that day, so activity from before it undercounts | `lib/scoreboard.ts` |
-| 11 | Distribution ordering, crypto payments, referral credits, the Sound Wave Spotlight referral code with its 10% commission | **Distribution: a first step is built, live behind its flag (2026-10-02)**, see "The Distribute step" at the end of this file. It is a readiness checklist and a hand-off to the partner's own sign-up, not an order form. **The Sound Wave Spotlight referral code is built flag-off (2026-10-02)**, see "Referral partners" at the end of this file. Crypto payments and referral credits (a user inviting another team) are not built | |
+| 11 | Distribution ordering, crypto payments, referral credits, the Sound Wave Spotlight referral code with its 10% commission | **Distribution: a first step is built, live behind its flag (2026-10-02)**, see "The Distribute step" at the end of this file. It is a readiness checklist and a hand-off to the partner's own sign-up, not an order form. **The Sound Wave Spotlight referral code is built flag-off (2026-10-02)**, see "Referral partners" at the end of this file. **Referral credits (a team inviting another) are built flag-off (2026-10-02)**, see "Referral credits" at the end of this file. Crypto payments are not built | |
 
 **One definition the scoreboard will need, recorded so it is not invented twice:** the doc's second-release rate counts from when a release "goes live", and nothing in this product writes a `released` status. `lib/recap-eligibility.ts` (release date passed, or every task done) is the product's existing answer to "has this release happened", and the Urganize Directory already reuses it for the same reason. Use it, or get a different definition from the founder, but do not add a third. (The scoreboard uses it: `releaseLiveAt` in `lib/scoreboard.ts` is the same rule, answering WHEN rather than yes or no.)
 
@@ -18405,3 +18405,45 @@ Nothing has run against a real database, a real Paystack webhook or a real signu
 5. Give them the link. Check the first referral end to end: sign up through it with a throwaway email, confirm the team shows under the partner, and after a real payment confirm the month line shows ten percent.
 6. Each month by the 10th: open the page, pay the amount shown, and press "Record payment".
 7. Changelog entry and version bump only if this is worth announcing; the surface is internal, so by the EPK precedent there is nothing to announce at merge.
+
+
+---
+
+## Referral credits (2026-10-02, flag-off)
+
+The strategy doc names it in three places and defines none of it: "Referral credits | Credits for users who invite another team", the "Refer" stage ("they invite another team") and a "referred signups" metric. A team shares a personal link; when a team signs up through it and makes its first payment, the team that invited it earns credits. Behind `NEXT_PUBLIC_FEATURE_REFERRAL_CREDITS` (default off), which **also needs `NEXT_PUBLIC_FEATURE_REFERRALS`**, because a personal code rides the same `?ref=` link and tagging step as a partner's. Migration `20261002210000_referral_credits.sql`, **not applied anywhere yet.** Not a scope expansion: the strategy doc commits it. It is the sibling of "Referral partners" above: a partner is a business paid in naira, a team is a customer paid in credits.
+
+**The numbers are defaults I chose, because the doc gives none.** They are constants in `lib/referral-credits.ts`, so changing one is a deploy and never a migration: the inviting team earns **100 credits** on the invited team's **first payment**, **up to 20 times**. The invited team gets no bonus. Challenge these before the flag goes on.
+
+### Things worth knowing before editing this
+
+1. **It pays on the first PAYMENT, not on signup, and that is the whole anti-abuse design.** A signup costs nothing to fake with a throwaway email; a payment does, and a paying team has covered the reward many times over (100 credits cost a few cents; the cheapest plan is ₦5,000 a year). The cap of 20 limits the damage if something is gamed anyway. A signup-time reward would be a credit-farming machine.
+2. **One link, two kinds of code.** A partner's code is looked up first, then a team's personal code, so both share `?ref=` without ambiguity. The namespace is kept disjoint from both sides: a partner cannot be created with a code a team holds (`create_partner` checks `referral_codes`), and a personal code is regenerated if a partner holds it.
+3. **A team is tagged once, ever, across BOTH tables** (`team_referrals` and `user_referrals`). It cannot be a partner's referral and a team's too, so one payment can never earn commission and credits for different people. A team cannot use its own code (`own_code`). The new-team (14 days), no-invitee and fail-closed rules are the partner ones, shared through `decideAttach`.
+4. **The reward is written to the ledger BEFORE the row is marked paid.** The other order could mark a reward paid and then fail to pay it; this order can at worst leave a paid reward unmarked, and the ledger key `referral:<invited team>` stops a second payment. A test pins the order. A false return from the grant is either a real failure or "already paid"; either way nothing more happens that time.
+5. **It rides the existing credits ledger and adds no new kind.** The credit is an `adjust` row in the top-up pool with `metadata.source = 'referral'`, so it never expires, is never taken back by the trial rule, and does not count as a purchase (`hasEverPurchased` looks for kind `topup`, not `adjust`). `adjustCredits` gained an optional `source` that defaults to `'admin'`, so every existing caller is unchanged, and the history shows it as "Reward for inviting a team".
+6. **A credit-only team can earn credits and use them.** Top-up-pool credits count as funded for the Solo-features rule, so a lapsed team that earns referral credits keeps working while they last. Intended: credits are credits.
+7. **Called from the webhook's first-charge path and from admin "Mark paid", and nowhere else.** Never on a renewal or a plan-change top-up, so only a first payment pays. A test lists the three files allowed to call it. A team that was tagged AFTER its first payment (for example by hand) is not rewarded retroactively.
+8. **The reward can be wrong in one direction, accepted.** If an invited team pays and then is refunded, the inviting team keeps its 100 credits (about ₦1,500 of credit, a few cents of cost). Nothing detects subscription refunds. Take them back with a negative adjustment in `/admin/teams` if it matters.
+9. **The Settings section draws nothing unless it has something true to say.** `components/settings/ReferralInviteSection.tsx` sits at the bottom of Settings → Team (managers only). Both flags off, a person who does not own a team (the code belongs to the owner's team), or a failed load all render nothing. `GET /api/referrals/mine` creates the team's code on first view, finds the team from the signed-in user and never from the request, and is an open route (no paywall) because a walled team is exactly one that might want the credits.
+10. **Both new tables have row level security and no policies.** Every read and write is a service-role route. A structural test lists the only file allowed to touch each.
+
+### Verified
+
+6,190 tests passing, none failing (about 30 new in `lib/referral-credits.test.ts`, covering the reward rules, code generation, the history label and structural guards on the reward path). Type-check clean apart from the 8 documented `confirmed-action.test.ts` errors. Lint clean on every touched file. **Eight deliberate breaks, each caught by a named test:** the cap off by one, paying a team twice, paying a team nobody invited, letting a team use its own code, marking before granting, dropping the ledger key, ignoring the credits switch, and labelling every credit a referral.
+
+### Not verified
+
+Nothing has run against a real database, a delivered webhook or a real signup. The migration is unapplied. No code has been created, no team tagged, no reward paid. The Settings section has never rendered with a real account. The defaults above are untested against any real behaviour of the people they are meant to move.
+
+### Not built
+
+A bonus for the invited team; a "referred signups" figure on the scoreboard (the table is there to count from); an email or push telling the inviting team it earned credits (it appears in the credit history and the balance); clawing a reward back when an invited team is refunded.
+
+### Activation
+
+1. Apply `20261002210000_referral_credits.sql` (and `20261002200000_referrals.sql` first if it is not in yet).
+2. Decide the numbers in `lib/referral-credits.ts`, or keep the defaults.
+3. Set `NEXT_PUBLIC_FEATURE_REFERRAL_CREDITS=true` (and `NEXT_PUBLIC_FEATURE_REFERRALS=true`) on the Vercel `Web` project (Production), with a deploy that rebuilds `apps/web`.
+4. Open Settings → Team, copy the link, sign up through it with a throwaway email, and confirm the invited count goes up. After a real first payment, confirm 100 credits appear in the credit history.
+5. Changelog entry and version bump at the flip, not at merge: this one IS worth announcing to customers ("Invite another team and earn credits").

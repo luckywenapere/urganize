@@ -62,6 +62,7 @@ export type AttachRefusal =
   | 'inactive_code'
   | 'no_team'
   | 'already_tagged'
+  | 'own_code'
   | 'joined_by_invite'
   | 'too_late';
 
@@ -73,6 +74,8 @@ export type AttachInput = {
   /** The caller's own team, or null when they do not own one yet. */
   workspace: { createdAt: string | null } | null;
   alreadyTagged: boolean;
+  /** The code is the caller's own personal code. A team cannot refer itself. */
+  selfReferral?: boolean;
   /** The caller belongs to somebody else's team through an invite. Invitees join
    *  an existing team and are never a referral. */
   joinedByInvite: boolean;
@@ -90,6 +93,7 @@ export function decideAttach(input: AttachInput): { ok: true } | { ok: false; re
   if (!input.partner.active) return { ok: false, reason: 'inactive_code' };
   if (!input.workspace) return { ok: false, reason: 'no_team' };
   if (input.alreadyTagged) return { ok: false, reason: 'already_tagged' };
+  if (input.selfReferral) return { ok: false, reason: 'own_code' };
   if (input.skipSelfServiceChecks) return { ok: true };
   if (input.joinedByInvite) return { ok: false, reason: 'joined_by_invite' };
   const created = input.workspace.createdAt ? new Date(input.workspace.createdAt).getTime() : NaN;
@@ -115,6 +119,8 @@ export function describeAttachRefusal(reason: AttachRefusal): string {
       return 'That person has no team yet.';
     case 'already_tagged':
       return 'That team is already tagged to a partner.';
+    case 'own_code':
+      return 'A team cannot use its own invite code.';
     case 'joined_by_invite':
       return 'That person joined through an invite, so they cannot be a referral.';
     case 'too_late':

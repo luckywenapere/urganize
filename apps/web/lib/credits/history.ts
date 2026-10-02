@@ -68,6 +68,9 @@ function labelFor(row: LedgerHistoryRow): { label: string; detail: string } {
       return { label: 'UrgAns chat', detail: '' };
     }
     case 'adjust': {
+      if (meta.source === 'referral' && row.credits > 0) {
+        return { label: 'Reward for inviting a team', detail: '' };
+      }
       const note = text(meta.note);
       return {
         label: row.credits >= 0 ? 'Credits added by Urganize' : 'Credits taken off by Urganize',
