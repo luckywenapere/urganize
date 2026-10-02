@@ -7,6 +7,7 @@ import {
   embeddedEstimateLine,
   embeddedRefusalNotice,
   formatGrantDay,
+  embeddedCostLine,
   isLowOnCredits,
   outOfCreditsNotice,
 } from './copy';
@@ -103,25 +104,15 @@ describe('the lines a person reads', () => {
 });
 
 describe('isLowOnCredits', () => {
-  it('turns on at a fifth of the monthly credits', () => {
-    expect(isLowOnCredits(132, 660)).toBe(true);
-    expect(isLowOnCredits(133, 660)).toBe(false);
-    expect(isLowOnCredits(300, 1500)).toBe(true);
-    expect(isLowOnCredits(301, 1500)).toBe(false);
-  });
-
-  it('never waits for fewer than ten credits, so a small allowance still gets its warning', () => {
-    expect(isLowOnCredits(10, 20)).toBe(true);
-    expect(isLowOnCredits(11, 20)).toBe(false);
-    expect(isLowOnCredits(10, 150)).toBe(true);
-    // A trial is measured against its own 50: ten left is low, eleven is not.
-    expect(isLowOnCredits(10, 50)).toBe(true);
-    expect(isLowOnCredits(11, 50)).toBe(false);
+  it('turns on below 50 credits, for every plan', () => {
+    expect(isLowOnCredits(49)).toBe(true);
+    expect(isLowOnCredits(50)).toBe(false);
+    expect(isLowOnCredits(660)).toBe(false);
   });
 
   it('is on when the balance is empty or overdrawn', () => {
-    expect(isLowOnCredits(0, 660)).toBe(true);
-    expect(isLowOnCredits(-12, 660)).toBe(true);
+    expect(isLowOnCredits(0)).toBe(true);
+    expect(isLowOnCredits(-12)).toBe(true);
   });
 });
 
@@ -157,5 +148,25 @@ describe('the refusal when a run cannot start', () => {
   it('only mentions buying when purchasing exists', () => {
     expect(embeddedRefusalNotice(input)).not.toMatch(/buy/i);
     expect(embeddedRefusalNotice(input, true)).toMatch(/buy more credits/i);
+  });
+});
+
+describe('embeddedCostLine', () => {
+  it('says the estimate and then the balance', () => {
+    expect(embeddedCostLine('release.draft_plan', 412)).toBe('This uses about 12 UrgAns credits. You have 412 credits.');
+  });
+
+  it('says "up to" for an action with no estimate of its own', () => {
+    expect(embeddedCostLine('release.fill_pitch', 80)).toBe('This uses up to 25 UrgAns credits. You have 80 credits.');
+  });
+
+  it('is singular for one credit and never negative', () => {
+    expect(embeddedCostLine('release.fill_pitch', 1)).toMatch(/You have 1 credit\.$/);
+    expect(embeddedCostLine('release.fill_pitch', -5)).toMatch(/You have 0 credits\.$/);
+  });
+
+  it('says only the estimate when the balance is not known', () => {
+    expect(embeddedCostLine('release.fill_pitch', null)).toBe('This uses up to 25 UrgAns credits.');
+    expect(embeddedCostLine('release.fill_pitch', Number.NaN)).toBe('This uses up to 25 UrgAns credits.');
   });
 });

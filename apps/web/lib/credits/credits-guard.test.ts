@@ -248,3 +248,17 @@ describe('the table', () => {
     expect(body).not.toMatch(/window_start/);
   });
 });
+
+describe('the balance replaces the daily embedded-action guard', () => {
+  const runner = sources.get('lib/urgans-actions/server.ts') ?? '';
+
+  it('only applies the daily cap when credits are off', () => {
+    // The cap is the credit-less world's brake; with credits on, a team that has
+    // paid for more must not be refused by a blanket count.
+    expect(runner).toMatch(/!isCreditsEnabled\(\)[\s\S]{0,80}checkEmbeddedActionsGuard\(/);
+  });
+
+  it('still has the guard to apply when credits are off', () => {
+    expect(runner).toMatch(/checkEmbeddedActionsGuard\(/);
+  });
+});
