@@ -72,6 +72,7 @@ const TOOL_FAILURES_BEFORE_ESCALATION = 2;
 const DEADLINE_MESSAGE =
   'That took longer than I had time for, so I stopped part-way. Ask me to carry on and I will pick it up.';
 const DEADLINE_NOTE = 'I ran out of time before I could finish. Ask me to carry on and I will.';
+const LENGTH_NOTE = 'That answer was cut short. Ask me to carry on and I will pick it up from there.';
 
 // ── OpenAI chat-completions wire shapes (minimal structural views) ─────────
 
@@ -411,6 +412,10 @@ export async function runChappiAgent(params: {
   let toolFailures = 0;
   let rounds = 0;
   let degraded: 'deadline' | null = null;
+  // True when the text we are about to return stopped because the model hit its
+  // output cap rather than because it finished. Without this the page shows a
+  // sentence that just ends, with nothing to say it was cut short.
+  let finalCutShort = false;
 
   /** Move `holder` to whatever the router says follows `failure`. False means stay. */
   const hop = (holder: DecisionHolder, failure: RoutingFailure): boolean => {
@@ -505,7 +510,10 @@ export async function runChappiAgent(params: {
       rounds += 1;
 
       const text = textOf(choice);
-      if (text) finalText = text;
+      if (text) {
+        finalText = text;
+        finalCutShort = choice.finish_reason === 'length';
+      }
 
       const toolCalls = toolCallsOf(choice);
       if (toolCalls.length === 0) break;
@@ -604,7 +612,10 @@ export async function runChappiAgent(params: {
               false
             );
             const closingText = textOf(closing.choice);
-            if (closingText) finalText = closingText;
+            if (closingText) {
+              finalText = closingText;
+              finalCutShort = closing.choice.finish_reason === 'length';
+            }
           } catch (error) {
             // Unrouted, this is thrown exactly as it always was. Routed, the tools
             // have run and the router has already tried another model: a missing
@@ -624,14 +635,18 @@ export async function runChappiAgent(params: {
 
   trace.rounds = rounds;
   trace.latencyMs = clock() - startedAt;
+  const cutShort = !degraded && Boolean(finalText) && finalCutShort;
   if (degraded) trace.degraded = degraded;
+  else if (cutShort) trace.degraded = 'length';
   logRoutingTrace(trace, false);
 
   const reply = degraded
     ? finalText
       ? `${finalText}\n\n${DEADLINE_NOTE}`
       : DEADLINE_MESSAGE
-    : finalText || 'Done.';
+    : cutShort
+      ? `${finalText}\n\n${LENGTH_NOTE}`
+      : finalText || 'Done.';
   return { reply, clientActions, pendingConfirmation, trace, usageCalls };
 }
 
