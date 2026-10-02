@@ -33,6 +33,9 @@
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
+const ARTIST_PAGE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_ARTIST_PAGE === 'true' &&
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
 
@@ -67,6 +70,7 @@ export function buildPrefetchRoutes({ hasCuratorProfile }: PrefetchAudience): st
   // landing destination (HOME_PATH), so it is the single most likely page a
   // signed-in account reaches right after the three base routes above warm.
   if (HOME_ENABLED) routes.push('/dashboard/home');
+  if (ARTIST_PAGE_ENABLED) routes.push('/dashboard/artists');
   if (NOTES_ENABLED) routes.push('/dashboard/notes');
   if (EVENTS_ENABLED) routes.push('/dashboard/shows');
   // The team side of pitching, in the nav for every team account since

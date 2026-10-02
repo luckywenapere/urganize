@@ -15,7 +15,7 @@ import type { WorkspaceIdentityLogo } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
 import { CatalogIcon, ChappiIcon, GearIcon } from "@/components/app/BrandIcons";
-import { MicVocal } from '@/components/icons';
+import { Disc3, MicVocal } from '@/components/icons';
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState } from "@/lib/persisted-state";
 import { leaveReleaseForCatalog } from "@/lib/catalog-intent";
@@ -120,6 +120,10 @@ type NavItem = {
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === "true";
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === "true";
+// The artist pages need the workspace roster too, the way every artist route does.
+const ARTIST_PAGE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_ARTIST_PAGE === "true" &&
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === "true";
 
 // Playlist pitching. The team row (/dashboard/pitching) left this card
 // 2026-09-29 (founder call: Pitching is reached from inside each release). The
@@ -152,6 +156,10 @@ function HomeNavIcon({ className }: { className?: string }) {
 // deprecated alias of this same icon — do not reach for it.
 function ShowsIcon({ className }: { className?: string }) {
   return <MicVocal className={className} aria-hidden="true" />;
+}
+
+function ArtistsIcon({ className }: { className?: string }) {
+  return <Disc3 className={className} aria-hidden="true" />;
 }
 
 function DirectoryIcon({ className }: { className?: string }) {
@@ -303,6 +311,20 @@ function buildNavItems(
         isActive: release.id === scopedReleaseId,
       })),
     },
+    // The artist pages (Catalogue, Phase 1): every artist with its rollouts,
+    // shows, team and press kit. Prefix match so one artist's page keeps the
+    // row lit.
+    ...(ARTIST_PAGE_ENABLED
+      ? [
+          {
+            href: "/dashboard/artists",
+            label: "Artists",
+            Icon: ArtistsIcon,
+            isActive: (pathname: string) => pathname.startsWith("/dashboard/artists"),
+            help: "nav.artists",
+          } satisfies NavItem,
+        ]
+      : []),
     // Shows is a global surface: a release is not
     // involved, so this is not a release scene and never carries ?release=.
     // Prefix match rather than exact, because a show's own page lives one
