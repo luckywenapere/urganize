@@ -41,6 +41,9 @@ const GUARDED_FILES = [
   // alone would silently stop covering the copy it used to hold.
   'components/workspace/WorkspaceDesktopFocused.tsx',
   'components/workspace/RolloutMenu.tsx',
+  'app/dashboard/artists/ArtistsPageClient.tsx',
+  'app/dashboard/artists/[artistId]/ArtistPageClient.tsx',
+  'lib/artist-page.ts',
   'components/workspace/RolloutMenuPortal.tsx',
   'components/workspace/useRolloutMenuActions.ts',
   'components/app/RightRail.tsx',

@@ -3,6 +3,7 @@ import { createAdminClient, createDueDateNotificationsForAllUsers } from '@/lib/
 import { sendWeeklyMotivationalNudges } from '@/lib/motivation-server';
 import { runTrialEndingSweep } from '@/lib/billing-alerts-server';
 import { runDeliveryReconcile } from '@/lib/delivery-records-server';
+import { runKitSnapshotSweep } from '@/lib/release-epk-snapshot-server';
 import { runPitchWindowSweep } from '@/lib/pitch-payments-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
@@ -66,6 +67,15 @@ export async function GET(request: NextRequest) {
   // reads what it writes.
   const directorySweep = await runDeliveryReconcile(adminClient);
 
+  // Press kit snapshots (2026-10-02). Another passenger, for the same
+  // reason. A delivered release keeps the copy of its artist's kit it had
+  // when it was delivered, so a later edit to the bio cannot rewrite what
+  // was sent. A release becomes delivered when its date passes, where no
+  // write happens, so this has to be a sweep. Never throws, does nothing
+  // while the pitch kit flag is off, and a release already frozen is never
+  // touched, so running it twice is harmless.
+  const kitSnapshotSweep = await runKitSnapshotSweep(adminClient);
+
   // Curator pitch payments (2026-09-25): the missed-window sweep, as a
   // BACKSTOP. It runs every 15 minutes from Supabase pg_cron
   // (/api/cron/pitch-payments); running it here too means a paused pg_cron
@@ -74,5 +84,5 @@ export async function GET(request: NextRequest) {
   // route gives, and it never throws.
   const pitchSweep = await runPitchWindowSweep(adminClient);
 
-  return NextResponse.json({ ok: true, trialSweep, directorySweep, pitchSweep });
+  return NextResponse.json({ ok: true, trialSweep, directorySweep, kitSnapshotSweep, pitchSweep });
 }

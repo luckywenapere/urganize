@@ -50,6 +50,19 @@ Found on 2026-10-02 by reading the code against the doc. Each is a fix to make, 
 
 ---
 
+
+### Build order after the credits sprint (2026-10-02, founder)
+
+Five phases, one at a time, each behind its own flag, each reversible, nothing deleting or rewriting user data. A phase is not started until the one before it has passed its checklist and a real team has used it. The founder approved the Phase 0 audit and these answers on 2026-10-02:
+
+1. **Catalogue** (artist, then releases, then each release's record). New artist pages at `/dashboard/artists`. The standing EPK stays one per artist; a release snapshots it when the release counts as delivered (the same rule as `lib/recap-eligibility.ts`).
+2. **Relationships**, built ON the directory, not beside it. One person, one profile (`person_profiles`, extended so `user_id` can be empty until the person claims it), plus a private per-team layer. Unclaimed profiles come from being credited on a task, pitched, sent songs for a show, or added by hand. Dedupe on email, then phone, then exact name plus role, and never merge on name alone.
+3. **Opportunities**, as the strategy doc defines it: what a team can pursue (deals, grants, sync, brands, partnerships). Hiring stays in Relationships through the existing work requests and joins later as one more kind. The money flow for hired work is its own spec.
+4. **Audience**, only against data sources with access confirmed in writing, starting with numbers a team enters or uploads.
+5. **Financials**, a read-only ledger inside Catalogue, collecting money that already moves through the app. No new payment flows.
+
+Where the code disagrees with this, the code is current reality. Status is recorded in the sections for each phase as it ships; the fan capture page (`/capture/[token]`) is the one piece of fan data that already exists, and it stays per release.
+
 ## What Urganize is
 
 **Urganize is where music teams do everything after the music is made.** (Since 2026-10-02 both the core line and the long description say "music teams", the strategy doc's wording; they said "your team" from 2026-09-24.) You make the music; Urganize is where your team plans the release, assigns the work, keeps files and metadata in one place, pitches to curators, books shows and puts the release out, for artists, managers and labels. That is the founder's positioning since 2026-09-24 (see "Everything after the music" at the end of this file). It replaced the category line "AI Music Business Manager" (locked 2026-09-09, widened 2026-09-11, audience narrowed the same day and widened back to three on 2026-09-24), which UrgAns's system prompt kept for one more day, until the founder decided on 2026-09-25 that the assistant says the new line too. The canonical strings live in `apps/web/lib/positioning.ts` and are enforced by `apps/web/lib/positioning-guard.test.ts`. What v1 BUILDS is unchanged and is the six-feature list below: a release management surface, described here in the words a customer reads rather than the words the build used.
@@ -103,7 +116,7 @@ The six features that constitute v1:
 
 **Scope expansion (2026-09-23):** a new surface, **share to socials**, was consciously sanctioned by the founder: after a first rollout, the team can share an Instagram post, a WhatsApp status and a message they can DM to anybody, and every rollout carries a Share button after that. It moves nothing off the out-of-scope list below, and the two nearest lines are worth naming because the distinction is the whole reason it is buildable. **"Third-party music platform integrations (… Instagram …)" is NOT crossed:** nothing calls Instagram's or WhatsApp's API, and the user posts from their own phone through the operating system's share sheet or saves the image, which is the content calendar's "planning only, no posting" line applied to a single moment. **"Pre-save campaigns" is NOT crossed:** the fan link is a URL the manager types, the capture page's reasoning. It honors the release-spine principle, since every post is made from one rollout's own facts. Nothing is stored server-side: the images are rendered on request and the answers are remembered per rollout in the browser. Every image carries a small "Made with Urganize" mark, the same distribution loop as the EPK footer and the recap card. Flag-gated behind `NEXT_PUBLIC_FEATURE_SOCIAL_SHARE` (default off; the image route 404s when off). Full detail in "Share to socials" at the end of this file. The "do not exceed" rule still holds for everything else.
 
-**Out of scope for v1, no exceptions:** (Amended 2026-10-02: the strategy doc commits to sync, analytics, and distribution plus streaming integrations. See "Company strategy comes first" at the top of this file before saying "v2" to any of them.)
+**Out of scope for v1, no exceptions:** (Amended 2026-10-02: the strategy doc commits to sync, analytics, and distribution plus streaming integrations. See "Company strategy comes first" at the top of this file before saying "v2" to any of them. Amended again 2026-10-02: Relationships (the CRM), Opportunities, Audience (fan data, streaming and social analytics) and the Catalogue artist page are also committed areas, not out of scope. They ship one at a time, behind flags, in the order recorded under "Build order after the credits sprint" below.)
 
 - Standalone events (events not tied to a release) — **EXCEPTION (2026-08-30): now built as the events surface.** The founder consciously moved this line; a show hangs off the artist, not off a release. This is the fifth sanctioned exception to this list, and one of three moved by the same decision (see "Scope expansion (2026-08-30)" above) — do not read it as license to add other items from this list.
 - Notes / idea capture / voice memos / track ideas — **EXCEPTION (2026-08-09): text notes are now being built as the Notes surface.** The founder consciously moved this line; see "Scope expansion (2026-08-09)" above. Global quick capture with an optional release link, private to the owner, at `/dashboard/notes`. **Voice memos and track-idea audio are NOT covered by this exception and stay out of scope.** This is the fourth sanctioned exception to this list (Chappi below was the first, the metadata hub above the second, native mobile apps below the third) — do not read it as license to add other items from this list.
@@ -18308,3 +18321,46 @@ First piece of distribution ordering (strategy row 11). Behind `NEXT_PUBLIC_FEAT
 **Verified:** 6,056 tests pass, `tsc` clean apart from the documented errors, lint at the 3-error baseline with one new warning (the fetch-on-mount effect, the accepted React 19 pattern), `next build` green with the flag on and `/auth`, `/dashboard`, `/locked`, `/onboarding`, `/settings` still static. The scene was looked at in a browser through a throwaway page (removed). **Not verified:** nothing has run with a real session or against TRM; the hand-off row has never been written for real.
 
 **Activation:** set `NEXT_PUBLIC_FEATURE_DISTRIBUTION=true` (and turn `NEXT_PUBLIC_FEATURE_METADATA` back on, so the fix links have somewhere to go) in Vercel `Web` with a commit that rebuilds `apps/web`. Changelog entry and version bump at the flip, not at merge.
+
+---
+
+## Catalogue, Phase 1: the artist page and the delivery snapshot (2026-10-02, flag-off)
+
+Phase 1 of "Build order after the credits sprint". Behind `NEXT_PUBLIC_FEATURE_ARTIST_PAGE` (needs `NEXT_PUBLIC_FEATURE_WORKSPACE` too). One additive migration, `20261002100000_release_epk_snapshot.sql`, **not applied anywhere yet**. No ledger entry or version bump: they land at the flip.
+
+### What it is
+
+- **`/dashboard/artists`** lists every artist on the team with its counts and press kit state; **`/dashboard/artists/[artistId]`** shows that artist's rollouts (planned, out now, past), shows (coming up, past), the team and the press kit. A new nav row, page-search entry and prefetch entry carry it. With the flag on, `/dashboard/press-kits` hands over to the artist list; the kit editor at `/dashboard/press-kits/[artistId]` keeps its route, so every link to a single kit still works.
+- **The artist press kit stays the one standing EPK per artist**, and a release reads it live while the release has not happened. The first time the release counts as delivered (`lib/recap-eligibility.ts`, the same rule as the directory) a daily sweep copies the three things its pitch shows from the kit (`descriptor`, `shortBio`, contact count, plus slug, state and publish time) into `release_epk_fields.kit_snapshot`, and the release reads the copy from then on. `loadPitchKit` prefers a valid snapshot and falls back to the live kit for anything it cannot read.
+
+### Things worth knowing
+
+1. **Most of the EPK half already existed.** The press kit draft/published split, the roll-in proposals, `presskit.draft_section` (UrgAns proposes, a person accepts, nothing saves otherwise) and the Solo/Manager gate on embedded actions were all built; the audit confirmed Solo can edit by hand and is refused the embedded generation. Phase 1 added the missing half: the artist page and the freeze on delivery.
+2. **The sweep is another passenger on `/api/cron/due-date-notifications`**, for the reason the others give (two cron slots, both taken, Hobby plan). `runKitSnapshotSweep` never throws, does nothing while the pitch kit flag is off, never touches a release that already has a copy, writes at most 200 a run and names only the snapshot columns, so a story and credits are never overwritten. **The cost is up to a day**: a release delivered at noon can still pick up a bio edit made before that night's run. A read-time snapshot would turn a GET into a write.
+3. **A delivered release whose artist had no kit gets nothing frozen**, and will read a kit made later. Harmless for a record that never held one, and the alternative is freezing "nothing".
+4. **`snapshot_column_missing` is the sweep's answer when the migration is not applied**, and it then writes nothing. Apply the migration before turning the pitch kit flag on.
+5. **Release buckets are `lib/artist-overview.ts`**: planned (date ahead or none), live (date today or within 30 days), past (older, archived, or `released` with no date). Every rollout lands in exactly one. A cancelled show is in neither show list.
+6. **The team card needed its own route.** `GET /api/workspace/artists/[artistId]/team` returns who is limited to this artist (`workspace_members.artist_scope_id`) apart from who sees every artist; the members route does not carry the scope and widening it would reach every surface that reads it.
+7. **A real bug fixed on the way**: `POST /api/tasks` accepted any user id as the assignee while the PATCH route refused anyone outside the team. Both now call `isTeamAssignee` (`lib/task-assignee-server.ts`), and a structural test reads both route sources.
+8. **Two analytics events**, ids and counts only: `artist_page_viewed` and `artist_page_action`.
+
+### Not built, deliberately
+
+- No edit-in-place of the artist EPK from the artist page: it links to the existing editor.
+- No artist-level financials or audience; those are Phases 4 and 5.
+- `profiles.artist_name` drift is untouched (found in the audit, separate change).
+- The first-release modal, the catalog grid and the release card do not link to the artist page yet.
+
+### Verified
+
+New tests: `lib/release-epk-snapshot.test.ts`, `release-epk-snapshot-server.test.ts` (against a fake client), `release-epk-server.test.ts`, `artist-overview.test.ts`, `artist-page.test.ts`, `task-assignee-server.test.ts`, plus two cases in `app-pages.test.ts`. **Five deliberate breaks, each caught by a named test** (no already-frozen check, archived not forced to past, snapshot ignored on read, the assignee check removed from the create route, the sweep running with the flag off). `tsc` shows only the 8 known `confirmed-action.test.ts` errors, lint adds nothing, and `next build` is green with the flags on and off with `/auth`, `/dashboard`, `/onboarding`, `/settings` and `/locked` still static; the team route answers 401 with the flag on and `{"error":"Not found."}` 404 with it off while `/api/releases` answers 401 either way.
+
+**Not verified:** nothing has run against a real database or in a browser. No snapshot has been written, the artist pages have never rendered with real data, and the migration is unapplied.
+
+### Activation
+
+1. Apply `20261002100000_release_epk_snapshot.sql` (paste it from the file; it is two nullable columns).
+2. Set `NEXT_PUBLIC_FEATURE_ARTIST_PAGE=true` on the Vercel `Web` project with a commit that rebuilds `apps/web`.
+3. Ledger entry and version bump at the flip.
+4. Check one delivered release: after the next 07:00 UTC cron its `release_epk_fields.kit_snapshot` is set, and a later bio edit no longer changes that release's pitch.
+

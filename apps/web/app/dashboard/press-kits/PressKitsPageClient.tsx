@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Newspaper } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
+import { isArtistPageEnabled } from '@/lib/artist-page';
 import { usePressKitsStore } from '@/stores/usePressKitsStore';
 import type { PressKit } from '@/types/press-kits';
 
@@ -41,6 +42,12 @@ export default function PressKitsPageClient() {
   useEffect(() => {
     if (!PRESS_KITS_ENABLED) {
       router.replace('/dashboard');
+      return;
+    }
+    // The artist list is where this lives now (Catalogue, Phase 1). The kit
+    // editor keeps its own route, so every link to a single kit still works.
+    if (isArtistPageEnabled()) {
+      router.replace('/dashboard/artists');
       return;
     }
     void load();

@@ -254,8 +254,9 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
               {data.release.artistName ? `${data.release.artistName}'s press kit` : 'The press kit'}
             </h3>
             <p className="mt-1 text-xs text-content-secondary">
-              One standing kit for the artist. This rollout reads it and adds its own story and
-              credits below.
+              {data.kitFrozenAt
+                ? 'This is the kit as it was when this rollout was delivered. Later edits to the artist kit do not change it.'
+                : 'One standing kit for the artist. This rollout reads it and adds its own story and credits below.'}
             </p>
           </div>
           <Link

@@ -238,6 +238,22 @@ export interface AnalyticsEventPropertiesMap {
     reason: string;
   };
   /**
+   * The Catalogue artist page (2026-10-02). What teams do BETWEEN rollouts is
+   * the whole point of the page, so `artist_page_viewed` carries how much the
+   * artist has, and `artist_page_action` says which door was used. No names and
+   * no text: ids and counts only.
+   */
+  artist_page_viewed: {
+    artist_id: string;
+    releases: number;
+    upcoming_shows: number;
+    has_kit: boolean;
+  };
+  artist_page_action: {
+    artist_id: string;
+    action: 'open_epk' | 'open_release' | 'open_show';
+  };
+  /**
    * Share to socials (2026-09-23). `opened` against `made` against `sent` is
    * the whole funnel, and `source` says whether the first-rollout offer earns
    * its interruption. NO TEXT, EVER: not the caption, not the fan link, not

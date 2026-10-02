@@ -12,6 +12,7 @@ import {
   type ReleaseEpkCredit,
   type ReleaseEpkFields,
 } from '@/lib/release-epk';
+import { readKitSnapshot, type KitSnapshot } from '@/lib/release-epk-snapshot';
 
 // Reading and writing the release pitch kit. Leaf-only (no app/api imports) so
 // the embedded action runner can use it too.
@@ -31,16 +32,7 @@ const asRow = (value: unknown): Record<string, unknown> =>
   (value || {}) as Record<string, unknown>;
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 
-export type PitchKitSummary = {
-  id: string;
-  artistId: string;
-  slug: string;
-  state: string;
-  publishedAt: string | null;
-  descriptor: string;
-  shortBio: string;
-  contactCount: number;
-} | null;
+export type PitchKitSummary = KitSnapshot | null;
 
 export type PitchKitPayload = {
   release: {
@@ -53,6 +45,8 @@ export type PitchKitPayload = {
   };
   /** The artist's standing kit, read-only here. null = none created yet. */
   kit: PitchKitSummary;
+  /** When `kit` was frozen at delivery, or null while it is read live. */
+  kitFrozenAt: string | null;
   fields: ReleaseEpkFields;
   /** What collaborators submitted, already narrowed to name and role. */
   submittedCredits: ReleaseEpkCredit[];
@@ -61,6 +55,51 @@ export type PitchKitPayload = {
   coverUrl: string | null;
   checklist: ReturnType<typeof pitchKitChecklist>;
 };
+
+/**
+ * The three things a pitch shows from artist kits, one query for all of them.
+ * Shared by the live read below and by the delivery sweep, so a frozen copy and
+ * a live read can never disagree about what "the kit" means.
+ */
+export async function readKitSummaries(
+  admin: SupabaseClient,
+  kitRows: Array<Record<string, unknown>>
+): Promise<Map<string, KitSnapshot>> {
+  const summaries = new Map<string, KitSnapshot>();
+  if (kitRows.length === 0) return summaries;
+
+  const sections = await admin
+    .from(SECTIONS_TABLE)
+    .select('kit_id,section,content')
+    .in('kit_id', kitRows.map((row) => text(row.id)))
+    .in('section', ['header', 'bios', 'contact']);
+  const sectionRows = sections.error ? [] : (sections.data || []);
+
+  for (const kitRow of kitRows) {
+    const kitId = text(kitRow.id);
+    const content = (name: string): Record<string, unknown> => {
+      const row = sectionRows.find(
+        (s) => asRow(s).kit_id === kitId && asRow(s).section === name
+      );
+      const value = row ? asRow(row).content : null;
+      return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+    };
+    const contacts = content('contact').contacts;
+    summaries.set(text(kitRow.artist_id), {
+      id: kitId,
+      artistId: text(kitRow.artist_id),
+      slug: text(kitRow.slug),
+      state: text(kitRow.state),
+      publishedAt: kitRow.published_at ? text(kitRow.published_at) : null,
+      descriptor: text(content('header').descriptor),
+      shortBio: text(content('bios').short),
+      contactCount: Array.isArray(contacts) ? contacts.length : 0,
+    });
+  }
+  return summaries;
+}
 
 export async function loadPitchKit(
   admin: SupabaseClient,
@@ -107,32 +146,20 @@ export async function loadPitchKit(
         })
   );
 
-  let kit: PitchKitSummary = null;
-  const kitRow = kitResult.error ? null : (kitResult.data as Record<string, unknown> | null);
-  if (kitRow) {
-    const sections = await admin
-      .from(SECTIONS_TABLE)
-      .select('section,content')
-      .eq('kit_id', text(kitRow.id))
-      .in('section', ['header', 'bios', 'contact']);
-    const content = (name: string): Record<string, unknown> => {
-      const row = (sections.data || []).find((s) => asRow(s).section === name);
-      const value = row ? asRow(row).content : null;
-      return value && typeof value === 'object' && !Array.isArray(value)
-        ? (value as Record<string, unknown>)
-        : {};
-    };
-    const contacts = content('contact').contacts;
-    kit = {
-      id: text(kitRow.id),
-      artistId,
-      slug: text(kitRow.slug),
-      state: text(kitRow.state),
-      publishedAt: kitRow.published_at ? text(kitRow.published_at) : null,
-      descriptor: text(content('header').descriptor),
-      shortBio: text(content('bios').short),
-      contactCount: Array.isArray(contacts) ? contacts.length : 0,
-    };
+  // A delivered release reads the copy frozen when it was delivered; one that
+  // has not happened yet reads the artist's live kit, so an edit to the bio
+  // reaches it. A snapshot that cannot be read is treated as absent.
+  const fieldsRow = fieldsResult.error ? null : asRow(fieldsResult.data);
+  const frozen = fieldsRow ? readKitSnapshot(fieldsRow.kit_snapshot) : null;
+  const kitFrozenAt = frozen && fieldsRow?.kit_snapshot_at ? text(fieldsRow.kit_snapshot_at) : null;
+
+  let kit: PitchKitSummary = frozen;
+  if (!kit) {
+    const kitRow = kitResult.error ? null : (kitResult.data as Record<string, unknown> | null);
+    if (kitRow) {
+      const summaries = await readKitSummaries(admin, [kitRow]);
+      kit = summaries.get(text(kitRow.artist_id)) ?? null;
+    }
   }
 
   let coverUrl: string | null = null;
@@ -165,6 +192,7 @@ export async function loadPitchKit(
         releaseDate: release.release_date ? text(release.release_date) : null,
       },
       kit,
+      kitFrozenAt,
       fields,
       submittedCredits,
       credits: effectiveCredits(fields, submittedCredits),

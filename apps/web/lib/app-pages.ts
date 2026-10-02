@@ -25,6 +25,9 @@ const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
+const ARTIST_PAGE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_ARTIST_PAGE === 'true' &&
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
 
 export type AppPage = {
@@ -105,6 +108,16 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       keywords: ['assistant', 'chat', 'ai', 'ask'],
     }
   );
+
+  if (ARTIST_PAGE_ENABLED) {
+    pages.push({
+      key: 'artists',
+      label: 'Artists',
+      href: '/dashboard/artists',
+      // The press kit lives on the artist page now, so those words find it.
+      keywords: ['artist', 'roster', 'act', 'catalogue', 'catalog', 'press kit', 'epk', 'bio'],
+    });
+  }
 
   if (NOTES_ENABLED) {
     pages.push({

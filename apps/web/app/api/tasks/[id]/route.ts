@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   TASK_ATTACHMENTS_TABLE,
   TASK_ATTACHMENTS_BUCKET,
-  WORKSPACE_MEMBERS_TABLE,
-  WORKSPACES_TABLE,
   buildReadOnlyResponse,
   buildTaskSchemaResponse,
   createTaskNotification,
@@ -18,6 +16,7 @@ import {
   type TaskRow,
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
+import { ASSIGN_OUTSIDE_TEAM_MESSAGE, isTeamAssignee } from '@/lib/task-assignee-server';
 import {
   captureServerAnalyticsEvent,
   createPostHogEvent,
@@ -135,32 +134,13 @@ export async function PATCH(
     // (unassignment); absent field is skipped. A user qualifies as either an
     // active workspace_members row OR the workspace owner.
     if (typeof mapped.updates.assigned_to_user_id === 'string') {
-      const targetUserId = mapped.updates.assigned_to_user_id;
-      const workspaceId = access.task.workspace_id;
-      const [memberResult, ownerResult] = await Promise.all([
-        adminClient
-          .from(WORKSPACE_MEMBERS_TABLE)
-          .select('id')
-          .eq('workspace_id', workspaceId)
-          .eq('user_id', targetUserId)
-          .eq('status', 'active')
-          .maybeSingle(),
-        adminClient
-          .from(WORKSPACES_TABLE)
-          .select('id')
-          .eq('id', workspaceId)
-          .eq('owner_id', targetUserId)
-          .maybeSingle(),
-      ]);
-
-      if (memberResult.error) throw memberResult.error;
-      if (ownerResult.error) throw ownerResult.error;
-
-      if (!memberResult.data && !ownerResult.data) {
-        return NextResponse.json(
-          { error: 'Cannot assign an activity to someone outside your team.' },
-          { status: 400 }
-        );
+      const allowed = await isTeamAssignee(
+        adminClient,
+        access.task.workspace_id,
+        mapped.updates.assigned_to_user_id
+      );
+      if (!allowed) {
+        return NextResponse.json({ error: ASSIGN_OUTSIDE_TEAM_MESSAGE }, { status: 400 });
       }
     }
 

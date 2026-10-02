@@ -21,6 +21,8 @@ async function loadPages(env: Record<string, string | undefined> = {}) {
   vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCHING', env.NEXT_PUBLIC_FEATURE_PITCHING ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_PRESS_KITS', env.NEXT_PUBLIC_FEATURE_PRESS_KITS ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_HOME', env.NEXT_PUBLIC_FEATURE_HOME ?? '');
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_ARTIST_PAGE', env.NEXT_PUBLIC_FEATURE_ARTIST_PAGE ?? '');
+  vi.stubEnv('NEXT_PUBLIC_FEATURE_WORKSPACE', env.NEXT_PUBLIC_FEATURE_WORKSPACE ?? '');
   return (await import('./app-pages')) as PagesModule;
 }
 
@@ -239,5 +241,33 @@ describe('appPageHaystack + the shared matcher', () => {
       matchesSearchTerms(appPageHaystack(page), parseSearchTerms('zzzznope'))
     );
     expect(matched).toEqual([]);
+  });
+});
+
+describe('buildAppPages — the artist pages', () => {
+  it('offers Artists only when its flag AND the workspace flag are on', async () => {
+    const both = await loadPages({
+      NEXT_PUBLIC_FEATURE_ARTIST_PAGE: 'true',
+      NEXT_PUBLIC_FEATURE_WORKSPACE: 'true',
+    });
+    expect(both.buildAppPages({ hasCuratorProfile: false }).map((p) => p.key)).toContain('artists');
+
+    const noWorkspace = await loadPages({ NEXT_PUBLIC_FEATURE_ARTIST_PAGE: 'true' });
+    expect(noWorkspace.buildAppPages({ hasCuratorProfile: false }).map((p) => p.key)).not.toContain('artists');
+
+    const off = await loadPages({ NEXT_PUBLIC_FEATURE_WORKSPACE: 'true' });
+    expect(off.buildAppPages({ hasCuratorProfile: false }).map((p) => p.key)).not.toContain('artists');
+  });
+
+  it('points at the artist list, and finds it by the words for what it holds', async () => {
+    const { buildAppPages, appPageHaystack } = await loadPages({
+      NEXT_PUBLIC_FEATURE_ARTIST_PAGE: 'true',
+      NEXT_PUBLIC_FEATURE_WORKSPACE: 'true',
+    });
+    const page = buildAppPages({ hasCuratorProfile: false }).find((p) => p.key === 'artists');
+    expect(page?.href).toBe('/dashboard/artists');
+    for (const query of ['roster', 'press kit', 'catalogue']) {
+      expect(matchesSearchTerms(appPageHaystack(page!), parseSearchTerms(query))).toBe(true);
+    }
   });
 });

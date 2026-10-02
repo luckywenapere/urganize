@@ -161,6 +161,10 @@ export const HELP_COPY = {
     label: 'UrgAns',
     text: 'Ask for help in plain words. It can make a plan or answer questions about your work.',
   },
+  'nav.artists': {
+    label: 'Artists',
+    text: 'Each act you work with, and every rollout, show and press kit that belongs to them.',
+  },
   'nav.shows': {
     label: 'Shows',
     text: 'Every live date, with its running order, its set and the tracks your DJ needs.',
