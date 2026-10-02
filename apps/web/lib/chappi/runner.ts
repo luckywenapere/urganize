@@ -24,6 +24,7 @@ import { executeToolCall } from './dispatch';
 import { stripModelMarkup } from '@/lib/model-markup';
 import { GatewayError, classifyAiFailure, gatewayErrorFromResponse } from '@/lib/ai/gateway-error';
 import { usesMaxCompletionTokens } from '@/lib/ai/model-ladder';
+import { SseReader, StreamAccumulator, type StreamSummary } from '@/lib/ai/sse-stream';
 import {
   addTraceUsage,
   fitToDeadline,
@@ -185,6 +186,8 @@ export function buildChatCompletionBody(params: {
   maxOutputTokens: number;
   tokenParam: TokenParam;
   reasoningEffort: ReasoningEffort | null;
+  /** Ask the gateway to stream the answer. Off, the body is the one this loop has always sent. */
+  stream?: boolean;
 }): Record<string, unknown> {
   const hasTools = Boolean(params.tools?.length);
   const effort = hasTools ? effortForTools(params.model, params.reasoningEffort) : params.reasoningEffort;
@@ -193,7 +196,10 @@ export function buildChatCompletionBody(params: {
     messages: params.messages,
     [params.tokenParam]: params.maxOutputTokens,
     ...(effort ? { reasoning_effort: effort } : {}),
-    stream: false,
+    stream: params.stream === true,
+    // Without this a stream ends without saying what it cost, and credits could
+    // only be charged from an estimate.
+    ...(params.stream === true ? { stream_options: { include_usage: true } } : {}),
     ...(params.tools?.length ? { tools: params.tools } : {}),
   };
 }
@@ -208,6 +214,8 @@ async function requestChatCompletion(params: {
   tokenParam: TokenParam;
   reasoningEffort: ReasoningEffort | null;
   timeoutMs?: number;
+  /** Given, the answer is streamed and each piece of text is handed to this as it arrives. */
+  onText?: (delta: string) => void;
 }): Promise<ChatCompletion> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), params.timeoutMs ?? REQUEST_TIMEOUT_MS);
@@ -219,7 +227,7 @@ async function requestChatCompletion(params: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${params.apiKey}`,
       },
-      body: JSON.stringify(buildChatCompletionBody(params)),
+      body: JSON.stringify(buildChatCompletionBody({ ...params, stream: Boolean(params.onText) })),
       signal: controller.signal,
     });
 
@@ -231,6 +239,11 @@ async function requestChatCompletion(params: {
         retryAfter: response.headers?.get?.('retry-after') ?? null,
       });
     }
+
+    // A gateway that was asked to stream but answered plain JSON is read as
+    // plain JSON, below.
+    const streamed = params.onText ? await readStreamedCompletion(response, params.onText) : null;
+    if (streamed) return streamed;
 
     const payload = (await response.json().catch(() => null)) as
       | ({ choices?: OpenAiChoice[] } & Record<string, unknown>)
@@ -245,6 +258,103 @@ async function requestChatCompletion(params: {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** The usage of a streamed call, in the shape the non-streaming path reports. */
+function usageOfStream(summary: StreamSummary): Pick<ChatCompletion, 'usage' | 'cachedTokens'> {
+  if (!summary.usage) return { usage: null, cachedTokens: null };
+  const payload = {
+    usage: {
+      prompt_tokens: summary.usage.promptTokens,
+      completion_tokens: summary.usage.completionTokens,
+      prompt_tokens_details: { cached_tokens: summary.cachedTokens },
+    },
+  };
+  return { usage: extractAiUsage(payload), cachedTokens: extractCachedTokens(payload) };
+}
+
+/**
+ * Reads a streamed answer to the end, handing each piece of text to `onText` as
+ * it arrives, and returns it in the shape a non-streaming call returns, so
+ * nothing downstream knows the difference.
+ *
+ * Returns null when the gateway did not actually stream (it answered plain
+ * JSON), so the caller reads the body as it always did.
+ *
+ * If the stream is cut short (our own deadline aborting the request, the
+ * connection dropping, an error object mid-stream) and the model had already
+ * written text and asked for no tool, that text is returned as an answer that
+ * stopped at its limit, so a slow model costs the user the tail of a reply and
+ * not all of it. A stream cut while a tool call was being written is thrown,
+ * because half a tool call is not something to run. Usage is absent from a cut
+ * stream (the gateway only sends it last), so a cut reply reports none.
+ */
+async function readStreamedCompletion(
+  response: Response,
+  onText: (delta: string) => void
+): Promise<ChatCompletion | null> {
+  const contentType = response.headers?.get?.('content-type') ?? '';
+  if (!response.body || !/text\/event-stream/i.test(contentType)) return null;
+
+  const reader = new SseReader();
+  const accumulator = new StreamAccumulator();
+  const decoder = new TextDecoder();
+  const body = response.body.getReader();
+  const take = (payloads: string[]) => {
+    for (const data of payloads) {
+      const delta = accumulator.push(data);
+      if (delta) onText(delta);
+    }
+  };
+
+  let broke: unknown = null;
+  try {
+    for (;;) {
+      const { value, done } = await body.read();
+      if (done) break;
+      take(reader.feed(decoder.decode(value, { stream: true })));
+    }
+    take(reader.flush());
+  } catch (error) {
+    broke = error;
+  }
+
+  const summary = accumulator.summary();
+  const finished = summary.done || summary.finishReason !== null;
+  const { usage, cachedTokens } = usageOfStream(summary);
+
+  if (broke || summary.streamError || !finished) {
+    if (summary.content.trim() && summary.toolCalls.length === 0) {
+      return {
+        choice: { message: { content: summary.content }, finish_reason: 'length' },
+        usage,
+        cachedTokens,
+      };
+    }
+    throw broke ?? new Error(summary.streamError ?? 'Chappi gateway stream ended early');
+  }
+
+  return {
+    choice: {
+      message: {
+        content: summary.content || null,
+        ...(summary.toolCalls.length > 0
+          ? {
+              tool_calls: summary.toolCalls.map(
+                (call): OpenAiToolCall => ({
+                  id: call.id ?? `call_${call.index}`,
+                  type: 'function',
+                  function: { name: call.name, arguments: call.arguments },
+                })
+              ),
+            }
+          : {}),
+      },
+      finish_reason: summary.finishReason ?? undefined,
+    },
+    usage,
+    cachedTokens,
+  };
 }
 
 /**
@@ -264,6 +374,7 @@ async function completeChat(params: {
   reasoningEffort: ReasoningEffort | null;
   timeoutMs?: number;
   quirks: Quirks;
+  onText?: (delta: string) => void;
 }): Promise<ChatCompletion> {
   for (let attempt = 0; ; attempt += 1) {
     const tokenParam: TokenParam = params.quirks.tokenParam.get(params.model) ?? defaultTokenParam(params.model);
@@ -383,6 +494,15 @@ export async function runChappiAgent(params: {
   system: string;
   messages: ChappiMessage[];
   routing?: ChatRouting;
+  /**
+   * Given, every model call is streamed and each piece of reply text is handed
+   * to this as it arrives. The returned `reply` is still the authority: what was
+   * streamed is a preview, and a round that goes on to use tools, or a model
+   * that is swapped for another, replaces it (see `onAttempt`).
+   */
+  onText?: (delta: string) => void;
+  /** Called before each model call, so a caller can drop the preview of a round that is being replaced. */
+  onAttempt?: () => void;
 }): Promise<ChappiAgentResult> {
   const config = getChappiModelConfig();
   if (!config) throw new Error('Chappi model is not configured');
@@ -448,6 +568,7 @@ export async function runChappiAgent(params: {
     for (;;) {
       const settings = settingsFor(holder.decision, config.model);
       noteModelCalled(trace, settings.model);
+      params.onAttempt?.();
 
       let completion: ChatCompletion;
       try {
@@ -461,6 +582,7 @@ export async function runChappiAgent(params: {
           reasoningEffort: settings.reasoningEffort,
           timeoutMs: timeoutMs(),
           quirks,
+          ...(params.onText ? { onText: params.onText } : {}),
         });
       } catch (error) {
         const failure = classifyAiFailure(error);
