@@ -49,24 +49,39 @@ credits; the credit history page at `/dashboard/credits` (every spend, top-up,
 monthly grant and trial grant with date and amount), linked from Settings billing
 and from the banner.
 
-## Left to build: buying credits
+## Buying credits (built, flag-off)
 
-Nothing sells credits yet, and `CREDITS_PURCHASABLE` stays false, so no line tells
-anyone to buy. The pack table is in `lib/credits/packs.ts`.
+Behind `NEXT_PUBLIC_FEATURE_CREDITS_PURCHASE` (default off, and only with credits on).
+No new table: the ledger row is the record. Pack table: `lib/credits/packs.ts`.
 
-1. `POST /api/credits/checkout { priceNaira }`: reject any price not in
-   `TOPUP_PACKS`; decide the credits on the server from the account's state at that
-   moment (`creditsForPack`); initialize a one-off Paystack transaction (no plan code)
-   with a `urgcredits-` reference prefix; store the reference, price and credits on a
-   `payments` row so the webhook never trusts the client.
-2. Webhook: divert on the reference prefix before the generic branch (the
-   `urgpitch-` and trial-card precedent). On `charge.success`, claim the payments row by
-   compare-and-set, then `adjustCredits`-style insert of a `topup` row with dedupe key
-   `topup:<reference>` so a redelivered webhook credits once. The amount credited is the
-   stored one.
-3. A buy screen on the history page, and the out-of-credits notice and the chat
-   fallback prompt switch to buying wording when `CREDITS_PURCHASABLE` becomes true.
-4. iOS hides the buy surface (Apple's external payment rule), as with pitch payments.
+1. `POST /api/credits/checkout { priceNaira }` (owner or admin of the team; an open
+   route, so a lapsed team can still pay). The price must be one of the four packs.
+   The credits come from the account's state at that moment (`creditsForPack`: a
+   subscriber's rate, or the credits-only rate for a trial, an ended plan, or an
+   account that cannot be read). A one-off Paystack transaction with no plan code,
+   reference `urgcredits-<random>`, and the team, payer, price and credits in the
+   metadata.
+2. Settling (`settleCreditsPurchase`), from the signed webhook and from the page the
+   buyer returns to, in either order, any number of times. It asks Paystack itself
+   whether the transaction was paid, then `checkPurchase` compares it to the pack
+   table: status success, NGN, the amount equal to the pack price to the kobo, and
+   credits equal to one of that pack's two rates. A forged reference cannot pass.
+   Then one `topup` ledger row with dedupe key `topup:<reference>`, so credits land
+   once. Paid but the write failed: logged loudly and answered 500 so Paystack
+   redelivers. A mismatch is logged and left for a person (redelivery cannot fix it).
+3. The webhook diverts on the reference prefix before the generic handling, and neither
+   it nor the verify route is behind the flag, so a pack that was paid for is credited
+   even if purchasing is switched off afterwards.
+4. `/dashboard/credits` shows the four packs, sized for the account, and the result when
+   the buyer returns. iOS shows a line pointing to the browser instead (Apple's
+   external payment rule). The out-of-credits notice and the low-balance banner say
+   "buy" only when the flag is on (`isCreditsPurchasable`).
+5. A purchase counts as a purchase for the trial rule: a trial that bought credits keeps
+   its leftover trial credits.
+
+Not built: a receipt email, a founder alert on purchase (a `credits_purchased` billing
+event is written), and a reconcile sweep for a purchase whose webhook and callback both
+never arrived.
 
 ## Left to decide: credits-only accounts
 

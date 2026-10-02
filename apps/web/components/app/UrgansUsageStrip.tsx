@@ -7,6 +7,7 @@ import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
 import { isChappiEnabled } from '@/lib/chappi/config';
 import { supabase } from '@/lib/supabase/client';
 import { creditsLeftLine, creditsNextLine } from '@/lib/credits/copy';
+import { isCreditsPurchasable } from '@/lib/credits/config';
 import type { CreditAccount } from '@/lib/credits/allowance';
 
 // The assistant-usage indicator. One calm line above the topbar once a team has
@@ -158,7 +159,7 @@ export function UrgansUsageStrip() {
           href="/dashboard/credits"
           className="shrink-0 text-sm font-medium text-content-secondary underline-offset-4 hover:underline"
         >
-          History
+          {isCreditsPurchasable() ? 'Buy credits' : 'History'}
         </Link>
         <Link
           href="/locked?intent=upgrade"

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2 } from '@/components/icons';
+import { BuyCredits } from '@/components/credits/BuyCredits';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
 import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
@@ -37,7 +38,7 @@ function formatWhen(iso: string): string {
 export default function CreditsPageClient() {
   const router = useRouter();
   const authLoading = useAuthStore((state) => state.isLoading);
-  const { balance } = useCreditBalance();
+  const { balance, account, refresh: refreshBalance } = useCreditBalance();
 
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [nextBefore, setNextBefore] = useState<string | null>(null);
@@ -78,6 +79,12 @@ export default function CreditsPageClient() {
     if (CREDITS_ON) void load(null);
   }, [load]);
 
+  // A purchase just landed: the balance and the list have both changed.
+  const handlePurchased = useCallback(() => {
+    void refreshBalance();
+    void load(null);
+  }, [refreshBalance, load]);
+
   if (!CREDITS_ON) return null;
 
   return (
@@ -100,6 +107,8 @@ export default function CreditsPageClient() {
           </p>
         ) : null}
       </header>
+
+      <BuyCredits account={account} onPurchased={handlePurchased} />
 
       {authLoading || isLoading ? (
         <div className="space-y-3" aria-busy="true">

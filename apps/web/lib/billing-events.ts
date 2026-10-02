@@ -79,6 +79,10 @@ export const BILLING_EVENT_TYPES = [
    *  source of every action route for the literal string 'urgans_action' and
    *  fails the build if it appears, so this split cannot regress silently. */
   'urgans_embedded_action',
+  /** A team bought UrgAns credits (lib/credits/purchase-server.ts). Metadata
+   *  carries the price, the credits and the Paystack reference. For founder
+   *  visibility only: the credits themselves are a `topup` row in the ledger. */
+  'credits_purchased',
   /** A team hit the daily embedded-actions cap (EMBEDDED_ACTIONS_DAILY_CAP in
    *  lib/urgans-actions/guard.ts). Drives a founder alert, at most one per
    *  team per 24h — see shouldAlertGuardTrip. */

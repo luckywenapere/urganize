@@ -1,4 +1,5 @@
 import type { CreditAccount } from './allowance';
+import { isCreditsPurchasable } from './config';
 import { EMBEDDED_ESTIMATE_CREDITS, EMBEDDED_HOLD_CREDITS, embeddedEstimateCredits } from './embedded';
 
 /**
@@ -13,12 +14,10 @@ import { EMBEDDED_ESTIMATE_CREDITS, EMBEDDED_HOLD_CREDITS, embeddedEstimateCredi
  */
 
 /**
- * Whether anyone can BUY credits yet. They cannot: pack sizes are undecided and
- * there is no checkout, so no line may tell a person to buy until this is true.
- * Every line that mentions buying is gated on it (and takes it as an argument so
- * both wordings are tested). Flip it in the same change that ships the checkout.
+ * Whether anyone can BUY credits is isCreditsPurchasable() (config.ts), off until
+ * the checkout is switched on. Every line that mentions buying is gated on it, and
+ * takes it as an argument so both wordings are tested.
  */
-export const CREDITS_PURCHASABLE = false;
 
 /** "12 October", in UTC so the day matches the one the window turns over on. */
 export function formatGrantDay(grantAtIso: string): string {
@@ -44,7 +43,7 @@ function whatNext({ account, nextGrantAt }: NoticeInput, purchasable: boolean): 
 }
 
 /** Said in the chat when a team has no credits left. */
-export function outOfCreditsNotice(input: NoticeInput, purchasable: boolean = CREDITS_PURCHASABLE): string {
+export function outOfCreditsNotice(input: NoticeInput, purchasable: boolean = isCreditsPurchasable()): string {
   const next = whatNext(input, purchasable);
   return `You are out of UrgAns credits. Quick commands still work.${next ? ` ${next}` : ''}`;
 }
@@ -77,7 +76,7 @@ export function embeddedCostLine(actionId: string, balance: number | null): stri
 /** Said when an embedded action (the planner, a press-kit draft) cannot start: the hold is more than the balance. */
 export function embeddedRefusalNotice(
   input: NoticeInput & { needed: number; left: number },
-  purchasable: boolean = CREDITS_PURCHASABLE
+  purchasable: boolean = isCreditsPurchasable()
 ): string {
   const left = Math.max(0, Math.floor(input.left));
   const next = whatNext(input, purchasable);
@@ -97,7 +96,7 @@ export function creditsLeftLine(left: number): string {
 export function creditsNextLine(
   left: number,
   input: NoticeInput,
-  purchasable: boolean = CREDITS_PURCHASABLE
+  purchasable: boolean = isCreditsPurchasable()
 ): string {
   const next = whatNext(input, purchasable);
   if (Math.floor(left) > 0) return next;

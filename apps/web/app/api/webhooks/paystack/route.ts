@@ -24,6 +24,8 @@ import {
   isCardTrialPlan,
 } from '@/lib/trial-card';
 import { isPitchPaymentReference } from '@/lib/pitch-payments';
+import { isCreditsReference } from '@/lib/credits/purchase';
+import { settleCreditsPurchase } from '@/lib/credits/purchase-server';
 import { handlePitchChargeEvent, handlePitchRefundEvent } from '@/lib/pitch-payments-server';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1131,6 +1133,37 @@ async function handlePitchRefund(event: string, payload: PaystackWebhookPayload)
   return NextResponse.json(result.body, { status: result.status });
 }
 
+// ─── UrgAns credit purchases ─────────────────────────────────────────────────
+//
+// A credit pack checkout carries a reference that starts with
+// CREDITS_REFERENCE_PREFIX, so it is recognised on the reference alone and routed
+// away before any subscription handling reads it. It never touches the payments
+// table: the ledger row, keyed on the reference, is the record.
+//
+// The body of this webhook is only a claim. settleCreditsPurchase asks Paystack
+// itself whether the transaction was paid and checks it against the pack table
+// to the kobo before a credit is written (lib/credits/purchase.ts).
+//
+// NOT BEHIND THE FEATURE FLAG, on the pitch-payments precedent: a pack somebody
+// paid for must still be credited if purchasing is switched off afterwards.
+//
+// A TRANSIENT failure answers 500 so Paystack redelivers. Everything else answers
+// 200: a mismatch will not get better by being sent again, and is logged loudly.
+
+async function handleCreditsCharge(payload: PaystackWebhookPayload) {
+  const admin = createAdminClient();
+  if (!admin) {
+    console.error('[paystack-webhook] Missing Supabase env vars for a credits charge');
+    return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
+  }
+  const reference = String(payload.data?.reference || '');
+  const outcome = await settleCreditsPurchase(admin, reference, 'webhook');
+  if (outcome.state === 'error' && outcome.transient) {
+    return NextResponse.json({ error: 'Try again' }, { status: 500 });
+  }
+  return ack({ event: 'charge.success', credits: outcome.state });
+}
+
 // ─── entrypoint ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -1157,6 +1190,9 @@ export async function POST(req: NextRequest) {
 
   if (event === 'charge.success' && isPitchPaymentReference(payload.data?.reference)) {
     return handlePitchCharge(payload);
+  }
+  if (event === 'charge.success' && isCreditsReference(payload.data?.reference)) {
+    return handleCreditsCharge(payload);
   }
   // Refunds from any other flow (the card-trial check) are acknowledged there.
   if (event.startsWith('refund.')) {

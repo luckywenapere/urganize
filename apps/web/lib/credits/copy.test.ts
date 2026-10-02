@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { isCreditsPurchasable } from './config';
 import {
-  CREDITS_PURCHASABLE,
   creditsLeftLine,
   creditsNextLine,
   embeddedEstimateLine,
@@ -29,9 +29,17 @@ describe('formatGrantDay', () => {
   });
 });
 
-describe('nothing can be bought yet', () => {
-  it('says so in one place', () => {
-    expect(CREDITS_PURCHASABLE).toBe(false);
+describe('buying wording follows the purchase switch', () => {
+  it('is off unless the purchase flag is the literal true, and never without credits', () => {
+    expect(isCreditsPurchasable({})).toBe(false);
+    expect(isCreditsPurchasable({ NEXT_PUBLIC_FEATURE_URGANS_CREDITS: 'true' })).toBe(false);
+    expect(isCreditsPurchasable({ NEXT_PUBLIC_FEATURE_CREDITS_PURCHASE: 'true' })).toBe(false);
+    expect(
+      isCreditsPurchasable({ NEXT_PUBLIC_FEATURE_URGANS_CREDITS: 'true', NEXT_PUBLIC_FEATURE_CREDITS_PURCHASE: 'yes' })
+    ).toBe(false);
+    expect(
+      isCreditsPurchasable({ NEXT_PUBLIC_FEATURE_URGANS_CREDITS: 'true', NEXT_PUBLIC_FEATURE_CREDITS_PURCHASE: 'true' })
+    ).toBe(true);
   });
 
   const lines = (): string[] => [

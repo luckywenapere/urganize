@@ -11,6 +11,7 @@ import {
 } from './allowance';
 import type { TurnCharge, UsageCall } from './pricing';
 import type { LedgerHistoryRow } from './history';
+import { purchaseDedupeKey } from './purchase';
 import { readBillingAnchor } from '@/lib/urgans-usage-server';
 import { resolveUsageWindow } from '@/lib/urgans-usage';
 
@@ -363,6 +364,48 @@ export async function settleTurn(client: SupabaseClient, input: SettleInput): Pr
 }
 
 const sum = (values: Array<number | null>): number => values.reduce<number>((total, value) => total + (value ?? 0), 0);
+
+/**
+ * Credit a purchase: one top-up row, keyed on the Paystack reference, so a
+ * webhook that is delivered twice, and a callback that races it, credit once. The
+ * caller has already checked that Paystack took the money (purchase.ts); this
+ * only writes. Never throws. 'already' means a repeat of a purchase that is on the
+ * ledger, which callers treat as success but do not announce a second time.
+ */
+export async function creditPurchase(
+  client: SupabaseClient,
+  input: {
+    workspaceId: string;
+    ownerUserId: string | null;
+    actorUserId: string;
+    credits: number;
+    reference: string;
+    priceNaira: number;
+  }
+): Promise<'credited' | 'already' | 'error'> {
+  const credits = Math.floor(input.credits);
+  if (!(credits > 0)) return 'error';
+  try {
+    const { error } = await client.from(TABLE).insert({
+      workspace_id: input.workspaceId,
+      owner_user_id: input.ownerUserId,
+      actor_user_id: input.actorUserId,
+      pool: 'topup',
+      kind: 'topup',
+      credits,
+      dedupe_key: purchaseDedupeKey(input.reference),
+      metadata: { source: 'paystack', reference: input.reference, price_naira: input.priceNaira },
+    });
+    if (!error) return 'credited';
+    // The reference is already on the ledger: told twice, credited once.
+    if (error.code === UNIQUE_VIOLATION) return 'already';
+    console.error(`[credits] could not credit the purchase ${input.reference}:`, error.message);
+    return 'error';
+  } catch (error) {
+    console.error(`[credits] could not credit the purchase ${input.reference}:`, error);
+    return 'error';
+  }
+}
 
 /**
  * Add or take away top-up credits by hand (the admin route): a purchase later,
