@@ -11,6 +11,7 @@ import {
   hasTaskThreadAccess,
   isReadOnlyWorkspaceMember,
   loadTaskDetail,
+  logTaskActivity,
   requireAuthenticatedAdmin,
   requireAuthenticatedAdminOrInternal,
   isTaskSchemaMissingError,
@@ -185,6 +186,23 @@ export async function PATCH(
     // from that instead of a third select of the same task. (access.task
     // would be STALE here; it predates the update.)
     const updatedRow = await taskService.updateTask(id, auth.user.id, mapped.updates);
+
+    // Who changed the activity (2026-10-02). Nothing else records it: tasks
+    // carries no editor column, and the scoreboard's "weekly active team" (2 or
+    // more members did something, updating a task being the strategy doc's
+    // first example) cannot be counted without it. task_activity has had no
+    // reader on screen since the feed was removed 2026-07-23, so this changes
+    // nothing anyone sees. Fire-and-forget: a lost log row must never fail an
+    // update that already succeeded.
+    void logTaskActivity(adminClient, {
+      taskId: id,
+      actorId: auth.user.id,
+      message: 'Updated the activity',
+      metadata: { kind: 'update', fields: Object.keys(mapped.updates) },
+    }).catch((logError: unknown) => {
+      console.error('[tasks] could not record the update:', logError);
+    });
+
     const task = updatedRow
       ? await loadTaskDetail(adminClient, updatedRow as TaskRow, auth.user.id, {
           includeComments: hasTaskThreadAccess(updatedRow as TaskRow, access.access, auth.user.id),
