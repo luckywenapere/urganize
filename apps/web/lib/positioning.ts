@@ -51,8 +51,7 @@
  *
  * "Music teams" since 2026-10-02, the strategy doc's one-line version
  * (docs/strategy/company-strategy.md, section 1). It said "your team" from
- * 2026-09-24. The long description below keeps "your team" as the founder
- * wrote it.
+ * 2026-09-24. The long description below says it too, from the same day.
  */
 export const CORE_CLAUSE = 'where music teams do everything after the music is made';
 
@@ -102,7 +101,7 @@ export const SHORT_DESCRIPTION = CORE_LINE;
  * release is the unit).
  */
 export const CANONICAL_DESCRIPTION =
-  'You make the music. Urganize is where your team does everything after. ' +
+  'You make the music. Urganize is where music teams do everything after. ' +
   'Plan the release, assign the work, keep files and metadata in one place, pitch to curators, ' +
   `book shows and put the release out. For ${AUDIENCE_LINE}.`;
 

@@ -231,12 +231,12 @@ describe('positioning', () => {
     // The 2026-09-24 brief gave these verbatim. Pinned as literals, not
     // against the module's own parts, because what matters is that the words
     // are the founder's rather than that the module agrees with itself.
-    // The core line says "music teams" since 2026-10-02, the strategy doc's
-    // one-line version; the long description below still says "your team".
+    // Both say "music teams" since 2026-10-02, the strategy doc's wording
+    // (founder call); they said "your team" from 2026-09-24.
     expect(CORE_LINE).toBe('Urganize is where music teams do everything after the music is made.');
     expect(SHORT_LINE).toBe('Everything after the music.');
     expect(CANONICAL_DESCRIPTION).toBe(
-      'You make the music. Urganize is where your team does everything after. ' +
+      'You make the music. Urganize is where music teams do everything after. ' +
         'Plan the release, assign the work, keep files and metadata in one place, pitch to curators, ' +
         'book shows and put the release out. For artists, managers and labels.',
     );

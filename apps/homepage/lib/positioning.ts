@@ -39,7 +39,7 @@ export const ONE_LINER = SHORT_LINE;
 export const SHORT_DESCRIPTION = CORE_LINE;
 
 export const CANONICAL_DESCRIPTION =
-  'You make the music. Urganize is where your team does everything after. ' +
+  'You make the music. Urganize is where music teams do everything after. ' +
   'Plan the release, assign the work, keep files and metadata in one place, pitch to curators, ' +
   `book shows and put the release out. For ${AUDIENCE_LINE}.`;
 

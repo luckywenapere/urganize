@@ -49,7 +49,7 @@ unchanged.
 ### Full description (4000 characters max)
 
 ```
-You make the music. Urganize is where your team does everything after. Plan the release, assign the work, keep files and metadata in one place, pitch to curators, book shows and put the release out. For artists, managers and labels.
+You make the music. Urganize is where music teams do everything after. Plan the release, assign the work, keep files and metadata in one place, pitch to curators, book shows and put the release out. For artists, managers and labels.
 
 PLAN THE ROLLOUT
 Every release starts with a real plan, not a blank board. Pick what you are putting out and Urganize lays out the whole rollout, sized to the format, with every activity dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
