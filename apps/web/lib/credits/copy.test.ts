@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isCreditsPurchasable } from './config';
 import {
+  composerCreditsLine,
   creditsLeftLine,
   creditsNextLine,
   embeddedEstimateLine,
@@ -46,6 +47,9 @@ describe('buying wording follows the purchase switch', () => {
     outOfCreditsNotice(subscriber),
     outOfCreditsNotice(creditsOnly),
     outOfCreditsNotice(trial),
+    composerCreditsLine(0),
+    composerCreditsLine(1),
+    composerCreditsLine(42),
     creditsLeftLine(0),
     creditsLeftLine(1),
     creditsLeftLine(42),
@@ -68,6 +72,14 @@ describe('buying wording follows the purchase switch', () => {
 });
 
 describe('the lines a person reads', () => {
+  it('the chat box line says how many credits are left, and never a negative or a fraction', () => {
+    expect(composerCreditsLine(42)).toBe('42 credits left');
+    expect(composerCreditsLine(1)).toBe('1 credit left');
+    expect(composerCreditsLine(0)).toBe('No UrgAns credits left');
+    expect(composerCreditsLine(-3)).toBe('No UrgAns credits left');
+    expect(composerCreditsLine(7.9)).toBe('7 credits left');
+  });
+
   it('say how many credits are left, singular and plural, and never a negative number', () => {
     expect(creditsLeftLine(42)).toBe('UrgAns: 42 credits left.');
     expect(creditsLeftLine(1)).toBe('UrgAns: 1 credit left.');

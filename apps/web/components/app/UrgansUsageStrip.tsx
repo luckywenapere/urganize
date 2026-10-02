@@ -1,17 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useAuthStore } from '@/lib/auth-store';
-import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
-import { isChappiEnabled } from '@/lib/chappi/config';
-import { supabase } from '@/lib/supabase/client';
 import { creditsLeftLine, creditsNextLine } from '@/lib/credits/copy';
 import { isCreditsPurchasable } from '@/lib/credits/config';
-import type { CreditAccount } from '@/lib/credits/allowance';
+import { useUrgansUsage } from './useUrgansUsage';
 
 // The assistant-usage indicator. One calm line above the topbar once a team has
-// spent 80% of its monthly UrgAns actions, and nothing at all before that.
+// spent 80% of its monthly UrgAns actions, or once its credits run low, and
+// nothing at all before that. The number comes from useUrgansUsage, which the
+// credits line under the chat box shares, so the two never disagree.
 //
 // SAME CONTRACT AS TeamTrialStrip, deliberately, because it occupies the same
 // slot and the reasoning transfers wholesale: above the topbar rather than in it
@@ -19,129 +16,10 @@ import type { CreditAccount } from '@/lib/credits/allowance';
 // states a number and does not escalate, redden or carry a warning icon), and
 // NOT dismissible (dismissing hides the one thing that stops the ceiling being a
 // surprise, which is the entire purpose).
-//
-// WHY ITS OWN ENDPOINT rather than another field on /api/subscription-status:
-// that payload is cached for 20s client-side and 30s server-side, and this
-// number changes on every assistant turn. A cached count would go stale exactly
-// when it matters.
-//
-// WHY IT REFETCHES ON CONVERSATION ACTIVITY. Mounted in AppShell, this component
-// survives navigation, so a mount-only fetch would answer once per full page
-// load — and a heavy session could cross 80% and hit the ceiling without the
-// warning ever appearing. Subscribing to the assistant store's turn count is the
-// cheapest live signal available; the TTL below collapses bursts into one
-// request. It over-triggers slightly (a deterministic chip costs no action but
-// still appends a turn), which is the harmless direction.
-//
-// AND WHY THAT COSTS NOTHING FOR ALMOST EVERYONE: the first answer for an
-// uncapped team is `limit: null`, which latches `noCeiling` and stops the
-// component fetching for the rest of the session. Tier only changes through a
-// checkout, which returns through /payment/callback and reloads the app. Today
-// that is every team — no code path can write the capped tier yet.
-
-const CHAPPI_ENABLED = isChappiEnabled();
-
-/** How long a fetched count is reused. Short: the banner is a live-ish warning,
- *  and the request is one indexed count. */
-const CACHE_TTL_MS = 15 * 1000;
-
-type CreditsView = { total: number; account: CreditAccount; nextGrantAt: string | null; low: boolean };
-
-const isAccount = (value: unknown): value is CreditAccount =>
-  value === 'trial' || value === 'subscriber' || value === 'credits_only';
-
-type UsageSnapshot = { used: number; limit: number | null; approaching: boolean; credits?: CreditsView };
-
-type CacheEntry = { userId: string; snapshot: UsageSnapshot | null; fetchedAt: number };
-
-let cache: CacheEntry | null = null;
-
-async function fetchUsage(): Promise<UsageSnapshot | null> {
-  try {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) return null;
-
-    const response = await fetch('/api/urgans/usage', {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    });
-    // 404 means the assistant flag is off server-side; 402 means the team is
-    // walled and has a bigger banner already. Either way: no opinion.
-    if (!response.ok) return null;
-
-    const payload = (await response.json().catch(() => ({}))) as Partial<UsageSnapshot>;
-    if (typeof payload.used !== 'number') return null;
-
-    const rawCredits = (payload as { credits?: Partial<CreditsView> }).credits;
-    const credits: CreditsView | undefined =
-      rawCredits && typeof rawCredits.total === 'number' && isAccount(rawCredits.account)
-        ? {
-            total: rawCredits.total,
-            account: rawCredits.account,
-            nextGrantAt: typeof rawCredits.nextGrantAt === 'string' ? rawCredits.nextGrantAt : null,
-            low: Boolean(rawCredits.low),
-          }
-        : undefined;
-
-    return {
-      used: payload.used,
-      limit: typeof payload.limit === 'number' ? payload.limit : null,
-      approaching: Boolean(payload.approaching),
-      ...(credits ? { credits } : {}),
-    };
-  } catch {
-    // Fail quiet. Null means "we do not know", and nothing renders on null.
-    return null;
-  }
-}
 
 export function UrgansUsageStrip() {
-  const user = useAuthStore((state) => state.user);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isAuthLoading = useAuthStore((state) => state.isLoading);
-  // Turns added this session. Opening a saved chat spends no action, so it
-  // must not count as one (identical to messages.length with history off).
-  const turnCount = useChappiStore(selectLiveTurnCount);
+  const usage = useUrgansUsage();
 
-  const userId = user?.id ?? null;
-
-  // Seeded from the module cache so a remount paints on the first frame rather
-  // than popping the line in.
-  const [usage, setUsage] = useState<UsageSnapshot | null>(() => {
-    if (!userId || !cache || cache.userId !== userId) return null;
-    if (Date.now() - cache.fetchedAt >= CACHE_TTL_MS) return null;
-    return cache.snapshot;
-  });
-
-  // Latched once we learn this team has no ceiling. A ref, not state: flipping
-  // it must not re-render, and it is read inside the effect that sets it.
-  const noCeiling = useRef(false);
-
-  useEffect(() => {
-    if (!CHAPPI_ENABLED) return;
-    if (isAuthLoading || !isAuthenticated || !userId) return;
-    // Curator-only accounts have no team, no billing and no assistant.
-    if (String(user?.role || '').toLowerCase() === 'curator') return;
-    if (noCeiling.current) return;
-
-    let cancelled = false;
-    void (async () => {
-      const fresh = cache && cache.userId === userId && Date.now() - cache.fetchedAt < CACHE_TTL_MS;
-      const snapshot = fresh ? cache!.snapshot : await fetchUsage();
-      if (!fresh) cache = { userId, snapshot, fetchedAt: Date.now() };
-      // A credit balance changes on every turn, so it never latches: only a team
-      // with neither a ceiling nor credits is done being asked.
-      if (snapshot && snapshot.limit === null && !snapshot.credits) noCeiling.current = true;
-      if (!cancelled) setUsage(snapshot);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthLoading, isAuthenticated, userId, user?.role, turnCount]);
-
-  if (!CHAPPI_ENABLED) return null;
 
   // Credits replace the action count. Calm, like the line below: it says how many
   // are left and, for a subscriber, when the next monthly credits arrive (credits
