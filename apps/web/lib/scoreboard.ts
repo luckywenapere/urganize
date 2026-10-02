@@ -107,7 +107,18 @@ export type ScoreboardInput = {
   activity: Map<string, number[]>;
   /** True when the activity read hit its row cap, so the numbers are a floor. */
   activityTruncated: boolean;
+  /** Teams that came in through a referral link. Null or absent when the tables
+   *  could not be read (not migrated yet), so the board shows "not tracked" and
+   *  never a misleading zero. */
+  referrals?: {
+    /** Invited by another team's personal link (referral credits). */
+    fromTeams: ReferredSignup[];
+    /** Came in through a commission partner's code. */
+    fromPartners: ReferredSignup[];
+  } | null;
 };
+
+export type ReferredSignup = { workspaceId: string; attachedAt: string };
 
 export type SecondReleaseSummary = {
   /** Teams whose first release went live at least 90 days ago. */
@@ -140,6 +151,16 @@ export type ActivationSummary = {
   rate: number | null;
 };
 
+export type ReferralSummary = {
+  /** Referred in the last 30 days. */
+  last30d: number;
+  allTime: number;
+  /** Of all of them, the ones that are a paying team today. */
+  payingNow: number;
+};
+
+export type ReferredSignups = { fromTeams: ReferralSummary; fromPartners: ReferralSummary };
+
 export type ScoreboardTeamRow = {
   workspaceId: string;
   name: string | null;
@@ -169,6 +190,9 @@ export type Scoreboard = {
   retention: RetentionCohort[];
   trialToPaid: TrialToPaidSummary;
   activation: ActivationSummary;
+  /** Doc section 2, "Referred signups: signups from a user's invite". Null when
+   *  the referral tables could not be read. */
+  referredSignups: ReferredSignups | null;
   activityTruncated: boolean;
   teams: ScoreboardTeamRow[];
 };
@@ -439,6 +463,35 @@ export function activationSummary(
   return { signups, activated, rate: ratio(activated, signups) };
 }
 
+/**
+ * Doc section 2: "Referred signups | Signups from a user's invite". Counts the
+ * teams that arrived through a referral link, split by who referred them (another
+ * team, or a commission partner), so the experiment's result is readable on its
+ * own. A referred team is counted only if it is a team on this board: the empty
+ * shell every invited teammate is given is left out, the same rule every other
+ * number here follows. Each team is counted once per source.
+ */
+export function referralSummary(
+  signups: ReferredSignup[],
+  teamIds: Set<string>,
+  payingIds: Set<string>,
+  now: Date
+): ReferralSummary {
+  const since = now.getTime() - 30 * DAY_MS;
+  const seen = new Set<string>();
+  let last30d = 0;
+  let payingNow = 0;
+  for (const signup of signups) {
+    if (!teamIds.has(signup.workspaceId) || seen.has(signup.workspaceId)) continue;
+    const at = ms(signup.attachedAt);
+    if (at === null) continue;
+    seen.add(signup.workspaceId);
+    if (at >= since && at <= now.getTime()) last30d += 1;
+    if (payingIds.has(signup.workspaceId)) payingNow += 1;
+  }
+  return { last30d, allTime: seen.size, payingNow };
+}
+
 export function buildScoreboard(input: ScoreboardInput): Scoreboard {
   const { now, teams, releases } = input;
   const nowMs = now.getTime();
@@ -455,6 +508,7 @@ export function buildScoreboard(input: ScoreboardInput): Scoreboard {
   const byTeam = realReleasesByTeam(releases);
   const payingTeams = teams.filter((team) => isPayingTeam(team, now));
   const payingIds = new Set(payingTeams.map((team) => team.workspaceId));
+  const teamIds = new Set(teams.map((team) => team.workspaceId));
 
   const rows: ScoreboardTeamRow[] = teams.map((team) => {
     const teamReleases = byTeam.get(team.workspaceId) ?? [];
@@ -504,6 +558,12 @@ export function buildScoreboard(input: ScoreboardInput): Scoreboard {
     retention: weekFourRetention(teams, input.activity, now, 8),
     trialToPaid: trialToPaidSummary(teams, now, 90),
     activation: activationSummary(teams, releases, now, 30),
+    referredSignups: input.referrals
+      ? {
+          fromTeams: referralSummary(input.referrals.fromTeams, teamIds, payingIds, now),
+          fromPartners: referralSummary(input.referrals.fromPartners, teamIds, payingIds, now),
+        }
+      : null,
     activityTruncated: input.activityTruncated,
     teams: rows,
   };

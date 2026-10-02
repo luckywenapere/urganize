@@ -16,6 +16,19 @@ export function formatRate(rate: number | null): string {
   return rate === null ? 'not enough data yet' : `${Math.round(rate * 100)}%`;
 }
 
+/** "Referred signups, last 30 days: 3 (2 from teams, 1 from partners)". The
+ *  doc's metric, in the words the team group reads. "Not tracked yet" when the
+ *  referral tables are not there, so a missing migration is never read as zero. */
+export function referredLine(board: Scoreboard): string {
+  const referred = board.referredSignups;
+  if (!referred) return 'Referred signups: not tracked yet';
+  const total = referred.fromTeams.last30d + referred.fromPartners.last30d;
+  return (
+    `Referred signups, last 30 days: ${total}` +
+    (total > 0 ? ` (${referred.fromTeams.last30d} from teams, ${referred.fromPartners.last30d} from partners)` : '')
+  );
+}
+
 /**
  * The Friday post (doc section 2: "KB posts the numbers to the team group
  * every Friday"). Plain lines, no formatting, because it is pasted into a
@@ -44,6 +57,7 @@ export function formatScoreboardForTeamGroup(board: Scoreboard): string {
       (board.activation.signups > 0
         ? ` (${board.activation.activated} of ${board.activation.signups})`
         : ''),
+    referredLine(board),
   ];
   if (board.activityTruncated) {
     lines.push('Note: activity hit its read limit, so the activity numbers are a floor.');

@@ -199,4 +199,32 @@ describe('loadScoreboardInput', () => {
     });
     expect(input.teams[0].subscription?.plan).toBe('manager');
   });
+
+  it('reads the two referral tables into the input', async () => {
+    const client = fakeClient({
+      workspaces: [workspace('team', 'boss'), workspace('other', 'boss2')],
+      user_referrals: [{ referred_workspace_id: 'team', attached_at: '2026-09-20T00:00:00.000Z' }],
+      team_referrals: [{ workspace_id: 'other', attached_at: '2026-09-21T00:00:00.000Z' }],
+    });
+    const { input, sources } = await loadScoreboardInput(client, NOW);
+    expect(input.referrals).toEqual({
+      fromTeams: [{ workspaceId: 'team', attachedAt: '2026-09-20T00:00:00.000Z' }],
+      fromPartners: [{ workspaceId: 'other', attachedAt: '2026-09-21T00:00:00.000Z' }],
+    });
+    expect(sources.find((source) => source.table === 'user_referrals')?.status).toBe('ok');
+  });
+
+  it('reports not tracked, never a zero, when either referral table is missing', async () => {
+    for (const missing of ['user_referrals', 'team_referrals']) {
+      const client = fakeClient({
+        workspaces: [workspace('team', 'boss')],
+        [missing]: 'missing',
+      });
+      const { input, sources } = await loadScoreboardInput(client, NOW);
+      expect(input.referrals, missing).toBeNull();
+      expect(sources.find((source) => source.table === missing)?.status).toBe('missing');
+      // The rest of the board still builds.
+      expect(input.teams).toHaveLength(1);
+    }
+  });
 });

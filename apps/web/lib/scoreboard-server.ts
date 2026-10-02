@@ -183,7 +183,7 @@ export async function loadScoreboardInput(
 ): Promise<{ input: ScoreboardInput; sources: ScoreboardSource[] }> {
   const sinceIso = new Date(now.getTime() - ACTIVITY_LOOKBACK_DAYS * DAY_MS).toISOString();
 
-  const [workspaces, members, subscriptions, artists, releases, tasks, activity] =
+  const [workspaces, members, subscriptions, artists, releases, tasks, activity, teamInvites, partnerTags] =
     await Promise.all([
       readAll(
         'workspaces',
@@ -244,6 +244,26 @@ export async function loadScoreboardInput(
         100_000
       ),
       readActivity(client, sinceIso),
+      readAll(
+        'user_referrals',
+        (from, to) =>
+          client
+            .from('user_referrals')
+            .select('referred_workspace_id, attached_at')
+            .order('referred_workspace_id', { ascending: true })
+            .range(from, to),
+        TABLE_CAP
+      ),
+      readAll(
+        'team_referrals',
+        (from, to) =>
+          client
+            .from('team_referrals')
+            .select('workspace_id, attached_at')
+            .order('workspace_id', { ascending: true })
+            .range(from, to),
+        TABLE_CAP
+      ),
     ]);
 
   const sources = [
@@ -254,6 +274,8 @@ export async function loadScoreboardInput(
     releases.source,
     tasks.source,
     ...activity.sources,
+    teamInvites.source,
+    partnerTags.source,
   ];
 
   // Owners' profiles, read once the owners are known.
@@ -445,6 +467,21 @@ export async function loadScoreboardInput(
       subscriptions: subscriptionRows,
       activity: activity.activity,
       activityTruncated: activity.truncated,
+      // Both tables must have been read: a half-read answer would show a zero for
+      // one source that is really "not tracked yet".
+      referrals:
+        teamInvites.source.status === 'ok' && partnerTags.source.status === 'ok'
+          ? {
+              fromTeams: teamInvites.rows.map((row) => ({
+                workspaceId: String(row.referred_workspace_id),
+                attachedAt: str(row.attached_at) ?? '',
+              })),
+              fromPartners: partnerTags.rows.map((row) => ({
+                workspaceId: String(row.workspace_id),
+                attachedAt: str(row.attached_at) ?? '',
+              })),
+            }
+          : null,
     },
     sources,
   };
