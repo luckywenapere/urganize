@@ -4,11 +4,57 @@ This file is the source of truth for AI coding assistants working in this reposi
 
 ---
 
+## Company strategy comes first (2026-10-02)
+
+**Read `docs/strategy/company-strategy.md` before this file.** It is a copy of the founder's "Urganize Company Strategy & Operating System" (dated 2026-10-01), and that document says of itself: "If another page disagrees with this one, this one wins until it is changed here." So on strategy, who we sell to, pricing, product shape, metrics and priorities, the strategy doc outranks everything below, including the v1 scope list and the architectural principles. This file still governs HOW to build: conventions, guards, deploys, flags, and the record of what was built and why.
+
+The copy is word for word. If the founder's document changes, refresh the copy from it; do not edit the copy on its own. Changes to the strategy itself are agreed at the founder's Monday review and logged in the company's Major Decisions Archive, not decided in a coding session.
+
+**The test a feature has to pass now** (the doc's product rule): it earns a sprint if it moves weekly active paying teams or the second-release rate. "Does it serve a release?" is still a good question, but it is no longer the whole test.
+
+### What the strategy doc changes in this file
+
+1. **Who we sell to.** It supersedes "Target user for v1" below. First: artist managers running more than one artist, small management teams and small labels. Second: independent artists. Rule: sell to the manager, serve the artist, speak to the ecosystem. Nigeria first, priced in naira.
+2. **The product has seven areas**: Home, Catalogue, Relationships (CRM), Opportunities, UrgAns, Audience, Shows. Catalogue, UrgAns and Shows exist. Relationships, Opportunities and Audience are not built.
+3. **Four out-of-scope lines are now committed direction, not v2**, because the strategy doc names them:
+   - Sync licensing (part of Opportunities: deals, grants, sync, brands and partnerships).
+   - Analytics dashboards (part of Audience: fan capture, streaming and social analytics).
+   - Third-party music platform integrations, for distribution ordered inside the rollout (partner: Therealmusicdistro, agreement signed; user price is partner price plus our margin, paid through Paystack) and for the streaming and social data Audience needs.
+   - The rest of the out-of-scope list stands until the strategy doc says otherwise.
+
+   Committed is not the same as "build it now". Each still has to earn a sprint under the rule above, and ships behind a flag that starts off, like everything else here.
+4. **Group is a plan again** (custom price, for distributors and multi-label groups), and Group teams count as paying teams. The code removed it on 2026-09-09; see the fixes list.
+5. **Credits-only accounts are a real way to use Urganize**: no monthly fee, Solo features, ₦30 a credit.
+6. **The directory**: search is open to every plan, Solo and trials included; seeded, unclaimed profiles are allowed (built only from credits already on a released release's public credit link, removed on request); and the app asks people to publish their profile right after their first release plan.
+7. **Copy**: the doc's one-liner is "Urganize is where music teams do everything after the music is made". "Interaction app" is internal only and never goes into copy.
+
+### Where the code disagrees with the strategy doc (not fixed yet)
+
+Found on 2026-10-02 by reading the code against the doc. Each is a fix to make, in whatever order the founder sets.
+
+| # | The doc says | The code does | Where |
+|---|---|---|---|
+| 1 | Solo is one seat | Solo allows 2 (manager plus artist) | `packages/pricing/src/index.ts`, Solo `limits.seats` |
+| 2 | Directory search on every plan | Solo cannot search (`directory_search: false`) | `apps/web/lib/entitlements.ts` |
+| 3 | Group is a custom-priced plan | Group was removed from `PricingTierId` on 2026-09-09 | `packages/pricing`, `lib/entitlements.ts`, "Group tier removed" below |
+| 4 | Anyone can use Urganize on credits alone | The paywall blocks every account without a plan, and nothing sells credits yet | `app/api/_shared/paywall.ts`, "UrgAns credits" below |
+| 5 | Low-balance warning below 50 credits | Warns at a fifth of the monthly amount, or at 10 | `components/app/UrgansUsageStrip.tsx` |
+| 6 | A credit history page | Does not exist | |
+| 7 | Credits ship behind a flag that starts off; the 40 and 150 action limits stay until credits are tested | Credits were switched on in production in v1.55.0 | The doc is dated one day before that release; confirm with the founder which is current |
+| 8 | "where music teams do everything after the music is made" | "where your team does everything after the music is made" | `apps/web/lib/positioning.ts` and its homepage mirror |
+| 9 | Uses "small labels" to describe who we sell to | "small labels" is a retired phrase the positioning guard blocks in site copy | `apps/web/lib/positioning-guard.test.ts`; fine in internal docs, not in copy without changing the guard |
+| 10 | The scoreboard: weekly active paying teams (2 or more members active in 7 days, on Manager, Label or Group), second-release rate, week 4 retention, trial to paid | None of these is computed anywhere; only MRR can be read from the data | Needs building, likely an `/admin` page |
+| 11 | Distribution ordering, crypto payments, referral credits, the Sound Wave Spotlight referral code with its 10% commission | None is built | |
+
+**One definition the scoreboard will need, recorded so it is not invented twice:** the doc's second-release rate counts from when a release "goes live", and nothing in this product writes a `released` status. `lib/recap-eligibility.ts` (release date passed, or every task done) is the product's existing answer to "has this release happened", and the Urganize Directory already reuses it for the same reason. Use it, or get a different definition from the founder, but do not add a third.
+
+---
+
 ## What Urganize is
 
 **Urganize is where your team does everything after the music is made.** You make the music; Urganize is where your team plans the release, assigns the work, keeps files and metadata in one place, pitches to curators, books shows and puts the release out, for artists, managers and labels. That is the founder's positioning since 2026-09-24 (see "Everything after the music" at the end of this file). It replaced the category line "AI Music Business Manager" (locked 2026-09-09, widened 2026-09-11, audience narrowed the same day and widened back to three on 2026-09-24), which UrgAns's system prompt kept for one more day, until the founder decided on 2026-09-25 that the assistant says the new line too. The canonical strings live in `apps/web/lib/positioning.ts` and are enforced by `apps/web/lib/positioning-guard.test.ts`. What v1 BUILDS is unchanged and is the six-feature list below: a release management surface, described here in the words a customer reads rather than the words the build used.
 
-**Target user for v1:** an artist manager or small label running more than one artist's releases at once. Not enterprise teams, not artists directly. Team-scale coordination (handoffs, files, status across a roster) is the paying pain point, confirmed directly: a solo manager with one artist already has a workable system (WhatsApp, Drive, calendar) and won't switch. Labels running a full roster are served by the premium Label tier (founder-delivered onboarding + template tailoring), not the self-serve core wedge.
+**Target user for v1** (superseded 2026-10-02 by the strategy doc, see "Company strategy comes first" above; kept as the record of the v1 build): an artist manager or small label running more than one artist's releases at once. Not enterprise teams, not artists directly. Team-scale coordination (handoffs, files, status across a roster) is the paying pain point, confirmed directly: a solo manager with one artist already has a workable system (WhatsApp, Drive, calendar) and won't switch. Labels running a full roster are served by the premium Label tier (founder-delivered onboarding + template tailoring), not the self-serve core wedge.
 
 **The central object is the release.** Every feature, every data model, every UI surface in v1 should answer the question: *how does this serve a release?* If a feature can't tie back to a specific release, it does not belong in v1.
 
@@ -57,7 +103,7 @@ The six features that constitute v1:
 
 **Scope expansion (2026-09-23):** a new surface, **share to socials**, was consciously sanctioned by the founder: after a first rollout, the team can share an Instagram post, a WhatsApp status and a message they can DM to anybody, and every rollout carries a Share button after that. It moves nothing off the out-of-scope list below, and the two nearest lines are worth naming because the distinction is the whole reason it is buildable. **"Third-party music platform integrations (… Instagram …)" is NOT crossed:** nothing calls Instagram's or WhatsApp's API, and the user posts from their own phone through the operating system's share sheet or saves the image, which is the content calendar's "planning only, no posting" line applied to a single moment. **"Pre-save campaigns" is NOT crossed:** the fan link is a URL the manager types, the capture page's reasoning. It honors the release-spine principle, since every post is made from one rollout's own facts. Nothing is stored server-side: the images are rendered on request and the answers are remembered per rollout in the browser. Every image carries a small "Made with Urganize" mark, the same distribution loop as the EPK footer and the recap card. Flag-gated behind `NEXT_PUBLIC_FEATURE_SOCIAL_SHARE` (default off; the image route 404s when off). Full detail in "Share to socials" at the end of this file. The "do not exceed" rule still holds for everything else.
 
-**Out of scope for v1, no exceptions:**
+**Out of scope for v1, no exceptions:** (Amended 2026-10-02: the strategy doc commits to sync, analytics, and distribution plus streaming integrations. See "Company strategy comes first" at the top of this file before saying "v2" to any of them.)
 
 - Standalone events (events not tied to a release) — **EXCEPTION (2026-08-30): now built as the events surface.** The founder consciously moved this line; a show hangs off the artist, not off a release. This is the fifth sanctioned exception to this list, and one of three moved by the same decision (see "Scope expansion (2026-08-30)" above) — do not read it as license to add other items from this list.
 - Notes / idea capture / voice memos / track ideas — **EXCEPTION (2026-08-09): text notes are now being built as the Notes surface.** The founder consciously moved this line; see "Scope expansion (2026-08-09)" above. Global quick capture with an optional release link, private to the owner, at `/dashboard/notes`. **Voice memos and track-idea audio are NOT covered by this exception and stay out of scope.** This is the fourth sanctioned exception to this list (Chappi below was the first, the metadata hub above the second, native mobile apps below the third) — do not read it as license to add other items from this list.
