@@ -31,6 +31,11 @@ export function resolveAdminTeamAccess(input: {
   profile: AdminTeamOwnerProfile | null | undefined;
   subscription: AdminTeamSubscription | null | undefined;
   now: Date;
+  /** The team holds credits that count for access (team-billing's
+   *  isFundedForAccess). Only the Teams console passes it, so it shows a
+   *  credits-only team as such; the email audiences and the scoreboard leave it
+   *  out and read such a team as walled or read-only, as before. */
+  creditsFunded?: boolean;
 }): { resolution: TeamAccessResolution; subscriptionActive: boolean; ownerAllowlisted: boolean } {
   const { profile, subscription, now } = input;
 
@@ -59,6 +64,7 @@ export function resolveAdminTeamAccess(input: {
       billingLockedAmount: input.workspace.billing_locked_amount,
     },
     now,
+    creditsFunded: input.creditsFunded,
   });
 
   return { resolution, subscriptionActive, ownerAllowlisted };

@@ -28,8 +28,12 @@ import { isPaywallRefusal, shouldAdmitCreditsOnly } from '@/lib/credits/urgans-a
  *     exactly as it did, with `creditsOnly: null`.
  *   - Only the PAYWALL refusals are looked at (402, and the read-only 403). A bad
  *     token, a curator account and a missing server setting still answer as before.
- *   - It admits to UrgAns's own routes and nowhere else. The rest of the app
- *     stays walled or read-only for that team.
+ *   - It admits to UrgAns's own routes and nowhere else. Since 2026-10-02 a
+ *     team with bought or monthly credits never reaches this branch: the team
+ *     resolver calls it 'credits_only' and the normal gate opens the whole app
+ *     with Solo features (lib/team-billing.ts). What is left for this branch is
+ *     a no-plan team with no such credits (at most trial leftovers), which keeps
+ *     UrgAns so it can buy more, and stays walled or read-only everywhere else.
  *   - With credits switched off this is the normal gate and nothing more.
  *
  * Whether the team has credits left is NOT decided here: the metered routes check

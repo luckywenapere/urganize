@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.61.0",
+    date: "October 2, 2026",
+    highlights: [
+      "No plan? If you have credits, you can now use all of Urganize with the Solo features, not just UrgAns.",
+    ],
+  },
+  {
     version: "1.60.0",
     date: "October 2, 2026",
     highlights: [

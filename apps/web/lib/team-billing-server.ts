@@ -29,12 +29,16 @@ import { getSubscriptionSnapshot } from './subscription-access';
 import { resolveTeamTier } from './entitlements';
 import type { PricingTierId } from '@urganize/pricing';
 import { isAllowlistedEmail } from './paywall-allowlist';
+import { isCreditsEnabled } from './credits/config';
+import { readBalances } from './credits/credits-server';
 import {
   TEAM_TRIAL_EXPIRY_GRACE_MS,
   combineTeamAccess,
   computeTeamTrialDaysLeft,
   lapsedFromPayment,
   resolveTeamAccess,
+  couldBeCreditsOnly,
+  isFundedForAccess,
   resolveWallVariant,
   type TeamAccessReason,
   type TeamAccessState,
@@ -333,9 +337,9 @@ export async function getTeamAccessForUser(
       })
     );
 
-    const resolveFor = (row: WorkspaceRow) => {
+    const accessInput = (row: WorkspaceRow, creditsFunded: boolean) => {
       const owner = row.owner_id ? ownerAccess.get(row.owner_id) : undefined;
-      const access = resolveTeamAccess({
+      return resolveTeamAccess({
         ownerHasAccess: Boolean(owner?.hasAccess),
         ownerAllowlisted: Boolean(owner?.allowlisted),
         ownerLapsedFromPayment: lapsedFromPayment({
@@ -344,7 +348,26 @@ export async function getTeamAccessForUser(
         }),
         team: toBillingFields(row),
         graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
+        creditsFunded,
       });
+    };
+
+    // Credits-only access (2026-10-02). A balance is read only for a team that
+    // would otherwise be walled or read-only, so a team on a plan or a trial pays
+    // nothing extra. One read per such team, in parallel.
+    const fundedWorkspaces = new Set<string>();
+    if (isCreditsEnabled()) {
+      const candidates = workspaces.filter((row) => couldBeCreditsOnly(accessInput(row, false).state));
+      await Promise.all(
+        candidates.map(async (row) => {
+          if (isFundedForAccess(await readBalances(client, row.id))) fundedWorkspaces.add(row.id);
+        })
+      );
+    }
+
+    const resolveFor = (row: WorkspaceRow) => {
+      const owner = row.owner_id ? ownerAccess.get(row.owner_id) : undefined;
+      const access = accessInput(row, fundedWorkspaces.has(row.id));
       return {
         ...access,
         tier: resolveTeamTier({
@@ -482,7 +505,7 @@ export async function getWorkspaceTier(workspaceId: string): Promise<PricingTier
     if (isAllowlistedEmail(ownerEmail)) return 'label';
 
     const snapshot = await getSubscriptionSnapshot(row.owner_id);
-    const access = resolveTeamAccess({
+    const baseInput = {
       ownerHasAccess: snapshot.hasAccess,
       ownerLapsedFromPayment: lapsedFromPayment({
         ownerHasAccess: snapshot.hasAccess,
@@ -490,7 +513,14 @@ export async function getWorkspaceTier(workspaceId: string): Promise<PricingTier
       }),
       team: toBillingFields(row),
       graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
-    });
+    };
+    let access = resolveTeamAccess(baseInput);
+    // A credits-only team joins under Solo's seat ceiling, not the fail-open one.
+    if (isCreditsEnabled() && couldBeCreditsOnly(access.state)) {
+      if (isFundedForAccess(await readBalances(client, row.id))) {
+        access = resolveTeamAccess({ ...baseInput, creditsFunded: true });
+      }
+    }
 
     return resolveTeamTier({
       state: access.state,

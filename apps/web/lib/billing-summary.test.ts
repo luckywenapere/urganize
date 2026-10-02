@@ -433,6 +433,26 @@ describe('summarizeBilling — team access', () => {
     expect(result.cta).toBe('reactivate');
   });
 
+  it('tells a credits-only OWNER they are on credits, and points at plans that work', () => {
+    const result = summarizeBilling(snapshot({ accountStatus: 'expired', plan: 'manager' }), {
+      team: team({ state: 'credits_only', isOwnerOrAdmin: true }),
+    });
+    expect(result.title).toBe('Using credits');
+    expect(result.details.join(' ')).toContain('Solo features');
+    // The team has access, so a bare /locked would bounce: reactivate, like read-only.
+    expect(result.cta).toBe('reactivate');
+  });
+
+  it('never offers a trial or a payment to a MEMBER of a credits-only team', () => {
+    const result = summarizeBilling(snapshot({ accountStatus: 'unpaid', trialUsed: false }), {
+      team: team({ state: 'credits_only', isOwnerOrAdmin: false }),
+    });
+    const all = [result.title, ...result.details].join(' ');
+    expect(all).not.toMatch(/free trial/i);
+    expect(all).toMatch(/team admin/i);
+    expect(result.cta).toBeNull();
+  });
+
   it('never offers a trial to a MEMBER of a read-only team', () => {
     // The same regression the 'paid' branch above exists for: a member's own
     // snapshot reads 'unpaid' with trialUsed false forever, so without a branch

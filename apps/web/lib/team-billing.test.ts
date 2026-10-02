@@ -15,6 +15,8 @@ import {
   isReadOnlySafeMethod,
   lapsedFromPayment,
   resolveTeamAccess,
+  couldBeCreditsOnly,
+  isFundedForAccess,
   resolveWallVariant,
   shouldConsultHardPaywallGate,
   type HardPaywallGateInput,
@@ -719,5 +721,84 @@ describe('the read-only refusal', () => {
     }
     expect(READ_ONLY_REFUSAL_MESSAGE.owner).toMatch(/update your payment/i);
     expect(READ_ONLY_REFUSAL_MESSAGE.member).toMatch(/team admin/i);
+  });
+});
+
+describe('credits-only access (2026-10-02)', () => {
+  const ended = {
+    trialStartedAt: '2026-08-01T00:00:00.000Z',
+    trialEndsAt: '2026-08-04T00:00:00.000Z',
+    compedAt: null,
+    billingPlan: null,
+    billingLockedAmount: null,
+  };
+  const now = new Date('2026-10-02T12:00:00.000Z');
+
+  it('opens the app to a team whose trial ended, while it holds credits', () => {
+    const result = resolveTeamAccess({ ownerHasAccess: false, team: ended, now, creditsFunded: true });
+    expect(result).toMatchObject({ state: 'credits_only', hasAccess: true, canWrite: true, reason: 'credits_funded' });
+  });
+
+  it('turns a lapsed plan with credits into credits-only, so it can still write', () => {
+    const result = resolveTeamAccess({
+      ownerHasAccess: false,
+      ownerLapsedFromPayment: true,
+      team: ended,
+      now,
+      creditsFunded: true,
+    });
+    expect(result.state).toBe('credits_only');
+    expect(result.canWrite).toBe(true);
+  });
+
+  it('falls back to the wall, or read-only, with no credits', () => {
+    expect(resolveTeamAccess({ ownerHasAccess: false, team: ended, now }).state).toBe('walled');
+    expect(resolveTeamAccess({ ownerHasAccess: false, team: ended, now, creditsFunded: false }).state).toBe('walled');
+    expect(
+      resolveTeamAccess({ ownerHasAccess: false, ownerLapsedFromPayment: true, team: ended, now }).state
+    ).toBe('read_only');
+  });
+
+  it('never narrows a paid, comped or trialing team to credits-only', () => {
+    expect(resolveTeamAccess({ ownerHasAccess: true, team: ended, now, creditsFunded: true }).state).toBe('paid');
+    expect(
+      resolveTeamAccess({ ownerHasAccess: false, team: { ...ended, compedAt: '2026-09-01T00:00:00.000Z' }, now, creditsFunded: true }).state
+    ).toBe('comped');
+    expect(
+      resolveTeamAccess({
+        ownerHasAccess: false,
+        team: { ...ended, trialEndsAt: '2026-10-05T00:00:00.000Z' },
+        now,
+        creditsFunded: true,
+      }).state
+    ).toBe('trial');
+  });
+
+  it('counts bought and monthly credits for access, never trial credits, and an unreadable balance as none', () => {
+    expect(isFundedForAccess({ allowance: 0, topup: 5 })).toBe(true);
+    expect(isFundedForAccess({ allowance: 3, topup: 0 })).toBe(true);
+    expect(isFundedForAccess({ allowance: 0, topup: 0, trial: 50 } as { allowance: number; topup: number })).toBe(false);
+    expect(isFundedForAccess({ allowance: 0, topup: 0 })).toBe(false);
+    expect(isFundedForAccess({ allowance: -2, topup: 1 })).toBe(false);
+    expect(isFundedForAccess(null)).toBe(false);
+    expect(isFundedForAccess(undefined)).toBe(false);
+  });
+
+  it('only asks for a balance when the answer would otherwise be the wall or read-only', () => {
+    expect(couldBeCreditsOnly('walled')).toBe(true);
+    expect(couldBeCreditsOnly('read_only')).toBe(true);
+    for (const state of ['paid', 'comped', 'trial', 'grace', 'credits_only'] as const) {
+      expect(couldBeCreditsOnly(state), state).toBe(false);
+    }
+  });
+
+  it('grants a credits-only team through combineTeamAccess, for a teammate too', () => {
+    expect(combineTeamAccess({ own: { state: 'credits_only' }, foreign: [], ownReleaseCount: null })).toMatchObject({
+      hasAccess: true,
+      canWrite: true,
+    });
+    expect(
+      combineTeamAccess({ own: { state: 'walled' }, foreign: [{ state: 'credits_only' }], ownReleaseCount: null })
+    ).toMatchObject({ hasAccess: true, canWrite: true });
   });
 });
