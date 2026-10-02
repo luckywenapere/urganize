@@ -16,6 +16,7 @@ import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { PLAN_CHANGE_SOURCE } from '@/lib/plan-change';
+import { recordSubscriptionCharge } from '@/lib/referrals-server';
 import {
   TRIAL_CARD_PLAN,
   buildDelayedSubscriptionPayload,
@@ -306,7 +307,7 @@ function readChargeSource(paystackResponse: Record<string, unknown> | null): str
  */
 async function handlePlanChangeCharge(
   admin: AdminClient,
-  payment: { id: string; user_id: string; plan: string; paystack_response: Record<string, unknown> | null },
+  payment: { id: string; user_id: string; plan: string; amount?: number | null; paystack_response: Record<string, unknown> | null },
   reference: string,
   now: Date
 ) {
@@ -364,6 +365,17 @@ async function handlePlanChangeCharge(
       }
     })();
   }
+
+  // The top-up is a subscription payment like any other, so it goes in the
+  // ledger referral commission is worked out from. Best effort: never throws.
+  await recordSubscriptionCharge(admin, {
+    userId: payment.user_id,
+    reference,
+    amountKobo: Number(payment.amount) || 0,
+    plan: targetPlan,
+    source: 'plan_change',
+    chargedAt: now,
+  });
 
   return ack({ event: 'charge.success', reference, matched: 'plan_change', plan: targetPlan });
 }
@@ -838,6 +850,17 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
           { status: 500 }
         );
       }
+      // Recorded only once the charge has fully applied: a delivery that asked
+      // for a redelivery above has not earned anyone anything yet, and the ledger
+      // is idempotent on the reference, so the redelivery records it then.
+      await recordSubscriptionCharge(admin, {
+        userId,
+        reference,
+        amountKobo: amountMinorUnit,
+        plan: planString,
+        source: 'initial',
+        chargedAt: now,
+      });
       return ack({
         event: 'charge.success',
         reference,
@@ -970,6 +993,15 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
     subRow.billing_interval,
     { plan: subRow.pending_plan, interval: subRow.pending_billing_interval }
   );
+
+  await recordSubscriptionCharge(admin, {
+    userId: subRow.user_id,
+    reference,
+    amountKobo: amountMinorUnit,
+    plan: subRow.pending_plan ?? subRow.plan,
+    source: 'renewal',
+    chargedAt: now,
+  });
 
   return ack({
     event: 'charge.success',

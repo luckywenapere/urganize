@@ -10,6 +10,7 @@ import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
 import { ACTION_EVENT_TYPE, parseTeamAdminAction } from '@/lib/admin-teams';
 import { logBillingEvent } from '@/lib/billing-events-server';
+import { recordSubscriptionCharge } from '@/lib/referrals-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { loadBriefCompletionByWorkspace } from '@/lib/team-brief-server';
 
@@ -343,10 +344,11 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
+      const markPaidReference = `admin_${Date.now()}_${workspace.id.slice(0, 8)}`;
       await client.from('payments').insert({
         user_id: workspace.owner_id,
         amount: action.amountMinorUnit,
-        reference: `admin_${Date.now()}_${workspace.id.slice(0, 8)}`,
+        reference: markPaidReference,
         status: 'success',
         plan: action.plan,
         paystack_response: {
@@ -356,6 +358,17 @@ export async function PATCH(request: NextRequest) {
           workspace_id: workspace.id,
           expires_at: action.expiresAt,
         },
+      });
+
+      // A deal settled by hand is a subscription payment too, so it joins the
+      // ledger referral commission is worked out from (source 'manual', which an
+      // admin can exclude from the partner's statement if it should not earn).
+      await recordSubscriptionCharge(client, {
+        userId: workspace.owner_id,
+        reference: markPaidReference,
+        amountKobo: action.amountMinorUnit,
+        plan: action.plan,
+        source: 'manual',
       });
 
       // Coalesced, so a second deal never rewrites when this team FIRST paid.

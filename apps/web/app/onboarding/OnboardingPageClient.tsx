@@ -87,6 +87,7 @@ import { shouldStartOnboardingTrial } from '@/lib/onboarding-trial';
 import { isSocialShareEnabled } from '@/lib/social-share';
 import { markPendingFirstShare } from '@/lib/social-share-offer';
 import { resolvePostSignupDestination, takePitchIntent } from '@/lib/pitch-intent';
+import { captureReferralFromSearch, reportReferralCode } from '@/lib/referral-intent';
 import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT, isPasswordLongEnough } from '@/lib/password-rules';
 
 // ---------------------------------------------------------------------------
@@ -423,6 +424,9 @@ export default function OnboardingPage() {
     // static server rendering (the /auth front-door trap). Email is local
     // state, not part of the persisted draft, so there is nothing to clash
     // with; the functional set keeps anything already typed.
+    // A partner's link carries ?ref=. Remembered here, read post-mount for the
+    // same reason as the email above, and handed to the server when signup ends.
+    captureReferralFromSearch(window.location.search);
     const handoffEmail = normalizeHandoffEmail(window.location.search);
     if (handoffEmail) {
       setEmail((current) => current || handoffEmail);
@@ -594,6 +598,9 @@ export default function OnboardingPage() {
       }).catch(() => undefined);
       persisted = Boolean(response?.ok);
     }
+    // Tell the server which partner's link this person came in through, now
+    // that their team exists. A no-op unless a code was remembered.
+    if (token) await reportReferralCode(token);
     await checkAuth({ force: true });
     // Only drop the draft once the server has the answers. If the PATCH
     // failed, leaving sessionStorage intact is strictly better than wiping

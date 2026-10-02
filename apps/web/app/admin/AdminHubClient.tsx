@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Users,
   Building2,
+  Link2,
 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
@@ -78,6 +79,12 @@ const SECTIONS: Array<{
     label: 'Teams',
     description: 'Trials, wall dates and deals. Extend, comp, or record a payment settled by invoice.',
     icon: Building2,
+  },
+  {
+    href: '/admin/referrals',
+    label: 'Referrals',
+    description: 'Partner codes, the teams they brought in, and the commission owed each month.',
+    icon: Link2,
   },
   {
     href: '/admin/waitlist',

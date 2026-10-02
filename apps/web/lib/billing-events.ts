@@ -135,6 +135,10 @@ export const BILLING_EVENT_TYPES = [
    *  Distribute step. `metadata` carries the release id. The founder compares
    *  the count with the partner's monthly statement. */
   'distribution_handoff',
+  /** A team was tagged to a referral partner, by their signup link or by hand.
+   *  `metadata` carries the partner id, the code as entered and which of the two
+   *  it was. The tag itself is team_referrals; this is the audit trail. */
+  'referral_attached',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];
