@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
+import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
+import { mintPassForUser } from '@/lib/urgans-pass-server';
 import { getChappiModelConfig, isChappiEnabled, isChappiModelConfigured } from '@/lib/chappi/config';
 import { executeToolCall, resolveChappiContext } from '@/lib/chappi/dispatch';
 import { buildChappiSystemPrompt } from '@/lib/chappi/system-prompt';
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await requireUrgansAccess(request);
   if ('error' in auth) return auth.error;
 
   // Degraded mode: no capable model configured → tell the client to run the
@@ -138,6 +139,9 @@ export async function POST(request: NextRequest) {
       adminClient: auth.adminClient,
       origin,
       authToken,
+      // Only for a credits-only team that holds credits: lets the assistant's own
+      // tool calls through the paywall (lib/urgans-pass.ts). Nobody else gets one.
+      ...(auth.creditsOnly?.funded ? { urgansPass: mintPassForUser(auth.user.id) } : {}),
     });
     const releaseScope = parseReleaseScope(body);
     const built = await buildChappiSystemPrompt(ctx);

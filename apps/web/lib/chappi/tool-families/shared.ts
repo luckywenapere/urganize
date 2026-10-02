@@ -5,6 +5,7 @@
 // from there, not from here — so no call site outside lib/chappi/** changed.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { URGANS_PASS_HEADER } from '@/lib/urgans-pass-header';
 import type {
   ChappiToolKind,
   ChappiToolName,
@@ -43,6 +44,13 @@ export type ChappiToolContext = {
   origin: string;
   /** The caller's bearer token, forwarded to the protected REST endpoints. */
   authToken: string;
+  /**
+   * A live UrgAns pass (lib/urgans-pass.ts), present ONLY for a credits-only
+   * team that holds credits. It rides along on every internal call so the
+   * paywall gate lets this team's assistant act. Absent for everyone else,
+   * whose requests are gated exactly as before.
+   */
+  urgansPass?: string;
 };
 
 export type ToolInputSchema = {
@@ -138,6 +146,7 @@ export async function callInternalApi(
     headers: {
       Authorization: `Bearer ${ctx.authToken}`,
       'Content-Type': 'application/json',
+      ...(ctx.urgansPass ? { [URGANS_PASS_HEADER]: ctx.urgansPass } : {}),
     },
     body: init.body ? JSON.stringify(init.body) : undefined,
     cache: 'no-store',

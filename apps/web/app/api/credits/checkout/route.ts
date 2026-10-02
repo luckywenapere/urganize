@@ -4,7 +4,7 @@ import { createAdminClient, getAuthenticatedUser } from '@/app/api/_shared/auth'
 import { isCreditsPurchasable } from '@/lib/credits/config';
 import { getCreditSnapshot } from '@/lib/credits/credits-server';
 import { creditsForPack, findPack } from '@/lib/credits/packs';
-import { buildPurchaseMetadata, creditsReference } from '@/lib/credits/purchase';
+import { buildPurchaseMetadata, creditsReference, resolveCreditsReturnPath } from '@/lib/credits/purchase';
 import { initializePaystackTransaction, isPaystackConfigured } from '@/lib/paystack-server';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Payments are not available right now. Try again later.' }, { status: 503 });
   }
 
-  const body = (await request.json().catch(() => null)) as { priceNaira?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { priceNaira?: unknown; returnTo?: unknown } | null;
   const pack = findPack(body?.priceNaira);
   if (!pack) {
     return NextResponse.json({ error: 'Pick one of the credit packs.' }, { status: 400 });
@@ -88,6 +88,8 @@ export async function POST(request: NextRequest) {
   }
 
   const base = resolveAppBase(request);
+  // A team behind the wall buys from /locked/urgans and has to come back there.
+  const returnPath = resolveCreditsReturnPath(body?.returnTo);
   const reference = creditsReference(randomBytes(16).toString('hex'));
 
   const initialized = await initializePaystackTransaction({
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
     amountKobo: pack.priceNaira * 100,
     reference,
     // Paystack appends ?trxref=...&reference=... to this.
-    callbackUrl: `${base}/dashboard/credits`,
+    callbackUrl: `${base}${returnPath}`,
     metadata: {
       ...buildPurchaseMetadata({
         workspaceId: team.primaryWorkspaceId,
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
         priceNaira: pack.priceNaira,
         credits,
       }),
-      cancel_action: `${base}/dashboard/credits?payment=cancelled`,
+      cancel_action: `${base}${returnPath}?payment=cancelled`,
     },
   });
   if (!initialized.ok) {

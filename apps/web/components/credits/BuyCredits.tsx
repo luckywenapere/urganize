@@ -6,7 +6,7 @@ import { authHeaders, readError } from '@/components/press-kits/press-kit-client
 import type { CreditAccount } from '@/lib/credits/allowance';
 import { isCreditsPurchasable } from '@/lib/credits/config';
 import { TOPUP_PACKS, creditsForPack } from '@/lib/credits/packs';
-import { isCreditsReference } from '@/lib/credits/purchase';
+import { isCreditsReference, type CreditsReturnPath } from '@/lib/credits/purchase';
 import { openPaystackCheckout } from '@/lib/pitch-payments-client';
 import { isIOSApp } from '@/lib/platform';
 
@@ -27,6 +27,8 @@ type Props = {
   account: CreditAccount | null;
   /** Called once a purchase has landed, so the balance and the history can reload. */
   onPurchased: () => void;
+  /** Where Paystack sends the buyer back: the credits page, or the UrgAns page behind the wall. */
+  returnTo?: CreditsReturnPath;
 };
 
 type Notice =
@@ -41,7 +43,7 @@ const naira = (value: number): string => `₦${value.toLocaleString('en')}`;
 const VERIFY_ATTEMPTS = 6;
 const VERIFY_GAP_MS = 2000;
 
-export function BuyCredits({ account, onPurchased }: Props) {
+export function BuyCredits({ account, onPurchased, returnTo = '/dashboard/credits' }: Props) {
   const [busyPrice, setBusyPrice] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -107,7 +109,7 @@ export function BuyCredits({ account, onPurchased }: Props) {
       const response = await fetch('/api/credits/checkout', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ priceNaira }),
+        body: JSON.stringify({ priceNaira, returnTo }),
       });
       if (!response.ok) {
         setError(await readError(response, 'Could not open the payment page. Try again.'));
@@ -124,7 +126,7 @@ export function BuyCredits({ account, onPurchased }: Props) {
     } finally {
       setBusyPrice(null);
     }
-  }, []);
+  }, [returnTo]);
 
   if (!isCreditsPurchasable()) return null;
 

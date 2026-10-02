@@ -235,6 +235,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAuthRoute =
     pathname?.startsWith('/auth') ||
     pathname === '/locked' ||
+    // UrgAns for a team behind the wall (app/locked/urgans): no help menu, and
+    // the artist-name gate must not intercept a page whose job is to keep
+    // working on credits.
+    pathname?.startsWith('/locked/') ||
     pathname === '/start-trial' ||
     pathname?.startsWith('/onboarding') ||
     pathname?.startsWith('/invite');

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_shared/auth';
+import { createAdminClient } from '@/app/api/_shared/auth';
+import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { getTranscriptionConfig, isChappiEnabled, isUrgansVoiceEnabled } from '@/lib/chappi/config';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { countBillingEventsSince, logBillingEvent } from '@/lib/billing-events-server';
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireUrgansAccess(request);
   if ('error' in auth) return auth.error;
 
   const config = getTranscriptionConfig();

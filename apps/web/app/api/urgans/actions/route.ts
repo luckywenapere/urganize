@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
+import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { isUrgansActionsEnabled, runUrgansAction } from '@/lib/urgans-actions/server';
 
 /**
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await requireUrgansAccess(request);
   if ('error' in auth) return auth.error;
 
   const body = (await request.json().catch(() => null)) as

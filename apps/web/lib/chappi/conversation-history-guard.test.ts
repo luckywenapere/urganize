@@ -114,14 +114,16 @@ describe('the chat routes', () => {
       expect(bodies.size).toBeGreaterThan(0);
       for (const [method, body] of bodies) {
         const flag = body.indexOf('isChappiHistoryEnabled()');
-        const auth = body.indexOf('requireActiveAuthenticatedUser(');
+        const auth = body.indexOf('requireUrgansAccess(');
         expect(flag, method).toBeGreaterThanOrEqual(0);
         expect(auth, method).toBeGreaterThan(flag);
       }
     });
 
-    it(`use the gated auth helper, so curators and read-only teams are handled: ${label}`, () => {
-      expect(source).toMatch(/requireActiveAuthenticatedUser/);
+    it(`use the UrgAns gate, the normal paywalled gate plus the credits-only admission: ${label}`, () => {
+      // requireUrgansAccess wraps requireAuthenticatedAdmin, so curators, a bad token and every other
+      // refusal behave exactly as before; only a paywall refusal for a credits-only team is admitted.
+      expect(source).toMatch(/requireUrgansAccess/);
       expect(source).not.toMatch(/\bgetAuthenticatedUser\(/);
     });
   }

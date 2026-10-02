@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
+import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { HISTORY_PAGE_ROWS, readLedgerHistory } from '@/lib/credits/credits-server';
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await requireUrgansAccess(request);
   if ('error' in auth) return auth.error;
 
   const beforeParam = request.nextUrl.searchParams.get('before');

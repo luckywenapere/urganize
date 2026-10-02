@@ -23,7 +23,7 @@ const source = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 describe('the transcribe route is dark when the flag is off', () => {
   it('checks both flags before touching auth', () => {
     const flagAt = source.search(/isUrgansVoiceEnabled\s*\(/);
-    const authAt = source.search(/requireActiveAuthenticatedUser\s*\(/);
+    const authAt = source.search(/requireUrgansAccess\s*\(/);
     expect(flagAt).toBeGreaterThan(-1);
     expect(authAt).toBeGreaterThan(-1);
     expect(flagAt).toBeLessThan(authAt);
