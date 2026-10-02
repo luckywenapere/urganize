@@ -62,11 +62,6 @@ export type Entitlements = {
   support_channel: SupportChannel;
   sso: boolean;
   sub_teams: boolean;
-  /** Search the directory for somebody who has delivered the role a rollout
-   *  needs. BEING LISTED IS FREE ON EVERY TIER and deliberately not in this
-   *  map: listing is supply and we want all of it, while searching is demand
-   *  and demand is what pays. Solo keeps its own profile and its own record. */
-  directory_search: boolean;
   /** UrgAns drafts a change, edits it, taps Apply — inside a product function
    *  rather than in chat. Manager and Label get it; Solo keeps chat only. The
    *  first feature-by-tier gate in this map that is NOT a countable ceiling: it
@@ -144,11 +139,14 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
   // IT IS THE TIGHTEST ROW IN THE TABLE and the one most new accounts land on,
   // so it is where a wrong number is felt first. Two of them are load-bearing in
   // ways that are not obvious from the figure alone:
-  //   - `seats: 2` counts the OWNER, because ensureOwnedWorkspace writes an
-  //     owner row into workspace_members like any other member. So 2 means the
-  //     manager plus one collaborator, not the manager plus two. Setting it to 1
-  //     would leave the invite form permanently dead — a locked button on day
-  //     one, which is the opposite of meeting a wall by needing a second person.
+  //   - `seats` counts the OWNER, because ensureOwnedWorkspace writes an owner
+  //     row into workspace_members like any other member. It was 2 (the owner
+  //     plus one collaborator) until 2026-10-02, when the strategy doc set Solo
+  //     to one seat. So a Solo owner can now invite nobody, which is the point:
+  //     Solo is for an independent artist working alone, and a team is
+  //     Manager. The invite form is NOT disabled for it; the refusal comes back
+  //     at submit with the reason and the upgrade, which is the 2026-09-01
+  //     "show the reason, not a dimmed button" rule.
   //   - `active_releases: 1` is only survivable because archiving exists to free
   //     the slot. It was built in the same pass that made these caps real, for
   //     exactly this reason.
@@ -167,7 +165,6 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: false,
     sub_teams: false,
     urgans_embedded_actions: false,
-    directory_search: false,
   },
   manager: {
     artists: limitsOf('manager').artists,
@@ -184,7 +181,6 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: false,
     sub_teams: false,
     urgans_embedded_actions: true,
-    directory_search: true,
   },
   // Group (id `enterprise`) sat here until 2026-09-09, when it was removed
   // from @urganize/pricing entirely — `PricingTierId` no longer has an
@@ -208,7 +204,6 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sso: false,
     sub_teams: false,
     urgans_embedded_actions: true,
-    directory_search: true,
   },
 };
 
@@ -381,9 +376,9 @@ function limitMessage(key: CountableLimitKey, limit: number, tierLabel: string):
     case 'artists':
       return `${tierLabel} plans cover ${limit} ${limit === 1 ? 'artist' : 'artists'}. Upgrade to Label for unlimited artists.`;
     case 'seats':
-      return `${tierLabel} plans include ${limit} people. Upgrade to Label for unlimited team members.`;
+      return `${tierLabel} plans include ${limit} ${limit === 1 ? 'person' : 'people'}. Upgrade to Label for unlimited team members.`;
     case 'active_releases':
-      return `${tierLabel} plans cover ${limit} rollouts at a time. Archive one you have finished, or upgrade to Label for unlimited rollouts.`;
+      return `${tierLabel} plans cover ${limit} ${limit === 1 ? 'rollout' : 'rollouts'} at a time. Archive one you have finished, or upgrade to Label for unlimited rollouts.`;
     case 'urgans_monthly_actions':
       return `You have used all ${limit} UrgAns actions on your plan this period. Everything else keeps working normally, and these reset when your billing period does. Upgrade to Label for unlimited.`;
   }

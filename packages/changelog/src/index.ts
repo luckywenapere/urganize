@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.59.0",
+    date: "October 2, 2026",
+    highlights: [
+      "Every plan can now search the directory, Solo included.",
+      "Solo is now for one person. To work with teammates, move up to Manager. Anyone already on your Solo team stays.",
+    ],
+  },
+  {
     version: "1.58.0",
     date: "October 2, 2026",
     highlights: [

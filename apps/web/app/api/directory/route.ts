@@ -1,7 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getEntitlement, minimumTierWith } from '@/lib/entitlements';
-import { getTeamAccessForUser } from '@/lib/team-billing-server';
-import { PRICING_TIERS } from '@urganize/pricing';
 import { profileRoles } from '@/lib/person-profile';
 import type { DirectoryRole } from '@/lib/directory-roles';
 import type { DirectoryEntry } from '@/lib/directory-search';
@@ -27,8 +24,11 @@ import {
  * can be honest rather than silently partial. At current volume it is nowhere
  * near binding; the day it is, this is where paging or a real index goes.
  *
- * SEARCHING IS MANAGER AND UP; being listed is free on every tier. Supply free,
- * demand paid (founder call). Inert today, since no real team resolves to solo.
+ * SEARCHING IS OPEN TO EVERY PLAN, Solo and trials included (strategy doc,
+ * section 10, 2026-10-02). It was Manager and up from 2026-09-05; the doc
+ * moved the money to the take rate on hires instead of charging to search.
+ * tier-limits-guard.test.ts holds this route to reading no entitlement.
+ * The paywall still applies: a team with no plan and no trial cannot search.
  */
 
 const DIRECTORY_PAGE_SIZE = 200;
@@ -42,27 +42,6 @@ export async function GET(request: NextRequest) {
   const adminClient = createAdminClient(auth.supabaseUrl);
   if (!adminClient) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
-  }
-
-  // The acting user's own team. getTeamAccessForUser already carries the tier
-  // and is 30s-cached, so this is the cheap answer as well as the right one;
-  // getWorkspaceTier asks about a workspace and is for the invite-redemption
-  // case, where the actor is not who is paying. Everything not confidently a
-  // paying Solo resolves to an uncapped tier, so this gates nobody today.
-  const access = await getTeamAccessForUser(auth.user.id, auth.user.email);
-  if (!getEntitlement(access.tier, 'directory_search')) {
-    // Named from the map rather than hardcoded, so a later re-cut of the tiers
-    // cannot leave this sentence pointing at a plan that no longer exists.
-    const minimumPlan = minimumTierWith('directory_search');
-    const planLabel = minimumPlan ? PRICING_TIERS[minimumPlan].label : 'a higher plan';
-    return NextResponse.json(
-      {
-        error: `Searching the directory is on ${planLabel} and up.`,
-        reason: 'plan_required',
-        minimumPlan: minimumPlan ?? undefined,
-      },
-      { status: 403 }
-    );
   }
 
   const { data, error } = await adminClient

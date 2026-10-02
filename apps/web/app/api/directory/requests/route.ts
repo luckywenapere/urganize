@@ -28,10 +28,10 @@ import {
  * two are different shapes: a received request is answerable and deliberately
  * carries no release, a sent one carries the release it was for.
  *
- * NEITHER SIDE IS BEHIND THE MANAGER GATE that /api/directory carries.
- * Searching is Manager and up; being listed and answering are free on every
- * tier, which is the founder's supply-free/demand-paid rule. A Solo person who
- * is listed has to be able to read their own inbox.
+ * NEITHER SIDE IS GATED ON A PLAN. Searching, being listed and answering are
+ * open on every plan (strategy doc, section 10, 2026-10-02; searching was
+ * Manager and up before that). A Solo person who is listed has to be able to
+ * read their own inbox.
  */
 
 /**

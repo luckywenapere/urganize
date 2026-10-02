@@ -80,10 +80,12 @@ describe('the tier table matches what is published', () => {
     expect(manager.urgans_monthly_actions).toBe(150);
   });
 
-  it('caps Solo at exactly 1 artist, 2 seats, 1 active release and 40 assistant actions', () => {
+  it('caps Solo at exactly 1 artist, 1 seat, 1 active release and 40 assistant actions', () => {
+    // One seat since 2026-10-02 (strategy doc, section 8: "Solo ... One seat").
+    // The owner holds it, so a Solo account cannot invite anyone.
     const solo = resolveEntitlements('solo');
     expect(solo.artists).toBe(1);
-    expect(solo.seats).toBe(2);
+    expect(solo.seats).toBe(1);
     expect(solo.active_releases).toBe(1);
     expect(solo.urgans_monthly_actions).toBe(40);
   });
@@ -852,29 +854,37 @@ describe('public tier copy tells the truth', () => {
 });
 
 describe('directory search', () => {
-  it('is off on solo and on above it', () => {
-    // Listing is free on every tier; SEARCHING is Manager and up (founder
-    // call, 2026-09-05). Supply free, demand paid.
-    expect(getEntitlement('solo', 'directory_search')).toBe(false);
-    expect(getEntitlement('manager', 'directory_search')).toBe(true);
-    expect(getEntitlement('label', 'directory_search')).toBe(true);
+  it('is not a plan entitlement: every plan can search', () => {
+    // Manager and up from 2026-09-05 to 2026-10-02. The strategy doc
+    // (section 10) opened it to every plan, Solo and trials included, so the
+    // key was removed rather than set true everywhere: a gate that can never
+    // refuse is code somebody will one day "fix". tier-limits-guard.test.ts
+    // holds the directory route to reading no entitlement at all.
+    for (const tier of PRICING_TIER_ORDER) {
+      expect(Object.keys(resolveEntitlements(tier)), tier).not.toContain('directory_search');
+    }
+  });
+});
+
+describe('limit copy reads correctly at a limit of one', () => {
+  it('says one person, not one people', () => {
+    const verdict = checkLimit({ tier: 'solo', key: 'seats', current: 1 });
+    if (verdict.allowed) throw new Error('expected blocked');
+    expect(verdict.message).toContain('1 person');
+    expect(verdict.message).not.toContain('1 people');
   });
 
-  it('names a real tier in refusal copy rather than a hardcoded string', () => {
-    expect(minimumTierWith('directory_search')).toBe('manager');
+  it('says one rollout, not one rollouts', () => {
+    const verdict = checkLimit({ tier: 'solo', key: 'active_releases', current: 1 });
+    if (verdict.allowed) throw new Error('expected blocked');
+    expect(verdict.message).toContain('1 rollout at a time');
   });
 
-  it('gates nobody who exists today', () => {
-    // Inert until Solo is sellable: resolveTeamTier fails open to the uncapped
-    // tier for every unknown, legacy, trial and comped plan, so no real team
-    // resolves to solo right now. If this ever fails, the gate has started
-    // biting real customers and that is a decision, not an accident.
-    // A legacy plan, a trial, a comped team and an unknown plan are the four
-    // states every real team is in right now. None resolves to solo.
-    expect(resolveTeamTier({ state: 'paid', ownerPlan: 'monthly' })).not.toBe('solo');
-    expect(resolveTeamTier({ state: 'paid', ownerPlan: 'annual' })).not.toBe('solo');
-    expect(resolveTeamTier({ state: 'trial' })).not.toBe('solo');
-    expect(resolveTeamTier({ state: 'comped' })).not.toBe('solo');
-    expect(resolveTeamTier({ state: 'paid', ownerPlan: null })).not.toBe('solo');
+  it('keeps the plural above one', () => {
+    const seats = checkLimit({ tier: 'manager', key: 'seats', current: 4 });
+    const releases = checkLimit({ tier: 'manager', key: 'active_releases', current: 3 });
+    if (seats.allowed || releases.allowed) throw new Error('expected blocked');
+    expect(seats.message).toContain('4 people');
+    expect(releases.message).toContain('3 rollouts at a time');
   });
 });

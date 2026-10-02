@@ -392,7 +392,12 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     audience: 'For a manager running one artist.',
     // Monthly only. The yearly price is ten months of this — see monthlyPrice.
     monthlyPrice: tierPrice(5_000),
-    limits: { artists: 1, seats: 2, activeReleases: 1, urgansMonthlyActions: 40 },
+    // ONE seat since 2026-10-02 (strategy doc, section 8: "Solo ... One seat").
+    // The owner holds it, so a Solo account can invite nobody; working with a
+    // team is what Manager is for. It was 2 (the owner plus one collaborator)
+    // from 2026-08-30. Lowering it removes nobody: a team already over the new
+    // ceiling keeps its members and is only refused new ones.
+    limits: { artists: 1, seats: 1, activeReleases: 1, urgansMonthlyActions: 40 },
     perks: [],
     // Moved here from Manager 2026-09-09 (founder call). Manager carried this
     // from 2026-08-30, back when it was the cheapest self-serve tier; Solo has

@@ -34,8 +34,8 @@ Found on 2026-10-02 by reading the code against the doc. Each is a fix to make, 
 
 | # | The doc says | The code does | Where |
 |---|---|---|---|
-| 1 | Solo is one seat | Solo allows 2 (manager plus artist) | `packages/pricing/src/index.ts`, Solo `limits.seats` |
-| 2 | Directory search on every plan | Solo cannot search (`directory_search: false`) | `apps/web/lib/entitlements.ts` |
+| 1 | Solo is one seat | **Fixed 2026-10-02 (v1.59.0).** Solo is 1 seat, which the owner holds, so a Solo account can invite nobody; a team already over it keeps its members and is only refused new ones. The seat and rollout refusal messages now read "1 person" and "1 rollout" | `packages/pricing/src/index.ts`, Solo `limits.seats` |
+| 2 | Directory search on every plan | **Fixed 2026-10-02 (v1.59.0).** The `directory_search` entitlement is removed outright rather than set true everywhere, the plan check is gone from `GET /api/directory`, and `tier-limits-guard.test.ts` holds that route to reading no entitlement. The paywall still applies, so a team with no plan and no trial cannot search, and credits-only teams cannot either (their access covers UrgAns only; widening it is a founder call) | `apps/web/app/api/directory/route.ts` |
 | 3 | Group is a custom-priced plan | Group was removed from `PricingTierId` on 2026-09-09 | `packages/pricing`, `lib/entitlements.ts`, "Group tier removed" below |
 | 4 | Anyone can use Urganize on credits alone | The paywall blocks every account without a plan, and nothing sells credits yet | `app/api/_shared/paywall.ts`, "UrgAns credits" below |
 | 5 | Low-balance warning below 50 credits | Warns at a fifth of the monthly amount, or at 10 | `components/app/UrgansUsageStrip.tsx` |

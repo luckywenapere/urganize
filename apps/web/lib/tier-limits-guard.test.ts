@@ -396,6 +396,11 @@ describe('the product surface is the same on every tier', () => {
     'app/api/setlists/[setlistId]/pack/route.ts',
     // The song catalog the setlist is built from.
     'app/api/songs/route.ts',
+    // Directory search, open to every plan since 2026-10-02 (strategy doc,
+    // section 10: "Search is open to every plan, Solo and trials included...
+    // The money comes from the take rate on hires, not from charging to
+    // search"). It was Manager and up before.
+    'app/api/directory/route.ts',
   ];
 
   it.each(UNGATED)('%s reads no entitlement', (file) => {
