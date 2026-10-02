@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.60.0",
+    date: "October 2, 2026",
+    highlights: [
+      "UrgAns now shows how many credits you have left, right under the chat box.",
+    ],
+  },
+  {
     version: "1.59.0",
     date: "October 2, 2026",
     highlights: [
