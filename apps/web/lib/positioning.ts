@@ -44,12 +44,17 @@
  */
 
 /**
- * The core line without its subject: "where your team does everything after
+ * The core line without its subject: "where music teams do everything after
  * the music is made". For a sentence that already names Urganize ("Urganize,
- * where your team...", "Urganize is where your team...") so a page can say it
+ * where music teams...", "Urganize is where music teams...") so a page can say it
  * without repeating the name twice in a row.
+ *
+ * "Music teams" since 2026-10-02, the strategy doc's one-line version
+ * (docs/strategy/company-strategy.md, section 1). It said "your team" from
+ * 2026-09-24. The long description below keeps "your team" as the founder
+ * wrote it.
  */
-export const CORE_CLAUSE = 'where your team does everything after the music is made';
+export const CORE_CLAUSE = 'where music teams do everything after the music is made';
 
 /** The core line. Introduces the product anywhere a whole sentence fits. */
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;

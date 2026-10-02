@@ -58,7 +58,7 @@ const SPRING = '#7FD99A';
 // the founder's words verbatim (SHORT_LINE and CORE_LINE there).
 const MAIN_LINE = 'Everything after the music.';
 const ACCENT = 'after the music';
-const SUB_LINE = 'Urganize is where your team does everything after the music is made.';
+const SUB_LINE = 'Urganize is where music teams do everything after the music is made.';
 
 const font = (file) => readFileSync(join(WEB, 'assets', 'fonts', file));
 const logo = readFileSync(join(HOMEPAGE, 'public', 'images', 'urganize-logo.png'));
