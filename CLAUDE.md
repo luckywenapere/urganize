@@ -3471,7 +3471,7 @@ ask); a report is stored in Urganize FIRST and pushed to Linear second; and the
 attached context is page + app version, name + email, team + plan + role, and
 the scoped release.
 
-### Seven things worth knowing before editing this
+### Eight things worth knowing before editing this
 
 1. **`POST /api/issue-reports` is deliberately NOT behind the paywall**, and a
    source-reading test enforces it. It uses `getAuthenticatedUser`, never
@@ -4814,7 +4814,7 @@ sanctioned, and adds no new object. Founder decisions, taken first:
   actions, exactly as typing does. A per-team daily cap on transcriptions is the
   only guard.
 
-### Seven things worth knowing before editing this
+### Eight things worth knowing before editing this
 
 1. **`lib/urgans-voice.ts` is the pure, client-safe core** (the
    `lib/genre-prediction.ts` split): `pickRecordingMimeType`,
@@ -9324,7 +9324,7 @@ recipient, with read receipts back.
 decisions and is the thing to read before changing anything here; the two that
 shape everything else are repeated below.
 
-### Seven things worth knowing before editing this
+### Eight things worth knowing before editing this
 
 1. **Song versions carry their OWN storage and do not reuse `assets`.** That
    table's `assets_scope_check` requires every row to belong to a release or a
@@ -15192,7 +15192,7 @@ what do I do first", unasked, once. They compose; neither replaces the other.
 on hover, and Tour A's first two steps sit on those same anchors. The tour
 points and moves on; it must not restate the pullout.
 
-### Seven things worth knowing before editing this
+### Eight things worth knowing before editing this
 
 1. **"On the catalog" is true by construction, not by matching a pathname.**
    `useCatalogTourAutoStart` is mounted in `WorkspaceView`, not `AppShell`, and
@@ -15857,7 +15857,7 @@ words the user PUBLISHES as their own:
 - **An untitled rollout drops its placeholder title** ("Untitled rollout" never
   reaches a post), and the artist carries the headline instead.
 
-### Seven things worth knowing before editing this
+### Eight things worth knowing before editing this
 
 1. **"First" is decided on the SERVER, in `POST /api/releases`, and returned as
    `firstRelease`.** The client's copy of the catalog may not have loaded, so it
@@ -17385,11 +17385,11 @@ reply cheap to keep.
 **What it does and does not fix.** It makes a reply appear in about two seconds
 and keeps the text of one that runs out of time. It does NOT raise the ceiling:
 gpt-5.5 writes about 93 tokens a second and the route is limited to 60 seconds, so
-a single reply still tops out near 3,000 to 5,000 tokens. Raising the time-based
-output cap (`outputCapForTime`) now that a cut reply is kept and cheap is the next,
-separate change; it was deliberately not bundled here.
+a single reply still tops out near 3,000 to 5,000 tokens. What a streamed turn
+CAN do, once the output cap stops being artificially low, is use all the time it
+has (see point 8).
 
-### Seven things worth knowing before editing this
+### Eight things worth knowing before editing this
 
 1. **Opt-in on both sides.** The server needs `URGANS_STREAM=on` AND the request
    needs `x-urgans-stream: 1`, so an old browser tab and a switched-off server both
@@ -17430,6 +17430,31 @@ separate change; it was deliberately not bundled here.
    follows the reply down only when the reader is already near the bottom, and the
    finished message does **not** replay the word-by-word fade (`noRevealId`). The
    old fade is what a plain-JSON reply still gets.
+8. **A streamed turn gets a higher output cap, and the clock stops shrinking it
+   (2026-10-02).** Each ladder rung has a `streamMaxOutputTokens` beside
+   `maxOutputTokens`: quick 2,048, standard 6,144, pro and max 8,192, against
+   1,024 / 4,096 / 3,000 / 3,000 for a plain turn. The plain caps and
+   `outputCapForTime` exist because a reply still being written at the deadline
+   was abandoned and fully billed; a streamed one is cut and KEPT, and the spike
+   found a cut stream is billed about what was written, so the caps no longer need
+   to guarantee the whole reply fits. `RouteDecision.streaming` carries this:
+   `capFor` picks the cap, `fitToDeadline` does not shrink a streamed decision to
+   the time left (it still steps DOWN a rung that cannot finish in time, and uses
+   the lower rung's streaming cap), and a hop keeps the streaming cap. The route
+   works out `wantsStream` before it plans the routing, so a plain turn, with the
+   switch off or the header absent, is byte-for-byte what it was. **The clock is
+   still the limit:** at about 93 tokens a second a reply gets roughly 4,000 tokens
+   in a clean single round, and what is left after tool rounds in a longer turn.
+   What this removes is the artificial ceiling (the 1,300-token final round of the
+   2026-10-02 incident was a time-based cap, not a real limit). More length needs
+   more clock: `maxDuration` is 60 here, and whether this account can go higher
+   (Vercel's longer limits on Fluid compute) was not checked.
+   **The credit hold is unchanged and now undercounts a long streamed turn.**
+   `holdCredits` assumes 12k tokens in and 1.5k out. A reply that streams 4k
+   tokens costs more than the hold on the top rungs, so a nearly empty balance can
+   start a turn and finish below zero. That is the existing "no lock between the
+   check and the charge" limit made somewhat larger; raising the assumed output in
+   `holdCredits` is the fix, and a credits decision, so not made here.
 
 ### Verified
 
@@ -17454,6 +17479,17 @@ and adds the note with the composer usable; a mid-reply reset returns to
 "Thinking..." and streams the new text; and a plain-JSON reply still gets the old
 reveal. **Screenshots were not possible** (the pane was hidden), so this is DOM
 evidence, not a look at the pixels.
+
+**The higher streaming cap (point 8)** was verified separately: full suite **6007
+passed, 69 skipped**; `tsc --noEmit` clean apart from the 8 documented errors; `eslint .`
+unchanged at 3 errors / 90 warnings with every touched file at zero; `next build` green
+with the key routes still `○ Static`. **Seven mutations, each confirmed applied and each
+killed by a named test**: the streamed decision being shrunk to the time left, the
+decision ignoring the streaming cap, a hop dropping it, the step down to a lower
+rung dropping it, the routing plan not receiving the flag, the route not passing the
+flag, and a streaming cap set below the plain one. Two of these first never applied
+(the search text had LF where the file has CRLF), which is the same trap this file
+already records, and were redone.
 
 ### Not verified
 

@@ -60,6 +60,18 @@ export type LadderRung = {
    */
   maxOutputTokens: number;
   /**
+   * The cap for a STREAMED turn (see lib/chappi/stream-protocol.ts). Higher, and
+   * not bounded by speed, because a streamed reply that is still being written at
+   * the deadline is cut off and KEPT, where an unstreamed one is lost. The spike
+   * (2026-10-02) found that dropping a stream early bills roughly what was written
+   * and not the cap, so a high cap costs nothing unless the model really writes
+   * that much. The clock is what limits a streamed reply in practice: at the
+   * speeds below a rung writes a few thousand tokens before the turn's deadline.
+   * Always at least `maxOutputTokens`, and inside the model's own output limit
+   * (model-ladder.catalog.test.ts checks that against the live catalogue).
+   */
+  streamMaxOutputTokens: number;
+  /**
    * How long one request typically takes on this rung. Only used to decide
    * whether a hop or an escalation can still finish inside the caller's
    * deadline, so a rough figure is enough. Starting values; the evaluation
@@ -87,6 +99,7 @@ export const DEFAULT_LADDER: Ladder = {
     models: ['openai/gpt-4o-mini', 'openai/gpt-5.6-luna'],
     reasoningEffort: 'low',
     maxOutputTokens: 1024,
+    streamMaxOutputTokens: 2048,
     typicalLatencyMs: 3_000,
     startupMs: 1_500,
     outputTokensPerSec: 120,
@@ -96,6 +109,7 @@ export const DEFAULT_LADDER: Ladder = {
     models: ['openai/gpt-5.4-mini', 'openai/gpt-5.6-luna'],
     reasoningEffort: 'low',
     maxOutputTokens: 4096,
+    streamMaxOutputTokens: 6144,
     typicalLatencyMs: 6_000,
     startupMs: 2_500,
     outputTokensPerSec: 110,
@@ -105,6 +119,7 @@ export const DEFAULT_LADDER: Ladder = {
     models: ['openai/gpt-5.4', 'openai/gpt-5.6-terra'],
     reasoningEffort: 'low',
     maxOutputTokens: 3000,
+    streamMaxOutputTokens: 8192,
     typicalLatencyMs: 12_000,
     startupMs: 4_000,
     outputTokensPerSec: 70,
@@ -114,6 +129,7 @@ export const DEFAULT_LADDER: Ladder = {
     models: ['openai/gpt-5.5', 'openai/gpt-5.6-sol'],
     reasoningEffort: 'low',
     maxOutputTokens: 3000,
+    streamMaxOutputTokens: 8192,
     typicalLatencyMs: 25_000,
     startupMs: 6_000,
     outputTokensPerSec: 70,

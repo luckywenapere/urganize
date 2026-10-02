@@ -199,7 +199,10 @@ export async function POST(request: NextRequest) {
     // Decided BEFORE the credit check because that check is for the model the
     // turn is about to start on; it is a pure decision and costs nothing.
     const trimmed = messages.slice(-MAX_MESSAGES);
-    const plan = planChatRouting({ messages: trimmed, team });
+    // Decided before the model is chosen: a streamed reply is allowed to be
+    // longer, because one that runs out of time is cut off and kept.
+    const wantsStream = isUrgansStreamOn() && requestWantsStream(request.headers);
+    const plan = planChatRouting({ messages: trimmed, team, streaming: wantsStream });
 
     // Credits, when switched on, REPLACE the monthly action ceiling: a turn is
     // paid for in credits worked out from the tokens it really used (see
@@ -341,7 +344,7 @@ export async function POST(request: NextRequest) {
     // validation, the credit and ceiling checks) has already answered as JSON
     // when it was going to refuse, so a stream only ever starts for a turn that
     // is really going to run.
-    if (isUrgansStreamOn() && requestWantsStream(request.headers)) {
+    if (wantsStream) {
       return streamTurn(runTurn);
     }
 

@@ -54,6 +54,16 @@ describe('the default ladder', () => {
     }
   });
 
+  it('gives every rung a streaming cap at least as high as its plain one', () => {
+    // A streamed reply is cut at the deadline and kept, so its cap is not bounded
+    // by speed the way the plain cap is. Lower than the plain cap would make
+    // streaming write LESS than not streaming.
+    for (const tier of MODEL_TIERS) {
+      const rung = DEFAULT_LADDER[tier];
+      expect(rung.streamMaxOutputTokens, tier).toBeGreaterThanOrEqual(rung.maxOutputTokens);
+    }
+  });
+
   it('lets every rung stream its whole token cap inside the turn budget', () => {
     // The max rung was capped at 8,192 and needed about 86 seconds to write it,
     // against 52 for the turn: the request was given up on and still billed in full.

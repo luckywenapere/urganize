@@ -48,6 +48,8 @@ export type ChatRoutingPlan =
 export function planChatRouting(input: {
   messages: ChappiMessage[];
   team: TeamForRouting | undefined;
+  /** The reply will be streamed, which raises the output cap (RouteDecision.streaming). */
+  streaming?: boolean;
   env?: EnvLike;
   now?: () => number;
 }): ChatRoutingPlan {
@@ -55,7 +57,13 @@ export function planChatRouting(input: {
   const mode = effectiveRouterMode('chat', env);
   if (mode === 'off') return { mode: 'off' };
 
-  const decision = routeModel({ surface: 'chat', chat: chatSignals(input.messages), team: input.team, env });
+  const decision = routeModel({
+    surface: 'chat',
+    chat: chatSignals(input.messages),
+    team: input.team,
+    streaming: input.streaming,
+    env,
+  });
 
   if (mode === 'shadow') {
     const trace = startTrace(decision, 'shadow');

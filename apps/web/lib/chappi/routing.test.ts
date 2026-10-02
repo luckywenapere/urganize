@@ -12,6 +12,7 @@ import {
   TURN_BUDGET_MS,
 } from './routing';
 import { startTrace, startUnroutedTrace, routeModel } from '@/lib/ai/model-router';
+import { DEFAULT_LADDER } from '@/lib/ai/model-ladder';
 import type { ChappiMessage } from './types';
 
 const msg = (role: 'user' | 'assistant', content: string, id = Math.random().toString(36)): ChappiMessage => ({
@@ -113,6 +114,33 @@ describe('planChatRouting', () => {
     expect(plan.trace.mode).toBe('shadow');
     expect(plan.trace.wouldUseModel).toBe('openai/gpt-5.5');
     expect(plan.trace.startTier).toBe('max');
+  });
+});
+
+describe('planChatRouting and streaming', () => {
+  const env = { AI_ROUTER: 'on', CHAPPI_API_BASE: 'https://api.rodiumai.io/v1' };
+  const messages: ChappiMessage[] = [{ id: 'm1', role: 'user', content: 'hello' }];
+  const team = { state: 'paid', tier: 'manager' } as never;
+
+  it('plans the streaming cap for a streamed turn', () => {
+    const plan = planChatRouting({ messages, team, streaming: true, env });
+    expect(plan.mode).toBe('on');
+    if (plan.mode !== 'on') return;
+    expect(plan.routing.decision.streaming).toBe(true);
+    expect(plan.routing.decision.maxOutputTokens).toBe(DEFAULT_LADDER.quick.streamMaxOutputTokens);
+  });
+
+  it('plans the plain cap otherwise', () => {
+    const plan = planChatRouting({ messages, team, env });
+    if (plan.mode !== 'on') throw new Error('expected a live plan');
+    expect(plan.routing.decision.maxOutputTokens).toBe(DEFAULT_LADDER.quick.maxOutputTokens);
+    expect(plan.routing.decision.streaming).toBeUndefined();
+  });
+
+  it('does not raise the cap of the closing line, which is never streamed', () => {
+    const plan = planChatRouting({ messages, team, streaming: true, env });
+    if (plan.mode !== 'on') throw new Error('expected a live plan');
+    expect(plan.routing.closeoutDecision?.streaming).toBeUndefined();
   });
 });
 
