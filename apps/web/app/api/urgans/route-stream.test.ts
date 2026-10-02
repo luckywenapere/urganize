@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
+import { DEFAULT_LADDER } from '@/lib/ai/model-ladder';
 import { StreamEventReader, URGANS_STREAM_HEADER, type UrgansStreamEvent } from '@/lib/chappi/stream-protocol';
 
 // How /api/urgans streams a reply. Same seams as route-routing.test.ts: the
@@ -291,5 +292,36 @@ describe('refusals stay plain JSON', () => {
 
     expect(response.headers.get('content-type')).toContain('application/json');
     expect((await response.json()).reply).toBe('Gone.');
+  });
+});
+
+describe('the output cap of a routed turn', () => {
+  beforeEach(() => {
+    vi.stubEnv('AI_ROUTER', 'on');
+  });
+
+  it('is the streaming cap when the reply is streamed', async () => {
+    vi.stubEnv('URGANS_STREAM', 'on');
+
+    await readEvents(await run(post(ASK)));
+
+    const { routing } = runChappiAgent.mock.calls[0][0];
+    expect(routing.decision.streaming).toBe(true);
+    expect(routing.decision.maxOutputTokens).toBe(DEFAULT_LADDER[routing.decision.tier as 'quick'].streamMaxOutputTokens);
+  });
+
+  it('stays the plain cap when the reply is not streamed, switch on or not', async () => {
+    vi.stubEnv('URGANS_STREAM', 'on');
+    await run(post());
+    vi.unstubAllEnvs();
+    vi.stubEnv('AI_ROUTER', 'on');
+    await run(post(ASK));
+
+    for (const call of runChappiAgent.mock.calls) {
+      const { routing } = call[0];
+      expect(routing.decision.streaming).toBeUndefined();
+      expect(routing.decision.maxOutputTokens).toBe(DEFAULT_LADDER[routing.decision.tier as 'quick'].maxOutputTokens);
+    }
+    expect(runChappiAgent).toHaveBeenCalledTimes(2);
   });
 });

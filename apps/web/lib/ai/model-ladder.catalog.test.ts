@@ -94,7 +94,9 @@ describe.skipIf(!enabled)('the default ladder against the provider\'s live catal
 
       it('allows at least as many output tokens as the rung asks for', () => {
         const limit = model().rodiumai_capabilities?.max_output_tokens ?? 0;
-        expect(limit).toBeGreaterThanOrEqual(DEFAULT_LADDER[tier].maxOutputTokens);
+        // The larger of the two caps, which is the streaming one: a request for
+        // more than the model can write is a 400.
+        expect(limit).toBeGreaterThanOrEqual(DEFAULT_LADDER[tier].streamMaxOutputTokens);
       });
     });
   }

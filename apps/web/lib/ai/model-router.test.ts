@@ -539,6 +539,61 @@ describe('the output cap follows the clock', () => {
   });
 });
 
+describe('a streamed turn\'s output cap', () => {
+  const NOW = 7_000_000;
+  const streamed = (tier: 'quick' | 'standard' | 'pro' | 'max') =>
+    decisionForTier({ surface: 'chat', tier, ceiling: 'max', streaming: true, env: {} });
+
+  it('uses the rung\'s streaming cap, and says it is streaming', () => {
+    for (const tier of ['quick', 'standard', 'pro', 'max'] as const) {
+      const decision = streamed(tier);
+      expect(decision.maxOutputTokens, tier).toBe(DEFAULT_LADDER[tier].streamMaxOutputTokens);
+      expect(decision.streaming).toBe(true);
+    }
+  });
+
+  it('leaves a plain turn exactly as it was, with no streaming mark', () => {
+    const plain = decisionForTier({ surface: 'chat', tier: 'max', ceiling: 'max', env: {} });
+    expect(plain.maxOutputTokens).toBe(DEFAULT_LADDER.max.maxOutputTokens);
+    expect('streaming' in plain).toBe(false);
+  });
+
+  it('carries the streaming cap through routeModel, pinned or not', () => {
+    const chat = { lastUserText: 'hi', userTurns: 1 };
+    expect(routeModel({ surface: 'chat', chat, streaming: true, env: {} }).maxOutputTokens).toBe(
+      DEFAULT_LADDER.quick.streamMaxOutputTokens
+    );
+    const pinned = routeModel({ surface: 'status', streaming: true, env: { AI_STATUS_MODEL: 'openai/gpt-4o-mini' } });
+    expect(pinned.pinned).toBe(true);
+    expect(pinned.streaming).toBe(true);
+  });
+
+  it('is not shrunk to fit the time left, because the clock cuts it and keeps the text', () => {
+    // 35s left would cap an unstreamed max-rung request well below its limit.
+    const fitted = fitToDeadline(streamed('max'), { deadlineMs: NOW + 35_000, now: NOW, env: {} });
+    expect(fitted?.tier).toBe('max');
+    expect(fitted?.maxOutputTokens).toBe(DEFAULT_LADDER.max.streamMaxOutputTokens);
+    expect(fitted?.reasons.some((r) => r.startsWith('time: output capped'))).toBe(false);
+  });
+
+  it('still steps down a rung that cannot finish in time, and uses the lower rung\'s streaming cap', () => {
+    const fitted = fitToDeadline(streamed('max'), { deadlineMs: NOW + 15_000, now: NOW, env: {} });
+    expect(fitted?.tier).toBe('pro');
+    expect(fitted?.maxOutputTokens).toBe(DEFAULT_LADDER.pro.streamMaxOutputTokens);
+    expect(fitted?.streaming).toBe(true);
+  });
+
+  it('keeps the streaming cap across a hop, with or without a deadline', () => {
+    const pro = streamed('pro');
+    for (const deadlineMs of [undefined, NOW + 20_000]) {
+      const hopped = nextAfterFailure({ decision: pro, failure: { kind: 'rate_limited' }, deadlineMs, now: NOW, env: {} });
+      expect(hopped?.model).toBe('openai/gpt-5.6-terra');
+      expect(hopped?.maxOutputTokens).toBe(DEFAULT_LADDER.pro.streamMaxOutputTokens);
+      expect(hopped?.streaming).toBe(true);
+    }
+  });
+});
+
 describe('summarizeTrace', () => {
   const trace: RoutingTrace = {
     mode: 'on',

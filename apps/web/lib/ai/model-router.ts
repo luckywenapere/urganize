@@ -334,6 +334,12 @@ export type RouteDecision = {
   /** Null means the router has no opinion (a pinned model) or never sends one. */
   reasoningEffort: ReasoningEffort | null;
   maxOutputTokens: number;
+  /**
+   * True when the answer will be streamed. A streamed reply that runs out of time
+   * is cut off and kept, so its cap is the rung's streaming cap and is not shrunk
+   * to fit the time left (see capFor and fitToDeadline).
+   */
+  streaming?: boolean;
   reasons: string[];
   /** The highest rung this request may climb to. */
   ceiling: ModelTier;
@@ -351,17 +357,24 @@ export type RouteDecision = {
 
 export type RouteRequest = {
   surface: RouteSurface;
+  /** The answer will be streamed. Raises the output cap; see RouteDecision.streaming. */
+  streaming?: boolean;
   /** Required for `chat`; ignored elsewhere. */
   chat?: ChatTurnSignals;
   team?: TeamForRouting;
   env?: EnvLike;
 };
 
+/** The output cap for a rung: the streaming cap when the answer is streamed. */
+export const capFor = (rung: Pick<LadderRung, 'maxOutputTokens' | 'streamMaxOutputTokens'>, streaming?: boolean): number =>
+  streaming ? rung.streamMaxOutputTokens : rung.maxOutputTokens;
+
 /** A decision for a known rung. Trusts its inputs; routeModel does the choosing. */
 export function decisionForTier(input: {
   surface: RouteSurface;
   tier: ModelTier;
   ceiling: ModelTier;
+  streaming?: boolean;
   env?: EnvLike;
   reasons?: string[];
 }): RouteDecision {
@@ -375,7 +388,8 @@ export function decisionForTier(input: {
     model,
     models: [...rung.models],
     reasoningEffort: rung.reasoningEffort,
-    maxOutputTokens: rung.maxOutputTokens,
+    maxOutputTokens: capFor(rung, input.streaming),
+    ...(input.streaming ? { streaming: true } : {}),
     reasons: [...(input.reasons ?? [])],
     ceiling: input.ceiling,
     floor,
@@ -406,7 +420,8 @@ export function routeModel(req: RouteRequest): RouteDecision {
       model: pin,
       models: [pin],
       reasoningEffort: null,
-      maxOutputTokens: rung.maxOutputTokens,
+      maxOutputTokens: capFor(rung, req.streaming),
+      ...(req.streaming ? { streaming: true } : {}),
       reasons: ['pinned by env'],
       ceiling,
       floor,
@@ -432,7 +447,7 @@ export function routeModel(req: RouteRequest): RouteDecision {
   if (capped !== tier) reasons.push(`capped at ${ceiling} by plan (wanted ${tier})`);
   tier = capped;
 
-  return { ...decisionForTier({ surface, tier, ceiling, env, reasons }), legacyModel };
+  return { ...decisionForTier({ surface, tier, ceiling, streaming: req.streaming, env, reasons }), legacyModel };
 }
 
 // ── What to do when a call fails ─────────────────────────────────────────────
@@ -489,9 +504,11 @@ function hopTo(
     models: [...rung.models],
     reasoningEffort: rung.reasoningEffort,
     maxOutputTokens:
-      time?.deadlineMs === undefined
-        ? rung.maxOutputTokens
-        : outputCapForTime(rung, time.deadlineMs - time.now),
+      decision.streaming
+        ? rung.streamMaxOutputTokens
+        : time?.deadlineMs === undefined
+          ? rung.maxOutputTokens
+          : outputCapForTime(rung, time.deadlineMs - time.now),
     hops: hop,
     tried: [...decision.tried, model],
     reasons: [...decision.reasons, `hop ${hop}: ${kind} ${decision.model} -> ${model}`],
@@ -582,6 +599,9 @@ export function fitToDeadline(
   const now = options.now ?? Date.now();
   const ladder = options.ladder ?? ladderFor(decision.surface, options.env ?? process.env);
   if (fits(ladder[decision.tier], deadlineMs, now)) {
+    // A streamed reply is cut at the deadline and kept, so there is nothing to
+    // gain by asking for less: the clock stops it without losing what it wrote.
+    if (decision.streaming) return decision;
     const cap = Math.min(decision.maxOutputTokens, outputCapForTime(ladder[decision.tier], deadlineMs - now));
     if (cap >= decision.maxOutputTokens) return decision;
     return { ...decision, maxOutputTokens: cap, reasons: [...decision.reasons, `time: output capped at ${cap}`] };
@@ -598,7 +618,7 @@ export function fitToDeadline(
         model,
         models: [...rung.models],
         reasoningEffort: rung.reasoningEffort,
-        maxOutputTokens: outputCapForTime(rung, deadlineMs - now),
+        maxOutputTokens: decision.streaming ? rung.streamMaxOutputTokens : outputCapForTime(rung, deadlineMs - now),
         tried: decision.tried.includes(model) ? decision.tried : [...decision.tried, model],
         reasons: [...decision.reasons, `time: ${decision.tier} -> ${tier}`],
       };
