@@ -34,7 +34,9 @@ function collect(dir: string, out: string[] = []): string[] {
 
 /** Source without comments, so prose that names a forbidden thing cannot trip a rule and a mention cannot satisfy one. */
 function code(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  // Line comments FIRST: a `/*` inside one (a path like `admin/*` in a comment) would otherwise open a
+  // "block comment" that swallows real code up to the next `*/`, which hid a call site from this guard.
+  return source.replace(/(^|[^:])\/\/.*$/gm, '$1').replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
 const files = [...collect(join(APP_ROOT, 'lib')), ...collect(join(APP_ROOT, 'app')), ...collect(join(APP_ROOT, 'components'))];
@@ -73,7 +75,7 @@ describe('the ledger is append-only', () => {
 });
 
 describe('the money maths is pure', () => {
-  const pure = ['pricing', 'allowance', 'model-prices', 'copy', 'config', 'embedded', 'packs', 'purchase'];
+  const pure = ['pricing', 'allowance', 'model-prices', 'copy', 'config', 'embedded', 'packs', 'purchase', 'urgans-admission'];
 
   it('imports only its own siblings', () => {
     for (const name of pure) {
@@ -276,5 +278,81 @@ describe('the balance replaces the daily embedded-action guard', () => {
 
   it('still has the guard to apply when credits are off', () => {
     expect(runner).toMatch(/checkEmbeddedActionsGuard\(/);
+  });
+});
+
+describe('a credits-only team can use UrgAns, and only UrgAns', () => {
+  const urgansRoutes = [...sources.keys()].filter((file) => /^app\/api\/urgans\/.*route\.ts$/.test(file));
+  const access = sources.get('app/api/_shared/urgans-access.ts') ?? '';
+  const gate = sources.get('app/api/_shared/auth.ts') ?? '';
+  const chat = sources.get('app/api/urgans/route.ts') ?? '';
+
+  it('finds the UrgAns routes it is about to check', () => {
+    expect(urgansRoutes.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('puts every UrgAns route behind the UrgAns gate, and none behind the plain paywalled ones', () => {
+    for (const file of urgansRoutes) {
+      const source = sources.get(file) ?? '';
+      expect(source, file).toMatch(/requireUrgansAccess/);
+      expect(source, file).not.toMatch(/requireAuthenticatedAdmin|requireActiveAuthenticatedUser|requireActiveAccount/);
+    }
+  });
+
+  it('keeps the admission to UrgAns: no other route imports the UrgAns gate', () => {
+    const users = [...sources]
+      .filter(([file, source]) => /requireUrgansAccess/.test(source) && !file.startsWith('app/api/urgans/') && file !== 'app/api/_shared/urgans-access.ts')
+      .map(([file]) => file);
+    expect(users).toEqual([]);
+  });
+
+  it('looks only at the paywall refusals, before it reads anything else', () => {
+    expect(access).toMatch(/READ_ONLY_REFUSAL_CODE/);
+    expect(access.indexOf('isPaywallRefusal(')).toBeGreaterThan(-1);
+    expect(access.indexOf('isPaywallRefusal(')).toBeLessThan(access.indexOf('getAuthenticatedUser('));
+    expect(access.indexOf('getAuthenticatedUser(')).toBeLessThan(access.indexOf('getTeamAccessForUser('));
+  });
+
+  it('is switched off with credits, and keeps the curator block', () => {
+    expect(access).toMatch(/isCreditsEnabled\(\)/);
+    expect(access).toMatch(/blockCuratorAccount\(/);
+  });
+
+  it('mints a pass in the chat route only, and only for a funded credits-only team', () => {
+    const minters = [...sources]
+      .filter(([file, source]) => file !== 'lib/urgans-pass-server.ts' && /\bmintPassForUser\s*\(/.test(source))
+      .map(([file]) => file);
+    expect(minters).toEqual(['app/api/urgans/route.ts']);
+    expect(chat).toMatch(/auth\.creditsOnly\?\.funded\s*\?\s*\{\s*urgansPass:\s*mintPassForUser\(/);
+  });
+
+  it('honours a pass in one place: the paywalled gate, after the curator block, around the paywall check alone', () => {
+    const readers = [...sources]
+      .filter(([file, source]) => file !== 'lib/urgans-pass-server.ts' && /\brequestHasUrgansPass\s*\(/.test(source))
+      .map(([file]) => file);
+    expect(readers).toEqual(['app/api/_shared/auth.ts']);
+
+    const fn = gate.slice(gate.indexOf('export async function requireActiveAuthenticatedUser('));
+    const body = fn.slice(0, fn.indexOf('\n}\n'));
+    expect(body.indexOf('blockCuratorAccount(')).toBeGreaterThan(-1);
+    expect(body.indexOf('blockCuratorAccount(')).toBeLessThan(body.indexOf('requestHasUrgansPass('));
+    expect(body).toMatch(/if\s*\(!requestHasUrgansPass\([^)]*\)\)\s*\{\s*const block = await requireActiveAccount\(/);
+  });
+
+  it('puts the pass on outgoing calls in one place, and only when the turn has one', () => {
+    const senders = [...sources]
+      .filter(([file, source]) => !/urgans-pass(-header)?\.ts$/.test(file) && /URGANS_PASS_HEADER/.test(source))
+      .map(([file]) => file)
+      .sort();
+    expect(senders).toEqual(['lib/chappi/tool-families/shared.ts', 'lib/urgans-pass-server.ts']);
+    expect(sources.get('lib/chappi/tool-families/shared.ts')).toMatch(/ctx\.urgansPass\s*\?/);
+  });
+
+  it('keeps the signing code and the admission rules free of the database and the request', () => {
+    const admission = sources.get('lib/credits/urgans-admission.ts') ?? '';
+    for (const spec of [...admission.matchAll(/from\s+['"]([^'"]+)['"]/g)].map((m) => m[1])) {
+      expect(spec).toMatch(/^\.\//);
+    }
+    expect(sources.get('lib/urgans-pass.ts')).not.toMatch(/process\.env|supabase|NextRequest/);
   });
 });

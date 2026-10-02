@@ -117,3 +117,20 @@ export function checkPurchase(verified: VerifiedPurchase): PurchaseDecision {
 export function purchaseDedupeKey(reference: string): string {
   return `topup:${reference}`;
 }
+
+/**
+ * Where Paystack sends a buyer back to. The credits page is behind the wall, so
+ * a team with no plan buys from the UrgAns page under /locked and must land
+ * back there, or the wall would bounce it and the reference that settles the
+ * purchase would be lost. Anything else asked for (a full URL, an unknown path)
+ * answers the credits page: this ends up in a URL we hand to Paystack, so it is
+ * a fixed list and never something the browser can choose freely.
+ */
+export const CREDITS_RETURN_PATHS = ['/dashboard/credits', '/locked/urgans'] as const;
+export type CreditsReturnPath = (typeof CREDITS_RETURN_PATHS)[number];
+
+export function resolveCreditsReturnPath(value: unknown): CreditsReturnPath {
+  return (CREDITS_RETURN_PATHS as readonly unknown[]).includes(value)
+    ? (value as CreditsReturnPath)
+    : '/dashboard/credits';
+}

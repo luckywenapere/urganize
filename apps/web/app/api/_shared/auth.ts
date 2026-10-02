@@ -4,6 +4,7 @@ import { requireActiveAccount } from '@/app/api/_shared/paywall';
 import { getMcpConfig, isMcpConnectEnabled, verifyMcpAccessKey } from '@/lib/mcp/config';
 import { extractBearerToken } from '@/lib/mcp/oauth';
 import { resolveMcpToken } from '@/lib/mcp/tokens-server';
+import { requestHasUrgansPass } from '@/lib/urgans-pass-server';
 
 // Single source of truth for API route auth. This replaces the per-domain
 // copies that used to live in releases/_shared.ts, tasks-server.ts,
@@ -59,8 +60,16 @@ export async function requireActiveAuthenticatedUser(request: NextRequest) {
   if ('error' in auth) return auth;
   const curatorBlock = await blockCuratorAccount(auth.user.id, auth.supabaseUrl);
   if (curatorBlock) return { error: curatorBlock };
-  const block = await requireActiveAccount(auth.user.id, auth.user.email, request.method);
-  if (block) return { error: block };
+  // THE UrgAns PASS (2026-10-02). A walled or read-only team that holds credits
+  // may use UrgAns, changes included, and UrgAns's tools act by calling these
+  // very routes. The chat route mints a short-lived, user-bound pass for that
+  // case (lib/urgans-pass.ts) and its tools attach it; a valid one skips the
+  // PAYWALL check for this one request and nothing else. The curator block above
+  // and every route's own ownership and team-access rules still apply.
+  if (!requestHasUrgansPass(request, auth.user.id)) {
+    const block = await requireActiveAccount(auth.user.id, auth.user.email, request.method);
+    if (block) return { error: block };
+  }
   return auth;
 }
 

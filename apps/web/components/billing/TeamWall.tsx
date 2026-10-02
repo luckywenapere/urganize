@@ -27,6 +27,7 @@ import {
 } from '@/lib/team-billing-client';
 import { isPricingV2Enabled } from '@/lib/entitlements';
 import { TierPlanPicker } from '@/components/billing/TierPlanPicker';
+import { WallUrgansCard } from '@/components/billing/WallUrgansCard';
 
 // The wall (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). Rendered by /locked when the
 // flag is on; the flag-off page is untouched beside it.
@@ -708,6 +709,10 @@ export function TeamWall() {
             ) : null}
           </Card>
         )}
+
+        {/* UrgAns stays usable on credits, changes included, while the rest of the
+            app is behind the wall. Renders nothing with credits off or no balance. */}
+        <WallUrgansCard />
 
         <p className="text-center text-xs text-content-tertiary">
           {user?.email ? (

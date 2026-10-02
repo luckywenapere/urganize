@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  resolveCreditsReturnPath,
   CREDITS_REFERENCE_PREFIX,
   buildPurchaseMetadata,
   checkPurchase,
@@ -90,5 +91,18 @@ describe('purchaseDedupeKey', () => {
     expect(purchaseDedupeKey('urgcredits-abc')).toBe('topup:urgcredits-abc');
     expect(purchaseDedupeKey('urgcredits-abc')).toBe(purchaseDedupeKey('urgcredits-abc'));
     expect(purchaseDedupeKey('urgcredits-abc')).not.toBe(purchaseDedupeKey('urgcredits-abd'));
+  });
+});
+
+describe('resolveCreditsReturnPath', () => {
+  it('returns to the UrgAns page behind the wall when asked', () => {
+    expect(resolveCreditsReturnPath('/locked/urgans')).toBe('/locked/urgans');
+    expect(resolveCreditsReturnPath('/dashboard/credits')).toBe('/dashboard/credits');
+  });
+
+  it('answers the credits page for anything else, so the browser cannot pick where Paystack sends someone', () => {
+    for (const value of [undefined, null, '', 'https://evil.test', '//evil.test', '/locked', '/locked/urgans/', 42]) {
+      expect(resolveCreditsReturnPath(value)).toBe('/dashboard/credits');
+    }
   });
 });

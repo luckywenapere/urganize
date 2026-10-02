@@ -15,6 +15,8 @@ export async function resolveChappiContext(params: {
   adminClient: SupabaseClient;
   origin: string;
   authToken: string;
+  /** See ChappiToolContext.urgansPass. */
+  urgansPass?: string;
 }): Promise<ChappiToolContext> {
   const access = await loadWorkspaceAccessContext(params.adminClient, params.user);
   return {
@@ -31,6 +33,7 @@ export async function resolveChappiContext(params: {
     artistScopeByWorkspaceId: access.artistScopeByWorkspaceId,
     origin: params.origin,
     authToken: params.authToken,
+    ...(params.urgansPass ? { urgansPass: params.urgansPass } : {}),
   };
 }
 

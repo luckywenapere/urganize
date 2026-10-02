@@ -4,8 +4,9 @@
  * and whether a model's "25" counts as a number.
  */
 
-import { describe, expect, it } from 'vitest';
-import { argNumber, argStringArray, isFlagGateOff, type InternalApiResponse } from './shared';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { argNumber, argStringArray, callInternalApi, isFlagGateOff, type ChappiToolContext, type InternalApiResponse } from './shared';
+import { URGANS_PASS_HEADER } from '@/lib/urgans-pass-header';
 
 const response = (status: number, error?: string): InternalApiResponse => ({
   ok: status < 400,
@@ -69,5 +70,32 @@ describe('argStringArray', () => {
   it('answers an empty array for anything that is not an array', () => {
     expect(argStringArray({}, 'ids')).toEqual([]);
     expect(argStringArray({ ids: 'a,b' }, 'ids')).toEqual([]);
+  });
+});
+
+describe('callInternalApi and the UrgAns pass', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const call = async (ctx: Partial<ChappiToolContext>) => {
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await callInternalApi(
+      { origin: 'https://app.test', authToken: 'jwt', ...ctx } as ChappiToolContext,
+      '/api/tasks',
+      { method: 'POST', body: {} }
+    );
+    return (fetchMock.mock.calls[0] as unknown as [string, { headers: Record<string, string> }])[1].headers;
+  };
+
+  it('sends the pass along with the caller own token when the turn has one', async () => {
+    const headers = await call({ urgansPass: '123.abc' });
+    expect(headers.Authorization).toBe('Bearer jwt');
+    expect(headers[URGANS_PASS_HEADER]).toBe('123.abc');
+  });
+
+  it('sends no pass header at all for everybody else', async () => {
+    const headers = await call({});
+    expect(Object.keys(headers)).not.toContain(URGANS_PASS_HEADER);
+    expect(Object.keys(await call({ urgansPass: '' }))).not.toContain(URGANS_PASS_HEADER);
   });
 });

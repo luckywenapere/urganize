@@ -5,7 +5,7 @@ import {
   createAdminClient,
   flagOffResponse,
   isChappiHistoryEnabled,
-  requireActiveAuthenticatedUser,
+  requireUrgansAccess,
   serverNotConfiguredResponse,
 } from './_shared';
 
@@ -17,7 +17,7 @@ import {
 export async function GET(request: NextRequest) {
   if (!isChappiHistoryEnabled()) return flagOffResponse();
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireUrgansAccess(request);
   if ('error' in auth) return auth.error;
 
   // Tolerant by design: a junk cursor starts from the top rather than 400ing.

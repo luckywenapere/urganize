@@ -100,7 +100,16 @@ describe('the lines a person reads', () => {
       expect(outOfCreditsNotice(input), input.account).not.toMatch(/arrive|November/);
       expect(creditsNextLine(5, input), input.account).toBe('');
     }
-    expect(creditsNextLine(0, creditsOnly)).toBe('Quick commands still work.');
+    expect(creditsNextLine(0, creditsOnly, false)).toBe('');
+  });
+
+  it('do not claim quick commands work for a credits-only team, whose commands reach the same paywalled routes', () => {
+    expect(outOfCreditsNotice(creditsOnly, false)).toBe('You are out of UrgAns credits.');
+    expect(outOfCreditsNotice(creditsOnly, true)).toBe('You are out of UrgAns credits. You can buy more credits at any time.');
+    expect(creditsNextLine(0, creditsOnly, true)).toBe('You can buy more credits at any time.');
+    // The teams that do have a plan are told as before.
+    expect(outOfCreditsNotice(trial, false)).toContain('Quick commands still work');
+    expect(outOfCreditsNotice(subscriber, false)).toContain('Quick commands still work');
   });
 
   it('keep to the house rules: no em dash and no workspace', () => {

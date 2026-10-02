@@ -12,7 +12,8 @@ import { NextResponse } from 'next/server';
 // must never spend the monthly assistant allowance. The guard test
 // lib/chappi/conversation-history-guard.test.ts fails the build if anything
 // under this folder reaches the usage counter.
-export { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_shared/auth';
+export { createAdminClient } from '@/app/api/_shared/auth';
+export { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 export { isChappiHistoryEnabled, isChatId } from '@/lib/chappi/conversation-history';
 
 /** The flag-off answer: exactly the body every flag-gated route in this app

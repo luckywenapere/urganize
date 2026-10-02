@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
+import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { isChappiEnabled } from '@/lib/chappi/config';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { getUsageSnapshot } from '@/lib/urgans-usage-server';
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  const auth = await requireAuthenticatedAdmin(request);
+  const auth = await requireUrgansAccess(request);
   if ('error' in auth) return auth.error;
 
   const team = await getTeamAccessForUser(auth.user.id, auth.user.email);

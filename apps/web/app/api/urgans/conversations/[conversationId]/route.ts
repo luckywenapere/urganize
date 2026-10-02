@@ -7,7 +7,7 @@ import {
   invalidChatIdResponse,
   isChappiHistoryEnabled,
   isChatId,
-  requireActiveAuthenticatedUser,
+  requireUrgansAccess,
   serverNotConfiguredResponse,
 } from '../_shared';
 
@@ -22,7 +22,7 @@ async function readChatId(context: Context): Promise<string | null> {
 export async function GET(request: NextRequest, context: Context) {
   if (!isChappiHistoryEnabled()) return flagOffResponse();
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireUrgansAccess(request);
   if ('error' in auth) return auth.error;
 
   const chatId = await readChatId(context);
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest, context: Context) {
 export async function PUT(request: NextRequest, context: Context) {
   if (!isChappiHistoryEnabled()) return flagOffResponse();
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireUrgansAccess(request);
   if ('error' in auth) return auth.error;
 
   const chatId = await readChatId(context);
@@ -82,7 +82,7 @@ export async function PUT(request: NextRequest, context: Context) {
 export async function DELETE(request: NextRequest, context: Context) {
   if (!isChappiHistoryEnabled()) return flagOffResponse();
 
-  const auth = await requireActiveAuthenticatedUser(request);
+  const auth = await requireUrgansAccess(request);
   if ('error' in auth) return auth.error;
 
   const chatId = await readChatId(context);

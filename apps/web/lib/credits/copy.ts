@@ -42,10 +42,20 @@ function whatNext({ account, nextGrantAt }: NoticeInput, purchasable: boolean): 
   return parts.join(' ');
 }
 
+/**
+ * Typed commands and chips cost nothing and keep working when credits run out,
+ * for a team whose plan lets it use the app. A credits-only team (walled or
+ * read-only) has no plan, and those commands go to the same paywalled routes, so
+ * for it the line would be false and is left out.
+ */
+function quickCommandsLine(account: CreditAccount): string {
+  return account === 'credits_only' ? '' : 'Quick commands still work.';
+}
+
 /** Said in the chat when a team has no credits left. */
 export function outOfCreditsNotice(input: NoticeInput, purchasable: boolean = isCreditsPurchasable()): string {
   const next = whatNext(input, purchasable);
-  return `You are out of UrgAns credits. Quick commands still work.${next ? ` ${next}` : ''}`;
+  return ['You are out of UrgAns credits.', quickCommandsLine(input.account), next].filter(Boolean).join(' ');
 }
 
 /**
@@ -100,7 +110,7 @@ export function creditsNextLine(
 ): string {
   const next = whatNext(input, purchasable);
   if (Math.floor(left) > 0) return next;
-  return `Quick commands still work.${next ? ` ${next}` : ''}`;
+  return [quickCommandsLine(input.account), next].filter(Boolean).join(' ');
 }
 
 /** The balance below which the banner shows (founder spec, 2026-10-01): the same 50 for everyone. */
