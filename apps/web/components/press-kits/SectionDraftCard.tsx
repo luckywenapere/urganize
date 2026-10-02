@@ -5,7 +5,7 @@ import { Loader2, RotateCcw, Sparkles } from '@/components/icons';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
 import { DRAFT_ALLOWED_FIELDS } from '@/lib/press-kit-draft';
 import { isCreditsEnabled } from '@/lib/credits/config';
-import { embeddedEstimateLine } from '@/lib/credits/copy';
+import { embeddedCostLine } from '@/lib/credits/copy';
 
 /**
  * UrgAns proposes, a person accepts.
@@ -30,6 +30,8 @@ const FIELD_LABELS: Record<string, string> = {
 type Props = {
   section: PressKitSectionKey;
   content: PressKitSectionContent;
+  /** UrgAns credits the team has, or null when unknown. */
+  balance: number | null;
   isBusy: boolean;
   error: string;
   onAccept: () => void;
@@ -40,6 +42,7 @@ type Props = {
 export function SectionDraftCard({
   section,
   content,
+  balance,
   isBusy,
   error,
   onAccept,
@@ -100,7 +103,7 @@ export function SectionDraftCard({
       {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
 
       {isCreditsEnabled() ? (
-        <p className="mt-3 text-xs text-content-tertiary">Another try: {embeddedEstimateLine('presskit.draft_section')}</p>
+        <p className="mt-3 text-xs text-content-tertiary">Another try: {embeddedCostLine('presskit.draft_section', balance)}</p>
       ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">

@@ -1,4 +1,5 @@
 import type { CreditAccount } from './allowance';
+import { isCreditsPurchasable } from './config';
 import { EMBEDDED_ESTIMATE_CREDITS, EMBEDDED_HOLD_CREDITS, embeddedEstimateCredits } from './embedded';
 
 /**
@@ -13,12 +14,10 @@ import { EMBEDDED_ESTIMATE_CREDITS, EMBEDDED_HOLD_CREDITS, embeddedEstimateCredi
  */
 
 /**
- * Whether anyone can BUY credits yet. They cannot: pack sizes are undecided and
- * there is no checkout, so no line may tell a person to buy until this is true.
- * Every line that mentions buying is gated on it (and takes it as an argument so
- * both wordings are tested). Flip it in the same change that ships the checkout.
+ * Whether anyone can BUY credits is isCreditsPurchasable() (config.ts), off until
+ * the checkout is switched on. Every line that mentions buying is gated on it, and
+ * takes it as an argument so both wordings are tested.
  */
-export const CREDITS_PURCHASABLE = false;
 
 /** "12 October", in UTC so the day matches the one the window turns over on. */
 export function formatGrantDay(grantAtIso: string): string {
@@ -44,7 +43,7 @@ function whatNext({ account, nextGrantAt }: NoticeInput, purchasable: boolean): 
 }
 
 /** Said in the chat when a team has no credits left. */
-export function outOfCreditsNotice(input: NoticeInput, purchasable: boolean = CREDITS_PURCHASABLE): string {
+export function outOfCreditsNotice(input: NoticeInput, purchasable: boolean = isCreditsPurchasable()): string {
   const next = whatNext(input, purchasable);
   return `You are out of UrgAns credits. Quick commands still work.${next ? ` ${next}` : ''}`;
 }
@@ -61,10 +60,23 @@ export function embeddedEstimateLine(actionId: string): string {
     : `This uses up to ${EMBEDDED_HOLD_CREDITS} UrgAns credits.`;
 }
 
+/**
+ * The estimate plus what the team has, said together BEFORE an action runs
+ * (founder spec, 2026-10-01: the balance shows on every credit-spending
+ * action). `balance` is null when it is not known yet or cannot be read; then
+ * only the estimate is said, because a wrong balance is worse than none.
+ */
+export function embeddedCostLine(actionId: string, balance: number | null): string {
+  const estimate = embeddedEstimateLine(actionId);
+  if (balance === null || !Number.isFinite(balance)) return estimate;
+  const left = Math.max(0, Math.floor(balance));
+  return `${estimate} You have ${left} ${left === 1 ? 'credit' : 'credits'}.`;
+}
+
 /** Said when an embedded action (the planner, a press-kit draft) cannot start: the hold is more than the balance. */
 export function embeddedRefusalNotice(
   input: NoticeInput & { needed: number; left: number },
-  purchasable: boolean = CREDITS_PURCHASABLE
+  purchasable: boolean = isCreditsPurchasable()
 ): string {
   const left = Math.max(0, Math.floor(input.left));
   const next = whatNext(input, purchasable);
@@ -84,19 +96,17 @@ export function creditsLeftLine(left: number): string {
 export function creditsNextLine(
   left: number,
   input: NoticeInput,
-  purchasable: boolean = CREDITS_PURCHASABLE
+  purchasable: boolean = isCreditsPurchasable()
 ): string {
   const next = whatNext(input, purchasable);
   if (Math.floor(left) > 0) return next;
   return `Quick commands still work.${next ? ` ${next}` : ''}`;
 }
 
-/**
- * Whether the banner should show: once what is left is a fifth of a month's
- * credits, or ten, whichever is more. `referenceCredits` is the plan's monthly
- * allowance, or the trial grant for an account that has none.
- */
-export function isLowOnCredits(total: number, referenceCredits: number): boolean {
-  const threshold = Math.max(10, Math.ceil(referenceCredits * 0.2));
-  return total <= threshold;
+/** The balance below which the banner shows (founder spec, 2026-10-01): the same 50 for everyone. */
+export const LOW_CREDITS_THRESHOLD = 50;
+
+/** Whether the banner should show: when what is left is below 50 credits. */
+export function isLowOnCredits(total: number): boolean {
+  return total < LOW_CREDITS_THRESHOLD;
 }

@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         account: credits.account,
         monthlyAllowance: credits.monthlyAllowance,
         nextGrantAt: credits.nextGrantAt,
-        low: isLowOnCredits(credits.total, credits.referenceCredits),
+        low: isLowOnCredits(credits.total),
       },
     });
   }

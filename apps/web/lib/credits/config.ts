@@ -21,3 +21,24 @@ export function isCreditsEnabled(
 ): boolean {
   return String(env.NEXT_PUBLIC_FEATURE_URGANS_CREDITS ?? '').trim().toLowerCase() === 'true';
 }
+
+/**
+ * Whether anyone can BUY credits. A second switch, deliberately separate from the
+ * credits themselves: the ledger and the metering can be live while the checkout
+ * is still dark, and every line that tells a person to buy waits on this.
+ *
+ * NEXT_PUBLIC_FEATURE_CREDITS_PURCHASE, default off, and meaningful only with
+ * credits on. Only the literal `true` turns it on. Read the same way as
+ * isCreditsEnabled, for the same reason (the browser reads it too).
+ */
+export function isCreditsPurchasable(
+  env: Record<string, string | undefined> = {
+    NEXT_PUBLIC_FEATURE_URGANS_CREDITS: process.env.NEXT_PUBLIC_FEATURE_URGANS_CREDITS,
+    NEXT_PUBLIC_FEATURE_CREDITS_PURCHASE: process.env.NEXT_PUBLIC_FEATURE_CREDITS_PURCHASE,
+  }
+): boolean {
+  return (
+    isCreditsEnabled(env) &&
+    String(env.NEXT_PUBLIC_FEATURE_CREDITS_PURCHASE ?? '').trim().toLowerCase() === 'true'
+  );
+}

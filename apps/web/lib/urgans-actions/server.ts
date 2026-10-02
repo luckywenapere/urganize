@@ -37,6 +37,7 @@ import { ensurePressKitAccess } from '../press-kit-access-server';
 import { checkEmbeddedActionsGuard } from './guard-server';
 import { getTeamAccessForUser } from '../team-billing-server';
 import { beginEmbeddedRun, settleEmbeddedRun } from '../credits/embedded-server';
+import { isCreditsEnabled } from '../credits/config';
 import { embeddedCharge, embeddedUsageSummary } from '../credits/embedded';
 import { decideApplyClaim, type UrgansActionRowForClaim } from './claim';
 import { getUrgansAction } from './registry';
@@ -274,7 +275,11 @@ export async function runUrgansAction(
     };
   }
 
-  if (scope.workspaceId) {
+  // The daily runaway guard is the credit-less world's only brake on usage. With
+  // credits on (founder spec, 2026-10-01) the balance replaces it: every run
+  // costs real credits, so a busy team is stopped by running out, not by a
+  // blanket count that would refuse someone who has paid for more.
+  if (scope.workspaceId && !isCreditsEnabled()) {
     const guard = await checkEmbeddedActionsGuard(admin, {
       workspaceId: scope.workspaceId,
       ownerUserId: scope.ownerUserId,

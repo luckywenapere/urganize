@@ -13,6 +13,7 @@ import {
   type ModelTier,
 } from './model-ladder';
 import { RODIUM_PLANNER_MODEL } from './planner-model';
+import { isCreditsEnabled } from '../credits/config';
 import type { ReasoningEffort } from './provider';
 
 /**
@@ -199,6 +200,12 @@ export type TeamForRouting = { state?: string | null; tier?: string | null };
  * else, and any caller that did not say, is held at Manager level.
  */
 export function resolveCeiling(team: TeamForRouting | undefined, env: EnvLike = process.env): ModelTier {
+  // With credits on, every plan can use every rung (founder spec, 2026-10-01):
+  // plans decide access, credits pay for each use, and the dearer rungs cost
+  // more credits. A plan ceiling on top would charge twice for the same limit.
+  if (isCreditsEnabled({ NEXT_PUBLIC_FEATURE_URGANS_CREDITS: env.NEXT_PUBLIC_FEATURE_URGANS_CREDITS })) {
+    return 'max';
+  }
   const pick = (key: string, fallback: ModelTier): ModelTier => {
     const value = String(env[key] ?? '').trim().toLowerCase();
     return isModelTier(value) ? value : fallback;

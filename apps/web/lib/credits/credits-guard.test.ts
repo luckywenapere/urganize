@@ -73,7 +73,7 @@ describe('the ledger is append-only', () => {
 });
 
 describe('the money maths is pure', () => {
-  const pure = ['pricing', 'allowance', 'model-prices', 'copy', 'config', 'embedded', 'packs'];
+  const pure = ['pricing', 'allowance', 'model-prices', 'copy', 'config', 'embedded', 'packs', 'purchase'];
 
   it('imports only its own siblings', () => {
     for (const name of pure) {
@@ -178,13 +178,29 @@ describe('nothing sells credits yet', () => {
     expect(users).toEqual([]);
   });
 
-  it('keeps the buy wording off until purchasing exists', () => {
-    expect(sources.get('lib/credits/copy.ts')).toMatch(/CREDITS_PURCHASABLE\s*=\s*false/);
+  it('keeps the buy wording behind the purchase switch', () => {
+    expect(sources.get('lib/credits/copy.ts')).toMatch(/isCreditsPurchasable\(\)/);
+    expect(sources.get('lib/credits/copy.ts')).not.toMatch(/=\s*true/);
   });
 
-  it('writes a top-up row only by hand: nothing but the admin adjustment inserts into the top-up source', () => {
+  it('writes a purchase row in exactly one place, keyed on the reference', () => {
     const server = sources.get('lib/credits/credits-server.ts') ?? '';
-    expect(server.match(/kind:\s*'topup'/g) ?? []).toEqual([]);
+    expect(server.match(/kind:\s*'topup'/g) ?? []).toHaveLength(1);
+    expect(server).toMatch(/dedupe_key:\s*purchaseDedupeKey\(/);
+  });
+
+  it('lets only the purchase settler call creditPurchase', () => {
+    const callers = [...sources]
+      .filter(([file, source]) => file !== 'lib/credits/credits-server.ts' && /\bcreditPurchase\s*\(/.test(source))
+      .map(([file]) => file);
+    expect(callers).toEqual(['lib/credits/purchase-server.ts']);
+  });
+
+  it('credits only after Paystack has confirmed, never on a webhook body alone', () => {
+    const settle = sources.get('lib/credits/purchase-server.ts') ?? '';
+    expect(settle).toMatch(/verifyPaystackTransaction\(/);
+    expect(settle.indexOf('verifyPaystackTransaction(')).toBeLessThan(settle.indexOf('creditPurchase('));
+    expect(settle.indexOf('checkPurchase(')).toBeLessThan(settle.indexOf('creditPurchase('));
   });
 });
 
@@ -246,5 +262,19 @@ describe('the table', () => {
     expect(sources_).toMatch(/drop function if exists public\.credit_balances\(uuid, date\)/i);
     const body = sources_.slice(sources_.indexOf('create or replace function'), sources_.indexOf('revoke all'));
     expect(body).not.toMatch(/window_start/);
+  });
+});
+
+describe('the balance replaces the daily embedded-action guard', () => {
+  const runner = sources.get('lib/urgans-actions/server.ts') ?? '';
+
+  it('only applies the daily cap when credits are off', () => {
+    // The cap is the credit-less world's brake; with credits on, a team that has
+    // paid for more must not be refused by a blanket count.
+    expect(runner).toMatch(/!isCreditsEnabled\(\)[\s\S]{0,80}checkEmbeddedActionsGuard\(/);
+  });
+
+  it('still has the guard to apply when credits are off', () => {
+    expect(runner).toMatch(/checkEmbeddedActionsGuard\(/);
   });
 });

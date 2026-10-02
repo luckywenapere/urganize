@@ -34,7 +34,8 @@ import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet
 import { applyRunAction, discardRunAction } from '@/lib/urgans-actions/client';
 import { isDraftableSection } from '@/lib/press-kit-draft';
 import { isCreditsEnabled } from '@/lib/credits/config';
-import { embeddedEstimateLine } from '@/lib/credits/copy';
+import { embeddedCostLine } from '@/lib/credits/copy';
+import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
 import { supabase } from '@/lib/supabase/client';
 import { PressKitInterviewModal } from '@/components/press-kits/PressKitInterviewModal';
 import { PhotoGrid } from '@/components/press-kits/PhotoGrid';
@@ -76,6 +77,7 @@ const relative = (iso: string): string => {
 };
 
 export default function PressKitPageClient() {
+  const { balance, refresh: refreshBalance } = useCreditBalance();
   const params = useParams<{ artistId: string }>();
   const artistId = String(params?.artistId || '');
   const router = useRouter();
@@ -385,6 +387,8 @@ export default function PressKitPageClient() {
           section: sectionKey,
           content: (body.output?.content || {}) as PressKitSectionContent,
         });
+        // A successful run is paid for, so the balance just moved.
+        void refreshBalance();
       } catch {
         setDraftError('Could not reach UrgAns. Check your connection and try again.');
       } finally {
@@ -654,6 +658,7 @@ export default function PressKitPageClient() {
                     <SectionDraftCard
                       section={draft.section}
                       content={draft.content}
+                      balance={balance}
                       isBusy={draftBusy}
                       error={draftError}
                       onAccept={() => void acceptDraft()}
@@ -676,7 +681,7 @@ export default function PressKitPageClient() {
                         {draftBusy ? 'UrgAns is writing' : 'Ask UrgAns to write this'}
                       </button>
                       {isCreditsEnabled() ? (
-                        <p className="mt-2 text-xs text-content-tertiary">{embeddedEstimateLine('presskit.draft_section')}</p>
+                        <p className="mt-2 text-xs text-content-tertiary">{embeddedCostLine('presskit.draft_section', balance)}</p>
                       ) : null}
                       {draftError ? (
                         <p role="alert" className="mt-2 text-sm text-status-error">{draftError}</p>

@@ -94,6 +94,16 @@ describe('legacyModelFor (what each surface used before the router)', () => {
 });
 
 describe('resolveCeiling', () => {
+  it('lets every plan reach the top rung when credits are on', () => {
+    const on = { NEXT_PUBLIC_FEATURE_URGANS_CREDITS: 'true' };
+    expect(resolveCeiling(paid('solo'), on)).toBe('max');
+    expect(resolveCeiling(paid('manager'), on)).toBe('max');
+    expect({ trial: resolveCeiling({ state: 'trial', tier: 'label' }, on) }.trial).toBe('max');
+    expect(resolveCeiling(undefined, on)).toBe('max');
+    // Off (or anything but the literal word) leaves the plan ceilings alone.
+    expect(resolveCeiling(paid('solo'), { NEXT_PUBLIC_FEATURE_URGANS_CREDITS: 'false' })).toBe('standard');
+  });
+
   it('caps a paid team by its plan', () => {
     expect(resolveCeiling(paid('solo'), {})).toBe('standard');
     expect(resolveCeiling(paid('manager'), {})).toBe('pro');

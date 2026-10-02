@@ -2,12 +2,13 @@
 'use client';
 
 import { isCreditsEnabled } from '@/lib/credits/config';
-import { embeddedEstimateLine } from '@/lib/credits/copy';
+import { embeddedCostLine } from '@/lib/credits/copy';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Check, ImageOff, Loader2, Plus, Sparkles, Trash2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
+import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
 import {
   applyRunAction,
   discardRunAction,
@@ -70,6 +71,7 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [fillError, setFillError] = useState('');
+  const { balance, refresh: refreshBalance } = useCreditBalance();
   const [draft, setDraft] = useState<FillBothDraft | null>(null);
   const [lockedMessage, setLockedMessage] = useState('');
 
@@ -139,6 +141,8 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
     setFillError('');
     const result = await runFillBoth({ releaseId, notes });
     setBusy(false);
+    // The run just settled, so the balance has moved (a failed run costs nothing).
+    void refreshBalance();
     if (!result.ok) {
       if (result.planRequired) {
         setLockedMessage(result.error);
@@ -148,7 +152,7 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
       return;
     }
     setDraft(result.draft);
-  }, [notes, releaseId]);
+  }, [notes, releaseId, refreshBalance]);
 
   const accept = useCallback(async () => {
     if (!draft) return;
@@ -489,7 +493,7 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
               {busy ? 'Writing…' : 'Fill both'}
             </button>
             {isCreditsEnabled() ? (
-              <p className="mt-2 text-xs text-content-tertiary">{embeddedEstimateLine('epk.fill_both')}</p>
+              <p className="mt-2 text-xs text-content-tertiary">{embeddedCostLine('epk.fill_both', balance)}</p>
             ) : null}
           </div>
         )}

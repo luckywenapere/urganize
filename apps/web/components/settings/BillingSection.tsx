@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { SALES_CONTACT_EMAIL } from '@urganize/pricing';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
@@ -12,6 +13,7 @@ import {
 } from '@/lib/billing-summary';
 import { errorMessage } from '@/lib/errors';
 import { isCardTrialEnabled } from '@/lib/trial-card';
+import { isCreditsEnabled } from '@/lib/credits/config';
 import { feedbackErrorClass } from './feedback';
 import { getAccessToken } from './getAccessToken';
 import { panelClass } from './panelClass';
@@ -258,6 +260,17 @@ export function BillingSection() {
           </button>
         ) : null}
       </div>
+
+      {isCreditsEnabled() ? (
+        <p className="mt-4 text-sm">
+          <Link
+            href="/dashboard/credits"
+            className="motion-focus text-content-secondary underline underline-offset-2 hover:text-content-primary"
+          >
+            See your UrgAns credit history
+          </Link>
+        </p>
+      ) : null}
 
       {secondaryCta === 'cancelTrial' ? (
         // Card-backed trial only: stop the charge Paystack has scheduled for
