@@ -25,6 +25,7 @@ describe('RELEASE_MENU_ORDER', () => {
       'pitch',
       'pitchkit',
       'metadata',
+      'distribute',
       'note',
       'coverart',
       'song',

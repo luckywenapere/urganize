@@ -20,6 +20,7 @@ export const ROLLOUT_MENU_FLAGS: RolloutMenuFlags = {
   contentCalendar: process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true',
   pitching: process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true',
   pitchKit: process.env.NEXT_PUBLIC_FEATURE_PITCH_KIT === 'true',
+  distribution: process.env.NEXT_PUBLIC_FEATURE_DISTRIBUTION === 'true',
   metadata: process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true',
   notes: process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true',
   coverArt: process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true',

@@ -93,6 +93,13 @@ export const RELEASE_MENU_ORDER = [
   // the submissions that come back, so it is returned to across the whole
   // rollout rather than filled in once. Also a promoted tab.
   'metadata',
+  // Distribution (2026-10-03). Directly after Metadata because it is where
+  // that paperwork pays off: the Distribute step reads the genre, language and
+  // explicit flag from it and sends the team there to fix what is missing.
+  // Ranked below the promoted work surfaces and above the assets set once,
+  // since a rollout reaches it late (the playbook's distribution steps sit in
+  // the last weeks) and then returns to it only to check delivery.
+  'distribute',
   // Capture, and the only entry here that LEAVES the panel rather than
   // swapping its body — it opens the notebook with this release already
   // filtered (and, on a phone, a blank note waiting). It exists because the
