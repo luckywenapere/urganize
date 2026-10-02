@@ -203,6 +203,25 @@ export function summarizeBilling(
     };
   }
 
+  // Credits-only (2026-10-02): no plan, but the team holds credits, so it uses the
+  // app with Solo features. Checked before every per-user branch below for the
+  // same reason the read-only one is: a member reads back 'unpaid' and would
+  // otherwise be told about a free trial. 'reactivate', not 'plans': this team
+  // HAS access, so a bare /locked would bounce them straight back. See BillingCta.
+  if (team && team.state === 'credits_only') {
+    return {
+      title: 'Using credits',
+      details: [
+        'Your team uses Urganize with Solo features while it has credits.',
+        team.isOwnerOrAdmin
+          ? 'Pick a plan for monthly credits and more room.'
+          : 'Your team admin can pick a plan.',
+      ],
+      cta: team.isOwnerOrAdmin ? 'reactivate' : null,
+      secondaryCta: null,
+    };
+  }
+
   // Read-only: they paid, the payment lapsed, and they keep every read forever.
   //
   // Guarded on the person's OWN status, the shape the 'paid' branch below uses.

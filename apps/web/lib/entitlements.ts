@@ -318,7 +318,7 @@ const LEGACY_PLAN_IDS = new Set([
 
 export function resolveTeamTier(input: {
   /** TeamAccessResolution.state. */
-  state: 'paid' | 'comped' | 'trial' | 'grace' | 'read_only' | 'walled';
+  state: 'paid' | 'comped' | 'trial' | 'grace' | 'read_only' | 'credits_only' | 'walled';
   /** subscriptions.plan for the team OWNER, or null. */
   ownerPlan?: string | null;
   /** workspaces.billing_plan — the deal marker, not an access grant. */
@@ -327,6 +327,13 @@ export function resolveTeamTier(input: {
   // A grandfathered rate carries label entitlements in full, per the pricing
   // spec's grandfathering rule. Checked first: the deal is what was agreed,
   // whatever the subscription row says.
+  // Credits-only: Solo features (strategy doc, section 8). Checked FIRST, before
+  // the founding deal and every fail-open branch below, because this is the one
+  // state where a team with no plan can write, and it must write under Solo's
+  // ceilings, not Label's. A founding deal is a price lock, not access; a
+  // founding team that lapsed and runs on credits is on Solo like anyone else.
+  if (input.state === 'credits_only') return 'solo';
+
   if (input.billingPlan === 'founding') return LEGACY_FOUNDING_TIER;
 
   // A trial is full access by definition. Capping seats during an evaluation

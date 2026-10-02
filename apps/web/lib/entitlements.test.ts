@@ -904,3 +904,11 @@ describe('limit copy reads correctly at a limit of one', () => {
     expect(releases.message).toContain('3 rollouts at a time');
   });
 });
+
+describe('credits-only teams are on Solo (2026-10-02)', () => {
+  it('resolves to Solo, whatever plan or deal the team had before', () => {
+    expect(resolveTeamTier({ state: 'credits_only' })).toBe('solo');
+    expect(resolveTeamTier({ state: 'credits_only', ownerPlan: 'label' })).toBe('solo');
+    expect(resolveTeamTier({ state: 'credits_only', ownerPlan: 'manager', billingPlan: 'founding' })).toBe('solo');
+  });
+});
