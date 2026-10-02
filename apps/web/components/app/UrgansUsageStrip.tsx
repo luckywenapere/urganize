@@ -155,6 +155,12 @@ export function UrgansUsageStrip() {
           {creditsNextLine(credits, { account: usage.credits.account, nextGrantAt: usage.credits.nextGrantAt })}
         </p>
         <Link
+          href="/dashboard/credits"
+          className="shrink-0 text-sm font-medium text-content-secondary underline-offset-4 hover:underline"
+        >
+          History
+        </Link>
+        <Link
           href="/locked?intent=upgrade"
           className="shrink-0 text-sm font-medium text-brand underline-offset-4 hover:underline"
         >

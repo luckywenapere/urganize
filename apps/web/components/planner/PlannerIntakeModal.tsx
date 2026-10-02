@@ -22,7 +22,8 @@ import { getTemplateStats } from '@/lib/release-templates/loader';
 import { suggestReleaseDate, type ReleasePlanIntake } from '@/lib/release-planning';
 import { createReleasePlan } from '@/lib/urgans-actions/client';
 import { isCreditsEnabled } from '@/lib/credits/config';
-import { embeddedEstimateLine } from '@/lib/credits/copy';
+import { embeddedCostLine } from '@/lib/credits/copy';
+import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
 import {
   EMPTY_PLANNER_INTAKE_DRAFT,
   clearPlannerIntakeDraft,
@@ -81,6 +82,7 @@ async function getAccessToken(): Promise<string> {
 const todayYmd = () => new Date().toISOString().slice(0, 10);
 
 export function PlannerIntakeModal() {
+  const { balance } = useCreditBalance();
   const router = useRouter();
   const intakePayload = usePlannerStore((state) => state.intake);
   const closeIntake = usePlannerStore((state) => state.closeIntake);
@@ -500,7 +502,7 @@ export function PlannerIntakeModal() {
 
           <p className="mt-3 text-center text-[11px] leading-5 text-content-tertiary sm:text-left">
             UrgAns builds the plan when you finish. You can change any activity after.
-            {isCreditsEnabled() ? ` ${embeddedEstimateLine('release.draft_plan')}` : ''}
+            {isCreditsEnabled() ? ` ${embeddedCostLine('release.draft_plan', balance)}` : ''}
           </p>
         </div>
       </div>

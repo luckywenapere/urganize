@@ -10,6 +10,7 @@ import {
   type TeamForAllowance,
 } from './allowance';
 import type { TurnCharge, UsageCall } from './pricing';
+import type { LedgerHistoryRow } from './history';
 import { readBillingAnchor } from '@/lib/urgans-usage-server';
 import { resolveUsageWindow } from '@/lib/urgans-usage';
 
@@ -66,6 +67,41 @@ const asNumber = (value: unknown): number => {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+/** Rows a history page reads at a time. A turn that drew on several sources is up to three rows. */
+export const HISTORY_PAGE_ROWS = 100;
+
+/**
+ * A page of a team's ledger, newest first, for the history screen. Selects ONLY
+ * what a person may see (what happened, when, how many credits, and the little
+ * metadata that names an action): never the provider's cost, which is ours.
+ * `before` is the created_at of the last row of the previous page. Null when the
+ * ledger cannot be read.
+ */
+export async function readLedgerHistory(
+  client: SupabaseClient,
+  workspaceId: string,
+  options: { before?: string | null } = {}
+): Promise<LedgerHistoryRow[] | null> {
+  try {
+    let query = client
+      .from(TABLE)
+      .select('id, kind, pool, credits, dedupe_key, metadata, created_at')
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: false })
+      .limit(HISTORY_PAGE_ROWS);
+    if (options.before) query = query.lt('created_at', options.before);
+    const { data, error } = await query;
+    if (error) {
+      console.error('[credits] could not read the history:', error.message);
+      return null;
+    }
+    return (data ?? []) as LedgerHistoryRow[];
+  } catch (error) {
+    console.error('[credits] could not read the history:', error);
+    return null;
+  }
+}
 
 /** Every source's balance for a team, or null when they cannot be read. */
 export async function readBalances(client: SupabaseClient, workspaceId: string): Promise<CreditBalances | null> {
