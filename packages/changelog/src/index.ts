@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.62.0",
+    date: "October 2, 2026",
+    highlights: [
+      "Every artist now has their own page. See their rollouts, shows, team and press kit all in one place.",
+      "When a rollout is done, it keeps the press kit it went out with. Changing the bio later will not change an old rollout.",
+    ],
+  },
+  {
     version: "1.61.0",
     date: "October 2, 2026",
     highlights: [
