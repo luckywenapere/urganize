@@ -11,6 +11,7 @@ import {
 import { type WorkspaceMemberRole } from '@/lib/tasks';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
 import { checkSeatAllowance, recordLimitHit } from '@/lib/seats-server';
+import { captureActivationIfReached } from '@/lib/activation-server';
 import {
   captureServerAnalyticsEvent,
   createPostHogEvent,
@@ -259,6 +260,11 @@ export async function POST(request: NextRequest) {
     } else {
       console.info(`[workspace-invite] ${email} -> already-active member, no link needed`);
     }
+
+    // Activation (2026-10-01): the first teammate invited, after a real
+    // rollout, completes the pair. Credited to the workspace OWNER, who may not
+    // be the person who pressed the button.
+    await captureActivationIfReached(adminClient, { workspaceId, trigger: 'invite' });
 
     captureServerAnalyticsEvent(
       posthogServer,

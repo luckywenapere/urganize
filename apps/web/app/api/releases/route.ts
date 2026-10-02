@@ -22,6 +22,7 @@ import { isTestReleaseEnabled, readTestRelease, writeTestRelease } from '@/lib/t
 import { isSocialShareEnabled } from '@/lib/social-share';
 import { FIRST_RELEASE_TEST_SCAN, decideFirstRelease } from '@/lib/social-share-offer';
 import { enqueueReleaseReminders } from '@/lib/release-reminders-server';
+import { captureActivationIfReached } from '@/lib/activation-server';
 
 type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
 
@@ -759,6 +760,17 @@ export async function POST(request: NextRequest) {
           })
         );
       }
+    }
+
+    // Activation (2026-10-01): a first REAL rollout plus one teammate invited,
+    // within 3 days of signup. A test rollout is practice and cannot complete
+    // it. Never throws; see lib/activation-server.ts.
+    if (!isTest) {
+      await captureActivationIfReached(adminClient, {
+        ownerUserId: auth.user.id,
+        trigger: 'release',
+        signupAt: auth.user.created_at,
+      });
     }
 
     if (releaseDateResult.value) {

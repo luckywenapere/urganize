@@ -205,6 +205,82 @@ export async function createReleasePlan(params: CreateReleasePlanParams): Promis
   }
 }
 
+export type FillBothDraft = {
+  actionId: string;
+  /** What UrgAns proposes. Only fields that are empty today are in here. */
+  kit: {
+    descriptor?: string;
+    short?: string;
+    medium?: string;
+    long?: string;
+    hook?: string;
+  };
+  story?: string;
+};
+
+export type RunFillBothResult =
+  | { ok: true; draft: FillBothDraft }
+  | { ok: false; status: number; error: string; planRequired?: boolean };
+
+/**
+ * Ask UrgAns to fill the gaps in the artist's press kit and the rollout's
+ * story. Nothing is written until the person accepts (applyRunAction).
+ * `plan_required` comes back flagged so the caller can show the locked sheet.
+ */
+export async function runFillBoth(params: {
+  releaseId: string;
+  notes?: string;
+}): Promise<RunFillBothResult> {
+  const token = await getAccessToken();
+  if (!token) return { ok: false, status: 401, error: 'Your session expired. Sign in again.' };
+  try {
+    const response = await postJson('/api/urgans/actions', token, {
+      actionType: 'epk.fill_both',
+      objectId: params.releaseId,
+      input: { notes: params.notes ?? '' },
+    });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error:
+          typeof payload.error === 'string'
+            ? payload.error
+            : 'UrgAns could not write that just now. Try again.',
+        planRequired: payload.reason === 'plan_required',
+      };
+    }
+    const output = (payload.output || {}) as {
+      draft?: {
+        kit?: {
+          header?: { descriptor?: string };
+          bios?: { short?: string; medium?: string; long?: string };
+          latest_release?: { hook?: string };
+        };
+        story?: string;
+      };
+    };
+    const kit = output.draft?.kit ?? {};
+    return {
+      ok: true,
+      draft: {
+        actionId: String(payload.actionId || ''),
+        kit: {
+          descriptor: kit.header?.descriptor,
+          short: kit.bios?.short,
+          medium: kit.bios?.medium,
+          long: kit.bios?.long,
+          hook: kit.latest_release?.hook,
+        },
+        story: output.draft?.story,
+      },
+    };
+  } catch (error) {
+    return failureFromThrown(error) as RunFillBothResult;
+  }
+}
+
 export type RunActionApplyResult =
   | { ok: true; result: unknown }
   | { ok: false; status: number; error: string };

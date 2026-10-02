@@ -31,7 +31,12 @@ export type SceneName =
   // release, visible to anyone with release access. Not "chat", the object
   // renamed to "rollout" in user-facing copy (2026-09-09), but scene NAMES
   // are identifiers like every other entry here, not copy.
-  | 'chat';
+  | 'chat'
+  // The release pitch kit (2026-10-01): the story and credits a rollout adds
+  // to the artist's standing press kit. Fetches for itself and is not cached,
+  // like the timeline: it is edited in place, and a cached copy painted over a
+  // live edit is the failure the old plan scene was kept out of the cache for.
+  | 'pitchkit';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'activities',
@@ -44,6 +49,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'coverart',
   'timeline',
   'chat',
+  'pitchkit',
 ];
 
 // Inlined at build time, same read every UI gate uses. Both consumers below
@@ -59,6 +65,7 @@ const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const RELEASE_CHAT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true';
+const PITCH_KIT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCH_KIT === 'true';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
@@ -136,6 +143,7 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   if (scene === 'files' && !FILES_ENABLED) return null;
   if (scene === 'pitch' && !PITCHING_ENABLED) return null;
   if (scene === 'chat' && !RELEASE_CHAT_ENABLED) return null;
+  if (scene === 'pitchkit' && !PITCH_KIT_ENABLED) return null;
   return scene;
 }
 
@@ -244,10 +252,10 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
  * payload to cache, no route to prefetch, and a fetcher for it would have to
  * invent a request that does not exist.
  */
-export type CacheableSceneName = Exclude<SceneName, 'timeline' | 'activities'>;
+export type CacheableSceneName = Exclude<SceneName, 'timeline' | 'activities' | 'pitchkit'>;
 
 export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName =>
-  scene !== 'timeline' && scene !== 'activities';
+  scene !== 'timeline' && scene !== 'activities' && scene !== 'pitchkit';
 
 /**
  * Which scenes may touch localStorage.
@@ -282,6 +290,8 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   timeline: false,
   // Plain JSON, no signed URLs or credentials — same reasoning as pitch.
   chat: true,
+  // Fetches for itself and is never cached (see CacheableSceneName).
+  pitchkit: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of

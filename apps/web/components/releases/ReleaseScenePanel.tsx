@@ -16,6 +16,7 @@ import { CalendarScene } from '@/components/content-calendar/CalendarScene';
 import { PitchScene } from '@/components/pitching/PitchScene';
 import { TimelineScene } from '@/components/releases/TimelineScene';
 import { ReleaseChatSection } from '@/components/releases/ReleaseChatSection';
+import { PitchKitSection } from '@/components/releases/PitchKitSection';
 import { calendarFontVariables } from '@/components/content-calendar/calendar-fonts';
 
 /**
@@ -54,6 +55,7 @@ const SECTION_SCENES = [
   'capture',
   'timeline',
   'chat',
+  'pitchkit',
 ] as const;
 
 // No compile-time coverage check beside this list, deliberately. One was
@@ -81,6 +83,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   coverart: 'Cover art',
   timeline: 'Timeline',
   chat: 'Chat',
+  pitchkit: 'Pitch kit',
 };
 
 type ReleaseScenePanelProps = {
@@ -227,6 +230,7 @@ export function ReleaseScenePanel({
       {scene === 'pitch' ? <PitchScene release={release} onToast={onToast} /> : null}
       {scene === 'capture' ? <CaptureSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'chat' ? <ReleaseChatSection releaseId={release.id} onToast={onToast} /> : null}
+      {scene === 'pitchkit' ? <PitchKitSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'timeline' ? (
         <TimelineScene
           release={release}

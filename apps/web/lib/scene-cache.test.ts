@@ -86,6 +86,7 @@ describe('persist policy', () => {
       files: 'NEXT_PUBLIC_FEATURE_FILES',
       pitch: 'NEXT_PUBLIC_FEATURE_PITCHING',
       chat: 'NEXT_PUBLIC_FEATURE_RELEASE_CHAT',
+      pitchkit: 'NEXT_PUBLIC_FEATURE_PITCH_KIT',
     };
     const cacheable = [...SCENE_NAMES].filter(isCacheableScene).filter((scene) => {
       const flag = flagFor[scene];
@@ -292,6 +293,7 @@ const SCENE_FLAGS = [
   'NEXT_PUBLIC_FEATURE_FILES',
   'NEXT_PUBLIC_FEATURE_PITCHING',
   'NEXT_PUBLIC_FEATURE_RELEASE_CHAT',
+  'NEXT_PUBLIC_FEATURE_PITCH_KIT',
 ] as const;
 
 async function loadResolver(flagsOn: boolean) {

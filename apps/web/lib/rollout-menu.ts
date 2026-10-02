@@ -43,6 +43,8 @@ export type RolloutMenuFlags = {
   releaseChat: boolean;
   contentCalendar: boolean;
   pitching: boolean;
+  /** The release pitch kit scene (NEXT_PUBLIC_FEATURE_PITCH_KIT). */
+  pitchKit: boolean;
   metadata: boolean;
   notes: boolean;
   coverArt: boolean;
@@ -145,6 +147,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.releaseChat ? scene('chat', 'Chat') : null,
     flags.contentCalendar ? scene('calendar', 'Content') : null,
     flags.pitching ? scene('pitch', 'Pitch') : null,
+    flags.pitchKit ? scene('pitchkit', 'Pitch kit') : null,
     flags.metadata ? scene('metadata', 'Metadata') : null,
     flags.notes ? note : null,
     flags.coverArt ? scene('coverart', 'Cover art') : null,
