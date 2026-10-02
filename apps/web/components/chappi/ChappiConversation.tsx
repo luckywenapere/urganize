@@ -27,6 +27,8 @@ import { BriefAttribution } from './BriefAttribution';
 import { ReplyText } from './ReplyText';
 import { stripModelMarkup } from '@/lib/model-markup';
 import { describeTranscriptAnnouncement } from '@/lib/chappi/transcript-announcement';
+import { createTextBatcher, isStreamContentType, URGANS_STREAM_HEADER } from '@/lib/chappi/stream-protocol';
+import { CONNECTION_DROPPED_NOTE, readStreamedTurn } from '@/lib/chappi/stream-client';
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
 import { ChappiRecapCard } from '@/components/chappi/ChappiRecapCard';
@@ -238,6 +240,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // disabled for up to a minute while an answer for another chat finishes.
   const [thinkingEpoch, setThinkingEpoch] = useState<number | null>(null);
   const isThinking = thinkingEpoch === epoch;
+  // The reply as it is being written, while the model is still writing it. A
+  // preview only: when the turn ends, the reply the server sends replaces it.
+  // Keyed by epoch like `thinkingEpoch`, so a preview for a transcript that has
+  // left the screen is never shown over a different one.
+  const [preview, setPreview] = useState<{ epoch: number; text: string } | null>(null);
+  const previewText = preview && preview.epoch === epoch ? preview.text : '';
+  // The reply that just replaced a preview. It is already on screen, so it must
+  // not fade in word by word a second time.
+  const [noRevealId, setNoRevealId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -319,7 +330,9 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     setPrevLastMessageId(lastMessageId);
     // A new user turn clears the reveal (the previous reply has finished
     // animating; keeping the id would replay it if the node ever remounts).
-    setRevealMessageId(lastMessage?.role === 'assistant' ? lastMessageId : null);
+    setRevealMessageId(
+      lastMessage?.role === 'assistant' && lastMessageId !== noRevealId ? lastMessageId : null
+    );
   }
 
   // "New chat" empties the transcript, and a picker with no conversation
@@ -355,16 +368,36 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     });
   }, [messages.length, isThinking, epoch]);
 
+  // While a reply is being written the page follows it down, but only if the
+  // reader is already at the bottom: someone who scrolled up to reread something
+  // is not dragged back every few words. Instant, not smooth: a smooth scroll
+  // restarted every fraction of a second never gets anywhere.
+  useEffect(() => {
+    if (!previewText) return;
+    const sentinel = bottomRef.current;
+    if (!sentinel) return;
+    let scroller: HTMLElement | null = sentinel.parentElement;
+    while (scroller) {
+      const overflowY = window.getComputedStyle(scroller).overflowY;
+      if ((overflowY === 'auto' || overflowY === 'scroll') && scroller.scrollHeight > scroller.clientHeight) break;
+      scroller = scroller.parentElement;
+    }
+    const target = scroller ?? document.documentElement;
+    const fromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (fromBottom < 160) sentinel.scrollIntoView({ behavior: 'instant', block: 'end' });
+  }, [previewText]);
+
   // Appends only the ASSISTANT side of a turn. Callers own appending the
   // user side (a chip's label, or the typed prompt) — keeps each turn
   // recorded exactly once regardless of which path produced it.
   const appendAssistantReply = (
     replyText: string,
     replyMeta?: ChappiReply,
-    briefSections?: string[]
+    briefSections?: string[],
+    messageId?: string
   ) => {
     appendMessage({
-      id: nextMessageId('a'),
+      id: messageId ?? nextMessageId('a'),
       role: 'assistant',
       content: replyText,
       // Attribution rides the MESSAGE, not this component's state: scrolling
@@ -411,11 +444,20 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     turn: Turn,
     replyText: string,
     replyMeta?: ChappiReply,
-    briefSections?: string[]
+    briefSections?: string[],
+    options?: { streamed?: boolean }
   ): boolean => {
     if (!isTurnCurrent(turn)) {
       deliverToChat(turn.conversationId, replyText, briefSections);
       return false;
+    }
+    if (options?.streamed) {
+      // Its text was already on screen as a preview; the reply takes its place
+      // without being revealed again.
+      const id = nextMessageId('a');
+      setNoRevealId(id);
+      appendAssistantReply(replyText, replyMeta, briefSections, id);
+      return true;
     }
     appendAssistantReply(replyText, replyMeta, briefSections);
     return true;
@@ -856,7 +898,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       }
       const response = await fetch('/api/urgans', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          // Asks for the reply a piece at a time. The server decides: with its
+          // switch off it answers plain JSON and this changes nothing.
+          [URGANS_STREAM_HEADER]: '1',
+        },
         body: JSON.stringify({
           // The route forwards only the last CHAPPI_HISTORY_LIMIT messages to
           // the model, so sending more is weight with no effect — and a
@@ -868,10 +916,55 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         }),
         cache: 'no-store',
       });
-      const data = (await response.json().catch(() => null)) as ChappiResponse | null;
+      let data: ChappiResponse | null;
+      let streamedText = '';
+      if (response.body && isStreamContentType(response.headers.get('content-type'))) {
+        // Pieces of the reply are shown as they arrive, a few times a second at
+        // most, so a fast model does not re-render the whole transcript on every
+        // word.
+        const batcher = createTextBatcher({
+          emit: (piece) =>
+            setPreview((current) => ({
+              epoch: turn.epoch,
+              text: (current && current.epoch === turn.epoch ? current.text : '') + piece,
+            })),
+        });
+        const outcome = await readStreamedTurn(response, {
+          onText: (delta) => {
+            if (isTurnCurrent(turn)) batcher.push(delta);
+          },
+          // A new round replaced the one being shown.
+          onReset: () => {
+            batcher.discard();
+            setPreview(null);
+          },
+        });
+        batcher.discard();
+        streamedText = outcome.text;
+        if (!outcome.final) {
+          // The connection dropped before the answer was complete. Keep what
+          // was written and say so; with nothing written, the typed-command
+          // router answers as it does for any other failure.
+          if (outcome.text) {
+            deliverReply(turn, `${outcome.text}\n\n${CONNECTION_DROPPED_NOTE}`, undefined, undefined, {
+              streamed: true,
+            });
+          } else {
+            fallBackToRouter();
+          }
+          return;
+        }
+        data = outcome.final;
+      } else {
+        data = (await response.json().catch(() => null)) as ChappiResponse | null;
+      }
 
       if (response.ok && data?.mode === 'agent') {
-        if (!deliverReply(turn, data.reply, undefined, data.briefSections)) {
+        if (
+          !deliverReply(turn, data.reply, undefined, data.briefSections, {
+            streamed: streamedText.length > 0,
+          })
+        ) {
           // The user moved on. No approval card: it would be asking about a
           // conversation that is no longer on screen, and nothing has run.
           settleLeftChatActions(data.clientActions);
@@ -907,6 +1000,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       // Only clears the indicator this turn set. If the transcript was
       // replaced and a new turn started meanwhile, that one owns it now.
       setThinkingEpoch((current) => (current === turn.epoch ? null : current));
+      setPreview((current) => (current && current.epoch === turn.epoch ? null : current));
     }
   };
 
@@ -1267,6 +1361,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           <Transcript
             messages={messages}
             isThinking={isThinking}
+            previewText={previewText}
             suggestions={reply?.suggestions}
             onSuggestion={sendUserTurn}
             bottomRef={bottomRef}
@@ -1324,6 +1419,8 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
 type TranscriptProps = {
   messages: ChappiMessage[];
   isThinking: boolean;
+  /** The reply as it is being written; '' when nothing has streamed. */
+  previewText: string;
   suggestions?: string[];
   onSuggestion: (suggestion: string) => void;
   bottomRef: RefObject<HTMLDivElement | null>;
@@ -1361,6 +1458,7 @@ type TranscriptProps = {
 function Transcript({
   messages,
   isThinking,
+  previewText,
   suggestions,
   onSuggestion,
   bottomRef,
@@ -1404,7 +1502,15 @@ function Transcript({
           than sitting beside one (mascot brief, 2026-08-30). He carries the
           aria-label, so the row still announces itself; the visible word
           stays for anyone who reads the transcript rather than the picture. */}
-      {isThinking ? (
+      {isThinking && previewText ? (
+        // Hidden from assistive technology on purpose: the finished reply is
+        // announced by the live region below when it arrives, and reading out a
+        // sentence that is still changing is noise.
+        <div aria-hidden="true" className="whitespace-pre-wrap break-words text-sm leading-7 text-content-primary">
+          <ReplyText content={previewText} reveal={false} />
+        </div>
+      ) : null}
+      {isThinking && !previewText ? (
         <div className="flex items-center gap-2 text-sm text-content-tertiary">
           <Chappi pose="thinking" size={CHAPPI_MIN_SIZE} ariaLabel="UrgAns is thinking" />
           Thinking…

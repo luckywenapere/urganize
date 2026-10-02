@@ -14,6 +14,13 @@ import {
   routingMetadata,
 } from '@/lib/chappi/routing';
 import { logRoutingTrace } from '@/lib/ai/routing-log';
+import {
+  URGANS_STREAM_CONTENT_TYPE,
+  encodeStreamEvent,
+  isUrgansStreamOn,
+  requestWantsStream,
+  type UrgansStreamEvent,
+} from '@/lib/chappi/stream-protocol';
 import { getChappiTool } from '@/lib/chappi/tools';
 import type {
   ChappiConfirmedAction,
@@ -268,68 +275,153 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { reply, clientActions, pendingConfirmation, trace, usageCalls } = await runChappiAgent({
-      ctx,
-      system,
-      messages: trimmed,
-      ...(plan.mode === 'on' ? { routing: plan.routing } : {}),
-    });
-
-    // The record of what the router did (or, in shadow, would have done). Absent
-    // for a turn it did not touch, so that row is what it always was.
-    const routed =
-      plan.mode === 'on' ? trace : plan.mode === 'shadow' ? (trace ? completeShadowTrace(plan.trace, trace) : plan.trace) : undefined;
-    if (plan.mode === 'shadow' && routed) logRoutingTrace(routed, false);
-    let metadata: Record<string, unknown> | undefined = routed ? routingMetadata(routed) : undefined;
-
-    // Charged after the turn succeeded, so a gateway failure is never charged.
-    // The cost is written onto the turn's billing event as well as the ledger, so
-    // a charge the ledger failed to take can be found and reconciled from here.
-    if (creditsOn && credits && team.primaryWorkspaceId) {
-      const charge = turnCharge(usageCalls);
-      metadata = {
-        ...(metadata ?? {}),
-        credits: { charged: charge.credits, rodi: Math.round(charge.rodi * 1000) / 1000, assumed: charge.assumed },
-      };
-      await settleTurn(auth.adminClient, {
-        workspaceId: team.primaryWorkspaceId,
-        ownerUserId: team.ownerUserId,
-        actorUserId: auth.user.id,
-        requestId: randomUUID(),
-        charge,
-        calls: usageCalls,
-        balances: credits,
+    // The whole turn, from the model call to the charge. Run the same way whether
+    // the answer is streamed or not: only how the result leaves differs.
+    const runTurn = async (stream?: {
+      onText: (delta: string) => void;
+      onAttempt: () => void;
+    }): Promise<ChappiResponse> => {
+      const { reply, clientActions, pendingConfirmation, trace, usageCalls } = await runChappiAgent({
+        ctx,
+        system,
+        messages: trimmed,
+        ...(plan.mode === 'on' ? { routing: plan.routing } : {}),
+        ...(stream ?? {}),
       });
+
+      // The record of what the router did (or, in shadow, would have done). Absent
+      // for a turn it did not touch, so that row is what it always was.
+      const routed =
+        plan.mode === 'on' ? trace : plan.mode === 'shadow' ? (trace ? completeShadowTrace(plan.trace, trace) : plan.trace) : undefined;
+      if (plan.mode === 'shadow' && routed) logRoutingTrace(routed, false);
+      let metadata: Record<string, unknown> | undefined = routed ? routingMetadata(routed) : undefined;
+
+      // Charged after the turn succeeded, so a gateway failure is never charged.
+      // The cost is written onto the turn's billing event as well as the ledger, so
+      // a charge the ledger failed to take can be found and reconciled from here.
+      if (creditsOn && credits && team.primaryWorkspaceId) {
+        const charge = turnCharge(usageCalls);
+        metadata = {
+          ...(metadata ?? {}),
+          credits: { charged: charge.credits, rodi: Math.round(charge.rodi * 1000) / 1000, assumed: charge.assumed },
+        };
+        await settleTurn(auth.adminClient, {
+          workspaceId: team.primaryWorkspaceId,
+          ownerUserId: team.ownerUserId,
+          actorUserId: auth.user.id,
+          requestId: randomUUID(),
+          charge,
+          calls: usageCalls,
+          balances: credits,
+        });
+      }
+
+      // Counted after the turn succeeded, so a gateway failure is never charged.
+      if (team.primaryWorkspaceId) {
+        await recordUrgansAction(auth.adminClient, {
+          workspaceId: team.primaryWorkspaceId,
+          ownerUserId: team.ownerUserId,
+          actorUserId: auth.user.id,
+          ...(metadata ? { metadata } : {}),
+        });
+      }
+
+      return {
+        mode: 'agent',
+        reply,
+        clientActions,
+        pendingConfirmation,
+        briefSections: built.briefSections,
+      } satisfies ChappiResponse;
+    };
+
+    // Streaming is opt-in on both sides: the server has to be switched on AND the
+    // request has to ask, so an old client and a switched-off server both get the
+    // plain JSON answer they always did. Everything above this line (auth,
+    // validation, the credit and ceiling checks) has already answered as JSON
+    // when it was going to refuse, so a stream only ever starts for a turn that
+    // is really going to run.
+    if (isUrgansStreamOn() && requestWantsStream(request.headers)) {
+      return streamTurn(runTurn);
     }
 
-    // Counted after the turn succeeded, so a gateway failure is never charged.
-    if (team.primaryWorkspaceId) {
-      await recordUrgansAction(auth.adminClient, {
-        workspaceId: team.primaryWorkspaceId,
-        ownerUserId: team.ownerUserId,
-        actorUserId: auth.user.id,
-        ...(metadata ? { metadata } : {}),
-      });
-    }
-
-    return NextResponse.json({
-      mode: 'agent',
-      reply,
-      clientActions,
-      pendingConfirmation,
-      briefSections: built.briefSections,
-    } satisfies ChappiResponse);
+    return NextResponse.json(await runTurn());
   } catch (error) {
-    const described = describeAgentError(error);
-
-    // A slow model or a busy gateway is ordinary and logs nothing. An empty
-    // balance and a rejected key are things no model can route around and only a
-    // person can fix: the user is told the same thing either way, and the log is
-    // where it has to be loud.
-    if (described.alert) console.error(AGENT_ALERT_LOG_LINES[described.alert], error);
-
-    return NextResponse.json({ mode: 'error', error: described.message } satisfies ChappiResponse, {
-      status: described.status,
-    });
+    const { payload, status } = agentErrorResponse(error);
+    return NextResponse.json(payload, { status });
   }
+}
+
+/**
+ * What to answer when the turn failed, and the status to answer it with. Shared
+ * by the plain and the streamed paths so a failure reads the same either way.
+ */
+function agentErrorResponse(error: unknown): { payload: ChappiResponse; status: number } {
+  const described = describeAgentError(error);
+
+  // A slow model or a busy gateway is ordinary and logs nothing. An empty
+  // balance and a rejected key are things no model can route around and only a
+  // person can fix: the user is told the same thing either way, and the log is
+  // where it has to be loud.
+  if (described.alert) console.error(AGENT_ALERT_LOG_LINES[described.alert], error);
+
+  return { payload: { mode: 'error', error: described.message }, status: described.status };
+}
+
+/**
+ * The turn as a stream of events (lib/chappi/stream-protocol.ts): text as the
+ * model writes it, then one `final` event carrying the answer the route has
+ * always sent. The charge is settled inside `runTurn`, before `final`, so the
+ * last event means the turn is fully accounted for. A failure is sent as a
+ * `final` event too, because the status line was written before it happened.
+ */
+function streamTurn(runTurn: (stream: { onText: (d: string) => void; onAttempt: () => void }) => Promise<ChappiResponse>) {
+  const encoder = new TextEncoder();
+
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: UrgansStreamEvent) => {
+        try {
+          controller.enqueue(encoder.encode(encodeStreamEvent(event)));
+        } catch {
+          // The reader went away. The turn still finishes and is still charged.
+        }
+      };
+
+      // Text the screen is showing for the round in progress. A new round (or a
+      // different model) replaces it, so tell the screen to drop it first.
+      let showing = false;
+      try {
+        const payload = await runTurn({
+          onText: (delta) => {
+            showing = true;
+            send({ type: 'text', delta });
+          },
+          onAttempt: () => {
+            if (!showing) return;
+            showing = false;
+            send({ type: 'reset' });
+          },
+        });
+        send({ type: 'final', data: payload });
+      } catch (error) {
+        send({ type: 'final', data: agentErrorResponse(error).payload });
+      } finally {
+        try {
+          controller.close();
+        } catch {
+          // Already closed.
+        }
+      }
+    },
+  });
+
+  return new Response(body, {
+    headers: {
+      'Content-Type': URGANS_STREAM_CONTENT_TYPE,
+      // No caching and no proxy buffering, or the pieces arrive all at once.
+      'Cache-Control': 'no-cache, no-transform',
+      'X-Accel-Buffering': 'no',
+    },
+  });
 }
