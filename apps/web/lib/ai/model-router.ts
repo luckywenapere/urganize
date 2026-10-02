@@ -621,8 +621,8 @@ export type RoutingTrace = {
   legacyModel?: string | null;
   /** In shadow: the model the router would have used. */
   wouldUseModel?: string;
-  /** Set when the turn was cut short: it ran out of time before it finished. */
-  degraded?: 'deadline';
+  /** Set when the turn was cut short: it ran out of time, or the last reply hit its output cap. */
+  degraded?: 'deadline' | 'length';
 };
 
 /**

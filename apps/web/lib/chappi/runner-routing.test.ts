@@ -103,6 +103,17 @@ afterEach(() => {
 });
 
 describe('without routing (the router off)', () => {
+  it('also says so when the answer stopped at its output cap', async () => {
+    fetchMock.mockResolvedValue(
+      reply({ choices: [{ message: { content: 'Half an answer and' }, finish_reason: 'length' }] })
+    );
+
+    const result = await runChappiAgent({ ctx, system: 'sys', messages });
+
+    expect(result.reply).toContain('Half an answer and');
+    expect(result.reply).toMatch(/cut short/i);
+  });
+
   it('calls the configured model exactly as before', async () => {
     fetchMock.mockResolvedValue(say('Hi there.'));
 
@@ -644,6 +655,69 @@ describe('with routing on', () => {
       expect(result.reply).toContain('I have started on that.');
       expect(result.reply).toMatch(/ran out of time/i);
       expect(result.trace.degraded).toBe('deadline');
+    });
+
+    it('says so when the final answer stopped at its output cap', async () => {
+      fetchMock.mockResolvedValue(
+        reply({ choices: [{ message: { content: 'Here are the first eight rollouts, and then' }, finish_reason: 'length' }] })
+      );
+
+      const result = await runChappiAgent({
+        ctx,
+        system: 'sys',
+        messages,
+        routing: { decision: at('pro'), deadlineMs: T0 + 52_000, now: () => T0 },
+      });
+
+      expect(result.reply).toContain('Here are the first eight rollouts, and then');
+      expect(result.reply).toMatch(/cut short/i);
+      expect(result.trace.degraded).toBe('length');
+    });
+
+    it('does not add the note to an answer that finished', async () => {
+      fetchMock.mockResolvedValue(
+        reply({ choices: [{ message: { content: 'All done.' }, finish_reason: 'stop' }] })
+      );
+
+      const result = await runChappiAgent({
+        ctx,
+        system: 'sys',
+        messages,
+        routing: { decision: at('pro'), deadlineMs: T0 + 52_000, now: () => T0 },
+      });
+
+      expect(result.reply).toBe('All done.');
+      expect(result.trace.degraded).toBeUndefined();
+    });
+
+    it('does not call an earlier cut-off round the final answer', async () => {
+      fetchMock
+        .mockResolvedValueOnce(
+          reply({
+            choices: [
+              {
+                message: {
+                  content: 'Looking that up and',
+                  tool_calls: [{ id: 'c1', type: 'function', function: { name: 'list_releases', arguments: '{}' } }],
+                },
+                finish_reason: 'length',
+              },
+            ],
+          })
+        )
+        .mockResolvedValueOnce(
+          reply({ choices: [{ message: { content: 'Found it.' }, finish_reason: 'stop' }] })
+        );
+
+      const result = await runChappiAgent({
+        ctx,
+        system: 'sys',
+        messages,
+        routing: { decision: at('pro'), deadlineMs: T0 + 52_000, now: () => T0 },
+      });
+
+      expect(result.reply).toBe('Found it.');
+      expect(result.trace.degraded).toBeUndefined();
     });
 
     it('cuts the per-request timeout to what the deadline leaves', async () => {
