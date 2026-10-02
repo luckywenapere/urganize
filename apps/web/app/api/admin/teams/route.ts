@@ -310,6 +310,9 @@ export async function PATCH(request: NextRequest) {
           expires_at: action.expiresAt,
           started_at: nowIso,
           updated_at: nowIso,
+          // Only when the admin said. Left out, an existing value stays, which is
+          // the old behaviour for the legacy plans whose name is the interval.
+          ...(action.billingInterval ? { billing_interval: action.billingInterval } : {}),
         },
         { onConflict: 'user_id' }
       );
@@ -351,6 +354,7 @@ export async function PATCH(request: NextRequest) {
       eventMetadata.plan = action.plan;
       eventMetadata.amountMinorUnit = action.amountMinorUnit;
       eventMetadata.expiresAt = action.expiresAt;
+      if (action.billingInterval) eventMetadata.billingInterval = action.billingInterval;
       break;
     }
   }

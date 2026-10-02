@@ -140,14 +140,36 @@ describe('parseTeamAdminAction — mark paid (invoice and transfer deals)', () =
       plan: 'annual',
       amountMinorUnit: 80_000_000,
       expiresAt: '2027-08-21T00:00:00.000Z',
+      billingInterval: null,
       note: null,
     });
   });
 
   it('accepts every plan an admin may assign', () => {
     for (const plan of ADMIN_ASSIGNABLE_PLANS) {
-      expect(ok({ ...base, plan })).toMatchObject({ plan });
+      expect(ok({ ...base, plan, billingInterval: 'monthly' })).toMatchObject({ plan });
     }
+  });
+
+  it('records Group as enterprise, from either name, with how often it is billed', () => {
+    expect(ok({ ...base, plan: 'Group', billingInterval: 'yearly' })).toMatchObject({
+      plan: 'enterprise',
+      billingInterval: 'annual',
+    });
+    expect(ok({ ...base, plan: 'enterprise', billingInterval: 'monthly' })).toMatchObject({
+      plan: 'enterprise',
+      billingInterval: 'monthly',
+    });
+  });
+
+  it('refuses a Group deal that does not say how often it is billed', () => {
+    expect(err({ ...base, plan: 'group' })).toContain('billingInterval');
+    expect(err({ ...base, plan: 'group', billingInterval: 'weekly' })).toContain('billingInterval');
+  });
+
+  it('refuses a nonsense interval on any plan, and leaves it out when not given', () => {
+    expect(err({ ...base, billingInterval: 'fortnightly' })).toContain('billingInterval');
+    expect(ok({ ...base, billingInterval: '' })).toMatchObject({ billingInterval: null });
   });
 
   it('refuses a plan the schema would reject, including the contactSales tier', () => {

@@ -74,12 +74,12 @@ export function PricingTierCards() {
 
   return (
     <section className="relative px-6 pb-20">
-      {/* max-w-5xl for three cards — narrower than the max-w-6xl this page used
-          while it carried four (Group, removed 2026-09-09). THE INTERVAL SWITCH
+      {/* max-w-6xl for four cards (Group came back 2026-10-02; it was max-w-5xl
+          for the three between 2026-09-09 and then). THE INTERVAL SWITCH
           CAME BACK on 2026-09-10, when monthly went on sale again beside
           yearly; it and the "2 months free" badge were absent from 2026-09-08,
           while there was only one interval to show. */}
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-6xl">
         {/* Above the cards, because it reprices every one of them and asking
             for it afterwards would move the numbers under the reader's
             cursor. */}
@@ -117,11 +117,11 @@ export function PricingTierCards() {
             </p>
           ) : null}
         </div>
-        {/* Three cards: one column on a phone (where most of this traffic
-            reads it), three from md — the same breakpoint the "how the Group
-            plan works" three-step section below already uses for three cards,
-            so the two three-up layouts on this page agree. */}
-        <div className="grid gap-6 md:grid-cols-3">
+        {/* Four cards since 2026-10-02 (Group, the "Let's talk" card, came
+            back): one column on a phone, where most of this traffic reads it,
+            two from sm and four from xl. Not four from md: at 768px that is
+            about 170px a card, which wraps the price and every line. */}
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {PRICING_TIER_ORDER.map((tierId) => {
             const tier = getTier(tierId);
             const price = formatTierPrice(tierId, interval);

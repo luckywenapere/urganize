@@ -14,9 +14,9 @@ import { isCreditsEnabled } from './config';
 import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pricing';
 
 describe('the founder rules in numbers', () => {
-  it('give a trial 50 credits and the plans 150, 660 and 1,500', () => {
+  it('give a trial 50 credits and the plans 150, 660 and 1,500, Group the same as Label', () => {
     expect(TRIAL_CREDITS).toBe(50);
-    expect(ALLOWANCE_CREDITS).toEqual({ solo: 150, manager: 660, label: 1500 });
+    expect(ALLOWANCE_CREDITS).toEqual({ solo: 150, manager: 660, label: 1500, enterprise: 1500 });
   });
 
   it('tag credits with exactly three sources', () => {
@@ -66,8 +66,13 @@ describe('monthlyAllowanceCredits', () => {
   });
 
   it('gives a paying team on a plan it does not recognise the Solo amount, never a free Label one', () => {
-    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'enterprise' })).toBe(ALLOWANCE_CREDITS.solo);
+    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'platinum' })).toBe(ALLOWANCE_CREDITS.solo);
     expect(monthlyAllowanceCredits({ state: 'paid', tier: null })).toBe(ALLOWANCE_CREDITS.solo);
+  });
+
+  it('gives a paying Group team 1,500 a month, and a Group trial nothing monthly', () => {
+    expect(monthlyAllowanceCredits({ state: 'paid', tier: 'enterprise' })).toBe(1500);
+    expect(monthlyAllowanceCredits({ state: 'trial', tier: 'enterprise' })).toBe(0);
   });
 
   it('rises with the plan', () => {

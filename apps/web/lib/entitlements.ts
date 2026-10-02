@@ -109,9 +109,10 @@ export type Entitlements = {
 // resolves to the uncapped tier, which is what has kept these caps from ever
 // touching an existing customer.
 //
-// `sso` and `sub_teams` are declared false on EVERY tier now — the one
-// exception, Group (id `enterprise`), was removed 2026-09-09 along with the
-// tier itself. Both keys are read by nothing. That is deliberate and
+// `sso` and `sub_teams` are declared false on EVERY tier, Group included. Group
+// (id `enterprise`) carried both as true until it was removed 2026-09-09; it came
+// back 2026-10-02 WITHOUT them, because both keys are read by nothing and a
+// public card may not promise an unbuilt feature. That is deliberate and
 // consistent with this repo's principle 6 (do not build enterprise features
 // until the problem is real): the map records the offer, it does not
 // authorise the build.
@@ -182,13 +183,6 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     sub_teams: false,
     urgans_embedded_actions: true,
   },
-  // Group (id `enterprise`) sat here until 2026-09-09, when it was removed
-  // from @urganize/pricing entirely — `PricingTierId` no longer has an
-  // 'enterprise' member, so there is nothing left for this map to key an entry
-  // on. It carried `urgans_priority: true`, `sso: true` and `sub_teams: true`
-  // (the last two read by nothing, per the standing note on those fields) —
-  // none of that is offered anywhere any more. See the removal note in
-  // packages/pricing/src/index.ts for the full account.
   label: {
     artists: limitsOf('label').artists,
     seats: limitsOf('label').seats,
@@ -196,6 +190,26 @@ export const ENTITLEMENTS: Record<PricingTierId, Entitlements> = {
     rollout_template_default: true,
     rollout_template_custom_save: true,
     urgans_monthly_actions: limitsOf('label').urgansMonthlyActions,
+    urgans_priority: false,
+    file_attachments: true,
+    data_export: true,
+    concierge_onboarding: true,
+    support_channel: 'whatsapp_24h',
+    sso: false,
+    sub_teams: false,
+    urgans_embedded_actions: true,
+  },
+  // Group (back 2026-10-02, strategy doc section 8). The same as Label in every
+  // key, on purpose: what makes Group different is the price and how it is
+  // agreed (by hand, per deal), not what the product does for it. Its ceilings
+  // read from @urganize/pricing like every other tier, and they are all null.
+  enterprise: {
+    artists: limitsOf('enterprise').artists,
+    seats: limitsOf('enterprise').seats,
+    active_releases: limitsOf('enterprise').activeReleases,
+    rollout_template_default: true,
+    rollout_template_custom_save: true,
+    urgans_monthly_actions: limitsOf('enterprise').urgansMonthlyActions,
     urgans_priority: false,
     file_attachments: true,
     data_export: true,

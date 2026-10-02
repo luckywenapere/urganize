@@ -33,12 +33,10 @@ import {
  * `subscriptions.billing_interval`. Anything reading an interval off a plan name
  * must go through `resolveBillingInterval` rather than matching strings.
  *
- * 'enterprise' (Group) is absent, and as of 2026-09-09 it is absent for a
- * stronger reason than it used to be: it is no longer a `PricingTierId` at
- * all, having been removed from @urganize/pricing entirely. While it existed
- * it was `contactSales` — quoted per contract and invoiced by hand — so it had
- * no Paystack plan code and never reached self-serve checkout or the renewal
- * path either.
+ * 'enterprise' (Group) is absent: it is `contactSales`, quoted per deal and
+ * recorded by hand in /admin/teams, so it has no Paystack plan code and never
+ * reaches self-serve checkout or the renewal path. (It was removed 2026-09-09
+ * and came back 2026-10-02 the same way.)
  */
 export type RecurringPlanId = BillingPlanId | 'manager' | 'solo';
 
@@ -53,11 +51,12 @@ export type RecurringPlanId = BillingPlanId | 'manager' | 'solo';
  * LABEL REJOINED 2026-09-08 (founder call), in the annual-only reprice that gave
  * it a ₦50,000/year price. It had been sales-led since 2026-08-30.
  *
- * GROUP (id 'enterprise') IS GONE, not merely excluded. It was the one
+ * GROUP (id 'enterprise') IS EXCLUDED, being sales-led; it came back 2026-10-02
+ * after the removal described next. It was the one
  * sales-led tier — quoted per contract, no price, no Paystack Plan, talk-to-us
  * card rather than a radio — for the one day between Label getting a price and
- * the founder removing it, 2026-09-09. There is no sales-led tier on the ladder
- * at all now; `SelfServeTierId` and `PricingTierId` are the same three ids.
+ * the founder removing it, 2026-09-09. Since 2026-10-02 it is back, still
+ * sales-led, so `SelfServeTierId` is `PricingTierId` minus 'enterprise'.
  *
  * This is about NEW purchases only. An existing subscription on any of these
  * ids renews regardless, because `isRecurringPlan` below is a separate list

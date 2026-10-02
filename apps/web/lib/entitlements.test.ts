@@ -240,6 +240,11 @@ describe('tier prices and the sales-led tier', () => {
     // A percentage invites an argument about how it was calculated; "2 months
     // free" is something a manager can check against their own statement.
     for (const tier of PRICING_TIER_ORDER) {
+      // A sales-led tier has no price, so there is no saving to state.
+      if (PRICING_TIERS[tier].contactSales) {
+        expect(annualSavingCopy(tier), tier).toBeNull();
+        continue;
+      }
       expect(annualSavingCopy(tier), tier).toBe('2 months free');
     }
   });
@@ -248,13 +253,12 @@ describe('tier prices and the sales-led tier', () => {
   // caller into the "Let's talk" branch instead of formatting a zero. Written
   // over every contactSales tier rather than naming one, so a future sales-led
   // tier cannot ship still carrying an amount.
-  it('has no sales-led tier, so nothing here needs a "Let\'s talk" price refusal', () => {
-    // Group (id `enterprise`) was the last one, removed 2026-09-09. Every
-    // remaining tier is self-serve, so this list is empty rather than naming
-    // one — the moment it stops being empty, the loop below starts proving
-    // the refusal for whichever tier that is.
+  it('renders no price for the sales-led tier, which is Group alone', () => {
+    // Group (id `enterprise`) came back 2026-10-02 as the one sales-led tier.
+    // The loop proves the refusal for every contactSales tier rather than
+    // naming Group, so a second sales-led tier cannot ship carrying an amount.
     const salesLed = ALL_TIERS.filter((tier) => PRICING_TIERS[tier].contactSales);
-    expect(salesLed).toEqual([]);
+    expect(salesLed).toEqual(['enterprise']);
     for (const tier of salesLed) {
       expect(PRICING_TIERS[tier].monthlyPrice, `${tier} monthlyPrice`).toBeUndefined();
       expect(getTierPrice(tier, 'monthly'), `${tier}/monthly`).toBeNull();
@@ -269,12 +273,25 @@ describe('tier prices and the sales-led tier', () => {
   // removed entirely on 2026-09-09 — not hidden, not renamed, DELETED — so
   // there is no `enterprise` member of PricingTierId left to carry either
   // name. This is what stops either from quietly coming back.
-  it('has no tier called Group, and no enterprise id, any more', () => {
-    expect(ALL_TIERS).not.toContain('enterprise');
+  it('calls the enterprise id Group, and no tier says enterprise to a customer', () => {
+    // Back 2026-10-02. The id stays `enterprise` because subscriptions.plan
+    // stores it and subscriptions_plan_check permits it; the name a customer
+    // reads is Group, on every surface.
+    expect(PRICING_TIERS.enterprise.label).toBe('Group');
     for (const tier of ALL_TIERS) {
-      expect(PRICING_TIERS[tier].label).not.toBe('Group');
       expect(PRICING_TIERS[tier].label).not.toMatch(/enterprise/i);
+      expect(PRICING_TIERS[tier].audience).not.toMatch(/enterprise/i);
     }
+  });
+
+  it('gives Group every Label entitlement, uncapped', () => {
+    expect(ENTITLEMENTS.enterprise).toEqual(ENTITLEMENTS.label);
+    expect(PRICING_TIERS.enterprise.limits).toEqual({
+      artists: null,
+      seats: null,
+      activeReleases: null,
+      urgansMonthlyActions: null,
+    });
   });
 
   it('recommends exactly one tier, and it is the one we sell', () => {
@@ -287,15 +304,14 @@ describe('tier prices and the sales-led tier', () => {
     expect(PRICING_TIERS.solo.contactSales).toBeUndefined();
   });
 
-  it('orders the cards cheapest first, and none of them is sales-led', () => {
-    // THREE cards since 2026-09-09: Group (the one sales-led, "Let's talk"
-    // tier, id `enterprise`) came back onto the ladder for a day on
-    // 2026-09-08, when Label got a price of its own, and was removed for good
-    // the next day. There is no fourth card and nothing left to end at.
-    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label']);
-    for (const tier of PRICING_TIER_ORDER) {
+  it('orders the cards cheapest first and ends on the one conversation', () => {
+    // FOUR cards since 2026-10-02: three self-serve, then Group, the lone
+    // "Let's talk" card.
+    expect(PRICING_TIER_ORDER).toEqual(['solo', 'manager', 'label', 'enterprise']);
+    for (const tier of PRICING_TIER_ORDER.slice(0, -1)) {
       expect(PRICING_TIERS[tier].contactSales, tier).toBeUndefined();
     }
+    expect(PRICING_TIERS.enterprise.contactSales).toBe(true);
   });
 
   it('carries a price at every sellable interval, in whole kobo', () => {

@@ -90,6 +90,17 @@ describe('isPayingTeam', () => {
     ).toBe(true);
   });
 
+  it('counts a Group team, recorded by hand as enterprise', () => {
+    expect(
+      isPayingTeam(team({ workspaceId: 'a', subscription: subscription({ plan: 'enterprise' }) }), NOW)
+    ).toBe(true);
+  });
+
+  it('counts a yearly Group deal as a twelfth of it in MRR', () => {
+    const yearly = subscription({ plan: 'enterprise', amountMinor: 120_000_000, billingInterval: 'annual' });
+    expect(monthlyRecurringMinor([yearly], NOW)).toBe(10_000_000);
+  });
+
   it('does not count Solo, which adds MRR but is not a team', () => {
     expect(
       isPayingTeam(team({ workspaceId: 'a', subscription: subscription({ plan: 'solo' }) }), NOW)

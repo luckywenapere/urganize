@@ -207,9 +207,10 @@ function isCurrentSubscription(sub: ScoreboardSubscription | null, now: Date): b
  * Doc section 7: "a current subscription on Manager, Label or Group. Solo
  * subscribers add MRR but don't count as teams."
  *
- * Group no longer exists in the code (removed 2026-09-09), so it cannot appear.
- * A legacy plan id (monthly, annual, custom, ...) was the old single team plan
- * and counts, which matches resolveTeamTier reading those as Label.
+ * Group is the tier id 'enterprise' (back 2026-10-02), written by "Mark paid" in
+ * /admin/teams, and counts like any tier but Solo. A legacy plan id (monthly,
+ * annual, custom, ...) was the old single team plan and counts, which matches
+ * resolveTeamTier reading those as Label.
  */
 export function isPayingTeam(team: ScoreboardTeam, now: Date): boolean {
   if (team.comped || team.allowlisted) return false;

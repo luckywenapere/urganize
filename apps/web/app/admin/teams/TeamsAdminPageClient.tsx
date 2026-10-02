@@ -233,10 +233,17 @@ export default function TeamsAdminPageClient() {
     (team: TeamRow) => {
       const plan =
         window.prompt(
-          'Plan (monthly, annual, founding, custom):',
+          'Plan (group, monthly, annual, founding, custom):',
           team.billingPlan || 'annual'
         )?.trim() || '';
       if (!plan) return;
+      // Group's price is whatever was agreed, so ask how often it is billed;
+      // the scoreboard divides a yearly deal by 12 for MRR.
+      const isGroup = ['group', 'enterprise'].includes(plan.toLowerCase());
+      const billingInterval = isGroup
+        ? window.prompt('Billed monthly or yearly?', 'yearly')?.trim() || ''
+        : '';
+      if (isGroup && !billingInterval) return;
       const defaultNaira = team.billingLockedAmount ? String(team.billingLockedAmount / 100) : '';
       const rawAmount = window.prompt('Amount paid, in naira:', defaultNaira);
       if (!rawAmount) return;
@@ -253,6 +260,7 @@ export default function TeamsAdminPageClient() {
         plan,
         amountMinorUnit: Math.round(naira * 100),
         expiresAt: new Date(`${rawDate.trim()}T00:00:00.000Z`).toISOString(),
+        ...(billingInterval ? { billingInterval } : {}),
         note,
       });
     },
