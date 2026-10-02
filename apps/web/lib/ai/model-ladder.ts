@@ -51,6 +51,12 @@ export type LadderRung = {
    * Completion-token cap for one chat round on this rung. On the GPT-5 family
    * this cap also has to cover the hidden reasoning tokens, so a cap sized for
    * a non-reasoning model (1024) can leave nothing for the answer.
+   *
+   * It is bounded by speed, not by what the model can write: the turn has about
+   * 52 seconds in all, so a rung must be able to stream its whole cap inside that
+   * (startupMs plus cap / outputTokensPerSec). The max rung was 8,192 until
+   * 2026-10-02, when a long strategy request ran for 86 seconds, was given up on
+   * at 51, and was billed 200 RODI for an answer nobody saw.
    */
   maxOutputTokens: number;
   /**
@@ -60,6 +66,17 @@ export type LadderRung = {
    * (model-eval.integration.test.ts) is where they get measured.
    */
   typicalLatencyMs: number;
+  /**
+   * How long a request takes before the first token comes back (reading the
+   * prompt, which is about 11k tokens of instructions and tool schemas on a chat
+   * turn), and how fast tokens stream after that. Deliberately on the slow side:
+   * they set the output cap for the time left (see outputCapForTime), and a cap
+   * that is too generous is a request that times out, which the provider still
+   * bills in full. Measured 2026-10-02 on the live gateway: gpt-5.5 wrote 8,127
+   * tokens in about 86 seconds (about 95 a second) and gpt-5.4 about 80 a second.
+   */
+  startupMs: number;
+  outputTokensPerSec: number;
 };
 
 export type Ladder = Record<ModelTier, LadderRung>;
@@ -71,6 +88,8 @@ export const DEFAULT_LADDER: Ladder = {
     reasoningEffort: 'low',
     maxOutputTokens: 1024,
     typicalLatencyMs: 3_000,
+    startupMs: 1_500,
+    outputTokensPerSec: 120,
   },
   standard: {
     tier: 'standard',
@@ -78,20 +97,26 @@ export const DEFAULT_LADDER: Ladder = {
     reasoningEffort: 'low',
     maxOutputTokens: 4096,
     typicalLatencyMs: 6_000,
+    startupMs: 2_500,
+    outputTokensPerSec: 110,
   },
   pro: {
     tier: 'pro',
     models: ['openai/gpt-5.4', 'openai/gpt-5.6-terra'],
     reasoningEffort: 'low',
-    maxOutputTokens: 4096,
+    maxOutputTokens: 3000,
     typicalLatencyMs: 12_000,
+    startupMs: 4_000,
+    outputTokensPerSec: 70,
   },
   max: {
     tier: 'max',
     models: ['openai/gpt-5.5', 'openai/gpt-5.6-sol'],
     reasoningEffort: 'low',
-    maxOutputTokens: 8192,
+    maxOutputTokens: 3000,
     typicalLatencyMs: 25_000,
+    startupMs: 6_000,
+    outputTokensPerSec: 70,
   },
 };
 
