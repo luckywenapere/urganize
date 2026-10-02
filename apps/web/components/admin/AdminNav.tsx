@@ -21,6 +21,7 @@ import {
   Users,
   UserPlus,
   Building2,
+  Link2,
 } from '@/components/icons';
 
 // The admin hub's left menu — one place linking every internal dashboard
@@ -66,6 +67,7 @@ const ITEMS: Array<{
     href: '/admin/pitch-payments',
   },
   { key: 'teams', label: 'Teams', icon: Building2, href: '/admin/teams' },
+  { key: 'referrals', label: 'Referrals', icon: Link2, href: '/admin/referrals' },
   { key: 'issue-reports', label: 'Reports', icon: Bug, href: '/admin/issue-reports' },
   { key: 'urgans', label: 'UrgAns actions', icon: Sparkles, href: '/admin/urgans' },
   { key: 'directory', label: 'Directory', icon: UserPlus, href: '/admin/directory' },

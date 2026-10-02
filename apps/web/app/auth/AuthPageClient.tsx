@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { SESSION_EXPIRED_NOTICE_KEY, useAuthStore } from '@/lib/auth-store';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
+import { captureReferralFromSearch } from '@/lib/referral-intent';
 import { HOME_PATH } from '@/lib/home-path';
 import { openExternalUrl } from '@/lib/external-link';
 import { Input } from '@urganize/ui';
@@ -103,6 +104,9 @@ export default function AuthPage() {
 
   useIsomorphicLayoutEffect(() => {
     setSearchParams(new URLSearchParams(window.location.search));
+    // A partner's link may land here first; remember its ?ref= so the signup
+    // that follows can report it (lib/referral-intent.ts).
+    captureReferralFromSearch(window.location.search);
   }, []);
 
   const nextPath = searchParams?.get('next') || HOME_PATH;
