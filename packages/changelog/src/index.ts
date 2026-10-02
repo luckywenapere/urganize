@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.58.0",
+    date: "October 2, 2026",
+    highlights: [
+      "You can buy more UrgAns credits. Pick a pack and pay with your card or bank. They are added right away.",
+      "A new credits page lists every credit you got and every credit you spent.",
+      "If your plan ends, your credits stay. You can still use UrgAns with them.",
+      "You see how many credits you have before UrgAns starts something.",
+    ],
+  },
+  {
     version: "1.57.0",
     date: "October 2, 2026",
     highlights: [
