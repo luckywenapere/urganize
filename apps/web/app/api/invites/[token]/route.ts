@@ -6,6 +6,7 @@ import {
   verifyInviteLinkToken,
 } from '@/lib/invite-link';
 import { claimWorkspaceInvite, type InviteClaimResult } from '@/lib/invite-claims-server';
+import { captureActivationIfReached } from '@/lib/activation-server';
 
 // Public + authenticated endpoints for token-based invite acceptance.
 //
@@ -283,6 +284,11 @@ export async function POST(
     userId,
     email: String(userResult.data.user.email || '').trim().toLowerCase(),
   });
+  // Activation (2026-10-01): somebody actually joining is a teammate invited.
+  // Credited to the workspace owner. Never throws.
+  if (result.outcome === 'joined') {
+    await captureActivationIfReached(admin, { workspaceId: result.workspaceId, trigger: 'invite' });
+  }
   return claimResultToResponse(result);
 }
 

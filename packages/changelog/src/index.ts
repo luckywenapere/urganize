@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.56.0",
+    date: "October 2, 2026",
+    highlights: [
+      "Each rollout now has a Pitch kit. Write the story behind it and show its credits, on top of your artist's press kit.",
+      "Ask UrgAns to Fill both and it writes the empty parts of your press kit and the story. It never changes what you already wrote.",
+    ],
+  },
+  {
     version: "1.55.0",
     date: "October 1, 2026",
     highlights: [

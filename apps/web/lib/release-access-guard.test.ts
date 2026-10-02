@@ -53,6 +53,9 @@ const TEAM_ACCESS_GROUPS = [
   // everyone with release access, same as this whole list — unlike a task
   // thread, which is narrower (hasTaskThreadAccess in tasks-server.ts).
   'messages',
+  // Release pitch kit (2026-10-01): the story and credits a rollout adds to
+  // the artist's standing press kit.
+  'pitch-kit',
 ];
 
 const BANNED = /ensureReleaseOwnership|ensureOwnedRelease/;

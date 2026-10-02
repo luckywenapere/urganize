@@ -51,6 +51,13 @@ const CHAT_COUNTERPARTS: Record<string, ChatCounterpart> = {
     // saved on assent, so there is no draft to settle afterwards.
     tools: ['write_press_kit_section'],
   },
+  'epk.fill_both': {
+    tools: null,
+    because:
+      'It fills gaps across a kit AND a release story in one metered run, which is a button job. ' +
+      'In conversation the same words are written with write_press_kit_section (kit prose) and ' +
+      'saved through the pitch kit scene, and neither writes anything this action would have.',
+  },
 };
 
 /** The helper every chat tool logs through. Only recordChatActionRun exists

@@ -33,7 +33,7 @@ const FILES = [
   // The directory joined this guard rather than growing a second one: same
   // house rules, same brief, and two guards would drift the moment one of them
   // gained a rule.
-  ...walk(join(WEB, 'lib')).filter((path) => /press-kit|press-photo|directory-|delivery-records|role-gaps/.test(path)),
+  ...walk(join(WEB, 'lib')).filter((path) => /press-kit|press-photo|directory-|delivery-records|role-gaps|release-epk|activation/.test(path)),
   ...walk(join(WEB, 'components', 'press-kits')),
   // The settings pop-up (2026-09-29): a new surface born under the house rules.
   // ArtistsBrandSegment is left out: it is all wiring for the `workspace` state

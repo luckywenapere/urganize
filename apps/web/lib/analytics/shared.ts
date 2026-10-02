@@ -122,6 +122,10 @@ export interface AnalyticsEventPropertiesMap {
   // server-side, once per account, computed from auth.user.created_at.
   time_to_first_release: { seconds_since_signup: number };
   time_to_first_completed_task: { seconds_since_signup: number };
+  /** First real rollout + one teammate invited, within ACTIVATION_WINDOW_DAYS
+   * (3) of signup. Server-side, once per account. The rule is
+   * lib/activation.ts; `completed_by` is whichever action finished the pair. */
+  activated: { seconds_since_signup: number; completed_by: 'release' | 'invite' };
   // UrgAns planner funnel. The question worth answering is where managers drop
   // out of a seven-question intake, and what the plan looked like when it
   // landed: how much of the playbook the answers removed, and whether the

@@ -45,6 +45,8 @@ const GUARDED_FILES = [
   'components/workspace/useRolloutMenuActions.ts',
   'components/app/RightRail.tsx',
   'lib/rollout-menu.ts',
+  'components/releases/PitchKitSection.tsx',
+  'lib/release-epk.ts',
   'components/app/MobileNavBar.tsx',
   'components/app/AppTopbar.tsx',
   'components/releases/ReleaseScenePanel.tsx',

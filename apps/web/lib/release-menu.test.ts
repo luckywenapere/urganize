@@ -23,6 +23,7 @@ describe('RELEASE_MENU_ORDER', () => {
       'chat',
       'calendar',
       'pitch',
+      'pitchkit',
       'metadata',
       'note',
       'coverart',

@@ -17968,3 +17968,19 @@ real inbox. The two admin pages have not rendered with a real admin session.
 6. No changelog entry: the admin pages are internal, and the sequence is
    lifecycle email rather than something a person does in the app. If it is
    ever worth announcing, the entry lands at the flip (the EPK precedent).
+
+
+---
+
+## Release pitch kit and the activated event (2026-10-02, v1.56.0)
+
+Not a scope expansion: it hangs off the sanctioned press kit (artist) and the release. Behind `NEXT_PUBLIC_FEATURE_PITCH_KIT` (default off; live in Production since 2026-10-02). "Fill both" also needs `NEXT_PUBLIC_FEATURE_URGANS_ACTIONS` and `NEXT_PUBLIC_FEATURE_RELEASE_PLANNER`, both already on.
+
+- **What it is.** The artist keeps ONE standing press kit. A rollout adds only what is true of that rollout: its story and the credits to show, in `release_epk_fields` (migration `20261001100000_release_epk_fields.sql`, applied 2026-10-02; RLS on, no policies, service-role routes only). The cover is never stored here: it is the release's own cover art. `credits` is nullable on purpose: null means "show what collaborators submitted", a non-null array is the manager's own list.
+- **Where it lives.** The `pitchkit` scene (`?scene=pitchkit`, "Pitch kit" in the rollout menu), `GET/PUT /api/releases/[releaseId]/pitch-kit` (team-access helpers, enlisted in `release-access-guard.test.ts`), `lib/release-epk*.ts`, and the `epk.fill_both` embedded action. The scene is out of the scene cache: it is edited in place.
+- **Fill both fills gaps and never overwrites.** It is `team_write`, runs through `runUrgansAction`, and is metered by the existing UrgAns credits with no code of its own: it reports model, tokens and cached tokens, and `lib/credits/embedded.ts` charges it. It has no entry in `EMBEDDED_ESTIMATE_CREDITS`, so it shows "up to 25 credits". It has no chat twin (`reconcile-guard.test.ts` records why).
+- **The activated event** (`lib/activation.ts`, `activation-server.ts`) fires once per account, server-side, when a first REAL rollout (not a test one) and one invited teammate both happen within 3 days of signup. It is called from rollout creation, the email invite and the link join, credited to the workspace owner, and never throws. No flag, no migration, no user-visible change.
+
+**A duplicate credits system was built alongside this and deliberately left out.** A parallel session wrote a second credits implementation (user-keyed `credit_accounts`, `credit_holds`, `credits_*` functions, `NEXT_PUBLIC_FEATURE_CREDITS`) while v1.55.0's workspace-keyed ledger was already live. Its migration reused the timestamp `20261001120000` and the table name `credit_ledger`, so it could not have been applied cleanly. It was never run, the flag was deleted from Vercel on 2026-10-02, and none of it is in this change. If a piece of it is wanted (the pack checkout, the balance chip), port it onto the live ledger in `lib/credits/`.
+
+**Verified:** 5,760 tests pass (5,712 on `main`), `tsc` clean apart from the 8 documented `confirmed-action.test.ts` errors, `eslint` at 3 errors and one new warning (`PitchKitSection`'s fetch-on-mount effect, the accepted React 19 pattern), `next build` green with the flag on and off and `/auth`, `/dashboard`, `/onboarding`, `/settings` still static. Flag off, the pitch-kit route answers `{"error":"Not found."}` 404 while `/api/releases` answers 401; on, it answers 401. **Not verified:** nothing has run against a real session. The scene, a save, "Fill both" against a real model, and the activated event firing for real have never been exercised; this sandbox cannot mint a session.

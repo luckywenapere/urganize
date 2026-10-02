@@ -84,6 +84,11 @@ export const RELEASE_MENU_ORDER = [
   // Marketing again, and named outright: "pitching is frequent enough to earn
   // a permanent, always-visible spot rather than the folded menu."
   'pitch',
+  // The release pitch kit (2026-10-01): the story and credits a rollout adds
+  // to the artist's standing press kit. Sits beside Pitch because it is what a
+  // pitch carries, and ahead of Metadata because writing the pitch is the work
+  // that precedes collecting the paperwork.
+  'pitchkit',
   // Distribution, 11 of 64 — nine release-level fields plus a collect link and
   // the submissions that come back, so it is returned to across the whole
   // rollout rather than filled in once. Also a promoted tab.
