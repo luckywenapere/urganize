@@ -15,6 +15,7 @@ import {
   type TaskRow,
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
+import { ASSIGN_OUTSIDE_TEAM_MESSAGE, isTeamAssignee } from '@/lib/task-assignee-server';
 
 // Allowed POST body fields. Same allowlist discipline as the PATCH route —
 // only `assignedToUserId` is accepted for assignee writes (the legacy
@@ -130,6 +131,17 @@ export async function POST(request: NextRequest) {
     // Guests are read-only (founder decision, 2026-07-23).
     if (isReadOnlyWorkspaceMember(access, workspaceId)) {
       return buildReadOnlyResponse();
+    }
+
+    // Whoever the activity is handed to has to be on this team. The PATCH route
+    // has always checked; creating with an assignee did not, so any user id
+    // on the platform was accepted. An absent or null assignee is fine (it
+    // means "me" or "nobody" in createTask).
+    if (typeof body.assignedToUserId === 'string' && body.assignedToUserId) {
+      const allowed = await isTeamAssignee(adminClient, workspaceId, body.assignedToUserId);
+      if (!allowed) {
+        return NextResponse.json({ error: ASSIGN_OUTSIDE_TEAM_MESSAGE }, { status: 400 });
+      }
     }
 
     const createdRow = await taskService.createTask(auth.user.id, workspaceId, body);
