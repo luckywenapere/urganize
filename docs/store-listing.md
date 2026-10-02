@@ -40,7 +40,7 @@ where a long name is truncated anyway.
 ### Short description (80 characters max)
 
 ```
-Urganize is where your team does everything after the music is made.
+Urganize is where music teams do everything after the music is made.
 ```
 
 68 characters. This is the core line from `positioning.ts` (`CORE_LINE`),
@@ -138,7 +138,7 @@ Apple's subtitle is the one field on either store that holds it whole.
 ### Promotional text (170 characters max)
 
 ```
-Urganize is where your team does everything after the music is made.
+Urganize is where music teams do everything after the music is made.
 ```
 
 68 characters. This is `SHORT_DESCRIPTION` from `positioning.ts`, which is the

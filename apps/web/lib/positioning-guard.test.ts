@@ -19,7 +19,7 @@ import {
 /**
  * The positioning, enforced rather than reviewed.
  *
- * Since 2026-09-24: Urganize is where your team does everything after the
+ * Since 2026-09-24: Urganize is where music teams do everything after the
  * music is made. That brief retired the category the product had been
  * introduced by since 2026-09-09 ("AI Music Business Manager"), and every
  * earlier brief retired phrases of its own. They all ask for zero hits in
@@ -231,7 +231,9 @@ describe('positioning', () => {
     // The 2026-09-24 brief gave these verbatim. Pinned as literals, not
     // against the module's own parts, because what matters is that the words
     // are the founder's rather than that the module agrees with itself.
-    expect(CORE_LINE).toBe('Urganize is where your team does everything after the music is made.');
+    // The core line says "music teams" since 2026-10-02, the strategy doc's
+    // one-line version; the long description below still says "your team".
+    expect(CORE_LINE).toBe('Urganize is where music teams do everything after the music is made.');
     expect(SHORT_LINE).toBe('Everything after the music.');
     expect(CANONICAL_DESCRIPTION).toBe(
       'You make the music. Urganize is where your team does everything after. ' +

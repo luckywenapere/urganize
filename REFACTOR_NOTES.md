@@ -13,7 +13,7 @@ Read-only audit of `apps/web` against the root `CLAUDE.md`. No code modified.
 ### Conventions and architectural principles established by `CLAUDE.md`
 
 **Product shape (v1):**
-- Urganize is where your team does everything after the music is made; v1 targets independent music managers (1-3 artists).
+- Urganize is where music teams do everything after the music is made; v1 targets independent music managers (1-3 artists).
 - **The release is the spine.** Every feature must tie back to a release; if it can't, it's not v1.
 - Six v1 scope items only: release object, AI-tailored rollout plan from templates, tasks (assignees+dependencies), file/asset attachment, lightweight event milestones, AI status update generator.
 - A long, explicit "out of scope" list — answer is *v2* for anything on it.

@@ -22,7 +22,7 @@
  * marketing site and the product two different descriptions.
  */
 
-export const CORE_CLAUSE = 'where your team does everything after the music is made';
+export const CORE_CLAUSE = 'where music teams do everything after the music is made';
 
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 
