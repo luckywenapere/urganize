@@ -235,7 +235,11 @@ export function formatPlanCyclePrice(
 // plan creation), and carrying a USD figure here is how the currency toggle
 // ended up advertising two prices that were not the same offer.
 
-export type PricingTierId = 'solo' | 'manager' | 'label';
+// 'enterprise' is Group's id. The DISPLAY NAME is "Group" and must stay so; the
+// id stays `enterprise` because it is what subscriptions.plan stores and what
+// subscriptions_plan_check (20260823100000) already permits, so bringing Group
+// back on 2026-10-02 needed no migration. Renaming the id would mean one.
+export type PricingTierId = 'solo' | 'manager' | 'label' | 'enterprise';
 export type BillingInterval = 'monthly' | 'annual';
 
 export type TierPrice = {
@@ -459,45 +463,50 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
       'WhatsApp support, answered same day',
     ],
   },
-  // REMOVED 2026-09-09 (founder call): "Group" (id `enterprise`, the one
-  // sales-led, contact-us tier — "For distributors and groups operating
-  // several labels") sat here from 2026-08-30, came off the page for a week
-  // when Label took the sales-led slot, came back on 2026-09-08 when Label
-  // got a price of its own, and was removed for good the next day. Ladder is
-  // three self-serve tiers now: Solo, Manager, Label. Nothing quoted per
-  // contract exists in this product any more.
+  // GROUP, BACK SINCE 2026-10-02 (strategy doc, section 8: "Group | Custom |
+  // Custom | Custom | Distributors and multi-label groups"). It was removed
+  // 2026-09-09; the doc made it a plan again, and Group teams count as paying
+  // teams on the scoreboard.
   //
-  // THIS IS A REAL DELETION, not a flag or a hide — `PricingTierId` no longer
-  // has an `'enterprise'` member, so nothing can construct, store, or render
-  // one. Two things worth knowing if a sales-led tier is ever wanted again:
-  //   - `subscriptions_plan_check` (20260823100000_pricing_tiers.sql) still
-  //     PERMITS the string 'enterprise' at the database layer — no migration
-  //     dropped it, because a CHECK constraint can only be widened or narrowed
-  //     by a migration and narrowing one on a column read by every billing
-  //     path is a real risk for a value nothing writes any more. If a stored
-  //     row still carries 'enterprise' from before this date,
-  //     `resolveTeamTier` in apps/web/lib/entitlements.ts fails open to
-  //     'label' for it (the same path an unknown plan already takes), so it
-  //     resolves safely rather than throwing.
-  //   - The `contactSales` field on PricingTierDefinition is untouched and
-  //     still generic — see its own doc comment — so bringing back a sales-led
-  //     tier is one new entry here, not new plumbing.
+  // SALES-LED: no monthlyPrice, so getTierPrice answers null for both intervals
+  // and every surface renders the "Let's talk" CTA. There is no Paystack Plan and
+  // no self-serve checkout; the founder agrees a price and records it in
+  // /admin/teams with "Mark paid" on the Group plan, which writes
+  // subscriptions.plan = 'enterprise' with the agreed amount, term and interval.
+  //
+  // Unlimited, like Label. A Group deal is the largest account we sell, so no
+  // ceiling may bite it. Its monthly credits are Label's 1,500 by default
+  // (founder call, 2026-10-02) and topped up by hand per deal.
+  //
+  // Perks name only what is built today, the rule above. No SSO, no sub-teams:
+  // both are declared in the entitlement map and read by nothing.
+  enterprise: {
+    id: 'enterprise',
+    label: 'Group',
+    audience: 'For distributors and multi-label groups.',
+    limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
+    perks: [
+      'Everything in Label',
+      'A price agreed with you',
+      'Pay by invoice or bank transfer',
+      'We set every label up with you',
+    ],
+    contactSales: true,
+  },
 };
 
 /** Card order on the pricing page: cheapest first, then the conversation.
  *  Solo leads and Manager sits one step above it, so the jump the ladder is
  *  built around (one artist to a roster) is the first thing a visitor reads.
  *
- *  THREE cards since 2026-09-09 (founder call): Solo, Manager, Label, all
- *  self-serve, all annual. Was four for one day — Group (`enterprise`) rejoined
- *  the page on 2026-09-08 as the lone "Let's talk" card and was removed
- *  entirely the next day, so there is no sales-led tier on the ladder at all
- *  right now. See the removal note where `enterprise` used to sit in
- *  PRICING_TIERS above. */
+ *  FOUR cards since 2026-10-02: Solo, Manager and Label are self-serve, and
+ *  Group is the lone "Let's talk" card. It was three from 2026-09-09, when Group
+ *  was removed; the strategy doc made it a plan again. */
 export const PRICING_TIER_ORDER: readonly PricingTierId[] = [
   'solo',
   'manager',
   'label',
+  'enterprise',
 ] as const;
 
 /** The intervals a new purchase may choose, and the one a surface opens on.

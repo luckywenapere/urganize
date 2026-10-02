@@ -32,7 +32,10 @@ export type HomeRoleInput = {
 };
 
 export function resolveHomeRole(input: HomeRoleInput): HomeRole {
-  const isGenuinelyPayingLabel = input.teamState === 'paid' && input.ownerPlan === 'label';
+  // Group ('enterprise', back 2026-10-02) is a roster of labels, so it gets the
+  // Label layout too. Still a literal read of the raw plan, for the reason above.
+  const isGenuinelyPayingLabel =
+    input.teamState === 'paid' && (input.ownerPlan === 'label' || input.ownerPlan === 'enterprise');
 
   // Row 1: owner/admin of a team that is genuinely, currently paying for
   // Label. Checked FIRST, ahead of row 2's profiles.role check — someone

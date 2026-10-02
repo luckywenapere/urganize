@@ -477,9 +477,31 @@ describe('the quote can never contradict the tier table', () => {
   //
   // It reads `monthlyPrice` since 2026-09-10: that is the only price a tier
   // stores now, and the yearly one is computed from it.
-  it('carries a price for every tier the package advertises', () => {
+  it('carries a price for every self-serve tier, and none for the sales-led one', () => {
     for (const tier of Object.keys(PRICING_TIERS) as Array<keyof typeof PRICING_TIERS>) {
+      if (PRICING_TIERS[tier].contactSales) {
+        expect(PRICING_TIERS[tier].monthlyPrice, tier).toBeUndefined();
+        continue;
+      }
       expect(PRICING_TIERS[tier].monthlyPrice, tier).toBeDefined();
     }
+  });
+
+  it('refuses a move onto or off Group, which is agreed by hand', () => {
+    const base = {
+      currentInterval: 'monthly' as const,
+      targetInterval: 'monthly',
+      periodEndsAt: '2026-12-01T00:00:00.000Z',
+      now: new Date('2026-11-01T00:00:00Z'),
+      currentPaidMinorUnit: 2_200_000,
+    };
+    expect(quotePlanChange({ ...base, currentPlan: 'manager', targetTier: 'enterprise' })).toEqual({
+      kind: 'refused',
+      reason: 'sales_led_target',
+    });
+    expect(quotePlanChange({ ...base, currentPlan: 'enterprise', targetTier: 'label' })).toEqual({
+      kind: 'refused',
+      reason: 'legacy_current_plan',
+    });
   });
 });

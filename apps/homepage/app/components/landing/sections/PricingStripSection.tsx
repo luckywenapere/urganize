@@ -28,7 +28,8 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 //
 // Server component and always was, so `/` stays static. The full ladder lives
 // on /pricing; this is the teaser. (There was a Group conversation to point at
-// too, briefly — removed 2026-09-09, see @urganize/pricing.)
+// too from 2026-09-08 to 2026-09-09, and again since 2026-10-02: Group, the
+// fourth card, with "Let's talk" in place of a price.)
 export function PricingStripSection() {
   const tiers = PRICING_TIER_ORDER.map((id) => {
     const tier = getTier(id);
@@ -50,10 +51,10 @@ export function PricingStripSection() {
           <h2 className={centeredHeadlineClass}>One price for your team.</h2>
         </div>
 
-        {/* THREE since 2026-09-09 (Group, the fourth, was removed the day after
-            it came back onto the ladder). One column below md, three from md —
-            the same breakpoint /pricing's own three-card layout uses. */}
-        <ul className="mx-auto mt-12 grid max-w-[56rem] gap-4 md:grid-cols-3">
+        {/* FOUR since 2026-10-02 (Group came back as the "Let's talk" card).
+            One column on a phone, two from sm, four from xl — the same
+            breakpoints /pricing's own cards use. */}
+        <ul className="mx-auto mt-12 grid max-w-[72rem] gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {tiers.map(({ id, tier, price, highlights }) => (
             <li
               key={id}

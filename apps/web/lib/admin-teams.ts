@@ -7,10 +7,22 @@
 
 /** Plans an admin may set by hand. 'founding' is the lifetime price lock;
  * 'custom' is a negotiated rate. Both are in subscriptions_plan_check as of
- * 20260821120000. 'label' is excluded on purpose: it is contactSales, so a
- * label deal is recorded as 'custom' with the agreed amount. */
-export const ADMIN_ASSIGNABLE_PLANS = ['monthly', 'annual', 'founding', 'custom'] as const;
+ * 20260821120000.
+ *
+ * 'enterprise' is GROUP (back 2026-10-02), and "Mark paid" is the only way a team
+ * gets onto it: Group is sales-led, with no checkout and no Paystack Plan. It is
+ * in subscriptions_plan_check since 20260823100000. The admin may type "group";
+ * it is stored as 'enterprise', the id the rest of the code reads.
+ *
+ * Self-serve tiers (solo, manager, label) are left out: they are bought through
+ * checkout, which writes the interval and the Paystack codes this cannot. */
+export const ADMIN_ASSIGNABLE_PLANS = ['monthly', 'annual', 'founding', 'custom', 'enterprise'] as const;
 export type AdminAssignablePlan = (typeof ADMIN_ASSIGNABLE_PLANS)[number];
+
+/** How often a hand-recorded deal is billed. Stored on
+ * subscriptions.billing_interval so MRR divides a yearly deal by 12 instead of
+ * counting it as one month's revenue. */
+export type AdminBillingInterval = 'monthly' | 'annual';
 
 /** Guard rails on extend. Long enough for a real sales conversation, short
  * enough that a slipped digit cannot silently grant a decade. An indefinite
@@ -32,6 +44,8 @@ export type TeamAdminAction =
       plan: AdminAssignablePlan;
       amountMinorUnit: number;
       expiresAt: string;
+      /** Required for Group; optional for the legacy plans, whose name already says. */
+      billingInterval: AdminBillingInterval | null;
       note: string | null;
     };
 
@@ -64,6 +78,24 @@ export function isAdminAssignablePlan(value: unknown): value is AdminAssignableP
   return (
     typeof value === 'string' && (ADMIN_ASSIGNABLE_PLANS as readonly string[]).includes(value)
   );
+}
+
+/** The plan an admin typed, normalised: trimmed, lower case, "group" read as
+ * 'enterprise'. Null when it is not a plan an admin may set. */
+export function parseAdminPlan(value: unknown): AdminAssignablePlan | null {
+  if (typeof value !== 'string') return null;
+  const plan = value.trim().toLowerCase();
+  const id = plan === 'group' ? 'enterprise' : plan;
+  return isAdminAssignablePlan(id) ? id : null;
+}
+
+/** "monthly", or "annual" (also "yearly"). Null for anything else, including absent. */
+export function parseAdminBillingInterval(value: unknown): AdminBillingInterval | null {
+  if (typeof value !== 'string') return null;
+  const interval = value.trim().toLowerCase();
+  if (interval === 'monthly') return 'monthly';
+  if (interval === 'annual' || interval === 'yearly') return 'annual';
+  return null;
 }
 
 /**
@@ -126,8 +158,19 @@ export function parseTeamAdminAction(
     }
 
     case 'mark_paid': {
-      if (!isAdminAssignablePlan(raw.plan)) {
-        return { error: `plan must be one of ${ADMIN_ASSIGNABLE_PLANS.join(', ')}.` };
+      const plan = parseAdminPlan(raw.plan);
+      if (!plan) {
+        return { error: `plan must be one of ${ADMIN_ASSIGNABLE_PLANS.join(', ')} (or group).` };
+      }
+      const hasInterval = raw.billingInterval !== undefined && raw.billingInterval !== null && raw.billingInterval !== '';
+      const billingInterval = parseAdminBillingInterval(raw.billingInterval);
+      if (hasInterval && !billingInterval) {
+        return { error: 'billingInterval must be monthly or yearly.' };
+      }
+      // A Group price is whatever was agreed, so nothing else can say how often
+      // it is billed, and the scoreboard's MRR needs to know.
+      if (plan === 'enterprise' && !billingInterval) {
+        return { error: 'A Group plan needs billingInterval: monthly or yearly.' };
       }
       const amountMinorUnit = parseAmount(raw.amountMinorUnit);
       if (amountMinorUnit === null) {
@@ -141,9 +184,10 @@ export function parseTeamAdminAction(
         action: {
           type: 'mark_paid',
           workspaceId: id,
-          plan: raw.plan,
+          plan,
           amountMinorUnit,
           expiresAt,
+          billingInterval,
           note,
         },
       };

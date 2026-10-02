@@ -22,6 +22,8 @@ import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pr
  *   solo      150  (5,000 naira a month)
  *   manager   660  (22,000)
  *   label     1,500 (50,000)
+ *   enterprise 1,500 (Group: custom price; Label's amount by default, founder
+ *              call 2026-10-02, topped up by hand per deal)
  *
  * Read from `state` AND `tier`, never `tier` alone, for the reason the router's
  * ceiling gives (lib/ai/model-router.ts resolveCeiling): resolveTeamTier reports
@@ -29,7 +31,7 @@ import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pr
  * during an evaluation, and reading that as a plan would hand every three-day
  * trial the biggest allowance.
  */
-export const ALLOWANCE_CREDITS = { solo: 150, manager: 660, label: 1500 } as const;
+export const ALLOWANCE_CREDITS = { solo: 150, manager: 660, label: 1500, enterprise: 1500 } as const;
 
 /** What a trial is given, once. */
 export const TRIAL_CREDITS = 50;
@@ -82,6 +84,8 @@ export function monthlyAllowanceCredits(team: TeamForAllowance | undefined): num
       return ALLOWANCE_CREDITS.manager;
     case 'label':
       return ALLOWANCE_CREDITS.label;
+    case 'enterprise':
+      return ALLOWANCE_CREDITS.enterprise;
     default:
       return ALLOWANCE_CREDITS.solo;
   }

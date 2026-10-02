@@ -218,6 +218,9 @@ export function resolveCeiling(team: TeamForRouting | undefined, env: EnvLike = 
     case 'manager':
       return pick('AI_ROUTER_CEILING_MANAGER', 'pro');
     case 'label':
+    // Group (back 2026-10-02) is sold above Label, so it gets Label's ceiling
+    // and the same override rather than a switch of its own.
+    case 'enterprise':
       return pick('AI_ROUTER_CEILING_LABEL', 'max');
     default:
       return unpaid;

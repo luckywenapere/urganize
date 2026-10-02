@@ -128,8 +128,13 @@ describe('resolveCeiling', () => {
   });
 
   it('is conservative about a paid team whose tier it does not recognise', () => {
-    expect(resolveCeiling(paid('enterprise'), {})).toBe('pro');
+    expect(resolveCeiling(paid('platinum'), {})).toBe('pro');
     expect(resolveCeiling({ state: 'paid', tier: null }, {})).toBe('pro');
+  });
+
+  it('gives Group the Label ceiling, and the same override', () => {
+    expect(resolveCeiling(paid('enterprise'), {})).toBe('max');
+    expect(resolveCeiling(paid('enterprise'), { AI_ROUTER_CEILING_LABEL: 'pro' })).toBe('pro');
   });
 
   it('can be tuned from the environment, and ignores values that are not tiers', () => {
