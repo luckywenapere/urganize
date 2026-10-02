@@ -12,6 +12,7 @@ import {
   BellRing,
   ChevronRight,
   ClipboardList,
+  Gauge,
   ListMusic,
   Mail,
   Mic,
@@ -30,6 +31,12 @@ const SECTIONS: Array<{
   description: string;
   icon: typeof Users;
 }> = [
+  {
+    href: '/admin/scoreboard',
+    label: 'Scoreboard',
+    description: 'Weekly active paying teams, MRR, second releases, retention, trials and activation, worked out live.',
+    icon: Gauge,
+  },
   {
     href: '/admin/onboarding',
     label: 'Onboarding',

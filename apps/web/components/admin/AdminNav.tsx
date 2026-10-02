@@ -8,6 +8,7 @@ import {
   Bug,
   BellRing,
   ClipboardList,
+  Gauge,
   LayoutDashboard,
   ListMusic,
   Mail,
@@ -39,6 +40,9 @@ const ITEMS: Array<{
   exact?: boolean;
 }> = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/admin', exact: true },
+  // Second, under Overview: the strategy doc's numbers, which the Monday review
+  // starts with (docs/strategy/company-strategy.md, section 2).
+  { key: 'scoreboard', label: 'Scoreboard', icon: Gauge, href: '/admin/scoreboard' },
   { key: 'onboarding', label: 'Onboarding', icon: ClipboardList, href: '/admin/onboarding' },
   { key: 'broadcast', label: 'Broadcast', icon: Radio, href: '/admin/broadcast' },
   { key: 'emails', label: 'Emails', icon: Mail, href: '/admin/emails' },

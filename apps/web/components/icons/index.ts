@@ -54,7 +54,10 @@ export {
   CalendarClock, CalendarPlus, Camera, ChartNoAxesGantt,
   CheckCircle, ChevronLeft, ChevronUp, CircleDot,
   CornerDownLeft, Disc3, FileText, Flag,
-  FolderOpen, Gift, Globe,
+  FolderOpen,
+  // The admin scoreboard (2026-10-02): the company's numbers at a glance.
+  Gauge,
+  Gift, Globe,
   // Shows (2026-09-25): the drag handle on a set row, and tap-to-call on a
   // promoter's number.
   GripVertical, History,
