@@ -148,11 +148,10 @@ const RETIRED = [
   /Global standard, from here/i,
   /\bLet['’]s build\b/i,
   /\bworkspaces?\b/i,
-  // 2026-09-11 retired the "small labels" wording. The same day retired the
-  // artists-managers-labels triple and "for labels"; the 2026-09-24 brief
-  // brought labels back ("For artists, managers and labels."), so those two
-  // left this list and only "small labels" stays.
-  /small labels/i,
+  // 2026-09-11 retired "small labels", the artists-managers-labels triple and
+  // "for labels". The 2026-09-24 brief brought the last two back, and
+  // "small labels" followed on 2026-10-02: the strategy doc names small labels
+  // among the teams we sell to (section 1), so the site may say it too.
   // 2026-09-24: the category and the lines that went with it. "AI Music
   // Manager" is matched CASE-SENSITIVELY on purpose: the title-cased form is
   // how the category was written in copy, while the lowercase search keyword

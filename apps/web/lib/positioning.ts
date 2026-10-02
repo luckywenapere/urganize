@@ -16,7 +16,8 @@
  * LABELS ARE BACK IN THE AUDIENCE. They were dropped on 2026-09-11, and the
  * long description's own last sentence ("For artists, managers and labels.")
  * puts them back, so the list below has three entries again. "Small labels"
- * stays retired in the guard; "for labels" does not.
+ * and "for labels" are both allowed again (small labels since 2026-10-02, the
+ * strategy doc names them among the teams we sell to).
  *
  * UrgAns says it too, since 2026-09-25. It kept the old category for one day
  * while the founder decided how the assistant describes the product; now
