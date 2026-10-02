@@ -25,6 +25,7 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { resetChappiHistory } from '@/stores/useChappiHistoryStore';
 import { clearPendingFirstShare } from '@/lib/social-share-offer';
 import { useHomeStore } from '@/stores/useHomeStore';
+import { clearLoginCookie, setLoginCookie } from '@/lib/login-cookie';
 import {
   classifyAuthFailure,
   isProfileReadTransientError,
@@ -1045,6 +1046,8 @@ if (typeof window !== 'undefined') {
       // must always resolve the loading gate or the '/' redirect never fires.
       if (!session) {
         // No Supabase session: any persisted isAuthenticated is stale.
+        // The marketing site's signed-in hint goes with it.
+        clearLoginCookie();
         invalidateAuthRecency();
         useAuthStore.setState({
           user: null,
@@ -1056,6 +1059,9 @@ if (typeof window !== 'undefined') {
         });
         return;
       }
+      // A live session: tell the marketing site. This is also what gives
+      // everyone already signed in the cookie, with no re-login.
+      setLoginCookie();
       const { isAuthenticated, user } = useAuthStore.getState();
       if (isAuthenticated && user) {
         // Persisted auth confirmed by a live session — release the gate now;
@@ -1091,6 +1097,8 @@ if (typeof window !== 'undefined') {
         });
       }
       lastAuthFailure = null;
+      // The marketing site must stop treating this browser as signed in.
+      clearLoginCookie();
       invalidateAuthRecency();
       // Cached release-scene data is per-account. Clearing it here (memory AND
       // disk) is what stops account B, signing in on the same device, from
@@ -1165,10 +1173,13 @@ if (typeof window !== 'undefined') {
         error: null,
       });
     } else if (event === 'SIGNED_IN') {
+      setLoginCookie();
       // Always a real verification: a sign-in switches identity, and
       // checkAuth is what runs the access/paywall side-effect.
       useAuthStore.getState().checkAuth({ force: true });
     } else if (event === 'TOKEN_REFRESHED') {
+      // Renews the cookie's max-age so it outlives an active session.
+      setLoginCookie();
       useAuthStore.setState((state) => ({
         isAuthenticated: state.isAuthenticated,
         isLoading: false,

@@ -14,6 +14,7 @@ import {
   ProofSection,
   StorySection,
 } from "./components/landing/Sections";
+import { LOGIN_REDIRECT_SCRIPT } from "@/lib/login-redirect";
 import { MarketingFooter } from "./components/marketing/MarketingFooter";
 import { MarketingHeader } from "./components/marketing/MarketingHeader";
 
@@ -48,6 +49,10 @@ const faqSchema = {
 export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]">
+      {/* Signed-in visitors go straight to the app, before anything below is
+          painted. Home page only: /pricing, /features and /login stay readable
+          (and /login exists for search). See lib/login-redirect.ts. */}
+      <script dangerouslySetInnerHTML={{ __html: LOGIN_REDIRECT_SCRIPT }} />
       <div className="relative">
         <MarketingHeader />
 
