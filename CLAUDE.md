@@ -17449,12 +17449,18 @@ has (see point 8).
    2026-10-02 incident was a time-based cap, not a real limit). More length needs
    more clock: `maxDuration` is 60 here, and whether this account can go higher
    (Vercel's longer limits on Fluid compute) was not checked.
-   **The credit hold is unchanged and now undercounts a long streamed turn.**
-   `holdCredits` assumes 12k tokens in and 1.5k out. A reply that streams 4k
-   tokens costs more than the hold on the top rungs, so a nearly empty balance can
-   start a turn and finish below zero. That is the existing "no lock between the
-   check and the charge" limit made somewhat larger; raising the assumed output in
-   `holdCredits` is the fix, and a credits decision, so not made here.
+   **The credit hold follows the turn's output cap (2026-10-02).** `holdCredits`
+   used to assume a flat 1.5k tokens out, which undercounts a long reply on the top
+   rungs, so a nearly empty balance could start a turn and finish below zero. The
+   route now holds for the answer the turn may write: `holdOutputTokens` takes the
+   routed decision's `maxOutputTokens`, floors it at 1,500 (a turn the router did
+   not touch holds exactly what it did) and ceilings it at 4,000, roughly what the
+   clock lets a reply write, so a streamed cap of 8,192 does not demand the price of
+   a reply that cannot be written before the deadline. Still a start-of-turn check,
+   not a reserved row; the "no lock between the check and the charge" limit stands.
+   The ceiling and floor are credits decisions (`HOLD_COMPLETION_CEILING` /
+   `HOLD_COMPLETION_TOKENS` in `lib/credits/pricing.ts`). Mutation-tested: dropping
+   the cap from the route, the ceiling and the floor each fail a named test.
 
 ### Verified
 

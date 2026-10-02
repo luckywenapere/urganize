@@ -139,13 +139,32 @@ export function turnCharge(calls: readonly UsageCall[]): TurnCharge {
  * (nothing cached) with a generous answer. A guard against starting a turn the
  * balance cannot pay for, not a quote. A turn that climbs to a dearer model
  * mid-way can still overshoot it, which is accepted (see credits-server.ts).
+ *
+ * The answer it assumes is the turn's own output cap, held between a floor and a
+ * ceiling (holdOutputTokens). It used to be a flat 1,500 tokens, which is about
+ * right for a short answer and well under what a long reply on the top rungs
+ * costs: a streamed reply can run to a few thousand tokens before the deadline
+ * (2026-10-02), so a nearly empty balance could start a turn and finish below zero.
  */
 export const HOLD_PROMPT_TOKENS = 12_000;
+/** The least answer a hold assumes, and what it assumes when the turn's cap is not known. */
 export const HOLD_COMPLETION_TOKENS = 1_500;
+/**
+ * The most answer a hold assumes. About what the turn's clock lets a reply write
+ * (roughly 93 tokens a second for about 50 seconds), so a cap of 8,192 does not
+ * demand the price of a reply that cannot be written before the deadline.
+ */
+export const HOLD_COMPLETION_CEILING = 4_000;
 
-export function holdCredits(model: string): number {
+/** The answer length a hold assumes for a turn whose output cap is `maxOutputTokens`. */
+export function holdOutputTokens(maxOutputTokens?: number): number {
+  if (maxOutputTokens === undefined || !Number.isFinite(maxOutputTokens)) return HOLD_COMPLETION_TOKENS;
+  return Math.min(HOLD_COMPLETION_CEILING, Math.max(HOLD_COMPLETION_TOKENS, Math.floor(maxOutputTokens)));
+}
+
+export function holdCredits(model: string, completionTokens: number = HOLD_COMPLETION_TOKENS): number {
   const credits = turnCharge([
-    { model, promptTokens: HOLD_PROMPT_TOKENS, completionTokens: HOLD_COMPLETION_TOKENS, cachedTokens: 0 },
+    { model, promptTokens: HOLD_PROMPT_TOKENS, completionTokens, cachedTokens: 0 },
   ]).credits;
   return credits;
 }

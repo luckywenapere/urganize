@@ -34,7 +34,7 @@ import { logBillingEvent } from '@/lib/billing-events-server';
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { outOfCreditsNotice } from '@/lib/credits/copy';
 import { getCreditSnapshot, settleTurn, type CreditSnapshot } from '@/lib/credits/credits-server';
-import { canStartTurn, holdCredits, turnCharge } from '@/lib/credits/pricing';
+import { canStartTurn, holdCredits, holdOutputTokens, turnCharge } from '@/lib/credits/pricing';
 import { randomUUID } from 'node:crypto';
 import { recordLimitHit } from '@/lib/seats-server';
 import { CHAPPI_HISTORY_LIMIT } from '@/lib/chappi/conversation-history';
@@ -220,7 +220,10 @@ export async function POST(request: NextRequest) {
       });
       // Unreadable (null) means do not enforce: see credits-server.ts.
       const holdModel = plan.mode === 'on' ? plan.routing.decision.model : (getChappiModelConfig()?.model ?? '');
-      if (credits && !canStartTurn(credits.total, holdCredits(holdModel))) {
+      // The hold assumes the answer the turn is allowed to write, so a long streamed
+      // reply on a top rung is held for what it can really cost.
+      const holdOutput = holdOutputTokens(plan.mode === 'on' ? plan.routing.decision.maxOutputTokens : undefined);
+      if (credits && !canStartTurn(credits.total, holdCredits(holdModel, holdOutput))) {
         await logBillingEvent(auth.adminClient, {
           workspaceId: team.primaryWorkspaceId,
           ownerUserId: team.ownerUserId,
