@@ -6,6 +6,7 @@ import {
   effectiveCredits,
   parseFieldsPatch,
   pitchKitChecklist,
+  pitchNoteFromStory,
   readStoredFields,
   type ReleaseEpkFields,
 } from './release-epk';
@@ -131,5 +132,49 @@ describe('pitchKitChecklist', () => {
       cover: false,
       kit: true,
     });
+  });
+});
+
+
+describe('pitchNoteFromStory', () => {
+  it('returns a short story whole', () => {
+    expect(pitchNoteFromStory('Written in Lagos in one night.')).toBe('Written in Lagos in one night.');
+  });
+
+  it('collapses line breaks and runs of spaces, since a note is one paragraph', () => {
+    expect(pitchNoteFromStory('Written in Lagos.\n\n  Mixed   in London.')).toBe('Written in Lagos. Mixed in London.');
+  });
+
+  it('keeps whole sentences and never ends mid-sentence when one fits', () => {
+    const story = `${'A'.repeat(100)}. ${'B'.repeat(100)}. ${'C'.repeat(100)}. ${'D'.repeat(100)}.`;
+    const note = pitchNoteFromStory(story, 300);
+    expect(note.length).toBeLessThanOrEqual(300);
+    expect(note.endsWith('.')).toBe(true);
+    expect(note).toBe(`${'A'.repeat(100)}. ${'B'.repeat(100)}.`);
+    expect(note).not.toContain('D');
+  });
+
+  it('cuts a first sentence that is too long at a word and says so with an ellipsis', () => {
+    const note = pitchNoteFromStory(`${'word '.repeat(100)}end.`, 50);
+    expect(note.length).toBeLessThanOrEqual(50);
+    expect(note.endsWith('…')).toBe(true);
+    expect(note).not.toMatch(/\s…$/);
+    expect(note.slice(0, -1)).toMatch(/^(word )*word$/);
+  });
+
+  it('never exceeds the cap, for any length', () => {
+    for (const max of [1, 2, 10, 40, 300]) {
+      const note = pitchNoteFromStory('Hello there. '.repeat(80), max);
+      expect(note.length).toBeLessThanOrEqual(max);
+    }
+  });
+
+  it('returns nothing for an empty or blank story', () => {
+    expect(pitchNoteFromStory('')).toBe('');
+    expect(pitchNoteFromStory('   \n ')).toBe('');
+  });
+
+  it('defaults to the playlist note cap of 300', () => {
+    expect(pitchNoteFromStory('x '.repeat(400)).length).toBeLessThanOrEqual(300);
   });
 });

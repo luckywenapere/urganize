@@ -48,6 +48,8 @@ import {
 import { canPayForPitchesHere, requestPitchQuote } from '@/lib/pitch-payments-client';
 import type { PitchQuote } from '@/types/pitch-payments';
 import { PitchCheckoutPanel } from './PitchCheckoutPanel';
+import { usePitchKitStory } from './usePitchKitStory';
+import { pitchNoteFromStory } from '@/lib/release-epk';
 
 type PitchComposerProps = {
   /** The release this pitch belongs to. Empty disables the whole composer. */
@@ -107,6 +109,8 @@ export function PitchComposer({
   const [songTitle, setSongTitle] = useState(initialSongTitle);
   const [songUrl, setSongUrl] = useState('');
   const [note, setNote] = useState('');
+  // The story from this rollout's Pitch kit, if the team wrote one. '' = none.
+  const storyNote = pitchNoteFromStory(usePitchKitStory(releaseId), MAX_PITCH_NOTE_LENGTH);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
 
@@ -443,9 +447,20 @@ export function PitchComposer({
         </div>
 
         <div className="space-y-1.5">
-          <label className={labelClass} htmlFor="pitch-note">
-            Note
-          </label>
+          <div className="flex items-baseline justify-between gap-3">
+            <label className={labelClass} htmlFor="pitch-note">
+              Note
+            </label>
+            {storyNote && note.trim() === '' ? (
+              <button
+                type="button"
+                onClick={() => setNote(storyNote)}
+                className="text-xs text-brand underline-offset-2 hover:underline focus-visible:underline"
+              >
+                Start from the story
+              </button>
+            ) : null}
+          </div>
           <textarea
             id="pitch-note"
             rows={3}

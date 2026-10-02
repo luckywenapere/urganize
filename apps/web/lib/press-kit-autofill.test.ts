@@ -247,3 +247,89 @@ describe('summarizeSources', () => {
     ).toEqual({ releases: 1, songs: 2, shows: 1, credits: 0, members: 0 });
   });
 });
+
+
+describe('the rollout pitch kit feeds the kit', () => {
+  const releases = [
+    { id: 'old', title: 'First', releaseType: 'single', releaseDate: '2025-01-01', description: '' },
+    { id: 'new', title: 'Second', releaseType: 'ep', releaseDate: '2026-08-01', description: '' },
+  ];
+  const kitFor = (releaseId: string, over: Partial<NonNullable<AutofillSources['pitchKit']>> = {}) => ({
+    releaseId,
+    story: 'Written in Lagos in one night.',
+    credits: null,
+    ...over,
+  });
+  const latest = (src: AutofillSources) =>
+    patchFor('latest_release', buildAutofillPatch(src, freshSections()))?.content;
+  const credits = (src: AutofillSources) =>
+    patchFor('credits', buildAutofillPatch(src, freshSections()))?.content.credits as
+      | Record<string, unknown>[]
+      | undefined;
+
+  it('puts the story on the latest release when it is about that same release', () => {
+    expect(latest(sources({ releases, pitchKit: kitFor('new') }))?.story).toBe('Written in Lagos in one night.');
+  });
+
+  it('never puts the story of one release on another one', () => {
+    expect(latest(sources({ releases, pitchKit: kitFor('old') }))?.story).toBeUndefined();
+  });
+
+  it('adds no story key at all when there is no story', () => {
+    expect(latest(sources({ releases, pitchKit: kitFor('new', { story: '   ' }) }))).not.toHaveProperty('story');
+    expect(latest(sources({ releases, pitchKit: null }))).not.toHaveProperty('story');
+    expect(latest(sources({ releases }))).not.toHaveProperty('story');
+  });
+
+  it('uses the credits list the manager wrote instead of the raw submissions', () => {
+    const list = credits(
+      sources({
+        releases,
+        credits: [{ legalName: 'Someone Else', stageName: null, roles: ['mixer'], contribution: null }],
+        pitchKit: kitFor('new', { credits: [{ name: 'ADA', role: 'Producer' }] }),
+      })
+    );
+    expect(list).toHaveLength(1);
+    expect(list?.[0]).toMatchObject({ stageName: 'ADA', roles: ['Producer'] });
+  });
+
+  it('falls back to the submissions when the manager made no list', () => {
+    const list = credits(
+      sources({
+        releases,
+        credits: [{ legalName: 'Ada Obi', stageName: null, roles: ['producer'], contribution: null }],
+        pitchKit: kitFor('new', { credits: null }),
+      })
+    );
+    expect(list?.[0]).toMatchObject({ legalName: 'Ada Obi' });
+  });
+
+  it('honours a list the manager cleared: an empty list is theirs, not a gap', () => {
+    const list = credits(
+      sources({
+        releases,
+        credits: [{ legalName: 'Ada Obi', stageName: null, roles: ['producer'], contribution: null }],
+        pitchKit: kitFor('new', { credits: [] }),
+      })
+    );
+    expect(list).toBeUndefined();
+  });
+
+  it('ignores a credits list that belongs to a different release', () => {
+    const list = credits(
+      sources({
+        releases,
+        credits: [{ legalName: 'Ada Obi', stageName: null, roles: ['producer'], contribution: null }],
+        pitchKit: kitFor('old', { credits: [{ name: 'ADA', role: 'Producer' }] }),
+      })
+    );
+    expect(list?.[0]).toMatchObject({ legalName: 'Ada Obi' });
+  });
+
+  it('carries only the same four fields a collaborator credit does', () => {
+    const entry = credits(
+      sources({ releases, pitchKit: kitFor('new', { credits: [{ name: 'ADA', role: 'Producer' }] }) })
+    )?.[0];
+    expect(Object.keys(entry ?? {}).sort()).toEqual(['contribution', 'legalName', 'roles', 'stageName']);
+  });
+});

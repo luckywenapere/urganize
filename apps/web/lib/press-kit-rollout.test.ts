@@ -253,3 +253,40 @@ describe('describeProposal', () => {
     }
   });
 });
+
+
+describe('the story on the latest release mirrors the pitch kit', () => {
+  it('replaces the story with the new one', () => {
+    const merged = mergeProposedContent(
+      'latest_release',
+      { releaseId: 'a', hook: 'Mine', story: 'Old story.' },
+      { releaseId: 'a', story: 'New story.' }
+    );
+    expect(merged.story).toBe('New story.');
+    expect(merged.hook).toBe('Mine');
+  });
+
+  it('drops an old release story when the next release has none', () => {
+    const merged = mergeProposedContent(
+      'latest_release',
+      { releaseId: 'a', hook: 'Old hook', story: 'Story of a.' },
+      { releaseId: 'b', title: 'B' }
+    );
+    expect(merged).not.toHaveProperty('story');
+    expect(merged.releaseId).toBe('b');
+  });
+
+  it('drops the story when the pitch kit story was cleared on the same release', () => {
+    const merged = mergeProposedContent(
+      'latest_release',
+      { releaseId: 'a', story: 'Story of a.' },
+      { releaseId: 'a', title: 'A' }
+    );
+    expect(merged).not.toHaveProperty('story');
+  });
+
+  it('leaves other sections alone', () => {
+    const merged = mergeProposedContent('header', { descriptor: 'Mine', story: 'keep' }, { homeCity: 'Lagos' });
+    expect(merged.story).toBe('keep');
+  });
+});

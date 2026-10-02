@@ -298,6 +298,10 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
             <label htmlFor="pitch-kit-story" className="text-xs font-semibold text-content-primary">
               The story behind it
             </label>
+            <p className="mt-0.5 text-xs text-content-tertiary">
+              The start of it can fill the note on a playlist pitch, and the same story and credits
+              can be added to the Latest release on your press kit.
+            </p>
             <textarea
               id="pitch-kit-story"
               value={story}
