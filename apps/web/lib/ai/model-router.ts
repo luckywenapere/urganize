@@ -436,6 +436,29 @@ export type RoutingFailure = { kind: AiFailureKind | 'tool_errors'; retryAfterMs
 /** The margin a hop needs beyond the rung's typical latency. */
 const HOP_GUARD_MS = 1_500;
 
+/** The smallest cap worth sending: below this an answer is cut off before it says anything. */
+export const MIN_USEFUL_OUTPUT_TOKENS = 600;
+
+/** The margin the request keeps before the turn's deadline (the runner's own abort margin). */
+const OUTPUT_TIME_MARGIN_MS = 250;
+
+/**
+ * The most a rung can be asked to write in the time left. A request that is
+ * still writing when the deadline passes is given up on, the user gets an
+ * error, and the provider bills the whole answer anyway, so the cap follows the
+ * clock instead of assuming the whole turn is free. Never above the rung's own
+ * cap, and never below MIN_USEFUL_OUTPUT_TOKENS (a rung that cannot manage even
+ * that does not fit, which fits() and fitToDeadline already decide).
+ */
+export function outputCapForTime(
+  rung: Pick<LadderRung, 'maxOutputTokens' | 'startupMs' | 'outputTokensPerSec'>,
+  timeLeftMs: number
+): number {
+  const streamingMs = Math.max(0, timeLeftMs - rung.startupMs - OUTPUT_TIME_MARGIN_MS);
+  const fromTime = Math.floor((streamingMs / 1000) * rung.outputTokensPerSec);
+  return Math.max(Math.min(MIN_USEFUL_OUTPUT_TOKENS, rung.maxOutputTokens), Math.min(rung.maxOutputTokens, fromTime));
+}
+
 const fits = (rung: LadderRung, deadlineMs: number | undefined, now: number): boolean =>
   deadlineMs === undefined || deadlineMs - now >= rung.typicalLatencyMs + HOP_GUARD_MS;
 
@@ -447,7 +470,8 @@ function hopTo(
   ladder: Ladder,
   tier: ModelTier,
   model: string,
-  kind: string
+  kind: string,
+  time?: { deadlineMs?: number; now: number }
 ): RouteDecision {
   const rung = ladder[tier];
   const hop = decision.hops + 1;
@@ -457,7 +481,10 @@ function hopTo(
     model,
     models: [...rung.models],
     reasoningEffort: rung.reasoningEffort,
-    maxOutputTokens: rung.maxOutputTokens,
+    maxOutputTokens:
+      time?.deadlineMs === undefined
+        ? rung.maxOutputTokens
+        : outputCapForTime(rung, time.deadlineMs - time.now),
     hops: hop,
     tried: [...decision.tried, model],
     reasons: [...decision.reasons, `hop ${hop}: ${kind} ${decision.model} -> ${model}`],
@@ -497,14 +524,14 @@ export function nextAfterFailure(input: {
 
   const sideways = (): RouteDecision | null => {
     const model = firstUntried(decision.models, decision.tried);
-    return model && fits(ladder[decision.tier], deadlineMs, now) ? hopTo(decision, ladder, decision.tier, model, kind) : null;
+    return model && fits(ladder[decision.tier], deadlineMs, now) ? hopTo(decision, ladder, decision.tier, model, kind, { deadlineMs, now }) : null;
   };
 
   const down = (): RouteDecision | null => {
     let tier = lowerTier(decision.tier);
     while (tier && tierIndex(tier) >= tierIndex(decision.floor)) {
       const model = firstUntried(ladder[tier].models, decision.tried);
-      if (model && fits(ladder[tier], deadlineMs, now)) return hopTo(decision, ladder, tier, model, kind);
+      if (model && fits(ladder[tier], deadlineMs, now)) return hopTo(decision, ladder, tier, model, kind, { deadlineMs, now });
       tier = lowerTier(tier);
     }
     return null;
@@ -514,7 +541,7 @@ export function nextAfterFailure(input: {
     const tier = escalateTier(decision.tier);
     if (!tier || tierIndex(tier) > tierIndex(decision.ceiling)) return null;
     const model = firstUntried(ladder[tier].models, decision.tried);
-    return model && fits(ladder[tier], deadlineMs, now) ? hopTo(decision, ladder, tier, model, kind) : null;
+    return model && fits(ladder[tier], deadlineMs, now) ? hopTo(decision, ladder, tier, model, kind, { deadlineMs, now }) : null;
   };
 
   switch (kind) {
@@ -547,7 +574,11 @@ export function fitToDeadline(
 
   const now = options.now ?? Date.now();
   const ladder = options.ladder ?? ladderFor(decision.surface, options.env ?? process.env);
-  if (fits(ladder[decision.tier], deadlineMs, now)) return decision;
+  if (fits(ladder[decision.tier], deadlineMs, now)) {
+    const cap = Math.min(decision.maxOutputTokens, outputCapForTime(ladder[decision.tier], deadlineMs - now));
+    if (cap >= decision.maxOutputTokens) return decision;
+    return { ...decision, maxOutputTokens: cap, reasons: [...decision.reasons, `time: output capped at ${cap}`] };
+  }
 
   let tier = lowerTier(decision.tier);
   while (tier && tierIndex(tier) >= tierIndex(decision.floor)) {
@@ -560,7 +591,7 @@ export function fitToDeadline(
         model,
         models: [...rung.models],
         reasoningEffort: rung.reasoningEffort,
-        maxOutputTokens: rung.maxOutputTokens,
+        maxOutputTokens: outputCapForTime(rung, deadlineMs - now),
         tried: decision.tried.includes(model) ? decision.tried : [...decision.tried, model],
         reasons: [...decision.reasons, `time: ${decision.tier} -> ${tier}`],
       };

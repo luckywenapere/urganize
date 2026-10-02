@@ -7,7 +7,9 @@ import {
   effectiveRouterMode,
   fitToDeadline,
   legacyModelFor,
+  MIN_USEFUL_OUTPUT_TOKENS,
   nextAfterFailure,
+  outputCapForTime,
   readRouterMode,
   resolveCeiling,
   routeModel,
@@ -452,6 +454,78 @@ describe('fitToDeadline', () => {
   it('will not drop below the surface floor', () => {
     const planner = decisionForTier({ surface: 'planner', tier: 'pro', ceiling: 'pro', env: {} });
     expect(fitToDeadline(planner, { deadlineMs: NOW + 5_000, now: NOW, env: {} })).toBeNull();
+  });
+});
+
+describe('outputCapForTime', () => {
+  const rung = DEFAULT_LADDER.max;
+
+  it('gives the rung its whole cap when there is time to write it', () => {
+    expect(outputCapForTime(rung, 52_000)).toBe(rung.maxOutputTokens);
+  });
+
+  it('shrinks the cap as the clock runs down, to what can be streamed in the time left', () => {
+    const cap = outputCapForTime(rung, 35_000);
+    expect(cap).toBeLessThan(rung.maxOutputTokens);
+    // The startup and the streaming both fit in what is left.
+    expect(rung.startupMs + (cap / rung.outputTokensPerSec) * 1000).toBeLessThanOrEqual(35_000);
+  });
+
+  it('never goes below a cap worth sending, and never above the rung', () => {
+    expect(outputCapForTime(rung, 100)).toBe(MIN_USEFUL_OUTPUT_TOKENS);
+    expect(outputCapForTime(rung, -5_000)).toBe(MIN_USEFUL_OUTPUT_TOKENS);
+    expect(outputCapForTime(rung, 10 * 60_000)).toBe(rung.maxOutputTokens);
+    // A rung whose own cap is under the floor keeps its own cap.
+    expect(outputCapForTime({ ...rung, maxOutputTokens: 400 }, 100)).toBe(400);
+  });
+
+  it('is the long strategy request that cost 200 RODI and timed out', () => {
+    // Round 3 of that turn started about 17 seconds into the 52 and wrote 8,127 tokens.
+    const cap = outputCapForTime(rung, 52_000 - 17_000);
+    expect(cap).toBeLessThan(2_500);
+    expect(rung.startupMs + (cap / rung.outputTokensPerSec) * 1000).toBeLessThan(35_000);
+  });
+});
+
+describe('the output cap follows the clock', () => {
+  const NOW = 7_000_000;
+  const max = decisionForTier({ surface: 'chat', tier: 'max', ceiling: 'max', env: {} });
+
+  it('lowers the cap on a rung that still fits, without a hop, and says why', () => {
+    const fitted = fitToDeadline(max, { deadlineMs: NOW + 35_000, now: NOW, env: {} });
+    expect(fitted?.tier).toBe('max');
+    expect(fitted?.maxOutputTokens).toBeLessThan(max.maxOutputTokens);
+    expect(fitted?.hops).toBe(0);
+    expect(fitted?.reasons.some((r) => r.startsWith('time: output capped at'))).toBe(true);
+  });
+
+  it('keeps the decision when there is room for the whole cap', () => {
+    expect(fitToDeadline(max, { deadlineMs: NOW + 52_000, now: NOW, env: {} })).toBe(max);
+  });
+
+  it('caps what a step down is asked to write too', () => {
+    const fitted = fitToDeadline(max, { deadlineMs: NOW + 15_000, now: NOW, env: {} });
+    expect(fitted?.tier).toBe('pro');
+    expect(fitted?.maxOutputTokens).toBeLessThan(DEFAULT_LADDER.pro.maxOutputTokens);
+  });
+
+  it('caps what a hop is asked to write', () => {
+    const pro = decisionForTier({ surface: 'chat', tier: 'pro', ceiling: 'max', env: {} });
+    const hopped = nextAfterFailure({
+      decision: pro,
+      failure: { kind: 'rate_limited' },
+      deadlineMs: NOW + 20_000,
+      now: NOW,
+      env: {},
+    });
+    expect(hopped?.model).toBe('openai/gpt-5.6-terra');
+    expect(hopped?.maxOutputTokens).toBeLessThan(DEFAULT_LADDER.pro.maxOutputTokens);
+  });
+
+  it('leaves a hop with no deadline at the rung cap', () => {
+    const pro = decisionForTier({ surface: 'chat', tier: 'pro', ceiling: 'max', env: {} });
+    const hopped = nextAfterFailure({ decision: pro, failure: { kind: 'rate_limited' }, now: NOW, env: {} });
+    expect(hopped?.maxOutputTokens).toBe(DEFAULT_LADDER.pro.maxOutputTokens);
   });
 });
 

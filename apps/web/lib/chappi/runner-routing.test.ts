@@ -35,6 +35,7 @@ import {
 } from './runner';
 import type { ChappiToolContext } from './tools';
 import { decisionForTier, type RouteDecision } from '@/lib/ai/model-router';
+import { DEFAULT_LADDER } from '@/lib/ai/model-ladder';
 import { GatewayError } from '@/lib/ai/gateway-error';
 
 const ctx = {
@@ -190,7 +191,7 @@ describe('with routing on', () => {
     expect(result.reply).toBe('Considered answer.');
     const body = bodyOf(0);
     expect(body.model).toBe('openai/gpt-5.4');
-    expect(body.max_completion_tokens).toBe(4096);
+    expect(body.max_completion_tokens).toBe(DEFAULT_LADDER.pro.maxOutputTokens);
     expect(body.reasoning_effort).toBe('low');
     expect(body).not.toHaveProperty('max_tokens');
     expect(result.trace).toMatchObject({ mode: 'on', startTier: 'pro', endTier: 'pro', models: ['openai/gpt-5.4'] });

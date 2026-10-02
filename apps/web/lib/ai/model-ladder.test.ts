@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { TURN_BUDGET_MS } from '../chappi/routing';
+
 import {
   DEFAULT_LADDER,
   MODEL_TIERS,
@@ -44,12 +46,21 @@ describe('the default ladder', () => {
     }
   });
 
-  it('gets slower and larger as it climbs', () => {
+  it('gets slower as it climbs', () => {
     for (let i = 1; i < MODEL_TIERS.length; i += 1) {
       const lower = DEFAULT_LADDER[MODEL_TIERS[i - 1]];
       const higher = DEFAULT_LADDER[MODEL_TIERS[i]];
       expect(higher.typicalLatencyMs).toBeGreaterThan(lower.typicalLatencyMs);
-      expect(higher.maxOutputTokens).toBeGreaterThanOrEqual(lower.maxOutputTokens);
+    }
+  });
+
+  it('lets every rung stream its whole token cap inside the turn budget', () => {
+    // The max rung was capped at 8,192 and needed about 86 seconds to write it,
+    // against 52 for the turn: the request was given up on and still billed in full.
+    for (const tier of MODEL_TIERS) {
+      const rung = DEFAULT_LADDER[tier];
+      const secondsToWrite = rung.maxOutputTokens / rung.outputTokensPerSec;
+      expect(rung.startupMs + secondsToWrite * 1000, tier).toBeLessThanOrEqual(TURN_BUDGET_MS);
     }
   });
 });
