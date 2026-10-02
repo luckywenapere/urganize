@@ -56,6 +56,8 @@ const TEAM_ACCESS_GROUPS = [
   // Release pitch kit (2026-10-01): the story and credits a rollout adds to
   // the artist's standing press kit.
   'pitch-kit',
+  // Distribution (2026-10-03): the readiness checklist and the partner hand-off.
+  'distribution',
 ];
 
 const BANNED = /ensureReleaseOwnership|ensureOwnedRelease/;

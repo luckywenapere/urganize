@@ -33,8 +33,10 @@ const FILES = [
   // The directory joined this guard rather than growing a second one: same
   // house rules, same brief, and two guards would drift the moment one of them
   // gained a rule.
-  ...walk(join(WEB, 'lib')).filter((path) => /press-kit|press-photo|directory-|delivery-records|role-gaps|release-epk|activation/.test(path)),
+  ...walk(join(WEB, 'lib')).filter((path) => /press-kit|press-photo|directory-|delivery-records|role-gaps|release-epk|activation|distribution/.test(path)),
   ...walk(join(WEB, 'components', 'press-kits')),
+  // The Distribute step (2026-10-03): a new surface born under the house rules.
+  join(WEB, 'components', 'releases', 'DistributionSection.tsx'),
   // The settings pop-up (2026-09-29): a new surface born under the house rules.
   // ArtistsBrandSegment is left out: it is all wiring for the `workspace` state
   // object and holds no copy, and the JSX-text reader mistakes that prop name

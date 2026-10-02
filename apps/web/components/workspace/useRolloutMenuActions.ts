@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ClipboardList,
   FolderOpen,
+  Globe,
   Image as ImageIcon,
   ListChecks,
   Mail,
@@ -44,6 +45,8 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   pitch: Radio,
   pitchkit: Newspaper,
   metadata: ClipboardList,
+  // Their own mark is a globe ("upload once, distribute everywhere").
+  distribute: Globe,
   note: NotebookPen,
   coverart: ImageIcon,
   song: Music,

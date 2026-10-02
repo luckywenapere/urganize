@@ -131,6 +131,10 @@ export const BILLING_EVENT_TYPES = [
   'pitch_recovery_unmatched',
   /** A curator reached the strike limit and their inbox is paused. */
   'curator_inbox_paused',
+  /** Someone opened the distribution partner's sign-up from a rollout's
+   *  Distribute step. `metadata` carries the release id. The founder compares
+   *  the count with the partner's monthly statement. */
+  'distribution_handoff',
 ] as const;
 
 export type BillingEventType = (typeof BILLING_EVENT_TYPES)[number];

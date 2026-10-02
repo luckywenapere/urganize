@@ -294,6 +294,7 @@ const SCENE_FLAGS = [
   'NEXT_PUBLIC_FEATURE_PITCHING',
   'NEXT_PUBLIC_FEATURE_RELEASE_CHAT',
   'NEXT_PUBLIC_FEATURE_PITCH_KIT',
+  'NEXT_PUBLIC_FEATURE_DISTRIBUTION',
 ] as const;
 
 async function loadResolver(flagsOn: boolean) {
@@ -445,5 +446,21 @@ describe('the activity list as a scene', () => {
   it('is not flag-gated — it is the fallback, so it must always resolve', async () => {
     const { resolveActiveScene } = await loadResolver(false);
     expect(resolveActiveScene('activities')).toBe('activities');
+  });
+});
+
+describe('the distribute scene (2026-10-03)', () => {
+  it('opens only with its flag on, and falls back to the release with it off', async () => {
+    const on = await loadResolver(true);
+    expect(on.resolveActiveScene('distribute')).toBe('distribute');
+    const off = await loadResolver(false);
+    expect(off.resolveActiveScene('distribute')).toBeNull();
+  });
+
+  it('fetches for itself, so it is never cached or persisted', async () => {
+    const mod = await loadResolver(true);
+    expect(mod.isCacheableScene('distribute')).toBe(false);
+    expect(mod.SCENE_PERSISTED.distribute).toBe(false);
+    expect([...mod.SCENE_PREFETCH_ORDER] as string[]).not.toContain('distribute');
   });
 });
