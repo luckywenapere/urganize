@@ -63,6 +63,20 @@ export type AutofillMember = {
   email: string;
 };
 
+/**
+ * What the newest rollout's pitch kit holds (release_epk_fields), for the ONE
+ * release it belongs to. Carrying the release id is the safeguard: a story is
+ * only ever used when it is about the same release the kit is pointing at, so
+ * a stale or mismatched row can never put one release's words on another.
+ */
+export type AutofillPitchKit = {
+  releaseId: string;
+  story: string;
+  /** null = the manager made no list (use the collaborators' submissions); an
+   *  empty array is a list they cleared on purpose, and is theirs. */
+  credits: { name: string; role: string }[] | null;
+};
+
 export type AutofillSources = {
   /** Every release for this artist. Order does not matter: the newest is
    *  picked here, by date, rather than trusted from the query. */
@@ -73,6 +87,8 @@ export type AutofillSources = {
   credits: AutofillCredit[];
   shows: AutofillShow[];
   members: AutofillMember[];
+  /** The rollout pitch kit for the newest release, when there is one. */
+  pitchKit?: AutofillPitchKit | null;
 };
 
 export type AutofillPatch = {
@@ -137,12 +153,17 @@ const buildHeader = (sources: AutofillSources): PressKitSectionContent | null =>
 const buildLatestRelease = (sources: AutofillSources): PressKitSectionContent | null => {
   const release = newestRelease(sources.releases);
   if (!release) return null;
+  const story =
+    sources.pitchKit && sources.pitchKit.releaseId === release.id ? clean(sources.pitchKit.story) : '';
   return {
     releaseId: release.id,
     title: clean(release.title),
     releaseType: clean(release.releaseType),
     releaseDate: clean(release.releaseDate),
     description: clean(release.description),
+    // The story the team wrote for this rollout's pitch. Present only when
+    // there is one, so a release without a pitch kit builds exactly as before.
+    ...(story ? { story } : {}),
   };
 };
 
@@ -159,6 +180,23 @@ const buildMusic = (sources: AutofillSources): PressKitSectionContent | null => 
 };
 
 const buildCredits = (sources: AutofillSources): PressKitSectionContent | null => {
+  // The manager's own list for this rollout wins over the raw submissions,
+  // when it is about the release the kit points at. Rebuilt into the same four
+  // fields a collaborator credit carries, so the public page and the roll in
+  // see one shape. An empty list is the manager's too: they cleared it.
+  const release = newestRelease(sources.releases);
+  const own = sources.pitchKit;
+  if (own && release && own.releaseId === release.id && own.credits !== null) {
+    if (own.credits.length === 0) return null;
+    return {
+      credits: own.credits.map((credit) => ({
+        legalName: clean(credit.name),
+        stageName: clean(credit.name),
+        roles: clean(credit.role) ? [clean(credit.role)] : [],
+        contribution: '',
+      })),
+    };
+  }
   if (sources.credits.length === 0) return null;
   return {
     credits: sources.credits.map((credit) => ({

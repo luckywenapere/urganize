@@ -167,3 +167,37 @@ export function pitchKitChecklist(input: {
     { key: 'kit', done: input.kitPublished, label: 'The artist press kit is published' },
   ];
 }
+
+
+/**
+ * The start of a rollout's story, sized for a playlist pitch note.
+ *
+ * A pitch note is one short paragraph (300 characters, MAX_PITCH_NOTE_LENGTH)
+ * and a story can be thousands, so this keeps WHOLE sentences from the front
+ * until the next would not fit. Only when even the first sentence is too long
+ * does it cut, at a word, with an ellipsis, so a note never ends mid-word.
+ *
+ * Written without a regex lookbehind on purpose: Safari before 16.4 fails to
+ * PARSE a lookbehind, which would take down the whole bundle, not just this.
+ */
+export function pitchNoteFromStory(story: string, max = 300): string {
+  const text = (typeof story === 'string' ? story : '').replace(/\s+/g, ' ').trim();
+  if (!text || max < 1) return '';
+  if (text.length <= max) return text;
+
+  const sentences = text.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g) ?? [text];
+  let note = '';
+  for (const sentence of sentences) {
+    const piece = sentence.trim();
+    const next = note ? `${note} ${piece}` : piece;
+    if (next.length > max) break;
+    note = next;
+  }
+  if (note) return note;
+
+  if (max === 1) return '…';
+  const room = text.slice(0, max - 1);
+  const lastSpace = room.lastIndexOf(' ');
+  const cut = (lastSpace > 0 ? room.slice(0, lastSpace) : room).replace(/[\s,;:.!?-]+$/, '');
+  return `${cut}…`;
+}

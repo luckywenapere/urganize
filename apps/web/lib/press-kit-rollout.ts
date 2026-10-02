@@ -152,6 +152,11 @@ export function mergeProposedContent(
   const next: PressKitSectionContent = { ...current, ...incoming };
 
   if (section === 'latest_release') {
+    // The story is never typed into the kit: it is copied from the rollout's
+    // pitch kit, so it always mirrors what is proposed. Without this, a release
+    // with no story would keep showing the PREVIOUS release's story.
+    if (!str(incoming.story)) delete next.story;
+
     const wasAbout = str(current.releaseId);
     const isAbout = str(incoming.releaseId);
     if (wasAbout && isAbout && wasAbout !== isAbout) {

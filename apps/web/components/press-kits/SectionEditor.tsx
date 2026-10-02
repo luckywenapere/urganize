@@ -282,6 +282,17 @@ export function SectionEditor({ section, draft, readOnly, setField, onBlur, phot
         <div className="space-y-4">
           {text('hook', 'The hook', 'What makes this one worth writing about?')}
           {text('quote', 'A line from the artist', 'In their own words.')}
+          {str(draft.story) ? (
+            <div className="rounded-xl border border-stroke-default bg-bg-surface px-4 py-3">
+              <p className="text-sm font-medium text-content-primary">The story</p>
+              <p className="mt-1 line-clamp-4 whitespace-pre-line text-sm text-content-secondary">
+                {str(draft.story)}
+              </p>
+              <p className="mt-2 text-xs text-content-tertiary">
+                This comes from the rollout&apos;s Pitch kit. Change it there, then accept the update here.
+              </p>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

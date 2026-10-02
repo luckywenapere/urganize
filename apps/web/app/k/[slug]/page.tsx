@@ -152,6 +152,7 @@ function SectionBody({
   if (section === 'latest_release') {
     const title = str(content.title);
     const hook = str(content.hook);
+    const story = str(content.story);
     const date = str(content.releaseDate);
     return (
       <div className="space-y-2">
@@ -168,6 +169,14 @@ function SectionBody({
         {hook ? (
           <p className="text-[15px] leading-relaxed" style={{ color: MUTED }}>
             {hook}
+          </p>
+        ) : null}
+        {story ? (
+          <p
+            className="whitespace-pre-line text-[15px] leading-relaxed"
+            style={{ color: MUTED }}
+          >
+            {story}
           </p>
         ) : null}
       </div>

@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { deriveSectionStatus } from '@/lib/press-kits';
 import { loadWorkspaceMembers } from '@/lib/tasks-server';
+import { readStoredFields } from '@/lib/release-epk';
+import { RELEASE_EPK_FIELDS_TABLE, isPitchKitEnabled } from '@/lib/release-epk-server';
 import {
   buildAutofillPatch,
   summarizeSources,
@@ -114,7 +116,7 @@ export async function loadPressKitSources(
     const anchor =
       releases.find((release) => release.releaseDate) || releases[0] || null;
 
-    const [metadataResult, songResult, creditResult, showResult, members] = await Promise.all([
+    const [metadataResult, songResult, creditResult, showResult, members, pitchKitResult] = await Promise.all([
       anchor
         ? adminClient
             .from('release_metadata')
@@ -147,6 +149,16 @@ export async function loadPressKitSources(
       // gets its own catch: a team we cannot read costs the contact block, not
       // the whole fill.
       loadWorkspaceMembers(adminClient, workspaceId, ownerUserId).catch(() => []),
+      // The rollout's own story and credits, when the pitch kit is switched on.
+      // A missing table or a failed read costs only this feed: a kit without a
+      // story is a working kit.
+      anchor && isPitchKitEnabled()
+        ? adminClient
+            .from(RELEASE_EPK_FIELDS_TABLE)
+            .select('story,story_source,credits')
+            .eq('release_id', anchor.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
     ]);
 
     const metadataRow =
@@ -179,6 +191,11 @@ export async function loadPressKitSources(
             };
           });
 
+    const pitchFields =
+      anchor && pitchKitResult && !pitchKitResult.error && pitchKitResult.data
+        ? readStoredFields(pitchKitResult.data)
+        : null;
+
     const shows: AutofillShow[] =
       showResult.error || !Array.isArray(showResult.data)
         ? []
@@ -203,6 +220,10 @@ export async function loadPressKitSources(
       songs,
       credits,
       shows,
+      pitchKit:
+        anchor && pitchFields
+          ? { releaseId: anchor.id, story: pitchFields.story, credits: pitchFields.credits }
+          : null,
       members: (members || []).map((member) => ({
         name: text(member.name),
         email: text(member.email),
