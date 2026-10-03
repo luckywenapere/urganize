@@ -7,6 +7,7 @@ import type { CreditSubmissionEmailProps } from './CreditSubmissionEmail';
 import type { TaskAssignedEmailProps } from './TaskAssignedEmail';
 import type { WorkRequestEmailProps } from './WorkRequestEmail';
 import type { WorkRequestAnswerEmailProps } from './WorkRequestAnswerEmail';
+import type { ReferralRewardEmailProps } from './ReferralRewardEmail';
 import type { FounderBillingAlertEmailProps } from './FounderBillingAlertEmail';
 import type { NotifyAdminEmailProps } from './NotifyAdminEmail';
 import type { PitchNoticeEmailProps } from './PitchNoticeEmail';
@@ -21,6 +22,7 @@ export type EmailTemplateProps = {
   task_assigned: TaskAssignedEmailProps;
   work_request: WorkRequestEmailProps;
   work_request_answer: WorkRequestAnswerEmailProps;
+  referral_reward: ReferralRewardEmailProps;
   founder_billing_alert: FounderBillingAlertEmailProps;
   notify_admin: NotifyAdminEmailProps;
   pitch_notice: PitchNoticeEmailProps;

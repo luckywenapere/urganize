@@ -77,6 +77,13 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description: 'Tells the asker whether the person is interested, and hands over contact on yes.',
     placeholderCopy: false,
   },
+  referral_reward: {
+    id: 'referral_reward',
+    category: 'transactional',
+    name: 'Referral reward',
+    description: 'Tells a team it earned credits because a team it invited made its first payment.',
+    placeholderCopy: false,
+  },
   founder_billing_alert: {
     id: 'founder_billing_alert',
     category: 'internal',

@@ -130,6 +130,26 @@ export function decideClawback(
   return { clawback: true, take, shortfall: reward - take };
 }
 
+/** Where "you earned credits" points: the credit history shows the reward. */
+export const REFERRAL_REWARD_URL = '/dashboard/credits';
+
+/**
+ * The push for an earned reward. It names no one: the invited team did not agree
+ * to be named. The tag is per invited team, so two rewards earned minutes apart
+ * stack instead of the second replacing the first.
+ */
+export function buildReferralRewardPush(
+  credits: number,
+  referredWorkspaceId: string
+): { title: string; body: string; url: string; tag: string } {
+  return {
+    title: `You earned ${credits} credits`,
+    body: 'A team you invited just subscribed.',
+    url: REFERRAL_REWARD_URL,
+    tag: `urganize-referral-reward-${referredWorkspaceId}`,
+  };
+}
+
 /** The ledger key that makes a clawback happen once. */
 export function clawbackDedupeKey(referredWorkspaceId: string): string {
   return `referral-clawback:${referredWorkspaceId}`;

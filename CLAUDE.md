@@ -18430,6 +18430,17 @@ The strategy doc names it in three places and defines none of it: "Referral cred
 9. **The Settings section draws nothing unless it has something true to say.** `components/settings/ReferralInviteSection.tsx` sits at the bottom of Settings → Team (managers only). Both flags off, a person who does not own a team (the code belongs to the owner's team), or a failed load all render nothing. `GET /api/referrals/mine` creates the team's code on first view, finds the team from the signed-in user and never from the request, and is an open route (no paywall) because a walled team is exactly one that might want the credits.
 10. **Both new tables have row level security and no policies.** Every read and write is a service-role route. A structural test lists the only file allowed to touch each.
 
+### The inviter is told when they earn credits (2026-10-03)
+
+When a reward is paid, `rewardReferrerOnFirstPayment` calls `notifyReferrerOfReward` (`lib/referrals-server.ts`): a push and an email to the inviting team's owner, both every time (the credits-submitted precedent). The email is the `referral_reward` template (transactional, so it always sends); the push copy is `buildReferralRewardPush` in `lib/referral-credits.ts`. Both link to `/dashboard/credits`.
+
+1. **Told once.** It runs only when THIS call paid the reward: a redelivery stops at `decideReward` (already rewarded) or at the ledger key refusing a second row, so the owner is never told twice. A test covers the awkward case, credits paid earlier but the row never stamped.
+2. **Names no one.** The invited team did not agree to be named, so both say "a team you invited". The push tag is per invited team, so two rewards earned minutes apart stack instead of the second replacing the first.
+3. **Never throws and never fails the payment.** The push and the email run side by side and each catches its own failure; the reward is already paid and nothing here is worth failing a webhook over. Not the in-app bell (task-scoped, desktop-only).
+4. **Not told when it is taken back.** A refund that reverses a reward writes the history line "Invite reward taken back" but sends nothing. Add one if wanted.
+
+Verified: 8 tests drive the real reward path with push and email mocked, and 7 deliberate breaks were each caught by a named test. Not verified: nothing has been delivered to a real inbox or phone.
+
 ### Refunds take the reward back (2026-10-03)
 
 When the payment that earned a reward is refunded in full, the reward comes back. The Paystack webhook's `refund.processed` branch (the one `handlePitchRefund` already owned) calls `handleRefundForReferrals` (`lib/referrals-server.ts`) first, and a pitch refund, which names no recorded charge, finds nothing and carries on as before. Migration `20261003120000_referral_reward_reversal.sql` adds `reversed_at` and `reversed_credits` to `user_referrals`; **apply it before this ships**, because the Settings stats and the reward cap both select `reversed_at`.
@@ -18454,7 +18465,7 @@ Nothing has run against a real database, a delivered webhook or a real signup. T
 
 ### Not built
 
-A bonus for the invited team; a "referred signups" figure on the scoreboard (the table is there to count from); an email or push telling the inviting team it earned credits (it appears in the credit history and the balance).
+A bonus for the invited team.
 
 ### Activation
 

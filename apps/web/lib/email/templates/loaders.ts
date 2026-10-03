@@ -54,6 +54,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.workRequestAnswerSubject(p.answererName, p.roleLabel, p.interested),
     };
   },
+  referral_reward: async () => {
+    const m = await import('./ReferralRewardEmail');
+    return {
+      element: (p) => createElement(m.ReferralRewardEmail, p),
+      subject: (p) => m.referralRewardSubject(p.credits),
+    };
+  },
   founder_billing_alert: async () => {
     const [m, alerts] = await Promise.all([
       import('./FounderBillingAlertEmail'),

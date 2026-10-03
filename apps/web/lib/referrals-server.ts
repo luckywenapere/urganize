@@ -14,7 +14,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomInt } from 'node:crypto';
 import { logBillingEvent } from './billing-events-server';
 import { adjustCredits, readBalances } from './credits/credits-server';
+import { isEmailConfigured, sendEmail } from './email';
+import { APP_URL } from './email/links';
+import { sendPushToUsers } from './push-server';
 import {
+  REFERRAL_REWARD_URL,
+  buildReferralRewardPush,
   buildReferralStats,
   clawbackDedupeKey,
   decideClawback,
@@ -397,9 +402,58 @@ export async function rewardReferrerOnFirstPayment(
       .eq('referred_workspace_id', referredId)
       .is('rewarded_at', null);
     if (marked.error) console.error('[referrals] reward paid but not marked:', marked.error.message, input.reference);
+
+    // Told once, and only when THIS call paid the reward: a redelivery stops at
+    // `if (!granted) return` above, so it can never tell them twice.
+    await notifyReferrerOfReward(admin, {
+      ownerUserId: referrerOwner,
+      credits: decision.credits,
+      referredWorkspaceId: referredId,
+    });
   } catch (error) {
     console.error('[referrals] rewarding a referrer threw:', error);
   }
+}
+
+/**
+ * Push and email the inviting team's owner that they earned credits. Both, every
+ * time (the credits-submitted precedent): the push is the ping, the email is
+ * the record. Never throws, and a failure of one never stops the other, because
+ * the reward is already paid and nothing here is worth failing a payment over.
+ * Not the in-app bell: it is task-scoped and desktop-only.
+ */
+async function notifyReferrerOfReward(
+  admin: SupabaseClient,
+  input: { ownerUserId: string; credits: number; referredWorkspaceId: string }
+): Promise<void> {
+  const push = buildReferralRewardPush(input.credits, input.referredWorkspaceId);
+  await Promise.all([
+    sendPushToUsers(admin, [input.ownerUserId], push).catch((error) =>
+      console.error('[referrals] reward push failed:', error instanceof Error ? error.message : error)
+    ),
+    (async () => {
+      try {
+        if (!isEmailConfigured()) return;
+        const { data } = await admin.auth.admin.getUserById(input.ownerUserId);
+        const email = data?.user?.email;
+        if (!email) return;
+        const metadataName = data.user?.user_metadata?.name;
+        await sendEmail(admin, {
+          templateId: 'referral_reward',
+          to: email,
+          props: {
+            recipientName: typeof metadataName === 'string' ? metadataName : '',
+            credits: input.credits,
+            creditsUrl: `${APP_URL}${REFERRAL_REWARD_URL}`,
+          },
+          trigger: 'referral_reward',
+          recipientUserId: input.ownerUserId,
+        });
+      } catch (error) {
+        console.error('[referrals] reward email failed:', error instanceof Error ? error.message : error);
+      }
+    })(),
+  ]);
 }
 
 // ---------------------------------------------------------------- refunds
