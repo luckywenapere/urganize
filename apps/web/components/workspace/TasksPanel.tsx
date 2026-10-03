@@ -23,6 +23,7 @@ import {
 import { matchesSearchTerms, parseSearchTerms, searchTasks } from '@/lib/task-search';
 import { appPageHaystack, buildAppPages, type AppPage } from '@/lib/app-pages';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
+import { watchNavigationStall } from '@/lib/nav-stall-watch';
 import { useAuthStore } from '@/lib/auth-store';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
@@ -471,6 +472,11 @@ export function TasksPanel({
   };
 
   const handleMoreMenuSelect = (action: MoreMenuAction) => {
+    // Scene toggles change the address; dialog rows leave isActive undefined.
+    // Same rule as the desktop RolloutMenu, so both surfaces report alike.
+    if (action.isActive !== undefined) {
+      watchNavigationStall(`rollout_menu:${action.key}`);
+    }
     action.onClick();
     closeMobilePanels();
   };

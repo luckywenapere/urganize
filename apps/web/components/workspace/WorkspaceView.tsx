@@ -7,6 +7,7 @@ import { AlertCircle, ArrowLeft } from '@/components/icons';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import { useAuthStore } from '@/lib/auth-store';
 import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
+import { watchNavigationStall } from '@/lib/nav-stall-watch';
 import { isTestReleaseEnabled, readTestRelease } from '@/lib/test-release';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
@@ -1027,6 +1028,10 @@ export function WorkspaceView() {
   // a forward move, and desktop deselects must not grow history with duplicate
   // catalog entries.
   const goBack = () => {
+    // Reports `nav_stalled` if the address has not changed 1.5s from now, so a
+    // back tap that looks dead (PostHog rage clicks, 2026-10-03) says whether
+    // the router was slow or stuck. Does nothing to the click itself.
+    watchNavigationStall('release_back_arrow');
     // The fifth "leave this release for the catalog" surface. It does not call
     // leaveReleaseForCatalog(), because setScope's `forgetScene` already does
     // the scene half properly (it knows the OUTGOING release without re-reading
