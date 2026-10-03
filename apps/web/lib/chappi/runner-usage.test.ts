@@ -23,6 +23,7 @@ import { runChappiAgent } from './runner';
 import type { ChappiToolContext } from './tools';
 import { decisionForTier } from '@/lib/ai/model-router';
 import { turnCharge } from '@/lib/credits/pricing';
+import { usageFromError } from '@/lib/ai/usage-log';
 
 const ctx = {
   user: { id: 'user-1', email: 'manager@example.com' },
@@ -133,5 +134,52 @@ describe('usageCalls', () => {
     fetchMock.mockResolvedValue(reply({ error: { message: 'bad key' } }, 401));
 
     await expect(runChappiAgent({ ctx, system: 'sys', messages })).rejects.toBeDefined();
+  });
+});
+
+// What the usage log needs from the loop. A failed turn is never CHARGED, but the
+// calls that did answer before it failed were billed to us, and an attempt that
+// failed may have been billed too. So the loop reports both, on a success and on
+// a throw, and the route that catches the throw can read them off the error.
+describe('failed attempts', () => {
+  it('reports an attempt that failed and was followed by a model that answered', async () => {
+    const decision = decisionForTier({ surface: 'chat', tier: 'pro', ceiling: 'max', env: {} });
+    fetchMock
+      .mockResolvedValueOnce(reply({ error: { message: 'slow down' } }, 429))
+      .mockResolvedValueOnce(say('Recovered.', { prompt_tokens: 10_800, completion_tokens: 60 }));
+
+    const result = await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision, now: () => 10_000_000 } });
+
+    expect(result.usageCalls).toHaveLength(1);
+    expect(result.failedCalls).toEqual([{ model: decision.model, kind: 'rate_limited' }]);
+  });
+
+  it('reports no failed attempts for a turn that went straight through', async () => {
+    fetchMock.mockResolvedValue(say('Hi.', { prompt_tokens: 10_800, completion_tokens: 40 }));
+    const result = await runChappiAgent({ ctx, system: 'sys', messages });
+    expect(result.failedCalls).toEqual([]);
+  });
+
+  it('carries the calls already made, and the attempt that failed, on the error it throws', async () => {
+    fetchMock
+      .mockResolvedValueOnce(callTool('list_releases', { prompt_tokens: 10_800, completion_tokens: 80 }))
+      .mockResolvedValueOnce(reply({ error: { message: 'bad key' } }, 401));
+
+    let thrown: unknown;
+    try {
+      await runChappiAgent({ ctx, system: 'sys', messages });
+    } catch (error) {
+      thrown = error;
+    }
+
+    const carried = usageFromError(thrown);
+    expect(carried.usageCalls).toHaveLength(1);
+    expect(carried.usageCalls[0].promptTokens).toBe(10_800);
+    expect(carried.failedCalls).toEqual([{ model: 'openai/gpt-4o-mini', kind: expect.any(String) }]);
+  });
+
+  it('still throws the same error, unchanged', async () => {
+    fetchMock.mockResolvedValue(reply({ error: { message: 'bad key' } }, 401));
+    await expect(runChappiAgent({ ctx, system: 'sys', messages })).rejects.toMatchObject({ status: 401 });
   });
 });

@@ -38,6 +38,13 @@ export const NAIRA_PER_CREDIT_SUBSCRIBER = NAIRA_PER_USD * CREDIT_USD;
 export const NAIRA_PER_CREDIT_CREDITS_ONLY = NAIRA_PER_CREDIT_SUBSCRIBER * 2;
 
 /** One call to the gateway, as the runner saw it. A field is null when the gateway did not say. */
+/**
+ * A provider call that did not return an answer: the model it used (null when
+ * the gateway chose) and the router's word for why. Kept beside UsageCall so the
+ * pure credits modules can carry it without importing anything outside lib/credits.
+ */
+export type FailedCall = { model: string | null; kind: string };
+
 export type UsageCall = {
   model: string;
   promptTokens: number | null;

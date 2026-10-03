@@ -37,6 +37,7 @@ import {
   type RoutingTrace,
 } from '@/lib/ai/model-router';
 import { logRoutingTrace } from '@/lib/ai/routing-log';
+import { attachUsageToError, type FailedCall } from '@/lib/ai/usage-log';
 import {
   effortForTools,
   extractAiUsage,
@@ -463,6 +464,12 @@ export type ChappiAgentResult = {
    * nothing was called. Collected whether or not the router is on.
    */
   usageCalls: UsageCall[];
+  /**
+   * The attempts this turn made that returned no answer, with the model each used
+   * and why it failed. Not charged and never part of `usageCalls`; the usage log
+   * reads them, because a call that failed may still have been billed to us.
+   */
+  failedCalls: FailedCall[];
   reply: string;
   clientActions: ChappiClientAction[];
   pendingConfirmation: ChappiPendingConfirmation | null;
@@ -525,6 +532,7 @@ export async function runChappiAgent(params: {
 
   const clientActions: ChappiClientAction[] = [];
   const usageCalls: UsageCall[] = [];
+  const failedCalls: FailedCall[] = [];
   let finalText = '';
   // At most one card per turn: the client has a single slot for it, and two
   // competing "are you sure?" asks would be incoherent.
@@ -586,6 +594,7 @@ export async function runChappiAgent(params: {
         });
       } catch (error) {
         const failure = classifyAiFailure(error);
+        failedCalls.push({ model: settings.model, kind: failure.kind });
         if (hop(holder, { kind: failure.kind, retryAfterMs: failure.retryAfterMs })) continue;
         throw error;
       }
@@ -752,6 +761,9 @@ export async function runChappiAgent(params: {
     trace.latencyMs = clock() - startedAt;
     trace.rounds = rounds;
     logRoutingTrace(trace, true);
+    // The turn failed and is not charged, but its earlier rounds were billed to us.
+    // The route that catches this reads them off the error to record the cost.
+    attachUsageToError(error, { usageCalls, failedCalls });
     throw error;
   }
 
@@ -769,7 +781,7 @@ export async function runChappiAgent(params: {
     : cutShort
       ? `${finalText}\n\n${LENGTH_NOTE}`
       : finalText || 'Done.';
-  return { reply, clientActions, pendingConfirmation, trace, usageCalls };
+  return { reply, clientActions, pendingConfirmation, trace, usageCalls, failedCalls };
 }
 
 /**

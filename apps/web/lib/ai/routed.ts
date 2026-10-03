@@ -12,6 +12,7 @@ import {
   type TeamForRouting,
 } from './model-router';
 import { logRoutingTrace } from './routing-log';
+import type { FailedCall } from './usage-log';
 import {
   generatePlainTextAiOutput,
   generateStructuredAiOutput,
@@ -54,6 +55,14 @@ type RoutedCommon = {
   /** Absolute epoch ms. A hop must be able to finish before it. */
   deadlineMs?: number;
   onUsage?: (usage: AiUsage) => void;
+  /**
+   * Called for every attempt that did NOT return an answer, with the model it
+   * used (null when the gateway chose) and the router's word for why. The usage
+   * log reads it: a failed call may still have been billed, and nothing else
+   * reports it. Whether the router is off, in shadow or on, and whether or not
+   * it then moves to another model, each failed attempt is reported once.
+   */
+  onFailure?: (failure: FailedCall) => void;
   /** Called once when the request finishes, whether it worked or not. */
   onTrace?: (trace: RoutingTrace) => void;
   /** An explicit effort (for the planner, AI_PLANNER_REASONING_EFFORT) beats the rung's. */
@@ -76,13 +85,27 @@ async function runRouted<R>(common: RoutedCommon, call: (attempt: Attempt) => Pr
   const mode = effectiveRouterMode(common.surface, env);
   const legacyModel = legacyModelFor(common.surface, env);
 
+  const reportFailure = (model: string | null, error: unknown, badOutput = false) => {
+    if (!common.onFailure) return;
+    const classified = classifyAiFailure(error);
+    common.onFailure({ model, kind: badOutput ? 'bad_output' : classified.kind });
+  };
+
   if (mode === 'off') {
-    return call({
-      model: legacyModel,
-      reasoningEffort: common.reasoningEffort,
-      onUsage: (usage) => common.onUsage?.(usage),
-      markBadOutput: () => {},
-    });
+    let badOutput = false;
+    try {
+      return await call({
+        model: legacyModel,
+        reasoningEffort: common.reasoningEffort,
+        onUsage: (usage) => common.onUsage?.(usage),
+        markBadOutput: () => {
+          badOutput = true;
+        },
+      });
+    } catch (error) {
+      reportFailure(legacyModel ?? null, error, badOutput);
+      throw error;
+    }
   }
 
   const decision = routeModel({ surface: common.surface, team: common.team, env });
@@ -102,15 +125,19 @@ async function runRouted<R>(common: RoutedCommon, call: (attempt: Attempt) => Pr
     trace.wouldUseModel = decision.model;
     noteModelCalled(trace, legacyModel ?? GATEWAY_DEFAULT_LABEL);
     let failed = false;
+    let shadowBadOutput = false;
     try {
       return await call({
         model: legacyModel,
         reasoningEffort: common.reasoningEffort,
         onUsage: reportUsage,
-        markBadOutput: () => {},
+        markBadOutput: () => {
+          shadowBadOutput = true;
+        },
       });
     } catch (error) {
       failed = true;
+      reportFailure(legacyModel ?? null, error, shadowBadOutput);
       throw error;
     } finally {
       finish(failed);
@@ -138,6 +165,7 @@ async function runRouted<R>(common: RoutedCommon, call: (attempt: Attempt) => Pr
       // A parse that returned nothing is the provider throwing a plain Error;
       // the flag is what says it was the answer that was bad, not the gateway.
       const failure = badOutput ? { ...classified, kind: 'bad_output' as const } : classified;
+      common.onFailure?.({ model: current.model, kind: failure.kind });
       const next = nextAfterFailure({ decision: current, failure, deadlineMs: common.deadlineMs, env });
       if (!next) {
         trace.endTier = current.tier;
@@ -163,8 +191,8 @@ export async function generateRoutedStructuredOutput<T>(
     temperature?: number;
   }
 ): Promise<T> {
-  const { surface, team, env, deadlineMs, onUsage, onTrace, reasoningEffort, parse, ...rest } = params;
-  return runRouted({ surface, team, env, deadlineMs, onUsage, onTrace, reasoningEffort }, (attempt) =>
+  const { surface, team, env, deadlineMs, onUsage, onFailure, onTrace, reasoningEffort, parse, ...rest } = params;
+  return runRouted({ surface, team, env, deadlineMs, onUsage, onFailure, onTrace, reasoningEffort }, (attempt) =>
     generateStructuredAiOutput<T>({
       ...rest,
       model: attempt.model,
@@ -188,8 +216,8 @@ export async function generateRoutedPlainText(
     maxRetries?: number;
   }
 ): Promise<string> {
-  const { surface, team, env, deadlineMs, onUsage, onTrace, reasoningEffort, ...rest } = params;
-  return runRouted({ surface, team, env, deadlineMs, onUsage, onTrace, reasoningEffort }, (attempt) =>
+  const { surface, team, env, deadlineMs, onUsage, onFailure, onTrace, reasoningEffort, ...rest } = params;
+  return runRouted({ surface, team, env, deadlineMs, onUsage, onFailure, onTrace, reasoningEffort }, (attempt) =>
     generatePlainTextAiOutput({
       ...rest,
       model: attempt.model,

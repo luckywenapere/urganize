@@ -36,6 +36,8 @@ import { outOfCreditsNotice } from '@/lib/credits/copy';
 import { getCreditSnapshot, settleTurn, type CreditSnapshot } from '@/lib/credits/credits-server';
 import { canStartTurn, holdCredits, holdOutputTokens, turnCharge } from '@/lib/credits/pricing';
 import { randomUUID } from 'node:crypto';
+import { usageFromError, type UsageLogContext } from '@/lib/ai/usage-log';
+import { recordRequestUsage } from '@/lib/ai/usage-log-server';
 import { recordLimitHit } from '@/lib/seats-server';
 import { CHAPPI_HISTORY_LIMIT } from '@/lib/chappi/conversation-history';
 
@@ -287,13 +289,45 @@ export async function POST(request: NextRequest) {
       onText: (delta: string) => void;
       onAttempt: () => void;
     }): Promise<ChappiResponse> => {
-      const { reply, clientActions, pendingConfirmation, trace, usageCalls } = await runChappiAgent({
-        ctx,
-        system,
-        messages: trimmed,
-        ...(plan.mode === 'on' ? { routing: plan.routing } : {}),
-        ...(stream ?? {}),
-      });
+      // One id for the turn: the ledger's spend row and the usage log's rows both
+      // carry it, which is how a charge is set beside what the turn cost us.
+      const requestId = randomUUID();
+      // The AI usage log (lib/ai/usage-log.ts). The release is the one the
+      // conversation was scoped to, if any: parseReleaseScope has checked its
+      // shape, and the log checks it is a uuid before it is written.
+      const usageContext: UsageLogContext = {
+        requestId,
+        feature: 'chat',
+        workspaceId: team.primaryWorkspaceId ?? null,
+        ownerUserId: team.ownerUserId ?? null,
+        actorUserId: auth.user.id,
+        releaseId: releaseScope?.id ?? null,
+      };
+
+      let agent: Awaited<ReturnType<typeof runChappiAgent>>;
+      try {
+        agent = await runChappiAgent({
+          ctx,
+          system,
+          messages: trimmed,
+          ...(plan.mode === 'on' ? { routing: plan.routing } : {}),
+          ...(stream ?? {}),
+        });
+      } catch (error) {
+        // A failed turn is not charged, but the rounds that did answer before it
+        // failed were billed to us, and so may be the attempt that failed. Record
+        // them, then fail exactly as before. Never throws.
+        const carried = usageFromError(error);
+        await recordRequestUsage(auth.adminClient, {
+          context: usageContext,
+          calls: carried.usageCalls,
+          failures: carried.failedCalls,
+          creditsCharged: 0,
+        });
+        throw error;
+      }
+      const { reply, clientActions, pendingConfirmation, trace, usageCalls } = agent;
+      const failedCalls = agent.failedCalls ?? [];
 
       // The record of what the router did (or, in shadow, would have done). Absent
       // for a turn it did not touch, so that row is what it always was.
@@ -305,8 +339,10 @@ export async function POST(request: NextRequest) {
       // Charged after the turn succeeded, so a gateway failure is never charged.
       // The cost is written onto the turn's billing event as well as the ledger, so
       // a charge the ledger failed to take can be found and reconciled from here.
+      let creditsCharged = 0;
       if (creditsOn && credits && team.primaryWorkspaceId) {
         const charge = turnCharge(usageCalls);
+        creditsCharged = charge.credits;
         metadata = {
           ...(metadata ?? {}),
           credits: { charged: charge.credits, rodi: Math.round(charge.rodi * 1000) / 1000, assumed: charge.assumed },
@@ -315,12 +351,21 @@ export async function POST(request: NextRequest) {
           workspaceId: team.primaryWorkspaceId,
           ownerUserId: team.ownerUserId,
           actorUserId: auth.user.id,
-          requestId: randomUUID(),
+          requestId,
           charge,
           calls: usageCalls,
           balances: credits,
         });
       }
+
+      // Recorded for every turn, charged or not: credits may be off, and the cost
+      // of a turn is worth knowing either way. Never throws.
+      await recordRequestUsage(auth.adminClient, {
+        context: usageContext,
+        calls: usageCalls,
+        failures: failedCalls,
+        creditsCharged,
+      });
 
       // Counted after the turn succeeded, so a gateway failure is never charged.
       if (team.primaryWorkspaceId) {

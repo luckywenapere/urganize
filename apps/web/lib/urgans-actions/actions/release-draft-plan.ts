@@ -160,13 +160,20 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
       reasoningEffort: resolvePlannerReasoningEffort(),
       deadlineMs: Date.now() + PLANNER_DEADLINE_MS,
       onUsage: collector.onUsage,
+      onFailure: collector.onFailure,
       onTrace: (trace) => {
         routed = trace;
       },
     });
 
     if (!result.ok) {
-      return { ok: false, status: result.status, error: result.error };
+      return {
+        ok: false,
+        status: result.status,
+        error: result.error,
+        usageCalls: collector.calls,
+        failedCalls: collector.failures,
+      };
     }
 
     const trace = routed as RoutingTrace | null;
@@ -187,6 +194,7 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
       tokensIn: sumTokens(collector.calls.map((call) => call.promptTokens)),
       tokensOut: sumTokens(collector.calls.map((call) => call.completionTokens)),
       usageCalls: collector.calls,
+      failedCalls: collector.failures,
     };
   },
 

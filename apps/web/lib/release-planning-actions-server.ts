@@ -74,6 +74,7 @@ export { summarizeRemovedTasks };
 export type { CreatedPlan, RemovedTaskSummary };
 import { isAiConfigured, type AiUsage, type ReasoningEffort } from './ai/provider';
 import { generateRoutedStructuredOutput } from './ai/routed';
+import type { FailedCall } from './ai/usage-log';
 import type { RoutingTrace, TeamForRouting } from './ai/model-router';
 import { getTemplate } from './release-templates/loader';
 import type { Template } from './release-templates/types';
@@ -325,6 +326,8 @@ export async function createReleasePlan(
      *  returned a payload (see lib/ai/provider.ts's own contract) — for the
      *  embedded action's urgans_actions logging. */
     onUsage?: (usage: AiUsage) => void;
+    /** Reports each tailoring attempt that returned no answer, for the usage log. */
+    onFailure?: (failure: FailedCall) => void;
     /** What the model router did for the tailoring call, once, when it did
      *  anything (never with the router off). Which model really answered is
      *  the last entry of `models`. */
@@ -343,6 +346,7 @@ export async function createReleasePlan(
     reasoningEffort,
     deadlineMs,
     onUsage,
+    onFailure,
     onTrace,
   } = params;
   const releaseId = release.id;
@@ -483,6 +487,7 @@ export async function createReleasePlan(
         reasoningEffort,
         deadlineMs,
         onUsage,
+        onFailure,
         onTrace,
       });
     } catch (error) {
