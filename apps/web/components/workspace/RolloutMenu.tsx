@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { sceneRowTarget } from '@/lib/nav-stall';
 import { watchNavigationStall } from '@/lib/nav-stall-watch';
 import { useChappiStore } from '@/stores/useChappiStore';
 import type { RolloutMenuAction } from './useRolloutMenuActions';
@@ -104,7 +105,10 @@ export function RolloutMenu({ actions, releaseTitle }: RolloutMenuProps) {
                     // (Share, Archive, Change artist) leave `isActive` undefined
                     // and are expected to leave the URL alone.
                     if (action.isActive !== undefined) {
-                      watchNavigationStall(`rollout_menu:${action.key}`);
+                      watchNavigationStall(
+                        `rollout_menu:${action.key}`,
+                        sceneRowTarget(window.location.href, action.key, Boolean(action.isActive))
+                      );
                     }
                     action.onClick();
                   }}

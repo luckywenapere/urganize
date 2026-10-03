@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  NAV_RECOVER_MIN_GAP_MS,
   NAV_STALL_MAX_PER_MINUTE,
   NAV_STALL_MIN_GAP_MS,
+  allowRecovery,
   allowStallReport,
   describeConnection,
   didNavigate,
+  linkClickTarget,
+  resolveRecoverTarget,
+  sceneRowTarget,
+  shouldRecover,
   shouldReportStall,
 } from './nav-stall';
 
@@ -93,5 +99,137 @@ describe('describeConnection', () => {
       describeConnection({ effectiveType: '3g', rtt: 450, downlink: 0.7, saveData: true })
     ).toEqual({ effective_type: '3g', rtt_ms: 450, downlink_mbps: 0.7, save_data: true });
     expect(describeConnection({ effectiveType: 3, rtt: 'fast', downlink: NaN, saveData: 'yes' })).toEqual({});
+  });
+});
+
+describe('resolveRecoverTarget', () => {
+  const here = 'https://app.urganize.app/dashboard?release=1';
+
+  it('keeps a same-origin path, query and hash', () => {
+    expect(resolveRecoverTarget('/dashboard?x=1#a', here)).toBe('/dashboard?x=1#a');
+    expect(resolveRecoverTarget('https://app.urganize.app/settings', here)).toBe('/settings');
+  });
+
+  it('refuses another site', () => {
+    expect(resolveRecoverTarget('https://evil.test/dashboard', here)).toBeNull();
+    expect(resolveRecoverTarget('//evil.test/x', here)).toBeNull();
+  });
+
+  it('refuses schemes that are not web pages', () => {
+    expect(resolveRecoverTarget('javascript:alert(1)', here)).toBeNull();
+    expect(resolveRecoverTarget('mailto:a@b.test', here)).toBeNull();
+  });
+
+  it('refuses garbage', () => {
+    expect(resolveRecoverTarget('http://[::', here)).toBeNull();
+  });
+});
+
+describe('shouldRecover', () => {
+  const stuck = 'https://a.test/dashboard?release=1';
+  const base = { before: stuck, after: stuck, target: '/dashboard', visible: true, online: true };
+
+  it('recovers when nothing landed and the target is elsewhere', () => {
+    expect(shouldRecover(base)).toBe(true);
+  });
+
+  it('does not recover when the navigation landed', () => {
+    expect(shouldRecover({ ...base, after: 'https://a.test/dashboard' })).toBe(false);
+  });
+
+  it('does not recover when the person left the page', () => {
+    expect(shouldRecover({ ...base, visible: false })).toBe(false);
+  });
+
+  it('does not recover when offline, where a page load cannot work either', () => {
+    expect(shouldRecover({ ...base, online: false })).toBe(false);
+  });
+
+  it('does not recover when the target is where the page already is', () => {
+    expect(shouldRecover({ ...base, target: '/dashboard?release=1' })).toBe(false);
+  });
+
+  it('does not recover when the page moved somewhere else on its own', () => {
+    expect(shouldRecover({ ...base, after: 'https://a.test/settings' })).toBe(false);
+  });
+});
+
+describe('allowRecovery', () => {
+  it('allows the first recovery', () => {
+    expect(allowRecovery(null, 1000)).toBe(true);
+  });
+
+  it('blocks a second one inside the gap, so a failing destination cannot loop', () => {
+    expect(allowRecovery(1000, 1000 + NAV_RECOVER_MIN_GAP_MS - 1)).toBe(false);
+  });
+
+  it('allows one after the gap', () => {
+    expect(allowRecovery(1000, 1000 + NAV_RECOVER_MIN_GAP_MS)).toBe(true);
+  });
+});
+
+describe('linkClickTarget', () => {
+  const click = {
+    button: 0,
+    metaKey: false,
+    ctrlKey: false,
+    shiftKey: false,
+    altKey: false,
+    href: '/dashboard',
+    target: null,
+    hasDownload: false,
+    currentHref: 'https://a.test/dashboard/shows',
+  };
+
+  it('returns the destination of a plain left click', () => {
+    expect(linkClickTarget(click)).toBe('/dashboard');
+  });
+
+  it('ignores other mouse buttons and modified clicks', () => {
+    expect(linkClickTarget({ ...click, button: 1 })).toBeNull();
+    expect(linkClickTarget({ ...click, metaKey: true })).toBeNull();
+    expect(linkClickTarget({ ...click, ctrlKey: true })).toBeNull();
+    expect(linkClickTarget({ ...click, shiftKey: true })).toBeNull();
+    expect(linkClickTarget({ ...click, altKey: true })).toBeNull();
+  });
+
+  it('ignores links that open elsewhere or download', () => {
+    expect(linkClickTarget({ ...click, target: '_blank' })).toBeNull();
+    expect(linkClickTarget({ ...click, hasDownload: true })).toBeNull();
+  });
+
+  it('treats _self as a normal link', () => {
+    expect(linkClickTarget({ ...click, target: '_self' })).toBe('/dashboard');
+  });
+
+  it('ignores another site and a missing href', () => {
+    expect(linkClickTarget({ ...click, href: 'https://other.test/' })).toBeNull();
+    expect(linkClickTarget({ ...click, href: null })).toBeNull();
+  });
+});
+
+describe('sceneRowTarget', () => {
+  const release = 'https://a.test/dashboard?release=abc&calendar=9';
+
+  it('opens a scene that is not lit', () => {
+    expect(sceneRowTarget(release, 'metadata', false)).toBe(
+      '/dashboard?release=abc&calendar=9&scene=metadata'
+    );
+  });
+
+  it('closes a lit scene', () => {
+    expect(sceneRowTarget(`${release}&scene=metadata`, 'metadata', true)).toBe(
+      '/dashboard?release=abc&calendar=9'
+    );
+  });
+
+  it('treats the main view as no scene', () => {
+    expect(sceneRowTarget(`${release}&scene=song`, 'activities', false)).toBe(
+      '/dashboard?release=abc&calendar=9'
+    );
+  });
+
+  it('gives nothing off a release page, where there is nothing sensible to load', () => {
+    expect(sceneRowTarget('https://a.test/dashboard', 'metadata', false)).toBeNull();
   });
 });

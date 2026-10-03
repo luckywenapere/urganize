@@ -22,9 +22,20 @@ export const NAV_STALL_MAX_PER_MINUTE = 3;
 /** Where the same tap that was just reported is allowed to report again. */
 export const NAV_STALL_MIN_GAP_MS = 5000;
 
+/** How long a navigation may take before the app stops waiting for the router
+ *  and loads the page the ordinary way. Long enough that a slow-but-working
+ *  navigation on weak mobile data finishes first; short enough that a router
+ *  that has stopped answering costs seconds instead of a stuck app. */
+export const NAV_RECOVER_MS = 7000;
+
+/** At most one recovery this often, so a destination that itself fails cannot
+ *  turn into a reload loop. */
+export const NAV_RECOVER_MIN_GAP_MS = 20_000;
+
 export type NavStallLabel =
   | 'release_back_arrow'
-  | `rollout_menu:${string}`;
+  | `rollout_menu:${string}`
+  | `link:${string}`;
 
 /** The part of a URL that tells two screens apart. The hash is ignored: a hash
  *  change is not the navigation we are waiting for. */
@@ -101,4 +112,97 @@ export function describeConnection(
   }
   if (typeof connection.saveData === 'boolean') out.save_data = connection.saveData;
   return out;
+}
+
+
+/**
+ * Turn a link or a computed destination into an address we are willing to load.
+ * Same-origin http(s) only: this value is handed to `location.assign`, so
+ * anything else (another site, `javascript:`, `mailto:`, garbage) is refused.
+ * Returns the path, query and hash, never the origin.
+ */
+export function resolveRecoverTarget(raw: string, currentHref: string): string | null {
+  try {
+    const current = new URL(currentHref);
+    const target = new URL(raw, current);
+    if (target.protocol !== 'https:' && target.protocol !== 'http:') return null;
+    if (target.origin !== current.origin) return null;
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Should the app give up on the router and load `target` itself? Only when the
+ * address is exactly where the tap left it (nothing landed), the target really
+ * is somewhere else, the person is still looking at the page and still has a
+ * connection. An offline phone cannot load a page either, and the offline banner
+ * already says why; a hidden tab is the person leaving, not the app freezing.
+ */
+export function shouldRecover(input: {
+  before: string;
+  after: string;
+  target: string;
+  visible: boolean;
+  online: boolean;
+}): boolean {
+  if (!input.visible || !input.online) return false;
+  if (didNavigate(input.before, input.after)) return false;
+  return didNavigate(input.after, input.target);
+}
+
+/** Allow a recovery unless one just ran. */
+export function allowRecovery(lastAt: number | null, now: number): boolean {
+  return lastAt === null || now - lastAt >= NAV_RECOVER_MIN_GAP_MS;
+}
+
+/**
+ * What a plain link click is asking for, or null when this click is not a
+ * navigation we should watch: another mouse button, a modified click (new tab,
+ * download), a link that opens elsewhere or downloads, or one that points
+ * somewhere that is not this app.
+ */
+export function linkClickTarget(input: {
+  button: number;
+  metaKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+  href: string | null;
+  target: string | null;
+  hasDownload: boolean;
+  currentHref: string;
+}): string | null {
+  if (input.button !== 0) return null;
+  if (input.metaKey || input.ctrlKey || input.shiftKey || input.altKey) return null;
+  if (input.hasDownload) return null;
+  if (input.target && input.target !== '_self') return null;
+  if (!input.href) return null;
+  return resolveRecoverTarget(input.href, input.currentHref);
+}
+
+/**
+ * Where a release menu row sends the page, for the recovery. A row that is
+ * lit closes its scene; any other opens it. `activities` is the main view, not
+ * a scene, so it always means "no scene". Returns null for anything that is not
+ * a release page, where there is nothing sensible to load.
+ */
+export function sceneRowTarget(
+  currentHref: string,
+  key: string,
+  isActive: boolean
+): string | null {
+  try {
+    const url = new URL(currentHref);
+    if (!url.searchParams.get('release')) return null;
+    if (key === 'activities' || isActive) {
+      url.searchParams.delete('scene');
+    } else {
+      url.searchParams.set('scene', key);
+    }
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return null;
+  }
 }
