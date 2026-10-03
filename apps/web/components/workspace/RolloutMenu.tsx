@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { watchNavigationStall } from '@/lib/nav-stall-watch';
 import { useChappiStore } from '@/stores/useChappiStore';
 import type { RolloutMenuAction } from './useRolloutMenuActions';
 
@@ -98,7 +99,15 @@ export function RolloutMenu({ actions, releaseTitle }: RolloutMenuProps) {
               ) : (
                 <button
                   type="button"
-                  onClick={action.onClick}
+                  onClick={() => {
+                    // Only the scene toggles change the address; the dialog rows
+                    // (Share, Archive, Change artist) leave `isActive` undefined
+                    // and are expected to leave the URL alone.
+                    if (action.isActive !== undefined) {
+                      watchNavigationStall(`rollout_menu:${action.key}`);
+                    }
+                    action.onClick();
+                  }}
                   disabled={action.disabled}
                   // Undefined on the dialog rows, which omits the attribute
                   // entirely rather than announcing them as unpressed toggles.

@@ -43,6 +43,22 @@ export interface AnalyticsEventPropertiesMap {
     last_failure_age_ms?: number;
     was_authenticated: boolean;
   };
+  /**
+   * A tap that should change the address (the release back arrow, a rollout
+   * menu row) had not done so 1.5s later. Reported by lib/nav-stall-watch.ts.
+   * Exists because PostHog showed real users rage-clicking those controls with
+   * no error, and recordings cannot say whether the router was slow or stuck.
+   */
+  nav_stalled: {
+    label: string;
+    waited_ms: number;
+    online: boolean;
+    auth_loading: boolean | null;
+    effective_type?: string;
+    rtt_ms?: number;
+    downlink_mbps?: number;
+    save_data?: boolean;
+  };
   onboarding_started: EmptyAnalyticsProperties;
   onboarding_role_selected: { role: 'artist' | 'manager' | 'label' | 'other' };
   onboarding_release_created: {
