@@ -132,3 +132,31 @@ describe('the remembered code', () => {
     expect(isReferralFresh(Number.NaN, now)).toBe(false);
   });
 });
+
+describe('refunds', () => {
+  it('hands a processed refund to the referral handler before the pitch handling reads it', () => {
+    const source = stripComments(read('app/api/webhooks/paystack/route.ts'));
+    const body = source.slice(source.indexOf('async function handlePitchRefund'));
+    const end = body.indexOf('\n}\n');
+    const fn = body.slice(0, end);
+    expect(fn).toContain("event === 'refund.processed'");
+    expect(fn.indexOf('handleRefundForReferrals(')).toBeGreaterThan(-1);
+    expect(fn.indexOf('handleRefundForReferrals(')).toBeLessThan(fn.indexOf('handlePitchRefundEvent('));
+  });
+
+  it('is NOT behind the switches, so a reward already paid can still be taken back if they are switched off', () => {
+    const source = stripComments(read('lib/referrals-server.ts'));
+    const start = source.indexOf('export async function handleRefundForReferrals');
+    const end = source.indexOf('// ------------------------------------------------------------------ overview');
+    const section = source.slice(start, end);
+    expect(section).not.toContain('isReferralsEnabled');
+    expect(section).not.toContain('isReferralCreditsEnabled');
+  });
+
+  it('leaves a reversed reward out of the cap, and out of the stats read', () => {
+    const source = stripComments(read('lib/referrals-server.ts'));
+    const reward = source.slice(source.indexOf('export async function rewardReferrerOnFirstPayment'));
+    expect(reward.slice(0, reward.indexOf('decideReward('))).toContain(".is('reversed_at', null)");
+    expect(source).toContain("'rewarded_at,reward_credits,reversed_at'");
+  });
+});

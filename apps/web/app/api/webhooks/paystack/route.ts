@@ -16,7 +16,7 @@ import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { PLAN_CHANGE_SOURCE } from '@/lib/plan-change';
-import { recordSubscriptionCharge, rewardReferrerOnFirstPayment } from '@/lib/referrals-server';
+import { handleRefundForReferrals, recordSubscriptionCharge, rewardReferrerOnFirstPayment } from '@/lib/referrals-server';
 import {
   TRIAL_CARD_PLAN,
   buildDelayedSubscriptionPayload,
@@ -1164,6 +1164,16 @@ async function handlePitchCharge(payload: PaystackWebhookPayload) {
 async function handlePitchRefund(event: string, payload: PaystackWebhookPayload) {
   const admin = createAdminClient();
   if (!admin) return ack({ event });
+  // A refund of a subscription payment takes back the referral reward it earned
+  // and stops it earning partner commission. A pitch refund names no such charge,
+  // so this finds nothing and the pitch handling below carries on as before.
+  if (event === 'refund.processed') {
+    const data = (payload.data || {}) as Record<string, unknown>;
+    await handleRefundForReferrals(admin, {
+      reference: String(data.transaction_reference || data.reference || ''),
+      refundAmountKobo: Number(data.amount) || 0,
+    });
+  }
   const result = await handlePitchRefundEvent(admin, event, (payload.data || {}) as Record<string, unknown>);
   return NextResponse.json(result.body, { status: result.status });
 }
