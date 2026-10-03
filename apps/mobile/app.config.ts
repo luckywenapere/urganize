@@ -23,7 +23,7 @@ const hasIosFirebase = existsSync(resolve(__dirname, IOS_FIREBASE_CONFIG));
 // secret. Empty means no OTA updates and no EAS builds yet; everything else,
 // including a local build, still works. The environment variable is only an
 // override for trying a second EAS project.
-const PASTED_EAS_PROJECT_ID = '';
+const PASTED_EAS_PROJECT_ID = 'a8a43eea-ad82-4288-a324-e301d906cf5a';
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || PASTED_EAS_PROJECT_ID;
 
 const INK = '#0d120e';

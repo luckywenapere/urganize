@@ -39,8 +39,8 @@ export const dynamic = "force-dynamic";
 // Bump both when a new APK is dropped into public/downloads/urganize.apk —
 // they ship in the same commit, so they can't drift. The filename stays
 // versionless on purpose: links people have already shared keep working.
-const APP_VERSION = "0.41.2";
-const APK_SIZE = "3.2 MB";
+const APP_VERSION = "1.54.0";
+const APK_SIZE = "41 MB";
 
 const bodyText = "text-[var(--marketing-text-muted)]";
 
