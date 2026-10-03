@@ -10,7 +10,7 @@ import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
 import { ACTION_EVENT_TYPE, parseTeamAdminAction } from '@/lib/admin-teams';
 import { logBillingEvent } from '@/lib/billing-events-server';
-import { recordSubscriptionCharge } from '@/lib/referrals-server';
+import { recordSubscriptionCharge, rewardReferrerOnFirstPayment } from '@/lib/referrals-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { loadBriefCompletionByWorkspace } from '@/lib/team-brief-server';
 
@@ -369,6 +369,11 @@ export async function PATCH(request: NextRequest) {
         amountKobo: action.amountMinorUnit,
         plan: action.plan,
         source: 'manual',
+      });
+      // A deal settled by hand is also a first payment for a team that was invited.
+      await rewardReferrerOnFirstPayment(client, {
+        payerUserId: workspace.owner_id,
+        reference: markPaidReference,
       });
 
       // Coalesced, so a second deal never rewrites when this team FIRST paid.

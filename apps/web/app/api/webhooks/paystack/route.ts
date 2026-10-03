@@ -16,7 +16,7 @@ import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { PLAN_CHANGE_SOURCE } from '@/lib/plan-change';
-import { recordSubscriptionCharge } from '@/lib/referrals-server';
+import { recordSubscriptionCharge, rewardReferrerOnFirstPayment } from '@/lib/referrals-server';
 import {
   TRIAL_CARD_PLAN,
   buildDelayedSubscriptionPayload,
@@ -861,6 +861,9 @@ async function handleChargeSuccess(payload: PaystackWebhookPayload) {
         source: 'initial',
         chargedAt: now,
       });
+      // The team that invited this one earns credits for a first payment. Idempotent
+      // on the invited team, so a redelivery cannot pay it twice.
+      await rewardReferrerOnFirstPayment(admin, { payerUserId: userId, reference });
       return ack({
         event: 'charge.success',
         reference,

@@ -421,6 +421,8 @@ export async function adjustCredits(
     credits: number;
     note?: string;
     dedupeKey?: string;
+    /** Where the credits came from, shown in the history. Defaults to 'admin'. */
+    source?: 'admin' | 'referral';
   }
 ): Promise<boolean> {
   const credits = Math.trunc(input.credits);
@@ -434,7 +436,7 @@ export async function adjustCredits(
       kind: 'adjust',
       credits,
       ...(input.dedupeKey ? { dedupe_key: input.dedupeKey } : {}),
-      metadata: { source: 'admin', ...(input.note ? { note: input.note.slice(0, 200) } : {}) },
+      metadata: { source: input.source ?? 'admin', ...(input.note ? { note: input.note.slice(0, 200) } : {}) },
     });
     if (error) {
       console.error('[credits] could not adjust credits:', error.message);
