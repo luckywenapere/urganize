@@ -20,6 +20,7 @@ import { resolvePlannerModel } from '@/lib/ai/planner-model';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { beginEmbeddedRun, settleEmbeddedRun } from '@/lib/credits/embedded-server';
 import { createUsageCollector } from '@/lib/credits/embedded';
+import { recordRequestUsage } from '@/lib/ai/usage-log-server';
 
 /**
  * The rollout plan: build it (POST) or read back what was built (GET).
@@ -157,6 +158,22 @@ export async function POST(
     return NextResponse.json({ error: gate.message, code: 'out_of_credits' }, { status: 429 });
   }
   const collector = createUsageCollector(resolvePlannerModel() ?? null);
+  // One id for the run: the ledger's charge and the usage log's rows both carry it.
+  const runRequestId = `embedded:${randomUUID()}`;
+  const logUsage = (creditsCharged: number) =>
+    recordRequestUsage(adminClient, {
+      context: {
+        requestId: runRequestId,
+        feature: 'plan',
+        workspaceId: ownerTeam.primaryWorkspaceId,
+        ownerUserId: ownerTeam.ownerUserId,
+        actorUserId: auth.user.id,
+        releaseId,
+      },
+      calls: collector.calls,
+      failures: collector.failures,
+      creditsCharged,
+    });
 
   const result = await createReleasePlan(adminClient, {
     release,
@@ -172,9 +189,12 @@ export async function POST(
     reasoningEffort: resolvePlannerReasoningEffort(),
     deadlineMs: startedAt + PLANNER_DEADLINE_MS,
     onUsage: collector.onUsage,
+    onFailure: collector.onFailure,
   });
 
   if (!result.ok) {
+    // Not charged, but the calls it made before it failed were billed to us.
+    await logUsage(0);
     return NextResponse.json(
       { error: result.error, ...(result.code ? { code: result.code } : {}) },
       { status: result.status }
@@ -182,15 +202,16 @@ export async function POST(
   }
 
   // Charged only now: a plan that could not be built costs nothing.
-  await settleEmbeddedRun(adminClient, {
+  const charge = await settleEmbeddedRun(adminClient, {
     gate,
     workspaceId: ownerTeam.primaryWorkspaceId,
     ownerUserId: ownerTeam.ownerUserId,
     actorUserId: auth.user.id,
-    requestId: `embedded:${randomUUID()}`,
+    requestId: runRequestId,
     actionId: 'release.draft_plan',
     calls: collector.calls,
   });
+  await logUsage(gate.metered && gate.ok ? charge.credits : 0);
 
   return NextResponse.json({ plan: result.plan }, { status: 201 });
 }

@@ -1,4 +1,4 @@
-import { turnCharge, type TurnCharge, type UsageCall } from './pricing';
+import { turnCharge, type FailedCall, type TurnCharge, type UsageCall } from './pricing';
 
 /**
  * How the embedded actions (the rollout planner, a press-kit draft) are paid for.
@@ -75,8 +75,16 @@ export type ReportedUsage = {
  */
 export function createUsageCollector(fallbackModel: string | null) {
   const calls: UsageCall[] = [];
+  // Attempts that returned no answer. Kept apart from `calls` on purpose: only a
+  // call that reported usage is ever charged, and a failure must never change
+  // what a run costs a team. They exist so the usage log can still show them.
+  const failures: FailedCall[] = [];
   return {
     calls,
+    failures,
+    onFailure(failure: FailedCall): void {
+      failures.push({ model: failure.model ?? fallbackModel ?? null, kind: failure.kind });
+    },
     onUsage(reported: ReportedUsage): void {
       calls.push({
         model: reported.model || fallbackModel || 'unknown',

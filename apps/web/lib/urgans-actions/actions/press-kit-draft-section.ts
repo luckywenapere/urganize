@@ -159,6 +159,7 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
         // try, three tries) put no limit on how long a second model could take.
         deadlineMs: Date.now() + DRAFT_DEADLINE_MS,
         onUsage: collector.onUsage,
+        onFailure: collector.onFailure,
         onTrace: (trace) => {
           routed = trace;
         },
@@ -168,6 +169,8 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
         ok: false,
         status: 502,
         error: 'UrgAns could not write that just now. Try again.',
+        usageCalls: collector.calls,
+        failedCalls: collector.failures,
       };
     }
 
@@ -190,6 +193,7 @@ export const pressKitDraftSectionAction: UrgansActionDefinition<Input, Output, R
       tokensIn: sumTokens(collector.calls.map((call) => call.promptTokens)),
       tokensOut: sumTokens(collector.calls.map((call) => call.completionTokens)),
       usageCalls: collector.calls,
+      failedCalls: collector.failures,
     };
   },
 

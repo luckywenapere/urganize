@@ -92,6 +92,28 @@ describe('createUsageCollector', () => {
     expect(collector.calls[0].model).toBe('unknown');
     expect(embeddedCharge(collector.calls).assumed).toBe(true);
   });
+
+  it('also keeps the attempts that failed, apart from the calls, so a failed run can still be logged', () => {
+    const collector = createUsageCollector('openai/gpt-5.4');
+    collector.onUsage({ promptTokens: 100, completionTokens: 10 });
+    collector.onFailure({ model: 'openai/gpt-5.4', kind: 'timeout' });
+    expect(collector.failures).toEqual([{ model: 'openai/gpt-5.4', kind: 'timeout' }]);
+    // A failure is not a call: it must not change what the run is charged.
+    expect(collector.calls).toHaveLength(1);
+    expect(embeddedCharge(collector.calls).credits).toBe(embeddedCharge([collector.calls[0]]).credits);
+  });
+
+  it('names the fallback model on a failure that did not say which model it was', () => {
+    const collector = createUsageCollector('openai/gpt-5.4');
+    collector.onFailure({ model: null, kind: 'unavailable' });
+    expect(collector.failures[0].model).toBe('openai/gpt-5.4');
+  });
+
+  it('leaves the model null when there is nothing to name', () => {
+    const collector = createUsageCollector(null);
+    collector.onFailure({ model: null, kind: 'unavailable' });
+    expect(collector.failures[0].model).toBeNull();
+  });
 });
 
 describe('sumTokens', () => {

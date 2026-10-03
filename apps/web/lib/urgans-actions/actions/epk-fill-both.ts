@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AiUsage } from '@/lib/ai/provider';
 import { isAiConfigured } from '@/lib/ai/provider';
 import { generateRoutedStructuredOutput } from '@/lib/ai/routed';
 import { legacyModelFor, summarizeTrace, type RoutingTrace } from '@/lib/ai/model-router';
+import { createUsageCollector, sumTokens } from '@/lib/credits/embedded';
 import { deriveSectionStatus } from '@/lib/press-kits';
 import { loadPitchKit, savePitchKitFields } from '@/lib/release-epk-server';
 import {
@@ -142,7 +142,11 @@ export const epkFillBothAction: UrgansActionDefinition<Input, Output, Result> = 
     };
     const notes = text(input?.notes).slice(0, MAX_NOTES_LENGTH);
 
-    let usage: AiUsage | null = null;
+    // Every model call the run makes, retries and hops included, so the run is
+    // charged for what it used (credits/embedded.ts). This kept only the LAST
+    // usage and returned no calls, so a Fill both run reported tokens but was
+    // charged as a run that made none.
+    const collector = createUsageCollector(legacyModelFor('press_kit') ?? null);
     let routed: RoutingTrace | null = null;
     let draft: FillDraft;
     try {
@@ -152,15 +156,20 @@ export const epkFillBothAction: UrgansActionDefinition<Input, Output, Result> = 
         temperature: 0.4,
         parse: (raw) => parseFillResponse(target, raw),
         deadlineMs: Date.now() + DEADLINE_MS,
-        onUsage: (reported) => {
-          usage = reported;
-        },
+        onUsage: collector.onUsage,
+        onFailure: collector.onFailure,
         onTrace: (trace) => {
           routed = trace;
         },
       });
     } catch {
-      return { ok: false, status: 502, error: 'UrgAns could not write that just now. Try again.' };
+      return {
+        ok: false,
+        status: 502,
+        error: 'UrgAns could not write that just now. Try again.',
+        usageCalls: collector.calls,
+        failedCalls: collector.failures,
+      };
     }
 
     const trace = routed as RoutingTrace | null;
@@ -183,9 +192,10 @@ export const epkFillBothAction: UrgansActionDefinition<Input, Output, Result> = 
         ...(trace ? { routing: summarizeTrace(trace) } : {}),
       },
       model: trace?.models[trace.models.length - 1] ?? legacyModelFor('press_kit') ?? null,
-      tokensIn: usage ? (usage as AiUsage).promptTokens : null,
-      tokensOut: usage ? (usage as AiUsage).completionTokens : null,
-      cachedTokens: usage ? ((usage as AiUsage).cachedTokens ?? null) : null,
+      tokensIn: sumTokens(collector.calls.map((call) => call.promptTokens)),
+      tokensOut: sumTokens(collector.calls.map((call) => call.completionTokens)),
+      usageCalls: collector.calls,
+      failedCalls: collector.failures,
     };
   },
 

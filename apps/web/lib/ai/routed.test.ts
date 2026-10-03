@@ -426,3 +426,76 @@ describe('with the router on', () => {
     expect(traces[0]).toMatchObject({ mode: 'on', surface: 'press_kit', startTier: 'standard', endTier: 'pro' });
   });
 });
+
+// The usage log needs to know about attempts that did NOT return an answer: a
+// failed call is still a call the provider may have billed, and nothing else
+// reports it. Whichever way the router is set, every attempt that fails is
+// reported once with the model it used and the router's word for why.
+describe('reporting failed attempts (onFailure)', () => {
+  it('reports the failed attempt with the router off, and still throws exactly as before', async () => {
+    vi.stubEnv('AI_STATUS_MODEL', 'openai/pinned-x');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fail(429)));
+    const failures: Array<{ model: string | null; kind: string }> = [];
+
+    await expect(
+      generateRoutedPlainText({ surface: 'status', messages, maxRetries: 1, onFailure: (f) => failures.push(f) })
+    ).rejects.toMatchObject({ status: 429 });
+
+    expect(failures).toEqual([{ model: 'openai/pinned-x', kind: 'rate_limited' }]);
+  });
+
+  it('reports a null model with the router off and no model set, because the gateway chose', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fail(500)));
+    const failures: Array<{ model: string | null; kind: string }> = [];
+    await expect(
+      generateRoutedPlainText({ surface: 'status', messages, maxRetries: 1, onFailure: (f) => failures.push(f) })
+    ).rejects.toBeDefined();
+    expect(failures).toHaveLength(1);
+    expect(failures[0].kind).toBeTruthy();
+  });
+
+  it('reports the failed attempt in shadow, with the model that was really called', async () => {
+    vi.stubEnv('AI_ROUTER', 'shadow');
+    vi.stubEnv('AI_STATUS_MODEL', 'openai/pinned-x');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fail(429)));
+    const failures: Array<{ model: string | null; kind: string }> = [];
+    await expect(
+      generateRoutedPlainText({ surface: 'status', messages, maxRetries: 1, onFailure: (f) => failures.push(f) })
+    ).rejects.toBeDefined();
+    expect(failures).toEqual([{ model: 'openai/pinned-x', kind: 'rate_limited' }]);
+  });
+
+  it('reports each failed attempt when the router hops, naming the model that failed', async () => {
+    vi.stubEnv('AI_ROUTER', 'on');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(fail(429)).mockResolvedValueOnce(ok('Recovered.')));
+    const failures: Array<{ model: string | null; kind: string }> = [];
+
+    const text = await generateRoutedPlainText({ surface: 'status', messages, maxRetries: 1, onFailure: (f) => failures.push(f) });
+
+    expect(text).toBe('Recovered.');
+    expect(failures).toEqual([{ model: 'openai/gpt-4o-mini', kind: 'rate_limited' }]);
+  });
+
+  it('reports the last failure when the router runs out of places to go', async () => {
+    vi.stubEnv('AI_ROUTER', 'on');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fail(429)));
+    const failures: Array<{ model: string | null; kind: string }> = [];
+    await expect(
+      generateRoutedPlainText({ surface: 'status', messages, maxRetries: 1, onFailure: (f) => failures.push(f) })
+    ).rejects.toBeDefined();
+    expect(failures.length).toBeGreaterThanOrEqual(2);
+    expect(failures.every((f) => f.kind === 'rate_limited')).toBe(true);
+  });
+
+  it('reports nothing for a call that works', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(ok('Fine.')));
+    const onFailure = vi.fn();
+    await generateRoutedPlainText({ surface: 'status', messages, maxRetries: 1, onFailure });
+    expect(onFailure).not.toHaveBeenCalled();
+  });
+
+  it('is optional: a call that supplies no onFailure behaves as it always did', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fail(429)));
+    await expect(generateRoutedPlainText({ surface: 'status', messages, maxRetries: 1 })).rejects.toMatchObject({ status: 429 });
+  });
+});

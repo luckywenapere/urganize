@@ -19,6 +19,7 @@
 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { PricingTierId } from '@urganize/pricing';
+import type { FailedCall } from '../ai/usage-log';
 import type { UsageCall } from '../credits/pricing';
 
 /**
@@ -85,8 +86,18 @@ export type UrgansActionRunOutcome<Output> =
       /** Every model call the run made, for credits and for the stored usage
        *  summary. Absent for an action that made none. */
       usageCalls?: UsageCall[];
+      /** The attempts that returned no answer, for the usage log only. */
+      failedCalls?: FailedCall[];
     }
-  | { ok: false; status: number; error: string };
+  | {
+      ok: false;
+      status: number;
+      error: string;
+      /** What the run had already used before it failed, for the usage log only:
+       *  a failed run is never charged, but the provider billed its calls. */
+      usageCalls?: UsageCall[];
+      failedCalls?: FailedCall[];
+    };
 
 export type UrgansActionApplyInput<Output> = {
   admin: SupabaseClient;

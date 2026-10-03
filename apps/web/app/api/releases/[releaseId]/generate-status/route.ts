@@ -7,6 +7,11 @@ import {
 import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import { isAiConfigured } from '@/lib/ai/provider';
 import { generateRoutedPlainText } from '@/lib/ai/routed';
+import { legacyModelFor } from '@/lib/ai/model-router';
+import { recordRequestUsage } from '@/lib/ai/usage-log-server';
+import { usageWorkspaceForOwner } from '@/lib/ai/usage-workspace-server';
+import { createUsageCollector } from '@/lib/credits/embedded';
+import { randomUUID } from 'node:crypto';
 import {
   buildStatusMessages,
   stripMarkdownWrappers,
@@ -233,6 +238,26 @@ export async function POST(
   const messages = buildStatusMessages({ release: releaseInfo, summary });
 
   // --- Call the model ---------------------------------------------------------
+  // What the call used, for the AI usage log. The status update is not metered, so
+  // nothing is charged; the log is where its cost shows up at all. Recorded on
+  // success AND on failure, because a failed call may still have been billed.
+  const usage = createUsageCollector(legacyModelFor('status') ?? null);
+  const logUsage = async (): Promise<void> => {
+    await recordRequestUsage(adminClient, {
+      context: {
+        requestId: randomUUID(),
+        feature: 'status',
+        workspaceId: await usageWorkspaceForOwner(release.owner_user_id),
+        ownerUserId: release.owner_user_id,
+        actorUserId: auth.user.id,
+        releaseId,
+      },
+      calls: usage.calls,
+      failures: usage.failures,
+      creditsCharged: 0,
+    });
+  };
+
   let raw: string;
   try {
     // Routed: with the model router off this is the call the route always made
@@ -245,8 +270,11 @@ export async function POST(
       timeoutMs: STATUS_TIMEOUT_MS,
       maxRetries: 2,
       deadlineMs: startedAt + STATUS_DEADLINE_MS,
+      onUsage: usage.onUsage,
+      onFailure: usage.onFailure,
     });
   } catch (error) {
+    await logUsage();
     const message = error instanceof Error ? error.message : 'Status generation failed.';
     const status = (error as { status?: number } | null)?.status;
     const isAbort =
@@ -266,6 +294,8 @@ export async function POST(
     }
     return NextResponse.json({ error: 'Service busy. Try again in a moment.' }, { status: 503 });
   }
+
+  await logUsage();
 
   const statusUpdate = stripMarkdownWrappers(raw);
   if (!statusUpdate) {

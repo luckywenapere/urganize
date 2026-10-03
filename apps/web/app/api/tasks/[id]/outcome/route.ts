@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { isAiConfigured } from '@/lib/ai/provider';
 import { generateRoutedStructuredOutput } from '@/lib/ai/routed';
+import { legacyModelFor } from '@/lib/ai/model-router';
+import { recordRequestUsage } from '@/lib/ai/usage-log-server';
+import { createUsageCollector } from '@/lib/credits/embedded';
+import { randomUUID } from 'node:crypto';
 import {
   OUTCOME_NOTE_MAX_LENGTH,
   buildOutcomeAiMessages,
@@ -100,6 +104,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     let followupQuestion: string | null = null;
 
     if (note && isAiConfigured()) {
+      // What the call used, for the AI usage log. Task outcomes are not metered, so
+      // nothing is charged; the log is where this cost shows up at all, and a
+      // failed call may still have been billed.
+      const usage = createUsageCollector(legacyModelFor('outcome') ?? null);
       try {
         // Routed, but this surface never changes model on a failure: the sheet
         // gives the model three seconds in all, and a second attempt cannot fit.
@@ -114,12 +122,27 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           // higher number would stack backoffs on top of the timeout.
           maxRetries: 1,
           parse: parseOutcomeAiResponse,
+          onUsage: usage.onUsage,
+          onFailure: usage.onFailure,
         });
         summary = result.summary;
         followupQuestion = result.followupQuestion;
       } catch {
         // Fail silent by design: keep the template summary, ask nothing.
       }
+      await recordRequestUsage(adminClient, {
+        context: {
+          requestId: randomUUID(),
+          feature: 'outcome',
+          workspaceId: access.task.workspace_id ?? null,
+          ownerUserId: null,
+          actorUserId: auth.user.id,
+          releaseId,
+        },
+        calls: usage.calls,
+        failures: usage.failures,
+        creditsCharged: 0,
+      });
     }
 
     const nowIso = new Date().toISOString();

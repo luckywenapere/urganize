@@ -37,6 +37,8 @@ import { ensurePressKitAccess } from '../press-kit-access-server';
 import { checkEmbeddedActionsGuard } from './guard-server';
 import { getTeamAccessForUser } from '../team-billing-server';
 import { beginEmbeddedRun, settleEmbeddedRun } from '../credits/embedded-server';
+import { recordRequestUsage } from '../ai/usage-log-server';
+import { usageFeatureForAction } from './usage-feature';
 import { isCreditsEnabled } from '../credits/config';
 import { embeddedCharge, embeddedUsageSummary } from '../credits/embedded';
 import { decideApplyClaim, type UrgansActionRowForClaim } from './claim';
@@ -361,36 +363,66 @@ export async function runUrgansAction(
     .select('id')
     .single();
 
+  // The ids the usage log and the credit charge share for this run.
+  const usageWorkspaceId = ownerTeam.primaryWorkspaceId ?? scope.workspaceId;
+  const usageFeature = usageFeatureForAction(action.id);
+  const logUsage = async (requestId: string, creditsCharged: number): Promise<void> => {
+    // An action with no label is skipped, never mislabelled: usage-feature.test.ts
+    // fails the build for a registered action that has none.
+    if (!usageFeature) return;
+    await recordRequestUsage(admin, {
+      context: {
+        requestId,
+        feature: usageFeature,
+        workspaceId: usageWorkspaceId,
+        ownerUserId: scope.ownerUserId,
+        actorUserId: params.actor.id,
+        // Only a release has a release to attribute the cost to. A press kit
+        // belongs to an artist, so its cost is recorded without one.
+        releaseId: scope.objectType === 'release' ? params.objectId : null,
+      },
+      calls: outcome.usageCalls ?? [],
+      failures: outcome.failedCalls ?? [],
+      creditsCharged,
+    });
+  };
+  const chargedOf = (charge: { credits: number }): number => (gate.metered && gate.ok ? charge.credits : 0);
+
   if (insert.error || !insert.data) {
     console.error('[urgans-actions] could not log a run:', insert.error);
+    const fallbackRequestId = `embedded:${randomUUID()}`;
     if (outcome.ok) {
       // The action already produced real, useful output (a saved plan draft,
       // e.g.) even though the log write failed — hiding that from the caller
       // would be a worse failure than a thin audit trail. An empty actionId
       // means apply/discard cannot target THIS run; the legacy plan routes
       // (PUT/DELETE /plan) still reach the same underlying draft directly.
-      await settleEmbeddedRun(admin, {
+      const charge = await settleEmbeddedRun(admin, {
         gate,
         workspaceId: ownerTeam.primaryWorkspaceId ?? scope.workspaceId,
         ownerUserId: scope.ownerUserId,
         actorUserId: params.actor.id,
-        requestId: `embedded:${randomUUID()}`,
+        requestId: fallbackRequestId,
         actionId: action.id,
         calls: outcome.usageCalls ?? [],
       });
+      await logUsage(fallbackRequestId, chargedOf(charge));
       return { ok: true, actionId: '', output: outcome.output };
     }
+    await logUsage(fallbackRequestId, 0);
     return { ok: false, status: outcome.status, error: outcome.error };
   }
 
   const actionId = String((insert.data as { id: string }).id);
 
   if (!outcome.ok) {
+    // Not charged, but the calls it made before it failed were billed to us.
+    await logUsage(`embedded:${actionId}`, 0);
     return { ok: false, status: outcome.status, error: outcome.error };
   }
 
   // Charged AFTER success, once (the run's own id is the dedupe key).
-  await settleEmbeddedRun(admin, {
+  const runCharge = await settleEmbeddedRun(admin, {
     gate,
     workspaceId: ownerTeam.primaryWorkspaceId ?? scope.workspaceId,
     ownerUserId: scope.ownerUserId,
@@ -399,6 +431,7 @@ export async function runUrgansAction(
     actionId: action.id,
     calls: outcome.usageCalls ?? [],
   });
+  await logUsage(`embedded:${actionId}`, chargedOf(runCharge));
 
   if (scope.workspaceId) {
     // Billed AFTER success — the chat-ceiling precedent
