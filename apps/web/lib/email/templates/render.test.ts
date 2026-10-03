@@ -8,6 +8,7 @@ import { TaskAssignedEmail, taskAssignedSubject } from './TaskAssignedEmail';
 import { WorkRequestEmail, workRequestSubject } from './WorkRequestEmail';
 import { WorkRequestAnswerEmail, workRequestAnswerSubject } from './WorkRequestAnswerEmail';
 import { NotifyAdminEmail, notifyAdminSubject } from './NotifyAdminEmail';
+import { ReferralRewardEmail, referralRewardSubject } from './ReferralRewardEmail';
 import { FounderBillingAlertEmail } from './FounderBillingAlertEmail';
 
 // End-to-end rendering of every template, replacing the copy/escaping coverage
@@ -371,5 +372,31 @@ describe('FounderBillingAlertEmail', () => {
     );
     expect(hostile.html).not.toContain('<script>');
     expect(hostile.html).toContain('&lt;script&gt;');
+  });
+});
+
+describe('ReferralRewardEmail', () => {
+  const props = { recipientName: 'Ada Okafor', credits: 100, creditsUrl: 'https://app.urganize.app/dashboard/credits' };
+
+  it('puts the amount in the subject', () => {
+    expect(referralRewardSubject(100)).toBe('You earned 100 credits');
+  });
+
+  it('greets by first name, says what happened and links the credit history', async () => {
+    const { html, text } = await render(ReferralRewardEmail(props));
+    expect(text).toContain('Hey Ada,');
+    expect(text).toContain('A team you invited just subscribed, so we added 100 credits to your balance.');
+    expect(html).toContain('https://app.urganize.app/dashboard/credits');
+    expectMailSafe(html);
+  });
+
+  it('still reads properly with no name', async () => {
+    const { text } = await render(ReferralRewardEmail({ ...props, recipientName: '' }));
+    expect(text).toContain('Hey,');
+  });
+
+  it('names no team', async () => {
+    const { text } = await render(ReferralRewardEmail(props));
+    expect(text).not.toMatch(/workspace/i);
   });
 });

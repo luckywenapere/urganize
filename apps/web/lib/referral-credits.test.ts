@@ -6,6 +6,7 @@ import {
   PERSONAL_CODE_LENGTH,
   REFERRAL_REWARD_CAP,
   REFERRAL_REWARD_CREDITS,
+  buildReferralRewardPush,
   buildReferralStats,
   clawbackDedupeKey,
   decideClawback,
@@ -381,5 +382,20 @@ describe('taking a reward back after a refund', () => {
       },
     ]);
     expect(entries[0].label).toBe('Invite reward taken back');
+  });
+});
+
+describe('the earned-credits push', () => {
+  it('names the amount, links the credit history and names nobody', () => {
+    expect(buildReferralRewardPush(100, 'team_a')).toEqual({
+      title: 'You earned 100 credits',
+      body: 'A team you invited just subscribed.',
+      url: '/dashboard/credits',
+      tag: 'urganize-referral-reward-team_a',
+    });
+  });
+
+  it('has a tag per invited team, so two rewards stack instead of one replacing the other', () => {
+    expect(buildReferralRewardPush(100, 'team_a').tag).not.toBe(buildReferralRewardPush(100, 'team_b').tag);
   });
 });
