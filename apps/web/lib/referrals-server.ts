@@ -13,9 +13,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomInt } from 'node:crypto';
 import { logBillingEvent } from './billing-events-server';
-import { adjustCredits } from './credits/credits-server';
+import { adjustCredits, readBalances } from './credits/credits-server';
 import {
   buildReferralStats,
+  clawbackDedupeKey,
+  decideClawback,
   decideReward,
   generatePersonalCode,
   isReferralCreditsEnabled,
@@ -307,13 +309,20 @@ export async function getOrCreatePersonalReferral(
 
     const rows = await admin
       .from('user_referrals')
-      .select('rewarded_at,reward_credits')
+      .select('rewarded_at,reward_credits,reversed_at')
       .eq('referrer_workspace_id', workspaceId);
     if (rows.error) return null;
     const stats = buildReferralStats(
-      ((rows.data as Array<{ rewarded_at: string | null; reward_credits: number | null }> | null) ?? []).map((row) => ({
+      (
+        (rows.data as Array<{
+          rewarded_at: string | null;
+          reward_credits: number | null;
+          reversed_at: string | null;
+        }> | null) ?? []
+      ).map((row) => ({
         rewardedAt: row.rewarded_at,
         rewardCredits: row.reward_credits,
+        reversedAt: row.reversed_at,
       }))
     );
     return { code, stats };
@@ -355,7 +364,8 @@ export async function rewardReferrerOnFirstPayment(
       .from('user_referrals')
       .select('referred_workspace_id', { count: 'exact', head: true })
       .eq('referrer_workspace_id', row.referrer_workspace_id)
-      .not('rewarded_at', 'is', null);
+      .not('rewarded_at', 'is', null)
+      .is('reversed_at', null);
 
     const decision = decideReward({
       referral: { rewardedAt: row.rewarded_at },
@@ -389,6 +399,149 @@ export async function rewardReferrerOnFirstPayment(
     if (marked.error) console.error('[referrals] reward paid but not marked:', marked.error.message, input.reference);
   } catch (error) {
     console.error('[referrals] rewarding a referrer threw:', error);
+  }
+}
+
+// ---------------------------------------------------------------- refunds
+
+/**
+ * What a refund does to referrals. Called from the payment webhook on
+ * `refund.processed`, so it never throws.
+ *
+ * Two things, both decided by the refund being of a payment we recorded:
+ *   1. A FULL refund of any recorded charge stops it earning partner commission
+ *      (the strategy doc: no commission on refunds). It is the same exclusion the
+ *      admin can set by hand on the partner statement, and "Restore" there still
+ *      undoes it.
+ *   2. A full refund of the payment that EARNED an inviter's reward takes the
+ *      reward back (rules in `decideClawback`).
+ *
+ * It is deliberately NOT behind the two switches: a reward already paid has to be
+ * recoverable even if the feature is later switched off. When the switches were
+ * never on there are no recorded charges, so it finds nothing and does nothing.
+ *
+ * Idempotent: the exclusion only sets an empty column, the clawback has a ledger
+ * key naming the invited team, and the referral row is only stamped once.
+ */
+export async function handleRefundForReferrals(
+  admin: SupabaseClient,
+  input: { reference: string; refundAmountKobo: number }
+): Promise<void> {
+  try {
+    if (!input.reference) return;
+    const charge = await admin
+      .from('subscription_charges')
+      .select('workspace_id,amount_kobo,excluded_at')
+      .eq('reference', input.reference)
+      .maybeSingle();
+    const row = charge.data as { workspace_id: string | null; amount_kobo: number; excluded_at: string | null } | null;
+    if (charge.error || !row) return;
+
+    const fullRefund = row.amount_kobo > 0 && input.refundAmountKobo >= row.amount_kobo;
+    if (fullRefund && !row.excluded_at) {
+      const excluded = await admin
+        .from('subscription_charges')
+        .update({ excluded_at: new Date().toISOString(), excluded_reason: 'Refunded in Paystack' })
+        .eq('reference', input.reference)
+        .is('excluded_at', null);
+      if (excluded.error) console.error('[referrals] could not exclude a refunded charge:', excluded.error.message, input.reference);
+    }
+
+    if (row.workspace_id) {
+      await reverseRewardForRefund(admin, {
+        referredWorkspaceId: row.workspace_id,
+        reference: input.reference,
+        chargeAmountKobo: row.amount_kobo,
+        refundAmountKobo: input.refundAmountKobo,
+      });
+    }
+  } catch (error) {
+    console.error('[referrals] handling a refund threw:', error);
+  }
+}
+
+async function reverseRewardForRefund(
+  admin: SupabaseClient,
+  input: { referredWorkspaceId: string; reference: string; chargeAmountKobo: number; refundAmountKobo: number }
+): Promise<void> {
+  const referral = await admin
+    .from('user_referrals')
+    .select('referrer_workspace_id,rewarded_at,reward_credits,reversed_at')
+    .eq('referred_workspace_id', input.referredWorkspaceId)
+    .maybeSingle();
+  if (referral.error || !referral.data) return;
+  const referralRow = referral.data as {
+    referrer_workspace_id: string;
+    rewarded_at: string | null;
+    reward_credits: number | null;
+    reversed_at: string | null;
+  };
+  // Cheap exits first: most refunds are not of a rewarded team's first payment.
+  if (!referralRow.rewarded_at || referralRow.reversed_at) return;
+
+  const first = await admin
+    .from('subscription_charges')
+    .select('reference')
+    .eq('workspace_id', input.referredWorkspaceId)
+    .order('charged_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const firstReference = (first.data as { reference: string } | null)?.reference ?? null;
+
+  const balances = await readBalances(admin, referralRow.referrer_workspace_id);
+  const decision = decideClawback({
+    referral: {
+      rewardedAt: referralRow.rewarded_at,
+      reversedAt: referralRow.reversed_at,
+      rewardCredits: referralRow.reward_credits,
+    },
+    refundedReference: input.reference,
+    firstChargeReference: first.error ? null : firstReference,
+    chargeAmountKobo: input.chargeAmountKobo,
+    refundAmountKobo: input.refundAmountKobo,
+    // The reward was written to the top-up pool, so that is the pool it comes back from.
+    referrerCredits: balances ? balances.topup : null,
+  });
+  if (!decision.clawback) {
+    if (decision.reason === 'balance_unreadable') {
+      console.error('[referrals] a refund should take back a reward but the balance could not be read:', input.reference);
+    }
+    return;
+  }
+
+  if (decision.take > 0) {
+    const referrer = await admin
+      .from('workspaces')
+      .select('owner_id')
+      .eq('id', referralRow.referrer_workspace_id)
+      .maybeSingle();
+    const referrerOwner = (referrer.data as { owner_id: string | null } | null)?.owner_id ?? null;
+    if (!referrerOwner) return;
+    const taken = await adjustCredits(admin, {
+      workspaceId: referralRow.referrer_workspace_id,
+      ownerUserId: referrerOwner,
+      actorUserId: referrerOwner,
+      credits: -decision.take,
+      source: 'referral',
+      note: 'A team you invited was refunded, so the reward was taken back.',
+      dedupeKey: clawbackDedupeKey(input.referredWorkspaceId),
+    });
+    // False is a real failure or "already taken back" (the ledger key refused a
+    // second row). Either way, stamp nothing now; a redelivery tries again.
+    if (!taken) return;
+  }
+
+  const marked = await admin
+    .from('user_referrals')
+    .update({ reversed_at: new Date().toISOString(), reversed_credits: decision.take })
+    .eq('referred_workspace_id', input.referredWorkspaceId)
+    .is('reversed_at', null);
+  if (marked.error) console.error('[referrals] reward taken back but not marked:', marked.error.message, input.reference);
+  if (decision.shortfall > 0) {
+    console.warn(
+      `[referrals] a reward was refunded but ${decision.shortfall} of its credits were already spent:`,
+      input.referredWorkspaceId
+    );
   }
 }
 

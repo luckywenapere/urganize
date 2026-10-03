@@ -71,6 +71,9 @@ function labelFor(row: LedgerHistoryRow): { label: string; detail: string } {
       if (meta.source === 'referral' && row.credits > 0) {
         return { label: 'Reward for inviting a team', detail: '' };
       }
+      if (meta.source === 'referral') {
+        return { label: 'Invite reward taken back', detail: 'A team you invited was refunded.' };
+      }
       const note = text(meta.note);
       return {
         label: row.credits >= 0 ? 'Credits added by Urganize' : 'Credits taken off by Urganize',

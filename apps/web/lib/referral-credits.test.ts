@@ -7,6 +7,8 @@ import {
   REFERRAL_REWARD_CAP,
   REFERRAL_REWARD_CREDITS,
   buildReferralStats,
+  clawbackDedupeKey,
+  decideClawback,
   decideReward,
   generatePersonalCode,
   isReferralCreditsEnabled,
@@ -282,5 +284,102 @@ describe('who may touch the invite tables', () => {
     const create = server.slice(server.indexOf("case 'create_partner'"), server.indexOf("case 'set_partner_active'"));
     expect(create).toContain("from('referral_codes')");
     expect(create.indexOf("from('referral_codes')")).toBeLessThan(create.indexOf("from('referral_partners').insert"));
+  });
+});
+
+describe('taking a reward back after a refund', () => {
+  const rewarded = { rewardedAt: '2026-10-01T10:00:00Z', reversedAt: null, rewardCredits: 100 };
+  const base = {
+    referral: rewarded,
+    refundedReference: 'ref_first',
+    firstChargeReference: 'ref_first',
+    chargeAmountKobo: 500_000,
+    refundAmountKobo: 500_000,
+    referrerCredits: 400,
+  };
+
+  it('takes the whole reward back on a full refund of the first payment', () => {
+    expect(decideClawback(base)).toEqual({ clawback: true, take: 100, shortfall: 0 });
+  });
+
+  it('does nothing when the team was never rewarded or was not invited', () => {
+    expect(decideClawback({ ...base, referral: null })).toEqual({ clawback: false, reason: 'not_rewarded' });
+    expect(decideClawback({ ...base, referral: { ...rewarded, rewardedAt: null } })).toEqual({
+      clawback: false,
+      reason: 'not_rewarded',
+    });
+  });
+
+  it('does nothing twice', () => {
+    expect(decideClawback({ ...base, referral: { ...rewarded, reversedAt: '2026-10-02T00:00:00Z' } })).toEqual({
+      clawback: false,
+      reason: 'already_reversed',
+    });
+  });
+
+  it('ignores a refund of a later payment, because the reward was for the first', () => {
+    expect(decideClawback({ ...base, refundedReference: 'ref_renewal' })).toEqual({
+      clawback: false,
+      reason: 'not_the_first_charge',
+    });
+    expect(decideClawback({ ...base, firstChargeReference: null })).toEqual({
+      clawback: false,
+      reason: 'not_the_first_charge',
+    });
+  });
+
+  it('ignores a partial refund', () => {
+    expect(decideClawback({ ...base, refundAmountKobo: 499_999 })).toEqual({ clawback: false, reason: 'partial_refund' });
+    expect(decideClawback({ ...base, chargeAmountKobo: 0, refundAmountKobo: 0 })).toEqual({
+      clawback: false,
+      reason: 'partial_refund',
+    });
+  });
+
+  it('takes only what the inviter still has, and never pushes the balance below zero', () => {
+    expect(decideClawback({ ...base, referrerCredits: 40 })).toEqual({ clawback: true, take: 40, shortfall: 60 });
+    expect(decideClawback({ ...base, referrerCredits: 0 })).toEqual({ clawback: true, take: 0, shortfall: 100 });
+    expect(decideClawback({ ...base, referrerCredits: -25 })).toEqual({ clawback: true, take: 0, shortfall: 100 });
+  });
+
+  it('takes nothing when the balance cannot be read', () => {
+    expect(decideClawback({ ...base, referrerCredits: null })).toEqual({
+      clawback: false,
+      reason: 'balance_unreadable',
+    });
+  });
+
+  it('has its own ledger key, apart from the reward key', () => {
+    expect(clawbackDedupeKey('team_a')).toBe('referral-clawback:team_a');
+    expect(clawbackDedupeKey('team_a')).not.toBe(rewardDedupeKey('team_a'));
+  });
+
+  it('stops counting a reversed reward, as earned and against the cap', () => {
+    const rows = [
+      { rewardedAt: '2026-10-01T00:00:00Z', rewardCredits: 100, reversedAt: null },
+      { rewardedAt: '2026-10-02T00:00:00Z', rewardCredits: 100, reversedAt: '2026-10-03T00:00:00Z' },
+    ];
+    expect(buildReferralStats(rows)).toEqual({ invited: 2, rewarded: 1, creditsEarned: 100, capReached: false });
+    const full = Array.from({ length: REFERRAL_REWARD_CAP }, (_, i) => ({
+      rewardedAt: '2026-10-01T00:00:00Z',
+      rewardCredits: 100,
+      reversedAt: i === 0 ? '2026-10-03T00:00:00Z' : null,
+    }));
+    expect(buildReferralStats(full).capReached).toBe(false);
+  });
+
+  it('shows a taken-back reward in the history under its own label', () => {
+    const entries = buildHistory([
+      {
+        id: 'x',
+        kind: 'adjust',
+        pool: 'topup',
+        credits: -100,
+        dedupe_key: 'referral-clawback:ws-1',
+        metadata: { source: 'referral' },
+        created_at: '2026-10-03T10:00:00Z',
+      },
+    ]);
+    expect(entries[0].label).toBe('Invite reward taken back');
   });
 });

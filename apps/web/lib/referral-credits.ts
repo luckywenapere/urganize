@@ -77,6 +77,64 @@ export function decideReward(
   return { reward: true, credits: REFERRAL_REWARD_CREDITS };
 }
 
+export type ClawbackRefusal =
+  | 'not_rewarded'
+  | 'already_reversed'
+  | 'not_the_first_charge'
+  | 'partial_refund'
+  | 'balance_unreadable';
+
+export type ClawbackInput = {
+  /** The invited team's referral row, or null when it was not invited by a team. */
+  referral: { rewardedAt: string | null; reversedAt: string | null; rewardCredits: number | null } | null;
+  /** The reference Paystack says was refunded. */
+  refundedReference: string;
+  /** The invited team's earliest recorded charge: the one that earned the reward. */
+  firstChargeReference: string | null;
+  chargeAmountKobo: number;
+  refundAmountKobo: number;
+  /** Credits the inviting team still holds in the pool its reward went into
+   *  (the credits it bought plus rewards). Null when it could not be read. */
+  referrerCredits: number | null;
+};
+
+/**
+ * Whether a refund takes a referral reward back, and how much.
+ *
+ * Only a FULL refund of the payment that EARNED the reward does it. A refunded
+ * renewal does not: the reward was for the first payment. A partial refund does
+ * not either, because the team still paid us something and a goodwill refund
+ * should not cost an inviter the credits they were promised.
+ *
+ * It takes back what the inviter still HAS, never more: the balance is never
+ * pushed below zero. If they already spent the reward, only what is left comes
+ * back and the rest is recorded as `shortfall`. A balance that cannot be read
+ * takes nothing and says so; the credit is easy to adjust by hand and a wrong
+ * guess would take credits from somebody who has not earned the refund.
+ */
+export function decideClawback(
+  input: ClawbackInput
+): { clawback: true; take: number; shortfall: number } | { clawback: false; reason: ClawbackRefusal } {
+  const referral = input.referral;
+  if (!referral || !referral.rewardedAt) return { clawback: false, reason: 'not_rewarded' };
+  if (referral.reversedAt) return { clawback: false, reason: 'already_reversed' };
+  if (!input.firstChargeReference || input.firstChargeReference !== input.refundedReference) {
+    return { clawback: false, reason: 'not_the_first_charge' };
+  }
+  if (input.chargeAmountKobo <= 0 || input.refundAmountKobo < input.chargeAmountKobo) {
+    return { clawback: false, reason: 'partial_refund' };
+  }
+  if (input.referrerCredits === null) return { clawback: false, reason: 'balance_unreadable' };
+  const reward = referral.rewardCredits ?? 0;
+  const take = Math.min(reward, Math.max(0, Math.trunc(input.referrerCredits)));
+  return { clawback: true, take, shortfall: reward - take };
+}
+
+/** The ledger key that makes a clawback happen once. */
+export function clawbackDedupeKey(referredWorkspaceId: string): string {
+  return `referral-clawback:${referredWorkspaceId}`;
+}
+
 /** The ledger key that makes a reward payable once. Names the INVITED team, so
  *  a redelivered payment webhook cannot pay it twice. */
 export function rewardDedupeKey(referredWorkspaceId: string): string {
@@ -93,9 +151,11 @@ export type ReferralStats = {
 };
 
 export function buildReferralStats(
-  rows: ReadonlyArray<{ rewardedAt: string | null; rewardCredits: number | null }>
+  rows: ReadonlyArray<{ rewardedAt: string | null; rewardCredits: number | null; reversedAt?: string | null }>
 ): ReferralStats {
-  const rewarded = rows.filter((row) => row.rewardedAt);
+  // A reward taken back by a refund no longer counts: not as earned, and not
+  // against the cap, so the slot it held is free for another team.
+  const rewarded = rows.filter((row) => row.rewardedAt && !row.reversedAt);
   return {
     invited: rows.length,
     rewarded: rewarded.length,
