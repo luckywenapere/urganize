@@ -57,7 +57,7 @@ export {
   FolderOpen,
   // The admin scoreboard (2026-10-02): the company's numbers at a glance.
   Gauge,
-  Gift, Globe,
+  Gift, Globe, Handshake,
   // Shows (2026-09-25): the drag handle on a set row, and tap-to-call on a
   // promoter's number.
   GripVertical, History,

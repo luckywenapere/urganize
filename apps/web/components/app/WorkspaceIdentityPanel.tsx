@@ -15,7 +15,7 @@ import type { WorkspaceIdentityLogo } from "@/stores/useWorkspaceIdentityStore";
 import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useChappiStore } from "@/stores/useChappiStore";
 import { CatalogIcon, ChappiIcon, GearIcon } from "@/components/app/BrandIcons";
-import { Disc3, MicVocal } from '@/components/icons';
+import { Disc3, Handshake, MicVocal } from '@/components/icons';
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { readPersistedState } from "@/lib/persisted-state";
 import { leaveReleaseForCatalog } from "@/lib/catalog-intent";
@@ -125,6 +125,12 @@ const ARTIST_PAGE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_ARTIST_PAGE === "true" &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === "true";
 
+// Relationships (Phase 2): the team's own book of people. Needs the workspace
+// flag too, since the team is resolved through it.
+const RELATIONSHIPS_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_RELATIONSHIPS === "true" &&
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === "true";
+
 // Playlist pitching. The team row (/dashboard/pitching) left this card
 // 2026-09-29 (founder call: Pitching is reached from inside each release). The
 // crossing at the base of the list (/curator) stays: it is the inbox for playlists the account owns, so it is shown only
@@ -160,6 +166,10 @@ function ShowsIcon({ className }: { className?: string }) {
 
 function ArtistsIcon({ className }: { className?: string }) {
   return <Disc3 className={className} aria-hidden="true" />;
+}
+
+function RelationshipsIcon({ className }: { className?: string }) {
+  return <Handshake className={className} aria-hidden="true" />;
 }
 
 function DirectoryIcon({ className }: { className?: string }) {
@@ -355,6 +365,19 @@ function buildNavItems(
             Icon: DirectoryIcon,
             isActive: (pathname: string) => pathname.startsWith("/dashboard/directory"),
             help: "nav.directory",
+          } satisfies NavItem,
+        ]
+      : []),
+    // The team's own contacts, with private notes. Prefix match so one person's
+    // page keeps the row lit.
+    ...(RELATIONSHIPS_ENABLED
+      ? [
+          {
+            href: "/dashboard/relationships",
+            label: "Relationships",
+            Icon: RelationshipsIcon,
+            isActive: (pathname: string) => pathname.startsWith("/dashboard/relationships"),
+            help: "nav.relationships",
           } satisfies NavItem,
         ]
       : []),
