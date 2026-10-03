@@ -66,13 +66,20 @@ describe('who may write the commission tables', () => {
     expect(offenders).toEqual(['lib/referrals-server.ts']);
   });
 
-  it('only the referrals module writes team_referrals and referral_payouts', () => {
-    for (const table of ['team_referrals', 'referral_payouts', 'referral_partners']) {
+  it('only the referrals module touches team_referrals, referral_payouts and referral_partners, bar the scoreboard reading one', () => {
+    const readers: Record<string, string[]> = {
+      // The scoreboard counts partner-referred signups from this table. Read only.
+      team_referrals: ['lib/referrals-server.ts', 'lib/scoreboard-server.ts'],
+      referral_payouts: ['lib/referrals-server.ts'],
+      referral_partners: ['lib/referrals-server.ts'],
+    };
+    for (const [table, expected] of Object.entries(readers)) {
       const offenders = walk(join(ROOT, 'app'))
         .concat(walk(join(ROOT, 'lib')))
         .filter((file) => stripComments(readFileSync(file, 'utf8')).includes(`'${table}'`))
-        .map((file) => relative(ROOT, file).replace(/\\/g, '/'));
-      expect(offenders, table).toEqual(['lib/referrals-server.ts']);
+        .map((file) => relative(ROOT, file).replace(/\\/g, '/'))
+        .sort();
+      expect(offenders, table).toEqual(expected);
     }
   });
 });

@@ -127,6 +127,19 @@ export function ScoreboardView({
               : 'No sign-up in the last 30 days has finished its first 3 days.'
           }
         />
+        <StatCard
+          label="Referred signups, last 30 days"
+          value={
+            board.referredSignups
+              ? number.format(board.referredSignups.fromTeams.last30d + board.referredSignups.fromPartners.last30d)
+              : 'Not tracked'
+          }
+          detail={
+            board.referredSignups
+              ? `${board.referredSignups.fromTeams.last30d} invited by a team, ${board.referredSignups.fromPartners.last30d} through a partner. All time: ${board.referredSignups.fromTeams.allTime + board.referredSignups.fromPartners.allTime}, of which ${board.referredSignups.fromTeams.payingNow + board.referredSignups.fromPartners.payingNow} pay today.`
+              : 'The referral tables are not set up yet.'
+          }
+        />
       </div>
 
       {board.activityTruncated ? (

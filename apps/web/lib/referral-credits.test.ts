@@ -255,14 +255,26 @@ describe('the invite link route', () => {
 });
 
 describe('who may touch the invite tables', () => {
-  it('only the referrals module reads or writes them', () => {
-    for (const table of ['referral_codes', 'user_referrals']) {
+  it('only the referrals module reads or writes them, bar the scoreboard, which only reads', () => {
+    const readers: Record<string, string[]> = {
+      referral_codes: ['lib/referrals-server.ts'],
+      // The scoreboard counts referred signups from this table. Read only: the
+      // next test pins that it never writes.
+      user_referrals: ['lib/referrals-server.ts', 'lib/scoreboard-server.ts'],
+    };
+    for (const [table, expected] of Object.entries(readers)) {
       const offenders = walk(join(ROOT, 'app'))
         .concat(walk(join(ROOT, 'lib')))
         .filter((file) => stripComments(readFileSync(file, 'utf8')).includes(`'${table}'`))
-        .map((file) => relative(ROOT, file).replace(/\\/g, '/'));
-      expect(offenders, table).toEqual(['lib/referrals-server.ts']);
+        .map((file) => relative(ROOT, file).replace(/\\/g, '/'))
+        .sort();
+      expect(offenders, table).toEqual(expected);
     }
+  });
+
+  it('keeps the scoreboard to reading them', () => {
+    const board = stripComments(read('lib/scoreboard-server.ts'));
+    expect(board).not.toMatch(/\.(insert|update|upsert|delete)\(/);
   });
 
   it('stops a partner taking a code a team already holds', () => {

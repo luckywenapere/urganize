@@ -5,6 +5,7 @@ import {
   buildScoreboard,
   isPayingTeam,
   monthlyRecurringMinor,
+  referralSummary,
   releaseLiveAt,
   secondReleaseSummary,
   trialToPaidSummary,
@@ -15,7 +16,7 @@ import {
   type ScoreboardSubscription,
   type ScoreboardTeam,
 } from './scoreboard';
-import { formatNaira, formatRate, formatScoreboardForTeamGroup } from './scoreboard-format';
+import { formatNaira, formatRate, formatScoreboardForTeamGroup, referredLine } from './scoreboard-format';
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = new Date('2026-10-02T12:00:00.000Z');
@@ -465,5 +466,115 @@ describe('buildScoreboard', () => {
     const board = buildScoreboard(input({ teams, activity }));
     expect(board.teams.map((row) => row.workspaceId)).toEqual(['busy', 'quiet']);
     expect(board.teams[0]).toMatchObject({ members: 2, activeMembers7d: 2 });
+  });
+});
+
+describe('referralSummary', () => {
+  const ids = new Set(['a', 'b', 'c']);
+  const paying = new Set(['a']);
+
+  it('counts the last 30 days apart from all time', () => {
+    const summary = referralSummary(
+      [
+        { workspaceId: 'a', attachedAt: daysAgo(3) },
+        { workspaceId: 'b', attachedAt: daysAgo(29) },
+        { workspaceId: 'c', attachedAt: daysAgo(31) },
+      ],
+      ids,
+      paying,
+      NOW
+    );
+    expect(summary).toEqual({ last30d: 2, allTime: 3, payingNow: 1 });
+  });
+
+  it('counts a team once, however many times it appears', () => {
+    const summary = referralSummary(
+      [
+        { workspaceId: 'a', attachedAt: daysAgo(3) },
+        { workspaceId: 'a', attachedAt: daysAgo(2) },
+      ],
+      ids,
+      paying,
+      NOW
+    );
+    expect(summary).toEqual({ last30d: 1, allTime: 1, payingNow: 1 });
+  });
+
+  it('leaves out a team that is not on the board, such as an invited teammate\'s empty one', () => {
+    const summary = referralSummary([{ workspaceId: 'ghost', attachedAt: daysAgo(1) }], ids, paying, NOW);
+    expect(summary).toEqual({ last30d: 0, allTime: 0, payingNow: 0 });
+  });
+
+  it('ignores a row with a date it cannot read, and a date in the future', () => {
+    const summary = referralSummary(
+      [
+        { workspaceId: 'a', attachedAt: '' },
+        { workspaceId: 'b', attachedAt: daysAhead(2) },
+      ],
+      ids,
+      paying,
+      NOW
+    );
+    expect(summary.allTime).toBe(1);
+    expect(summary.last30d).toBe(0);
+  });
+
+  it('counts only teams that pay today as paying', () => {
+    const summary = referralSummary(
+      [
+        { workspaceId: 'a', attachedAt: daysAgo(5) },
+        { workspaceId: 'b', attachedAt: daysAgo(5) },
+      ],
+      ids,
+      paying,
+      NOW
+    );
+    expect(summary.payingNow).toBe(1);
+  });
+});
+
+describe('referred signups on the board', () => {
+  const base = { now: NOW, teams: [team({ workspaceId: 'a' }), team({ workspaceId: 'b' })], releases: [], subscriptions: [], activity: new Map<string, number[]>(), activityTruncated: false };
+
+  it('is not tracked when the referral tables could not be read, never a zero', () => {
+    expect(buildScoreboard({ ...base, referrals: null }).referredSignups).toBeNull();
+    expect(buildScoreboard(base).referredSignups).toBeNull();
+  });
+
+  it('keeps invited-by-a-team and through-a-partner apart', () => {
+    const board = buildScoreboard({
+      ...base,
+      referrals: {
+        fromTeams: [{ workspaceId: 'a', attachedAt: daysAgo(2) }],
+        fromPartners: [{ workspaceId: 'b', attachedAt: daysAgo(40) }],
+      },
+    });
+    expect(board.referredSignups?.fromTeams).toMatchObject({ last30d: 1, allTime: 1 });
+    expect(board.referredSignups?.fromPartners).toMatchObject({ last30d: 0, allTime: 1 });
+  });
+
+  it('reads zero as zero when the tables are there and empty', () => {
+    const board = buildScoreboard({ ...base, referrals: { fromTeams: [], fromPartners: [] } });
+    expect(board.referredSignups?.fromTeams).toEqual({ last30d: 0, allTime: 0, payingNow: 0 });
+  });
+
+  it('says so in the Friday post, in the right words for each case', () => {
+    const none = buildScoreboard(base);
+    expect(referredLine(none)).toBe('Referred signups: not tracked yet');
+    expect(formatScoreboardForTeamGroup(none)).toContain('Referred signups: not tracked yet');
+
+    const empty = buildScoreboard({ ...base, referrals: { fromTeams: [], fromPartners: [] } });
+    expect(referredLine(empty)).toBe('Referred signups, last 30 days: 0');
+
+    const some = buildScoreboard({
+      ...base,
+      referrals: {
+        fromTeams: [{ workspaceId: 'a', attachedAt: daysAgo(2) }],
+        fromPartners: [{ workspaceId: 'b', attachedAt: daysAgo(3) }],
+      },
+    });
+    expect(referredLine(some)).toBe('Referred signups, last 30 days: 2 (1 from teams, 1 from partners)');
+    expect(formatScoreboardForTeamGroup(some)).not.toMatch(/[*_#`]/);
+    expect(formatScoreboardForTeamGroup(some)).not.toContain('\u2014');
   });
 });
