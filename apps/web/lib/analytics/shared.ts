@@ -59,6 +59,17 @@ export interface AnalyticsEventPropertiesMap {
     downlink_mbps?: number;
     save_data?: boolean;
   };
+  /**
+   * A tap that should change the address still had not done so 7s later, so the
+   * app loaded the destination the ordinary way (what a reload does). Reported
+   * by lib/nav-stall-watch.ts; read it beside `nav_stalled`, which fires earlier
+   * for the same tap. A high count here is the router freezing in the field.
+   */
+  nav_recovered: {
+    label: string;
+    waited_ms: number;
+    online: boolean;
+  };
   onboarding_started: EmptyAnalyticsProperties;
   onboarding_role_selected: { role: 'artist' | 'manager' | 'label' | 'other' };
   onboarding_release_created: {

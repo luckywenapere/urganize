@@ -21,6 +21,7 @@ import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 // UrgAns chat card, is still its own async chunk inside it.
 import { RightRail } from '@/components/app/RightRail';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
+import { installLinkStallWatchdog } from '@/lib/nav-stall-watch';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { NavigationTracker } from '@/components/app/NavigationTracker';
 import { ToastProvider } from '@/components/shared/ToastProvider';
@@ -335,6 +336,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       void checkAuth();
     }
   }, [checkAuth, isAuthenticated, user]);
+
+  // If a tap on any ordinary link has not changed the page after a few seconds,
+  // load the destination the ordinary way instead of leaving the app frozen.
+  // Real users hit links and buttons that did nothing until they reloaded; see
+  // lib/nav-stall.ts. Installed once for the whole shell.
+  useEffect(() => installLinkStallWatchdog(), []);
 
   // A curator-only account has no team, so every dashboard and settings route is a dead end
   // for them: the APIs behind those pages return 403 and the pages would render

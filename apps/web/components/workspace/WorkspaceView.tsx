@@ -1031,7 +1031,7 @@ export function WorkspaceView() {
     // Reports `nav_stalled` if the address has not changed 1.5s from now, so a
     // back tap that looks dead (PostHog rage clicks, 2026-10-03) says whether
     // the router was slow or stuck. Does nothing to the click itself.
-    watchNavigationStall('release_back_arrow');
+    watchNavigationStall('release_back_arrow', '/dashboard');
     // The fifth "leave this release for the catalog" surface. It does not call
     // leaveReleaseForCatalog(), because setScope's `forgetScene` already does
     // the scene half properly (it knows the OUTGOING release without re-reading
