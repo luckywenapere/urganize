@@ -173,6 +173,10 @@ export const HELP_COPY = {
     label: 'Directory',
     text: 'Find people who have done this work before, like a designer or an engineer.',
   },
+  'nav.relationships': {
+    label: 'Relationships',
+    text: 'The producers, DJs and editors your team works with, and your own private notes on each.',
+  },
   'nav.pitches': {
     label: 'Playlist pitches',
     text: 'Answers from the people who run music lists you sent songs to.',
