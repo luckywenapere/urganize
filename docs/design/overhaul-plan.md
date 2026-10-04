@@ -89,3 +89,9 @@ Relationships/Shows/Directory/Notes/Settings page restyles, press kit and public
 - `pnpm test` (vitest), `eslint .` against the 3-error baseline, `tsc --noEmit`, `next build` by exit code in both flag states, with `/auth`, `/settings`, `/dashboard` still static.
 - Run the dev server and look at Home, Catalogue and a rollout at 1440, 1024 and 375px, in dark and paper mode, using the Browser pane. Compare against the two Deel screenshots.
 - Honest limit: an authenticated session cannot be minted in this sandbox, so real-data states need the founder's pass on a preview deploy.
+
+### Log, 2026-10-04 (later)
+- Sub-tab row is now a full-bleed continuation of the top band with one hairline (52e8fc5f).
+- Onboarding wizard: rounded card, option rows, fields; pill buttons (e81afd05). Billing wall already used the shared pill Button and rounded cards, so no change.
+- Phone bottom bar floats as a glass pill and collapses to a round active-tab button on scroll down, opens on scroll up or tap (1b3674af). Reference: the founder's WhatsApp clip. Unverified on a real phone.
+- Still open: Settings and public pages in the new style, tours verified by clicking through, paper-mode check of the new bar and band.
