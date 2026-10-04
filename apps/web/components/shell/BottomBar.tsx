@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
@@ -54,14 +54,39 @@ export function BottomBar() {
   const tabs = useMemo(() => buildMobileTabs(), []);
   const active = activeMobileTab(areas, pathname);
   const [moreOpen, setMoreOpen] = useState(false);
+  const collapsed = useBarCollapsedOnScroll();
+  const ActiveIcon = active === 'more' ? MoreHorizontal : (TAB_ICON[active ?? ''] ?? Home);
 
   return (
     <>
+      {/* A floating glass pill that shrinks to one round button at the left when
+          the page scrolls down and opens again on scroll up or a tap. The fixed
+          4rem strip below it is still reserved by .mobile-nav-clearance, so
+          nothing is hidden behind it at the end of a page. */}
       <nav
         aria-label="Primary"
-        className="mobile-nav-bar fixed inset-x-0 bottom-0 z-40 border-t border-stroke-default bg-bg-base/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+        data-collapsed={collapsed ? 'true' : 'false'}
+        className="mobile-nav-bar fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 z-40 h-14 overflow-hidden rounded-full border border-stroke-default bg-bg-surface/70 shadow-lg backdrop-blur-2xl transition-[width] duration-300 ease-standard lg:hidden"
+        style={{ width: collapsed ? '3.5rem' : 'calc(100vw - 1.5rem)' }}
       >
-        <ul className="mx-auto flex h-16 max-w-xl items-stretch">
+        <button
+          type="button"
+          aria-label="Open navigation"
+          tabIndex={collapsed ? 0 : -1}
+          aria-hidden={!collapsed}
+          onClick={() => expandBottomBar()}
+          className={`motion-focus absolute left-0 top-0 grid h-14 w-14 place-items-center text-brand transition-opacity duration-200 ${
+            collapsed ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        >
+          <ActiveIcon className="h-5 w-5" aria-hidden="true" />
+        </button>
+        <ul
+          className={`mx-auto flex h-14 w-[calc(100vw-1.5rem)] max-w-xl items-stretch gap-0.5 px-1.5 py-1 transition-opacity duration-200 ${
+            collapsed ? 'pointer-events-none opacity-0' : 'opacity-100'
+          }`}
+          aria-hidden={collapsed}
+        >
           {tabs.map((tab) => {
             const Icon = TAB_ICON[tab.key] ?? Home;
             const isActive = active === tab.key;
@@ -69,14 +94,15 @@ export function BottomBar() {
               <li key={tab.key} className="flex-1">
                 <Link
                   href={tab.href}
+                  tabIndex={collapsed ? -1 : 0}
                   onClick={tab.key === 'catalogue' ? leaveReleaseForCatalog : undefined}
                   aria-current={isActive ? 'page' : undefined}
                   data-tour={tab.key === 'catalogue' ? 'nav-catalog' : tab.key === 'urgans' ? 'nav-urgans' : `shell-mobile-${tab.key}`}
-                  className={`motion-focus flex h-full flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors ${
-                    isActive ? 'text-brand' : 'text-content-tertiary'
+                  className={`motion-focus flex h-full flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                    isActive ? 'bg-bg-hover text-brand' : 'text-content-tertiary'
                   }`}
                 >
-                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
                   {tab.label}
                 </Link>
               </li>
@@ -85,14 +111,15 @@ export function BottomBar() {
           <li className="flex-1">
             <button
               type="button"
+              tabIndex={collapsed ? -1 : 0}
               onClick={() => setMoreOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={moreOpen}
-              className={`motion-focus flex h-full w-full flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors ${
-                active === 'more' ? 'text-brand' : 'text-content-tertiary'
+              className={`motion-focus flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                active === 'more' ? 'bg-bg-hover text-brand' : 'text-content-tertiary'
               }`}
             >
-              <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+              <MoreHorizontal className="h-[18px] w-[18px]" aria-hidden="true" />
               More
             </button>
           </li>
@@ -101,6 +128,51 @@ export function BottomBar() {
       {moreOpen ? <MoreSheet areas={areas} onClose={() => setMoreOpen(false)} /> : null}
     </>
   );
+}
+
+// Shared so the collapsed button can open the bar again without the hook
+// owning a second copy of the state.
+const EXPAND_EVENT = 'urganize:bottom-bar-expand';
+function expandBottomBar() {
+  window.dispatchEvent(new Event(EXPAND_EVENT));
+}
+
+/**
+ * True while the person is scrolling down the page. Any scroll container counts
+ * (the capture listener hears panels as well as the window), small movements are
+ * ignored so a wobble does not flicker the bar, and the bar is always open at
+ * the very top of a page.
+ */
+function useBarCollapsedOnScroll(): boolean {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const lastTop = new WeakMap<EventTarget, number>();
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      const top =
+        target instanceof Document || target === window
+          ? window.scrollY
+          : target instanceof HTMLElement
+            ? target.scrollTop
+            : 0;
+      const key = (target ?? window) as EventTarget;
+      const previous = lastTop.get(key) ?? 0;
+      const delta = top - previous;
+      if (top <= 24) setCollapsed(false);
+      else if (delta > 12) setCollapsed(true);
+      else if (delta < -12) setCollapsed(false);
+      else return;
+      lastTop.set(key, top);
+    };
+    const expand = () => setCollapsed(false);
+    document.addEventListener('scroll', onScroll, { passive: true, capture: true });
+    window.addEventListener(EXPAND_EVENT, expand);
+    return () => {
+      document.removeEventListener('scroll', onScroll, { capture: true });
+      window.removeEventListener(EXPAND_EVENT, expand);
+    };
+  }, []);
+  return collapsed;
 }
 
 function MoreSheet({
