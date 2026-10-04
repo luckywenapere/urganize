@@ -95,3 +95,4 @@ Relationships/Shows/Directory/Notes/Settings page restyles, press kit and public
 - Onboarding wizard: rounded card, option rows, fields; pill buttons (e81afd05). Billing wall already used the shared pill Button and rounded cards, so no change.
 - Phone bottom bar floats as a glass pill and collapses to a round active-tab button on scroll down, opens on scroll up or tap (1b3674af). Reference: the founder's WhatsApp clip. Unverified on a real phone.
 - Still open: Settings and public pages in the new style, tours verified by clicking through, paper-mode check of the new bar and band.
+- Paper mode checked for the band, sub-tab row and floating bar: reads cleanly. Settings pop-up already matches the shell, no change. Tour anchors all exist on the new shell (read in code; not clicked through) and the copy still holds.
