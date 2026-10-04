@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.67.0",
+    date: "October 4, 2026",
+    highlights: [
+      "Opportunities is open. Add the deals, grants, sync and brand work you are going after, and give each one a next step and a date.",
+      "The list puts what is late first, so you know what to chase.",
+    ],
+  },
+  {
     version: "1.66.0",
     date: "October 4, 2026",
     highlights: [
