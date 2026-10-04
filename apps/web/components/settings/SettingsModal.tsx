@@ -1,18 +1,32 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { useDialogFocus } from '@/lib/use-dialog-focus';
 import {
   SETTINGS_MENU,
   SETTINGS_SEGMENT_LABELS,
+  closeSettingsUrl,
+  isPlainLeftClick,
   readSettingsFlags,
   readSettingsRequest,
   resolveDesktopSegment,
   resolveSettingsView,
+  settingsLeaveHref,
   visibleSettingsSegments,
   type SettingsSegment,
 } from '@/lib/settings-nav';
@@ -82,9 +96,6 @@ function SettingsModalGate() {
   );
 }
 
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 function SettingsDialog({
   request,
   section,
@@ -93,6 +104,7 @@ function SettingsDialog({
   section: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const userId = user?.id ?? '';
@@ -162,47 +174,78 @@ function SettingsDialog({
     closeSettings();
   }, [dirtyKeys, closeSettings]);
 
+  // Where to go once "Discard" is confirmed, when the close was really a
+  // navigation (a link inside the pop-up) rather than a plain close.
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+
+  // Leaving for another page from inside the pop-up. The open-Settings URL is
+  // REPLACED with the page's own URL first and the destination pushed after, so
+  // history reads [page, destination]. Pushing straight from the open URL left
+  // an "open Settings" entry behind, and Back (or a redirect that replaced the
+  // destination) walked the person into Settings again — the report that Home
+  // "finds a way back to settings".
+  const leaveTo = useCallback(
+    (href: string) => {
+      resetDirty();
+      router.replace(closeSettingsUrl(pathname ?? '/dashboard', window.location.search), {
+        scroll: false,
+      });
+      router.push(href);
+    },
+    [pathname, resetDirty, router]
+  );
+
   const discardAndClose = () => {
     setConfirmingDiscard(false);
+    if (pendingHref) {
+      const href = pendingHref;
+      setPendingHref(null);
+      leaveTo(href);
+      return;
+    }
     resetDirty();
     closeSettings();
   };
 
-  // ── Focus, keyboard ───────────────────────────────────────────────────────
-  const panelRef = useRef<HTMLDivElement>(null);
-  // The "Discard changes?" prompt sits inside this panel, so while it is up it
-  // is the dialog that owns Tab. Trapping against the whole panel let Tab walk
-  // off the prompt into the settings behind its scrim.
-  const discardRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    panelRef.current?.focus();
-    return () => previous?.focus?.();
-  }, []);
+  const keepEditing = () => {
+    setConfirmingDiscard(false);
+    setPendingHref(null);
+  };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') {
-      event.stopPropagation();
-      if (confirmingDiscard) setConfirmingDiscard(false);
-      else requestClose();
+  // Bubble phase on purpose: a link that opens or re-points the pop-up has its
+  // own onClick (it calls preventDefault), which runs first, so
+  // isPlainLeftClick sees defaultPrevented and this stays out of its way.
+  const onPanelClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (!isPlainLeftClick(event)) return;
+    const anchor = (event.target as Element).closest?.('a[href]') as HTMLAnchorElement | null;
+    if (!anchor) return;
+    const href = settingsLeaveHref(
+      { href: anchor.href, target: anchor.target, download: anchor.hasAttribute('download') },
+      window.location.href
+    );
+    if (!href) return;
+    event.preventDefault();
+    if (decideSettingsClose(dirtyKeys) === 'confirm') {
+      setPendingHref(href);
+      setConfirmingDiscard(true);
       return;
     }
-    const container = (confirmingDiscard ? discardRef.current : null) ?? panelRef.current;
-    if (event.key !== 'Tab' || !container) return;
-    // Keep Tab inside: the page behind is inert while this is open.
-    const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-      (el) => el.offsetParent !== null
-    );
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
+    leaveTo(href);
+  };
+
+  // ── Focus, keyboard ───────────────────────────────────────────────────────
+  const panelRef = useRef<HTMLDivElement>(null);
+  // The shared dialog contract: focus moves onto the panel (so the label is
+  // read first), Tab stays inside, and focus returns to the opener. The
+  // "Discard changes?" prompt is its own dialog on the same stack, so while it
+  // is up it owns Tab.
+  useDialogFocus(true, panelRef, { initialFocus: 'panel' });
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape') return;
+    event.stopPropagation();
+    if (confirmingDiscard) keepEditing();
+    else requestClose();
   };
 
   // ── Deep link: scroll to a section once its segment is showing ────────────
@@ -295,6 +338,7 @@ function SettingsDialog({
         aria-label="Settings"
         tabIndex={-1}
         onKeyDown={onKeyDown}
+        onClick={onPanelClick}
         // focus-visible:outline-none, not a bare outline-none: the panel takes
         // focus only to carry the keyboard in, and the app-wide :focus-visible
         // ring outranks a plain outline-none (the ShareSheet found this).
@@ -324,7 +368,7 @@ function SettingsDialog({
                 type="button"
                 onClick={() => openSettings({ segment: SETTINGS_MENU })}
                 aria-label="Back to all settings"
-                className="motion-focus motion-press -ml-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary sm:hidden"
+                className="motion-focus motion-press -ml-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary sm:hidden"
               >
                 <ChevronLeft className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -338,7 +382,7 @@ function SettingsDialog({
                 type="button"
                 onClick={requestClose}
                 aria-label="Close settings"
-                className="motion-focus motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary sm:hidden"
+                className="motion-focus motion-press grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary sm:hidden"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -360,16 +404,10 @@ function SettingsDialog({
           <div
             className="absolute inset-0 z-10 grid place-items-center bg-black/45 p-6"
             onClick={(event) => {
-              if (event.target === event.currentTarget) setConfirmingDiscard(false);
+              if (event.target === event.currentTarget) keepEditing();
             }}
           >
-            <div
-              ref={discardRef}
-              role="alertdialog"
-              aria-modal="true"
-              aria-labelledby="settings-discard-title"
-              className="w-full max-w-sm rounded-2xl border border-stroke-strong bg-bg-surface p-5 shadow-xl"
-            >
+            <DiscardPrompt>
               <h3 id="settings-discard-title" className="font-display text-lg font-semibold text-content-primary">
                 Discard changes?
               </h3>
@@ -386,17 +424,38 @@ function SettingsDialog({
                 </button>
                 <button
                   type="button"
-                  autoFocus
-                  onClick={() => setConfirmingDiscard(false)}
+                  data-autofocus
+                  onClick={keepEditing}
                   className="motion-focus motion-press h-10 rounded-lg bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
                 >
                   Keep editing
                 </button>
               </div>
-            </div>
+            </DiscardPrompt>
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The "Discard changes?" question. Its own dialog on the shared stack, so while
+ * it is up it owns Tab (the settings behind its scrim are inert) and focus
+ * lands on the safe answer, "Keep editing", via `data-autofocus`.
+ */
+function DiscardPrompt({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, ref);
+  return (
+    <div
+      ref={ref}
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="settings-discard-title"
+      className="w-full max-w-sm rounded-2xl border border-stroke-strong bg-bg-surface p-5 shadow-xl"
+    >
+      {children}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  settingsLeaveHref,
   SETTINGS_MENU,
   SETTINGS_SEGMENTS,
   buildSettingsUrl,
@@ -342,5 +343,21 @@ describe('isPlainLeftClick', () => {
 
   it('does not fight a handler that already claimed the click', () => {
     expect(isPlainLeftClick({ ...click, defaultPrevented: true })).toBe(false);
+  });
+});
+
+describe('settingsLeaveHref', () => {
+  const base = 'https://app.urganize.app/dashboard?settings=menu';
+  it('returns the path for a plain in-app link', () => {
+    expect(settingsLeaveHref({ href: 'https://app.urganize.app/dashboard/press-kits' }, base)).toBe(
+      '/dashboard/press-kits'
+    );
+    expect(settingsLeaveHref({ href: '/dashboard/home?x=1#a' }, base)).toBe('/dashboard/home?x=1#a');
+  });
+  it('leaves other tabs, downloads, other sites and settings links alone', () => {
+    expect(settingsLeaveHref({ href: '/x', target: '_blank' }, base)).toBeNull();
+    expect(settingsLeaveHref({ href: '/x', download: true }, base)).toBeNull();
+    expect(settingsLeaveHref({ href: 'https://example.com/x' }, base)).toBeNull();
+    expect(settingsLeaveHref({ href: '/dashboard?settings=team' }, base)).toBeNull();
   });
 });
