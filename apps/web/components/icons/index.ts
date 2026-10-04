@@ -80,6 +80,8 @@ export {
   PartyPopper, Pencil, Phone, PiggyBank, Pin,
   Plug, Rocket, Send, Share,
   Share2, ShieldCheck, Slash, Smartphone,
-  Smile, ThumbsDown, ThumbsUp, TrendingUp,
+  Smile, Square, ThumbsDown, ThumbsUp, TrendingUp,
   Undo2, UserCircle, UserCircle2, UserPlus,
+  // Read-aloud on UrgAns replies (NEXT_PUBLIC_FEATURE_URGANS_SPEAK).
+  Volume2,
 } from 'lucide-react';
