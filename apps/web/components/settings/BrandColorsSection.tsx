@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useId } from 'react';
-import { AlertCircle } from '@/components/icons';
+import { AlertCircle, ChevronDown } from '@/components/icons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import {
   BRAND_COLORS_SETTINGS_ANCHOR,
@@ -49,14 +49,44 @@ export function BrandColorsSection({
   error,
   onSave,
 }: BrandColorsSectionProps) {
+  // Closed by default: this is an occasional job, and Artists & brand is the long
+  // section, so it opens calm. A deep link (the share sheet's "Change them") opens
+  // it. The body stays mounted when closed, only hidden, so a color somebody is
+  // still choosing is not thrown away by folding the section.
+  const bodyId = useId();
+  const [open, setOpen] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('section') === BRAND_COLORS_SETTINGS_ANCHOR
+  );
+
   return (
     <section id={BRAND_COLORS_SETTINGS_ANCHOR} className={`${panelClass} scroll-mt-4`}>
-      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-        Brand colors
+      <h2>
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          className="motion-focus flex min-h-11 w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="min-w-0">
+            <span className="block font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+              Brand colors
+            </span>
+            <span className="mt-1 block text-sm font-normal normal-case tracking-normal text-content-secondary">
+              Colors for each artist&apos;s share images.
+            </span>
+          </span>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${open ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
+        </button>
       </h2>
+      <div id={bodyId} hidden={!open} className="mt-4">
       <p className="mb-4 text-sm text-content-secondary">
-        Colors for each artist&apos;s share images. The text turns light or dark by itself, so it
-        stays easy to read.
+        The text turns light or dark by itself, so it stays easy to read.
       </p>
 
       {isLoading && artists === undefined ? (
@@ -83,6 +113,7 @@ export function BrandColorsSection({
 
       {message && <p role="status" className={`mt-3 ${feedbackSuccessClass}`}>{message}</p>}
       {error && <p role="alert" className={`mt-3 ${feedbackErrorClass}`}>{error}</p>}
+      </div>
     </section>
   );
 }
