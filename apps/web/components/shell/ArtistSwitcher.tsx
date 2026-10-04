@@ -93,7 +93,7 @@ export function ArtistSwitcher() {
     return (
       <div className="flex min-w-0 items-center gap-2.5" data-tour="shell-switcher">
         {mark}
-        <span className="hidden min-w-0 text-left sm:block">
+        <span className="hidden max-w-[10rem] min-w-0 text-left xl:block">
           <span className="block truncate text-sm font-semibold leading-4 text-content-primary">{title}</span>
           <span className="block truncate text-xs leading-4 text-content-tertiary">{sub}</span>
         </span>
@@ -112,7 +112,7 @@ export function ArtistSwitcher() {
         className="motion-focus motion-press flex min-h-11 min-w-0 items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5 hover:bg-bg-hover/70"
       >
         {mark}
-        <span className="hidden min-w-0 text-left sm:block">
+        <span className="hidden max-w-[10rem] min-w-0 text-left xl:block">
           <span className="flex items-center gap-1 text-sm font-semibold leading-4 text-content-primary">
             <span className="truncate">{title}</span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />

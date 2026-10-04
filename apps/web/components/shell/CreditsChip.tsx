@@ -33,7 +33,8 @@ export function CreditsChip() {
       }`}
     >
       <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-      {label}
+      <span className="xl:hidden">{total.toLocaleString('en')}</span>
+      <span className="hidden xl:inline">{label}</span>
     </Link>
   );
 }

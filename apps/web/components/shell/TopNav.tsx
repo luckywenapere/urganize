@@ -77,7 +77,7 @@ export function TopNav({ userName }: { userName?: string }) {
 
         <ArtistSwitcher />
 
-        <nav aria-label="Main" className="mx-auto hidden min-w-0 items-center gap-1 lg:flex">
+        <nav aria-label="Main" className="mx-auto hidden min-w-0 items-center gap-0.5 lg:flex xl:gap-1">
           {areas.map((area) => {
             const Icon = AREA_ICON[area.key];
             const isActive = active?.key === area.key;
@@ -88,13 +88,13 @@ export function TopNav({ userName }: { userName?: string }) {
                 onClick={area.key === 'catalogue' ? leaveReleaseForCatalog : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 data-tour={`shell-${area.key}`}
-                className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors ${
+                className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium transition-colors xl:px-3.5 ${
                   isActive
                     ? 'bg-bg-surface text-content-primary shadow-sm ring-1 ring-stroke-default'
                     : 'text-content-secondary hover:bg-bg-hover/70 hover:text-content-primary'
                 }`}
               >
-                <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <Icon className="hidden h-[18px] w-[18px] 2xl:block" aria-hidden="true" />
                 {area.label}
               </Link>
             );
@@ -111,12 +111,14 @@ export function TopNav({ userName }: { userName?: string }) {
             className="motion-focus motion-press inline-flex h-10 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface/70 px-2.5 text-sm text-content-secondary hover:text-content-primary sm:px-3"
           >
             <Search className="h-[18px] w-[18px]" aria-hidden="true" />
-            <kbd className="hidden rounded-md bg-bg-hover px-1.5 py-0.5 font-mono text-[11px] text-content-tertiary lg:inline">
+            <kbd className="hidden rounded-md bg-bg-hover px-1.5 py-0.5 font-mono text-[11px] text-content-tertiary 2xl:inline">
               Ctrl K
             </kbd>
           </button>
           <CreditsChip />
-          <HelpMenu />
+          <span className="hidden xl:contents">
+            <HelpMenu />
+          </span>
           <NotificationsBell />
           <WorkspaceMenu userName={userName} />
         </div>
@@ -162,9 +164,9 @@ function MoreMenu() {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="true"
-        className="motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-medium text-content-secondary hover:bg-bg-hover/70 hover:text-content-primary"
+        className="motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium text-content-secondary hover:bg-bg-hover/70 xl:px-3.5 hover:text-content-primary"
       >
-        <MoreHorizontal className="h-[18px] w-[18px]" aria-hidden="true" />
+        <MoreHorizontal className="hidden h-[18px] w-[18px] 2xl:block" aria-hidden="true" />
         More
       </button>
       {open ? (
