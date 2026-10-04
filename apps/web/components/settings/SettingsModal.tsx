@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
@@ -104,7 +104,6 @@ function SettingsDialog({
   section: string | null;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const userId = user?.id ?? '';
@@ -187,12 +186,12 @@ function SettingsDialog({
   const leaveTo = useCallback(
     (href: string) => {
       resetDirty();
-      router.replace(closeSettingsUrl(pathname ?? '/dashboard', window.location.search), {
+      router.replace(closeSettingsUrl(window.location.pathname, window.location.search), {
         scroll: false,
       });
       router.push(href);
     },
-    [pathname, resetDirty, router]
+    [resetDirty, router]
   );
 
   const discardAndClose = () => {

@@ -489,8 +489,29 @@ function ShareDialog({ request }: { request: ShareRequest }) {
                       // Close first: the sheet is mounted app-wide, so it would
                       // otherwise sit open on top of Settings. Settings opens over
                       // the page in place, so the rollout stays scoped behind it.
+                      //
+                      // close() also runs the create flow's own continuation,
+                      // which can navigate to the new rollout. Opening Settings
+                      // in the same tick raced that push, so Settings opened
+                      // over the wrong URL and could not be closed cleanly.
+                      // Wait for the navigation to land, then open it.
+                      const releaseId = request.releaseId;
+                      const expectsNavigation = Boolean(request.then);
                       close();
-                      openSettings({ segment: 'artists', section: BRAND_COLORS_SETTINGS_ANCHOR });
+                      const open = () =>
+                        openSettings({ segment: 'artists', section: BRAND_COLORS_SETTINGS_ANCHOR });
+                      if (!expectsNavigation) {
+                        open();
+                        return;
+                      }
+                      const started = Date.now();
+                      const timer = window.setInterval(() => {
+                        const landed = window.location.search.includes(`release=${releaseId}`);
+                        if (landed || Date.now() - started > 2000) {
+                          window.clearInterval(timer);
+                          open();
+                        }
+                      }, 50);
                     }
                   : null
               }
