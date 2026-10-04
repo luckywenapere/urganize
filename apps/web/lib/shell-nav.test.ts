@@ -61,13 +61,13 @@ describe('shell nav', () => {
     expect(areas.find((a) => a.key === 'audience')?.live).toBe(false);
   });
 
-  it('relationships points at its first built tab, or at its own page when none is', () => {
+  it('relationships always points at its own page, whichever tabs are built', () => {
     expect(buildShellAreas(ALL_ON).find((a) => a.key === 'relationships')?.href).toBe(
       '/dashboard/relationships'
     );
     expect(
       buildShellAreas({ ...ALL_OFF, pitching: true }).find((a) => a.key === 'relationships')?.href
-    ).toBe('/dashboard/pitching');
+    ).toBe('/dashboard/relationships');
     expect(buildShellAreas(ALL_OFF).find((a) => a.key === 'relationships')?.href).toBe(
       '/dashboard/relationships'
     );

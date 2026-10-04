@@ -168,7 +168,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
     {
       key: 'relationships',
       label: 'Relationships',
-      href: relationshipTabs[0]?.href ?? '/dashboard/relationships',
+      href: '/dashboard/relationships',
       live: relationshipTabs.length > 0,
       subTabs: relationshipTabs,
       isActive: (p) =>

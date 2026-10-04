@@ -10,8 +10,8 @@ function PitchRow({ pitch, placed }: { pitch: HomePitchItem; placed: boolean }) 
         aria-hidden="true"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-content-primary">{pitch.playlistName}</p>
-        <p className="mt-0.5 truncate text-xs text-content-tertiary">
+        <p className="break-words text-sm font-medium sm:truncate text-content-primary">{pitch.playlistName}</p>
+        <p className="mt-0.5 break-words text-xs sm:truncate text-content-tertiary">
           {pitch.songTitle}
           {pitch.curatorName ? ` · ${pitch.curatorName}` : ''}
           {' · '}

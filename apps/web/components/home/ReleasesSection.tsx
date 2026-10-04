@@ -41,7 +41,7 @@ function ReleaseCard({ release }: { release: HomeReleaseSummary }) {
           <p className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">
             {release.artistName || 'Unassigned artist'}
           </p>
-          <h3 className="mt-1 truncate font-display text-lg font-semibold text-content-primary">{release.title}</h3>
+          <h3 className="mt-1 break-words font-display sm:truncate text-lg font-semibold text-content-primary">{release.title}</h3>
         </div>
         <span className={`shrink-0 text-xs font-medium ${release.isSoon ? 'text-brand' : 'text-content-tertiary'}`}>
           {daysOutLabel(release.daysOut)}

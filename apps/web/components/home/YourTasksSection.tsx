@@ -14,10 +14,10 @@ function TaskRow({ task }: { task: HomeTaskItem }) {
     <li className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
       <TaskCompletionCheckbox taskId={task.id} status={task.status} taskTitle={task.title} className="mt-0.5" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-content-primary">{task.title}</p>
-        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-content-tertiary">
+        <p className="break-words text-sm font-medium text-content-primary sm:truncate">{task.title}</p>
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-content-tertiary">
           <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${getPriorityDotClass(task.priority)}`} aria-hidden="true" />
-          <span className="truncate">
+          <span className="break-words sm:truncate">
             {task.releaseTitle ? `${task.releaseTitle} · ${task.artistName || 'Unassigned artist'}` : 'No rollout'}
           </span>
           <span aria-hidden="true">·</span>

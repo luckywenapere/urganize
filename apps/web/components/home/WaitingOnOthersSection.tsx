@@ -11,8 +11,8 @@ function WaitingTaskRow({ task }: { task: HomeWaitingTask }) {
         aria-hidden="true"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-content-primary">{task.title}</p>
-        <p className="mt-0.5 truncate text-xs text-content-tertiary">
+        <p className="break-words text-sm font-medium sm:truncate text-content-primary">{task.title}</p>
+        <p className="mt-0.5 break-words text-xs sm:truncate text-content-tertiary">
           {task.assigneeName || 'Someone on your team'}
           {task.releaseTitle ? ` · ${task.releaseTitle}` : ''}
           {' · '}
@@ -30,8 +30,8 @@ function DjLinkRow({ link }: { link: HomeWaitingDjLink }) {
     <li className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
       <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-status-warning" aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-content-primary">{link.recipientName}</p>
-        <p className="mt-0.5 truncate text-xs text-content-tertiary">
+        <p className="break-words text-sm font-medium sm:truncate text-content-primary">{link.recipientName}</p>
+        <p className="mt-0.5 break-words text-xs sm:truncate text-content-tertiary">
           {link.showLabel} · DJ link not opened, {Math.floor(link.hoursWaiting / 24)}d
         </p>
       </div>
