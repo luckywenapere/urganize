@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import type { HomeReleaseSummary } from '@/lib/home/types';
 import { HomeSectionShell } from './HomeSectionShell';
@@ -23,6 +26,8 @@ function daysOutLabel(daysOut: number | null): string {
   const daysAgo = Math.abs(daysOut);
   return `Out ${daysAgo === 1 ? '1 day' : `${daysAgo} days`} ago`;
 }
+
+const VISIBLE = 3;
 
 function ReleaseCard({ release }: { release: HomeReleaseSummary }) {
   const progressPct = release.progress.total > 0 ? Math.round((release.progress.done / release.progress.total) * 100) : 0;
@@ -90,16 +95,32 @@ function ReleaseCard({ release }: { release: HomeReleaseSummary }) {
 }
 
 export function ReleasesSection({ releases }: { releases: readonly HomeReleaseSummary[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? releases : releases.slice(0, VISIBLE);
+  const hidden = releases.length - shown.length;
+
   return (
     <HomeSectionShell title="Releases">
       {releases.length === 0 ? (
         <EmptyState title="Nothing in flight right now." className="py-4" />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {releases.map((release) => (
-            <ReleaseCard key={release.id} release={release} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {shown.map((release) => (
+              <ReleaseCard key={release.id} release={release} />
+            ))}
+          </div>
+          {hidden > 0 || expanded ? (
+            <button
+                type="button"
+                onClick={() => setExpanded((open) => !open)}
+                aria-expanded={expanded}
+                className="motion-focus mt-2 min-h-11 w-full rounded-lg px-2 text-left text-xs font-semibold text-content-secondary hover:text-content-primary"
+              >
+                {expanded ? 'Show fewer' : `Show ${hidden} more`}
+              </button>
+          ) : null}
+        </>
       )}
     </HomeSectionShell>
   );
