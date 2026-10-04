@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.65.1",
+    date: "October 4, 2026",
+    highlights: [
+      "In Settings, Brand colors now stays folded until you open it, so Artists & brand is easier to scan.",
+    ],
+  },
+  {
     version: "1.65.0",
     date: "October 4, 2026",
     highlights: [
