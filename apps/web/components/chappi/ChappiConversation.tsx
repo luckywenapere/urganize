@@ -261,6 +261,17 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Opening UrgAns brings the keyboard up (founder call, 2026-10-04): a person
+  // who taps UrgAns is there to ask, so the box is ready. The full page only,
+  // never the dock or the rail, which sit on every other page and would take the
+  // keyboard from whatever the person is doing there. The field is 16px below
+  // sm, so focusing it never zooms iOS. A mobile browser may still refuse a
+  // keyboard that no tap asked for; the Urganize app allows it.
+  useEffect(() => {
+    if (variant !== 'page') return;
+    inputRef.current?.focus({ preventScroll: true });
+  }, [variant]);
+
   // Voice input (NEXT_PUBLIC_FEATURE_URGANS_VOICE). The transcript is MERGED
   // into whatever is typed — never replacing it, never sending. Reading the
   // input from getState avoids a stale closure at transcribe time (a clip can

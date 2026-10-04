@@ -206,6 +206,9 @@ export default function App() {
             style={[styles.web, { backgroundColor: appearance.background }]}
             containerStyle={[styles.web, { backgroundColor: appearance.background }]}
             originWhitelist={['https://*']}
+            // So the page can bring the keyboard up on its own when UrgAns opens.
+            // iOS refuses that unless this is false; Android always allows it.
+            keyboardDisplayRequiresUserAction={false}
             injectedJavaScriptBeforeContentLoaded={SHELL_INFO_SCRIPT}
             onMessage={onMessage}
             onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
