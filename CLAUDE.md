@@ -18535,3 +18535,16 @@ Nothing has run against a real database or a real session, and no screen has bee
 1. Apply `20261003100000_relationships.sql`.
 2. Set `NEXT_PUBLIC_FEATURE_RELATIONSHIPS=true` on the Vercel `Web` project with a commit that rebuilds `apps/web`.
 3. Add a contact, add the same email again, and confirm you land on the same person; then add a different person with the same name and confirm a duplicate flag appears instead of a merge.
+
+---
+
+## Design overhaul, pass 1: a new shell (2026-10-04, live, no flag)
+
+Founder call: apply Deel's structure to the whole app with Urganize's skin, and put nothing behind a flag. The plan and progress log live in `docs/design/overhaul-plan.md`; read it before continuing.
+
+- **Shell:** a top bar (logo, artist switcher, area pills Home / Catalogue / Relationships / Opportunities / Audience / Shows, search, credits chip, help, bell, account) plus a sub-tab row, a bottom bar on phones (Home, Catalogue, UrgAns, Shows, More), a floating UrgAns button that opens the chat drawer, and a Ctrl/Cmd+K bar. The left menu, the right-hand column and the mobile bar of the old shell are deleted. The nav model is `lib/shell-nav.ts` (pure, tested); the artist chosen in the switcher is `useShellStore.selectedArtistId` and filters Home and the Catalogue.
+- **Coming soon:** areas that are not built (Opportunities, Audience, and Relationships or Shows while their flags are off) open a "Coming soon" page with "Tell me when it is ready" (`components/shell/ComingSoon.tsx`, copy in `lib/coming-soon.ts`). They are never greyed out.
+- **Catalogue:** the rollouts list is a table with filter chips and a Table/Cards toggle (`CatalogueView`, rules in `lib/catalogue-table.ts`). A rollout's places are a row of tabs (`RolloutTabs`) under a page header.
+- **Home** is the landing page for everyone (`HOME_PATH` is `/dashboard/home`); `NEXT_PUBLIC_FEATURE_HOME` no longer exists. The existing sections stay; Home gained the ask bar.
+- **Still open:** the attention cards and onboarding bar on Home, the Artists table restyle, a density pass on tokens, tour anchors (`lib/tours.ts`) against the new shell, and every later pass (Relationships, Shows, Settings, public pages, onboarding, billing wall, native shell).
+- **Not verified:** nothing has been seen with a real session. Build, lint, types and 6,553 tests pass, and `/auth`, `/dashboard`, `/dashboard/home` and `/settings` stay static, but the new screens need a founder look at 1440, 1024 and 375 in both themes.
