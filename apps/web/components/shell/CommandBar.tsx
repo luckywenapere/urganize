@@ -112,10 +112,6 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
   }, [query, releases, hasCuratorProfile, setInput, setRailOpen, router]);
 
   useEffect(() => {
-    setActive(0);
-  }, [query]);
-
-  useEffect(() => {
     listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [active]);
 
@@ -146,7 +142,10 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
           <input
             data-autofocus
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setActive(0);
+            }}
             onKeyDown={(event) => {
               if (event.key === 'ArrowDown') {
                 event.preventDefault();

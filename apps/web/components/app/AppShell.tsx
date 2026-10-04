@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
@@ -186,7 +186,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   // creation modal the page-level buttons use, from any dashboard page,
   // without navigating away.
   const isCreateReleaseOpen = useShellStore((state) => state.createOpen);
-  const openCreateRelease = useShellStore((state) => state.openCreate);
   const closeCreateRelease = useShellStore((state) => state.closeCreate);
 
   const isAuthRoute =
