@@ -243,8 +243,8 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
       />
 
       <div className="rounded-2xl border border-stroke-default bg-bg-surface p-3 sm:p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="relative min-w-[200px] flex-1 sm:max-w-xs">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <label className="relative w-full sm:min-w-[200px] sm:max-w-xs sm:flex-1">
             <span className="sr-only">Search rollouts</span>
             <Search
               className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary"
@@ -259,7 +259,11 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
             />
           </label>
 
-          <div role="group" aria-label="Filter by status" className="flex flex-wrap items-center gap-1.5">
+          <div
+            role="group"
+            aria-label="Filter by status"
+            className="-mx-3 flex items-center gap-1.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
+          >
             {STATUS_FILTERS.map((filter) => {
               const active = status === filter.key;
               return (
@@ -268,7 +272,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
                   type="button"
                   onClick={() => setStatus(filter.key)}
                   aria-pressed={active}
-                  className={`motion-focus motion-press inline-flex h-11 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors ${
+                  className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors ${
                     active
                       ? 'border-content-primary bg-bg-base text-content-primary'
                       : 'border-stroke-control text-content-secondary hover:border-content-secondary hover:text-content-primary'
@@ -281,14 +285,14 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
             })}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm text-content-secondary">
+          <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
+            <label className="flex w-full items-center gap-2 text-sm text-content-secondary sm:w-auto">
               <span className="sr-only sm:not-sr-only">Sort</span>
-              <span className="relative inline-flex">
+              <span className="relative inline-flex w-full sm:w-auto">
               <select
                 value={sort}
                 onChange={(event) => setSort(event.target.value as SortKey)}
-                className="h-11 appearance-none rounded-full border border-stroke-control bg-bg-base pl-4 pr-10 text-base text-content-primary hover:border-content-secondary"
+                className="h-11 w-full appearance-none rounded-full sm:w-auto border border-stroke-control bg-bg-base pl-4 pr-10 text-base text-content-primary hover:border-content-secondary"
               >
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.key} value={option.key}>
