@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, ArrowRight, CheckCircle2, AlertCircle } from '@/components/icons';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
@@ -17,7 +18,11 @@ const TONE: Record<AttentionTone, { badge: string; Icon: typeof AlertCircle }> =
  * to go. The first thing on Home, above the lists, so the answer to "what is on
  * fire" is on screen before anything is read.
  */
+const VISIBLE = 3;
+
 export function AttentionCards({ items }: { items: readonly AttentionItem[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? items : items.slice(0, VISIBLE);
   if (items.length === 0) {
     return (
       <section aria-label="For you today" className="rounded-2xl border border-stroke-default bg-bg-surface p-5">
@@ -31,7 +36,7 @@ export function AttentionCards({ items }: { items: readonly AttentionItem[] }) {
     <section aria-label="For you today">
       <h2 className="mb-3 font-display text-lg font-semibold text-content-primary">For you today</h2>
       <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {items.map((item) => {
+        {shown.map((item) => {
           const { badge, Icon } = TONE[item.tone];
           return (
             <li key={item.key}>
@@ -56,6 +61,16 @@ export function AttentionCards({ items }: { items: readonly AttentionItem[] }) {
           );
         })}
       </ul>
+      {items.length > VISIBLE ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          aria-expanded={expanded}
+          className="motion-focus mt-2 min-h-11 rounded-lg px-1 text-xs font-semibold text-content-secondary hover:text-content-primary"
+        >
+          {expanded ? 'Show fewer' : `Show ${items.length - VISIBLE} more`}
+        </button>
+      ) : null}
     </section>
   );
 }

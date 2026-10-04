@@ -5,6 +5,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useLiveHomeSections } from './useLiveHomeSections';
 import { HomeHeaderRow } from './HomeHeaderRow';
 import { HomeAskBar } from './HomeAskBar';
+import { HomeSummaryStrip } from './HomeSummaryStrip';
 import { AttentionCards } from './AttentionCards';
 import { OnboardingBar } from './OnboardingBar';
 import { buildOnboardingProgress } from '@/lib/home/onboarding';
@@ -69,9 +70,14 @@ export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; v
 
   return (
     <div className="home-scene-container space-y-5">
-      <HomeHeaderRow header={home.header} />
-      <HomeAskBar />
-      <OnboardingBar progress={buildOnboardingProgress(live.releases)} />
+      <div className="space-y-4">
+        <HomeHeaderRow header={home.header} />
+        <HomeSummaryStrip
+          late={yourTasks.late.length}
+          today={yourTasks.today.length}
+          waiting={waitingTasks.length + home.waiting.djLinks.length}
+        />
+      </div>
       <AttentionCards
         items={buildAttentionItems({
           yourTasks,
@@ -80,6 +86,8 @@ export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; v
           nextShow: home.nextShow,
         })}
       />
+      <HomeAskBar />
+      <OnboardingBar progress={buildOnboardingProgress(live.releases)} />
       <BriefCard />
       <div className="home-two-col">
         <div className="space-y-5">
@@ -87,9 +95,9 @@ export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; v
           <WaitingOnOthersSection tasks={waitingTasks} djLinks={home.waiting.djLinks} onTimeCount={live.waitingOnTimeCount} />
         </div>
         <div className="space-y-5">
+          <NextShowSection nextShow={home.nextShow} />
           <ReleasesSection releases={releases} />
           <PlacementsSection placements={placements} />
-          <NextShowSection nextShow={home.nextShow} />
         </div>
       </div>
     </div>

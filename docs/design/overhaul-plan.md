@@ -96,3 +96,9 @@ Relationships/Shows/Directory/Notes/Settings page restyles, press kit and public
 - Phone bottom bar floats as a glass pill and collapses to a round active-tab button on scroll down, opens on scroll up or tap (1b3674af). Reference: the founder's WhatsApp clip. Unverified on a real phone.
 - Still open: Settings and public pages in the new style, tours verified by clicking through, paper-mode check of the new bar and band.
 - Paper mode checked for the band, sub-tab row and floating bar: reads cleanly. Settings pop-up already matches the shell, no change. Tour anchors all exist on the new shell (read in code; not clicked through) and the copy still holds.
+
+### Log, 2026-10-04 (Home engineered, detail pages)
+- Person and show detail pages: person page uses PageHeader with "We spoke today" as the one primary pill; show page title is larger and Edit is the filled pill.
+- Home reading order, designed from where the eye goes: greeting (largest type) -> summary strip (late / due today / waiting on others, each a jump link) -> "For you today" cards (capped at 3) -> ask bar -> getting started (hides itself) -> two columns. Left: Your tasks (5 shown) then Waiting on others (3 shown), each with "Show N more". Right: Next show, Rollouts, Placements.
+- Why: Waiting on others used to sit under an unbounded task list, so on a phone it was screens down. The strip gives it a front door at the top, and the caps keep it within one scroll.
+- Skeleton synced (strip, cards, ask bar). Not seen with real data: local Supabase is unreachable, so Home only renders its skeleton here. Needs a look on the preview, at 375 and 1440.

@@ -1,7 +1,12 @@
+'use client';
+
+import { useState } from 'react';
 import { getPriorityDotClass } from '@/lib/tasks';
 import type { HomeWaitingDjLink, HomeWaitingTask } from '@/lib/home/types';
 import { HomeSectionShell } from './HomeSectionShell';
 import { EmptyState } from '@/components/shared/EmptyState';
+
+const VISIBLE = 3;
 
 function WaitingTaskRow({ task }: { task: HomeWaitingTask }) {
   return (
@@ -53,10 +58,16 @@ export function WaitingOnOthersSection({
   djLinks: readonly HomeWaitingDjLink[];
   onTimeCount: number;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const hasWaiting = tasks.length > 0 || djLinks.length > 0;
+  const total = tasks.length + djLinks.length;
+  const limit = expanded ? total : VISIBLE;
+  const shownTasks = tasks.slice(0, limit);
+  const shownLinks = djLinks.slice(0, Math.max(0, limit - shownTasks.length));
+  const hidden = total - shownTasks.length - shownLinks.length;
 
   return (
-    <HomeSectionShell title="Waiting on others">
+    <HomeSectionShell id="home-waiting" title="Waiting on others">
       {!hasWaiting ? (
         <EmptyState
           title={
@@ -69,13 +80,23 @@ export function WaitingOnOthersSection({
       ) : (
         <>
           <ul className="divide-y divide-stroke-subtle">
-            {tasks.map((task) => (
+            {shownTasks.map((task) => (
               <WaitingTaskRow key={task.id} task={task} />
             ))}
-            {djLinks.map((link) => (
+            {shownLinks.map((link) => (
               <DjLinkRow key={`${link.showId}-${link.recipientId}`} link={link} />
             ))}
           </ul>
+          {hidden > 0 || expanded ? (
+            <button
+              type="button"
+              onClick={() => setExpanded((open) => !open)}
+              aria-expanded={expanded}
+              className="motion-focus mt-2 min-h-11 w-full rounded-lg px-2 text-left text-xs font-semibold text-content-secondary hover:text-content-primary"
+            >
+              {expanded ? 'Show fewer' : `Show ${hidden} more`}
+            </button>
+          ) : null}
           {onTimeCount > 0 ? (
             <p className="mt-3 border-t border-stroke-subtle pt-3 text-xs text-content-tertiary">
               {onTimeCount} more {onTimeCount === 1 ? 'task is' : 'tasks are'} with your team and on time.
