@@ -2812,11 +2812,16 @@ html[data-auth-session='1'] .auth-form-shell {
   );
 }
 .shell-band-sub {
-  background-image: linear-gradient(
-    to bottom,
-    rgb(var(--color-brand) / 0.03),
-    rgb(var(--color-brand) / 0)
-  );
+  position: relative;
+  isolation: isolate;
+}
+.shell-band-sub::before {
+  content: '';
+  position: absolute;
+  inset: 0 -100vw;
+  z-index: -1;
+  background-color: rgb(var(--color-bg-base));
+  box-shadow: inset 0 -1px 0 rgb(var(--color-stroke) / 0.08);
 }
 
 /* The new shell (design overhaul, 2026-10-04) has a full-width top band, so the
