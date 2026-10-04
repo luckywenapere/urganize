@@ -119,8 +119,10 @@ const config: ExpoConfig = {
     [
       'expo-build-properties',
       {
-        // React Native Firebase needs static frameworks on iOS.
-        ios: { useFrameworks: 'static' },
+        // React Native Firebase 26 resolves Firebase through Swift Package
+        // Manager, which it refuses to combine with static linkage (the pod
+        // install fails with duplicate symbols), so link dynamically.
+        ios: { useFrameworks: 'dynamic' },
       },
     ],
   ],
