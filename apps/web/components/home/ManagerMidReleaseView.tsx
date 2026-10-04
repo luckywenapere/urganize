@@ -7,6 +7,8 @@ import { HomeHeaderRow } from './HomeHeaderRow';
 import { HomeAskBar } from './HomeAskBar';
 import { HomeSummaryStrip } from './HomeSummaryStrip';
 import { FocusTaskCard } from './FocusTaskCard';
+import { UpNextCard } from './UpNextCard';
+import { pickUpNext } from '@/lib/home/up-next';
 import { pickFocusTask, withoutTask } from '@/lib/home/focus';
 import { AttentionCards } from './AttentionCards';
 import { OnboardingBar } from './OnboardingBar';
@@ -83,7 +85,7 @@ export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; v
           waiting={waitingTasks.length + home.waiting.djLinks.length}
         />
       </div>
-      {focus ? <FocusTaskCard focus={focus} /> : null}
+      {focus ? <FocusTaskCard focus={focus} /> : <UpNextCard next={pickUpNext(home.nextShow, releases)} />}
       <AttentionCards
         items={buildAttentionItems({
           yourTasks,
