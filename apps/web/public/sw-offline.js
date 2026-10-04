@@ -22,7 +22,11 @@ importScripts('/sw-push.js');
 const CACHE_VERSION = 'v1';
 const HTML_CACHE = `urganize-offline-html-${CACHE_VERSION}`;
 const ASSET_CACHE = `urganize-offline-assets-${CACHE_VERSION}`;
-const CURRENT_CACHES = new Set([HTML_CACHE, ASSET_CACHE]);
+// In-app (client-side) navigations fetch a React Server Component payload
+// (`?_rsc=…`) rather than a document. Without keeping those, tapping a link
+// offline fails the fetch and Next falls back to a full page load.
+const RSC_CACHE = `urganize-offline-rsc-${CACHE_VERSION}`;
+const CURRENT_CACHES = new Set([HTML_CACHE, ASSET_CACHE, RSC_CACHE]);
 const OFFLINE_CACHE_PREFIX = 'urganize-offline-';
 
 // A page that must never resolve to the dashboard's chrome offline — each
@@ -38,7 +42,10 @@ const PUBLIC_ONLY_PREFIXES = ['/epk/', '/credits/', '/capture/', '/curator', '/a
 // somewhere inside it," not "show me this exact page."
 const APP_CHROME_PREFIXES = ['/dashboard', '/settings', '/admin'];
 
-const MAX_CACHED_HTML_ENTRIES = 20;
+// Room for every nav destination the page warms (see lib/prefetch-routes.ts)
+// plus the pages the user has actually opened.
+const MAX_CACHED_HTML_ENTRIES = 40;
+const MAX_CACHED_RSC_ENTRIES = 80;
 const NAVIGATION_TIMEOUT_MS = 5000;
 
 const OFFLINE_HTML = `<!doctype html>
@@ -146,6 +153,46 @@ async function handleNavigation(request) {
   }
 }
 
+// Network first, so online behaviour is exactly what it was; the cached copy
+// only answers when the network fails. Vary is ignored on lookup because the
+// router state header differs between a prefetch and the click that follows.
+async function handleRsc(request) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok && response.type === 'basic') {
+      const cache = await caches.open(RSC_CACHE);
+      cache.put(request, response.clone());
+      trimCache(RSC_CACHE, MAX_CACHED_RSC_ENTRIES);
+    }
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request, { ignoreVary: true });
+    if (cached) return cached;
+    throw error;
+  }
+}
+
+// Fetch each page ahead of time so it is already on the device when the
+// connection drops. Only same-origin app paths; never an API route.
+async function precacheRoutes(paths) {
+  const cache = await caches.open(HTML_CACHE);
+  await Promise.all(
+    paths.map(async (path) => {
+      if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//')) return;
+      if (path.startsWith('/api/')) return;
+      try {
+        const response = await fetch(path, { credentials: 'same-origin' });
+        if (response && response.ok && response.type === 'basic') {
+          await cache.put(path, response);
+        }
+      } catch {
+        // Best effort: a page that fails to warm is simply fetched on demand.
+      }
+    })
+  );
+  await trimCache(HTML_CACHE, MAX_CACHED_HTML_ENTRIES);
+}
+
 async function handleCacheFirst(request, cacheName) {
   const cached = await caches.match(request);
   if (cached) return cached;
@@ -188,6 +235,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || data.type !== 'precache-routes' || !Array.isArray(data.paths)) return;
+  event.waitUntil(precacheRoutes(data.paths));
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
@@ -203,6 +256,11 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(handleNavigation(request));
+    return;
+  }
+
+  if (url.searchParams.has('_rsc')) {
+    event.respondWith(handleRsc(request));
     return;
   }
 

@@ -35,7 +35,7 @@ import { NativeAppearanceBridge } from '@/components/providers/NativeAppearanceB
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
 import { ChappiHistoryBridge } from '@/components/chappi/ChappiHistoryBridge';
 import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
-import { registerAppServiceWorker } from '@/lib/offline/register';
+import { precacheRoutesOffline, registerAppServiceWorker } from '@/lib/offline/register';
 import { OfflineBanner } from '@/components/app/OfflineBanner';
 import { flushOfflineQueue } from '@/lib/offline/sync';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
@@ -434,13 +434,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (isCuratorAccount) return;
     if (!shouldBackgroundPrefetch()) return;
     return runWhenIdle(() => {
-      for (const route of buildPrefetchRoutes({ hasCuratorProfile })) {
+      const routes = buildPrefetchRoutes({ hasCuratorProfile });
+      for (const route of routes) {
         try {
           router.prefetch(route);
         } catch {
           // Prefetch is best-effort; a failure must never break navigation.
         }
       }
+      // With the offline layer on, also keep each page on the device so the
+      // whole nav still opens with no connection.
+      void precacheRoutesOffline(routes);
     });
   }, [hasCuratorProfile, isAuthLoading, isAuthenticated, isCuratorAccount, router]);
 

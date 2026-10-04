@@ -229,6 +229,46 @@ describe('sw-offline.js routing', () => {
     expect(await secondResponse.text()).toBe('<html>settings</html>');
   });
 
+  it('precaches the pages it is told to, so they open offline without a prior visit', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(fakeResponse('<html>notes</html>'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    const { listeners } = loadServiceWorker(fetchImpl);
+
+    let work: Promise<unknown> | undefined;
+    for (const listener of listeners.message || []) {
+      listener({
+        data: { type: 'precache-routes', paths: ['/dashboard/notes', '//evil.test', '/api/x'] },
+        waitUntil: (p: Promise<unknown>) => {
+          work = p;
+        },
+      } as never);
+    }
+    await work;
+    // Only the one safe path was fetched: protocol-relative and /api/ refused.
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+    const offline = await (await dispatchFetch(
+      listeners,
+      fakeRequest('https://app.urganize.app/dashboard/notes', { mode: 'navigate' })
+    ))!;
+    expect(await offline.text()).toBe('<html>notes</html>');
+  });
+
+  it('serves a cached in-app navigation payload when the network fails', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(fakeResponse('rsc-payload'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    const { listeners } = loadServiceWorker(fetchImpl);
+    const url = 'https://app.urganize.app/dashboard/notes?_rsc=abc';
+
+    await (await dispatchFetch(listeners, fakeRequest(url)))!;
+    const offline = await (await dispatchFetch(listeners, fakeRequest(url)))!;
+    expect(await offline.text()).toBe('rsc-payload');
+  });
+
   it('falls back to the cached dashboard shell for an uncached app-chrome path', async () => {
     const fetchImpl = vi
       .fn()
