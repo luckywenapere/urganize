@@ -146,50 +146,6 @@ export function helpCopyInstruction(): string {
 }
 
 export const HELP_COPY = {
-  // ---------------------------------------------------------------- side menu
-  // The screenshot's own case. These rows had no explanation at all in the
-  // expanded card; only the collapsed icon rail carried a native title.
-  'nav.home': {
-    label: 'Home',
-    text: 'What needs your attention today, across every rollout you run.',
-  },
-  'nav.catalog': {
-    label: 'Catalog',
-    text: 'Every rollout you are working on, in one list. Tap one to open it.',
-  },
-  'nav.urgans': {
-    label: 'UrgAns',
-    text: 'Ask for help in plain words. It can make a plan or answer questions about your work.',
-  },
-  'nav.artists': {
-    label: 'Artists',
-    text: 'Each act you work with, and every rollout, show and press kit that belongs to them.',
-  },
-  'nav.shows': {
-    label: 'Shows',
-    text: 'Every live date, with its running order, its set and the tracks your DJ needs.',
-  },
-  'nav.directory': {
-    label: 'Directory',
-    text: 'Find people who have done this work before, like a designer or an engineer.',
-  },
-  'nav.relationships': {
-    label: 'Relationships',
-    text: 'The producers, DJs and editors your team works with, and your own private notes on each.',
-  },
-  'nav.pitches': {
-    label: 'Playlist pitches',
-    text: 'Answers from the people who run music lists you sent songs to.',
-  },
-  'nav.admin': {
-    label: 'Admin',
-    text: 'Inside tools for the Urganize team. Only a few accounts can open this.',
-  },
-  'nav.settings': {
-    label: 'Settings',
-    text: 'Your account, your team, and what the app tells you about.',
-  },
-
   // ------------------------------------------------------- metadata: the steps
   // Each of these replaced a helper paragraph that sat open above the step's
   // body. Step 2's was four sentences, the worst in the file.

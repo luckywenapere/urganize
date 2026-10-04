@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from '@/components/icons';
+import { PageHeader } from '@/components/shell/PageHeader';
 import { useAuthStore } from '@/lib/auth-store';
 import {
   describeLastContact,
@@ -127,22 +128,28 @@ export default function RelationshipPageClient() {
   return (
     <div className="mx-auto w-full max-w-2xl">
       <BackLink />
-
-      <header className="mb-6">
-        <h1 className="break-words font-display text-2xl font-semibold text-content-primary">{person.label}</h1>
-        <p className="mt-1 text-sm text-content-secondary">
-          {[person.role || 'No role yet', describeLastContact(person.lastContactAt)].join(' · ')}
+      <PageHeader
+        title={person.label}
+        description={[person.role || 'No role yet', describeLastContact(person.lastContactAt)].join(' · ')}
+        action={
+          <button
+            type="button"
+            onClick={() => void markContacted()}
+            className="motion-focus motion-press inline-flex h-12 items-center justify-center rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse hover:opacity-90"
+          >
+            We spoke today
+          </button>
+        }
+      />
+      {person.claimed ? (
+        <p className="-mt-3 mb-5 text-xs text-content-secondary">
+          {person.profile
+            ? `On Urganize${person.profile.city ? `, based in ${person.profile.city}` : ''}.`
+            : 'On Urganize. Their own profile is private, so only what you wrote is shown.'}
         </p>
-        {person.claimed ? (
-          <p className="mt-2 text-xs text-content-secondary">
-            {person.profile
-              ? `On Urganize${person.profile.city ? `, based in ${person.profile.city}` : ''}.`
-              : 'On Urganize. Their own profile is private, so only what you wrote is shown.'}
-          </p>
-        ) : null}
-      </header>
+      ) : null}
 
-      <div className="space-y-4 rounded-xl border border-stroke-default bg-bg-surface p-4">
+      <div className="space-y-4 rounded-2xl border border-stroke-default bg-bg-surface p-5">
         <label className="block text-xs font-semibold text-content-secondary">
           Name you use for them
           <input
@@ -231,19 +238,12 @@ export default function RelationshipPageClient() {
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => void markContacted()}
-            className="motion-focus rounded-lg border border-stroke-control px-3 py-2 text-sm font-semibold text-content-secondary hover:border-content-secondary hover:text-content-primary"
-          >
-            We spoke today
-          </button>
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={() => void save()}
             disabled={saving || !dirty || !label.trim()}
-            className="motion-focus rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand/90 disabled:opacity-50"
+            className="motion-focus motion-press inline-flex h-11 items-center rounded-full bg-brand px-6 text-sm font-semibold text-content-inverse hover:bg-brand/90 disabled:opacity-50"
           >
             {saving ? 'Saving' : 'Save'}
           </button>

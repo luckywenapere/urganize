@@ -420,7 +420,7 @@ export default function ShowPageClient() {
         ) : null}
       </div>
 
-      <header className="mt-4">
+      <header className="mt-6">
         {event.artistName || event.seriesTitle ? (
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
             {[event.artistName, event.seriesTitle].filter(Boolean).join(' · ')}
@@ -429,7 +429,7 @@ export default function ShowPageClient() {
 
         <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
           <h1
-            className={`min-w-0 font-display text-2xl font-semibold text-content-primary ${
+            className={`min-w-0 font-display text-3xl font-semibold leading-tight tracking-tight text-content-primary sm:text-4xl ${
               cancelled ? 'line-through decoration-content-tertiary' : ''
             }`}
           >
@@ -482,7 +482,7 @@ export default function ShowPageClient() {
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
-                className="motion-focus inline-flex h-9 items-center rounded-lg border border-stroke-default px-3 text-sm font-semibold text-content-secondary hover:border-stroke-strong hover:text-content-primary"
+                className="motion-focus motion-press inline-flex h-10 items-center rounded-full bg-content-primary px-5 text-sm font-semibold text-content-inverse hover:opacity-90"
               >
                 Edit
               </button>

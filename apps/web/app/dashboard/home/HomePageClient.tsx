@@ -9,17 +9,18 @@ import { usePlannerStore } from '@/stores/usePlannerStore';
 import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
+import { useCatalogTourAutoStart } from '@/components/tours/useCatalogTourAutoStart';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { ManagerMidReleaseView } from '@/components/home/ManagerMidReleaseView';
-import { HomeNotBuiltYet } from '@/components/home/HomeNotBuiltYet';
 import { ManagerQuietView } from '@/components/home/ManagerQuietView';
 
 // Same loop-guard reasoning as HOME_PATH (lib/home-path.ts) and
 // ChappiPageClient's own CHAPPI_ENABLED read: the route itself has no
 // server-side gate, so an off flag has to bounce here.
-const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
 const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
+const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
 /**
  * The Home tab's page. Follows ChappiPageClient's established shape for a
@@ -48,15 +49,10 @@ export default function HomePageClient() {
   } | null>(null);
 
   useEffect(() => {
-    if (!HOME_ENABLED) return;
     void loadHome();
   }, [loadHome]);
 
   useEffect(() => {
-    if (!HOME_ENABLED) {
-      router.replace('/dashboard');
-      return;
-    }
     if (authLoading) return;
     if (!user) {
       router.replace('/auth');
@@ -69,7 +65,18 @@ export default function HomePageClient() {
   // The deferred first-release prompt — same hook every landing surface uses.
   useFirstReleasePrompt(() => setIsCreateModalOpen(true));
 
-  if (!HOME_ENABLED) return null;
+  // The first-visit tour. Home is where people land, so that is where it starts.
+  const releaseCount = useReleaseStore((state) => state.releases.length);
+  useCatalogTourAutoStart({
+    enabled: TOURS_ENABLED,
+    plannerEnabled: PLANNER_ENABLED,
+    releasesLoaded: !homeLoading && Boolean(home),
+    releaseCount,
+    scopedReleaseId: null,
+    scopedTaskCount: 0,
+    canCreate: true,
+    onHome: true,
+  });
 
   if (authLoading || homeLoading || !home) {
     return <HomeSkeleton />;
@@ -77,12 +84,10 @@ export default function HomePageClient() {
 
   return (
     <>
-      {home.role === 'manager' && home.state === 'manager_mid_release' ? (
-        <ManagerMidReleaseView home={home} viewerId={user?.id ?? ''} />
-      ) : home.state === 'manager_all_clear' || home.state === 'manager_between' ? (
+      {home.state === 'manager_all_clear' || home.state === 'manager_between' ? (
         <ManagerQuietView home={home} onNewRollout={() => setIsCreateModalOpen(true)} />
       ) : (
-        <HomeNotBuiltYet home={home} />
+        <ManagerMidReleaseView home={home} viewerId={user?.id ?? ''} />
       )}
 
       <CreateReleaseModal

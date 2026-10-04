@@ -42,12 +42,7 @@
 //
 // It is inlined at build time like every other NEXT_PUBLIC_* read, so a flag
 // flip needs a deploy that actually rebuilds apps/web before this moves.
-export const HOME_PATH =
-  process.env.NEXT_PUBLIC_FEATURE_HOME === 'true'
-    ? '/dashboard/home'
-    : process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true'
-      ? '/dashboard/urgans'
-      : '/dashboard';
+export const HOME_PATH = '/dashboard/home';
 
 /** Where a curator-only account lands. That surface has no team chrome at all. */
 export const CURATOR_HOME_PATH = '/curator';

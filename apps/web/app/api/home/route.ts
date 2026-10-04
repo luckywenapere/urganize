@@ -10,7 +10,7 @@ import { createTimings } from '@/lib/server-timing';
  * and the 404 cannot be told apart from a route that does not exist (the
  * EPK / notes / events precedent — see app/api/events/_shared.ts).
  */
-const isHomeFeatureEnabled = (): boolean => process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
+const isHomeFeatureEnabled = (): boolean => true;
 
 export async function GET(request: NextRequest) {
   if (!isHomeFeatureEnabled()) {

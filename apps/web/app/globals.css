@@ -2417,7 +2417,7 @@ body:focus-within .keyboard-hint,
    is the right way round — the composer staying put is the point. */
 @media (min-width: 768px) {
   .chappi-shell-height {
-    height: calc(100dvh - 7.75rem - 1px);
+    height: calc(100dvh - 8.25rem - 1px);
     min-height: 24rem;
   }
 }
@@ -2433,7 +2433,7 @@ body:focus-within .keyboard-hint,
    keep both in sync (see CLAUDE.md's loading-skeleton rule). */
 @media (min-width: 1024px) {
   .notes-shell-height {
-    height: calc(100dvh - 7.75rem - 1px);
+    height: calc(100dvh - 8.25rem - 1px);
     min-height: 24rem;
   }
 }
@@ -2483,7 +2483,7 @@ body:focus-within .keyboard-hint,
    topbar min-h-16 + 1px border (4rem) + main pt-5 (1.25rem) +
    chappi-main-padding-nav (1rem + 4rem + safe-area) = 10.25rem. */
 .chappi-shell-height-nav {
-  height: calc(100dvh - 10.25rem - env(safe-area-inset-bottom, 0px) - 1px);
+  height: calc(100dvh - 10.75rem - env(safe-area-inset-bottom, 0px) - 1px);
 }
 
 /* Desktop-only floor, same reasoning as .chappi-shell-height above — and it
@@ -2491,7 +2491,7 @@ body:focus-within .keyboard-hint,
    binds under a ~549px viewport, which small phones reach in portrait. */
 @media (min-width: 1024px) {
   .chappi-shell-height-nav {
-    height: calc(100dvh - 7.75rem - 1px);
+    height: calc(100dvh - 8.25rem - 1px);
     min-height: 24rem;
   }
 }
@@ -2538,7 +2538,7 @@ body:focus-within .keyboard-hint,
   :root[data-keyboard-open='true'] .chappi-shell-height {
     position: fixed;
     z-index: 20;
-    top: calc(max(var(--app-visual-top, 0px), calc(4rem + 1px)) + 0.75rem);
+    top: calc(max(var(--app-visual-top, 0px), calc(4.5rem + 1px)) + 0.75rem);
     /* AN EXPLICIT HEIGHT, NOT `bottom` + `height: auto`. Both place the box
        identically, but only this one keeps the height DEFINITE, and the
        column's whole interior depends on that: the transcript is a
@@ -2554,7 +2554,7 @@ body:focus-within .keyboard-hint,
        0.75rem of air at each end. */
     height: calc(
       var(--app-viewport-height, 100dvh) -
-        max(0px, calc(4rem + 1px - var(--app-visual-top, 0px))) - 1.5rem
+        max(0px, calc(4.5rem + 1px - var(--app-visual-top, 0px))) - 1.5rem
     );
     left: 1rem;
     right: 1rem;
@@ -2773,5 +2773,60 @@ html[data-auth-session='1'] .auth-session-loader {
 }
 
 html[data-auth-session='1'] .auth-form-shell {
+  display: none;
+}
+
+/* ------------------------------------------------------------------------- *
+ * The shell's soft band (design overhaul, 2026-10-04).
+ *
+ * Deel's lavender header, done in the brand colour at a whisper: a solid base
+ * (so the page can scroll under the sticky bar without showing through) with the
+ * tint laid over it, fading to nothing by the bottom edge so the bar reads as
+ * part of the page and not a slab on top of it. The tint is the brand token, so
+ * paper mode gets forest on cream and dark mode gets spring on ink with no
+ * second set of numbers to keep in step.
+ * ------------------------------------------------------------------------- */
+/* The band is drawn by a pseudo-element that runs past the frame on both sides,
+   so on a wide screen the top bar reaches the window edges instead of stopping at
+   the 1440px frame with stray lines either side. overflow-x: clip on .app-layout
+   keeps that overhang from ever making the page scroll sideways, and unlike
+   overflow: hidden it does not break position: sticky. */
+.app-layout {
+  overflow-x: clip;
+}
+.shell-band {
+  position: sticky;
+  isolation: isolate;
+}
+.shell-band::before {
+  content: '';
+  position: absolute;
+  inset: 0 -100vw;
+  z-index: -1;
+  background-color: rgb(var(--color-bg-base));
+  background-image: linear-gradient(
+    to bottom,
+    rgb(var(--color-brand) / 0.12),
+    rgb(var(--color-brand) / 0.04) 70%,
+    rgb(var(--color-brand) / 0)
+  );
+}
+.shell-band-sub {
+  position: relative;
+  isolation: isolate;
+}
+.shell-band-sub::before {
+  content: '';
+  position: absolute;
+  inset: 0 -100vw;
+  z-index: -1;
+  background-color: rgb(var(--color-bg-base));
+  box-shadow: inset 0 -1px 0 rgb(var(--color-stroke) / 0.08);
+}
+
+/* The new shell (design overhaul, 2026-10-04) has a full-width top band, so the
+   page-wide inset frame behind it reads as stray lines down both sides and a dark
+   strip above the bar. Pages that carry the band drop the frame. */
+body:has(.shell-band)::before {
   display: none;
 }

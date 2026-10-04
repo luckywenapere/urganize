@@ -1,5 +1,7 @@
 'use client';
 
+import { PageHeader } from '@/components/shell/PageHeader';
+import { ComingSoon } from '@/components/shell/ComingSoon';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -267,16 +269,14 @@ export default function ShowsPageClient() {
   const [now] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!EVENTS_ENABLED) {
-      router.replace('/dashboard');
-      return;
-    }
+    // Switched off: the area opens to its coming-soon screen (below).
+    if (!EVENTS_ENABLED) return;
     // Fire immediately rather than behind authLoading — the stores read their
     // own token from getSession() (local), so waiting on the auth store's
     // GoTrue round trip only delays real data (the notes page pattern).
     void load();
     void loadRoster();
-  }, [load, loadRoster, router]);
+  }, [load, loadRoster]);
 
   // Only artists that actually have shows are worth filtering by.
   const artistsWithShows = useMemo(() => {
@@ -297,7 +297,7 @@ export default function ShowsPageClient() {
     return partitionShowList(visible, new Date(now));
   }, [activeFilter, events, now]);
 
-  if (!EVENTS_ENABLED) return null;
+  if (!EVENTS_ENABLED) return <ComingSoon area="shows" />;
 
   const bookableArtists = artists.filter((artist) => bookableArtistIds?.includes(artist.id));
   const canBook = bookableArtists.length > 0;
@@ -308,7 +308,7 @@ export default function ShowsPageClient() {
     <button
       type="button"
       onClick={() => setIsCreateOpen(true)}
-      className="motion-focus motion-press inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+      className="motion-focus motion-press inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse hover:opacity-90"
     >
       <Plus className="h-4 w-4" aria-hidden />
       Book a show
@@ -321,16 +321,12 @@ export default function ShowsPageClient() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-content-primary">Shows</h1>
-          <p className="mt-1 text-sm text-content-secondary">
-            Every date, its running order and the tracks the DJ needs.
-          </p>
-        </div>
-        {!isLoading && events.length > 0 ? bookButton : null}
-      </header>
+    <div>
+      <PageHeader
+        title="Shows"
+        description="Every date, its running order and the tracks the DJ needs."
+        action={!isLoading && events.length > 0 ? bookButton : null}
+      />
 
       {error ? (
         <div role="alert" className="mt-6 rounded-lg border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">

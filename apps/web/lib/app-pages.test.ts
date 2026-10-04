@@ -43,10 +43,10 @@ afterEach(() => {
 });
 
 describe('buildAppPages — always present', () => {
-  it('offers the catalog, the assistant and settings with every flag off', async () => {
+  it('offers Home, the catalog, the assistant and settings with every flag off', async () => {
     const { buildAppPages } = await loadPages();
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
-    expect(keys).toEqual(['catalog', 'urgans', 'settings']);
+    expect(keys).toEqual(['home', 'catalog', 'urgans', 'settings']);
   });
 
   it('offers Home first, ahead of the catalog, when its flag is on', async () => {
@@ -55,10 +55,9 @@ describe('buildAppPages — always present', () => {
     expect(keys).toEqual(['home', 'catalog', 'urgans', 'settings']);
   });
 
-  it('leaves Home out when its flag is off, and drops it as a Catalog keyword', async () => {
+  it('keeps Home as its own page, not a Catalog keyword', async () => {
     const { buildAppPages, appPageHaystack } = await loadPages();
     const pages = buildAppPages({ hasCuratorProfile: false });
-    expect(pages.map((page) => page.key)).not.toContain('home');
     const catalog = pages.find((page) => page.key === 'catalog');
     expect(catalog).toBeDefined();
     // 'home' used to be a keyword here, back when this WAS the app's only

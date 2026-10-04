@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { ArrowRight, Handshake, X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { distinctRoles, distinctTags, filterRelationships } from '@/lib/relationships-filter';
@@ -13,6 +12,8 @@ import {
   relationshipHref,
 } from '@/lib/relationships-page';
 import { useRelationshipsStore } from '@/stores/useRelationshipsStore';
+import { ComingSoon } from '@/components/shell/ComingSoon';
+import { PageHeader } from '@/components/shell/PageHeader';
 
 const PAGE_ENABLED = isRelationshipsPageEnabled();
 
@@ -22,7 +23,6 @@ const FIELD =
   'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary placeholder:text-content-tertiary hover:border-content-secondary';
 
 export default function RelationshipsPageClient() {
-  const router = useRouter();
   const authLoading = useAuthStore((state) => state.isLoading);
 
   const relationships = useRelationshipsStore((state) => state.relationships);
@@ -50,14 +50,12 @@ export default function RelationshipsPageClient() {
   const [flagError, setFlagError] = useState<string | null>(null);
 
   useEffect(() => {
-    // A direct link followed while the flag is off goes back to the catalogue.
-    // The flag is inlined at build time, so there is no server-side gate.
-    if (!PAGE_ENABLED) {
-      router.replace('/dashboard');
-      return;
-    }
+    // While the page is switched off the area opens to its coming-soon screen
+    // (below) instead of bouncing. The flag is inlined at build time, so there
+    // is no server-side gate.
+    if (!PAGE_ENABLED) return;
     void load();
-  }, [load, router]);
+  }, [load]);
 
   const roles = useMemo(() => distinctRoles(relationships), [relationships]);
   const allTags = useMemo(() => distinctTags(relationships), [relationships]);
@@ -72,7 +70,7 @@ export default function RelationshipsPageClient() {
     [relationships, query, role, tag, staleOnly]
   );
 
-  if (!PAGE_ENABLED) return null;
+  if (!PAGE_ENABLED) return <ComingSoon area="relationships" />;
 
   const loading = (authLoading || initialLoading) && relationships.length === 0;
   const filtering = Boolean(query.trim() || role || tag || staleOnly);
@@ -116,29 +114,26 @@ export default function RelationshipsPageClient() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <header className="mb-6 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">People</p>
-          <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">Relationships</h1>
-          <p className="mt-1 text-sm text-content-secondary">
-            Everyone your team works with, with your own notes. Only your team sees them.
-          </p>
-        </div>
-        {!adding ? (
-          <button
-            type="button"
-            onClick={() => {
-              setAdding(true);
-              setFormMessage(null);
-              setFormError(null);
-            }}
-            className="motion-focus shrink-0 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand/90"
-          >
-            Add person
-          </button>
-        ) : null}
-      </header>
+    <div>
+      <PageHeader
+        title="Relationships"
+        description="Everyone your team works with, with your own notes. Only your team sees them."
+        action={
+          !adding ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAdding(true);
+                setFormMessage(null);
+                setFormError(null);
+              }}
+              className="motion-focus motion-press inline-flex h-12 items-center justify-center gap-2 rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse hover:opacity-90"
+            >
+              Add person
+            </button>
+          ) : null
+        }
+      />
 
       {formMessage && !adding ? (
         <p

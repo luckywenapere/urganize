@@ -1,9 +1,7 @@
 'use client';
 
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { TASKS_PILL_DOCK_OFFSET_CLASS } from '@/components/workspace/TasksPanel';
-import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
-import { RolloutMenuSkeletonPortal } from './RolloutMenuSkeleton';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
 import {
@@ -88,8 +86,6 @@ export function WorkspaceSkeleton() {
   // the rails for a scene and then reserving a timeline body underneath. (The
   // rails are gone since 2026-09-30, but the rule stands: read the param once.)
   const panelBody = resolvePanelBody(searchParams.get('scene'));
-  const pathname = usePathname();
-  const isDesktopViewport = useIsDesktopViewport();
   const knownCount = useKnownReleaseCount();
   // `?release=` is the normal signal, but a single-release workspace scopes
   // itself in an effect, so the URL is still bare while WorkspaceView holds
@@ -114,133 +110,43 @@ export function WorkspaceSkeleton() {
       <div
         className={`flex min-h-0 min-w-0 flex-1 flex-col pt-6 sm:px-6 lg:block lg:px-0 lg:pt-0 ${isFocused ? 'pb-0 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
-          {/* The catalog's "Search release" bar (2026-08-31). Reserved on the
-              same rule the real one renders on — the catalog is showing AND
-              there is a release to find — and the wrapper classes are
-              byte-identical to ReleaseSearchBar's so nothing shifts when data
-              lands. Its count line ("3 of 9 releases") is NOT reserved: it only
-              appears while a query is being typed, which cannot be true on the
-              first paint.
-
-              `knownCount` hydrates in an effect, so an SSR paint reserves
-              nothing here and the bar arrives with the count — the same
-              tradeoff every other count-aware shape in this file makes, and it
-              is the honest direction: reserving a bar for an account that turns
-              out to have no releases would push the "No releases yet" state
-              down the page. */}
-          {!isFocused && knownCount > 0 ? (
-            <div className="mb-4 w-full shrink-0 lg:mx-auto lg:max-w-md">
-              <SkeletonBlock className="h-11 w-full rounded-full" />
-            </div>
-          ) : null}
-
-          <section className="flex min-h-0 flex-1 flex-col lg:hidden">
-            {isFocused ? (
-              <MobileFocusedSkeleton panelBody={panelBody} />
-            ) : (
-              <ReleaseRowListSkeleton count={Math.min(knownCount, 6)} />
-            )}
-          </section>
-
-          <section className="hidden lg:block">
-            {isFocused ? (
-              <DesktopFocusedSkeleton panelBody={panelBody} />
-            ) : (
-              // Matches WorkspaceDesktopGrid's current template exactly
-              // (240px max track + the 1008px structural cap — see that
-              // file's comment for the width-budget arithmetic; URG-225).
-              <ReleaseGridSkeleton
-                count={knownCount}
-                columns="mx-auto max-w-[1008px] justify-center [grid-template-columns:repeat(auto-fit,minmax(220px,240px))]"
-              />
-            )}
-          </section>
-
-          {/* The rollout menu's placeholder, drawn into the right-hand column.
-              Only where a menu is genuinely coming: a desktop viewport (the
-              phone's menu is a hamburger, which reserves nothing here), on
-              /dashboard itself (this skeleton is also the segment fallback for
-              the pages under it, some of which carry a `?release=` of their
-              own, like the notes page), and on a rollout. Reserving a column
-              anywhere else would open a blank strip for nothing. */}
-          {isFocused && isDesktopViewport && pathname === '/dashboard' ? (
-            <RolloutMenuSkeletonPortal />
-          ) : null}
+          {isFocused ? (
+            <>
+              <section className="flex min-h-0 flex-1 flex-col lg:hidden">
+                <MobileFocusedSkeleton panelBody={panelBody} />
+              </section>
+              <section className="hidden lg:block">
+                <DesktopFocusedSkeleton panelBody={panelBody} />
+              </section>
+            </>
+          ) : (
+            <CatalogueSkeleton count={Math.max(3, Math.min(knownCount, 6))} />
+          )}
       </div>
     </div>
   );
 }
 
-/** At-rest surface: a grid of card slots. No label line — the real grid
- * dropped its "Releases" eyebrow (2026-07-23), and the desktop variant uses
- * the SAME centered auto-fit template as WorkspaceDesktopGrid with 4 slots
- * (the typical roster size) so the resolved cards land where the skeleton
- * stood instead of collapsing from a fuller placeholder grid. */
-function ReleaseGridSkeleton({ count, columns }: { count: number; columns: string }) {
+/** The Catalogue's shape (design overhaul, 2026-10-04): a page title and one
+ * action, the filter row, then rows. Rows on a phone are cards; from md up they
+ * are a table, as CatalogueView draws them. */
+function CatalogueSkeleton({ count }: { count: number }) {
   return (
-    <div className="space-y-3 lg:space-y-4">
-      <div className={`grid gap-3 lg:gap-4 ${columns}`}>
+    <div className="space-y-5 pt-6">
+      <div className="flex items-center justify-between gap-4">
+        <SkeletonBlock className="h-9 w-40" />
+        <SkeletonBlock className="h-12 w-36 rounded-full" />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <SkeletonBlock className="h-10 w-full max-w-xs rounded-full" />
+        <SkeletonBlock className="h-10 w-20 rounded-full" />
+        <SkeletonBlock className="h-10 w-24 rounded-full" />
+        <SkeletonBlock className="h-10 w-24 rounded-full" />
+      </div>
+      <div className="space-y-2">
         {Array.from({ length: count }).map((_, index) => (
-          <ReleaseCardSkeleton key={`release-card-${index}`} />
+          <SkeletonBlock key={`catalogue-row-${index}`} className="h-20 w-full rounded-2xl md:h-16" />
         ))}
-      </div>
-    </div>
-  );
-}
-
-/** At-rest MOBILE surface (2026-08-07): the full-width "New rollout" button
- * ReleasesColumn shows below sm, then a stack of horizontal row slots. Mirrors
- * that file's `space-y-3` list of `focused`-variant cards — fixed square
- * thumbnail (w-28, sm:w-36) beside the meta column — so nothing resizes when
- * the real cards resolve. */
-function ReleaseRowListSkeleton({ count }: { count: number }) {
-  return (
-    <div className="space-y-3">
-      <SkeletonBlock className="h-11 w-full rounded-full sm:hidden" />
-      {Array.from({ length: count }).map((_, index) => (
-        <ReleaseRowSkeleton key={`release-row-${index}`} />
-      ))}
-    </div>
-  );
-}
-
-/** Focused-variant row slot: the art block is `aspect-square` on a fixed
- * width, which is what sets the row's height — same as the real card, where
- * the meta column is `self-stretch` beside it. */
-function ReleaseRowSkeleton() {
-  return (
-    <div className="flex items-stretch overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
-      <div className="aspect-square w-28 shrink-0 border-r border-stroke-subtle bg-bg-elevated sm:w-36" />
-      <div className="min-w-0 flex-1 space-y-2.5 px-4 py-4">
-        <SkeletonBlock className="h-2.5 w-20" />
-        <SkeletonBlock className="h-4 w-3/4" />
-        <SkeletonBlock className="h-2.5 w-24" />
-        <div className="mt-1.5 flex items-center justify-between">
-          <SkeletonBlock className="h-2.5 w-12" />
-          <SkeletonBlock className="h-2.5 w-20" />
-        </div>
-        <SkeletonBlock className="h-1.5 w-full rounded-full" />
-      </div>
-    </div>
-  );
-}
-
-/** Tile-variant card slot: square art block + eyebrow/title/date/Motion row
- * (label + "X of Y done" + progress bar — WorkspaceReleaseCard's exact meta
- * shape, so the resolved card doesn't grow a line the skeleton didn't have). */
-function ReleaseCardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
-      <div className="aspect-square border-b border-stroke-subtle bg-bg-elevated" />
-      <div className="space-y-2.5 px-4 py-4">
-        <SkeletonBlock className="h-2.5 w-20" />
-        <SkeletonBlock className="h-4 w-3/4" />
-        <SkeletonBlock className="h-2.5 w-24" />
-        <div className="mt-1.5 flex items-center justify-between">
-          <SkeletonBlock className="h-2.5 w-12" />
-          <SkeletonBlock className="h-2.5 w-20" />
-        </div>
-        <SkeletonBlock className="h-1.5 w-full rounded-full" />
       </div>
     </div>
   );

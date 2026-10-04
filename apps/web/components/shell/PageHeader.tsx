@@ -1,0 +1,36 @@
+import type { ReactNode } from 'react';
+
+type PageHeaderProps = {
+  /** The page's one title, in the display face. Every page has exactly one. */
+  title: string;
+  /** One quiet line under the title: what the page is for, or the count. */
+  description?: ReactNode;
+  /** The page's single primary action, rendered at the right (Deel's "Add
+   *  people"). More than one filled button here defeats the point of it. */
+  action?: ReactNode;
+  className?: string;
+};
+
+/**
+ * Title on the left, the page's one primary action on the right. Every page in
+ * the new shell opens with this, so a manager always knows where they are and
+ * what the main thing to do here is.
+ *
+ * Stacks on a phone, with the action under the title and full width, because the
+ * right edge of a phone is the hardest corner to reach.
+ */
+export function PageHeader({ title, description, action, className = '' }: PageHeaderProps) {
+  return (
+    <div
+      className={`flex flex-col gap-4 pb-6 pt-8 sm:flex-row sm:items-end sm:justify-between sm:pb-7 sm:pt-10 ${className}`}
+    >
+      <div className="min-w-0">
+        <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-content-primary sm:text-[44px]">
+          {title}
+        </h1>
+        {description ? <p className="mt-1.5 text-sm text-content-secondary">{description}</p> : null}
+      </div>
+      {action ? <div className="flex shrink-0 [&>*]:w-full sm:[&>*]:w-auto">{action}</div> : null}
+    </div>
+  );
+}

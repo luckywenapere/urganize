@@ -392,7 +392,7 @@ export default async function PublicPressKitPage({ params }: PageProps) {
                       src={photo.url}
                       alt={`${kit.artistName} press photo`}
                       loading="lazy"
-                      className="w-full rounded-lg"
+                      className="w-full rounded-xl"
                       style={{ backgroundColor: SURFACE }}
                     />
                     <figcaption className="mt-2 space-y-0.5">
@@ -468,7 +468,7 @@ export default async function PublicPressKitPage({ params }: PageProps) {
 
         {embargo ? (
           <p
-            className="mt-8 rounded-lg border px-4 py-3 text-sm"
+            className="mt-8 rounded-xl border px-4 py-3 text-sm"
             style={{ borderColor: STROKE, backgroundColor: SURFACE, color: CREAM }}
           >
             {embargo}

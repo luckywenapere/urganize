@@ -31,7 +31,7 @@ const ARTIST_PAGE_ENABLED =
 const RELATIONSHIPS_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_RELATIONSHIPS === 'true' &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
-const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
+const HOME_ENABLED = true;
 
 export type AppPage = {
   key: string;
@@ -99,7 +99,7 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
   pages.push(
     {
       key: 'catalog',
-      label: 'Catalog',
+      label: 'Catalogue',
       href: '/dashboard',
       keywords: ['rollouts', 'releases', 'all rollouts', 'all releases'],
       leavesRelease: true,

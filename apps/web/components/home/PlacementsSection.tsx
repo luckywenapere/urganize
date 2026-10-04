@@ -1,6 +1,10 @@
+'use client';
+
+import { useState } from 'react';
 import type { HomePitchItem, HomePlacements } from '@/lib/home/types';
 import { HomeSectionShell } from './HomeSectionShell';
-import { EmptyState } from '@/components/shared/EmptyState';
+
+const VISIBLE = 2;
 
 function PitchRow({ pitch, placed }: { pitch: HomePitchItem; placed: boolean }) {
   return (
@@ -10,8 +14,8 @@ function PitchRow({ pitch, placed }: { pitch: HomePitchItem; placed: boolean }) 
         aria-hidden="true"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-content-primary">{pitch.playlistName}</p>
-        <p className="mt-0.5 truncate text-xs text-content-tertiary">
+        <p className="break-words text-sm font-medium sm:truncate text-content-primary">{pitch.playlistName}</p>
+        <p className="mt-0.5 break-words text-xs sm:truncate text-content-tertiary">
           {pitch.songTitle}
           {pitch.curatorName ? ` · ${pitch.curatorName}` : ''}
           {' · '}
@@ -28,21 +32,39 @@ function PitchRow({ pitch, placed }: { pitch: HomePitchItem; placed: boolean }) 
  * records money) — see the approved plan's data-mapping notes.
  */
 export function PlacementsSection({ placements }: { placements: HomePlacements }) {
+  const [expanded, setExpanded] = useState(false);
   const hasAny = placements.placed.length > 0 || placements.underReview.length > 0;
+  const total = placements.placed.length + placements.underReview.length;
+  const limit = expanded ? total : VISIBLE;
+  const placed = placements.placed.slice(0, limit);
+  const review = placements.underReview.slice(0, Math.max(0, limit - placed.length));
+  const hidden = total - placed.length - review.length;
 
   return (
     <HomeSectionShell title="Placements">
       {!hasAny ? (
-        <EmptyState title="No pitches out right now." className="py-4" />
+        <p className="text-sm text-content-secondary">No pitches out right now.</p>
       ) : (
+        <>
         <ul className="divide-y divide-stroke-subtle">
-          {placements.placed.map((pitch) => (
+          {placed.map((pitch) => (
             <PitchRow key={pitch.id} pitch={pitch} placed />
           ))}
-          {placements.underReview.map((pitch) => (
+          {review.map((pitch) => (
             <PitchRow key={pitch.id} pitch={pitch} placed={false} />
           ))}
         </ul>
+        {hidden > 0 || expanded ? (
+          <button
+            type="button"
+            onClick={() => setExpanded((open) => !open)}
+            aria-expanded={expanded}
+            className="motion-focus mt-2 min-h-11 w-full rounded-lg px-2 text-left text-xs font-semibold text-content-secondary hover:text-content-primary"
+          >
+            {expanded ? 'Show fewer' : `Show ${hidden} more`}
+          </button>
+        ) : null}
+        </>
       )}
     </HomeSectionShell>
   );

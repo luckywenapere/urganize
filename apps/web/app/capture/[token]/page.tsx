@@ -73,7 +73,7 @@ export default async function PublicCapturePage({ params }: PageProps) {
           <img
             src={page.graphicUrl}
             alt={`${page.releaseTitle} artwork`}
-            className="aspect-square w-full border object-cover"
+            className="aspect-square w-full rounded-2xl border object-cover"
             style={{ borderColor: STROKE }}
           />
         ) : null}
@@ -110,7 +110,7 @@ export default async function PublicCapturePage({ params }: PageProps) {
           // fan who tapped a link that was shared in good faith deserves an
           // explanation, and a dead end reads as the artist's page being fake.
           <div
-            className="mt-8 border p-6 text-center"
+            className="mt-8 rounded-2xl border p-6 text-center"
             style={{ borderColor: STROKE, backgroundColor: 'var(--capture-surface)' }}
           >
             <p className="text-sm" style={{ color: CREAM }}>

@@ -113,7 +113,7 @@ export function CaptureLeadForm({
   if (reward) {
     return (
       <div
-        className="mt-8 border p-6 text-center"
+        className="mt-8 rounded-2xl border p-6 text-center"
         style={{ borderColor: STROKE, backgroundColor: SURFACE }}
       >
         <div
@@ -132,7 +132,7 @@ export function CaptureLeadForm({
           href={reward.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-5 inline-flex min-h-11 items-center gap-2 px-5 py-2.5 text-sm font-semibold"
+          className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold"
           style={{ backgroundColor: BRAND, color: INK }}
         >
           {reward.label}
@@ -157,7 +157,7 @@ export function CaptureLeadForm({
             placeholder="Your name"
             autoComplete="name"
             required
-            className="w-full border px-4 py-3 text-base outline-none placeholder:opacity-60 focus:ring-1"
+            className="w-full rounded-xl border px-4 py-3 text-base outline-none placeholder:opacity-60 focus:ring-1"
             style={inputStyle()}
           />
         </div>
@@ -178,7 +178,7 @@ export function CaptureLeadForm({
         // text-base, not text-sm: iOS Safari zooms the whole page in on focus
         // for any input under 16px, which on a capture page means the fan's
         // first interaction is the layout jumping.
-        className="w-full border px-4 py-3 text-base outline-none placeholder:opacity-60 focus:ring-1"
+        className="w-full rounded-xl border px-4 py-3 text-base outline-none placeholder:opacity-60 focus:ring-1"
         style={inputStyle()}
       />
 
@@ -191,7 +191,7 @@ export function CaptureLeadForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 px-5 py-3 text-base font-semibold disabled:opacity-70"
+        className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-base font-semibold disabled:opacity-70"
         style={{ backgroundColor: BRAND, color: INK }}
       >
         {isSubmitting ? (

@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Users } from '@/components/icons';
+import { PageHeader } from '@/components/shell/PageHeader';
 import { useAuthStore } from '@/lib/auth-store';
 import { artistSummary } from '@/lib/artist-overview';
 import { artistHref, describeArtistCounts, isArtistPageEnabled } from '@/lib/artist-page';
@@ -58,56 +59,60 @@ export default function ArtistsPageClient() {
   const loading = (authLoading || !rosterLoaded) && artists.length === 0;
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <header className="mb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Catalogue
-        </p>
-        <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">Artists</h1>
-        <p className="mt-1 text-sm text-content-secondary">
-          Each artist, with every rollout, show and press kit in one place.
-        </p>
-      </header>
+    <div>
+      <PageHeader title="Artists" description="Each artist, with every rollout, show and press kit in one place." />
 
       {loading ? (
-        <div className="space-y-3" aria-busy="true">
+        <div className="space-y-2" aria-busy="true">
           {[0, 1, 2].map((key) => (
-            <div
-              key={key}
-              className="h-[84px] animate-pulse rounded-xl border border-stroke-default bg-bg-surface"
-            />
+            <div key={key} className="h-16 animate-pulse rounded-2xl border border-stroke-default bg-bg-surface" />
           ))}
         </div>
       ) : cards.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-stroke-default p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-stroke-default p-8 text-center">
           <Users className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden />
           <p className="mt-3 text-sm font-semibold text-content-primary">No artists yet</p>
           <p className="mt-1 text-sm text-content-secondary">Add an artist in Settings and they appear here.</p>
         </div>
       ) : (
-        <ul className="space-y-3">
-          {cards.map(({ artist, summary, kit }) => (
-            <li key={artist.id}>
-              <Link
-                href={artistHref(artist.id)}
-                className="motion-focus flex items-center justify-between gap-3 rounded-xl border border-stroke-default bg-bg-surface p-4 transition-colors hover:border-stroke-strong"
-              >
-                <div className="min-w-0">
-                  <h2 className="line-clamp-2 break-words font-display text-base font-semibold text-content-primary">
-                    {artist.name}
-                  </h2>
-                  <p className="mt-1 text-xs text-content-secondary">{describeArtistCounts(summary)}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="rounded-full border border-stroke-default px-2 py-0.5 text-[11px] font-semibold text-content-secondary">
-                    {kit ? KIT_COPY[kit.state] : 'No kit yet'}
+        <div className="overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
+          <div className="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)_2rem] gap-4 border-b border-stroke-subtle px-5 py-3 text-xs font-medium text-content-tertiary md:grid">
+            <span>Artist</span>
+            <span>Rollouts</span>
+            <span>Planned</span>
+            <span>Shows coming</span>
+            <span>Press kit</span>
+            <span />
+          </div>
+          <ul className="divide-y divide-stroke-subtle">
+            {cards.map(({ artist, summary, kit }) => (
+              <li key={artist.id}>
+                <Link
+                  href={artistHref(artist.id)}
+                  className="motion-focus grid min-h-16 items-center gap-x-4 gap-y-1 px-5 py-3 transition-colors hover:bg-bg-hover/60 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)_2rem]"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-display text-base font-semibold text-content-primary">
+                      {artist.name}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-content-secondary md:hidden">
+                      {describeArtistCounts(summary)}
+                    </span>
                   </span>
-                  <ArrowRight className="h-4 w-4 text-content-tertiary" aria-hidden />
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                  <span className="hidden text-sm tabular-nums text-content-primary md:block">{summary.releases}</span>
+                  <span className="hidden text-sm tabular-nums text-content-primary md:block">{summary.planned}</span>
+                  <span className="hidden text-sm tabular-nums text-content-primary md:block">{summary.upcomingShows}</span>
+                  <span>
+                    <span className="inline-flex rounded-full border border-stroke-default px-2.5 py-0.5 text-xs font-medium text-content-secondary">
+                      {kit ? KIT_COPY[kit.state] : 'No kit yet'}
+                    </span>
+                  </span>
+                  <ArrowRight className="hidden h-4 w-4 text-content-tertiary md:block" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
