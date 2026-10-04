@@ -1,4 +1,5 @@
 import type { HomeReleaseSummary } from './types';
+import { settingsDeepLink } from '@/lib/settings-nav';
 
 /**
  * The getting-started bar on Home (design overhaul, 2026-10-04), Deel's
@@ -25,7 +26,7 @@ export function buildOnboardingProgress(releases: readonly HomeReleaseSummary[])
     { key: 'rollout', label: 'Start a rollout', done: releases.length > 0, href: '/dashboard' },
     { key: 'date', label: 'Set a release date', done: releases.some((release) => release.releaseDate !== null), href: '/dashboard' },
     { key: 'work', label: 'Finish your first activity', done: releases.some((release) => release.progress.done > 0), href: '/dashboard' },
-    { key: 'team', label: 'Bring in a teammate', done: releases.some((release) => release.teamSize > 1), href: '/settings?tab=team' },
+    { key: 'team', label: 'Bring in a teammate', done: releases.some((release) => release.teamSize > 1), href: settingsDeepLink({ segment: 'team' }) },
   ];
   const doneCount = steps.filter((step) => step.done).length;
   return {

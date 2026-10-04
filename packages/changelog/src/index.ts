@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.65.0",
+    date: "October 4, 2026",
+    highlights: [
+      "Urganize has a new look. A top menu replaces the side menu, and every page now has a clear title and one main button.",
+      "Home shows your day at a glance and the one task to do first.",
+      "Your rollouts are in one table you can filter, with a card view if you prefer.",
+      "If your plan ends, the screen now shows what is waiting for you and one clear way to continue.",
+    ],
+  },
+  {
     version: "1.64.0",
     date: "October 4, 2026",
     highlights: [
