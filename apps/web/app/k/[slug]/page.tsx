@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
@@ -5,6 +6,7 @@ import {
   isKitIndexable,
   kitDescription,
   kitTagline,
+  PUBLIC_SECTION_ORDER,
   resolveKitLink,
 } from '@/lib/press-kit-public';
 import { loadPublicPressKit } from '@/lib/press-kit-public-server';
@@ -378,6 +380,48 @@ export default async function PublicPressKitPage({ params }: PageProps) {
     links: kit.byKey.links || {},
   });
 
+  const photosBlock = kit.photos.length > 0 ? (
+            <Section title={PRESS_KIT_SECTION_LABELS.assets}>
+              <div className="kit-photos grid gap-4 sm:grid-cols-2">
+                {kit.photos.map((photo) => (
+                  <figure key={photo.id}>
+                    {/* A signed Storage URL with a one hour life. next/image
+                        would proxy and cache it past its own expiry. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.url}
+                      alt={`${kit.artistName} press photo`}
+                      loading="lazy"
+                      className="w-full rounded-lg"
+                      style={{ backgroundColor: SURFACE }}
+                    />
+                    <figcaption className="mt-2 space-y-0.5">
+                      {photo.photographerCredit ? (
+                        <p className="text-xs" style={{ color: MUTED }}>
+                          Photo by {photo.photographerCredit}
+                        </p>
+                      ) : null}
+                      {photo.usageRights ? (
+                        <p className="font-mono text-[10px] uppercase tracking-[0.12em]" style={{ color: FAINT }}>
+                          {usageRightLabel(photo.usageRights)}
+                        </p>
+                      ) : null}
+                      {/* A plain link, so it can be right clicked and so a
+                          browser with no scripting still hands over the file. */}
+                      <a
+                        href={`/api/k/${kit.slug}/photos/${photo.id}/download`}
+                        className="kit-print-hide inline-block text-xs underline underline-offset-4"
+                        style={{ color: ACCENT }}
+                      >
+                        Download full size
+                      </a>
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </Section>
+          ) : null;
+
   return (
     <div className="kit-island min-h-screen" style={{ backgroundColor: GROUND }}>
       <KitViewBeacon slug={kit.slug} />
@@ -431,53 +475,25 @@ export default async function PublicPressKitPage({ params }: PageProps) {
           </p>
         ) : null}
 
-        {kit.photos.length > 0 ? (
-          <Section title={PRESS_KIT_SECTION_LABELS.assets}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {kit.photos.map((photo) => (
-                <figure key={photo.id}>
-                  {/* A signed Storage URL with a one hour life. next/image
-                      would proxy and cache it past its own expiry. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photo.url}
-                    alt={`${kit.artistName} press photo`}
-                    loading="lazy"
-                    className="w-full rounded-lg"
-                    style={{ backgroundColor: SURFACE }}
-                  />
-                  <figcaption className="mt-2 space-y-0.5">
-                    {photo.photographerCredit ? (
-                      <p className="text-xs" style={{ color: MUTED }}>
-                        Photo by {photo.photographerCredit}
-                      </p>
-                    ) : null}
-                    {photo.usageRights ? (
-                      <p className="font-mono text-[10px] uppercase tracking-[0.12em]" style={{ color: FAINT }}>
-                        {usageRightLabel(photo.usageRights)}
-                      </p>
-                    ) : null}
-                    {/* A plain link, so it can be right clicked and so a
-                        browser with no scripting still hands over the file. */}
-                    <a
-                      href={`/api/k/${kit.slug}/photos/${photo.id}/download`}
-                      className="kit-print-hide inline-block text-xs underline underline-offset-4"
-                      style={{ color: ACCENT }}
-                    >
-                      Download full size
-                    </a>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          </Section>
-        ) : null}
+        {PUBLIC_SECTION_ORDER.map((key) => {
+          if (key === 'header') return null;
+          if (key === 'assets') {
+            return <Fragment key="assets">{photosBlock}</Fragment>;
+          }
+          const entry = body.find((candidate) => candidate.section === key);
+          if (!entry) return null;
+          return (
+            <Section key={key} title={PRESS_KIT_SECTION_LABELS[key]}>
+              <SectionBody section={key} content={entry.content} />
+            </Section>
+          );
+        })}
 
-        {body.map((entry) => (
-          <Section key={entry.section} title={PRESS_KIT_SECTION_LABELS[entry.section]}>
-            <SectionBody section={entry.section} content={entry.content} />
-          </Section>
-        ))}
+        {body.length === 0 && kit.photos.length === 0 ? (
+          <p className="mt-12 text-sm" style={{ color: MUTED }}>
+            The team is still putting this kit together. Check back soon.
+          </p>
+        ) : null}
 
         <footer className="mt-16 border-t pt-6" style={{ borderColor: STROKE }}>
           <p className="font-mono text-[11px]" style={{ color: FAINT }}>

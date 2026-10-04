@@ -5,7 +5,6 @@
  * loading half is lib/press-kit-public-server.ts.
  */
 
-import { PRESS_KIT_SECTIONS } from '@/types/press-kits';
 import type {
   PressKitSectionContent,
   PressKitSectionKey,
@@ -107,7 +106,7 @@ export function publicSections(
     hidden: boolean;
   }[]
 ): PublicKitSection[] {
-  const order = new Map(PRESS_KIT_SECTIONS.map((key, index) => [key, index]));
+  const order = new Map(PUBLIC_SECTION_ORDER.map((key, index) => [key, index]));
   return sections
     .filter((section) => !section.hidden)
     .filter((section) => section.section !== 'assets')
@@ -118,6 +117,30 @@ export function publicSections(
     .filter((section) => Object.values(section.content).some(isFilled))
     .sort((a, b) => (order.get(a.section) ?? 99) - (order.get(b.section) ?? 99));
 }
+
+/**
+ * The order a reader sees sections in, which is NOT the editor's order.
+ *
+ * The editor follows how a team builds a kit; a reader opens it to find out
+ * who to email, what the artist is about, and what they look like, in that
+ * order. So contact comes first and the photos right after the bios, while
+ * live dates and links, which people look up rather than read, go last.
+ * Every section key must appear here once (a test holds it).
+ */
+export const PUBLIC_SECTION_ORDER: readonly PressKitSectionKey[] = [
+  'header',
+  'contact',
+  'bios',
+  'assets',
+  'latest_release',
+  'music',
+  'video',
+  'credits',
+  'numbers',
+  'press',
+  'live',
+  'links',
+];
 
 /**
  * The one line under the artist's name.
@@ -199,6 +222,9 @@ const KNOWN_HOSTS: Record<string, string> = {
   'bandcamp.com': 'Bandcamp',
 };
 
+/** Longer than any real share link; mostly junk or an attempt to break layout. */
+const MAX_LINK_LENGTH = 2000;
+
 const looksLikeUrl = (value: string): boolean =>
   /^https?:\/\/\S+$/i.test(value) || /^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(value);
 
@@ -215,7 +241,11 @@ function toHttpUrl(value: string): URL | null {
   if (!withScheme) return null;
   try {
     const url = new URL(withScheme);
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    // https://spotify.com@evil.example reads as Spotify and goes elsewhere.
+    if (url.username || url.password) return null;
+    if (url.href.length > MAX_LINK_LENGTH) return null;
+    return url;
   } catch {
     return null;
   }
@@ -224,9 +254,13 @@ function toHttpUrl(value: string): URL | null {
 /** A readable name for a link with no label: Spotify, not the whole address. */
 export function nameForLinkHost(url: URL): string {
   const host = url.hostname.replace(/^www\./i, '').toLowerCase();
-  if (KNOWN_HOSTS[host]) return KNOWN_HOSTS[host];
-  const root = host.split('.').slice(-2).join('.');
-  return KNOWN_HOSTS[root] || host;
+  // Walk up the domain: m.youtube.com, then youtube.com.
+  const parts = host.split('.');
+  for (let start = 0; start < parts.length - 1; start += 1) {
+    const known = KNOWN_HOSTS[parts.slice(start).join('.')];
+    if (known) return known;
+  }
+  return host;
 }
 
 /**

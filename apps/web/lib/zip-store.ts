@@ -61,17 +61,20 @@ export function safeZipName(name: string, fallback = 'file'): string {
  *  extension: a.jpg, a.jpg becomes a.jpg, a-2.jpg. Case-insensitive, because
  *  the people opening the archive are on Windows and macOS. */
 export function uniqueZipNames(names: string[]): string[] {
-  const seen = new Map<string, number>();
+  const taken = new Set<string>();
   return names.map((raw) => {
     const name = safeZipName(raw);
-    const key = name.toLowerCase();
-    const count = (seen.get(key) || 0) + 1;
-    seen.set(key, count);
-    if (count === 1) return name;
     const dot = name.lastIndexOf('.');
     const base = dot > 0 ? name.slice(0, dot) : name;
     const ext = dot > 0 ? name.slice(dot) : '';
-    return `${base}-${count}${ext}`;
+    let candidate = name;
+    // Keep numbering until the name is genuinely free, so a file already
+    // called a-2.jpg cannot collide with the second a.jpg.
+    for (let count = 2; taken.has(candidate.toLowerCase()); count += 1) {
+      candidate = `${base}-${count}${ext}`;
+    }
+    taken.add(candidate.toLowerCase());
+    return candidate;
   });
 }
 
