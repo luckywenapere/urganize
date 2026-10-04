@@ -329,18 +329,18 @@ const normalizeHandoffEmail = (search: string): string => {
 // ---------------------------------------------------------------------------
 
 const cardShell =
-  'border border-stroke-default bg-bg-surface px-5 py-5 sm:px-6 sm:py-6';
+  'rounded-2xl border border-stroke-default bg-bg-surface px-5 py-5 sm:px-6 sm:py-6';
 
 const inputBase =
-  'block w-full border border-stroke-control bg-bg-elevated px-3 py-2.5 text-base text-content-primary placeholder:text-content-tertiary outline-none transition-colors duration-fast ease-standard focus:border-brand';
+  'block w-full rounded-xl border border-stroke-control bg-bg-elevated px-3 py-2.5 text-base text-content-primary placeholder:text-content-tertiary outline-none transition-colors duration-fast ease-standard focus:border-brand';
 
 const labelBase = 'block text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary';
 
 const primaryButton =
-  'inline-flex min-h-11 items-center justify-center bg-brand px-5 text-sm font-semibold text-content-inverse transition-colors duration-fast ease-standard hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50';
+  'motion-press inline-flex min-h-12 items-center justify-center rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse transition-opacity duration-fast ease-standard hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
 
 const secondaryButton =
-  'inline-flex min-h-11 items-center justify-center border border-stroke-default bg-bg-surface px-5 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
+  'motion-press inline-flex min-h-12 items-center justify-center rounded-full border border-stroke-default bg-bg-surface px-6 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50';
 
 // ---------------------------------------------------------------------------
 // Page
@@ -1094,7 +1094,7 @@ export default function OnboardingPage() {
                     <label
                       key={option.value}
                       aria-disabled={!available || undefined}
-                      className={`flex items-center gap-3 border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
+                      className={`flex items-center gap-3 rounded-xl border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
                         selected
                           ? 'border-brand bg-brand/8'
                           : available
@@ -1140,7 +1140,7 @@ export default function OnboardingPage() {
                   return (
                     <label
                       key={option.value}
-                      className={`flex items-center gap-3 border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
+                      className={`flex items-center gap-3 rounded-xl border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
                         checked
                           ? 'border-brand bg-brand/8'
                           : 'border-stroke-default hover:border-stroke-strong'
@@ -1173,7 +1173,7 @@ export default function OnboardingPage() {
                   return (
                     <label
                       key={option.value}
-                      className={`flex items-center gap-3 border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
+                      className={`flex items-center gap-3 rounded-xl border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
                         selected
                           ? 'border-brand bg-brand/8'
                           : 'border-stroke-default hover:border-stroke-strong'
@@ -1231,7 +1231,7 @@ export default function OnboardingPage() {
           {/* ----- Step 4: AI Moment ------------------------------------ */}
           {step === 4 && aiMoment ? (
             <div className="mt-5">
-              <div className="border border-brand/30 bg-brand/8 px-4 py-5 sm:px-5">
+              <div className="rounded-2xl border border-brand/30 bg-brand/8 px-4 py-5 sm:px-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
                   Your first move
                 </p>
@@ -1281,7 +1281,7 @@ export default function OnboardingPage() {
                     return (
                       <label
                         key={option.value}
-                        className={`flex items-start gap-3 border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
+                        className={`flex items-start gap-3 rounded-xl border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
                           selected
                             ? 'border-brand bg-brand/8'
                             : 'border-stroke-default hover:border-stroke-strong'
@@ -1327,7 +1327,7 @@ export default function OnboardingPage() {
                     return (
                       <label
                         key={option.value}
-                        className={`flex items-start gap-3 border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
+                        className={`flex items-start gap-3 rounded-xl border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
                           selected
                             ? 'border-brand bg-brand/8'
                             : 'border-stroke-default hover:border-stroke-strong'
