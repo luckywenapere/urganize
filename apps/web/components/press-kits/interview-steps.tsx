@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from '@/components/icons';
 import type { InterviewQuestion } from '@/lib/press-kit-interview';
+import { looksLikeWebAddress } from '@/lib/press-kit-public';
 import type { PressKitSectionContent } from '@/types/press-kits';
 
 /**
@@ -145,7 +146,11 @@ export function InterviewStepBody({ question, answer, patch }: Props) {
             onChange={(event) =>
               patch({
                 links: links.map((entry, position) =>
-                  position === index ? { ...entry, label: event.target.value } : entry
+                  position !== index
+                    ? entry
+                    : looksLikeWebAddress(event.target.value) && !str(entry.url)
+                      ? { ...entry, label: '', url: event.target.value.trim() }
+                      : { ...entry, label: event.target.value }
                 ),
               })
             }

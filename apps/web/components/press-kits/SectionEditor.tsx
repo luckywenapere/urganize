@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { Check, Copy, Plus, Trash2 } from '@/components/icons';
 import { PRESS_KIT_SECTION_HINTS } from '@/lib/press-kits';
+import { looksLikeWebAddress } from '@/lib/press-kit-public';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
 
 type Props = {
@@ -125,6 +126,7 @@ function RepeatableList({
   itemKey,
   columns,
   addLabel,
+  itemName,
   draft,
   setField,
   onBlur,
@@ -133,6 +135,7 @@ function RepeatableList({
   itemKey: string;
   columns: { key: string; label: string; placeholder?: string; type?: string }[];
   addLabel: string;
+  itemName: string;
   draft: PressKitSectionContent;
   setField: (key: string, value: unknown) => void;
   onBlur: () => void;
@@ -141,49 +144,95 @@ function RepeatableList({
   const items = rows(draft[itemKey]);
 
   const update = (index: number, key: string, value: string) => {
-    const next = items.map((item, position) =>
-      position === index ? { ...item, [key]: value } : item
-    );
+    const next = items.map((item, position) => {
+      if (position !== index) return item;
+      // People paste the address into the nearest box. If it landed in a name
+      // box while the link box is empty, move it where it belongs.
+      if (
+        (key === 'label' || key === 'title') &&
+        columns.some((column) => column.key === 'url') &&
+        !str(item.url) &&
+        looksLikeWebAddress(value)
+      ) {
+        return { ...item, [key]: '', url: value.trim() };
+      }
+      return { ...item, [key]: value };
+    });
     setField(itemKey, next);
+  };
+
+  const invalid = (column: { key: string; type?: string }, value: string): string => {
+    const text = value.trim();
+    if (!text) return '';
+    if (column.type === 'url' && !looksLikeWebAddress(text)) {
+      return 'That does not look like a web address. Paste the full link.';
+    }
+    if (column.type === 'email' && !/^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/.test(text)) {
+      return 'That does not look like an email address.';
+    }
+    return '';
   };
 
   return (
     <div className="space-y-3">
+      {items.length === 0 ? (
+        <p className="text-sm text-content-tertiary">Nothing here yet.</p>
+      ) : null}
+
       {items.map((item, index) => (
         <div
           key={index}
-          className="space-y-3 rounded-lg border border-stroke-default bg-bg-base p-3"
+          className="rounded-lg border border-stroke-default bg-bg-base p-3 sm:p-4"
         >
-          <div className="grid gap-3 sm:grid-cols-2">
-            {columns.map((column) => (
-              <Field key={column.key} label={column.label}>
-                <input
-                  type={column.type || 'text'}
-                  value={str(item[column.key])}
-                  disabled={readOnly}
-                  placeholder={column.placeholder}
-                  onChange={(event) => update(index, column.key, event.target.value)}
-                  onBlur={onBlur}
-                  className={inputClass}
-                />
-              </Field>
-            ))}
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
+              {itemName} {index + 1}
+            </p>
+            {readOnly ? null : (
+              <button
+                type="button"
+                aria-label={`Remove ${itemName.toLowerCase()} ${index + 1}`}
+                title="Remove"
+                onClick={() =>
+                  setField(
+                    itemKey,
+                    items.filter((_, position) => position !== index)
+                  )
+                }
+                className="motion-focus grid h-9 w-9 place-items-center rounded-md text-content-tertiary hover:bg-bg-hover hover:text-status-error"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+              </button>
+            )}
           </div>
-          {readOnly ? null : (
-            <button
-              type="button"
-              onClick={() =>
-                setField(
-                  itemKey,
-                  items.filter((_, position) => position !== index)
-                )
-              }
-              className="motion-focus inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-content-secondary hover:bg-bg-hover hover:text-status-error"
-            >
-              <Trash2 className="h-3.5 w-3.5" aria-hidden />
-              Remove
-            </button>
-          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {columns.map((column) => {
+              const value = str(item[column.key]);
+              const problem = invalid(column, value);
+              const wide = column.type === 'url' || column.type === 'email';
+              return (
+                <div key={column.key} className={wide ? 'sm:col-span-2' : undefined}>
+                  <Field label={column.label}>
+                    <input
+                      type={column.type || 'text'}
+                      value={value}
+                      disabled={readOnly}
+                      placeholder={column.placeholder}
+                      aria-invalid={problem ? true : undefined}
+                      onChange={(event) => update(index, column.key, event.target.value)}
+                      onBlur={onBlur}
+                      className={inputClass}
+                    />
+                  </Field>
+                  {problem ? (
+                    <p role="alert" className="mt-1 text-xs text-status-error">
+                      {problem}
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         </div>
       ))}
 
@@ -191,7 +240,7 @@ function RepeatableList({
         <button
           type="button"
           onClick={() => setField(itemKey, [...items, {}])}
-          className="motion-focus inline-flex items-center gap-1.5 rounded-lg border border-dashed border-stroke-default px-3 py-2 text-sm text-content-secondary hover:border-brand hover:text-content-primary"
+          className="motion-focus inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-dashed border-stroke-control px-3 py-2 text-sm text-content-secondary hover:border-brand hover:text-content-primary"
         >
           <Plus className="h-4 w-4" aria-hidden />
           {addLabel}
@@ -299,6 +348,7 @@ export function SectionEditor({ section, draft, readOnly, setField, onBlur, phot
       {section === 'contact' ? (
         <RepeatableList
           itemKey="contacts"
+          itemName="Contact"
           addLabel="Add a contact"
           columns={[
             { key: 'name', label: 'Name', placeholder: 'Ada Obi' },
@@ -315,6 +365,7 @@ export function SectionEditor({ section, draft, readOnly, setField, onBlur, phot
       {section === 'numbers' ? (
         <RepeatableList
           itemKey="stats"
+          itemName="Number"
           addLabel="Add a number"
           columns={[
             { key: 'label', label: 'What it is', placeholder: 'Monthly listeners' },
@@ -331,6 +382,7 @@ export function SectionEditor({ section, draft, readOnly, setField, onBlur, phot
       {section === 'press' ? (
         <RepeatableList
           itemKey="coverage"
+          itemName="Coverage"
           addLabel="Add coverage"
           columns={[
             { key: 'outlet', label: 'Outlet', placeholder: 'The Native' },
@@ -348,6 +400,7 @@ export function SectionEditor({ section, draft, readOnly, setField, onBlur, phot
       {section === 'links' ? (
         <RepeatableList
           itemKey="links"
+          itemName="Link"
           addLabel="Add a link"
           columns={[
             { key: 'label', label: 'Where', placeholder: 'Spotify' },
@@ -387,6 +440,7 @@ export function SectionEditor({ section, draft, readOnly, setField, onBlur, phot
         // wants to watch it, not hold the master.
         <RepeatableList
           itemKey="videos"
+          itemName="Video"
           columns={[
             { key: 'title', label: 'What it is', placeholder: 'Official video' },
             { key: 'url', label: 'Link', placeholder: 'https://', type: 'url' },

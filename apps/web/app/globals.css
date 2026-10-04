@@ -683,8 +683,55 @@ html[data-theme='light'] .cc-island {
     page-break-after: avoid;
   }
 
+  /* One sheet. Tighter type, links that show where they go (paper cannot be
+     tapped), and photos as a compact contact strip rather than full width
+     frames that push the contact block onto page two. */
+  .kit-island main {
+    max-width: none;
+    padding: 0;
+    font-size: 10.5pt;
+  }
+
+  .kit-island h1 {
+    font-size: 28pt;
+    line-height: 1.1;
+  }
+
+  .kit-island .kit-section {
+    margin-top: 14pt;
+  }
+
+  .kit-island .kit-section a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 8.5pt;
+    color: var(--kit-text-faint);
+    overflow-wrap: anywhere;
+    text-decoration: none;
+  }
+
+  .kit-island .kit-section a[href^='mailto:'] {
+    text-decoration: none;
+  }
+
+  .kit-island .kit-photos {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8pt;
+  }
+
+  .kit-island .kit-photos img {
+    max-height: 48mm;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 0;
+  }
+
+  .kit-island .kit-photos figure {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   @page {
-    margin: 18mm 16mm;
+    margin: 16mm 14mm;
   }
 }
 

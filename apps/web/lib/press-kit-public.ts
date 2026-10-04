@@ -5,7 +5,6 @@
  * loading half is lib/press-kit-public-server.ts.
  */
 
-import { PRESS_KIT_SECTIONS } from '@/types/press-kits';
 import type {
   PressKitSectionContent,
   PressKitSectionKey,
@@ -107,7 +106,7 @@ export function publicSections(
     hidden: boolean;
   }[]
 ): PublicKitSection[] {
-  const order = new Map(PRESS_KIT_SECTIONS.map((key, index) => [key, index]));
+  const order = new Map(PUBLIC_SECTION_ORDER.map((key, index) => [key, index]));
   return sections
     .filter((section) => !section.hidden)
     .filter((section) => section.section !== 'assets')
@@ -118,6 +117,30 @@ export function publicSections(
     .filter((section) => Object.values(section.content).some(isFilled))
     .sort((a, b) => (order.get(a.section) ?? 99) - (order.get(b.section) ?? 99));
 }
+
+/**
+ * The order a reader sees sections in, which is NOT the editor's order.
+ *
+ * The editor follows how a team builds a kit; a reader opens it to find out
+ * who to email, what the artist is about, and what they look like, in that
+ * order. So contact comes first and the photos right after the bios, while
+ * live dates and links, which people look up rather than read, go last.
+ * Every section key must appear here once (a test holds it).
+ */
+export const PUBLIC_SECTION_ORDER: readonly PressKitSectionKey[] = [
+  'header',
+  'contact',
+  'bios',
+  'assets',
+  'latest_release',
+  'music',
+  'video',
+  'credits',
+  'numbers',
+  'press',
+  'live',
+  'links',
+];
 
 /**
  * The one line under the artist's name.
@@ -175,4 +198,95 @@ export function successorPathForKit(
   if (!slug) return null;
   if (!isKitLive(kit.publishedAt)) return null;
   return `/k/${slug}`;
+}
+
+export type KitLink = { href: string; label: string };
+
+const KNOWN_HOSTS: Record<string, string> = {
+  'open.spotify.com': 'Spotify',
+  'spotify.com': 'Spotify',
+  'music.apple.com': 'Apple Music',
+  'youtube.com': 'YouTube',
+  'youtu.be': 'YouTube',
+  'music.youtube.com': 'YouTube Music',
+  'instagram.com': 'Instagram',
+  'tiktok.com': 'TikTok',
+  'twitter.com': 'X',
+  'x.com': 'X',
+  'facebook.com': 'Facebook',
+  'soundcloud.com': 'SoundCloud',
+  'audiomack.com': 'Audiomack',
+  'boomplay.com': 'Boomplay',
+  'deezer.com': 'Deezer',
+  'tidal.com': 'Tidal',
+  'bandcamp.com': 'Bandcamp',
+};
+
+/** Longer than any real share link; mostly junk or an attempt to break layout. */
+const MAX_LINK_LENGTH = 2000;
+
+const looksLikeUrl = (value: string): boolean =>
+  /^https?:\/\/\S+$/i.test(value) || /^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(value);
+
+function toHttpUrl(value: string): URL | null {
+  const trimmed = value.trim();
+  if (!trimmed || /\s/.test(trimmed)) return null;
+  const withScheme = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : /^[a-z][a-z0-9+.-]*:/i.test(trimmed)
+      ? ''
+      : looksLikeUrl(trimmed)
+        ? `https://${trimmed}`
+        : '';
+  if (!withScheme) return null;
+  try {
+    const url = new URL(withScheme);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    // https://spotify.com@evil.example reads as Spotify and goes elsewhere.
+    if (url.username || url.password) return null;
+    if (url.href.length > MAX_LINK_LENGTH) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+/** A readable name for a link with no label: Spotify, not the whole address. */
+export function nameForLinkHost(url: URL): string {
+  const host = url.hostname.replace(/^www\./i, '').toLowerCase();
+  // Walk up the domain: m.youtube.com, then youtube.com.
+  const parts = host.split('.');
+  for (let start = 0; start < parts.length - 1; start += 1) {
+    const known = KNOWN_HOSTS[parts.slice(start).join('.')];
+    if (known) return known;
+  }
+  return host;
+}
+
+/**
+ * Turns what somebody typed into a link a reader can safely tap.
+ *
+ * People paste the address into whichever box is nearest, so a link whose
+ * address sits in the label is rescued rather than shown as dead text, and an
+ * address with no scheme gets https. Only http(s) ever comes out, and an
+ * unusable pair answers null so the row is dropped instead of printed raw.
+ * The label is never the address itself: a long streaming URL with tracking
+ * parameters is not something to put in front of a journalist.
+ */
+export function resolveKitLink(entry: { label?: unknown; url?: unknown }): KitLink | null {
+  const label = typeof entry.label === 'string' ? entry.label.trim() : '';
+  const rawUrl = typeof entry.url === 'string' ? entry.url.trim() : '';
+  const url = toHttpUrl(rawUrl) || (!rawUrl ? toHttpUrl(label) : null);
+  if (!url) return null;
+  const labelIsAddress = label !== '' && toHttpUrl(label) !== null;
+  return {
+    href: url.toString(),
+    label: label && !labelIsAddress ? label : nameForLinkHost(url),
+  };
+}
+
+/** True when a typed value is a web address rather than a name. Used by the
+ *  editor to move an address pasted into a label box over to the link box. */
+export function looksLikeWebAddress(value: unknown): boolean {
+  return typeof value === 'string' && toHttpUrl(value) !== null;
 }

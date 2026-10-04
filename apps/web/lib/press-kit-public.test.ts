@@ -5,6 +5,9 @@ import {
   isKitLive,
   kitDescription,
   kitTagline,
+  looksLikeWebAddress,
+  PUBLIC_SECTION_ORDER,
+  resolveKitLink,
   publicSections,
   successorPathForKit,
 } from './press-kit-public';
@@ -109,7 +112,7 @@ describe('publicSections', () => {
       section('bios', { short: 'A bio' }),
       section('header', { descriptor: 'A descriptor' }),
     ]);
-    expect(result.map((entry) => entry.section)).toEqual(['header', 'bios', 'contact']);
+    expect(result.map((entry) => entry.section)).toEqual(['header', 'contact', 'bios']);
   });
 });
 
@@ -177,5 +180,152 @@ describe('successorPathForKit', () => {
   it('leaves an old link alone when the kit has no slug', () => {
     expect(successorPathForKit({ slug: '', publishedAt: '2026-09-01T00:00:00Z' })).toBeNull();
     expect(successorPathForKit({ slug: '   ', publishedAt: '2026-09-01T00:00:00Z' })).toBeNull();
+  });
+});
+
+describe('resolveKitLink', () => {
+  it('rescues an address pasted into the label box', () => {
+    const long =
+      'https://open.spotify.com/artist/7dp5tbWcRoekRCHpCRUo7v?si=gEFw5AH1R5We2tB-Flv1gw&utm_source=copy-link';
+    expect(resolveKitLink({ label: long, url: '' })).toEqual({
+      href: long,
+      label: 'Spotify',
+    });
+  });
+
+  it('keeps a real label', () => {
+    expect(resolveKitLink({ label: 'Listen', url: 'https://example.com/a' })).toEqual({
+      href: 'https://example.com/a',
+      label: 'Listen',
+    });
+  });
+
+  it('never prints the address as the label', () => {
+    expect(resolveKitLink({ label: 'https://x.com/dorian', url: 'https://x.com/dorian' })?.label).toBe('X');
+  });
+
+  it('adds https to a bare domain', () => {
+    expect(resolveKitLink({ label: '', url: 'www.instagram.com/dorian' })).toEqual({
+      href: 'https://www.instagram.com/dorian',
+      label: 'Instagram',
+    });
+  });
+
+  it('names an unknown site by its host', () => {
+    expect(resolveKitLink({ url: 'https://www.dorian.com/press' })?.label).toBe('dorian.com');
+  });
+
+  it('refuses anything that is not http(s)', () => {
+    expect(resolveKitLink({ label: 'x', url: 'javascript:alert(1)' })).toBeNull();
+    expect(resolveKitLink({ label: 'x', url: 'mailto:a@b.com' })).toBeNull();
+    expect(resolveKitLink({ label: 'x', url: 'data:text/html,hi' })).toBeNull();
+  });
+
+  it('drops empty, spaced or non-string entries', () => {
+    expect(resolveKitLink({})).toBeNull();
+    expect(resolveKitLink({ label: 'Spotify', url: '' })).toBeNull();
+    expect(resolveKitLink({ url: 'not a link' })).toBeNull();
+    expect(resolveKitLink({ label: 5, url: 7 })).toBeNull();
+  });
+
+  it('does not rescue the label when a bad url was typed', () => {
+    expect(resolveKitLink({ label: 'https://a.com', url: 'javascript:x' })).toBeNull();
+  });
+});
+
+describe('looksLikeWebAddress', () => {
+  it('spots addresses and ignores names', () => {
+    expect(looksLikeWebAddress('https://open.spotify.com/artist/1')).toBe(true);
+    expect(looksLikeWebAddress('instagram.com/dorian')).toBe(true);
+    expect(looksLikeWebAddress('Spotify')).toBe(false);
+    expect(looksLikeWebAddress('Dorian live at the O2')).toBe(false);
+    expect(looksLikeWebAddress('javascript:alert(1)')).toBe(false);
+    expect(looksLikeWebAddress(null)).toBe(false);
+  });
+});
+
+describe('PUBLIC_SECTION_ORDER', () => {
+  it('lists every section exactly once', async () => {
+    const { PRESS_KIT_SECTIONS } = await import('@/types/press-kits');
+    expect([...PUBLIC_SECTION_ORDER].sort()).toEqual([...PRESS_KIT_SECTIONS].sort());
+  });
+  it('puts contact first and links last', () => {
+    expect(PUBLIC_SECTION_ORDER[0]).toBe('header');
+    expect(PUBLIC_SECTION_ORDER[1]).toBe('contact');
+    expect(PUBLIC_SECTION_ORDER[PUBLIC_SECTION_ORDER.length - 1]).toBe('links');
+    expect(PUBLIC_SECTION_ORDER.indexOf('bios')).toBeLessThan(PUBLIC_SECTION_ORDER.indexOf('assets'));
+  });
+});
+
+describe('link edge cases', () => {
+  const resolve = (label: unknown, url: unknown) => resolveKitLink({ label, url });
+
+  it('refuses addresses with embedded credentials', () => {
+    expect(resolve('Spotify', 'https://open.spotify.com@evil.example/x')).toBeNull();
+    expect(resolve('', 'https://user:pass@example.com')).toBeNull();
+  });
+  it('refuses absurdly long addresses', () => {
+    expect(resolve('x', `https://example.com/${'a'.repeat(2100)}`)).toBeNull();
+  });
+  it('accepts an upper case scheme and surrounding whitespace', () => {
+    expect(resolve('Site', '  HTTPS://Example.com/a  ')?.href).toBe('https://example.com/a');
+  });
+  it('keeps ports, queries and fragments', () => {
+    expect(resolve('x', 'http://example.com:8080/a?b=1#c')?.href).toBe('http://example.com:8080/a?b=1#c');
+  });
+  it('refuses protocol-relative, ftp, file, tel and blob', () => {
+    for (const bad of ['//example.com', 'ftp://example.com', 'file:///etc/passwd', 'tel:+234', 'blob:https://a.com/x']) {
+      expect(resolve('x', bad)).toBeNull();
+    }
+  });
+  it('refuses an address with a space inside it', () => {
+    expect(resolve('x', 'https://example.com/a b')).toBeNull();
+  });
+  it('does not treat a sentence or an email as an address', () => {
+    expect(resolve('Check my site example.com', '')).toBeNull();
+    expect(resolve('', 'ada@example.com')).toBeNull();
+    expect(resolve('', 'hello')).toBeNull();
+  });
+  it('names subdomains of known sites', () => {
+    expect(resolve('', 'https://dorian.bandcamp.com')?.label).toBe('Bandcamp');
+    expect(resolve('', 'https://m.youtube.com/watch?v=1')?.label).toBe('YouTube');
+    expect(resolve('', 'https://music.youtube.com/x')?.label).toBe('YouTube Music');
+  });
+  it('treats unicode labels as real labels', () => {
+    expect(resolve('Écoute ici', 'https://example.com')?.label).toBe('Écoute ici');
+  });
+  it('handles punycode and uppercase hosts', () => {
+    expect(resolve('', 'https://EXAMPLE.COM')?.href).toBe('https://example.com/');
+  });
+  it('never throws on odd input types', () => {
+    for (const value of [null, undefined, 0, {}, [], true]) {
+      expect(() => resolve(value, value)).not.toThrow();
+      expect(resolve(value, value)).toBeNull();
+    }
+  });
+  it('is stable: resolving a resolved link changes nothing', () => {
+    const once = resolve('', 'https://open.spotify.com/artist/1?si=a');
+    expect(once && resolve(once.label, once.href)).toEqual(once);
+  });
+});
+
+describe('publicSections edge cases', () => {
+  it('drops a section whose content is only empty strings, nulls and empty lists', () => {
+    expect(publicSections([section('contact', { contacts: [], note: '  ', x: null })])).toEqual([]);
+  });
+  it('treats a null published copy as never published', () => {
+    expect(publicSections([section('bios', null)])).toEqual([]);
+  });
+  it('drops hidden sections even when filled', () => {
+    expect(publicSections([section('bios', { short: 'x' }, true)])).toEqual([]);
+  });
+  it('keeps everything in reader order for a full kit', () => {
+    const filled = { value: 'x' };
+    const all = (['links', 'live', 'press', 'numbers', 'credits', 'video', 'music', 'latest_release', 'bios', 'contact', 'header'] as const).map(
+      (key) => section(key, filled)
+    );
+    expect(publicSections(all).map((entry) => entry.section)).toEqual([
+      'header', 'contact', 'bios', 'latest_release', 'music', 'video', 'credits', 'numbers', 'press', 'live', 'links',
+    ]);
   });
 });
