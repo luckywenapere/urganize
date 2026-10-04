@@ -60,7 +60,7 @@ export const CATALOG_TOUR_STEPS: readonly TourStep[] = [
     id: 'catalog',
     anchor: 'nav-catalog',
     title: 'Your rollouts live here.',
-    body: 'Every rollout you are running shows up in this list. Tap one to open it.',
+    body: 'Open Catalogue to see every rollout you are running. Tap one to open it.',
   },
   {
     id: 'urgans',
@@ -78,6 +78,17 @@ export const CATALOG_TOUR_STEPS: readonly TourStep[] = [
     ctaLabel: 'Done',
   },
 ];
+
+/** The last step when the tour starts on Home: the rollout cards and the New rollout
+ *  button only exist on the Catalogue page, so on Home the step points at the
+ *  Catalogue pill that gets there. */
+export const HOME_TOUR_FINISH = {
+  anchor: 'nav-catalog' as TourAnchor,
+  title: 'Start in Catalogue.',
+  body: 'Open Catalogue to see every rollout, or start a new one from there.',
+  ctaLabel: 'Done',
+  action: 'done' as CatalogTourCtaAction,
+};
 
 export const ROLLOUT_TOUR_STEPS: readonly TourStep[] = [
   {

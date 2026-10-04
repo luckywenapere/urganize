@@ -9,6 +9,7 @@ import { usePlannerStore } from '@/stores/usePlannerStore';
 import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
+import { useCatalogTourAutoStart } from '@/components/tours/useCatalogTourAutoStart';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { ManagerMidReleaseView } from '@/components/home/ManagerMidReleaseView';
@@ -18,6 +19,8 @@ import { ManagerQuietView } from '@/components/home/ManagerQuietView';
 // ChappiPageClient's own CHAPPI_ENABLED read: the route itself has no
 // server-side gate, so an off flag has to bounce here.
 const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
+const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
+const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
 /**
  * The Home tab's page. Follows ChappiPageClient's established shape for a
@@ -61,6 +64,19 @@ export default function HomePageClient() {
 
   // The deferred first-release prompt — same hook every landing surface uses.
   useFirstReleasePrompt(() => setIsCreateModalOpen(true));
+
+  // The first-visit tour. Home is where people land, so that is where it starts.
+  const releaseCount = useReleaseStore((state) => state.releases.length);
+  useCatalogTourAutoStart({
+    enabled: TOURS_ENABLED,
+    plannerEnabled: PLANNER_ENABLED,
+    releasesLoaded: !homeLoading && Boolean(home),
+    releaseCount,
+    scopedReleaseId: null,
+    scopedTaskCount: 0,
+    canCreate: true,
+    onHome: true,
+  });
 
   if (authLoading || homeLoading || !home) {
     return <HomeSkeleton />;

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { isBodyScrollLocked } from '@/lib/body-scroll-lock';
 import {
   CATALOG_TOUR_STEPS,
+  HOME_TOUR_FINISH,
   decideCatalogTourAutoStart,
   markTourSeen,
   readTourSeen,
@@ -37,6 +38,7 @@ export function useCatalogTourAutoStart({
   scopedReleaseId,
   scopedTaskCount,
   canCreate,
+  onHome = false,
 }: {
   enabled: boolean;
   plannerEnabled: boolean;
@@ -45,6 +47,10 @@ export function useCatalogTourAutoStart({
   scopedReleaseId: string | null;
   scopedTaskCount: number;
   canCreate: boolean;
+  /** True when mounted on Home. Home is where people land now, so the tour starts
+   *  there, and its last step points at the Catalogue pill (the rollout cards it
+   *  would otherwise point at only exist on the Catalogue page). */
+  onHome?: boolean;
 }): void {
   const start = useTourStore((state) => state.start);
   const consumeReplay = useTourStore((state) => state.consumeReplay);
@@ -83,7 +89,9 @@ export function useCatalogTourAutoStart({
     }
     attempted.current = true;
 
-    const cta = resolveCatalogTourCta({
+    const cta = onHome
+      ? HOME_TOUR_FINISH
+      : resolveCatalogTourCta({
       plannerEnabled,
       scopedReleaseId,
       scopedTaskCount,
@@ -116,6 +124,7 @@ export function useCatalogTourAutoStart({
     scopedReleaseId,
     scopedTaskCount,
     canCreate,
+    onHome,
     pendingReplay,
     userId,
     isAuthLoading,
