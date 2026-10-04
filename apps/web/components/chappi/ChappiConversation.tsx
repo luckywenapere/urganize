@@ -18,14 +18,22 @@ import {
   Rocket,
   Send,
   Sparkles,
+  Square,
   ThumbsDown,
   ThumbsUp,
+  Volume2,
   type LucideIcon,
 } from '@/components/icons';
 import { TeamBriefNudge } from './TeamBriefNudge';
 import { BriefAttribution } from './BriefAttribution';
 import { ReplyText } from './ReplyText';
 import { stripModelMarkup } from '@/lib/model-markup';
+import {
+  isSpeechEnabled,
+  isSpeechSupported,
+  speakChunks,
+  speechChunksForReply,
+} from '@/lib/chappi/speech';
 import { describeTranscriptAnnouncement } from '@/lib/chappi/transcript-announcement';
 import { createTextBatcher, isStreamContentType, URGANS_STREAM_HEADER } from '@/lib/chappi/stream-protocol';
 import { CONNECTION_DROPPED_NOTE, readStreamedTurn } from '@/lib/chappi/stream-client';
@@ -140,6 +148,7 @@ async function getAccessToken(): Promise<string> {
 // other flag, so Next inlines it.
 const HISTORY_ENABLED = isChappiHistoryEnabled();
 const VOICE_ENABLED = isUrgansVoiceEnabled();
+const SPEAK_ENABLED = isSpeechEnabled();
 
 // "Listening… 0:07" — mm:ss, single-digit minutes are enough for a 60s cap.
 const formatElapsed = (seconds: number): string => {
@@ -1646,14 +1655,40 @@ function AssistantMessage({
 }) {
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const [canSpeak, setCanSpeak] = useState(false);
+  const stopSpeechRef = useRef<(() => void) | null>(null);
   // Cleared on unmount so a copy right before navigating can't set state on
   // a dead component.
   const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     return () => {
       if (copyResetRef.current) clearTimeout(copyResetRef.current);
+      // Leaving the chat (or a new chat replacing this reply) silences it.
+      stopSpeechRef.current?.();
     };
   }, []);
+  // Browser support is only known after mount, so the server and client render
+  // the same markup first and the button appears once speech is confirmed.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCanSpeak(SPEAK_ENABLED && isSpeechSupported() && speechChunksForReply(content).length > 0);
+  }, [content]);
+
+  const handleSpeak = () => {
+    if (speaking) {
+      stopSpeechRef.current?.();
+      return;
+    }
+    const chunks = speechChunksForReply(content);
+    if (chunks.length === 0) return;
+    captureAnalyticsEvent({ name: 'urgans_reply_action', properties: { action: 'speak' } });
+    setSpeaking(true);
+    stopSpeechRef.current = speakChunks(chunks, document.documentElement.lang || 'en-US', () => {
+      stopSpeechRef.current = null;
+      setSpeaking(false);
+    });
+  };
 
   const handleCopy = async () => {
     try {
@@ -1708,6 +1743,24 @@ function AssistantMessage({
             <Copy className="h-3.5 w-3.5" aria-hidden="true" />
           )}
         </button>
+        {canSpeak ? (
+          <button
+            type="button"
+            onClick={handleSpeak}
+            aria-label={speaking ? 'Stop reading aloud' : 'Read reply aloud'}
+            aria-pressed={speaking}
+            title={speaking ? 'Stop' : 'Listen'}
+            className={`${actionButtonClass} ${speaking ? 'text-brand' : ''}`}
+          >
+            {/* A square while speaking, a speaker otherwise, so the state is
+                not carried by colour alone. */}
+            {speaking ? (
+              <Square className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true" />
+            ) : (
+              <Volume2 className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+          </button>
+        ) : null}
         {onRetry ? (
           <button
             type="button"
