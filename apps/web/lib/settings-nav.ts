@@ -193,6 +193,28 @@ export function isPlainLeftClick(event: {
   );
 }
 
+/**
+ * A link clicked INSIDE the pop-up: where should it really go? Null means leave
+ * it alone (another tab, a download, another site, or a link that opens or
+ * re-points the pop-up itself). Otherwise the path to push — after the pop-up's
+ * own history entry has been replaced, so Back never returns to an open Settings.
+ */
+export function settingsLeaveHref(
+  anchor: { href: string; target?: string | null; download?: boolean },
+  baseUrl: string
+): string | null {
+  if (anchor.download || anchor.target === '_blank') return null;
+  let url: URL;
+  try {
+    url = new URL(anchor.href, baseUrl);
+  } catch {
+    return null;
+  }
+  if (url.origin !== new URL(baseUrl).origin) return null;
+  if (url.searchParams.has(SETTINGS_PARAM)) return null;
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 // ── Reading the URL ─────────────────────────────────────────────────────────
 
 type ParamReader = { get(name: string): string | null };

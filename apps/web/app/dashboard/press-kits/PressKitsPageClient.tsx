@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Newspaper } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
-import { isArtistPageEnabled } from '@/lib/artist-page';
 import { usePressKitsStore } from '@/stores/usePressKitsStore';
 import type { PressKit } from '@/types/press-kits';
 
@@ -44,12 +43,10 @@ export default function PressKitsPageClient() {
       router.replace('/dashboard');
       return;
     }
-    // The artist list is where this lives now (Catalogue, Phase 1). The kit
-    // editor keeps its own route, so every link to a single kit still works.
-    if (isArtistPageEnabled()) {
-      router.replace('/dashboard/artists');
-      return;
-    }
+    // No handover to the artist list here (removed 2026-10-04): tapping "Press
+    // kits" in the menu or Settings landed people on Artists, which they read
+    // as the Directory. The artist page links to each kit's editor; this list
+    // is the one place that is just press kits.
     void load();
   }, [load, router]);
 
