@@ -2,12 +2,12 @@
 //
 // Two sets live behind this door and call sites cannot tell them apart:
 //
-//   HOUSE (30) — Urganize's own marks, drawn in the Adinkra/Kuba voice of
+//   HOUSE (41) — Urganize's own marks, drawn in the Adinkra/Kuba voice of
 //   the brand's textile reference. See ./house.tsx for the four rules that
 //   decide what belongs, and for the two directions that were drawn, tested at
 //   real icon size, and rejected on evidence.
 //
-//   PASSTHROUGH (70) — still lucide, re-exported unchanged. The long tail:
+//   PASSTHROUGH (59) — still lucide, re-exported unchanged. The long tail:
 //   admin tables, rare settings rows, one-off empty states. Drawing all
 //   98 would mean hand-cutting 68 marks for surfaces almost nobody opens,
 //   several of which lucide already draws better than we would.
@@ -45,6 +45,9 @@ export {
   Plus, Radio, RefreshCw, RotateCcw,
   Search, Sparkles, Trash2, Upload,
   Users, X,
+  // The design pass (2026-10-04): the seven areas, you, credits and notes.
+  Disc3, Handshake, Headphones, Home, Menu, MicVocal,
+  NotebookPen, Spotlight, UserCircle, UserCircle2, Wallet2,
 } from './house';
 
 /* Long tail — lucide, unchanged. */
@@ -53,18 +56,14 @@ export {
   ArrowUp, BadgeDollarSign, Bug, Building2,
   CalendarClock, CalendarPlus, Camera, ChartNoAxesGantt,
   CheckCircle, ChevronLeft, ChevronUp, CircleDot,
-  CornerDownLeft, Disc3, FileText, Flag,
+  CornerDownLeft, FileText, Flag,
   FolderOpen,
   // The admin scoreboard (2026-10-02): the company's numbers at a glance.
   Gauge,
-  Gift, Globe, Handshake,
+  Gift, Globe,
   // Shows (2026-09-25): the drag handle on a set row, and tap-to-call on a
   // promoter's number.
   GripVertical, History,
-  // Home tab (NEXT_PUBLIC_FEATURE_HOME): the topbar logo, side-menu row and
-  // mobile tab. Passthrough for now — a hand-drawn house mark is a design
-  // decision this step's scope doesn't cover; see the note above icon().
-  Home,
   Image, ImageIcon, ImageOff, Info,
   // Share to socials (2026-09-23). A brand mark is exactly what lucide draws
   // better than we would, and it is the one glyph people look for on a
@@ -72,18 +71,16 @@ export {
   Instagram,
   KeyRound, Layers, LayoutDashboard, LayoutGrid,
   Link2, ListChecks, LockOpen, LogOut,
-  MapPin, Maximize2, Menu, Mic,
-  MicVocal, Minimize2, MonitorDown, MoreHorizontal,
-  Newspaper, NotebookPen, PanelLeftClose, PanelLeftOpen,
+  MapPin, Maximize2, Mic,
+  Minimize2, MonitorDown, MoreHorizontal,
+  Newspaper, PanelLeftClose, PanelLeftOpen,
   // Brand colors (2026-09-24): the share sheet's link to Settings.
   Palette,
   PartyPopper, Pencil, Phone, PiggyBank, Pin,
   Plug, Rocket, Send, Share,
   Share2, ShieldCheck, Slash, Smartphone,
   Smile, Square, ThumbsDown, ThumbsUp, TrendingUp,
-  Undo2, UserCircle, UserCircle2, UserPlus,
+  Undo2, UserPlus,
   // Read-aloud on UrgAns replies (NEXT_PUBLIC_FEATURE_URGANS_SPEAK).
   Volume2,
-  // The top bar's credits and More menu (design overhaul, 2026-10-04).
-  Wallet2,
 } from 'lucide-react';

@@ -7,9 +7,12 @@ import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import {
   Disc3,
+  Handshake,
+  Headphones,
   Home,
   MicVocal,
   MoreHorizontal,
+  Spotlight,
   Sparkles,
   Wallet2,
   X,
@@ -29,6 +32,13 @@ import {
 } from '@/lib/shell-nav';
 
 type IconComponent = ComponentType<LucideProps>;
+
+/** The areas in the More sheet. Each carries a piece of the music trade. */
+const MORE_ICON: Record<string, IconComponent> = {
+  relationships: Handshake,
+  opportunities: Spotlight,
+  audience: Headphones,
+};
 
 const TAB_ICON: Record<string, IconComponent> = {
   home: Home,
@@ -228,8 +238,12 @@ function MoreSheet({
               <Link
                 href={item.href}
                 onClick={onClose}
-                className="motion-focus flex min-h-14 items-center justify-between gap-3 text-base text-content-primary"
+                className="motion-focus flex min-h-14 items-center gap-2.5 text-base text-content-primary"
               >
+                {(() => {
+                  const Icon = MORE_ICON[item.key];
+                  return Icon ? <Icon className="h-5 w-5 text-content-tertiary" aria-hidden="true" /> : null;
+                })()}
                 {item.label}
               </Link>
             </li>
