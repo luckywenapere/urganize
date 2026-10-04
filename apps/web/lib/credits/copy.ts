@@ -102,16 +102,6 @@ export function creditsLeftLine(left: number): string {
   return `UrgAns: ${plural(safe, 'credit', 'credits')} left.`;
 }
 
-/**
- * The quiet line under the chat box, shown on every turn while credits are on.
- * Shorter than the banner's because it sits beside the composer, not above the app.
- */
-export function composerCreditsLine(left: number): string {
-  const safe = Math.max(0, Math.floor(left));
-  if (safe === 0) return 'No UrgAns credits left';
-  return `${plural(safe, 'credit', 'credits')} left`;
-}
-
 /** The banner's second line; '' when there is nothing true to add. */
 export function creditsNextLine(
   left: number,
