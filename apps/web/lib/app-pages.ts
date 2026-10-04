@@ -99,7 +99,7 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
   pages.push(
     {
       key: 'catalog',
-      label: 'Catalog',
+      label: 'Catalogue',
       href: '/dashboard',
       keywords: ['rollouts', 'releases', 'all rollouts', 'all releases'],
       leavesRelease: true,

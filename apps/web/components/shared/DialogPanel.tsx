@@ -8,6 +8,9 @@ type DialogPanelProps = {
   label: string;
   onClose: () => void;
   className?: string;
+  /** 'panel' (default) reads the label first; 'first' lands on the control marked
+   * data-autofocus, for a dialog whose whole job is typing. */
+  initialFocus?: 'panel' | 'first';
   children: ReactNode;
 };
 
@@ -22,9 +25,9 @@ type DialogPanelProps = {
  * the panel rather than a control, so the label is read first and Tab then
  * enters it.
  */
-export function DialogPanel({ label, onClose, className, children }: DialogPanelProps) {
+export function DialogPanel({ label, onClose, className, initialFocus = 'panel', children }: DialogPanelProps) {
   const ref = useRef<HTMLDivElement>(null);
-  useDialogFocus(true, ref, { initialFocus: 'panel' });
+  useDialogFocus(true, ref, { initialFocus });
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

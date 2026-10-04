@@ -134,6 +134,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
       />
       <DialogPanel
         label="Search or ask UrgAns"
+        initialFocus="first"
         onClose={onClose}
         className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface shadow-lg"
       >
