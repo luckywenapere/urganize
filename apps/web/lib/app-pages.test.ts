@@ -46,13 +46,13 @@ describe('buildAppPages — always present', () => {
   it('offers Home, the catalog, the assistant and settings with every flag off', async () => {
     const { buildAppPages } = await loadPages();
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
-    expect(keys).toEqual(['home', 'catalog', 'urgans', 'settings']);
+    expect(keys).toEqual(['home', 'catalog', 'urgans', 'opportunities', 'settings']);
   });
 
   it('offers Home first, ahead of the catalog, when its flag is on', async () => {
     const { buildAppPages } = await loadPages({ NEXT_PUBLIC_FEATURE_HOME: 'true' });
     const keys = buildAppPages({ hasCuratorProfile: false }).map((page) => page.key);
-    expect(keys).toEqual(['home', 'catalog', 'urgans', 'settings']);
+    expect(keys).toEqual(['home', 'catalog', 'urgans', 'opportunities', 'settings']);
   });
 
   it('keeps Home as its own page, not a Catalog keyword', async () => {

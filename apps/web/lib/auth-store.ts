@@ -18,6 +18,7 @@ import { resetPressKitsStore } from '@/stores/usePressKitsStore';
 import { resetEventsStore } from '@/stores/useEventsStore';
 import { resetArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { resetRelationshipsStore } from '@/stores/useRelationshipsStore';
+import { resetOpportunitiesStore } from '@/stores/useOpportunitiesStore';
 import { resetReleaseStore } from '@/stores/useReleaseStore';
 import { resetTaskStore } from '@/stores/useTaskStore';
 import { resetActivityStore } from '@/stores/useActivityStore';
@@ -1130,6 +1131,7 @@ if (typeof window !== 'undefined') {
       resetEventsStore();
       resetArtistRosterStore();
       resetRelationshipsStore();
+      resetOpportunitiesStore();
       // The UrgAns conversation is the same exposure in its sharpest form: a
       // whole transcript of account A's questions and answers, kept in a
       // module-level store that a client-side navigation to /auth never

@@ -18,16 +18,6 @@ export type ComingSoonCopy = {
 };
 
 export const COMING_SOON: Partial<Record<ShellAreaKey, ComingSoonCopy>> = {
-  opportunities: {
-    title: 'Opportunities',
-    question: 'What can we go after next?',
-    willDo: [
-      'See deals, grants, sync and brand work that fit your artists in one list.',
-      'Track each one from first message to signed.',
-      'Ask UrgAns to find openings that match a rollout.',
-    ],
-    meanwhile: { label: 'Ask UrgAns what to pitch next', href: '/dashboard/urgans' },
-  },
   audience: {
     title: 'Audience',
     question: 'Who are the fans, and what is the data saying?',
