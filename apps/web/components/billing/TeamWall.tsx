@@ -28,6 +28,7 @@ import {
 import { isPricingV2Enabled } from '@/lib/entitlements';
 import { TierPlanPicker } from '@/components/billing/TierPlanPicker';
 import { WallUrgansCard } from '@/components/billing/WallUrgansCard';
+import { describeWallSummary, type WallSummaryCounts } from '@/lib/wall-summary';
 
 // The wall (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). Rendered by /locked when the
 // flag is on; the flag-off page is untouched beside it.
@@ -131,6 +132,9 @@ export function TeamWall() {
    *  too small to charge for. Both need saying out loud, because a button that
    *  goes quiet reads as a failure. */
   const [changeResult, setChangeResult] = useState<string | null>(null);
+  // What is already theirs, in real numbers. Null until the lookup lands or when it
+  // fails, and the wall then falls back to the generic reassurance.
+  const [summaryLine, setSummaryLine] = useState<string | null>(null);
   const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [notifyError, setNotifyError] = useState<string | null>(null);
 
@@ -227,6 +231,31 @@ export function TeamWall() {
       cancelled = true;
     };
   }, [isAuthLoading, userId]);
+
+  // The numbers behind "your things are safe": rollouts, activities and teammates.
+  // Telemetry-grade: a failure only means the generic line shows instead.
+  useEffect(() => {
+    if (!team || team.hasAccess) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return;
+        const response = await fetch('/api/billing/wall-summary', {
+          headers: { Authorization: `Bearer ${token}`, 'x-urganize-prefetch': '1' },
+        });
+        if (!response.ok) return;
+        const counts = (await response.json()) as WallSummaryCounts;
+        if (!cancelled) setSummaryLine(describeWallSummary(counts));
+      } catch {
+        // The generic line already says it.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [team]);
 
   // Access came back while they were sitting here (the webhook landed, or an
   // admin comped them). Send them back into the app.
@@ -449,7 +478,7 @@ export function TeamWall() {
 
   return (
     <main className="min-h-screen px-4 py-12">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
         <Logo />
 
         <header className="flex flex-col gap-3">
@@ -474,7 +503,7 @@ export function TeamWall() {
               'Your team can still see everything. Pay again to start making changes.'
             ) : (
               <>
-                Your rollouts, tasks and files are safe and waiting.
+                {summaryLine ?? 'Your rollouts, tasks and files are safe and waiting.'}
                 {team?.teamName ? ` Nothing on ${team.teamName} has been removed.` : ''}
               </>
             )}
@@ -482,13 +511,13 @@ export function TeamWall() {
         </header>
 
         {isOwner ? (
-          <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+          <div className="flex flex-col gap-4">
             {/* Activate. Annual first and highlighted: it is the better deal
                 and the one most teams should take. */}
             <Card padding="lg" className="flex flex-col gap-5">
               <div>
                 <h2 className="font-display text-lg font-semibold text-content-primary">
-                  Activate your plan
+                  Pick your plan
                 </h2>
                 <p className="mt-1 text-sm text-content-secondary">
                   One price covers your whole team.
@@ -607,7 +636,7 @@ export function TeamWall() {
                   {canCheckOut ? (
                     <Button
                       variant="primary"
-                      className="w-full"
+                      className="min-h-14 w-full text-base"
                       disabled={isStartingCheckout}
                       onClick={handleActivate}
                     >
@@ -619,6 +648,12 @@ export function TeamWall() {
                             ? 'Start your plan again'
                             : 'Activate your plan'}
                     </Button>
+                  ) : null}
+
+                  {canCheckOut ? (
+                    <p className="-mt-2 text-center text-xs text-content-tertiary">
+                      Secure checkout with Paystack, paid in naira.
+                    </p>
                   ) : null}
 
                   {checkoutError ? (
@@ -638,36 +673,31 @@ export function TeamWall() {
               )}
             </Card>
 
-            {/* Talk to us. Same weight as checkout, deliberately. */}
-            <Card padding="lg" className="flex flex-col gap-5">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-content-primary">
-                  Talk to us
-                </h2>
-                <p className="mt-1 text-sm text-content-secondary">
-                  {PRICING_V2
-                    ? 'Running a bigger roster, or prefer an invoice? Talk to us directly.'
-                    : 'Prefer an invoice or a walkthrough for your team? Talk to us directly.'}
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Button variant="secondary" className="w-full" onClick={handleWhatsApp}>
-                  <span className="inline-flex items-center gap-2">
-                    <MessageCircle className="size-4" aria-hidden="true" />
-                    Message us on WhatsApp
-                  </span>
-                </Button>
-                <Button variant="secondary" className="w-full" onClick={handleEmail}>
-                  Email {SALES_CONTACT_EMAIL}
-                </Button>
-              </div>
-
-              <p className="text-xs leading-6 text-content-tertiary">
-                We set up annual agreements, invoices and bank transfers for management
-                teams every week. Tell us how your team pays and we will match it.
-              </p>
-            </Card>
+            {/* Talk to us: a quiet second path, not a rival button. One filled action
+                converts best; teams that close over an invoice still find this in one
+                tap, right under the thing they are deciding about. */}
+            <p className="text-center text-sm text-content-secondary">
+              {PRICING_V2
+                ? 'Running a bigger roster, or prefer an invoice?'
+                : 'Prefer an invoice or a walkthrough?'}{' '}
+              <button
+                type="button"
+                onClick={handleWhatsApp}
+                className="motion-focus inline-flex min-h-11 items-center gap-1 font-semibold text-content-primary underline underline-offset-4 hover:text-brand"
+              >
+                <MessageCircle className="size-4" aria-hidden="true" />
+                Message us on WhatsApp
+              </button>{' '}
+              or{' '}
+              <button
+                type="button"
+                onClick={handleEmail}
+                className="motion-focus inline-flex min-h-11 items-center font-semibold text-content-primary underline underline-offset-4 hover:text-brand"
+              >
+                email us
+              </button>
+              .
+            </p>
           </div>
         ) : (
           <Card padding="lg" className="flex max-w-2xl flex-col gap-5">
