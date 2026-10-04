@@ -17,7 +17,7 @@ Order per screen: better-layout (structure) -> shadcn (build) -> better-ui + bet
 
 ### Progress log (tick as you go)
 - [x] 0. Copy plan into repo, save memory pointer (2026-10-04)
-- [~] 1. (UrgAns height constants moved for 4.5rem top bar; broader density pass still open) Tokens + type/density pass (globals.css, tailwind preset) (no flag)
+- [x] 1. (Reviewed 2026-10-04 on the Catalogue at desktop: rows, header and chips already read at Deel density, so no token change was made. Revisit only if the founder asks.) Tokens + type/density pass (globals.css, tailwind preset) (no flag)
 - [x] 2. Nav model (`lib/` pure builder + tests), no flag
 - [x] 3. Shell components: TopNav, SubNav, PageHeader, ArtistSwitcher, CreditsChip, BottomBar + More sheet
 - [x] 4. FloatingUrgAns drawer + Home ask-bar + ⌘K command bar
