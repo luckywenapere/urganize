@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Urganize font options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=Onest:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Instrument+Serif&family=Young+Serif&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#0d120e; --card:#161d17; --line:rgba(243,237,220,.12); --cream:#f3eddc; --mute:#a9ac9f; --green:#7fd99a; --red:#e07a72; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#080c09; color:var(--cream); font-family:system-ui,sans-serif; }
+  header { padding:28px 20px 8px; max-width:1180px; margin:0 auto; }
+  h1.page { font:600 26px/1.2 system-ui; margin:0 0 6px; }
+  header p { color:var(--mute); margin:4px 0; max-width:70ch; line-height:1.5; font-size:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:20px; padding:20px; max-width:1180px; margin:0 auto; }
+  .opt { background:var(--ink); border:1px solid var(--line); border-radius:20px; padding:18px; }
+  .opt .tag { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; font:600 13px system-ui; }
+  .opt .tag small { color:var(--mute); font-weight:400; }
+  .why { color:var(--mute); font:13px/1.5 system-ui; margin:12px 0 0; }
+  .screen { font-family:var(--body); }
+  .eyebrow { font:400 11px 'Space Mono',monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--mute); }
+  .hello { font:600 28px/1.15 'Fraunces',serif; margin:6px 0 2px; letter-spacing:-.01em; }
+  .sub { color:var(--mute); font-size:14px; }
+  .chip { display:inline-flex; align-items:baseline; gap:8px; margin-top:12px; padding:8px 16px; border:1px solid var(--line); border-radius:999px; background:var(--card); }
+  .chip b { font:600 20px 'Fraunces',serif; color:var(--red); font-variant-numeric:tabular-nums; }
+  .chip span { font-size:14px; color:var(--mute); }
+  .focus { margin-top:14px; padding:16px; border:1px solid var(--line); border-radius:18px; background:var(--card); }
+  .focus h3 { font:600 20px/1.25 'Fraunces',serif; margin:6px 0; }
+  .focus .meta { font-size:13px; color:var(--mute); } .focus .meta em { color:var(--red); font-style:normal; }
+  .btn { display:inline-block; margin-top:12px; padding:12px 22px; border-radius:999px; background:var(--cream); color:var(--ink); font-weight:600; font-size:14px; }
+  table { width:100%; border-collapse:collapse; margin-top:14px; font-size:14px; }
+  td { padding:9px 0; border-top:1px solid var(--line); } td:last-child { text-align:right; font-variant-numeric:tabular-nums; color:var(--mute); }
+  p.body { font-size:15px; line-height:1.55; color:#d8d3c2; margin:12px 0 0; }
+  .heads { padding:8px 20px 40px; max-width:1180px; margin:0 auto; }
+  .heads h2 { font:600 18px system-ui; margin:18px 0 10px; }
+  .hrow { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; }
+  .hcard { background:var(--ink); border:1px solid var(--line); border-radius:20px; padding:18px; }
+  .hcard .big { font-size:34px; line-height:1.12; margin:6px 0 8px; letter-spacing:-.01em; }
+  .hcard .pairs { font:15px 'Space Grotesk',sans-serif; color:#d8d3c2; line-height:1.5; }
+</style>
+</head>
+<body>
+<header>
+  <h1 class="page">Urganize font options</h1>
+  <p>Same Home screen content in each card, only the interface font changes. Headlines stay in Fraunces here so you judge the body font on its own; the headline options are lower down. Dates and small labels stay in Space Mono. Open this on your phone as well: type is judged at the size people actually read it.</p>
+  <p><b>Where we are today:</b> Space Grotesk for body and interface, Fraunces for headlines, Space Mono for dates and counts. Space Grotesk is the brand-bible font, and it is also one of the most common "designed" grotesques on the web right now, which is why it can read as generic.</p>
+</header>
+
+<div class="grid">
+
+<section class="opt" style="--body:'Space Grotesk',sans-serif"><div class="tag">A. Space Grotesk <small>current, brand bible</small></div><div class="screen" style="font-family:'Space Grotesk',sans-serif">
+  <div class="eyebrow">Sunday, October 4</div><div class="hello">Good afternoon, Lucky.</div><div class="sub">The Urganization</div>
+  <div class="chip"><b>19</b><span>tasks late</span></div>
+  <div class="focus"><div class="eyebrow">Do this first</div><h3>Confirm release date locked at distributor</h3><div class="meta">Ohema · DOR1AN · <em>23 days overdue</em></div><span class="btn">Mark done</span></div>
+  <table><tr><td>Cover art final approved</td><td>12 Oct</td></tr><tr><td>Send press kit to editors</td><td>14 Oct</td></tr><tr><td>Pitch to 8 playlists</td><td>19 Oct</td></tr></table>
+  <p class="body">Your rollout is on track. Three things need you this week, and nothing is waiting on anyone else.</p></div>
+  <p class="why">Safe and on brand. Its quirks (the geometric "a", the tight "g") are now so familiar they stop looking designed.</p></section>
+
+<section class="opt"><div class="tag">B. Bricolage Grotesque <small>characterful, editorial</small></div><div class="screen" style="font-family:'Bricolage Grotesque',sans-serif">
+  <div class="eyebrow">Sunday, October 4</div><div class="hello">Good afternoon, Lucky.</div><div class="sub">The Urganization</div>
+  <div class="chip"><b>19</b><span>tasks late</span></div>
+  <div class="focus"><div class="eyebrow">Do this first</div><h3>Confirm release date locked at distributor</h3><div class="meta">Ohema · DOR1AN · <em>23 days overdue</em></div><span class="btn">Mark done</span></div>
+  <table><tr><td>Cover art final approved</td><td>12 Oct</td></tr><tr><td>Send press kit to editors</td><td>14 Oct</td></tr><tr><td>Pitch to 8 playlists</td><td>19 Oct</td></tr></table>
+  <p class="body">Your rollout is on track. Three things need you this week, and nothing is waiting on anyone else.</p></div>
+  <p class="why">The most personality: slightly quirky terminals, ink-trap feel. Reads as made by people with taste, which a critical Gen Z audience notices. Risk: it is loud in dense tables.</p></section>
+
+<section class="opt"><div class="tag">C. Instrument Sans <small>calm, modern, precise</small></div><div class="screen" style="font-family:'Instrument Sans',sans-serif">
+  <div class="eyebrow">Sunday, October 4</div><div class="hello">Good afternoon, Lucky.</div><div class="sub">The Urganization</div>
+  <div class="chip"><b>19</b><span>tasks late</span></div>
+  <div class="focus"><div class="eyebrow">Do this first</div><h3>Confirm release date locked at distributor</h3><div class="meta">Ohema · DOR1AN · <em>23 days overdue</em></div><span class="btn">Mark done</span></div>
+  <table><tr><td>Cover art final approved</td><td>12 Oct</td></tr><tr><td>Send press kit to editors</td><td>14 Oct</td></tr><tr><td>Pitch to 8 playlists</td><td>19 Oct</td></tr></table>
+  <p class="body">Your rollout is on track. Three things need you this week, and nothing is waiting on anyone else.</p></div>
+  <p class="why">Quiet and confident, easy to read for a long time. It lets Fraunces and the textile character carry the personality. Risk: closest to "nice but neutral".</p></section>
+
+<section class="opt"><div class="tag">D. Geist <small>sharp, tool-like, current</small></div><div class="screen" style="font-family:'Geist',sans-serif">
+  <div class="eyebrow">Sunday, October 4</div><div class="hello">Good afternoon, Lucky.</div><div class="sub">The Urganization</div>
+  <div class="chip"><b>19</b><span>tasks late</span></div>
+  <div class="focus"><div class="eyebrow">Do this first</div><h3>Confirm release date locked at distributor</h3><div class="meta">Ohema · DOR1AN · <em>23 days overdue</em></div><span class="btn">Mark done</span></div>
+  <table><tr><td>Cover art final approved</td><td>12 Oct</td></tr><tr><td>Send press kit to editors</td><td>14 Oct</td></tr><tr><td>Pitch to 8 playlists</td><td>19 Oct</td></tr></table>
+  <p class="body">Your rollout is on track. Three things need you this week, and nothing is waiting on anyone else.</p></div>
+  <p class="why">Crisp numerals and tidy tables; feels like a serious pro tool. Risk: it is already everywhere in developer products, so it can read as "another SaaS".</p></section>
+
+<section class="opt"><div class="tag">E. Onest <small>friendly, rounded geometry</small></div><div class="screen" style="font-family:'Onest',sans-serif">
+  <div class="eyebrow">Sunday, October 4</div><div class="hello">Good afternoon, Lucky.</div><div class="sub">The Urganization</div>
+  <div class="chip"><b>19</b><span>tasks late</span></div>
+  <div class="focus"><div class="eyebrow">Do this first</div><h3>Confirm release date locked at distributor</h3><div class="meta">Ohema · DOR1AN · <em>23 days overdue</em></div><span class="btn">Mark done</span></div>
+  <table><tr><td>Cover art final approved</td><td>12 Oct</td></tr><tr><td>Send press kit to editors</td><td>14 Oct</td></tr><tr><td>Pitch to 8 playlists</td><td>19 Oct</td></tr></table>
+  <p class="body">Your rollout is on track. Three things need you this week, and nothing is waiting on anyone else.</p></div>
+  <p class="why">Warmer and more approachable, good at small sizes on cheap phone screens. Risk: softer than the textile, ink-and-gold brand voice.</p></section>
+
+</div>
+
+<div class="heads">
+  <h2>Headline options (same body font, Instrument Sans)</h2>
+  <div class="hrow">
+    <div class="hcard"><div class="eyebrow">Today: Fraunces</div><div class="big" style="font-family:'Fraunces',serif;font-weight:600">Good afternoon, Lucky.</div><div class="pairs">A soft, wonky old-style serif. Warm, a little literary, already distinctive. This is the strongest part of the current look.</div></div>
+    <div class="hcard"><div class="eyebrow">Instrument Serif</div><div class="big" style="font-family:'Instrument Serif',serif">Good afternoon, Lucky.</div><div class="pairs">Tall, condensed, fashion-magazine. Very current with design-aware Gen Z. Single weight, so no bold: use it only for big titles.</div></div>
+    <div class="hcard"><div class="eyebrow">Young Serif</div><div class="big" style="font-family:'Young Serif',serif">Good afternoon, Lucky.</div><div class="pairs">Chunky and friendly, a record-sleeve feel. Holds up at small sizes and bold, but less refined than Fraunces.</div></div>
+  </div>
+</div>
+</body>
+</html>
