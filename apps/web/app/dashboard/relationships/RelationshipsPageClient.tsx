@@ -13,6 +13,7 @@ import {
 } from '@/lib/relationships-page';
 import { useRelationshipsStore } from '@/stores/useRelationshipsStore';
 import { ComingSoon } from '@/components/shell/ComingSoon';
+import { PageHeader } from '@/components/shell/PageHeader';
 
 const PAGE_ENABLED = isRelationshipsPageEnabled();
 
@@ -113,29 +114,26 @@ export default function RelationshipsPageClient() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <header className="mb-6 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">People</p>
-          <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">Relationships</h1>
-          <p className="mt-1 text-sm text-content-secondary">
-            Everyone your team works with, with your own notes. Only your team sees them.
-          </p>
-        </div>
-        {!adding ? (
-          <button
-            type="button"
-            onClick={() => {
-              setAdding(true);
-              setFormMessage(null);
-              setFormError(null);
-            }}
-            className="motion-focus shrink-0 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand/90"
-          >
-            Add person
-          </button>
-        ) : null}
-      </header>
+    <div>
+      <PageHeader
+        title="Relationships"
+        description="Everyone your team works with, with your own notes. Only your team sees them."
+        action={
+          !adding ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAdding(true);
+                setFormMessage(null);
+                setFormError(null);
+              }}
+              className="motion-focus motion-press inline-flex h-12 items-center justify-center gap-2 rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse hover:opacity-90"
+            >
+              Add person
+            </button>
+          ) : null
+        }
+      />
 
       {formMessage && !adding ? (
         <p

@@ -1,5 +1,6 @@
 'use client';
 
+import { PageHeader } from '@/components/shell/PageHeader';
 import { ComingSoon } from '@/components/shell/ComingSoon';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -307,7 +308,7 @@ export default function ShowsPageClient() {
     <button
       type="button"
       onClick={() => setIsCreateOpen(true)}
-      className="motion-focus motion-press inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+      className="motion-focus motion-press inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse hover:opacity-90"
     >
       <Plus className="h-4 w-4" aria-hidden />
       Book a show
@@ -320,16 +321,12 @@ export default function ShowsPageClient() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-content-primary">Shows</h1>
-          <p className="mt-1 text-sm text-content-secondary">
-            Every date, its running order and the tracks the DJ needs.
-          </p>
-        </div>
-        {!isLoading && events.length > 0 ? bookButton : null}
-      </header>
+    <div>
+      <PageHeader
+        title="Shows"
+        description="Every date, its running order and the tracks the DJ needs."
+        action={!isLoading && events.length > 0 ? bookButton : null}
+      />
 
       {error ? (
         <div role="alert" className="mt-6 rounded-lg border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">

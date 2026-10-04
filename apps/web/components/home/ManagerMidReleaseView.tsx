@@ -6,6 +6,8 @@ import { useLiveHomeSections } from './useLiveHomeSections';
 import { HomeHeaderRow } from './HomeHeaderRow';
 import { HomeAskBar } from './HomeAskBar';
 import { AttentionCards } from './AttentionCards';
+import { OnboardingBar } from './OnboardingBar';
+import { buildOnboardingProgress } from '@/lib/home/onboarding';
 import { buildAttentionItems } from '@/lib/home/attention';
 import { useShellStore } from '@/stores/useShellStore';
 import { BriefCard } from './BriefCard';
@@ -69,6 +71,7 @@ export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; v
     <div className="home-scene-container space-y-5">
       <HomeHeaderRow header={home.header} />
       <HomeAskBar />
+      <OnboardingBar progress={buildOnboardingProgress(live.releases)} />
       <AttentionCards
         items={buildAttentionItems({
           yourTasks,
