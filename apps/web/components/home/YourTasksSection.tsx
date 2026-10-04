@@ -9,7 +9,7 @@ import type { HomeTaskItem, HomeYourTasks } from '@/lib/home/types';
 import { HomeSectionShell } from './HomeSectionShell';
 import { EmptyState } from '@/components/shared/EmptyState';
 
-const VISIBLE = 5;
+const VISIBLE = 3;
 
 function TaskRow({ task }: { task: HomeTaskItem }) {
   const due = getRelativeDueLabel({ dueDate: task.dueDate, completedAt: null, compressedRunway: false });

@@ -17,7 +17,7 @@ export function HomeAskBar() {
       className="motion-focus flex h-14 w-full items-center gap-3 rounded-full border border-stroke-control bg-bg-surface px-5 text-left text-base text-content-secondary hover:border-content-secondary"
     >
       <Search className="h-5 w-5 shrink-0 text-content-tertiary" aria-hidden="true" />
-      <span className="min-w-0 flex-1 truncate">Search a rollout, or ask UrgAns what to do next</span>
+      <span className="min-w-0 flex-1 truncate">Search or ask UrgAns</span>
       <Sparkles className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
     </button>
   );

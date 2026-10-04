@@ -1,6 +1,5 @@
 import type { HomeNextShow } from '@/lib/home/types';
 import { HomeSectionShell } from './HomeSectionShell';
-import { EmptyState } from '@/components/shared/EmptyState';
 
 const FIT_LABEL: Record<'over' | 'under' | 'on_time', { text: string; className: string }> = {
   over: { text: 'over the slot', className: 'text-status-error' },
@@ -12,7 +11,7 @@ export function NextShowSection({ nextShow }: { nextShow: HomeNextShow | null })
   if (!nextShow) {
     return (
       <HomeSectionShell title="Next show">
-        <EmptyState title="Nothing booked in the next 14 days." className="py-4" />
+        <p className="text-sm text-content-secondary">Nothing booked in the next 14 days.</p>
       </HomeSectionShell>
     );
   }

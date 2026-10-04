@@ -27,7 +27,7 @@ function daysOutLabel(daysOut: number | null): string {
   return `Out ${daysAgo === 1 ? '1 day' : `${daysAgo} days`} ago`;
 }
 
-const VISIBLE = 3;
+const VISIBLE = 2;
 
 function ReleaseCard({ release }: { release: HomeReleaseSummary }) {
   const progressPct = release.progress.total > 0 ? Math.round((release.progress.done / release.progress.total) * 100) : 0;

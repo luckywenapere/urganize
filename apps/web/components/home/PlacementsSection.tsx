@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import type { HomePitchItem, HomePlacements } from '@/lib/home/types';
 import { HomeSectionShell } from './HomeSectionShell';
-import { EmptyState } from '@/components/shared/EmptyState';
 
-const VISIBLE = 3;
+const VISIBLE = 2;
 
 function PitchRow({ pitch, placed }: { pitch: HomePitchItem; placed: boolean }) {
   return (
@@ -44,7 +43,7 @@ export function PlacementsSection({ placements }: { placements: HomePlacements }
   return (
     <HomeSectionShell title="Placements">
       {!hasAny ? (
-        <EmptyState title="No pitches out right now." className="py-4" />
+        <p className="text-sm text-content-secondary">No pitches out right now.</p>
       ) : (
         <>
         <ul className="divide-y divide-stroke-subtle">

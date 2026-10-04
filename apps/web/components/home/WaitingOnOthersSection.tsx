@@ -6,7 +6,7 @@ import type { HomeWaitingDjLink, HomeWaitingTask } from '@/lib/home/types';
 import { HomeSectionShell } from './HomeSectionShell';
 import { EmptyState } from '@/components/shared/EmptyState';
 
-const VISIBLE = 3;
+const VISIBLE = 2;
 
 function WaitingTaskRow({ task }: { task: HomeWaitingTask }) {
   return (
