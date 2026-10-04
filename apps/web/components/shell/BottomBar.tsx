@@ -71,7 +71,7 @@ export function BottomBar() {
                   href={tab.href}
                   onClick={tab.key === 'catalogue' ? leaveReleaseForCatalog : undefined}
                   aria-current={isActive ? 'page' : undefined}
-                  data-tour={`shell-mobile-${tab.key}`}
+                  data-tour={tab.key === 'catalogue' ? 'nav-catalog' : tab.key === 'urgans' ? 'nav-urgans' : `shell-mobile-${tab.key}`}
                   className={`motion-focus flex h-full flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors ${
                     isActive ? 'text-brand' : 'text-content-tertiary'
                   }`}

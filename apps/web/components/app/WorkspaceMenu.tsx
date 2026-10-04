@@ -137,6 +137,7 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
       <button
         ref={triggerRef}
         type="button"
+        data-tour="nav-settings"
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}

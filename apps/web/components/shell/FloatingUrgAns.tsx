@@ -68,7 +68,7 @@ export function FloatingUrgAns() {
         onClick={() => setOpen(!open)}
         aria-label={open ? 'Close UrgAns' : 'Ask UrgAns'}
         aria-expanded={open}
-        data-tour="shell-urgans"
+        data-tour="nav-urgans"
         className="motion-focus motion-press fixed bottom-6 right-6 z-[60] grid h-14 w-14 place-items-center rounded-full bg-brand text-content-inverse shadow-lg ring-1 ring-black/10 transition-transform hover:scale-105"
       >
         <Sparkles className="h-6 w-6" aria-hidden="true" />

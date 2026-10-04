@@ -5,6 +5,8 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useLiveHomeSections } from './useLiveHomeSections';
 import { HomeHeaderRow } from './HomeHeaderRow';
 import { HomeAskBar } from './HomeAskBar';
+import { AttentionCards } from './AttentionCards';
+import { buildAttentionItems } from '@/lib/home/attention';
 import { useShellStore } from '@/stores/useShellStore';
 import { BriefCard } from './BriefCard';
 import { YourTasksSection } from './YourTasksSection';
@@ -67,6 +69,14 @@ export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; v
     <div className="home-scene-container space-y-5">
       <HomeHeaderRow header={home.header} />
       <HomeAskBar />
+      <AttentionCards
+        items={buildAttentionItems({
+          yourTasks,
+          waiting: { tasks: waitingTasks, djLinks: home.waiting.djLinks },
+          placements,
+          nextShow: home.nextShow,
+        })}
+      />
       <BriefCard />
       <div className="home-two-col">
         <div className="space-y-5">

@@ -381,11 +381,12 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
               <span role="columnheader">Next up</span>
             </div>
             <ul role="rowgroup" className="divide-y divide-stroke-subtle">
-              {visible.map((row) => {
+              {visible.map((row, rowIndex) => {
                 const date = formatDate(row.releaseDate);
                 return (
                   <li key={row.id} role="row">
                     <a
+                      data-tour={rowIndex === 0 ? 'release-card' : undefined}
                       href={`/dashboard?release=${row.id}`}
                       onClick={(event) => open(event, row.id)}
                       className={`motion-focus grid gap-3 px-4 py-4 hover:bg-bg-hover/50 sm:px-5 md:items-center md:gap-4 ${COLUMNS}`}
