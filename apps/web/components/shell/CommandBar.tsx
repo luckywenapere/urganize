@@ -161,7 +161,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
             }}
             placeholder="Search rollouts and pages, or ask UrgAns"
             aria-label="Search rollouts and pages, or ask UrgAns"
-            className="h-14 min-w-0 flex-1 bg-transparent text-base text-content-primary outline-none placeholder:text-content-tertiary"
+            className="h-14 min-w-0 flex-1 bg-transparent text-base text-content-primary outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none placeholder:text-content-tertiary"
           />
         </div>
         <ul ref={listRef} className="max-h-[50vh] overflow-y-auto p-2">
