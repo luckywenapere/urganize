@@ -5,6 +5,8 @@ import {
   isKitLive,
   kitDescription,
   kitTagline,
+  looksLikeWebAddress,
+  resolveKitLink,
   publicSections,
   successorPathForKit,
 } from './press-kit-public';
@@ -177,5 +179,66 @@ describe('successorPathForKit', () => {
   it('leaves an old link alone when the kit has no slug', () => {
     expect(successorPathForKit({ slug: '', publishedAt: '2026-09-01T00:00:00Z' })).toBeNull();
     expect(successorPathForKit({ slug: '   ', publishedAt: '2026-09-01T00:00:00Z' })).toBeNull();
+  });
+});
+
+describe('resolveKitLink', () => {
+  it('rescues an address pasted into the label box', () => {
+    const long =
+      'https://open.spotify.com/artist/7dp5tbWcRoekRCHpCRUo7v?si=gEFw5AH1R5We2tB-Flv1gw&utm_source=copy-link';
+    expect(resolveKitLink({ label: long, url: '' })).toEqual({
+      href: long,
+      label: 'Spotify',
+    });
+  });
+
+  it('keeps a real label', () => {
+    expect(resolveKitLink({ label: 'Listen', url: 'https://example.com/a' })).toEqual({
+      href: 'https://example.com/a',
+      label: 'Listen',
+    });
+  });
+
+  it('never prints the address as the label', () => {
+    expect(resolveKitLink({ label: 'https://x.com/dorian', url: 'https://x.com/dorian' })?.label).toBe('X');
+  });
+
+  it('adds https to a bare domain', () => {
+    expect(resolveKitLink({ label: '', url: 'www.instagram.com/dorian' })).toEqual({
+      href: 'https://www.instagram.com/dorian',
+      label: 'Instagram',
+    });
+  });
+
+  it('names an unknown site by its host', () => {
+    expect(resolveKitLink({ url: 'https://www.dorian.com/press' })?.label).toBe('dorian.com');
+  });
+
+  it('refuses anything that is not http(s)', () => {
+    expect(resolveKitLink({ label: 'x', url: 'javascript:alert(1)' })).toBeNull();
+    expect(resolveKitLink({ label: 'x', url: 'mailto:a@b.com' })).toBeNull();
+    expect(resolveKitLink({ label: 'x', url: 'data:text/html,hi' })).toBeNull();
+  });
+
+  it('drops empty, spaced or non-string entries', () => {
+    expect(resolveKitLink({})).toBeNull();
+    expect(resolveKitLink({ label: 'Spotify', url: '' })).toBeNull();
+    expect(resolveKitLink({ url: 'not a link' })).toBeNull();
+    expect(resolveKitLink({ label: 5, url: 7 })).toBeNull();
+  });
+
+  it('does not rescue the label when a bad url was typed', () => {
+    expect(resolveKitLink({ label: 'https://a.com', url: 'javascript:x' })).toBeNull();
+  });
+});
+
+describe('looksLikeWebAddress', () => {
+  it('spots addresses and ignores names', () => {
+    expect(looksLikeWebAddress('https://open.spotify.com/artist/1')).toBe(true);
+    expect(looksLikeWebAddress('instagram.com/dorian')).toBe(true);
+    expect(looksLikeWebAddress('Spotify')).toBe(false);
+    expect(looksLikeWebAddress('Dorian live at the O2')).toBe(false);
+    expect(looksLikeWebAddress('javascript:alert(1)')).toBe(false);
+    expect(looksLikeWebAddress(null)).toBe(false);
   });
 });

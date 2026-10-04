@@ -5,12 +5,15 @@ import {
   isKitIndexable,
   kitDescription,
   kitTagline,
+  resolveKitLink,
 } from '@/lib/press-kit-public';
 import { loadPublicPressKit } from '@/lib/press-kit-public-server';
 import { usageRightLabel } from '@/lib/press-photo';
 import { PRESS_KIT_SECTION_LABELS } from '@/lib/press-kits';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
+import { formatKitDate, firstContactEmail, kitTextFile } from '@/lib/press-kit-text';
 import { KitViewBeacon } from './KitViewBeacon';
+import { CopyButton, DownloadKitButton, EmailButton } from './KitActions';
 
 /**
  * The public press kit at /k/{slug}.
@@ -95,14 +98,20 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function SafeLink({ href, children }: { href: string; children: React.ReactNode }) {
   const trimmed = href.trim();
   const safe = /^https?:\/\//i.test(trimmed);
-  if (!safe) return <span style={{ color: MUTED }}>{children}</span>;
+  if (!safe) {
+    return (
+      <span className="break-words" style={{ color: MUTED, overflowWrap: 'anywhere' }}>
+        {children}
+      </span>
+    );
+  }
   return (
     <a
       href={trimmed}
       target="_blank"
       rel="noopener noreferrer nofollow"
-      className="underline underline-offset-4"
-      style={{ color: ACCENT }}
+      className="break-words underline underline-offset-4"
+      style={{ color: ACCENT, overflowWrap: 'anywhere' }}
     >
       {children}
     </a>
@@ -122,11 +131,12 @@ function Bios({ content }: { content: PressKitSectionContent }) {
     <div className="space-y-6">
       {available.map((entry) => (
         <div key={entry.key}>
-          {available.length > 1 ? (
+          <div className="flex items-center justify-between gap-3">
             <p className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: FAINT }}>
-              {entry.label}
+              {available.length > 1 ? entry.label : 'Bio'}
             </p>
-          ) : null}
+            <CopyButton text={str(content[entry.key])} label="Copy" />
+          </div>
           <div className="mt-1 space-y-3 text-[15px] leading-relaxed" style={{ color: CREAM }}>
             {str(content[entry.key])
               .split(/\n{2,}/)
@@ -153,7 +163,7 @@ function SectionBody({
     const title = str(content.title);
     const hook = str(content.hook);
     const story = str(content.story);
-    const date = str(content.releaseDate);
+    const date = formatKitDate(content.releaseDate);
     return (
       <div className="space-y-2">
         {title ? (
@@ -207,7 +217,10 @@ function SectionBody({
       <ul className="space-y-1.5">
         {videos.map((video, index) => (
           <li key={index} className="text-[15px]" style={{ color: CREAM }}>
-            <SafeLink href={str(video.url)}>{str(video.title) || str(video.url)}</SafeLink>
+            {(() => {
+              const link = resolveKitLink({ label: video.title, url: video.url });
+              return link ? <SafeLink href={link.href}>{link.label}</SafeLink> : str(video.title);
+            })()}
           </li>
         ))}
       </ul>
@@ -249,7 +262,7 @@ function SectionBody({
                 make on somebody's behalf. */}
             {str(stat.asOf) ? (
               <p className="font-mono text-[10px]" style={{ color: FAINT }}>
-                as of {str(stat.asOf)}
+                as of {formatKitDate(stat.asOf)}
               </p>
             ) : null}
           </li>
@@ -265,7 +278,11 @@ function SectionBody({
       <ul className="space-y-2">
         {coverage.map((entry, index) => (
           <li key={index} className="text-[15px]" style={{ color: CREAM }}>
-            <SafeLink href={str(entry.url)}>{str(entry.title) || str(entry.outlet)}</SafeLink>
+            {(() => {
+              const text = str(entry.title) || str(entry.outlet);
+              const link = resolveKitLink({ label: text, url: entry.url });
+              return link ? <SafeLink href={link.href}>{text || link.label}</SafeLink> : text;
+            })()}
             {str(entry.outlet) && str(entry.title) ? (
               <span style={{ color: FAINT }}> · {str(entry.outlet)}</span>
             ) : null}
@@ -283,7 +300,9 @@ function SectionBody({
         {shows.map((show, index) => (
           <li key={index} className="text-[15px]" style={{ color: CREAM }}>
             {str(show.title) || str(show.venue)}
-            {str(show.date) ? <span style={{ color: FAINT }}> · {str(show.date)}</span> : null}
+            {formatKitDate(show.date) ? (
+              <span style={{ color: FAINT }}> · {formatKitDate(show.date)}</span>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -304,13 +323,16 @@ function SectionBody({
               ) : null}
             </p>
             {str(contact.email) ? (
-              <a
-                href={`mailto:${str(contact.email)}`}
-                className="text-sm underline underline-offset-4"
-                style={{ color: ACCENT }}
-              >
-                {str(contact.email)}
-              </a>
+              <div className="flex flex-wrap items-center gap-x-3">
+                <a
+                  href={`mailto:${str(contact.email)}`}
+                  className="break-all text-sm underline underline-offset-4"
+                  style={{ color: ACCENT }}
+                >
+                  {str(contact.email)}
+                </a>
+                <CopyButton text={str(contact.email)} label="Copy email" />
+              </div>
             ) : null}
           </li>
         ))}
@@ -319,13 +341,15 @@ function SectionBody({
   }
 
   if (section === 'links') {
-    const links = rows(content.links);
+    const links = rows(content.links)
+      .map((entry) => resolveKitLink(entry))
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
     if (links.length === 0) return null;
     return (
       <ul className="flex flex-wrap gap-x-5 gap-y-2">
         {links.map((link, index) => (
-          <li key={index} className="text-[15px]">
-            <SafeLink href={str(link.url)}>{str(link.label) || str(link.url)}</SafeLink>
+          <li key={index} className="min-w-0 max-w-full text-[15px]">
+            <SafeLink href={link.href}>{link.label}</SafeLink>
           </li>
         ))}
       </ul>
@@ -345,6 +369,14 @@ export default async function PublicPressKitPage({ params }: PageProps) {
   const genreTags = str(header.genreTags);
   const embargo = embargoNotice(kit.embargoDate);
   const body = kit.sections.filter((entry) => entry.section !== 'header');
+  const contactEmail = firstContactEmail(kit.byKey.contact);
+  const textFile = kitTextFile({
+    artistName: kit.artistName,
+    header,
+    bios: kit.byKey.bios || {},
+    contact: kit.byKey.contact || {},
+    links: kit.byKey.links || {},
+  });
 
   return (
     <div className="kit-island min-h-screen" style={{ backgroundColor: GROUND }}>
@@ -355,7 +387,10 @@ export default async function PublicPressKitPage({ params }: PageProps) {
           <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
             Press kit
           </p>
-          <h1 className="mt-2 font-display text-4xl sm:text-5xl" style={{ color: CREAM }}>
+          <h1
+            className="mt-2 break-words font-display text-4xl sm:text-5xl"
+            style={{ color: CREAM, overflowWrap: 'anywhere', textWrap: 'balance' }}
+          >
             {kit.artistName}
           </h1>
           {tagline ? (
@@ -377,6 +412,15 @@ export default async function PublicPressKitPage({ params }: PageProps) {
             </p>
           ) : null}
         </header>
+
+        <div className="kit-print-hide mt-8 flex flex-wrap items-start gap-3">
+          {contactEmail ? <EmailButton email={contactEmail} artistName={kit.artistName} /> : null}
+          <DownloadKitButton
+            artistSlug={kit.slug}
+            textFile={textFile}
+            photos={kit.photos.map((photo) => ({ url: photo.url, fileName: photo.fileName }))}
+          />
+        </div>
 
         {embargo ? (
           <p

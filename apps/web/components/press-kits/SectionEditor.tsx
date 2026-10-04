@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { Check, Copy, Plus, Trash2 } from '@/components/icons';
 import { PRESS_KIT_SECTION_HINTS } from '@/lib/press-kits';
+import { looksLikeWebAddress } from '@/lib/press-kit-public';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
 
 type Props = {
@@ -141,9 +142,20 @@ function RepeatableList({
   const items = rows(draft[itemKey]);
 
   const update = (index: number, key: string, value: string) => {
-    const next = items.map((item, position) =>
-      position === index ? { ...item, [key]: value } : item
-    );
+    const next = items.map((item, position) => {
+      if (position !== index) return item;
+      // People paste the address into the nearest box. If it landed in a name
+      // box while the link box is empty, move it where it belongs.
+      if (
+        (key === 'label' || key === 'title') &&
+        columns.some((column) => column.key === 'url') &&
+        !str(item.url) &&
+        looksLikeWebAddress(value)
+      ) {
+        return { ...item, [key]: '', url: value.trim() };
+      }
+      return { ...item, [key]: value };
+    });
     setField(itemKey, next);
   };
 
