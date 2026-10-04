@@ -6,8 +6,11 @@ import type { HomeNextShow, HomePlacements, HomeWaiting, HomeYourTasks } from '.
  * to go. Pure, so the ranking and the wording can be tested; the component only
  * draws what this returns.
  *
- * Nothing with a count of zero is returned, so a quiet day yields an empty list
- * and Home says so instead of showing a row of zeroes.
+ * Task counts (late, due today, waiting on others) are NOT cards: the summary strip
+ * under the greeting already says them, and saying them twice made Home read as
+ * noisy. These cards are for the things a count cannot say: a set that runs over,
+ * a DJ who has not opened the tracks, a playlist that added a song. Nothing with a
+ * count of zero is returned, and an empty list renders no section at all.
  */
 export type AttentionTone = 'urgent' | 'warn' | 'good' | 'info';
 
@@ -33,32 +36,6 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
 export function buildAttentionItems(input: AttentionInput): AttentionItem[] {
   const items: AttentionItem[] = [];
 
-  const late = input.yourTasks.late.length;
-  if (late > 0) {
-    items.push({
-      key: 'late',
-      tone: 'urgent',
-      count: late,
-      title: `${plural(late, 'task is', 'tasks are')} overdue`,
-      detail: 'These are yours and past their date.',
-      href: '/dashboard',
-      action: 'Review',
-    });
-  }
-
-  const today = input.yourTasks.today.length;
-  if (today > 0) {
-    items.push({
-      key: 'today',
-      tone: 'warn',
-      count: today,
-      title: `${plural(today, 'task is', 'tasks are')} due today`,
-      detail: 'Clear these and today is done.',
-      href: '/dashboard',
-      action: 'Open',
-    });
-  }
-
   const show = input.nextShow;
   if (show?.setlist && show.setlist.fit === 'over') {
     items.push({
@@ -82,19 +59,6 @@ export function buildAttentionItems(input: AttentionInput): AttentionItem[] {
       detail: 'The files were sent and nobody has looked yet.',
       href: '/dashboard/shows',
       action: 'See shows',
-    });
-  }
-
-  const waiting = input.waiting.tasks.length;
-  if (waiting > 0) {
-    items.push({
-      key: 'waiting',
-      tone: 'warn',
-      count: waiting,
-      title: `${plural(waiting, 'task is', 'tasks are')} late with your team`,
-      detail: 'Someone else owns these. A nudge may help.',
-      href: '/dashboard',
-      action: 'See who',
     });
   }
 

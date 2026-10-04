@@ -23,14 +23,7 @@ const VISIBLE = 3;
 export function AttentionCards({ items }: { items: readonly AttentionItem[] }) {
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? items : items.slice(0, VISIBLE);
-  if (items.length === 0) {
-    return (
-      <section aria-label="For you today" className="rounded-2xl border border-stroke-default bg-bg-surface p-5">
-        <h2 className="font-display text-lg font-semibold text-content-primary">For you today</h2>
-        <p className="mt-1 text-sm text-content-secondary">Nothing is on fire. Pick something from your list, or plan the next rollout.</p>
-      </section>
-    );
-  }
+  if (items.length === 0) return null;
 
   return (
     <section aria-label="For you today">

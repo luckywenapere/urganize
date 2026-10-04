@@ -14,25 +14,31 @@ describe('buildAttentionItems', () => {
     expect(buildAttentionItems(empty)).toEqual([]);
   });
 
-  it('never returns an item with a zero count', () => {
-    const items = buildAttentionItems({ ...empty, yourTasks: { late: [task('a')], today: [], week: [] } });
-    expect(items.every((item) => item.count > 0)).toBe(true);
-  });
-
-  it('puts overdue before due today before good news', () => {
+  it('leaves task counts to the summary strip, so nothing is said twice', () => {
     const items = buildAttentionItems({
       ...empty,
       yourTasks: { late: [task('a')], today: [task('b')], week: [] },
-      placements: { placed: [{ id: 'p' } as never], underReview: [] },
+      waiting: { tasks: [{ id: 'w' } as never], djLinks: [] },
     });
-    expect(items.map((item) => item.key)).toEqual(['late', 'today', 'placements']);
+    expect(items).toEqual([]);
+  });
+
+  it('puts a long set before a DJ who has not opened the tracks before good news', () => {
+    const items = buildAttentionItems({
+      ...empty,
+      waiting: { tasks: [], djLinks: [{ showId: 's' } as never] },
+      placements: { placed: [{ id: 'p' } as never], underReview: [] },
+      nextShow: { id: 's', artistName: 'Dorian', setlist: { fit: 'over' } } as never,
+    });
+    expect(items.map((item) => item.key)).toEqual(['setlist-over', 'dj-links', 'placements']);
+    expect(items.every((item) => item.count > 0)).toBe(true);
   });
 
   it('uses the right grammar for one and many', () => {
-    const one = buildAttentionItems({ ...empty, yourTasks: { late: [task('a')], today: [], week: [] } });
-    const many = buildAttentionItems({ ...empty, yourTasks: { late: [task('a'), task('b')], today: [], week: [] } });
-    expect(one[0].title).toBe('1 task is overdue');
-    expect(many[0].title).toBe('2 tasks are overdue');
+    const one = buildAttentionItems({ ...empty, waiting: { tasks: [], djLinks: [{ showId: 's' } as never] } });
+    const many = buildAttentionItems({ ...empty, waiting: { tasks: [], djLinks: [{ showId: 's' } as never, { showId: 't' } as never] } });
+    expect(one[0].title).toBe('1 DJ has not opened the tracks');
+    expect(many[0].title).toBe('2 DJs have not opened the tracks');
   });
 
   it('flags a set that runs over its slot, and only then', () => {
