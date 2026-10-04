@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, type MouseEvent } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   SETTINGS_PARAM,
   buildSettingsUrl,
@@ -29,16 +29,20 @@ import {
  */
 export function useOpenSettings() {
   const router = useRouter();
-  const pathname = usePathname();
 
   return useCallback(
     (target?: SettingsTarget) => {
+      // The pathname is read live too, not from usePathname: a navigation that
+      // is still landing (the create flow pushes the new rollout, then the share
+      // sheet opens Settings) would otherwise pair a stale path with the new
+      // query string, or the other way round.
+      const pathname = window.location.pathname;
       const search = window.location.search;
       const wasOpen = new URLSearchParams(search).has(SETTINGS_PARAM);
       // A page without app chrome has nothing mounted to read the param, so the
       // dashboard is where it opens from there.
       const url = canHostSettings(pathname)
-        ? buildSettingsUrl(pathname ?? '/dashboard', search, target)
+        ? buildSettingsUrl(pathname, search, target)
         : settingsDeepLink(target);
       if (wasOpen) {
         router.replace(url, { scroll: false });
@@ -46,7 +50,7 @@ export function useOpenSettings() {
         router.push(url, { scroll: false });
       }
     },
-    [pathname, router]
+    [router]
   );
 }
 
@@ -56,13 +60,14 @@ export function useOpenSettings() {
  */
 export function useCloseSettings() {
   const router = useRouter();
-  const pathname = usePathname();
 
   return useCallback(() => {
-    router.replace(closeSettingsUrl(pathname ?? '/dashboard', window.location.search), {
+    // Live pathname and search, so closing always removes the param from the URL
+    // the person is actually on, never from a stale render's copy of it.
+    router.replace(closeSettingsUrl(window.location.pathname, window.location.search), {
       scroll: false,
     });
-  }, [pathname, router]);
+  }, [router]);
 }
 
 /**
