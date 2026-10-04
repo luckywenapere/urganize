@@ -58,8 +58,6 @@ const BASELINE: Record<string, string> = {
     'An API path (/api/workspace/artists/...) that the reader mistakes for prose.',
   'components/workspace/WorkspaceDesktopFocused.tsx':
     'A CSS class name, workspace-mode-enter.',
-  'components/workspace/WorkspaceDesktopGrid.tsx':
-    'A CSS class name, workspace-mode-enter.',
 };
 
 const ROOTS = ['components', 'app', 'stores'].map((dir) => join(WEB, dir));

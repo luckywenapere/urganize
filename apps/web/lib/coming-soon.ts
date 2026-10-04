@@ -24,7 +24,7 @@ export const COMING_SOON: Partial<Record<ShellAreaKey, ComingSoonCopy>> = {
     willDo: [
       'See deals, grants, sync and brand work that fit your artists in one list.',
       'Track each one from first message to signed.',
-      'Ask UrgAns to find openings that match a release.',
+      'Ask UrgAns to find openings that match a rollout.',
     ],
     meanwhile: { label: 'Ask UrgAns what to pitch next', href: '/dashboard/urgans' },
   },
@@ -32,9 +32,9 @@ export const COMING_SOON: Partial<Record<ShellAreaKey, ComingSoonCopy>> = {
     title: 'Audience',
     question: 'Who are the fans, and what is the data saying?',
     willDo: [
-      'Collect fan emails from a release page and keep them in one place.',
+      'Collect fan emails from a rollout page and keep them in one place.',
       'See streaming and social numbers next to the rollout that moved them.',
-      'Find out which releases brought the most new fans.',
+      'Find out which rollouts brought the most new fans.',
     ],
   },
   relationships: {
@@ -42,7 +42,7 @@ export const COMING_SOON: Partial<Record<ShellAreaKey, ComingSoonCopy>> = {
     question: 'Who do we work with?',
     willDo: [
       'Keep every producer, designer, DJ, curator and promoter in one book.',
-      'See what each person delivered on past releases.',
+      'See what each person delivered on past rollouts.',
       'Invite someone to a rollout in one tap.',
     ],
   },
