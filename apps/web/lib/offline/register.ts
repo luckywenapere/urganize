@@ -19,6 +19,22 @@ function isServiceWorkerSupported(): boolean {
   return typeof window !== 'undefined' && 'serviceWorker' in navigator;
 }
 
+/**
+ * Ask the offline worker to download these pages now, so they open with no
+ * connection even if the user has never visited them. A no-op unless the
+ * offline flag is on and a worker is already controlling the page. Never
+ * throws.
+ */
+export async function precacheRoutesOffline(paths: string[]): Promise<void> {
+  if (!OFFLINE_ENABLED || !isServiceWorkerSupported() || paths.length === 0) return;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    registration.active?.postMessage({ type: 'precache-routes', paths });
+  } catch {
+    // Best effort.
+  }
+}
+
 /** Safe to call on every app load. Never throws; a failed registration is
  * a silent no-op, same posture as registerPushServiceWorker(). */
 export async function registerAppServiceWorker(): Promise<ServiceWorkerRegistration | null> {
