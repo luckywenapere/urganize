@@ -94,7 +94,7 @@ const routeTitles = [
  *  push the wordmark off true centre by half its own width. It also adds no
  *  width to the row's documented budget. Desktop is left-anchored, so
  *  there the badge simply sits in the flow. The badge lives here and not in
- *  `Logo`, which auth, invite and paywall pages share. Remove at beta. */
+ *  `Logo`, which auth, invite and paywall pages share. Remove at launch. */
 function BrandMark({ centered = false }: { centered?: boolean }) {
   return (
     <span className="relative inline-flex items-center gap-1.5">
@@ -104,7 +104,7 @@ function BrandMark({ centered = false }: { centered?: boolean }) {
           centered ? 'absolute left-full top-1/2 ml-1.5 -translate-y-1/2' : ''
         }`}
       >
-        Alpha
+        Beta
       </span>
     </span>
   );
