@@ -1,14 +1,18 @@
 'use client';
 
+import { barNeverCollapsesOn, nextBarCollapsed } from '@/lib/bar-collapse';
 import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import {
   Disc3,
+  Handshake,
+  Headphones,
   Home,
   MicVocal,
   MoreHorizontal,
+  Spotlight,
   Sparkles,
   Wallet2,
   X,
@@ -28,6 +32,13 @@ import {
 } from '@/lib/shell-nav';
 
 type IconComponent = ComponentType<LucideProps>;
+
+/** The areas in the More sheet. Each carries a piece of the music trade. */
+const MORE_ICON: Record<string, IconComponent> = {
+  relationships: Handshake,
+  opportunities: Spotlight,
+  audience: Headphones,
+};
 
 const TAB_ICON: Record<string, IconComponent> = {
   home: Home,
@@ -54,7 +65,7 @@ export function BottomBar() {
   const tabs = useMemo(() => buildMobileTabs(), []);
   const active = activeMobileTab(areas, pathname);
   const [moreOpen, setMoreOpen] = useState(false);
-  const collapsed = useBarCollapsedOnScroll();
+  const collapsed = useBarCollapsedOnScroll(pathname);
   const ActiveIcon = active === 'more' ? MoreHorizontal : (TAB_ICON[active ?? ''] ?? Home);
 
   return (
@@ -143,26 +154,32 @@ function expandBottomBar() {
  * ignored so a wobble does not flicker the bar, and the bar is always open at
  * the very top of a page.
  */
-function useBarCollapsedOnScroll(): boolean {
+function useBarCollapsedOnScroll(pathname: string): boolean {
   const [collapsed, setCollapsed] = useState(false);
+  const held = barNeverCollapsesOn(pathname);
   useEffect(() => {
+    if (held) return;
     const lastTop = new WeakMap<EventTarget, number>();
     const onScroll = (event: Event) => {
       const target = event.target;
-      const top =
+      const el =
         target instanceof Document || target === window
-          ? window.scrollY
+          ? (document.scrollingElement ?? document.documentElement)
           : target instanceof HTMLElement
-            ? target.scrollTop
-            : 0;
+            ? target
+            : null;
+      if (!el) return;
       const key = (target ?? window) as EventTarget;
       const previous = lastTop.get(key) ?? 0;
-      const delta = top - previous;
-      if (top <= 24) setCollapsed(false);
-      else if (delta > 12) setCollapsed(true);
-      else if (delta < -12) setCollapsed(false);
-      else return;
-      lastTop.set(key, top);
+      const next = nextBarCollapsed({
+        top: el.scrollTop,
+        previous,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+      });
+      if (next === null) return;
+      setCollapsed(next);
+      lastTop.set(key, el.scrollTop);
     };
     const expand = () => setCollapsed(false);
     document.addEventListener('scroll', onScroll, { passive: true, capture: true });
@@ -171,8 +188,9 @@ function useBarCollapsedOnScroll(): boolean {
       document.removeEventListener('scroll', onScroll, { capture: true });
       window.removeEventListener(EXPAND_EVENT, expand);
     };
-  }, []);
-  return collapsed;
+  }, [held]);
+  // Held pages report open without touching state, so leaving one starts fresh.
+  return held ? false : collapsed;
 }
 
 function MoreSheet({
@@ -220,8 +238,12 @@ function MoreSheet({
               <Link
                 href={item.href}
                 onClick={onClose}
-                className="motion-focus flex min-h-14 items-center justify-between gap-3 text-base text-content-primary"
+                className="motion-focus flex min-h-14 items-center gap-2.5 text-base text-content-primary"
               >
+                {(() => {
+                  const Icon = MORE_ICON[item.key];
+                  return Icon ? <Icon className="h-5 w-5 text-content-tertiary" aria-hidden="true" /> : null;
+                })()}
                 {item.label}
               </Link>
             </li>

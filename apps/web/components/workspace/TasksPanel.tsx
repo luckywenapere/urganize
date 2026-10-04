@@ -1,34 +1,24 @@
 'use client';
 
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
-  ArrowRight,
-  CalendarDays,
   ChevronDown,
   Menu,
   Plus,
-  Search,
-  X,
-  ListChecks,
 } from '@/components/icons';
 import {
   getTaskSectionLabel,
   groupTasksIntoSections,
-  isEventMilestone,
   type Task,
   type TaskSectionKey,
 } from '@/lib/tasks';
-import { matchesSearchTerms, parseSearchTerms, searchTasks } from '@/lib/task-search';
-import { appPageHaystack, buildAppPages, type AppPage } from '@/lib/app-pages';
-import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { sceneRowTarget } from '@/lib/nav-stall';
 import { watchNavigationStall } from '@/lib/nav-stall-watch';
-import { useAuthStore } from '@/lib/auth-store';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow } from '@/components/tasks/TaskRow';
+import { orderForThumb } from '@/lib/release-menu';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { resolvePanelBody } from '@/lib/scene-cache';
@@ -74,42 +64,22 @@ export const TASKS_PILL_DOCK_OFFSET_CLASS = MOBILE_NAV_ENABLED
 export const taskPanelPillClass =
   'motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
 
-/** The two round icon buttons at the base of the mobile dock (search, more).
- *  One class rather than two copies: they sit side by side, so any drift
- *  between them is visible in the same glance. */
+/** The labelled button at the base of the mobile dock. A word beside the icon,
+ *  and 44px tall, so a thumb finds it without guessing what a bare icon does. */
 const MOBILE_DOCK_TRIGGER_CLASS =
-  'motion-focus motion-press grid h-8 w-8 shrink-0 touch-manipulation place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary';
+  'motion-focus motion-press inline-flex h-11 shrink-0 touch-manipulation items-center gap-2 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-5 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover';
 
-/** The panel either trigger opens. Shared so the menu and the search surface
- *  cannot end up looking like two different components. */
+/** The panel the dock's button opens. */
 const MOBILE_DOCK_PANEL_CLASS =
   'rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]';
-
-/** Group label inside the search results. */
-const SEARCH_GROUP_HEADING_CLASS =
-  'px-2 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-content-tertiary';
-
-/**
- * First non-empty line of an activity's body, shown on a search row that
- * matched THERE rather than in the title — a result has to be able to say why
- * it is in the list. Truncation is left to CSS so no arbitrary character
- * budget has to be maintained here.
- */
-function describeDescriptionMatch(description: string | null): string | null {
-  if (!description) return null;
-  return description
-    .split('\n')
-    .map((line) => line.trim())
-    .find(Boolean) ?? null;
-}
 
 /**
  * An action WorkspaceView owns and the rollout menu places — modal-shaped rather
  * than a scene toggle, so it never lights up. Structured rather than
  * pre-rendered ReactNode: the menu draws each one in a different spot at each
  * width (the right-hand column's card, or the mobile release menu), and the
- * mobile search surface needs a real label to filter against — a rendered
- * `<button>` blob can't be introspected for its text.
+ * menu needs a real label to draw — a rendered `<button>` blob can't be
+ * introspected for its text.
  *
  * It carried the two flag-gated AI actions ported from the removed release
  * detail page until 2026-09-07, when both moved into the UrgAns conversation
@@ -276,17 +246,6 @@ export function TasksPanel({
   // this panel stays where it is underneath the modal.
   const { openTask, openQuickCreate } = useTaskUI();
 
-  // For the search surface's Pages group. `useRouter` only — deliberately NOT
-  // `useSearchParams`, which in a statically prerendered client component bails
-  // out to the nearest Suspense boundary; the scoped release reaches this
-  // component as a prop, and the one place that needs the live URL
-  // (leaveReleaseForCatalog) reads it at click time.
-  const router = useRouter();
-  // Tri-state, and null must stay "not yet" rather than "no" — buildAppPages
-  // handles that, and the cost of being wrong here is only that the crossing
-  // is briefly unsearchable for a dual account.
-  const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
-
   // The rollout menu's rows swap this panel's body between the main view and a
   // release scene (Calendar / Files / Song / …), in place — they were nav links
   // to separate pages until 2026-08-04, then briefly modal overlays, and are an
@@ -369,18 +328,11 @@ export function TasksPanel({
   // exclusive by construction: they occupy the same slot above the trigger
   // row, and two open at once would stack into a full-screen sheet nobody
   // designed.
-  const [openMobilePanel, setOpenMobilePanel] = useState<'menu' | 'search' | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [openMobilePanel, setOpenMobilePanel] = useState<'menu' | null>(null);
   const moreMenuListId = useId();
-  const searchPanelId = useId();
 
-  const toggleMobilePanel = (panel: 'menu' | 'search') => {
+  const toggleMobilePanel = (panel: 'menu') => {
     setOpenMobilePanel((current) => (current === panel ? null : panel));
-    // Unconditional: every toggle either opens the search fresh or leaves it,
-    // so a query is never worth carrying across one. A leftover query would
-    // silently filter the next look at a surface the user thinks they just
-    // opened.
-    setSearchQuery('');
   };
 
   /**
@@ -419,57 +371,13 @@ export function TasksPanel({
     archive: archiveAction,
   });
 
-  // Which bucket each activity sits in, derived from the SAME grouping pass
-  // the buckets above render from rather than by re-deriving it per result —
-  // so a search result's "Overdue" / "Due This Week" line can never disagree
-  // with the list the user closed to search.
-  const sectionKeyByTaskId = useMemo(() => {
-    const map = new Map<string, TaskSectionKey>();
-    (Object.entries(sections) as [TaskSectionKey, Task[]][]).forEach(([key, list]) => {
-      list.forEach((task) => map.set(task.id, key));
-    });
-    return map;
-  }, [sections]);
-
-  // One query, THREE kinds of result: the release's activities (the point of
-  // the 2026-08-31 split — sixty-odd rows that were previously unsearchable),
-  // the release tools the folded menu holds, and the app's own pages (added
-  // the same day — "that search should be able to search for any page at
-  // all"). Terms are parsed once so all three answer the same question.
-  const searchTerms = parseSearchTerms(searchQuery);
-  const taskMatches = searchTasks(tasks, searchQuery);
-  const toolMatches =
-    searchTerms.length > 0
-      ? moreMenuActions.filter((action) => matchesSearchTerms(action.label, searchTerms))
-      : [];
-  // Rebuilt per render rather than memoized, matching the menu hook above and
-  // for a weaker version of the same reason: it is a handful of literals and
-  // one store read, so a stale-closure risk is not worth trading for.
-  const pageMatches =
-    searchTerms.length > 0
-      ? buildAppPages({ hasCuratorProfile }).filter((page) =>
-          matchesSearchTerms(appPageHaystack(page), searchTerms)
-        )
-      : [];
-  const hasSearchResults =
-    taskMatches.results.length > 0 || toolMatches.length > 0 || pageMatches.length > 0;
-  // Headings exist to tell the kinds of result apart, so with only one kind on
-  // screen they are noise — the reference screenshot has none at all.
-  const searchGroupCount =
-    (taskMatches.results.length > 0 ? 1 : 0) +
-    (toolMatches.length > 0 ? 1 : 0) +
-    (pageMatches.length > 0 ? 1 : 0);
-  const showSearchGroupHeadings = searchGroupCount > 1;
-
-  // The dock's own presence rule. Search needs activities to search; the menu
-  // needs actions to list. Either alone is enough to render the row, so a
-  // release with sixty activities and every optional feature switched off
-  // still gets a way to find one.
-  const hasMobileDockControls = tasks.length > 0 || moreMenuActions.length > 0;
+  // The dock renders only when the menu has actions to list. Search is not here
+  // any more (2026-10-04): the top bar's search is the one search, and it finds
+  // this rollout's activities first when a rollout is open.
+  const hasMobileDockControls = moreMenuActions.length > 0;
 
   const closeMobilePanels = () => {
     setOpenMobilePanel(null);
-    setSearchQuery('');
   };
 
   const handleMoreMenuSelect = (action: MoreMenuAction) => {
@@ -482,25 +390,6 @@ export function TasksPanel({
       );
     }
     action.onClick();
-    closeMobilePanels();
-  };
-
-  const handleSearchPageSelect = (page: AppPage) => {
-    // The catalog is an EXIT from the scoped release, so it takes the same
-    // step the back arrow, MobileNavBar's Home tab, the side menu's Catalog
-    // row and the topbar's Catalog icon all take — otherwise coming back to
-    // this release would resume the scene the user just navigated away from.
-    // Every other page is somewhere you go and return from, where resuming the
-    // scene is exactly what scene memory is for.
-    if (page.leavesRelease) leaveReleaseForCatalog();
-    router.push(page.href);
-    closeMobilePanels();
-  };
-
-  const handleSearchTaskSelect = (taskId: string) => {
-    // The detail pop-up is mounted globally by TaskUIProvider, so this works
-    // with a scene open as well as over the activity list.
-    openTask(taskId);
     closeMobilePanels();
   };
 
@@ -812,22 +701,6 @@ export function TasksPanel({
                   this guards against the tap itself zooming the page, not
                   just a focused field zooming it), while leaving pinch-zoom
                   available everywhere else for accessibility. */}
-              {tasks.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => toggleMobilePanel('search')}
-                  aria-expanded={openMobilePanel === 'search'}
-                  aria-controls={searchPanelId}
-                  // Matches the field's own label rather than the narrower
-                  // "Search activities" it said until 2026-08-31 — this
-                  // surface has found tools and pages since the day pages
-                  // were added, and the trigger should say what it opens.
-                  aria-label="Search activities, tools and pages"
-                  className={MOBILE_DOCK_TRIGGER_CLASS}
-                >
-                  <Search className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
-              ) : null}
               {moreMenuActions.length > 0 ? (
                 <button
                   type="button"
@@ -837,11 +710,11 @@ export function TasksPanel({
                   // "More" was right while this was an overflow list. Since
                   // 2026-08-31 it holds every release surface, so it is the
                   // release menu and says so.
-                  aria-label="Rollout menu"
                   data-tour="rollout-menu"
                   className={MOBILE_DOCK_TRIGGER_CLASS}
                 >
-                  <Menu className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Menu className="h-4 w-4" aria-hidden="true" />
+                  Rollout menu
                 </button>
               ) : null}
             </div>
@@ -863,7 +736,7 @@ export function TasksPanel({
         {openMobilePanel === 'menu' ? (
           <div id={moreMenuListId} className={MOBILE_DOCK_PANEL_CLASS}>
             <ul className="max-h-[50dvh] overflow-y-auto">
-              {moreMenuActions.map((action) => (
+              {orderForThumb(moreMenuActions).map((action) => (
                 <li key={action.key}>
                   <button
                     type="button"
@@ -890,166 +763,6 @@ export function TasksPanel({
                 </li>
               ))}
             </ul>
-          </div>
-        ) : null}
-
-        {/* The search surface: a field over real results. */}
-        {openMobilePanel === 'search' ? (
-          <div id={searchPanelId} className={MOBILE_DOCK_PANEL_CLASS}>
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-tertiary"
-                aria-hidden="true"
-              />
-              {/*
-                `text-lg`, NOT `text-base`, and this is load-bearing rather
-                than cosmetic: iOS Safari zooms the whole page when a field
-                UNDER 16px takes focus, and this project's own type scale
-                (packages/config/tailwind/preset.js) redefines `base` to 14px
-                — `lg` is the first step in THIS preset that clears the
-                threshold. A previous fix shipped as `text-base` and the zoom
-                kept happening.
-
-                `autoFocus` is back (it was removed 2026-08-17, when this
-                field was 13px and focusing it on open zoomed the page): a
-                button labelled Search that opens a field you must then tap is
-                half a control. It is safe ONLY because of the size above —
-                if this field's font size is ever reduced, remove autoFocus in
-                the same edit.
-              */}
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                autoFocus
-                placeholder="Search…"
-                aria-label="Search activities, tools and pages"
-                className="motion-focus h-9 w-full rounded-full border border-stroke-control bg-bg-elevated pl-9 pr-10 text-lg text-content-primary placeholder:text-content-tertiary"
-              />
-              <button
-                type="button"
-                onClick={closeMobilePanels}
-                aria-label="Close search"
-                className="motion-focus absolute right-1 top-1/2 grid h-7 w-7 -translate-y-1/2 touch-manipulation place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
-              >
-                <X className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-            </div>
-
-            {searchTerms.length === 0 ? (
-              // Deliberately NOT the whole activity list: an unfiltered 64-row
-              // list is what the buckets above already are, and painting it
-              // here would make the search surface indistinguishable from the
-              // menu the founder asked to separate it from.
-              <p className="px-2 py-3 text-center text-xs text-content-tertiary">
-                Type to find an activity, a tool or a page.
-              </p>
-            ) : !hasSearchResults ? (
-              <p className="px-2 py-3 text-center text-xs text-content-tertiary">No matches.</p>
-            ) : (
-              <div className="mt-1 max-h-72 overflow-y-auto">
-                {taskMatches.results.length > 0 ? (
-                  <>
-                    {showSearchGroupHeadings ? (
-                      <p className={SEARCH_GROUP_HEADING_CLASS}>Activities</p>
-                    ) : null}
-                    <ul>
-                      {taskMatches.results.map(({ task, matchedIn }) => {
-                        const bucket = sectionKeyByTaskId.get(task.id);
-                        const snippet =
-                          matchedIn === 'description'
-                            ? describeDescriptionMatch(task.description)
-                            : null;
-                        const context = [bucket ? getTaskSectionLabel(bucket) : null, snippet]
-                          .filter(Boolean)
-                          .join(' · ');
-                        const RowIcon = isEventMilestone(task) ? CalendarDays : ListChecks;
-                        return (
-                          <li key={task.id}>
-                            <button
-                              type="button"
-                              onClick={() => handleSearchTaskSelect(task.id)}
-                              className="motion-focus flex w-full items-start gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-bg-hover"
-                            >
-                              <RowIcon
-                                className="mt-0.5 h-4 w-4 shrink-0 text-content-tertiary"
-                                aria-hidden="true"
-                              />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm text-content-primary">
-                                  {task.title}
-                                </span>
-                                {context ? (
-                                  <span className="block truncate text-[11px] text-content-tertiary">
-                                    {context}
-                                  </span>
-                                ) : null}
-                              </span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    {taskMatches.hiddenCount > 0 ? (
-                      <p className="px-2 pb-1 pt-0.5 text-[11px] text-content-tertiary">
-                        +{taskMatches.hiddenCount} more. Keep typing to narrow it down.
-                      </p>
-                    ) : null}
-                  </>
-                ) : null}
-
-                {toolMatches.length > 0 ? (
-                  <>
-                    {showSearchGroupHeadings ? (
-                      <p className={SEARCH_GROUP_HEADING_CLASS}>Rollout tools</p>
-                    ) : null}
-                    <ul>
-                      {toolMatches.map((action) => (
-                        <li key={action.key}>
-                          <button
-                            type="button"
-                            onClick={() => handleMoreMenuSelect(action)}
-                            disabled={action.disabled}
-                            className="motion-focus flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover disabled:opacity-60"
-                          >
-                            <action.icon
-                              className="h-4 w-4 shrink-0 text-content-tertiary"
-                              aria-hidden="true"
-                            />
-                            {action.label}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : null}
-
-                {pageMatches.length > 0 ? (
-                  <>
-                    {showSearchGroupHeadings ? (
-                      <p className={SEARCH_GROUP_HEADING_CLASS}>Pages</p>
-                    ) : null}
-                    <ul>
-                      {pageMatches.map((page) => (
-                        <li key={page.key}>
-                          <button
-                            type="button"
-                            onClick={() => handleSearchPageSelect(page)}
-                            className="motion-focus flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover"
-                          >
-                            <ArrowRight
-                              className="h-4 w-4 shrink-0 text-content-tertiary"
-                              aria-hidden="true"
-                            />
-                            {page.label}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : null}
-              </div>
-            )}
           </div>
         ) : null}
       </div>

@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.66.0",
+    date: "October 4, 2026",
+    highlights: [
+      "The bar at the bottom of your phone only tucks away when you really scroll. It stays put on short pages and in UrgAns.",
+      "One search now finds the activities in the rollout you are in.",
+      "UrgAns opens ready to type, and new icons make each area easier to spot.",
+    ],
+  },
+  {
     version: "1.65.1",
     date: "October 4, 2026",
     highlights: [

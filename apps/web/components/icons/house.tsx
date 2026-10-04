@@ -413,12 +413,134 @@ export const Search = icon(
   </>
 );
 
-/** UrgAns and everything it touches. A struck four-point star with a second,
- *  smaller one — the gold-thread ray fan reduced to a mark. */
+/** UrgAns and everything it touches. A diamond (the container rule) holding
+ *  three equaliser bars of different heights: a voice working something out,
+ *  rather than the generic AI sparkle every other product wears. */
 export const Sparkles = icon(
   'Sparkles',
   <>
-    <path d="M10 3.4 11.7 8.3 16.6 10 11.7 11.7 10 16.6 8.3 11.7 3.4 10 8.3 8.3Z" strokeLinejoin="round" strokeWidth={G} />
-    <path d="M17.4 14.2 18.3 16.7 20.8 17.6 18.3 18.5 17.4 21 16.5 18.5 14 17.6 16.5 16.7Z" strokeLinejoin="round" />
+    <path d="M12 2.8 21.2 12 12 21.2 2.8 12Z" />
+    <path d="M9.2 13.4v-2.8M12 15.4V8.6M14.8 13.4v-2.8" strokeWidth={G} strokeLinecap="round" />
+  </>
+);
+
+/* ---------------------------------------------------------------------------
+   The seven areas and the people (design pass, 2026-10-04). Each carries a
+   piece of the music trade: a studio, a record, a patch cable, a spotlight,
+   headphones, a stage microphone. Same four rules as above.
+   ------------------------------------------------------------------------- */
+
+/** Home. A studio: roof and walls cut square, with a record for the door. */
+export const Home = icon(
+  'Home',
+  <>
+    <path d="M4 11.2 12 4.4l8 6.8V20H4Z" />
+    <circle cx="12" cy="15.2" r="2.6" strokeWidth={G} />
+    <path d="M12 15.2h.01" strokeWidth={G} strokeLinecap="round" />
+  </>
+);
+
+/** Catalogue. A record: sleeve ring, label ring, centre hole and a groove. */
+export const Disc3 = icon(
+  'Disc3',
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="3.2" strokeWidth={G} />
+    <path d="M5.6 12A6.4 6.4 0 0 1 12 5.6" opacity={0.55} strokeLinecap="round" />
+    <path d="M12 12h.01" strokeWidth={G} strokeLinecap="round" />
+  </>
+);
+
+/** Relationships. A patch cable hanging between two jacks: two people on one
+ *  line, the thing a manager actually does all day. */
+export const Handshake = icon(
+  'Handshake',
+  <>
+    <rect x="4.4" y="2.8" width="3.2" height="5" strokeWidth={G} />
+    <rect x="16.4" y="2.8" width="3.2" height="5" strokeWidth={G} />
+    <path d="M6 7.8V12a6 6 0 0 0 12 0V7.8" strokeLinecap="round" />
+  </>
+);
+
+/** Opportunities. A stage light throwing a pool of light: being picked out,
+ *  which is the whole hope of a deal, a grant or a sync. */
+export const Spotlight = icon(
+  'Spotlight',
+  <>
+    <circle cx="12" cy="4.9" r="2.3" />
+    <path d="M10.4 6.9 3.8 18.6M13.6 6.9l6.6 11.7" strokeWidth={G} strokeLinecap="round" />
+    <path d="M3.8 18.6a8.2 2.6 0 0 0 16.4 0" strokeLinecap="round" opacity={0.65} />
+  </>
+);
+
+/** Audience. Headphones: somebody listening. */
+export const Headphones = icon(
+  'Headphones',
+  <>
+    <path d="M4.2 15.2V12a7.8 7.8 0 0 1 15.6 0v3.2" />
+    <rect x="3.2" y="13.6" width="4" height="6.6" rx="1" strokeWidth={G} />
+    <rect x="16.8" y="13.6" width="4" height="6.6" rx="1" strokeWidth={G} />
+  </>
+);
+
+/** Shows. A stage microphone on its stand. */
+export const MicVocal = icon(
+  'MicVocal',
+  <>
+    <rect x="9" y="2.8" width="6" height="10.4" rx="3" strokeWidth={G} />
+    <path d="M5.8 11.4a6.2 6.2 0 0 0 12.4 0" />
+    <path d="M12 17.6v3" strokeLinecap="round" />
+    <path d="M8.8 20.6h6.4" strokeLinecap="square" />
+  </>
+);
+
+/** Credits. A short stack of records: what a run of UrgAns spends. */
+export const Wallet2 = icon(
+  'Wallet2',
+  <>
+    <ellipse cx="12" cy="7" rx="8" ry="3" />
+    <ellipse cx="12" cy="7" rx="1.9" ry="0.7" strokeWidth={G} />
+    <path d="M4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7" />
+    <path d="M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5" />
+  </>
+);
+
+/** You. A bust in headphones inside the ring: the person wearing the cans. */
+export const UserCircle = icon(
+  'UserCircle',
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="11" r="1.9" strokeWidth={G} />
+    <path d="M7.5 11.4V10.4a4.5 4.5 0 0 1 9 0v1" strokeWidth={G} strokeLinecap="round" />
+    <path d="M7 18.6a5.2 4 0 0 1 10 0" strokeWidth={G} strokeLinecap="round" />
+  </>
+);
+
+export const UserCircle2 = icon(
+  'UserCircle2',
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="11" r="1.9" strokeWidth={G} />
+    <path d="M7.5 11.4V10.4a4.5 4.5 0 0 1 9 0v1" strokeWidth={G} strokeLinecap="round" />
+    <path d="M7 18.6a5.2 4 0 0 1 10 0" strokeWidth={G} strokeLinecap="round" />
+  </>
+);
+
+/** Notes. A lyric sheet: the page, two ruled lines and a note on the bottom one. */
+export const NotebookPen = icon(
+  'NotebookPen',
+  <>
+    <path d="M5.4 3.2h9.6l3.6 3.6v14H5.4Z" />
+    <path d="M8.8 9.4h6.4M8.8 12.6h6.4" opacity={0.6} strokeLinecap="round" />
+    <path d="M11.2 18.4v-3.2" strokeWidth={G} strokeLinecap="round" />
+    <path d="M11.2 18.4a1.3 1.3 0 1 1-2.6 0 1.3 1.3 0 0 1 2.6 0Z" strokeWidth={G} />
+  </>
+);
+
+/** Menu. A tracklist: lines of different lengths, like titles on a sleeve. */
+export const Menu = icon(
+  'Menu',
+  <>
+    <path d="M4 7h16M4 12h11M4 17h16" strokeWidth={G} strokeLinecap="round" />
   </>
 );

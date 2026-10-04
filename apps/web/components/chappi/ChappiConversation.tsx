@@ -72,8 +72,6 @@ import { mergeTranscript } from '@/lib/urgans-voice';
 import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { supabase } from '@/lib/supabase/client';
 import { CHAPPI_CHIPS, buildHelpReply, resolveIntent } from '@/lib/chappi/intent-router';
-import { composerCreditsLine } from '@/lib/credits/copy';
-import { useUrgansUsage } from '@/components/app/useUrgansUsage';
 import type {
   ChappiChip,
   ChappiClientAction,
@@ -262,6 +260,17 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const [noRevealId, setNoRevealId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Opening UrgAns brings the keyboard up (founder call, 2026-10-04): a person
+  // who taps UrgAns is there to ask, so the box is ready. The full page only,
+  // never the dock or the rail, which sit on every other page and would take the
+  // keyboard from whatever the person is doing there. The field is 16px below
+  // sm, so focusing it never zooms iOS. A mobile browser may still refuse a
+  // keyboard that no tap asked for; the Urganize app allows it.
+  useEffect(() => {
+    if (variant !== 'page') return;
+    inputRef.current?.focus({ preventScroll: true });
+  }, [variant]);
 
   // Voice input (NEXT_PUBLIC_FEATURE_URGANS_VOICE). The transcript is MERGED
   // into whatever is typed — never replacing it, never sending. Reading the
@@ -1157,11 +1166,6 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // settled on: context control, field, send. The dropdown still opens
   // upward from it, and it still renders nothing while the user has no
   // releases (in which case this is simply field + send).
-  // Null while unknown or while credits are switched off; the hook shares the
-  // banner's request, so this costs nothing extra.
-  const usageCredits = useUrgansUsage()?.credits;
-  const creditsLeft = usageCredits ? Math.max(0, usageCredits.total) : null;
-
   const inputForm = (
     <form onSubmit={handleSubmit} className="w-full">
       <div className="flex items-center gap-1 rounded-full border border-stroke-default bg-bg-surface p-1.5 transition-colors focus-within:border-brand/70 focus-within:bg-bg-elevated">
@@ -1235,15 +1239,6 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       {voice.error ? (
         <p role="status" className="mt-2 px-2 text-center text-xs text-content-tertiary">
           {voice.error}
-        </p>
-      ) : null}
-      {/* The balance on every turn, while credits are on. Deliberately not a
-          live region: it changes after every reply, and announcing it each
-          time would talk over the answer. The banner above the topbar is what
-          speaks up once credits run low. */}
-      {creditsLeft !== null ? (
-        <p className="mt-2 px-2 text-center text-xs tabular-nums text-content-tertiary">
-          {composerCreditsLine(creditsLeft)}
         </p>
       ) : null}
     </form>

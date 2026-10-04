@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { RELEASE_MENU_ORDER, orderReleaseMenu } from './release-menu';
+import { RELEASE_MENU_ORDER, orderForThumb, orderReleaseMenu } from './release-menu';
 
 function keys(entries: { key: string }[]): string[] {
   return entries.map((entry) => entry.key);
@@ -123,5 +123,13 @@ describe('orderReleaseMenu', () => {
     const shuffled = entriesFor([...RELEASE_MENU_ORDER].reverse());
 
     expect(keys(orderReleaseMenu(shuffled))).toEqual([...RELEASE_MENU_ORDER]);
+  });
+});
+
+describe('orderForThumb', () => {
+  it('puts the most-used row last, nearest the thumb, without changing the input', () => {
+    const ranked = ['activities', 'chat', 'content'];
+    expect(orderForThumb(ranked)).toEqual(['content', 'chat', 'activities']);
+    expect(ranked).toEqual(['activities', 'chat', 'content']);
   });
 });

@@ -175,3 +175,15 @@ export function orderReleaseMenu<T extends { key: string }>(entries: T[]): T[] {
       (POSITION_BY_KEY[second.key] ?? RELEASE_MENU_ORDER.length)
   );
 }
+
+/**
+ * The phone's list, flipped so the most-used rows sit nearest the thumb
+ * (founder call, 2026-10-04). On a phone the list opens at the bottom of the
+ * screen, where the thumb rests, so the rows a person taps most belong at the
+ * bottom edge and the rare ones at the top where they take a stretch. The order
+ * above is still ranked most-used first; only the phone draws it upside down.
+ * A desktop's card keeps the ranked order, since the eye reads it top down.
+ */
+export function orderForThumb<T>(rows: readonly T[]): T[] {
+  return [...rows].reverse();
+}

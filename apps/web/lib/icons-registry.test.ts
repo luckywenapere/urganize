@@ -5,7 +5,7 @@ import { join } from 'node:path';
 /**
  * Structural guard for the house icon set (components/icons/).
  *
- * Every icon in the app is imported from ONE module, which merges 30
+ * Every icon in the app is imported from ONE module, which merges 41
  * hand-drawn house marks with the lucide long tail. That merge is the thing
  * that can silently break: a name imported from the shim but not exported by
  * it fails at build, but the two ways it rots quietly are
@@ -86,7 +86,7 @@ describe('icon registry', () => {
     const source = readFileSync(join(ICONS_DIR, 'house.tsx'), 'utf8');
     const drawn = [...source.matchAll(/^export const (\w+) = icon\(/gm)].map((m) => m[1]);
 
-    expect(drawn.length).toBe(30);
+    expect(drawn.length).toBe(41);
     // A forwardRef component is an OBJECT, not a function — which is the whole
     // point: it is the same shape lucide exports, so the two sets are
     // interchangeable in a typed array or prop.
@@ -97,7 +97,7 @@ describe('icon registry', () => {
     }
 
     // The shared icon() factory is the only place these are set, so asserting
-    // it once covers all 30 — and pins the contract that makes them drop-in
+    // it once covers all 41 — and pins the contract that makes them drop-in
     // replacements for lucide, in the type system as well as at runtime.
     expect(source).toContain('viewBox="0 0 24 24"');
     expect(source).toContain("fill=\"none\"");
@@ -108,7 +108,7 @@ describe('icon registry', () => {
     const source = readFileSync(join(ICONS_DIR, 'house.tsx'), 'utf8');
     const bodies = [...source.matchAll(/export const (\w+) = icon\(\s*'[^']+',\s*<>([\s\S]*?)<\/>\s*\);/g)];
 
-    expect(bodies.length).toBe(30);
+    expect(bodies.length).toBe(41);
     const overCrowded = bodies
       .map(([, name, body]) => [name, (body.match(/<(path|circle|rect|ellipse|line|polygon)\b/g) ?? []).length] as const)
       .filter(([, count]) => count > 4);
