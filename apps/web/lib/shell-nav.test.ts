@@ -49,15 +49,15 @@ describe('shell nav', () => {
       home: true,
       catalogue: true,
       relationships: false,
-      opportunities: false,
+      opportunities: true,
       audience: false,
       shows: false,
     });
   });
 
-  it('opportunities and audience are never live', () => {
+  it('opportunities is always live, audience is not built yet', () => {
     const areas = buildShellAreas(ALL_ON);
-    expect(areas.find((a) => a.key === 'opportunities')?.live).toBe(false);
+    expect(areas.find((a) => a.key === 'opportunities')?.live).toBe(true);
     expect(areas.find((a) => a.key === 'audience')?.live).toBe(false);
   });
 
@@ -136,7 +136,7 @@ describe('shell nav', () => {
     const soon = Object.fromEntries(
       buildMoreItems(buildShellAreas(ALL_ON)).map((i) => [i.key, i.soon])
     );
-    expect(soon).toEqual({ relationships: false, opportunities: true, audience: true });
+    expect(soon).toEqual({ relationships: false, opportunities: false, audience: true });
   });
 
   it('lights More for an area the bar does not carry, UrgAns for its page', () => {

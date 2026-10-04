@@ -131,6 +131,13 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
     });
   }
 
+  pages.push({
+    key: 'opportunities',
+    label: 'Opportunities',
+    href: '/dashboard/opportunities',
+    keywords: ['deal', 'grant', 'sync', 'brand', 'partnership', 'sponsor', 'licensing', 'offer'],
+  });
+
   if (NOTES_ENABLED) {
     pages.push({
       key: 'notes',

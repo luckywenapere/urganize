@@ -83,6 +83,7 @@ export function buildPrefetchRoutes({ hasCuratorProfile }: PrefetchAudience): st
   if (PITCHING_ENABLED) routes.push('/dashboard/pitching');
   if (DIRECTORY_ENABLED) routes.push('/dashboard/directory');
   if (RELATIONSHIPS_ENABLED) routes.push('/dashboard/relationships');
+  routes.push('/dashboard/opportunities');
   // Both halves required: the feature has to be on AND this account has to
   // actually be a playlist owner. Everyone else has no such nav entry.
   if (PITCHING_ENABLED && hasCuratorProfile === true) routes.push('/curator');

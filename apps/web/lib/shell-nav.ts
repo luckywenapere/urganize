@@ -180,7 +180,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       key: 'opportunities',
       label: 'Opportunities',
       href: '/dashboard/opportunities',
-      live: false,
+      live: true,
       subTabs: [],
       isActive: (p) => startsWithPath(p, '/dashboard/opportunities'),
     },

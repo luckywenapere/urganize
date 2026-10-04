@@ -34,6 +34,7 @@ describe('buildPrefetchRoutes', () => {
       '/dashboard',
       '/dashboard/urgans',
       '/dashboard/home',
+      '/dashboard/opportunities',
     ]);
   });
 
@@ -49,6 +50,7 @@ describe('buildPrefetchRoutes', () => {
       '/dashboard/notes',
       '/dashboard/shows',
       '/dashboard/pitching',
+      '/dashboard/opportunities',
       '/curator',
     ]);
   });
