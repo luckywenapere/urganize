@@ -6,6 +6,8 @@ import { useLiveHomeSections } from './useLiveHomeSections';
 import { HomeHeaderRow } from './HomeHeaderRow';
 import { HomeAskBar } from './HomeAskBar';
 import { HomeSummaryStrip } from './HomeSummaryStrip';
+import { FocusTaskCard } from './FocusTaskCard';
+import { pickFocusTask, withoutTask } from '@/lib/home/focus';
 import { AttentionCards } from './AttentionCards';
 import { OnboardingBar } from './OnboardingBar';
 import { buildOnboardingProgress } from '@/lib/home/onboarding';
@@ -68,6 +70,9 @@ export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; v
       }
     : home.placements;
 
+  const focus = pickFocusTask(yourTasks);
+  const listTasks = withoutTask(yourTasks, focus?.task.id ?? null);
+
   return (
     <div className="home-scene-container space-y-5">
       <div className="space-y-4">
@@ -78,6 +83,7 @@ export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; v
           waiting={waitingTasks.length + home.waiting.djLinks.length}
         />
       </div>
+      {focus ? <FocusTaskCard focus={focus} /> : null}
       <AttentionCards
         items={buildAttentionItems({
           yourTasks,
@@ -91,7 +97,7 @@ export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; v
       <BriefCard />
       <div className="home-two-col">
         <div className="space-y-5">
-          <YourTasksSection yourTasks={yourTasks} />
+          <YourTasksSection yourTasks={listTasks} />
           <WaitingOnOthersSection tasks={waitingTasks} djLinks={home.waiting.djLinks} onTimeCount={live.waitingOnTimeCount} />
         </div>
         <div className="space-y-5">

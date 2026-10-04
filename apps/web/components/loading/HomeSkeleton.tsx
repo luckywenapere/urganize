@@ -36,6 +36,7 @@ export function HomeSkeleton() {
           <SkeletonBlock className="h-11 w-40 rounded-full" />
         </div>
       </div>
+      <SkeletonBlock className="h-36 w-full rounded-2xl" />
       <div>
         <SkeletonBlock className="mb-3 h-5 w-32" />
         <div className="flex gap-3">
