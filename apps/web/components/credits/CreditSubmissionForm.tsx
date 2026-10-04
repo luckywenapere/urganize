@@ -153,7 +153,7 @@ function TextField({
         placeholder={placeholder}
         required={required}
         autoComplete={autoComplete}
-        className="mt-1.5 w-full border px-3 py-2 text-lg outline-none"
+        className="mt-1.5 w-full rounded-xl border px-3 py-2 text-lg outline-none"
         style={inputStyle()}
       />
       {hint ? <Hint>{hint}</Hint> : null}
@@ -194,7 +194,7 @@ function SplitField({
           onChange(raw === '' ? null : Number(raw));
         }}
         placeholder="0 to 100"
-        className="mt-1.5 w-full border px-3 py-2 text-lg outline-none"
+        className="mt-1.5 w-full rounded-xl border px-3 py-2 text-lg outline-none"
         style={inputStyle()}
       />
       {hint ? <Hint>{hint}</Hint> : null}
@@ -225,7 +225,7 @@ function TextAreaField({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="mt-1.5 w-full resize-none border px-3 py-2 text-lg outline-none"
+        className="mt-1.5 w-full resize-none rounded-xl border px-3 py-2 text-lg outline-none"
         style={inputStyle()}
       />
       {hint ? <Hint>{hint}</Hint> : null}
@@ -343,7 +343,7 @@ export function CreditSubmissionForm({
   if (submitted) {
     const recipient = artistName?.trim() || releaseTitle?.trim() || 'the team';
     return (
-      <div className="mt-10 border py-10 text-center" style={{ borderColor: STROKE }}>
+      <div className="mt-10 rounded-2xl border py-10 text-center" style={{ borderColor: STROKE }}>
         <p className="text-lg" style={{ color: CREAM }}>
           Done. Your details have been sent to <span style={{ color: BRAND }}>{recipient}</span>.
         </p>
@@ -365,7 +365,7 @@ export function CreditSubmissionForm({
             setSubmitted(false);
             setReplacedEarlier(false);
           }}
-          className="mt-6 border px-4 py-2 text-sm"
+          className="mt-6 rounded-full border px-5 py-2.5 text-sm"
           style={{ borderColor: STROKE, color: CREAM }}
         >
           Fill it in for someone else
@@ -382,7 +382,7 @@ export function CreditSubmissionForm({
           machine the person reading it may not be the person it remembers. */}
       {prefilledFor ? (
         <div
-          className="flex flex-col gap-3 border p-4 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between"
           style={{ borderColor: STROKE }}
         >
           <p className="text-sm leading-relaxed" style={{ color: MUTED }}>
@@ -393,7 +393,7 @@ export function CreditSubmissionForm({
           <button
             type="button"
             onClick={handleForgetPrefill}
-            className="shrink-0 border px-3 py-2 text-sm"
+            className="shrink-0 rounded-full border px-4 py-2 text-sm"
             style={{ borderColor: STROKE, color: CREAM }}
           >
             Not you? Start fresh
@@ -432,7 +432,7 @@ export function CreditSubmissionForm({
                   type="checkbox"
                   checked={input.roles.includes(role)}
                   onChange={() => toggleRole(role)}
-                  className="h-4 w-4"
+                  className="h-4 w-4 rounded"
                 />
                 {RELEASE_CREDIT_ROLE_LABELS[role]}
               </label>
@@ -587,7 +587,7 @@ export function CreditSubmissionForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
           style={{ backgroundColor: BRAND, color: '#06321f' }}
         >
           {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
