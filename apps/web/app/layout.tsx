@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { Space_Grotesk, Fraunces, Space_Mono } from 'next/font/google';
+import { Space_Grotesk, Young_Serif, Space_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
 import { CursorRefresher } from '@/components/app/CursorRefresher';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
@@ -9,7 +9,7 @@ import './globals.css';
 
 // Self-hosted via next/font (preloaded, no third-party request chain). Per
 // the Urganize Brand Bible (URG 001): Space Grotesk is the body/UI workhorse
-// (--font-sans), Fraunces is the display face used large and with restraint
+// (--font-sans), Young Serif is the display face used large and with restraint
 // for headlines (--font-display), Space Mono carries the "catalog" metadata
 // voice — dates, statuses, counts, IDs (--font-mono). IBM Plex Sans is
 // retired; globals.css binds all three variables below.
@@ -18,11 +18,11 @@ const spaceGrotesk = Space_Grotesk({
   display: 'swap',
   variable: '--font-space-grotesk',
 });
-const fraunces = Fraunces({
+const youngSerif = Young_Serif({
   subsets: ['latin'],
-  weight: ['500', '600'],
+  weight: '400',
   display: 'swap',
-  variable: '--font-fraunces',
+  variable: '--font-young-serif',
 });
 const spaceMono = Space_Mono({
   subsets: ['latin'],
@@ -128,7 +128,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       suppressHydrationWarning
       data-theme="dark"
-      className={`dark ${TEXTILE_ENABLED ? 'urg-textile ' : ''}${spaceGrotesk.variable} ${fraunces.variable} ${spaceMono.variable}`}
+      className={`dark ${TEXTILE_ENABLED ? 'urg-textile ' : ''}${spaceGrotesk.variable} ${youngSerif.variable} ${spaceMono.variable}`}
     >
       <head>
         <script
