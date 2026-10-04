@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useLiveHomeSections } from './useLiveHomeSections';
 import { HomeHeaderRow } from './HomeHeaderRow';
-import { ArtistFilterChips } from './ArtistFilterChips';
+import { HomeAskBar } from './HomeAskBar';
+import { useShellStore } from '@/stores/useShellStore';
 import { BriefCard } from './BriefCard';
 import { YourTasksSection } from './YourTasksSection';
 import { WaitingOnOthersSection } from './WaitingOnOthersSection';
@@ -24,7 +25,8 @@ import type { HomePayload } from '@/lib/home/types';
  * artistId on it to filter against without a fragile name match.
  */
 export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; viewerId: string }) {
-  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
+  // The artist comes from the top bar's switcher, so Home and Catalogue agree.
+  const selectedArtistId = useShellStore((state) => state.selectedArtistId);
 
   const live = useLiveHomeSections(viewerId, home.primaryOwnerId, home.artists);
 
@@ -64,7 +66,7 @@ export function ManagerMidReleaseView({ home, viewerId }: { home: HomePayload; v
   return (
     <div className="home-scene-container space-y-5">
       <HomeHeaderRow header={home.header} />
-      <ArtistFilterChips artists={live.artists} selectedArtistId={selectedArtistId} onSelect={setSelectedArtistId} />
+      <HomeAskBar />
       <BriefCard />
       <div className="home-two-col">
         <div className="space-y-5">

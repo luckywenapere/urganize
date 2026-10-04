@@ -12,13 +12,11 @@ import { useFirstReleasePrompt } from '@/components/releases/useFirstReleaseProm
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { ManagerMidReleaseView } from '@/components/home/ManagerMidReleaseView';
-import { HomeNotBuiltYet } from '@/components/home/HomeNotBuiltYet';
 import { ManagerQuietView } from '@/components/home/ManagerQuietView';
 
 // Same loop-guard reasoning as HOME_PATH (lib/home-path.ts) and
 // ChappiPageClient's own CHAPPI_ENABLED read: the route itself has no
 // server-side gate, so an off flag has to bounce here.
-const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
 const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
 
 /**
@@ -48,15 +46,10 @@ export default function HomePageClient() {
   } | null>(null);
 
   useEffect(() => {
-    if (!HOME_ENABLED) return;
     void loadHome();
   }, [loadHome]);
 
   useEffect(() => {
-    if (!HOME_ENABLED) {
-      router.replace('/dashboard');
-      return;
-    }
     if (authLoading) return;
     if (!user) {
       router.replace('/auth');
@@ -69,20 +62,16 @@ export default function HomePageClient() {
   // The deferred first-release prompt — same hook every landing surface uses.
   useFirstReleasePrompt(() => setIsCreateModalOpen(true));
 
-  if (!HOME_ENABLED) return null;
-
   if (authLoading || homeLoading || !home) {
     return <HomeSkeleton />;
   }
 
   return (
     <>
-      {home.role === 'manager' && home.state === 'manager_mid_release' ? (
-        <ManagerMidReleaseView home={home} viewerId={user?.id ?? ''} />
-      ) : home.state === 'manager_all_clear' || home.state === 'manager_between' ? (
+      {home.state === 'manager_all_clear' || home.state === 'manager_between' ? (
         <ManagerQuietView home={home} onNewRollout={() => setIsCreateModalOpen(true)} />
       ) : (
-        <HomeNotBuiltYet home={home} />
+        <ManagerMidReleaseView home={home} viewerId={user?.id ?? ''} />
       )}
 
       <CreateReleaseModal

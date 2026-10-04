@@ -40,7 +40,7 @@ const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const RELATIONSHIPS_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_RELATIONSHIPS === 'true' &&
   process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
-const HOME_ENABLED = process.env.NEXT_PUBLIC_FEATURE_HOME === 'true';
+const HOME_ENABLED = true;
 
 /** The two destinations every signed-in team account has. Settings left this
  *  list on 2026-09-29: it is a pop-up over these pages now, so there is no

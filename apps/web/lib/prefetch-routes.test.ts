@@ -33,6 +33,7 @@ describe('buildPrefetchRoutes', () => {
     expect(buildPrefetchRoutes({ hasCuratorProfile: false })).toEqual([
       '/dashboard',
       '/dashboard/urgans',
+      '/dashboard/home',
     ]);
   });
 
@@ -63,16 +64,6 @@ describe('buildPrefetchRoutes', () => {
       home: true,
     });
     expect(buildPrefetchRoutes({ hasCuratorProfile: false })).toContain('/dashboard/home');
-  });
-
-  it('leaves Home cold when its flag is off, even with everything else on', async () => {
-    const { buildPrefetchRoutes } = await loadRoutes({
-      notes: true,
-      events: true,
-      pitching: true,
-      home: false,
-    });
-    expect(buildPrefetchRoutes({ hasCuratorProfile: true })).not.toContain('/dashboard/home');
   });
 
   // The team side of pitching needs only the flag, unlike the crossing below

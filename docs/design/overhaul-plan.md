@@ -17,14 +17,14 @@ Order per screen: better-layout (structure) -> shadcn (build) -> better-ui + bet
 
 ### Progress log (tick as you go)
 - [x] 0. Copy plan into repo, save memory pointer (2026-10-04)
-- [ ] 1. Tokens + type/density pass (globals.css, tailwind preset) (no flag)
-- [ ] 2. Nav model (`lib/` pure builder + tests), no flag
-- [ ] 3. Shell components: TopNav, SubNav, PageHeader, ArtistSwitcher, CreditsChip, BottomBar + More sheet
-- [ ] 4. FloatingUrgAns drawer + Home ask-bar + ⌘K command bar
-- [ ] 5. ComingSoon screen (page on phone, inline panel on desktop), interest capture
-- [ ] 6. Home (needs-attention list, per-artist progress, onboarding bar, empty states)
-- [ ] 7. Catalogue > Releases table + chips + card toggle (+ mobile cards)
-- [ ] 8. Artists table, rollout workspace header/tab strip, remove RightRail menu in new shell
+- [~] 1. (UrgAns height constants moved for 4.5rem top bar; broader density pass still open) Tokens + type/density pass (globals.css, tailwind preset) (no flag)
+- [x] 2. Nav model (`lib/` pure builder + tests), no flag
+- [x] 3. Shell components: TopNav, SubNav, PageHeader, ArtistSwitcher, CreditsChip, BottomBar + More sheet
+- [x] 4. FloatingUrgAns drawer + Home ask-bar + ⌘K command bar
+- [x] 5. ComingSoon screen (page on phone, inline panel on desktop), interest capture
+- [~] 6. (Home unconditional, ask bar, uses top-bar artist; attention cards/onboarding bar still open) Home (needs-attention list, per-artist progress, onboarding bar, empty states)
+- [x] 7. Catalogue > Releases table + chips + card toggle (+ mobile cards)
+- [~] 8. (rollout header + tabs done; Artists table restyle and deleting orphaned old shell files still open) Artists table, rollout workspace header/tab strip, remove RightRail menu in new shell
 - [ ] 9. Skeleton sync, tours/help-copy/guards, tests, CLAUDE.md section
 - [ ] 10. Verify (tests, lint, tsc, build both flag states, browser at 3 widths x 2 themes) and founder preview pass
 - Later passes (not started): Relationships, Shows, Settings, press kit/public pages, onboarding, billing wall, native shell
