@@ -3,18 +3,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { ArrowRight, Disc3, Search, Sparkles } from '@/components/icons';
+import { ArrowRight, Disc3, ListChecks, Search, Sparkles } from '@/components/icons';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { appPageHaystack, buildAppPages } from '@/lib/app-pages';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { searchReleases } from '@/lib/release-search';
-import { matchesSearchTerms, parseSearchTerms } from '@/lib/task-search';
+import { matchesSearchTerms, parseSearchTerms, searchTasks } from '@/lib/task-search';
+import { useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { useTaskStore } from '@/stores/useTaskStore';
 import { useAuthStore } from '@/lib/auth-store';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useShellStore } from '@/stores/useShellStore';
 
-type Result = { key: string; group: 'Ask' | 'Pages' | 'Rollouts'; label: string; hint?: string; run: () => void };
+type Result = { key: string; group: 'Ask' | 'Activities' | 'Pages' | 'Rollouts'; label: string; hint?: string; run: () => void };
 
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const MAX_PER_GROUP = 6;
@@ -57,6 +59,16 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
   const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
   const setInput = useChappiStore((state) => state.setInput);
   const setRailOpen = useChappiStore((state) => state.setRailOpen);
+  const tasks = useTaskStore((state) => state.tasks);
+  const { openTask } = useTaskUI();
+  // The rollout on screen, read once when the bar opens. The bar is mounted on
+  // every page, so it reads the address at open time instead of subscribing to
+  // it (useSearchParams here would pull the whole app out of static rendering).
+  // With a rollout open its activities lead the results: that is what a person
+  // searching from inside a rollout is looking for.
+  const [scopedReleaseId] = useState(() =>
+    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('release')
+  );
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
@@ -76,6 +88,18 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
           else router.push('/dashboard/urgans');
         },
       });
+    }
+
+    if (scopedReleaseId && terms.length > 0) {
+      const mine = tasks.filter((task) => task.releaseId === scopedReleaseId);
+      for (const { task } of searchTasks(mine, query).results.slice(0, MAX_PER_GROUP)) {
+        out.push({
+          key: `task-${task.id}`,
+          group: 'Activities',
+          label: task.title,
+          run: () => openTask(task.id),
+        });
+      }
     }
 
     const pages = buildAppPages({ hasCuratorProfile }).filter(
@@ -109,7 +133,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
       }
     }
     return out;
-  }, [query, releases, hasCuratorProfile, setInput, setRailOpen, router]);
+  }, [query, releases, hasCuratorProfile, setInput, setRailOpen, router, scopedReleaseId, tasks, openTask]);
 
   useEffect(() => {
     listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
@@ -121,7 +145,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
     result.run();
   };
 
-  const groups = ['Ask', 'Pages', 'Rollouts'] as const;
+  const groups = ['Ask', 'Activities', 'Pages', 'Rollouts'] as const;
 
   return (
     <div className="fixed inset-0 z-[170] flex items-start justify-center px-4 pt-[12vh]">
@@ -159,8 +183,8 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
                 choose(results[active]);
               }
             }}
-            placeholder="Search rollouts and pages, or ask UrgAns"
-            aria-label="Search rollouts and pages, or ask UrgAns"
+            placeholder="Search activities, rollouts and pages, or ask UrgAns"
+            aria-label="Search activities, rollouts and pages, or ask UrgAns"
             className="h-14 min-w-0 flex-1 bg-transparent text-base text-content-primary outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none placeholder:text-content-tertiary"
           />
         </div>
@@ -180,7 +204,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
                   {items.map((result) => {
                     const index = results.indexOf(result);
                     const isActive = index === active;
-                    const Icon = group === 'Ask' ? Sparkles : group === 'Rollouts' ? Disc3 : ArrowRight;
+                    const Icon = group === 'Ask' ? Sparkles : group === 'Rollouts' ? Disc3 : group === 'Activities' ? ListChecks : ArrowRight;
                     return (
                       <li key={result.key}>
                         <button
