@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.64.0",
+    date: "October 4, 2026",
+    highlights: [
+      "The content calendar is back. Plan your posts on a month grid, one calendar for each account.",
+    ],
+  },
+  {
     version: "1.63.0",
     date: "October 2, 2026",
     highlights: [
