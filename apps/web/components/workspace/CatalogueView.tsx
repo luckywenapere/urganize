@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import Image from 'next/image';
-import { Plus, Search, X } from '@/components/icons';
+import { ChevronDown, Plus, Search, X } from '@/components/icons';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PageHeader } from '@/components/shell/PageHeader';
 import {
@@ -284,10 +284,11 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
           <div className="ml-auto flex items-center gap-2">
             <label className="flex items-center gap-2 text-sm text-content-secondary">
               <span className="sr-only sm:not-sr-only">Sort</span>
+              <span className="relative inline-flex">
               <select
                 value={sort}
                 onChange={(event) => setSort(event.target.value as SortKey)}
-                className="h-11 rounded-full border border-stroke-control bg-bg-base px-3 text-base text-content-primary hover:border-content-secondary"
+                className="h-11 appearance-none rounded-full border border-stroke-control bg-bg-base pl-4 pr-10 text-base text-content-primary hover:border-content-secondary"
               >
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.key} value={option.key}>
@@ -295,6 +296,11 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
                   </option>
                 ))}
               </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary"
+                aria-hidden="true"
+              />
+              </span>
             </label>
             <div role="group" aria-label="Layout" className="hidden items-center rounded-full border border-stroke-control p-0.5 md:flex">
               {(['table', 'cards'] as const).map((option) => (

@@ -2786,7 +2786,23 @@ html[data-auth-session='1'] .auth-form-shell {
  * paper mode gets forest on cream and dark mode gets spring on ink with no
  * second set of numbers to keep in step.
  * ------------------------------------------------------------------------- */
+/* The band is drawn by a pseudo-element that runs past the frame on both sides,
+   so on a wide screen the top bar reaches the window edges instead of stopping at
+   the 1440px frame with stray lines either side. overflow-x: clip on .app-layout
+   keeps that overhang from ever making the page scroll sideways, and unlike
+   overflow: hidden it does not break position: sticky. */
+.app-layout {
+  overflow-x: clip;
+}
 .shell-band {
+  position: sticky;
+  isolation: isolate;
+}
+.shell-band::before {
+  content: '';
+  position: absolute;
+  inset: 0 -100vw;
+  z-index: -1;
   background-color: rgb(var(--color-bg-base));
   background-image: linear-gradient(
     to bottom,
@@ -2801,4 +2817,11 @@ html[data-auth-session='1'] .auth-form-shell {
     rgb(var(--color-brand) / 0.03),
     rgb(var(--color-brand) / 0)
   );
+}
+
+/* The new shell (design overhaul, 2026-10-04) has a full-width top band, so the
+   page-wide inset frame behind it reads as stray lines down both sides and a dark
+   strip above the bar. Pages that carry the band drop the frame. */
+body:has(.shell-band)::before {
+  display: none;
 }
