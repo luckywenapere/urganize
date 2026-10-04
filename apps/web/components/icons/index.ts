@@ -7,7 +7,7 @@
 //   decide what belongs, and for the two directions that were drawn, tested at
 //   real icon size, and rejected on evidence.
 //
-//   PASSTHROUGH (69) — still lucide, re-exported unchanged. The long tail:
+//   PASSTHROUGH (70) — still lucide, re-exported unchanged. The long tail:
 //   admin tables, rare settings rows, one-off empty states. Drawing all
 //   98 would mean hand-cutting 68 marks for surfaces almost nobody opens,
 //   several of which lucide already draws better than we would.
@@ -84,4 +84,6 @@ export {
   Undo2, UserCircle, UserCircle2, UserPlus,
   // Read-aloud on UrgAns replies (NEXT_PUBLIC_FEATURE_URGANS_SPEAK).
   Volume2,
+  // The top bar's credits and More menu (design overhaul, 2026-10-04).
+  Wallet2,
 } from 'lucide-react';

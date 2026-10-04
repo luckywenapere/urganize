@@ -5,21 +5,18 @@ import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
-import { RAIL_OPEN_KEY, RAIL_OPEN_VERSION, useChappiStore } from '@/stores/useChappiStore';
-import { readPersistedState } from '@/lib/persisted-state';
-import { RAIL_WIDTH_KEY, RAIL_WIDTH_VERSION, parsePersistedRailWidth } from '@/lib/rail-width';
+import { useShellStore } from '@/stores/useShellStore';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
-import { AppTopbar } from '@/components/app/AppTopbar';
+import { TopNav } from '@/components/shell/TopNav';
+import { SubNav } from '@/components/shell/SubNav';
+import { BottomBar } from '@/components/shell/BottomBar';
+import { CommandBar } from '@/components/shell/CommandBar';
+import { FloatingUrgAns } from '@/components/shell/FloatingUrgAns';
 import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
 import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
-// Static, unlike the identity card and the rest: this column has to be in the
-// server HTML as a (closed, zero-width) element so the menu's slot exists the
-// moment a rollout mounts, and it holds only layout code. Its heavy half, the
-// UrgAns chat card, is still its own async chunk inside it.
-import { RightRail } from '@/components/app/RightRail';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { installLinkStallWatchdog } from '@/lib/nav-stall-watch';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
@@ -58,19 +55,7 @@ import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 // included) in the render-blocking bundle of every route, /auth included.
 // next/dynamic moves each into its own async chunk that loads after hydration.
 // ssr:false is safe: all render nothing on the server today. (HelpMenu moved
-// into AppTopbar's right cluster 2026-07-23 and rides its bundle now.)
-const ChappiDock = dynamic(
-  () => import('@/components/chappi/ChappiDock').then((m) => m.ChappiDock),
-  { ssr: false }
-);
-const MobileNavBar = dynamic(
-  () => import('@/components/app/MobileNavBar').then((m) => m.MobileNavBar),
-  { ssr: false }
-);
-const WorkspaceIdentityPanel = dynamic(
-  () => import('@/components/app/WorkspaceIdentityPanel').then((m) => m.WorkspaceIdentityPanel),
-  { ssr: false }
-);
+// into the top bar's right cluster 2026-07-23 and rides its bundle now.)
 const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
   { ssr: false }
@@ -140,10 +125,7 @@ const ShareSheet = dynamic(
 // them now (see ReleaseScenePanel), and nothing app-level is involved.
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
-// When the assistant flag is on, the UrgAns side rail rides beside <main> at
-// lg+ and the floating dock takes the bottom-right corner below lg. With the
-// flag off there is no launcher at all — the founder WhatsApp chat feature
-// was removed outright rather than kept as a flag-off fallback.
+// UrgAns is a floating button and drawer on every page (components/shell/FloatingUrgAns).
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 // Saved UrgAns chats (NEXT_PUBLIC_FEATURE_URGANS_HISTORY, meaningful only with
@@ -156,13 +138,6 @@ const CHAT_HISTORY_ENABLED = isChappiHistoryEnabled();
 // reach the feature while the UI is dark.
 const REPORT_ISSUE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_REPORT_ISSUE === 'true';
 
-// Bottom tab bar, below lg only — see MobileNavBar.tsx. Moves the topbar's
-// nav icons + create CTA down to where a thumb reaches on a phone, and
-// stands in for the ChappiDock launcher on that same range (ChappiDock
-// retires itself when this is on; AppShell's dock mount line below is
-// unchanged).
-const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
-
 // The UrgAns planner's intake modal is mounted app-wide (see the dynamic import
 // above), so a note or an assistant chip can open it without the notes page or
 // the assistant page owning a copy.
@@ -174,13 +149,6 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 // in the release, for the flag-on path only.
 const TYPE_FIRST_CREATE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
-
-// The workspace identity card (URG-214) — a persistent left column, mirroring
-// the UrgAns rail's right column. Only meaningful once workspaces exist, so
-// it's gated on both its own flag and NEXT_PUBLIC_FEATURE_WORKSPACE.
-const IDENTITY_PANEL_ENABLED =
-  process.env.NEXT_PUBLIC_FEATURE_IDENTITY_PANEL === 'true' &&
-  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
 // Soft, dismissible prompt steering Android browser visitors toward the
 // native app (docs/mobile/*.md) instead of mobile web. Shown app-wide,
@@ -207,14 +175,6 @@ const INSTALL_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_INSTALL_PROMPT ==
 const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
 const SOCIAL_SHARE_ENABLED = isSocialShareEnabled();
 
-// Once-per-session arming for the side rail: landing on the assistant page
-// (the post-auth front door when the flag is on — see lib/home-path.ts)
-// opens the rail on whatever page the user navigates to next. sessionStorage,
-// not localStorage, on purpose: a close should stick for the rest of the
-// SESSION, then a fresh session's landing re-arms. Survives reloads (same
-// tab keeps its sessionStorage), resets on a new tab/app launch.
-const RAIL_ARMED_KEY = 'urganize.chappi.rail-armed';
-
 export function AppShell({ children }: { children: ReactNode }) {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -225,13 +185,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Lifted here so the universal topbar "New rollout" button opens the same
   // creation modal the page-level buttons use, from any dashboard page,
   // without navigating away.
-  const [isCreateReleaseOpen, setIsCreateReleaseOpen] = useState(false);
-  const openCreateRelease = useCallback(() => {
-    setIsCreateReleaseOpen(true);
-  }, []);
-  const closeCreateRelease = useCallback(() => {
-    setIsCreateReleaseOpen(false);
-  }, []);
+  const isCreateReleaseOpen = useShellStore((state) => state.createOpen);
+  const openCreateRelease = useShellStore((state) => state.openCreate);
+  const closeCreateRelease = useShellStore((state) => state.closeCreate);
 
   const isAuthRoute =
     pathname?.startsWith('/auth') ||
@@ -319,17 +275,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const workspaceUserName = user?.name || user?.artist_name || user?.email || '';
 
-  // The dock's corner launcher is what pb-28 clears; with MOBILE_NAV_ENABLED
-  // the dock retires below lg and the bar itself needs clearing instead — see
-  // .mobile-nav-clearance / .chappi-main-padding-nav in globals.css. Kept as
-  // a precomputed value so the <main> className below stays a one-token swap.
-  const mainPaddingClass = isChappiRoute
-    ? MOBILE_NAV_ENABLED
-      ? 'chappi-main-padding-nav'
-      : 'chappi-main-padding'
-    : MOBILE_NAV_ENABLED
-      ? 'mobile-nav-clearance'
-      : 'pb-28 md:pb-10';
+  // The bottom bar is 4rem tall below lg and needs clearing; from lg up there is
+  // none. The assistant's own page has its own sizing (see globals.css).
+  const mainPaddingClass = isChappiRoute ? 'chappi-main-padding-nav' : 'mobile-nav-clearance';
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -354,69 +302,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       router.replace(CURATOR_HOME_PATH);
     }
   }, [isAuthLoading, isCuratorAccount, isDashboardRoute, isSettingsRoute, router]);
-
-  // Hydrate the side rail's persisted open state once per load — same
-  // SSR-safe pattern as ChappiDock (first paint closed, storage read in a
-  // mount effect). Runs before the arming effect below (declaration order),
-  // so a landing on the assistant page wins over a persisted "closed".
-  useEffect(() => {
-    if (!CHAPPI_ENABLED) return;
-    const persisted = readPersistedState(
-      RAIL_OPEN_KEY,
-      RAIL_OPEN_VERSION,
-      (value): value is boolean => typeof value === 'boolean'
-    );
-    if (persisted !== null) {
-      useChappiStore.getState().setRailOpen(persisted);
-    }
-
-    // The rail's WIDTH, same read, same reason it is not read during render:
-    // a storage read at render time is the hydration mismatch this repo has
-    // had to correct before. hydrateRailWidth, not setRailWidth — the setter
-    // persists, and writing back a value we just read is pointless churn.
-    const storedWidth = readPersistedState(
-      RAIL_WIDTH_KEY,
-      RAIL_WIDTH_VERSION,
-      (value): value is number => parsePersistedRailWidth(value) !== null
-    );
-    const width = parsePersistedRailWidth(storedWidth);
-    if (width !== null) {
-      useChappiStore.getState().hydrateRailWidth(width);
-    }
-  }, []);
-
-  // Arm the rail ONCE per session, on the first chrome-bearing page the user
-  // reaches: from then on, anywhere they switch to has UrgAns on the side —
-  // until they close it, which sticks for the rest of the session.
-  //
-  // The trigger used to be the first visit to the assistant PAGE, which worked
-  // only because that page was also the login landing. When the catalog became
-  // the front door (2026-08-12, v0.45.1) the rail stopped opening by itself,
-  // so this now fires on the dashboard and settings too — restoring the
-  // pre-v0.45.1 behaviour without putting the assistant page back in front of
-  // anyone. Founder call, 2026-08-12.
-  //
-  // Three conditions, each load-bearing:
-  //  - auth must have RESOLVED (not merely be in flight): arming mid-load can
-  //    fire for a session that turns out to be signed out or a curator.
-  //  - a curator never gets the rail at all, so never burn their arm flag.
-  //  - only routes that actually render chrome. The rail is a flex sibling of
-  //    <main> on dashboard/settings; on a public page (/epk, /credits, an
-  //    invite) there is nothing for it to sit beside, and arming there would
-  //    spend the once-per-session flag before the user ever reaches the app.
-  useEffect(() => {
-    if (!CHAPPI_ENABLED) return;
-    if (!isAuthenticated || isAuthLoading || isCuratorAccount) return;
-    if (!isDashboardRoute && !isSettingsRoute) return;
-    try {
-      if (window.sessionStorage.getItem(RAIL_ARMED_KEY)) return;
-      window.sessionStorage.setItem(RAIL_ARMED_KEY, '1');
-    } catch {
-      // Restricted storage — skip arming rather than re-open on every visit.
-      return;
-    }
-    useChappiStore.getState().setRailOpen(true);
-  }, [isAuthenticated, isAuthLoading, isCuratorAccount, isDashboardRoute, isSettingsRoute]);
 
   // Warm the route chunks for every destination the nav offers while the
   // browser is idle, so a tap is instant instead of a skeleton. Skipped on
@@ -564,7 +449,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       ) : showWorkspaceChrome ? (
         // PAGE WIDTH SOURCE OF TRUTH.
         // The inner mx-auto max-w-[1440px] wrapper below is the ONLY place
-        // that decides how wide an authenticated page renders. AppTopbar and
+        // that decides how wide an authenticated page renders. TopNav and
         // <main> both sit inside it so chrome (topbar nav, scrollbar
         // alignment) and content edges share one value — navigating between
         // /dashboard and /settings cannot produce a width jump.
@@ -611,40 +496,19 @@ export function AppShell({ children }: { children: ReactNode }) {
                 UrgAns actions, which today is nobody: no code path can write
                 the capped tier yet. */}
             <UrgansUsageStrip />
-            <AppTopbar onNewRelease={openCreateRelease} userName={workspaceUserName} />
-            {/* <main> + the right-hand column share a flex row so the column is
-                a layout-flow column (content narrows; nothing is covered) on
-                every chrome page. It holds the rollout's menu on top and the
-                UrgAns chat under it, and renders nowhere on the assistant page
-                itself — that page IS the chat. */}
-            {/* The two side columns are wrapped because they are OUTSIDE
-                app/error.tsx's reach — it renders inside this layout, so a throw
-                out here escapes to global-error.tsx and takes the whole app with
-                it. Neither column is load-bearing: if one breaks, it goes quiet
-                and the workspace keeps working. ErrorBoundary adds no DOM node,
-                which matters here — these are flex children of this row. */}
-            <div className="flex min-h-0 flex-1">
-              {IDENTITY_PANEL_ENABLED ? (
-                <ErrorBoundary name="identity-panel" onError={reportBoundaryError}>
-                  <WorkspaceIdentityPanel />
-                </ErrorBoundary>
-              ) : null}
-              <main
-                id="main-content"
-                tabIndex={-1}
-                className={`min-w-0 flex-1 px-4 pt-5 focus:outline-none sm:px-5 md:px-6 lg:px-8 ${mainPaddingClass}`}
-              >
-                {children}
-              </main>
-              {/* NOT gated on the assistant flag any more: with UrgAns off the
-                  column still carries the rollout menu. RightRail decides for
-                  itself whether the chat card exists. */}
-              {!isChappiRoute ? (
-                <ErrorBoundary name="right-rail" onError={reportBoundaryError}>
-                  <RightRail onNewRelease={openCreateRelease} />
-                </ErrorBoundary>
-              ) : null}
-            </div>
+            {/* The shell (design overhaul, 2026-10-04): a top bar of the six
+                areas, a second row of tabs for the area you are in, the page,
+                and on a phone a bottom bar. It replaces the left menu and the
+                right-hand column. */}
+            <TopNav userName={workspaceUserName} />
+            <SubNav />
+            <main
+              id="main-content"
+              tabIndex={-1}
+              className={`min-w-0 flex-1 px-4 focus:outline-none sm:px-5 lg:px-8 ${mainPaddingClass}`}
+            >
+              {children}
+            </main>
           </div>
         </div>
       ) : (
@@ -665,17 +529,22 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </div>
       )}
-      {/* HelpMenu moved into AppTopbar's right cluster (2026-07-23). */}
-      {/* Same reasoning as the side columns above: losing the dock silently is
-          a real cost — but strictly less than losing the entire application
-          because a floating widget threw. */}
-      {showHelpMenu && CHAPPI_ENABLED ? (
-        <ErrorBoundary name="support-launcher" onError={reportBoundaryError}>
-          <ChappiDock onNewRelease={openCreateRelease} />
+      {/* The floating UrgAns button and drawer, and the search bar. Wrapped
+          because they sit OUTSIDE app/error.tsx's reach: losing the launcher
+          silently is a real cost, but strictly less than losing the whole
+          application because a floating widget threw. */}
+      {showHelpMenu && CHAPPI_ENABLED && showWorkspaceChrome ? (
+        <ErrorBoundary name="urgans-launcher" onError={reportBoundaryError}>
+          <FloatingUrgAns />
         </ErrorBoundary>
       ) : null}
-      {MOBILE_NAV_ENABLED && showWorkspaceChrome && !requiresArtistNameGate ? (
-        <MobileNavBar />
+      {showWorkspaceChrome && !requiresArtistNameGate ? (
+        <>
+          <ErrorBoundary name="command-bar" onError={reportBoundaryError}>
+            <CommandBar />
+          </ErrorBoundary>
+          <BottomBar />
+        </>
       ) : null}
       {/* Gated on the same showHelpMenu the `?` launcher uses — signed in, not
           mid-auth, not on a public page, not a curator. It opens from the help

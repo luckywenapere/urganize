@@ -281,6 +281,13 @@ export interface AnalyticsEventPropertiesMap {
     action: 'open_epk' | 'open_release' | 'open_show';
   };
   /**
+   * The shell's coming-soon screens (design overhaul, 2026-10-04). `viewed`
+   * against `interest` is how the next area to build gets chosen: how many
+   * people opened it, and how many asked to be told. Area key only.
+   */
+  coming_soon_viewed: { area: string };
+  coming_soon_interest: { area: string };
+  /**
    * Share to socials (2026-09-23). `opened` against `made` against `sent` is
    * the whole funnel, and `source` says whether the first-rollout offer earns
    * its interruption. NO TEXT, EVER: not the caption, not the fan link, not

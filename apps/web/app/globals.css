@@ -2775,3 +2775,30 @@ html[data-auth-session='1'] .auth-session-loader {
 html[data-auth-session='1'] .auth-form-shell {
   display: none;
 }
+
+/* ------------------------------------------------------------------------- *
+ * The shell's soft band (design overhaul, 2026-10-04).
+ *
+ * Deel's lavender header, done in the brand colour at a whisper: a solid base
+ * (so the page can scroll under the sticky bar without showing through) with the
+ * tint laid over it, fading to nothing by the bottom edge so the bar reads as
+ * part of the page and not a slab on top of it. The tint is the brand token, so
+ * paper mode gets forest on cream and dark mode gets spring on ink with no
+ * second set of numbers to keep in step.
+ * ------------------------------------------------------------------------- */
+.shell-band {
+  background-color: rgb(var(--color-bg-base));
+  background-image: linear-gradient(
+    to bottom,
+    rgb(var(--color-brand) / 0.12),
+    rgb(var(--color-brand) / 0.04) 70%,
+    rgb(var(--color-brand) / 0)
+  );
+}
+.shell-band-sub {
+  background-image: linear-gradient(
+    to bottom,
+    rgb(var(--color-brand) / 0.03),
+    rgb(var(--color-brand) / 0)
+  );
+}

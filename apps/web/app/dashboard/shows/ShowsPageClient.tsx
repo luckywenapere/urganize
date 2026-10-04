@@ -1,5 +1,6 @@
 'use client';
 
+import { ComingSoon } from '@/components/shell/ComingSoon';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -267,16 +268,14 @@ export default function ShowsPageClient() {
   const [now] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!EVENTS_ENABLED) {
-      router.replace('/dashboard');
-      return;
-    }
+    // Switched off: the area opens to its coming-soon screen (below).
+    if (!EVENTS_ENABLED) return;
     // Fire immediately rather than behind authLoading — the stores read their
     // own token from getSession() (local), so waiting on the auth store's
     // GoTrue round trip only delays real data (the notes page pattern).
     void load();
     void loadRoster();
-  }, [load, loadRoster, router]);
+  }, [load, loadRoster]);
 
   // Only artists that actually have shows are worth filtering by.
   const artistsWithShows = useMemo(() => {
@@ -297,7 +296,7 @@ export default function ShowsPageClient() {
     return partitionShowList(visible, new Date(now));
   }, [activeFilter, events, now]);
 
-  if (!EVENTS_ENABLED) return null;
+  if (!EVENTS_ENABLED) return <ComingSoon area="shows" />;
 
   const bookableArtists = artists.filter((artist) => bookableArtistIds?.includes(artist.id));
   const canBook = bookableArtists.length > 0;

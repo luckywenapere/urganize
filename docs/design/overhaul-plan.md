@@ -17,8 +17,8 @@ Order per screen: better-layout (structure) -> shadcn (build) -> better-ui + bet
 
 ### Progress log (tick as you go)
 - [x] 0. Copy plan into repo, save memory pointer (2026-10-04)
-- [ ] 1. Tokens + type/density pass (globals.css, tailwind preset) behind NEW_SHELL
-- [ ] 2. Nav model (`lib/` pure builder + tests), flag `NEXT_PUBLIC_FEATURE_NEW_SHELL`
+- [ ] 1. Tokens + type/density pass (globals.css, tailwind preset) (no flag)
+- [ ] 2. Nav model (`lib/` pure builder + tests), no flag
 - [ ] 3. Shell components: TopNav, SubNav, PageHeader, ArtistSwitcher, CreditsChip, BottomBar + More sheet
 - [ ] 4. FloatingUrgAns drawer + Home ask-bar + ⌘K command bar
 - [ ] 5. ComingSoon screen (page on phone, inline panel on desktop), interest capture
@@ -74,8 +74,8 @@ Top pills, in order: **Home | Catalogue | Relationships | Opportunities | UrgAns
 7. **Copy sweep for the shell only**: "Catalogue" (not Catalog) to match the strategy doc, "rollout" as the object, plain fifth-grade labels. Coming-soon copy per area: what it will do + "Tell me when it's ready".
 
 ## Implementation approach
-- Everything behind one new flag `NEXT_PUBLIC_FEATURE_NEW_SHELL` (default off). Off = today's UI byte-identical. Flip with a commit that touches `apps/web` (turbo-ignore trap).
-- `AppShell.tsx` (795 lines) branches: flag on renders `TopNav/SubNav/BottomBar/FloatingUrgAns` and no `WorkspaceIdentityPanel` or `RightRail`.
+- **NO FLAG (founder decision 2026-10-04): everything goes live straight.** The new shell replaces the old one outright; delete the superseded left menu/right rail code paths rather than keeping them. Existing per-feature flags (notes, events, pitching...) still decide which destinations exist.
+- `AppShell.tsx` (795 lines) renders `TopNav/SubNav/BottomBar/FloatingUrgAns` and no longer mounts `WorkspaceIdentityPanel` or `RightRail`.
 - Reuse, don't rebuild: `lib/app-pages.ts` (page + flag logic, extend with sub-tabs), `components/app/AppTopbar.tsx` pieces (`NotificationsBell`, `HelpMenu`, `WorkspaceMenu`), `lib/layout-columns.ts`, the home components (`BriefCard`, `ArtistFilterChips`), `useChappiStore` + `ChappiSidePanel` content for the drawer, `useArtistRosterStore` for the switcher, credits snapshot from `lib/credits/*` for the chip, `lib/release-search.ts` for table search.
 - Update in the same PR (per repo rules): the matching skeletons (`WorkspaceSkeleton`, page skeletons), `lib/tours.ts` anchors, `lib/help-copy.ts`, guards that list files (`rollout-vocabulary.test.ts`, `positioning-guard`), and `lib/prefetch-routes.ts`.
 - New tests in `lib/` (pure logic only, the repo has no component tests): nav model builder (pillar order, flags, sub-tabs, coming-soon), attention-list ranking for Home, table filter/sort, credits-chip state.
