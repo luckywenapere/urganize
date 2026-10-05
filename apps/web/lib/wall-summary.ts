@@ -36,3 +36,15 @@ export function describeWallSummary(counts: WallSummaryCounts): string | null {
   const single = parts.length === 1 && parts[0].count === 1;
   return `Your ${join(parts.map((part) => part.text))} ${single ? 'is' : 'are'} exactly where you left ${single ? 'it' : 'them'}.`;
 }
+
+/** The counts as big-number tiles. Zero and unreadable counts are left out. */
+export function wallStatTiles(counts: WallSummaryCounts): { value: number; label: string }[] {
+  const tiles: { value: number; label: string }[] = [];
+  const add = (value: number | null, one: string, many: string) => {
+    if (value && value > 0) tiles.push({ value, label: value === 1 ? one : many });
+  };
+  add(counts.rollouts, 'rollout', 'rollouts');
+  add(counts.activities, 'activity', 'activities');
+  add(counts.teammates, 'teammate', 'teammates');
+  return tiles;
+}

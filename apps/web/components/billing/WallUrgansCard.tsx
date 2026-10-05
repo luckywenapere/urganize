@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { Card } from '@urganize/ui';
 import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
 import { isCreditsEnabled, isCreditsPurchasable } from '@/lib/credits/config';
 
@@ -30,22 +29,21 @@ export function WallUrgansCard() {
   const left = Math.max(0, Math.floor(total));
   if (left === 0 && !isCreditsPurchasable()) return null;
 
+  // A quiet row, not a card: the plan above is the one thing this page asks for,
+  // and a second boxed card with its own filled button would compete with it.
   return (
-    <Card padding="lg" className="flex flex-col gap-4">
-      <div>
-        <h2 className="font-display text-lg font-semibold text-content-primary">UrgAns is still here</h2>
-        <p className="mt-1 text-sm text-content-secondary">
-          {left > 0
-            ? `You have ${left.toLocaleString('en-US')} ${left === 1 ? 'credit' : 'credits'}. Use UrgAns to run your rollouts, and pay as you go.`
-            : 'You are out of credits. Buy more to use UrgAns, and pay as you go.'}
-        </p>
-      </div>
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-stroke-subtle pt-5">
+      <p className="text-sm text-content-secondary">
+        {left > 0
+          ? `Or use UrgAns on credits. You have ${left.toLocaleString('en-US')} left.`
+          : 'Or use UrgAns on credits, and pay as you go.'}
+      </p>
       <Link
         href={URGANS_HUB_PATH}
-        className="inline-flex min-h-11 items-center justify-center rounded-full bg-brand px-4 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover"
+        className="motion-focus inline-flex min-h-11 items-center font-semibold text-content-primary underline underline-offset-4 hover:text-brand"
       >
         {left > 0 ? 'Open UrgAns' : 'Get credits'}
       </Link>
-    </Card>
+    </div>
   );
 }

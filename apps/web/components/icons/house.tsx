@@ -483,14 +483,13 @@ export const Headphones = icon(
   </>
 );
 
-/** Shows. A stage microphone on its stand. */
-export const MicVocal = icon(
-  'MicVocal',
+/** Shows. A ticket stub with a torn edge: an event you go to, and nobody
+ * mistakes it for a record button (the stage microphone it replaced did). */
+export const Ticket = icon(
+  'Ticket',
   <>
-    <rect x="9" y="2.8" width="6" height="10.4" rx="3" strokeWidth={G} />
-    <path d="M5.8 11.4a6.2 6.2 0 0 0 12.4 0" />
-    <path d="M12 17.6v3" strokeLinecap="round" />
-    <path d="M8.8 20.6h6.4" strokeLinecap="square" />
+    <path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5v2.2a2.3 2.3 0 0 0 0 4.6v2.2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5v-2.2a2.3 2.3 0 0 0 0-4.6z" />
+    <path d="M14.5 7.5v9" strokeWidth={G} strokeDasharray="1.7 2.1" strokeLinecap="round" />
   </>
 );
 

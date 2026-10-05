@@ -98,6 +98,13 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description: 'A walled teammate asking their admin to activate the plan.',
     placeholderCopy: false,
   },
+  pay_link: {
+    id: 'pay_link',
+    category: 'transactional',
+    name: 'Link to pick a plan',
+    description: 'Emailed to the owner on request from the iPhone app, where payment cannot be taken.',
+    placeholderCopy: false,
+  },
   pitch_notice: {
     id: 'pitch_notice',
     category: 'transactional',

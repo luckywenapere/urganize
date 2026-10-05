@@ -10,6 +10,7 @@ import type { WorkRequestAnswerEmailProps } from './WorkRequestAnswerEmail';
 import type { ReferralRewardEmailProps } from './ReferralRewardEmail';
 import type { FounderBillingAlertEmailProps } from './FounderBillingAlertEmail';
 import type { NotifyAdminEmailProps } from './NotifyAdminEmail';
+import type { PayLinkEmailProps } from './PayLinkEmail';
 import type { PitchNoticeEmailProps } from './PitchNoticeEmail';
 import type { FounderOpsAlertEmailProps } from './FounderOpsAlertEmail';
 import type { OnboardingStepEmailProps } from './OnboardingStepEmail';
@@ -25,6 +26,7 @@ export type EmailTemplateProps = {
   referral_reward: ReferralRewardEmailProps;
   founder_billing_alert: FounderBillingAlertEmailProps;
   notify_admin: NotifyAdminEmailProps;
+  pay_link: PayLinkEmailProps;
   pitch_notice: PitchNoticeEmailProps;
   founder_ops_alert: FounderOpsAlertEmailProps;
   onboarding_step: OnboardingStepEmailProps;
