@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.71.0",
+    date: "October 5, 2026",
+    highlights: [
+      "The trial-ended page is cleaner. It shows what you built and one button to continue.",
+      "On iPhone you can email yourself the link to pay on the web.",
+      "Shows has a ticket icon, so it no longer looks like a record button.",
+    ],
+  },
+  {
     version: "1.69.0",
     date: "October 4, 2026",
     highlights: [
