@@ -6,9 +6,9 @@ import path from 'node:path';
 // Satori, which backs next/og's ImageResponse, needs raw font binaries and
 // cannot read next/font's CSS variables. It also does not support variable
 // fonts or woff2, which is why these are STATIC ttf cuts checked into the repo
-// rather than anything pulled from Google at build time. Fraunces ships as the
-// 144pt optical size because the headline on this card is genuinely display
-// scale.
+// rather than anything pulled from Google at build time. Young Serif ships
+// as its one regular cut; Space Grotesk stays for the card's body text because
+// Instrument Sans is only published as a variable font, which satori cannot read.
 //
 // Vercel's output tracing cannot see a runtime readFile, so
 // next.config.js declares outputFileTracingIncludes for this route. If a
@@ -24,7 +24,7 @@ export type RecapFont = {
 const FONT_DIR = path.join(process.cwd(), 'assets', 'fonts');
 
 const FONT_FILES: Array<{ file: string; name: string; weight: 400 | 500 | 600 }> = [
-  { file: 'Fraunces144pt-SemiBold.ttf', name: 'Fraunces', weight: 600 },
+  { file: 'YoungSerif-Regular.ttf', name: 'Young Serif', weight: 400 },
   { file: 'SpaceGrotesk-Regular.ttf', name: 'Space Grotesk', weight: 400 },
   { file: 'SpaceGrotesk-Medium.ttf', name: 'Space Grotesk', weight: 500 },
   { file: 'SpaceMono-Regular.ttf', name: 'Space Mono', weight: 400 },

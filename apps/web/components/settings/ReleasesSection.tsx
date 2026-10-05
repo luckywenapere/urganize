@@ -10,6 +10,7 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { useKnownReleaseCount } from '@/components/loading/known-counts';
 import type { Release } from '@/types/releases';
 import { panelClass } from './panelClass';
+import { InfoTip } from '@/components/shared/HelpTip';
 
 /**
  * Deleting a release is only available here (URG-163) — the workspace's
@@ -68,15 +69,9 @@ export function ReleasesSection() {
   return (
     <>
       <section id="delete-rollouts" className={`${panelClass} scroll-mt-4`}>
-        <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Delete rollouts</h2>
-        {/* Used to say "only available here" (URG-163). Narrowed at the
-            test-path flip (2026-09-01, v1.16.0): a TEST release's own banner
-            can delete it too, so "only" stopped being true. This is still the
-            one place a REAL release is deleted. */}
-        <p className="mb-4 text-sm text-content-secondary">
-          Delete a rollout here. This permanently removes it, its activities,
-          and its attached files.
-        </p>
+        <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary flex items-center gap-2">Delete rollouts
+        <InfoTip label="Delete rollouts" text="Delete a rollout here. This permanently removes it, its activities, and its attached files." />
+      </h2>
         {isLoadingReleases ? (
           <div className="space-y-2">
             {Array.from({ length: knownReleaseCount }).map((_, index) => (

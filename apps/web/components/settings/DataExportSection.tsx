@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { errorMessage } from '@/lib/errors';
 import { buildExportFileName, type ExportFormat } from '@/lib/account-export';
 import { shareOrDownloadTextFile } from '@/lib/share-file';
-import { isNativePlatform } from '@/lib/platform';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 import { getAccessToken } from './getAccessToken';
@@ -88,17 +87,13 @@ export function DataExportSection() {
 
   return (
     <section id="export" className={`${panelClass} scroll-mt-4`}>
-      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+      <h2 className="mb-5 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Your data
+        <HelpTip helpKey="settings.export" />
       </h2>
       {/* Two paragraphs and six sentences until 2026-09-08. What is IN the
           export moved into the pullout; the platform line stays visible
           because it changes what the buttons below actually do. */}
-      <p className="mb-4 text-sm text-content-secondary">
-        Take a copy of everything Urganize holds for you, whenever you want.
-        {isNativePlatform() ? '' : ' Both download straight to this device.'}{' '}
-        <HelpTip helpKey="settings.export" className="align-text-bottom" />
-      </p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

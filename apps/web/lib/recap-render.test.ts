@@ -56,10 +56,10 @@ describe('recap fonts', () => {
       expect(font.data.length).toBeGreaterThan(1000);
     }
     expect(fonts.map((font) => `${font.name}:${font.weight}`).sort()).toEqual([
-      'Fraunces:600',
       'Space Grotesk:400',
       'Space Grotesk:500',
       'Space Mono:400',
+      'Young Serif:400',
     ]);
   });
 });

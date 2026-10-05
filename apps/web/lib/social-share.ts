@@ -507,7 +507,7 @@ const TEXT_COLUMN: Record<ShareFormat, Record<'cover' | 'type', number>> = {
   status: { type: 888, cover: 888 },
 };
 
-// A deliberately wide estimate of one character of Fraunces SemiBold, as a
+// A deliberately wide estimate of one character of Young Serif, as a
 // share of the font size. Measured on the rendered posters it runs 0.43 to
 // 0.48; 0.5 leaves a margin, so a line sized against it always fits.
 const DISPLAY_CHAR_EM = 0.5;

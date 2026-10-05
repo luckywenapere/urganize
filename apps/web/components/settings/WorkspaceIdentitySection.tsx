@@ -4,6 +4,7 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
 import { saveButtonVisible } from '@/lib/settings-dirty';
+import { InfoTip } from '@/components/shared/HelpTip';
 
 type WorkspaceIdentitySectionProps = {
   input: string;
@@ -38,14 +39,9 @@ export function WorkspaceIdentitySection({
 }: WorkspaceIdentitySectionProps) {
   return (
     <section className={panelClass}>
-      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Team name</h2>
-      {/* Trimmed 2026-08-05 for the two-column row (shares one line with
-          Workspace logo now): the heading already says "Workspace identity"
-          and the input label right below says "Workspace name", so the old
-          "Your label or team name," lead-in was redundant. */}
-      <p className="mb-4 text-sm text-content-secondary">
-        Shown on the team card across the app.
-      </p>
+      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary flex items-center gap-2">Team name
+        <InfoTip label="Team name" text="Shown on the team card across the app." />
+      </h2>
       {isLoading ? (
         <div className="space-y-2">
           <SkeletonBlock className="h-3 w-20" />

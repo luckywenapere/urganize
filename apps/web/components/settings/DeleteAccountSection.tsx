@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { errorMessage } from '@/lib/errors';
 import { getAccessToken } from './getAccessToken';
+import { InfoTip } from '@/components/shared/HelpTip';
 
 export function DeleteAccountSection() {
   const router = useRouter();
@@ -54,10 +55,9 @@ export function DeleteAccountSection() {
   // panels).
   return (
     <section id="delete-account" className="relative scroll-mt-4 border-l-2 border-status-error/50 py-9 pl-5">
-      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-status-error">Delete account</h2>
-      <p className="mb-4 text-sm text-content-secondary">
-        This permanently deletes your account. This action cannot be undone.
-      </p>
+      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-status-error flex items-center gap-2">Delete account
+        <InfoTip label="Delete account" text="This permanently deletes your account. This action cannot be undone." />
+      </h2>
       <div className="space-y-4">
         <label className="block">
           <span className="mb-1 block text-sm text-content-secondary">Type DELETE</span>

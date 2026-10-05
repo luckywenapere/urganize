@@ -5,6 +5,7 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { formatFileSize } from '@/lib/asset-constants';
 import { panelClass } from './panelClass';
 import { feedbackErrorClass, feedbackSuccessClass } from './feedback';
+import { InfoTip } from '@/components/shared/HelpTip';
 
 export type WorkspaceLogo = { fileName: string | null; url: string };
 
@@ -46,14 +47,9 @@ export function WorkspaceLogoSection({
 
   return (
     <section className={panelClass}>
-      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Team logo</h2>
-      {/* Trimmed 2026-08-05 for the two-column row (shares one line with
-          Workspace identity now): the heading already says "Workspace logo",
-          so this drops the redundant lead-in and the "new and existing...
-          until you upload" elaboration, keeping just the core behavior. */}
-      <p className="mb-4 text-sm text-content-secondary">
-        Shown on rollouts with no cover art of their own.
-      </p>
+      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary flex items-center gap-2">Team logo
+        <InfoTip label="Team logo" text="Shown on rollouts with no cover art of their own." />
+      </h2>
       {isLoading ? (
         <div className="flex items-center gap-4">
           <SkeletonBlock className="h-24 w-24" />

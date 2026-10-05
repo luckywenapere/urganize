@@ -18562,3 +18562,9 @@ Founder rule, for everything and not only icons: every design choice (icons, men
 - **One search.** The top bar's search is the only one. With a rollout open it finds that rollout's activities first, then rollouts and pages. The phone's rollout menu is one labelled button, and its list is drawn upside down (`orderForThumb`) so the most-used rows sit nearest the thumb.
 - **UrgAns opens ready.** The full chat page focuses its box on arrival (the Urganize app allows it; a mobile browser may still refuse a keyboard that no tap asked for). The chat box shows no credits line: the top-bar chip and the low-credit banner carry the balance.
 - **Font:** still Space Grotesk, Fraunces and Space Mono. Options are in `docs/design/font-options.html`, waiting on the founder's pick.
+
+## No helper lines stacked under things, and the type (2026-10-05)
+
+Founder rule: a heading or button never carries a grey sentence stacked under it. The words move behind a small info icon (`InfoTip`, or `HelpTip` with a key from `lib/help-copy.ts` when the copy is worth the fifth-grader guard). `PageHeader` takes `info` for "what this page is for" and keeps `description` for live facts (a count, who is shown). `SettingRow` and the Settings section intros use the icon. Money and delete warnings moved behind it too on the founder's say-so; the confirm dialogs still state the consequence in full. Not swept yet: modal and form field hints, empty-state sentences.
+
+Type: Young Serif is the display face (`--font-young-serif`, one weight, so `.font-display` turns faux bold off) and Instrument Sans is the body face (`--font-instrument-sans`). Generated images (recap, share cards) use the Young Serif TTF but still Space Grotesk for body text, because Instrument Sans only ships as a variable font and satori cannot read one. The marketing site keeps its own faces. Settings > Artists & brand is three folds (`SettingsGroup`): Your team, Artists, Press kits.
