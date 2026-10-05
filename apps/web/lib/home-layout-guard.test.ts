@@ -54,7 +54,8 @@ describe('Home loading skeleton', () => {
     // query paint different columns for the same width, so the screen jumps
     // the moment data arrives.
     expect(skeleton).toContain('home-scene-container');
-    expect(skeleton).toContain('home-two-col');
+    // The long lists are folded on the real page, so the skeleton no longer
+    // reserves the two-column block; it must also not invent its own columns.
     expect(skeleton).not.toMatch(/sm:grid-cols-2/);
   });
 });
