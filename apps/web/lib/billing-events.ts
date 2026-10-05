@@ -29,6 +29,8 @@ export const BILLING_EVENT_TYPES = [
   'talk_to_us_clicked',
   /** A non-owner asked their admin to activate the plan. */
   'notify_admin_sent',
+  /** An owner asked, from the iPhone app, to be emailed the link to pay on the web. */
+  'pay_link_emailed',
   /** Checkout was initialized (they reached Paystack). */
   'checkout_started',
   /** Payment landed and access was granted. */

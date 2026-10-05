@@ -78,6 +78,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.notifyAdminSubject(p.requesterLabel, p.teamName),
     };
   },
+  pay_link: async () => {
+    const m = await import('./PayLinkEmail');
+    return {
+      element: (p) => createElement(m.PayLinkEmail, p),
+      subject: () => m.payLinkSubject(),
+    };
+  },
   pitch_notice: async () => {
     const m = await import('./PitchNoticeEmail');
     return {

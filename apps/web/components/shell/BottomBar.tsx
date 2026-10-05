@@ -10,10 +10,10 @@ import {
   Handshake,
   Headphones,
   Home,
-  MicVocal,
   MoreHorizontal,
   Spotlight,
   Sparkles,
+  Ticket,
   Wallet2,
   X,
   type LucideProps,
@@ -44,7 +44,7 @@ const TAB_ICON: Record<string, IconComponent> = {
   home: Home,
   catalogue: Disc3,
   urgans: Sparkles,
-  shows: MicVocal,
+  shows: Ticket,
 };
 
 /**

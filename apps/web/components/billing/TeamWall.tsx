@@ -26,9 +26,13 @@ import {
   type TeamAccessClientSnapshot,
 } from '@/lib/team-billing-client';
 import { isPricingV2Enabled } from '@/lib/entitlements';
+import { HelpTip } from '@/components/shared/HelpTip';
 import { TierPlanPicker } from '@/components/billing/TierPlanPicker';
 import { WallUrgansCard } from '@/components/billing/WallUrgansCard';
-import { describeWallSummary, type WallSummaryCounts } from '@/lib/wall-summary';
+import {
+  wallStatTiles,
+  type WallSummaryCounts,
+} from '@/lib/wall-summary';
 
 // The wall (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). Rendered by /locked when the
 // flag is on; the flag-off page is untouched beside it.
@@ -91,17 +95,6 @@ const WALL_TIERS: readonly PricingTierId[] = PRICING_TIER_ORDER.filter(
  *  must stay a member of WALL_TIERS, or the wall opens with nothing selected. */
 const DEFAULT_TIER: PricingTierId = 'solo';
 
-const VALUE_LINES = [
-  // The second line carried "paid once a year" while annual was the only
-  // interval on sale (2026-09-08 to 09-10). Both sell again, and the wall now
-  // shows a toggle, so a line promising one of them would contradict the control
-  // directly above it. The team-not-per-person half is the part that matters and
-  // is unchanged.
-  'Every rollout, task and file exactly where you left it.',
-  'One price for your whole team, not per person.',
-  'Cancel whenever you want, from settings.',
-];
-
 export function TeamWall() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -134,7 +127,11 @@ export function TeamWall() {
   const [changeResult, setChangeResult] = useState<string | null>(null);
   // What is already theirs, in real numbers. Null until the lookup lands or when it
   // fails, and the wall then falls back to the generic reassurance.
-  const [summaryLine, setSummaryLine] = useState<string | null>(null);
+  const [summaryCounts, setSummaryCounts] = useState<WallSummaryCounts | null>(null);
+  // iPhone app: emailing the owner a link to pay on the web.
+  const [linkState, setLinkState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [linkEmail, setLinkEmail] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [notifyState, setNotifyState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [notifyError, setNotifyError] = useState<string | null>(null);
 
@@ -247,7 +244,9 @@ export function TeamWall() {
         });
         if (!response.ok) return;
         const counts = (await response.json()) as WallSummaryCounts;
-        if (!cancelled) setSummaryLine(describeWallSummary(counts));
+        if (!cancelled) {
+          setSummaryCounts(counts);
+        }
       } catch {
         // The generic line already says it.
       }
@@ -424,6 +423,27 @@ export function TeamWall() {
     }
   }, [trackTalkToUs]);
 
+  const handleEmailLink = useCallback(async () => {
+    setLinkError(null);
+    setLinkState('sending');
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Sign in again and retry.');
+      const response = await fetch('/api/billing/email-pay-link', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; email?: string };
+      if (!response.ok) throw new Error(payload.error || 'Could not send that.');
+      setLinkEmail(payload.email ?? null);
+      setLinkState('sent');
+    } catch (error) {
+      setLinkError(errorMessage(error, 'Could not send that.'));
+      setLinkState('error');
+    }
+  }, []);
+
   const handleNotifyAdmin = useCallback(async () => {
     setNotifyError(null);
     setNotifyState('sending');
@@ -482,32 +502,45 @@ export function TeamWall() {
         <Logo />
 
         <header className="flex flex-col gap-3">
-          <h1 className="font-display text-3xl font-semibold text-content-primary">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
             {isUpgradeIntent
-              ? 'Move up a plan.'
+              ? 'Your plan'
               : isReadOnlyTeam
-                ? 'Your plan ended.'
+                ? 'Your plan ended'
                 : team?.state === 'walled'
-                  ? 'Your trial has ended.'
-                  : 'Activate your plan.'}
-          </h1>
-          <p className="max-w-2xl text-base leading-7 text-content-secondary">
-            {isUpgradeIntent ? (
-              // Someone who arrived here from a ceiling already has access, so
-              // the reassurance below would be answering a question they did
-              // not ask.
-              'Pick the plan that fits what your team is doing now. Your rollouts carry over untouched.'
-            ) : isReadOnlyTeam ? (
-              // They can already see everything, so the reassurance is about
-              // what they cannot do rather than what they might have lost.
-              'Your team can still see everything. Pay again to start making changes.'
-            ) : (
-              <>
-                {summaryLine ?? 'Your rollouts, tasks and files are safe and waiting.'}
-                {team?.teamName ? ` Nothing on ${team.teamName} has been removed.` : ''}
-              </>
-            )}
+                  ? 'Your trial has ended'
+                  : 'Your plan'}
           </p>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-3xl leading-tight text-content-primary sm:text-4xl">
+              {isUpgradeIntent
+                ? 'Move up a plan.'
+                : isReadOnlyTeam
+                  ? 'Start making changes again.'
+                  : 'Pick up where you left off.'}
+            </h1>
+            <HelpTip
+              helpKey={isUpgradeIntent ? 'wall.upgrade' : isReadOnlyTeam ? 'wall.readonly' : 'wall.kept'}
+              className="shrink-0"
+            />
+          </div>
+          {!isUpgradeIntent && !isReadOnlyTeam && summaryCounts && wallStatTiles(summaryCounts).length > 0 ? (
+            // Their own work, in real numbers, is the strongest reason to carry
+            // on: people protect what they have already built. Facts only.
+            <ul className="mt-2 grid grid-cols-3 gap-3" aria-label="What is waiting for your team">
+              {wallStatTiles(summaryCounts).map((tile) => (
+                <li
+                  key={tile.label}
+                  className="rounded-2xl border border-stroke-default bg-bg-surface px-3 py-3 text-center"
+                >
+                  <span className="block font-display text-2xl text-content-primary tabular-nums">
+                    {tile.value}
+                  </span>
+                  <span className="block text-xs text-content-tertiary">{tile.label}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </header>
 
         {isOwner ? (
@@ -515,39 +548,53 @@ export function TeamWall() {
             {/* Activate. Annual first and highlighted: it is the better deal
                 and the one most teams should take. */}
             <Card padding="lg" className="flex flex-col gap-5">
-              <div>
+              <div className="flex items-center gap-2">
                 <h2 className="font-display text-lg font-semibold text-content-primary">
                   Pick your plan
                 </h2>
-                <p className="mt-1 text-sm text-content-secondary">
-                  One price covers your whole team.
-                </p>
+                <HelpTip helpKey="wall.plan" />
               </div>
 
               {isIOSNativeApp ? (
-                <div className="flex flex-col gap-4">
-                  <div className="rounded-lg border border-stroke-default bg-bg-elevated p-4 text-sm text-content-secondary">
-                    <p>
-                      Plans are activated on the web. Open{' '}
-                      <button
-                        type="button"
-                        onClick={() => openExternalUrl('https://app.urganize.app/locked')}
-                        className="underline text-content-primary hover:text-brand"
-                      >
-                        app.urganize.app
-                      </button>{' '}
-                      in your browser to finish, then come back here.
-                    </p>
-                  </div>
+                <div className="flex flex-col gap-3">
+                  {/* Apple does not let an app take payment, so the pay step happens
+                      on the web. One tap emails the owner the link, which keeps it a
+                      button and not a set of instructions. */}
                   <Button
-                    variant="secondary"
-                    className="w-full"
-                    onClick={() => {
-                      if (userId) void getTeamAccessClient(userId, { force: true }).then(setTeam);
-                    }}
+                    variant="primary"
+                    className="min-h-14 w-full text-base"
+                    disabled={linkState === 'sending' || linkState === 'sent'}
+                    onClick={handleEmailLink}
                   >
-                    Check again
+                    {linkState === 'sending'
+                      ? 'Sending'
+                      : linkState === 'sent'
+                        ? 'Link sent'
+                        : 'Email me the link'}
                   </Button>
+                  {linkState === 'sent' ? (
+                    <p className="text-center text-sm text-content-secondary">
+                      Sent{linkEmail ? ` to ${linkEmail}` : ''}.
+                    </p>
+                  ) : null}
+                  {linkError ? (
+                    <p role="alert" className="flex items-start gap-2 text-sm text-status-error">
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                      <span>{linkError}</span>
+                    </p>
+                  ) : null}
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      className="motion-focus min-h-11 text-center text-sm font-medium text-content-secondary underline underline-offset-4 hover:text-content-primary"
+                      onClick={() => {
+                        if (userId) void getTeamAccessClient(userId, { force: true }).then(setTeam);
+                      }}
+                    >
+                      I have paid, check again
+                    </button>
+                    <HelpTip helpKey="wall.ios" />
+                  </div>
                 </div>
               ) : (
                 <>
@@ -616,17 +663,6 @@ export function TeamWall() {
                   </div>
                   )}
 
-                  <ul className="flex flex-col gap-2">
-                    {VALUE_LINES.map((line) => (
-                      <li
-                        key={line}
-                        className="flex items-start gap-2 text-sm text-content-secondary"
-                      >
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
-                        <span>{line}</span>
-                      </li>
-                    ))}
-                  </ul>
 
                   {/* HIDDEN rather than disabled when there is nothing to buy.
                       A greyed-out button with no explanation is the pattern this
@@ -646,15 +682,10 @@ export function TeamWall() {
                           ? 'Change your plan'
                           : isReadOnlyTeam
                             ? 'Start your plan again'
-                            : 'Activate your plan'}
+                            : 'Activate and keep going'}
                     </Button>
                   ) : null}
 
-                  {canCheckOut ? (
-                    <p className="-mt-2 text-center text-xs text-content-tertiary">
-                      Secure checkout with Paystack, paid in naira.
-                    </p>
-                  ) : null}
 
                   {checkoutError ? (
                     <p role="alert" className="flex items-start gap-2 text-sm text-status-error">
@@ -676,28 +707,24 @@ export function TeamWall() {
             {/* Talk to us: a quiet second path, not a rival button. One filled action
                 converts best; teams that close over an invoice still find this in one
                 tap, right under the thing they are deciding about. */}
-            <p className="text-center text-sm text-content-secondary">
-              {PRICING_V2
-                ? 'Running a bigger roster, or prefer an invoice?'
-                : 'Prefer an invoice or a walkthrough?'}{' '}
+            <div className="flex flex-wrap items-center justify-center gap-x-4 text-sm">
               <button
                 type="button"
                 onClick={handleWhatsApp}
                 className="motion-focus inline-flex min-h-11 items-center gap-1 font-semibold text-content-primary underline underline-offset-4 hover:text-brand"
               >
                 <MessageCircle className="size-4" aria-hidden="true" />
-                Message us on WhatsApp
-              </button>{' '}
-              or{' '}
+                WhatsApp us
+              </button>
               <button
                 type="button"
                 onClick={handleEmail}
                 className="motion-focus inline-flex min-h-11 items-center font-semibold text-content-primary underline underline-offset-4 hover:text-brand"
               >
-                email us
+                Email us
               </button>
-              .
-            </p>
+              <HelpTip helpKey="wall.talk" />
+            </div>
           </div>
         ) : (
           <Card padding="lg" className="flex max-w-2xl flex-col gap-5">
@@ -747,7 +774,7 @@ export function TeamWall() {
         <p className="text-center text-xs text-content-tertiary">
           {user?.email ? (
             <>
-              Signed in as <span className="text-content-secondary">{user.email}</span>. Not you?{' '}
+              Signed in as <span className="text-content-secondary">{user.email}</span>.{' '}
               {/* This page has no app chrome, so without this a person on the
                   wrong account had no way off it. */}
               <button
@@ -757,15 +784,11 @@ export function TeamWall() {
                 }}
                 className="underline text-content-secondary hover:text-content-primary"
               >
-                Sign out
+                Not you? Sign out
               </button>
-              .{' '}
+              .
             </>
           ) : null}
-          Need a hand?{' '}
-          <a className="underline text-content-secondary" href={`mailto:${SALES_CONTACT_EMAIL}`}>
-            {SALES_CONTACT_EMAIL}
-          </a>
         </p>
       </div>
     </main>

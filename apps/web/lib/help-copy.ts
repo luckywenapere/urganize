@@ -162,6 +162,33 @@ export const HELP_COPY = {
     text: 'Names, shares and how to reach each person, one row each. You can save it as a file.',
   },
 
+  // The billing wall (2026-10-05). Each line used to sit as grey text stacked
+  // under a button; one tap on the icon says the same thing without crowding it.
+  'wall.kept': {
+    label: 'Pick up where you left off',
+    text: 'Everything your team built is still here. Nothing has been removed.',
+  },
+  'wall.readonly': {
+    label: 'Read only',
+    text: 'Your team can still see everything. Pay again to start making changes.',
+  },
+  'wall.upgrade': {
+    label: 'Move up a plan',
+    text: 'Pick the plan that fits what your team does now. Your rollouts carry over untouched.',
+  },
+  'wall.plan': {
+    label: 'Pick your plan',
+    text: 'One price covers your whole team, paid in naira. Cancel any time in settings.',
+  },
+  'wall.ios': {
+    label: 'Why pay on the web',
+    text: 'Apple does not allow payment inside the app. We send you a link to finish on the web.',
+  },
+  'wall.talk': {
+    label: 'Talk to us',
+    text: 'Running a bigger roster, or want an invoice? We set it up by hand.',
+  },
+
   // ------------------------------------------------------ metadata: the fields
   // Nine fields, each of which rendered its explanation as a grey line under
   // the input. Nine lines under nine inputs is the wall this pass removed.

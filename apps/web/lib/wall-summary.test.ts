@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeWallSummary } from './wall-summary';
+import { describeWallSummary, wallStatTiles } from './wall-summary';
 
 describe('describeWallSummary', () => {
   it('names all three with no Oxford comma', () => {
@@ -30,5 +30,15 @@ describe('describeWallSummary', () => {
 
   it('never uses an em dash or the word workspace', () => {
     expect(describeWallSummary({ rollouts: 5, activities: 9, teammates: 2 })).not.toMatch(/—|workspace/i);
+  });
+});
+
+describe('wallStatTiles', () => {
+  it('skips zero and unreadable counts and pluralises', () => {
+    expect(wallStatTiles({ rollouts: 1, activities: 64, teammates: 0 })).toEqual([
+      { value: 1, label: 'rollout' },
+      { value: 64, label: 'activities' },
+    ]);
+    expect(wallStatTiles({ rollouts: null, activities: null, teammates: null })).toEqual([]);
   });
 });

@@ -46,7 +46,7 @@ export {
   Search, Sparkles, Trash2, Upload,
   Users, X,
   // The design pass (2026-10-04): the seven areas, you, credits and notes.
-  Disc3, Handshake, Headphones, Home, Menu, MicVocal,
+  Disc3, Handshake, Headphones, Home, Menu, Ticket,
   NotebookPen, Spotlight, UserCircle, UserCircle2, Wallet2,
 } from './house';
 
