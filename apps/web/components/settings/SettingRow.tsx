@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { InfoTip } from '@/components/shared/HelpTip';
 
 type SettingRowProps = {
   /** Rendered at 16px beside the title — pass a lucide icon already carrying
@@ -37,8 +38,10 @@ export function SettingRow({ icon, title, description, action, error }: SettingR
             {icon}
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-content-primary">{title}</p>
-            <p className="mt-1 max-w-[46ch] text-sm text-content-secondary">{description}</p>
+            <p className="flex items-center gap-2 text-sm font-semibold text-content-primary">
+              {title}
+              <InfoTip label={title} text={description} />
+            </p>
           </div>
         </div>
         {action ? <div className="shrink-0 sm:pt-0.5">{action}</div> : null}

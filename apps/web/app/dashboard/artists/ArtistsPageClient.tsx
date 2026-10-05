@@ -60,7 +60,7 @@ export default function ArtistsPageClient() {
 
   return (
     <div>
-      <PageHeader title="Artists" description="Each artist, with every rollout, show and press kit in one place." />
+      <PageHeader title="Artists" info="Each artist, with every rollout, show and press kit in one place." />
 
       {loading ? (
         <div className="space-y-2" aria-busy="true">

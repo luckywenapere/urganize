@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.73.0",
+    date: "October 5, 2026",
+    highlights: [
+      "Cleaner screens. The small grey lines under titles and buttons now sit behind a tap-for-info icon.",
+      "A new body font, Instrument Sans, and Young Serif now also headlines the calendar and share images.",
+      "Settings is easier to scan. Your team, Artists and Press kits fold open one at a time.",
+    ],
+  },
+  {
     version: "1.72.0",
     date: "October 5, 2026",
     highlights: [

@@ -137,15 +137,15 @@
   --space-12: 48px;
   --space-16: 64px;
 
-  /* --font-space-grotesk / --font-young-serif / --font-space-mono are generated
+  /* --font-instrument-sans / --font-young-serif / --font-space-mono are generated
      by next/font in app/layout.tsx (self-hosted, preloaded). Per the Brand
-     Bible: Space Grotesk is the body/UI workhorse (font-sans), Young Serif is
+     Bible: Instrument Sans is the body/UI workhorse (font-sans), Young Serif is
      the display face used large and with restraint for headlines
      (font-display), Space Mono carries metadata — catalog numbers,
      timestamps, statuses, counts (font-mono). IBM Plex Sans and the old
      font-accent alias were dropped — both had zero consumers once
      font-sans stopped pointing at Plex. */
-  --font-sans: var(--font-space-grotesk), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: var(--font-instrument-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-display: var(--font-young-serif), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: var(--font-space-mono), 'JetBrains Mono', monospace;
 

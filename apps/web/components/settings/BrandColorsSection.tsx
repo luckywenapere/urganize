@@ -74,9 +74,6 @@ export function BrandColorsSection({
             <span className="block font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
               Brand colors
             </span>
-            <span className="mt-1 block text-sm font-normal normal-case tracking-normal text-content-secondary">
-              Colors for each artist&apos;s share images.
-            </span>
           </span>
           <ChevronDown
             className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${open ? 'rotate-180' : ''}`}
@@ -85,10 +82,6 @@ export function BrandColorsSection({
         </button>
       </h2>
       <div id={bodyId} hidden={!open} className="mt-4">
-      <p className="mb-4 text-sm text-content-secondary">
-        The text turns light or dark by itself, so it stays easy to read.
-      </p>
-
       {isLoading && artists === undefined ? (
         <div className="space-y-2">
           <SkeletonBlock className="h-32 w-full rounded-xl" />

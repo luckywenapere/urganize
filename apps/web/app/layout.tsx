@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { Space_Grotesk, Young_Serif, Space_Mono } from 'next/font/google';
+import { Instrument_Sans, Young_Serif, Space_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
 import { CursorRefresher } from '@/components/app/CursorRefresher';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
@@ -8,15 +8,15 @@ import { CANONICAL_DESCRIPTION } from '@/lib/positioning';
 import './globals.css';
 
 // Self-hosted via next/font (preloaded, no third-party request chain). Per
-// the Urganize Brand Bible (URG 001): Space Grotesk is the body/UI workhorse
+// the Urganize Brand Bible (URG 001): Instrument Sans is the body/UI workhorse (swapped from Space Grotesk 2026-10-05, founder call: Space Grotesk had become the stock "designed" grotesque)
 // (--font-sans), Young Serif is the display face used large and with restraint
 // for headlines (--font-display), Space Mono carries the "catalog" metadata
 // voice — dates, statuses, counts, IDs (--font-mono). IBM Plex Sans is
 // retired; globals.css binds all three variables below.
-const spaceGrotesk = Space_Grotesk({
+const instrumentSans = Instrument_Sans({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-space-grotesk',
+  variable: '--font-instrument-sans',
 });
 const youngSerif = Young_Serif({
   subsets: ['latin'],
@@ -128,7 +128,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       suppressHydrationWarning
       data-theme="dark"
-      className={`dark ${TEXTILE_ENABLED ? 'urg-textile ' : ''}${spaceGrotesk.variable} ${youngSerif.variable} ${spaceMono.variable}`}
+      className={`dark ${TEXTILE_ENABLED ? 'urg-textile ' : ''}${instrumentSans.variable} ${youngSerif.variable} ${spaceMono.variable}`}
     >
       <head>
         <script

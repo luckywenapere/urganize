@@ -324,7 +324,7 @@ export default function ShowsPageClient() {
     <div>
       <PageHeader
         title="Shows"
-        description="Every date, its running order and the tracks the DJ needs."
+        info="Every date, its running order and the tracks the DJ needs."
         action={!isLoading && events.length > 0 ? bookButton : null}
       />
 

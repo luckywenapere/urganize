@@ -64,14 +64,20 @@ import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
  * (z-[170]+) that Escape and the scroll lock belong to. */
 const PANEL_Z = 'z-[150]';
 
+/** A pullout's words: either a key into HELP_COPY (held to the fifth-grader
+ * guard) or free text for the many one-off lines that used to sit as grey
+ * paragraphs under a heading (InfoTip). */
+type TipWords = { helpKey: HelpKey; text?: never; label?: never } | { helpKey?: never; text: string; label: string };
+
 export function HelpTipPanel({
   helpKey,
+  text: freeText,
+  label: _freeLabel,
   anchor,
   prefer = 'bottom',
   id,
   onDismiss,
-}: {
-  helpKey: HelpKey;
+}: TipWords & {
   /** The element to point at. `null` closes the panel — callers hold the open
    * state, which is what lets one panel serve a whole list of rows. */
   anchor: HTMLElement | null;
@@ -83,7 +89,7 @@ export function HelpTipPanel({
    * nothing to restore focus to. */
   onDismiss?: () => void;
 }) {
-  const { text } = HELP_COPY[helpKey];
+  const text = helpKey ? HELP_COPY[helpKey].text : (freeText as string);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [placed, setPlaced] = useState<PlacedHelpTip | null>(null);
 
@@ -156,14 +162,15 @@ export function HelpTipPanel({
 
 export function HelpTip({
   helpKey,
+  text,
+  label: freeLabel,
   prefer = 'bottom',
   className = '',
-}: {
-  helpKey: HelpKey;
+}: TipWords & {
   prefer?: 'right' | 'bottom';
   className?: string;
 }) {
-  const { label } = HELP_COPY[helpKey];
+  const label = helpKey ? HELP_COPY[helpKey].label : (freeLabel as string);
   const panelId = useId();
   // The trigger element lives in STATE, not a ref, and that is not a style
   // preference: the panel needs it as a prop, and reading `ref.current` during
@@ -236,7 +243,7 @@ export function HelpTip({
         <Info className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <HelpTipPanel
-        helpKey={helpKey}
+        {...(helpKey ? { helpKey } : { text: text as string, label: label })}
         anchor={open ? trigger : null}
         prefer={prefer}
         id={panelId}
@@ -244,4 +251,22 @@ export function HelpTip({
       />
     </>
   );
+}
+
+/**
+ * The same pullout for a line of free text. Used where a heading used to carry a
+ * grey sentence under it (2026-10-05, founder call: no helper lines stacked under
+ * titles and buttons). Prefer HelpTip with a key when the words are worth the
+ * fifth-grader guard; use this for the many one-off section intros.
+ */
+export function InfoTip({
+  label,
+  text,
+  className = '',
+}: {
+  label: string;
+  text: string;
+  className?: string;
+}) {
+  return <HelpTip label={label} text={text} className={className} />;
 }

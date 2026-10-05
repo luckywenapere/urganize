@@ -2,6 +2,7 @@
 
 import { useReportIssueStore } from '@/stores/useReportIssueStore';
 import { panelClass } from './panelClass';
+import { InfoTip } from '@/components/shared/HelpTip';
 
 const REPORT_ISSUE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_REPORT_ISSUE === 'true';
 
@@ -26,13 +27,10 @@ export function ReportIssueSection() {
 
   return (
     <section className={panelClass}>
-      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+      <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary flex items-center gap-2">
         Report an issue
+        <InfoTip label="Report an issue" text="Something broken, or something you wish Urganize did? Tell us here and it goes straight to the people building it." />
       </h2>
-      <p className="mb-4 text-sm text-content-secondary">
-        Something broken, or something you wish Urganize did? Tell us here and it goes straight to
-        the people building it.
-      </p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

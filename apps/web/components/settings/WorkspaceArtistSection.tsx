@@ -154,19 +154,15 @@ export function WorkspaceArtistSection({
 
   return (
     <section id="artists" className={`${panelClass} scroll-mt-4`}>
-      <h2 className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+      <h2 className="mb-5 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         Artists
+        <HelpTip helpKey="settings.artists" />
       </h2>
       {/* States its scope explicitly (2026-08-13): the sibling editor under
           Account edits the signed-in user's own profile name. Both used to say
           just "Artist name" with the same placeholder. */}
       {/* Three sentences until 2026-09-08. The two consequences of editing
           here moved into the pullout; what the list IS stays visible. */}
-      <p className="mb-4 text-sm text-content-secondary">
-        The artists this team works on.{' '}
-        <HelpTip helpKey="settings.artists" className="align-text-bottom" />
-      </p>
-
       {isLoading && artists === undefined ? (
         <div className="space-y-2">
           <SkeletonBlock className="h-10 w-full rounded-lg" />
