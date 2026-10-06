@@ -1,4 +1,4 @@
-// Read-aloud for UrgAns replies (NEXT_PUBLIC_FEATURE_URGANS_SPEAK).
+// Read-aloud for UrgAns replies.
 //
 // Uses the browser's own speech synthesis: no vendor, no server route, no cost
 // per reply, and nothing leaves the device (the founder's "RodiumAi or nothing"
@@ -17,10 +17,6 @@ export const MAX_SPEECH_CHUNK = 180;
 /** A reply longer than this is not read aloud at all: it would run for minutes
  * and the person can read it faster. Matches the model's own output ceiling. */
 export const MAX_SPEECH_CHARS = 6000;
-
-export function isSpeechEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_FEATURE_URGANS_SPEAK === 'true';
-}
 
 /** Plain text for the voice: markup removed, URLs reduced to "link", line
  * breaks turned into pauses, whitespace collapsed. */

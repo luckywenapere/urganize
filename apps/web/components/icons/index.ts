@@ -81,6 +81,6 @@ export {
   Share2, ShieldCheck, Slash, Smartphone,
   Smile, Square, ThumbsDown, ThumbsUp, TrendingUp,
   Undo2, UserPlus,
-  // Read-aloud on UrgAns replies (NEXT_PUBLIC_FEATURE_URGANS_SPEAK).
+  // Read-aloud on UrgAns replies.
   Volume2,
 } from 'lucide-react';
