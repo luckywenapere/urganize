@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.75.0",
+    date: "October 6, 2026",
+    highlights: [
+      "UrgAns can now read its replies out loud. Tap the speaker under any reply to listen.",
+    ],
+  },
+  {
     version: "1.74.0",
     date: "October 6, 2026",
     highlights: [
