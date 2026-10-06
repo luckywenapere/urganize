@@ -22,6 +22,7 @@ import { getChappiTool, getChappiToolSchemas } from './tools';
 import type { ChappiTool, ChappiToolContext } from './tools';
 import { executeToolCall } from './dispatch';
 import { stripModelMarkup } from '@/lib/model-markup';
+import { buildUserModelContent, type ModelUserPart } from '@/lib/urgans-attachments';
 import { GatewayError, classifyAiFailure, gatewayErrorFromResponse } from '@/lib/ai/gateway-error';
 import { usesMaxCompletionTokens } from '@/lib/ai/model-ladder';
 import { SseReader, StreamAccumulator, type StreamSummary } from '@/lib/ai/sse-stream';
@@ -85,7 +86,9 @@ type OpenAiToolCall = {
 };
 
 export type OpenAiChatMessage =
-  | { role: 'system' | 'user' | 'assistant'; content: string }
+  | { role: 'system' | 'assistant'; content: string }
+  // A user turn is a string unless it carries a photo, then a list of parts.
+  | { role: 'user'; content: string | ModelUserPart[] }
   | { role: 'assistant'; content: string | null; tool_calls: OpenAiToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string };
 
@@ -102,13 +105,21 @@ export type OpenAiChatMessage =
  * checking blankness on the raw text first would have kept it.
  */
 export function toModelHistory(messages: ChappiMessage[]): OpenAiChatMessage[] {
-  return messages
-    .map((m) => ({
-      role: m.role,
-      content: m.role === 'assistant' ? stripModelMarkup(m.content) : m.content,
-    }))
-    .filter((m) => m.content.trim())
-    .map((m) => ({ role: m.role, content: m.content }) as OpenAiChatMessage);
+  const out: OpenAiChatMessage[] = [];
+  for (const m of messages) {
+    if (m.role === 'assistant') {
+      const content = stripModelMarkup(m.content);
+      if (content.trim()) out.push({ role: 'assistant', content });
+      continue;
+    }
+    // A user turn may carry a photo or a text file (lib/urgans-attachments.ts).
+    // With none, this is the string it always was.
+    const content = buildUserModelContent(m.content, m.attachments);
+    if (typeof content === 'string' ? content.trim() : content.length > 0) {
+      out.push({ role: 'user', content });
+    }
+  }
+  return out;
 }
 
 type OpenAiChoice = {
