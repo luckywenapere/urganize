@@ -140,24 +140,24 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
         }
       : {
           key: 'note',
-          label: 'Notes',
+          label: 'Jot a note',
           target: { kind: 'link', href: `/dashboard/notes?release=${id}` },
         };
 
   const entries: (RolloutMenuEntry | null)[] = [
-    flags.timeline ? scene('activities', 'Activities') : null,
-    flags.releaseChat ? scene('chat', 'Chat') : null,
-    flags.contentCalendar ? scene('calendar', 'Content') : null,
-    flags.pitching ? scene('pitch', 'Pitch') : null,
-    flags.pitchKit ? scene('pitchkit', 'Pitch kit') : null,
-    flags.metadata ? scene('metadata', 'Metadata') : null,
-    flags.distribution ? scene('distribute', 'Distribute') : null,
+    flags.timeline ? scene('activities', 'Work the plan') : null,
+    flags.releaseChat ? scene('chat', 'Talk to the team') : null,
+    flags.contentCalendar ? scene('calendar', 'Plan content') : null,
+    flags.pitching ? scene('pitch', 'Pitch this!') : null,
+    flags.pitchKit ? scene('pitchkit', 'Build your pitch kit') : null,
+    flags.metadata ? scene('metadata', 'Fill in details') : null,
+    flags.distribution ? scene('distribute', 'Distribute now') : null,
     flags.notes ? note : null,
-    flags.coverArt ? scene('coverart', 'Cover art') : null,
-    flags.songUpload ? scene('song', 'Song') : null,
-    flags.files ? scene('files', 'Files') : null,
+    flags.coverArt ? scene('coverart', 'Add cover art') : null,
+    flags.songUpload ? scene('song', 'Upload the song') : null,
+    flags.files ? scene('files', 'Add files') : null,
     input.share ? dialog('share', input.share) : null,
-    flags.capture ? scene('capture', 'Fan capture') : null,
+    flags.capture ? scene('capture', 'Collect fan emails') : null,
     input.changeArtist ? dialog('change-artist', input.changeArtist) : null,
     input.archive ? dialog('archive', input.archive) : null,
   ];

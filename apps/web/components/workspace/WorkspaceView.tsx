@@ -787,7 +787,7 @@ export function WorkspaceView() {
   const shareAction =
     SOCIAL_SHARE_ENABLED && scopedReleaseId
       ? {
-          label: 'Share',
+          label: 'Share to socials',
           onClick: () =>
             useShareStore.getState().open({ releaseId: scopedReleaseId, source: 'rollout_menu' }),
         }
