@@ -121,9 +121,10 @@ export function ManagerMidReleaseView({
       {yourTasks.late.length === 0 ? (
         <ChappiSpeaksCard line={pickChappiSpeaks({ releases })} />
       ) : null}
-      <HomeAskBar />
       <OnboardingBar progress={buildOnboardingProgress(live.releases)} />
       <BriefCard />
+      {/* Right above the fold button: the one thing to do, then a place to ask. */}
+      <HomeAskBar />
       {/* The long lists stay folded so Home opens on one thing to do, not a wall
           of sections. Nothing is removed: one tap shows all of it. */}
       <button
