@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.74.0",
+    date: "October 6, 2026",
+    highlights: [
+      "On Home, the ask bar now sits right above \"See everything\" and is easier to spot.",
+      "The round UrgAns button no longer shows on Home, since the ask bar does the same job.",
+    ],
+  },
+  {
     version: "1.73.0",
     date: "October 5, 2026",
     highlights: [

@@ -43,7 +43,8 @@ export function FloatingUrgAns() {
   const [everOpened, setEverOpened] = useState(false);
   if (open && !everOpened) setEverOpened(true);
 
-  if (pathname === '/dashboard/urgans') return null;
+  // Home has its own ask bar, so the button would be a second door to the same room.
+  if (pathname === '/dashboard/urgans' || pathname === '/dashboard/home') return null;
 
   return (
     <div className="hidden lg:block">
