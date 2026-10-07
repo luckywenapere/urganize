@@ -44,9 +44,13 @@ export function ChappiPageSkeleton() {
   const resumableMessages = useKnownResumableChat();
   const shellClass = `${MOBILE_NAV_ENABLED ? 'chappi-shell-height-nav' : 'chappi-shell-height'} flex flex-col`;
 
-  // The desktop side panel (priority task card plus counts), reserved at lg+.
+  // The desktop Today panel (a close row, the priority task card, then counts),
+  // reserved at lg+. Open by default (DEFAULT_CHAT_SIDE), so it is reserved too.
   const sidePanel = (
     <div className="hidden w-80 shrink-0 space-y-3 lg:block">
+      <div className="flex justify-end">
+        <SkeletonBlock className="h-7 w-7 rounded-full" />
+      </div>
       <SkeletonBlock className="h-40 w-full rounded-2xl" />
       <div className="flex gap-2">
         <SkeletonBlock className="h-8 w-20 rounded-full" />
@@ -81,8 +85,9 @@ export function ChappiPageSkeleton() {
   if (!HISTORY_ENABLED) {
     return (
       <div className={shellClass} aria-hidden="true">
-        <div className="flex h-7 shrink-0 items-center justify-end">
-          <SkeletonBlock className="mr-auto h-6 w-16 rounded-full" />
+        <div className="flex shrink-0 items-center justify-end">
+          <SkeletonBlock className="mr-auto h-9 w-20 rounded-full" />
+          <SkeletonBlock className="mr-2 hidden h-7 w-16 rounded-full lg:block" />
           <SkeletonBlock className="hidden h-7 w-7 lg:block" />
         </div>
         <div className="flex min-h-0 flex-1 gap-6">
@@ -122,12 +127,13 @@ export function ChappiPageSkeleton() {
 
   return (
     <div className={shellClass} aria-hidden="true">
-      <div className="flex h-7 shrink-0 items-center justify-end gap-2">
-        <SkeletonBlock className="h-6 w-16 rounded-full" />
-        <SkeletonBlock
-          className="h-6 w-16 rounded-full"
-        />
-        <span className="flex-1" />
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        {/* Home link on the left, then Today and Chats (lg+), the phone's own
+            Chats toggle, and the collapse button, as ChappiPageClient. */}
+        <SkeletonBlock className="mr-auto h-9 w-20 rounded-full" />
+        <SkeletonBlock className="hidden h-7 w-16 rounded-full lg:block" />
+        <SkeletonBlock className="hidden h-7 w-16 rounded-full lg:block" />
+        <SkeletonBlock className="h-7 w-16 rounded-full lg:hidden" />
         <SkeletonBlock className="hidden h-7 w-7 lg:block" />
       </div>
       <div className="min-h-0 flex-1">
