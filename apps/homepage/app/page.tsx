@@ -6,6 +6,7 @@ import {
   LANDING_TITLE,
 } from "@/lib/seo";
 import {
+  AffiliationsSection,
   FaqSection,
   FeatureGridSection,
   FinalCTASection,
@@ -72,6 +73,8 @@ export default function Home() {
               2026-08-25 five-beat page (hero + video, stats, screenshot,
               three features, final form) is in git history under that date. */}
           <HeroSection />
+          {/* Affiliations strip directly under the hero (2026-10-07, founder call). */}
+          <AffiliationsSection />
           <StorySection />
           <ProofSection />
           <FeatureGridSection />
