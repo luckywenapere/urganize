@@ -279,9 +279,24 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // keyboard from whatever the person is doing there. The field is 16px below
   // sm, so focusing it never zooms iOS. A mobile browser may still refuse a
   // keyboard that no tap asked for; the Urganize app allows it.
+  // The box often is not there on the first frame (the page shows a skeleton
+  // until auth and the saved chat resolve, and the input can be disabled for a
+  // moment), so a single focus on mount silently did nothing on a phone. Retry
+  // for about two seconds until the field actually holds focus.
   useEffect(() => {
     if (variant !== 'page') return;
-    inputRef.current?.focus({ preventScroll: true });
+    let tries = 0;
+    let timer: number | undefined;
+    const tick = () => {
+      const el = inputRef.current;
+      if (el && !el.disabled) {
+        el.focus({ preventScroll: true });
+        if (document.activeElement === el) return;
+      }
+      if (++tries < 40) timer = window.setTimeout(tick, 50);
+    };
+    tick();
+    return () => window.clearTimeout(timer);
   }, [variant]);
 
   // Voice input (NEXT_PUBLIC_FEATURE_URGANS_VOICE). The transcript is MERGED
