@@ -1,5 +1,6 @@
 'use client';
 
+import { PullReveal } from '@/components/shared/PullReveal';
 import { useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import Image from 'next/image';
 import { ChevronDown, Plus, Search, X } from '@/components/icons';
@@ -242,7 +243,8 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
         action={addButton}
       />
 
-      <div className="rounded-2xl border border-stroke-default bg-bg-surface p-3 sm:p-4">
+      <PullReveal filtering={Boolean(query.trim()) || status !== 'all'}>
+      <div className="mb-4 rounded-2xl border border-stroke-default bg-bg-surface p-3 sm:mb-0 sm:p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <label className="relative w-full sm:min-w-[200px] sm:max-w-xs sm:flex-1">
             <span className="sr-only">Search rollouts</span>
@@ -324,6 +326,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
           </div>
         </div>
       </div>
+      </PullReveal>
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
         <p className="px-5 py-4 text-sm text-content-secondary" aria-live="polite">

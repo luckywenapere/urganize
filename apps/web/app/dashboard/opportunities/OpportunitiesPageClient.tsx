@@ -1,5 +1,6 @@
 'use client';
 
+import { PullReveal } from '@/components/shared/PullReveal';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Pencil, Trash2, X } from '@/components/icons';
 import { PageHeader } from '@/components/shell/PageHeader';
@@ -394,6 +395,7 @@ export default function OpportunitiesPageClient() {
               </>
             ) : null}
           </p>
+          <PullReveal filtering={Boolean(query.trim()) || state !== 'open' || Boolean(kind) || Boolean(artistId)}>
           <div className="mb-4 space-y-3">
             <input
               className={FIELD}
@@ -450,6 +452,7 @@ export default function OpportunitiesPageClient() {
               ) : null}
             </div>
           </div>
+          </PullReveal>
         </>
       ) : null}
 

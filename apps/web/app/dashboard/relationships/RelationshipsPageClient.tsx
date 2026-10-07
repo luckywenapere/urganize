@@ -1,5 +1,6 @@
 'use client';
 
+import { PullReveal } from '@/components/shared/PullReveal';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Handshake, X } from '@/components/icons';
@@ -278,6 +279,7 @@ export default function RelationshipsPageClient() {
       ) : null}
 
       {relationships.length > 0 ? (
+        <PullReveal filtering={filtering}>
         <div className="mb-4 space-y-3">
           <input
             className={FIELD}
@@ -333,6 +335,7 @@ export default function RelationshipsPageClient() {
             </button>
           </div>
         </div>
+        </PullReveal>
       ) : null}
 
       {loading ? (

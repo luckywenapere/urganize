@@ -1,5 +1,6 @@
 'use client';
 
+import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -87,7 +88,7 @@ export function TopNav({ userName }: { userName?: string }) {
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:ml-0">
           <button
             type="button"
-            onClick={openCommand}
+            onClick={() => (hasPullReveal() ? revealListSearch() : openCommand())}
             data-tour="shell-search"
             aria-label="Search or ask UrgAns"
             className="motion-focus motion-press inline-flex h-10 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface/70 px-2.5 text-sm text-content-secondary hover:text-content-primary sm:px-3"
