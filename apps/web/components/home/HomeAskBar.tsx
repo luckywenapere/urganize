@@ -1,24 +1,58 @@
 'use client';
 
-import { Search, Sparkles } from '@/components/icons';
-import { useShellStore } from '@/stores/useShellStore';
+import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { Send, Sparkles } from '@/components/icons';
+import { useChappiStore } from '@/stores/useChappiStore';
 
 /**
- * The "Search or ask UrgAns" bar on Home, just above the fold button. It stands in for the floating UrgAns button, which is hidden on Home. It looks like a search box
- * and opens the same palette as Ctrl or Command K, so there is one place to find
- * a rollout or hand a question to UrgAns.
+ * A real chat box on Home, just above the fold button. Search lives in the top
+ * bar, so this one only talks to UrgAns: send a message and the conversation
+ * opens (the drawer on a desktop, the full page on a phone) with that message
+ * already sent. It stands in for the floating UrgAns button, which is hidden on
+ * Home.
  */
 export function HomeAskBar() {
-  const openCommand = useShellStore((state) => state.openCommand);
+  const router = useRouter();
+  const setInput = useChappiStore((state) => state.setInput);
+  const setSendInputOnOpen = useChappiStore((state) => state.setSendInputOnOpen);
+  const setRailOpen = useChappiStore((state) => state.setRailOpen);
+  const [text, setText] = useState('');
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setInput(trimmed);
+    setSendInputOnOpen(true);
+    setText('');
+    if (window.matchMedia('(min-width: 1024px)').matches) setRailOpen(true);
+    else router.push('/dashboard/urgans');
+  };
+
   return (
-    <button
-      type="button"
-      onClick={openCommand}
-      className="motion-focus flex h-16 w-full items-center gap-3 rounded-full border border-stroke-control bg-bg-surface px-5 text-left text-base text-content-secondary hover:border-content-secondary"
+    <form
+      onSubmit={handleSubmit}
+      className="flex h-16 w-full items-center gap-3 rounded-full border border-stroke-control bg-bg-surface pl-5 pr-2 focus-within:border-content-secondary"
     >
-      <Search className="h-5 w-5 shrink-0 text-content-tertiary" aria-hidden="true" />
-      <span className="min-w-0 flex-1 truncate">Search or ask UrgAns</span>
       <Sparkles className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
-    </button>
+      <input
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder="Ask UrgAns anything"
+        aria-label="Message UrgAns"
+        enterKeyHint="send"
+        autoComplete="off"
+        className="min-w-0 flex-1 bg-transparent text-base text-content-primary placeholder:text-content-tertiary focus:outline-none"
+      />
+      <button
+        type="submit"
+        disabled={!text.trim()}
+        aria-label="Send to UrgAns"
+        className="motion-focus grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand text-content-inverse disabled:opacity-40"
+      >
+        <Send className="h-5 w-5" aria-hidden="true" />
+      </button>
+    </form>
   );
 }

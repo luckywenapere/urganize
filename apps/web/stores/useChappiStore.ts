@@ -86,6 +86,10 @@ type ChappiStore = {
    * screen", so a late reply can never land in a different chat or, after a
    * same-tab sign-out, in a different account's. */
   epoch: number;
+  /** Set by a box outside the chat (Home's) that wants its text sent as soon
+   * as a conversation is on screen. The conversation clears it when it sends. */
+  sendInputOnOpen: boolean;
+  setSendInputOnOpen: (value: boolean) => void;
   setInput: (value: string) => void;
   setReply: (reply: ChappiReply | null) => void;
   setPendingConfirmation: (pending: ChappiPendingConfirmation | null) => void;
@@ -136,6 +140,8 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   railWidth: DEFAULT_RAIL_WIDTH,
   pendingConfirmation: null,
   epoch: 0,
+  sendInputOnOpen: false,
+  setSendInputOnOpen: (value) => set({ sendInputOnOpen: value }),
   setInput: (value) => set({ input: value }),
   setReply: (reply) => set({ reply }),
   setPendingConfirmation: (pending) => set({ pendingConfirmation: pending }),
