@@ -3,59 +3,42 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Home's columns must be allowed to shrink below their content.
- *
- * A grid track written `1fr` is `minmax(auto, 1fr)`: the column's floor is the
- * widest thing inside it. Every row on Home is a flex row holding a `truncate`
- * (nowrap) title, and nowrap text contributes its FULL width to that floor, so
- * the one-column phone layout grew to fit the longest task title (measured: a
- * card 504px wide in a 361px space) and the page clipped everything past the
- * right edge. `minmax(0, 1fr)` makes the floor zero, so the column is exactly
- * the width it is given and `truncate` does its job.
- *
- * Reading the stylesheet is the only way to hold this: vitest has no layout
- * engine, and nothing type-checks a CSS value.
+ * Home's layout (2026-10-07). Reading the files is the only way to hold these:
+ * vitest has no layout engine, and nothing type-checks a CSS value.
  */
 
 const WEB = join(__dirname, '..');
-const css = readFileSync(join(WEB, 'app', 'globals.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-const skeleton = readFileSync(join(WEB, 'components', 'loading', 'HomeSkeleton.tsx'), 'utf8');
+const read = (...parts: string[]) => readFileSync(join(WEB, ...parts), 'utf8');
+const css = read('app', 'globals.css').replace(/\/\*[\s\S]*?\*\//g, '');
+const skeleton = read('components', 'loading', 'HomeSkeleton.tsx');
+const split = read('components', 'home', 'HomeDesktopSplit.tsx');
 
-/** Every `grid-template-columns` value declared inside a `.home-two-col` rule. */
-function homeColumnTemplates(): string[] {
-  const values: string[] = [];
-  const rule = /\.home-two-col\s*\{([^}]*)\}/g;
-  let match: RegExpExecArray | null;
-  while ((match = rule.exec(css))) {
-    const value = /grid-template-columns:\s*([^;]+);/.exec(match[1]);
-    if (value) values.push(value[1].trim());
-  }
-  return values;
-}
-
-describe('Home column tracks', () => {
-  it('declares the one-column, two-column and no-container-query layouts', () => {
-    expect(homeColumnTemplates()).toHaveLength(3);
+describe('Home layout', () => {
+  it('has no two-column grid any more: every group is a single-column stack', () => {
+    expect(css).not.toContain('.home-two-col');
   });
 
-  it('never uses a bare 1fr, which would let a long title stretch the page', () => {
-    for (const template of homeColumnTemplates()) {
-      const tracks = template.split(/\s+(?![^(]*\))/);
-      for (const track of tracks) {
-        expect(track, `"${template}"`).toMatch(/^minmax\(0,\s*1fr\)$/);
-      }
-    }
+  it('lets the conversation side shrink below its content', () => {
+    // A flex child's floor is its widest content unless min-width is zero, so a
+    // long line in the transcript would push the page sideways.
+    expect(split).toMatch(/min-w-0 flex-1/);
+  });
+
+  it('locks the desktop split to the screen', () => {
+    expect(css).toMatch(/\.home-split-height\s*\{[^}]*height:/);
+    expect(split).toContain('home-split-height');
   });
 });
 
 describe('Home loading skeleton', () => {
-  it('uses the same container and column classes as the real layout', () => {
-    // A skeleton on the viewport `sm:` breakpoint and a page on a container
-    // query paint different columns for the same width, so the screen jumps
-    // the moment data arrives.
+  it('has both shapes, switched by CSS so the server markup is right at every width', () => {
     expect(skeleton).toContain('home-scene-container');
-    // The long lists are folded on the real page, so the skeleton no longer
-    // reserves the two-column block; it must also not invent its own columns.
+    expect(skeleton).toContain('home-split-height');
+    expect(skeleton).toContain('lg:hidden');
+    expect(skeleton).toMatch(/hidden[^"'`]*lg:flex/);
+  });
+
+  it('does not invent viewport columns the page does not have', () => {
     expect(skeleton).not.toMatch(/sm:grid-cols-2/);
   });
 });

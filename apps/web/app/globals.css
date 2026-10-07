@@ -461,38 +461,13 @@ html[data-theme='light'] .cc-island {
   }
 }
 
-/* Home tab (built flag-off, NEXT_PUBLIC_FEATURE_HOME). Same container-query
-   mechanism as the calendar and timeline below, for the same reason: the
-   UrgAns rail and the identity card narrow Home's own content column without
-   narrowing the viewport, so a 1280px window with both open can still leave
-   Home under 45rem of real width — a `lg:` gate would wrongly promise two
-   columns there. Two columns only when the CONTAINER actually has the room. */
+/* Home tab. `.home-scene-container` is the column Home's blocks sit in; the
+   Home -> chat fade (lib/home-chat-glide.ts, near the end of this file) hangs
+   off it. Since 2026-10-07 every group on Home is a single-column stack
+   (components/home/HomeStack.tsx), so the two-column grid that used to live
+   here is gone. */
 .home-scene-container {
   container-type: inline-size;
-}
-/* `minmax(0, 1fr)`, never a bare `1fr`: `1fr` is `minmax(auto, 1fr)`, so the
-   column's floor is its widest content. Every Home row holds a nowrap
-   `truncate` title, which contributes its full width to that floor, so on a
-   phone the single column grew to the longest task title (a card 504px wide in
-   a 361px space) and the page clipped the right edge. A zero floor makes the
-   column exactly the width it is given and lets `truncate` do its job.
-   lib/home-layout-guard.test.ts holds this. */
-.home-two-col {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1.25rem;
-}
-@container (min-width: 48rem) {
-  .home-two-col {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-}
-@supports not (container-type: inline-size) {
-  @media (min-width: 1024px) {
-    .home-two-col {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    }
-  }
 }
 
 /* Timeline scene (2026-08-30). Same container-query mechanism as the calendar
@@ -2642,6 +2617,79 @@ body:focus-within .keyboard-hint,
 @media (max-width: 1023px) {
   .mobile-nav-raise {
     bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Install and push prompts: the same lift as .mobile-nav-raise, for cards that
+   sat at a hand-written bottom-[calc(5rem+...)] before (2026-10-07). */
+@media (max-width: 1023px) {
+  .mobile-nav-raise-card {
+    bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ── Home's pinned UrgAns box (2026-10-07, founder call) ──────────────────
+   On a phone the UrgAns box is pinned to the bottom of Home, just above the
+   floating bottom bar, and everything else scrolls above it
+   (components/home/HomeAskBar.tsx). It is portalled to <body>: .app-layout
+   carries a transform (lazy-fade-in), and a transform makes it the anchor of
+   any fixed element inside it, so the box would sit at the end of the page
+   instead of the bottom of the screen.
+
+   Bar geometry (BottomBar.tsx): 0.75rem off the bottom edge, 3.5rem tall, so
+   its top is at 4.25rem; the box sits 0.5rem above that. The box publishes
+   its own height as --home-dock-height (and data-home-dock on <html>) while
+   it is mounted, so the page and the toasts can clear it. */
+.home-dock {
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Home's <main>: room for the bar, the box and some air below the last card. */
+.home-main-padding {
+  padding-bottom: calc(5.75rem + var(--home-dock-height, 3.5rem) + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 1023px) {
+  /* Typing: the box rides on top of the keyboard. --app-keyboard-inset is how
+     far a fixed box has to lift to clear it (KeyboardViewportBridge): about 0
+     on Android, where the screen itself shrinks, and the keyboard's height on
+     iOS, where the keyboard covers the screen instead. */
+  :root[data-keyboard-open='true'] .home-dock {
+    bottom: calc(0.5rem + var(--app-keyboard-inset, 0px));
+  }
+
+  /* The bottom bar steps aside while anyone types, on every page. iOS already
+     hides it behind the keyboard; on Android the screen shrinks and the bar
+     would otherwise sit between the keyboard and the field being typed in
+     (the Home box, and the full chat's composer). */
+  :root[data-keyboard-open='true'] .mobile-nav-bar {
+    display: none;
+  }
+
+  /* Toasts and prompts sit above the box while it is on screen. */
+  :root[data-home-dock] .mobile-nav-raise,
+  :root[data-home-dock] .mobile-nav-raise-card {
+    bottom: calc(5.25rem + var(--home-dock-height, 3.5rem) + env(safe-area-inset-bottom, 0px));
+  }
+  :root[data-home-dock][data-keyboard-open='true'] .mobile-nav-raise,
+  :root[data-home-dock][data-keyboard-open='true'] .mobile-nav-raise-card {
+    bottom: calc(1rem + var(--home-dock-height, 3.5rem) + var(--app-keyboard-inset, 0px));
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-main-padding {
+    padding-bottom: 2.5rem;
+  }
+
+  /* Desktop Home is the chat (components/home/HomeDesktopSplit.tsx): the Home
+     column and the conversation side by side, locked to the screen so the
+     page never scrolls. Each column scrolls on its own and the composer stays
+     at the bottom. The top bar is 72px and <main> keeps 2.5rem of padding
+     below, so the split gets the rest. Shared with HomeSkeleton. */
+  .home-split-height {
+    height: calc(100dvh - 72px - 2.5rem);
+    min-height: 24rem;
   }
 }
 

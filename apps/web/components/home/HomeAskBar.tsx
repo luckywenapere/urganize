@@ -1,20 +1,20 @@
 'use client';
 
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   GLIDE_MS,
   LEAVING_CLASS,
-  SOURCE_ATTRIBUTE,
   composerBottomGap,
   glideOffset,
   markArrivingFromHome,
   prefersReducedMotion,
 } from '@/lib/home-chat-glide';
+import { COMPOSER_FOCUS_EVENT } from '@/lib/composer-focus';
 import { ArrowUp, Loader2, Mic } from '@/components/icons';
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray } from '@/components/chappi/ChappiAttachments';
-import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { useAttachments } from '@/components/chappi/useAttachments';
 import { useVoiceInput } from '@/components/chappi/useVoiceInput';
 import { isUrgansVoiceEnabled } from '@/lib/chappi/config';
@@ -24,24 +24,49 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 
 const VOICE_ENABLED = isUrgansVoiceEnabled();
 
+// True only in the browser after hydration, false on the server and in the
+// hydration render, so the portal never makes the two disagree.
+const subscribeNever = () => () => undefined;
+const useInBrowser = () =>
+  useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false
+  );
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
 /**
- * A real chat box on Home, just above the fold button, with the same controls
- * as the UrgAns chat: attach a photo or file, pick the rollout the message is
- * about, talk instead of typing, send. Search lives in the top bar, so this one
- * only talks to UrgAns: send and the conversation opens (the drawer on a
- * desktop, the full page on a phone) with the message and files already sent.
- * It stands in for the floating UrgAns button, which is hidden on Home.
+ * The UrgAns box on a phone's Home (2026-10-07, founder call): pinned to the
+ * bottom of the screen just above the bottom bar, with everything else on Home
+ * scrolling above it. It is a real box: type here, attach a photo or file with
+ * +, or talk with the mic, all without leaving Home. Send slides the box down
+ * into the full chat (lib/home-chat-glide.ts), where the message is sent.
+ *
+ * Phone only. On a desktop Home carries the conversation itself
+ * (HomeDesktopSplit), so this is never mounted there.
+ *
+ * Three things about it are not obvious:
+ *  - It is portalled to <body>. .app-layout carries a transform, which makes it
+ *    the anchor of any fixed element inside it, so a fixed box inside <main>
+ *    would sit at the end of the page instead of the bottom of the screen.
+ *  - The text lives in useChappiStore.input, the same text the chat's own box
+ *    shows, so "Ask UrgAns" in the search bar fills this box with no special
+ *    case and a half-typed message carries into the chat.
+ *  - It publishes its height as --home-dock-height and data-home-dock on
+ *    <html>, so Home's padding and the toasts clear it (globals.css).
  */
 export function HomeAskBar() {
   const router = useRouter();
   const releases = useReleaseStore((state) => state.releases);
   const scopedReleaseId = useChappiStore((state) => state.scopedReleaseId);
-  const setScopedReleaseId = useChappiStore((state) => state.setScopedReleaseId);
+  const input = useChappiStore((state) => state.input);
   const setInput = useChappiStore((state) => state.setInput);
   const setSendInputOnOpen = useChappiStore((state) => state.setSendInputOnOpen);
   const setPendingAttachments = useChappiStore((state) => state.setPendingAttachments);
-  const [text, setText] = useState('');
   const attach = useAttachments();
+  const inBrowser = useInBrowser();
+  const dockRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   // How far the box is sliding, while it slides to the chat (null at rest).
   const [glide, setGlide] = useState<number | null>(null);
 
@@ -59,30 +84,32 @@ export function HomeAskBar() {
     };
   }, [glide]);
 
-  // Slide the box down to where the chat's message box sits and fade the rest
-  // of Home, while the chat page loads underneath. Nothing waits on the slide.
-  const openChat = (box: HTMLElement | null) => {
-    if (box && !prefersReducedMotion()) {
-      const rect = box.getBoundingClientRect();
-      setGlide(
-        glideOffset({
-          boxBottom: rect.bottom,
-          viewportHeight: window.innerHeight,
-          bottomGap: composerBottomGap(window.innerWidth),
-        })
-      );
-      document.documentElement.classList.add(LEAVING_CLASS);
-      markArrivingFromHome();
-    }
-    router.push('/dashboard/urgans');
-  };
-  const glideStyle =
-    glide === null
-      ? undefined
-      : {
-          transform: `translateY(${glide}px)`,
-          transition: `transform ${GLIDE_MS}ms var(--motion-out)`,
-        };
+  // Tell the page how tall the box is, so the last card and the toasts clear it.
+  useEffect(() => {
+    const dock = dockRef.current;
+    const root = document.documentElement;
+    if (!dock) return;
+    const publish = () => {
+      root.style.setProperty('--home-dock-height', `${Math.ceil(dock.getBoundingClientRect().height)}px`);
+    };
+    root.dataset.homeDock = '';
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(dock);
+    return () => {
+      observer.disconnect();
+      delete root.dataset.homeDock;
+      root.style.removeProperty('--home-dock-height');
+    };
+    // Again once the box is in the page: it is not in the first render.
+  }, [inBrowser]);
+
+  // "Ask UrgAns" in the search bar puts the question here and asks for focus.
+  useEffect(() => {
+    const focus = () => inputRef.current?.focus();
+    window.addEventListener(COMPOSER_FOCUS_EVENT, focus);
+    return () => window.removeEventListener(COMPOSER_FOCUS_EVENT, focus);
+  }, []);
 
   // Fetch the chat page ahead of time so the glide never waits on a download.
   useEffect(() => {
@@ -94,7 +121,7 @@ export function HomeAskBar() {
     : null;
   const voice = useVoiceInput({
     enabled: VOICE_ENABLED,
-    onTranscript: (spoken) => setText((current) => mergeTranscript(current, spoken)),
+    onTranscript: (spoken) => setInput(mergeTranscript(useChappiStore.getState().input, spoken)),
     getHints: () =>
       scopedRelease
         ? { releaseTitle: scopedRelease.title, artistName: scopedRelease.artistName }
@@ -103,125 +130,120 @@ export function HomeAskBar() {
   const isRecording = voice.state === 'recording';
   const isTranscribing = voice.state === 'transcribing';
   const busy = isRecording || isTranscribing;
-  const canSend = (text.trim().length > 0 || attach.attachments.length > 0) && attach.pending === 0 && !busy;
+  const canSend = (input.trim().length > 0 || attach.attachments.length > 0) && attach.pending === 0 && !busy;
+
+  // Slide the box down to where the chat's message box sits and fade the rest
+  // of Home, while the chat page loads underneath. Nothing waits on the slide.
+  const openChat = (box: HTMLElement) => {
+    if (!prefersReducedMotion()) {
+      const rect = box.getBoundingClientRect();
+      setGlide(
+        glideOffset({
+          boxBottom: rect.bottom,
+          viewportHeight: window.innerHeight,
+          bottomGap: composerBottomGap(window.innerWidth),
+          keyboardOpen: document.documentElement.dataset.keyboardOpen === 'true',
+        })
+      );
+      document.documentElement.classList.add(LEAVING_CLASS);
+      markArrivingFromHome();
+    }
+    router.push('/dashboard/urgans');
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canSend) return;
-    setInput(text.trim());
+    setInput(input.trim());
     setPendingAttachments(attach.attachments);
     setSendInputOnOpen(true);
-    setText('');
     attach.clear();
-    // Always the full chat page, never a drawer: the page mounts the
-    // conversation that picks the message up and sends it.
+    // Always the full chat page: it mounts the conversation that picks the
+    // message up and sends it. No keyboard hand-off: the chat's box is busy
+    // while the reply comes, so a kept keyboard would only lose what is typed.
     openChat(event.currentTarget);
   };
 
-  // Enter sends, Shift+Enter makes a new line, like every chat box.
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-      event.preventDefault();
-      event.currentTarget.form?.requestSubmit();
-    }
-  };
+  if (!CHAPPI_ENABLED || !inBrowser) return null;
 
-  return (
-    <>
-    {/* A phone has no room to type on Home with the keyboard up, so the box is
-        a tap target: the full chat opens with the keyboard ready. */}
-    <button
-      type="button"
-      onClick={(event) => openChat(event.currentTarget)}
-      style={glideStyle}
-      {...{ [SOURCE_ATTRIBUTE]: '' }}
-      className="motion-focus flex h-14 w-full items-center rounded-2xl border border-stroke-control bg-bg-surface px-4 text-left text-base text-content-tertiary lg:hidden"
-    >
-      Message UrgAns...
-    </button>
-    <form
-      onSubmit={handleSubmit}
-      style={glideStyle}
-      {...{ [SOURCE_ATTRIBUTE]: '' }}
-      className="hidden rounded-2xl border border-stroke-control bg-bg-surface p-3 focus-within:border-content-secondary lg:block"
-    >
-      <ChappiAttachmentTray
-        attachments={attach.attachments}
-        pending={attach.pending}
-        onRemove={attach.remove}
-      />
-      {isRecording ? (
-        <div role="status" className="flex min-h-[3.25rem] items-center gap-2 px-1 text-base text-content-secondary">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-status-error motion-safe:animate-pulse" aria-hidden="true" />
-          Listening...
-        </div>
-      ) : (
-        <textarea
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={(event) => {
-            const pictures = Array.from(event.clipboardData?.files ?? []).filter((file) =>
-              file.type.startsWith('image/')
-            );
-            if (pictures.length === 0) return;
-            event.preventDefault();
-            void attach.addFiles(pictures);
-          }}
-          rows={2}
-          placeholder={isTranscribing ? 'Turning your voice into text...' : 'Message UrgAns...'}
-          aria-label="Message UrgAns"
-          enterKeyHint="send"
-          disabled={isTranscribing}
-          className="block max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-1 text-base text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60"
-        />
-      )}
-      <div className="mt-2 flex items-center gap-1">
-        <ChappiAttachMenu disabled={busy} onFiles={(files) => void attach.addFiles(files)} />
-        <ChappiScopePicker
-          releases={releases}
-          scopedReleaseId={scopedReleaseId}
-          onSelect={setScopedReleaseId}
-        />
-        <span className="flex-1" />
-        {voice.supported ? (
+  return createPortal(
+    <div ref={dockRef} className="home-dock fixed inset-x-3 z-40 lg:hidden">
+      <form
+        onSubmit={handleSubmit}
+        style={
+          glide === null
+            ? undefined
+            : { transform: `translateY(${glide}px)`, transition: `transform ${GLIDE_MS}ms var(--motion-out)` }
+        }
+      >
+        <ChappiAttachmentTray attachments={attach.attachments} pending={attach.pending} onRemove={attach.remove} />
+        <div className="flex items-center gap-1 rounded-full border border-stroke-control bg-bg-surface/95 p-1.5 shadow-lg backdrop-blur-2xl transition-colors focus-within:border-brand/70">
+          <ChappiAttachMenu disabled={busy} onFiles={(files) => void attach.addFiles(files)} />
+          {isRecording ? (
+            <div role="status" className="flex min-w-0 flex-1 items-center gap-2 px-2 text-[16px] text-content-secondary">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-status-error motion-safe:animate-pulse" aria-hidden="true" />
+              Listening...
+            </div>
+          ) : (
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onPaste={(event) => {
+                const pictures = Array.from(event.clipboardData?.files ?? []).filter((file) =>
+                  file.type.startsWith('image/')
+                );
+                if (pictures.length === 0) return;
+                event.preventDefault();
+                void attach.addFiles(pictures);
+              }}
+              placeholder={isTranscribing ? 'Turning your voice into text...' : 'Message UrgAns...'}
+              aria-label="Message UrgAns"
+              enterKeyHint="send"
+              disabled={isTranscribing}
+              // 16px: anything smaller makes iOS zoom the page on focus.
+              className="min-w-0 flex-1 bg-transparent px-2 text-[16px] text-content-primary placeholder:text-content-tertiary focus:outline-none disabled:opacity-60"
+            />
+          )}
+          {voice.supported ? (
+            <button
+              type="button"
+              onClick={voice.toggle}
+              data-recording={isRecording ? 'true' : undefined}
+              aria-label={isRecording ? 'Stop recording' : 'Talk to UrgAns'}
+              disabled={isTranscribing || voice.state === 'requesting'}
+              className="motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error"
+            >
+              {isTranscribing || voice.state === 'requesting' ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : isRecording ? (
+                <span className="h-3 w-3 rounded-[3px] bg-current" aria-hidden="true" />
+              ) : (
+                <Mic className="h-4 w-4" aria-hidden="true" />
+              )}
+            </button>
+          ) : null}
           <button
-            type="button"
-            onClick={voice.toggle}
-            data-recording={isRecording ? 'true' : undefined}
-            aria-label={isRecording ? 'Stop recording' : 'Talk to UrgAns'}
-            disabled={isTranscribing || voice.state === 'requesting'}
-            className="motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error"
+            type="submit"
+            aria-label="Send to UrgAns"
+            disabled={!canSend}
+            className="motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
           >
-            {isTranscribing || voice.state === 'requesting' ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : isRecording ? (
-              <span className="h-3 w-3 rounded-[3px] bg-current" aria-hidden="true" />
-            ) : (
-              <Mic className="h-4 w-4" aria-hidden="true" />
-            )}
+            <ArrowUp className="h-5 w-5" aria-hidden="true" />
           </button>
+        </div>
+        {voice.error ? (
+          <p role="status" className="mt-1.5 rounded-lg bg-bg-surface/95 px-3 py-1 text-xs text-content-tertiary">
+            {voice.error}
+          </p>
         ) : null}
-        <button
-          type="submit"
-          aria-label="Send to UrgAns"
-          disabled={!canSend}
-          className="motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
-        >
-          <ArrowUp className="h-5 w-5" aria-hidden="true" />
-        </button>
-      </div>
-      {voice.error ? (
-        <p role="status" className="mt-2 px-1 text-xs text-content-tertiary">
-          {voice.error}
-        </p>
-      ) : null}
-      {attach.error ? (
-        <p role="alert" className="mt-2 px-1 text-xs text-status-error">
-          {attach.error}
-        </p>
-      ) : null}
-    </form>
-    </>
+        {attach.error ? (
+          <p role="alert" className="mt-1.5 rounded-lg bg-bg-surface/95 px-3 py-1 text-xs text-status-error">
+            {attach.error}
+          </p>
+        ) : null}
+      </form>
+    </div>,
+    document.body
   );
 }

@@ -227,7 +227,7 @@ export function PushPermissionPrompt() {
   // safe area plus a gap. Both collapse to a plain inset at lg+, where
   // neither the bar nor the ChappiDock launcher renders.
   const bottomClass = MOBILE_NAV_ENABLED
-    ? 'bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] lg:bottom-6'
+    ? 'mobile-nav-raise-card lg:bottom-6'
     : 'bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] lg:bottom-6';
 
   return (

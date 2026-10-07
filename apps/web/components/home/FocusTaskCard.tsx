@@ -5,32 +5,24 @@ import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { getRelativeDueLabel } from '@/lib/tasks';
 import type { FocusTask } from '@/lib/home/focus';
 
-const GROUP_LABEL: Record<FocusTask['group'], string> = {
-  late: 'Do this first',
-  today: 'Do this first',
-  week: 'Start here',
-};
-
 /**
- * The one task Home asks for, big and under the greeting: a title, where it sits,
+ * The one task Home asks for, on top of the tasks stack: a title, where it sits,
  * a checkbox to finish it and a button to open it. It is the answer to "where do
- * I start" for a manager facing a long list.
+ * I start" for a manager facing a long list. The stack (HomeStack) draws the
+ * card around it, so this is only what goes inside.
  */
 export function FocusTaskCard({ focus }: { focus: FocusTask }) {
   const { openTask } = useTaskUI();
-  const { task, group } = focus;
+  const { task } = focus;
   const due = getRelativeDueLabel({ dueDate: task.dueDate, completedAt: null, compressedRunway: false });
   const where = task.releaseTitle ? `${task.releaseTitle} · ${task.artistName || 'Unassigned artist'}` : 'No rollout';
 
   return (
-    <section
-      aria-label={GROUP_LABEL[group]}
-      className="rounded-2xl border border-stroke-default bg-bg-surface p-4 sm:p-5"
-    >
+    <div>
       <div className="flex items-start gap-3">
         <TaskCompletionCheckbox taskId={task.id} status={task.status} taskTitle={task.title} className="mt-1" />
         <div className="min-w-0 flex-1">
-          <p className="break-words font-display text-xl font-semibold leading-snug text-content-primary sm:text-2xl">
+          <p className="break-words font-display text-xl font-semibold leading-snug text-content-primary">
             {task.title}
           </p>
           <p className="mt-1 break-words text-sm text-content-secondary">
@@ -48,6 +40,6 @@ export function FocusTaskCard({ focus }: { focus: FocusTask }) {
           Open task
         </button>
       </div>
-    </section>
+    </div>
   );
 }

@@ -113,3 +113,9 @@ Relationships/Shows/Directory/Notes/Settings page restyles, press kit and public
 - Tours: the first-visit catalogue tour now starts on Home (where people land), last step points at the Catalogue pill (lib/tours.ts HOME_TOUR_FINISH). Replay from Help and Settings still works. Tour anchors verified present in the new shell.
 - Settings: already the modal with a left list and search; sections are short. Only "Artists & brand" is long (five blocks) and could be grouped. Not changed.
 - Not seen: the wall (needs a walled account) and the tour (flag off, needs data). Check on the preview with a trial-ended account and with NEXT_PUBLIC_FEATURE_TOURS on.
+
+### Log, 2026-10-07 (Home stacks, the pinned phone box, Home becomes the chat)
+- From the Hark screenshots (plan: `C:/Users/penta/.claude/plans/the-home-screen-on-wiggly-aho.md`). Every Home group is a stack with a chip label; empty groups are not drawn; "Do this first" is the top card of Tasks.
+- Phone: the UrgAns box is pinned above the bottom bar on every Home state, with + and the mic; send slides into the full chat.
+- Computer: Home is the chat (stacks left, conversation right, "+ New session" after the last stack, Chat | Sessions switch). The full chat page redirects to Home at lg+; the Today panel is gone. Chats are called sessions in copy.
+- Shipped as v1.88.0. See the CLAUDE.md note of the same date for the details and what is unverified.
