@@ -29,7 +29,6 @@ import { BriefAttribution } from './BriefAttribution';
 import { ReplyText } from './ReplyText';
 import { stripModelMarkup } from '@/lib/model-markup';
 import {
-  isSpeechEnabled,
   isSpeechSupported,
   speakChunks,
   speechChunksForReply,
@@ -146,7 +145,6 @@ async function getAccessToken(): Promise<string> {
 // other flag, so Next inlines it.
 const HISTORY_ENABLED = isChappiHistoryEnabled();
 const VOICE_ENABLED = isUrgansVoiceEnabled();
-const SPEAK_ENABLED = isSpeechEnabled();
 
 // "Listening… 0:07" — mm:ss, single-digit minutes are enough for a 60s cap.
 const formatElapsed = (seconds: number): string => {
@@ -1679,7 +1677,7 @@ function AssistantMessage({
   // the same markup first and the button appears once speech is confirmed.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCanSpeak(SPEAK_ENABLED && isSpeechSupported() && speechChunksForReply(content).length > 0);
+    setCanSpeak(isSpeechSupported() && speechChunksForReply(content).length > 0);
   }, [content]);
 
   const handleSpeak = () => {

@@ -217,19 +217,19 @@ describe('what each row does', () => {
     }
   });
 
-  it('labels the scene rows the way their desktop pills always have', () => {
+  it('labels the scene rows with an instruction', () => {
     const labels = Object.fromEntries(build().map((entry) => [entry.key, entry.label]));
     expect(labels).toMatchObject({
-      activities: 'Activities',
-      chat: 'Chat',
-      calendar: 'Content',
-      pitch: 'Pitch',
-      pitchkit: 'Pitch kit',
-      metadata: 'Metadata',
-      coverart: 'Cover art',
-      song: 'Song',
-      files: 'Files',
-      capture: 'Fan capture',
+      activities: 'Work the plan',
+      chat: 'Talk to the team',
+      calendar: 'Plan content',
+      pitch: 'Pitch this!',
+      pitchkit: 'Build your pitch kit',
+      metadata: 'Fill in details',
+      coverart: 'Add cover art',
+      song: 'Upload the song',
+      files: 'Add files',
+      capture: 'Collect fan emails',
     });
   });
 });
@@ -237,7 +237,7 @@ describe('what each row does', () => {
 describe('the two variants', () => {
   it('is a plain Notes link on desktop, pre-filtered to the rollout', () => {
     const note = build({ variant: 'rail' }).find((entry) => entry.key === 'note');
-    expect(note?.label).toBe('Notes');
+    expect(note?.label).toBe('Jot a note');
     expect(note?.target).toEqual({ kind: 'link', href: '/dashboard/notes?release=rel-1' });
   });
 
