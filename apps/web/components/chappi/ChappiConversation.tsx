@@ -282,7 +282,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // The box often is not there on the first frame (the page shows a skeleton
   // until auth and the saved chat resolve, and the input can be disabled for a
   // moment), so a single focus on mount silently did nothing on a phone. Retry
-  // for about two seconds until the field actually holds focus.
+  // for up to ten seconds until the field actually holds focus.
   useEffect(() => {
     if (variant !== 'page') return;
     let tries = 0;
@@ -293,7 +293,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         el.focus({ preventScroll: true });
         if (document.activeElement === el) return;
       }
-      if (++tries < 40) timer = window.setTimeout(tick, 50);
+      if (++tries < 100) timer = window.setTimeout(tick, 100);
     };
     tick();
     return () => window.clearTimeout(timer);

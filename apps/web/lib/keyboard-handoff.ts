@@ -21,8 +21,21 @@ export function primeKeyboard(): void {
       'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0;pointer-events:none;';
     document.body.appendChild(proxy);
     proxy.focus({ preventScroll: true });
-    // Long enough for the page to mount; removed even if nothing took over.
-    window.setTimeout(() => proxy.remove(), 3000);
+    // Keep it until the chat box (or any other field) has taken over, so a
+    // slow page load cannot drop the keyboard before the box exists. Gives up
+    // after 10s either way.
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      const active = document.activeElement;
+      const handedOver =
+        active !== proxy &&
+        active instanceof HTMLElement &&
+        (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+      if (handedOver || Date.now() - startedAt > 10000) {
+        window.clearInterval(timer);
+        proxy.remove();
+      }
+    }, 100);
   } catch {
     // A convenience only; the chat box still tries on its own.
   }
