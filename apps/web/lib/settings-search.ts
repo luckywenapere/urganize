@@ -141,6 +141,8 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   },
 
   wholeSegment('security', ['account']),
+
+  wholeSegment('admin', ['internal', 'teams', 'growth', 'metrics', 'waitlist', 'emails', 'dashboard']),
   {
     segment: 'security',
     section: 'password',

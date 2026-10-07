@@ -36,6 +36,7 @@ export const SETTINGS_SEGMENTS = [
   'billing',
   'connections',
   'security',
+  'admin',
 ] as const;
 
 export type SettingsSegment = (typeof SETTINGS_SEGMENTS)[number];
@@ -53,6 +54,7 @@ export const SETTINGS_SEGMENT_LABELS: Record<SettingsSegment, string> = {
   billing: 'Billing',
   connections: 'Connections & data',
   security: 'Security & account',
+  admin: 'Admin',
 };
 
 /** One line under each name in the phone's list. Plain words, on purpose. */
@@ -66,6 +68,7 @@ export const SETTINGS_SEGMENT_HINTS: Record<SettingsSegment, string> = {
   billing: 'Your plan and trial',
   connections: 'Connected apps and your data',
   security: 'Password and deleting things',
+  admin: 'Internal dashboards',
 };
 
 const isSegment = (value: string | null | undefined): value is SettingsSegment =>
@@ -103,7 +106,9 @@ export function readSettingsFlags(): SettingsFlags {
   };
 }
 
-export type SettingsViewer = { role: string | null | undefined };
+/** `isAdmin` is the server's ADMIN_EMAILS answer, carried on the identity
+ *  payload. It is never inferred from the role. */
+export type SettingsViewer = { role: string | null | undefined; isAdmin?: boolean };
 
 /**
  * The segments this person gets, in order. Founder call: hide what somebody
@@ -115,6 +120,7 @@ export type SettingsViewer = { role: string | null | undefined };
  *   an artist who runs their own team. A teammate on somebody else's plan has
  *   nothing to change there. (This is the one call the founder did not make
  *   explicitly; it is here in one place so it is a one-line change.)
+ * - Admin is for the accounts ADMIN_EMAILS names, and for nobody else.
  * - General, Notifications and Security & account are everyone's, and are
  *   never flagged off, so the pop-up can never open empty.
  *
@@ -141,6 +147,7 @@ export function visibleSettingsSegments(
     billing: ownsPlan,
     connections: flags.mcpConnect || flags.dataExport,
     security: true,
+    admin: viewer.isAdmin === true,
   };
 
   return SETTINGS_SEGMENTS.filter((segment) => wanted[segment]);

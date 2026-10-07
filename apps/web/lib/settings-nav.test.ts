@@ -37,8 +37,11 @@ const ALL_OFF: SettingsFlags = {
 
 const params = (query: string) => new URLSearchParams(query);
 
+/** Everything except Admin, which only an admin account gets. */
+const NON_ADMIN = SETTINGS_SEGMENTS.filter((segment) => segment !== 'admin');
+
 describe('the segment list', () => {
-  it('is nine segments in the order the founder chose', () => {
+  it('is ten segments, in the order the founder chose, with Admin last', () => {
     expect([...SETTINGS_SEGMENTS]).toEqual([
       'general',
       'notifications',
@@ -49,18 +52,27 @@ describe('the segment list', () => {
       'billing',
       'connections',
       'security',
+      'admin',
     ]);
   });
 });
 
 describe('visibleSettingsSegments', () => {
-  it('shows a manager all nine with every flag on, in order', () => {
-    expect(visibleSettingsSegments({ role: 'manager' }, ALL_ON)).toEqual([...SETTINGS_SEGMENTS]);
+  it('shows a manager every segment but Admin, with every flag on, in order', () => {
+    expect(visibleSettingsSegments({ role: 'manager' }, ALL_ON)).toEqual([...NON_ADMIN]);
+  });
+
+  it('shows Admin only to an admin account, and never to a curator who is also an admin', () => {
+    expect(visibleSettingsSegments({ role: 'manager', isAdmin: true }, ALL_ON)).toContain('admin');
+    expect(visibleSettingsSegments({ role: 'viewer', isAdmin: true }, ALL_ON)).toContain('admin');
+    expect(visibleSettingsSegments({ role: 'manager', isAdmin: false }, ALL_ON)).not.toContain('admin');
+    expect(visibleSettingsSegments({ role: 'manager' }, ALL_ON)).not.toContain('admin');
+    expect(visibleSettingsSegments({ role: 'curator', isAdmin: true }, ALL_ON)).toEqual([]);
   });
 
   it('treats artist-manager as a manager', () => {
     expect(visibleSettingsSegments({ role: 'artist-manager' }, ALL_ON)).toEqual([
-      ...SETTINGS_SEGMENTS,
+      ...NON_ADMIN,
     ]);
   });
 
