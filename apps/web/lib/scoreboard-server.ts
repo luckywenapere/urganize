@@ -1,4 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  readActivity,
+  readAll,
+  str,
+  type AdminReadSource,
+  type LatestEvent,
+  type Row,
+} from './admin-read-server';
 import { resolveAdminTeamAccess } from './admin-team-access';
 import { readTestRelease } from './test-release';
 import type {
@@ -13,174 +21,36 @@ import type {
 // shapes them. Service-role only: the one caller is the admin route, which has
 // already passed verifyAdmin.
 //
-// WHY EVERYTHING IS PAGED. PostgREST caps a response at 1,000 rows by default,
-// and a plain read silently returns the first 1,000 (the trap the Growth page
-// recorded for sign-up counts). Every read here walks pages until a short one
-// comes back or its cap is reached, and an activity table that hits its cap
-// marks the whole board as a floor rather than the truth.
-//
-// WHERE ACTIVITY COMES FROM. Only tables that record WHO did something and
-// WHEN. Measured 2026-10-02: task changes were recorded nowhere until the task
-// update route began writing task_activity the same day, so a team's activity
-// from before then undercounts task edits and completions. activity_logs is
-// deliberately absent: nothing writes it.
+// The paged reader and the activity sources moved to ./admin-read-server.ts on
+// 2026-10-07 so the usage dashboard (/admin/metrics) reads activity the same
+// way. See that file for why every read is paged and where activity comes from.
 
-const PAGE_SIZE = 1000;
 const TABLE_CAP = 20_000;
-const ACTIVITY_CAP = 20_000;
 /** Activity older than this cannot change any number on the board: the oldest
  *  window is week-4 retention for the eighth-newest cohort (about 12 weeks). */
 export const ACTIVITY_LOOKBACK_DAYS = 120;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export type ScoreboardSource = {
-  table: string;
-  rows: number;
-  status: 'ok' | 'missing' | 'error';
-  truncated: boolean;
-  message?: string;
+export type ScoreboardSource = AdminReadSource;
+
+/** What the usage dashboard needs beyond the scoreboard's own input, taken from
+ *  rows this function already reads so nothing is read twice. The scoreboard
+ *  route ignores it. */
+export type ScoreboardExtras = {
+  /** Each person's most recent activity and what it was. */
+  latestEvents: Map<string, LatestEvent>;
+  /** Every release row as read (orphans included), for plan and test counts. */
+  releaseRows: Row[];
+  /** Every task row as read: id, release_id, status, completed_at, updated_at,
+   *  auto_generated, created_at. */
+  taskRows: Row[];
 };
-
-type Row = Record<string, unknown>;
-
-type PageQuery = (from: number, to: number) => PromiseLike<{
-  data: unknown[] | null;
-  error: { message: string; code?: string } | null;
-}>;
-
-/** A table or column that does not exist on this database. Reported, never
- *  thrown: one missing optional table must not blank the board. */
-function isMissing(error: { message: string; code?: string }): boolean {
-  return (
-    error.code === '42P01' ||
-    error.code === '42703' ||
-    error.code === 'PGRST205' ||
-    error.code === 'PGRST204' ||
-    /does not exist|could not find/i.test(error.message)
-  );
-}
-
-async function readAll(
-  table: string,
-  query: PageQuery,
-  cap: number
-): Promise<{ rows: Row[]; source: ScoreboardSource }> {
-  const rows: Row[] = [];
-  for (let from = 0; from < cap; from += PAGE_SIZE) {
-    const to = Math.min(from + PAGE_SIZE, cap) - 1;
-    const { data, error } = await query(from, to);
-    if (error) {
-      return {
-        rows,
-        source: {
-          table,
-          rows: rows.length,
-          status: isMissing(error) ? 'missing' : 'error',
-          truncated: false,
-          message: error.message,
-        },
-      };
-    }
-    const page = (data ?? []) as Row[];
-    rows.push(...page);
-    if (page.length < to - from + 1) {
-      return { rows, source: { table, rows: rows.length, status: 'ok', truncated: false } };
-    }
-  }
-  return { rows, source: { table, rows: rows.length, status: 'ok', truncated: true } };
-}
-
-function str(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
-
-/** One activity source: a table, the column naming who acted, the column
- *  saying when, and any extra filter. */
-type ActivitySource = {
-  table: string;
-  actor: string;
-  at: string;
-  /** Only rows whose `type` is one of these (billing_events). */
-  types?: string[];
-};
-
-const ACTIVITY_SOURCES: ActivitySource[] = [
-  { table: 'task_activity', actor: 'actor_id', at: 'created_at' },
-  { table: 'task_comments', actor: 'user_id', at: 'created_at' },
-  { table: 'task_attachments', actor: 'user_id', at: 'created_at' },
-  { table: 'tasks', actor: 'created_by', at: 'created_at' },
-  { table: 'task_outcomes', actor: 'created_by', at: 'created_at' },
-  { table: 'notifications', actor: 'actor_id', at: 'created_at' },
-  { table: 'assets', actor: 'uploaded_by', at: 'created_at' },
-  { table: 'release_messages', actor: 'user_id', at: 'created_at' },
-  { table: 'releases', actor: 'owner_user_id', at: 'created_at' },
-  { table: 'notes', actor: 'owner_user_id', at: 'updated_at' },
-  { table: 'urgans_actions', actor: 'actor_user_id', at: 'created_at' },
-  { table: 'urgans_conversations', actor: 'owner_user_id', at: 'last_message_at' },
-  {
-    table: 'billing_events',
-    actor: 'actor_user_id',
-    at: 'created_at',
-    // Only the events a member caused by using the product. The table also
-    // holds paywall hits and the founder's own admin actions.
-    types: ['urgans_action', 'urgans_embedded_action', 'urgans_voice_transcription'],
-  },
-  { table: 'playlist_pitches', actor: 'created_by', at: 'created_at' },
-  { table: 'press_kit_section_versions', actor: 'saved_by', at: 'created_at' },
-  { table: 'team_brief_sections', actor: 'updated_by', at: 'updated_at' },
-  { table: 'release_epk_fields', actor: 'updated_by', at: 'updated_at' },
-  { table: 'work_requests', actor: 'sender_user_id', at: 'created_at' },
-];
-
-async function readActivity(
-  client: SupabaseClient,
-  sinceIso: string
-): Promise<{ activity: Map<string, number[]>; sources: ScoreboardSource[]; truncated: boolean }> {
-  const activity = new Map<string, number[]>();
-  const results = await Promise.all(
-    ACTIVITY_SOURCES.map((source) =>
-      readAll(
-        source.table,
-        (from, to) => {
-          let query = client
-            .from(source.table)
-            .select(`${source.actor}, ${source.at}`)
-            .gte(source.at, sinceIso)
-            .not(source.actor, 'is', null);
-          if (source.types) query = query.in('type', source.types);
-          return query.order(source.at, { ascending: false }).range(from, to);
-        },
-        ACTIVITY_CAP
-      )
-    )
-  );
-
-  let truncated = false;
-  const sources: ScoreboardSource[] = [];
-  results.forEach((result, index) => {
-    const def = ACTIVITY_SOURCES[index];
-    sources.push(result.source);
-    if (result.source.truncated) truncated = true;
-    for (const row of result.rows) {
-      const userId = str(row[def.actor]);
-      const at = str(row[def.at]);
-      if (!userId || !at) continue;
-      const when = Date.parse(at);
-      if (!Number.isFinite(when)) continue;
-      const list = activity.get(userId) ?? [];
-      list.push(when);
-      activity.set(userId, list);
-    }
-  });
-
-  return { activity, sources, truncated };
-}
 
 export async function loadScoreboardInput(
   client: SupabaseClient,
   now: Date
-): Promise<{ input: ScoreboardInput; sources: ScoreboardSource[] }> {
+): Promise<{ input: ScoreboardInput; sources: ScoreboardSource[]; extras: ScoreboardExtras }> {
   const sinceIso = new Date(now.getTime() - ACTIVITY_LOOKBACK_DAYS * DAY_MS).toISOString();
 
   const [workspaces, members, subscriptions, artists, releases, tasks, activity, teamInvites, partnerTags] =
@@ -238,7 +108,7 @@ export async function loadScoreboardInput(
         (from, to) =>
           client
             .from('tasks')
-            .select('id, release_id, status, completed_at, updated_at')
+            .select('id, release_id, status, completed_at, updated_at, auto_generated, created_at')
             .order('id', { ascending: true })
             .range(from, to),
         100_000
@@ -484,5 +354,10 @@ export async function loadScoreboardInput(
           : null,
     },
     sources,
+    extras: {
+      latestEvents: activity.latest,
+      releaseRows: releases.rows,
+      taskRows: tasks.rows,
+    },
   };
 }

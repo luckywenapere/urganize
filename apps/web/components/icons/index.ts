@@ -52,6 +52,8 @@ export {
 
 /* Long tail — lucide, unchanged. */
 export {
+  // The usage dashboard (2026-10-07): people using Urganize over time.
+  Activity,
   AlignLeft, Archive, ArrowDown, ArrowRight,
   ArrowUp, BadgeDollarSign, Bug, Building2,
   CalendarClock, CalendarPlus, Camera, ChartNoAxesGantt,

@@ -47,9 +47,14 @@ describe('the scanner itself', () => {
 });
 
 describe('one writer', () => {
-  it('lets only usage-log-server.ts touch the ai_usage_events table', () => {
+  it('lets only usage-log-server.ts write the ai_usage_events table, and the usage dashboard read it', () => {
     const touching = [...sources.entries()].filter(([, source]) => source.includes('ai_usage_events')).map(([file]) => file);
-    expect(touching).toEqual(['lib/ai/usage-log-server.ts']);
+    expect(touching.sort()).toEqual(['lib/ai/usage-log-server.ts', 'lib/usage-metrics-server.ts']);
+  });
+
+  it('keeps the usage dashboard (/admin/metrics) to reading', () => {
+    const source = sources.get('lib/usage-metrics-server.ts') ?? '';
+    expect(source).not.toMatch(/\.(insert|update|upsert|delete)\s*\(/);
   });
 
   it('never updates or deletes a usage row, so a corrected figure is a new row', () => {
