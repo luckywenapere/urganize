@@ -6,7 +6,7 @@
 export type ChappiRole = 'user' | 'assistant';
 
 /**
- * Something the user attached to a message (NEXT_PUBLIC_FEATURE_URGANS_ATTACHMENTS).
+ * Something the user attached to a message.
  * The bytes (`dataUrl` for a photo, `text` for a text file) live in the browser
  * for the session and are sent with a request; they are never saved. A saved or
  * reopened chat has none of them, only the names.

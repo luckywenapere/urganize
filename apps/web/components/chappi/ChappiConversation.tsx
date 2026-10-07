@@ -73,7 +73,6 @@ import { isUrgansVoiceEnabled } from '@/lib/chappi/config';
 import {
   attachmentOnlyContent,
   isAttachmentOnlyContent,
-  isUrgansAttachmentsEnabled,
   selectAttachmentsToSend,
   stripAttachmentPayloads,
 } from '@/lib/urgans-attachments';
@@ -303,7 +302,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const isRecording = voice.state === 'recording';
   const isTranscribing = voice.state === 'transcribing';
 
-  // Photos, camera shots and text files (NEXT_PUBLIC_FEATURE_URGANS_ATTACHMENTS).
+  // Photos, camera shots and text files .
   // They live in the browser until the message is sent; nothing is stored.
   const attach = useAttachments();
 
@@ -1161,7 +1160,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = input.trim();
-    const attached = ATTACH_ENABLED ? attach.attachments : [];
+    const attached = attach.attachments;
     if ((!trimmed && attached.length === 0) || isThinking || attach.pending > 0) return;
     setInput('');
     attach.clear();
@@ -1206,25 +1205,21 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // releases (in which case this is simply field + send).
   const inputForm = (
     <form onSubmit={handleSubmit} className="w-full">
-      {ATTACH_ENABLED ? (
-        <ChappiAttachmentTray
-          attachments={attach.attachments}
-          pending={attach.pending}
-          onRemove={attach.remove}
-        />
-      ) : null}
+      <ChappiAttachmentTray
+        attachments={attach.attachments}
+        pending={attach.pending}
+        onRemove={attach.remove}
+      />
       <div className="flex items-center gap-1 rounded-full border border-stroke-default bg-bg-surface p-1.5 transition-colors focus-within:border-brand/70 focus-within:bg-bg-elevated">
         <ChappiScopePicker
           releases={releases}
           scopedReleaseId={scopedReleaseId}
           onSelect={setScopedReleaseId}
         />
-        {ATTACH_ENABLED ? (
-          <ChappiAttachMenu
-            disabled={isThinking || isRecording || isTranscribing}
-            onFiles={(files) => void attach.addFiles(files)}
-          />
-        ) : null}
+        <ChappiAttachMenu
+          disabled={isThinking || isRecording || isTranscribing}
+          onFiles={(files) => void attach.addFiles(files)}
+        />
         {isRecording ? (
           // The field is replaced by a live "Listening…" readout while
           // recording. Same 16px/px-2 metrics as the input so the row height
@@ -1246,18 +1241,14 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             onChange={(event) => setInput(event.target.value)}
             // A picture pasted from the clipboard (a screenshot, a copied image)
             // attaches like a chosen one. Pasted text is left alone.
-            onPaste={
-              ATTACH_ENABLED
-                ? (event) => {
-                    const pictures = Array.from(event.clipboardData?.files ?? []).filter((file) =>
-                      file.type.startsWith('image/')
-                    );
-                    if (pictures.length === 0) return;
-                    event.preventDefault();
-                    void attach.addFiles(pictures);
-                  }
-                : undefined
-            }
+            onPaste={(event) => {
+              const pictures = Array.from(event.clipboardData?.files ?? []).filter((file) =>
+                file.type.startsWith('image/')
+              );
+              if (pictures.length === 0) return;
+              event.preventDefault();
+              void attach.addFiles(pictures);
+            }}
             placeholder={isTranscribing ? 'Turning your voice into text…' : 'Ask UrgAns…'}
             aria-label="Message UrgAns"
             disabled={isThinking || isTranscribing}
@@ -1292,7 +1283,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           type="submit"
           aria-label="Send"
           disabled={
-            (!input.trim() && !(ATTACH_ENABLED && attach.attachments.length > 0)) ||
+            (!input.trim() && attach.attachments.length === 0) ||
             attach.pending > 0 ||
             isThinking ||
             isRecording ||
@@ -1312,7 +1303,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           {voice.error}
         </p>
       ) : null}
-      {ATTACH_ENABLED && attach.error ? (
+      {attach.error ? (
         // role="alert": the person just did something and it did not work.
         <p role="alert" className="mt-2 px-2 text-center text-xs text-status-error">
           {attach.error}

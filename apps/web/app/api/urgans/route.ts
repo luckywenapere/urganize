@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { mintPassForUser } from '@/lib/urgans-pass-server';
 import { getChappiModelConfig, isChappiEnabled, isChappiModelConfigured } from '@/lib/chappi/config';
-import { isUrgansAttachmentsEnabled, parseAttachments } from '@/lib/urgans-attachments';
+import { parseAttachments } from '@/lib/urgans-attachments';
 import { executeToolCall, resolveChappiContext } from '@/lib/chappi/dispatch';
 import { buildChappiSystemPrompt } from '@/lib/chappi/system-prompt';
 import { closeConfirmedAction, runChappiAgent } from '@/lib/chappi/runner';
@@ -67,9 +67,8 @@ function parseMessages(raw: unknown): ChappiMessage[] {
     const content = (item as { content?: unknown }).content;
     if ((role === 'user' || role === 'assistant') && typeof content === 'string' && content.trim()) {
       const message: ChappiMessage = { id: String((item as { id?: unknown }).id ?? ''), role, content };
-      // Attachments belong to the user's own turns, and only while the feature is
-      // on: switched off, a request carrying a photo is read as plain words.
-      if (role === 'user' && isUrgansAttachmentsEnabled()) {
+      // Attachments belong to the user's own turns only.
+      if (role === 'user') {
         const attachments = parseAttachments((item as { attachments?: unknown }).attachments);
         if (attachments.length > 0) message.attachments = attachments;
       }

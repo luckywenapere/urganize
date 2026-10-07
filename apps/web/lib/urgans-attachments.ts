@@ -1,4 +1,4 @@
-// Photos, camera shots and text files for UrgAns (NEXT_PUBLIC_FEATURE_URGANS_ATTACHMENTS).
+// Photos, camera shots and text files for UrgAns.
 //
 // The person attaches something to a message; a photo goes to the model as an
 // image, a text file goes in as text. Nothing is stored: the bytes live in the
@@ -10,17 +10,6 @@
 // the route and the runner share one set of rules, the lib/urgans-voice.ts split.
 
 import type { ChappiAttachment, ChappiMessage } from '@/lib/chappi/types';
-
-/** Photos, camera shots and text files in the UrgAns composer
- * (NEXT_PUBLIC_FEATURE_URGANS_ATTACHMENTS). Only meaningful alongside
- * NEXT_PUBLIC_FEATURE_CHAPPI. Off, the attach button is hidden and the route
- * reads every message as plain words, so a direct call cannot get a photo into
- * the model either. Read per call (not at module load) so a test can switch it;
- * Next still inlines the literal at build time. Lives here and not in
- * lib/chappi/config.ts because the route tests mock that module. */
-export function isUrgansAttachmentsEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_FEATURE_URGANS_ATTACHMENTS === 'true';
-}
 
 const KIB = 1024;
 const MIB = 1024 * KIB;
