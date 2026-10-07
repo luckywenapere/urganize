@@ -54,7 +54,7 @@ export function ComingSoon({ area }: { area: string }) {
 
   return (
     <div>
-      <PageHeader title={copy.title} info={copy.question} />
+      <PageHeader />
       <section className="max-w-2xl rounded-2xl border border-stroke-default bg-bg-surface p-6 sm:p-8">
         <span className="inline-flex items-center rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-brand">
           Coming soon

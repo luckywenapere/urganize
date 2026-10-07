@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.88.1",
+    date: "October 7, 2026",
+    highlights: [
+      "Pages like Relationships and Shows no longer repeat their name in a big heading.",
+      "Rest your pointer on a menu item for half a second to see what it is for.",
+    ],
+  },
+  {
     version: "1.88.0",
     date: "October 7, 2026",
     highlights: [

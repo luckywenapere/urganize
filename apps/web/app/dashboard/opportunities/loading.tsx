@@ -3,11 +3,8 @@
 export default function Loading() {
   return (
     <div aria-hidden="true" className="animate-pulse">
-      <div className="flex flex-col gap-4 pb-6 pt-8 sm:flex-row sm:items-end sm:justify-between sm:pb-7 sm:pt-10">
-        <div>
-          <div className="h-10 w-64 rounded-lg bg-bg-elevated" />
-          <div className="mt-2 h-4 w-80 max-w-full rounded-lg bg-bg-elevated" />
-        </div>
+      <div className="flex flex-col gap-4 pb-4 pt-5 sm:flex-row sm:items-end sm:justify-between sm:pb-5 sm:pt-6">
+        <div />
         <div className="h-12 w-44 rounded-full bg-bg-elevated" />
       </div>
       <div className="mb-4 h-5 w-40 rounded-lg bg-bg-elevated" />

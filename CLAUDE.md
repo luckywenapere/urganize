@@ -18655,3 +18655,15 @@ Founder ask: a live dashboard of who is using Urganize, how many rollouts have b
 **Activation:** apply the migration; set `METRICS_INTERNAL_EMAILS` on the Vercel `Web` project (Production) with the founder's other accounts and teammates; open `/admin/metrics` and confirm you appear under "Online now" within two minutes (with "Show our team" on), and that the rollout total matches `select count(*) from releases where coalesce(metadata->>'test_release','') <> 'true';`.
 
 **Not built:** website-to-signup conversion (needs a PostHog read key, which the app refuses on purpose), and restoring the "plan it myself" option in the rollout flow (separate task).
+
+---
+
+## Page tips live on the menu items (2026-10-07, v1.88.1, no flag)
+
+Founder call: the big page title on Relationships, Shows and Opportunities (and the Coming soon pages) repeated the name already lit in the top bar, so it is gone with its info icon. What those icons said now shows when a pointer rests on the menu item itself, in the top bar and the tab row under it.
+
+- **Timing is `lib/nav-tip-timing.ts`** (pure, tested): 500ms before the first tip (Nielsen Norman's half-second guidance; Material uses the same, Radix 700ms), then instant for 300ms after one closes so moving along the bar does not wait again (macOS and Radix's skip delay). Keyboard focus shows at once; leaving, a click or a scroll closes at once. The warm window is shared by the top bar and the tab row.
+- **The words are `nav.*` entries in `lib/help-copy.ts`**, held to the fifth-grader guard; `components/shell/useNavTip.tsx` maps each menu item key to its entry and gives each menu one panel (`HelpTipPanel`).
+- **Hover only, by design**: a tap on a phone is a tap to go there. Phone users lost the info icon these replaced; the More sheet and bottom bar carry no tips.
+- `PageHeader` with no title keeps only the live facts and the action. The person page keeps its title (a name, not a repeat of the nav).
+- Verified: the new and copy-guard tests pass, `tsc` and lint clean on touched files, and a throwaway page (deleted) confirmed no tip at 300ms, a tip at 600ms 8px under the item, instant next tip, close on leave, nothing for touch. Not seen with a real signed-in session.
