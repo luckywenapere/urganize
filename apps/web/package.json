@@ -1,7 +1,7 @@
 {
   "name": "@urganize/web",
   "description": "Urganize is where music teams do everything after the music is made.",
-  "version": "1.77.0",
+  "version": "1.78.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -24,6 +24,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.469.0",
+    "mammoth": "^1.13.0",
     "next": "^16.1.1",
     "posthog-js": "^1.260.2",
     "posthog-node": "^5.9.0",
@@ -32,6 +33,8 @@
     "react-dom": "^19.2.3",
     "react-email": "^6.11.0",
     "react-icons": "^5.5.0",
+    "read-excel-file": "^9.3.10",
+    "unpdf": "^1.8.1",
     "web-push": "^3.6.7",
     "zustand": "^5.0.2"
   },

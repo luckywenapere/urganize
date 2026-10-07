@@ -10,6 +10,8 @@ import {
   attachmentOnlyContent,
   buildUserModelContent,
   classifyFile,
+  formatPagesAsText,
+  formatSheetAsText,
   parseAttachments,
   selectAttachmentsToSend,
   stripAttachmentPayloads,
@@ -58,13 +60,21 @@ describe('classifyFile', () => {
     expect(classifyFile({ name: 'x.json', type: 'application/json', size: 10 })).toEqual({ ok: true, kind: 'text' });
   });
 
-  it('says plainly that PDFs are not read yet, and what to do instead', () => {
-    const byType = classifyFile({ name: 'contract', type: 'application/pdf', size: 10 });
-    const byName = classifyFile({ name: 'Contract.PDF', type: '', size: 10 });
-    for (const verdict of [byType, byName]) {
-      expect(verdict.ok).toBe(false);
-      if (!verdict.ok) expect(verdict.reason).toMatch(/PDF/);
-    }
+  it('accepts PDF, Word and Excel as documents, by type or by name', () => {
+    expect(classifyFile({ name: 'c', type: 'application/pdf', size: 10 })).toEqual({ ok: true, kind: 'document', format: 'pdf' });
+    expect(classifyFile({ name: 'Contract.PDF', type: '', size: 10 })).toEqual({ ok: true, kind: 'document', format: 'pdf' });
+    expect(classifyFile({ name: 'a.docx', type: '', size: 10 })).toEqual({ ok: true, kind: 'document', format: 'docx' });
+    expect(classifyFile({ name: 'a', type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', size: 10 })).toEqual({ ok: true, kind: 'document', format: 'xlsx' });
+    expect(classifyFile({ name: 'a.pdf', type: 'application/pdf', size: 16 * 1024 * 1024 }).ok).toBe(false);
+  });
+
+  it('tells the person what to do about old Office files and slides', () => {
+    const doc = classifyFile({ name: 'a.doc', type: '', size: 10 });
+    const ppt = classifyFile({ name: 'a.pptx', type: '', size: 10 });
+    expect(doc.ok).toBe(false);
+    expect(ppt.ok).toBe(false);
+    if (!doc.ok) expect(doc.reason).toMatch(/\.docx/);
+    if (!ppt.ok) expect(ppt.reason).toMatch(/PDF/);
   });
 
   it('refuses a picture or a text file over its size, and anything unknown', () => {
@@ -252,5 +262,21 @@ describe('buildUserModelContent', () => {
 
   it('marks a cut text file', () => {
     expect(buildUserModelContent('x', [doc({ truncated: true })])).toContain('cut short');
+  });
+});
+
+describe('turning documents into text', () => {
+  it('writes a sheet one line per row, tab separated, dropping empty rows and trailing blanks', () => {
+    const out = formatSheetAsText('Splits', [
+      ['Name', 'Share'],
+      [null, null],
+      ['Ada', 50, null],
+      ['Bo\tb', new Date('2026-01-02T00:00:00Z')],
+    ]);
+    expect(out).toBe('## Sheet: Splits\nName\tShare\nAda\t50\nBo b\t2026-01-02');
+  });
+
+  it('labels each page and leaves empty pages out', () => {
+    expect(formatPagesAsText(['one  \nline', '   ', 'three'])).toBe('## Page 1\none\nline\n\n## Page 3\nthree');
   });
 });
