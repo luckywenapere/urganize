@@ -3,10 +3,14 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  COMPOSER_TRANSITION_NAME,
+  GLIDE_MS,
+  LEAVING_CLASS,
   SOURCE_ATTRIBUTE,
-  navigateWithTransition,
-} from '@/lib/view-transition';
+  composerBottomGap,
+  glideOffset,
+  markArrivingFromHome,
+  prefersReducedMotion,
+} from '@/lib/home-chat-glide';
 import { ArrowUp, Loader2, Mic } from '@/components/icons';
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray } from '@/components/chappi/ChappiAttachments';
@@ -38,6 +42,47 @@ export function HomeAskBar() {
   const setPendingAttachments = useChappiStore((state) => state.setPendingAttachments);
   const [text, setText] = useState('');
   const attach = useAttachments();
+  // How far the box is sliding, while it slides to the chat (null at rest).
+  const [glide, setGlide] = useState<number | null>(null);
+
+  // Never leave Home faded: on leaving the page, or if the chat never opens.
+  useEffect(() => {
+    if (glide === null) return;
+    const root = document.documentElement;
+    const giveUp = window.setTimeout(() => {
+      root.classList.remove(LEAVING_CLASS);
+      setGlide(null);
+    }, 6000);
+    return () => {
+      window.clearTimeout(giveUp);
+      root.classList.remove(LEAVING_CLASS);
+    };
+  }, [glide]);
+
+  // Slide the box down to where the chat's message box sits and fade the rest
+  // of Home, while the chat page loads underneath. Nothing waits on the slide.
+  const openChat = (box: HTMLElement | null) => {
+    if (box && !prefersReducedMotion()) {
+      const rect = box.getBoundingClientRect();
+      setGlide(
+        glideOffset({
+          boxBottom: rect.bottom,
+          viewportHeight: window.innerHeight,
+          bottomGap: composerBottomGap(window.innerWidth),
+        })
+      );
+      document.documentElement.classList.add(LEAVING_CLASS);
+      markArrivingFromHome();
+    }
+    router.push('/dashboard/urgans');
+  };
+  const glideStyle =
+    glide === null
+      ? undefined
+      : {
+          transform: `translateY(${glide}px)`,
+          transition: `transform ${GLIDE_MS}ms var(--motion-out)`,
+        };
 
   // Fetch the chat page ahead of time so the glide never waits on a download.
   useEffect(() => {
@@ -70,7 +115,7 @@ export function HomeAskBar() {
     attach.clear();
     // Always the full chat page, never a drawer: the page mounts the
     // conversation that picks the message up and sends it.
-    navigateWithTransition(() => router.push('/dashboard/urgans'), '/dashboard/urgans');
+    openChat(event.currentTarget);
   };
 
   // Enter sends, Shift+Enter makes a new line, like every chat box.
@@ -87,10 +132,8 @@ export function HomeAskBar() {
         a tap target: the full chat opens with the keyboard ready. */}
     <button
       type="button"
-      onClick={() =>
-        navigateWithTransition(() => router.push('/dashboard/urgans'), '/dashboard/urgans')
-      }
-      style={{ viewTransitionName: COMPOSER_TRANSITION_NAME }}
+      onClick={(event) => openChat(event.currentTarget)}
+      style={glideStyle}
       {...{ [SOURCE_ATTRIBUTE]: '' }}
       className="motion-focus flex h-14 w-full items-center rounded-2xl border border-stroke-control bg-bg-surface px-4 text-left text-base text-content-tertiary lg:hidden"
     >
@@ -98,7 +141,7 @@ export function HomeAskBar() {
     </button>
     <form
       onSubmit={handleSubmit}
-      style={{ viewTransitionName: COMPOSER_TRANSITION_NAME }}
+      style={glideStyle}
       {...{ [SOURCE_ATTRIBUTE]: '' }}
       className="hidden rounded-2xl border border-stroke-control bg-bg-surface p-3 focus-within:border-content-secondary lg:block"
     >

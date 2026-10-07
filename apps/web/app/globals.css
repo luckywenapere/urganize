@@ -2835,30 +2835,18 @@ body:has(.shell-band)::before {
 
 .font-display { font-synthesis-weight: none; }
 
-/* Home <-> full chat hand-off (lib/view-transition.ts). The Home chat box and
-   the chat's composer share the name `urgans-composer`, so the browser glides
-   one into the other while everything else cross-fades. Everything here is
-   scoped to the `vt-urgans` class the helper sets for the length of the
-   transition, so no other navigation changes. A return to Home (`vt-plain`)
-   switches the morph off for a plain fade. Reduced motion never starts a
-   transition at all (the helper checks), and the rule below is a second guard. */
-html.vt-urgans::view-transition-old(root),
-html.vt-urgans::view-transition-new(root) {
-  animation-duration: var(--motion-slow);
-  animation-timing-function: var(--motion-out);
+/* Home -> full chat hand-off (lib/home-chat-glide.ts). The Home box slides
+   down by an inline transform; this fades the rest of Home while the chat
+   loads, and fades the chat in when it arrives. Reduced motion never sets the
+   class or the arrival mark, so neither rule runs then. */
+html.urgans-leaving .home-scene-container > :not([data-urgans-source]) {
+  opacity: 0;
+  transition: opacity var(--motion-base, 200ms) var(--motion-out);
 }
-html.vt-urgans::view-transition-group(urgans-composer) {
-  animation-duration: var(--motion-slow);
-  animation-timing-function: var(--motion-out);
+.urgans-arrive {
+  animation: urgans-arrive var(--motion-base, 200ms) var(--motion-out) both;
 }
-html.vt-plain [data-urgans-composer],
-html.vt-plain [data-urgans-source] {
-  view-transition-name: none !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  html.vt-urgans::view-transition-group(*),
-  html.vt-urgans::view-transition-old(*),
-  html.vt-urgans::view-transition-new(*) {
-    animation-duration: 1ms !important;
-  }
+@keyframes urgans-arrive {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

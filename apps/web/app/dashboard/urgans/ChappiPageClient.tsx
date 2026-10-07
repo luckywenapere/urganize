@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, History, Minimize2, PanelRight, Plus, X } from '@/components/icons';
 import { HOME_PATH } from '@/lib/home-path';
-import { navigateWithTransition } from '@/lib/view-transition';
+import { consumeArrivingFromHome } from '@/lib/home-chat-glide';
 import { TodayPanel } from '@/components/chappi/TodayPanel';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -74,6 +74,8 @@ export default function ChappiPageClient() {
     resume: () => void;
   } | null>(null);
   const keyboardOpen = useKeyboardOpen();
+  // Opened by the Home box sliding down: fade the chat in to finish the move.
+  const [arrivedFromHome] = useState(() => consumeArrivingFromHome());
   // Below xl only: the chats list is showing in place of the conversation.
   const [showChats, setShowChats] = useState(false);
   const hasConversation = useChappiStore((state) => state.messages.length > 0);
@@ -159,7 +161,11 @@ export default function ChappiPageClient() {
           overflowed the calc and re-introduced page scroll. Floor keeps
           short viewports usable; the empty state centers vertically within
           the definite height. */}
-      <div className={`${MOBILE_NAV_ENABLED ? 'chappi-shell-height-nav' : 'chappi-shell-height'} flex flex-col`}>
+      <div
+        className={`${MOBILE_NAV_ENABLED ? 'chappi-shell-height-nav' : 'chappi-shell-height'} flex flex-col${
+          arrivedFromHome ? ' urgans-arrive' : ''
+        }`}
+      >
         {/* Collapse — the mirror image of ChappiSidePanel's expand button.
             Desktop-only (the split view it returns to doesn't exist below
             lg). Opens the side rail explicitly (an intentional "give me the
@@ -174,12 +180,6 @@ export default function ChappiPageClient() {
               Home, so the link was a second copy (founder call, 2026-10-07). */}
           <Link
             href={HOME_PATH}
-            onClick={(event) => {
-              // A plain fade back; modified clicks keep their normal meaning.
-              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
-              event.preventDefault();
-              navigateWithTransition(() => router.push(HOME_PATH), HOME_PATH, { shared: false });
-            }}
             className="motion-focus motion-press mr-auto hidden min-h-9 items-center gap-1.5 lg:inline-flex rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />

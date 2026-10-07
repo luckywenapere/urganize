@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.85.1",
+    date: "October 7, 2026",
+    highlights: [
+      "Opening the chat from Home no longer freezes for a moment first.",
+    ],
+  },
+  {
     version: "1.85.0",
     date: "October 7, 2026",
     highlights: [
