@@ -90,7 +90,9 @@ export function ReleaseChatSection({ releaseId, onToast }: ReleaseChatSectionPro
   };
 
   return (
-    <div className="mt-8">
+    // flex-1 + mt-auto on the composer: the message bar rests at the bottom
+    // even when the thread is short or empty (founder report, 2026-10-07).
+    <div className="mt-8 flex flex-1 flex-col">
       <ThreadMessageList
         messages={messages}
         isLoading={isLoading}
@@ -101,7 +103,9 @@ export function ReleaseChatSection({ releaseId, onToast }: ReleaseChatSectionPro
         emptyTitle="No messages yet."
         emptyBody="Start the conversation. Anyone with access to this rollout can see it here."
       />
-      <ThreadComposer onSend={handleSend} placeholder="Message the team about this rollout…" />
+      <div className="mt-auto">
+        <ThreadComposer onSend={handleSend} placeholder="Message the team about this rollout…" />
+      </div>
     </div>
   );
 }

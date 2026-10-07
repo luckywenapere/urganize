@@ -190,7 +190,7 @@ export function ReleaseScenePanel({
   if (!(SECTION_SCENES as readonly string[]).includes(scene)) return null;
 
   return (
-    <section aria-label={`${release.title} — ${SCENE_LABELS[scene]}`} className="min-w-0">
+    <section aria-label={`${release.title} — ${SCENE_LABELS[scene]}`} className={`min-w-0 ${scene === 'chat' ? 'flex flex-1 flex-col' : ''}`}>
       {/* `items-start`, not `items-center`: the heading block is two lines now,
           and the back control should sit level with the scene name. */}
       <div className="flex items-start justify-between gap-3 border-b border-stroke-subtle pb-3">
