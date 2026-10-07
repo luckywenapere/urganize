@@ -8,7 +8,6 @@ import { Logo } from '@urganize/ui';
 import {
   Search,
   ShieldCheck,
-  Sparkles,
   Wallet2,
   type LucideProps,
 } from '@/components/icons';
@@ -18,18 +17,12 @@ import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { activeShellArea, buildShellAreas, readShellFlags } from '@/lib/shell-nav';
 import { useShellStore } from '@/stores/useShellStore';
-import { useHomeChatStore } from '@/stores/useHomeChatStore';
-import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
-import { HOME_PATH } from '@/lib/home-path';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { ArtistSwitcher } from './ArtistSwitcher';
 import { CreditsChip } from './CreditsChip';
 import { useNavTip } from './useNavTip';
 
 type IconComponent = ComponentType<LucideProps>;
-
-const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
-const HISTORY_ENABLED = isChappiHistoryEnabled();
 
 /**
  * The top bar (design overhaul, 2026-10-04): the Deel shell with Urganize's skin.
@@ -141,15 +134,7 @@ function MoreMenu() {
     };
   }, [open]);
 
-  const items: Array<{ href: string; label: string; Icon: IconComponent; onSelect?: () => void }> = [];
-  if (CHAPPI_ENABLED && HISTORY_ENABLED) {
-    items.push({
-      href: HOME_PATH,
-      label: 'UrgAns sessions',
-      Icon: Sparkles,
-      onSelect: () => useHomeChatStore.getState().setPane('sessions'),
-    });
-  }
+  const items: Array<{ href: string; label: string; Icon: IconComponent }> = [];
   items.push({ href: '/dashboard/credits', label: 'Credits', Icon: Wallet2 });
   if (isAdmin) items.push({ href: '/admin', label: 'Admin', Icon: ShieldCheck });
 
@@ -166,15 +151,12 @@ function MoreMenu() {
       </button>
       {open ? (
         <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-2xl border border-stroke-default bg-bg-surface p-1.5 shadow-lg">
-          {items.map(({ href, label, Icon, onSelect }) => (
+          {items.map(({ href, label, Icon }) => (
             <Link
               key={href}
               href={href}
-              onClick={() => {
-                onSelect?.();
-                setOpen(false);
-              }}
-              aria-current={!onSelect && pathname.startsWith(href) ? 'page' : undefined}
+              onClick={() => setOpen(false)}
+              aria-current={pathname.startsWith(href) ? 'page' : undefined}
               className="motion-focus flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm text-content-primary hover:bg-bg-hover"
             >
               <Icon className="h-4 w-4 text-content-tertiary" aria-hidden="true" />
