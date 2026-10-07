@@ -44,6 +44,7 @@ import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import type { ReleaseCoverArt } from '@/types/cover-art';
 import type { ReleaseSong } from '@/types/song';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
+import { COMPOSER_ATTRIBUTE, COMPOSER_TRANSITION_NAME } from '@/lib/view-transition';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -1235,7 +1236,18 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // upward from it, and it still renders nothing while the user has no
   // releases (in which case this is simply field + send).
   const inputForm = (
-    <form onSubmit={handleSubmit} className="w-full">
+    <form
+      onSubmit={handleSubmit}
+      className="w-full"
+      // The full page's composer is where the Home box glides to (see
+      // lib/view-transition.ts). Panel composers never carry the name.
+      {...(variant === 'page'
+        ? {
+            style: { viewTransitionName: COMPOSER_TRANSITION_NAME },
+            [COMPOSER_ATTRIBUTE]: '',
+          }
+        : {})}
+    >
       <ChappiAttachmentTray
         attachments={attach.attachments}
         pending={attach.pending}

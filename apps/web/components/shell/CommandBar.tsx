@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { navigateWithTransition } from '@/lib/view-transition';
 import { createPortal } from 'react-dom';
 import { ArrowRight, Disc3, ListChecks, Search, Sparkles } from '@/components/icons';
 import { DialogPanel } from '@/components/shared/DialogPanel';
@@ -85,7 +86,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
         run: () => {
           setInput(query.trim());
           if (window.matchMedia('(min-width: 1024px)').matches) setRailOpen(true);
-          else router.push('/dashboard/urgans');
+          else navigateWithTransition(() => router.push('/dashboard/urgans'), '/dashboard/urgans', { shared: false });
         },
       });
     }

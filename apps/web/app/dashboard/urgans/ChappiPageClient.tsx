@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, History, Minimize2, PanelRight, Plus, X } from '@/components/icons';
 import { HOME_PATH } from '@/lib/home-path';
+import { navigateWithTransition } from '@/lib/view-transition';
 import { TodayPanel } from '@/components/chappi/TodayPanel';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -173,6 +174,12 @@ export default function ChappiPageClient() {
               Home, so the link was a second copy (founder call, 2026-10-07). */}
           <Link
             href={HOME_PATH}
+            onClick={(event) => {
+              // A plain fade back; modified clicks keep their normal meaning.
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+              event.preventDefault();
+              navigateWithTransition(() => router.push(HOME_PATH), HOME_PATH, { shared: false });
+            }}
             className="motion-focus motion-press mr-auto hidden min-h-9 items-center gap-1.5 lg:inline-flex rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
