@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.84.0",
+    date: "October 7, 2026",
+    highlights: [
+      "In the full chat you can close the Today panel, and bring it back from the Today button or by pressing Home.",
+      "Your saved chats are back on desktop. Open them from the Chats button in the chat.",
+    ],
+  },
+  {
     version: "1.83.0",
     date: "October 7, 2026",
     highlights: [

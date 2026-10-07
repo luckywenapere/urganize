@@ -1,7 +1,7 @@
 'use client';
 
 import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
-import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from '@urganize/ui';
@@ -18,6 +18,7 @@ import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { activeShellArea, buildShellAreas, readShellFlags } from '@/lib/shell-nav';
 import { useShellStore } from '@/stores/useShellStore';
+import { useChatSideStore } from '@/stores/useChatSideStore';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { ArtistSwitcher } from './ArtistSwitcher';
 import { CreditsChip } from './CreditsChip';
@@ -46,12 +47,22 @@ export function TopNav({ userName }: { userName?: string }) {
   const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
   const active = activeShellArea(areas, pathname);
   const openCommand = useShellStore((state) => state.openCommand);
+  // Home pressed while already in the full chat brings the Today panel back
+  // rather than navigating away, but only when it was closed.
+  const reopenToday = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!pathname.startsWith('/dashboard/urgans')) return;
+    const side = useChatSideStore.getState();
+    if (side.mode === 'today') return;
+    event.preventDefault();
+    side.setMode('today');
+  };
 
   return (
     <header className="shell-band sticky top-0 z-30">
       <div className="mx-auto flex h-[72px] w-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5 lg:px-8">
         <Link
           href="/dashboard/home"
+          onClick={reopenToday}
           aria-label="Urganize home"
           className="motion-focus shrink-0 rounded-md transition-opacity hover:opacity-80"
         >
@@ -69,7 +80,13 @@ export function TopNav({ userName }: { userName?: string }) {
               <Link
                 key={area.key}
                 href={area.href}
-                onClick={area.key === 'catalogue' ? leaveReleaseForCatalog : undefined}
+                onClick={
+                  area.key === 'catalogue'
+                    ? leaveReleaseForCatalog
+                    : area.key === 'home'
+                      ? reopenToday
+                      : undefined
+                }
                 aria-current={isActive ? 'page' : undefined}
                 data-tour={area.key === 'catalogue' ? 'nav-catalog' : `shell-${area.key}`}
                 className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium transition-colors xl:px-3.5 ${

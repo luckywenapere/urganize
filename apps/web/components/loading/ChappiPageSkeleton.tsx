@@ -3,7 +3,6 @@
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownResumableChat } from './known-counts';
 import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
-import { CHATS_MENU_ON } from '@/lib/chats-menu';
 
 // Mirrors ChappiPageClient's own flag reads — keep them in sync (CLAUDE.md's
 // loading-skeleton rule).
@@ -126,7 +125,7 @@ export function ChappiPageSkeleton() {
       <div className="flex h-7 shrink-0 items-center justify-end gap-2">
         <SkeletonBlock className="h-6 w-16 rounded-full" />
         <SkeletonBlock
-          className={`h-6 w-16 rounded-full ${CHATS_MENU_ON ? 'lg:hidden' : ''}`}
+          className="h-6 w-16 rounded-full"
         />
         <span className="flex-1" />
         <SkeletonBlock className="hidden h-7 w-7 lg:block" />

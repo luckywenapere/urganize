@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
+import { X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
+import { useChatSideStore } from '@/stores/useChatSideStore';
 import { useHomeStore } from '@/stores/useHomeStore';
 import { useHomeFocusData } from '@/components/home/useHomeFocusData';
 import { FocusTaskCard } from '@/components/home/FocusTaskCard';
@@ -26,11 +28,21 @@ export function TodayPanel() {
     void load();
   }, [load]);
 
+  const setMode = useChatSideStore((state) => state.setMode);
+
   if (!userId || !home) return null;
-  return <TodayPanelBody home={home} viewerId={userId} />;
+  return <TodayPanelBody home={home} viewerId={userId} onClose={() => setMode('closed')} />;
 }
 
-function TodayPanelBody({ home, viewerId }: { home: HomePayload; viewerId: string }) {
+function TodayPanelBody({
+  home,
+  viewerId,
+  onClose,
+}: {
+  home: HomePayload;
+  viewerId: string;
+  onClose: () => void;
+}) {
   const { releases, yourTasks, waitingTasks } = useHomeFocusData(home, viewerId);
   const focus = pickFocusTask(yourTasks);
   const waiting = waitingTasks.length + home.waiting.djLinks.length;
@@ -42,6 +54,17 @@ function TodayPanelBody({ home, viewerId }: { home: HomePayload; viewerId: strin
 
   return (
     <aside aria-label="Today" className="hidden w-80 shrink-0 space-y-3 overflow-y-auto lg:block">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close Today panel"
+          title="Close"
+          className="motion-focus motion-press grid h-7 w-7 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        >
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </div>
       {focus ? <FocusTaskCard focus={focus} /> : <UpNextCard next={pickUpNext(home.nextShow, releases)} />}
       {counts.length > 0 ? (
         <ul aria-label="Today at a glance" className="flex flex-wrap gap-2">
