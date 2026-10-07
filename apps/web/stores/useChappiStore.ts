@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import type {
+  ChappiAttachment,
   ChappiMessage,
   ChappiPendingConfirmation,
   ChappiReply,
@@ -90,6 +91,9 @@ type ChappiStore = {
    * as a conversation is on screen. The conversation clears it when it sends. */
   sendInputOnOpen: boolean;
   setSendInputOnOpen: (value: boolean) => void;
+  /** Files attached in Home's box, sent along with its message. */
+  pendingAttachments: ChappiAttachment[];
+  setPendingAttachments: (value: ChappiAttachment[]) => void;
   setInput: (value: string) => void;
   setReply: (reply: ChappiReply | null) => void;
   setPendingConfirmation: (pending: ChappiPendingConfirmation | null) => void;
@@ -142,6 +146,8 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   epoch: 0,
   sendInputOnOpen: false,
   setSendInputOnOpen: (value) => set({ sendInputOnOpen: value }),
+  pendingAttachments: [],
+  setPendingAttachments: (value) => set({ pendingAttachments: value }),
   setInput: (value) => set({ input: value }),
   setReply: (reply) => set({ reply }),
   setPendingConfirmation: (pending) => set({ pendingConfirmation: pending }),
