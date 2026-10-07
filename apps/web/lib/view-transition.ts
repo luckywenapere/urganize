@@ -17,8 +17,8 @@ export const SOURCE_ATTRIBUTE = 'data-urgans-source';
 
 const ACTIVE_CLASS = 'vt-urgans';
 const PLAIN_CLASS = 'vt-plain';
-/** A slow destination never holds the old page frozen for longer than this. */
-export const DESTINATION_TIMEOUT_MS = 1200;
+/** The old page is a frozen picture until the new one is ready, so a slow destination must never hold it for long. */
+export const DESTINATION_TIMEOUT_MS = 450;
 
 /** Pure: whether to animate at all. */
 export function shouldAnimateNavigation(input: {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   COMPOSER_TRANSITION_NAME,
@@ -38,6 +38,11 @@ export function HomeAskBar() {
   const setPendingAttachments = useChappiStore((state) => state.setPendingAttachments);
   const [text, setText] = useState('');
   const attach = useAttachments();
+
+  // Fetch the chat page ahead of time so the glide never waits on a download.
+  useEffect(() => {
+    router.prefetch('/dashboard/urgans');
+  }, [router]);
 
   const scopedRelease = scopedReleaseId
     ? releases.find((release) => release.id === scopedReleaseId) ?? null
