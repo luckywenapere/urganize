@@ -31,6 +31,7 @@ import {
   buildShellAreas,
   readShellFlags,
 } from '@/lib/shell-nav';
+import { NAV_TIP_TOUCH_CLASS, useNavTip } from './useNavTip';
 
 type IconComponent = ComponentType<LucideProps>;
 
@@ -67,6 +68,7 @@ export function BottomBar() {
   const active = activeMobileTab(areas, pathname);
   const [moreOpen, setMoreOpen] = useState(false);
   const collapsed = useBarCollapsedOnScroll(pathname);
+  const tip = useNavTip();
   const ActiveIcon = active === 'more' ? MoreHorizontal : (TAB_ICON[active ?? ''] ?? Home);
 
   return (
@@ -107,6 +109,7 @@ export function BottomBar() {
                 <Link
                   href={tab.href}
                   tabIndex={collapsed ? -1 : 0}
+                  {...tip.bind(tab.key)}
                   onClick={
                     tab.key === 'catalogue'
                       ? leaveReleaseForCatalog
@@ -116,7 +119,7 @@ export function BottomBar() {
                   }
                   aria-current={isActive ? 'page' : undefined}
                   data-tour={tab.key === 'catalogue' ? 'nav-catalog' : tab.key === 'urgans' ? 'nav-urgans' : `shell-mobile-${tab.key}`}
-                  className={`motion-focus flex h-full flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${
+                  className={`motion-focus flex h-full flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${NAV_TIP_TOUCH_CLASS} ${
                     isActive ? 'bg-bg-hover text-brand' : 'text-content-tertiary'
                   }`}
                 >
@@ -130,10 +133,11 @@ export function BottomBar() {
             <button
               type="button"
               tabIndex={collapsed ? -1 : 0}
+              {...tip.bind('more')}
               onClick={() => setMoreOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={moreOpen}
-              className={`motion-focus flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${
+              className={`motion-focus flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${NAV_TIP_TOUCH_CLASS} ${
                 active === 'more' ? 'bg-bg-hover text-brand' : 'text-content-tertiary'
               }`}
             >
@@ -143,6 +147,7 @@ export function BottomBar() {
           </li>
         </ul>
       </nav>
+      {tip.panel}
       {moreOpen ? <MoreSheet areas={areas} onClose={() => setMoreOpen(false)} /> : null}
     </>
   );
@@ -208,6 +213,7 @@ function MoreSheet({
   onClose: () => void;
 }) {
   const openSettings = useSettingsLinkClick();
+  const tip = useNavTip({ overSheet: true });
   const items = buildMoreItems(areas);
   if (typeof document === 'undefined') return null;
 
@@ -244,8 +250,9 @@ function MoreSheet({
             <li key={item.key}>
               <Link
                 href={item.href}
+                {...tip.bind(item.key)}
                 onClick={onClose}
-                className="motion-focus flex min-h-14 items-center gap-2.5 text-base text-content-primary"
+                className={`motion-focus flex min-h-14 items-center gap-2.5 text-base text-content-primary ${NAV_TIP_TOUCH_CLASS}`}
               >
                 {(() => {
                   const Icon = MORE_ICON[item.key];
@@ -279,6 +286,7 @@ function MoreSheet({
             </Link>
           </li>
         </ul>
+        {tip.panel}
       </DialogPanel>
     </div>,
     document.body

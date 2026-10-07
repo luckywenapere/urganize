@@ -44,3 +44,23 @@ export function navTipDelay({
   }
   return NAV_TIP_OPEN_DELAY_MS;
 }
+
+/**
+ * On a phone there is no hover, so a tip opens on a PRESS AND HOLD, the way
+ * Android and Material show a tooltip on touch (founder ask, 2026-10-07: tips on
+ * phone too). A quick tap still just goes to the page.
+ *
+ *  - HOLD 500ms: Android's own long-press timeout, the length people's thumbs
+ *    already know from every app on the phone.
+ *  - LINGER 1500ms: Material's mobile tooltip stays about a second and a half
+ *    after the finger lifts, long enough to read two short sentences.
+ *  - MOVE TOLERANCE 10px: past this the finger is scrolling, not holding.
+ */
+export const NAV_TIP_LONG_PRESS_MS = 500;
+export const NAV_TIP_TOUCH_LINGER_MS = 1500;
+export const NAV_TIP_MOVE_TOLERANCE_PX = 10;
+
+/** True once a held finger has moved far enough to count as a scroll. */
+export function touchMovedTooFar(dx: number, dy: number): boolean {
+  return Math.hypot(dx, dy) > NAV_TIP_MOVE_TOLERANCE_PX;
+}

@@ -63,6 +63,9 @@ import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 /** Above app chrome and MobileNavBar's own z-[140], below the modal tier
  * (z-[170]+) that Escape and the scroll lock belong to. */
 const PANEL_Z = 'z-[150]';
+/** For a tip on something inside a sheet (the phone's More sheet sits at
+ * z-[170]), so the tip is not drawn behind the sheet it explains. */
+const PANEL_Z_OVER_SHEET = 'z-[180]';
 
 /** A pullout's words: either a key into HELP_COPY (held to the fifth-grader
  * guard) or free text for the many one-off lines that used to sit as grey
@@ -77,6 +80,7 @@ export function HelpTipPanel({
   prefer = 'bottom',
   id,
   onDismiss,
+  overSheet = false,
 }: TipWords & {
   /** The element to point at. `null` closes the panel — callers hold the open
    * state, which is what lets one panel serve a whole list of rows. */
@@ -88,6 +92,8 @@ export function HelpTipPanel({
   /** Called on Escape. Optional: the side menu closes on pointer leave and has
    * nothing to restore focus to. */
   onDismiss?: () => void;
+  /** Draw above a bottom sheet rather than under it. */
+  overSheet?: boolean;
 }) {
   const text = helpKey ? HELP_COPY[helpKey].text : (freeText as string);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -152,7 +158,7 @@ export function HelpTipPanel({
         left: placed?.left ?? 0,
         visibility: placed ? 'visible' : 'hidden',
       }}
-      className={`pointer-events-none ${PANEL_Z} max-w-[17rem] rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-xs leading-relaxed text-content-primary shadow-lg`}
+      className={`pointer-events-none ${overSheet ? PANEL_Z_OVER_SHEET : PANEL_Z} max-w-[17rem] rounded-lg border border-stroke-default bg-bg-elevated px-3 py-2 text-xs leading-relaxed text-content-primary shadow-lg`}
     >
       {text}
     </div>,
