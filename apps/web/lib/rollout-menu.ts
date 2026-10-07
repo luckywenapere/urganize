@@ -37,8 +37,8 @@ export type RolloutMenuVariant = 'rail' | 'phone';
  * panel). A flag that is off removes its row and nothing else.
  */
 export type RolloutMenuFlags = {
-  /** Also decides whether the Activities row exists: it switches between the two
-   *  main views, and with the timeline off there is only one. */
+  /** Owns TWO rows, Timeline and Activities: they switch between the two main
+   *  views, and with the timeline off there is only one. */
   timeline: boolean;
   releaseChat: boolean;
   contentCalendar: boolean;
@@ -145,6 +145,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
         };
 
   const entries: (RolloutMenuEntry | null)[] = [
+    flags.timeline ? scene('timeline', 'See the timeline') : null,
     flags.timeline ? scene('activities', 'Work the plan') : null,
     flags.releaseChat ? scene('chat', 'Talk to the team') : null,
     flags.contentCalendar ? scene('calendar', 'Plan content') : null,

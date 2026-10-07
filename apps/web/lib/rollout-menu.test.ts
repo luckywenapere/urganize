@@ -47,24 +47,25 @@ const keysOf = (entries: RolloutMenuEntry[]) => entries.map((entry) => entry.key
 
 /** Which row each feature switch owns. The mapping is the thing being tested,
  *  so it is written out here rather than derived from the module. */
-const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey> = {
-  timeline: 'activities',
-  releaseChat: 'chat',
-  contentCalendar: 'calendar',
-  pitching: 'pitch',
-  pitchKit: 'pitchkit',
-  distribution: 'distribute',
-  metadata: 'metadata',
-  notes: 'note',
-  coverArt: 'coverart',
-  songUpload: 'song',
-  files: 'files',
-  capture: 'capture',
+const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey[]> = {
+  timeline: ['timeline', 'activities'],
+  releaseChat: ['chat'],
+  contentCalendar: ['calendar'],
+  pitching: ['pitch'],
+  pitchKit: ['pitchkit'],
+  distribution: ['distribute'],
+  metadata: ['metadata'],
+  notes: ['note'],
+  coverArt: ['coverart'],
+  songUpload: ['song'],
+  files: ['files'],
+  capture: ['capture'],
 };
 
 /** Rows that swap the panel body for a scene. Everything else in the menu
  *  navigates away or opens a dialog. */
 const SCENE_ROWS: ReleaseMenuKey[] = [
+  'timeline',
   'activities',
   'chat',
   'calendar',
@@ -95,9 +96,9 @@ describe('buildRolloutMenu', () => {
 
   it('drops exactly one row for each feature that is switched off', () => {
     for (const flag of Object.keys(ROW_BY_FLAG) as (keyof RolloutMenuFlags)[]) {
-      const row = ROW_BY_FLAG[flag];
+      const rows = ROW_BY_FLAG[flag];
       const keys = keysOf(build({ flags: { ...ALL_ON, [flag]: false } }));
-      expect(keys, `${flag} off`).toEqual(RELEASE_MENU_ORDER.filter((key) => key !== row));
+      expect(keys, `${flag} off`).toEqual(RELEASE_MENU_ORDER.filter((key) => !rows.includes(key)));
     }
   });
 
@@ -156,11 +157,12 @@ describe('which row is lit', () => {
     }
   });
 
-  it('lights nothing for the timeline, which is a main view and not a row', () => {
-    // The timeline is what a rollout LANDS on; the Activities row points at
-    // the OTHER main view. Lighting it here would say "you are on the buckets"
-    // while the timeline is showing.
-    expect(build({ activeScene: 'timeline' }).filter((entry) => entry.isActive)).toEqual([]);
+  it('lights Timeline, and only Timeline, while the timeline is showing', () => {
+    // The timeline is what a rollout LANDS on and has its own row since
+    // 2026-10-07. The caller resolves a bare rollout to 'timeline', so this row
+    // is lit on landing, and the Activities row (the buckets) stays unlit.
+    const lit = build({ activeScene: 'timeline' }).filter((entry) => entry.isActive);
+    expect(lit.map((entry) => entry.key)).toEqual(['timeline']);
   });
 
   it('lights nothing when the open scene’s own feature is off', () => {

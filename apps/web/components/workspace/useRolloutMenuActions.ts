@@ -4,6 +4,7 @@ import type { ComponentType } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Archive,
+  CalendarClock,
   CalendarDays,
   ClipboardList,
   FolderOpen,
@@ -27,7 +28,7 @@ import {
   type RolloutMenuVariant,
 } from '@/lib/rollout-menu';
 import { ROLLOUT_MENU_FLAGS } from '@/lib/rollout-menu-flags';
-import { resolveActiveScene, type SceneName } from '@/lib/scene-cache';
+import { resolvePanelBody, type SceneName } from '@/lib/scene-cache';
 import { useSceneOverlay } from './useSceneOverlay';
 
 /**
@@ -40,6 +41,7 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   // one); a menu row needs one, and a checklist is what the buckets are. The
   // slot held a Gantt mark while it pointed at the timeline.
   activities: ListChecks,
+  timeline: CalendarClock,
   chat: MessageCircle,
   calendar: CalendarDays,
   pitch: Radio,
@@ -121,7 +123,9 @@ export function useRolloutMenuActions({
   const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
   // Through the shared resolver rather than trusting the URL: with a feature off,
   // a stale `?scene=…` must not light a row for a scene that is not rendering.
-  const activeScene = resolveActiveScene(urlScene);
+  // `resolvePanelBody` rather than `resolveActiveScene`, so a bare rollout (no
+  // `?scene=`) lights Timeline: that is the view it is actually showing.
+  const activeScene = resolvePanelBody(urlScene);
 
   const toggle = (scene: SceneName, id: string) => {
     if (activeScene === scene) {
