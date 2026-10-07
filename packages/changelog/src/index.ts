@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.84.1",
+    date: "October 7, 2026",
+    highlights: [
+      "Opening UrgAns on your phone now brings up the keyboard right away.",
+    ],
+  },
+  {
     version: "1.84.0",
     date: "October 7, 2026",
     highlights: [
