@@ -1,4 +1,4 @@
-// Photos, camera shots and text files for UrgAns.
+// Photos, camera shots, PDFs, Word and Excel files, and text files for UrgAns.
 //
 // The person attaches something to a message; a photo goes to the model as an
 // image, a text file goes in as text. Nothing is stored: the bytes live in the
@@ -33,6 +33,11 @@ export const MAX_IMAGE_DATA_URL_CHARS = 1_100_000;
 export const MAX_TOTAL_IMAGE_DATA_CHARS = 3_200_000;
 
 export const MAX_TEXT_FILE_BYTES = 1 * MIB;
+
+/** PDF, Word and Excel files are turned into text in the browser (so the upload
+ * limit never applies), then travel as an ordinary text attachment. This is the
+ * size of the file itself; the text that comes out is capped by MAX_TEXT_CHARS. */
+export const MAX_DOCUMENT_FILE_BYTES = 15 * MIB;
 export const MAX_TEXT_CHARS = 40_000;
 export const MAX_TOTAL_TEXT_CHARS = 80_000;
 
@@ -51,9 +56,15 @@ const DATA_URL_IMAGE = /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/]+={
 const TEXT_EXTENSIONS = new Set(['txt', 'md', 'markdown', 'csv', 'tsv', 'json', 'log', 'srt', 'vtt']);
 const TEXT_MIMES = new Set(['application/json', 'application/csv', 'application/x-ndjson']);
 
+export type DocumentFormat = 'pdf' | 'docx' | 'xlsx';
+
 export type FileVerdict =
   | { ok: true; kind: 'image' | 'text' }
+  | { ok: true; kind: 'document'; format: DocumentFormat }
   | { ok: false; reason: string };
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 function extensionOf(name: string): string {
   const dot = name.lastIndexOf('.');
@@ -66,10 +77,24 @@ export function classifyFile(file: { name: string; type: string; size: number })
   const type = (file.type || '').toLowerCase().split(';')[0].trim();
   const ext = extensionOf(file.name);
 
-  if (type === 'application/pdf' || ext === 'pdf') {
+  let format: DocumentFormat | null = null;
+  if (type === 'application/pdf' || ext === 'pdf') format = 'pdf';
+  else if (type === DOCX_MIME || ext === 'docx') format = 'docx';
+  else if (type === XLSX_MIME || ext === 'xlsx') format = 'xlsx';
+  if (format) {
+    if (file.size > MAX_DOCUMENT_FILE_BYTES) {
+      return { ok: false, reason: 'That file is too big. Pick one under 15 MB, or send the part you need.' };
+    }
+    return { ok: true, kind: 'document', format };
+  }
+
+  if (ext === 'doc' || ext === 'xls' || ext === 'ppt' || ext === 'pptx') {
     return {
       ok: false,
-      reason: 'UrgAns cannot read PDFs yet. Paste the text, or take a photo of the page.',
+      reason:
+        ext === 'doc' || ext === 'xls'
+          ? 'UrgAns cannot read the old .doc and .xls files. Save it as .docx or .xlsx and try again.'
+          : 'UrgAns cannot read PowerPoint files yet. Save the slides as a PDF and attach that.',
     };
   }
 
@@ -92,7 +117,7 @@ export function classifyFile(file: { name: string; type: string; size: number })
 
   return {
     ok: false,
-    reason: 'UrgAns can read pictures and plain text files (text, CSV, JSON, Markdown).',
+    reason: 'UrgAns can read pictures, PDFs, Word and Excel files, and plain text (text, CSV, JSON, Markdown).',
   };
 }
 
@@ -286,4 +311,32 @@ export function buildUserModelContent(
 
   if (images.length === 0) return text || content;
   return [{ type: 'text', text: text || 'The user attached a picture.' }, ...images];
+}
+
+// ── Turning documents into text ──────────────────────────────────────────────
+
+/** One sheet as plain text: a heading, then one line per row, cells separated by
+ * a tab. Empty rows are dropped (a spreadsheet is mostly empty space). */
+export function formatSheetAsText(name: string, rows: ReadonlyArray<ReadonlyArray<unknown>>): string {
+  const lines: string[] = [];
+  for (const row of rows) {
+    const cells = row.map((cell) => {
+      if (cell === null || cell === undefined) return '';
+      if (cell instanceof Date) return cell.toISOString().slice(0, 10);
+      return String(cell).replace(/[\t\r\n]+/g, ' ').trim();
+    });
+    while (cells.length > 0 && cells[cells.length - 1] === '') cells.pop();
+    if (cells.length > 0) lines.push(cells.join('\t'));
+  }
+  return `## Sheet: ${name}\n${lines.join('\n')}`;
+}
+
+/** Page texts as one string, each page under its own heading so the model can say
+ * where something was. Pages with no text are left out. */
+export function formatPagesAsText(pages: ReadonlyArray<string>): string {
+  return pages
+    .map((text, index) => ({ page: index + 1, text: text.replace(/[ \t]+\n/g, '\n').trim() }))
+    .filter((p) => p.text.length > 0)
+    .map((p) => `## Page ${p.page}\n${p.text}`)
+    .join('\n\n');
 }
