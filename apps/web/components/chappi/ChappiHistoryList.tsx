@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2 } from '@/components/icons';
+import { Loader2, Trash2 } from '@/components/icons';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { formatRelativeTime } from '@/lib/relative-time';
@@ -44,7 +44,6 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
   const open = useChappiHistoryStore((state) => state.open);
   const remove = useChappiHistoryStore((state) => state.remove);
   const currentId = useChappiStore((state) => state.conversationId);
-  const reset = useChappiStore((state) => state.reset);
 
   const [pendingDelete, setPendingDelete] = useState<ChatSummary | null>(null);
   const [openError, setOpenError] = useState('');
@@ -60,12 +59,6 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
     else setOpenError("Couldn't open that chat. Check your connection and try again.");
   };
 
-  const handleNewChat = () => {
-    setOpenError('');
-    reset();
-    onDone?.();
-  };
-
   const isMenu = variant === 'menu';
   const showSkeleton = summaries.length === 0 && (listStatus === 'idle' || listStatus === 'loading');
 
@@ -79,26 +72,6 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
           Chats
         </p>
-        {isMenu ? (
-          <button
-            type="button"
-            onClick={handleNewChat}
-            aria-label="New chat"
-            title="New chat"
-            className="motion-focus motion-press grid h-6 w-6 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleNewChat}
-            className="motion-focus motion-press inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            New chat
-          </button>
-        )}
       </div>
 
       {openError ? (
