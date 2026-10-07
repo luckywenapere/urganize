@@ -1461,22 +1461,6 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             column. Don't restore the old pair without a fresh call; the
             auto-scroll below still follows the newest reply either way. */}
         <div className={`mx-auto flex w-full flex-col ${isPanel ? '' : 'max-w-[46rem] px-1'}`}>
-          {isPanel ? null : (
-            // With history on, the page's chats column (xl+) carries its own
-            // "New chat", so this one steps aside where the column shows.
-            <div
-              className={`flex shrink-0 justify-end pb-3 pt-1 ${HISTORY_ENABLED ? 'xl:hidden' : ''}`}
-            >
-              <button
-                type="button"
-                onClick={reset}
-                className="motion-focus inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-secondary"
-              >
-                <RotateCcw className="h-3 w-3" aria-hidden="true" />
-                New chat
-              </button>
-            </div>
-          )}
           <Transcript
             messages={messages}
             isThinking={isThinking}
