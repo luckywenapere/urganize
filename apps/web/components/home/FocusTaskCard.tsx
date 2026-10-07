@@ -18,21 +18,16 @@ const GROUP_LABEL: Record<FocusTask['group'], string> = {
  */
 export function FocusTaskCard({ focus }: { focus: FocusTask }) {
   const { openTask } = useTaskUI();
-  const { task, group, groupSize } = focus;
+  const { task, group } = focus;
   const due = getRelativeDueLabel({ dueDate: task.dueDate, completedAt: null, compressedRunway: false });
   const where = task.releaseTitle ? `${task.releaseTitle} · ${task.artistName || 'Unassigned artist'}` : 'No rollout';
-  const context =
-    groupSize > 1
-      ? `Your most pressing of ${groupSize} ${group === 'late' ? 'late tasks' : group === 'today' ? 'tasks due today' : 'tasks this week'}.`
-      : null;
 
   return (
     <section
       aria-label={GROUP_LABEL[group]}
       className="rounded-2xl border border-stroke-default bg-bg-surface p-4 sm:p-5"
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">{GROUP_LABEL[group]}</p>
-      <div className="mt-3 flex items-start gap-3">
+      <div className="flex items-start gap-3">
         <TaskCompletionCheckbox taskId={task.id} status={task.status} taskTitle={task.title} className="mt-1" />
         <div className="min-w-0 flex-1">
           <p className="break-words font-display text-xl font-semibold leading-snug text-content-primary sm:text-2xl">
@@ -42,7 +37,6 @@ export function FocusTaskCard({ focus }: { focus: FocusTask }) {
             {where} ·{' '}
             <span className={due.isOverdue ? 'font-medium text-status-error' : ''}>{due.label}</span>
           </p>
-          {context ? <p className="mt-1 text-xs text-content-tertiary">{context}</p> : null}
         </div>
       </div>
       <div className="mt-4 flex">

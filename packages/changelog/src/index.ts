@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.81.0",
+    date: "October 7, 2026",
+    highlights: [
+      "The priority task card on Home is simpler: just the task and a button to open it.",
+    ],
+  },
+  {
     version: "1.80.0",
     date: "October 7, 2026",
     highlights: [
