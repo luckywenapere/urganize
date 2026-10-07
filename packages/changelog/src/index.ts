@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.88.3",
+    date: "October 7, 2026",
+    highlights: [
+      "The Sessions link in the top bar's More menu is gone. Your chats are still on Home, under Sessions.",
+    ],
+  },
+  {
     version: "1.88.2",
     date: "October 7, 2026",
     highlights: [
