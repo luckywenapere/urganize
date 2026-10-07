@@ -27,6 +27,7 @@ import type { ReleaseCaptureLead, ReleaseCapturePage } from '@/types/capture';
 import type { ReleaseSong } from '@/types/song';
 import type { ReleaseCoverArt } from '@/types/cover-art';
 import type { Asset } from '@/components/releases/AssetSection';
+import type { ChatPerson } from '@/lib/chat-mentions';
 import type { ReleaseMessage } from '@/types/release-message';
 
 /**
@@ -75,7 +76,11 @@ export type SongScenePayload = { songs: ReleaseSong[] };
 export type CoverArtScenePayload = { coverArt: ReleaseCoverArt | null };
 
 /** Oldest first — a chat thread reads top-to-bottom. */
-export type ChatScenePayload = { messages: ReleaseMessage[] };
+export type ChatScenePayload = {
+  messages: ReleaseMessage[];
+  /** Who can be tagged with @ (names only). Absent in an older cached copy. */
+  people?: ChatPerson[];
+};
 
 export type ScenePayloadMap = {
   metadata: MetadataScenePayload;
@@ -308,6 +313,7 @@ const FETCHERS: Record<CacheableSceneName, SceneFetcher> = {
     );
     return {
       messages: Array.isArray(data.messages) ? (data.messages as ReleaseMessage[]) : [],
+      people: Array.isArray(data.people) ? (data.people as ChatPerson[]) : [],
     } satisfies ChatScenePayload;
   },
 };

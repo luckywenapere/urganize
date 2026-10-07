@@ -75,7 +75,7 @@ export async function sendEmail<Id extends EmailTemplateId>(
   const meta = getEmailTemplateMeta(params.templateId);
   const config = readEmailConfig();
 
-  // Optional categories (onboarding, reminders, announcements) carry an
+  // Optional categories (onboarding, reminders, announcements, chat) carry an
   // unsubscribe link and the one-click headers. Without a signing secret no link
   // can be made; the send degrades to going out without one rather than a
   // welcome email silently stopping.

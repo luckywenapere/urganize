@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useAuthStore } from '@/lib/auth-store';
+import { chatEmailRecipients, splitMessageForDisplay, type ChatPerson } from '@/lib/chat-mentions';
 import { supabase } from '@/lib/supabase/client';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import { ThreadMessageList } from '@/components/threads/ThreadMessageList';
@@ -33,6 +35,8 @@ export function ReleaseChatSection({ releaseId, onToast }: ReleaseChatSectionPro
   const { data, isLoading, error: loadError, reload } = useSceneData(releaseId, 'chat');
   const setScene = useSceneDataStore((state) => state.setScene);
   const rawMessages = useMemo(() => data?.messages ?? [], [data]);
+  const people = useMemo<ChatPerson[]>(() => data?.people ?? [], [data]);
+  const currentUserId = useAuthStore((state) => state.user?.id ?? null);
 
   const messages = useMemo<ThreadMessage[]>(
     () =>
@@ -67,7 +71,9 @@ export function ReleaseChatSection({ releaseId, onToast }: ReleaseChatSectionPro
     if (!response.ok) {
       throw new Error(payload.error || 'Something went wrong.');
     }
-    setScene(releaseId, 'chat', { messages: payload.messages || [] });
+    // A write answers with messages only; keep the people list we already have.
+    const current = useSceneDataStore.getState().getScene(releaseId, 'chat');
+    setScene(releaseId, 'chat', { messages: payload.messages || [], people: current?.people ?? people });
   };
 
   const handleSend = async (content: string) => {
@@ -75,7 +81,34 @@ export function ReleaseChatSection({ releaseId, onToast }: ReleaseChatSectionPro
       method: 'POST',
       body: JSON.stringify({ content }),
     });
+    // The server decides from the same text with the same rule, so this says
+    // who it is emailing without asking it.
+    const { userIds, everyone } = chatEmailRecipients({
+      content,
+      people,
+      authorId: currentUserId ?? '',
+    });
+    if (everyone && userIds.length) {
+      onToast(`Sent. Emailing everyone on this rollout (${userIds.length}).`, 'success');
+    } else if (userIds.length) {
+      const names = userIds
+        .map((id) => people.find((person) => person.userId === id)?.name)
+        .filter(Boolean) as string[];
+      const named = names.length <= 2 ? names.join(' and ') : `${names[0]} and ${names.length - 1} others`;
+      onToast(`Sent. Emailing ${named}.`, 'success');
+    }
   };
+
+  const renderContent = (content: string) =>
+    splitMessageForDisplay(content, people).map((part, index) =>
+      part.mention ? (
+        <span key={index} className="font-semibold text-brand">
+          {part.text}
+        </span>
+      ) : (
+        <span key={index}>{part.text}</span>
+      )
+    );
 
   const handleEdit = async (messageId: string, content: string) => {
     await request(`/api/releases/${releaseId}/messages/${messageId}`, {
@@ -102,9 +135,15 @@ export function ReleaseChatSection({ releaseId, onToast }: ReleaseChatSectionPro
         onDelete={handleDelete}
         emptyTitle="No messages yet."
         emptyBody="Start the conversation. Anyone with access to this rollout can see it here."
+        renderContent={renderContent}
       />
       <div className="mt-auto">
-        <ThreadComposer onSend={handleSend} placeholder="Message the team about this rollout…" />
+        <ThreadComposer
+          onSend={handleSend}
+          placeholder="Message the team. Type @ to tag someone, or @everyone to email the team."
+          mentionPeople={people}
+          currentUserId={currentUserId}
+        />
       </div>
     </div>
   );
