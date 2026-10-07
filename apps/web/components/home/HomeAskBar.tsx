@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, Sparkles } from '@/components/icons';
+import { Send } from '@/components/icons';
 import { useChappiStore } from '@/stores/useChappiStore';
 
 /**
@@ -30,29 +30,39 @@ export function HomeAskBar() {
     else router.push('/dashboard/urgans');
   };
 
+  // Enter sends, Shift+Enter makes a new line, like every chat box.
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  };
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex h-16 w-full items-center gap-3 rounded-full border border-stroke-control bg-bg-surface pl-5 pr-2 focus-within:border-content-secondary"
+      className="rounded-2xl border border-stroke-control bg-bg-surface p-3 focus-within:border-content-secondary"
     >
-      <Sparkles className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
-      <input
+      <textarea
         value={text}
         onChange={(event) => setText(event.target.value)}
-        placeholder="Ask UrgAns anything"
+        onKeyDown={handleKeyDown}
+        rows={2}
+        placeholder="Message UrgAns..."
         aria-label="Message UrgAns"
         enterKeyHint="send"
-        autoComplete="off"
-        className="min-w-0 flex-1 bg-transparent text-base text-content-primary placeholder:text-content-tertiary focus:outline-none"
+        className="block max-h-40 min-h-[3.25rem] w-full resize-none bg-transparent px-1 text-base text-content-primary placeholder:text-content-tertiary focus:outline-none"
       />
-      <button
-        type="submit"
-        disabled={!text.trim()}
-        aria-label="Send to UrgAns"
-        className="motion-focus grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand text-content-inverse disabled:opacity-40"
-      >
-        <Send className="h-5 w-5" aria-hidden="true" />
-      </button>
+      <div className="mt-2 flex justify-end">
+        <button
+          type="submit"
+          disabled={!text.trim()}
+          aria-label="Send to UrgAns"
+          className="motion-focus grid h-10 w-10 place-items-center rounded-full bg-brand text-content-inverse disabled:opacity-40"
+        >
+          <Send className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </div>
     </form>
   );
 }
