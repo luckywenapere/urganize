@@ -118,4 +118,4 @@ Relationships/Shows/Directory/Notes/Settings page restyles, press kit and public
 - From the Hark screenshots (plan: `C:/Users/penta/.claude/plans/the-home-screen-on-wiggly-aho.md`). Every Home group is a stack with a chip label; empty groups are not drawn; "Do this first" is the top card of Tasks.
 - Phone: the UrgAns box is pinned above the bottom bar on every Home state, with + and the mic; send slides into the full chat.
 - Computer: Home is the chat (stacks left, conversation right, "+ New session" after the last stack, Chat | Sessions switch). The full chat page redirects to Home at lg+; the Today panel is gone. Chats are called sessions in copy.
-- Shipped as v1.87.0. See the CLAUDE.md note of the same date for the details and what is unverified.
+- Shipped as v1.88.0. See the CLAUDE.md note of the same date for the details and what is unverified.

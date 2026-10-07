@@ -16,6 +16,9 @@ export type EmailCategory =
   | 'reminders'
   /** Dashboard broadcasts. Unsubscribable. */
   | 'announcements'
+  /** Being tagged in a rollout's chat. Unsubscribable, on its own, so turning
+   *  it off never silences anything else (founder call, 2026-10-07). */
+  | 'chat'
   /** Founder-only operational mail. Never sent to a customer; no unsubscribe. */
   | 'internal';
 
@@ -132,6 +135,14 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     // EMAIL_ONBOARDING_SEQUENCE=on, which is the approval.
     placeholderCopy: false,
   },
+  chat_mention: {
+    id: 'chat_mention',
+    category: 'chat',
+    name: 'Tagged in rollout chat',
+    description:
+      'Sent when someone tags a teammate with @Name, or the whole team with @everyone, in a rollout chat.',
+    placeholderCopy: false,
+  },
   announcement: {
     id: 'announcement',
     category: 'announcements',
@@ -145,6 +156,7 @@ const UNSUBSCRIBABLE: ReadonlySet<EmailCategory> = new Set<EmailCategory>([
   'onboarding',
   'reminders',
   'announcements',
+  'chat',
 ]);
 
 /** Categories a recipient can turn off, and which therefore carry an unsubscribe

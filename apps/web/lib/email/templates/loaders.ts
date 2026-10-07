@@ -113,6 +113,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.announcementSubject(p.subject),
     };
   },
+  chat_mention: async () => {
+    const m = await import('./ChatMentionEmail');
+    return {
+      element: (p) => createElement(m.ChatMentionEmail, p),
+      subject: (p) => m.chatMentionSubject(p.authorLabel, p.releaseTitle, p.everyone),
+    };
+  },
 };
 
 export async function loadEmailTemplate<Id extends EmailTemplateId>(

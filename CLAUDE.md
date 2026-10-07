@@ -18586,7 +18586,26 @@ Photos (library, camera on a phone, paste) and plain text files can be attached 
 
 ---
 
-## Home becomes the chat on a computer; stacks; sessions (2026-10-07, v1.87.0, no flag)
+## Tagging people in rollout chat emails them (2026-10-07)
+
+Founder ask: the rollout chat should email everyone on the rollout, or the one person you tag. No new flag (founder call): it goes wherever `NEXT_PUBLIC_FEATURE_RELEASE_CHAT` is on. One migration, `20261007120000_email_chat_category.sql`, **not applied anywhere yet**.
+
+**Founder decisions, asked before building:** a plain message emails nobody; `@everyone` emails everyone who can see the rollout; `@Name` emails that person; anyone who can post may use either; the email carries the full message and a link; a push goes out too; turning it off is the email's unsubscribe link, no Settings toggle.
+
+1. **The message text is the record.** No mention column: the server re-reads the text when a message is POSTed (`chatEmailRecipients` in `lib/chat-mentions.ts`), so a name picked and then deleted is not emailed and a name typed by hand is. At each `@` the LONGEST matching name wins ("@Ada Obi" over "@Ada"), case is ignored, a tag never starts inside a word (so an email address is not a tag) or runs on into one. The author is never emailed; 25 recipients at most per message.
+2. **Who can be tagged is who can see the rollout** (`loadReleaseChatPeople`, `lib/release-chat-server.ts`): the owner plus every active member of the owner's team not limited to another artist, guests included. That is the set `decideReleaseAccess` admits, so nobody is emailed a link they cannot open. A name typed for anyone else simply does not match. The picker gets names only (`toChatPeoplePayload`); emails stay on the server.
+3. **Sending runs after the response** (`after()` from `next/server`) and never throws, so a slow or failed email never delays or fails the message. Edits notify nobody. Each email has the Resend idempotency key `chat-<message>-<user>`; the push tag is per message so two stack.
+4. **A new email category, `chat`**, unsubscribable on its own so turning it off stops chat mail and nothing else. That is why the migration exists: `email_log.category` and `email_suppressions.scope` both have check constraints listing the categories. Before it is applied a chat email still sends, but its log row is refused and its unsubscribe link fails to save.
+5. **The composer's @ picker is a real combobox** (`ThreadComposer`'s optional `mentionPeople`): arrows, Enter or Tab to pick, Escape closes. Enter only picks while the list is open, so it never sends. The task chat passes no people, so it has no picker. Tags show highlighted in sent messages (`renderContent` on `ThreadMessageList`), and a toast says who is being emailed, worked out with the same rule the server uses.
+6. **The daily email limit still applies.** Resend's free plan is 100 a day for the whole app; one `@everyone` on a ten-person team is ten of them.
+
+**Verified:** 29 new tests (`lib/chat-mentions.test.ts`, `lib/email/templates/chat-mention-render.test.ts`); two deliberate breaks (emailing the author, dropping longest-name-first) each caught. Full suite 6,712 passing with one failure, `home-layout-guard.test.ts`, which fails the same way on `main`. `tsc` clean apart from the 8 known errors, lint clean on every touched file, `next build` green with `/auth` and `/settings` still static. **Not verified:** no real message has emailed anyone, the picker has not been seen in a browser, and the migration is unapplied.
+
+**Activation:** apply the migration. If release chat is on in production, this is live at merge, and a changelog entry belongs with it ("Tag someone with @ in a rollout's chat and they get an email. @everyone emails the whole team.").
+
+---
+
+## Home becomes the chat on a computer; stacks; sessions (2026-10-07, v1.88.0, no flag)
 
 Founder brief from the Hark app screenshots, decided through four rounds of questions. Plan: `C:/Users/penta/.claude/plans/the-home-screen-on-wiggly-aho.md`. Live at merge, no flag (the overhaul's rule).
 
