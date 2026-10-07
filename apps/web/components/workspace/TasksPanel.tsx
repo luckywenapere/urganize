@@ -402,7 +402,12 @@ export function TasksPanel({
     // where this is a direct grid child that stretches to fill its row track
     // (see WorkspaceDesktopFocused) — on mobile, where it's an ordinary block
     // child in normal page flow, `flex: 1 1 0%` on a non-flex-item is inert.
-    <aside id={id} data-tour="activities" className="flex min-h-0 min-w-0 flex-1 flex-col scroll-mt-20">
+    // Below lg the panel is at least a screen tall (minus the chrome above it),
+    // so the sticky mobile dock at its end lands at the bottom of the screen
+    // even when the content is short (an empty chat, a thin scene). Without a
+    // floor, `sticky` has nothing to stick against and the dock sat mid-page
+    // right under the content. `mt-auto` on the dock pushes it to the end.
+    <aside id={id} data-tour="activities" className="flex min-h-[calc(100dvh-9rem)] min-w-0 flex-1 flex-col scroll-mt-20 lg:min-h-0">
       {/* (The desktop's row of scene pills that sat here until 2026-09-30 is
           the rollout menu now: a vertical card at the top of the right-hand
           column, above the UrgAns chat, rendered by WorkspaceView and drawn from
@@ -679,7 +684,7 @@ export function TasksPanel({
           owns the screen's edge — see TASKS_PILL_DOCK_OFFSET_CLASS. The
           -mx/px bleed still matches <main>'s own gutter at each breakpoint. */}
       <div
-        className={`sticky z-20 -mx-4 flex flex-col gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
+        className={`sticky z-20 -mx-4 mt-auto flex flex-col gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
         <div className="flex flex-wrap items-center gap-2">
           {/* CENTRED, not pinned to the right edge (founder call,
