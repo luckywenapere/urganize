@@ -124,7 +124,7 @@ function nextUpLabel(row: CatalogueRow): ReactNode {
 }
 
 /** The search and filter bar appears only above this many rollouts. */
-const FILTER_BAR_MIN_ROWS = 10;
+const FILTER_BAR_MIN_ROWS = 20;
 
 const COLUMNS =
   'md:grid-cols-[minmax(240px,2.4fr)_130px_130px_minmax(150px,1fr)_minmax(180px,1.6fr)]';
