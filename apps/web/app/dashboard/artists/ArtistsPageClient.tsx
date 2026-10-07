@@ -4,7 +4,6 @@ import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Users } from '@/components/icons';
-import { PageHeader } from '@/components/shell/PageHeader';
 import { useAuthStore } from '@/lib/auth-store';
 import { artistSummary } from '@/lib/artist-overview';
 import { artistHref, describeArtistCounts, isArtistPageEnabled } from '@/lib/artist-page';
@@ -60,7 +59,7 @@ export default function ArtistsPageClient() {
 
   return (
     <div>
-      <PageHeader title="Artists" info="Each artist, with every rollout, show and press kit in one place." />
+      <div className="pt-5 sm:pt-6" />
 
       {loading ? (
         <div className="space-y-2" aria-busy="true">

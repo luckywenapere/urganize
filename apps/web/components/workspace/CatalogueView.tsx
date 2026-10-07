@@ -189,7 +189,6 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
   if (rows.length === 0) {
     return (
       <div>
-        <PageHeader title="Rollouts" />
         <EmptyState
           mascot="resting"
           title="No rollouts yet"
@@ -224,7 +223,6 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
   return (
     <div>
       <PageHeader
-        title="Rollouts"
         description={
           artistName ? (
             <span className="inline-flex items-center gap-2">
