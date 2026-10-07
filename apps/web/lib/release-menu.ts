@@ -59,6 +59,12 @@ export const RELEASE_MENU_ORDER = [
   // planning questions, and the questions' only door is the card that fills
   // the empty panel, which needs no menu row.)
   //
+  // The timeline (2026-10-07, founder: "the timeline should also be in the menu
+  // with notes and the rest so it is navigatable"). It is what a rollout LANDS
+  // on, but landing is not the same as having a name: once you were in Notes,
+  // Content or Metadata nothing in this list said how to get back to it. Leads
+  // the list, since it is the main view and the row you press to come home.
+  'timeline',
   // The OTHER main view, whichever one is not currently showing. Until
   // 2026-09-06 this slot was 'timeline' — the same activities seen a different
   // way, "closest to Activities", leading both rows. It swapped when the

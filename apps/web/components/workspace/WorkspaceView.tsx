@@ -41,6 +41,7 @@ import { useScenePrefetch } from './useScenePrefetch';
 import { useIsDesktopViewport } from './useIsDesktopViewport';
 import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
 import { TimelineScene } from '@/components/releases/TimelineScene';
+import { TimelineFullScreen } from '@/components/releases/TimelineFullScreen';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
 import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
@@ -176,6 +177,9 @@ export function WorkspaceView() {
    * cannot disagree.
    */
   const panelBody = resolvePanelBody(urlScene);
+  // The rollout the timeline was opened full screen on, or null. See
+  // `timelineIsFull` below for how it is read.
+  const [timelineFullFor, setTimelineFullFor] = useState<string | null>(null);
   const bodyIsMainView = panelBody === 'activities' || panelBody === 'timeline';
   // Which of the two always-in-the-DOM layout branches (mobile drill-down /
   // desktop focused) should receive side-effectful children — see the hook.
@@ -906,7 +910,15 @@ export function WorkspaceView() {
   // view a release LANDS on — there is nothing to go back from, and the
   // release header directly above already names the release. The buckets have
   // always rendered chromeless for the same reason.
-  const scenePanel =
+  // Full screen (2026-10-07). The mode is keyed to the rollout it was opened on
+  // and to the timeline being the body, so switching rollout or tab ends it with
+  // no effect to reset it. The timeline mounts ONCE: while the overlay is up the
+  // panel slot holds an empty placeholder rather than a second copy.
+  const timelineIsFull =
+    timelineFullFor !== null &&
+    timelineFullFor === scopedReleaseSlim?.id &&
+    panelBody === 'timeline';
+  const timelineScene =
     panelBody === 'timeline' && scopedReleaseSlim ? (
       <TimelineScene
         release={scopedReleaseSlim}
@@ -915,7 +927,18 @@ export function WorkspaceView() {
         onToast={(message, tone) => setToast({ message, tone })}
         onRescheduled={() => void loadCommandCenter({ force: true })}
         suppressEmptyState={bannerReplacesEmptyState}
+        onFullScreen={
+          timelineIsFull ? undefined : () => setTimelineFullFor(scopedReleaseSlim.id)
+        }
       />
+    ) : null;
+  const scenePanel =
+    timelineScene ? (
+      timelineIsFull ? (
+        <div aria-hidden="true" />
+      ) : (
+        timelineScene
+      )
     ) : panelBody !== 'activities' && scopedReleaseSlim ? (
       <ReleaseScenePanel
         scene={panelBody}
@@ -1168,6 +1191,22 @@ export function WorkspaceView() {
           <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
             {scopeAnnouncement}
           </div>
+
+          {timelineIsFull && timelineScene && scopedReleaseSlim ? (
+            <TimelineFullScreen
+              title={`Timeline for ${scopedReleaseSlim.title || 'this rollout'}`}
+              onClose={() => setTimelineFullFor(null)}
+            >
+              {/* The page's own toast sits behind the overlay, so a failed
+                  reschedule would be invisible. Shown here too while it is up. */}
+              {toast ? (
+                <div className="mt-4" role={toast.tone === 'success' ? 'status' : 'alert'}>
+                  <Toast message={toast.message} tone={toast.tone} />
+                </div>
+              ) : null}
+              {timelineScene}
+            </TimelineFullScreen>
+          ) : null}
 
           {error ? (
             <div role="alert" className="mb-6 flex items-start gap-3 border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">

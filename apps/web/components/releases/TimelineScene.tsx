@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { CalendarClock, ChevronDown, Flag } from '@/components/icons';
+import { CalendarClock, ChevronDown, Flag, Maximize2 } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
 import {
@@ -99,6 +99,9 @@ type TimelineSceneProps = {
    * the only thing that would explain an empty screen, so they stay.
    */
   suppressEmptyState?: boolean;
+  /** Shows a "Full screen" button beside the legend. Left out inside the
+   *  full-screen overlay itself, which has its own close control. */
+  onFullScreen?: () => void;
 };
 
 export function TimelineScene({
@@ -108,6 +111,7 @@ export function TimelineScene({
   onToast,
   onRescheduled,
   suppressEmptyState = false,
+  onFullScreen,
 }: TimelineSceneProps) {
   // Phases default OPEN (`?? false` at the two call sites below). They shipped
   // collapsed in 2026-08, which was defensible while this was a scene you chose
@@ -215,7 +219,7 @@ export function TimelineScene({
 
   return (
     <div className="tl-scene-container mt-8">
-      <Legend />
+      <Legend onFullScreen={onFullScreen} />
 
       {/* ---- Wide: the week grid ---------------------------------------- */}
       <div className="tl-grid-view">
@@ -679,7 +683,7 @@ function TimelineWeekList({
 // Chrome
 // ---------------------------------------------------------------------------
 
-function Legend() {
+function Legend({ onFullScreen }: { onFullScreen?: () => void }) {
   return (
     <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-content-tertiary">
       <span className="inline-flex items-center gap-1.5">
@@ -699,6 +703,20 @@ function Legend() {
         Overdue
       </span>
       <span className="tl-grid-view">Drag to move · tap to open</span>
+      {/* Only where the week grid shows (`tl-grid-view`): the narrow list is
+          already the whole width of a phone, so there is nothing to enlarge. */}
+      {onFullScreen ? (
+        <span className="tl-grid-view ml-auto">
+          <button
+            type="button"
+            onClick={onFullScreen}
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-stroke-control px-2.5 text-xs font-medium text-content-secondary transition-colors hover:border-content-secondary hover:text-content-primary"
+          >
+            <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+            Full screen
+          </button>
+        </span>
+      ) : null}
     </div>
   );
 }
