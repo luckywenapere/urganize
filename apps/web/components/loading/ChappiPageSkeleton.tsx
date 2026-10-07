@@ -45,6 +45,17 @@ export function ChappiPageSkeleton() {
   const resumableMessages = useKnownResumableChat();
   const shellClass = `${MOBILE_NAV_ENABLED ? 'chappi-shell-height-nav' : 'chappi-shell-height'} flex flex-col`;
 
+  // The desktop side panel (priority task card plus counts), reserved at lg+.
+  const sidePanel = (
+    <div className="hidden w-80 shrink-0 space-y-3 lg:block">
+      <SkeletonBlock className="h-40 w-full rounded-2xl" />
+      <div className="flex gap-2">
+        <SkeletonBlock className="h-8 w-20 rounded-full" />
+        <SkeletonBlock className="h-8 w-24 rounded-full" />
+      </div>
+    </div>
+  );
+
   const emptyState = (layoutClass: string) => (
     <div className={`${layoutClass} flex-col px-2`}>
       {/* The single question line, centered in the space the composer
@@ -71,10 +82,14 @@ export function ChappiPageSkeleton() {
   if (!HISTORY_ENABLED) {
     return (
       <div className={shellClass} aria-hidden="true">
-        <div className="hidden h-7 shrink-0 justify-end lg:flex">
-          <SkeletonBlock className="h-7 w-7" />
+        <div className="flex h-7 shrink-0 items-center justify-end">
+          <SkeletonBlock className="mr-auto h-6 w-16 rounded-full" />
+          <SkeletonBlock className="hidden h-7 w-7 lg:block" />
         </div>
-        {emptyState('flex min-h-0 flex-1')}
+        <div className="flex min-h-0 flex-1 gap-6">
+          <div className="min-w-0 flex-1">{emptyState('flex h-full min-h-0')}</div>
+          {sidePanel}
+        </div>
       </div>
     );
   }
@@ -108,17 +123,20 @@ export function ChappiPageSkeleton() {
 
   return (
     <div className={shellClass} aria-hidden="true">
-      <div className="flex h-7 shrink-0 items-center justify-end">
+      <div className="flex h-7 shrink-0 items-center justify-end gap-2">
+        <SkeletonBlock className="h-6 w-16 rounded-full" />
         <SkeletonBlock
-          className={`mr-auto h-6 w-16 rounded-full ${CHATS_MENU_ON ? 'lg:hidden' : ''}`}
+          className={`h-6 w-16 rounded-full ${CHATS_MENU_ON ? 'lg:hidden' : ''}`}
         />
+        <span className="flex-1" />
         <SkeletonBlock className="hidden h-7 w-7 lg:block" />
       </div>
       <div className="min-h-0 flex-1">
-        <div className="flex h-full min-h-0">
+        <div className="flex h-full min-h-0 gap-6">
           <div className="min-h-0 min-w-0 flex-1">
             {resumableMessages > 0 ? transcript : emptyState('flex h-full min-h-0')}
           </div>
+          {sidePanel}
         </div>
       </div>
     </div>

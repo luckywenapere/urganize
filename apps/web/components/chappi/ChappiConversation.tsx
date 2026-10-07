@@ -1160,7 +1160,9 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // A message typed in Home's chat box is sent the moment a conversation shows.
   const sendInputOnOpen = useChappiStore((state) => state.sendInputOnOpen);
   useEffect(() => {
-    if (!sendInputOnOpen) return;
+    // Only the full page takes a message handed over from Home, and only once
+    // no reply is in flight, so a queued message is never lost or doubled.
+    if (!sendInputOnOpen || variant !== 'page' || isThinking) return;
     const text = useChappiStore.getState().input.trim();
     const files = useChappiStore.getState().pendingAttachments;
     useChappiStore.getState().setSendInputOnOpen(false);
@@ -1169,7 +1171,7 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     useChappiStore.getState().setInput('');
     sendUserTurn(text, files);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sendInputOnOpen]);
+  }, [sendInputOnOpen, variant, isThinking]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1592,7 +1594,7 @@ function Transcript({
               {/* The stand-in text for a message sent with only a picture is the
                   same words as the chips above it, so it is not shown twice. */}
               {isAttachmentOnlyContent(message.content, message.attachments) ? null : (
-                <div className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-bg-elevated px-4 py-2.5 text-sm leading-6 text-content-primary">
+                <div className="whitespace-pre-wrap rounded-2xl rounded-br-md border border-brand/25 bg-brand/15 px-4 py-2.5 text-sm leading-6 text-content-primary">
                   {message.content}
                 </div>
               )}
@@ -1617,12 +1619,14 @@ function Transcript({
         // Hidden from assistive technology on purpose: the finished reply is
         // announced by the live region below when it arrives, and reading out a
         // sentence that is still changing is noise.
-        <div aria-hidden="true" className="whitespace-pre-wrap break-words text-sm leading-7 text-content-primary">
-          <ReplyText content={previewText} reveal={false} />
+        <div className="flex">
+          <div aria-hidden="true" className="max-w-[90%] whitespace-pre-wrap break-words rounded-2xl rounded-bl-md border border-stroke-default bg-bg-surface px-4 py-3 text-sm leading-7 text-content-primary">
+            <ReplyText content={previewText} reveal={false} />
+          </div>
         </div>
       ) : null}
       {isThinking && !previewText ? (
-        <div className="flex items-center gap-2 text-sm text-content-tertiary">
+        <div className="inline-flex items-center gap-2 rounded-2xl rounded-bl-md border border-stroke-default bg-bg-surface px-4 py-3 text-sm text-content-tertiary">
           <Chappi pose="thinking" size={CHAPPI_MIN_SIZE} ariaLabel="UrgAns is thinking" />
           Thinking…
         </div>
@@ -1805,8 +1809,8 @@ function AssistantMessage({
     'motion-focus grid h-7 w-7 place-items-center rounded-md text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary';
 
   return (
-    <div>
-      <div className="whitespace-pre-wrap break-words text-sm leading-7 text-content-primary">
+    <div className="max-w-[90%]">
+      <div className="whitespace-pre-wrap break-words rounded-2xl rounded-bl-md border border-stroke-default bg-bg-surface px-4 py-3 text-sm leading-7 text-content-primary">
         <ReplyText content={content} reveal={reveal} />
       </div>
       {/* Attribution sits between the answer and the action row: it belongs to

@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ArrowLeft, History, Minimize2 } from '@/components/icons';
+import { HOME_PATH } from '@/lib/home-path';
+import { TodayPanel } from '@/components/chappi/TodayPanel';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -166,18 +169,21 @@ export default function ChappiPageClient() {
             exactly as if the catalog had been scoped to it. */}
         {/* With chat history on this row shows at every width, because it
             also carries the phone's only way into the chats list. */}
-        <div
-          className={
-            HISTORY_ENABLED
-              ? 'flex shrink-0 items-center justify-end'
-              : 'hidden shrink-0 justify-end lg:flex'
-          }
-        >
+        <div className="flex shrink-0 items-center justify-end">
+          {/* The way back. Always on screen, desktop and phone, because the chat
+              is a full page now and Home is where the day's list lives. */}
+          <Link
+            href={HOME_PATH}
+            className="motion-focus motion-press mr-auto inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            Home
+          </Link>
           {HISTORY_ENABLED ? (
             <button
               type="button"
               onClick={() => setShowChats((current) => !current)}
-              className={`motion-focus motion-press mr-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary ${
+              className={`motion-focus motion-press mr-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary ${
                 menuHostsChats ? 'lg:hidden' : ''
               }`}
             >
@@ -200,9 +206,7 @@ export default function ChappiPageClient() {
             }}
             aria-label="Collapse into the catalog"
             title="Back to the catalog"
-            className={`motion-focus motion-press ${
-              HISTORY_ENABLED ? 'hidden lg:grid' : 'grid'
-            } h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary`}
+            className={`motion-focus motion-press hidden lg:grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary`}
           >
             <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
@@ -210,7 +214,8 @@ export default function ChappiPageClient() {
         <div className="shrink-0">
           <InviteTeamBanner />
         </div>
-        <div className="min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 gap-6">
+         <div className="min-h-0 min-w-0 flex-1">
           {HISTORY_ENABLED ? (
             <div className="flex h-full min-h-0 gap-4">
               {showChats ? (
@@ -231,6 +236,8 @@ export default function ChappiPageClient() {
           ) : (
             <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
           )}
+         </div>
+         <TodayPanel />
         </div>
       </div>
 
