@@ -5,7 +5,6 @@ import { useReleaseStore } from "@/stores/useReleaseStore";
 import { useLiveHomeSections } from "./useLiveHomeSections";
 import { HomeHeaderRow } from "./HomeHeaderRow";
 import { HomeAskBar } from "./HomeAskBar";
-import { HomeSummaryStrip } from "./HomeSummaryStrip";
 import { FocusTaskCard } from "./FocusTaskCard";
 import { UpNextCard } from "./UpNextCard";
 import { pickUpNext } from "@/lib/home/up-next";
@@ -99,11 +98,6 @@ export function ManagerMidReleaseView({
     <div className="home-scene-container space-y-5">
       <div className="space-y-4">
         <HomeHeaderRow header={home.header} />
-        <HomeSummaryStrip
-          late={yourTasks.late.length}
-          today={yourTasks.today.length}
-          waiting={waitingTasks.length + home.waiting.djLinks.length}
-        />
       </div>
       {focus ? (
         <FocusTaskCard focus={focus} />
