@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, History, Minimize2 } from '@/components/icons';
+import { ArrowLeft, History, Minimize2, PanelRight, X } from '@/components/icons';
 import { HOME_PATH } from '@/lib/home-path';
 import { TodayPanel } from '@/components/chappi/TodayPanel';
 import { useAuthStore } from '@/lib/auth-store';
@@ -24,8 +24,7 @@ import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
 import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
-import { CHATS_MENU_ON, chatsLiveInMenu } from '@/lib/chats-menu';
-import { useSidebarStore } from '@/stores/useSidebarStore';
+import { useChatSideStore } from '@/stores/useChatSideStore';
 
 // Same flag AppTopbar reads for the nav icon — if a direct link is followed
 // while the flag is off, bounce to the workspace instead of 404ing (the
@@ -76,15 +75,14 @@ export default function ChappiPageClient() {
   const keyboardOpen = useKeyboardOpen();
   // Below xl only: the chats list is showing in place of the conversation.
   const [showChats, setShowChats] = useState(false);
-  // Where the saved chats live: in the left menu when it can carry them (the
-  // Cursor layout), otherwise behind this page's own Chats toggle. The menu
-  // is hidden below lg, so the toggle stays at phone widths either way.
-  const menuCollapsed = useSidebarStore((state) => state.collapsed);
-  const menuHostsChats = chatsLiveInMenu({
-    historyOn: HISTORY_ENABLED,
-    menuOn: CHATS_MENU_ON,
-    collapsed: menuCollapsed,
-  });
+  // Desktop right column: today's focus, saved chats or closed. Remembered.
+  const sideMode = useChatSideStore((state) => state.mode);
+  const hydrateSide = useChatSideStore((state) => state.hydrate);
+  const toggleSide = useChatSideStore((state) => state.toggle);
+  const setSideMode = useChatSideStore((state) => state.setMode);
+  useEffect(() => {
+    hydrateSide();
+  }, [hydrateSide]);
 
   // iOS scrolls the document to reveal a focused field BEFORE the layout has
   // had a chance to react, and this page's own contract is that it never
@@ -179,13 +177,35 @@ export default function ChappiPageClient() {
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
             Home
           </Link>
+          <button
+            type="button"
+            onClick={() => toggleSide('today')}
+            aria-pressed={sideMode === 'today'}
+            className={`motion-focus motion-press mr-2 hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors hover:bg-bg-hover hover:text-content-primary lg:inline-flex ${
+              sideMode === 'today' ? 'text-content-primary' : 'text-content-secondary'
+            }`}
+          >
+            <PanelRight className="h-3.5 w-3.5" aria-hidden="true" />
+            Today
+          </button>
+          {HISTORY_ENABLED ? (
+            <button
+              type="button"
+              onClick={() => toggleSide('history')}
+              aria-pressed={sideMode === 'history'}
+              className={`motion-focus motion-press mr-2 hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors hover:bg-bg-hover hover:text-content-primary lg:inline-flex ${
+                sideMode === 'history' ? 'text-content-primary' : 'text-content-secondary'
+              }`}
+            >
+              <History className="h-3.5 w-3.5" aria-hidden="true" />
+              Chats
+            </button>
+          ) : null}
           {HISTORY_ENABLED ? (
             <button
               type="button"
               onClick={() => setShowChats((current) => !current)}
-              className={`motion-focus motion-press mr-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary ${
-                menuHostsChats ? 'lg:hidden' : ''
-              }`}
+              className="motion-focus motion-press mr-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary lg:hidden"
             >
               {showChats ? (
                 <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
@@ -219,7 +239,7 @@ export default function ChappiPageClient() {
           {HISTORY_ENABLED ? (
             <div className="flex h-full min-h-0 gap-4">
               {showChats ? (
-                <div className={`min-h-0 min-w-0 flex-1 ${menuHostsChats ? 'lg:hidden' : ''}`}>
+                <div className="min-h-0 min-w-0 flex-1 lg:hidden">
                   <ChappiHistoryList variant="panel" onDone={() => setShowChats(false)} />
                 </div>
               ) : null}
@@ -227,7 +247,7 @@ export default function ChappiPageClient() {
                   and recap cards, and any reply still on its way, live in it. */}
               <div
                 className={`min-h-0 min-w-0 flex-1 ${
-                  showChats ? (menuHostsChats ? 'hidden lg:block' : 'hidden') : ''
+                  showChats ? 'hidden lg:block' : ''
                 }`}
               >
                 <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
@@ -237,7 +257,25 @@ export default function ChappiPageClient() {
             <ChappiConversation onNewRelease={() => setIsCreateModalOpen(true)} />
           )}
          </div>
-         <TodayPanel />
+         {sideMode === 'today' ? <TodayPanel /> : null}
+         {sideMode === 'history' && HISTORY_ENABLED ? (
+           <aside aria-label="Saved chats" className="hidden w-80 shrink-0 flex-col lg:flex">
+             <div className="mb-1 flex shrink-0 justify-end">
+               <button
+                 type="button"
+                 onClick={() => setSideMode('closed')}
+                 aria-label="Close chats"
+                 title="Close"
+                 className="motion-focus motion-press grid h-7 w-7 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+               >
+                 <X className="h-3.5 w-3.5" aria-hidden="true" />
+               </button>
+             </div>
+             <div className="min-h-0 flex-1">
+               <ChappiHistoryList variant="panel" />
+             </div>
+           </aside>
+         ) : null}
         </div>
       </div>
 
