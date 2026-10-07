@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.78.0",
+    date: "October 7, 2026",
+    highlights: [
+      "You can now attach PDF, Word and Excel files to a message in UrgAns, and it will read them.",
+    ],
+  },
+  {
     version: "1.77.0",
     date: "October 7, 2026",
     highlights: [
