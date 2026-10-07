@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
-import { useNavTip } from './useNavTip';
+import { NAV_TIP_TOUCH_CLASS, useNavTip } from './useNavTip';
 import { activeShellArea, buildShellAreas, readShellFlags, visibleSubTabs } from '@/lib/shell-nav';
 
 /**
@@ -37,7 +37,7 @@ export function SubNav() {
               ref={(node) => {
                 if (node && isActive) node.scrollIntoView?.({ block: 'nearest', inline: 'center' });
               }}
-              className={`motion-focus motion-press inline-flex h-10 shrink-0 items-center rounded-lg px-3.5 text-sm font-medium transition-colors ${
+              className={`motion-focus motion-press inline-flex h-10 shrink-0 items-center rounded-lg px-3.5 text-sm font-medium transition-colors ${NAV_TIP_TOUCH_CLASS} ${
                 isActive
                   ? 'bg-bg-hover text-content-primary'
                   : 'text-content-secondary hover:bg-bg-hover/60 hover:text-content-primary'

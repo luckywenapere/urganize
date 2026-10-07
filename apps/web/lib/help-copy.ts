@@ -278,6 +278,14 @@ export const HELP_COPY = {
     label: 'Shows',
     text: 'Every date, its running order and the tracks the DJ needs.',
   },
+  'nav.urgans': {
+    label: 'UrgAns',
+    text: 'Your assistant. Ask it to plan, write or find anything about your music.',
+  },
+  'nav.more': {
+    label: 'More',
+    text: 'The people you work with, deals, fans, credits and settings.',
+  },
   'nav.rollouts': {
     label: 'Rollouts',
     text: 'Every song and project your team is planning or has put out.',
