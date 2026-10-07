@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, History, Minimize2, PanelRight, X } from '@/components/icons';
+import { ArrowLeft, History, Minimize2, PanelRight, Plus, X } from '@/components/icons';
 import { HOME_PATH } from '@/lib/home-path';
 import { TodayPanel } from '@/components/chappi/TodayPanel';
 import { useAuthStore } from '@/lib/auth-store';
@@ -75,6 +75,7 @@ export default function ChappiPageClient() {
   const keyboardOpen = useKeyboardOpen();
   // Below xl only: the chats list is showing in place of the conversation.
   const [showChats, setShowChats] = useState(false);
+  const hasConversation = useChappiStore((state) => state.messages.length > 0);
   // Desktop right column: today's focus, saved chats or closed. Remembered.
   const sideMode = useChatSideStore((state) => state.mode);
   const hydrateSide = useChatSideStore((state) => state.hydrate);
@@ -213,6 +214,23 @@ export default function ChappiPageClient() {
                 <History className="h-3.5 w-3.5" aria-hidden="true" />
               )}
               {showChats ? 'Back to chat' : 'Chats'}
+            </button>
+          ) : null}
+          {/* New chat lives here, in the header that never scrolls, so it is one
+              tap away however long the chat gets (it used to sit at the top of
+              the transcript and scroll out of reach). Shown only once there is
+              something to start over from. */}
+          {hasConversation ? (
+            <button
+              type="button"
+              onClick={() => {
+                useChappiStore.getState().reset();
+                setShowChats(false);
+              }}
+              className="motion-focus motion-press mr-2 inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary lg:mr-2"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              New chat
             </button>
           ) : null}
           <button
