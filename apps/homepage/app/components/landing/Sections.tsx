@@ -54,6 +54,7 @@
 // - WorkspaceShotSection left the landing page 2026-09-02 (the hero carries
 //   the catalog shot now) but stays exported: the four persona pages still
 //   import it.
+export { AffiliationsSection } from "./sections/AffiliationsSection";
 export { FaqSection } from "./sections/FaqSection";
 export { FeatureGridSection } from "./sections/FeatureGridSection";
 export { FinalCTASection } from "./sections/FinalCTASection";
