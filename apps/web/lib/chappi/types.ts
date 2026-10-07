@@ -5,11 +5,33 @@
 /** Roles in a Chappi conversation. Reserved for the Phase 2 agentic loop. */
 export type ChappiRole = 'user' | 'assistant';
 
+/**
+ * Something the user attached to a message.
+ * The bytes (`dataUrl` for a photo, `text` for a text file) live in the browser
+ * for the session and are sent with a request; they are never saved. A saved or
+ * reopened chat has none of them, only the names.
+ */
+export type ChappiAttachment = {
+  id: string;
+  kind: 'image' | 'text';
+  name: string;
+  mime: string;
+  size: number;
+  /** Photos only: a JPEG (or PNG/WebP/GIF) data URL, already shrunk in the browser. */
+  dataUrl?: string;
+  /** Text files only: the file's text, capped. */
+  text?: string;
+  /** Text files only: the text was longer than the cap and was cut. */
+  truncated?: boolean;
+};
+
 /** One turn in the ephemeral, client-held conversation (Phase 2+). */
 export type ChappiMessage = {
   id: string;
   role: ChappiRole;
   content: string;
+  /** User turns only. See ChappiAttachment. */
+  attachments?: ChappiAttachment[];
   /** Assistant turns only: which brief sections were in context (Phase 4).
    *  Held per MESSAGE rather than on the store root so scrolling back up a
    *  transcript still shows what each answer was working from — a single

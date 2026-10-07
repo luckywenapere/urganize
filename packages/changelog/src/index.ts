@@ -20,10 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.76.0",
+    version: "1.77.0",
     date: "October 7, 2026",
     highlights: [
       "On Home, the ask bar is now a chat box. Type a message and UrgAns opens with it already sent.",
+    ],
+  },
+  {
+    version: "1.76.0",
+    date: "October 7, 2026",
+    highlights: [
+      "You can now attach photos and text files to a message in UrgAns. Tap the plus, take a photo or pick a file, and UrgAns will read it.",
     ],
   },
   {

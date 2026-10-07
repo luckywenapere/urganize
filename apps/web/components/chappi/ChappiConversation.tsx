@@ -66,12 +66,22 @@ import { markPendingFirstShare } from '@/lib/social-share-offer';
 import { actionsForLeftChat, firstShareOffersIn } from '@/lib/chappi/left-chat-actions';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useVoiceInput } from '@/components/chappi/useVoiceInput';
+import { useAttachments } from '@/components/chappi/useAttachments';
+import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
+import { ChappiAttachmentTray, ChappiMessageAttachments } from '@/components/chappi/ChappiAttachments';
 import { isUrgansVoiceEnabled } from '@/lib/chappi/config';
+import {
+  attachmentOnlyContent,
+  isAttachmentOnlyContent,
+  selectAttachmentsToSend,
+  stripAttachmentPayloads,
+} from '@/lib/urgans-attachments';
 import { mergeTranscript } from '@/lib/urgans-voice';
 import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { supabase } from '@/lib/supabase/client';
 import { CHAPPI_CHIPS, buildHelpReply, resolveIntent } from '@/lib/chappi/intent-router';
 import type {
+  ChappiAttachment,
   ChappiChip,
   ChappiClientAction,
   ChappiIntent,
@@ -145,6 +155,10 @@ async function getAccessToken(): Promise<string> {
 // other flag, so Next inlines it.
 const HISTORY_ENABLED = isChappiHistoryEnabled();
 const VOICE_ENABLED = isUrgansVoiceEnabled();
+// Said when a message with a picture or file reaches the fallback (no model, or
+// the monthly limit): the typed-command router cannot read either.
+const ATTACHMENTS_UNAVAILABLE_NOTE =
+  'I cannot read pictures or files right now, so I did not look at what you attached. Send it again in a moment.';
 
 // "Listening… 0:07" — mm:ss, single-digit minutes are enough for a 60s cap.
 const formatElapsed = (seconds: number): string => {
@@ -287,6 +301,10 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   });
   const isRecording = voice.state === 'recording';
   const isTranscribing = voice.state === 'transcribing';
+
+  // Photos, camera shots and text files .
+  // They live in the browser until the message is sent; nothing is stored.
+  const attach = useAttachments();
 
   // The release whose song the transcript is currently offering to upload, or
   // null. Component state rather than the store, unlike pendingConfirmation:
@@ -905,8 +923,16 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     setThinkingEpoch(turn.epoch);
     // The router answers synchronously into whatever transcript is on screen,
     // so after any await it only runs if that is still this turn's transcript.
+    const sentAttachments = Boolean(historyForApi[historyForApi.length - 1]?.attachments?.length);
     const fallBackToRouter = () => {
-      if (isTurnCurrent(turn)) runDeterministic(prompt);
+      if (!isTurnCurrent(turn)) return;
+      // The typed-command router cannot read a picture or a file, and handing it
+      // the stand-in text ("Attached: x.jpg") would only get a help card back.
+      if (sentAttachments) {
+        deliverReply(turn, ATTACHMENTS_UNAVAILABLE_NOTE);
+        return;
+      }
+      runDeterministic(prompt);
     };
     try {
       const token = await getAccessToken();
@@ -927,7 +953,10 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
           // The route forwards only the last CHAPPI_HISTORY_LIMIT messages to
           // the model, so sending more is weight with no effect — and a
           // restored chat can be hundreds of messages long.
-          messages: historyForApi.slice(-CHAPPI_HISTORY_LIMIT),
+          // Photos and files ride only with the latest message that has them, and
+          // only while it is recent (lib/urgans-attachments.ts): a request never
+          // carries a picture from an hour ago.
+          messages: selectAttachmentsToSend(historyForApi.slice(-CHAPPI_HISTORY_LIMIT)),
           releaseScope: scopedRelease
             ? { id: scopedRelease.id, title: scopedRelease.title }
             : undefined,
@@ -1059,7 +1088,8 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          messages: historyForApi.slice(-CHAPPI_HISTORY_LIMIT),
+          // Approving a card writes one closing line. It never needs the picture.
+          messages: stripAttachmentPayloads(historyForApi.slice(-CHAPPI_HISTORY_LIMIT)),
           releaseScope: scopedRelease
             ? { id: scopedRelease.id, title: scopedRelease.title }
             : undefined,
@@ -1110,11 +1140,18 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // Appends the user turn immediately (so it appears without waiting on the
   // round-trip), then sends the FULL prior history + this turn to the agent
   // — /api/urgans already accepts and expects multi-turn `messages`.
-  const sendUserTurn = (text: string) => {
+  const sendUserTurn = (text: string, attachments?: ChappiAttachment[]) => {
     // Typing something else abandons any pending proposal. Nothing ran, and
     // the model will re-propose if the user asks again.
     if (pendingConfirmation) setPendingConfirmation(null);
-    const userMessage: ChappiMessage = { id: nextMessageId('u'), role: 'user', content: text };
+    const userMessage: ChappiMessage = {
+      id: nextMessageId('u'),
+      role: 'user',
+      // Never empty, so a message with only a picture survives everywhere a
+      // blank one is dropped (and a reopened chat still says what was shared).
+      content: text || attachmentOnlyContent(attachments ?? []),
+      ...(attachments?.length ? { attachments } : {}),
+    };
     const historyForApi = [...messages, userMessage];
     appendMessage(userMessage);
     void submitPrompt(text, historyForApi);
@@ -1135,9 +1172,11 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed || isThinking) return;
+    const attached = attach.attachments;
+    if ((!trimmed && attached.length === 0) || isThinking || attach.pending > 0) return;
     setInput('');
-    sendUserTurn(trimmed);
+    attach.clear();
+    sendUserTurn(trimmed, attached);
   };
 
   // Regenerate the last reply: drop it from the transcript (keeping the user
@@ -1178,11 +1217,20 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // releases (in which case this is simply field + send).
   const inputForm = (
     <form onSubmit={handleSubmit} className="w-full">
+      <ChappiAttachmentTray
+        attachments={attach.attachments}
+        pending={attach.pending}
+        onRemove={attach.remove}
+      />
       <div className="flex items-center gap-1 rounded-full border border-stroke-default bg-bg-surface p-1.5 transition-colors focus-within:border-brand/70 focus-within:bg-bg-elevated">
         <ChappiScopePicker
           releases={releases}
           scopedReleaseId={scopedReleaseId}
           onSelect={setScopedReleaseId}
+        />
+        <ChappiAttachMenu
+          disabled={isThinking || isRecording || isTranscribing}
+          onFiles={(files) => void attach.addFiles(files)}
         />
         {isRecording ? (
           // The field is replaced by a live "Listening…" readout while
@@ -1203,6 +1251,16 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             ref={inputRef}
             value={input}
             onChange={(event) => setInput(event.target.value)}
+            // A picture pasted from the clipboard (a screenshot, a copied image)
+            // attaches like a chosen one. Pasted text is left alone.
+            onPaste={(event) => {
+              const pictures = Array.from(event.clipboardData?.files ?? []).filter((file) =>
+                file.type.startsWith('image/')
+              );
+              if (pictures.length === 0) return;
+              event.preventDefault();
+              void attach.addFiles(pictures);
+            }}
             placeholder={isTranscribing ? 'Turning your voice into text…' : 'Ask UrgAns…'}
             aria-label="Message UrgAns"
             disabled={isThinking || isTranscribing}
@@ -1236,7 +1294,13 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         <button
           type="submit"
           aria-label="Send"
-          disabled={!input.trim() || isThinking || isRecording || isTranscribing}
+          disabled={
+            (!input.trim() && attach.attachments.length === 0) ||
+            attach.pending > 0 ||
+            isThinking ||
+            isRecording ||
+            isTranscribing
+          }
           className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
         >
           {isThinking ? (
@@ -1249,6 +1313,12 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
       {voice.error ? (
         <p role="status" className="mt-2 px-2 text-center text-xs text-content-tertiary">
           {voice.error}
+        </p>
+      ) : null}
+      {attach.error ? (
+        // role="alert": the person just did something and it did not work.
+        <p role="alert" className="mt-2 px-2 text-center text-xs text-status-error">
+          {attach.error}
         </p>
       ) : null}
     </form>
@@ -1513,8 +1583,17 @@ function Transcript({
       {messages.map((message) =>
         message.role === 'user' ? (
           <div key={message.id} className="flex justify-end">
-            <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-bg-elevated px-4 py-2.5 text-sm leading-6 text-content-primary">
-              {message.content}
+            <div className="flex max-w-[85%] flex-col items-end">
+              {message.attachments?.length ? (
+                <ChappiMessageAttachments attachments={message.attachments} />
+              ) : null}
+              {/* The stand-in text for a message sent with only a picture is the
+                  same words as the chips above it, so it is not shown twice. */}
+              {isAttachmentOnlyContent(message.content, message.attachments) ? null : (
+                <div className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-bg-elevated px-4 py-2.5 text-sm leading-6 text-content-primary">
+                  {message.content}
+                </div>
+              )}
             </div>
           </div>
         ) : (
