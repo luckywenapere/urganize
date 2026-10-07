@@ -123,6 +123,9 @@ function nextUpLabel(row: CatalogueRow): ReactNode {
   );
 }
 
+/** The search and filter bar appears only above this many rollouts. */
+const FILTER_BAR_MIN_ROWS = 10;
+
 const COLUMNS =
   'md:grid-cols-[minmax(240px,2.4fr)_130px_130px_minmax(150px,1fr)_minmax(180px,1.6fr)]';
 
@@ -147,9 +150,13 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
   const selectedArtistId = useShellStore((state) => state.selectedArtistId);
   const setSelectedArtistId = useShellStore((state) => state.setSelectedArtistId);
   const artists = useArtistRosterStore((state) => state.artists);
-  const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<StatusFilterKey>('all');
+  const [queryState, setQuery] = useState('');
+  const [statusState, setStatus] = useState<StatusFilterKey>('all');
   const [sort, setSort] = useState<SortKey>('recent');
+  // The filter bar only earns its place once the list is long enough to need it.
+  const showFilters = rows.length > FILTER_BAR_MIN_ROWS;
+  const query = showFilters ? queryState : '';
+  const status: StatusFilterKey = showFilters ? statusState : 'all';
   const [view, setView] = useState<'table' | 'cards'>('table');
 
   const artistName = artists.find((artist) => artist.id === selectedArtistId)?.name ?? null;
@@ -241,6 +248,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
         action={addButton}
       />
 
+      {showFilters ? (
       <PullReveal filtering={Boolean(query.trim()) || status !== 'all'}>
       <div className="mb-4 rounded-2xl border border-stroke-default bg-bg-surface p-3 sm:mb-0 sm:p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -325,6 +333,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
         </div>
       </div>
       </PullReveal>
+      ) : null}
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
         <p className="px-5 py-4 text-sm text-content-secondary" aria-live="polite">
