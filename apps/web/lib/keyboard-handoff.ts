@@ -1,3 +1,5 @@
+import { KEYBOARD_PROXY_ATTRIBUTE } from './composer-focus';
+
 /**
  * iOS Safari only opens the keyboard for a focus() that happens inside the tap
  * that asked for it. Opening UrgAns is a page change, so by the time the chat
@@ -14,6 +16,8 @@ export function primeKeyboard(): void {
     const proxy = document.createElement('input');
     proxy.type = 'text';
     proxy.setAttribute('aria-hidden', 'true');
+    // The UrgAns box takes focus over from this, and only this (lib/composer-focus.ts).
+    proxy.setAttribute(KEYBOARD_PROXY_ATTRIBUTE, '');
     proxy.tabIndex = -1;
     // 16px so iOS does not zoom; off-screen but not display:none (which can
     // not take focus).

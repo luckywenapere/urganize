@@ -4,11 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { History, Maximize2, MessageCircle, RotateCcw, X } from '@/components/icons';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { useHomeChatStore } from '@/stores/useHomeChatStore';
+import { HOME_PATH } from '@/lib/home-path';
 import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
 import { ChappiConversation } from './ChappiConversation';
 import { ChappiHistoryList } from './ChappiHistoryList';
 
-// Saved chats: a header button swaps the card's body to the chats list.
+// Saved sessions: a header button swaps the card's body to the sessions list.
 const HISTORY_ENABLED = isChappiHistoryEnabled();
 
 type ChappiSidePanelProps = {
@@ -90,8 +92,8 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
             <button
               type="button"
               onClick={() => setShowChats((current) => !current)}
-              aria-label={showChats ? 'Back to the conversation' : 'Your chats'}
-              title={showChats ? 'Back to the conversation' : 'Chats'}
+              aria-label={showChats ? 'Back to the session' : 'Your sessions'}
+              title={showChats ? 'Back to the session' : 'Sessions'}
               className={`motion-focus motion-press grid h-7 w-7 place-items-center transition-colors hover:bg-bg-hover hover:text-content-primary ${
                 showChats ? 'text-brand' : 'text-content-tertiary'
               }`}
@@ -104,11 +106,11 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
               type="button"
               onClick={() => {
                 reset();
-                // A new chat is a conversation to type into, not the list.
+                // A new session is a conversation to type into, not the list.
                 setShowChats(false);
               }}
-              aria-label="New conversation"
-              title="New conversation"
+              aria-label="New session"
+              title="New session"
               className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
             >
               <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
@@ -117,14 +119,16 @@ export function ChappiSidePanel({ open, onNewRelease }: ChappiSidePanelProps) {
           <button
             type="button"
             onClick={() => {
-              // The page and this card share one conversation, so expanding
-              // is a pure navigation — the transcript follows. railOpen is
-              // left true on purpose: the column renders nowhere on the
-              // assistant page, and navigating back restores the split.
-              router.push('/dashboard/urgans');
+              // On a computer the full chat is Home (2026-10-07). Home and this
+              // card share one conversation, so expanding is a pure navigation
+              // and the transcript follows. The drawer is closed first, or it
+              // would pop open again on the next page after Home.
+              setRailOpen(false);
+              useHomeChatStore.getState().setPane('chat');
+              router.push(HOME_PATH);
             }}
-            aria-label="Open UrgAns full page"
-            title="Open full page"
+            aria-label="Open UrgAns on Home"
+            title="Open on Home"
             className="motion-focus motion-press grid h-7 w-7 place-items-center text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />

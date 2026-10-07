@@ -52,8 +52,23 @@ const MAX_BRIEF_SECTION_LENGTH = 60;
 export const CHAT_PAGE_SIZE = 30;
 /** How many list rows the browser keeps for an instant first paint. */
 export const CHAT_CACHE_SUMMARY_LIMIT = 30;
-/** Title for a chat with no user message yet. */
+/**
+ * Title for a chat with no user message yet. THIS VALUE IS STORED and compared
+ * (applySync below, useChappiHistoryStore), so it stays 'New chat' even though
+ * the app now calls a conversation a session (2026-10-07): renaming it would
+ * freeze every saved untitled chat at the old marker. Show a title through
+ * displayChatTitle instead.
+ */
 export const CHAT_TITLE_FALLBACK = 'New chat';
+
+/** What a conversation is called on screen when it has no title of its own yet. */
+export const SESSION_TITLE_DISPLAY = 'New session';
+
+/** A saved conversation's title as people see it. The stored marker reads as "New session". */
+export function displayChatTitle(title: string | null | undefined): string {
+  const trimmed = (title ?? '').trim();
+  return !trimmed || trimmed === CHAT_TITLE_FALLBACK ? SESSION_TITLE_DISPLAY : trimmed;
+}
 
 export type ChatRole = 'user' | 'assistant';
 

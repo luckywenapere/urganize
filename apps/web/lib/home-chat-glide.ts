@@ -21,13 +21,16 @@ const ARRIVAL_WINDOW_MS = 5000;
 
 /**
  * Pure: how far the box should move to sit where the chat's composer sits,
- * a little above the bottom of the screen.
+ * a little above the bottom of the screen. Not at all while the keyboard is
+ * open: the box is riding on the keyboard, and the chat's composer will be too.
  */
 export function glideOffset(input: {
   boxBottom: number;
   viewportHeight: number;
   bottomGap: number;
+  keyboardOpen?: boolean;
 }): number {
+  if (input.keyboardOpen) return 0;
   const target = input.viewportHeight - input.bottomGap;
   return Math.round(target - input.boxBottom);
 }

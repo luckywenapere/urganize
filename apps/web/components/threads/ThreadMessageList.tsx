@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Loader2, MessageCircle, Pencil, Trash2 } from '@/components/icons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { formatRelativeTime } from '@/lib/relative-time';
@@ -15,6 +15,9 @@ type ThreadMessageListProps = {
   onDelete?: (messageId: string) => Promise<void>;
   emptyTitle: string;
   emptyBody: string;
+  /** How a message's text is drawn, e.g. with @tags highlighted. Defaults to
+   *  the plain text. */
+  renderContent?: (content: string) => ReactNode;
 };
 
 /**
@@ -33,6 +36,7 @@ export function ThreadMessageList({
   onDelete,
   emptyTitle,
   emptyBody,
+  renderContent,
 }: ThreadMessageListProps) {
   if (isLoading) {
     return (
@@ -72,7 +76,13 @@ export function ThreadMessageList({
   return (
     <ul className="space-y-4">
       {messages.map((message) => (
-        <ThreadMessageRow key={message.id} message={message} onEdit={onEdit} onDelete={onDelete} />
+        <ThreadMessageRow
+          key={message.id}
+          message={message}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          renderContent={renderContent}
+        />
       ))}
     </ul>
   );
@@ -82,10 +92,12 @@ function ThreadMessageRow({
   message,
   onEdit,
   onDelete,
+  renderContent,
 }: {
   message: ThreadMessage;
   onEdit?: (messageId: string, content: string) => Promise<void>;
   onDelete?: (messageId: string) => Promise<void>;
+  renderContent?: (content: string) => ReactNode;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
@@ -179,7 +191,9 @@ function ThreadMessageRow({
             ) : null}
           </div>
         ) : (
-          <p className="mt-1 whitespace-pre-wrap text-sm text-content-primary">{message.content}</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-content-primary">
+            {renderContent ? renderContent(message.content) : message.content}
+          </p>
         )}
 
         {rowError && !isEditing ? (

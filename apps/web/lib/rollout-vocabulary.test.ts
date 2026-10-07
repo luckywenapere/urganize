@@ -92,6 +92,18 @@ const GUARDED_FILES = [
   'lib/help-copy.ts',
   'lib/home/chappi-speaks.ts',
   'components/home/ManagerQuietView.tsx',
+  // Home's stacks and the desktop split (2026-10-07).
+  'components/home/HomeStack.tsx',
+  'components/home/HomeBlocks.tsx',
+  'components/home/HomeDesktopSplit.tsx',
+  'components/home/RolloutsStack.tsx',
+  'components/home/TasksStack.tsx',
+  'components/home/WaitingStack.tsx',
+  'components/home/AttentionStack.tsx',
+  'components/home/PlacementsStack.tsx',
+  'components/home/NextShowCard.tsx',
+  'components/releases/RolloutCreateFlow.tsx',
+  'lib/home/sections.ts',
   'lib/tours.ts',
   // The settings pop-up (2026-09-29). settings-search.ts is deliberately absent:
   // its keywords are words people TYPE, and people still type "release".

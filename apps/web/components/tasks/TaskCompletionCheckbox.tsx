@@ -82,7 +82,10 @@ export function TaskCompletionCheckbox({
     ? 'border-brand bg-brand text-content-inverse'
     : isLocked
       ? 'border-stroke-default bg-bg-elevated/40 text-transparent hover:border-stroke-strong'
-      : 'border-stroke-default bg-bg-surface text-transparent hover:border-stroke-strong';
+      : // The control outline (3:1 on every ground, rule 14 of the 2026-09-30
+        // accessibility pass), not a hairline: on a card the same colour as the
+        // circle, a hairline left nothing to see (found on Home's stacks).
+        'border-stroke-control bg-bg-surface text-transparent hover:border-content-secondary';
 
   if (disabled) {
     return (

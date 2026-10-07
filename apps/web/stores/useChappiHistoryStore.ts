@@ -918,7 +918,7 @@ export const useChappiHistoryStore = create<ChappiHistoryState>((set, get) => ({
   },
 
   remove: async (id) => {
-    if (!sessionUserId) throw new Error('Sign in again to delete this chat.');
+    if (!sessionUserId) throw new Error('Sign in again to delete this session.');
     const owner = sessionUserId;
     // Tombstoned first, so no save can recreate the chat while the delete is out.
     tombstones.add(id);
@@ -957,7 +957,7 @@ export const useChappiHistoryStore = create<ChappiHistoryState>((set, get) => ({
       throw new Error(
         serverMessage && serverMessage !== FLAG_OFF_ERROR
           ? serverMessage
-          : 'Could not delete this chat. Check your connection and try again.'
+          : 'Could not delete this session. Check your connection and try again.'
       );
     }
 

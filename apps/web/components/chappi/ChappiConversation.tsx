@@ -64,6 +64,7 @@ import { useShareStore } from '@/stores/useShareStore';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { markPendingFirstShare } from '@/lib/social-share-offer';
 import { actionsForLeftChat, firstShareOffersIn } from '@/lib/chappi/left-chat-actions';
+import { mayAutoFocusComposer, readAutoFocusContext } from '@/lib/composer-focus';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useVoiceInput } from '@/components/chappi/useVoiceInput';
 import { useAttachments } from '@/components/chappi/useAttachments';
@@ -103,6 +104,16 @@ type ChappiConversationProps = {
    *   close), sized for a ~380px column.
    */
   variant?: 'page' | 'panel';
+  /**
+   * The empty state's question is the page's h1 on the full chat page. On
+   * desktop Home the greeting is already the h1, so Home passes 'h2'.
+   */
+  headingLevel?: 'h1' | 'h2';
+  /**
+   * Bump to put the cursor in the box (desktop Home's "+ New session" and the
+   * search bar's "Ask UrgAns"). 0 or absent asks for nothing.
+   */
+  focusRequest?: number;
 };
 
 // Icons live here, not in the client-safe intent-router lib (icons are React
@@ -186,8 +197,8 @@ function nextMessageId(role: 'u' | 'a'): string {
  * failures earn a line; a save in progress is silent. */
 const SAVE_NOTICE_COPY: Record<'retrying' | 'blocked' | 'too_long', string> = {
   retrying: "Not saved yet. We'll keep trying.",
-  blocked: "This chat can't be saved right now.",
-  too_long: 'This chat is too long to save. Start a new chat.',
+  blocked: "This session can't be saved right now.",
+  too_long: 'This session is too long to save. Start a new session.',
 };
 
 /** One request/response exchange: the store epoch it started under, and the
@@ -215,7 +226,12 @@ type Turn = { epoch: number; conversationId: string | null };
  * configured — or the call fails — it falls back to the local keyword
  * intent-router, so the page always does something useful.
  */
-export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiConversationProps) {
+export function ChappiConversation({
+  onNewRelease,
+  variant = 'page',
+  headingLevel = 'h1',
+  focusRequest = 0,
+}: ChappiConversationProps) {
   const isPanel = variant === 'panel';
   const router = useRouter();
   const todaysDirective = useReleaseStore((state) => state.todaysDirective);
@@ -283,8 +299,42 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   // until auth and the saved chat resolve, and the input can be disabled for a
   // moment), so a single focus on mount silently did nothing on a phone. Retry
   // for up to ten seconds until the field actually holds focus.
+  // Since desktop Home carries this conversation beside its own column
+  // (2026-10-07), the retry never takes focus from an open dialog (the tour, the
+  // create modal) or from something the person is using on the page, and it
+  // stops for good at their first click or key press.
   useEffect(() => {
     if (variant !== 'page') return;
+    let tries = 0;
+    let timer: number | undefined;
+    let stopped = false;
+    const stop = () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+    const tick = () => {
+      if (stopped) return;
+      const el = inputRef.current;
+      if (el && !el.disabled && mayAutoFocusComposer(readAutoFocusContext(el))) {
+        el.focus({ preventScroll: true });
+        if (document.activeElement === el) return;
+      }
+      if (++tries < 100) timer = window.setTimeout(tick, 100);
+    };
+    window.addEventListener('pointerdown', stop, { capture: true, once: true });
+    window.addEventListener('keydown', stop, { capture: true, once: true });
+    tick();
+    return () => {
+      stop();
+      window.removeEventListener('pointerdown', stop, { capture: true });
+      window.removeEventListener('keydown', stop, { capture: true });
+    };
+  }, [variant]);
+
+  // An explicit ask for the cursor ("+ New session", "Ask UrgAns"). The box can
+  // be disabled for a moment while a reply finishes, so try for a short while.
+  useEffect(() => {
+    if (!focusRequest) return;
     let tries = 0;
     let timer: number | undefined;
     const tick = () => {
@@ -293,11 +343,11 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
         el.focus({ preventScroll: true });
         if (document.activeElement === el) return;
       }
-      if (++tries < 100) timer = window.setTimeout(tick, 100);
+      if (++tries < 20) timer = window.setTimeout(tick, 100);
     };
     tick();
     return () => window.clearTimeout(timer);
-  }, [variant]);
+  }, [focusRequest]);
 
   // Voice input (NEXT_PUBLIC_FEATURE_URGANS_VOICE). The transcript is MERGED
   // into whatever is typed — never replacing it, never sending. Reading the
@@ -1430,9 +1480,15 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
             state elsewhere on the screen is never competing with him. */}
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-y-auto lg:flex-none lg:overflow-visible">
           <Chappi pose="idle" size={96} />
-          <h1 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
-            What do you want to get done today?
-          </h1>
+          {headingLevel === 'h2' ? (
+            <h2 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
+              What do you want to get done today?
+            </h2>
+          ) : (
+            <h1 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
+              What do you want to get done today?
+            </h1>
+          )}
         </div>
         <div className="mt-3 shrink-0 lg:mt-6">
           <div className="mx-auto w-full max-w-2xl">{inputForm}</div>

@@ -5,7 +5,7 @@ import { Loader2, Trash2 } from '@/components/icons';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { formatRelativeTime } from '@/lib/relative-time';
-import { CHAT_TITLE_FALLBACK, type ChatSummary } from '@/lib/chappi/conversation-history';
+import { displayChatTitle, type ChatSummary } from '@/lib/chappi/conversation-history';
 import { useChappiHistoryStore } from '@/stores/useChappiHistoryStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { ChappiDeleteChatDialog } from './ChappiDeleteChatDialog';
@@ -56,21 +56,21 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
     setOpenError('');
     const opened = await open(id);
     if (opened) onDone?.();
-    else setOpenError("Couldn't open that chat. Check your connection and try again.");
+    else setOpenError("Couldn't open that session. Check your connection and try again.");
   };
 
   const isMenu = variant === 'menu';
   const showSkeleton = summaries.length === 0 && (listStatus === 'idle' || listStatus === 'loading');
 
   return (
-    <nav aria-label="Saved chats" className="flex h-full min-h-0 flex-col">
+    <nav aria-label="Saved sessions" className="flex h-full min-h-0 flex-col">
       <div
         className={`flex shrink-0 items-center justify-between gap-2 ${
           isMenu ? 'px-2.5 pb-1' : 'px-1 pb-2'
         }`}
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
-          Chats
+          Sessions
         </p>
       </div>
 
@@ -98,7 +98,7 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
           </div>
         ) : summaries.length === 0 && listStatus === 'error' ? (
           <div className={`py-3 text-sm text-content-secondary ${isMenu ? 'px-2.5' : 'px-3.5'}`}>
-            <p>Couldn&rsquo;t load your chats.</p>
+            <p>Couldn&rsquo;t load your sessions.</p>
             <button
               type="button"
               onClick={() => void loadList({ force: true })}
@@ -109,19 +109,19 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
           </div>
         ) : summaries.length === 0 && isMenu ? (
           <p className="px-2.5 py-2 text-xs leading-relaxed text-content-tertiary">
-            Your chats with UrgAns show up here.
+            Your sessions with UrgAns show up here.
           </p>
         ) : summaries.length === 0 ? (
           <div className="px-3.5 py-2">
             <EmptyState
-              title="No saved chats yet"
-              description="Your chats with UrgAns show up here, so you can pick one up again later."
+              title="No saved sessions yet"
+              description="Your sessions with UrgAns show up here, so you can pick one up again later."
             />
           </div>
         ) : (
           <ul className={isMenu ? 'space-y-0.5 pb-1' : 'pb-2'}>
             {summaries.map((summary) => {
-              const title = summary.title || CHAT_TITLE_FALLBACK;
+              const title = displayChatTitle(summary.title);
               const isCurrent = summary.id === currentId;
               return (
                 <li key={summary.id} className="group relative flex items-center">
@@ -176,8 +176,8 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
                   <button
                     type="button"
                     onClick={() => setPendingDelete(summary)}
-                    aria-label={`Delete chat: ${title}`}
-                    title="Delete chat"
+                    aria-label={`Delete session: ${title}`}
+                    title="Delete session"
                     className={`motion-focus absolute top-1/2 grid -translate-y-1/2 place-items-center rounded-full text-content-tertiary transition-opacity hover:bg-bg-hover hover:text-status-error focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 ${
                       isMenu ? 'right-1 h-6 w-6' : 'right-2 h-7 w-7'
                     }`}
@@ -199,7 +199,7 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
               className="motion-focus inline-flex items-center gap-1.5 text-xs font-medium text-content-secondary hover:text-content-primary disabled:opacity-60"
             >
               {isLoadingMore ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : null}
-              Load older chats
+              Load older sessions
             </button>
           </div>
         ) : null}
@@ -207,7 +207,7 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
 
       <ChappiDeleteChatDialog
         open={pendingDelete !== null}
-        chatTitle={pendingDelete?.title || CHAT_TITLE_FALLBACK}
+        chatTitle={displayChatTitle(pendingDelete?.title)}
         onClose={() => setPendingDelete(null)}
         onConfirm={async () => {
           if (!pendingDelete) return;
