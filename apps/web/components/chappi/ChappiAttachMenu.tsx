@@ -27,7 +27,7 @@ function useHasTouchCamera(): boolean {
 
 // What the file picker offers. The final check is lib/urgans-attachments.ts
 // classifyFile; this only narrows the list so most wrong picks never happen.
-const FILE_ACCEPT = '.txt,.md,.markdown,.csv,.tsv,.json,.log,.srt,.vtt,text/*';
+const FILE_ACCEPT = '.pdf,.docx,.xlsx,.txt,.md,.markdown,.csv,.tsv,.json,.log,.srt,.vtt,text/*';
 
 /**
  * The "+" in the UrgAns composer: take a photo, choose a picture, or attach a

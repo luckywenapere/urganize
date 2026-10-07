@@ -1,4 +1,5 @@
-// The browser half of UrgAns attachments: shrink a photo, read a text file.
+// The browser half of UrgAns attachments: shrink a photo, read a text file, pull
+// the text out of a PDF, Word or Excel file.
 //
 // Kept apart from lib/urgans-attachments.ts because everything here needs a
 // canvas or a File, which the shared rules (and their tests) must not. The one
@@ -13,6 +14,9 @@ import {
   MAX_IMAGE_DATA_URL_CHARS,
   MAX_TEXT_CHARS,
   classifyFile,
+  formatPagesAsText,
+  formatSheetAsText,
+  type DocumentFormat,
 } from '@/lib/urgans-attachments';
 
 /** A sentence the person can read. Thrown for anything the composer should show
@@ -86,6 +90,34 @@ async function shrinkImage(file: File): Promise<string> {
   throw new AttachmentError('That picture is too detailed to send. Try a smaller one.');
 }
 
+/** The text inside a PDF, Word or Excel file. The libraries load only when one is
+ * attached, so nobody else pays for them. Scanned pages have no text to find. */
+async function extractDocumentText(file: File, format: DocumentFormat): Promise<string> {
+  try {
+    if (format === 'pdf') {
+      const { getDocumentProxy, extractText } = await import('unpdf');
+      const pdf = await getDocumentProxy(new Uint8Array(await file.arrayBuffer()));
+      const { text } = await extractText(pdf, { mergePages: false });
+      return formatPagesAsText(Array.isArray(text) ? text : [text]);
+    }
+    if (format === 'docx') {
+      const mammoth = await import('mammoth');
+      const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+      return value.trim();
+    }
+    const { default: readXlsxFile } = await import('read-excel-file/browser');
+    const sheets = await readXlsxFile(file);
+    const parts = sheets.map((sheet) => formatSheetAsText(sheet.sheet, sheet.data));
+    return parts.join('\n\n');
+  } catch {
+    throw new AttachmentError(
+      format === 'pdf'
+        ? 'That PDF could not be opened. It may be locked or damaged.'
+        : 'That file could not be opened. It may be locked or damaged.'
+    );
+  }
+}
+
 let counter = 0;
 function attachmentId(): string {
   counter += 1;
@@ -99,6 +131,27 @@ export async function readAttachment(file: File): Promise<ChappiAttachment> {
 
   // A phone camera names everything "image.jpg"; a pasted screenshot has no name.
   const name = (file.name || '').trim() || (verdict.kind === 'image' ? 'photo.jpg' : 'file.txt');
+
+  if (verdict.kind === 'document') {
+    const extracted = await extractDocumentText(file, verdict.format);
+    if (extracted.replace(/## (Page|Sheet)[^\n]*\n?/g, '').trim().length === 0) {
+      throw new AttachmentError(
+        verdict.format === 'pdf'
+          ? 'There is no text in that PDF (it may be a scan). Take a photo of the page instead.'
+          : 'There is nothing to read in that file.'
+      );
+    }
+    const truncated = extracted.length > MAX_TEXT_CHARS;
+    return {
+      id: attachmentId(),
+      kind: 'text',
+      name,
+      mime: file.type || 'application/octet-stream',
+      size: file.size,
+      text: truncated ? extracted.slice(0, MAX_TEXT_CHARS) : extracted,
+      ...(truncated ? { truncated: true } : {}),
+    };
+  }
 
   if (verdict.kind === 'image') {
     const dataUrl = await shrinkImage(file);
