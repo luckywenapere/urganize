@@ -1122,6 +1122,18 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
     void submitPrompt(text, historyForApi);
   };
 
+  // A message typed in Home's chat box is sent the moment a conversation shows.
+  const sendInputOnOpen = useChappiStore((state) => state.sendInputOnOpen);
+  useEffect(() => {
+    if (!sendInputOnOpen) return;
+    const text = useChappiStore.getState().input.trim();
+    useChappiStore.getState().setSendInputOnOpen(false);
+    if (!text) return;
+    useChappiStore.getState().setInput('');
+    sendUserTurn(text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendInputOnOpen]);
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = input.trim();
