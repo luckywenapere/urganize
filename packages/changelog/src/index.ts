@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.87.0",
+    date: "October 7, 2026",
+    highlights: [
+      "In a rollout's chat, type @ to tag someone. They get an email and a notification. Use @everyone to tag the whole team.",
+    ],
+  },
+  {
     version: "1.86.0",
     date: "October 7, 2026",
     highlights: [

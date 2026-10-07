@@ -18,12 +18,16 @@ import { isUnsubscribableCategory, type EmailCategory } from './registry';
 export const UNSUBSCRIBE_PATH = '/unsubscribe';
 export const UNSUBSCRIBE_API_PATH = '/api/email/unsubscribe';
 
-export type UnsubscribeScope = Extract<EmailCategory, 'onboarding' | 'reminders' | 'announcements'>;
+export type UnsubscribeScope = Extract<
+  EmailCategory,
+  'onboarding' | 'reminders' | 'announcements' | 'chat'
+>;
 
 export const UNSUBSCRIBE_SCOPE_LABELS: Record<UnsubscribeScope, string> = {
   onboarding: 'getting-started emails',
   reminders: 'rollout reminders',
   announcements: 'product announcements',
+  chat: 'rollout chat emails',
 };
 
 export function isUnsubscribeScope(value: unknown): value is UnsubscribeScope {

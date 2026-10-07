@@ -1,4 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import {
+  loadReleaseChatPeople,
+  notifyReleaseChatMessage,
+  toChatPeoplePayload,
+} from '@/lib/release-chat-server';
 import {
   RELEASE_MESSAGES_TABLE,
   createAdminClient,
@@ -18,6 +23,12 @@ import {
  * which is narrower (see hasTaskThreadAccess in lib/tasks-server.ts). The
  * PRD asks for the release thread to be visible to "everyone with release
  * access", which is exactly what ensureReleaseTeamReadAccess already grants.
+ *
+ * Tags (2026-10-07): a new message that says "@Name" or "@everyone" emails
+ * and pushes those people (lib/chat-mentions.ts decides who, from the text).
+ * That runs AFTER the response, through next/server's after(), so a slow
+ * email never delays the message appearing. Edits never notify anyone.
+ * GET also returns `people`, the names the composer's @ picker offers.
  */
 
 export async function GET(
@@ -43,8 +54,14 @@ export async function GET(
   if ('error' in ownership) return ownership.error;
 
   try {
-    const messages = await loadReleaseMessages(adminClient, releaseId, auth.user.id);
-    return NextResponse.json({ messages });
+    const [messages, people] = await Promise.all([
+      loadReleaseMessages(adminClient, releaseId, auth.user.id),
+      loadReleaseChatPeople(adminClient, {
+        ownerUserId: ownership.release.ownerUserId,
+        artistId: ownership.release.artistId,
+      }),
+    ]);
+    return NextResponse.json({ messages, people: toChatPeoplePayload(people) });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Could not load messages.' },
@@ -101,6 +118,24 @@ export async function POST(
     return NextResponse.json(
       { error: insertResult.error.message || 'Could not send the message.' },
       { status: 500 }
+    );
+  }
+
+  const messageId = String((insertResult.data as { id?: string } | null)?.id || '');
+  if (messageId) {
+    const release = ownership.release;
+    after(() =>
+      notifyReleaseChatMessage(adminClient, {
+        release: {
+          id: release.id,
+          title: release.title,
+          ownerUserId: release.ownerUserId,
+          artistId: release.artistId,
+        },
+        messageId,
+        authorId: auth.user.id,
+        content,
+      }).then(() => undefined)
     );
   }
 
