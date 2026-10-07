@@ -1,0 +1,204 @@
+'use client';
+
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
+import { ArrowUp, MessageCircle, Plus } from '@/components/icons';
+import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
+import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
+import { ChappiConversationSkeleton } from '@/components/loading/ChappiConversationSkeleton';
+import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
+import { COMPOSER_FOCUS_EVENT } from '@/lib/composer-focus';
+import { useChappiStore } from '@/stores/useChappiStore';
+import { useHomeChatStore } from '@/stores/useHomeChatStore';
+
+// The conversation is heavy and a phone never shows it on Home, so it is its
+// own chunk, asked for only by this desktop layout.
+const ChappiConversation = dynamic(
+  () => import('@/components/chappi/ChappiConversation').then((m) => m.ChappiConversation),
+  { ssr: false, loading: () => <ChappiConversationSkeleton /> }
+);
+
+const HISTORY_ENABLED = isChappiHistoryEnabled();
+
+// How many of these layouts are on screen. React's development double mount
+// unmounts and mounts again at once, so the switch is only put back to the
+// conversation once the count has stayed at zero, which only a real leave does.
+let liveSplits = 0;
+
+const switchButtonClass = (active: boolean) =>
+  `motion-focus motion-press inline-flex h-8 items-center rounded-full px-3.5 text-xs font-medium transition-colors ${
+    active
+      ? 'bg-bg-surface text-content-primary shadow-sm ring-1 ring-stroke-default'
+      : 'text-content-secondary hover:text-content-primary'
+  }`;
+
+/**
+ * Home on a computer is the UrgAns chat (2026-10-07, founder call, from the
+ * Hark reference): Home's own column on the left, the live conversation on the
+ * right, both on screen. The page itself never scrolls: each side scrolls on
+ * its own and the message box stays at the bottom of the right side.
+ *
+ * - "+ New session" sits right after the last stack (not pinned, founder call)
+ *   and starts a fresh session with the cursor in the box.
+ * - With session history on, a "Chat | Sessions" switch at the top of the right
+ *   side swaps the conversation for the list of past sessions, the way the
+ *   reference swaps to its projects. The conversation stays mounted, only
+ *   hidden, while the list shows: its upload and recap cards, and any reply
+ *   still on its way, live in it.
+ * - The right side carries data-tour="nav-urgans", so the tour's UrgAns step
+ *   points here (the floating button is not drawn on Home).
+ *
+ * Mounted only at lg and up (HomePageClient), so ChappiConversation is never in
+ * the DOM twice.
+ */
+export function HomeDesktopSplit({
+  children,
+  onNewRelease,
+}: {
+  /** The Home state view: greeting first, then the stacks. */
+  children: ReactNode;
+  /** Opens Home's own create-rollout modal. */
+  onNewRelease: () => void;
+}) {
+  const pane = useHomeChatStore((state) => state.pane);
+  const setPane = useHomeChatStore((state) => state.setPane);
+  const [focusRequest, setFocusRequest] = useState(0);
+  const showSessions = HISTORY_ENABLED && pane === 'sessions';
+
+  // Put the switch back on the conversation when Home is left.
+  useEffect(() => {
+    liveSplits += 1;
+    return () => {
+      liveSplits -= 1;
+      window.setTimeout(() => {
+        if (liveSplits === 0) useHomeChatStore.getState().setPane('chat');
+      }, 0);
+    };
+  }, []);
+
+  // "Ask UrgAns" from the search bar puts the question in the box and asks for
+  // the cursor (lib/ask-urgans.ts).
+  useEffect(() => {
+    const focus = () => {
+      useHomeChatStore.getState().setPane('chat');
+      setFocusRequest((count) => count + 1);
+    };
+    window.addEventListener(COMPOSER_FOCUS_EVENT, focus);
+    return () => window.removeEventListener(COMPOSER_FOCUS_EVENT, focus);
+  }, []);
+
+  const startNewSession = () => {
+    useChappiStore.getState().reset();
+    setPane('chat');
+    setFocusRequest((count) => count + 1);
+  };
+
+  return (
+    <div className="home-split-height flex gap-6 xl:gap-8">
+      <div className="home-scene-container w-[26rem] shrink-0 overflow-y-auto overscroll-contain pb-2 pr-1 xl:w-[28rem]">
+        {children}
+        <button
+          type="button"
+          onClick={startNewSession}
+          className="motion-focus motion-press mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-stroke-strong px-4 py-4 text-sm font-medium text-content-secondary transition-colors hover:border-brand/60 hover:bg-bg-hover hover:text-content-primary"
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          New session
+        </button>
+      </div>
+
+      <section
+        aria-label="UrgAns"
+        data-tour="nav-urgans"
+        className="flex min-w-0 flex-1 flex-col border-l border-stroke-subtle pl-6 xl:pl-8"
+      >
+        {HISTORY_ENABLED ? (
+          <div className="flex shrink-0 justify-end">
+            <div role="group" aria-label="Show" className="inline-flex rounded-full bg-bg-elevated p-1">
+              <button
+                type="button"
+                aria-pressed={!showSessions}
+                onClick={() => setPane('chat')}
+                className={switchButtonClass(!showSessions)}
+              >
+                <MessageCircle className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                Chat
+              </button>
+              <button
+                type="button"
+                aria-pressed={showSessions}
+                onClick={() => setPane('sessions')}
+                className={switchButtonClass(showSessions)}
+              >
+                Sessions
+              </button>
+            </div>
+          </div>
+        ) : null}
+        <div className="shrink-0">
+          <InviteTeamBanner />
+        </div>
+
+        {showSessions ? (
+          <div className="flex min-h-0 flex-1 flex-col pt-3">
+            <NewSessionBox onStarted={() => setPane('chat')} />
+            <div className="mt-4 min-h-0 flex-1">
+              <ChappiHistoryList variant="panel" onDone={() => setPane('chat')} />
+            </div>
+          </div>
+        ) : null}
+        <div className={`min-h-0 flex-1 ${showSessions ? 'hidden' : ''}`}>
+          <ChappiConversation
+            onNewRelease={onNewRelease}
+            headingLevel="h2"
+            focusRequest={focusRequest}
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * The box at the top of the Sessions list: type the first message of a new
+ * session and it starts. The conversation (mounted, only hidden) picks the
+ * message up and sends it once the switch is back on Chat.
+ */
+function NewSessionBox({ onStarted }: { onStarted: () => void }) {
+  const [text, setText] = useState('');
+  const canSend = text.trim().length > 0;
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canSend) return;
+    const store = useChappiStore.getState();
+    store.reset();
+    store.setInput(text.trim());
+    store.setSendInputOnOpen(true);
+    setText('');
+    onStarted();
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex shrink-0 items-center gap-1 rounded-full border border-stroke-control bg-bg-surface p-1.5 transition-colors focus-within:border-brand/70"
+    >
+      <input
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder="Start a new session..."
+        aria-label="Start a new session"
+        className="min-w-0 flex-1 bg-transparent px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:outline-none"
+      />
+      <button
+        type="submit"
+        aria-label="Start session"
+        disabled={!canSend}
+        className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
+      >
+        <ArrowUp className="h-4 w-4" aria-hidden="true" />
+      </button>
+    </form>
+  );
+}

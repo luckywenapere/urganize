@@ -37,7 +37,7 @@ import { OfflineBanner } from '@/components/app/OfflineBanner';
 import { flushOfflineQueue } from '@/lib/offline/sync';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
-import { CURATOR_HOME_PATH } from '@/lib/home-path';
+import { CURATOR_HOME_PATH, HOME_PATH } from '@/lib/home-path';
 import { isSocialShareEnabled } from '@/lib/social-share';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 
@@ -275,8 +275,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const workspaceUserName = user?.name || user?.artist_name || user?.email || '';
 
   // The bottom bar is 4rem tall below lg and needs clearing; from lg up there is
-  // none. The assistant's own page has its own sizing (see globals.css).
-  const mainPaddingClass = isChappiRoute ? 'chappi-main-padding-nav' : 'mobile-nav-clearance';
+  // none. The assistant's own page has its own sizing (see globals.css), and
+  // Home also clears the UrgAns box pinned above the bar (2026-10-07).
+  const mainPaddingClass = isChappiRoute
+    ? 'chappi-main-padding-nav'
+    : pathname === HOME_PATH
+      ? 'home-main-padding'
+      : 'mobile-nav-clearance';
 
   useEffect(() => {
     if (!isAuthenticated || !user) {

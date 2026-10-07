@@ -108,7 +108,7 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       key: 'urgans',
       label: 'UrgAns',
       href: '/dashboard/urgans',
-      keywords: ['assistant', 'chat', 'ai', 'ask'],
+      keywords: ['assistant', 'chat', 'ai', 'ask', 'session', 'sessions'],
     }
   );
 

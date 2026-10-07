@@ -1,7 +1,7 @@
 'use client';
 
 import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
-import { useEffect, useMemo, useRef, useState, type ComponentType, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from '@urganize/ui';
@@ -18,7 +18,9 @@ import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { activeShellArea, buildShellAreas, readShellFlags } from '@/lib/shell-nav';
 import { useShellStore } from '@/stores/useShellStore';
-import { useChatSideStore } from '@/stores/useChatSideStore';
+import { useHomeChatStore } from '@/stores/useHomeChatStore';
+import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
+import { HOME_PATH } from '@/lib/home-path';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { ArtistSwitcher } from './ArtistSwitcher';
 import { CreditsChip } from './CreditsChip';
@@ -26,6 +28,7 @@ import { CreditsChip } from './CreditsChip';
 type IconComponent = ComponentType<LucideProps>;
 
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+const HISTORY_ENABLED = isChappiHistoryEnabled();
 
 /**
  * The top bar (design overhaul, 2026-10-04): the Deel shell with Urganize's skin.
@@ -47,22 +50,12 @@ export function TopNav({ userName }: { userName?: string }) {
   const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
   const active = activeShellArea(areas, pathname);
   const openCommand = useShellStore((state) => state.openCommand);
-  // Home pressed while already in the full chat brings the Today panel back
-  // rather than navigating away, but only when it was closed.
-  const reopenToday = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (!pathname.startsWith('/dashboard/urgans')) return;
-    const side = useChatSideStore.getState();
-    if (side.mode === 'today') return;
-    event.preventDefault();
-    side.setMode('today');
-  };
 
   return (
     <header className="shell-band sticky top-0 z-30">
       <div className="mx-auto flex h-[72px] w-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5 lg:px-8">
         <Link
           href="/dashboard/home"
-          onClick={reopenToday}
           aria-label="Urganize home"
           className="motion-focus shrink-0 rounded-md transition-opacity hover:opacity-80"
         >
@@ -80,13 +73,7 @@ export function TopNav({ userName }: { userName?: string }) {
               <Link
                 key={area.key}
                 href={area.href}
-                onClick={
-                  area.key === 'catalogue'
-                    ? leaveReleaseForCatalog
-                    : area.key === 'home'
-                      ? reopenToday
-                      : undefined
-                }
+                onClick={area.key === 'catalogue' ? leaveReleaseForCatalog : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 data-tour={area.key === 'catalogue' ? 'nav-catalog' : `shell-${area.key}`}
                 className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium transition-colors xl:px-3.5 ${
@@ -124,8 +111,9 @@ export function TopNav({ userName }: { userName?: string }) {
   );
 }
 
-/** The overflow for things that are not one of the six areas: the UrgAns page,
- *  credit history and, for an admin, Admin. A plain disclosure (Tab and Enter,
+/** The overflow for things that are not one of the six areas: past UrgAns
+ *  sessions (shown on Home, where the chat lives on a computer), credit history
+ *  and, for an admin, Admin. A plain disclosure (Tab and Enter,
  *  Escape closes), not a menu role, because it does not move focus with arrows. */
 function MoreMenu() {
   const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
@@ -149,8 +137,15 @@ function MoreMenu() {
     };
   }, [open]);
 
-  const items: Array<{ href: string; label: string; Icon: IconComponent }> = [];
-  if (CHAPPI_ENABLED) items.push({ href: '/dashboard/urgans', label: 'UrgAns chats', Icon: Sparkles });
+  const items: Array<{ href: string; label: string; Icon: IconComponent; onSelect?: () => void }> = [];
+  if (CHAPPI_ENABLED && HISTORY_ENABLED) {
+    items.push({
+      href: HOME_PATH,
+      label: 'UrgAns sessions',
+      Icon: Sparkles,
+      onSelect: () => useHomeChatStore.getState().setPane('sessions'),
+    });
+  }
   items.push({ href: '/dashboard/credits', label: 'Credits', Icon: Wallet2 });
   if (isAdmin) items.push({ href: '/admin', label: 'Admin', Icon: ShieldCheck });
 
@@ -167,12 +162,15 @@ function MoreMenu() {
       </button>
       {open ? (
         <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-2xl border border-stroke-default bg-bg-surface p-1.5 shadow-lg">
-          {items.map(({ href, label, Icon }) => (
+          {items.map(({ href, label, Icon, onSelect }) => (
             <Link
               key={href}
               href={href}
-              onClick={() => setOpen(false)}
-              aria-current={pathname.startsWith(href) ? 'page' : undefined}
+              onClick={() => {
+                onSelect?.();
+                setOpen(false);
+              }}
+              aria-current={!onSelect && pathname.startsWith(href) ? 'page' : undefined}
               className="motion-focus flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm text-content-primary hover:bg-bg-hover"
             >
               <Icon className="h-4 w-4 text-content-tertiary" aria-hidden="true" />

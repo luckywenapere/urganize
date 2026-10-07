@@ -20,6 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.87.0",
+    date: "October 7, 2026",
+    highlights: [
+      "On a computer, Home is your UrgAns chat: your tasks on the left, UrgAns on the right.",
+      "On a phone, type to UrgAns from the box at the bottom of Home. You can add a photo or a file, or talk.",
+      "Your tasks and other lists on Home fold into neat stacks. Tap the label to open one.",
+      "Your chats with UrgAns are now called sessions. Start a new one with New session.",
+      "The circle you tick to finish a task is easier to see.",
+    ],
+  },
+  {
     version: "1.86.0",
     date: "October 7, 2026",
     highlights: [

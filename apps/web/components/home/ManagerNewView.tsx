@@ -13,6 +13,8 @@ import {
 } from '@/lib/home/welcome';
 import type { HomePayload } from '@/lib/home/types';
 
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+
 /**
  * Home for a manager with no rollouts yet. Calm on purpose: Chappi, one line,
  * one button. Everything else on Home (counts, focus task, lists) only appears
@@ -34,7 +36,9 @@ export function ManagerNewView({
         aria-label="Get started"
         className="mx-auto flex max-w-xl flex-col items-center gap-5 py-6 text-center sm:py-10"
       >
-        <Chappi pose="idle" size={132} />
+        {/* On a computer the conversation beside this column already has Chappi
+            waiting, and two on one screen is one too many. */}
+        <Chappi pose="idle" size={132} className={CHAPPI_ENABLED ? 'lg:hidden' : ''} />
         <div className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
             {WELCOME_EYEBROW}

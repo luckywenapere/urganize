@@ -7,6 +7,8 @@ import { ArrowRight, Disc3, ListChecks, Search, Sparkles } from '@/components/ic
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { appPageHaystack, buildAppPages } from '@/lib/app-pages';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
+import { askUrgansTarget } from '@/lib/ask-urgans';
+import { requestComposerFocus } from '@/lib/composer-focus';
 import { searchReleases } from '@/lib/release-search';
 import { matchesSearchTerms, parseSearchTerms, searchTasks } from '@/lib/task-search';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
@@ -84,8 +86,19 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
         label: `Ask UrgAns: ${query.trim()}`,
         run: () => {
           setInput(query.trim());
-          if (window.matchMedia('(min-width: 1024px)').matches) setRailOpen(true);
-          else router.push('/dashboard/urgans');
+          const target = askUrgansTarget(
+            window.location.pathname,
+            window.matchMedia('(min-width: 1024px)').matches
+          );
+          if (target === 'home-composer') {
+            // Home carries the box itself. Asked for a moment later, once this
+            // bar has closed and handed focus back to the button that opened it.
+            window.setTimeout(requestComposerFocus, 80);
+          } else if (target === 'drawer') {
+            setRailOpen(true);
+          } else {
+            router.push('/dashboard/urgans');
+          }
         },
       });
     }

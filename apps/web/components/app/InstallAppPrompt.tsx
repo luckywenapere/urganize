@@ -185,7 +185,7 @@ export function InstallAppPrompt() {
   // its flag is on, otherwise just the safe area. PushPermissionPrompt's
   // bottomClass, kept identical so the two cards land in the same place.
   const bottomClass = MOBILE_NAV_ENABLED
-    ? 'bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] lg:bottom-6'
+    ? 'mobile-nav-raise-card lg:bottom-6'
     : 'bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] lg:bottom-6';
 
   const settle = (outcome: InstallPromptOutcome) => {

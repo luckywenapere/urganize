@@ -56,7 +56,7 @@ export function OnboardingBar({ progress }: { progress: OnboardingProgress }) {
       >
         <div className="h-full rounded-full bg-brand transition-[width] duration-300" style={{ width: `${progress.percent}%` }} />
       </div>
-      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+      <ul className="mt-4 grid gap-2">
         {progress.steps.map((step) => (
           <li key={step.key} className="flex items-center gap-2.5 text-sm">
             <span

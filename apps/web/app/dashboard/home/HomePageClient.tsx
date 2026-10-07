@@ -5,49 +5,43 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useHomeStore } from '@/stores/useHomeStore';
-import { usePlannerStore } from '@/stores/usePlannerStore';
 import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
-import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
+import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
 import { useCatalogTourAutoStart } from '@/components/tours/useCatalogTourAutoStart';
-import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
-import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
+import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { ManagerMidReleaseView } from '@/components/home/ManagerMidReleaseView';
 import { ManagerQuietView } from '@/components/home/ManagerQuietView';
 import { ManagerNewView } from '@/components/home/ManagerNewView';
+import { HomeAskBar } from '@/components/home/HomeAskBar';
+import { HomeDesktopSplit } from '@/components/home/HomeDesktopSplit';
 
-// Same loop-guard reasoning as HOME_PATH (lib/home-path.ts) and
-// ChappiPageClient's own CHAPPI_ENABLED read: the route itself has no
-// server-side gate, so an off flag has to bounce here.
-const TEAM_LOGINS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TEAM_LOGINS === 'true';
 const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
+const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 /**
- * The Home tab's page. Follows ChappiPageClient's established shape for a
- * dashboard sub-route: fire the data load immediately (not gated behind
- * authLoading — the store reads its own token from getSession()), bounce on
- * a resolved "no session" or a flag-off deployment, render ONE skeleton
- * until both auth and Home's own data are ready.
+ * The Home tab's page. Fires the data load immediately (the store reads its own
+ * token from getSession()), bounces on a resolved "no session", and renders ONE
+ * skeleton until both auth and Home's own data are ready.
  *
- * The create-release flow here is DELIBERATELY SIMPLER than
- * WorkspaceView's/ChappiPageClient's: it wires the compulsory team-login
- * step and the first-rollout share offer (both correctness-affecting), but
- * does not yet branch on NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE or
- * NEXT_PUBLIC_FEATURE_FIRST_WIN the way those two pages do. Worth widening
- * in a follow-up step if Home needs to match that behavior exactly.
+ * Two layouts since 2026-10-07 (founder call):
+ *  - On a computer (lg and up, with UrgAns on) Home is the chat: Home's column
+ *    on the left, the conversation on the right (HomeDesktopSplit).
+ *  - On a phone it is one column with the UrgAns box pinned to the bottom of
+ *    the screen (HomeAskBar). Send opens the full chat page.
+ * The two are mounted one at a time (useIsDesktopViewport, the WorkspaceView
+ * precedent), so the conversation is never in the page twice.
+ *
+ * Making a rollout goes through RolloutCreateFlow, the same flow the chat page
+ * uses, so the conversation's "New rollout" behaves the same in both places.
  */
 export default function HomePageClient() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
-  const { isInitialLoading: releasesLoading, loadCommandCenter } = useReleaseStore();
   const { data: home, isLoading: homeLoading, load: loadHome } = useHomeStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [accessStep, setAccessStep] = useState<{
-    releaseId: string;
-    title: string | null;
-    resume: () => void;
-  } | null>(null);
+  const isDesktop = useIsDesktopViewport();
 
   useEffect(() => {
     void loadHome();
@@ -83,75 +77,33 @@ export default function HomePageClient() {
     return <HomeSkeleton />;
   }
 
+  const openCreate = () => setIsCreateModalOpen(true);
+  const viewerId = user?.id ?? '';
+  const view =
+    home.state === 'manager_new' ? (
+      <ManagerNewView home={home} onNewRollout={openCreate} />
+    ) : home.state === 'manager_all_clear' || home.state === 'manager_between' ? (
+      <ManagerQuietView home={home} viewerId={viewerId} onNewRollout={openCreate} />
+    ) : (
+      <ManagerMidReleaseView home={home} viewerId={viewerId} />
+    );
+
   return (
     <>
-      {home.state === 'manager_new' ? (
-        <ManagerNewView home={home} onNewRollout={() => setIsCreateModalOpen(true)} />
-      ) : home.state === 'manager_all_clear' || home.state === 'manager_between' ? (
-        <ManagerQuietView home={home} onNewRollout={() => setIsCreateModalOpen(true)} />
+      {isDesktop && CHAPPI_ENABLED ? (
+        <HomeDesktopSplit onNewRelease={openCreate}>{view}</HomeDesktopSplit>
       ) : (
-        <ManagerMidReleaseView home={home} viewerId={user?.id ?? ''} />
+        <>
+          <div className="home-scene-container">{view}</div>
+          <HomeAskBar />
+        </>
       )}
 
-      <CreateReleaseModal
+      <RolloutCreateFlow
         open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreated={(releaseId, plan, result) => {
-          setIsCreateModalOpen(false);
-          void loadCommandCenter({ force: true });
-          void loadHome({ force: true });
-          const plannerPending = result?.plannerPending === true;
-
-          const resume = () => {
-            if (plannerPending) {
-              router.push(`/dashboard?release=${releaseId}`);
-              usePlannerStore.getState().openIntake({
-                source: 'empty_state',
-                releaseId,
-                ...(result?.releaseType ? { prefill: { releaseType: result.releaseType } } : {}),
-              });
-            } else {
-              router.push(
-                plan === 'template'
-                  ? `/dashboard?release=${releaseId}&new=1`
-                  : `/dashboard?release=${releaseId}`
-              );
-            }
-          };
-
-          const continueAfterAccess = withFirstShareOffer({
-            releaseId,
-            firstRelease: result?.firstRelease,
-            snapshot: result?.share,
-            then: resume,
-          });
-          if (TEAM_LOGINS_ENABLED) {
-            setAccessStep({ releaseId, title: result?.title ?? null, resume: continueAfterAccess });
-            return;
-          }
-          continueAfterAccess();
-        }}
+        onCreated={() => void loadHome({ force: true })}
       />
-
-      {accessStep ? (
-        <ReleaseAccessStep
-          releaseId={accessStep.releaseId}
-          releaseTitle={accessStep.title}
-          onDone={() => {
-            const { resume } = accessStep;
-            setAccessStep(null);
-            resume();
-          }}
-        />
-      ) : null}
-
-      {/* Kept in sync with useReleaseStore's own loading state so a create
-          modal opened while the catalog's data is still settling doesn't
-          race — mirrors WorkspaceView/ChappiPageClient's own reliance on
-          isInitialLoading for the same reason (unused here beyond keeping
-          the store subscription live so onCreated's release count reads
-          are correct). */}
-      {releasesLoading ? null : null}
     </>
   );
 }

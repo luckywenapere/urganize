@@ -68,7 +68,7 @@ export function ChappiDeleteChatDialog({
     try {
       await onConfirm();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not delete this chat.');
+      setError(caught instanceof Error ? caught.message : 'Could not delete this session.');
     } finally {
       setIsDeleting(false);
     }
@@ -81,7 +81,7 @@ export function ChappiDeleteChatDialog({
     >
       <button
         type="button"
-        aria-label="Close delete chat dialog"
+        aria-label="Close delete session dialog"
         className="absolute inset-0"
         onClick={() => {
           if (!isDeleting) onClose();
@@ -98,7 +98,7 @@ export function ChappiDeleteChatDialog({
       >
         <div className="p-4 sm:p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-content-tertiary">
-            Delete chat
+            Delete session
           </p>
           <h2
             id="delete-chat-title"
@@ -107,7 +107,7 @@ export function ChappiDeleteChatDialog({
             Delete &ldquo;{chatTitle}&rdquo;?
           </h2>
           <p className="mt-2 text-sm leading-6 text-content-secondary">
-            This deletes the chat on every device. This can&rsquo;t be undone. Anything UrgAns
+            This deletes the session on every device. This can&rsquo;t be undone. Anything UrgAns
             did for you in it stays done.
           </p>
         </div>
@@ -131,7 +131,7 @@ export function ChappiDeleteChatDialog({
             isLoading={isDeleting}
             leftIcon={isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
           >
-            Delete chat
+            Delete session
           </Button>
         </div>
       </div>

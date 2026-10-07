@@ -10,6 +10,11 @@ describe('glideOffset', () => {
   it('moves the box down to sit above the bottom of the screen', () => {
     expect(glideOffset({ boxBottom: 500, viewportHeight: 900, bottomGap: 24 })).toBe(376);
   });
+  it('stays put while the keyboard is open, since the box rides on it', () => {
+    expect(
+      glideOffset({ boxBottom: 500, viewportHeight: 900, bottomGap: 24, keyboardOpen: true })
+    ).toBe(0);
+  });
   it('moves it up when it starts below that spot', () => {
     expect(glideOffset({ boxBottom: 950, viewportHeight: 900, bottomGap: 24 })).toBe(-74);
   });
