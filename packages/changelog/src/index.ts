@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.86.0",
+    date: "October 7, 2026",
+    highlights: [
+      "Timeline now has its own tab in a rollout, so you can get back to it from Notes or Content.",
+      "You can open the timeline full screen.",
+    ],
+  },
+  {
     version: "1.85.1",
     date: "October 7, 2026",
     highlights: [
