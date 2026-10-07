@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useReleaseStore } from "@/stores/useReleaseStore";
-import { useLiveHomeSections } from "./useLiveHomeSections";
+import { useState } from "react";
+import { useHomeFocusData } from "./useHomeFocusData";
 import { HomeHeaderRow } from "./HomeHeaderRow";
 import { HomeAskBar } from "./HomeAskBar";
 import { FocusTaskCard } from "./FocusTaskCard";
@@ -13,7 +12,6 @@ import { AttentionCards } from "./AttentionCards";
 import { OnboardingBar } from "./OnboardingBar";
 import { buildOnboardingProgress } from "@/lib/home/onboarding";
 import { buildAttentionItems } from "@/lib/home/attention";
-import { useShellStore } from "@/stores/useShellStore";
 import { BriefCard } from "./BriefCard";
 import { ChappiSpeaksCard } from "./ChappiSpeaksCard";
 import { pickChappiSpeaks } from "@/lib/home/chappi-speaks";
@@ -43,52 +41,7 @@ export function ManagerMidReleaseView({
   viewerId: string;
 }) {
   // The artist comes from the top bar's switcher, so Home and Catalogue agree.
-  const selectedArtistId = useShellStore((state) => state.selectedArtistId);
-
-  const live = useLiveHomeSections(viewerId, home.primaryOwnerId, home.artists);
-
-  const allReleases = useReleaseStore((state) => state.releases);
-  const releaseArtistById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const release of allReleases) map.set(release.id, release.artistId);
-    return map;
-  }, [allReleases]);
-
-  const matchesArtist = (releaseId: string | null): boolean => {
-    if (!selectedArtistId) return true;
-    if (!releaseId) return false;
-    return releaseArtistById.get(releaseId) === selectedArtistId;
-  };
-
-  const releases = selectedArtistId
-    ? live.releases.filter((release) => release.artistId === selectedArtistId)
-    : live.releases;
-  const yourTasks = selectedArtistId
-    ? {
-        late: live.yourTasks.late.filter((task) =>
-          matchesArtist(task.releaseId),
-        ),
-        today: live.yourTasks.today.filter((task) =>
-          matchesArtist(task.releaseId),
-        ),
-        week: live.yourTasks.week.filter((task) =>
-          matchesArtist(task.releaseId),
-        ),
-      }
-    : live.yourTasks;
-  const waitingTasks = selectedArtistId
-    ? live.waitingTasks.filter((task) => matchesArtist(task.releaseId))
-    : live.waitingTasks;
-  const placements = selectedArtistId
-    ? {
-        placed: home.placements.placed.filter((pitch) =>
-          matchesArtist(pitch.releaseId),
-        ),
-        underReview: home.placements.underReview.filter((pitch) =>
-          matchesArtist(pitch.releaseId),
-        ),
-      }
-    : home.placements;
+  const { live, releases, yourTasks, waitingTasks, placements } = useHomeFocusData(home, viewerId);
 
   const [showAll, setShowAll] = useState(false);
   const focus = pickFocusTask(yourTasks);

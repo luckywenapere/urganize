@@ -31,7 +31,6 @@ export function HomeAskBar() {
   const setInput = useChappiStore((state) => state.setInput);
   const setSendInputOnOpen = useChappiStore((state) => state.setSendInputOnOpen);
   const setPendingAttachments = useChappiStore((state) => state.setPendingAttachments);
-  const setRailOpen = useChappiStore((state) => state.setRailOpen);
   const [text, setText] = useState('');
   const attach = useAttachments();
 
@@ -59,8 +58,9 @@ export function HomeAskBar() {
     setSendInputOnOpen(true);
     setText('');
     attach.clear();
-    if (window.matchMedia('(min-width: 1024px)').matches) setRailOpen(true);
-    else router.push('/dashboard/urgans');
+    // Always the full chat page, never a drawer: the page mounts the
+    // conversation that picks the message up and sends it.
+    router.push('/dashboard/urgans');
   };
 
   // Enter sends, Shift+Enter makes a new line, like every chat box.
@@ -72,9 +72,19 @@ export function HomeAskBar() {
   };
 
   return (
+    <>
+    {/* A phone has no room to type on Home with the keyboard up, so the box is
+        a tap target: the full chat opens with the keyboard ready. */}
+    <button
+      type="button"
+      onClick={() => router.push('/dashboard/urgans')}
+      className="motion-focus flex h-14 w-full items-center rounded-2xl border border-stroke-control bg-bg-surface px-4 text-left text-base text-content-tertiary lg:hidden"
+    >
+      Message UrgAns...
+    </button>
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-stroke-control bg-bg-surface p-3 focus-within:border-content-secondary"
+      className="hidden rounded-2xl border border-stroke-control bg-bg-surface p-3 focus-within:border-content-secondary lg:block"
     >
       <ChappiAttachmentTray
         attachments={attach.attachments}
@@ -153,5 +163,6 @@ export function HomeAskBar() {
         </p>
       ) : null}
     </form>
+    </>
   );
 }

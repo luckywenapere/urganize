@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.83.0",
+    date: "October 7, 2026",
+    highlights: [
+      "Typing in the Home chat box now opens the full chat with your message sent.",
+      "Chat messages now appear in bubbles. On a computer, your priority task sits beside the chat.",
+      "There is a Home arrow at the top of the chat to take you back.",
+    ],
+  },
+  {
     version: "1.82.0",
     date: "October 7, 2026",
     highlights: [
