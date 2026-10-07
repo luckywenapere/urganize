@@ -178,7 +178,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
       onClick={onCreate}
       disabled={testRelease?.isStarting}
       data-tour="new-rollout"
-      className="motion-focus motion-press inline-flex h-12 items-center justify-center gap-2 rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+      className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full bg-content-primary px-4 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <Plus className="h-4 w-4" aria-hidden="true" />
       Add rollout
@@ -229,9 +229,9 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
 
   return (
     <div>
-      <PageHeader
-        description={
-          artistName ? (
+      {artistName ? (
+        <PageHeader
+          description={
             <span className="inline-flex items-center gap-2">
               Showing {artistName}
               <button
@@ -243,10 +243,11 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
                 <X className="h-3 w-3" aria-hidden="true" />
               </button>
             </span>
-          ) : undefined
-        }
-        action={addButton}
-      />
+          }
+        />
+      ) : (
+        <div className="pt-5 sm:pt-6" />
+      )}
 
       {showFilters ? (
       <PullReveal filtering={Boolean(query.trim()) || status !== 'all'}>
@@ -336,9 +337,12 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
       ) : null}
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-        <p className="px-5 py-4 text-sm text-content-secondary" aria-live="polite">
-          Total {visible.length} {visible.length === 1 ? 'rollout' : 'rollouts'}
-        </p>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+          <p className="text-sm text-content-secondary" aria-live="polite">
+            Total {visible.length} {visible.length === 1 ? 'rollout' : 'rollouts'}
+          </p>
+          {addButton}
+        </div>
 
         {visible.length === 0 ? (
           <div className="border-t border-stroke-subtle px-5 py-10">
