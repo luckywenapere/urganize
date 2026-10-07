@@ -15,6 +15,7 @@ import { createPortal } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
+import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
 import {
@@ -39,6 +40,7 @@ import { useCloseSettings, useOpenSettings } from './useOpenSettings';
 import { useIsWide } from './useIsWide';
 import { useTeammates } from './useTeammates';
 import { useWorkspaceSettings } from './useWorkspaceSettings';
+import { AdminSegment } from './segments/AdminSegment';
 import { ArtistsBrandSegment } from './segments/ArtistsBrandSegment';
 import { BillingSegment } from './segments/BillingSegment';
 import { ConnectionsSegment } from './segments/ConnectionsSegment';
@@ -106,6 +108,7 @@ function SettingsDialog({
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const isAdmin = useWorkspaceIdentityStore((s) => s.isAdmin);
   const userId = user?.id ?? '';
 
   const closeSettings = useCloseSettings();
@@ -114,8 +117,8 @@ function SettingsDialog({
 
   const flags = useMemo(() => readSettingsFlags(), []);
   const visible = useMemo(
-    () => visibleSettingsSegments({ role: user?.role }, flags),
-    [user?.role, flags]
+    () => visibleSettingsSegments({ role: user?.role, isAdmin }, flags),
+    [user?.role, isAdmin, flags]
   );
 
   const view = resolveSettingsView(request, visible);
@@ -314,6 +317,8 @@ function SettingsDialog({
         return <UrgansSegment />;
       case 'directory':
         return <DirectorySegment />;
+      case 'admin':
+        return <AdminSegment />;
       case 'billing':
         return <BillingSegment />;
       case 'connections':

@@ -1,28 +1,20 @@
 'use client';
 
 import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
-import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from '@urganize/ui';
-import {
-  Search,
-  ShieldCheck,
-  Wallet2,
-  type LucideProps,
-} from '@/components/icons';
+import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { activeShellArea, buildShellAreas, readShellFlags } from '@/lib/shell-nav';
 import { useShellStore } from '@/stores/useShellStore';
-import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { ArtistSwitcher } from './ArtistSwitcher';
 import { CreditsChip } from './CreditsChip';
 import { useNavTip } from './useNavTip';
-
-type IconComponent = ComponentType<LucideProps>;
 
 /**
  * The top bar (design overhaul, 2026-10-04): the Deel shell with Urganize's skin.
@@ -82,7 +74,6 @@ export function TopNav({ userName }: { userName?: string }) {
               </Link>
             );
           })}
-          <MoreMenu />
           {tip.panel}
         </nav>
 
@@ -105,66 +96,5 @@ export function TopNav({ userName }: { userName?: string }) {
         </div>
       </div>
     </header>
-  );
-}
-
-/** The overflow for things that are not one of the six areas: past UrgAns
- *  sessions (shown on Home, where the chat lives on a computer), credit history
- *  and, for an admin, Admin. A plain disclosure (Tab and Enter,
- *  Escape closes), not a menu role, because it does not move focus with arrows. */
-function MoreMenu() {
-  const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
-  const pathname = usePathname() ?? '';
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [open]);
-
-  const items: Array<{ href: string; label: string; Icon: IconComponent }> = [];
-  items.push({ href: '/dashboard/credits', label: 'Credits', Icon: Wallet2 });
-  if (isAdmin) items.push({ href: '/admin', label: 'Admin', Icon: ShieldCheck });
-
-  return (
-    <div ref={rootRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        aria-haspopup="true"
-        className="motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium text-content-secondary hover:bg-bg-hover/70 xl:px-3.5 hover:text-content-primary"
-      >
-        More
-      </button>
-      {open ? (
-        <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-2xl border border-stroke-default bg-bg-surface p-1.5 shadow-lg">
-          {items.map(({ href, label, Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setOpen(false)}
-              aria-current={pathname.startsWith(href) ? 'page' : undefined}
-              className="motion-focus flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm text-content-primary hover:bg-bg-hover"
-            >
-              <Icon className="h-4 w-4 text-content-tertiary" aria-hidden="true" />
-              {label}
-            </Link>
-          ))}
-        </div>
-      ) : null}
-    </div>
   );
 }

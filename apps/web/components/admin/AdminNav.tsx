@@ -32,7 +32,7 @@ import {
 // the content below lg. No feature flags here: every entry is an internal
 // surface, and access is enforced server-side by ADMIN_EMAILS on each
 // page's backing API (this menu is navigation, not the guard).
-const ITEMS: Array<{
+export const ADMIN_NAV_ITEMS: Array<{
   key: string;
   label: string;
   icon: typeof LayoutDashboard;
@@ -110,7 +110,7 @@ export function AdminNav() {
         Admin
       </p>
       <ul className="flex w-full gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
-        {ITEMS.map((item) => {
+        {ADMIN_NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           return (

@@ -6,6 +6,7 @@ import {
   BellRing,
   ChevronRight,
   Globe,
+  LayoutDashboard,
   LogOut,
   Palette,
   Plug,
@@ -34,6 +35,7 @@ const SEGMENT_ICONS: Record<SettingsSegment, ComponentType<LucideProps>> = {
   billing: BadgeDollarSign,
   connections: Plug,
   security: ShieldCheck,
+  admin: LayoutDashboard,
 };
 
 /** Shared by the search box and the pop-up's own text fields. Not the app's
