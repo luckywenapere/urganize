@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+  Activity,
   BadgeDollarSign,
   BellRing,
   ChevronRight,
@@ -37,6 +38,12 @@ const SECTIONS: Array<{
     label: 'Scoreboard',
     description: 'Weekly active paying teams, MRR, second releases, retention, trials and activation, worked out live.',
     icon: Gauge,
+  },
+  {
+    href: '/admin/metrics',
+    label: 'Metrics',
+    description: 'Who is online now, active people, rollouts and how their plans were made, and who has gone quiet. Updates every minute.',
+    icon: Activity,
   },
   {
     href: '/admin/onboarding',

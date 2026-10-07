@@ -53,6 +53,17 @@ describe('the scanner itself', () => {
 
 describe('the ledger is append-only', () => {
   const writers = ['lib/credits/credits-server.ts', 'app/api/admin/credits/route.ts'];
+  // Reads the provider cost on spend rows for the usage dashboard (/admin/metrics,
+  // 2026-10-07) when the AI usage log is not there. Reading only, held below.
+  const readers = ['lib/usage-metrics-server.ts'];
+
+  it('lets the readers only read', () => {
+    for (const file of readers) {
+      const source = sources.get(file) ?? '';
+      expect(source, file).toMatch(/from\(\s*['"`]credit_ledger['"`]\s*\)/);
+      expect(source, file).not.toMatch(/\.(insert|update|upsert|delete)\s*\(/);
+    }
+  });
 
   it('never updates, upserts or deletes a ledger row', () => {
     for (const file of writers) {
@@ -65,7 +76,7 @@ describe('the ledger is append-only', () => {
     const offenders = [...sources]
       .filter(([, source]) => /from\(\s*['"`]credit_ledger['"`]\s*\)/.test(source) || /\bTABLE\b.*credit_ledger/.test(source))
       .map(([file]) => file)
-      .filter((file) => !writers.includes(file));
+      .filter((file) => !writers.includes(file) && !readers.includes(file));
     expect(offenders).toEqual([]);
   });
 

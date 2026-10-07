@@ -175,6 +175,7 @@ export async function GET(request: NextRequest) {
     creditLinks,
     creditSubmissions,
     urgansChats,
+    presenceDays,
     assets,
   ] = await Promise.all([
     readSection(admin, { table: 'task_comments', column: 'task_id', values: taskIds }),
@@ -208,6 +209,10 @@ export async function GET(request: NextRequest) {
     // this route is scoped by. Unavailable (not empty) where the table does
     // not exist yet.
     readSection(admin, { table: 'urgans_conversations', column: 'owner_user_id', values: [userId] }),
+    // The days you opened the app (2026-10-07, the /admin/metrics ping): one
+    // row per day with the first and last time and the kind of device. Removed
+    // with the account by the cascade, so it belongs here by the same rule.
+    readSection(admin, { table: 'user_presence_days', column: 'user_id', values: [userId] }),
     withDownloadUrls(admin, assetsRaw),
   ]);
 
@@ -262,6 +267,7 @@ export async function GET(request: NextRequest) {
       files: assets,
       notes,
       urgans_chats: urgansChats,
+      days_you_used_urganize: presenceDays,
       content_calendars: calendars,
       content_posts: posts,
       credit_links: creditLinks,

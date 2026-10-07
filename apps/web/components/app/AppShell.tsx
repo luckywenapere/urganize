@@ -21,6 +21,7 @@ import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { installLinkStallWatchdog } from '@/lib/nav-stall-watch';
 import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { NavigationTracker } from '@/components/app/NavigationTracker';
+import { PresenceBeacon } from '@/components/app/PresenceBeacon';
 import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
@@ -435,6 +436,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     {/* Records every route change so back affordances (Settings' back
         button) can return to the exact previous page. */}
     <NavigationTracker />
+    {/* The "last seen" ping behind /admin/metrics' online-now and active-people
+        counts. Signed-in users only; renders nothing. */}
+    <PresenceBeacon />
     {/* Card-before-trial's in-session gate: the auth-store bounce only fires
         on full page loads, and both signup funnels finish with client-side
         navigations — this routes a cardTrialRequired account to /start-trial
