@@ -1162,10 +1162,12 @@ export function ChappiConversation({ onNewRelease, variant = 'page' }: ChappiCon
   useEffect(() => {
     if (!sendInputOnOpen) return;
     const text = useChappiStore.getState().input.trim();
+    const files = useChappiStore.getState().pendingAttachments;
     useChappiStore.getState().setSendInputOnOpen(false);
-    if (!text) return;
+    useChappiStore.getState().setPendingAttachments([]);
+    if (!text && files.length === 0) return;
     useChappiStore.getState().setInput('');
-    sendUserTurn(text);
+    sendUserTurn(text, files);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sendInputOnOpen]);
 
