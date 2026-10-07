@@ -117,8 +117,6 @@ export default function RelationshipsPageClient() {
   return (
     <div>
       <PageHeader
-        title="Relationships"
-        info="Everyone your team works with, with your own notes. Only your team sees them."
         action={
           !adding ? (
             <button

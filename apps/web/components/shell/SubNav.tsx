@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
+import { useNavTip } from './useNavTip';
 import { activeShellArea, buildShellAreas, readShellFlags, visibleSubTabs } from '@/lib/shell-nav';
 
 /**
@@ -18,6 +19,7 @@ export function SubNav() {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
   const tabs = visibleSubTabs(activeShellArea(areas, pathname));
+  const tip = useNavTip();
   if (tabs.length === 0) return null;
 
   return (
@@ -29,6 +31,7 @@ export function SubNav() {
             <Link
               key={tab.key}
               href={tab.href}
+              {...tip.bind(tab.key)}
               onClick={tab.key === 'releases' ? leaveReleaseForCatalog : undefined}
               aria-current={isActive ? 'page' : undefined}
               ref={(node) => {
@@ -44,6 +47,7 @@ export function SubNav() {
             </Link>
           );
         })}
+        {tip.panel}
       </div>
     </nav>
   );

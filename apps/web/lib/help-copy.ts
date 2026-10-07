@@ -251,6 +251,62 @@ export const HELP_COPY = {
     text: "Renaming one updates that artist's rollouts too. You pick one when you make a new rollout.",
   },
 
+  // ------------------------------------------------------- nav: menu items
+  // Shown when a pointer rests on an item in the top bar or the tab row under
+  // it (2026-10-07: these replaced the info icon beside each page's title).
+  'nav.home': {
+    label: 'Home',
+    text: 'Your day at a glance: what is late, what is due and what to do first.',
+  },
+  'nav.catalogue': {
+    label: 'Catalogue',
+    text: 'Every rollout, act and note your team keeps.',
+  },
+  'nav.relationships': {
+    label: 'Relationships',
+    text: 'The people your team works with, the open directory and your playlist pitches.',
+  },
+  'nav.opportunities': {
+    label: 'Opportunities',
+    text: 'Deals, grants, sync and brand work your team is going after. Only your team sees them.',
+  },
+  'nav.audience': {
+    label: 'Audience',
+    text: 'Your fans and what the numbers say. Coming soon.',
+  },
+  'nav.shows': {
+    label: 'Shows',
+    text: 'Every date, its running order and the tracks the DJ needs.',
+  },
+  'nav.rollouts': {
+    label: 'Rollouts',
+    text: 'Every song and project your team is planning or has put out.',
+  },
+  'nav.artists': {
+    label: 'Artists',
+    text: 'Each act on your roster, with their dates and their team.',
+  },
+  'nav.pressKits': {
+    label: 'Press kits',
+    text: 'One page about each act that you can send to writers and radio.',
+  },
+  'nav.notes': {
+    label: 'Notes',
+    text: 'Quick thoughts you jot down. Only you can see them.',
+  },
+  'nav.people': {
+    label: 'People',
+    text: 'Everyone your team works with, with your own notes. Only your team sees them.',
+  },
+  'nav.directory': {
+    label: 'Directory',
+    text: 'Find producers, designers and engineers by the work they have done.',
+  },
+  'nav.pitching': {
+    label: 'Pitching',
+    text: 'Songs you sent to playlist curators, and what they said back.',
+  },
+
   // --------------------------------------------------------------- workspace
   'workspace.testRelease': {
     label: 'This is a test rollout',

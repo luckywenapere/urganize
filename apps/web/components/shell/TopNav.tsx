@@ -24,6 +24,7 @@ import { HOME_PATH } from '@/lib/home-path';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { ArtistSwitcher } from './ArtistSwitcher';
 import { CreditsChip } from './CreditsChip';
+import { useNavTip } from './useNavTip';
 
 type IconComponent = ComponentType<LucideProps>;
 
@@ -50,6 +51,7 @@ export function TopNav({ userName }: { userName?: string }) {
   const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
   const active = activeShellArea(areas, pathname);
   const openCommand = useShellStore((state) => state.openCommand);
+  const tip = useNavTip();
 
   return (
     <header className="shell-band sticky top-0 z-30">
@@ -73,6 +75,7 @@ export function TopNav({ userName }: { userName?: string }) {
               <Link
                 key={area.key}
                 href={area.href}
+                {...tip.bind(area.key)}
                 onClick={area.key === 'catalogue' ? leaveReleaseForCatalog : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 data-tour={area.key === 'catalogue' ? 'nav-catalog' : `shell-${area.key}`}
@@ -87,6 +90,7 @@ export function TopNav({ userName }: { userName?: string }) {
             );
           })}
           <MoreMenu />
+          {tip.panel}
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:ml-0">

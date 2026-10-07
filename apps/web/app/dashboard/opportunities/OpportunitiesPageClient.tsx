@@ -189,8 +189,6 @@ export default function OpportunitiesPageClient() {
   return (
     <div>
       <PageHeader
-        title="Opportunities"
-        info="Deals, grants, sync and brand work your team is going after. Only your team sees them."
         action={
           editing === null ? (
             <button
