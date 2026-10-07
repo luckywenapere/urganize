@@ -11,9 +11,6 @@ export function HomeHeaderRow({ header }: { header: HomeHeader }) {
           {header.greeting}, {header.firstName}.
         </h1>
       </div>
-      {header.teamName ? (
-        <p className="text-sm text-content-secondary">{header.teamName}</p>
-      ) : null}
     </div>
   );
 }
