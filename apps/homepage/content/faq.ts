@@ -17,14 +17,14 @@ const managerArtists = PRICING_TIERS.manager.limits.artists;
 
 export const FAQ_ITEMS: readonly FaqItem[] = [
   {
-    question: "Do I need a card to start?",
+    question: "Can I start using it today?",
     answer:
-      "No. The trial is free for 3 days, you can start with a test rollout and you pick a plan only when it ends.",
+      "We are letting teams in from the waitlist. Join it and we will reach out when your spot opens.",
   },
   {
-    question: "What happens when the 3 days end?",
+    question: "What happens when my spot opens?",
     answer:
-      "Your work is kept and your team is paused until you pick a plan.",
+      "We set you up with a team trial first, and you pick a plan only after.",
   },
   {
     question: "Is it for one artist or a roster?",

@@ -13,7 +13,7 @@ import {
   type BillingInterval,
   type PricingTierId,
 } from "@urganize/pricing";
-import { APP_SIGNUP_URL } from "@/lib/app-urls";
+import { WAITLIST_URL } from "@/lib/app-urls";
 import { salesMailto } from "@/lib/sales-mailto";
 
 // The price table.
@@ -177,7 +177,7 @@ export function PricingTierCards() {
                     also taking TrialButton's drop shadow; three shadowed
                     buttons in one card row is a different change. */}
                 <a
-                  href={selfServe ? APP_SIGNUP_URL : salesMailto(tier.label)}
+                  href={selfServe ? WAITLIST_URL : salesMailto(tier.label)}
                   data-track={selfServe ? "start_trial_click" : undefined}
                   data-location={selfServe ? `pricing_${tierId}` : undefined}
                   className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--marketing-primary)] px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] transition-colors hover:bg-[var(--marketing-primary-hover)]"
@@ -216,8 +216,7 @@ export function PricingTierCards() {
             of anything a customer reads. */}
         <p className="mt-8 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">
           Prices are in Naira. One price covers your whole team, not each person.
-          Every plan is paid once a year. The free trial lasts 3 days and needs
-          no card.
+          Every plan is paid once a year. We are letting teams in from the waitlist.
         </p>
       </div>
     </section>

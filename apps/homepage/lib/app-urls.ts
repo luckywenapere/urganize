@@ -16,5 +16,13 @@ export const APP_LOGIN_URL = `${APP_ORIGIN}/auth`;
 /** New accounts. NOT /auth — see the note above. */
 export const APP_SIGNUP_URL = `${APP_ORIGIN}/onboarding`;
 
+/**
+ * Where every "Try Urganize" button goes (2026-10-07, founder call: the site is
+ * a waitlist again). The inline form on the homepage, id="waitlist" in
+ * FinalCTASection. A root-relative href so it works from any marketing page and
+ * scrolls when already on the homepage. Sign-in stays on APP_LOGIN_URL.
+ */
+export const WAITLIST_URL = "/#waitlist";
+
 /** Password reset, linked from /login so users don't bounce off the app. */
 export const APP_PASSWORD_RESET_URL = `${APP_ORIGIN}/auth/forgot-password`;

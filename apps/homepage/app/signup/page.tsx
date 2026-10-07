@@ -4,7 +4,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
-import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-urls";
+import { APP_LOGIN_URL, WAITLIST_URL } from "@/lib/app-urls";
 
 // Lives on the marketing domain for the same reason /login does — see the
 // note there. Note the CTA points at /onboarding, not /auth: apps/web's
@@ -19,7 +19,7 @@ import { APP_LOGIN_URL, APP_SIGNUP_URL } from "@/lib/app-urls";
 export const metadata: Metadata = buildPageMetadata({
   title: "Sign up",
   description:
-    `${CORE_LINE} Create your account and start planning rollouts.`,
+    `${CORE_LINE} Join the waitlist and we will let you in as spots open.`,
   path: "/signup",
 });
 
@@ -34,7 +34,7 @@ export default function SignupPage() {
             Sign up
           </p>
           <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
-            Create your account
+            Join the waitlist
           </h1>
           <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
             Add your first rollout and get a plan built from a real playbook,
@@ -43,13 +43,13 @@ export default function SignupPage() {
 
           <div className="mt-10">
             <a
-              href={APP_SIGNUP_URL}
+              href={WAITLIST_URL}
               className="relative z-[60] inline-flex touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] sm:text-base"
             >
-              Create your account
+              Join the waitlist
             </a>
             <p className="mt-4 text-sm text-[var(--marketing-text-subtle)]">
-              3 days free for your whole team. No card required.
+              We are letting teams in from the waitlist.
             </p>
           </div>
 
