@@ -159,7 +159,7 @@ export default async function GuidePage({
             </p>
             <p className={`mt-2 ${bodyText}`}>
               Create a rollout and get the whole plan, with an owner and a due date on every
-              activity. Free for 3 days, no card needed.
+              activity. Join the waitlist to get in.
             </p>
             <div className="mt-5">
               <TrialButton location="guide_cta" />

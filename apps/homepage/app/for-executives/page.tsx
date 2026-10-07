@@ -7,7 +7,6 @@ import {
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { TrialButton } from "../components/landing/TrialButton";
-import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
@@ -111,7 +110,7 @@ export default function ForExecutivesPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="for_executives_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                3 days free. No card.
+                We are letting teams in from the waitlist.
               </p>
             </div>
           </div>
@@ -191,7 +190,7 @@ export default function ForExecutivesPage() {
                 See every rollout without asking.
               </h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                Start with a 3-day free trial, and we set up every team
+                Join the waitlist, and we set up every team
                 personally. See{" "}
                 <Link
                   href="/pricing"
@@ -204,11 +203,8 @@ export default function ForExecutivesPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="for_executives_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  3 days free. No card.
+                  We are letting teams in from the waitlist.
                 </p>
-                <div className="mt-6 w-full">
-                  <WaitlistDisclosure source="for_executives_cta" />
-                </div>
               </div>
             </div>
           </SectionShell>

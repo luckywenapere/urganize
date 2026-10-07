@@ -89,7 +89,7 @@ export function PricingPageClient() {
                 what the headline now says. Composed from lib/positioning, so it
                 cannot drift from the homepage and the footer. */}
             <p className="hero-fade-in hero-delay-2 mx-auto max-w-xl text-lg leading-relaxed text-[var(--marketing-text-muted)] md:text-xl">
-              {CORE_LINE} Start free on your own, or let us set your roster up
+              {CORE_LINE} Join the waitlist, and let us set your roster up
               with you.
             </p>
 

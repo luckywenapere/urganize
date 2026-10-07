@@ -4,7 +4,6 @@ import { ThemedProductShot } from "../components/landing/ThemedProductShot";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { TrialButton } from "../components/landing/TrialButton";
-import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
@@ -135,7 +134,7 @@ export default function FeaturesPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="features_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                3 days free. No card.
+                We are letting teams in from the waitlist.
               </p>
             </div>
           </div>
@@ -244,12 +243,9 @@ export default function FeaturesPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="features_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  3 days free. No card.
+                  We are letting teams in from the waitlist.
                 </p>
                 <ProofLine id="antoine" className="mt-2" />
-                <div className="mt-6 w-full">
-                  <WaitlistDisclosure source="features_cta" />
-                </div>
               </div>
             </div>
           </SectionShell>

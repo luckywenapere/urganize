@@ -7,7 +7,6 @@ import {
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { TrialButton } from "../components/landing/TrialButton";
-import { WaitlistDisclosure } from "../components/landing/WaitlistDisclosure";
 import { WorkspaceShotSection } from "../components/landing/sections/WorkspaceShotSection";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
@@ -115,7 +114,7 @@ export default function ForAiArtistsPage() {
             <div className="mt-8 flex w-full flex-col items-center gap-4">
               <TrialButton location="for_ai_artists_hero" size="lg" className="w-full sm:w-auto" />
               <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                3 days free. No card.
+                We are letting teams in from the waitlist.
               </p>
             </div>
           </div>
@@ -197,7 +196,7 @@ export default function ForAiArtistsPage() {
                 Release fast without releasing messy.
               </h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">
-                Start with a 3-day free trial, and we set up every artist
+                Join the waitlist, and we set up every artist
                 personally. See{" "}
                 <Link
                   href="/pricing"
@@ -210,11 +209,8 @@ export default function ForAiArtistsPage() {
               <div className="mt-10 flex w-full flex-col items-center gap-4">
                 <TrialButton location="for_ai_artists_cta" size="lg" className="w-full sm:w-auto" />
                 <p className="text-sm leading-6 text-[var(--marketing-text-muted)]">
-                  3 days free. No card.
+                  We are letting teams in from the waitlist.
                 </p>
-                <div className="mt-6 w-full">
-                  <WaitlistDisclosure source="for_ai_artists_cta" />
-                </div>
               </div>
             </div>
           </SectionShell>

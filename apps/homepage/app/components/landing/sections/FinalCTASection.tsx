@@ -1,8 +1,7 @@
 import { ProofLine } from "../ProofLine";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
-import { TrialButton } from "../TrialButton";
-import { WaitlistDisclosure } from "../WaitlistDisclosure";
+import { WaitlistForm } from "../WaitlistForm";
 import { centeredHeadlineClass } from "./shared";
 
 // The journey's one terminal ask (2026-09-02): the trial button, one real
@@ -33,15 +32,19 @@ export function FinalCTASection() {
         <div className="text-center">
           <h2 className={centeredHeadlineClass}>Put your next rollout on plan.</h2>
 
-          <div className="relative z-[60] mt-10 flex w-full flex-col items-center gap-4">
-            <TrialButton location="final" size="lg" className="w-full sm:w-auto" />
+          {/* The waitlist form, always open (2026-10-07): every "Try Urganize"
+              button on the site lands here via /#waitlist. */}
+          <div
+            id="waitlist"
+            className="relative z-[60] mt-10 flex w-full scroll-mt-28 flex-col items-center gap-4"
+          >
+            <div className="w-full">
+              <WaitlistForm source="homepage_final_cta" />
+            </div>
             <ProofLine
               id="adenaiye"
               className="mt-3 w-full max-w-[30rem] border-t border-[color:var(--marketing-border)] pt-5"
             />
-            <div className="mt-6 w-full">
-              <WaitlistDisclosure />
-            </div>
           </div>
         </div>
       </SectionShell>
