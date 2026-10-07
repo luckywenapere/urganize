@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { mintPassForUser } from '@/lib/urgans-pass-server';
 import { getChappiModelConfig, isChappiEnabled, isChappiModelConfigured } from '@/lib/chappi/config';
+import { parseAttachments } from '@/lib/urgans-attachments';
 import { executeToolCall, resolveChappiContext } from '@/lib/chappi/dispatch';
 import { buildChappiSystemPrompt } from '@/lib/chappi/system-prompt';
 import { closeConfirmedAction, runChappiAgent } from '@/lib/chappi/runner';
@@ -65,7 +66,13 @@ function parseMessages(raw: unknown): ChappiMessage[] {
     const role = (item as { role?: unknown }).role;
     const content = (item as { content?: unknown }).content;
     if ((role === 'user' || role === 'assistant') && typeof content === 'string' && content.trim()) {
-      messages.push({ id: String((item as { id?: unknown }).id ?? ''), role, content });
+      const message: ChappiMessage = { id: String((item as { id?: unknown }).id ?? ''), role, content };
+      // Attachments belong to the user's own turns only.
+      if (role === 'user') {
+        const attachments = parseAttachments((item as { attachments?: unknown }).attachments);
+        if (attachments.length > 0) message.attachments = attachments;
+      }
+      messages.push(message);
     }
   }
   return messages;
