@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import {
   Activity,
   ArrowLeft,
-  BadgeDollarSign,
   Bug,
   BellRing,
   ClipboardList,
@@ -15,7 +14,6 @@ import {
   Mail,
   Mic,
   PiggyBank,
-  Radio,
   Smile,
   Sparkles,
   TrendingUp,
@@ -48,15 +46,8 @@ const ITEMS: Array<{
   // Third: who is using Urganize right now and how (2026-10-07).
   { key: 'metrics', label: 'Metrics', icon: Activity, href: '/admin/metrics' },
   { key: 'onboarding', label: 'Onboarding', icon: ClipboardList, href: '/admin/onboarding' },
-  { key: 'broadcast', label: 'Broadcast', icon: Radio, href: '/admin/broadcast' },
   { key: 'emails', label: 'Emails', icon: Mail, href: '/admin/emails' },
   { key: 'notifications', label: 'Notifications', icon: BellRing, href: '/admin/notifications' },
-  {
-    key: 'pricing-validation',
-    label: 'Pricing validation',
-    icon: BadgeDollarSign,
-    href: '/admin/pricing-validation',
-  },
   {
     key: 'curator-invites',
     label: 'Playlist owners',

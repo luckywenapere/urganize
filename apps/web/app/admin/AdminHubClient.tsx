@@ -9,7 +9,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Activity,
-  BadgeDollarSign,
   BellRing,
   ChevronRight,
   ClipboardList,
@@ -17,7 +16,6 @@ import {
   ListMusic,
   Mail,
   Mic,
-  Radio,
   TrendingUp,
   Users,
   Building2,
@@ -52,12 +50,6 @@ const SECTIONS: Array<{
     icon: ClipboardList,
   },
   {
-    href: '/admin/broadcast',
-    label: 'Broadcast',
-    description: 'Send a push notification to every device with notifications turned on.',
-    icon: Radio,
-  },
-  {
     href: '/admin/emails',
     label: 'Emails',
     description: 'Everything Urganize emails, write your own to any group, and the onboarding emails.',
@@ -68,12 +60,6 @@ const SECTIONS: Array<{
     label: 'Notifications',
     description: 'Edit the copy and timing for rollout reminders, motivational nudges, and deadline reminders.',
     icon: BellRing,
-  },
-  {
-    href: '/admin/pricing-validation',
-    label: 'Pricing validation',
-    description: 'Willingness-to-pay survey responses, by price band and placement.',
-    icon: BadgeDollarSign,
   },
   {
     href: '/admin/curator-invites',

@@ -13,6 +13,7 @@ import { logBillingEvent } from '@/lib/billing-events-server';
 import { recordSubscriptionCharge, rewardReferrerOnFirstPayment } from '@/lib/referrals-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { loadBriefCompletionByWorkspace } from '@/lib/team-brief-server';
+import { sendTeamAdminNotice } from '@/lib/team-notices-server';
 
 // /api/admin/teams — the founder's billing console, and the review surface for
 // the migration that started every existing team's trial.
@@ -416,6 +417,21 @@ export async function PATCH(request: NextRequest) {
         { status: 500 }
       );
     }
+  }
+
+  // Tell the owner when the founder gives the team free access or extends its
+  // trial. Live, one email per change, after the change has landed. It never
+  // fails the action: sendTeamAdminNotice does not throw.
+  if ((action.type === 'comp' || action.type === 'extend_trial') && workspace.owner_id) {
+    await sendTeamAdminNotice(client, {
+      workspaceId: workspace.id,
+      ownerUserId: workspace.owner_id,
+      kind: action.type === 'comp' ? 'comped' : 'trial_extended',
+      when: 'now',
+      trigger: action.type === 'comp' ? 'admin_comp' : 'admin_extend_trial',
+      actorUserId: admin.userId,
+      idempotencyKey: `team-notice-${workspace.id}-${action.type}-${nowIso}`,
+    });
   }
 
   // Any of these can change who has access, and members other than the owner

@@ -16,6 +16,7 @@ import type { FounderOpsAlertEmailProps } from './FounderOpsAlertEmail';
 import type { OnboardingStepEmailProps } from './OnboardingStepEmail';
 import type { AnnouncementEmailProps } from './AnnouncementEmail';
 import type { ChatMentionEmailProps } from './ChatMentionEmail';
+import type { TeamAdminNoticeEmailProps } from './TeamAdminNoticeEmail';
 
 export type EmailTemplateProps = {
   welcome: WelcomeEmailProps;
@@ -33,6 +34,7 @@ export type EmailTemplateProps = {
   onboarding_step: OnboardingStepEmailProps;
   announcement: AnnouncementEmailProps;
   chat_mention: ChatMentionEmailProps;
+  team_admin_notice: TeamAdminNoticeEmailProps;
 };
 
 export type EmailTemplateId = keyof EmailTemplateProps;
