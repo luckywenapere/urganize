@@ -58,17 +58,7 @@ export default function PressKitsPageClient() {
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <header className="mb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Press
-        </p>
-        <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">
-          Press kits
-        </h1>
-        <p className="mt-1 text-sm text-content-secondary">
-          One kit per artist, with one link that never changes. Press always see the current one.
-        </p>
-      </header>
+      <div className="pt-5 sm:pt-6" />
 
       {/* A failed load over an already-painted roster is a banner, not a wall:
           the cached rows are still usable and still true a moment ago. With
