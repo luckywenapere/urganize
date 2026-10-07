@@ -2,6 +2,11 @@
 
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  COMPOSER_TRANSITION_NAME,
+  SOURCE_ATTRIBUTE,
+  navigateWithTransition,
+} from '@/lib/view-transition';
 import { ArrowUp, Loader2, Mic } from '@/components/icons';
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray } from '@/components/chappi/ChappiAttachments';
@@ -60,7 +65,7 @@ export function HomeAskBar() {
     attach.clear();
     // Always the full chat page, never a drawer: the page mounts the
     // conversation that picks the message up and sends it.
-    router.push('/dashboard/urgans');
+    navigateWithTransition(() => router.push('/dashboard/urgans'), '/dashboard/urgans');
   };
 
   // Enter sends, Shift+Enter makes a new line, like every chat box.
@@ -77,13 +82,19 @@ export function HomeAskBar() {
         a tap target: the full chat opens with the keyboard ready. */}
     <button
       type="button"
-      onClick={() => router.push('/dashboard/urgans')}
+      onClick={() =>
+        navigateWithTransition(() => router.push('/dashboard/urgans'), '/dashboard/urgans')
+      }
+      style={{ viewTransitionName: COMPOSER_TRANSITION_NAME }}
+      {...{ [SOURCE_ATTRIBUTE]: '' }}
       className="motion-focus flex h-14 w-full items-center rounded-2xl border border-stroke-control bg-bg-surface px-4 text-left text-base text-content-tertiary lg:hidden"
     >
       Message UrgAns...
     </button>
     <form
       onSubmit={handleSubmit}
+      style={{ viewTransitionName: COMPOSER_TRANSITION_NAME }}
+      {...{ [SOURCE_ATTRIBUTE]: '' }}
       className="hidden rounded-2xl border border-stroke-control bg-bg-surface p-3 focus-within:border-content-secondary lg:block"
     >
       <ChappiAttachmentTray
