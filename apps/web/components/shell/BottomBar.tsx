@@ -22,6 +22,7 @@ import { UserCircle2 } from '@/components/icons';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { useSettingsLinkClick } from '@/components/settings/useOpenSettings';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
+import { primeKeyboard } from '@/lib/keyboard-handoff';
 import { settingsDeepLink } from '@/lib/settings-nav';
 import {
   activeMobileTab,
@@ -106,7 +107,13 @@ export function BottomBar() {
                 <Link
                   href={tab.href}
                   tabIndex={collapsed ? -1 : 0}
-                  onClick={tab.key === 'catalogue' ? leaveReleaseForCatalog : undefined}
+                  onClick={
+                    tab.key === 'catalogue'
+                      ? leaveReleaseForCatalog
+                      : tab.key === 'urgans' && !isActive
+                        ? primeKeyboard
+                        : undefined
+                  }
                   aria-current={isActive ? 'page' : undefined}
                   data-tour={tab.key === 'catalogue' ? 'nav-catalog' : tab.key === 'urgans' ? 'nav-urgans' : `shell-mobile-${tab.key}`}
                   className={`motion-focus flex h-full flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${
