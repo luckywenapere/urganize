@@ -460,7 +460,7 @@ export function TasksPanel({
           activity buckets do; the pills stay put either way — the desktop
           header row above, the mobile rows above and below — so the scene
           switcher never disappears (founder call, 2026-08-05). */}
-      <div className="min-h-0 flex-1 pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+      <div className="flex min-h-0 flex-1 flex-col pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
       {/* Above the body rather than inside the buckets, so it survives the
           timeline taking the main view — see `bodyIsMainView`. Deliberately
           NOT shown over the named scenes: a "Plan the rollout" card on top of
