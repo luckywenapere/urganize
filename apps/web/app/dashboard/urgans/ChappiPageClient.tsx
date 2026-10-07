@@ -168,11 +168,11 @@ export default function ChappiPageClient() {
         {/* With chat history on this row shows at every width, because it
             also carries the phone's only way into the chats list. */}
         <div className="flex shrink-0 items-center justify-end">
-          {/* The way back. Always on screen, desktop and phone, because the chat
-              is a full page now and Home is where the day's list lives. */}
+          {/* The way back, desktop only: on a phone the bottom bar already has
+              Home, so the link was a second copy (founder call, 2026-10-07). */}
           <Link
             href={HOME_PATH}
-            className="motion-focus motion-press mr-auto inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+            className="motion-focus motion-press mr-auto hidden min-h-9 items-center gap-1.5 lg:inline-flex rounded-full px-2.5 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
           >
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
             Home
