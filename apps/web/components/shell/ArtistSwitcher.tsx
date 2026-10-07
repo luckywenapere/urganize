@@ -1,15 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Image from 'next/image';
 import { Check, ChevronDown } from '@/components/icons';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { readSavedArtistId, useShellStore } from '@/stores/useShellStore';
-import { getInitials } from '@/lib/tasks';
 
 /**
- * The top bar's team and artist switcher, the counterpart of Deel's group
+ * The top bar's team and artist switcher (text only: the round team mark was removed 2026-10-07, founder call), the counterpart of Deel's group
  * switcher. A manager thinks artist first, so the question it answers is "which
  * artist am I looking at", with "All artists" as the default.
  *
@@ -19,7 +17,6 @@ import { getInitials } from '@/lib/tasks';
  */
 export function ArtistSwitcher() {
   const teamName = useWorkspaceIdentityStore((state) => state.name);
-  const logo = useWorkspaceIdentityStore((state) => state.logo);
   const loadIdentity = useWorkspaceIdentityStore((state) => state.load);
   const artists = useArtistRosterStore((state) => state.artists);
   const loadRoster = useArtistRosterStore((state) => state.load);
@@ -30,7 +27,6 @@ export function ArtistSwitcher() {
 
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const [logoFailed, setLogoFailed] = useState(false);
 
   useEffect(() => {
     void loadIdentity();
@@ -71,29 +67,10 @@ export function ArtistSwitcher() {
   const sub = selectedArtist ? selectedArtist.name : artists.length > 1 ? 'All artists' : artists[0]?.name ?? 'Your team';
   const canSwitch = artists.length > 1;
 
-  const mark = (
-    <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-content-primary text-[11px] font-semibold text-content-inverse">
-      {logo?.url && !logoFailed ? (
-        <Image
-          src={logo.url}
-          alt=""
-          width={36}
-          height={36}
-          unoptimized
-          className="h-full w-full object-cover"
-          onError={() => setLogoFailed(true)}
-        />
-      ) : (
-        getInitials(title)
-      )}
-    </span>
-  );
-
   if (!canSwitch) {
     return (
       <div className="flex min-w-0 items-center gap-2.5" data-tour="shell-switcher">
-        {mark}
-        <span className="hidden max-w-[10rem] min-w-0 text-left xl:block">
+        <span className="max-w-[7.5rem] min-w-0 text-left sm:max-w-[10rem]">
           <span className="block truncate text-sm font-semibold leading-4 text-content-primary">{title}</span>
           <span className="block truncate text-xs leading-4 text-content-tertiary">{sub}</span>
         </span>
@@ -109,10 +86,9 @@ export function ArtistSwitcher() {
         aria-haspopup="true"
         aria-expanded={open}
         aria-label={`Team ${title}, showing ${sub}. Change artist`}
-        className="motion-focus motion-press flex min-h-11 min-w-0 items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5 hover:bg-bg-hover/70"
+        className="motion-focus motion-press flex min-h-11 min-w-0 items-center gap-2.5 rounded-full px-2.5 py-1 hover:bg-bg-hover/70"
       >
-        {mark}
-        <span className="hidden max-w-[10rem] min-w-0 text-left xl:block">
+        <span className="max-w-[7.5rem] min-w-0 text-left sm:max-w-[10rem]">
           <span className="flex items-center gap-1 text-sm font-semibold leading-4 text-content-primary">
             <span className="truncate">{title}</span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
