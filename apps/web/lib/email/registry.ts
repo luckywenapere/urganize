@@ -87,6 +87,13 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description: 'Tells a team it earned credits because a team it invited made its first payment.',
     placeholderCopy: false,
   },
+  team_admin_notice: {
+    id: 'team_admin_notice',
+    category: 'transactional',
+    name: 'Team comped or trial extended',
+    description: 'Tells a team owner the founder gave the team free access or extended its free trial. Sent for every such change, including earlier ones.',
+    placeholderCopy: false,
+  },
   founder_billing_alert: {
     id: 'founder_billing_alert',
     category: 'internal',

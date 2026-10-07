@@ -6,6 +6,7 @@ import { Loader2 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
+import { TeamNoticesPanel } from './TeamNoticesPanel';
 
 // /admin/teams — the founder's billing console.
 //
@@ -329,6 +330,8 @@ export default function TeamsAdminPageClient() {
           {error}
         </p>
       ) : null}
+
+      <TeamNoticesPanel />
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[

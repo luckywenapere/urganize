@@ -19,7 +19,6 @@ const PATTERN =
   /buildMissingTableResponse|isOptionalTableMissingError|buildTaskSchemaResponse|isTaskSchemaMissingError|ensureReleaseOpsSchema/;
 
 const BASELINE = new Set([
-  'app/api/admin/pricing-validation/route.ts',
   'app/api/command-center/route.ts',
   'app/api/notifications/read/route.ts',
   'app/api/notifications/route.ts',
