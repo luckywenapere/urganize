@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ArrowLeft } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
-import type { SceneName } from '@/components/workspace/useSceneOverlay';
+import { FIELD_PARAM, type SceneName } from '@/components/workspace/useSceneOverlay';
+import { isMetadataFixField } from '@/lib/distribution-fix';
 import { captureFeatureDiscoveryByName } from '@/lib/analytics';
 import { resolveMainView } from '@/lib/scene-cache';
 import { MetadataSection } from '@/components/releases/MetadataSection';
@@ -103,6 +105,11 @@ type ReleaseScenePanelProps = {
   onOpenTask?: (taskId: string) => void;
   /** A timeline drag changed an activity's date; re-read the workspace. */
   onTaskRescheduled?: () => void;
+  /** The Distribute scene's Fix buttons for the rollout's title, its release day
+   *  and its artist open dialogs the workspace owns. Passed only for the person
+   *  who may use them (the owner), so a Fix button never leads to a refusal. */
+  onOpenDetails?: () => void;
+  onChangeArtist?: () => void;
 };
 
 /** Shared "get me back to the activity list" control. Reads as a return
@@ -139,7 +146,17 @@ export function ReleaseScenePanel({
   tasks = [],
   onOpenTask,
   onTaskRescheduled,
+  onOpenDetails,
+  onChangeArtist,
 }: ReleaseScenePanelProps) {
+  // The input a Fix button sent the person to (`?field=`). Read here and passed
+  // down, with the section KEYED on it, so a different field is a fresh arrival:
+  // the step that holds it opens and the input takes focus, with nothing in the
+  // section needing to react to the URL after it has mounted.
+  const searchParams = useSearchParams();
+  const requestedField = searchParams.get(FIELD_PARAM);
+  const focusField = scene === 'metadata' && isMetadataFixField(requestedField) ? requestedField : null;
+
   // Feature-discovery analytics used to ride the route change (a
   // featureRouteMatchers entry for the old /metadata path). With no route change
   // left, report it explicitly on the open transition; the localStorage dedupe
@@ -225,7 +242,13 @@ export function ReleaseScenePanel({
           navigation did not. The sections carry an `mt-8` top margin of their
           own, which sits fine under the divider above. */}
       {scene === 'metadata' ? (
-        <MetadataSection releaseId={release.id} releaseTitle={release.title} onToast={onToast} />
+        <MetadataSection
+          key={focusField ?? 'metadata'}
+          releaseId={release.id}
+          releaseTitle={release.title}
+          focusField={focusField}
+          onToast={onToast}
+        />
       ) : null}
       {scene === 'song' ? <SongSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'coverart' ? <CoverArtSection releaseId={release.id} onToast={onToast} /> : null}
@@ -235,7 +258,11 @@ export function ReleaseScenePanel({
       {scene === 'chat' ? <ReleaseChatSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitchkit' ? <PitchKitSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'distribute' ? (
-        <DistributionSection release={release} />
+        <DistributionSection
+          release={release}
+          onOpenDetails={onOpenDetails}
+          onChangeArtist={onChangeArtist}
+        />
       ) : null}
       {scene === 'timeline' ? (
         <TimelineScene

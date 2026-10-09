@@ -10,15 +10,17 @@
  * payment or a file, and nothing here may suggest it does.
  *
  * What Urganize adds is the part it can know: whether the rollout is ready to
- * be delivered (the song, the cover, the details the stores ask for), and a
- * record that the team went across, so the founder can check the partner's
- * monthly statement against our own count.
+ * be delivered, and a record that the team went across, so the founder can check
+ * the partner's monthly statement against our own count.
  *
- * Pure: no React, no I/O, no environment reads beyond the one flag. The facts
- * come from lib/distribution-server.ts.
+ * THE RULES MOVED (2026-10-09). The readiness checklist that lived here was
+ * replaced by the check before distribution: lib/distribution-rules.ts holds
+ * every rule, lib/distribution-server.ts reads the facts and runs them, and the
+ * route refuses an order that has errors. This module keeps what is about the
+ * PARTNER and the clock: who they are, how long delivery takes, the flag.
+ *
+ * Pure: no React, no I/O, no environment reads beyond the one flag.
  */
-
-import type { SceneName } from './scene-cache';
 
 /** The partner. One place for the name and the links, so the scene, the tests
  *  and any later order flow cannot disagree about who the default distributor
@@ -45,149 +47,8 @@ export function isDistributionEnabled(): boolean {
   return process.env.NEXT_PUBLIC_FEATURE_DISTRIBUTION === 'true';
 }
 
-/** What the server reads off the rollout. Plain data, so this module needs no
- *  database. */
-export type DistributionFacts = {
-  /** releases.release_date, as stored (a date or null). */
-  releaseDate: string | null;
-  /** At least one audio asset is attached. */
-  hasSong: boolean;
-  /** releases.artwork_asset_id is set. */
-  hasCoverArt: boolean;
-  /** release_metadata, or null when the row does not exist yet. */
-  metadata: {
-    genre: string | null;
-    language: string | null;
-    /** True, false, or null when never answered. */
-    explicit: boolean | null;
-    labelName: string | null;
-  } | null;
-  /** Credits collaborators have submitted through the collect link. */
-  creditsCount: number;
-};
-
-export type DistributionCheckKey =
-  | 'date'
-  | 'song'
-  | 'cover'
-  | 'genre'
-  | 'language'
-  | 'explicit'
-  | 'credits'
-  | 'label';
-
-export type DistributionCheck = {
-  key: DistributionCheckKey;
-  label: string;
-  done: boolean;
-  /** A required item blocks a clean delivery; a recommended one does not. */
-  required: boolean;
-  /** One short line on what to do. Empty when done. */
-  hint: string;
-  /** The scene that fixes it, so the checklist can offer a way there. */
-  fixIn: SceneName | null;
-};
-
 const present = (value: string | null | undefined): boolean =>
   typeof value === 'string' && value.trim().length > 0;
-
-export function buildDistributionChecks(
-  facts: DistributionFacts,
-  flags: { metadata: boolean; song: boolean; coverArt: boolean }
-): DistributionCheck[] {
-  const meta = facts.metadata;
-  const fix = (scene: SceneName, on: boolean): SceneName | null => (on ? scene : null);
-
-  return [
-    {
-      key: 'date',
-      label: 'Release date',
-      done: present(facts.releaseDate),
-      required: true,
-      hint: 'Set a date on the rollout so the stores know when to go live.',
-      fixIn: null,
-    },
-    {
-      key: 'song',
-      label: 'The song',
-      done: facts.hasSong,
-      required: true,
-      hint: 'Upload the final master as a WAV, MP3 or FLAC.',
-      fixIn: fix('song', flags.song),
-    },
-    {
-      key: 'cover',
-      label: 'Cover art',
-      done: facts.hasCoverArt,
-      required: true,
-      hint: 'Stores want a square image, 3000 by 3000 pixels.',
-      fixIn: fix('coverart', flags.coverArt),
-    },
-    {
-      key: 'genre',
-      label: 'Genre',
-      done: present(meta?.genre),
-      required: true,
-      hint: 'Pick the genre the stores should file it under.',
-      fixIn: fix('metadata', flags.metadata),
-    },
-    {
-      key: 'language',
-      label: 'Language',
-      done: present(meta?.language),
-      required: true,
-      hint: 'Say what language the lyrics are in.',
-      fixIn: fix('metadata', flags.metadata),
-    },
-    {
-      key: 'explicit',
-      label: 'Explicit or clean',
-      // false is an answer. Only null (never answered) is missing.
-      done: meta?.explicit === true || meta?.explicit === false,
-      required: true,
-      hint: 'Stores need to know if the lyrics are explicit.',
-      fixIn: fix('metadata', flags.metadata),
-    },
-    {
-      key: 'credits',
-      label: 'Songwriter and producer credits',
-      done: facts.creditsCount > 0,
-      required: false,
-      hint: 'Send your collaborators the collect link so the credits are on file.',
-      fixIn: fix('metadata', flags.metadata),
-    },
-    {
-      key: 'label',
-      label: 'Label name',
-      done: present(meta?.labelName),
-      required: false,
-      hint: 'Add it if there is a label. Leave it empty for self-released music.',
-      fixIn: fix('metadata', flags.metadata),
-    },
-  ];
-}
-
-export type DistributionReadiness = {
-  checks: DistributionCheck[];
-  requiredDone: number;
-  requiredTotal: number;
-  /** Every required item is done. */
-  ready: boolean;
-  /** The recommended items still open, for the "also worth doing" line. */
-  recommendedOpen: number;
-};
-
-export function summarizeDistribution(checks: DistributionCheck[]): DistributionReadiness {
-  const required = checks.filter((check) => check.required);
-  const requiredDone = required.filter((check) => check.done).length;
-  return {
-    checks,
-    requiredDone,
-    requiredTotal: required.length,
-    ready: requiredDone === required.length,
-    recommendedOpen: checks.filter((check) => !check.required && !check.done).length,
-  };
-}
 
 /**
  * Whether the release date leaves enough room for the stores. Returns a plain

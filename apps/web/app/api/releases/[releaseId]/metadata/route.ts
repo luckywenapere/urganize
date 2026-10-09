@@ -89,6 +89,7 @@ type UpdateMetadataBody = {
   language?: unknown;
   explicit?: unknown;
   labelName?: unknown;
+  featuredArtists?: unknown;
   cLine?: unknown;
   pLine?: unknown;
 };
@@ -101,7 +102,7 @@ const readOptionalString = (value: unknown): string | null => {
 
 // Editable half of the metadata hub (URG-108): the release-level
 // distribution fields (ISRC, UPC, ISWC, genre, subgenre, language, explicit,
-// label, (P)/(C) lines). Full-replace on every save — the hub's form is
+// label, featured artists, (P)/(C) lines). Full-replace on every save — the hub's form is
 // fully controlled and always submits its complete current state, so an
 // upsert keyed on release_id is simpler and more predictable than a partial
 // PATCH contract.
@@ -149,6 +150,7 @@ export async function PATCH(
         language: readOptionalString(body.language),
         explicit: body.explicit === undefined ? null : body.explicit,
         label_name: readOptionalString(body.labelName),
+        featured_artists: readOptionalString(body.featuredArtists),
         c_line: readOptionalString(body.cLine),
         p_line: readOptionalString(body.pLine),
         updated_at: new Date().toISOString(),

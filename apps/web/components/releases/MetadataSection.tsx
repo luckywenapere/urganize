@@ -19,6 +19,13 @@ import { supabase } from '@/lib/supabase/client';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { MetadataFieldsSkeleton, ShareLinkCardSkeleton } from '@/components/loading/ReleaseSectionSkeletons';
 import type { ReleaseMetadataSnapshot } from '@/lib/release-ops';
+import { describeSplitTotal, formatPercent, splitTotalIsOff } from '@/lib/credit-split-totals';
+import {
+  metadataFieldElementId,
+  metadataStepElementId,
+  metadataStepForField,
+  type MetadataFixField,
+} from '@/lib/distribution-fix';
 import {
   GENRE_PREDICTION_ACCEPT_ATTR,
   validateGenrePredictionUpload,
@@ -121,8 +128,11 @@ type MetadataFormState = {
   genre: string;
   subgenre: string;
   language: string;
-  explicit: boolean;
+  /** Null until somebody answers. Unset is not the same as "not explicit": the
+   * distribution check refuses a rollout whose flag was never set. */
+  explicit: boolean | null;
   labelName: string;
+  featuredArtists: string;
   cLine: string;
   pLine: string;
 };
@@ -134,8 +144,9 @@ const EMPTY_FORM: MetadataFormState = {
   genre: '',
   subgenre: '',
   language: '',
-  explicit: false,
+  explicit: null,
   labelName: '',
+  featuredArtists: '',
   cLine: '',
   pLine: '',
 };
@@ -149,8 +160,11 @@ function toFormState(metadata: ReleaseMetadataSnapshot | null): MetadataFormStat
     genre: metadata.genre,
     subgenre: metadata.subgenre,
     language: metadata.language,
-    explicit: metadata.explicit === true,
+    // Null stays null. This used to read `=== true`, which turned "never
+    // answered" into false and saved it on the next click of Save details.
+    explicit: metadata.explicit,
     labelName: metadata.labelName,
+    featuredArtists: metadata.featuredArtists,
     cLine: metadata.cLine,
     pLine: metadata.pLine,
   };
@@ -163,6 +177,7 @@ const COUNTED_METADATA_FIELDS = [
   'subgenre',
   'language',
   'labelName',
+  'featuredArtists',
   'isrc',
   'upc',
   'iswc',
@@ -170,38 +185,13 @@ const COUNTED_METADATA_FIELDS = [
   'cLine',
 ] as const satisfies readonly (keyof MetadataFormState)[];
 
-/** One decimal place, matching what the public form now accepts. Legacy rows
- * stored with two decimals display rounded. */
-function formatPercent(value: number): string {
-  const rounded = Math.round(value * 10) / 10;
-  return `${rounded % 1 === 0 ? rounded : rounded.toFixed(1)}%`;
-}
-
-/** Splits have to add up to 100, so say so in words rather than leaving the
- * reader to work out what "unclaimed" meant, or why 120% is a problem. */
-function describeSplitTotal(label: string, total: number): string {
-  const rounded = Math.round(total * 10) / 10;
-  if (rounded === 100) return `${label} add up to 100%. Nothing missing.`;
-  if (rounded > 100) {
-    return `${label} add up to ${formatPercent(total)}. That is ${formatPercent(
-      total - 100
-    )} too much. They should total 100%.`;
-  }
-  return `${label} add up to ${formatPercent(total)}. ${formatPercent(
-    100 - total
-  )} is still missing. They should total 100%.`;
-}
-
 function splitTotalTone(total: number): string {
-  return Math.round(total * 10) / 10 === 100 ? 'text-content-secondary' : 'text-status-warning';
+  return splitTotalIsOff(total) ? 'text-status-warning' : 'text-content-secondary';
 }
 
-/** Whether a split total needs a flag on the collapsed Step 3 chip — reuses
- * splitTotalTone's own rounding so the chip and the in-card banner can never
- * disagree about what "off" means. */
-function splitTotalIsOff(total: number): boolean {
-  return splitTotalTone(total) === 'text-status-warning';
-}
+/** Whether a split total needs a flag on the collapsed Step 3 chip is
+ * splitTotalIsOff (lib/credit-split-totals.ts), the same rule the distribution
+ * check uses, so the chip, the in-card banner and the warning cannot disagree. */
 
 type StepKey = 'details' | 'credits' | 'answers';
 
@@ -210,10 +200,19 @@ type MetadataSectionProps = {
   /** Only used to name the exported spreadsheet. Optional so the scene keeps
    * working for any caller that does not have it in hand. */
   releaseTitle?: string;
+  /** A field the distribution check sent the person here to fix (a Fix button).
+   * The step that holds it opens and the input takes focus once the form is
+   * on screen. */
+  focusField?: MetadataFixField | null;
   onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
 };
 
-export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSectionProps) {
+export function MetadataSection({
+  releaseId,
+  releaseTitle,
+  focusField = null,
+  onToast,
+}: MetadataSectionProps) {
   // One cached scene covers both endpoints this section reads (metadata +
   // credits), fetched in parallel by the store. Cache-first, so re-opening
   // Metadata — or opening it after the workspace's idle prefetch has warmed
@@ -232,16 +231,23 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
   // --- Collapsed-card state ---------------------------------------------------
   // Session-only and all-closed on every mount — see the ROUND TWO doc comment
   // above for why this deliberately does not persist like the task buckets do.
-  const [openSteps, setOpenSteps] = useState<Record<StepKey, boolean>>({
-    details: false,
-    credits: false,
-    answers: false,
+  // The one exception to "all closed on entry": a person who tapped Fix on the
+  // distribution check lands with the step that holds the thing to fix already
+  // open. Seeded here and not from an effect, so the first paint is the right one.
+  const [openSteps, setOpenSteps] = useState<Record<StepKey, boolean>>(() => {
+    const requested = focusField ? metadataStepForField(focusField) : null;
+    return {
+      details: requested === 'details',
+      credits: requested === 'credits',
+      answers: requested === 'answers',
+    };
   });
   const toggleStep = (key: StepKey) =>
     setOpenSteps((current) => ({ ...current, [key]: !current[key] }));
   const detailsBodyId = useId();
   const creditsBodyId = useId();
   const answersBodyId = useId();
+  const explicitGroupName = useId();
 
   // --- Release-level fields -------------------------------------------------
   const [form, setForm] = useState<MetadataFormState>(EMPTY_FORM);
@@ -262,6 +268,25 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
     if (isFormDirtyRef.current || !data) return;
     setForm(toFormState(data.metadata));
   }, [data]);
+
+  // --- Landing on a field from a Fix button -------------------------------------
+  // Focus the input (or, for the credits steps, the step's own header) and bring
+  // it into view, once the form has rendered. Once per field, so a background
+  // revalidate cannot pull focus back after the person has moved on.
+  const landedOnRef = useRef<MetadataFixField | null>(null);
+  useEffect(() => {
+    if (!focusField || isLoading || landedOnRef.current === focusField) return;
+    const step = metadataStepForField(focusField);
+    const targetId =
+      focusField === 'credits' || focusField === 'splits'
+        ? metadataStepElementId(step)
+        : metadataFieldElementId(focusField);
+    const element = document.getElementById(targetId);
+    if (!element) return;
+    landedOnRef.current = focusField;
+    element.focus({ preventScroll: true });
+    element.scrollIntoView({ block: 'center' });
+  }, [focusField, isLoading]);
 
   // --- Credits share link ----------------------------------------------------
   const [isMutatingLink, setIsMutatingLink] = useState(false);
@@ -665,6 +690,7 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
           <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
             <button
               type="button"
+              id={metadataStepElementId('details')}
               onClick={() => toggleStep('details')}
               aria-expanded={openSteps.details}
               aria-controls={detailsBodyId}
@@ -719,6 +745,7 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
                     <Field
                       label="Genre"
                       help="metadata.field.genre"
+                      fieldKey="genre"
                       value={form.genre}
                       onChange={(v) => editForm((f) => ({ ...f, genre: v }))}
                       labelAction={
@@ -762,6 +789,7 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
                     <Field
                       label="Language"
                       help="metadata.field.language"
+                      fieldKey="language"
                       value={form.language}
                       onChange={(v) => editForm((f) => ({ ...f, language: v }))}
                     />
@@ -770,6 +798,13 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
                       help="metadata.field.labelName"
                       value={form.labelName}
                       onChange={(v) => editForm((f) => ({ ...f, labelName: v }))}
+                    />
+                    <Field
+                      label="Featured artist"
+                      help="metadata.field.featuredArtists"
+                      fieldKey="featured_artists"
+                      value={form.featuredArtists}
+                      onChange={(v) => editForm((f) => ({ ...f, featuredArtists: v }))}
                     />
                     <Field
                       label="ISRC"
@@ -804,15 +839,39 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
                       value={form.cLine}
                       onChange={(v) => editForm((f) => ({ ...f, cLine: v }))}
                     />
-                    <label className="flex items-center gap-2 text-sm text-content-secondary sm:col-span-2">
-                      <input
-                        type="checkbox"
-                        checked={form.explicit}
-                        onChange={(event) => editForm((f) => ({ ...f, explicit: event.target.checked }))}
-                        className="h-4 w-4 accent-brand"
-                      />
-                      This song has explicit content (swearing or adult themes)
-                    </label>
+                    {/* A Yes/No that starts unanswered, replacing a checkbox that
+                        could not say "never asked" and so saved false for
+                        everyone. The distribution check refuses a rollout
+                        whose flag was never set. */}
+                    <fieldset className="sm:col-span-2">
+                      {/* TODO(copy): the brief gives no text for this question or its answers. */}
+                      <legend className="text-sm text-content-secondary">
+                        Does this song have explicit content (swearing or adult themes)?
+                      </legend>
+                      <div className="mt-1 flex items-center gap-4">
+                        {(
+                          [
+                            [true, 'Yes'],
+                            [false, 'No'],
+                          ] as const
+                        ).map(([value, label]) => (
+                          <label
+                            key={label}
+                            className="flex min-h-11 cursor-pointer items-center gap-2 pr-3 text-sm text-content-secondary"
+                          >
+                            <input
+                              type="radio"
+                              name={`${explicitGroupName}-explicit`}
+                              id={value ? metadataFieldElementId('explicit') : undefined}
+                              checked={form.explicit === value}
+                              onChange={() => editForm((f) => ({ ...f, explicit: value }))}
+                              className="h-4 w-4 accent-brand"
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
                     <div className="sm:col-span-2">
                       <button
                         type="button"
@@ -834,6 +893,7 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
           <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
             <button
               type="button"
+              id={metadataStepElementId('credits')}
               onClick={() => toggleStep('credits')}
               aria-expanded={openSteps.credits}
               aria-controls={creditsBodyId}
@@ -1001,6 +1061,7 @@ export function MetadataSection({ releaseId, releaseTitle, onToast }: MetadataSe
           <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
             <button
               type="button"
+              id={metadataStepElementId('answers')}
               onClick={() => toggleStep('answers')}
               aria-expanded={openSteps.answers}
               aria-controls={answersBodyId}
@@ -1109,6 +1170,7 @@ function Field({
   placeholder,
   labelAction,
   help,
+  fieldKey,
 }: {
   label: string;
   value: string;
@@ -1129,8 +1191,12 @@ function Field({
    * the people who cannot see the icon. Both read from one HELP_COPY entry, so
    * they cannot drift. */
   help?: HelpKey;
+  /** Gives the input a stable id (`metadata-field-<key>`) so a Fix button from
+   * the distribution check can land on it. Without one the id is generated. */
+  fieldKey?: MetadataFixField;
 }) {
-  const inputId = useId();
+  const generatedId = useId();
+  const inputId = fieldKey ? metadataFieldElementId(fieldKey) : generatedId;
   const hintId = `${inputId}-hint`;
   const helpText = help ? HELP_COPY[help].text : null;
   const input = (

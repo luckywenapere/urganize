@@ -59,6 +59,12 @@ const GUARDED_FILES = [
   'components/releases/PitchKitSection.tsx',
   'components/releases/DistributionSection.tsx',
   'lib/distribution.ts',
+  // The check before distribution (2026-10-09). The brief's two sentences that say
+  // "release" for the object are allowed below, by exact phrase.
+  'lib/distribution-rules.ts',
+  'lib/distribution-fix.ts',
+  'components/releases/DistributionIssueList.tsx',
+  'components/workspace/DistributionStatusStrip.tsx',
   'lib/release-epk.ts',
   'components/releases/ReleaseScenePanel.tsx',
   'components/chappi/ChappiConversation.tsx',
@@ -148,6 +154,11 @@ const ALLOWED = [
   // written (the brief's copy is final): the skip button, and the blocked line.
   /release without a/i,
   /see the release until/i,
+  // Two strings the distribution check brief wrote with the word release in
+  // them, kept as written: "Add a release title." and "Say if the release is
+  // explicit."
+  /a release title/i,
+  /the release is explicit/i,
 ];
 
 const OBJECT_WORD = /(?<![\w\-/?&.${])release(s|'s)?(?![\w\-=_}?]|\.\w)/gi;

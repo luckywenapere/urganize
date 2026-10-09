@@ -32,6 +32,7 @@ const METADATA_FIELDS = [
   'subgenre',
   'language',
   'labelName',
+  'featuredArtists',
   'cLine',
   'pLine',
 ] as const;
@@ -43,7 +44,7 @@ export const METADATA_TOOLS: ChappiTool[] = [
     name: 'get_release_metadata',
     kind: 'read',
     description:
-      "Read a rollout's distribution details: ISRC, UPC, ISWC, genre, subgenre, language, explicit flag, label name, and the (P)/(C) lines.",
+      "Read a rollout's distribution details: ISRC, UPC, ISWC, genre, subgenre, language, explicit flag, label name, featured artists, and the (P)/(C) lines.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },
@@ -91,6 +92,10 @@ export const METADATA_TOOLS: ChappiTool[] = [
         language: { type: 'string', description: 'Language of the lyrics.' },
         explicit: { type: 'boolean', description: 'Whether the lyrics are explicit.' },
         labelName: { type: 'string' },
+        featuredArtists: {
+          type: 'string',
+          description: 'Other artists on the song, e.g. "Tems, Burna Boy". Goes here, not in the title.',
+        },
         cLine: { type: 'string', description: 'Copyright line, e.g. "2026 Example Records".' },
         pLine: { type: 'string', description: 'Phonographic line for the recording.' },
       },
