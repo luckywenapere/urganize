@@ -37,6 +37,7 @@ import { DeleteReleaseDialog } from './DeleteReleaseDialog';
 import type { ReleaseCardData } from './catalogue-types';
 import { CatalogueView } from './CatalogueView';
 import { displayStatus, pickNextTask, type CatalogueRow } from '@/lib/catalogue-table';
+import { distributionStripMode } from '@/lib/distribution-strip-visibility';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
@@ -1060,11 +1061,25 @@ export function WorkspaceView() {
   // "Fix these" banner reads as an error before anything was done. The
   // planner card or the date card is the next step there; the strip shows up
   // as soon as either a date or an activity exists.
-  const isEmptyShell = Boolean(scopedReleaseSlim) && !scopedReleaseSlim?.releaseDate && scopedTasks.length === 0;
+  //
+  // Not the readiness list on a Released rollout (v1.92.5): "Fix these before
+  // you order distribution" under a header that says Released contradicted
+  // it. The rule is distributionStripMode, which reads the same displayStatus
+  // as the Catalogue row and the focused header, so the three always agree. A
+  // distributor's answer still shows there; archived is unchanged.
+  const distributionMode = scopedReleaseSlim
+    ? distributionStripMode({
+        status: scopedReleaseSlim.status ?? '',
+        releaseDate: scopedReleaseSlim.releaseDate ?? null,
+        tasksDone: scopedTasks.filter((task) => task.status === 'done').length,
+        tasksTotal: scopedTasks.length,
+      })
+    : 'none';
   const distributionStatusStrip =
-    bodyIsMainView && scopedReleaseSlim && !isEmptyShell ? (
+    bodyIsMainView && scopedReleaseSlim && distributionMode !== 'none' ? (
       <DistributionStatusStrip
         releaseId={scopedReleaseSlim.id}
+        showReadiness={distributionMode === 'full'}
         onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}
         onChangeArtist={changeArtistAction ? changeArtistAction.onClick : undefined}
       />
