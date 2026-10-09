@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.9",
+    date: "October 9, 2026",
+    highlights: [
+      "Teams with many rollouts now see every activity counted, so progress and \"Released\" are right.",
+      "UrgAns now calls a rollout released when it has come out, the same as your catalog.",
+    ],
+  },
+  {
     version: "1.92.8",
     date: "October 9, 2026",
     highlights: [
