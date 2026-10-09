@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   activeMembersBetween,
   atRiskTeams,
+  attachOwnerContacts,
   buildFounderCockpit,
   compoundedGrowth,
   firstRolloutSummary,
@@ -280,6 +281,53 @@ describe('atRiskTeams', () => {
     const risk = atRiskTeams(data, buildScoreboard(data), 3);
     expect(risk).toHaveLength(3);
     expect(risk[0].workspaceId).toBe('paid');
+  });
+});
+
+describe('atRiskTeams: the stage each team stalled at', () => {
+  it('places each slipped team at its first unfinished lifecycle stage', () => {
+    const activity = new Map<string, number[]>();
+    // All went quiet this week after a busy week before.
+    for (const id of ['no-rollout', 'free-with-rollout', 'paid-not-live', 'paid-live']) {
+      bothActive(activity, id, 10);
+    }
+    const teams = [
+      team({ workspaceId: 'no-rollout' }),
+      team({ workspaceId: 'free-with-rollout' }),
+      team({ workspaceId: 'paid-not-live', subscription: subscription(), state: 'paid' }),
+      team({ workspaceId: 'paid-live', subscription: subscription(), state: 'paid' }),
+    ];
+    const releases = [
+      release({ id: 'r1', workspaceId: 'free-with-rollout' }),
+      release({ id: 'r2', workspaceId: 'paid-not-live', releaseDate: '2026-12-01' }),
+      release({ id: 'r3', workspaceId: 'paid-live', releaseDate: '2026-09-01', createdAt: daysAgo(60) }),
+    ];
+    const data = input({ teams, activity, releases });
+    const byId = new Map(atRiskTeams(data, buildScoreboard(data), 10).map((row) => [row.workspaceId, row]));
+    expect(byId.get('no-rollout')?.stalledAt).toEqual({ stage: 'activate', missing: 'No rollout yet' });
+    expect(byId.get('free-with-rollout')?.stalledAt.stage).toBe('convert');
+    expect(byId.get('paid-not-live')?.stalledAt.stage).toBe('first_release');
+    expect(byId.get('paid-live')?.stalledAt.stage).toBe('second_release');
+    // Contacts are filled in by the route, never guessed here.
+    expect(byId.get('no-rollout')).toMatchObject({ ownerName: null, ownerEmail: null });
+  });
+
+  it('attachOwnerContacts adds name and email by team, nulls when unknown', () => {
+    const activity = new Map<string, number[]>();
+    bothActive(activity, 'a', 10);
+    bothActive(activity, 'b', 10);
+    const data = input({ teams: [team({ workspaceId: 'a' }), team({ workspaceId: 'b' })], activity });
+    const listed = atRiskTeams(data, buildScoreboard(data), 10);
+    const withContacts = attachOwnerContacts(
+      listed,
+      new Map([['a', 'Ada Obi']]),
+      new Map<string, string | null>([['a', 'ada@example.com'], ['b', null]])
+    );
+    const byId = new Map(withContacts.map((row) => [row.workspaceId, row]));
+    expect(byId.get('a')).toMatchObject({ ownerName: 'Ada Obi', ownerEmail: 'ada@example.com' });
+    expect(byId.get('b')).toMatchObject({ ownerName: null, ownerEmail: null });
+    // The input list is not changed.
+    expect(listed.every((row) => row.ownerEmail === null)).toBe(true);
   });
 });
 
