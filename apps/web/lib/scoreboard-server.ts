@@ -45,6 +45,10 @@ export type ScoreboardExtras = {
   /** Every task row as read: id, release_id, status, completed_at, updated_at,
    *  auto_generated, created_at. */
   taskRows: Row[];
+  /** Each counted team's owner email (profiles.email), for matching the
+   *  waitlist to accounts on the cockpit's funnel. Server-side only: no route
+   *  sends it to the browser. */
+  ownerEmails: Map<string, string | null>;
 };
 
 export async function loadScoreboardInput(
@@ -270,6 +274,7 @@ export async function loadScoreboardInput(
   }
 
   const teams: ScoreboardTeam[] = [];
+  const ownerEmails = new Map<string, string | null>();
   for (const row of workspaces.rows) {
     const workspaceId = String(row.id);
     const ownerId = str(row.owner_id);
@@ -284,6 +289,7 @@ export async function loadScoreboardInput(
     }
 
     const profile = ownerId ? profiles.get(ownerId) : undefined;
+    ownerEmails.set(workspaceId, profile ? str(profile.email) : null);
     const subscription = ownerId ? subscriptionByUser.get(ownerId) ?? null : null;
     const { resolution, ownerAllowlisted } = resolveAdminTeamAccess({
       workspace: {
@@ -358,6 +364,7 @@ export async function loadScoreboardInput(
       latestEvents: activity.latest,
       releaseRows: releases.rows,
       taskRows: tasks.rows,
+      ownerEmails,
     },
   };
 }
