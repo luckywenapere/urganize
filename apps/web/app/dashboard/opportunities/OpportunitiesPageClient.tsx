@@ -4,9 +4,11 @@ import { PullReveal } from '@/components/shared/PullReveal';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Pencil, Trash2, X } from '@/components/icons';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { useAuthStore } from '@/lib/auth-store';
 import {
   KIND_LABEL,
+  OPPORTUNITIES_EMPTY_COPY,
   OPPORTUNITY_CURRENCIES,
   OPPORTUNITY_KINDS,
   OPPORTUNITY_STATUSES,
@@ -186,21 +188,22 @@ export default function OpportunitiesPageClient() {
     if (failure) setRowError(failure.error);
   }
 
+  const addButton = (
+    <button
+      type="button"
+      onClick={openNew}
+      className="motion-focus motion-press inline-flex h-12 items-center justify-center gap-2 rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse hover:opacity-90"
+    >
+      {OPPORTUNITIES_EMPTY_COPY.action}
+    </button>
+  );
+
   return (
     <div>
-      <PageHeader
-        action={
-          editing === null ? (
-            <button
-              type="button"
-              onClick={openNew}
-              className="motion-focus motion-press inline-flex h-12 items-center justify-center gap-2 rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse hover:opacity-90"
-            >
-              Add opportunity
-            </button>
-          ) : null
-        }
-      />
+      {/* With nothing saved yet the empty state below carries the one Add
+          button, so the header holds none (the Shows page's rule): one primary
+          action on screen, not two stacked on a phone. */}
+      <PageHeader action={editing === null && opportunities.length > 0 ? addButton : null} />
 
       {editing !== null ? (
         <form onSubmit={handleSave} className="mb-6 space-y-3 rounded-xl border border-stroke-default bg-bg-surface p-4">
@@ -467,17 +470,26 @@ export default function OpportunitiesPageClient() {
           ))}
         </ul>
       ) : loadError && opportunities.length === 0 ? (
-        <p role="alert" className="text-sm text-status-error">
-          {loadError}
-        </p>
-      ) : opportunities.length === 0 ? (
-        <div className="rounded-xl border border-stroke-default bg-bg-surface p-6">
-          <h2 className="font-display text-xl font-semibold text-content-primary">Nothing here yet</h2>
-          <p className="mt-2 max-w-prose text-sm text-content-secondary">
-            Add the deals, grants, sync and brand work you are going after. Give each one a next step and a date, and
-            this page tells you what to chase first.
-          </p>
+        <div role="alert" className="rounded-xl border border-stroke-default bg-bg-surface p-6 text-center">
+          <p className="text-sm text-content-primary">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => void load({ force: true })}
+            className="motion-focus mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-content-secondary hover:text-content-primary"
+          >
+            Try again
+          </button>
         </div>
+      ) : opportunities.length === 0 ? (
+        // While the add form is open it is the next step, so the empty state
+        // steps aside rather than offering the same button under it.
+        editing === null ? (
+          <EmptyState
+            title={OPPORTUNITIES_EMPTY_COPY.title}
+            description={OPPORTUNITIES_EMPTY_COPY.description}
+            action={addButton}
+          />
+        ) : null
       ) : visible.length === 0 ? (
         <p className="text-sm text-content-secondary">
           {filtering ? 'No opportunities match.' : 'Nothing open right now.'}

@@ -1,5 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { findHelpCopyProblems } from './help-copy';
 import {
+  OPPORTUNITIES_EMPTY_COPY,
   describeDate,
   filterOpportunities,
   formatAmount,
@@ -161,3 +165,51 @@ describe('words', () => {
     expect(describeDate('2026-10-01', TODAY)).toBe('3 days late');
   });
 });
+
+describe('the empty Opportunities page', () => {
+  it('says what the page is for in one plain line, under the help-copy bar', () => {
+    expect(findHelpCopyProblems(OPPORTUNITIES_EMPTY_COPY.description)).toEqual([]);
+    expect(sentencesIn(OPPORTUNITIES_EMPTY_COPY.description)).toBe(1);
+    // House copy: no Oxford comma, no em dash, no "release" for the object.
+    expect(OPPORTUNITIES_EMPTY_COPY.description).not.toMatch(/, and /);
+    for (const text of Object.values(OPPORTUNITIES_EMPTY_COPY)) {
+      expect(text).not.toContain('\u2014');
+      expect(text).not.toMatch(/\brelease/i);
+    }
+  });
+
+  const source = readFileSync(join(process.cwd(), 'app/dashboard/opportunities/OpportunitiesPageClient.tsx'), 'utf8');
+
+  it('uses the shared EmptyState with the copy above and the Add action', () => {
+    expect(source).toContain("import { EmptyState } from '@/components/shared/EmptyState'");
+    const empty = source.slice(source.indexOf('<EmptyState'), source.indexOf('/>', source.indexOf('<EmptyState')));
+    expect(empty).toContain('title={OPPORTUNITIES_EMPTY_COPY.title}');
+    expect(empty).toContain('description={OPPORTUNITIES_EMPTY_COPY.description}');
+    expect(empty).toContain('action={addButton}');
+    // The button opens the add form, the same as the header button does.
+    const button = source.slice(source.indexOf('const addButton'), source.indexOf('</button>', source.indexOf('const addButton')));
+    expect(button).toContain('onClick={openNew}');
+    expect(button).toContain('{OPPORTUNITIES_EMPTY_COPY.action}');
+    // The old bespoke card is gone.
+    expect(source).not.toContain('Nothing here yet');
+  });
+
+  it('shows one Add button at a time: the header only once something is saved', () => {
+    expect(source).toMatch(/<PageHeader action=\{editing === null && opportunities\.length > 0 \? addButton : null\} \/>/);
+  });
+
+  it('steps the empty state aside while the add form is open', () => {
+    expect(source).toMatch(/opportunities\.length === 0 \? \([\s\S]*?editing === null \? \(\s*<EmptyState/);
+  });
+
+  it('offers Try again when the first load fails', () => {
+    const start = source.indexOf('loadError && opportunities.length === 0');
+    const failed = source.slice(start, source.indexOf('</div>', start));
+    expect(failed).toContain('load({ force: true })');
+    expect(failed).toContain('Try again');
+  });
+});
+
+function sentencesIn(text: string): number {
+  return text.split(/[.!?](?:\s|$)/).filter((part) => part.trim()).length;
+}

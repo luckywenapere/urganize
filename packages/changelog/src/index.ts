@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.3",
+    date: "October 9, 2026",
+    highlights: [
+      "An empty Opportunities page now says what it is for and puts the Add opportunity button right there.",
+    ],
+  },
+  {
     version: "1.92.2",
     date: "October 9, 2026",
     highlights: [
