@@ -6,6 +6,9 @@ import { buildFounderCockpit } from '@/lib/founder-cockpit';
 import { buildFunnels, FUNNEL_WINDOWS, type WaitlistEntry } from '@/lib/admin-funnel';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 import { loadScoreboardInput } from '@/lib/scoreboard-server';
+import { buildUrgansUsage } from '@/lib/admin-urgans-usage';
+import { loadUrgansUsageRows } from '@/lib/admin-urgans-usage-server';
+import { RODI_PER_USD } from '@/lib/credits/pricing';
 
 // GET /api/admin/cockpit — the founder cockpit at the top of /admin
 // (2026-10-09). The Scoreboard's own reads and definitions, plus which way each
@@ -18,7 +21,9 @@ import { loadScoreboardInput } from '@/lib/scoreboard-server';
 //
 // Since iteration 2 (2026-10-09) it also returns the sign-up funnel
 // (lib/admin-funnel.ts), which adds one read: the marketing site's waitlist,
-// run alongside the Supabase reads.
+// run alongside the Supabase reads. Iteration 3 added the UrgAns panel
+// (lib/admin-urgans-usage.ts): two more reads, the AI usage log and the credit
+// ledger's spends and refunds over the last 8 weeks, also in parallel.
 
 export const maxDuration = 60;
 
@@ -67,6 +72,7 @@ async function readWaitlist(): Promise<{ entries: WaitlistEntry[] | null; source
     };
   }
 }
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
@@ -76,16 +82,25 @@ export async function GET(request: NextRequest) {
   const client = admin.supabaseAdmin as SupabaseClient;
 
   try {
-    const [{ input, sources, extras }, waitlist] = await Promise.all([
-      loadScoreboardInput(client, new Date()),
+    const now = new Date();
+    const [{ input, sources, extras }, waitlist, urgansRows] = await Promise.all([
+      loadScoreboardInput(client, now),
       readWaitlist(),
+      loadUrgansUsageRows(client, now),
     ]);
     const board = buildScoreboard(input);
     return NextResponse.json(
       {
         cockpit: buildFounderCockpit(input, board),
         funnels: buildFunnels(input, waitlist.entries, extras.ownerEmails),
-        sources: [...sources, waitlist.source],
+        urgans: buildUrgansUsage(
+          input,
+          board.secondRelease,
+          urgansRows.usage,
+          urgansRows.ledger,
+          RODI_PER_USD
+        ),
+        sources: [...sources, waitlist.source, ...urgansRows.sources],
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );

@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { AdminBarChart } from '@/components/admin/AdminBarChart';
 import { FunnelStrip } from '@/components/admin/FunnelStrip';
+import { UrgansPanel } from '@/components/admin/UrgansPanel';
 import type { AdminFunnel } from '@/lib/admin-funnel';
+import type { UrgansUsage } from '@/lib/admin-urgans-usage';
 import { InfoTip } from '@/components/shared/HelpTip';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 import type { AtRiskTeam, FounderCockpit } from '@/lib/founder-cockpit';
@@ -68,11 +70,14 @@ function reasonLine(team: AtRiskTeam): string {
 export function FounderCockpitView({
   cockpit,
   funnels = [],
+  urgans = null,
   sources,
 }: {
   cockpit: FounderCockpit;
   /** The sign-up funnel, one per window. Empty hides the strip. */
   funnels?: AdminFunnel[];
+  /** UrgAns, credits and release outcomes. Null hides the panel. */
+  urgans?: UrgansUsage | null;
   sources: AdminReadSource[];
 }) {
   const problems = sources.filter((source) => source.status !== 'ok' || source.truncated);
@@ -181,6 +186,8 @@ export function FounderCockpitView({
       </div>
 
       {funnels.length > 0 ? <FunnelStrip funnels={funnels} /> : null}
+
+      {urgans ? <UrgansPanel usage={urgans} /> : null}
 
       <div className="mt-6">
         <Label

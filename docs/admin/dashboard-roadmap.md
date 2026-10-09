@@ -87,9 +87,9 @@ does.
 | 7 | Paying teams + MRR | Doc section 2 | `subscriptions` | **Shipped** |
 | 8 | Needs a message | Paying teams under 2 active people; teams that went quiet this week | Board rows + activity | **Shipped** |
 | 9 | Runway / default alive | Months of cash at current burn | Cash and spend are not in the database | **Needs data**, shown as "Not tracked" |
-| 10 | Second-release rate | Doc section 7 (bar 60%) | `secondReleaseSummary` | On the Scoreboard; add to cockpit when the first teams cross 90 days |
+| 10 | Second-release rate + rollouts live this week | Doc section 7 (bar 60%); rollouts whose `releaseLiveAt` falls in the last 7 days | `secondReleaseSummary`, `releaseLiveAt` | **Shipped** (iteration 3) |
 | 11 | Funnel: waitlist → account → first rollout → activated → trial over → paid | Teams that signed up in the last 30 or 90 days (past their first 3 days), how far each got | Supabase via `ScoreboardInput`; waitlist from Neon `"User"`, matched to team owners by email | **Shipped** (iteration 2). Waitlist shows "Not tracked" where `DATABASE_URL` is unset |
-| 12 | UrgAns credit use | Credits spent per active team per week; share of paying teams using UrgAns weekly (seed bar 5) | Credit ledger, `ai_usage_events`, `urgans_action` billing events | **Next** |
+| 12 | UrgAns use + credits + AI cost | Share of weekly active paying teams that used UrgAns inside a rollout this week (seed bar: half); credits spent per week (spends minus refunds, 8 weeks) and per active team; AI cost this week per active team | `ai_usage_events` (cost + release + feature), `credit_ledger` spend/refund rows | **Shipped** (iteration 3). Cost per active team falls back to the ledger's `provider_cost_rodi`; "Not tracked" when neither reads |
 | 13 | Logo churn + NRR | Paying teams lost per month; MRR kept from last month's payers | `subscriptions` history (status changes are overwritten, so needs care) | Later; may need data |
 
 Rules every number on the cockpit follows: one definition (the Scoreboard's),
@@ -167,29 +167,38 @@ percentage.
   Shown by `components/admin/FunnelStrip.tsx` (30 / 90 day toggle, one column
   at phone width, five across from `md`).
 
+- **Iteration 3 (2026-10-09): UrgAns and releases on the cockpit.**
+  `lib/admin-urgans-usage.ts` (pure, tested) adds a panel under the funnel:
+  the share of this week's weekly active paying teams (the North Star teams)
+  where someone used UrgAns inside a rollout in the last 7 days, against the
+  strategy doc's seed bar of half, with last week beside it and "used UrgAns at
+  all" as a fact; credits spent per week for 8 weeks (spends minus refunds;
+  grants and allowances are not spending) and per weekly active team; AI cost
+  this week per weekly active team, in dollars at `RODI_PER_USD`, from the
+  usage log or the ledger's provider cost; rollouts that went live this week
+  vs last (the `releaseLiveAt` rule); and the Scoreboard's second-release rate
+  with its waiting count. "Inside a rollout" = a usage-log call with a
+  `release_id` for a feature a person asks for (chat, plan, press kit, pitch
+  kit, Spotify pitch); status updates and task outcome replies are left out.
+  Reads: `lib/admin-urgans-usage-server.ts` (two read-only selects, run in
+  parallel inside `GET /api/admin/cockpit`), added to the ledger and usage-log
+  guard tests' reader lists. Shown by `components/admin/UrgansPanel.tsx`.
+
 ## 6. Next (ordered; one PR each)
 
-1. **UrgAns in the cockpit.** Share of weekly active paying teams that used
-   UrgAns inside a rollout this week (seed bar 5: half), credits spent per
-   active team, and AI cost per active team (from `ai_usage_events` or the
-   credit ledger, "Not tracked" when neither reads). Reuse `usage-metrics`
-   reads; no new tables.
-2. **Second-release tile + "rollouts live this week".** Bring the
-   second-release rate (with its "waiting" count) onto the cockpit, plus how
-   many rollouts went live in the last 7 days (the `releaseLiveAt` rule).
-3. **Message list with a one-tap action.** For each "needs a message" team:
+1. **Message list with a one-tap action.** For each "needs a message" team:
    owner name and email, the stage it stalled at (strategy doc section 6), and
    a mailto or "draft in Emails" link. Read-only; nothing sent automatically.
-4. **Hub link grid grouped and complete.** Numbers / Operations / Content
+2. **Hub link grid grouped and complete.** Numbers / Operations / Content
    groups, every menu section listed once, cards shortened.
-5. **Runway, the honest way.** A founder-entered monthly figure (cash, monthly
+3. **Runway, the honest way.** A founder-entered monthly figure (cash, monthly
    spend) needs storage, so it waits for a migration slot; until then, a link
    to wherever the monthly money review lives. Default alive = MRR growth
    carried forward vs spend, shown only when both numbers exist.
-6. **Logo churn and net revenue retention, monthly.** Needs a reliable record
+4. **Logo churn and net revenue retention, monthly.** Needs a reliable record
    of when a subscription stopped; check whether `billing_events` or Paystack
    webhooks already give it before proposing a table.
-7. **Sean Ellis survey count.** Only if the founder runs the survey in-app or
+5. **Sean Ellis survey count.** Only if the founder runs the survey in-app or
    in a form we can read; otherwise leave it off.
 
 ## 7. Open questions for the founder
@@ -199,3 +208,8 @@ percentage.
   The Scoreboard does not leave them out today, so the cockpit matches it.
 - Where do cash and monthly spend live today (a sheet, the bank)? That decides
   how runway gets onto the cockpit.
+- The UrgAns share counts chat, plans, press kits, pitch kits and Spotify
+  pitches tied to a rollout, and leaves out status updates and task outcome
+  replies (the app makes those on the side of something else). If "use
+  UrgAns inside releases" should include them, it is one line in
+  `URGANS_CHOSEN_FEATURES` (`lib/admin-urgans-usage.ts`).
