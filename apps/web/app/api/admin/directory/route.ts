@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { verifyAdmin } from '../_shared';
-import { summarizeDirectory } from '@/lib/directory-admin-summary';
+import { summarizeDirectory, summarizeWorkRequests } from '@/lib/directory-admin-summary';
 import { DIRECTORY_DEMAND_SOURCES, type DirectoryDemandSource } from '@/lib/directory-demand';
 
 /**
@@ -11,6 +11,11 @@ import { DIRECTORY_DEMAND_SOURCES, type DirectoryDemandSource } from '@/lib/dire
  * roles are managers asking for that nobody has delivered. That is `recruit`,
  * and it is the reason the demand signal is a durable row rather than an
  * analytics event alone (lib/directory-demand.ts).
+ *
+ * It also reports how the requests are doing (sent, answered, closed with no
+ * answer, and the reply rate), read from work_requests. That is the number the
+ * demand test in the Profiles and Directory spec asks for: do messages get a
+ * reply. Counted over the same 90 days as demand.
  *
  * NOT flag-gated, the /admin/teams and /admin/urgans precedent: with
  * NEXT_PUBLIC_FEATURE_DIRECTORY off every table simply reads empty, and the
@@ -29,13 +34,18 @@ export async function GET(request: NextRequest) {
   const client = admin.supabaseAdmin as SupabaseClient;
   const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-  const [profilesResult, recordsResult, demandResult] = await Promise.all([
+  const [profilesResult, recordsResult, demandResult, requestsResult] = await Promise.all([
     client.from('person_profiles').select('roles').neq('visibility', 'private').limit(QUERY_LIMIT),
     client.from('delivery_records').select('user_id, role').limit(QUERY_LIMIT),
     client
       .from('billing_events')
       .select('metadata')
       .eq('type', 'directory_role_wanted')
+      .gte('created_at', since)
+      .limit(QUERY_LIMIT),
+    client
+      .from('work_requests')
+      .select('status, created_at')
       .gte('created_at', since)
       .limit(QUERY_LIMIT),
   ]);
@@ -48,6 +58,7 @@ export async function GET(request: NextRequest) {
     ['person_profiles', profilesResult],
     ['delivery_records', recordsResult],
     ['billing_events', demandResult],
+    ['work_requests', requestsResult],
   ] as const) {
     if (result.error) {
       return NextResponse.json(
@@ -77,8 +88,14 @@ export async function GET(request: NextRequest) {
     )
     .map((meta) => ({ role: meta.role, matched: meta.matched, source: meta.source }));
 
+  const requests = ((requestsResult.data || []) as { status: string; created_at: string }[]).map((row) => ({
+    status: String(row.status || ''),
+    createdAt: String(row.created_at || ''),
+  }));
+
   return NextResponse.json({
     lookbackDays: LOOKBACK_DAYS,
     ...summarizeDirectory({ profiles, records, demand }),
+    requests: summarizeWorkRequests(requests),
   });
 }

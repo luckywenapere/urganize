@@ -6,7 +6,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
-import type { DirectorySummary } from '@/lib/directory-admin-summary';
+import type { DirectorySummary, WorkRequestSummary } from '@/lib/directory-admin-summary';
 
 // /admin/directory — supply against demand, one row per role.
 //
@@ -18,7 +18,12 @@ import type { DirectorySummary } from '@/lib/directory-admin-summary';
 // Follows the /admin/urgans gate/load pattern exactly (authLoading -> !user ->
 // redirect; the backing GET's 401/403 is the real gate). Read only.
 
-type DirectoryPayload = DirectorySummary & { lookbackDays: number };
+type DirectoryPayload = DirectorySummary & { lookbackDays: number; requests: WorkRequestSummary };
+
+const EMPTY_REQUESTS: WorkRequestSummary = {
+  totals: { sent: 0, interested: 0, passed: 0, closed: 0, waiting: 0, replyRate: null },
+  weeks: [],
+};
 
 const numberFormat = new Intl.NumberFormat('en');
 
@@ -63,6 +68,7 @@ export default function DirectoryAdminPageClient() {
           byRole: body.byRole || [],
           recruit: body.recruit || [],
           totals: body.totals || { listed: 0, withARecord: 0, wanted: 0, unmet: 0 },
+          requests: body.requests || EMPTY_REQUESTS,
         });
         setChecked(true);
       } catch {
@@ -93,6 +99,8 @@ export default function DirectoryAdminPageClient() {
   }
 
   const totals = payload?.totals ?? { listed: 0, withARecord: 0, wanted: 0, unmet: 0 };
+  const requests = payload?.requests ?? EMPTY_REQUESTS;
+  const replyRate = requests.totals.replyRate;
 
   return (
     <div>
@@ -148,6 +156,59 @@ export default function DirectoryAdminPageClient() {
           <p className="mt-3 text-sm text-content-tertiary">
             Nothing has gone unmet yet.
           </p>
+        )}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-base font-semibold text-content-primary">Requests</h2>
+        <p className="mt-1 max-w-2xl text-sm text-content-secondary">
+          Messages sent from the directory. One nobody answers in 7 days closes. The reply
+          rate counts answered over answered plus closed, so a request sent an hour ago does
+          not drag it down.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-5">
+          <Stat label="Sent" value={requests.totals.sent} />
+          <Stat label="Said yes" value={requests.totals.interested} />
+          <Stat label="Said no" value={requests.totals.passed} />
+          <Stat label="Closed, no answer" value={requests.totals.closed} />
+          <div className="rounded-xl border border-stroke-default px-4 py-3">
+            <p className="text-xs uppercase tracking-wide text-content-tertiary">Reply rate</p>
+            <p className="mt-1 font-display text-xl text-content-primary">
+              {replyRate === null ? 'Not enough yet' : `${Math.round(replyRate * 100)}%`}
+            </p>
+          </div>
+        </div>
+        {requests.weeks.length > 0 ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
+              <thead>
+                <tr className="border-b border-stroke-default text-left text-xs uppercase tracking-wide text-content-tertiary">
+                  <th className="py-2 pr-3 font-medium">Week of</th>
+                  <th className="py-2 pr-3 font-medium">Sent</th>
+                  <th className="py-2 pr-3 font-medium">Yes</th>
+                  <th className="py-2 pr-3 font-medium">No</th>
+                  <th className="py-2 pr-3 font-medium">Closed</th>
+                  <th className="py-2 font-medium">Waiting</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.weeks.map((week) => (
+                  <tr key={week.weekStart} className="border-b border-stroke-subtle">
+                    <td className="py-2 pr-3 text-content-primary">{week.weekStart}</td>
+                    <td className="py-2 pr-3 text-content-secondary">{numberFormat.format(week.sent)}</td>
+                    <td className="py-2 pr-3 text-content-secondary">
+                      {numberFormat.format(week.interested)}
+                    </td>
+                    <td className="py-2 pr-3 text-content-secondary">{numberFormat.format(week.passed)}</td>
+                    <td className="py-2 pr-3 text-content-secondary">{numberFormat.format(week.closed)}</td>
+                    <td className="py-2 text-content-secondary">{numberFormat.format(week.waiting)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-content-tertiary">Nobody has sent a request yet.</p>
         )}
       </section>
 

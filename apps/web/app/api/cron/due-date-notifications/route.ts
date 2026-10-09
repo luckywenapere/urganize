@@ -7,6 +7,7 @@ import { runKitSnapshotSweep } from '@/lib/release-epk-snapshot-server';
 import { runPitchWindowSweep } from '@/lib/pitch-payments-server';
 import { runEditorialPitchReminderSweep } from '@/lib/editorial-pitch-server';
 import { runPaybackQuestionSweep, runSpendCreditsSweep } from '@/lib/release-spend-sweeps-server';
+import { runWorkRequestExpirySweep } from '@/lib/work-request-expiry-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -103,6 +104,15 @@ export async function GET(request: NextRequest) {
   const spendCreditsSweep = await runSpendCreditsSweep(adminClient);
   const paybackSweep = await runPaybackQuestionSweep(adminClient);
 
+  // Directory work requests (2026-10-09): one nobody answered in seven days
+  // closes, so the sender's slot is freed and the recipient's inbox stops
+  // offering something already over. Another passenger, for the same reason
+  // (two schedule slots, one run a day). Reads and routes already treat a stale
+  // request as closed before this runs, so a missed day costs nothing but a
+  // slot. Never throws, and is not behind the directory flag: a request already
+  // sent keeps closing if the feature is switched off.
+  const workRequestSweep = await runWorkRequestExpirySweep(adminClient);
+
   return NextResponse.json({
     ok: true,
     trialSweep,
@@ -112,5 +122,6 @@ export async function GET(request: NextRequest) {
     editorialPitchSweep,
     spendCreditsSweep,
     paybackSweep,
+    workRequestSweep,
   });
 }
