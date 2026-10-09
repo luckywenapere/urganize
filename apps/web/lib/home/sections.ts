@@ -4,11 +4,14 @@
  *
  *   Getting started (only while a team is setting up), Tasks (or Up next when
  *   there are none), For you today, Waiting on others, Next show, Rollouts,
- *   Placements, then UrgAns' line for the day.
+ *   Placements, Where the money went (managers, when there is spend), then
+ *   UrgAns' line for the day.
  *
  * A group with nothing in it is left out entirely: Home never shows an empty
  * state. Pure so the order and the drops can be tested.
  */
+
+import { SPEND_COPY } from '../release-spend';
 
 export type HomeBlockKey =
   | 'onboarding'
@@ -19,6 +22,7 @@ export type HomeBlockKey =
   | 'next-show'
   | 'rollouts'
   | 'placements'
+  | 'spend'
   | 'daily-line';
 
 export type HomeBlocksInput = {
@@ -32,6 +36,8 @@ export type HomeBlocksInput = {
   hasNextShow: boolean;
   rolloutCount: number;
   placementCount: number;
+  /** The viewer is a manager and their rollouts spent something in the last 90 days. */
+  hasSpend: boolean;
   /** Late tasks of the viewer's own: UrgAns' daily line waits for a day with none. */
   lateCount: number;
 };
@@ -45,6 +51,7 @@ export const HOME_BLOCK_LABELS = {
   'next-show': 'Next show',
   rollouts: 'Rollouts',
   placements: 'Placements',
+  spend: SPEND_COPY.homeTitle,
 } as const;
 
 export function orderHomeBlocks(input: HomeBlocksInput): HomeBlockKey[] {
@@ -62,6 +69,7 @@ export function orderHomeBlocks(input: HomeBlocksInput): HomeBlockKey[] {
   if (input.hasNextShow && !(showUpNext && input.upNext === 'show')) blocks.push('next-show');
   if (input.rolloutCount > 0) blocks.push('rollouts');
   if (input.placementCount > 0) blocks.push('placements');
+  if (input.hasSpend) blocks.push('spend');
   if (input.lateCount === 0) blocks.push('daily-line');
   return blocks;
 }

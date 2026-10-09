@@ -37,6 +37,16 @@ export const NAIRA_PER_USD = 1500;
 export const NAIRA_PER_CREDIT_SUBSCRIBER = NAIRA_PER_USD * CREDIT_USD;
 export const NAIRA_PER_CREDIT_CREDITS_ONLY = NAIRA_PER_CREDIT_SUBSCRIBER * 2;
 
+/**
+ * What a credit is worth in kobo, for COST bookkeeping only: release spend values
+ * the UrgAns credits a rollout used at ₦15 each so the cost sits beside the rest
+ * of what the rollout cost. It is not a price anyone is charged. It lives in this
+ * module because the naira rates must not be used outside it (see the credits
+ * guard), and exporting the one derived number lets a reader outside ask the
+ * value without importing the rates.
+ */
+export const CREDIT_VALUE_KOBO = Math.round(NAIRA_PER_CREDIT_SUBSCRIBER * 100);
+
 /** One call to the gateway, as the runner saw it. A field is null when the gateway did not say. */
 /**
  * A provider call that did not return an answer: the model it used (null when

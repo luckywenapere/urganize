@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.91.0",
+    date: "October 9, 2026",
+    highlights: [
+      "You can now log what you pay for on each rollout. Open Spend, add the cost, and see the total.",
+      "Download the list as a spreadsheet that opens in Excel or Google Sheets.",
+      "Thirty days after release day, Urganize asks what the rollout paid back, and shows your answer on the rollout.",
+      "Managers also see where the money went, by type, on Home.",
+    ],
+  },
+  {
     version: "1.90.0",
     date: "October 9, 2026",
     highlights: [

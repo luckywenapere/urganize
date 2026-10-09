@@ -25,6 +25,7 @@ import { resetActivityStore } from '@/stores/useActivityStore';
 import { clearKitDetailCache } from '@/lib/press-kit-detail-cache';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { resetChappiHistory } from '@/stores/useChappiHistoryStore';
+import { resetSpendAccess } from '@/stores/useSpendAccessStore';
 import { clearPendingFirstShare } from '@/lib/social-share-offer';
 import { useHomeStore } from '@/stores/useHomeStore';
 import { clearLoginCookie, setLoginCookie } from '@/lib/login-cookie';
@@ -1132,6 +1133,10 @@ if (typeof window !== 'undefined') {
       resetArtistRosterStore();
       resetRelationshipsStore();
       resetOpportunitiesStore();
+      // Whether account A could see a rollout's spend must not carry over to account
+      // B in the same tab: a stale `true` would show B a Spend row for a rollout B
+      // cannot read the cost of. The server asks again either way.
+      resetSpendAccess();
       // The UrgAns conversation is the same exposure in its sharpest form: a
       // whole transcript of account A's questions and answers, kept in a
       // module-level store that a client-side navigation to /auth never

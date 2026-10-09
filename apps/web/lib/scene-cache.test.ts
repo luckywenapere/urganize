@@ -463,3 +463,19 @@ describe('the distribute scene (2026-10-03)', () => {
     expect([...mod.SCENE_PREFETCH_ORDER] as string[]).not.toContain('distribute');
   });
 });
+
+describe('the spend scene (2026-10-09)', () => {
+  it('always opens: who may SEE it is the server\'s answer, not a feature switch', async () => {
+    for (const flagsOn of [true, false]) {
+      const mod = await loadResolver(flagsOn);
+      expect(mod.resolveActiveScene('spend'), `flags ${flagsOn}`).toBe('spend');
+    }
+  });
+
+  it('is money, so it is never cached, persisted to disk or prefetched', async () => {
+    const mod = await loadResolver(true);
+    expect(mod.isCacheableScene('spend')).toBe(false);
+    expect(mod.SCENE_PERSISTED.spend).toBe(false);
+    expect([...mod.SCENE_PREFETCH_ORDER] as string[]).not.toContain('spend');
+  });
+});

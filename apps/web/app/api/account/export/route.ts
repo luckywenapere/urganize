@@ -175,6 +175,8 @@ export async function GET(request: NextRequest) {
     creditLinks,
     creditSubmissions,
     distributionRejections,
+    releaseSpend,
+    releasePayback,
     urgansChats,
     presenceDays,
     assets,
@@ -214,6 +216,13 @@ export async function GET(request: NextRequest) {
       column: 'release_id',
       values: releaseIds,
     }),
+    // What each rollout cost and what it paid back (release spend, 2026-10-09),
+    // keyed on release_id like the other release-scoped tables, and removed with
+    // the rollout by the cascade, so it belongs here by this route's own rule.
+    // Amounts are integer kobo. Unavailable, not empty, where the table does not
+    // exist yet.
+    readSection(admin, { table: 'release_spend', column: 'release_id', values: releaseIds }),
+    readSection(admin, { table: 'release_payback', column: 'release_id', values: releaseIds }),
     // Saved UrgAns chats — the user's own words and the answers to them, kept
     // until they delete them (founder decision, 2026-09-24) and removed with
     // the account by the auth.users cascade, so they belong here by the rule
@@ -284,6 +293,8 @@ export async function GET(request: NextRequest) {
       credit_links: creditLinks,
       credit_submissions: creditSubmissions,
       distribution_rejections: distributionRejections,
+      spend_lines: releaseSpend,
+      spend_payback: releasePayback,
       capture_pages: capturePages,
       capture_leads: captureLeads,
       rollout_plan_drafts: plans,
