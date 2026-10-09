@@ -12,6 +12,7 @@ import { logBillingEvent } from '@/lib/billing-events-server';
 import { notifyFounder } from '@/lib/billing-alerts-server';
 import { invalidateSubscriptionSnapshot } from '@/lib/subscription-access';
 import { invalidateTeamAccess } from '@/lib/team-billing-server';
+import { fetchPaystackInit } from '@/lib/paystack-init';
 
 // Moving a paying team between tiers.
 //
@@ -42,8 +43,6 @@ import { invalidateTeamAccess } from '@/lib/team-billing-server';
 // paywall wrapper would refuse exactly the people most likely to want to.
 
 export const dynamic = 'force-dynamic';
-
-const PAYSTACK_INIT_URL = 'https://api.paystack.co/transaction/initialize';
 
 type ChangePlanRequest = { plan?: unknown; interval?: unknown };
 
@@ -300,7 +299,7 @@ export async function POST(request: NextRequest) {
   // NO `plan` PARAM, and that is the whole point of using initialize here: a
   // plan code would have Paystack open a second recurring subscription. This is
   // a one-off top-up charge, the same shape the card-verification charge uses.
-  const paystackResponse = await fetch(PAYSTACK_INIT_URL, {
+  const paystackResponse = await fetchPaystackInit({
     method: 'POST',
     headers: {
       Authorization: `Bearer ${paystackSecretKey}`,

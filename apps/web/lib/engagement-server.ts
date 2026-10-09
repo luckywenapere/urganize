@@ -24,6 +24,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { sendPushToUsers, type PushPayload } from '@/lib/push-server';
+import { PUSH_FLUSH_BUDGET_MS } from '@/lib/push-limits';
 
 export const SCHEDULED_NOTIFICATIONS_TABLE = 'scheduled_notifications';
 
@@ -168,14 +169,27 @@ export async function enqueueLoginDrip(
   }
 }
 
+/** Pushes sent at the same moment by one flush. Small, so a slow push service
+ * ties up a handful of sends and not the whole run. */
+const FLUSH_CONCURRENCY = 5;
+
 /** Send everything due. Rows are marked sent even when the user has no
  * registered devices — a reminder is a moment, not a debt to retry
- * forever. Never throws. */
+ * forever. Never throws.
+ *
+ * It stops starting new sends once `timeBudgetMs` is spent (default
+ * {@link PUSH_FLUSH_BUDGET_MS}) and leaves the rest due, so the next flush
+ * (the login ping, or tomorrow's cron) picks them up. Before this a stuck push
+ * could hold the morning cron until the platform killed it, and the email
+ * outbox, which runs after it, never got its turn. */
 export async function flushDueNotifications(
   adminClient: SupabaseClient,
-  limit = 50
+  limit = 50,
+  options: { timeBudgetMs?: number } = {}
 ): Promise<{ processed: number; delivered: number }> {
   try {
+    const started = Date.now();
+    const timeBudgetMs = options.timeBudgetMs ?? PUSH_FLUSH_BUDGET_MS;
     const nowIso = new Date().toISOString();
     const dueResult = await adminClient
       .from(SCHEDULED_NOTIFICATIONS_TABLE)
@@ -190,15 +204,17 @@ export async function flushDueNotifications(
       return { processed: 0, delivered: 0 };
     }
 
-    let delivered = 0;
-    for (const row of dueResult.data as Array<{
+    type DueRow = {
       id: string;
       user_id: string;
       kind: string;
       title: string;
       body: string;
       url: string;
-    }>) {
+    };
+    const rows = dueResult.data as DueRow[];
+
+    const sendOne = async (row: DueRow): Promise<boolean> => {
       // Mark sent FIRST (claim) so overlapping flushers can't double-send.
       const claim = await adminClient
         .from(SCHEDULED_NOTIFICATIONS_TABLE)
@@ -207,7 +223,7 @@ export async function flushDueNotifications(
         .is('sent_at', null)
         .select('id')
         .maybeSingle();
-      if (claim.error || !claim.data) continue;
+      if (claim.error || !claim.data) return false;
 
       // Tag by kind, not a shared 'urganize-engagement' string — otherwise a
       // release reminder and a comeback nudge (both delivered through this
@@ -219,10 +235,28 @@ export async function flushDueNotifications(
         url: row.url || '/dashboard',
         tag: `urganize-${row.kind}`,
       });
-      if (result.sent > 0) delivered += 1;
+      return result.sent > 0;
+    };
+
+    let delivered = 0;
+    let processed = 0;
+    for (let index = 0; index < rows.length; index += FLUSH_CONCURRENCY) {
+      if (Date.now() - started > timeBudgetMs) break;
+      const group = rows.slice(index, index + FLUSH_CONCURRENCY);
+      // One failed send must not lose the counts of the rest of the group.
+      const outcomes = await Promise.all(
+        group.map((row) =>
+          sendOne(row).catch((error) => {
+            console.error('[engagement] a scheduled push failed', error);
+            return false;
+          })
+        )
+      );
+      processed += group.length;
+      delivered += outcomes.filter(Boolean).length;
     }
 
-    return { processed: dueResult.data.length, delivered };
+    return { processed, delivered };
   } catch (error) {
     console.error('[engagement] flushDueNotifications failed', error);
     return { processed: 0, delivered: 0 };

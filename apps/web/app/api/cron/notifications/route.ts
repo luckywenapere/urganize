@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/tasks-server';
 import { flushDueNotifications } from '@/lib/engagement-server';
 import { drainEmailOutbox } from '@/lib/email/outbox-server';
+import { PUSH_FLUSH_BUDGET_MS, emailBudgetMs } from '@/lib/push-limits';
 
-// The outbox drain below can take most of a minute on a busy morning.
+// The push flush and the outbox drain below share this minute (lib/push-limits.ts).
 export const maxDuration = 60;
 
 // Scheduled flusher for the engagement drip — see apps/web/vercel.json for
@@ -28,7 +29,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const result = await flushDueNotifications(adminClient, 100);
+  // The push flush and the email drain share one 60 second function. The flush
+  // stops starting sends after PUSH_FLUSH_BUDGET_MS and the drain gets what is
+  // left, so a slow push service can no longer starve the email outbox.
+  const startedAt = Date.now();
+  const result = await flushDueNotifications(adminClient, 100, { timeBudgetMs: PUSH_FLUSH_BUDGET_MS });
 
   // The email outbox (2026-09-30): the onboarding sequence's days 2 to 7, and
   // any broadcast the day's email limit held back. A passenger on this cron for
@@ -37,7 +42,10 @@ export async function GET(request: NextRequest) {
   // is when the sequence is meant to land. It never throws, keeps inside the
   // daily limit, and does nothing for the sequence while
   // EMAIL_ONBOARDING_SEQUENCE is off.
-  const email = await drainEmailOutbox(adminClient, { timeBudgetMs: 40_000, maxSends: 80 });
+  const email = await drainEmailOutbox(adminClient, {
+    timeBudgetMs: emailBudgetMs(Date.now() - startedAt),
+    maxSends: 80,
+  });
 
   return NextResponse.json({ ok: true, ...result, email });
 }
