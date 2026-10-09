@@ -65,16 +65,21 @@ describe('type-first create screen', () => {
 });
 
 describe('the create flows hand the created title to the planner discard', () => {
-  it.each(['components/releases/RolloutCreateFlow.tsx', 'components/workspace/WorkspaceView.tsx'])(
-    '%s passes createdTitle next to every discardIfAbandoned',
-    (path) => {
-      const source = read(path);
-      const discards = source.split('discardIfAbandoned: true').length - 1;
-      const titles = source.split('createdTitle: result?.savedTitle ?? null').length - 1;
-      expect(discards).toBeGreaterThan(0);
-      expect(titles).toBe(discards);
-    }
-  );
+  // Since v1.92.1 every create path builds its intake through the shared
+  // buildCreatedRolloutIntake (which always sets discardIfAbandoned and
+  // createdTitle; see lib/created-rollout-intake.test.ts), so the check here is
+  // that each call hands it the saved title.
+  it.each([
+    'components/app/AppShell.tsx',
+    'components/releases/RolloutCreateFlow.tsx',
+    'components/workspace/WorkspaceView.tsx',
+  ])('%s passes the saved title to every buildCreatedRolloutIntake', (path) => {
+    const source = read(path);
+    const builds = source.split('buildCreatedRolloutIntake({').length - 1;
+    const titles = (source.match(/savedTitle: result\??\.savedTitle,/g) ?? []).length;
+    expect(builds).toBeGreaterThan(0);
+    expect(titles).toBe(builds);
+  });
 
   it('the planner builds its discard request through the shared helper', () => {
     const planner = read('components/planner/PlannerIntakeModal.tsx');

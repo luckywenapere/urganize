@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
+import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { CreateReleaseModal } from '@/components/releases/CreateReleaseModal';
 import { ReleaseAccessStep } from '@/components/releases/ReleaseAccessStep';
 import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
@@ -66,17 +67,15 @@ export function RolloutCreateFlow({ open, onClose, onCreated }: RolloutCreateFlo
           onCreated?.();
           const plannerPending = result?.plannerPending === true;
           const openIntake = () =>
-            usePlannerStore.getState().openIntake({
-              source: 'empty_state',
-              releaseId,
-              // Made just now for the planner: closing it early discards the
-              // empty rollout instead of leaving it in the catalogue.
-              discardIfAbandoned: true,
-              // The title it was made with, so a shell that was only named is
-              // still discarded and a renamed one is kept.
-              createdTitle: result?.savedTitle ?? null,
-              ...(result?.releaseType ? { prefill: { releaseType: result.releaseType } } : {}),
-            });
+            // Made just now for the planner: closing it early discards the
+            // empty rollout instead of leaving it in the catalogue.
+            usePlannerStore.getState().openIntake(
+              buildCreatedRolloutIntake({
+                releaseId,
+                savedTitle: result?.savedTitle,
+                releaseType: result?.releaseType,
+              })
+            );
 
           if (TYPE_FIRST_CREATE_ENABLED) {
             withFirstShareOffer({
