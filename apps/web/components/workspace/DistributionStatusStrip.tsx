@@ -15,6 +15,11 @@ type DistributionStatusStripProps = {
   onOpenDetails?: () => void;
   /** Open the Change artist dialog. Passed only for who may. */
   onChangeArtist?: () => void;
+  /** False once the rollout reads Released (`distributionStripMode` in
+   *  lib/distribution-strip-visibility): the "Fix these before you order
+   *  distribution" / "Worth a look" list is a before-release check, so only a
+   *  distributor's answer can still show. Defaults to true. */
+  showReadiness?: boolean;
 };
 
 /**
@@ -34,6 +39,11 @@ type DistributionStatusStripProps = {
  * removing from other screens. The header says what the list is and how many
  * there are; one tap opens it, with a Fix button on each item.
  *
+ * NOT ON A RELEASED ROLLOUT (v1.92.5). Once the rollout reads Released (the
+ * Catalogue's derived status), WorkspaceView passes `showReadiness={false}`:
+ * the list is a check before release, and under a Released header it read as
+ * if the release had not happened. A distributor's answer still shows.
+ *
  * Mounted by WorkspaceView only while the
  * rollout's main view is showing: inside a scene the person is already working,
  * and the Distribute scene carries the same list.
@@ -42,6 +52,7 @@ export function DistributionStatusStrip({
   releaseId,
   onOpenDetails,
   onChangeArtist,
+  showReadiness = true,
 }: DistributionStatusStripProps) {
   const { data } = useDistributionStatus(releaseId);
   const [open, setOpen] = useState(false);
@@ -51,7 +62,7 @@ export function DistributionStatusStrip({
   if (!data) return null;
 
   const issueCount = data.errors.length + data.warnings.length;
-  const showIssues = !data.lastHandoffAt && issueCount > 0;
+  const showIssues = showReadiness && !data.lastHandoffAt && issueCount > 0;
   // The newest answer only: the Distribute scene keeps the history.
   const rejections = data.rejections.slice(0, 1);
   if (!showIssues && rejections.length === 0) return null;
