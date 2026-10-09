@@ -94,6 +94,15 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description: 'Tells a team owner the founder gave the team free access or extended its free trial. Sent for every such change, including earlier ones.',
     placeholderCopy: false,
   },
+  release_payback_question: {
+    id: 'release_payback_question',
+    category: 'reminders',
+    name: 'What did the rollout pay back?',
+    description:
+      'Asked once, 30 days after release day: what did the rollout pay back. The answer is saved on the rollout. Copy in lib/release-spend.ts.',
+    // The question is the brief's; the sentence after it is marked TODO(copy).
+    placeholderCopy: false,
+  },
   founder_billing_alert: {
     id: 'founder_billing_alert',
     category: 'internal',

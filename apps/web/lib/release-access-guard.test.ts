@@ -60,6 +60,10 @@ const TEAM_ACCESS_GROUPS = [
   'distribution',
   // Spotify editorial pitch backfill (2026-10-09): a write any member may trigger.
   'editorial-pitch',
+  // Release spend (2026-10-09). The team-access helpers decide whether somebody
+  // is on this rollout's team at all; WHO MAY SEE A COST is the narrower rule
+  // public.can_view_release_spend, which every route asks as well.
+  'spend',
 ];
 
 const BANNED = /ensureReleaseOwnership|ensureOwnedRelease/;

@@ -74,6 +74,14 @@ export type RolloutMenuInput = {
   share?: RolloutMenuDialogAction | null;
   changeArtist?: RolloutMenuDialogAction | null;
   archive?: RolloutMenuDialogAction | null;
+  /**
+   * Show the Spend row. NOT a feature flag: spend is always built, and who may
+   * see it is a per-person, per-rollout answer from the database (the owner and
+   * team managers). The caller passes true only once the server has said this
+   * person may, so a member who cannot see a cost is never shown a row that
+   * leads to a refusal.
+   */
+  showSpend?: boolean;
 };
 
 /** What pressing a row does. A `scene` swaps the panel body and toggles closed
@@ -151,6 +159,8 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.pitchKit ? scene('pitchkit', 'Build your pitch kit') : null,
     flags.metadata ? scene('metadata', 'Fill in details') : null,
     scene('distribute', 'Distribute now'),
+    // TODO(copy): the brief names the section (Spend), not the menu row.
+    input.showSpend ? scene('spend', 'Track spend') : null,
     flags.notes ? note : null,
     flags.coverArt ? scene('coverart', 'Add cover art') : null,
     flags.songUpload ? scene('song', 'Upload the song') : null,

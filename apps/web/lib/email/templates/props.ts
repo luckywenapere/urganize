@@ -17,6 +17,7 @@ import type { OnboardingStepEmailProps } from './OnboardingStepEmail';
 import type { AnnouncementEmailProps } from './AnnouncementEmail';
 import type { ChatMentionEmailProps } from './ChatMentionEmail';
 import type { TeamAdminNoticeEmailProps } from './TeamAdminNoticeEmail';
+import type { ReleasePaybackQuestionEmailProps } from './ReleasePaybackQuestionEmail';
 
 export type EmailTemplateProps = {
   welcome: WelcomeEmailProps;
@@ -35,6 +36,7 @@ export type EmailTemplateProps = {
   announcement: AnnouncementEmailProps;
   chat_mention: ChatMentionEmailProps;
   team_admin_notice: TeamAdminNoticeEmailProps;
+  release_payback_question: ReleasePaybackQuestionEmailProps;
 };
 
 export type EmailTemplateId = keyof EmailTemplateProps;

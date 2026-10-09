@@ -19,6 +19,7 @@ import {
   Radio,
   Share2,
   Users,
+  Wallet2,
   type LucideProps,
 } from '@/components/icons';
 import type { ReleaseMenuKey } from '@/lib/release-menu';
@@ -29,6 +30,7 @@ import {
 } from '@/lib/rollout-menu';
 import { ROLLOUT_MENU_FLAGS } from '@/lib/rollout-menu-flags';
 import { resolvePanelBody, type SceneName } from '@/lib/scene-cache';
+import { useCanViewSpend } from '@/stores/useSpendAccessStore';
 import { useSceneOverlay } from './useSceneOverlay';
 
 /**
@@ -49,6 +51,8 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   metadata: ClipboardList,
   // Their own mark is a globe ("upload once, distribute everywhere").
   distribute: Globe,
+  // Money, in a wallet. The shim carries Wallet2 already.
+  spend: Wallet2,
   note: NotebookPen,
   coverart: ImageIcon,
   song: Music,
@@ -120,6 +124,9 @@ export function useRolloutMenuActions({
   archive,
 }: UseRolloutMenuActionsInput): RolloutMenuAction[] {
   const router = useRouter();
+  // Asked once per rollout and shared by every surface that draws the menu. The
+  // row appears only after the server says this person may see the cost.
+  const showSpend = useCanViewSpend(releaseId);
   const { activeScene: urlScene, openScene, closeScene } = useSceneOverlay();
   // Through the shared resolver rather than trusting the URL: with a feature off,
   // a stale `?scene=…` must not light a row for a scene that is not rendering.
@@ -140,6 +147,7 @@ export function useRolloutMenuActions({
     activeScene,
     variant,
     flags: ROLLOUT_MENU_FLAGS,
+    showSpend,
     share,
     changeArtist,
     archive,

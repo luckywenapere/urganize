@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AdminBarChart } from '@/components/admin/AdminBarChart';
+import { BarList } from '@/components/shared/BarList';
 import { InfoTip } from '@/components/shared/HelpTip';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 import { PRESENCE_SURFACES, SURFACE_LABEL } from '@/lib/presence';
@@ -54,36 +55,6 @@ function Stat({ label, value, fact }: { label: string; value: string; fact?: str
       <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-content-primary">{value}</p>
       {fact ? <p className="mt-1 text-xs leading-5 text-content-secondary">{fact}</p> : null}
     </div>
-  );
-}
-
-/** A labelled list of single-colour bars: one hue, length carries the number,
- *  and every value is written out, so nothing depends on colour. */
-function BarList({ rows, label }: { rows: Array<{ key: string; label: string; value: number }>; label: string }) {
-  const total = rows.reduce((sum, row) => sum + row.value, 0);
-  const max = Math.max(0, ...rows.map((row) => row.value));
-  return (
-    <ul aria-label={label} className="space-y-2.5">
-      {rows.map((row) => {
-        const width = max > 0 ? (row.value / max) * 100 : 0;
-        return (
-          <li key={row.key}>
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="text-content-primary">{row.label}</span>
-              <span className="shrink-0 tabular-nums text-content-secondary">
-                {number.format(row.value)}
-                {total > 0 ? ` · ${formatShare(row.value / total)}` : ''}
-              </span>
-            </div>
-            <div aria-hidden="true" className="mt-1 h-1.5 rounded-full bg-stroke-strong">
-              {row.value > 0 ? (
-                <div className="h-1.5 rounded-full bg-brand" style={{ width: `max(4px, ${width}%)` }} />
-              ) : null}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 
@@ -204,6 +175,7 @@ export function MetricsView({
             <div className="mt-3">
               {pingRecording ? (
                 <BarList
+                  formatShare={formatShare}
                   label="Where people used Urganize in the last 7 days"
                   rows={PRESENCE_SURFACES.map((surface) => ({
                     key: surface,
@@ -249,6 +221,7 @@ export function MetricsView({
             </p>
             <div className="mt-3">
               <BarList
+                formatShare={formatShare}
                 label="How rollout plans were made"
                 rows={(Object.keys(PLAN_LABELS) as Array<keyof PlanSplit>).map((key) => ({
                   key,

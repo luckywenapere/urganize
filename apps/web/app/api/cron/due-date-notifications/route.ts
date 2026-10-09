@@ -6,6 +6,7 @@ import { runDeliveryReconcile } from '@/lib/delivery-records-server';
 import { runKitSnapshotSweep } from '@/lib/release-epk-snapshot-server';
 import { runPitchWindowSweep } from '@/lib/pitch-payments-server';
 import { runEditorialPitchReminderSweep } from '@/lib/editorial-pitch-server';
+import { runPaybackQuestionSweep, runSpendCreditsSweep } from '@/lib/release-spend-sweeps-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -93,6 +94,15 @@ export async function GET(request: NextRequest) {
   // a row per reminder type, so running it twice is harmless. Never throws.
   const editorialPitchSweep = await runEditorialPitchReminderSweep(adminClient);
 
+  // Release spend (brief 3, 2026-10-09), two steps. First the credits sweep:
+  // each rollout's UrgAns credits for the last three finished Lagos days become
+  // one automatic spend line, keyed on the rollout and the day, so running it
+  // twice corrects a line and never doubles it. Then the payback question, asked
+  // once 30 days after release day. Both ride this cron because both schedule
+  // slots are taken, and neither throws.
+  const spendCreditsSweep = await runSpendCreditsSweep(adminClient);
+  const paybackSweep = await runPaybackQuestionSweep(adminClient);
+
   return NextResponse.json({
     ok: true,
     trialSweep,
@@ -100,5 +110,7 @@ export async function GET(request: NextRequest) {
     kitSnapshotSweep,
     pitchSweep,
     editorialPitchSweep,
+    spendCreditsSweep,
+    paybackSweep,
   });
 }
