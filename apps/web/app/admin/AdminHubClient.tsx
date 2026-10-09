@@ -32,9 +32,15 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { FounderCockpitView } from '@/components/admin/FounderCockpitView';
 import type { FounderCockpit } from '@/lib/founder-cockpit';
 import type { AdminFunnel } from '@/lib/admin-funnel';
+import type { UrgansUsage } from '@/lib/admin-urgans-usage';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 
-type CockpitPayload = { cockpit: FounderCockpit; funnels: AdminFunnel[]; sources: AdminReadSource[] };
+type CockpitPayload = {
+  cockpit: FounderCockpit;
+  funnels: AdminFunnel[];
+  urgans: UrgansUsage | null;
+  sources: AdminReadSource[];
+};
 type CockpitState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
@@ -174,7 +180,15 @@ export default function AdminHubClient() {
           setCockpit({ status: 'error', message: body.error || 'Could not work out this week\'s numbers.' });
           return;
         }
-        setCockpit({ status: 'ready', payload: { cockpit: body.cockpit, funnels: body.funnels ?? [], sources: body.sources ?? [] } });
+        setCockpit({
+          status: 'ready',
+          payload: {
+            cockpit: body.cockpit,
+            funnels: body.funnels ?? [],
+            urgans: body.urgans ?? null,
+            sources: body.sources ?? [],
+          },
+        });
       } catch {
         if (!cancelled) setCockpit({ status: 'error', message: 'Could not work out this week\'s numbers.' });
       }
@@ -203,6 +217,7 @@ export default function AdminHubClient() {
         <FounderCockpitView
           cockpit={cockpit.payload.cockpit}
           funnels={cockpit.payload.funnels}
+          urgans={cockpit.payload.urgans}
           sources={cockpit.payload.sources}
         />
       ) : cockpit.status === 'error' ? (
