@@ -5,6 +5,7 @@ import type { NotificationType, TaskNotification } from '@/lib/tasks';
 import {
   BELL_BADGE_CAP,
   DIGEST_WINDOW_MS,
+  NOTIFICATION_LIST_LIMIT,
   bellBadge,
   describeDigestTitles,
   getDigestMessage,
@@ -265,5 +266,24 @@ describe('the bell uses them', () => {
   it('renders the list through groupNotifications', () => {
     expect(bell).toContain('groupNotifications(notifications)');
     expect(bell).toContain('aria-expanded');
+  });
+});
+
+describe('the list the API returns', () => {
+  const source = readFileSync(join(process.cwd(), 'lib/tasks-server.ts'), 'utf8');
+  const listFn = source.slice(
+    source.indexOf('export async function listNotifications('),
+    source.indexOf('export async function listNotifications(') + 1200
+  );
+
+  it('holds enough rows that one large sweep cannot push everything else out', () => {
+    // A sweep writes one row per task, so the page has to be wider than a small
+    // backlog; 20 was filled by a single sweep (v1.92.8 raised it).
+    expect(NOTIFICATION_LIST_LIMIT).toBeGreaterThanOrEqual(50);
+  });
+
+  it('reads its page size from the named limit, not a literal', () => {
+    expect(listFn).toContain('.limit(NOTIFICATION_LIST_LIMIT)');
+    expect(listFn).not.toMatch(/\.limit\(\d+\)/);
   });
 });

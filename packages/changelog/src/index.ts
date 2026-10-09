@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.8",
+    date: "October 9, 2026",
+    highlights: [
+      "When a lot of alerts arrive at once, you now get one message instead of one for each, and older assignments stay in the bell.",
+    ],
+  },
+  {
     version: "1.92.7",
     date: "October 9, 2026",
     highlights: [
