@@ -281,6 +281,63 @@ export async function runFillBoth(params: {
   }
 }
 
+export type DraftSpotifyPitchResult =
+  | {
+      ok: true;
+      fields: { genre: string; moods: string; instruments: string; description: string };
+      /** Which fields UrgAns wrote. Anything already filled is left alone. */
+      filled: string[];
+    }
+  | { ok: false; status: number; error: string; planRequired?: boolean };
+
+/**
+ * Ask UrgAns to draft the Spotify editorial pitch's empty fields. One-shot: the
+ * server writes what it drafted onto the task, so there is nothing to accept.
+ * `planRequired` comes back flagged so the caller can show the locked sheet.
+ */
+export async function runDraftSpotifyPitch(params: {
+  releaseId: string;
+  taskId: string;
+}): Promise<DraftSpotifyPitchResult> {
+  const token = await getAccessToken();
+  if (!token) return { ok: false, status: 401, error: 'Your session expired. Sign in again.' };
+  try {
+    const response = await postJson('/api/urgans/actions', token, {
+      actionType: 'release.draft_spotify_pitch',
+      objectId: params.releaseId,
+      input: { taskId: params.taskId },
+    });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error:
+          typeof payload.error === 'string'
+            ? payload.error
+            : 'UrgAns could not write that just now. Try again.',
+        planRequired: payload.reason === 'plan_required',
+      };
+    }
+    const output = (payload.output || {}) as {
+      fields?: { genre?: string; moods?: string; instruments?: string; description?: string };
+      filled?: string[];
+    };
+    return {
+      ok: true,
+      fields: {
+        genre: output.fields?.genre ?? '',
+        moods: output.fields?.moods ?? '',
+        instruments: output.fields?.instruments ?? '',
+        description: output.fields?.description ?? '',
+      },
+      filled: Array.isArray(output.filled) ? output.filled : [],
+    };
+  } catch (error) {
+    return failureFromThrown(error) as DraftSpotifyPitchResult;
+  }
+}
+
 export type RunActionApplyResult =
   | { ok: true; result: unknown }
   | { ok: false; status: number; error: string };

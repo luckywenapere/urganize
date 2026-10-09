@@ -29,6 +29,9 @@ import { TourOfferCard } from '@/components/tours/TourOfferCard';
 import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { TestReleaseBanner } from './TestReleaseBanner';
 import { PostPlanKitPrompt } from '@/components/press-kits/PostPlanKitPrompt';
+import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
+import { requestEditorialPitchBackfill } from '@/lib/editorial-pitch-client';
+import { daysToRelease, isEditorialPitchTask, pitchWindowState } from '@/lib/editorial-pitch';
 import { DeleteReleaseDialog } from './DeleteReleaseDialog';
 import type { ReleaseCardData } from './catalogue-types';
 import { CatalogueView } from './CatalogueView';
@@ -126,6 +129,13 @@ const CreateReleaseModal = dynamic(
 // the type-first flag is off.
 const ReleaseSetupSheet = dynamic(
   () => import('@/components/releases/ReleaseSetupSheet').then((m) => m.ReleaseSetupSheet),
+  { ssr: false }
+);
+
+// Edits the title and release day of a rollout that already has both. Opened
+// from the Spotify pitch's closed-window banner ("Move release date").
+const ReleaseDetailsSheet = dynamic(
+  () => import('@/components/releases/ReleaseDetailsSheet').then((m) => m.ReleaseDetailsSheet),
   { ssr: false }
 );
 
@@ -251,6 +261,7 @@ export function WorkspaceView() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isChangeArtistOpen, setIsChangeArtistOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   // The roster decides whether "Change artist" is worth offering at all. Read
   // from the shared store (not the identity store, which is behind a flag that
@@ -603,6 +614,34 @@ export function WorkspaceView() {
     return taskList.filter((task) => task.releaseId === scopedReleaseId);
   }, [scopedReleaseId, taskList]);
 
+  // The Spotify editorial pitch for the scoped rollout (2026-10-09), if it has one.
+  const editorialPitchTask = useMemo(
+    () => scopedTasks.find((task) => isEditorialPitchTask(task.templateTaskId)) ?? null,
+    [scopedTasks]
+  );
+
+  // A rollout planned before the pitch step existed gets it the first time it
+  // is opened. The server decides everything and records the decision; this only
+  // asks when it could matter: a dated, active, planned rollout with no pitch
+  // task and more than 7 days to go. Once per rollout per tab, and a refresh
+  // only when the plan actually changed.
+  const pitchBackfillReleaseId =
+    scopedReleaseSlim &&
+    scopedReleaseSlim.releaseDate &&
+    !scopedReleaseSlim.isTest &&
+    isReleaseActive(scopedReleaseSlim.status) &&
+    scopedTasks.length > 0 &&
+    !editorialPitchTask &&
+    pitchWindowState(daysToRelease(scopedReleaseSlim.releaseDate, new Date())) === 'open'
+      ? scopedReleaseSlim.id
+      : null;
+  useEffect(() => {
+    if (!pitchBackfillReleaseId) return;
+    void requestEditorialPitchBackfill(pitchBackfillReleaseId).then((changed) => {
+      if (changed) void loadCommandCenter({ force: true });
+    });
+  }, [pitchBackfillReleaseId, loadCommandCenter]);
+
   // Tour A. Mounted here rather than in AppShell because it needs the scoped
   // rollout, its activity count and the release list to build the contextual
   // last step — and because being here IS "the user reached the catalog": the
@@ -827,6 +866,25 @@ export function WorkspaceView() {
   // (see lib/urgans-actions/types.ts): the legacy plan route this reaches is
   // still owner-keyed, a deliberate, recorded deferral, so a non-owner
   // teammate offered this card would tap a working control that 404s.
+  // The Spotify pitch window has closed: release day is 7 days away or less and
+  // the pitch is still open. First in the banner chain because it is the only
+  // one with a deadline. Moving the date is owner-only (the schedule route is),
+  // so a teammate is offered only the skip.
+  const editorialPitchBanner =
+    scopedReleaseSlim &&
+    editorialPitchTask &&
+    editorialPitchTask.status !== 'done' &&
+    editorialPitchTask.status !== 'cancelled' &&
+    pitchWindowState(daysToRelease(scopedReleaseSlim.releaseDate, new Date())) === 'closed' ? (
+      <EditorialPitchClosedBanner
+        taskId={editorialPitchTask.id}
+        canMoveDate={scopedReleaseIsOwn}
+        onMoveDate={() => setIsDetailsOpen(true)}
+        onSkipped={() => void loadCommandCenter({ force: true })}
+        onError={(message) => setToast({ message, tone: 'error' })}
+      />
+    ) : null;
+
   // The post-plan press kit offer. Held as the release id it was raised for,
   // not a boolean, so scoping to a different release clears it by construction
   // rather than by remembering to.
@@ -1326,7 +1384,7 @@ export function WorkspaceView() {
                   shareAction={shareAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
                   activitiesBanner={
-                    kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner
+                    editorialPitchBanner ?? kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner
                   }
                   activitiesFooter={roleGapsFooter}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
@@ -1369,7 +1427,7 @@ export function WorkspaceView() {
                 banner={newReleaseGuideBanner}
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
                 panelActivitiesBanner={
-                  kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner
+                  editorialPitchBanner ?? kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner
                 }
                 panelActivitiesFooter={roleGapsFooter}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
@@ -1511,6 +1569,19 @@ export function WorkspaceView() {
             const target = winReleaseId;
             setWinReleaseId(null);
             router.push(`/dashboard?release=${target}`);
+          }}
+        />
+      ) : null}
+
+      {isDetailsOpen && scopedReleaseSlim ? (
+        <ReleaseDetailsSheet
+          releaseId={scopedReleaseSlim.id}
+          releaseTitle={scopedReleaseSlim.title}
+          releaseDate={scopedReleaseSlim.releaseDate ?? null}
+          onDismiss={() => setIsDetailsOpen(false)}
+          onSaved={(message) => {
+            setIsDetailsOpen(false);
+            setToast({ message, tone: 'success' });
           }}
         />
       ) : null}

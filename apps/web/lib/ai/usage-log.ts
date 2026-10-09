@@ -26,7 +26,7 @@ export type { FailedCall };
  *    a release counts them once however many calls the request made.
  */
 
-export const AI_USAGE_FEATURES = ['chat', 'plan', 'press_kit', 'pitch_kit', 'status', 'outcome'] as const;
+export const AI_USAGE_FEATURES = ['chat', 'plan', 'press_kit', 'pitch_kit', 'spotify_pitch', 'status', 'outcome'] as const;
 export type AiUsageFeature = (typeof AI_USAGE_FEATURES)[number];
 
 /** Who a request belongs to. Every id is optional in the log and checked before it is written. */

@@ -22,6 +22,7 @@ describe('usageFeatureForAction', () => {
     expect(usageFeatureForAction('release.draft_plan')).toBe('plan');
     expect(usageFeatureForAction('presskit.draft_section')).toBe('press_kit');
     expect(usageFeatureForAction('epk.fill_both')).toBe('pitch_kit');
+    expect(usageFeatureForAction('release.draft_spotify_pitch')).toBe('spotify_pitch');
   });
 
   it('answers null for an action it does not know', () => {

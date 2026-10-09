@@ -48,6 +48,10 @@ export interface TaskNotification {
    * notifications bell to switch the workspace's URL scope before opening the
    * task drawer, so the user lands in the right release context. */
   taskReleaseId: string | null;
+  /** Release title and day, set for the Spotify pitch reminders so the bell can
+   *  say which release and count down from today. Absent for other types. */
+  taskReleaseTitle?: string | null;
+  taskReleaseDate?: string | null;
 }
 
 export interface TaskComment {

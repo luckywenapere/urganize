@@ -1,4 +1,5 @@
 import type { ReleaseOption } from '@/lib/release-helpers';
+import { PITCH_REMINDER_NOTIFICATION_TYPES, pitchNotificationMessage } from '@/lib/editorial-pitch';
 
 /**
  * Audit findings before building collaborative tasks:
@@ -92,6 +93,7 @@ export const NOTIFICATION_TYPE_OPTIONS = [
   'task_due_7d',
   'task_overdue',
   'task_status_changed',
+  ...PITCH_REMINDER_NOTIFICATION_TYPES,
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPE_OPTIONS)[number];
@@ -191,6 +193,14 @@ export function getNotificationMessage(notification: TaskNotification): string {
       return 'An activity is overdue';
     case 'task_status_changed':
       return `${notification.actorName} changed an activity's status`;
+    case 'pitch_reminder_28d':
+    case 'pitch_reminder_14d':
+    case 'pitch_reminder_8d':
+      return pitchNotificationMessage(
+        notification.type,
+        { title: notification.taskReleaseTitle, date: notification.taskReleaseDate },
+        new Date()
+      );
     default:
       return 'Activity update';
   }

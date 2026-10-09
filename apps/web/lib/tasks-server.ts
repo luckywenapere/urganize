@@ -45,6 +45,7 @@ import {
   priorityLabelForEmail,
 } from '@/lib/email/format';
 import { claimPendingWorkspaceInvite } from '@/lib/invite-claims-server';
+import { isEditorialPitchTask, isPitchReminderType } from '@/lib/editorial-pitch';
 
 export const WORKSPACES_TABLE = 'workspaces';
 export const WORKSPACE_MEMBERS_TABLE = 'workspace_members';
@@ -2132,7 +2133,7 @@ async function sendTaskAssignedEmail(
 export async function createDueDateNotificationsForAllUsers(adminClient: SupabaseClient) {
   const result = await adminClient
     .from(TASKS_TABLE)
-    .select('id,assigned_to_user_id,due_date,status')
+    .select('id,assigned_to_user_id,due_date,status,metadata')
     .not('due_date', 'is', null)
     .not('assigned_to_user_id', 'is', null);
 
@@ -2165,6 +2166,14 @@ export async function createDueDateNotificationsForAllUsers(adminClient: Supabas
     const status = normalizeTaskStatus((row as { status?: string }).status);
 
     if (!taskId || !assigneeUserId || !dueDateRaw || status === 'done' || status === 'cancelled') {
+      continue;
+    }
+
+    // The Spotify pitch is due 28 days out but stays open until 7 days before
+    // release day, so the ordinary due and overdue tiers would call it overdue
+    // for three weeks while it can still be sent. Its own reminders
+    // (lib/editorial-pitch-server.ts) replace them.
+    if (isEditorialPitchTask(readTemplateTaskId((row as { metadata?: unknown }).metadata))) {
       continue;
     }
 
@@ -2226,6 +2235,36 @@ export async function listNotifications(
     loadProfilesByIds(adminClient, actorIds),
   ]);
 
+  // The Spotify pitch reminders name the release and count down from its day,
+  // so look those up for the rows that need them (usually none).
+  const releaseIdByTaskId = new Map<string, string>();
+  for (const task of taskResult.data || []) {
+    const row = task as { id?: string; release_id?: string | null };
+    const taskId = readString(row.id);
+    const releaseId = readString(row.release_id);
+    if (taskId && releaseId) releaseIdByTaskId.set(taskId, releaseId);
+  }
+  const pitchReleaseIds = [
+    ...new Set(
+      rows
+        .filter((row) => isPitchReminderType(row.type))
+        .map((row) => releaseIdByTaskId.get(row.task_id))
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const releaseInfoById = new Map<string, { title: string; date: string | null }>();
+  if (pitchReleaseIds.length) {
+    const releaseResult = await adminClient
+      .from('releases')
+      .select('id,title,release_date')
+      .in('id', pitchReleaseIds);
+    for (const release of releaseResult.data || []) {
+      const row = release as { id?: string; title?: string; release_date?: string | null };
+      const id = readString(row.id);
+      if (id) releaseInfoById.set(id, { title: readString(row.title), date: row.release_date ?? null });
+    }
+  }
+
   const taskById = new Map<
     string,
     { title: string; status: TaskStatus; releaseId: string | null }
@@ -2270,6 +2309,12 @@ export async function listNotifications(
       actorName: readString(actor?.name) || readString(actor?.email) || 'System',
       taskStatus: task.status,
       taskReleaseId: task.releaseId,
+      ...(isPitchReminderType(row.type) && task.releaseId
+        ? {
+            taskReleaseTitle: releaseInfoById.get(task.releaseId)?.title ?? null,
+            taskReleaseDate: releaseInfoById.get(task.releaseId)?.date ?? null,
+          }
+        : {}),
     };
   });
 }

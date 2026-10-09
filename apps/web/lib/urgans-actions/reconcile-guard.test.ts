@@ -58,6 +58,13 @@ const CHAT_COUNTERPARTS: Record<string, ChatCounterpart> = {
       'In conversation the same words are written with write_press_kit_section (kit prose) and ' +
       'saved through the pitch kit scene, and neither writes anything this action would have.',
   },
+  'release.draft_spotify_pitch': {
+    tools: null,
+    because:
+      'It fills four form fields on one task in the task pop-up, which is a button job. ' +
+      'In conversation the same words can be written in the transcript and pasted, and the ' +
+      'chat has no tool that writes the pitch fields.',
+  },
 };
 
 /** The helper every chat tool logs through. Only recordChatActionRun exists

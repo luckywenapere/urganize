@@ -1,5 +1,10 @@
 import { RELEASE_PIPELINE_STATES, type ReleasePipelineState } from '@/types/releases';
 import {
+  PITCH_BLOCKED_COPY,
+  isDistributionOrderTask,
+  isEditorialPitchTask,
+} from '@/lib/editorial-pitch';
+import {
   TASK_DONE_STATUS,
   TASK_LOCKED_STATUS,
   type ExecutionTask,
@@ -40,14 +45,21 @@ export function getTaskCompletionBlocker(task: ExecutionTask, tasks: ExecutionTa
     return 'Complete the dependency chain first.';
   }
 
-  const dependencyTitles = task.dependencies
+  const openDependencies = task.dependencies
     .map((id) => tasks.find((candidate) => candidate.id === id))
     .filter((candidate): candidate is ExecutionTask => Boolean(candidate))
-    .filter((candidate) => candidate.status !== TASK_DONE_STATUS)
-    .map((candidate) => candidate.title);
+    .filter((candidate) => candidate.status !== TASK_DONE_STATUS);
 
-  if (dependencyTitles.length > 0) {
-    return `Waiting on ${dependencyTitles.join(', ')}.`;
+  if (openDependencies.length > 0) {
+    // Spotify takes a pitch only after the distributor has delivered, so the
+    // pitch says that instead of naming the upload step.
+    if (
+      isEditorialPitchTask(task.templateTaskId) &&
+      openDependencies.some((candidate) => isDistributionOrderTask(candidate.templateTaskId))
+    ) {
+      return PITCH_BLOCKED_COPY;
+    }
+    return `Waiting on ${openDependencies.map((candidate) => candidate.title).join(', ')}.`;
   }
 
   if (!isRequirementSatisfied(task.requirement)) {

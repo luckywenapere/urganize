@@ -13,6 +13,8 @@ import {
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
+import { EditorialPitchPanel } from '@/components/tasks/EditorialPitchPanel';
+import { isEditorialPitchTask } from '@/lib/editorial-pitch';
 import { ShareLoginActions } from '@/components/team/ShareLoginActions';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
@@ -582,6 +584,12 @@ export function TaskDetailView({
             prerequisites={prerequisites}
             onOpenPrerequisite={onOpenPrerequisite}
           />
+
+          {/* The Spotify editorial pitch's form fields (2026-10-09). Only on that
+              one task, between what it waits on and the free-text notes. */}
+          {isEditorialPitchTask(task.templateTaskId) ? (
+            <EditorialPitchPanel key={task.id} taskId={task.id} releaseId={task.releaseId ?? null} />
+          ) : null}
 
           {/* Notes stay out of the way until they exist (2026-09-05). This was
               a 120px box that rendered even when empty, which is most of the

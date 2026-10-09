@@ -58,6 +58,8 @@ const TEAM_ACCESS_GROUPS = [
   'pitch-kit',
   // Distribution (2026-10-03): the readiness checklist and the partner hand-off.
   'distribution',
+  // Spotify editorial pitch backfill (2026-10-09): a write any member may trigger.
+  'editorial-pitch',
 ];
 
 const BANNED = /ensureReleaseOwnership|ensureOwnedRelease/;

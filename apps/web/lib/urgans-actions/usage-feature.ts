@@ -13,6 +13,7 @@ const FEATURE_BY_ACTION: Readonly<Record<string, AiUsageFeature>> = {
   'release.draft_plan': 'plan',
   'presskit.draft_section': 'press_kit',
   'epk.fill_both': 'pitch_kit',
+  'release.draft_spotify_pitch': 'spotify_pitch',
 };
 
 export function usageFeatureForAction(actionId: string): AiUsageFeature | null {

@@ -96,7 +96,6 @@ Two things, and they are the whole reason an EP needs its own playbook:
 - Upload the EP to the distributor — Manager
 - Upload EP cover art to the distributor — Manager
 - Announce the EP with the tracklist reveal — Artist
-- Pitch the EP to editorial with lead single traction as evidence — Marketing Lead
 - Review lead single performance and adjust the EP plan — Manager
 - Identify priority playlists and curators for the EP — Marketing Lead
 - Confirm the EP release date is locked at the distributor — Manager
@@ -109,6 +108,7 @@ Two things, and they are the whole reason an EP needs its own playbook:
 - Begin EP curator outreach with a private link — Marketing Lead
 - [Conditional] Send the EP press release to contacts — Manager
 - Plan a second focus track to push after release — Manager
+- Pitch to Spotify editorial, with the lead single's numbers as evidence (after the EP upload at -35; Spotify needs it at least 7 days before release day) — Manager
 
 ## Week 3 — Marketing Ramp (Days 71–77) [offset: -21]
 

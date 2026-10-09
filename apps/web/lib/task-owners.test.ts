@@ -145,6 +145,45 @@ describe('proposeTaskOwners: ranking by exact template step', () => {
   });
 });
 
+describe('proposeTaskOwners: steps Spotify sets the deadline for', () => {
+  const history: PastAssignment[] = [
+    { templateTaskId: 'editorial_pitch', role: 'manager', assignedToUserId: 'ada' },
+    { templateTaskId: 'editorial_pitch', role: 'manager', assignedToUserId: 'ada' },
+    { templateTaskId: 'w6_upload_to_distributor', role: 'manager', assignedToUserId: 'ben' },
+  ];
+
+  it('keeps the pitch and every distribution order with the release owner, whatever history says', () => {
+    const proposals = proposeTaskOwners({
+      tasks: [
+        { id: 'pitch', templateTaskId: 'editorial_pitch', role: 'manager' },
+        { id: 'single', templateTaskId: 'w6_upload_to_distributor', role: 'manager' },
+        { id: 'ep', templateTaskId: 'w5_upload_ep_to_distributor', role: 'manager' },
+        { id: 'album', templateTaskId: 'w7_upload_album_to_distributor', role: 'manager' },
+      ],
+      history,
+      members: MEMBERS,
+      creatorUserId: OWNER,
+      memberNames: { ada: 'Ada', ben: 'Ben' },
+    });
+
+    for (const proposal of proposals) {
+      expect(proposal.userId).toBe(OWNER);
+      expect(proposal.basis).toBe('creator');
+    }
+  });
+
+  it('still uses history for an ordinary step', () => {
+    const [proposal] = proposeTaskOwners({
+      tasks: [{ id: 'other', templateTaskId: 'w6_upload_cover_art', role: 'manager' }],
+      history: [{ templateTaskId: 'w6_upload_cover_art', role: 'manager', assignedToUserId: 'ada' }],
+      members: MEMBERS,
+      creatorUserId: OWNER,
+      memberNames: { ada: 'Ada' },
+    });
+    expect(proposal.userId).toBe('ada');
+  });
+});
+
 describe('proposeTaskOwners: falling through the ladder', () => {
   it('an unknown template id (no history for it) falls to the role match', () => {
     const history: PastAssignment[] = [
