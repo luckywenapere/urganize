@@ -59,3 +59,43 @@ export function inChunks<T>(items: readonly T[], size: number): T[][] {
   }
   return chunks;
 }
+
+/** Ids per `.in(...)` request. 150 uuids is about 5.6 KB of URL, well inside every proxy's limit. */
+export const IN_LIST_CHUNK = 150;
+
+/**
+ * Read every row whose key is in `values`: the ids go in chunks (one huge
+ * `.in(...)` is a URL too long to send) and each chunk is read a page at a time
+ * (one response stops at 1,000 rows). Used where a list must be COMPLETE, such
+ * as the account data export (2026-10-09, v1.92.10).
+ *
+ * `maxRows` stops the read once that many rows are held, and `truncated` says it
+ * did. Pass the caller's own ceiling PLUS ONE, so reaching it means there really
+ * was more, and the caller can announce the cut instead of returning a list that
+ * only looks complete. A page that fails throws.
+ */
+export async function readInChunks<V, T>(
+  values: readonly V[],
+  fetchPage: (group: V[], from: number, to: number) => PromiseLike<PageResult<T>>,
+  options: { chunkSize?: number; pageSize?: number; maxRows?: number } = {}
+): Promise<PagedRows<T>> {
+  const pageSize = Math.max(1, options.pageSize ?? ROWS_PAGE_SIZE);
+  const maxRows = Math.max(1, options.maxRows ?? Number.POSITIVE_INFINITY);
+  const rows: T[] = [];
+
+  for (const group of inChunks(values, options.chunkSize ?? IN_LIST_CHUNK)) {
+    const pages = Number.isFinite(maxRows)
+      ? Math.max(1, Math.ceil((maxRows - rows.length) / pageSize))
+      : Number.MAX_SAFE_INTEGER;
+    const result = await readAllPages<T>((from, to) => fetchPage(group, from, to), {
+      pageSize,
+      maxPages: pages,
+    });
+    rows.push(...result.rows);
+    if (rows.length >= maxRows) {
+      return { rows: rows.slice(0, maxRows), truncated: true };
+    }
+  }
+
+  return { rows, truncated: false };
+}

@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.10",
+    date: "October 9, 2026",
+    highlights: [
+      "Your data export now includes every activity, comment and file, no matter how big your team is.",
+      "Deleting your account now removes all of your attachment files, not just the first batch.",
+      "Home now shows your own upcoming shows even when other teams have many.",
+    ],
+  },
+  {
     version: "1.92.9",
     date: "October 9, 2026",
     highlights: [

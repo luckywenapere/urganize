@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
+import { IN_LIST_CHUNK, inChunks, readAllPages, type PageResult } from '@/lib/paged-rows';
 import { TASK_ATTACHMENTS_BUCKET } from '@/lib/tasks-server';
 
 // Storage objects don't cascade with the DB rows deleted below, so they are
 // enumerated and removed first. Unlike the per-release DELETE, a storage
 // failure must not block account deletion (the privacy policy promises the
 // account goes away) — log and continue; an orphaned blob is recoverable.
+//
+// Every list here is read a page at a time (2026-10-09, v1.92.10). A single
+// `select` stops at 1,000 rows, and one `.in('task_id', ...)` carrying a
+// thousand task ids is a URL too long to send, so a team of about sixteen
+// rollouts had its attachment files skipped, and orphaned, when it deleted.
 async function removeUserStorageObjects(supabaseAdmin: SupabaseClient, userId: string) {
   const pathsByBucket = new Map<string, Set<string>>();
   const collectPath = (bucket: string, path: unknown) => {
@@ -22,45 +28,91 @@ async function removeUserStorageObjects(supabaseAdmin: SupabaseClient, userId: s
     }
   };
 
+  /** Reads one whole list, a page at a time. A failure is logged and reads as empty, like before. */
+  const readRows = async <T,>(
+    label: string,
+    fetchPage: (from: number, to: number) => PromiseLike<PageResult<T>>
+  ): Promise<T[]> => {
+    try {
+      const { rows, truncated } = await readAllPages<T>(fetchPage);
+      if (truncated) {
+        console.warn(`[account/delete-now] ${label} hit the read ceiling; some files may be left behind.`);
+      }
+      return rows;
+    } catch (error) {
+      logQueryError(label, error as { message?: string });
+      return [];
+    }
+  };
+
   // All assets owned by the user — storage_bucket on the row covers both the
   // release-assets and proofs buckets.
-  const assetsResult = await supabaseAdmin
-    .from('assets')
-    .select('storage_bucket, storage_path')
-    .eq('owner_user_id', userId);
-  logQueryError('assets', assetsResult.error);
-  for (const row of assetsResult.data ?? []) {
+  const assets = await readRows<{ storage_bucket: string | null; storage_path: string | null }>(
+    'assets',
+    (from, to) =>
+      supabaseAdmin
+        .from('assets')
+        .select('storage_bucket, storage_path')
+        .eq('owner_user_id', userId)
+        .order('id', { ascending: true })
+        .range(from, to)
+  );
+  for (const row of assets) {
     collectPath(String(row.storage_bucket || RELEASE_ASSETS_BUCKET), row.storage_path);
   }
 
   // Task attachments uploaded by the user anywhere...
-  const ownAttachmentsResult = await supabaseAdmin
-    .from('task_attachments')
-    .select('storage_path')
-    .eq('user_id', userId);
-  logQueryError('task attachments', ownAttachmentsResult.error);
-  for (const row of ownAttachmentsResult.data ?? []) {
+  const ownAttachments = await readRows<{ storage_path: string | null }>('task attachments', (from, to) =>
+    supabaseAdmin
+      .from('task_attachments')
+      .select('storage_path')
+      .eq('user_id', userId)
+      .order('id', { ascending: true })
+      .range(from, to)
+  );
+  for (const row of ownAttachments) {
     collectPath(TASK_ATTACHMENTS_BUCKET, row.storage_path);
   }
 
   // ...plus attachments on tasks under the user's releases — those rows
   // cascade-delete with the releases and would orphan their blobs.
-  const releasesResult = await supabaseAdmin.from('releases').select('id').eq('owner_user_id', userId);
-  logQueryError('releases', releasesResult.error);
-  const releaseIds = (releasesResult.data ?? []).map((row) => String(row.id || '')).filter(Boolean);
-  if (releaseIds.length > 0) {
-    const tasksResult = await supabaseAdmin.from('tasks').select('id').in('release_id', releaseIds);
-    logQueryError('tasks', tasksResult.error);
-    const taskIds = (tasksResult.data ?? []).map((row) => String(row.id || '')).filter(Boolean);
-    if (taskIds.length > 0) {
-      const releaseAttachmentsResult = await supabaseAdmin
-        .from('task_attachments')
-        .select('storage_path')
-        .in('task_id', taskIds);
-      logQueryError('rollout task attachments', releaseAttachmentsResult.error);
-      for (const row of releaseAttachmentsResult.data ?? []) {
-        collectPath(TASK_ATTACHMENTS_BUCKET, row.storage_path);
-      }
+  const releases = await readRows<{ id: string | null }>('releases', (from, to) =>
+    supabaseAdmin
+      .from('releases')
+      .select('id')
+      .eq('owner_user_id', userId)
+      .order('id', { ascending: true })
+      .range(from, to)
+  );
+  const releaseIds = releases.map((row) => String(row.id || '')).filter(Boolean);
+  const taskIds: string[] = [];
+  for (const group of inChunks(releaseIds, IN_LIST_CHUNK)) {
+    const tasks = await readRows<{ id: string | null }>('tasks', (from, to) =>
+      supabaseAdmin
+        .from('tasks')
+        .select('id')
+        .in('release_id', group)
+        .order('id', { ascending: true })
+        .range(from, to)
+    );
+    for (const row of tasks) {
+      const id = String(row.id || '');
+      if (id) taskIds.push(id);
+    }
+  }
+  for (const group of inChunks(taskIds, IN_LIST_CHUNK)) {
+    const attachments = await readRows<{ storage_path: string | null }>(
+      'rollout task attachments',
+      (from, to) =>
+        supabaseAdmin
+          .from('task_attachments')
+          .select('storage_path')
+          .in('task_id', group)
+          .order('id', { ascending: true })
+          .range(from, to)
+    );
+    for (const row of attachments) {
+      collectPath(TASK_ATTACHMENTS_BUCKET, row.storage_path);
     }
   }
 

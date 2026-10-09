@@ -170,9 +170,17 @@ async function loadVisibleShows(
   const windowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const windowEnd = new Date(now.getTime() + SHOW_LOOKAHEAD_DAYS * 86_400_000).toISOString();
 
+  // Scoped to this team's owners IN THE QUERY, like GET /api/events and the
+  // pitches read below. It used to read every team's shows in the window and
+  // filter in memory, so the 100-row cap was shared by the whole platform: once
+  // other teams held 100 shows between them in these 30 days, this team's next
+  // show and its waiting DJ links dropped off Home.
+  const ownerIds = access.releaseOwnerIds.length ? access.releaseOwnerIds : [user.id];
+
   const { data, error } = await adminClient
     .from(EVENTS_TABLE)
     .select(EVENT_COLUMNS)
+    .in('owner_user_id', ownerIds)
     .neq('status', 'cancelled')
     .gte('set_start_at', windowStart)
     .lte('set_start_at', windowEnd)
