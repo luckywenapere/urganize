@@ -88,7 +88,7 @@ does.
 | 8 | Needs a message | Paying teams under 2 active people; teams that went quiet this week | Board rows + activity | **Shipped** |
 | 9 | Runway / default alive | Months of cash at current burn | Cash and spend are not in the database | **Needs data**, shown as "Not tracked" |
 | 10 | Second-release rate | Doc section 7 (bar 60%) | `secondReleaseSummary` | On the Scoreboard; add to cockpit when the first teams cross 90 days |
-| 11 | Funnel: waitlist → account → first rollout → activated → paid | Monthly or weekly cohorts | Neon waitlist + Supabase | **Next** (partly needs Neon `DATABASE_URL`) |
+| 11 | Funnel: waitlist → account → first rollout → activated → trial over → paid | Teams that signed up in the last 30 or 90 days (past their first 3 days), how far each got | Supabase via `ScoreboardInput`; waitlist from Neon `"User"`, matched to team owners by email | **Shipped** (iteration 2). Waitlist shows "Not tracked" where `DATABASE_URL` is unset |
 | 12 | UrgAns credit use | Credits spent per active team per week; share of paying teams using UrgAns weekly (seed bar 5) | Credit ledger, `ai_usage_events`, `urgans_action` billing events | **Next** |
 | 13 | Logo churn + NRR | Paying teams lost per month; MRR kept from last month's payers | `subscriptions` history (status changes are overwritten, so needs care) | Later; may need data |
 
@@ -149,34 +149,47 @@ percentage.
   `components/admin/FounderCockpitView.tsx` above the dashboard links in
   `AdminHubClient`. Runway is shown as "Not tracked".
 
+- **Iteration 2 (2026-10-09): the sign-up funnel on the cockpit.**
+  `lib/admin-funnel.ts` (pure, tested) follows the teams whose owner signed up
+  in the last 30 or 90 days and whose first 3 days are over (the Activation
+  rule's cohort, so the 30-day Activated step equals the Scoreboard's
+  Activation exactly), through first rollout, activated, trial over and paid.
+  Each step is counted on its own, so a team that paid without inviting anyone
+  still shows under Paid; the line under each step is the share of the step
+  before that also got there (never over 100%). "Trial over" replaces "started
+  a trial" because every new team is given the 3-day trial automatically, so a
+  trial-start step would just repeat the account count. Paid is the
+  Scoreboard's trial-to-paid rule. The waitlist is read from the marketing
+  site's Neon `"User"` table in the same route and matched to team owners by
+  email (emails never leave the server); it reads "Not tracked" when
+  `DATABASE_URL` is unset or the read fails. `isActivatedTeam` was pulled out
+  of `activationSummary` in `lib/scoreboard.ts` so both ask the same question.
+  Shown by `components/admin/FunnelStrip.tsx` (30 / 90 day toggle, one column
+  at phone width, five across from `md`).
+
 ## 6. Next (ordered; one PR each)
 
-1. **Funnel strip on the cockpit.** Last 4 weeks and last 12 weeks:
-   accounts made → made a first rollout → activated (rollout + invite in 3
-   days) → started a trial → paid. All Supabase, no Neon needed; the waitlist
-   step joins when `DATABASE_URL` is confirmed on the `Web` project. Pure
-   module + tests, then a row of steps with conversion between each.
-2. **UrgAns in the cockpit.** Share of weekly active paying teams that used
+1. **UrgAns in the cockpit.** Share of weekly active paying teams that used
    UrgAns inside a rollout this week (seed bar 5: half), credits spent per
    active team, and AI cost per active team (from `ai_usage_events` or the
    credit ledger, "Not tracked" when neither reads). Reuse `usage-metrics`
    reads; no new tables.
-3. **Second-release tile + "rollouts live this week".** Bring the
+2. **Second-release tile + "rollouts live this week".** Bring the
    second-release rate (with its "waiting" count) onto the cockpit, plus how
    many rollouts went live in the last 7 days (the `releaseLiveAt` rule).
-4. **Message list with a one-tap action.** For each "needs a message" team:
+3. **Message list with a one-tap action.** For each "needs a message" team:
    owner name and email, the stage it stalled at (strategy doc section 6), and
    a mailto or "draft in Emails" link. Read-only; nothing sent automatically.
-5. **Hub link grid grouped and complete.** Numbers / Operations / Content
+4. **Hub link grid grouped and complete.** Numbers / Operations / Content
    groups, every menu section listed once, cards shortened.
-6. **Runway, the honest way.** A founder-entered monthly figure (cash, monthly
+5. **Runway, the honest way.** A founder-entered monthly figure (cash, monthly
    spend) needs storage, so it waits for a migration slot; until then, a link
    to wherever the monthly money review lives. Default alive = MRR growth
    carried forward vs spend, shown only when both numbers exist.
-7. **Logo churn and net revenue retention, monthly.** Needs a reliable record
+6. **Logo churn and net revenue retention, monthly.** Needs a reliable record
    of when a subscription stopped; check whether `billing_events` or Paystack
    webhooks already give it before proposing a table.
-8. **Sean Ellis survey count.** Only if the founder runs the survey in-app or
+7. **Sean Ellis survey count.** Only if the founder runs the survey in-app or
    in a form we can read; otherwise leave it off.
 
 ## 7. Open questions for the founder

@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { AdminBarChart } from '@/components/admin/AdminBarChart';
+import { FunnelStrip } from '@/components/admin/FunnelStrip';
+import type { AdminFunnel } from '@/lib/admin-funnel';
 import { InfoTip } from '@/components/shared/HelpTip';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 import type { AtRiskTeam, FounderCockpit } from '@/lib/founder-cockpit';
@@ -65,9 +67,12 @@ function reasonLine(team: AtRiskTeam): string {
 
 export function FounderCockpitView({
   cockpit,
+  funnels = [],
   sources,
 }: {
   cockpit: FounderCockpit;
+  /** The sign-up funnel, one per window. Empty hides the strip. */
+  funnels?: AdminFunnel[];
   sources: AdminReadSource[];
 }) {
   const problems = sources.filter((source) => source.status !== 'ok' || source.truncated);
@@ -174,6 +179,8 @@ export function FounderCockpitView({
           value="Not tracked"
         />
       </div>
+
+      {funnels.length > 0 ? <FunnelStrip funnels={funnels} /> : null}
 
       <div className="mt-6">
         <Label

@@ -449,18 +449,28 @@ export function activationSummary(
     if (signup === null || signup < since) continue;
     if (signup + ACTIVATION_WINDOW_DAYS * DAY_MS > nowMs) continue;
     signups += 1;
-
-    const invite = ms(team.firstInviteAt);
-    const releaseInWindow = (byTeam.get(team.workspaceId) ?? []).some((release) => {
-      const created = ms(release.createdAt);
-      return created !== null && isWithinActivationWindow(signup, created);
-    });
-    if (releaseInWindow && invite !== null && isWithinActivationWindow(signup, invite)) {
-      activated += 1;
-    }
+    if (isActivatedTeam(team, byTeam.get(team.workspaceId) ?? [])) activated += 1;
   }
 
   return { signups, activated, rate: ratio(activated, signups) };
+}
+
+/**
+ * One team's half of the activation rule above: a real (non-test) release
+ * created and a teammate invited, both within 3 days of the owner signing up.
+ * Exported so the admin funnel (./admin-funnel.ts) asks the same question.
+ * `teamReleases` may include test releases; they are skipped here.
+ */
+export function isActivatedTeam(team: ScoreboardTeam, teamReleases: ScoreboardRelease[]): boolean {
+  const signup = ms(team.ownerSignedUpAt);
+  if (signup === null) return false;
+  const invite = ms(team.firstInviteAt);
+  if (invite === null || !isWithinActivationWindow(signup, invite)) return false;
+  return teamReleases.some((release) => {
+    if (release.isTest) return false;
+    const created = ms(release.createdAt);
+    return created !== null && isWithinActivationWindow(signup, created);
+  });
 }
 
 /**
