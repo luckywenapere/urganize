@@ -9,6 +9,7 @@ import {
   readTourSeen,
   resolveCatalogTourCta,
   tourSeenKey,
+  tourStepProgress,
 } from './tours';
 
 /** A Map-backed localStorage, the lib/credit-prefill.test.ts approach — vitest
@@ -200,5 +201,22 @@ describe('seen state', () => {
     markTourSeen('', 'catalog');
     expect(map.size).toBe(0);
     expect(readTourSeen('', 'catalog')).toBe(false);
+  });
+});
+
+describe('tourStepProgress', () => {
+  it('says "Step N of M", counting from one', () => {
+    expect(tourStepProgress(0, 3)).toEqual({ label: 'Step 1 of 3', percent: 33 });
+    expect(tourStepProgress(1, 3)).toEqual({ label: 'Step 2 of 3', percent: 67 });
+    expect(tourStepProgress(2, 3)).toEqual({ label: 'Step 3 of 3', percent: 100 });
+  });
+
+  it('never runs past the last step or before the first', () => {
+    expect(tourStepProgress(5, 3)).toEqual({ label: 'Step 3 of 3', percent: 100 });
+    expect(tourStepProgress(-1, 3)).toEqual({ label: 'Step 1 of 3', percent: 33 });
+  });
+
+  it('treats an empty tour as one step rather than dividing by zero', () => {
+    expect(tourStepProgress(0, 0)).toEqual({ label: 'Step 1 of 1', percent: 100 });
   });
 });
