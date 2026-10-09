@@ -44,3 +44,15 @@ Open, in the order they will be taken:
 **Checked.** JavaScript off: all 8 sections at opacity 1. JavaScript blocked at the network: all 8 at 1. JavaScript on: all 8 start hidden below the fold and are visible after scrolling. Jump to `/#waitlist`: the six sections above the landing point stay shown. Homepage lint (0 errors, the 2 existing warnings), homepage build, and the positioning and copy guard tests in `apps/web` all pass.
 
 **Merged.** #766, 2026-10-09 (squash).
+
+**Merged.** #767, 2026-10-09 (squash).
+
+## 2026-10-09 | /pricing says "paid once a year" next to a Monthly / Yearly switch
+
+**What is wrong.** Under the four plan cards the footnote reads "Every plan is paid once a year." Right above the cards is a Monthly / Yearly switch that opens on Monthly, and both intervals are on sale (`SELLABLE_INTERVALS` in `packages/pricing`; `/terms` already says "paid monthly or once a year"). The line was true on 2026-09-08 when the switch did not exist and nobody changed it when monthly came back on 2026-09-10. Seen at 390px: `foot/before-m390-toggle-yearly.png` (the switch and the cards) and `foot/before-m390-footnote.png`.
+
+**Why it costs sign-ups.** A visitor on Monthly reads a price like ₦5,000/month, scrolls to the small print and is told every plan is yearly. That is a pricing contradiction on the page people compare plans on, and it makes the monthly price look like a trick. It is the one place on the site that disagrees with `packages/pricing`.
+
+**Fix.** The sentence in `PricingTierCards.tsx` now reads "You can pay monthly or once a year." (the wording `/terms` uses) and is built from `SELLABLE_INTERVALS`, the same list the switch above the cards reads, so the two cannot disagree again. If only yearly were ever on sale it says "Every plan is paid once a year."; if only monthly, "Every plan is paid monthly." No price, interval or plan definition touched.
+
+**Checked.** `/pricing` at 390px and 1440px: the footnote now reads "You can pay monthly or once a year." with the Monthly / Yearly switch above it, on Monthly and on Yearly. No price, plan or interval changed. Before: `foot/before-m390-toggle-yearly.png`, `foot/before-m390-footnote.png`, `foot/before-d1440-footnote.png`. After: `foot/after-m390-toggle-monthly.png`, `foot/after-m390-toggle-yearly.png`, `foot/after-m390-footnote.png`, `foot/after-d1440-footnote.png`.
