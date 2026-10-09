@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.88.5",
+    date: "October 9, 2026",
+    highlights: [
+      "Each task on Home now reads as one sentence, like \"Send the press release in Midnight EP by Dorian, 3 days overdue.\"",
+      "Tap a task card anywhere to open it. The circle on the left only marks it done.",
+      "Home's loading screen now matches how Home looks once it loads.",
+    ],
+  },
+  {
     version: "1.88.4",
     date: "October 7, 2026",
     highlights: [
