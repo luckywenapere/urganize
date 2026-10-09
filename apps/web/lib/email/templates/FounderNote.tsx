@@ -52,7 +52,7 @@ export function FounderNoteBody({
       ))}
       {signOff ? (
         <Text style={{ margin: '24px 0 0', color: '#1e2621', fontSize: '15px', lineHeight: '1.65' }}>
-          Lucky
+          Wena
           <br />
           <span style={{ color: MUTED_TEXT, fontSize: '13px' }}>Founder, Urganize</span>
         </Text>

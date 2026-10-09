@@ -49,9 +49,9 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     key: 'day1',
     day: 1,
     label: 'Welcome and the story',
-    subject: 'Welcome to Urganize, a note from Lucky',
+    subject: 'Welcome to Urganize, a note from Wena',
     preview: 'Why I built Urganize, and what to expect this week.',
-    body: `Lucky here. I’m the founder of Urganize, and I want to say thank you for signing up.
+    body: `Wena here. I’m the founder of Urganize, and I want to say thank you for signing up.
 
 Urganize started with a problem I had myself. I was managing an artist, and there was no software built for it. I needed one place to share tasks, keep us both accountable and see how my artist’s career was going. Somewhere I could open and see everything about the music and the management at once. That place didn’t exist, so I built it.
 
