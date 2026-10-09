@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.2",
+    date: "October 9, 2026",
+    highlights: [
+      "When you go to delete a rollout, Urganize now checks how many activities it has before you confirm, so a full rollout never looks empty.",
+      "In Settings, each rollout you can delete now shows when it was made, so two \"Untitled rollout\" rows are easy to tell apart.",
+    ],
+  },
+  {
     version: "1.92.1",
     date: "October 9, 2026",
     highlights: [

@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react';
 import { Trash2 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
-import { useTaskStore } from '@/stores/useTaskStore';
 import { DeleteReleaseDialog } from '@/components/workspace/DeleteReleaseDialog';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { useKnownReleaseCount } from '@/components/loading/known-counts';
 import type { Release } from '@/types/releases';
 import { panelClass } from './panelClass';
 import { InfoTip } from '@/components/shared/HelpTip';
+import { formatRolloutCreatedLabel } from '@/lib/settings-rollout-row';
 
 /**
  * Deleting a release is only available here (URG-163) — the workspace's
@@ -20,7 +20,7 @@ import { InfoTip } from '@/components/shared/HelpTip';
  * carries its own "Delete test release" button, because the founder asked
  * for the test path to end with the delete option. Real releases keep the
  * Settings-only rule. Self-contained like ProfileSection: reads
- * releases/tasks straight from the global stores rather than via parent
+ * releases straight from the global stores rather than via parent
  * props, and owns its own delete-confirm dialog end to end.
  */
 export function ReleasesSection() {
@@ -29,7 +29,6 @@ export function ReleasesSection() {
   const isLoadingReleases = useReleaseStore((state) => state.isInitialLoading);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const removeReleaseLocal = useReleaseStore((state) => state.removeReleaseLocal);
-  const tasks = useTaskStore((state) => state.tasks);
 
   const [releaseToDelete, setReleaseToDelete] = useState<Pick<Release, 'id' | 'title'> | null>(
     null
@@ -101,6 +100,12 @@ export function ReleasesSection() {
                           release has moved past it. */}
                       {release.status !== 'draft' ? ` · ${release.status.replace(/_/g, ' ')}` : ''}
                     </p>
+                    {/* Tells identical "Untitled rollout" rows apart (v1.92.2). */}
+                    {formatRolloutCreatedLabel(release.createdAt) ? (
+                      <p className="truncate text-xs text-content-tertiary">
+                        {formatRolloutCreatedLabel(release.createdAt)}
+                      </p>
+                    ) : null}
                   </div>
                   <button
                     type="button"
@@ -120,9 +125,6 @@ export function ReleasesSection() {
       <DeleteReleaseDialog
         open={releaseToDelete !== null}
         release={releaseToDelete}
-        tasksTotal={
-          releaseToDelete ? tasks.filter((task) => task.releaseId === releaseToDelete.id).length : 0
-        }
         onClose={() => setReleaseToDelete(null)}
         onDeleted={handleReleaseDeleted}
       />

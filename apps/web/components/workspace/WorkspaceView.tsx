@@ -1670,11 +1670,6 @@ export function WorkspaceView() {
       <DeleteReleaseDialog
         open={testReleaseToDelete !== null}
         release={testReleaseToDelete}
-        tasksTotal={
-          testReleaseToDelete
-            ? taskList.filter((task) => task.releaseId === testReleaseToDelete.id).length
-            : 0
-        }
         onClose={() => setTestReleaseToDelete(null)}
         onDeleted={(releaseId) => {
           setTestReleaseToDelete(null);
