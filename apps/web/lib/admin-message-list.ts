@@ -1,8 +1,11 @@
+import { composeDraftHref } from './email/compose-prefill';
+
 // The "Needs a message" list on the founder cockpit (iteration 4, 2026-10-09):
 // for each team that slipped this week, who to write to, which lifecycle stage
 // the team stalled at, who owns that stage, and a mailto link that opens a
-// short draft. NOTHING IS SENT FROM HERE: the link only opens the founder's own
-// mail app with the draft filled in, and the founder edits and sends it.
+// short draft. NOTHING IS SENT FROM HERE: the links only fill in a draft (in
+// the admin Emails composer since iteration 5, or the founder's own mail app),
+// and the founder edits and sends it.
 //
 // PURE and client-safe (no server imports), so the rules are tested here and
 // the cockpit view imports the stage words directly.
@@ -25,20 +28,41 @@
 // and was active stalls, so they are never returned.
 //
 // The doc says a team that stalls "gets a direct message from that stage's
-// owner within 3 days". The owner names are copied from the doc's table; when
-// the table changes, change STAGE_INFO.
+// owner within 3 days". Who owns each stage lives in ONE place, LIFECYCLE_STAGES
+// below, copied from the doc's table; lib/admin-message-list.test.ts reads the
+// doc and fails if the two drift. When the table changes, change that constant.
+
+export type LifecycleStage = { number: number; label: string; owner: string };
+
+/** The strategy doc's customer lifecycle (section 6), all eight stages, with
+ *  each stage's owner. The doc's Convert row reads "Lucky (KB follows up)":
+ *  Lucky owns it, so Lucky writes. */
+export const LIFECYCLE_STAGES = [
+  { number: 1, label: 'Reach', owner: 'KB' },
+  { number: 2, label: 'Sign up', owner: 'KB' },
+  { number: 3, label: 'Activate', owner: 'Chidera' },
+  { number: 4, label: 'Convert', owner: 'Lucky' },
+  { number: 5, label: 'First release', owner: 'Chidera' },
+  { number: 6, label: 'Second release', owner: 'Chidera' },
+  { number: 7, label: 'Expand', owner: 'Lucky' },
+  { number: 8, label: 'Refer', owner: 'KB' },
+] as const satisfies readonly LifecycleStage[];
 
 export type StalledStage = 'activate' | 'convert' | 'first_release' | 'second_release' | 'expand';
 
-export const STAGE_INFO: Record<
-  StalledStage,
-  { number: number; label: string; owner: string }
-> = {
-  activate: { number: 3, label: 'Activate', owner: 'Chidera' },
-  convert: { number: 4, label: 'Convert', owner: 'Lucky' },
-  first_release: { number: 5, label: 'First release', owner: 'Chidera' },
-  second_release: { number: 6, label: 'Second release', owner: 'Chidera' },
-  expand: { number: 7, label: 'Expand', owner: 'Lucky' },
+function lifecycleStage(number: number): LifecycleStage {
+  const found = LIFECYCLE_STAGES.find((entry) => entry.number === number);
+  if (!found) throw new Error(`No lifecycle stage ${number}`);
+  return found;
+}
+
+/** The stages a slipped team can be at, read from LIFECYCLE_STAGES. */
+export const STAGE_INFO: Record<StalledStage, LifecycleStage> = {
+  activate: lifecycleStage(3),
+  convert: lifecycleStage(4),
+  first_release: lifecycleStage(5),
+  second_release: lifecycleStage(6),
+  expand: lifecycleStage(7),
 };
 
 export type StageFacts = {
@@ -110,6 +134,18 @@ export function isMailtoSafeEmail(email: string | null | undefined): email is st
   return /^[^\s@,;?&#%<>"'()]+@[^\s@,;?&#%<>"'()]+\.[^\s@,;?&#%<>"'()]+$/.test(email);
 }
 
+/** The draft for one team: who, a subject and an opener. No greeting: the
+ *  admin composer adds "Hi <name>," itself, and the mailto link adds its own. */
+export function messageDraft(team: {
+  teamName: string | null;
+  stage: StalledStage;
+}): { subject: string; ask: string } {
+  return {
+    subject: team.teamName ? `Checking in on ${team.teamName}` : 'Checking in',
+    ask: STAGE_ASK[team.stage],
+  };
+}
+
 /**
  * A mailto link with a short draft for this team, or null when there is no
  * usable email. One recipient only, never a CC or BCC.
@@ -122,7 +158,23 @@ export function messageMailto(team: {
 }): string | null {
   if (!isMailtoSafeEmail(team.email)) return null;
   const name = firstName(team.ownerName);
-  const subject = team.teamName ? `Checking in on ${team.teamName}` : 'Checking in';
-  const body = `${name ? `Hi ${name},` : 'Hi,'}\n\n${STAGE_ASK[team.stage]}\n\n`;
+  const { subject, ask } = messageDraft(team);
+  const body = `${name ? `Hi ${name},` : 'Hi,'}\n\n${ask}\n\n`;
   return `mailto:${team.email}?subject=${encodeMailtoPart(subject)}&body=${encodeMailtoPart(body)}`;
+}
+
+/**
+ * A link to the admin Emails composer with this team's draft filled in
+ * (iteration 5), or null when there is no usable email. The composer adds the
+ * greeting and sign-off, so the body is the opener alone. Nothing is sent
+ * until the admin presses Send there.
+ */
+export function messageComposeHref(team: {
+  email: string | null;
+  teamName: string | null;
+  stage: StalledStage;
+}): string | null {
+  if (!isMailtoSafeEmail(team.email)) return null;
+  const { subject, ask } = messageDraft(team);
+  return composeDraftHref({ to: team.email, subject, body: ask });
 }

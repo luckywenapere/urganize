@@ -23,12 +23,14 @@ import { FounderCockpitView } from '@/components/admin/FounderCockpitView';
 import type { FounderCockpit } from '@/lib/founder-cockpit';
 import type { AdminFunnel } from '@/lib/admin-funnel';
 import type { UrgansUsage } from '@/lib/admin-urgans-usage';
+import type { ChurnSummary } from '@/lib/admin-churn';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 
 type CockpitPayload = {
   cockpit: FounderCockpit;
   funnels: AdminFunnel[];
   urgans: UrgansUsage | null;
+  churn: ChurnSummary | null;
   sources: AdminReadSource[];
 };
 type CockpitState =
@@ -107,6 +109,7 @@ export default function AdminHubClient() {
             cockpit: body.cockpit,
             funnels: body.funnels ?? [],
             urgans: body.urgans ?? null,
+            churn: body.churn ?? null,
             sources: body.sources ?? [],
           },
         });
@@ -143,6 +146,7 @@ export default function AdminHubClient() {
           cockpit={cockpit.payload.cockpit}
           funnels={cockpit.payload.funnels}
           urgans={cockpit.payload.urgans}
+          churn={cockpit.payload.churn}
           sources={cockpit.payload.sources}
         />
       ) : cockpit.status === 'error' ? (

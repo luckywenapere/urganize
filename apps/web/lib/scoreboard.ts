@@ -57,6 +57,10 @@ export type ScoreboardSubscription = {
   amountMinor: number | null;
   billingInterval: string | null;
   expiresAt: string | null;
+  /** subscriptions.started_at: when the current run of paying began. Set by the
+   *  first charge and by "Mark paid"; renewals leave it alone. Optional because
+   *  only the churn numbers read it. */
+  startedAt?: string | null;
 };
 
 export type ScoreboardTeam = {
@@ -219,7 +223,7 @@ export function weekStartUtc(date: Date): Date {
   return start;
 }
 
-function isCurrentSubscription(sub: ScoreboardSubscription | null, now: Date): boolean {
+export function isCurrentSubscription(sub: ScoreboardSubscription | null, now: Date): boolean {
   if (!sub) return false;
   if (!CURRENT_STATUSES.has(String(sub.status))) return false;
   if (!sub.amountMinor || sub.amountMinor <= 0) return false;
@@ -239,9 +243,15 @@ function isCurrentSubscription(sub: ScoreboardSubscription | null, now: Date): b
 export function isPayingTeam(team: ScoreboardTeam, now: Date): boolean {
   if (team.comped || team.allowlisted) return false;
   if (!isCurrentSubscription(team.subscription, now)) return false;
-  const plan = String(team.subscription?.plan ?? '');
-  if (isPricingTierId(plan)) return plan !== 'solo';
-  return plan.length > 0;
+  return isTeamPlan(team.subscription?.plan);
+}
+
+/** A plan that makes a team a paying team when it is current: any tier but
+ *  Solo, or a legacy plan id. See isPayingTeam. */
+export function isTeamPlan(plan: string | null | undefined): boolean {
+  const id = String(plan ?? '');
+  if (isPricingTierId(id)) return id !== 'solo';
+  return id.length > 0;
 }
 
 /** Doc section 2: "Subscriptions only, yearly plans at price ÷ 12". In kobo. */
@@ -250,14 +260,20 @@ export function monthlyRecurringMinor(subscriptions: ScoreboardSubscription[], n
   for (const sub of subscriptions) {
     if (!RECURRING_STATUSES.has(String(sub.status))) continue;
     if (!isCurrentSubscription(sub, now)) continue;
-    const interval = resolveBillingInterval({
-      plan: sub.plan,
-      storedInterval: sub.billingInterval,
-    });
-    const amount = sub.amountMinor ?? 0;
-    total += interval === 'annual' ? Math.round(amount / 12) : amount;
+    total += monthlyAmountMinor(sub);
   }
   return total;
+}
+
+/** One subscription's price as a monthly amount, in kobo: yearly plans at a
+ *  twelfth (doc section 2). Says nothing about whether it is current. */
+export function monthlyAmountMinor(sub: ScoreboardSubscription): number {
+  const interval = resolveBillingInterval({
+    plan: sub.plan,
+    storedInterval: sub.billingInterval,
+  });
+  const amount = sub.amountMinor ?? 0;
+  return interval === 'annual' ? Math.round(amount / 12) : amount;
 }
 
 /** How many of `memberIds` did something at or after `sinceMs`. */

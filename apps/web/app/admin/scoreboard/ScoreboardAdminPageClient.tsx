@@ -43,7 +43,9 @@ export default function ScoreboardAdminPageClient() {
           if (options.asGate) router.replace('/dashboard');
           return;
         }
-        const response = await fetch('/api/admin/scoreboard', {
+        // The first load may reuse a read the cockpit made a moment ago (one
+        // read for both pages); Refresh always reads again.
+        const response = await fetch(options.asGate ? '/api/admin/scoreboard' : '/api/admin/scoreboard?fresh=1', {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store',
         });

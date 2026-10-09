@@ -11,16 +11,24 @@
 //
 // Not flag-gated (the /admin/teams precedent): access is ADMIN_EMAILS on every
 // backing route, and a non-admin is bounced home.
+//
+// A link can fill the form in (iteration 5 of the admin dashboard,
+// 2026-10-10): ?to=one@address&subject=…&body=… opens it aimed at that one
+// person with the draft written (lib/email/compose-prefill.ts checks and cleans
+// all three). It is only a draft: the send still needs Send and its confirm.
+// The founder cockpit's "Needs a message" list uses it. page.tsx wraps this in
+// a Suspense boundary because it reads the query string.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Loader2, Mail } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { AUDIENCE_GROUPS, AUDIENCE_GROUP_LABELS, DEFAULT_RECENT_DAYS, isValidEmailAddress } from '@/lib/email/audience';
 import { ANNOUNCEMENT_BODY_MAX, ANNOUNCEMENT_SUBJECT_MAX } from '@/lib/email/announcement';
 import type { BroadcastCounts, BroadcastSummary } from '@/lib/email/broadcast-server';
+import { parseComposePrefill } from '@/lib/email/compose-prefill';
 import { adminRequest, describeBudget, type BudgetPayload } from '../emailAdminApi';
 
 type AudienceKind = 'everyone' | 'group' | 'person' | 'waitlist';
@@ -125,18 +133,22 @@ export default function ComposeEmailPageClient() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
 
-  const [kind, setKind] = useState<AudienceKind>('everyone');
+  // Read once, on the first render: a draft from a link (see the top of file).
+  const searchParams = useSearchParams();
+  const [prefill] = useState(() => parseComposePrefill(searchParams));
+
+  const [kind, setKind] = useState<AudienceKind>(prefill?.to ? 'person' : 'everyone');
   const [group, setGroup] = useState<GroupKey>('trial');
   const [days, setDays] = useState(String(DEFAULT_RECENT_DAYS));
-  const [personEmail, setPersonEmail] = useState('');
+  const [personEmail, setPersonEmail] = useState(prefill?.to ?? '');
   const [audienceInfo, setAudienceInfo] = useState<AudienceInfo | null>(null);
   const [audienceLoading, setAudienceLoading] = useState(false);
   const [audienceError, setAudienceError] = useState<string | null>(null);
   const audienceSeq = useRef(0);
   const audienceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
+  const [subject, setSubject] = useState(prefill?.subject ?? '');
+  const [body, setBody] = useState(prefill?.body ?? '');
   const [includeGreeting, setIncludeGreeting] = useState(true);
   const [signOff, setSignOff] = useState(true);
 
@@ -207,12 +219,19 @@ export default function ComposeEmailPageClient() {
     let cancelled = false;
     (async () => {
       const ok = await loadOverview();
-      if (!cancelled && ok) checkAudience({ kind: 'everyone', group: 'trial', days: String(DEFAULT_RECENT_DAYS), personEmail: '' });
+      if (!cancelled && ok) {
+        checkAudience({
+          kind: prefill?.to ? 'person' : 'everyone',
+          group: 'trial',
+          days: String(DEFAULT_RECENT_DAYS),
+          personEmail: prefill?.to ?? '',
+        });
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user, router, loadOverview, checkAudience]);
+  }, [authLoading, user, router, loadOverview, checkAudience, prefill]);
 
   useEffect(
     () => () => {
@@ -369,6 +388,12 @@ export default function ComposeEmailPageClient() {
         unsubscribed is left out. {describeBudget(budget)}
       </p>
 
+      {prefill ? (
+        <p className="mt-4 rounded-lg border border-brand/35 bg-brand/10 px-3 py-2 text-sm text-content-primary">
+          A draft is filled in{prefill.to ? <> for {prefill.to}</> : null}. Read it and change anything you like. Nothing
+          is sent until you press Send.
+        </p>
+      ) : null}
       {pageError ? (
         <p className="mt-4 rounded-lg border border-status-error/35 bg-status-error/10 px-3 py-2 text-sm text-status-error">
           {pageError}

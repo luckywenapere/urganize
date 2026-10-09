@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { verifyAdmin } from '../_shared';
 import { buildScoreboard } from '@/lib/scoreboard';
-import { loadScoreboardInput } from '@/lib/scoreboard-server';
+import { scoreboardReadCache } from '@/lib/scoreboard-cache-server';
 
 // GET /api/admin/scoreboard — the company scoreboard from the strategy doc
 // (docs/strategy/company-strategy.md, sections 2 and 7), worked out from the
@@ -14,6 +14,9 @@ import { loadScoreboardInput } from '@/lib/scoreboard-server';
 //
 // It reads a lot of rows (every team, release and activity, plus 120 days of
 // activity across eighteen tables), so it gets the full minute the plan allows.
+// Since 2026-10-10 the rows come from the read cache it shares with the founder
+// cockpit (lib/scoreboard-cache-server.ts): opening /admin and then this page
+// reads them once. `?fresh=1` (the Refresh button) reads them again.
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -25,7 +28,8 @@ export async function GET(request: NextRequest) {
   const client = admin.supabaseAdmin as SupabaseClient;
 
   try {
-    const { input, sources } = await loadScoreboardInput(client, new Date());
+    const fresh = request.nextUrl.searchParams.get('fresh') === '1';
+    const { input, sources } = await scoreboardReadCache.get(client, { fresh });
     return NextResponse.json(
       { scoreboard: buildScoreboard(input), sources },
       { headers: { 'Cache-Control': 'no-store' } }
