@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.91.4",
+    date: "October 9, 2026",
+    highlights: [
+      "Before you answer UrgAns's questions, you can now see the plan it starts from: how many activities, how they split across the weeks, and a few of them by name. Looking is free.",
+    ],
+  },
+  {
     version: "1.91.3",
     date: "October 9, 2026",
     highlights: [

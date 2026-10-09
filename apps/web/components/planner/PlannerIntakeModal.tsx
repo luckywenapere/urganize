@@ -39,6 +39,7 @@ import {
   getStepKicker,
   type StepIndex,
 } from './intake-steps';
+import { PlannerTemplatePreview } from './PlannerTemplatePreview';
 
 /**
  * The guided intake: one question per screen, seven at most, then UrgAns
@@ -499,6 +500,14 @@ export function PlannerIntakeModal() {
               fromNote={intakePayload.source === 'note'}
             />
           </div>
+
+          {/* The free preview (v1.91.4): what the plan starts from, read from
+              the playbook in the browser, on the first question a person sees
+              and only once the type is known. No request and no credits; the
+              cost and the balance stay in the footer line below. */}
+          {step === firstStep && draft.releaseType ? (
+            <PlannerTemplatePreview releaseType={draft.releaseType} />
+          ) : null}
 
           <p aria-live="polite" role="status" className="sr-only">
             {`${getStepKicker(step, firstStep)}: ${stepMeta.title}`}
