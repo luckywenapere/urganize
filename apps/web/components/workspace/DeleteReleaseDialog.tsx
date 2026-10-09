@@ -8,15 +8,23 @@ import { Button } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import type { Release } from '@/types/releases';
+import {
+  describeReleaseDeletion,
+  describeTaskCountStatus,
+  fetchReleaseTaskCount,
+  isDeleteBlockedByCount,
+  type ReleaseTaskCountState,
+} from '@/lib/delete-release-task-count';
 
 type DeleteReleaseDialogProps = {
   open: boolean;
   /** Release the dialog is asking about. Null while closed (or when the
    * scope points at a release that no longer exists). */
   release: Pick<Release, 'id' | 'title'> | null;
-  /** Total task count for the release — surfaces the blast radius in the
-   * confirmation copy so the user knows exactly what goes with it. */
-  tasksTotal: number;
+  // No task-count prop on purpose (v1.92.2): a caller's count came from the
+  // client task store, which can be empty, stale or capped, and a wrong 0
+  // made a 32-activity rollout read as empty. The dialog asks the server
+  // itself; see lib/delete-release-task-count.ts.
   onClose: () => void;
   /** Called after the server confirms the deletion. The parent owns the
    * follow-up (clear scope, drop local state, re-sync). */
@@ -40,7 +48,6 @@ async function getAccessToken(): Promise<string> {
 export function DeleteReleaseDialog({
   open,
   release,
-  tasksTotal,
   onClose,
   onDeleted,
 }: DeleteReleaseDialogProps) {
@@ -57,6 +64,38 @@ export function DeleteReleaseDialog({
       setError('');
     }
   }
+
+  // The rollout's activity count, asked of the server every time the dialog
+  // opens on a rollout. Reset to `loading` at render time (same prev-guard
+  // pattern) so a reopen never flashes the previous rollout's number.
+  const releaseId = open && release ? release.id : null;
+  const [taskCount, setTaskCount] = useState<ReleaseTaskCountState>({ status: 'loading' });
+  const [prevCountKey, setPrevCountKey] = useState<string | null>(releaseId);
+  if (releaseId !== prevCountKey) {
+    setPrevCountKey(releaseId);
+    setTaskCount({ status: 'loading' });
+  }
+
+  useEffect(() => {
+    if (!releaseId) {
+      return;
+    }
+    const controller = new AbortController();
+    let cancelled = false;
+    void (async () => {
+      const accessToken = await getAccessToken().catch(() => '');
+      const next = await fetchReleaseTaskCount(releaseId, accessToken, {
+        signal: controller.signal,
+      });
+      if (!cancelled) {
+        setTaskCount(next);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [releaseId]);
 
   // Portal mount-guard — see CreateReleaseModal: AppShell's `lazy-fade`
   // wrapper carries a transform that breaks `position: fixed` for any
@@ -163,13 +202,17 @@ export function DeleteReleaseDialog({
           >
             Delete &ldquo;{release.title}&rdquo;?
           </h2>
-          <p className="mt-2 text-sm leading-6 text-content-secondary">
-            This permanently deletes the rollout
-            {tasksTotal > 0
-              ? `, its ${tasksTotal} ${tasksTotal === 1 ? 'task' : 'tasks'},`
-              : ''}{' '}
-            and all attached files. This can&rsquo;t be undone.
+          <p className="mt-2 text-sm leading-6 text-content-secondary" aria-live="polite">
+            {describeReleaseDeletion(taskCount)}
           </p>
+          {describeTaskCountStatus(taskCount) ? (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-content-tertiary">
+              {taskCount.status === 'loading' ? (
+                <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+              ) : null}
+              {describeTaskCountStatus(taskCount)}
+            </p>
+          ) : null}
         </div>
 
         {error ? (
@@ -187,7 +230,7 @@ export function DeleteReleaseDialog({
             type="button"
             variant="danger"
             onClick={() => void handleDelete()}
-            disabled={isDeleting}
+            disabled={isDeleting || isDeleteBlockedByCount(taskCount)}
             isLoading={isDeleting}
             leftIcon={isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
           >
