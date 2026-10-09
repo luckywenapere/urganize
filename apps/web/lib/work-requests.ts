@@ -13,8 +13,22 @@ import { DIRECTORY_ROLES, type DirectoryRole } from './directory-roles';
  * copies that drift. lib/work-requests-server.ts is the I/O half.
  */
 
-export const WORK_REQUEST_STATUSES = ['new', 'interested', 'passed'] as const;
+/**
+ * `expired` is a request that nobody answered in time. It is something that
+ * happens TO a request, never an answer a person gives, so
+ * `parseWorkRequestAnswer` refuses it and only the daily sweep writes it.
+ */
+export const WORK_REQUEST_STATUSES = ['new', 'interested', 'passed', 'expired'] as const;
 export type WorkRequestStatus = (typeof WORK_REQUEST_STATUSES)[number];
+
+/**
+ * How long a request waits for an answer before it closes (the directory
+ * spec, "From profile to working together": accepts, declines, or does not
+ * reply in 7 days and it closes). Closing it frees the sender's open slot and
+ * the one-open-request-per-person guard, so they can ask somebody else, or ask
+ * again.
+ */
+export const WORK_REQUEST_EXPIRY_DAYS = 7;
 
 /** Long enough to say what the job is, short enough that nobody writes a brief
  *  into it. Same cap a pitch note carries, and the CHECK enforces it too. */
@@ -160,10 +174,90 @@ export function parseWorkRequestAnswer(
  * second answer would rewrite something the sender may already have acted on.
  */
 export function canAnswerWorkRequest(
-  request: { recipientUserId: string; status: WorkRequestStatus },
-  userId: string
+  request: { recipientUserId: string; status: WorkRequestStatus; createdAt?: string | null },
+  userId: string,
+  now: Date | number = Date.now()
 ): boolean {
-  return request.recipientUserId === userId && request.status === 'new';
+  if (request.recipientUserId !== userId) return false;
+  // A request that has run out its seven days is closed even if the sweep has
+  // not got to it yet, so a late answer cannot land on something the sender
+  // has already been told is over.
+  return effectiveRequestStatus(request.status, request.createdAt ?? null, now) === 'new';
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The moment before which a still-waiting request counts as closed. ONE place
+ * computes it, and the list read, the answer route, the open-request count and
+ * the daily sweep all compare against it with a strict "created before", so a
+ * request made exactly seven days ago is the last one that can still be
+ * answered everywhere at once.
+ */
+export function workRequestCutoff(now: Date | number = Date.now()): string {
+  const at = now instanceof Date ? now.getTime() : now;
+  return new Date(at - WORK_REQUEST_EXPIRY_DAYS * DAY_MS).toISOString();
+}
+
+/** A request is stale when it is still waiting and is older than the cutoff.
+ *  An unreadable date is never stale: closing somebody's ask on a guess is the
+ *  wrong way to be wrong. */
+export function isWorkRequestStale(
+  request: { status: WorkRequestStatus; createdAt: string | null },
+  now: Date | number = Date.now()
+): boolean {
+  if (request.status !== 'new') return false;
+  const created = request.createdAt ? Date.parse(request.createdAt) : NaN;
+  if (!Number.isFinite(created)) return false;
+  return created < Date.parse(workRequestCutoff(now));
+}
+
+/**
+ * WHAT A REQUEST SHOULD READ AS RIGHT NOW. The stored status says `new` until
+ * the sweep has run (it runs once a day) and until the migration that allows
+ * `expired` has been applied, so every read goes through this instead of
+ * trusting the column. The product is therefore correct from the moment this
+ * ships, between sweeps, and in an environment where the migration has not
+ * landed yet.
+ */
+export function effectiveRequestStatus(
+  status: WorkRequestStatus,
+  createdAt: string | null,
+  now: Date | number = Date.now()
+): WorkRequestStatus {
+  return isWorkRequestStale({ status, createdAt }, now) ? 'expired' : status;
+}
+
+/** The rows a route hands back, with every stale waiting request read as
+ *  closed. Returns new objects, never the rows it was given. */
+export function withEffectiveStatus<T extends { status?: unknown; created_at?: unknown }>(
+  rows: T[],
+  now: Date | number = Date.now()
+): T[] {
+  return rows.map((row) => ({
+    ...row,
+    status: effectiveRequestStatus(
+      String(row.status ?? 'new') as WorkRequestStatus,
+      typeof row.created_at === 'string' ? row.created_at : null,
+      now
+    ),
+  }));
+}
+
+/**
+ * "NOT TAKING WORK" MEANS NOT TAKING REQUESTS. The profile has always offered
+ * the setting, and its own hint says "People know not to ask yet", but nothing
+ * enforced it: a request went through to somebody who had said no. An unknown
+ * value fails OPEN, since refusing every request to a person over a data
+ * problem is the wrong way to handle one.
+ */
+export function canReceiveRequests(availability: string | null | undefined): boolean {
+  return availability !== 'closed';
+}
+
+export function refusalForClosedAvailability(name: string): string {
+  const who = name.trim() || 'This person';
+  return `${who} is not taking work right now.`;
 }
 
 /** Fails OPEN on a count that could not be read, like every other counter in
@@ -178,6 +272,7 @@ const STATUS_COPY: Record<WorkRequestStatus, string> = {
   new: 'Waiting',
   interested: 'Interested',
   passed: 'Passed',
+  expired: 'Closed',
 };
 
 export function describeRequestStatus(status: WorkRequestStatus): string {

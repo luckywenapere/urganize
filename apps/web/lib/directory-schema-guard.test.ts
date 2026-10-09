@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 import { DIRECTORY_ROLES } from './directory-roles';
+import { WORK_REQUEST_STATUSES } from './work-requests';
 
 /**
  * The role vocabulary is written twice: once in TypeScript, once as a CHECK
@@ -21,6 +22,16 @@ const MIGRATION = join(
   'supabase',
   'migrations',
   '20260905200000_person_directory.sql'
+);
+
+const EXPIRED_MIGRATION = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'supabase',
+  'migrations',
+  '20261009130000_work_requests_expired.sql'
 );
 
 const REQUESTS_MIGRATION = join(
@@ -123,5 +134,27 @@ describe('work requests schema', () => {
 
   it('starts a request as new', () => {
     expect(sql).toMatch(/status text not null default 'new'/);
+  });
+});
+
+describe('work requests closing after seven days', () => {
+  const sql = readFileSync(EXPIRED_MIGRATION, 'utf8');
+
+  it('allows exactly the statuses TypeScript lists', () => {
+    // A status added only in TypeScript would pass every other test and then
+    // fail at the Postgres boundary the first time the sweep wrote it.
+    const inSql = checkConstraintValues(sql, 'work_requests_status_check');
+    expect(inSql.length).toBeGreaterThan(0);
+    expect([...inSql].sort()).toEqual([...WORK_REQUEST_STATUSES].sort());
+  });
+
+  it('adds no write policy, so a closed request is still only ever written by the service role', () => {
+    expect(sql).not.toMatch(/create policy/i);
+  });
+
+  it('leaves the open-request index alone, so an expired request frees the slot', () => {
+    // The index is `where status = 'new'` in the original migration. This one
+    // must not touch it: the whole point is that `expired` drops out of it.
+    expect(sql).not.toContain('work_requests_open_key');
   });
 });

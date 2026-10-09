@@ -5,11 +5,16 @@ import {
   MAX_OPEN_REQUESTS_PER_TEAM,
   RECIPIENT_REQUEST_FIELDS,
   SENDER_REQUEST_FIELDS,
+  canReceiveRequests,
   parseWorkRequestInput,
+  refusalForClosedAvailability,
   revealsContact,
+  withEffectiveStatus,
   withinOpenRequestCap,
+  workRequestCutoff,
   type WorkRequestStatus,
 } from '@/lib/work-requests';
+import { expireStaleRequestsForPair } from '@/lib/work-request-expiry-server';
 import { notifyWorkRequest } from '@/lib/work-requests-server';
 import {
   PERSON_PROFILES_TABLE,
@@ -145,7 +150,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const requests = (data || []).map(asRow);
+  // A request still marked waiting after its seven days is read as closed, so
+  // the lists are right before the daily sweep has got to it.
+  const requests = withEffectiveStatus((data || []).map(asRow));
   return NextResponse.json({
     box,
     requests: box === 'sent' ? await decorateSentRequests(adminClient, requests) : requests,
@@ -176,7 +183,7 @@ export async function POST(request: NextRequest) {
   // private" keeps the two indistinguishable.
   const { data: recipient } = await adminClient
     .from(PERSON_PROFILES_TABLE)
-    .select('user_id, display_name, visibility')
+    .select('user_id, display_name, visibility, availability')
     .eq('user_id', input.recipientUserId)
     .neq('visibility', 'private')
     .maybeSingle();
@@ -185,15 +192,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'That person is not listed.' }, { status: 404 });
   }
 
+  // "Not taking work" is enforced here and not only by hiding the button,
+  // because a request is a plain API call and the button is a courtesy. A
+  // listed person who has closed their availability cannot be asked, and the
+  // sender is told why rather than having it quietly sit unanswered.
+  if (!canReceiveRequests(asRow(recipient).availability as string | null)) {
+    return NextResponse.json(
+      { error: refusalForClosedAvailability(String(asRow(recipient).display_name || '')) },
+      { status: 409 }
+    );
+  }
+
   const team = await getTeamAccessForUser(auth.user.id, auth.user.email);
 
   // The cap counts OPEN requests only, so a team that follows up on what it
-  // sent is never blocked. Fails open on an unreadable count.
+  // sent is never blocked. A request past its seven days is closed even if the
+  // daily sweep has not got to it, so it does not count. Fails open on an
+  // unreadable count.
   const { count, error: countError } = await adminClient
     .from(WORK_REQUESTS_TABLE)
     .select('id', { count: 'exact', head: true })
     .eq('workspace_id', team.primaryWorkspaceId)
-    .eq('status', 'new');
+    .eq('status', 'new')
+    .gte('created_at', workRequestCutoff());
 
   if (!withinOpenRequestCap(countError ? null : count ?? 0)) {
     return NextResponse.json(
@@ -205,6 +226,16 @@ export async function POST(request: NextRequest) {
   }
 
   const senderName = auth.user.user_metadata?.name || auth.user.email || 'Someone on Urganize';
+
+  // Close this team's stale ask to this person for this role first. The partial
+  // unique index counts a request that has run out its seven days until the
+  // daily sweep closes it, and "you already asked" for something that closed
+  // days ago is the one answer a sender could not act on.
+  await expireStaleRequestsForPair(adminClient, {
+    workspaceId: team.primaryWorkspaceId,
+    recipientUserId: input.recipientUserId,
+    role: input.role,
+  });
 
   const { data, error } = await adminClient
     .from(WORK_REQUESTS_TABLE)

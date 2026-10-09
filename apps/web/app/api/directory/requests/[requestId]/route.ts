@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { canAnswerWorkRequest, parseWorkRequestAnswer, type WorkRequestStatus } from '@/lib/work-requests';
+import {
+  canAnswerWorkRequest,
+  effectiveRequestStatus,
+  parseWorkRequestAnswer,
+  workRequestCutoff,
+  type WorkRequestStatus,
+} from '@/lib/work-requests';
 import { notifyWorkRequestAnswer } from '@/lib/work-requests-server';
 import {
   WORK_REQUESTS_TABLE,
@@ -46,25 +52,35 @@ export async function PATCH(
 
   const { data: existing } = await adminClient
     .from(WORK_REQUESTS_TABLE)
-    .select('id, recipient_user_id, sender_user_id, status, role, sender_name')
+    .select('id, recipient_user_id, sender_user_id, status, role, sender_name, created_at')
     .eq('id', requestId)
     .maybeSingle();
 
   if (!existing) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
 
   const row = asRow(existing);
+  const storedStatus = String(row.status || 'new') as WorkRequestStatus;
+  const createdAt = typeof row.created_at === 'string' ? row.created_at : null;
   const answerable = canAnswerWorkRequest(
     {
       recipientUserId: String(row.recipient_user_id || ''),
-      status: String(row.status || 'new') as WorkRequestStatus,
+      status: storedStatus,
+      createdAt,
     },
     auth.user.id
   );
 
   if (!answerable) {
-    // Already answered is a different thing from not yours, and the recipient
-    // deserves to be told which. A stranger gets the flat 404 above.
+    // Already answered, or closed after seven days, is a different thing from
+    // not yours, and the recipient deserves to be told which. A stranger gets
+    // the flat 404 above.
     if (String(row.recipient_user_id || '') === auth.user.id) {
+      if (effectiveRequestStatus(storedStatus, createdAt) === 'expired') {
+        return NextResponse.json(
+          { error: 'This request closed after 7 days with no answer.' },
+          { status: 409 }
+        );
+      }
       return NextResponse.json({ error: 'You already answered this one.' }, { status: 409 });
     }
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
@@ -77,6 +93,9 @@ export async function PATCH(
     // lock, the same call the curator invite and the plan claim both make.
     .eq('id', requestId)
     .eq('status', 'new')
+    // And still inside its seven days, so an answer cannot land in the gap
+    // between the check above and the update on a request that has just closed.
+    .gte('created_at', workRequestCutoff())
     .select('id, role, note, status, reply, sender_name, sender_team, created_at, answered_at')
     .maybeSingle();
 

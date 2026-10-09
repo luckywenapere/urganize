@@ -93,7 +93,12 @@ export function SentRequestsList({
 
   if (!loaded || shown.length === 0) return null;
 
-  const answered = shown.filter((request) => request.status !== 'new');
+  // A request that closed after seven days with no reply is not an answer: it
+  // is neither a yes nor a no, and counting it would tell the sender somebody
+  // had replied when they had not.
+  const answered = shown.filter(
+    (request) => request.status !== 'new' && request.status !== 'expired'
+  );
   const heading =
     answered.length > 0
       ? `${answered.length} of ${shown.length} ${shown.length === 1 ? 'person has' : 'people have'} answered`
@@ -121,6 +126,12 @@ export function SentRequestsList({
 
             {request.reply ? (
               <p className="mt-2 text-sm text-content-secondary">{request.reply}</p>
+            ) : null}
+
+            {request.status === 'expired' ? (
+              <p className="mt-2 text-sm text-content-tertiary">
+                No answer in 7 days, so this one closed. You can ask again.
+              </p>
             ) : null}
 
             {contact ? (

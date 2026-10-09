@@ -125,3 +125,109 @@ export function summarizeDirectory(input: {
     },
   };
 }
+
+/**
+ * What happened to the requests people sent.
+ *
+ * The directory's job is to turn a find into work, and the first number on that
+ * road is whether anybody answers. `directory_role_wanted` counts looking; this
+ * counts asking. Read from `work_requests` itself, which already holds every
+ * sent request with its status, so there is nothing new to record and nothing
+ * that can drift from what actually happened.
+ *
+ * A request still marked waiting after its seven days is counted as CLOSED, the
+ * same read-time rule the app uses (effectiveRequestStatus), so this page is
+ * right even before the daily sweep has run or the migration that allows the
+ * stored word has been applied.
+ *
+ * THE REPLY RATE LEAVES OUT REQUESTS STILL WAITING. A request sent an hour ago
+ * has not had a chance to be answered yet; counting it as unanswered would make
+ * the rate swing with whenever somebody happened to look. The denominator is
+ * answered plus closed, the requests whose outcome is known. Null when there is
+ * nothing to divide, never a made-up zero.
+ */
+export type WorkRequestRow = { status: string; createdAt: string };
+
+export type WorkRequestCounts = {
+  sent: number;
+  interested: number;
+  passed: number;
+  closed: number;
+  waiting: number;
+};
+
+export type WorkRequestWeek = WorkRequestCounts & {
+  /** Monday of the week, UTC, as YYYY-MM-DD. */
+  weekStart: string;
+};
+
+export type WorkRequestSummary = {
+  totals: WorkRequestCounts & {
+    /** Answered over answered plus closed. Null until anything has a known outcome. */
+    replyRate: number | null;
+  };
+  /** Newest week first, only weeks that had a request. */
+  weeks: WorkRequestWeek[];
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function weekStartOf(time: number): string {
+  const date = new Date(time);
+  // getUTCDay: Sunday 0. Monday is the start, so Sunday belongs to the week
+  // before it.
+  const sinceMonday = (date.getUTCDay() + 6) % 7;
+  const monday = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - sinceMonday);
+  return new Date(monday).toISOString().slice(0, 10);
+}
+
+function emptyCounts(): WorkRequestCounts {
+  return { sent: 0, interested: 0, passed: 0, closed: 0, waiting: 0 };
+}
+
+export function summarizeWorkRequests(
+  rows: WorkRequestRow[],
+  now: Date | number = Date.now(),
+  expiryDays = 7
+): WorkRequestSummary {
+  const nowMs = now instanceof Date ? now.getTime() : now;
+  const cutoff = nowMs - expiryDays * DAY_MS;
+
+  const totals = emptyCounts();
+  const byWeek = new Map<string, WorkRequestCounts>();
+
+  for (const row of rows) {
+    const created = Date.parse(row.createdAt);
+    // A row with no readable date cannot be placed in a week, and guessing
+    // would put it in the wrong one. Left out of the weekly table, still counted
+    // in the totals, and read as it is stored.
+    const known = Number.isFinite(created);
+
+    let outcome: keyof Omit<WorkRequestCounts, 'sent'>;
+    if (row.status === 'interested') outcome = 'interested';
+    else if (row.status === 'passed') outcome = 'passed';
+    else if (row.status === 'expired') outcome = 'closed';
+    else if (known && created < cutoff) outcome = 'closed';
+    else outcome = 'waiting';
+
+    totals.sent += 1;
+    totals[outcome] += 1;
+
+    if (!known) continue;
+    const key = weekStartOf(created);
+    const week = byWeek.get(key) ?? emptyCounts();
+    week.sent += 1;
+    week[outcome] += 1;
+    byWeek.set(key, week);
+  }
+
+  const answered = totals.interested + totals.passed;
+  const known = answered + totals.closed;
+
+  return {
+    totals: { ...totals, replyRate: known === 0 ? null : answered / known },
+    weeks: [...byWeek.entries()]
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([weekStart, counts]) => ({ weekStart, ...counts })),
+  };
+}
