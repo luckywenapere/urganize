@@ -90,7 +90,7 @@ export async function loadScoreboardInput(
         (from, to) =>
           client
             .from('subscriptions')
-            .select('user_id, plan, status, amount, billing_interval, expires_at')
+            .select('user_id, plan, status, amount, billing_interval, expires_at, started_at')
             .order('user_id', { ascending: true })
             .range(from, to),
         TABLE_CAP
@@ -187,6 +187,7 @@ export async function loadScoreboardInput(
       amountMinor: typeof row.amount === 'number' ? row.amount : null,
       billingInterval: str(row.billing_interval),
       expiresAt: str(row.expires_at),
+      startedAt: str(row.started_at),
     }));
   const subscriptionByUser = new Map(subscriptionRows.map((sub) => [sub.userId, sub]));
 

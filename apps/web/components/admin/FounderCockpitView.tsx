@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { AdminBarChart } from '@/components/admin/AdminBarChart';
 import { FunnelStrip } from '@/components/admin/FunnelStrip';
 import { UrgansPanel } from '@/components/admin/UrgansPanel';
+import { ChurnPanel } from '@/components/admin/ChurnPanel';
+import type { ChurnSummary } from '@/lib/admin-churn';
 import type { AdminFunnel } from '@/lib/admin-funnel';
 import type { UrgansUsage } from '@/lib/admin-urgans-usage';
 import { InfoTip } from '@/components/shared/HelpTip';
@@ -15,7 +17,7 @@ import {
   growthVerdict,
 } from '@/lib/founder-cockpit-format';
 import { formatNaira, formatRate } from '@/lib/scoreboard-format';
-import { firstName, messageMailto, stageLine } from '@/lib/admin-message-list';
+import { firstName, messageComposeHref, messageMailto, stageLine } from '@/lib/admin-message-list';
 
 // The founder cockpit at the top of /admin (2026-10-09). Display only: it
 // fetches nothing and holds no state, so AdminHubClient owns the loading and
@@ -23,7 +25,8 @@ import { firstName, messageMailto, stageLine } from '@/lib/admin-message-list';
 //
 // Order, most important first (iteration 4 review): the North Star and the
 // number that moves before it, their 8-week trend, the stage numbers, who
-// needs a message this week, then the funnel and the UrgAns panel.
+// needs a message this week, churn (iteration 5), then the funnel and the
+// UrgAns panel.
 //
 // House rule (2026-10-05): no grey sentence stacked under a heading. What a
 // number means sits behind its info icon; a line under a number is only ever a
@@ -76,6 +79,7 @@ export function FounderCockpitView({
   cockpit,
   funnels = [],
   urgans = null,
+  churn = null,
   sources,
 }: {
   cockpit: FounderCockpit;
@@ -83,6 +87,8 @@ export function FounderCockpitView({
   funnels?: AdminFunnel[];
   /** UrgAns, credits and release outcomes. Null hides the panel. */
   urgans?: UrgansUsage | null;
+  /** Logo churn and gross MRR churn by month. Null hides the panel. */
+  churn?: ChurnSummary | null;
   sources: AdminReadSource[];
 }) {
   const problems = sources.filter((source) => source.status !== 'ok' || source.truncated);
@@ -207,7 +213,7 @@ export function FounderCockpitView({
       <div className="mt-6">
         <Label
           text="Needs a message"
-          info="Paying teams where fewer than 2 people did something this week, then teams that were active last week and are quiet this week. Paying teams first. Each shows the first stage of the customer lifecycle it has not finished and who owns that stage; the strategy doc says that person writes within 3 days. Email opens a draft in your own mail app. Nothing is sent from here."
+          info="Paying teams where fewer than 2 people did something this week, then teams that were active last week and are quiet this week. Paying teams first. Each shows the first stage of the customer lifecycle it has not finished and who owns that stage; the strategy doc says that person writes within 3 days. Draft in Emails opens the admin email page with the message filled in, so it goes out from the Urganize address and is kept with the other admin emails; or open it in your own mail app. Nothing is sent until you press Send."
         />
         {cockpit.atRisk.length === 0 ? (
           <p className="mt-3 text-sm text-content-secondary">No team has slipped this week.</p>
@@ -217,6 +223,11 @@ export function FounderCockpitView({
               const mailto = messageMailto({
                 email: team.ownerEmail,
                 ownerName: team.ownerName,
+                teamName: team.name,
+                stage: team.stalledAt.stage,
+              });
+              const draftHref = messageComposeHref({
+                email: team.ownerEmail,
                 teamName: team.name,
                 stage: team.stalledAt.stage,
               });
@@ -244,14 +255,22 @@ export function FounderCockpitView({
                       {stageLine(team.stalledAt.stage)}. {team.stalledAt.missing}.
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
+                  <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 sm:flex-col sm:items-end sm:gap-1">
                     <span className="text-xs tabular-nums text-content-secondary">{lastSeen(team.lastActiveAt)}</span>
+                    {draftHref ? (
+                      <Link
+                        href={draftHref}
+                        className="motion-focus inline-flex h-8 items-center rounded-lg border border-stroke-default px-3 text-xs font-medium text-content-primary transition-colors hover:bg-bg-hover"
+                      >
+                        Draft in Emails to {firstName(team.ownerName) ?? 'owner'}
+                      </Link>
+                    ) : null}
                     {mailto ? (
                       <a
                         href={mailto}
-                        className="motion-focus inline-flex h-8 items-center rounded-lg border border-stroke-default px-3 text-xs font-medium text-content-primary transition-colors hover:bg-bg-hover"
+                        className="motion-focus text-xs font-medium text-brand hover:underline"
                       >
-                        Email {firstName(team.ownerName) ?? 'owner'}
+                        Or use my mail app
                       </a>
                     ) : null}
                   </div>
@@ -261,6 +280,8 @@ export function FounderCockpitView({
           </ul>
         )}
       </div>
+
+      {churn ? <ChurnPanel churn={churn} /> : null}
 
       {funnels.length > 0 ? <FunnelStrip funnels={funnels} /> : null}
 

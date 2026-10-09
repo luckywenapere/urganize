@@ -5,7 +5,8 @@ import { buildScoreboard } from '@/lib/scoreboard';
 import { attachOwnerContacts, buildFounderCockpit } from '@/lib/founder-cockpit';
 import { buildFunnels, FUNNEL_WINDOWS, type WaitlistEntry } from '@/lib/admin-funnel';
 import type { AdminReadSource } from '@/lib/admin-read-server';
-import { loadScoreboardInput } from '@/lib/scoreboard-server';
+import { scoreboardReadCache } from '@/lib/scoreboard-cache-server';
+import { churnSummary } from '@/lib/admin-churn';
 import { buildUrgansUsage } from '@/lib/admin-urgans-usage';
 import { loadUrgansUsageRows } from '@/lib/admin-urgans-usage-server';
 import { RODI_PER_USD } from '@/lib/credits/pricing';
@@ -26,6 +27,10 @@ import { RODI_PER_USD } from '@/lib/credits/pricing';
 // ledger's spends and refunds over the last 8 weeks, also in parallel.
 // Iteration 4 added the owner's name and email to each "Needs a message" team
 // (read with the owners' profiles the Scoreboard already loads, no new query).
+// Iteration 5 (2026-10-10): the Scoreboard's rows come from the read cache the
+// Scoreboard route shares (lib/scoreboard-cache-server.ts), so opening both
+// pages reads them once; and the churn numbers (lib/admin-churn.ts) are worked
+// out from the same rows, with no new read.
 
 export const maxDuration = 60;
 
@@ -84,12 +89,14 @@ export async function GET(request: NextRequest) {
   const client = admin.supabaseAdmin as SupabaseClient;
 
   try {
-    const now = new Date();
-    const [{ input, sources, extras }, waitlist, urgansRows] = await Promise.all([
-      loadScoreboardInput(client, now),
+    const fresh = request.nextUrl.searchParams.get('fresh') === '1';
+    const [{ input, sources, extras }, waitlist] = await Promise.all([
+      scoreboardReadCache.get(client, { fresh }),
       readWaitlist(),
-      loadUrgansUsageRows(client, now),
     ]);
+    // After the shared read, so the UrgAns windows end at the same moment as
+    // every other number (a cached read keeps the time it was made).
+    const urgansRows = await loadUrgansUsageRows(client, input.now);
     const board = buildScoreboard(input);
     const cockpit = buildFounderCockpit(input, board);
     // Owner name and email for the "Needs a message" teams only (iteration 4),
@@ -99,6 +106,7 @@ export async function GET(request: NextRequest) {
       {
         cockpit,
         funnels: buildFunnels(input, waitlist.entries, extras.ownerEmails),
+        churn: churnSummary(input),
         urgans: buildUrgansUsage(
           input,
           board.secondRelease,

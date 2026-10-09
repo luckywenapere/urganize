@@ -85,12 +85,12 @@ does.
 | 5 | Time to first rollout | Median days, sign-up to first real rollout, last 90 days | `profiles.created_at`, `releases.created_at` | **Shipped** |
 | 6 | Week 4 retention | Newest 4 complete weekly cohorts, pooled | `weekFourRetention` | **Shipped** |
 | 7 | Paying teams + MRR | Doc section 2 | `subscriptions` | **Shipped** |
-| 8 | Needs a message | Paying teams under 2 active people; teams that went quiet this week; each with owner name + email, the lifecycle stage it stalled at (doc section 6) and its owner, and a mailto draft | Board rows + activity; owner `profiles.name`/`email` | **Shipped** (contacts and stage: iteration 4) |
+| 8 | Needs a message | Paying teams under 2 active people; teams that went quiet this week; each with owner name + email, the lifecycle stage it stalled at (doc section 6) and its owner, and a "Draft in Emails" link (the admin composer, prefilled) with a mailto beside it | Board rows + activity; owner `profiles.name`/`email` | **Shipped** (contacts and stage: iteration 4; Draft in Emails: iteration 5) |
 | 9 | Runway / default alive | Months of cash at current burn | Cash and spend are not in the database | **Needs data**, shown as "Not tracked" |
 | 10 | Second-release rate + rollouts live this week | Doc section 7 (bar 60%); rollouts whose `releaseLiveAt` falls in the last 7 days | `secondReleaseSummary`, `releaseLiveAt` | **Shipped** (iteration 3) |
 | 11 | Funnel: waitlist → account → first rollout → activated → trial over → paid | Teams that signed up in the last 30 or 90 days (past their first 3 days), how far each got | Supabase via `ScoreboardInput`; waitlist from Neon `"User"`, matched to team owners by email | **Shipped** (iteration 2). Waitlist shows "Not tracked" where `DATABASE_URL` is unset |
 | 12 | UrgAns use + credits + AI cost | Share of weekly active paying teams that used UrgAns inside a rollout this week (seed bar: half); credits spent per week (spends minus refunds, 8 weeks) and per active team; AI cost this week per active team | `ai_usage_events` (cost + release + feature), `credit_ledger` spend/refund rows | **Shipped** (iteration 3). Cost per active team falls back to the ledger's `provider_cost_rodi`; "Not tracked" when neither reads |
-| 13 | Logo churn + NRR | Paying teams lost per month; MRR kept from last month's payers | `subscriptions` history (status changes are overwritten, so needs care) | Later; may need data |
+| 13 | Logo churn + gross MRR churn; NRR | Paying teams lost per calendar month out of those paying at its start; MRR of subscriptions that stopped out of start-of-month MRR; 3 full months + this month so far | `subscriptions.started_at` → last paid day (`expires_at` once passed), today's price | **Shipped** (iteration 5). Net MRR churn and NRR show "Not tracked": a plan change overwrites the price, so upgrades and downgrades are not stored |
 
 Rules every number on the cockpit follows: one definition (the Scoreboard's),
 a definition behind an info icon, empty data shown as "No data yet" or "Not
@@ -132,8 +132,9 @@ percentage.
 - Three different "active" rules (Scoreboard: did something; Metrics: also
   opened the app or signed in; Growth: accounts). Each is labelled on its own
   page; the cockpit uses only the Scoreboard's.
-- The Scoreboard and the cockpit read the same rows separately on each visit
-  (about the same cost twice if both are opened).
+- ~~The Scoreboard and the cockpit read the same rows separately on each visit
+  (about the same cost twice if both are opened).~~ Fixed in iteration 5: one
+  shared read, reused for a minute (`lib/scoreboard-cache-server.ts`).
 
 ---
 
@@ -206,32 +207,67 @@ percentage.
   reads "Overview" like its menu row, with the grey intro paragraph moved
   behind an info icon (house rule).
 
+- **Iteration 5 (2026-10-10): churn, Draft in Emails, one read.**
+  One combined PR again (Vercel's deploy cap). (a) **Churn and revenue kept**
+  on the cockpit, under Needs a message (`lib/admin-churn.ts`, pure, tested;
+  words in `lib/admin-churn-format.ts`; shown by
+  `components/admin/ChurnPanel.tsx`). What is stored decides what is shown:
+  one subscriptions row per account, overwritten, so each subscription gives
+  one stretch of paying from `started_at` (set by the first charge and by Mark
+  paid, never by renewals) to its last paid day once that has passed. Logo
+  churn = paying teams (the Scoreboard's rule: not Solo, not comped, not
+  allowlisted) lost in a calendar month / paying at its start; gross MRR churn
+  = MRR of subscriptions that stopped in the month / MRR at its start (Solo
+  included, as in MRR). Three full months and this month so far, with Lenny's
+  bars (logo churn 2.5 to 5% good, under 1.5% great; NRR about 90% good, 110%
+  great) behind the info icons. **Net MRR churn and NRR are "Not tracked"**:
+  a plan change overwrites the price, so upgrades and downgrades are not kept.
+  Lost counts are "at least" (a team that stopped and came back was
+  overwritten), start-of-month MRR uses today's price, and paid rows with no
+  `started_at` (or stopped early with no date) are counted as left out, never
+  guessed. `profiles.paid_at` was NOT used as the start: the renewal webhook
+  rewrites it on every charge, so it is the latest payment, not the first.
+  No new query: `started_at` joins the subscriptions select the Scoreboard
+  already runs. (b) **Draft in Emails.** `/admin/emails/new` reads
+  `?to=&subject=&body=` (`lib/email/compose-prefill.ts`: one plain address or
+  none, subject and body cut to the composer's limits and stripped of control
+  characters, shown only as input values) under a Suspense boundary, so the
+  route is still built static. It opens aimed at that one person with a "draft
+  filled in, nothing is sent until you press Send" note; Send keeps its
+  confirm and every backing route keeps its ADMIN_EMAILS check. The cockpit's
+  Needs a message rows now lead with "Draft in Emails to <name>"; the mailto
+  stays as "Or use my mail app". The composer adds "Hi <name>," itself, so
+  the prefilled body is the stage opener alone. (c) **One read for both
+  pages.** `GET /api/admin/cockpit` and `GET /api/admin/scoreboard` share
+  `scoreboardReadCache` (`lib/scoreboard-cache-server.ts`): a read made in the
+  last 60 seconds is reused and two requests in flight share one read; a failed
+  read is never kept; the Scoreboard's Refresh asks `?fresh=1`. A test builds
+  every number both pages send from a fresh read and from the cache (twice)
+  and requires them identical. The cache lives in one server instance's
+  memory, so it only helps when both requests reach the same warm instance.
+  (d) **Stage owners in one place.** `LIFECYCLE_STAGES` in
+  `lib/admin-message-list.ts` holds all eight stages and owners; `STAGE_INFO`
+  reads from it, and a test reads the strategy doc's section 6 table and fails
+  if a label or owner drifts.
+
 ## 6. Next (ordered; one PR each)
 
 1. **Runway, the honest way.** A founder-entered monthly figure (cash, monthly
    spend) needs storage, so it waits for a migration slot; until then, a link
    to wherever the monthly money review lives. Default alive = MRR growth
    carried forward vs spend, shown only when both numbers exist.
-2. **Logo churn and net revenue retention, monthly.** Needs a reliable record
-   of when a subscription stopped; check whether `billing_events` or Paystack
-   webhooks already give it before proposing a table.
-3. **"Draft in Emails" instead of mailto.** Let `/admin/emails/new` accept a
-   prefilled recipient, subject and body (query params read under a Suspense
-   boundary so the route stays static), then point the Needs a message button
-   at it, so the message goes out from the Urganize address and is logged with
-   the other admin emails. Still never sent without the founder pressing Send.
-4. **Read the cockpit once.** The Scoreboard and the cockpit each run the same
-   reads on every visit; a short server cache (or one route feeding both
-   pages) halves the cost when both are opened.
-5. **Leave our own accounts out (if the founder says yes).** See the open
+2. **Net revenue retention, properly.** Needs a record of each plan change
+   with its old and new price (a `billing_events` row written on every
+   upgrade, downgrade and Mark paid, no migration: `type` is free text), and
+   then a month or two of history before the number means anything. Until
+   then NRR stays "Not tracked".
+3. **Leave our own accounts out (if the founder says yes).** See the open
    question below; `/admin/metrics` already has the internal-email list.
-6. **Stage owners from one place.** The owner names (Chidera, Lucky) are
-   copied from the strategy doc's lifecycle table into `STAGE_INFO`; if the
-   table changes often, read them from a small config instead.
-7. **Last week's message list.** Whether each stalled team got its message
-   within 3 days needs a record of messages sent (the Emails tool's log could
-   give it once drafts go through it, item 3).
-8. **Sean Ellis survey count.** Only if the founder runs the survey in-app or
+4. **Last week's message list.** Whether each stalled team got its message
+   within 3 days needs a record of messages sent. Drafts now go through the
+   Emails tool (iteration 5), so its log can answer it: match each listed
+   team's owner email to admin emails sent in the 3 days after it was listed.
+5. **Sean Ellis survey count.** Only if the founder runs the survey in-app or
    in a form we can read; otherwise leave it off.
 
 ## 7. Open questions for the founder
@@ -241,6 +277,14 @@ percentage.
   The Scoreboard does not leave them out today, so the cockpit matches it.
 - Where do cash and monthly spend live today (a sheet, the bank)? That decides
   how runway gets onto the cockpit.
+- Churn counts a team as lost on its last paid day. Should a failed monthly
+  renewal get a few days' grace (Paystack retries for about 3 days) before it
+  counts, so a card that fails and then clears is not counted as lost for a
+  day? Today it is counted until the renewal lands, then disappears.
+- Should we start logging every plan change (old price, new price) so net
+  revenue retention can be worked out from next month on? It is a small
+  write in the billing routes, not a migration, but it touches billing code,
+  so it waits for a yes.
 - The UrgAns share counts chat, plans, press kits, pitch kits and Spotify
   pitches tied to a rollout, and leaves out status updates and task outcome
   replies (the app makes those on the side of something else). If "use

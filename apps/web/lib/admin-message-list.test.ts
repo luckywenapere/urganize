@@ -1,6 +1,12 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parseComposePrefill } from './email/compose-prefill';
 import {
+  LIFECYCLE_STAGES,
   STAGE_INFO,
+  messageComposeHref,
+  messageDraft,
   firstName,
   isMailtoSafeEmail,
   messageMailto,
@@ -93,5 +99,62 @@ describe('messageMailto', () => {
       (stage) => new URL(messageMailto({ email: 'a@b.co', ownerName: null, teamName: null, stage }) as string).searchParams.get('body')
     );
     expect(new Set(bodies).size).toBe(bodies.length);
+  });
+});
+
+describe('messageComposeHref (Draft in Emails)', () => {
+  it('opens the admin composer aimed at the owner alone, with the subject and opener filled in', () => {
+    const href = messageComposeHref({ email: 'ada@example.com', teamName: 'Obi & Co', stage: 'convert' });
+    expect(href?.startsWith('/admin/emails/new?')).toBe(true);
+    const draft = parseComposePrefill(new URL(href as string, 'https://app.urganize.app').searchParams);
+    expect(draft).toEqual({
+      to: 'ada@example.com',
+      subject: 'Checking in on Obi & Co',
+      body: messageDraft({ teamName: 'Obi & Co', stage: 'convert' }).ask,
+    });
+    // The composer adds "Hi <name>," itself, so the draft does not.
+    expect(draft?.body.startsWith('Hi')).toBe(false);
+  });
+
+  it('gives no link when the email is missing or could add a recipient', () => {
+    for (const email of [null, '', 'not-an-email', 'a@b.co,c@d.co', 'a@b.co?cc=x@y.co']) {
+      expect(messageComposeHref({ email, teamName: 'T', stage: 'activate' })).toBeNull();
+    }
+  });
+
+  it('says the same thing as the mailto draft', () => {
+    for (const stage of Object.keys(STAGE_INFO) as Array<keyof typeof STAGE_INFO>) {
+      const mail = new URL(messageMailto({ email: 'a@b.co', ownerName: 'Ada', teamName: 'T', stage }) as string);
+      const compose = parseComposePrefill(
+        new URL(messageComposeHref({ email: 'a@b.co', teamName: 'T', stage }) as string, 'https://x.test').searchParams
+      );
+      expect(mail.searchParams.get('subject')).toBe(compose?.subject);
+      expect(mail.searchParams.get('body')).toContain(compose?.body as string);
+    }
+  });
+});
+
+describe('stage owners, kept in one place', () => {
+  it('matches the owners in the strategy doc lifecycle table (section 6)', () => {
+    const doc = readFileSync(resolve(__dirname, '../../../docs/strategy/company-strategy.md'), 'utf8');
+    const section = doc.slice(doc.indexOf('## 6. Customer lifecycle'), doc.indexOf('## 7.'));
+    const rows = section
+      .split('\n')
+      .map((line) => line.match(/^\|\s*(\d+)\.\s*([^|]+?)\s*\|[^|]*\|\s*([^|]+?)\s*\|/))
+      .filter((match): match is RegExpMatchArray => Boolean(match))
+      .map((match) => ({ number: Number(match[1]), label: match[2], owner: match[3] }));
+    expect(rows).toHaveLength(LIFECYCLE_STAGES.length);
+    for (const stage of LIFECYCLE_STAGES) {
+      const row = rows.find((entry) => entry.number === stage.number);
+      expect(row?.label).toBe(stage.label);
+      // "Lucky (KB follows up)" is owned by Lucky.
+      expect(row?.owner.split(' (')[0]).toBe(stage.owner);
+    }
+  });
+
+  it('reads the stalled stages from that one list', () => {
+    for (const info of Object.values(STAGE_INFO)) {
+      expect(LIFECYCLE_STAGES).toContainEqual(info);
+    }
   });
 });
