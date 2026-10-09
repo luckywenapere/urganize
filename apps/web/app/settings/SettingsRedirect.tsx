@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { legacySettingsTarget, settingsDeepLink } from '@/lib/settings-nav';
+import { settingsDeepLink } from '@/lib/settings-nav';
+import { settingsStubTarget } from '@/lib/settings-stub-target';
 
 /**
  * `/settings` is not a page any more (2026-09-29). Settings is a pop-up that
@@ -13,8 +14,12 @@ import { legacySettingsTarget, settingsDeepLink } from '@/lib/settings-nav';
  *
  * It has to run in the browser, not on the server, because a URL hash never
  * reaches the server and `#directory` / `#brand-colors` / `#teammates` are the
- * links that matter most. The mapping itself is `legacySettingsTarget` in
- * lib/settings-nav.ts, which is where it is tested.
+ * links that matter most. The mapping itself is `settingsStubTarget` in
+ * lib/settings-stub-target.ts (old `?tab=`/`#anchor` links via
+ * `legacySettingsTarget`, plus the pop-up's own `?settings=`), which is where
+ * it is tested.
+ *
+ * Also rendered by `/dashboard/settings` (v1.92.6), the path people guess.
  *
  * It reads `window.location` in an effect rather than `useSearchParams`, the
  * `/auth` rule: `useSearchParams` in a statically prerendered client page makes
@@ -27,7 +32,7 @@ export default function SettingsRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    const { segment, section } = legacySettingsTarget(window.location.search, window.location.hash);
+    const { segment, section } = settingsStubTarget(window.location.search, window.location.hash);
     router.replace(settingsDeepLink({ segment, section }));
   }, [router]);
 

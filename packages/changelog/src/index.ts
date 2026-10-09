@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.6",
+    date: "October 9, 2026",
+    highlights: [
+      "Opening, reloading or sharing a Settings link now always lands on Settings over your catalog, never on a \"page not found\" screen.",
+    ],
+  },
+  {
     version: "1.92.5",
     date: "October 9, 2026",
     highlights: [
