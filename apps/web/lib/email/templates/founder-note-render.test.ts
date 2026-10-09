@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { renderEmail } from '../render';
 import { OnboardingStepEmail, onboardingStepSubject } from './OnboardingStepEmail';
 import { AnnouncementEmail } from './AnnouncementEmail';
+import { WelcomeEmail, WELCOME_SUBJECT } from './WelcomeEmail';
 import { ONBOARDING_STEP_KEYS, getOnboardingStep } from '../onboarding-sequence';
 
 function expectMailSafe(html: string) {
@@ -52,6 +53,38 @@ describe('OnboardingStepEmail', () => {
     expect(whatsapp).not.toMatch(/text-decoration-line:none/);
     expect(whatsapp).toMatch(/overflow-wrap:anywhere/);
     expect(html).not.toMatch(/word-break:break-all/);
+  });
+});
+
+// The founder signs as "Wena" (founder call, 2026-10-09), never "Lucky". Held for
+// every email that carries the founder's voice: the welcome, all five sequence
+// steps and the admin composer's sign-off.
+describe('the founder signs as Wena', () => {
+  it('uses Wena in the welcome note, its subject and every sequence step', async () => {
+    const welcome = await renderEmail(WelcomeEmail({ recipientName: 'Ada' }));
+    const parts = [WELCOME_SUBJECT, welcome.html, welcome.text];
+    for (const step of ONBOARDING_STEP_KEYS) {
+      const { html, text } = await renderEmail(OnboardingStepEmail({ step, recipientName: 'Ada' }));
+      parts.push(onboardingStepSubject(step), html, text);
+    }
+    for (const part of parts) expect(part).not.toContain('Lucky');
+    expect(WELCOME_SUBJECT).toContain('Wena');
+    expect(welcome.text).toContain('Wena here.');
+    expect(welcome.text).toMatch(/Wena\s+Founder, Urganize/);
+  });
+
+  it('signs a composer announcement as Wena', async () => {
+    const { text } = await renderEmail(
+      AnnouncementEmail({
+        subject: 'News',
+        body: 'Hello there.',
+        recipientName: 'Ada',
+        includeGreeting: true,
+        signOff: true,
+      })
+    );
+    expect(text).toMatch(/Wena\s+Founder, Urganize/);
+    expect(text).not.toContain('Lucky');
   });
 });
 

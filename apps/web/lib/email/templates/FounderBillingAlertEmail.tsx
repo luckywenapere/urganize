@@ -22,7 +22,7 @@ export function FounderBillingAlertEmail({ kind, context }: FounderBillingAlertE
   const facts = buildFounderAlertFacts(context);
 
   return (
-    <EmailLayout preview={headline}>
+    <EmailLayout preview={headline} socials={false}>
       <Text style={{ margin: '0 0 14px', color: BODY_TEXT, fontSize: '14px', fontWeight: 600 }}>
         {headline}
       </Text>

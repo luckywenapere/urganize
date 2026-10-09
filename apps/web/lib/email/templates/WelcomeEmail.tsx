@@ -27,12 +27,12 @@ export function WelcomeEmail({ recipientName, unsubscribeUrl }: WelcomeEmailProp
 
   return (
     <EmailLayout
-      preview="A note from Lucky, the founder of Urganize."
+      preview="A note from Wena, the founder of Urganize."
       footer={unsubscribeUrl ? <UnsubscribeFooter url={unsubscribeUrl} /> : undefined}
     >
       <Paragraph>{greeting}</Paragraph>
       <Paragraph>
-        Lucky here. I&rsquo;m the founder of Urganize. Thanks for signing up.
+        Wena here. I&rsquo;m the founder of Urganize. Thanks for signing up.
       </Paragraph>
       <Paragraph>
         I built this because running a rollout across group chats and spreadsheets kept breaking my
@@ -48,7 +48,7 @@ export function WelcomeEmail({ recipientName, unsubscribeUrl }: WelcomeEmailProp
         When you&rsquo;re ready, <AccentLink href={APP_URL}>set up your first rollout</AccentLink>.
       </Paragraph>
       <Text style={{ margin: '24px 0 0', color: '#1e2621', fontSize: '15px', lineHeight: '1.65' }}>
-        Lucky
+        Wena
         <br />
         <span style={{ color: MUTED_TEXT, fontSize: '13px' }}>Founder, Urganize</span>
       </Text>
@@ -56,4 +56,4 @@ export function WelcomeEmail({ recipientName, unsubscribeUrl }: WelcomeEmailProp
   );
 }
 
-export const WELCOME_SUBJECT = 'Welcome to Urganize: a note from Lucky';
+export const WELCOME_SUBJECT = 'Welcome to Urganize: a note from Wena';
