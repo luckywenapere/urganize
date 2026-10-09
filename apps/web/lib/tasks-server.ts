@@ -33,6 +33,7 @@ import {
 import { sendPushToUsers, type PushPayload } from '@/lib/push-server';
 import { mapTaskOutcomeRow, type TaskOutcome } from '@/lib/task-outcomes';
 import { assignDueTier, type DueTier } from '@/lib/due-tiers';
+import { NOTIFICATION_LIST_LIMIT } from '@/lib/notification-groups';
 import { getNotificationPresets } from '@/lib/notification-presets-server';
 import type { NotificationPresets } from '@/lib/notification-presets';
 import { TEAM_TRIAL_DAYS, isHardPaywallEnabled } from '@/lib/team-billing';
@@ -2218,7 +2219,7 @@ export async function listNotifications(
     .select('id,user_id,type,task_id,actor_id,read,created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(20);
+    .limit(NOTIFICATION_LIST_LIMIT);
 
   if (result.error) {
     throw result.error;

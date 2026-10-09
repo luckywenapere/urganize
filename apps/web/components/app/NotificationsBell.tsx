@@ -12,10 +12,16 @@ import { getNotificationMessage, type TaskNotification } from '@/lib/tasks';
 import { formatRelativeTime } from '@/lib/relative-time';
 import {
   bellBadge,
+  type DigestNotificationType,
   describeDigestTitles,
   getDigestMessage,
   groupNotifications,
 } from '@/lib/notification-groups';
+import {
+  TOAST_BURST_WINDOW_MS,
+  describeToastBurst,
+  isTierToastCoolingDown,
+} from '@/lib/notification-toast-burst';
 
 // Phase 1 of in-app notifications: the front door for an already-built
 // backend (notifications table + GET /api/notifications +
@@ -206,6 +212,29 @@ export function NotificationsBell() {
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
 
+    // The due-date sweep inserts one row per task, so rows arrive in bursts.
+    // Collect the ids that land inside one short window, refresh the list ONCE,
+    // and show one toast that says what the burst was (lib/notification-toast-
+    // burst). A repeat of the same sweep tier shortly after stays quiet.
+    const pendingIds: string[] = [];
+    let burstTimer: ReturnType<typeof setTimeout> | null = null;
+    const lastTierToastAt = new Map<DigestNotificationType, number>();
+
+    const flushBurst = async () => {
+      burstTimer = null;
+      const ids = pendingIds.splice(0, pendingIds.length);
+      if (ids.length === 0) return;
+      // background: the user didn't ask for a load, so no loading-state flip.
+      // The list is capped at NOTIFICATION_LIST_LIMIT rows and the realtime payload carries no
+      // title, so this one refetch is also what hydrates the toast.
+      const list = await fetchNotifications({ background: true });
+      const burst = describeToastBurst(ids, list);
+      const now = Date.now();
+      if (isTierToastCoolingDown(lastTierToastAt, burst.tier, now)) return;
+      if (burst.tier) lastTierToastAt.set(burst.tier, now);
+      pushToast(burst.message);
+    };
+
     const channel = supabase
       .channel(`notifications:${userId}`)
       .on(
@@ -216,30 +245,16 @@ export function NotificationsBell() {
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
         },
-        async (payload) => {
+        (payload) => {
           const newRow = payload.new as
             | { id?: string; actor_id?: string | null }
             | null;
           if (!newRow?.id) return;
           if (newRow.actor_id && newRow.actor_id === userId) return;
-
-          // Refresh the list so the dropdown badge + body reflect the new
-          // row, then surface the toast using the hydrated taskTitle from
-          // the response (the raw realtime payload doesn't include it —
-          // GET /api/notifications joins it server-side; the list is capped
-          // at 20 rows, so this refetch is the cheapest correct hydration
-          // path). background: the user didn't ask for a load, so no
-          // loading-state flip.
-          const list = await fetchNotifications({ background: true });
-          const matched = list.find((n) => n.id === newRow.id);
-          const headline = matched
-            ? getNotificationMessage(matched)
-            : 'New notification';
-          const body =
-            matched && matched.taskTitle
-              ? `${headline}: ${matched.taskTitle}`
-              : headline;
-          pushToast(body);
+          pendingIds.push(newRow.id);
+          if (burstTimer === null) {
+            burstTimer = setTimeout(() => void flushBurst(), TOAST_BURST_WINDOW_MS);
+          }
         }
       )
       .on(
@@ -267,6 +282,7 @@ export function NotificationsBell() {
       .subscribe();
 
     return () => {
+      if (burstTimer !== null) clearTimeout(burstTimer);
       // removeChannel returns a promise but we don't await — teardown is
       // fire-and-forget; the channel will be GC'd by the supabase client.
       void supabase.removeChannel(channel);
@@ -413,8 +429,8 @@ export function NotificationsBell() {
 
   // The badge and the button's spoken name come from one function so they
   // cannot disagree: "9+" on screen is "more than 9 unread" aloud, never an
-  // exact number the screen does not show. The list is capped at 20 rows by
-  // the API, so a count past the cap is "at least", not exact.
+  // exact number the screen does not show. The list is capped at
+  // NOTIFICATION_LIST_LIMIT rows by the API, so a count past the cap is "at least".
   const badge = bellBadge(unreadCount);
   const hasUnread = unreadCount > 0;
 
