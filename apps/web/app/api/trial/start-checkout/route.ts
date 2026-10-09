@@ -9,6 +9,7 @@ import {
   isCardTrialPlan,
   resolveTrialVerificationKobo,
 } from '@/lib/trial-card';
+import { fetchPaystackInit } from '@/lib/paystack-init';
 
 // POST /api/trial/start-checkout — card-before-trial (NEXT_PUBLIC_FEATURE_CARD_TRIAL).
 //
@@ -36,8 +37,6 @@ import {
 type StartTrialCheckoutRequest = {
   plan?: unknown;
 };
-
-const PAYSTACK_INIT_URL = 'https://api.paystack.co/transaction/initialize';
 
 function generateReference(): string {
   // Same `urganize_<timestamp>_<random>` convention as billing/start-checkout
@@ -181,7 +180,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not start trial checkout.' }, { status: 500 });
   }
 
-  const paystackResponse = await fetch(PAYSTACK_INIT_URL, {
+  const paystackResponse = await fetchPaystackInit({
     method: 'POST',
     headers: {
       Authorization: `Bearer ${paystackSecretKey}`,

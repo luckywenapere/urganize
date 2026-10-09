@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.11",
+    date: "October 9, 2026",
+    highlights: [
+      "Starting a payment now tells you when Paystack is too slow, instead of spinning forever.",
+      "A slow phone notification service can no longer hold up your morning emails.",
+    ],
+  },
+  {
     version: "1.92.10",
     date: "October 9, 2026",
     highlights: [

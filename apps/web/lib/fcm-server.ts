@@ -24,6 +24,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildFcmMessage, classifyFcmError } from '@/lib/fcm';
+import { PUSH_SEND_TIMEOUT_MS } from '@/lib/push-limits';
 import type { PushPayload } from '@/lib/push-server';
 
 export const DEVICE_PUSH_TOKENS_TABLE = 'device_push_tokens';
@@ -113,6 +114,7 @@ async function getAccessToken(account: ServiceAccount): Promise<string | null> {
         grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
         assertion,
       }),
+      signal: AbortSignal.timeout(PUSH_SEND_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -170,6 +172,7 @@ export async function sendFcmToTokens(
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(buildFcmMessage(row.token, payload)),
+          signal: AbortSignal.timeout(PUSH_SEND_TIMEOUT_MS),
         });
 
         if (response.ok) {

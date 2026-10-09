@@ -6,6 +6,7 @@ import { isPricingV2Enabled } from '@/lib/entitlements';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { resolveCheckoutSubject } from '@/lib/billing-events';
 import { logBillingEvent } from '@/lib/billing-events-server';
+import { fetchPaystackInit } from '@/lib/paystack-init';
 
 // App-initiated Paystack subscription checkout.
 //
@@ -52,8 +53,6 @@ type StartCheckoutResponse = {
   accessCode: string;
   reference: string;
 };
-
-const PAYSTACK_INIT_URL = 'https://api.paystack.co/transaction/initialize';
 
 function generateReference(): string {
   // `urganize_<timestamp>_<random>` — same convention as the (now-deleted)
@@ -212,7 +211,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not start checkout.' }, { status: 500 });
   }
 
-  const paystackResponse = await fetch(PAYSTACK_INIT_URL, {
+  const paystackResponse = await fetchPaystackInit({
     method: 'POST',
     headers: {
       Authorization: `Bearer ${paystackSecretKey}`,

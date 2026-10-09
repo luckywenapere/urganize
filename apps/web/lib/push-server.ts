@@ -4,6 +4,7 @@
 import webpush from 'web-push';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { sendFcmToTokens, isFcmConfigured, DEVICE_PUSH_TOKENS_TABLE } from '@/lib/fcm-server';
+import { PUSH_SEND_TIMEOUT_MS } from '@/lib/push-limits';
 
 // Server half of the push wiring. The ONLY place pushes are sent from — the
 // payload shape here is the contract public/sw.js renders, and the contract
@@ -89,7 +90,9 @@ async function sendToWebPushSubscriptions(
             keys: { p256dh: row.p256dh, auth: row.auth },
           },
           body,
-          { TTL: 60 * 60 * 24 }
+          // A push service that stops answering must not hold a request or a
+          // cron run open (lib/push-limits.ts).
+          { TTL: 60 * 60 * 24, timeout: PUSH_SEND_TIMEOUT_MS }
         );
         sent += 1;
       } catch (error) {
