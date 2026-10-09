@@ -10,7 +10,7 @@ import { TasksPanel } from './TasksPanel';
 import { RolloutTabs } from './RolloutTabs';
 import type { ReleaseCardData } from './catalogue-types';
 import type { RolloutMenuDialogInput } from './useRolloutMenuActions';
-import { statusGroup } from '@/lib/catalogue-table';
+import { displayStatus, statusGroup } from '@/lib/catalogue-table';
 
 type WorkspaceDesktopFocusedProps = {
   /** Tasks already filtered to the scoped release. */
@@ -106,6 +106,14 @@ export function WorkspaceDesktopFocused({
   const [failedCover, setFailedCover] = useState<string | null>(null);
   const showCover = Boolean(card.coverArtUrl) && card.coverArtUrl !== failedCover;
   const date = formatDate(card.release.releaseDate);
+  // The same derived status the Catalogue row shows, so opening a rollout
+  // that read Released there does not say Draft here.
+  const status = displayStatus({
+    status: card.release.status,
+    releaseDate: card.release.releaseDate,
+    tasksDone,
+    tasksTotal,
+  });
 
   // Viewport-locked, as it has always been: the page never scrolls here; long
   // lists scroll inside the panel so the header and tabs never leave view. The
@@ -161,10 +169,10 @@ export function WorkspaceDesktopFocused({
                 {card.release.title}
               </h1>
               <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_TONE[statusGroup(card.release.status)]}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_TONE[statusGroup(status)]}`}
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-                {STATUS_LABEL[card.release.status] ?? card.release.status.replace(/_/g, ' ')}
+                {STATUS_LABEL[status] ?? status.replace(/_/g, ' ')}
               </span>
             </div>
             <p className="mt-0.5 text-sm text-content-secondary">

@@ -36,7 +36,7 @@ import { daysToRelease, isEditorialPitchTask, pitchWindowState } from '@/lib/edi
 import { DeleteReleaseDialog } from './DeleteReleaseDialog';
 import type { ReleaseCardData } from './catalogue-types';
 import { CatalogueView } from './CatalogueView';
-import { pickNextTask, type CatalogueRow } from '@/lib/catalogue-table';
+import { displayStatus, pickNextTask, type CatalogueRow } from '@/lib/catalogue-table';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
@@ -741,7 +741,13 @@ export function WorkspaceView() {
           title: card.release.title,
           artistId: source?.artistId ?? null,
           artistName: card.release.artistName,
-          status: card.release.status,
+          // Released is derived (lib/recap-eligibility's rule), never written.
+          status: displayStatus({
+            status: card.release.status,
+            releaseDate: card.release.releaseDate,
+            tasksDone: card.tasksDone,
+            tasksTotal: card.tasksTotal,
+          }),
           releaseDate: card.release.releaseDate,
           tasksDone: card.tasksDone,
           tasksTotal: card.tasksTotal,
