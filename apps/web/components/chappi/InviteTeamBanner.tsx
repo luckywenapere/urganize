@@ -6,6 +6,8 @@ import { useAuthStore } from '@/lib/auth-store';
 import { getRolePermissions } from '@/lib/role-permissions';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
+import { shouldShowInviteBanner } from '@/lib/invite-banner';
+import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 
 // Dismissal is remembered per browser (PostHog's home-banner behavior): the
 // banner stays gone once closed rather than nagging every visit.
@@ -18,19 +20,20 @@ const isPersistedDismissed = (value: unknown): value is boolean => typeof value 
  * PostHog "Get more out of PostHog by inviting your team" pattern. Routes to
  * Settings → Teammates (the existing invite surface; the section carries an
  * `id="teammates"` anchor). Renders nothing until mount so dismissed users
- * never see a flash: default hidden, shown by the mount effect only when no
- * dismissal is persisted.
+ * never see a flash: default hidden, shown only once the dismissal has been
+ * read AND the team size is known (lib/invite-banner.ts decides), so a manager
+ * whose team is already full is never told to invite them.
  */
 export function InviteTeamBanner() {
   const openSettings = useOpenSettings();
   const user = useAuthStore((state) => state.user);
-  const [isVisible, setIsVisible] = useState(false);
+  // null until the mount effect has read the persisted choice.
+  const [dismissed, setDismissed] = useState<boolean | null>(null);
+  const teamKnown = useWorkspaceIdentityStore((state) => state.hydrated);
+  const memberCount = useWorkspaceIdentityStore((state) => state.memberCount);
 
   useEffect(() => {
-    const dismissed = readPersistedState(DISMISSED_KEY, DISMISSED_VERSION, isPersistedDismissed);
-    if (dismissed !== true) {
-      setIsVisible(true);
-    }
+    setDismissed(readPersistedState(DISMISSED_KEY, DISMISSED_VERSION, isPersistedDismissed) === true);
   }, []);
 
   // The Settings → Teammates section (the banner's destination) only renders
@@ -38,7 +41,12 @@ export function InviteTeamBanner() {
   // isManagerAccount. Artists would land on a page without the section, so
   // the banner doesn't show for them at all.
   const isManagerAccount = getRolePermissions(user?.role).role === 'manager';
-  if (!isManagerAccount || !isVisible) return null;
+  if (
+    dismissed === null ||
+    !shouldShowInviteBanner({ isManager: isManagerAccount, dismissed, teamKnown, memberCount })
+  ) {
+    return null;
+  }
 
   return (
     <div className="mb-4 flex flex-col items-start gap-3 border border-stroke-default bg-bg-surface px-3 py-2 sm:flex-row sm:items-center sm:px-4">
@@ -59,7 +67,7 @@ export function InviteTeamBanner() {
       <button
         type="button"
         onClick={() => {
-          setIsVisible(false);
+          setDismissed(true);
           writePersistedState(DISMISSED_KEY, DISMISSED_VERSION, true);
         }}
         aria-label="Dismiss invite banner"
