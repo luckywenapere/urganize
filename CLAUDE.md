@@ -14541,7 +14541,7 @@ Never against production. A throwaway local stack stands in for Supabase: a Post
 
 ### Fixes
 
-1. **"Invite your team" only shows to a team that is just the manager** (v1.92.8). The Home strip used to remember only "closed in this browser", so a manager with a full team saw it again on every new phone or browser. `lib/invite-banner.ts` decides (manager, not dismissed, team size known, one person on the team); it waits for the identity store's `hydrated` so it never flashes. Before and after: `notes/polish-shots/invite-banner/`.
+1. **"Invite your team" only shows to a team that is just the manager** (v1.92.9). The Home strip used to remember only "closed in this browser", so a manager with a full team saw it again on every new phone or browser. `lib/invite-banner.ts` decides (manager, not dismissed, team size known, one person on the team); it waits for the identity store's `hydrated` so it never flashes. Before and after: `notes/polish-shots/invite-banner/`.
 
 ## The marketing pages show without JavaScript (2026-10-09, no flag)
 
