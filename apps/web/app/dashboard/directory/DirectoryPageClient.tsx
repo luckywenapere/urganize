@@ -22,6 +22,7 @@ import {
 import type { PersonAvailability } from '@/types/directory';
 import { DirectoryEmptyState } from '@/components/directory/DirectoryEmptyState';
 import { WorkRequestSheet } from '@/components/directory/WorkRequestSheet';
+import { canReceiveRequests } from '@/lib/work-requests';
 
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { bucketResultCount, type DirectoryDemandSource } from '@/lib/directory-demand';
@@ -287,7 +288,14 @@ function DirectoryBody() {
                 <li key={person.userId}>
                   <PersonCard
                     person={person}
-                    onAsk={REQUESTS_ENABLED ? () => setAsking(person) : null}
+                    // Somebody who is "Not taking work" is listed and findable
+                    // but cannot be asked, and the server refuses it too. The
+                    // button is the courtesy; the route is the rule.
+                    onAsk={
+                      REQUESTS_ENABLED && canReceiveRequests(person.availability)
+                        ? () => setAsking(person)
+                        : null
+                    }
                   />
                 </li>
               ))}

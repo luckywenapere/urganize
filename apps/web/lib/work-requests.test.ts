@@ -3,13 +3,20 @@ import {
   MAX_OPEN_REQUESTS_PER_TEAM,
   RECIPIENT_REQUEST_FIELDS,
   SENDER_REQUEST_FIELDS,
+  WORK_REQUEST_EXPIRY_DAYS,
   WORK_REQUEST_STATUSES,
   canAnswerWorkRequest,
+  canReceiveRequests,
   describeRequestStatus,
+  effectiveRequestStatus,
+  isWorkRequestStale,
   parseWorkRequestAnswer,
   parseWorkRequestInput,
+  refusalForClosedAvailability,
   revealsContact,
+  withEffectiveStatus,
   withinOpenRequestCap,
+  workRequestCutoff,
 } from './work-requests';
 
 describe('parseWorkRequestInput', () => {
@@ -115,8 +122,15 @@ describe('parseWorkRequestAnswer', () => {
     expect(parseWorkRequestAnswer({ status: 'maybe' })).toHaveProperty('error');
   });
 
-  it('lists exactly three statuses', () => {
-    expect([...WORK_REQUEST_STATUSES]).toEqual(['new', 'interested', 'passed']);
+  it('refuses closing a request as an answer', () => {
+    // `expired` is something that happens to a request, never something a
+    // person says. Letting a client send it would let the sender (or anybody
+    // with a request id) close a waiting ask on the recipient's behalf.
+    expect(parseWorkRequestAnswer({ status: 'expired' })).toHaveProperty('error');
+  });
+
+  it('lists exactly four statuses', () => {
+    expect([...WORK_REQUEST_STATUSES]).toEqual(['new', 'interested', 'passed', 'expired']);
   });
 });
 
@@ -141,6 +155,7 @@ describe('describeRequestStatus', () => {
     expect(describeRequestStatus('new')).toBe('Waiting');
     expect(describeRequestStatus('interested')).toBe('Interested');
     expect(describeRequestStatus('passed')).toBe('Passed');
+    expect(describeRequestStatus('expired')).toBe('Closed');
   });
 });
 
@@ -160,6 +175,11 @@ describe('revealsContact', () => {
 
   it('reveals nothing while a request is still waiting', () => {
     expect(revealsContact('new')).toBe(false);
+  });
+
+  it('reveals nothing once a request has closed unanswered', () => {
+    // Nobody agreed to anything. A closed ask is not a yes.
+    expect(revealsContact('expired')).toBe(false);
   });
 
   it('covers every status, so a new one cannot default to revealing', () => {
@@ -188,5 +208,114 @@ describe('SENDER_REQUEST_FIELDS', () => {
     // request. A column here would mean a stored copy that outlives the
     // consent that revealed it.
     expect(SENDER_REQUEST_FIELDS.some((field) => /email|phone|contact/.test(field))).toBe(false);
+  });
+});
+
+const NOW = new Date('2026-10-20T12:00:00.000Z');
+const DAY = 24 * 60 * 60 * 1000;
+const daysAgo = (days: number) => new Date(NOW.getTime() - days * DAY).toISOString();
+
+describe('the 7 day close', () => {
+  it('is seven days', () => {
+    expect(WORK_REQUEST_EXPIRY_DAYS).toBe(7);
+  });
+
+  it('puts the cutoff exactly seven days back', () => {
+    expect(workRequestCutoff(NOW)).toBe('2026-10-13T12:00:00.000Z');
+  });
+
+  it('leaves a request younger than seven days open', () => {
+    expect(isWorkRequestStale({ status: 'new', createdAt: daysAgo(6.9) }, NOW)).toBe(false);
+  });
+
+  it('closes a request older than seven days', () => {
+    expect(isWorkRequestStale({ status: 'new', createdAt: daysAgo(7.1) }, NOW)).toBe(true);
+  });
+
+  it('treats exactly seven days as still open', () => {
+    // The sweep and the routes both write `created_at < cutoff`, so a request
+    // made exactly seven days ago is the last moment it can still be answered.
+    expect(isWorkRequestStale({ status: 'new', createdAt: daysAgo(7) }, NOW)).toBe(false);
+  });
+
+  it('never closes an answered request, however old', () => {
+    expect(isWorkRequestStale({ status: 'interested', createdAt: daysAgo(40) }, NOW)).toBe(false);
+    expect(isWorkRequestStale({ status: 'passed', createdAt: daysAgo(40) }, NOW)).toBe(false);
+  });
+
+  it('does not close a request whose date it cannot read', () => {
+    // An unreadable date is not evidence the request is old. Closing somebody's
+    // ask on a guess is the wrong way to be wrong.
+    expect(isWorkRequestStale({ status: 'new', createdAt: 'not a date' }, NOW)).toBe(false);
+    expect(isWorkRequestStale({ status: 'new', createdAt: null }, NOW)).toBe(false);
+  });
+
+  it('reads a stale waiting request as closed before the sweep has run', () => {
+    // So the product is right the moment this ships, and between sweeps, and
+    // while the migration is not yet applied.
+    expect(effectiveRequestStatus('new', daysAgo(8), NOW)).toBe('expired');
+    expect(effectiveRequestStatus('new', daysAgo(2), NOW)).toBe('new');
+  });
+
+  it('leaves every other status as it is', () => {
+    expect(effectiveRequestStatus('interested', daysAgo(40), NOW)).toBe('interested');
+    expect(effectiveRequestStatus('passed', daysAgo(40), NOW)).toBe('passed');
+    expect(effectiveRequestStatus('expired', daysAgo(1), NOW)).toBe('expired');
+  });
+
+  it('stops the recipient answering a request that has closed', () => {
+    const base = { recipientUserId: 'u1', status: 'new' as const };
+    expect(canAnswerWorkRequest({ ...base, createdAt: daysAgo(3) }, 'u1', NOW)).toBe(true);
+    expect(canAnswerWorkRequest({ ...base, createdAt: daysAgo(8) }, 'u1', NOW)).toBe(false);
+    expect(canAnswerWorkRequest({ recipientUserId: 'u1', status: 'expired' }, 'u1', NOW)).toBe(false);
+  });
+});
+
+describe('Not taking work', () => {
+  it('refuses a request to somebody who has closed their availability', () => {
+    expect(canReceiveRequests('closed')).toBe(false);
+  });
+
+  it('allows a request to open and selective people', () => {
+    expect(canReceiveRequests('open')).toBe(true);
+    expect(canReceiveRequests('selective')).toBe(true);
+  });
+
+  it('fails open on a value it does not recognise', () => {
+    // Availability is a free-text column with a CHECK. An unknown value is a
+    // data problem, and refusing every request to that person is the wrong
+    // way to handle one.
+    expect(canReceiveRequests(null)).toBe(true);
+    expect(canReceiveRequests('on holiday')).toBe(true);
+  });
+
+  it('says why in plain words', () => {
+    const copy = refusalForClosedAvailability('Ada');
+    expect(copy).toContain('Ada');
+    expect(copy.toLowerCase()).toContain('not taking work');
+    expect(copy).not.toMatch(/\u2014/);
+  });
+});
+
+describe('withEffectiveStatus', () => {
+  it('rewrites a stale waiting row to closed and leaves the rest alone', () => {
+    const rows = [
+      { id: 'a', status: 'new', created_at: daysAgo(8) },
+      { id: 'b', status: 'new', created_at: daysAgo(1) },
+      { id: 'c', status: 'interested', created_at: daysAgo(30) },
+    ];
+    const out = withEffectiveStatus(rows, NOW);
+    expect(out.map((row) => row.status)).toEqual(['expired', 'new', 'interested']);
+  });
+
+  it('does not change the rows it was given', () => {
+    const rows = [{ id: 'a', status: 'new', created_at: daysAgo(8) }];
+    withEffectiveStatus(rows, NOW);
+    expect(rows[0].status).toBe('new');
+  });
+
+  it('keeps every other field on the row', () => {
+    const out = withEffectiveStatus([{ id: 'a', status: 'new', created_at: daysAgo(9), note: 'Hi.' }], NOW);
+    expect(out[0]).toMatchObject({ id: 'a', note: 'Hi.' });
   });
 });
