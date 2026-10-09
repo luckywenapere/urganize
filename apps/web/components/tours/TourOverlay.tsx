@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 
 import { Button } from '@urganize/ui';
 import { placeHelpTip, type PlacedHelpTip } from '@/lib/help-tip-position';
-import { pickVisibleAnchor, type TourAnchor } from '@/lib/tours';
+import { pickVisibleAnchor, tourStepProgress, type TourAnchor } from '@/lib/tours';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { useTourStore } from '@/stores/useTourStore';
 
@@ -197,6 +197,7 @@ export function TourOverlay() {
 
   const isLast = active.stepIndex === active.steps.length - 1;
   const primaryLabel = step.ctaLabel ?? (isLast ? 'Done' : 'Next');
+  const progress = tourStepProgress(active.stepIndex, active.steps.length);
 
   return createPortal(
     <>
@@ -233,26 +234,38 @@ export function TourOverlay() {
         }}
         className={`${CARD_Z} w-[min(20rem,calc(100vw-1.5rem))] rounded-xl border border-stroke-default bg-bg-elevated p-4 shadow-xl`}
       >
-        <p aria-live="polite" className="text-sm font-semibold text-content-primary">
+        {/* The step indicator sits on its own row above the title, in the
+            app's stepped-flow eyebrow (TeamBriefSection's guided mode): the
+            words for anyone reading, the bar for a glance. On its own row so
+            a long last-step label ("Go to Team") never squeezes it. */}
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
+            {progress.label}
+          </span>
+          <div
+            aria-hidden="true"
+            className="h-1.5 w-16 overflow-hidden rounded-full bg-stroke-strong"
+          >
+            <div className="h-full rounded-full bg-brand" style={{ width: `${progress.percent}%` }} />
+          </div>
+        </div>
+        <p aria-live="polite" className="mt-2 text-sm font-semibold text-content-primary">
           {step.title}
         </p>
         <p className="mt-1.5 text-xs leading-relaxed text-content-secondary">{step.body}</p>
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <span className="font-mono text-[11px] text-content-tertiary">
-            {active.stepIndex + 1} of {active.steps.length}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={skip}
-              className="rounded-lg px-2 py-1 text-xs text-content-tertiary transition hover:text-content-primary"
-            >
-              Skip
-            </button>
-            <Button ref={nextButtonRef} size="sm" onClick={next}>
-              {primaryLabel}
-            </Button>
-          </div>
+        {/* Both controls are 44px tall: this card is shown mostly on phones,
+            and Skip was a 24px text link before. */}
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={skip}
+            className="motion-focus inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          >
+            Skip
+          </button>
+          <Button ref={nextButtonRef} size="md" className="min-h-11" onClick={next}>
+            {primaryLabel}
+          </Button>
         </div>
       </div>
     </>,

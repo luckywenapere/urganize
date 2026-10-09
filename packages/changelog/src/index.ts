@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.4",
+    date: "October 9, 2026",
+    highlights: [
+      "The guided tour now shows \"Step 2 of 3\" with a small progress bar, and its Skip and Next buttons are bigger and easier to tap.",
+    ],
+  },
+  {
     version: "1.92.3",
     date: "October 9, 2026",
     highlights: [

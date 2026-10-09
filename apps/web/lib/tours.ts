@@ -211,6 +211,29 @@ export function resolveCatalogTourCta(input: {
   };
 }
 
+/**
+ * The card's step indicator: "Step 2 of 3" and how far along the bar is.
+ *
+ * It reads the way every other stepped flow in the app does (the team brief's
+ * guided mode says "Step 2 of 6" in the same uppercase mono eyebrow, and its
+ * bar is the same `bg-stroke-strong` track with a `bg-brand` fill). The card
+ * said a bare "2 of 3" in 11px tertiary type before, which a live review
+ * flagged as easy to miss and unlike the rest of the app. Clamped so a stale
+ * index can never draw "Step 4 of 3" or a bar past its end.
+ */
+export function tourStepProgress(
+  stepIndex: number,
+  total: number
+): { label: string; percent: number } {
+  const count = Math.max(1, Math.floor(total));
+  const index = Math.min(Math.max(0, Math.floor(stepIndex)), count - 1);
+  const current = index + 1;
+  return {
+    label: `Step ${current} of ${count}`,
+    percent: Math.round((current / count) * 100),
+  };
+}
+
 /** A candidate anchor, reduced to the two facts that decide whether it is on
  *  screen. Kept as plain data so this stays testable without a DOM. */
 export type AnchorCandidate = {
