@@ -31,9 +31,10 @@ import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { FounderCockpitView } from '@/components/admin/FounderCockpitView';
 import type { FounderCockpit } from '@/lib/founder-cockpit';
+import type { AdminFunnel } from '@/lib/admin-funnel';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 
-type CockpitPayload = { cockpit: FounderCockpit; sources: AdminReadSource[] };
+type CockpitPayload = { cockpit: FounderCockpit; funnels: AdminFunnel[]; sources: AdminReadSource[] };
 type CockpitState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
@@ -173,7 +174,7 @@ export default function AdminHubClient() {
           setCockpit({ status: 'error', message: body.error || 'Could not work out this week\'s numbers.' });
           return;
         }
-        setCockpit({ status: 'ready', payload: { cockpit: body.cockpit, sources: body.sources ?? [] } });
+        setCockpit({ status: 'ready', payload: { cockpit: body.cockpit, funnels: body.funnels ?? [], sources: body.sources ?? [] } });
       } catch {
         if (!cancelled) setCockpit({ status: 'error', message: 'Could not work out this week\'s numbers.' });
       }
@@ -199,7 +200,11 @@ export default function AdminHubClient() {
       </p>
 
       {cockpit.status === 'ready' ? (
-        <FounderCockpitView cockpit={cockpit.payload.cockpit} sources={cockpit.payload.sources} />
+        <FounderCockpitView
+          cockpit={cockpit.payload.cockpit}
+          funnels={cockpit.payload.funnels}
+          sources={cockpit.payload.sources}
+        />
       ) : cockpit.status === 'error' ? (
         <p role="alert" className="mt-8 rounded-xl border border-stroke-default bg-bg-surface p-4 text-sm text-content-secondary">
           {cockpit.message}
