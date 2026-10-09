@@ -18,7 +18,7 @@ import type { Template } from './release-templates/types';
 import { BANNED_COPY_CHARS, BANNED_COPY_WORDS } from './press-kits';
 
 /**
- * The free plan preview on the planner's first question (v1.91.4).
+ * The free plan preview on the planner's first question (v1.92.0).
  *
  * Two promises are held here: every number and name on the card comes from
  * the hand-written playbook the plan will start from, and building the card

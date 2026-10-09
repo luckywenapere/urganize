@@ -18847,7 +18847,7 @@ Found by using the live app: with type-first create on, tapping Single, EP or Al
 
 ---
 
-## A free look at the plan before credits are spent (2026-10-09, v1.91.4, no flag)
+## A free look at the plan before credits are spent (2026-10-09, v1.92.0, no flag)
 
 Found by using the live app: the UrgAns planner's footer says "This uses about 12 UrgAns credits. You have N credits." from its first question, and a new person had seen nothing of what those credits buy. **No flag**: it is read-only display inside an already-live surface, in line with the design overhaul's "nothing behind a flag" call and the v1.91.x precedent. No pricing, credit amount, hold or entitlement changed.
 

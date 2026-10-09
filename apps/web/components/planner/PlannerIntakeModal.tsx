@@ -501,7 +501,7 @@ export function PlannerIntakeModal() {
             />
           </div>
 
-          {/* The free preview (v1.91.4): what the plan starts from, read from
+          {/* The free preview (v1.92.0): what the plan starts from, read from
               the playbook in the browser, on the first question a person sees
               and only once the type is known. No request and no credits; the
               cost and the balance stay in the footer line below. */}

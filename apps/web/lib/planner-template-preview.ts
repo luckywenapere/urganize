@@ -2,7 +2,7 @@
  * The free look at a plan BEFORE any UrgAns credits are spent (2026-10-09).
  *
  * The planner asks its questions and only then builds the plan, which costs
- * about 12 credits. Until v1.91.4 a new person was told that cost at the first
+ * about 12 credits. Until v1.92.0 a new person was told that cost at the first
  * question with nothing to show for it. This module answers "what would I get?"
  * from the hand-written playbook the planner starts from: how many activities,
  * how they split across the four phases, and a few real activity names.

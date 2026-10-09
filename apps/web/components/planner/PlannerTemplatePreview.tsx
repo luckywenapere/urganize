@@ -11,7 +11,7 @@ import {
 } from '@/lib/planner-template-preview';
 
 /**
- * The free look at the plan, shown on the planner's first question (v1.91.4).
+ * The free look at the plan, shown on the planner's first question (v1.92.0).
  *
  * Built from the hand-written playbook in the browser: no request, no model,
  * no credits. The cost and the balance stay in the planner's footer line right
