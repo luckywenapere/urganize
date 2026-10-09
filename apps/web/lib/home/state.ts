@@ -10,9 +10,22 @@ import type { Task } from '@/types/tasks';
  * (lib/tasks.ts's getTaskSectionKey): device-local, not UTC, so Home agrees
  * with the catalog about what "today" means.
  */
+const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * A date column ("2026-10-13") is a calendar day, not an instant. `new Date()`
+ * reads it as UTC midnight, which is the evening before in the Americas, so a
+ * count taken from it came out a day short. A bare day is read as local
+ * midnight (the rule `parseReleaseDate` in lib/recap-copy.ts already follows);
+ * anything with a time in it is read as the instant it names.
+ */
+export function parseCalendarDayOrInstant(value: string): Date {
+  return new Date(CALENDAR_DAY.test(value) ? `${value}T00:00:00` : value);
+}
+
 export function daysUntilDate(dateStr: string | null, now: Date = new Date()): number | null {
   if (!dateStr) return null;
-  const date = new Date(dateStr);
+  const date = parseCalendarDayOrInstant(dateStr);
   if (Number.isNaN(date.getTime())) return null;
 
   const today = new Date(now);

@@ -1,7 +1,7 @@
 import type { Task } from '@/types/tasks';
 import type { DbReleaseType } from '@/types/releases';
 import { getTemplateStats } from '@/lib/release-templates/loader';
-import { daysUntilDate, isTaskLate } from './state';
+import { daysUntilDate, isTaskLate, parseCalendarDayOrInstant } from './state';
 import type { HomeReleaseSummary } from './types';
 
 /** A release counts as "soon" once it is 14 days out or closer, including a
@@ -50,7 +50,7 @@ export function computeWeekProgress(
 ): { current: number; total: number } | null {
   if (!releaseDate) return null;
 
-  const release = new Date(releaseDate);
+  const release = parseCalendarDayOrInstant(releaseDate);
   if (Number.isNaN(release.getTime())) return null;
 
   const stats = getTemplateStats(releaseType);

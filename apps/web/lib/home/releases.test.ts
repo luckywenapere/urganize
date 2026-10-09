@@ -73,6 +73,22 @@ describe('computeWeekProgress', () => {
     expect(result?.current).toBe(result?.total);
   });
 
+  it('reads the same week in the Americas as in Lagos (a date column is a calendar day)', () => {
+    const original = process.env.TZ;
+    try {
+      for (const zone of ['America/New_York', 'America/Los_Angeles', 'Africa/Lagos']) {
+        process.env.TZ = zone;
+        // Release 2026-11-24, single playbook: plan starts 56 days earlier,
+        // 2026-09-29. Oct 5 is day 6 (still week 1); Oct 6 is day 7 (week 2).
+        expect(computeWeekProgress('2026-11-24', 'single', new Date(2026, 9, 5, 12))?.current).toBe(1);
+        expect(computeWeekProgress('2026-11-24', 'single', new Date(2026, 9, 6, 12))?.current).toBe(2);
+      }
+    } finally {
+      if (original === undefined) delete process.env.TZ;
+      else process.env.TZ = original;
+    }
+  });
+
   it('clamps to week 1 for a release far in the future beyond the plan start', () => {
     const releaseDate = new Date(NOW);
     releaseDate.setDate(releaseDate.getDate() + 365);
