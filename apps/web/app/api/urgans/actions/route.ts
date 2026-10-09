@@ -4,6 +4,15 @@ import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { isUrgansActionsEnabled, runUrgansAction } from '@/lib/urgans-actions/server';
 
 /**
+ * The actions this runs call a model with a 52 second deadline (the planner,
+ * Fill both, the press kit and Spotify pitch drafts), so the function needs the
+ * same 60 second ceiling every other long AI route here sets. Without it the
+ * plan's default function timeout applied and a slow draft was cut off with no
+ * answer, after the provider had already billed it.
+ */
+export const maxDuration = 60;
+
+/**
  * POST /api/urgans/actions — run one embedded UrgAns action: draft, don't
  * write. `actionType` is in the BODY rather than a dynamic route segment
  * (`/api/urgans/actions/[actionId]/apply` already claims that shape for the

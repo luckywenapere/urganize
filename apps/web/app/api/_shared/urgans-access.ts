@@ -50,7 +50,11 @@ export type CreditsOnlyAdmission = {
 
 type AdminAuth = Extract<Awaited<ReturnType<typeof requireAuthenticatedAdmin>>, { user: unknown }>;
 
-type Admitted = AdminAuth & {
+// `Omit<..., 'error'>` matters: the success branch of requireAuthenticatedAdmin
+// carries an inferred `error?: undefined`, which would make `'error' in auth`
+// narrow a caller's refusal to `NextResponse | undefined` (the trap its own
+// comment records), so a route could be typed as able to answer nothing.
+type Admitted = Omit<AdminAuth, 'error'> & {
   /** Set only when the team was admitted as credits-only; null for everyone the normal gate lets in. */
   creditsOnly: CreditsOnlyAdmission | null;
 };

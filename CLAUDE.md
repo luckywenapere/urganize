@@ -14543,6 +14543,24 @@ Never against production. A throwaway local stack stands in for Supabase: a Post
 
 1. **"Invite your team" only shows to a team that is just the manager** (v1.92.8). The Home strip used to remember only "closed in this browser", so a manager with a full team saw it again on every new phone or browser. `lib/invite-banner.ts` decides (manager, not dismissed, team size known, one person on the team); it waits for the identity store's `hydrated` so it never flashes. Before and after: `notes/polish-shots/invite-banner/`.
 
+## The marketing pages show without JavaScript (2026-10-09, no flag)
+
+Found by the marketing polish loop (`notes/marketing-log.md` keeps its running log): `.scroll-reveal` started at `opacity: 0` in CSS and only the `IntersectionObserver` in `ScrollReveal.tsx` ever showed a section. With scripts off, blocked or not yet loaded, the homepage was the hero, the logo strip and then about 6,500px of blank screen, and the waitlist form (the last block, and the only sign-up path from the site) was invisible; `/features` lost about 1,700px.
+
+- **Visible by default; armed by script.** `ScrollReveal` sets `data-reveal="armed"` on a section only once it has run in the browser and only when that section is wholly below the fold (`getBoundingClientRect().top >= innerHeight`). The CSS hides `.scroll-reveal[data-reveal="armed"]:not(.is-visible)`. A section already on screen, or already scrolled past (a reload that restored the scroll position, `/#waitlist`), is never hidden, so there is no flash.
+- **Do not put the hidden state back on the base `.scroll-reveal` rule.** It is the whole bug.
+- Marketing-site only, so no changelog entry and no version bump (the app-only scope rule above).
+- **Verified:** JS off, JS blocked at the network, and JS on (all eight sections start hidden below the fold and show after scrolling), plus `/#waitlist` with the six sections above it staying shown. Homepage lint and build, and the positioning and copy guard tests in `apps/web`, pass. **Not verified:** a real slow Lagos connection, and a mobile Safari; the check is a headless Chromium with the network blocked.
+
+## "Try Urganize" lands on the waitlist headline (2026-10-09, no flag)
+
+Every marketing "Try Urganize" button goes to `/#waitlist`, and the `id="waitlist"` sat on the div under the section's headline, so the page jumped to a bare email field with "Put your next rollout on plan." scrolled off behind the fixed header. The anchor is on the block that holds the headline now (`FinalCTASection.tsx`) with `scroll-mt-28`.
+
+- **`scroll-mt-28` (112px), not `scroll-mt-24`.** The fixed header is 77px tall on a phone and 81px at 1440px, and the section slides up 20px as `ScrollReveal` shows it, after the browser has already placed the anchor. At 96px the headline sat flush against the header; at 112px it lands about 92px down. If the header height or the reveal's slide changes, re-check this margin.
+- The form is still reached by `#waitlist input[type=email]`; the id moved up, nothing was renamed.
+- Marketing-site only, so no changelog entry and no version bump.
+- **Verified:** at 390px and 1440px, dark and light, the headline reads above the form after tapping the hero button. Homepage lint, build and the positioning and copy guard tests pass. **Not verified:** a real phone's browser (iOS Safari's anchor jump and its dynamic toolbar).
+
 ---
 
 ## Deploy Configuration (configured by /setup-deploy)
@@ -18961,3 +18979,15 @@ Found by a live-app review: the bell's badge read "9+" while its spoken name sai
 - **Tests:** `lib/notification-groups.test.ts` (badge cap and spoken name, grouping rules, copy under the house rules, and source scans that the bell builds its badge through `bellBadge` and its list through `groupNotifications`). Five deliberate breaks, each caught.
 - **Seen in a browser** through a throwaway page (deleted) with 12 overdue rows, an assignment and a comment, at 375px and 1440px: one digest line, no sideways scroll, expands to the twelve rows.
 - **Not changed, and logged in `notes/needs-lucky.md`:** the API's 20-row cap can push older non-sweep notifications out of the list when a big sweep lands, and an app left open during a sweep can show a toast per inserted row.
+
+---
+
+## Bell toast bursts, the actions route's ceiling, and a clean type-check (2026-10-09, v1.92.8, no flag)
+
+Three loose ends from the v1.92.7 bell work and the live-app review, shipped as one change to spend one deploy. No flag, no schema change, nothing about pricing or credits.
+
+- **One toast per burst.** The daily due-date sweep inserts one notification per task, and an app left open at 07:00 UTC fetched the list and toasted once per row. `NotificationsBell` now collects the rows that arrive within `TOAST_BURST_WINDOW_MS` (1.2 s), fetches once, and shows one toast that says what the burst was (`describeToastBurst`, `lib/notification-toast-burst.ts`, pure): one row says exactly what a single arrival always said, several rows of one sweep tier say "12 activities are overdue" (the count is distinct inserted ids, so rows the list cap pushed out still count), a mixed burst says "5 new notifications". A second burst of the SAME sweep tier inside 30 s stays quiet (`isTierToastCoolingDown`): it is the same sweep still writing. The bell's list still refreshes either way. Mutation-tested.
+- **The bell list holds 50 rows, not 20** (`NOTIFICATION_LIST_LIMIT` in `lib/notification-groups.ts`, read by `listNotifications`). One large sweep could fill 20 by itself and push an older assignment or comment out. The bell already folds sweep rows into one line per tier, so more rows do not mean a longer dropdown. An unread count past the cap is still "at least that many" ("9+" / "more than 9 unread").
+- **`POST /api/urgans/actions` now has `export const maxDuration = 60`.** It runs the planner, Fill both and the press-kit and Spotify pitch drafts, all of which wait up to 52 seconds on a model, and it had never set a function ceiling, so the plan's default applied and a slow draft was cut off with no answer after the provider had billed it. `lib/ai-route-duration-guard.test.ts` reads every `app/api/**/route.ts` and fails a route that calls a model without declaring `maxDuration`, unless it is listed as short by design with the reason (today only the task outcome route: one 3-second model call, no retry).
+- **`tsc --noEmit` is clean now, 0 errors.** The "8 documented `confirmed-action.test.ts` errors" in the sections above are history: they came from `requireUrgansAccess`'s `Admitted` type inheriting `error?: undefined` from `AdminAuth`, so `'error' in auth` narrowed wrongly in every caller. `Admitted` is `Omit<AdminAuth, 'error'> & { creditsOnly }` now. Use the repo's pinned `./node_modules/.bin/tsc --noEmit` (5.9.3); a bare `npx tsc` resolves TypeScript 6 and fails on `baseUrl`.
+- **Not verified in a browser or with a real session.** Preview pass: leave the app open across the 07:00 UTC sweep (or insert several `task_overdue` rows for yourself within a second) and confirm one toast, then a second burst within 30 s makes none; confirm an older assignment still shows in the bell behind a large sweep.

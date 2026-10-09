@@ -6,9 +6,9 @@ import type { NotificationType, TaskNotification } from '@/lib/tasks';
  * Pure and client-safe: the bell imports it, the tests hold it. Two jobs.
  *
  * 1. The badge and the button's spoken name come from one function, so they
- *    cannot disagree. The list the bell holds is capped at 20 rows by the API,
- *    so a count past the badge's cap is "at least that many", never an exact
- *    figure. The badge says "9+", and the spoken name says "more than 9".
+ *    cannot disagree. The list the bell holds is capped at
+ *    `NOTIFICATION_LIST_LIMIT` rows by the API, so a count past the badge's cap
+ *    is "at least that many", never an exact figure. The badge says "9+", and the spoken name says "more than 9".
  * 2. The due-date sweep writes one notification per task, all within seconds of
  *    each other, so a team with a backlog saw a dropdown of near-identical
  *    "An activity is overdue" rows. A run of those is shown as one line that
@@ -16,6 +16,16 @@ import type { NotificationType, TaskNotification } from '@/lib/tasks';
  */
 
 /** More unread than this shows as "9+" on the 40px bell. */
+/**
+ * How many of a person's newest notifications the API returns (v1.92.8). It was 20,
+ * which one large due-date sweep (one row per task) could fill by itself, pushing
+ * an older assignment or comment out of the bell. 50 leaves room behind a sweep;
+ * the bell still folds the sweep rows into one line each, so more rows do not mean
+ * a longer dropdown. A page of rows, not a count: an unread total past it is
+ * "at least that many".
+ */
+export const NOTIFICATION_LIST_LIMIT = 50;
+
 export const BELL_BADGE_CAP = 9;
 
 export type BellBadge = {

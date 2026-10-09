@@ -229,12 +229,17 @@ html[data-marketing-theme="dark"] .theme-shot-light {
 
 
 .scroll-reveal {
-  opacity: 0;
-  transform: translateY(20px);
   transition:
     opacity 0.5s ease,
     transform 0.5s ease;
   will-change: opacity, transform;
+}
+
+/* Hidden only once ScrollReveal has armed a section that is still below the
+   fold, so a blocked or slow script can never leave the page blank. */
+.scroll-reveal[data-reveal="armed"]:not(.is-visible) {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 .scroll-reveal.is-visible {
