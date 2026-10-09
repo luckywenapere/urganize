@@ -34,7 +34,7 @@ type DistributionStatusStripProps = {
  * removing from other screens. The header says what the list is and how many
  * there are; one tap opens it, with a Fix button on each item.
  *
- * Mounted by WorkspaceView only while the Distribute step is switched on and the
+ * Mounted by WorkspaceView only while the
  * rollout's main view is showing: inside a scene the person is already working,
  * and the Distribute scene carries the same list.
  */

@@ -17,9 +17,9 @@
  * replaced by the check before distribution: lib/distribution-rules.ts holds
  * every rule, lib/distribution-server.ts reads the facts and runs them, and the
  * route refuses an order that has errors. This module keeps what is about the
- * PARTNER and the clock: who they are, how long delivery takes, the flag.
+ * PARTNER and the clock: who they are and how long delivery takes.
  *
- * Pure: no React, no I/O, no environment reads beyond the one flag.
+ * Pure: no React, no I/O, no environment reads.
  */
 
 /** The partner. One place for the name and the links, so the scene, the tests
@@ -42,10 +42,6 @@ export const DELIVERY_WORKING_DAYS = 14;
 /** Roughly three weeks, which is 14 working days plus the time it takes to
  *  finish setting the account up. A date nearer than this gets a warning. */
 export const SAFE_LEAD_DAYS = 21;
-
-export function isDistributionEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_FEATURE_DISTRIBUTION === 'true';
-}
 
 const present = (value: string | null | undefined): boolean =>
   typeof value === 'string' && value.trim().length > 0;

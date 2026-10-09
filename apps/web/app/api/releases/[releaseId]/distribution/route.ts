@@ -4,7 +4,6 @@ import {
   ensureReleaseTeamReadAccess,
   ensureReleaseTeamWriteAccess,
 } from '@/lib/release-access-server';
-import { isDistributionEnabled } from '@/lib/distribution';
 import {
   checkReleaseForDistribution,
   loadDistributionPayload,
@@ -34,11 +33,8 @@ import {
  *
  * Team-aware like every scene route group: any member may read and order, a
  * guest is read-only (so a guest cannot log a hand-off), a non-member gets the
- * existence-hiding 404. Flag first, so a direct call cannot reach a feature the
- * UI is dark for.
+ * existence-hiding 404.
  */
-
-const gateOff = () => NextResponse.json({ error: 'Not found.' }, { status: 404 });
 
 const couldNotCheck = () =>
   NextResponse.json({ error: 'Could not check this rollout. Try again.' }, { status: 500 });
@@ -47,8 +43,6 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
-  if (!isDistributionEnabled()) return gateOff();
-
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 
@@ -74,8 +68,6 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
 ) {
-  if (!isDistributionEnabled()) return gateOff();
-
   const auth = await requireActiveAuthenticatedUser(request);
   if ('error' in auth) return auth.error;
 

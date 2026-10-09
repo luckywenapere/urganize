@@ -1,8 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   DISTRIBUTION_PARTNER,
   SAFE_LEAD_DAYS,
-  isDistributionEnabled,
   releaseDateWarning,
 } from './distribution';
 
@@ -60,15 +59,3 @@ describe('releaseDateWarning', () => {
   });
 });
 
-describe('isDistributionEnabled', () => {
-  afterEach(() => vi.unstubAllEnvs());
-
-  it('is on only for the literal word true', () => {
-    vi.stubEnv('NEXT_PUBLIC_FEATURE_DISTRIBUTION', 'true');
-    expect(isDistributionEnabled()).toBe(true);
-    for (const value of ['', 'false', '1', 'yes', 'TRUE']) {
-      vi.stubEnv('NEXT_PUBLIC_FEATURE_DISTRIBUTION', value);
-      expect(isDistributionEnabled(), value).toBe(false);
-    }
-  });
-});

@@ -72,7 +72,6 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const RELEASE_CHAT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true';
 const PITCH_KIT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCH_KIT === 'true';
-const DISTRIBUTION_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DISTRIBUTION === 'true';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
@@ -151,7 +150,6 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   if (scene === 'pitch' && !PITCHING_ENABLED) return null;
   if (scene === 'chat' && !RELEASE_CHAT_ENABLED) return null;
   if (scene === 'pitchkit' && !PITCH_KIT_ENABLED) return null;
-  if (scene === 'distribute' && !DISTRIBUTION_ENABLED) return null;
   return scene;
 }
 

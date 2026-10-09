@@ -31,7 +31,6 @@ import { TestReleaseBanner } from './TestReleaseBanner';
 import { PostPlanKitPrompt } from '@/components/press-kits/PostPlanKitPrompt';
 import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
 import { DistributionStatusStrip } from './DistributionStatusStrip';
-import { isDistributionEnabled } from '@/lib/distribution';
 import { requestEditorialPitchBackfill } from '@/lib/editorial-pitch-client';
 import { daysToRelease, isEditorialPitchTask, pitchWindowState } from '@/lib/editorial-pitch';
 import { DeleteReleaseDialog } from './DeleteReleaseDialog';
@@ -1043,13 +1042,13 @@ export function WorkspaceView() {
     ) : null);
 
   // The check before distribution, shown on the rollout itself (brief 2). Only
-  // while the Distribute step is on and the main view is showing: inside a scene
+  // while the main view is showing: inside a scene
   // the person is already working, and the Distribute scene carries the same
   // list. Its Fix buttons for the title, the release day and the artist open the
   // dialogs this component owns, and only for the owner, because both edits are
   // owner-only and a Fix button that can only fail is worse than none.
   const distributionStatusStrip =
-    isDistributionEnabled() && bodyIsMainView && scopedReleaseSlim ? (
+    bodyIsMainView && scopedReleaseSlim ? (
       <DistributionStatusStrip
         releaseId={scopedReleaseSlim.id}
         onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}

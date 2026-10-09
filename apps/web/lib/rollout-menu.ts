@@ -45,8 +45,6 @@ export type RolloutMenuFlags = {
   pitching: boolean;
   /** The release pitch kit scene (NEXT_PUBLIC_FEATURE_PITCH_KIT). */
   pitchKit: boolean;
-  /** The Distribute step (NEXT_PUBLIC_FEATURE_DISTRIBUTION). */
-  distribution: boolean;
   metadata: boolean;
   notes: boolean;
   coverArt: boolean;
@@ -152,7 +150,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.pitching ? scene('pitch', 'Pitch this!') : null,
     flags.pitchKit ? scene('pitchkit', 'Build your pitch kit') : null,
     flags.metadata ? scene('metadata', 'Fill in details') : null,
-    flags.distribution ? scene('distribute', 'Distribute now') : null,
+    scene('distribute', 'Distribute now'),
     flags.notes ? note : null,
     flags.coverArt ? scene('coverart', 'Add cover art') : null,
     flags.songUpload ? scene('song', 'Upload the song') : null,

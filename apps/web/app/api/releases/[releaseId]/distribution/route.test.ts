@@ -85,7 +85,6 @@ function completeDb(): FakeDb {
 const handoffs = () => inserts.filter((entry) => entry.table === 'billing_events');
 
 beforeEach(() => {
-  vi.stubEnv('NEXT_PUBLIC_FEATURE_DISTRIBUTION', 'true');
   db = completeDb();
   inserts = [];
 });
@@ -205,13 +204,3 @@ describe('GET: what the scene and the rollout show', () => {
   });
 });
 
-describe('the feature switch', () => {
-  it('answers the flag-gate 404 for both methods while the Distribute step is off', async () => {
-    vi.stubEnv('NEXT_PUBLIC_FEATURE_DISTRIBUTION', 'false');
-    for (const response of [need(await GET(get(), context)), need(await POST(post(), context))]) {
-      expect(response.status).toBe(404);
-      expect(await response.json()).toEqual({ error: 'Not found.' });
-    }
-    expect(handoffs()).toHaveLength(0);
-  });
-});

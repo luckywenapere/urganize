@@ -14,7 +14,6 @@ const ALL_ON: RolloutMenuFlags = {
   contentCalendar: true,
   pitching: true,
   pitchKit: true,
-  distribution: true,
   metadata: true,
   notes: true,
   coverArt: true,
@@ -53,7 +52,6 @@ const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey[]> = {
   contentCalendar: ['calendar'],
   pitching: ['pitch'],
   pitchKit: ['pitchkit'],
-  distribution: ['distribute'],
   metadata: ['metadata'],
   notes: ['note'],
   coverArt: ['coverart'],
@@ -102,11 +100,11 @@ describe('buildRolloutMenu', () => {
     }
   });
 
-  it('is only the dialog rows when every feature is off', () => {
+  it('is only Distribute and the dialog rows when every feature is off (Distribute has no switch)', () => {
     const allOff = Object.fromEntries(
       Object.keys(ALL_ON).map((flag) => [flag, false])
     ) as RolloutMenuFlags;
-    expect(keysOf(build({ flags: allOff }))).toEqual(['share', 'change-artist', 'archive']);
+    expect(keysOf(build({ flags: allOff }))).toEqual(['distribute', 'share', 'change-artist', 'archive']);
   });
 
   it('shows each dialog row only when its action is passed', () => {

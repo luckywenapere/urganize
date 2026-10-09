@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.90.0",
+    date: "October 9, 2026",
+    highlights: [
+      "Before you order distribution, Urganize now checks your rollout and lists what the stores still need. Each item has a Fix button that takes you to the right spot.",
+      "The sign-up button stays hidden until the things the stores need are filled in. If only small things are left, you can order anyway.",
+      "Songs now have a Featured artist box, so you do not need to put it in the title.",
+      "You now say Yes or No on whether a song is explicit. Before, it was a box that was quietly left unticked.",
+    ],
+  },
+  {
     version: "1.89.0",
     date: "October 9, 2026",
     highlights: [
