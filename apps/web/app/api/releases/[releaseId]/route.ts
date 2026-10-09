@@ -21,6 +21,9 @@ import {
   shutdownServerAnalytics,
 } from '@/lib/posthog';
 import { isReleaseActive } from '@/lib/release-activity';
+import { decideDraftDiscard, type DraftDiscardDecision } from '@/lib/release-draft-discard';
+import { RELEASE_COLLABORATORS_TABLE } from '@/lib/release-ops';
+import { countReleaseSpendLines } from '@/lib/release-spend-server';
 
 const TASKS_TABLE = 'tasks';
 const ASSETS_TABLE = 'assets';
@@ -71,7 +74,7 @@ async function loadReleaseRetentionSummary(
   const [tasksResult, workspaceResult] = await Promise.all([
     adminClient
       .from(TASKS_TABLE)
-      .select('id', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('release_id', releaseId),
     adminClient
       .from(WORKSPACES_TABLE)
@@ -84,7 +87,7 @@ async function loadReleaseRetentionSummary(
   const teamMembersResult = workspaceResult.data?.id
     ? await adminClient
         .from(WORKSPACE_MEMBERS_TABLE)
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('workspace_id', workspaceResult.data.id)
         .neq('role', 'owner')
         .in('status', ['active', 'invited'])
@@ -341,6 +344,55 @@ export async function PATCH(
   });
 }
 
+/** Rows of one child table for this release. Null when the read failed. */
+async function countReleaseRows(
+  adminClient: SupabaseClient,
+  table: string,
+  releaseId: string
+): Promise<number | null> {
+  const result = await adminClient
+    .from(table)
+    .select('*', { count: 'exact', head: true })
+    .eq('release_id', releaseId);
+  if (result.error) return null;
+  return typeof result.count === 'number' ? result.count : null;
+}
+
+/** Reads what decideDraftDiscard needs. Any failed read reaches it as null. */
+async function checkUntouchedDraft(adminClient: SupabaseClient, releaseId: string): Promise<DraftDiscardDecision> {
+  const releaseResult = await adminClient
+    .from('releases')
+    .select('title,status,release_date,description,artwork_asset_id,metadata,created_at')
+    .eq('id', releaseId)
+    .maybeSingle();
+  if (releaseResult.error || !releaseResult.data) return { discard: false, reason: 'unverifiable' };
+  const row = releaseResult.data as Record<string, unknown>;
+  const text = (value: unknown) => (typeof value === 'string' ? value : null);
+
+  const [tasks, taskGroups, assets, songs, spend, collaborators] = await Promise.all([
+    countReleaseRows(adminClient, TASKS_TABLE, releaseId),
+    countReleaseRows(adminClient, 'task_groups', releaseId),
+    countReleaseRows(adminClient, ASSETS_TABLE, releaseId),
+    countReleaseRows(adminClient, 'songs', releaseId),
+    countReleaseSpendLines(adminClient, releaseId),
+    countReleaseRows(adminClient, RELEASE_COLLABORATORS_TABLE, releaseId),
+  ]);
+
+  return decideDraftDiscard(
+    {
+      title: text(row.title),
+      status: text(row.status),
+      releaseDate: text(row.release_date),
+      description: text(row.description),
+      artworkAssetId: text(row.artwork_asset_id),
+      metadata:
+        row.metadata && typeof row.metadata === 'object' ? (row.metadata as Record<string, unknown>) : null,
+      createdAt: text(row.created_at),
+    },
+    { tasks, taskGroups, assets, songs, spend, collaborators }
+  );
+}
+
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ releaseId: string }> }
@@ -357,6 +409,21 @@ export async function DELETE(
     const adminClient = createAdminClient(auth.supabaseUrl);
     const ownership = await ensureReleaseOwnership(adminClient, releaseId, auth.user.id);
     if ('error' in ownership) return ownership.error;
+
+    // Closing the UrgAns planner before it finished asks for this (2026-10-09):
+    // discard the rollout the planner was opened on, but ONLY when nobody has
+    // touched it. lib/release-draft-discard.ts holds the rule and fails closed,
+    // so a refusal here leaves the rollout exactly as it was.
+    const untouchedDraftOnly = request.nextUrl.searchParams.get('onlyIfUntouchedDraft') === '1';
+    if (untouchedDraftOnly) {
+      const decision = await checkUntouchedDraft(adminClient!, releaseId);
+      if (!decision.discard) {
+        return NextResponse.json(
+          { error: 'This rollout has work in it, so it was kept.', reason: decision.reason },
+          { status: 409 }
+        );
+      }
+    }
 
     // Storage objects don't cascade with the DB row, so they go first — same
     // ordering as the single-asset DELETE: if storage removal fails we leave
@@ -414,7 +481,10 @@ export async function DELETE(
     captureServerAnalyticsEvent(
       posthogServer,
       auth.user.id,
-      createPostHogEvent('release_deleted', { release_id: releaseId })
+      createPostHogEvent('release_deleted', {
+        release_id: releaseId,
+        ...(untouchedDraftOnly ? { reason: 'planner_abandoned' } : {}),
+      })
     );
 
     return new NextResponse(null, { status: 204 });

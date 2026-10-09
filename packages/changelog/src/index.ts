@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.91.1",
+    date: "October 9, 2026",
+    highlights: [
+      "If one part of Home can't load, the rest of Home still shows instead of an error page.",
+      "The \"Back to your rollouts\" button on the error page now takes you to your Catalogue.",
+      "Closing the planner before you finish no longer leaves an empty \"Untitled rollout\" behind.",
+      "A new, empty rollout no longer shows the distribution warning before you have started.",
+    ],
+  },
+  {
     version: "1.91.0",
     date: "October 9, 2026",
     highlights: [

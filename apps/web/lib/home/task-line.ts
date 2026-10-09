@@ -24,6 +24,10 @@ type TaskLineInput = {
  * sentence, so the two can never disagree about what is overdue. Home only lists
  * open tasks, so a task is never treated as finished here.
  */
+function asText(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 export function describeTaskLine(
   task: TaskLineInput,
   now: Date = new Date(),
@@ -32,10 +36,13 @@ export function describeTaskLine(
   const dueClause = due.label.charAt(0).toLowerCase() + due.label.slice(1);
 
   // A title that already ends in punctuation would put it before our comma.
-  const title = task.title.trim().replace(/[\s.,:;]+$/, '');
+  // Read defensively (2026-10-09): this runs for every task on Home, and a row
+  // whose title or names arrive as null or a non-string must not throw, since
+  // one throw here used to take the whole of Home down.
+  const title = asText(task.title).replace(/[\s.,:;]+$/, '') || 'Untitled activity';
 
-  const release = task.releaseTitle?.trim();
-  const artist = task.artistName?.trim();
+  const release = asText(task.releaseTitle);
+  const artist = asText(task.artistName);
   // A missing artist is simply left out. "by Unassigned artist" reads as a
   // person's name inside a sentence, which it is not.
   const where = release ? (artist ? `in ${release} by ${artist}` : `in ${release}`) : 'not in a rollout';

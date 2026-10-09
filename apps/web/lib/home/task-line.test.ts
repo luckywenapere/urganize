@@ -78,4 +78,15 @@ describe('describeTaskLine', () => {
     expect(text).not.toContain('·');
     expect(text.endsWith('.')).toBe(true);
   });
+
+  it('never throws on a row with missing or non-string text (2026-10-09, Home crash)', () => {
+    const odd = (over: Record<string, unknown>) =>
+      describeTaskLine({ title: 'x', releaseTitle: null, artistName: null, dueDate: null, ...over } as never, NOW);
+    expect(() => odd({ title: null })).not.toThrow();
+    expect(() => odd({ title: undefined })).not.toThrow();
+    expect(() => odd({ title: 42, releaseTitle: 7, artistName: {} })).not.toThrow();
+    expect(() => odd({ dueDate: 'not a date' })).not.toThrow();
+    expect(odd({ title: null }).text).toBe('Untitled activity, not in a rollout, no due date.');
+    expect(odd({ title: '   ', releaseTitle: '  ' }).text).toBe('Untitled activity, not in a rollout, no due date.');
+  });
 });

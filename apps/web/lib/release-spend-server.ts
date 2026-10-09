@@ -478,3 +478,18 @@ export async function loadSpendSummary(
 export function spendToday(now: Date = new Date()): string {
   return presenceDay(now);
 }
+
+/**
+ * How many spend lines one rollout has, for the planner's discard check
+ * (lib/release-draft-discard.ts): a rollout with any spend is never discarded.
+ * A read, kept here so this file stays the one place that names the table.
+ * Null when it could not be read, which that check treats as "keep it".
+ */
+export async function countReleaseSpendLines(admin: SupabaseClient, releaseId: string): Promise<number | null> {
+  const result = await admin
+    .from(SPEND_TABLE)
+    .select('*', { count: 'exact', head: true })
+    .eq('release_id', releaseId);
+  if (result.error) return null;
+  return typeof result.count === 'number' ? result.count : null;
+}
