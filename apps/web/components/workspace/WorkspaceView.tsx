@@ -50,6 +50,7 @@ import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
 import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
 import { usePlannerStore } from '@/stores/usePlannerStore';
+import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
 import { PlanBuiltBanner } from '@/components/planner/PlanBuiltBanner';
 import { markPlanBuiltSeen, usePlanBuiltSeen } from '@/components/planner/usePlanBuiltSeen';
@@ -1511,17 +1512,15 @@ export function WorkspaceView() {
               then: () => {
                 router.push(`/dashboard?release=${releaseId}`);
                 if (plannerPending) {
-                  openIntake({
-                    source: 'empty_state',
-                    releaseId,
-                    // Made just now for the planner: closing it early
-                    // discards the empty rollout (lib/release-draft-discard.ts).
-                    discardIfAbandoned: true,
-                    createdTitle: result?.savedTitle ?? null,
-                    ...(result?.releaseType
-                      ? { prefill: { releaseType: result.releaseType } }
-                      : {}),
-                  });
+                  // Made just now for the planner: closing it early
+                  // discards the empty rollout (lib/release-draft-discard.ts).
+                  openIntake(
+                    buildCreatedRolloutIntake({
+                      releaseId,
+                      savedTitle: result?.savedTitle,
+                      releaseType: result?.releaseType,
+                    })
+                  );
                 }
               },
             })();
@@ -1541,17 +1540,15 @@ export function WorkspaceView() {
               // The type picked in the modal rides along as a prefill so the
               // intake's own type question isn't asked a second time.
               router.push(`/dashboard?release=${releaseId}`);
-              openIntake({
-                source: 'empty_state',
-                releaseId,
-                // Made just now for the planner: closing it early discards
-                // the empty rollout (lib/release-draft-discard.ts).
-                discardIfAbandoned: true,
-                createdTitle: result?.savedTitle ?? null,
-                ...(result?.releaseType
-                  ? { prefill: { releaseType: result.releaseType } }
-                  : {}),
-              });
+              // Made just now for the planner: closing it early discards
+              // the empty rollout (lib/release-draft-discard.ts).
+              openIntake(
+                buildCreatedRolloutIntake({
+                  releaseId,
+                  savedTitle: result?.savedTitle,
+                  releaseType: result?.releaseType,
+                })
+              );
             } else {
               // ?new=1 triggers the one-time dismissible getting-started guide
               // (NewReleaseGuide) — only for TEMPLATE creations; its copy

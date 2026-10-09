@@ -1,5 +1,7 @@
 import { readPlannerPending } from './release-planner-pending';
 import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
+import type { PlanReleaseType } from './release-planning';
+import type { PlannerIntakePayload } from '@/stores/usePlannerStore';
 
 /**
  * "Is this rollout an empty shell the planner left behind?" (2026-10-09).
@@ -104,6 +106,31 @@ export function buildDraftDiscardPath(releaseId: string, createdTitle?: string |
   const created = normalizeCreatedTitle(createdTitle);
   if (created) params.set('createdTitle', created);
   return `/api/releases/${encodeURIComponent(releaseId)}?${params.toString()}`;
+}
+
+/**
+ * The planner intake for a rollout a create step made a moment ago only so the
+ * planner had something to plan (v1.92.1). Every create path builds it here,
+ * so closing the planner early discards the empty shell the same way wherever
+ * the rollout was made: Home, the UrgAns page, the workspace, and the
+ * AppShell's global "+ New rollout" modal (which used to omit it and leave an
+ * "Untitled rollout" behind). The discard itself is still only ever what the
+ * server allows under decideDraftDiscard below, so anything touched is kept.
+ */
+export function buildCreatedRolloutIntake(input: {
+  releaseId: string;
+  /** The title the server saved (CreateReleaseModal's result.savedTitle). */
+  savedTitle?: string | null;
+  /** The type picked in the create modal, or null when it was never asked. */
+  releaseType?: PlanReleaseType | null;
+}): PlannerIntakePayload {
+  return {
+    source: 'empty_state',
+    releaseId: input.releaseId,
+    discardIfAbandoned: true,
+    createdTitle: input.savedTitle ?? null,
+    ...(input.releaseType ? { prefill: { releaseType: input.releaseType } } : {}),
+  };
 }
 
 export function decideDraftDiscard(

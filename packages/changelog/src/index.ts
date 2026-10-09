@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.1",
+    date: "October 9, 2026",
+    highlights: [
+      "Starting a rollout from the + New rollout button and closing UrgAns before it finished no longer leaves an empty \"Untitled rollout\" in your catalogue. Anything you've already added to it is kept.",
+    ],
+  },
+  {
     version: "1.92.0",
     date: "October 9, 2026",
     highlights: [

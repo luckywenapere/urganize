@@ -25,6 +25,7 @@ import { PresenceBeacon } from '@/components/app/PresenceBeacon';
 import { ToastProvider } from '@/components/shared/ToastProvider';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
+import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge';
 import { CardTrialGate } from '@/components/providers/CardTrialGate';
 import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
@@ -590,15 +591,17 @@ export function AppShell({ children }: { children: ReactNode }) {
               // navigation here: dismissing the intake leaves the user where
               // they were, and submitting it navigates to the plan scene
               // itself. The type picked in the modal rides along so the intake
-              // doesn't ask it again.
+              // doesn't ask it again. Closing the intake early discards the
+              // rollout made just now while it is still an untouched shell,
+              // exactly as the Home/workspace create paths do (v1.92.1).
               if (PLANNER_ENABLED && result?.plannerPending) {
-                usePlannerStore.getState().openIntake({
-                  source: 'empty_state',
-                  releaseId,
-                  ...(result.releaseType
-                    ? { prefill: { releaseType: result.releaseType } }
-                    : {}),
-                });
+                usePlannerStore.getState().openIntake(
+                  buildCreatedRolloutIntake({
+                    releaseId,
+                    savedTitle: result.savedTitle,
+                    releaseType: result.releaseType,
+                  })
+                );
               } else if (TYPE_FIRST_CREATE_ENABLED) {
                 // TYPE-FIRST CREATE (2026-09-01): the one create screen was the whole
                 // form, so the release view — where name and date get
