@@ -18,7 +18,7 @@ export type FounderOpsAlertEmailProps = {
 // who has no team at all. Dense, no button, the same shell and log as every send.
 export function FounderOpsAlertEmail({ headline, facts }: FounderOpsAlertEmailProps) {
   return (
-    <EmailLayout preview={headline}>
+    <EmailLayout preview={headline} socials={false}>
       <Text style={{ margin: '0 0 14px', color: BODY_TEXT, fontSize: '14px', fontWeight: 600 }}>
         {headline}
       </Text>

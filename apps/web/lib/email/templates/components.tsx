@@ -1,5 +1,6 @@
 import { Button, Link, Section, Text } from 'react-email';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
+import { SOCIAL_LINKS } from '../links';
 import { BODY_TEXT, INK, MUTED_TEXT, PAGE_BG, SPRING } from './theme';
 
 // Shared body pieces so every template reads as one system. react-email inlines
@@ -105,6 +106,39 @@ export function FootnoteText({ children }: { children: ReactNode }) {
   return (
     <Text style={{ margin: '22px 0 0', color: MUTED_TEXT, fontSize: '13px', lineHeight: '1.6' }}>
       {children}
+    </Text>
+  );
+}
+
+/** "Follow us" with one plain text link per account. Text, not icons: mail clients
+ *  block images by default and none of them render SVG, and a new sending domain
+ *  does better with fewer remote assets. No separator character (a middle dot
+ *  would collide with the " · " meta lines some templates assert are absent):
+ *  each link is underlined and spaced, and in a client that drops the spacing the
+ *  single space between them still keeps them apart. */
+export function SocialFooter() {
+  return (
+    <Text style={{ margin: '8px 0 0', color: MUTED_TEXT, fontSize: '12px', lineHeight: '1.9' }}>
+      Follow us:{' '}
+      {SOCIAL_LINKS.map(({ label, href }) => (
+        <Fragment key={label}>
+          <Link
+            href={href}
+            style={{
+              color: MUTED_TEXT,
+              // react-email's Link sets textDecorationLine: 'none' and spreads
+              // this style after it, so the key is overridden in place (see
+              // AccentLink) rather than left for a mail client to pick.
+              textDecorationLine: 'underline',
+              textDecoration: 'underline',
+              marginRight: '12px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {label}
+          </Link>{' '}
+        </Fragment>
+      ))}
     </Text>
   );
 }
