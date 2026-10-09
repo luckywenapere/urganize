@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  displayStatus,
   filterCatalogueRows,
   pickNextTask,
   progressPercent,
@@ -106,6 +109,83 @@ describe('catalogue table', () => {
     expect(pickNextTask([{ title: 'only undated', status: 'todo', dueDate: null }])).toEqual({
       title: 'only undated',
       dueDate: null,
+    });
+  });
+
+  describe('displayStatus: the status a rollout shows (released derived, nothing written)', () => {
+    // Noon local on 2026-10-09, so "today" is unambiguous whatever the runner's zone.
+    const now = new Date(2026, 9, 9, 12, 0, 0);
+    const base = { status: 'draft', releaseDate: null as string | null, tasksDone: 0, tasksTotal: 10 };
+
+    it('reads a draft whose release date has passed as released', () => {
+      expect(displayStatus({ ...base, releaseDate: '2026-09-01' }, now)).toBe('released');
+    });
+
+    it('counts release day itself as released, and tomorrow as not yet', () => {
+      expect(displayStatus({ ...base, releaseDate: '2026-10-09' }, now)).toBe('released');
+      expect(displayStatus({ ...base, releaseDate: '2026-10-10' }, now)).toBe('draft');
+    });
+
+    it('reads a rollout with every activity done as released, even with no date', () => {
+      expect(displayStatus({ ...base, tasksDone: 10, tasksTotal: 10 }, now)).toBe('released');
+      expect(displayStatus({ ...base, tasksDone: 9, tasksTotal: 10 }, now)).toBe('draft');
+    });
+
+    it('does not call an empty rollout (0 of 0, no date) released', () => {
+      expect(displayStatus({ ...base, tasksDone: 0, tasksTotal: 0 }, now)).toBe('draft');
+    });
+
+    it('keeps the stored status for anything that has not happened yet', () => {
+      expect(displayStatus({ ...base, status: 'in_progress', releaseDate: '2026-12-01' }, now)).toBe('in_progress');
+      expect(displayStatus({ ...base, status: 'planning' }, now)).toBe('planning');
+    });
+
+    it('lifts in-progress and ready rollouts to released once the date passes', () => {
+      expect(displayStatus({ ...base, status: 'in_progress', releaseDate: '2026-10-01' }, now)).toBe('released');
+      expect(displayStatus({ ...base, status: 'ready', releaseDate: '2026-10-01' }, now)).toBe('released');
+    });
+
+    it('never turns an archived rollout back into a released one', () => {
+      expect(displayStatus({ ...base, status: 'archived', releaseDate: '2026-01-01', tasksDone: 10 }, now)).toBe(
+        'archived'
+      );
+    });
+
+    it('ignores a malformed date rather than guessing', () => {
+      expect(displayStatus({ ...base, releaseDate: 'not-a-date' }, now)).toBe('draft');
+    });
+
+    it('a derived released row lands under the Released chip, not Planning', () => {
+      const rows = [
+        row({ id: 'past', status: displayStatus({ ...base, releaseDate: '2026-09-01' }, now) }),
+        row({ id: 'future', status: displayStatus({ ...base, releaseDate: '2026-12-01' }, now) }),
+      ];
+      expect(statusCounts(rows, { query: '', artistId: null })).toEqual({
+        all: 2,
+        planning: 1,
+        active: 0,
+        released: 1,
+        archived: 0,
+      });
+    });
+  });
+
+  // Structural guards (pattern 4): the derived status reuses the ONE
+  // "has this release happened" rule and is what every Catalogue surface draws.
+  describe('wiring', () => {
+    const read = (rel: string) => readFileSync(join(__dirname, '..', rel), 'utf8');
+
+    it('derives released from lib/recap-eligibility, not a third definition', () => {
+      const src = read('lib/catalogue-table.ts');
+      expect(src).toMatch(/from '\.\/recap-eligibility'/);
+      expect(src).toMatch(/isRecapEligible\(/);
+      // No hand-rolled date comparison sneaking in beside it.
+      expect(src).not.toMatch(/setHours\(0/);
+    });
+
+    it('the Catalogue rows and the focused rollout header both show displayStatus', () => {
+      expect(read('components/workspace/WorkspaceView.tsx')).toMatch(/status: displayStatus\(/);
+      expect(read('components/workspace/WorkspaceDesktopFocused.tsx')).toMatch(/displayStatus\(/);
     });
   });
 });

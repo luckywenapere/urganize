@@ -9,6 +9,7 @@
 // artist-name matching behave exactly as they always did.
 
 import { searchReleases } from '@/lib/release-search';
+import { isRecapEligible } from './recap-eligibility';
 
 export type CatalogueNextTask = { title: string; dueDate: string | null };
 
@@ -17,6 +18,9 @@ export type CatalogueRow = {
   title: string;
   artistId: string | null;
   artistName: string | null;
+  /** The status the Catalogue SHOWS: `displayStatus` of the stored one, so a
+   *  rollout whose day has passed reads Released. Filters and chip counts read
+   *  this too, so the pill and the chip a row sits under always agree. */
   status: string;
   releaseDate: string | null;
   tasksDone: number;
@@ -59,6 +63,34 @@ export function statusGroup(status: string): Exclude<StatusFilterKey, 'all'> {
     default:
       return 'planning';
   }
+}
+
+/**
+ * The status to show for a rollout. Nothing in the product writes the
+ * `released` status, so a stored `draft` stays `draft` forever, and every
+ * rollout used to read Draft in the Catalogue, long after its release day.
+ *
+ * This derives `released` for DISPLAY ONLY, from the product's one existing
+ * answer to "has this release happened" (`isRecapEligible` in
+ * lib/recap-eligibility.ts: release day has arrived, or every activity is
+ * done). It is not a third definition, and it writes nothing: the stored
+ * status, the schema and every other reader are unchanged.
+ *
+ * Archived stays archived (`isRecapEligible` treats it as happened, but a
+ * rollout someone put away must not reappear under Released). Anything that
+ * has not happened keeps its stored status.
+ */
+export function displayStatus(
+  row: Pick<CatalogueRow, 'status' | 'releaseDate' | 'tasksDone' | 'tasksTotal'>,
+  now: Date = new Date()
+): string {
+  if (row.status === 'archived' || row.status === 'released') return row.status;
+  const happened = isRecapEligible(
+    { releaseDate: row.releaseDate, status: row.status },
+    { totalTasks: row.tasksTotal, allTasksDone: row.tasksDone >= row.tasksTotal },
+    now
+  );
+  return happened ? 'released' : row.status;
 }
 
 export type CatalogueFilters = {

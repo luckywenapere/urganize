@@ -1,7 +1,7 @@
 {
   "name": "urganize",
   "description": "Urganize is where music teams do everything after the music is made.",
-  "version": "1.91.1",
+  "version": "1.91.2",
   "private": true,
   "packageManager": "pnpm@10.6.4",
   "workspaces": [
