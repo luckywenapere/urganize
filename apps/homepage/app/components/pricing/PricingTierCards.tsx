@@ -61,6 +61,20 @@ const INTERVAL_LABEL: Record<BillingInterval, string> = {
   annual: "Yearly",
 };
 
+// THE BILLING LINE IS DERIVED FROM WHAT IS ON SALE, not typed (2026-10-09).
+// It said "Every plan is paid once a year." while the switch above the cards
+// offered Monthly and Yearly: true on 2026-09-08, when yearly was the only
+// interval, and nobody changed it when monthly came back two days later. It is
+// the same drift this file's header describes for prices, so it reads the same
+// list the switch does. The both-intervals wording is the one /terms uses.
+function billingLine(intervals: readonly BillingInterval[]): string {
+  const monthly = intervals.includes("monthly");
+  const annual = intervals.includes("annual");
+  if (monthly && annual) return "You can pay monthly or once a year.";
+  if (annual) return "Every plan is paid once a year.";
+  return "Every plan is paid monthly.";
+}
+
 export function PricingTierCards() {
   // Monthly first: it is the price we set and the smaller number, so opening on
   // yearly would show every visitor the larger figure first. The saving badge
@@ -215,8 +229,9 @@ export function PricingTierCards() {
             "Your whole team" rather than "your workspace": that word is out
             of anything a customer reads. */}
         <p className="mt-8 text-center text-xs leading-6 text-[var(--marketing-text-subtle)]">
-          Prices are in Naira. One price covers your whole team, not each person.
-          Every plan is paid once a year. We are letting teams in from the waitlist.
+          Prices are in Naira. One price covers your whole team, not each person.{" "}
+          {billingLine(SELLABLE_INTERVALS)} We are letting teams in from the
+          waitlist.
         </p>
       </div>
     </section>

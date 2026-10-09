@@ -14563,6 +14563,12 @@ Every marketing "Try Urganize" button goes to `/#waitlist`, and the `id="waitlis
 
 ---
 
+## The /pricing footnote follows the intervals on sale (2026-10-09, no flag)
+
+The line under the four plan cards said "Every plan is paid once a year." while the Monthly / Yearly switch above them was open on Monthly: true on 2026-09-08, stale since monthly came back on 2026-09-10, and the only place on the site disagreeing with `packages/pricing` and `/terms` ("paid monthly or once a year"). `billingLine` in `apps/homepage/app/components/pricing/PricingTierCards.tsx` now builds the sentence from `SELLABLE_INTERVALS`, the same list the switch reads, so the two cannot disagree again: both on sale reads "You can pay monthly or once a year.", yearly only "Every plan is paid once a year.", monthly only "Every plan is paid monthly." No price, interval or plan definition changed. Marketing-site only, so no changelog entry or version bump (the app-only scope rule). Looked at in headless Chromium at 390px and 1440px on both intervals; `notes/marketing-log.md` has the screenshot paths. Not verified against the deployed site until the preview lands.
+
+---
+
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
   - `Web` → https://app.urganize.app (builds `apps/web`)
