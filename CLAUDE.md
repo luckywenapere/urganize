@@ -14535,6 +14535,15 @@ Found by the marketing polish loop (`notes/marketing-log.md` keeps its running l
 - Marketing-site only, so no changelog entry and no version bump (the app-only scope rule above).
 - **Verified:** JS off, JS blocked at the network, and JS on (all eight sections start hidden below the fold and show after scrolling), plus `/#waitlist` with the six sections above it staying shown. Homepage lint and build, and the positioning and copy guard tests in `apps/web`, pass. **Not verified:** a real slow Lagos connection, and a mobile Safari; the check is a headless Chromium with the network blocked.
 
+## "Try Urganize" lands on the waitlist headline (2026-10-09, no flag)
+
+Every marketing "Try Urganize" button goes to `/#waitlist`, and the `id="waitlist"` sat on the div under the section's headline, so the page jumped to a bare email field with "Put your next rollout on plan." scrolled off behind the fixed header. The anchor is on the block that holds the headline now (`FinalCTASection.tsx`) with `scroll-mt-28`.
+
+- **`scroll-mt-28` (112px), not `scroll-mt-24`.** The fixed header is 77px tall on a phone and 81px at 1440px, and the section slides up 20px as `ScrollReveal` shows it, after the browser has already placed the anchor. At 96px the headline sat flush against the header; at 112px it lands about 92px down. If the header height or the reveal's slide changes, re-check this margin.
+- The form is still reached by `#waitlist input[type=email]`; the id moved up, nothing was renamed.
+- Marketing-site only, so no changelog entry and no version bump.
+- **Verified:** at 390px and 1440px, dark and light, the headline reads above the form after tapping the hero button. Homepage lint, build and the positioning and copy guard tests pass. **Not verified:** a real phone's browser (iOS Safari's anchor jump and its dynamic toolbar).
+
 ---
 
 ## Deploy Configuration (configured by /setup-deploy)

@@ -19,6 +19,17 @@ Open, in the order they will be taken:
 7. Product shots on a phone are desktop screenshots shrunk to about 330px wide and cannot be read.
 8. The press kit shot still reads "Made with Urganize, the operating system" (the app dropped that line). Retaking shots needs a signed-in headed Chrome, so it is in `notes/needs-lucky.md`.
 9. `scripts/smoke-waitlist.mjs` looks for copy and an h1 that no longer exist.
+10. `/pricing` bottom block still says "Not ready to talk yet? ... We'll reach out when the time is right for your team." There is no longer a sales conversation on that page (every plan sends you to the form), so "talk" promises something the page does not offer.
+
+## 2026-10-09 | Tapping "Try Urganize" lands on a bare email field
+
+**What is wrong.** Every "Try Urganize" button (hero, header, the four pricing cards, /signup) links to `/#waitlist`. The `id="waitlist"` sits on the div that wraps the form, which is *under* the headline "Put your next rollout on plan.", and `scroll-mt-28` then leaves the form just under the fixed header. So the page jumps to an email field and "JOIN THE WAITLIST", with the headline scrolled off the top. Seen at 390px: `cta/after-hero-tap.png`.
+
+**Why it costs sign-ups.** This is the one click the whole site is built to earn. The visitor arrives from a button that said "Try Urganize", on a box with no sentence above it saying what they are about to do. A field with no question over it reads as a stray input, not the end of the pitch.
+
+**Fix.** Move the anchor up to the block that holds the headline, and give it `scroll-mt-28` (112px) so the headline lands just under the fixed header (77px on a phone, 81px on desktop). `scroll-mt-24` was tried first and left the headline flush against the header, because the section slides up 20px after the browser has placed the anchor (the `ScrollReveal` entrance). One id moved and one margin class, no copy changed, nothing else on the page touched.
+
+**Checked.** Tapping "Try Urganize" at 390px: header bottom 77px, headline top 92px, email field top 166px, so the headline reads above the form in dark and light. At 1440px the headline is visible with the form under it in both themes. Before: `cta/after-hero-tap.png`. After: `anchor/after-m390-dark.png`, `anchor/after-m390-light.png`, `anchor/after-d1440-dark.png`, `anchor/after-d1440-light.png`. Selectors that reach the form (`#waitlist input[type=email]`) still work.
 
 ## 2026-10-09 | Page blank below the first screen without JavaScript
 
@@ -31,3 +42,5 @@ Open, in the order they will be taken:
 **Fix.** Sections are shown by default. `ScrollReveal` hides one (`data-reveal="armed"`) only after it has run in the browser and only when the section is wholly below the fold; sections already on screen, or already scrolled past (a reload that restored the scroll position, a jump link), are left showing. No new component, no new dependency, nothing animated that was not animated before.
 
 **Checked.** JavaScript off: all 8 sections at opacity 1. JavaScript blocked at the network: all 8 at 1. JavaScript on: all 8 start hidden below the fold and are visible after scrolling. Jump to `/#waitlist`: the six sections above the landing point stay shown. Homepage lint (0 errors, the 2 existing warnings), homepage build, and the positioning and copy guard tests in `apps/web` all pass.
+
+**Merged.** #766, 2026-10-09 (squash).
