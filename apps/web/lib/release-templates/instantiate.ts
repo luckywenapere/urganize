@@ -235,7 +235,7 @@ export async function instantiateTemplate(params: {
 // Internals
 // ---------------------------------------------------------------------------
 
-interface BuildTaskRowParams {
+export interface BuildTaskRowParams {
   task: TemplateTask;
   index: number;
   template: Template;
@@ -247,7 +247,7 @@ interface BuildTaskRowParams {
   instantiationMs: number;
 }
 
-function buildTaskRow(params: BuildTaskRowParams) {
+export function buildTaskRow(params: BuildTaskRowParams) {
   const {
     task,
     index,

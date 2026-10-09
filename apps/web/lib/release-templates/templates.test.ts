@@ -123,7 +123,7 @@ describe('staggered-single templates', () => {
     expect(drop?.offset_days).toBe(-42);
     // The EP editorial pitch is the reason the single goes first: it depends on
     // the single's numbers, so it must land after the drop.
-    const pitch = EP_RELEASE_TEMPLATE.tasks.find((task) => task.id === 'w5_ep_editorial_pitch');
+    const pitch = EP_RELEASE_TEMPLATE.tasks.find((task) => task.id === 'editorial_pitch');
     expect(pitch?.offset_days).toBeGreaterThan(drop?.offset_days as number);
     expect(pitch?.depends_on).toContain('w6_single_first_numbers');
   });
@@ -137,9 +137,7 @@ describe('staggered-single templates', () => {
     expect(second?.offset_days).toBe(-42);
     // The album pitch rests on BOTH singles' numbers — that combined evidence
     // is the entire argument for staggering the campaign.
-    const pitch = ALBUM_RELEASE_TEMPLATE.tasks.find(
-      (task) => task.id === 'w5_album_editorial_pitch'
-    );
+    const pitch = ALBUM_RELEASE_TEMPLATE.tasks.find((task) => task.id === 'editorial_pitch');
     expect(pitch?.depends_on).toEqual(
       expect.arrayContaining(['w12_single_1_first_numbers', 'w6_single_2_first_numbers'])
     );

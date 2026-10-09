@@ -243,6 +243,48 @@ describe('getTaskCompletionBlocker', () => {
   });
 });
 
+describe('the Spotify editorial pitch waits on the distribution order', () => {
+  const order = (over: Partial<ExecutionTask> = {}) =>
+    templateTask({
+      id: 'order',
+      title: 'Upload to the distributor',
+      templateTaskId: 'w6_upload_to_distributor',
+      ...over,
+    });
+  const pitch = (over: Partial<ExecutionTask> = {}) =>
+    templateTask({
+      id: 'pitch',
+      title: 'Pitch to Spotify editorial',
+      templateTaskId: 'editorial_pitch',
+      dependencies: ['order'],
+      ...over,
+    });
+
+  it('says to order distribution first, not which step to finish', () => {
+    expect(getTaskCompletionBlocker(pitch(), [pitch(), order()])).toBe(
+      "Order distribution first. Spotify can't see the release until then."
+    );
+  });
+
+  it('lets the pitch through once the order is done', () => {
+    const done = order({ status: TASK_DONE_STATUS });
+    expect(getTaskCompletionBlocker(pitch(), [pitch(), done])).toBeNull();
+  });
+
+  it('keeps the ordinary wording when the open step is some other activity', () => {
+    const other = templateTask({ id: 'other', title: 'Finish the artwork' });
+    const task = pitch({ dependencies: ['other'] });
+    expect(getTaskCompletionBlocker(task, [task, other])).toBe('Waiting on Finish the artwork.');
+  });
+
+  it('does not rewrite the wording for any task but the pitch', () => {
+    const task = templateTask({ id: 'x', dependencies: ['order'], templateTaskId: 'w6_announce' });
+    expect(getTaskCompletionBlocker(task, [task, order()])).toBe(
+      'Waiting on Upload to the distributor.'
+    );
+  });
+});
+
 describe('isRequirementSatisfied', () => {
   it('treats an absent requirement as satisfied', () => {
     // Most activities carry none, so the absence has to read as "nothing to

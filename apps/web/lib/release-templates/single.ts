@@ -258,18 +258,6 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       tags: ['distribution'],
     },
     {
-      id: 'w6_spotify_for_artists_pitch',
-      title: 'Submit Spotify for Artists pitch',
-      description:
-        'Submit the Spotify for Artists pitch with a private link (Release Radar and Discover Weekly consideration). Spotify needs 4+ weeks of lead time for editorial review.',
-      role: 'marketing_lead',
-      type: 'task',
-      offset_days: -42,
-      duration_days: 1,
-      optional: false,
-      tags: ['editorial', 'marketing'],
-    },
-    {
       id: 'w6_setup_presave',
       title: 'Set up pre-save link',
       description:
@@ -412,6 +400,22 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       duration_days: 1,
       optional: true,
       tags: ['marketing', 'editorial'],
+    },
+    {
+      // The one Spotify editorial pitch. Spotify only accepts a pitch once the
+      // distributor has delivered the release, and wants it at least 7 days
+      // before release day, so it waits on the upload and sits at -28.
+      id: 'editorial_pitch',
+      title: 'Pitch to Spotify editorial',
+      description:
+        'Spotify needs this at least 7 days before release day. Earlier gives you a better shot.',
+      role: 'manager',
+      type: 'task',
+      offset_days: -28,
+      duration_days: 1,
+      depends_on: ['w6_upload_to_distributor'],
+      optional: false,
+      tags: ['editorial', 'distribution'],
     },
 
     // -----------------------------------------------------------------------

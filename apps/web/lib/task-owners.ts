@@ -22,6 +22,8 @@
 // it should not throw away a more specific match just because the top pick
 // left the team.
 
+import { isOwnerDefaultTask } from './editorial-pitch';
+
 export type PastAssignment = {
   /** Null entries are filtered out by the caller before this ever sees them;
    *  kept nullable here so the server loader's raw row shape can be passed
@@ -138,6 +140,18 @@ export function proposeTaskOwners(input: {
   };
 
   return tasks.map((task): ProposedOwner => {
+    // The Spotify pitch and the distribution order it waits on stay with the
+    // release owner by default. Past releases say who clicked through those
+    // steps before; they do not say who should own a deadline Spotify sets.
+    if (isOwnerDefaultTask(task.templateTaskId)) {
+      return {
+        taskId: task.id,
+        userId: creatorUserId,
+        basis: 'creator',
+        reason: 'Spotify sets this deadline, so it stays with you.',
+      };
+    }
+
     if (task.templateTaskId) {
       const entries = byTemplateTaskId.get(task.templateTaskId) ?? [];
       const candidate = pickAssignable(rankCandidates(entries));

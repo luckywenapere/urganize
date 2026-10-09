@@ -129,7 +129,6 @@ the album's own 5-week editorial window even opens.
 ## Week 5 — Album Editorial & Pre-save (Days 85–91) [offset: -35]
 
 - Confirm the distributor accepted the album with no metadata errors — Manager
-- Pitch the album to editorial with both singles' traction as evidence — Marketing Lead
 - Set up the album pre-save link — Manager
 - [Conditional] Album pre-save campaign goes live — Manager
 - Identify priority playlists and curators for the album — Marketing Lead
@@ -141,6 +140,7 @@ the album's own 5-week editorial window even opens.
 - [Conditional] Send the album press release to contacts — Manager
 - [Conditional] Pitch long-form press: interviews, features, album reviews — Manager
 - Confirm any release-day events — Manager
+- Pitch to Spotify editorial, with both singles' numbers as evidence (after the album upload at -49; Spotify needs it at least 7 days before release day) — Manager
 
 ## Week 3 — Marketing Ramp (Days 99–105) [offset: -21]
 

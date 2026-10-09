@@ -912,19 +912,6 @@ export const ALBUM_RELEASE_TEMPLATE: Template = {
       tags: ['distribution'],
     },
     {
-      id: 'w5_album_editorial_pitch',
-      title: "Pitch the album to editorial with both singles' traction as evidence",
-      description:
-        'Pitch the album with real numbers from two released singles: streams, saves, playlist adds, markets, and growth between the two. Five weeks out keeps you inside the editorial window. This combined evidence is the entire reason the campaign was staggered.',
-      role: 'marketing_lead',
-      type: 'task',
-      offset_days: -35,
-      duration_days: 1,
-      depends_on: ['w12_single_1_first_numbers', 'w6_single_2_first_numbers'],
-      optional: false,
-      tags: ['editorial', 'marketing'],
-    },
-    {
       id: 'w5_album_presave_setup',
       title: 'Set up the album pre-save link',
       description:
@@ -1028,6 +1015,25 @@ export const ALBUM_RELEASE_TEMPLATE: Template = {
       duration_days: 1,
       optional: false,
       tags: ['event', 'planning'],
+    },
+    {
+      // The one Spotify editorial pitch: after the album is delivered, at least
+      // 7 days before release day, with both singles' numbers as evidence.
+      id: 'editorial_pitch',
+      title: 'Pitch to Spotify editorial',
+      description:
+        'Spotify needs this at least 7 days before release day. Earlier gives you a better shot. Attach the numbers from both singles: streams, saves, playlist adds and markets.',
+      role: 'manager',
+      type: 'task',
+      offset_days: -28,
+      duration_days: 1,
+      depends_on: [
+        'w7_upload_album_to_distributor',
+        'w12_single_1_first_numbers',
+        'w6_single_2_first_numbers',
+      ],
+      optional: false,
+      tags: ['editorial', 'distribution'],
     },
 
     // -----------------------------------------------------------------------

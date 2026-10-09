@@ -856,6 +856,28 @@ describe('applyDeltaToDraft', () => {
     expect(after?.assignee_basis).toBe('history');
   });
 
+  it('ignores a suggested date for the Spotify pitch and the order it waits on', () => {
+    const doc = buildBaseDraft();
+    const pitch = doc.tasks.find((task) => task.template_task_id === 'editorial_pitch')!;
+    const order = doc.tasks.find((task) => task.template_task_id === 'w6_upload_to_distributor')!;
+    const other = doc.tasks.find((task) => task.template_task_id === 'w6_upload_cover_art')!;
+    expect(pitch.offset_days).toBe(-28);
+
+    const next = applyDeltaToDraft(doc, {
+      ...emptyDelta(),
+      adjust_offsets: [
+        { id: pitch.id, offset_days: -10, reason: 'Compress the plan.' },
+        { id: order.id, offset_days: -10, reason: 'Compress the plan.' },
+        { id: other.id, offset_days: -10, reason: 'Compress the plan.' },
+      ],
+    });
+
+    expect(next.tasks.find((task) => task.id === pitch.id)?.offset_days).toBe(-28);
+    expect(next.tasks.find((task) => task.id === order.id)?.offset_days).toBe(order.offset_days);
+    // An ordinary step still moves.
+    expect(next.tasks.find((task) => task.id === other.id)?.offset_days).toBe(-10);
+  });
+
   it('does not stamp a reason onto a drop that never happened', () => {
     const doc = buildBaseDraft();
     const untouched = doc.tasks[0];
@@ -1393,11 +1415,16 @@ describe('isTaskKeptByPreset — surprise (tag-based, every playbook)', () => {
     }
   });
 
-  it('keeps exactly 13 of the single playbook’s 64 — the reviewed number', () => {
+  it('keeps exactly 14 of the single playbook’s 64 — the reviewed number', () => {
+    // 13 until the Spotify editorial pitch joined the distribution steps: it is
+    // tagged distribution because Spotify only takes a pitch after delivery, so
+    // it is kept like the rest of the delivery chain. Pitching is private to
+    // Spotify, not a public announcement.
     const kept = SINGLE_RELEASE_TEMPLATE.tasks.filter((task) =>
       isTaskKeptByPreset(withTags(task), 'surprise', SINGLE_RELEASE_TEMPLATE.id)
     );
-    expect(kept).toHaveLength(13);
+    expect(kept).toHaveLength(14);
+    expect(kept.some((task) => task.id === 'editorial_pitch')).toBe(true);
   });
 
   it('never depends on the template id: an unrecognized one gives the same tag-based answer', () => {
@@ -1448,10 +1475,11 @@ describe('isTaskKeptByPreset / QUIET_KEEP_TASK_IDS — quiet', () => {
   });
 
   it('keeps the free Spotify for Artists pitch, which no scope-based rule could', () => {
-    // marketing/press scope removal would take this out too (it carries both
-    // tags); the whole reason Quiet is a hand-picked allowlist rather than a
-    // scope is that it must survive.
-    expect(QUIET_KEEP_TASK_IDS['single_v0.3']).toContain('w6_spotify_for_artists_pitch');
+    // Quiet is a hand-picked allowlist rather than a scope because this free
+    // pitch has to survive it.
+    expect(QUIET_KEEP_TASK_IDS['single_v0.3']).toContain('editorial_pitch');
+    expect(QUIET_KEEP_TASK_IDS['ep_v0.1']).toContain('editorial_pitch');
+    expect(QUIET_KEEP_TASK_IDS['album_v0.1']).toContain('editorial_pitch');
   });
 
   it('never keeps the distributor uploads for a template it does not recognize (fails open, not blind)', () => {
@@ -1479,9 +1507,9 @@ describe('applyPreset', () => {
     expect(next.tasks).toHaveLength(doc.tasks.length);
   });
 
-  it('surprise removes exactly 51 of the single playbook’s 64', () => {
+  it('surprise removes exactly 50 of the single playbook’s 64', () => {
     const next = applyPreset(buildBaseDraft(), 'surprise');
-    expect(next.tasks.filter((task) => task.removed)).toHaveLength(51);
+    expect(next.tasks.filter((task) => task.removed)).toHaveLength(50);
   });
 
   it('is idempotent: applying it twice removes nothing further', () => {

@@ -217,6 +217,27 @@ export async function resolveActionScope(
   };
 }
 
+/**
+ * Whether THIS caller could run an embedded action on this object right now:
+ * the surface is switched on, they can reach the object, and the owner's plan
+ * includes embedded actions. Read-only: nothing is logged and nothing is
+ * charged. A screen uses it to decide whether to SHOW a button at all (a Solo
+ * team sees none), while runUrgansAction still makes the real decision.
+ */
+export async function canRunEmbeddedAction(
+  admin: SupabaseClient,
+  actionType: string,
+  objectId: string,
+  user: User
+): Promise<boolean> {
+  if (!isUrgansActionsEnabled()) return false;
+  const action = getUrgansAction(actionType);
+  if (!action) return false;
+  const scopeResult = await resolveActionScope(admin, action, objectId, user);
+  if (!scopeResult.ok) return false;
+  return getEntitlement(scopeResult.scope.tier, 'urgans_embedded_actions');
+}
+
 // ── Run ──────────────────────────────────────────────────────────────────────
 
 export type RunActionParams = {

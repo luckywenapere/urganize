@@ -10,12 +10,15 @@ import {
   isReadOnlyWorkspaceMember,
   loadTaskDetail,
   logTaskActivity,
+  readTemplateTaskId,
   requireAuthenticatedAdmin,
   requireAuthenticatedAdminOrInternal,
   isTaskSchemaMissingError,
   type TaskRow,
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
+import { isEditorialPitchTask } from '@/lib/editorial-pitch';
+import { loadPitchBlocker } from '@/lib/editorial-pitch-server';
 import { ASSIGN_OUTSIDE_TEAM_MESSAGE, isTeamAssignee } from '@/lib/task-assignee-server';
 import {
   captureServerAnalyticsEvent,
@@ -141,6 +144,21 @@ export async function PATCH(
       );
       if (!allowed) {
         return NextResponse.json({ error: ASSIGN_OUTSIDE_TEAM_MESSAGE }, { status: 400 });
+      }
+    }
+
+    // Spotify takes a pitch only after the distributor has delivered, so the
+    // pitch cannot be marked done while the distribution order is still open.
+    // This is the only task the route guards: it deliberately enforces nothing
+    // else about order. The client checks the same rule first, so this is the
+    // backstop for the status dropdown and for anything calling the API.
+    if (
+      mapped.updates.status === 'done' &&
+      isEditorialPitchTask(readTemplateTaskId(access.task.metadata))
+    ) {
+      const blocker = await loadPitchBlocker(adminClient, access.task);
+      if (blocker) {
+        return NextResponse.json({ error: blocker }, { status: 409 });
       }
     }
 

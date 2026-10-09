@@ -30,7 +30,6 @@ Default roles: Artist, Manager, Marketing Lead, Designer, Distributor Contact
 - Upload track and metadata to distributor — Manager
 - Upload cover art to distributor — Manager
 - Confirm release date locked at distributor — Manager
-- Submit Spotify for Artists pitch (Release Radar & Discover Weekly consideration) with private link — Marketing Lead
 - Set up pre-save link (distributor has now accepted) — Manager
 - Begin curator/playlist outreach with private link — Marketing Lead
 
@@ -48,6 +47,7 @@ Default roles: Artist, Manager, Marketing Lead, Designer, Distributor Contact
 - Begin teaser content rollout (1 piece every 2–3 days) — Marketing Lead
 - Brief any PR contacts on release — Manager
 - Follow up on curator outreach — Marketing Lead
+- Pitch to Spotify editorial (after the upload at -42; Spotify needs it at least 7 days before release day) — Manager
 
 ## Week 3 — Pre-Release Push (Days 36–42) [offset: -21]
 

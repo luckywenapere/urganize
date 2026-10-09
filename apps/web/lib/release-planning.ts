@@ -32,6 +32,7 @@
 import type { Template, TaskRole } from './release-templates/types';
 import { getTemplateLeadTimeDays } from './release-templates/loader';
 import type { ProposedOwner } from './task-owners';
+import { EDITORIAL_PITCH_TASK_ID, isPinnedOffsetTask } from './editorial-pitch';
 
 // ---------------------------------------------------------------------------
 // Feature flag
@@ -303,7 +304,7 @@ export const QUIET_KEEP_TASK_IDS: Record<string, string[]> = {
     'w6_upload_to_distributor',
     'w6_upload_cover_art',
     'w6_confirm_release_date_at_distributor',
-    'w6_spotify_for_artists_pitch',
+    EDITORIAL_PITCH_TASK_ID,
     'w5_confirm_distributor_accepted',
     'w2_prepare_release_day_posts',
     'w2_setup_artist_analytics',
@@ -338,7 +339,7 @@ export const QUIET_KEEP_TASK_IDS: Record<string, string[]> = {
     'w8_confirm_ep_window',
     'w4_confirm_ep_accepted',
     'w11_single_editorial_pitch',
-    'w5_ep_editorial_pitch',
+    EDITORIAL_PITCH_TASK_ID,
     'w2_prepare_release_day_content',
     'w7_analytics_access',
     'w6_lead_single_drop',
@@ -379,7 +380,7 @@ export const QUIET_KEEP_TASK_IDS: Record<string, string[]> = {
     'w5_confirm_album_accepted',
     'w14_single_1_editorial_pitch',
     'w9_single_2_editorial_pitch',
-    'w5_album_editorial_pitch',
+    EDITORIAL_PITCH_TASK_ID,
     'w2_prepare_release_day_content',
     'w13_analytics_access',
     'w12_single_1_drop',
@@ -1536,7 +1537,10 @@ export function applyDeltaToDraft(doc: ReleasePlanDraftDoc, delta: PlannerAiDelt
       next.removed_reason = dropReason || null;
     }
 
-    const offset = offsets.get(task.id);
+    // The Spotify pitch and the distribution order it waits on are pinned to
+    // Spotify's own rules (delivery first, pitch at least 7 days out), so the
+    // model's date suggestion for them is ignored rather than applied.
+    const offset = isPinnedOffsetTask(task.template_task_id) ? undefined : offsets.get(task.id);
     if (offset) {
       next.offset_days = offset.offset_days;
       next.phase = derivePlanPhase(offset.offset_days);

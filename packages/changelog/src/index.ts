@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.89.0",
+    date: "October 9, 2026",
+    highlights: [
+      "Every rollout plan now has a step to pitch Spotify editorial. It comes after you order distribution, and it is due 28 days before release day.",
+      "Rollouts you already made get the step the first time you open them. You get reminders at 28, 14 and 8 days out.",
+      "On Manager and above, Draft my pitch fills in your genre, moods, instruments and song description for you.",
+    ],
+  },
+  {
     version: "1.88.5",
     date: "October 9, 2026",
     highlights: [

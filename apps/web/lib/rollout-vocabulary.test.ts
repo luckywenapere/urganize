@@ -126,6 +126,13 @@ const GUARDED_FILES = [
   'components/settings/segments/GeneralSegment.tsx',
   'components/settings/segments/SecuritySegment.tsx',
   'components/settings/segments/ArtistsBrandSegment.tsx',
+  // The Spotify editorial pitch (2026-10-09). The two phrases the brief wrote with
+  // the word release in them are allowed below, by exact phrase.
+  'lib/editorial-pitch.ts',
+  'lib/editorial-pitch-draft.ts',
+  'components/tasks/EditorialPitchPanel.tsx',
+  'components/workspace/EditorialPitchClosedBanner.tsx',
+  'components/releases/ReleaseDetailsSheet.tsx',
   '../../packages/pricing/src/index.ts',
 ];
 
@@ -137,6 +144,10 @@ const ALLOWED = [
   /\/api\/releases|\?release=|\/releases?\//, // URLs
   /_release\b|\brelease_/, // tool names and enum values (create_release, pre_release)
   /\bcreate_release\b|\bget_release\b/, // named in UrgAns's own prompt on purpose
+  // Two strings the Spotify pitch brief wrote with the word release in them, kept as
+  // written (the brief's copy is final): the skip button, and the blocked line.
+  /release without a/i,
+  /see the release until/i,
 ];
 
 const OBJECT_WORD = /(?<![\w\-/?&.${])release(s|'s)?(?![\w\-=_}?]|\.\w)/gi;

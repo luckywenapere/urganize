@@ -5,6 +5,7 @@ import { runTrialEndingSweep } from '@/lib/billing-alerts-server';
 import { runDeliveryReconcile } from '@/lib/delivery-records-server';
 import { runKitSnapshotSweep } from '@/lib/release-epk-snapshot-server';
 import { runPitchWindowSweep } from '@/lib/pitch-payments-server';
+import { runEditorialPitchReminderSweep } from '@/lib/editorial-pitch-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -84,5 +85,20 @@ export async function GET(request: NextRequest) {
   // route gives, and it never throws.
   const pitchSweep = await runPitchWindowSweep(adminClient);
 
-  return NextResponse.json({ ok: true, trialSweep, directorySweep, kitSnapshotSweep, pitchSweep });
+  // Spotify editorial pitch reminders (2026-10-09), at 28, 14 and 8 days before
+  // release day. NOT the curator sweep above, despite the similar name: that one
+  // is about paid pitches to playlist curators. This one reminds a team to send
+  // Spotify its own editorial pitch before the window closes 7 days out. It
+  // rides this cron because both schedule slots are taken, and "sent once" is
+  // a row per reminder type, so running it twice is harmless. Never throws.
+  const editorialPitchSweep = await runEditorialPitchReminderSweep(adminClient);
+
+  return NextResponse.json({
+    ok: true,
+    trialSweep,
+    directorySweep,
+    kitSnapshotSweep,
+    pitchSweep,
+    editorialPitchSweep,
+  });
 }

@@ -663,19 +663,6 @@ export const EP_RELEASE_TEMPLATE: Template = {
       tags: ['marketing'],
     },
     {
-      id: 'w5_ep_editorial_pitch',
-      title: 'Pitch the EP to editorial with lead single traction as evidence',
-      description:
-        'Pitch the EP with the single\'s real numbers attached: streams, saves, playlist adds, and where the listeners are. Five weeks out keeps you inside the editorial window. This evidence is the whole reason the single went first.',
-      role: 'marketing_lead',
-      type: 'task',
-      offset_days: -35,
-      duration_days: 1,
-      depends_on: ['w6_single_first_numbers'],
-      optional: false,
-      tags: ['editorial', 'marketing'],
-    },
-    {
       id: 'w5_review_single_performance',
       title: 'Review lead single performance and adjust the EP plan',
       description:
@@ -793,6 +780,21 @@ export const EP_RELEASE_TEMPLATE: Template = {
       depends_on: ['w13_lock_tracklist'],
       optional: false,
       tags: ['planning', 'marketing'],
+    },
+    {
+      // The one Spotify editorial pitch: after the EP is delivered, at least 7
+      // days before release day, with the lead single's numbers as evidence.
+      id: 'editorial_pitch',
+      title: 'Pitch to Spotify editorial',
+      description:
+        'Spotify needs this at least 7 days before release day. Earlier gives you a better shot. Attach the numbers from the lead single: streams, saves, playlist adds and markets.',
+      role: 'manager',
+      type: 'task',
+      offset_days: -28,
+      duration_days: 1,
+      depends_on: ['w5_upload_ep_to_distributor', 'w6_single_first_numbers'],
+      optional: false,
+      tags: ['editorial', 'distribution'],
     },
 
     // -----------------------------------------------------------------------
