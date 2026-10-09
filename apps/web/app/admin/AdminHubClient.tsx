@@ -1,8 +1,12 @@
 'use client';
 
-// The admin hub overview: one card per internal dashboard. The gate is
-// GET /api/admin/me (verifyAdmin / ADMIN_EMAILS) — anyone else bounces to
-// /dashboard, the same shape as the other admin page clients.
+// The admin hub overview: the founder cockpit (2026-10-09), then one card per
+// internal dashboard. The gate is GET /api/admin/me (verifyAdmin /
+// ADMIN_EMAILS) — anyone else bounces to /dashboard, the same shape as the
+// other admin page clients. The cockpit loads AFTER the gate from its own route
+// (GET /api/admin/cockpit), so the links show at once while its numbers, which
+// take a few seconds to work out, fill in above them. A cockpit failure shows
+// its own message and never hides the links.
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -24,6 +28,16 @@ import {
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { FounderCockpitView } from '@/components/admin/FounderCockpitView';
+import type { FounderCockpit } from '@/lib/founder-cockpit';
+import type { AdminReadSource } from '@/lib/admin-read-server';
+
+type CockpitPayload = { cockpit: FounderCockpit; sources: AdminReadSource[] };
+type CockpitState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; payload: CockpitPayload };
 
 const SECTIONS: Array<{
   href: string;
@@ -110,6 +124,7 @@ export default function AdminHubClient() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
   const [checked, setChecked] = useState(false);
+  const [cockpit, setCockpit] = useState<CockpitState>({ status: 'loading' });
 
   useEffect(() => {
     if (authLoading) return;
@@ -140,6 +155,34 @@ export default function AdminHubClient() {
     };
   }, [authLoading, router, user]);
 
+  useEffect(() => {
+    if (!checked) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getAccessToken();
+        const response = await fetch('/api/admin/cockpit', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        const body = (await response.json().catch(() => ({}))) as Partial<CockpitPayload> & {
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!response.ok || !body.cockpit) {
+          setCockpit({ status: 'error', message: body.error || 'Could not work out this week\'s numbers.' });
+          return;
+        }
+        setCockpit({ status: 'ready', payload: { cockpit: body.cockpit, sources: body.sources ?? [] } });
+      } catch {
+        if (!cancelled) setCockpit({ status: 'error', message: 'Could not work out this week\'s numbers.' });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [checked]);
+
   if (authLoading || !user || !checked) {
     return <AdminPageSkeleton titleWidth="w-64" descriptionLines={2} hubGrid={SECTIONS.length} />;
   }
@@ -155,7 +198,29 @@ export default function AdminHubClient() {
         allowlist — these pages have no nav entries in the product itself.
       </p>
 
-      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {cockpit.status === 'ready' ? (
+        <FounderCockpitView cockpit={cockpit.payload.cockpit} sources={cockpit.payload.sources} />
+      ) : cockpit.status === 'error' ? (
+        <p role="alert" className="mt-8 rounded-xl border border-stroke-default bg-bg-surface p-4 text-sm text-content-secondary">
+          {cockpit.message}
+        </p>
+      ) : (
+        <div role="status" aria-busy="true" aria-label="Loading this week's numbers" className="mt-8">
+          <SkeletonBlock className="h-6 w-32" />
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <SkeletonBlock className="h-32 rounded-xl" />
+            <SkeletonBlock className="h-32 rounded-xl" />
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 5 }, (_, index) => (
+              <SkeletonBlock key={index} className="h-24 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <h2 className="mt-10 font-display text-lg font-semibold text-content-primary">All dashboards</h2>
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {SECTIONS.map((section) => {
           const Icon = section.icon;
           return (
