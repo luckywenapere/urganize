@@ -18249,9 +18249,9 @@ See the PR. Not verified: no walled account has used it for real (no pass honour
 
 ---
 
-## The AI usage log (2026-10-03, built, waits for its migration)
+## The AI usage log (2026-10-03, live; its migration was found applied 2026-10-09)
 
-One row per provider call in `ai_usage_events`, so the real cost of a release can be summed (migration `20261003120000_ai_usage_events.sql`, **not applied anywhere yet**). It is the record of COST; the credit ledger stays the record of MONEY. They share a request id, so a charge can be set beside what it cost. Built for the per-release pricing test: the credit ledger's spend rows carried tokens in a JSON blob with no release and no feature, a failed call wrote nothing, and four AI features were not recorded at all. No flag and no changelog entry: nothing a person sees changes.
+One row per provider call in `ai_usage_events`, so the real cost of a release can be summed (migration `20261003120000_ai_usage_events.sql`, **applied in production; found in place on 2026-10-09**). It is the record of COST; the credit ledger stays the record of MONEY. They share a request id, so a charge can be set beside what it cost. Built for the per-release pricing test: the credit ledger's spend rows carried tokens in a JSON blob with no release and no feature, a failed call wrote nothing, and four AI features were not recorded at all. No flag and no changelog entry: nothing a person sees changes.
 
 **What records.** Chat turns (with the rollout the conversation was scoped to), the rollout planner from the button and from chat, press-kit drafts, Fill both, status updates and task outcomes. Feature labels: `chat`, `plan`, `press_kit`, `pitch_kit`, `status`, `outcome`. Two views, `release_ai_cost` and `release_ai_cost_by_feature`, sum it per release.
 
@@ -18267,9 +18267,9 @@ One row per provider call in `ai_usage_events`, so the real cost of a release ca
 
 **Not logged yet:** the short closing line after a confirmation card is approved, and voice transcription (no token counts). Cost is still converted at the estimated RODI rate until it is reconciled against the provider's invoice.
 
-**Verified:** 6,375 tests pass, `tsc` clean apart from the 8 documented `confirmed-action.test.ts` errors, `eslint` clean on every touched file, `next build` green with `/auth`, `/dashboard` and `/settings` still static. 13 deliberate breaks, each caught by a named test. The migration was run on a real Postgres engine (PGlite), twice, with every constraint and both views exercised. **Not verified:** nothing has run against a real database or a real model call, and no usage row has been written for real.
+**Verified:** 6,375 tests pass, `tsc` clean apart from the 8 documented `confirmed-action.test.ts` errors, `eslint` clean on every touched file, `next build` green with `/auth`, `/dashboard` and `/settings` still static. 13 deliberate breaks, each caught by a named test. The migration was run on a real Postgres engine (PGlite), twice, with every constraint and both views exercised. **Checked against production on 2026-10-09:** with the migration in place, `ai_usage_events`, `release_ai_cost` and `release_ai_cost_by_feature` all answer (empty) to a signed-out request, a made-up table name answers "not found" in the same check, and a signed-out insert is refused by row level security (42501). **Not verified:** that any usage row has been written for real (the table cannot be read without the service-role key), and nothing has run against a real model call.
 
-**Activation:** apply the migration; rows start appearing on the next AI call. Then `select * from release_ai_cost order by cost_rodi desc;`.
+**Activation:** ~~apply the migration~~ (done, found applied 2026-10-09); rows start appearing on the next AI call. Then `select * from release_ai_cost order by cost_rodi desc;`.
 
 ## The company scoreboard (2026-10-02, internal, no flag)
 
@@ -18767,7 +18767,7 @@ Third of three PRs from the "release savings" briefs (the Spotify editorial pitc
 ### What did not match the brief, and what was built instead
 
 1. **"A distribution order adds its line automatically" cannot happen yet.** Distribute is a readiness list plus a hand-off to the partner's own sign-up; there is no order endpoint and nothing charged. The writer, `addUrganizeSpendLine`, is built and tested, and nothing calls it. When the partner API lands, the order route calls it once the order succeeds; its `dedupe_key` makes a retry add nothing.
-2. **Credit use is the one automatic line that exists today.** Credits are charged per team, not per release; the only attribution to a release is `ai_usage_events` (`release_id`, `credits_charged`), which is itself waiting on its own migration. A daily step on the 07:00 UTC cron (`runSpendCreditsSweep`) adds up each rollout's credits per Lagos day for the last 3 days and upserts one `Urganize` line per rollout per day at 15 naira a credit (`CREDIT_VALUE_KOBO`, in `lib/credits/pricing.ts`, because that module owns the naira rates). It refuses a partial read (a capped or failed page) so a low total never overwrites a right one, and does nothing while the usage table is missing.
+2. **Credit use is the one automatic line that exists today.** Credits are charged per team, not per release; the only attribution to a release is `ai_usage_events` (`release_id`, `credits_charged`), whose migration is applied (found in place on 2026-10-09), so the sweep can read it. A daily step on the 07:00 UTC cron (`runSpendCreditsSweep`) adds up each rollout's credits per Lagos day for the last 3 days and upserts one `Urganize` line per rollout per day at 15 naira a credit (`CREDIT_VALUE_KOBO`, in `lib/credits/pricing.ts`, because that module owns the naira rates). It refuses a partial read (a capped or failed page) so a low total never overwrites a right one, and does nothing while the usage table is missing.
 3. **Category and source are text with CHECK constraints, not Postgres enums**, like every newer table here: an enum value needs a migration outside a transaction.
 4. **Columns added to the brief's schema:** `workspace_id` in place of `team_id`; `dedupe_key` (a plain unique index, not partial, so an upsert can target it); `created_by` nullable for system lines; `asked_at` on `release_payback`, because the row is inserted when the question is sent and that is what makes it fire once.
 
