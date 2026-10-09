@@ -1047,8 +1047,15 @@ export function WorkspaceView() {
   // list. Its Fix buttons for the title, the release day and the artist open the
   // dialogs this component owns, and only for the owner, because both edits are
   // owner-only and a Fix button that can only fail is worse than none.
+  //
+  // Not on an empty shell (2026-10-09): a rollout with no release day and no
+  // activities yet has nothing to distribute, and opening one with a red
+  // "Fix these" banner reads as an error before anything was done. The
+  // planner card or the date card is the next step there; the strip shows up
+  // as soon as either a date or an activity exists.
+  const isEmptyShell = Boolean(scopedReleaseSlim) && !scopedReleaseSlim?.releaseDate && scopedTasks.length === 0;
   const distributionStatusStrip =
-    bodyIsMainView && scopedReleaseSlim ? (
+    bodyIsMainView && scopedReleaseSlim && !isEmptyShell ? (
       <DistributionStatusStrip
         releaseId={scopedReleaseSlim.id}
         onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}
@@ -1501,6 +1508,9 @@ export function WorkspaceView() {
                   openIntake({
                     source: 'empty_state',
                     releaseId,
+                    // Made just now for the planner: closing it early
+                    // discards the empty rollout (lib/release-draft-discard.ts).
+                    discardIfAbandoned: true,
                     ...(result?.releaseType
                       ? { prefill: { releaseType: result.releaseType } }
                       : {}),
@@ -1527,6 +1537,9 @@ export function WorkspaceView() {
               openIntake({
                 source: 'empty_state',
                 releaseId,
+                // Made just now for the planner: closing it early discards
+                // the empty rollout (lib/release-draft-discard.ts).
+                discardIfAbandoned: true,
                 ...(result?.releaseType
                   ? { prefill: { releaseType: result.releaseType } }
                   : {}),

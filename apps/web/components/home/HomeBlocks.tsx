@@ -1,6 +1,7 @@
 'use client';
 
-import { Fragment } from 'react';
+import { ErrorBoundary } from '@/components/app/ErrorBoundary';
+import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { buildAttentionItems } from '@/lib/home/attention';
 import { pickChappiSpeaks } from '@/lib/home/chappi-speaks';
 import { buildOnboardingProgress } from '@/lib/home/onboarding';
@@ -105,8 +106,14 @@ export function HomeBlocks({
     <>
       {/* No wrapper per block: a block that draws nothing (the getting-started
           bar once closed) must not leave an empty gap in the page's spacing. */}
+      {/* Each block is fenced (2026-10-09): one card that throws on odd data
+          goes quiet instead of taking the whole of Home to the crash screen,
+          which is what a bad block did before, and "Try again" could not help
+          because the same data threw again. ErrorBoundary adds no element. */}
       {blocks.map((key) => (
-        <Fragment key={key}>{render(key)}</Fragment>
+        <ErrorBoundary key={key} name={`home-block-${key}`} onError={reportBoundaryError}>
+          {render(key)}
+        </ErrorBoundary>
       ))}
     </>
   );

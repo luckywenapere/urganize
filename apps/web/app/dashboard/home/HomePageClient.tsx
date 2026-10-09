@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -15,6 +16,8 @@ import { ManagerQuietView } from '@/components/home/ManagerQuietView';
 import { ManagerNewView } from '@/components/home/ManagerNewView';
 import { HomeAskBar } from '@/components/home/HomeAskBar';
 import { HomeDesktopSplit } from '@/components/home/HomeDesktopSplit';
+import { ErrorBoundary } from '@/components/app/ErrorBoundary';
+import { reportBoundaryError } from '@/lib/report-boundary-error';
 
 const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
@@ -79,7 +82,7 @@ export default function HomePageClient() {
 
   const openCreate = () => setIsCreateModalOpen(true);
   const viewerId = user?.id ?? '';
-  const view =
+  const stateView =
     home.state === 'manager_new' ? (
       <ManagerNewView home={home} onNewRollout={openCreate} />
     ) : home.state === 'manager_all_clear' || home.state === 'manager_between' ? (
@@ -87,6 +90,14 @@ export default function HomePageClient() {
     ) : (
       <ManagerMidReleaseView home={home} viewerId={viewerId} />
     );
+  // Fenced (2026-10-09): if Home's own column cannot draw, the page keeps its
+  // chat and a way to the catalogue instead of the full-page crash screen.
+  // Each block inside is fenced too (HomeBlocks), so this is the outer net.
+  const view = (
+    <ErrorBoundary name="home-view" onError={reportBoundaryError} fallback={<HomeViewFallback />}>
+      {stateView}
+    </ErrorBoundary>
+  );
 
   return (
     <>
@@ -105,5 +116,20 @@ export default function HomePageClient() {
         onCreated={() => void loadHome({ force: true })}
       />
     </>
+  );
+}
+
+/** What Home's column shows if it fails to draw: a way to the catalogue. */
+function HomeViewFallback() {
+  return (
+    <div className="rounded-2xl border border-stroke-default bg-bg-surface p-5">
+      <p className="text-sm text-content-secondary">Part of Home could not load. Your rollouts are safe.</p>
+      <Link
+        href="/dashboard"
+        className="motion-focus mt-3 inline-flex items-center rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:border-stroke-strong"
+      >
+        Open your catalog
+      </Link>
+    </div>
   );
 }

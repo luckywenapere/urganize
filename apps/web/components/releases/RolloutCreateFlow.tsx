@@ -69,6 +69,9 @@ export function RolloutCreateFlow({ open, onClose, onCreated }: RolloutCreateFlo
             usePlannerStore.getState().openIntake({
               source: 'empty_state',
               releaseId,
+              // Made just now for the planner: closing it early discards the
+              // empty rollout instead of leaving it in the catalogue.
+              discardIfAbandoned: true,
               ...(result?.releaseType ? { prefill: { releaseType: result.releaseType } } : {}),
             });
 

@@ -43,6 +43,14 @@ export type PlannerIntakePayload = {
   /** A note to link to the release the intake creates. */
   noteId?: string;
   prefill?: PlannerIntakePrefill;
+  /**
+   * The rollout was made a moment ago only so the planner had something to
+   * plan (picking Single, EP or Album). Closing the planner before it finishes
+   * then asks the server to discard it, which it does only while the rollout
+   * is still untouched (lib/release-draft-discard.ts). Without this, every
+   * abandoned try left an empty "Untitled rollout" in the catalogue.
+   */
+  discardIfAbandoned?: boolean;
 };
 
 /**

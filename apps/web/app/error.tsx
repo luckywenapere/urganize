@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@urganize/ui';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
-import { HOME_PATH } from '@/lib/home-path';
+import { errorBackHref } from '@/lib/error-back-link';
 
 // The route-level boundary. Catches anything thrown while rendering a page or
 // running its effects, on the client or during a server render, and replaces
@@ -70,8 +70,11 @@ export default function AppError({
           <Button type="button" onClick={() => reset()}>
             Try again
           </Button>
+          {/* The catalogue, not Home: Home is the landing page, so linking
+              there made a crash on Home loop back into itself
+              (lib/error-back-link.ts). */}
           <Link
-            href={HOME_PATH}
+            href={errorBackHref(pathname)}
             className="inline-flex min-h-11 items-center justify-center border border-stroke-default bg-bg-surface px-5 text-sm font-medium text-content-secondary transition-colors duration-fast ease-standard hover:bg-bg-hover hover:text-content-primary"
           >
             Back to your rollouts

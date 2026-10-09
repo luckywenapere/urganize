@@ -105,7 +105,7 @@ export interface AnalyticsEventPropertiesMap {
     activities_created?: number;
     activities_moved?: number;
   };
-  release_deleted: { release_id: string };
+  release_deleted: { release_id: string; reason?: 'planner_abandoned' };
   playbook_step_completed: {
     release_id: string;
     step_id: string;

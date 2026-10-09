@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { ArrowUp, MessageCircle, Plus } from '@/components/icons';
+import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiConversationSkeleton } from '@/components/loading/ChappiConversationSkeleton';
@@ -10,6 +11,7 @@ import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
 import { COMPOSER_FOCUS_EVENT } from '@/lib/composer-focus';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useHomeChatStore } from '@/stores/useHomeChatStore';
+import { reportBoundaryError } from '@/lib/report-boundary-error';
 
 // The conversation is heavy and a phone never shows it on Home, so it is its
 // own chunk, asked for only by this desktop layout.
@@ -148,11 +150,15 @@ export function HomeDesktopSplit({
           </div>
         ) : null}
         <div className={`min-h-0 flex-1 ${showSessions ? 'hidden' : ''}`}>
-          <ChappiConversation
-            onNewRelease={onNewRelease}
-            headingLevel="h2"
-            focusRequest={focusRequest}
-          />
+          {/* Fenced so a broken conversation (a stored message it cannot draw)
+              costs the chat side, not the whole of Home. */}
+          <ErrorBoundary name="home-conversation" onError={reportBoundaryError} fallback={<ConversationFallback />}>
+            <ChappiConversation
+              onNewRelease={onNewRelease}
+              headingLevel="h2"
+              focusRequest={focusRequest}
+            />
+          </ErrorBoundary>
         </div>
       </section>
     </div>
@@ -200,5 +206,16 @@ function NewSessionBox({ onStarted }: { onStarted: () => void }) {
         <ArrowUp className="h-4 w-4" aria-hidden="true" />
       </button>
     </form>
+  );
+}
+
+/** What the chat side shows if the conversation itself fails to draw. */
+function ConversationFallback() {
+  return (
+    <div className="flex h-full items-center justify-center px-4 text-center">
+      <p className="max-w-xs text-sm text-content-secondary">
+        The chat could not load here. Open UrgAns from the menu to keep going.
+      </p>
+    </div>
   );
 }

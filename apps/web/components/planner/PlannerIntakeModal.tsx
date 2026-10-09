@@ -79,6 +79,27 @@ async function getAccessToken(): Promise<string> {
   return session?.access_token || '';
 }
 
+/**
+ * Asks the server to discard a rollout the planner was opened on and left
+ * before finishing. True only when it was actually deleted; the server refuses
+ * (409) when anything was put in it, and that is not an error to show.
+ */
+async function discardAbandonedRollout(releaseId: string): Promise<boolean> {
+  try {
+    const token = await getAccessToken();
+    if (!token) return false;
+    const response = await fetch(`/api/releases/${releaseId}?onlyIfUntouchedDraft=1`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // The server records the delete as release_deleted with reason
+    // planner_abandoned, so nothing is captured here as well.
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 const todayYmd = () => new Date().toISOString().slice(0, 10);
 
 export function PlannerIntakeModal() {
@@ -186,8 +207,30 @@ export function PlannerIntakeModal() {
   const dismiss = useCallback(() => {
     if (isBusy) return;
     captureAnalyticsEvent(createPostHogEvent('planner_intake_dismissed', { step }));
+    const abandonedReleaseId =
+      intakePayload?.discardIfAbandoned && intakePayload.releaseId ? intakePayload.releaseId : null;
     closeIntake();
-  }, [closeIntake, isBusy, step]);
+    // The rollout was only made so the planner had something to plan. Leaving
+    // before the plan is built discards it, so an abandoned try does not leave
+    // an empty "Untitled rollout" behind. The server keeps it if anything was
+    // put in it (lib/release-draft-discard.ts), and so does a failure here:
+    // the worst case is the rollout staying, exactly as before.
+    if (abandonedReleaseId && !usePlannerStore.getState().isGenerating(abandonedReleaseId)) {
+      void discardAbandonedRollout(abandonedReleaseId).then((discarded) => {
+        if (!discarded) return;
+        clearPlannerIntakeDraft();
+        void loadCommandCenter({ force: true });
+        // Still on the discarded rollout: go back to the catalogue rather than
+        // leave the page pointing at a rollout that no longer exists.
+        if (
+          typeof window !== 'undefined' &&
+          new URLSearchParams(window.location.search).get('release') === abandonedReleaseId
+        ) {
+          router.replace('/dashboard');
+        }
+      });
+    }
+  }, [closeIntake, intakePayload, isBusy, loadCommandCenter, router, step]);
 
   useEffect(() => {
     if (!open) return;
