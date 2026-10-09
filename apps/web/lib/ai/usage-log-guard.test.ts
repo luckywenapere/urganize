@@ -47,14 +47,28 @@ describe('the scanner itself', () => {
 });
 
 describe('one writer', () => {
-  it('lets only usage-log-server.ts write the ai_usage_events table, and the usage dashboard read it', () => {
+  it('lets only usage-log-server.ts write the ai_usage_events table, and the usage dashboard and the release spend sweep read it', () => {
     const touching = [...sources.entries()].filter(([, source]) => source.includes('ai_usage_events')).map(([file]) => file);
-    expect(touching.sort()).toEqual(['lib/ai/usage-log-server.ts', 'lib/usage-metrics-server.ts']);
+    expect(touching.sort()).toEqual([
+      'lib/ai/usage-log-server.ts',
+      'lib/release-spend-sweeps-server.ts',
+      'lib/usage-metrics-server.ts',
+    ]);
   });
 
   it('keeps the usage dashboard (/admin/metrics) to reading', () => {
     const source = sources.get('lib/usage-metrics-server.ts') ?? '';
     expect(source).not.toMatch(/\.(insert|update|upsert|delete)\s*\(/);
+  });
+
+  it('keeps the release spend sweep to reading the usage log', () => {
+    const source = sources.get('lib/release-spend-sweeps-server.ts') ?? '';
+    expect(source).toContain('ai_usage_events');
+    // Its upserts write release_payback (here) and release_spend (through the
+    // spend server), never the usage table, and it has no insert, update or
+    // delete of its own.
+    expect(source).not.toMatch(/\.(insert|update|delete)\s*\(/);
+    expect(source).not.toMatch(/from\(USAGE_TABLE\)[\s\S]{0,200}\.(upsert|insert|update|delete)\s*\(/);
   });
 
   it('never updates or deletes a usage row, so a corrected figure is a new row', () => {

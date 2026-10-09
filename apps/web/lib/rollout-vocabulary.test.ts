@@ -139,6 +139,12 @@ const GUARDED_FILES = [
   'components/tasks/EditorialPitchPanel.tsx',
   'components/workspace/EditorialPitchClosedBanner.tsx',
   'components/releases/ReleaseDetailsSheet.tsx',
+  // Release spend (2026-10-09). The brief's sentences that say "on this release"
+  // are allowed below, by exact phrase.
+  'lib/release-spend.ts',
+  'components/releases/SpendSection.tsx',
+  'components/home/SpendCard.tsx',
+  'lib/email/templates/ReleasePaybackQuestionEmail.tsx',
   '../../packages/pricing/src/index.ts',
 ];
 
@@ -159,6 +165,9 @@ const ALLOWED = [
   // explicit."
   /a release title/i,
   /the release is explicit/i,
+  // Two strings the release spend brief wrote with the word release in them,
+  // kept as written: the empty state and the total's label.
+  /on this release/i,
 ];
 
 const OBJECT_WORD = /(?<![\w\-/?&.${])release(s|'s)?(?![\w\-=_}?]|\.\w)/gi;

@@ -41,7 +41,12 @@ export type SceneName =
   // and the hand-off to their sign-up. Fetches for itself and is not cached: the
   // checklist is what a manager comes BACK to after fixing something, so a
   // cached copy painted first would show the item they just fixed as still open.
-  | 'distribute';
+  | 'distribute'
+  // Release spend (2026-10-09): what the team paid for on the rollout. Fetches for
+  // itself and is NEVER cached or persisted, for a reason no other scene has:
+  // the payload is MONEY, visible to the owner and team managers only, and a
+  // copy painted from disk or memory could outlive a change in who may see it.
+  | 'spend';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'activities',
@@ -56,6 +61,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'chat',
   'pitchkit',
   'distribute',
+  'spend',
 ];
 
 // Inlined at build time, same read every UI gate uses. Both consumers below
@@ -260,14 +266,15 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
  */
 export type CacheableSceneName = Exclude<
   SceneName,
-  'timeline' | 'activities' | 'pitchkit' | 'distribute'
+  'timeline' | 'activities' | 'pitchkit' | 'distribute' | 'spend'
 >;
 
 export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName =>
   scene !== 'timeline' &&
   scene !== 'activities' &&
   scene !== 'pitchkit' &&
-  scene !== 'distribute';
+  scene !== 'distribute' &&
+  scene !== 'spend';
 
 /**
  * Which scenes may touch localStorage.
@@ -305,6 +312,8 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   // Fetches for itself and is never cached (see CacheableSceneName).
   pitchkit: false,
   distribute: false,
+  // Never to disk: it is money (see SceneName).
+  spend: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of

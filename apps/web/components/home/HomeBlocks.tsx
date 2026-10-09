@@ -15,10 +15,12 @@ import { NextShowCard } from './NextShowCard';
 import { OnboardingBar } from './OnboardingBar';
 import { PlacementsStack } from './PlacementsStack';
 import { RolloutsStack } from './RolloutsStack';
+import { SpendCard } from './SpendCard';
 import { TasksStack } from './TasksStack';
 import { UpNextCard } from './UpNextCard';
 import { WaitingStack } from './WaitingStack';
 import { useHomeFocusData } from './useHomeFocusData';
+import { useSpendSummary } from './useSpendSummary';
 
 /**
  * Home's groups in the decided order (lib/home/sections.ts), each one only when
@@ -37,6 +39,9 @@ export function HomeBlocks({
   hideStartUpNext?: boolean;
 }) {
   const { live, releases, yourTasks, waitingTasks, placements } = useHomeFocusData(home, viewerId);
+  // The money card is for managers (a label is a team of them). The server adds
+  // up only what this person may see, so anyone else gets nothing and no card.
+  const spend = useSpendSummary(home.role === 'manager' || home.role === 'label');
 
   const taskStack = buildTaskStack(yourTasks);
   const upNext = pickUpNext(home.nextShow, releases);
@@ -59,6 +64,7 @@ export function HomeBlocks({
     hasNextShow: home.nextShow !== null,
     rolloutCount: releases.length,
     placementCount: placementItems.length,
+    hasSpend: (spend?.totalKobo ?? 0) > 0,
     lateCount: yourTasks.late.length,
   });
 
@@ -88,6 +94,8 @@ export function HomeBlocks({
         return <RolloutsStack rollouts={releases} />;
       case 'placements':
         return <PlacementsStack items={placementItems} />;
+      case 'spend':
+        return spend ? <SpendCard summary={spend} /> : null;
       case 'daily-line':
         return <ChappiSpeaksCard line={pickChappiSpeaks({ releases })} />;
     }

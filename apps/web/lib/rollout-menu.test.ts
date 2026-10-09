@@ -37,6 +37,9 @@ function build(over: Partial<RolloutMenuInput> = {}): RolloutMenuEntry[] {
     activeScene: null,
     variant: 'rail',
     flags: ALL_ON,
+    // The Spend row needs the server's yes for this person; "everything on"
+    // includes it, and the tests below take it away on purpose.
+    showSpend: true,
     ...MODALS,
     ...over,
   });
@@ -71,6 +74,7 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'pitchkit',
   'metadata',
   'distribute',
+  'spend',
   'coverart',
   'song',
   'files',
@@ -104,7 +108,32 @@ describe('buildRolloutMenu', () => {
     const allOff = Object.fromEntries(
       Object.keys(ALL_ON).map((flag) => [flag, false])
     ) as RolloutMenuFlags;
-    expect(keysOf(build({ flags: allOff }))).toEqual(['distribute', 'share', 'change-artist', 'archive']);
+    expect(keysOf(build({ flags: allOff, showSpend: false }))).toEqual([
+      'distribute',
+      'share',
+      'change-artist',
+      'archive',
+    ]);
+  });
+
+  it('shows the Spend row only once the server has said this person may see the cost, right after Distribute', () => {
+    for (const absent of [false, undefined]) {
+      expect(keysOf(build({ showSpend: absent })), String(absent)).not.toContain('spend');
+    }
+    const keys = keysOf(build({ showSpend: true }));
+    expect(keys.indexOf('spend')).toBe(keys.indexOf('distribute') + 1);
+    // No feature switch owns it: with every switch off, a person who may see
+    // spend still gets the row.
+    const allOff = Object.fromEntries(Object.keys(ALL_ON).map((flag) => [flag, false])) as RolloutMenuFlags;
+    expect(keysOf(build({ flags: allOff, showSpend: true }))).toContain('spend');
+  });
+
+  it('opens the Spend scene and lights its row while it is open', () => {
+    const idle = build({ showSpend: true }).find((entry) => entry.key === 'spend');
+    expect(idle?.target).toEqual({ kind: 'scene', scene: 'spend' });
+    expect(idle?.isActive).toBe(false);
+    const open = build({ showSpend: true, activeScene: 'spend' }).find((entry) => entry.key === 'spend');
+    expect(open?.isActive).toBe(true);
   });
 
   it('shows each dialog row only when its action is passed', () => {

@@ -74,38 +74,11 @@ describe('the feature flag', () => {
   });
 });
 
-describe('formatNaira', () => {
-  it('prints whole naira with thousands separators and no decimals', () => {
-    expect(formatNaira(500_000)).toBe('₦5,000');
-    expect(formatNaira(1_500_000)).toBe('₦15,000');
-    expect(formatNaira(32_500)).toBe('₦325');
-  });
-
-  it('keeps kobo when there are some', () => {
-    expect(formatNaira(500_050)).toBe('₦5,000.50');
-  });
-
-  it('never prints a negative or a non-number', () => {
-    expect(formatNaira(-100)).toBe('₦0');
-    expect(formatNaira(Number.NaN)).toBe('₦0');
-  });
-});
-
-describe('nairaToKobo', () => {
-  it('reads what a curator types into a price field', () => {
-    expect(nairaToKobo('5000')).toBe(500_000);
-    expect(nairaToKobo('5,000')).toBe(500_000);
-    expect(nairaToKobo('₦5,000')).toBe(500_000);
-    expect(nairaToKobo(' 5000.5 ')).toBe(500_050);
-    expect(nairaToKobo(12_000)).toBe(1_200_000);
-  });
-
-  it('refuses anything that is not a positive amount', () => {
-    expect(nairaToKobo('')).toBeNull();
-    expect(nairaToKobo('abc')).toBeNull();
-    expect(nairaToKobo('-5')).toBeNull();
-    expect(nairaToKobo('0')).toBeNull();
-    expect(nairaToKobo('5.001')).toBeNull();
+describe('formatNaira and nairaToKobo', () => {
+  it('are still exported from here, and are the ones in lib/money.ts', async () => {
+    const money = await import('./money');
+    expect(formatNaira).toBe(money.formatNaira);
+    expect(nairaToKobo).toBe(money.nairaToKobo);
   });
 });
 

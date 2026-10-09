@@ -12,6 +12,7 @@
 // the browser banner and the daily sweep agree on what "today" is.
 
 import { presenceDay } from './presence';
+import { dayNumber, formatDay } from './lagos-day';
 
 // ---------------------------------------------------------------------------
 // The plan step
@@ -107,32 +108,6 @@ export function pitchCounterCopy(length: number): string {
 // ---------------------------------------------------------------------------
 // Days
 // ---------------------------------------------------------------------------
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})/;
-
-/** Days since the epoch for a YYYY-MM-DD at the start of a string, or null. */
-function dayNumber(value: string | null | undefined): number | null {
-  const match = DAY_PATTERN.exec(String(value ?? ''));
-  if (!match) return null;
-  const [, y, m, d] = match;
-  const ms = Date.UTC(Number(y), Number(m) - 1, Number(d));
-  if (Number.isNaN(ms)) return null;
-  // Date.UTC rolls 2026-02-30 over to March without complaint; reject it.
-  const check = new Date(ms);
-  if (
-    check.getUTCFullYear() !== Number(y) ||
-    check.getUTCMonth() + 1 !== Number(m) ||
-    check.getUTCDate() !== Number(d)
-  ) {
-    return null;
-  }
-  return Math.round(ms / MS_PER_DAY);
-}
-
-function formatDay(day: number): string {
-  return new Date(day * MS_PER_DAY).toISOString().slice(0, 10);
-}
 
 /**
  * Calendar days from today (Lagos) to release day, or null with no usable date.

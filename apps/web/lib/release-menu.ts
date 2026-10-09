@@ -106,6 +106,14 @@ export const RELEASE_MENU_ORDER = [
   // since a rollout reaches it late (the playbook's distribution steps sit in
   // the last weeks) and then returns to it only to check delivery.
   'distribute',
+  // Release spend (2026-10-09). Right after Distribute: money goes out all along a
+  // rollout (promo, playlists, design, video), but it is recorded in a sitting
+  // after the fact and the Distribute step is where the biggest single payment
+  // lands, so the two sit together. Ranked below the work surfaces a team returns
+  // to daily. No usage data exists for it; a reasoned placement, to be checked
+  // against real opens once they exist. The row only appears for a person who may
+  // see spend (the owner and team managers), so most members never see it.
+  'spend',
   // Capture, and the only entry here that LEAVES the panel rather than
   // swapping its body — it opens the notebook with this release already
   // filtered (and, on a phone, a blank note waiting). It exists because the

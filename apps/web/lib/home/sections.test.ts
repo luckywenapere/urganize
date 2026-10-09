@@ -10,6 +10,7 @@ const full: HomeBlocksInput = {
   hasNextShow: true,
   rolloutCount: 2,
   placementCount: 4,
+  hasSpend: true,
   lateCount: 0,
 };
 
@@ -23,6 +24,7 @@ describe('orderHomeBlocks', () => {
       'next-show',
       'rollouts',
       'placements',
+      'spend',
       'daily-line',
     ]);
   });
@@ -37,6 +39,7 @@ describe('orderHomeBlocks', () => {
         hasNextShow: false,
         rolloutCount: 0,
         placementCount: 0,
+        hasSpend: false,
       })
     ).toEqual(['tasks', 'daily-line']);
   });
@@ -63,6 +66,13 @@ describe('orderHomeBlocks', () => {
     expect(orderHomeBlocks({ ...full, upNext: 'show' })).toContain('next-show');
   });
 
+  it('shows Where the money went after Placements and before the daily line, and only with spend', () => {
+    const blocks = orderHomeBlocks(full);
+    expect(blocks.indexOf('spend')).toBe(blocks.indexOf('placements') + 1);
+    expect(blocks.indexOf('spend')).toBe(blocks.indexOf('daily-line') - 1);
+    expect(orderHomeBlocks({ ...full, hasSpend: false })).not.toContain('spend');
+  });
+
   it("keeps UrgAns' daily line for days when nothing is late", () => {
     expect(orderHomeBlocks({ ...full, lateCount: 2 })).not.toContain('daily-line');
   });
@@ -74,5 +84,7 @@ describe('HOME_BLOCK_LABELS', () => {
       expect(label).not.toMatch(/release/i);
     }
     expect(HOME_BLOCK_LABELS.rollouts).toBe('Rollouts');
+    // The brief's own title.
+    expect(HOME_BLOCK_LABELS.spend).toBe('Where the money went');
   });
 });
