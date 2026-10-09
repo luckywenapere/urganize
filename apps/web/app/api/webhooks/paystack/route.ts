@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getPlanExpiry } from '@/lib/billing';
@@ -25,6 +24,7 @@ import {
   isCardTrialPlan,
 } from '@/lib/trial-card';
 import { afterResponse } from '@/lib/after-response';
+import { validatePaystackSignature } from '@/lib/paystack-signature';
 import { isPitchPaymentReference } from '@/lib/pitch-payments';
 import { isCreditsReference } from '@/lib/credits/purchase';
 import { settleCreditsPurchase } from '@/lib/credits/purchase-server';
@@ -105,15 +105,6 @@ type PaystackWebhookPayload = {
     next_payment_date?: string;
     status?: string;
   };
-};
-
-const validateSignature = (rawBody: string, signature: string | null, secret: string): boolean => {
-  if (!signature) return false;
-  const expected = crypto.createHmac('sha512', secret).update(rawBody).digest('hex');
-  // Constant-time compare to avoid signature-timing oracle. Lengths must
-  // match before timingSafeEqual; mismatched lengths short-circuit false.
-  if (expected.length !== signature.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(signature, 'hex'));
 };
 
 const createAdminClient = () => {
@@ -1213,7 +1204,7 @@ export async function POST(req: NextRequest) {
   const signature = req.headers.get('x-paystack-signature');
   const rawBody = await req.text();
 
-  if (!validateSignature(rawBody, signature, paystackSecretKey)) {
+  if (!validatePaystackSignature(rawBody, signature, paystackSecretKey)) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 

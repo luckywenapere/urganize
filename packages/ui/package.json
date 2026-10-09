@@ -1,6 +1,6 @@
 {
   "name": "@urganize/ui",
-  "version": "1.92.12",
+  "version": "1.92.13",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
