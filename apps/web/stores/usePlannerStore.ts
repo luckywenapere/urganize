@@ -51,6 +51,12 @@ export type PlannerIntakePayload = {
    * abandoned try left an empty "Untitled rollout" in the catalogue.
    */
   discardIfAbandoned?: boolean;
+  /**
+   * The title the rollout was created with, when the create step named it
+   * (v1.91.3). Sent with the discard so a shell that was only named, and
+   * nothing else, is still discarded; a rename after creation keeps it.
+   */
+  createdTitle?: string | null;
 };
 
 /**

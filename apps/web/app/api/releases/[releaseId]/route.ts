@@ -359,7 +359,11 @@ async function countReleaseRows(
 }
 
 /** Reads what decideDraftDiscard needs. Any failed read reaches it as null. */
-async function checkUntouchedDraft(adminClient: SupabaseClient, releaseId: string): Promise<DraftDiscardDecision> {
+async function checkUntouchedDraft(
+  adminClient: SupabaseClient,
+  releaseId: string,
+  createdTitle: string | null
+): Promise<DraftDiscardDecision> {
   const releaseResult = await adminClient
     .from('releases')
     .select('title,status,release_date,description,artwork_asset_id,metadata,created_at')
@@ -389,7 +393,9 @@ async function checkUntouchedDraft(adminClient: SupabaseClient, releaseId: strin
         row.metadata && typeof row.metadata === 'object' ? (row.metadata as Record<string, unknown>) : null,
       createdAt: text(row.created_at),
     },
-    { tasks, taskGroups, assets, songs, spend, collaborators }
+    { tasks, taskGroups, assets, songs, spend, collaborators },
+    new Date(),
+    createdTitle
   );
 }
 
@@ -416,7 +422,11 @@ export async function DELETE(
     // so a refusal here leaves the rollout exactly as it was.
     const untouchedDraftOnly = request.nextUrl.searchParams.get('onlyIfUntouchedDraft') === '1';
     if (untouchedDraftOnly) {
-      const decision = await checkUntouchedDraft(adminClient!, releaseId);
+      // The title the rollout was created with (v1.91.3: the create step can
+      // name it). It only lets an EXACT match through as untouched; every other
+      // check in the rule still has to pass.
+      const createdTitle = request.nextUrl.searchParams.get('createdTitle');
+      const decision = await checkUntouchedDraft(adminClient!, releaseId, createdTitle);
       if (!decision.discard) {
         return NextResponse.json(
           { error: 'This rollout has work in it, so it was kept.', reason: decision.reason },

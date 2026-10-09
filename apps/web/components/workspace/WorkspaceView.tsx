@@ -1517,6 +1517,7 @@ export function WorkspaceView() {
                     // Made just now for the planner: closing it early
                     // discards the empty rollout (lib/release-draft-discard.ts).
                     discardIfAbandoned: true,
+                    createdTitle: result?.savedTitle ?? null,
                     ...(result?.releaseType
                       ? { prefill: { releaseType: result.releaseType } }
                       : {}),
@@ -1546,6 +1547,7 @@ export function WorkspaceView() {
                 // Made just now for the planner: closing it early discards
                 // the empty rollout (lib/release-draft-discard.ts).
                 discardIfAbandoned: true,
+                createdTitle: result?.savedTitle ?? null,
                 ...(result?.releaseType
                   ? { prefill: { releaseType: result.releaseType } }
                   : {}),

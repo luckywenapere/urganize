@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.91.3",
+    date: "October 9, 2026",
+    highlights: [
+      "You can name a rollout as you create it. Leave the name empty and it stays Untitled rollout.",
+      "Picking Single, EP or Album no longer starts the rollout straight away, so you can change your pick before you press Create rollout.",
+    ],
+  },
+  {
     version: "1.91.2",
     date: "October 9, 2026",
     highlights: [

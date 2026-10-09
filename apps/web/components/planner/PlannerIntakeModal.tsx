@@ -24,6 +24,7 @@ import { createReleasePlan } from '@/lib/urgans-actions/client';
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { embeddedCostLine } from '@/lib/credits/copy';
 import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
+import { buildDraftDiscardPath } from '@/lib/release-draft-discard';
 import {
   EMPTY_PLANNER_INTAKE_DRAFT,
   clearPlannerIntakeDraft,
@@ -84,11 +85,11 @@ async function getAccessToken(): Promise<string> {
  * before finishing. True only when it was actually deleted; the server refuses
  * (409) when anything was put in it, and that is not an error to show.
  */
-async function discardAbandonedRollout(releaseId: string): Promise<boolean> {
+async function discardAbandonedRollout(releaseId: string, createdTitle: string | null): Promise<boolean> {
   try {
     const token = await getAccessToken();
     if (!token) return false;
-    const response = await fetch(`/api/releases/${releaseId}?onlyIfUntouchedDraft=1`, {
+    const response = await fetch(buildDraftDiscardPath(releaseId, createdTitle), {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -209,6 +210,7 @@ export function PlannerIntakeModal() {
     captureAnalyticsEvent(createPostHogEvent('planner_intake_dismissed', { step }));
     const abandonedReleaseId =
       intakePayload?.discardIfAbandoned && intakePayload.releaseId ? intakePayload.releaseId : null;
+    const createdTitle = intakePayload?.createdTitle ?? null;
     closeIntake();
     // The rollout was only made so the planner had something to plan. Leaving
     // before the plan is built discards it, so an abandoned try does not leave
@@ -216,7 +218,7 @@ export function PlannerIntakeModal() {
     // put in it (lib/release-draft-discard.ts), and so does a failure here:
     // the worst case is the rollout staying, exactly as before.
     if (abandonedReleaseId && !usePlannerStore.getState().isGenerating(abandonedReleaseId)) {
-      void discardAbandonedRollout(abandonedReleaseId).then((discarded) => {
+      void discardAbandonedRollout(abandonedReleaseId, createdTitle).then((discarded) => {
         if (!discarded) return;
         clearPlannerIntakeDraft();
         void loadCommandCenter({ force: true });

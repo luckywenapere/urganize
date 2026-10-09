@@ -17,8 +17,12 @@ import { DEFAULT_RELEASE_TITLE } from '@/types/releases';
  *
  *  - it is still waiting for its plan (planner_pending), so the planner never
  *    built anything, and its metadata carries nothing else;
- *  - it is still a draft, with the default title, no date, no description and
- *    no cover art, so the person typed nothing into it;
+ *  - it is still a draft, with no date, no description and no cover art, and
+ *    its title is either the default or EXACTLY the one it was created with
+ *    (the create step takes an optional title since 2026-10-09, v1.91.3), so
+ *    nothing was typed into it after the planner opened. The created title is
+ *    supplied by the caller that made the rollout a moment ago; a title that
+ *    differs from it (a rename) is a no;
  *  - it was made within the last hour, so a shell somebody kept on purpose is
  *    never swept up by a later close;
  *  - it has no activities, groups, files, songs, spend or collaborators, each
@@ -65,10 +69,49 @@ export type DraftDiscardDecision =
 
 const ALLOWED_METADATA_KEYS = new Set(['planner_pending']);
 
+/** The releases.title column's cap, mirrored from the create route. */
+const MAX_TITLE_LENGTH = 140;
+
+/**
+ * The title the rollout was created with, as the caller reported it, or null
+ * when it is missing, blank, the default, or too long to be a real title. Only
+ * a usable value ever widens the rule, so a bad one falls back to the
+ * default-title-only check (the v1.91.1 behaviour).
+ */
+export function normalizeCreatedTitle(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > MAX_TITLE_LENGTH) return null;
+  if (trimmed === DEFAULT_RELEASE_TITLE) return null;
+  return trimmed;
+}
+
+/** True when the title is the default or exactly the one it was created with. */
+export function isTitleUntouched(title: string | null, createdTitle?: string | null): boolean {
+  const current = (title ?? '').trim();
+  if (current === DEFAULT_RELEASE_TITLE) return true;
+  const created = normalizeCreatedTitle(createdTitle);
+  return created !== null && current === created;
+}
+
+/**
+ * The DELETE the planner sends when it is closed early. The created title
+ * rides along only when it is a real one, so an untitled shell sends exactly
+ * the v1.91.1 request.
+ */
+export function buildDraftDiscardPath(releaseId: string, createdTitle?: string | null): string {
+  const params = new URLSearchParams({ onlyIfUntouchedDraft: '1' });
+  const created = normalizeCreatedTitle(createdTitle);
+  if (created) params.set('createdTitle', created);
+  return `/api/releases/${encodeURIComponent(releaseId)}?${params.toString()}`;
+}
+
 export function decideDraftDiscard(
   release: DraftDiscardRelease,
   counts: DraftDiscardCounts,
-  now: Date = new Date()
+  now: Date = new Date(),
+  /** The title the caller created this rollout with, if it gave one. */
+  createdTitle: string | null = null
 ): DraftDiscardDecision {
   if (!readPlannerPending(release.metadata)) return { discard: false, reason: 'not_planner_pending' };
   const metadataKeys = release.metadata ? Object.keys(release.metadata) : [];
@@ -78,8 +121,7 @@ export function decideDraftDiscard(
 
   if (release.status !== 'draft') return { discard: false, reason: 'not_draft' };
 
-  const title = (release.title ?? '').trim();
-  if (title !== DEFAULT_RELEASE_TITLE) return { discard: false, reason: 'edited' };
+  if (!isTitleUntouched(release.title, createdTitle)) return { discard: false, reason: 'edited' };
   if (release.releaseDate) return { discard: false, reason: 'edited' };
   if ((release.description ?? '').trim()) return { discard: false, reason: 'edited' };
   if (release.artworkAssetId) return { discard: false, reason: 'edited' };

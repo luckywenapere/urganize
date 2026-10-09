@@ -46,13 +46,19 @@ const RELEASE_TYPE_LABELS: Record<DbReleaseType, string> = {
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
 // Type-first create (founder call, 2026-09-01). When on, this modal is ONE
-// screen: tap Single / EP / Album and the release is created on the spot —
-// no plan chooser (every type-first release is a rollout release; "start
-// blank" is covered by never setting a date and adding your own activities,
-// the existing SetReleaseDateCard escape hatch), no title, no date. Both are
-// prompted later, inside the release (ReleaseSetupSheet). Flag off, the
-// two-step modal below is byte-identical to before this flag existed.
-// Documented as incompatible with NEXT_PUBLIC_FEATURE_RELEASE_PLANNER.
+// screen: no plan chooser (every type-first release is a rollout release;
+// "start blank" is covered by never setting a date and adding your own
+// activities, the existing SetReleaseDateCard escape hatch), and no date,
+// which is prompted later inside the release (ReleaseSetupSheet).
+//
+// AMENDED 2026-10-09 (v1.91.3): the screen now carries an optional title
+// field, and the Single / EP / Album cards are a choice rather than the
+// submit: pick one (and change your mind freely), then "Create rollout". The
+// tap-to-create version had no way to name the rollout, so every one was an
+// "Untitled rollout", and the cards locked the moment one was tapped. An
+// empty title still means "Untitled rollout", and ReleaseSetupSheet still
+// asks for a name only while the title is the default. Flag off, the
+// two-step modal below is unchanged.
 const TYPE_FIRST_CREATE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
 
@@ -90,6 +96,10 @@ type CreateReleaseModalProps = {
        * route defaulted it. Callers use it for copy that names the release
        * without waiting on the store resync. */
       title?: string | null;
+      /** The title the server actually saved (trimmed and sanitised; the
+       * default when none was typed). The planner sends it with its
+       * abandoned-shell discard, which only accepts an exact match. */
+      savedTitle?: string | null;
       /** The playbook picked in this modal's type picker, or null when the
        * picker never rendered (single-playbook environments, where the row's
        * 'single' is a default, not an answer). Callers hand it to the planner
@@ -194,6 +204,12 @@ export function CreateReleaseModal({
   // was implicitly before the picker existed.
   const [releaseType, setReleaseType] = useState<DbReleaseType>('single');
 
+  // Type-first only: whether a card has been chosen yet. The cards used to be
+  // the submit, so a type was always an explicit answer; they are a choice now,
+  // and the planner is told the type only because somebody picked it. With a
+  // single playbook there is nothing to choose, so it counts as picked.
+  const [typeFirstPicked, setTypeFirstPicked] = useState(!SHOW_TYPE_PICKER);
+
   // WHOSE release this is. Read from the shared roster store rather than
   // fetched here: this modal opens often, and it shipped with a per-open fetch
   // that the store's recency guard now collapses to one request.
@@ -229,6 +245,7 @@ export function CreateReleaseModal({
     if (open) {
       setPlan(null);
       setReleaseType('single');
+      setTypeFirstPicked(!SHOW_TYPE_PICKER);
       setArtistId('');
     }
   }, [open]);
@@ -248,7 +265,7 @@ export function CreateReleaseModal({
   useDialogFocus(open && isMounted, panelRef, { initialFocus: 'panel' });
 
   useEffect(() => {
-    if (!open || !plan) {
+    if (!open || (!plan && !TYPE_FIRST_CREATE_ENABLED)) {
       return;
     }
 
@@ -420,6 +437,7 @@ export function CreateReleaseModal({
       onCreated(releaseId, input.plan, {
         plannerPending: payload.plannerPending === true,
         title: input.title || null,
+        savedTitle: payload.release?.title ?? null,
         releaseType: input.typeWasPicked ? input.releaseType : null,
         firstRelease: payload.firstRelease === true,
         share: {
@@ -440,7 +458,24 @@ export function CreateReleaseModal({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSubmitting) return;
     if (!validateForm()) {
+      return;
+    }
+    if (TYPE_FIRST_CREATE_ENABLED) {
+      // The type-first screen: title (optional) plus the chosen card. Enter in
+      // the title field lands here too, so an unpicked type is said plainly
+      // rather than silently defaulted to Single.
+      if (!typeFirstPicked) {
+        setSubmitError('Choose Single, EP or Album first.');
+        return;
+      }
+      await performCreate({
+        title: title.trim(),
+        releaseType,
+        plan: 'template',
+        typeWasPicked: true,
+      });
       return;
     }
     await performCreate({
@@ -453,13 +488,13 @@ export function CreateReleaseModal({
     });
   };
 
-  // Type-first create: the tap IS the form. `setReleaseType` only drives the
-  // spinner on the tapped card; the create itself takes the option directly
-  // so it can never race the state update.
+  // Type-first create: a card is a choice, not the submit (v1.91.3), so it
+  // can be changed until "Create rollout" is pressed.
   const handleTypeFirstPick = (option: DbReleaseType) => {
     if (isSubmitting) return;
     setReleaseType(option);
-    void performCreate({ releaseType: option, plan: 'template', typeWasPicked: true });
+    setTypeFirstPicked(true);
+    setSubmitError('');
   };
 
   const modal = (
@@ -541,36 +576,83 @@ export function CreateReleaseModal({
             </IconButton>
           </div>
 
-          {/* Type-first create (founder call, 2026-09-01): ONE screen, one
-              card per playbook, and the tap creates the release on the spot.
-              No plan chooser (dropped — every type-first release is a rollout
-              release), no fields. Each card is just the type's name; the
-              playbook numbers were dropped (founder call, 2026-09-29). */}
+          {/* Type-first create (founder call, 2026-09-01): ONE screen, no plan
+              chooser (every type-first release is a rollout release). Each card
+              is just the type's name; the playbook numbers were dropped
+              (founder call, 2026-09-29). Since v1.91.3 the screen opens on an
+              optional title field, the cards are a radio choice that stays
+              changeable, and the footer's "Create rollout" is the submit. */}
           {TYPE_FIRST_CREATE_ENABLED ? (
-            <div
-              className={`grid gap-3 p-4 sm:p-5 ${
-                CREATABLE_RELEASE_TYPES.length > 1 ? 'sm:grid-cols-3' : ''
-              }`}
-            >
-              {CREATABLE_RELEASE_TYPES.map((option) => {
-                const isBusy = isSubmitting && releaseType === option;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => handleTypeFirstPick(option)}
-                    disabled={isSubmitting}
-                    className="motion-focus motion-press group flex flex-col items-start gap-2 rounded-xl border border-stroke-default bg-bg-elevated p-4 text-left transition-colors hover:border-brand/50 hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60 sm:p-5"
-                  >
-                    <span className="flex items-center gap-2 font-display text-base font-semibold text-content-primary">
-                      {RELEASE_TYPE_LABELS[option]}
-                      {isBusy ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-brand" aria-hidden="true" />
-                      ) : null}
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="space-y-5 overflow-y-auto p-4 sm:p-5">
+              <label className="block">
+                <span className="mb-2 flex items-baseline gap-2 text-sm font-medium text-content-primary">
+                  What&apos;s it called?
+                  <span className="text-xs font-normal text-content-tertiary">Optional</span>
+                </span>
+                <input
+                  ref={titleInputRef}
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  disabled={isSubmitting}
+                  className="input rounded-lg border-stroke-control bg-bg-elevated"
+                  placeholder={DEFAULT_RELEASE_TITLE}
+                  maxLength={140}
+                  aria-invalid={Boolean(errors.title)}
+                />
+                {errors.title ? (
+                  <p role="alert" className="mt-2 text-xs text-status-error">{errors.title}</p>
+                ) : (
+                  <p className="mt-2 text-xs leading-5 text-content-secondary">
+                    The song or project title. Skip it and we&apos;ll call it &ldquo;
+                    {DEFAULT_RELEASE_TITLE}&rdquo;. You can name it later.
+                  </p>
+                )}
+              </label>
+
+              {SHOW_TYPE_PICKER ? (
+                <div
+                  role="radiogroup"
+                  aria-label="Format"
+                  onKeyDown={(event) =>
+                    onRadioGroupKeyDown(event, CREATABLE_RELEASE_TYPES.indexOf(releaseType), (index) =>
+                      handleTypeFirstPick(CREATABLE_RELEASE_TYPES[index])
+                    )
+                  }
+                >
+                  <span className="mb-2 block text-sm font-medium text-content-primary">Format</span>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {CREATABLE_RELEASE_TYPES.map((option, index) => {
+                      const isSelected = typeFirstPicked && option === releaseType;
+                      // Roving tabindex: the chosen card, or the first one
+                      // before anything is chosen, is the group's one Tab stop.
+                      const isTabStop = typeFirstPicked ? isSelected : index === 0;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          tabIndex={isTabStop ? 0 : -1}
+                          onClick={() => handleTypeFirstPick(option)}
+                          disabled={isSubmitting}
+                          className={`motion-focus motion-press group flex items-center gap-2 rounded-xl border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:p-5 ${
+                            isSelected
+                              ? 'border-brand bg-brand/10'
+                              : 'border-stroke-default bg-bg-elevated hover:border-brand/50 hover:bg-bg-hover'
+                          }`}
+                        >
+                          {isSelected ? (
+                            <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                          ) : null}
+                          <span className="font-display text-base font-semibold text-content-primary">
+                            {RELEASE_TYPE_LABELS[option]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -792,7 +874,7 @@ export function CreateReleaseModal({
             </div>
           ) : null}
 
-          {plan ? (
+          {plan || TYPE_FIRST_CREATE_ENABLED ? (
             <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-stroke-subtle p-4 sm:flex-row sm:justify-end sm:p-5">
               <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
                 Cancel

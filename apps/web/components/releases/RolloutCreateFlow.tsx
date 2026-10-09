@@ -72,6 +72,9 @@ export function RolloutCreateFlow({ open, onClose, onCreated }: RolloutCreateFlo
               // Made just now for the planner: closing it early discards the
               // empty rollout instead of leaving it in the catalogue.
               discardIfAbandoned: true,
+              // The title it was made with, so a shell that was only named is
+              // still discarded and a renamed one is kept.
+              createdTitle: result?.savedTitle ?? null,
               ...(result?.releaseType ? { prefill: { releaseType: result.releaseType } } : {}),
             });
 
