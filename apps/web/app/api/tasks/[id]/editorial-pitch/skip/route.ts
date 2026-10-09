@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { isEditorialPitchTask } from '@/lib/editorial-pitch';
+import { afterResponse } from '@/lib/after-response';
 import { readTemplateOrigin, skipEditorialPitch } from '@/lib/editorial-pitch-server';
 import {
   buildReadOnlyResponse,
@@ -41,14 +42,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const skipped = await skipEditorialPitch(adminClient, id, auth.user.id);
   if (!skipped) return NextResponse.json({ error: 'Could not skip the pitch.' }, { status: 500 });
 
-  void logTaskActivity(adminClient, {
-    taskId: id,
-    actorId: auth.user.id,
-    message: 'Released without a Spotify pitch',
-    metadata: { kind: 'editorial_pitch_skipped' },
-  }).catch((error: unknown) => {
-    console.error('[editorial-pitch] could not record the skip:', error);
-  });
+  afterResponse('editorial pitch skip record', () =>
+    logTaskActivity(adminClient, {
+      taskId: id,
+      actorId: auth.user.id,
+      message: 'Released without a Spotify pitch',
+      metadata: { kind: 'editorial_pitch_skipped' },
+    })
+  );
 
   return NextResponse.json({ skipped: true });
 }

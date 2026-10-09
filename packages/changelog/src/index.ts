@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.12",
+    date: "October 9, 2026",
+    highlights: [
+      "When you assign or update an activity, the alert to your teammate no longer gets lost when the app is busy.",
+      "Who changed an activity is now always recorded.",
+    ],
+  },
+  {
     version: "1.92.11",
     date: "October 9, 2026",
     highlights: [

@@ -30,6 +30,7 @@ import {
   type WorkspaceMemberRole,
   type WorkspaceMembersResponse,
 } from '@/lib/tasks';
+import { afterResponse } from '@/lib/after-response';
 import { sendPushToUsers, type PushPayload } from '@/lib/push-server';
 import { mapTaskOutcomeRow, type TaskOutcome } from '@/lib/task-outcomes';
 import { assignDueTier, type DueTier } from '@/lib/due-tiers';
@@ -817,17 +818,20 @@ export async function ensureOwnedWorkspace(
       // but there is no sense making a doomed round trip on every signup.
       if ('trial_ends_at' in trialStamp) {
         const stampedEnd = (trialStamp as { trial_ends_at: string }).trial_ends_at;
-        void logBillingEvent(adminClient, {
-          workspaceId: workspace.id,
-          ownerUserId: owner.id,
-          actorUserId: owner.id,
-          type: 'trial_started',
-          metadata: {
-            trialEndsAt: stampedEnd,
-            trialDays: TEAM_TRIAL_DAYS,
-            source: 'workspace_provisioned',
-          },
-        });
+        const trialWorkspaceId = workspace.id;
+        afterResponse('trial started record', () =>
+          logBillingEvent(adminClient, {
+            workspaceId: trialWorkspaceId,
+            ownerUserId: owner.id,
+            actorUserId: owner.id,
+            type: 'trial_started',
+            metadata: {
+              trialEndsAt: stampedEnd,
+              trialDays: TEAM_TRIAL_DAYS,
+              source: 'workspace_provisioned',
+            },
+          })
+        );
       }
     } else if ((insertResult.error as { code?: string } | null)?.code === '23505') {
       // Another request for this same user won the race to create the
@@ -1937,12 +1941,15 @@ export async function logTaskActivity(
     metadata?: Record<string, unknown>;
   }
 ) {
-  await adminClient.from(TASK_ACTIVITY_TABLE).insert({
+  const { error } = await adminClient.from(TASK_ACTIVITY_TABLE).insert({
     task_id: input.taskId,
     actor_id: input.actorId,
     message: input.message,
     metadata: input.metadata || {},
   });
+  // A rejected insert comes back as a value, not a throw, so without this a
+  // lost row left no trace anywhere.
+  if (error) console.warn('[tasks] could not record activity:', error.message);
 }
 
 // Web Push copy per notification type. Bodies get the task title injected;
