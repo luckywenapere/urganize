@@ -56,3 +56,15 @@ Open, in the order they will be taken:
 **Fix.** The sentence in `PricingTierCards.tsx` now reads "You can pay monthly or once a year." (the wording `/terms` uses) and is built from `SELLABLE_INTERVALS`, the same list the switch above the cards reads, so the two cannot disagree again. If only yearly were ever on sale it says "Every plan is paid once a year."; if only monthly, "Every plan is paid monthly." No price, interval or plan definition touched.
 
 **Checked.** `/pricing` at 390px and 1440px: the footnote now reads "You can pay monthly or once a year." with the Monthly / Yearly switch above it, on Monthly and on Yearly. No price, plan or interval changed. Before: `foot/before-m390-toggle-yearly.png`, `foot/before-m390-footnote.png`, `foot/before-d1440-footnote.png`. After: `foot/after-m390-toggle-monthly.png`, `foot/after-m390-toggle-yearly.png`, `foot/after-m390-footnote.png`, `foot/after-d1440-footnote.png`.
+
+**Merged.** #769, 2026-10-09 (squash).
+
+## 2026-10-09 | /pricing's search snippet still says "book a demo with the founders"
+
+**What is wrong.** The meta description of `/pricing` ends "What each plan includes and how to book a demo with the founders." That is what Google and a link preview show under the brand result, and Pricing is a standing sitelink candidate. The page itself has no demo to book: three of the four cards say "Try Urganize" and land on the waitlist, the hero says "Join the waitlist, and let us set your roster up with you", and the only mailto left is Group's "Let's talk". The `<meta name="description">` in the built HTML is the evidence (`apps/homepage/app/pricing/page.tsx:18`).
+
+**Why it costs sign-ups.** The snippet is the promise a visitor clicks on. They click expecting a call with the founders, find a price table and a waitlist, and either bounce or feel the page changed the deal. A stale snippet also keeps telling search engines the page is about booking demos.
+
+**Fix.** One sentence in the description, nothing else: "...from a single manager to a full roster. See what each plan includes and join the waitlist." It keeps "Everything after the music" (the positioning guard requires it on every page description) and the one-price-for-your-whole-team line, and says what the page does. No title, headline, price or structure touched.
+
+**Checked.** Built the homepage and read the page's own HTML: `<meta name="description">`, `og:description` and `twitter:description` on `/pricing` all carry the new 152-character sentence, and "book a demo" appears nowhere else in `apps/homepage` copy (the one remaining hit is a code comment). Positioning and copy guards in `apps/web` pass. There is no screenshot for a meta tag; the before and after tag text is in the PR.

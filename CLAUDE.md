@@ -14552,6 +14552,12 @@ The line under the four plan cards said "Every plan is paid once a year." while 
 
 ---
 
+## The /pricing search snippet matches the page (2026-10-09, no flag)
+
+`/pricing`'s meta description ended "how to book a demo with the founders", but the page has no demo to book: three of the four cards say "Try Urganize" and land on the waitlist, and only Group says "Let's talk". It now ends "See what each plan includes and join the waitlist." in `apps/homepage/app/pricing/page.tsx`, which also feeds the Open Graph and Twitter descriptions. It keeps "Everything after the music", which the positioning guard requires on every marketing page description. Marketing-site only, so no changelog entry or version bump. Checked by building the homepage and reading the rendered tags; not seen in a real search result.
+
+---
+
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
   - `Web` → https://app.urganize.app (builds `apps/web`)
