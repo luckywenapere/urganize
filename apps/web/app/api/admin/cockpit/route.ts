@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getNeonClient, verifyAdmin } from '../_shared';
 import { buildScoreboard } from '@/lib/scoreboard';
-import { buildFounderCockpit } from '@/lib/founder-cockpit';
+import { attachOwnerContacts, buildFounderCockpit } from '@/lib/founder-cockpit';
 import { buildFunnels, FUNNEL_WINDOWS, type WaitlistEntry } from '@/lib/admin-funnel';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 import { loadScoreboardInput } from '@/lib/scoreboard-server';
@@ -24,6 +24,8 @@ import { RODI_PER_USD } from '@/lib/credits/pricing';
 // run alongside the Supabase reads. Iteration 3 added the UrgAns panel
 // (lib/admin-urgans-usage.ts): two more reads, the AI usage log and the credit
 // ledger's spends and refunds over the last 8 weeks, also in parallel.
+// Iteration 4 added the owner's name and email to each "Needs a message" team
+// (read with the owners' profiles the Scoreboard already loads, no new query).
 
 export const maxDuration = 60;
 
@@ -89,9 +91,13 @@ export async function GET(request: NextRequest) {
       loadUrgansUsageRows(client, now),
     ]);
     const board = buildScoreboard(input);
+    const cockpit = buildFounderCockpit(input, board);
+    // Owner name and email for the "Needs a message" teams only (iteration 4),
+    // so the founder knows who to write to. Admin-only behind verifyAdmin.
+    cockpit.atRisk = attachOwnerContacts(cockpit.atRisk, extras.ownerNames, extras.ownerEmails);
     return NextResponse.json(
       {
-        cockpit: buildFounderCockpit(input, board),
+        cockpit,
         funnels: buildFunnels(input, waitlist.entries, extras.ownerEmails),
         urgans: buildUrgansUsage(
           input,

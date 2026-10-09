@@ -7,6 +7,7 @@ import {
   type Scoreboard,
   type ScoreboardInput,
 } from './scoreboard';
+import { stalledStage, type StalledAt } from './admin-message-list';
 
 // The founder cockpit (2026-10-09): the few numbers at the top of /admin that
 // say, in ten seconds, whether the company moved this week.
@@ -90,6 +91,13 @@ export type AtRiskTeam = {
   members: number;
   activeMembers7d: number;
   lastActiveAt: string | null;
+  /** The first lifecycle stage (strategy doc section 6) the team has not
+   *  finished, and what is missing. See lib/admin-message-list.ts. */
+  stalledAt: StalledAt;
+  /** The team owner's name and email (profiles), filled in by the route with
+   *  attachOwnerContacts. Null until then, or when the profile has none. */
+  ownerName: string | null;
+  ownerEmail: string | null;
 };
 
 export type FounderCockpit = {
@@ -252,7 +260,7 @@ export function atRiskTeams(
   const nowMs = input.now.getTime();
   const previousFrom = nowMs - 2 * WEEK_MS;
   const previousTo = nowMs - WEEK_MS;
-  const members = new Map(input.teams.map((team) => [team.workspaceId, team.memberUserIds]));
+  const teamsById = new Map(input.teams.map((team) => [team.workspaceId, team]));
 
   const out: AtRiskTeam[] = [];
   for (const row of board.teams) {
@@ -261,7 +269,7 @@ export function atRiskTeams(
       reason = 'paying_quiet';
     } else if (row.activeMembers7d < WEEKLY_ACTIVE_MIN_MEMBERS) {
       const before = activeMembersBetween(
-        members.get(row.workspaceId) ?? [],
+        teamsById.get(row.workspaceId)?.memberUserIds ?? [],
         input.activity,
         previousFrom,
         previousTo
@@ -277,6 +285,16 @@ export function atRiskTeams(
       members: row.members,
       activeMembers7d: row.activeMembers7d,
       lastActiveAt: row.lastActiveAt,
+      stalledAt: stalledStage({
+        realReleases: row.realReleases,
+        members: row.members,
+        firstInviteAt: teamsById.get(row.workspaceId)?.firstInviteAt ?? null,
+        paying: row.paying,
+        firstLiveAt: row.firstLiveAt,
+        secondReleaseStarted: row.secondReleaseStarted,
+      }),
+      ownerName: null,
+      ownerEmail: null,
     });
   }
 
@@ -287,6 +305,23 @@ export function atRiskTeams(
       (a.name ?? '').localeCompare(b.name ?? '')
   );
   return out.slice(0, limit);
+}
+
+/**
+ * Adds each listed team's owner name and email. Only the "Needs a message"
+ * teams get them, so the founder can write to them; the route reads both from
+ * the owners' profiles it already loaded. A team with no profile keeps nulls.
+ */
+export function attachOwnerContacts(
+  teams: AtRiskTeam[],
+  ownerNames: Map<string, string | null>,
+  ownerEmails: Map<string, string | null>
+): AtRiskTeam[] {
+  return teams.map((team) => ({
+    ...team,
+    ownerName: ownerNames.get(team.workspaceId) ?? null,
+    ownerEmail: ownerEmails.get(team.workspaceId) ?? null,
+  }));
 }
 
 export function buildFounderCockpit(input: ScoreboardInput, board: Scoreboard): FounderCockpit {

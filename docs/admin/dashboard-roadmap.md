@@ -85,7 +85,7 @@ does.
 | 5 | Time to first rollout | Median days, sign-up to first real rollout, last 90 days | `profiles.created_at`, `releases.created_at` | **Shipped** |
 | 6 | Week 4 retention | Newest 4 complete weekly cohorts, pooled | `weekFourRetention` | **Shipped** |
 | 7 | Paying teams + MRR | Doc section 2 | `subscriptions` | **Shipped** |
-| 8 | Needs a message | Paying teams under 2 active people; teams that went quiet this week | Board rows + activity | **Shipped** |
+| 8 | Needs a message | Paying teams under 2 active people; teams that went quiet this week; each with owner name + email, the lifecycle stage it stalled at (doc section 6) and its owner, and a mailto draft | Board rows + activity; owner `profiles.name`/`email` | **Shipped** (contacts and stage: iteration 4) |
 | 9 | Runway / default alive | Months of cash at current burn | Cash and spend are not in the database | **Needs data**, shown as "Not tracked" |
 | 10 | Second-release rate + rollouts live this week | Doc section 7 (bar 60%); rollouts whose `releaseLiveAt` falls in the last 7 days | `secondReleaseSummary`, `releaseLiveAt` | **Shipped** (iteration 3) |
 | 11 | Funnel: waitlist → account → first rollout → activated → trial over → paid | Teams that signed up in the last 30 or 90 days (past their first 3 days), how far each got | Supabase via `ScoreboardInput`; waitlist from Neon `"User"`, matched to team owners by email | **Shipped** (iteration 2). Waitlist shows "Not tracked" where `DATABASE_URL` is unset |
@@ -127,9 +127,8 @@ percentage.
 - No runway or default-alive figure (no data in the app).
 
 **Noise / clean-up candidates:**
-- The hub's link grid lists 11 of the 17 sections in the side menu (Pitch
-  payments, Reports, UrgAns actions, Directory, Chappi and Overview are menu
-  only). Either list every section or group them (Numbers / Operations / Content).
+- ~~The hub's link grid lists 11 of the 17 sections in the side menu.~~ Fixed
+  in iteration 4: grouped into Numbers / Operations / Content, all listed.
 - Three different "active" rules (Scoreboard: did something; Metrics: also
   opened the app or signed in; Growth: accounts). Each is labelled on its own
   page; the cockpit uses only the Scoreboard's.
@@ -184,21 +183,55 @@ percentage.
   parallel inside `GET /api/admin/cockpit`), added to the ledger and usage-log
   guard tests' reader lists. Shown by `components/admin/UrgansPanel.tsx`.
 
+- **Iteration 4 (2026-10-09): who to write to, and every dashboard grouped.**
+  One combined PR (Vercel's daily deploy cap was hit, so items were batched).
+  (a) Each "Needs a message" team now shows the owner's name and email, the
+  first stage of the strategy doc's customer lifecycle (section 6) it has not
+  finished, who owns that stage, what is missing, and an "Email <name>" mailto
+  link that opens a short stage-specific draft in the founder's own mail app.
+  Nothing is sent from Urganize. A mailto, not a "draft in Emails" link,
+  because `/admin/emails/new` takes no prefilled recipient or text today. The
+  stage rule is pure and tested in `lib/admin-message-list.ts` (Activate:
+  real rollout + a teammate, then Convert: paying, First release: live, Second
+  release: started within 90 days, else Expand); `lib/founder-cockpit.ts`
+  stamps it on each listed team and the route fills in `profiles.name` and
+  `email` for those teams only (`attachOwnerContacts`; the name joins the
+  profiles select the Scoreboard already runs, no new query). (b) "All
+  dashboards" is now grouped into Numbers / Operations / Content and lists
+  every side-menu section once (16, up from 11), with one short line each
+  (`lib/admin-sections.ts`; `lib/admin-sections.test.ts` reads
+  `AdminNav.tsx` and fails if the two drift). (c) Review pass: the cockpit is
+  ordered by importance (North Star pair, its 8-week trend, the stage tiles,
+  Needs a message, then the funnel and the UrgAns panel), and the hub's title
+  reads "Overview" like its menu row, with the grey intro paragraph moved
+  behind an info icon (house rule).
+
 ## 6. Next (ordered; one PR each)
 
-1. **Message list with a one-tap action.** For each "needs a message" team:
-   owner name and email, the stage it stalled at (strategy doc section 6), and
-   a mailto or "draft in Emails" link. Read-only; nothing sent automatically.
-2. **Hub link grid grouped and complete.** Numbers / Operations / Content
-   groups, every menu section listed once, cards shortened.
-3. **Runway, the honest way.** A founder-entered monthly figure (cash, monthly
+1. **Runway, the honest way.** A founder-entered monthly figure (cash, monthly
    spend) needs storage, so it waits for a migration slot; until then, a link
    to wherever the monthly money review lives. Default alive = MRR growth
    carried forward vs spend, shown only when both numbers exist.
-4. **Logo churn and net revenue retention, monthly.** Needs a reliable record
+2. **Logo churn and net revenue retention, monthly.** Needs a reliable record
    of when a subscription stopped; check whether `billing_events` or Paystack
    webhooks already give it before proposing a table.
-5. **Sean Ellis survey count.** Only if the founder runs the survey in-app or
+3. **"Draft in Emails" instead of mailto.** Let `/admin/emails/new` accept a
+   prefilled recipient, subject and body (query params read under a Suspense
+   boundary so the route stays static), then point the Needs a message button
+   at it, so the message goes out from the Urganize address and is logged with
+   the other admin emails. Still never sent without the founder pressing Send.
+4. **Read the cockpit once.** The Scoreboard and the cockpit each run the same
+   reads on every visit; a short server cache (or one route feeding both
+   pages) halves the cost when both are opened.
+5. **Leave our own accounts out (if the founder says yes).** See the open
+   question below; `/admin/metrics` already has the internal-email list.
+6. **Stage owners from one place.** The owner names (Chidera, Lucky) are
+   copied from the strategy doc's lifecycle table into `STAGE_INFO`; if the
+   table changes often, read them from a small config instead.
+7. **Last week's message list.** Whether each stalled team got its message
+   within 3 days needs a record of messages sent (the Emails tool's log could
+   give it once drafts go through it, item 3).
+8. **Sean Ellis survey count.** Only if the founder runs the survey in-app or
    in a form we can read; otherwise leave it off.
 
 ## 7. Open questions for the founder

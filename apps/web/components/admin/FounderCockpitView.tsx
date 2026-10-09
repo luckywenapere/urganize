@@ -15,10 +15,15 @@ import {
   growthVerdict,
 } from '@/lib/founder-cockpit-format';
 import { formatNaira, formatRate } from '@/lib/scoreboard-format';
+import { firstName, messageMailto, stageLine } from '@/lib/admin-message-list';
 
 // The founder cockpit at the top of /admin (2026-10-09). Display only: it
 // fetches nothing and holds no state, so AdminHubClient owns the loading and
 // the gate, and the layout can be looked at with made-up numbers.
+//
+// Order, most important first (iteration 4 review): the North Star and the
+// number that moves before it, their 8-week trend, the stage numbers, who
+// needs a message this week, then the funnel and the UrgAns panel.
 //
 // House rule (2026-10-05): no grey sentence stacked under a heading. What a
 // number means sits behind its info icon; a line under a number is only ever a
@@ -141,7 +146,21 @@ export function FounderCockpitView({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4">
+        <Label
+          text="Weekly active teams, last 8 weeks"
+          info="Each bar is one 7-day stretch, newest on the right. Teams made after a stretch ended are left out of it."
+        />
+        <div className="mt-3 rounded-xl border border-stroke-default bg-bg-surface p-4">
+          <AdminBarChart
+            title="Weekly active teams, last 8 weeks"
+            bars={bars}
+            formatValue={(value) => plural(value, 'active team', 'active teams')}
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Stat
           label="MRR"
           info="Monthly recurring revenue from subscriptions. Yearly plans count as a twelfth of their price. Credits are not included."
@@ -185,57 +204,67 @@ export function FounderCockpitView({
         />
       </div>
 
-      {funnels.length > 0 ? <FunnelStrip funnels={funnels} /> : null}
-
-      {urgans ? <UrgansPanel usage={urgans} /> : null}
-
-      <div className="mt-6">
-        <Label
-          text="Weekly active teams, last 8 weeks"
-          info="Each bar is one 7-day stretch, newest on the right. Teams made after a stretch ended are left out of it."
-        />
-        <div className="mt-3 rounded-xl border border-stroke-default bg-bg-surface p-4">
-          <AdminBarChart
-            title="Weekly active teams, last 8 weeks"
-            bars={bars}
-            formatValue={(value) => plural(value, 'active team', 'active teams')}
-          />
-        </div>
-      </div>
-
       <div className="mt-6">
         <Label
           text="Needs a message"
-          info="Paying teams where fewer than 2 people did something this week, then teams that were active last week and are quiet this week. Paying teams first."
+          info="Paying teams where fewer than 2 people did something this week, then teams that were active last week and are quiet this week. Paying teams first. Each shows the first stage of the customer lifecycle it has not finished and who owns that stage; the strategy doc says that person writes within 3 days. Email opens a draft in your own mail app. Nothing is sent from here."
         />
         {cockpit.atRisk.length === 0 ? (
           <p className="mt-3 text-sm text-content-secondary">No team has slipped this week.</p>
         ) : (
           <ul className="mt-3 divide-y divide-stroke-subtle rounded-xl border border-stroke-default bg-bg-surface">
-            {cockpit.atRisk.map((team) => (
-              <li
-                key={team.workspaceId}
-                className="flex flex-col gap-1 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-content-primary">
-                    {team.name || 'Unnamed team'}
-                    {team.paying ? (
-                      <span className="ml-2 rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand">
-                        Paying
-                      </span>
+            {cockpit.atRisk.map((team) => {
+              const mailto = messageMailto({
+                email: team.ownerEmail,
+                ownerName: team.ownerName,
+                teamName: team.name,
+                stage: team.stalledAt.stage,
+              });
+              return (
+                <li
+                  key={team.workspaceId}
+                  className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-content-primary">
+                      {team.name || 'Unnamed team'}
+                      {team.paying ? (
+                        <span className="ml-2 rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand">
+                          Paying
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="truncate text-xs text-content-secondary">
+                      {team.ownerName || 'No name'}
+                      {' · '}
+                      {team.ownerEmail || 'No email on file'}
+                    </p>
+                    <p className="mt-1 text-xs text-content-secondary">{reasonLine(team)}</p>
+                    <p className="text-xs text-content-secondary">
+                      {stageLine(team.stalledAt.stage)}. {team.stalledAt.missing}.
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
+                    <span className="text-xs tabular-nums text-content-secondary">{lastSeen(team.lastActiveAt)}</span>
+                    {mailto ? (
+                      <a
+                        href={mailto}
+                        className="motion-focus inline-flex h-8 items-center rounded-lg border border-stroke-default px-3 text-xs font-medium text-content-primary transition-colors hover:bg-bg-hover"
+                      >
+                        Email {firstName(team.ownerName) ?? 'owner'}
+                      </a>
                     ) : null}
-                  </p>
-                  <p className="text-xs text-content-secondary">{reasonLine(team)}</p>
-                </div>
-                <span className="shrink-0 text-xs tabular-nums text-content-secondary">
-                  {lastSeen(team.lastActiveAt)}
-                </span>
-              </li>
-            ))}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
+
+      {funnels.length > 0 ? <FunnelStrip funnels={funnels} /> : null}
+
+      {urgans ? <UrgansPanel usage={urgans} /> : null}
 
       <p className="mt-4 text-xs leading-5 text-content-tertiary">
         Past weeks use today&apos;s paying status and today&apos;s team members, because neither is
