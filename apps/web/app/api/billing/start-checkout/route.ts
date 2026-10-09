@@ -7,6 +7,7 @@ import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { resolveCheckoutSubject } from '@/lib/billing-events';
 import { logBillingEvent } from '@/lib/billing-events-server';
 import { fetchPaystackInit } from '@/lib/paystack-init';
+import { afterResponse } from '@/lib/after-response';
 
 // App-initiated Paystack subscription checkout.
 //
@@ -271,13 +272,16 @@ export async function POST(request: NextRequest) {
   // Funnel step: they reached Paystack. Fire-and-forget, after the checkout is
   // real, so a ledger hiccup can never cost someone their checkout.
   if (isHardPaywallEnabled() && body.workspaceId) {
-    void logBillingEvent(admin, {
-      workspaceId: body.workspaceId,
-      ownerUserId: subjectUserId,
-      actorUserId: userId,
-      type: 'checkout_started',
-      metadata: { plan: planId, interval: selectedInterval, currency, reference, amountMinorUnit },
-    });
+    const checkoutWorkspaceId = body.workspaceId;
+    afterResponse('checkout started record', () =>
+      logBillingEvent(admin, {
+        workspaceId: checkoutWorkspaceId,
+        ownerUserId: subjectUserId,
+        actorUserId: userId,
+        type: 'checkout_started',
+        metadata: { plan: planId, interval: selectedInterval, currency, reference, amountMinorUnit },
+      })
+    );
   }
 
   const response: StartCheckoutResponse = {
