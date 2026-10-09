@@ -1,14 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { SignalIcon } from '@/components/app/BrandIcons';
+import { ChevronDown } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useToast } from '@/components/shared/ToastProvider';
 import { getNotificationMessage, type TaskNotification } from '@/lib/tasks';
 import { formatRelativeTime } from '@/lib/relative-time';
+import {
+  bellBadge,
+  describeDigestTitles,
+  getDigestMessage,
+  groupNotifications,
+} from '@/lib/notification-groups';
 
 // Phase 1 of in-app notifications: the front door for an already-built
 // backend (notifications table + GET /api/notifications +
@@ -29,6 +36,44 @@ async function getAccessToken(): Promise<string> {
     data: { session },
   } = await supabase.auth.getSession();
   return session?.access_token || '';
+}
+
+/**
+ * One notification as a row. Used for ordinary notifications and for the rows
+ * inside an opened digest; `nested` indents it under its digest line.
+ */
+function NotificationRow({
+  notification,
+  nested = false,
+  onSelect,
+}: {
+  notification: TaskNotification;
+  nested?: boolean;
+  onSelect: (notification: TaskNotification) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(notification)}
+      className={`motion-focus flex w-full items-start gap-3 py-3 pr-3 text-left transition-colors hover:bg-bg-hover ${
+        nested ? 'pl-8' : 'pl-3'
+      } ${notification.read ? '' : 'bg-brand/5'}`}
+    >
+      <span
+        aria-hidden="true"
+        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+          notification.read ? 'bg-transparent' : 'bg-brand'
+        }`}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm text-content-primary">{getNotificationMessage(notification)}</p>
+        <p className="mt-0.5 truncate text-xs text-content-secondary">{notification.taskTitle}</p>
+        <p className="mt-1 text-[11px] text-content-tertiary">
+          {formatRelativeTime(notification.createdAt)}
+        </p>
+      </div>
+    </button>
+  );
 }
 
 /**
@@ -69,6 +114,9 @@ export function NotificationsBell() {
   const [notifications, setNotifications] = useState<TaskNotification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  // Which digests are opened. Keyed by the digest id, which stays the same
+  // while the run's newest row does, so a refetch does not shut one.
+  const [openDigests, setOpenDigests] = useState<ReadonlySet<string>>(() => new Set());
 
   // Derived rather than stored — the server's unreadCount is just
   // `notifications.filter(n => !n.read).length` over the same payload it
@@ -79,6 +127,19 @@ export function NotificationsBell() {
     (count, notification) => (notification.read ? count : count + 1),
     0
   );
+
+  // The daily due-date sweep writes one row per task, all within seconds, so a
+  // run of them is shown as one line (see lib/notification-groups.ts).
+  const entries = useMemo(() => groupNotifications(notifications), [notifications]);
+
+  const toggleDigest = useCallback((id: string) => {
+    setOpenDigests((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   // Returns the freshly-fetched list so callers that need the row that just
   // arrived via realtime can look it up by id without waiting for the next
@@ -350,9 +411,11 @@ export function NotificationsBell() {
   if (!WORKSPACE_FEATURE_ENABLED) return null;
   if (!isAuthenticated) return null;
 
-  // Cap visual badge at "9+" — anything bigger is just visual noise on a
-  // 40px-square trigger and the dropdown still shows the exact list.
-  const badgeLabel = unreadCount > 9 ? '9+' : String(unreadCount);
+  // The badge and the button's spoken name come from one function so they
+  // cannot disagree: "9+" on screen is "more than 9 unread" aloud, never an
+  // exact number the screen does not show. The list is capped at 20 rows by
+  // the API, so a count past the cap is "at least", not exact.
+  const badge = bellBadge(unreadCount);
   const hasUnread = unreadCount > 0;
 
   return (
@@ -363,18 +426,16 @@ export function NotificationsBell() {
         onClick={handleToggle}
         aria-expanded={isOpen}
         aria-controls={isOpen ? panelId : undefined}
-        aria-label={
-          hasUnread ? `Notifications, ${unreadCount} unread` : 'Notifications'
-        }
+        aria-label={badge.ariaLabel}
         className="motion-focus motion-press relative grid h-10 w-10 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
       >
         <SignalIcon className="h-[18px] w-[18px]" />
-        {hasUnread ? (
+        {badge.visible ? (
           <span
             aria-hidden="true"
             className="absolute -right-1 -top-1 grid min-h-[18px] min-w-[18px] place-items-center rounded-full border border-bg-base bg-brand px-1 text-[10px] font-semibold leading-none text-content-inverse"
           >
-            {badgeLabel}
+            {badge.label}
           </span>
         ) : null}
       </button>
@@ -435,35 +496,74 @@ export function NotificationsBell() {
               </p>
             ) : (
               <ul className="divide-y divide-stroke-subtle">
-                {notifications.map((notification) => (
-                  <li key={notification.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelect(notification)}
-                      className={`motion-focus flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-bg-hover ${
-                        notification.read ? '' : 'bg-brand/5'
-                      }`}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                          notification.read ? 'bg-transparent' : 'bg-brand'
+                {entries.map((entry) => {
+                  if (entry.kind === 'single') {
+                    return (
+                      <li key={entry.notification.id}>
+                        <NotificationRow
+                          notification={entry.notification}
+                          onSelect={handleSelect}
+                        />
+                      </li>
+                    );
+                  }
+
+                  const isDigestOpen = openDigests.has(entry.id);
+                  const listId = `${panelId}-${entry.id}`;
+                  return (
+                    <li key={entry.id}>
+                      <button
+                        type="button"
+                        onClick={() => toggleDigest(entry.id)}
+                        aria-expanded={isDigestOpen}
+                        aria-controls={isDigestOpen ? listId : undefined}
+                        className={`motion-focus flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-bg-hover ${
+                          entry.unreadCount > 0 ? 'bg-brand/5' : ''
                         }`}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-content-primary">
-                          {getNotificationMessage(notification)}
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-content-secondary">
-                          {notification.taskTitle}
-                        </p>
-                        <p className="mt-1 text-[11px] text-content-tertiary">
-                          {formatRelativeTime(notification.createdAt)}
-                        </p>
-                      </div>
-                    </button>
-                  </li>
-                ))}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                            entry.unreadCount > 0 ? 'bg-brand' : 'bg-transparent'
+                          }`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-content-primary">
+                            {getDigestMessage(entry.type, entry.notifications.length)}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-content-secondary">
+                            {describeDigestTitles(entry.notifications.map((n) => n.taskTitle))}
+                          </p>
+                          <p className="mt-1 text-[11px] text-content-tertiary">
+                            {formatRelativeTime(entry.newestAt)}
+                          </p>
+                        </div>
+                        <ChevronDown
+                          aria-hidden="true"
+                          className={`mt-1 h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
+                            isDigestOpen ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+                      {isDigestOpen ? (
+                        <ul
+                          id={listId}
+                          className="divide-y divide-stroke-subtle border-t border-stroke-subtle"
+                        >
+                          {entry.notifications.map((notification) => (
+                            <li key={notification.id}>
+                              <NotificationRow
+                                notification={notification}
+                                nested
+                                onSelect={handleSelect}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
