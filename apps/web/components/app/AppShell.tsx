@@ -600,7 +600,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     : {}),
                 });
               } else if (TYPE_FIRST_CREATE_ENABLED) {
-                // TYPE-FIRST CREATE (2026-09-01): the type tap was the whole
+                // TYPE-FIRST CREATE (2026-09-01): the one create screen was the whole
                 // form, so the release view — where name and date get
                 // prompted — is the destination, wherever the modal was opened
                 // from. Flag off, the stay-put behavior above is unchanged.
