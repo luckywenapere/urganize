@@ -18331,6 +18331,8 @@ The strategy doc (section 8): "Credits only | None | None | ₦30 a credit | Any
 
 First piece of distribution ordering (strategy row 11). Behind `NEXT_PUBLIC_FEATURE_DISTRIBUTION` (default off). No migration. Not a scope expansion: the strategy doc commits distribution through Therealmusicdistro (TRM), agreement signed.
 
+**AMENDED 2026-10-09: the flag is deleted and the step is always on.** It had already been switched on in production (found by probing), and the founder said not to ship it behind a flag. The checklist this section describes was replaced the same day by the check before distribution (see "The check before distribution" at the end of this file); the rest of this section (the hand-off, the partner, the billing event) still describes what is built. The "Activation" line at the end of this section is history.
+
 **What it is, and what it is not.** A "Distribute" row in the rollout menu, after Metadata, opens a scene (`?scene=distribute`) with TRM as the default distributor, a button that opens TRM's own sign-up (`https://therealmusicdistro.com/urganize/`, which logs the account on their side), a link to their terms, and a readiness checklist: date, song, cover art, genre, language and explicit flag are required; credits and label name are recommended. **It is not an order form and takes no payment.** The agreement's Option A (we collect through Paystack and pay TRM the partner price monthly) needs TRM's API, which they have not delivered. Until it arrives people sign up and pay on TRM's site. Switching to Option A is the next phase: Paystack checkout, accept TRM's terms before the first order (the contract requires showing them), status tracking.
 
 **Things worth knowing:**
@@ -18704,3 +18706,54 @@ The full vitest suite passes (about 130 new tests: the pure rules, the backfill 
 1. Apply `20261009100000_pitch_reminder_notification_types.sql`. Until it is applied, a reminder cannot be recorded (the sweep logs once and stops), and nothing else is affected.
 2. Merge. The step reaches new rollouts straight away, and older ones the first time they are opened.
 3. Draft my pitch appears only where embedded actions are on (`NEXT_PUBLIC_FEATURE_URGANS_ACTIONS` plus the planner flag) and the owner's plan is Manager or above.
+
+---
+
+## The check before distribution (2026-10-09, live at merge, no flag)
+
+Second of three PRs from the "release savings" briefs (the Spotify pitch step is above; a record of release spend is the third). **No feature flag (founder call, 2026-10-09: "dont ship it behind a flag").** `NEXT_PUBLIC_FEATURE_DISTRIBUTION` is deleted, so the Distribute row, scene, status line and route are always on, and it goes live at merge as v1.90.0. **It was already reachable: the Distribute and Metadata flags were both found ON in production on 2026-10-09** (a route answers 404 before auth while its flag is off, and an unauthenticated probe of the metadata, credits and distribution routes answered 401 for all three). So the new check replaces the checklist people already see, and the Fix buttons already have somewhere to land. An earlier draft of this section and of the PR said both were off; that was wrong, and was caught by probing rather than assuming. One migration, `20261009110000_distribution_check.sql`, **not applied anywhere yet, and it must be applied BEFORE the merge**: the Metadata save now writes `release_metadata.featured_artists`, so without the column every metadata save fails.
+
+**What it is.** One server-side function, `checkReleaseForDistribution(admin, releaseId)`, reads a rollout and returns `{errors, warnings}`, each item `{code, message, fieldPath}`. The Distribute scene, a status line on the rollout and the order route all call it, so a rollout can never read one way in one place and another way in another.
+
+### What did not match the brief, and what was built instead
+
+1. **There is no order endpoint.** Distribute is a readiness list plus a hand-off to Therealmusicdistro's own sign-up, because the partner's API does not exist. So "order" is that hand-off. `POST /api/releases/[releaseId]/distribution` now re-runs the check ITSELF on the stored rollout and answers 409 with the list on errors, so a request that skips the screen gets the same refusal. This honestly gates only what Urganize RECORDS: the partner's page is public, and the screen opens it synchronously inside the tap (a browser only allows a new tab from a gesture), so it can outrun the server check. The day a real order endpoint exists it calls the same function.
+2. **There are no tracks.** A rollout is one song and credits are per rollout, so "every track" means the rollout and `{track}` is its title. A writer credit is any of the roles songwriter, composer or lyricist (`requiredSplits`).
+3. **The explicit flag could not say "never asked".** The column is nullable but the form wrote `false` on first save. It is a Yes/No choice that stays empty until answered, and existing non-null values count as set.
+4. **Artwork size is unknown for older uploads** (recorded only since 2026-08-22), so unknown reads as too small, which fails closed. Re-uploading records the size. The server still does not decode images.
+5. **Three rules the brief left out were kept**, so nothing that was checked before stops being checked: the song is uploaded, the language is set, and the release-date warning (14 working days). The label-name suggestion was dropped.
+
+### Things worth knowing before editing this
+
+1. **The rules are pure and listed once.** `lib/distribution-rules.ts` holds `DISTRIBUTION_RULES` (one entry per code, with level, field path and copy). The split maths moved to `lib/credit-split-totals.ts` so the Metadata banner and the warning cannot disagree about "adds up to 100". The tolerance is real: 28.6 + 35.7 + 35.7 floats to 100.00000000000001, which must read as fine (the first test for this used 33.3 + 33.3 + 33.4, which sums to exactly 100 and tested nothing; a mutation caught it).
+2. **The reads FAIL CLOSED.** Before the check gated anything, a failed read just made a checklist ask again. Now any read that errors makes the check answer null, and the route answers 500 "Could not check this rollout", never "all clear".
+3. **`audio_wrong_format` is skipped while `DISTRIBUTION_AUDIO_FORMATS` is empty** (`lib/distribution-config.ts`). The partner's accepted formats are an open question for Yb Lekzy; the rule is built and tested for the day the list is filled.
+4. **Warnings need an explicit `acknowledgeWarnings: true`**, literally `true` and nothing truthy, so a request that never saw them cannot order past them. The warning codes that were ordered past are written onto the hand-off row, so "went anyway" is countable.
+5. **A Fix button only appears if the fix can work for this person.** `lib/distribution-fix.ts` turns a field path into a destination (a scene plus a field, the title and date sheet, or the Change artist dialog). Title, date and artist edits are owner-only, so a teammate gets no Fix button on those items, and a switched-off scene gets none either.
+6. **Fix lands on the field.** `?scene=metadata&field=<name>` opens the step that holds it and focuses an input with a stable id (`metadata-field-<name>`); `credits` and `splits` land on their step. The scene is keyed on the field so a second Fix re-lands.
+7. **`distribution_rejections` has a select policy and no write policy**, so a signed-in person cannot write or erase the distributor's answer. A member limited to one artist reads only that artist's rollouts. Nothing writes the table today (`recordDistributionRejection` is built and tested for the day the API exists). It keeps the partner's payload whole in `raw`.
+8. **Featured artist is a new nullable column** and had to join the Chappi `METADATA_FIELDS` read-then-merge list: the metadata PATCH replaces the whole row, so leaving a field out would wipe it on every assistant edit.
+9. **The status on the rollout is collapsed by default and shows nothing for a clean rollout** (a "you're ready" banner on every release teaches people to ignore banners). It stops showing the list once a hand-off is recorded and then only shows the newest thing the distributor sent back.
+10. **The account export carries `distribution_rejections`**, keyed on `release_id` (deleting a rollout deletes them).
+
+### Looked at in a browser, which found two real problems
+
+A throwaway page (deleted) mounted the real scene, status strip and Metadata form with the session and fetch stubbed and the real rule output. It found that the Fix buttons were 15 x 16px (below even the 24px accessibility minimum) and the Yes/No labels were 20px tall; Fix is now a 40px bordered button with a negative margin so rows stay compact, and the labels are 44px. Confirmed after: no sideways scroll at 375px or 1440px in dark and light, teammates lose only the owner-only Fix buttons, "Order anyway" appears only with warnings and records the hand-off, a clean rollout shows the sign-up button, and each Fix button puts the right `scene` and `field` in the URL.
+
+### Verified
+
+7,035 tests pass (87 of them in the five distribution test files, replacing the old checklist's 17: every rule has a passing and a failing case, plus the route's refusal paths, the fail-closed reads and the fix map). `tsc` shows only the 8 documented `confirmed-action.test.ts` errors. Lint is net-zero against `main` file by file (the one `set-state-in-effect` warning moved from `DistributionSection` into the shared `useDistributionStatus` hook; `WorkspaceView` is unchanged apart from line numbers). `next build` is green by exit code with the Metadata flag on and off (the only flag left that touches this), with `/auth`, `/dashboard`, `/onboarding`, `/settings` and `/locked` still static. Route probes on `next start`: both methods of the distribution route answer 401 unauthenticated, like the control route; there is no flag left to answer 404 for. **Sixteen deliberate breaks, each caught by a named test** (the all-caps boundary, the explicit unset case, the 35-day boundary, unknown artwork size, the audio skip, the splits tolerance, the feat word boundary, the placeholder title, the songwriter test, the route no longer refusing errors, warnings not needing acknowledgement, a truthy acknowledgement, the route skipping the check, a failed credits read, explicit read as `=== true`, and a missing Fix destination). One survived at first (the splits tolerance, because its test sum happened to be exact) and the test was fixed. The migration ran twice on a real Postgres engine (PGlite): 31 checks, including re-applying it, existing rows keeping their data, the constraints at their edges, RLS reading for the owner, an unscoped member, a member scoped to the right and the wrong artist, an invited member, an outsider and a signed-out caller, no way to insert, update or delete as a signed-in user, and the two delete rules.
+
+### Not verified
+
+Nothing has run against a real database, a real model, a real session or the partner. No rollout has been checked for real, no hand-off has been recorded, no rejection has ever been stored, and the migration is unapplied. The Fix-landing focus was checked in a stubbed page, not inside the real workspace.
+
+### Copy that is not in the brief (TODO(copy))
+
+The explicit question and its Yes/No answers; the sentence for a rejection with no reason; the splits sentence naming writing or master shares; the Featured artist label and its help line; and the wording of the three kept rules (language, audio, release-date). Each is marked `TODO(copy)` in the code except the kept rules, which keep their earlier in-app wording.
+
+### Activation
+
+1. Apply `20261009110000_distribution_check.sql` BEFORE merging (it adds `release_metadata.featured_artists` and creates `distribution_rejections`; both statements are additive and safe to re-run). The check itself tolerates the table being missing (rejections read as none), but the Metadata save does not tolerate the column being missing.
+2. Merge. There is nothing to switch on: the v1.90.0 entry and version bump are in the PR.
+3. When Yb Lekzy confirms the accepted audio formats, fill `DISTRIBUTION_AUDIO_FORMATS` in `lib/distribution-config.ts`.

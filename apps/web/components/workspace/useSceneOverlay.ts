@@ -60,7 +60,18 @@ import { SCENE_NAMES, type SceneName } from '@/lib/scene-cache';
  * for a different release, or by picking a different release in the workspace,
  * and both paths have to clear.
  */
-export const SCENE_SCOPED_PARAMS: readonly string[] = ['calendar', 'month'];
+export const SCENE_SCOPED_PARAMS: readonly string[] = ['calendar', 'month', 'field'];
+
+/**
+ * The input a scene should land on when it opens (2026-10-09): the distribution
+ * check's Fix buttons send the person to "Metadata, the Genre box", not just to
+ * Metadata. It is the one scene param that is NOT remembered across a close: a
+ * field is an instruction for one arrival, so closeScene drops it and an open
+ * that names no field clears any left over. It is also dropped when the scoped
+ * release changes, like the calendar's params (it is in SCENE_SCOPED_PARAMS for
+ * that reason).
+ */
+export const FIELD_PARAM = 'field';
 
 /** Strip every scene-internal param. Mutates the passed URLSearchParams. */
 export function clearSceneScopedParams(params: URLSearchParams): void {
@@ -74,7 +85,9 @@ export type SceneOverlay = {
    * consumers immediately re-gate this through `resolveActiveScene`, which is
    * what decides whether the scene can actually render. */
   activeScene: SceneName | null;
-  openScene: (scene: SceneName, releaseId: string) => void;
+  /** `options.field` names the input to land on (see FIELD_PARAM); omit it and
+   * any field left in the URL is cleared. */
+  openScene: (scene: SceneName, releaseId: string, options?: { field?: string | null }) => void;
   closeScene: () => void;
 };
 
@@ -90,7 +103,7 @@ export function useSceneOverlay(): SceneOverlay {
   const activeScene = isSceneName(raw) ? raw : null;
 
   const openScene = useCallback(
-    (scene: SceneName, releaseId: string) => {
+    (scene: SceneName, releaseId: string, options?: { field?: string | null }) => {
       const params = new URLSearchParams(searchParams.toString());
       const previousReleaseId = params.get(RELEASE_PARAM);
 
@@ -122,6 +135,10 @@ export function useSceneOverlay(): SceneOverlay {
 
       const wasOpen = isSceneName(searchParams.get(SCENE_PARAM));
       params.set(SCENE_PARAM, scene);
+      // A field belongs to ONE arrival: set when this open names one, cleared
+      // otherwise so it cannot linger into a later, unrelated open.
+      if (options?.field) params.set(FIELD_PARAM, options.field);
+      else params.delete(FIELD_PARAM);
 
       const url = `${pathname ?? ''}?${params.toString()}`;
 
@@ -142,6 +159,7 @@ export function useSceneOverlay(): SceneOverlay {
   const closeScene = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete(SCENE_PARAM);
+    params.delete(FIELD_PARAM);
     const query = params.toString();
 
     // REPLACE, never router.back(). A legacy-route redirect can make a

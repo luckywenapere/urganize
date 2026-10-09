@@ -174,6 +174,7 @@ export async function GET(request: NextRequest) {
     plans,
     creditLinks,
     creditSubmissions,
+    distributionRejections,
     urgansChats,
     presenceDays,
     assets,
@@ -200,6 +201,16 @@ export async function GET(request: NextRequest) {
     readSection(admin, { table: 'release_credit_links', column: 'release_id', values: releaseIds }),
     readSection(admin, {
       table: 'release_credit_submissions',
+      column: 'release_id',
+      values: releaseIds,
+    }),
+    // What the distributor sent back for a rollout (2026-10-09): the reason and
+    // the payload it came from, kept whole. Keyed on release_id like the other
+    // release-scoped tables, and it belongs here because deleting a rollout
+    // deletes these rows with it (on delete cascade). Unavailable, not empty,
+    // where the table does not exist yet.
+    readSection(admin, {
+      table: 'distribution_rejections',
       column: 'release_id',
       values: releaseIds,
     }),
@@ -272,6 +283,7 @@ export async function GET(request: NextRequest) {
       content_posts: posts,
       credit_links: creditLinks,
       credit_submissions: creditSubmissions,
+      distribution_rejections: distributionRejections,
       capture_pages: capturePages,
       capture_leads: captureLeads,
       rollout_plan_drafts: plans,

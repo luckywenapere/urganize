@@ -83,6 +83,12 @@ export type ReleaseMetadataSnapshot = {
   genre: string;
   subgenre: string;
   labelName: string;
+  /**
+   * Other artists on the song, as free text ("Tems, Burna Boy"). Added 2026-10-09:
+   * the distribution check warns when a title carries "feat" and sends the
+   * person here instead, so the field has to exist.
+   */
+  featuredArtists: string;
   language: string;
   explicit: boolean | null;
   /** Copyright line, e.g. "© 2026 Some Label". Added for URG-108 (metadata hub). */

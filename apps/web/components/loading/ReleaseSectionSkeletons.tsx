@@ -45,18 +45,19 @@ export function ShareLinkCardSkeleton() {
   );
 }
 
-// Matches MetadataSection's real field count exactly — 9 fields, ordered
-// easiest-first (Genre, Subgenre, Language, Label name, ISRC, UPC, ISWC,
-// ℗ line, © line) — so the resolved form doesn't visibly grow past the
-// placeholder grid. ISWC joined the form 2026-08-27; keep this in step with
-// COUNTED_METADATA_FIELDS in MetadataSection.tsx. Every field also carries a
+// Matches MetadataSection's real field count exactly — 10 fields, ordered
+// easiest-first (Genre, Subgenre, Language, Label name, Featured artist, ISRC,
+// UPC, ISWC, ℗ line, © line) — so the resolved form doesn't visibly grow past
+// the placeholder grid. ISWC joined the form 2026-08-27 and Featured artist
+// 2026-10-09; keep this in step with COUNTED_METADATA_FIELDS in
+// MetadataSection.tsx. Every field also carries a
 // plain-English hint line under its input (2026-08-13), which is why each row
 // below reserves three blocks and the grid gap matches the real form's `gap-4`.
-const METADATA_FIELD_COUNT = 9;
+const METADATA_FIELD_COUNT = 10;
 
-/** The release-details distribution-metadata form: a 9-field 2-column grid
- * (label + input + hint per field) + an explicit-content checkbox row + a
- * Save button. */
+/** The release-details distribution-metadata form: a 10-field 2-column grid
+ * (label + input + hint per field) + the explicit-content Yes/No group (a
+ * question line over two options) + a Save button. */
 export function MetadataFieldsSkeleton() {
   return (
     <div
@@ -70,7 +71,13 @@ export function MetadataFieldsSkeleton() {
           <SkeletonBlock className="mt-1.5 h-2.5 w-4/5" />
         </div>
       ))}
-      <SkeletonBlock className="h-4 w-64 sm:col-span-2" />
+      <div className="space-y-2 sm:col-span-2">
+        <SkeletonBlock className="h-3.5 w-72 max-w-full" />
+        <div className="flex gap-5">
+          <SkeletonBlock className="h-4 w-12" />
+          <SkeletonBlock className="h-4 w-12" />
+        </div>
+      </div>
       <SkeletonBlock className="h-9 w-32 sm:col-span-2" />
     </div>
   );

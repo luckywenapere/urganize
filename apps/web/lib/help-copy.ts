@@ -208,6 +208,11 @@ export const HELP_COPY = {
     label: 'Label name',
     text: "The company putting this out. Use the artist's own name if there is no company.",
   },
+  // TODO(copy): the brief adds this field and gives no label or help for it.
+  'metadata.field.featuredArtists': {
+    label: 'Featured artist',
+    text: 'Anyone who sings or plays on this song beside the main name. Put them here, not in the title.',
+  },
   'metadata.field.isrc': {
     label: 'ISRC',
     text: 'A code for this one recording. Your distributor gives it to you.',

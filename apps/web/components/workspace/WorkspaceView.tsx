@@ -30,6 +30,7 @@ import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { TestReleaseBanner } from './TestReleaseBanner';
 import { PostPlanKitPrompt } from '@/components/press-kits/PostPlanKitPrompt';
 import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
+import { DistributionStatusStrip } from './DistributionStatusStrip';
 import { requestEditorialPitchBackfill } from '@/lib/editorial-pitch-client';
 import { daysToRelease, isEditorialPitchTask, pitchWindowState } from '@/lib/editorial-pitch';
 import { DeleteReleaseDialog } from './DeleteReleaseDialog';
@@ -1006,6 +1007,8 @@ export function WorkspaceView() {
         tasks={scopedTasks}
         onOpenTask={openTask}
         onTaskRescheduled={() => void loadCommandCenter({ force: true })}
+        onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}
+        onChangeArtist={changeArtistAction ? changeArtistAction.onClick : undefined}
       />
     ) : undefined;
 
@@ -1037,6 +1040,21 @@ export function WorkspaceView() {
         releaseType={scopedReleaseSlim?.releaseType}
       />
     ) : null);
+
+  // The check before distribution, shown on the rollout itself (brief 2). Only
+  // while the main view is showing: inside a scene
+  // the person is already working, and the Distribute scene carries the same
+  // list. Its Fix buttons for the title, the release day and the artist open the
+  // dialogs this component owns, and only for the owner, because both edits are
+  // owner-only and a Fix button that can only fail is worse than none.
+  const distributionStatusStrip =
+    bodyIsMainView && scopedReleaseSlim ? (
+      <DistributionStatusStrip
+        releaseId={scopedReleaseSlim.id}
+        onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}
+        onChangeArtist={changeArtistAction ? changeArtistAction.onClick : undefined}
+      />
+    ) : null;
 
   const handleSelect = (releaseId: string) => {
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
@@ -1375,6 +1393,7 @@ export function WorkspaceView() {
                   </div>
                 )}
                 {newReleaseGuideBanner}
+                {isDesktopViewport ? null : distributionStatusStrip}
                 <TasksPanel
                   id={TASKS_PANEL_ID}
                   tasks={scopedTasks}
@@ -1424,7 +1443,12 @@ export function WorkspaceView() {
                     ? () => openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })
                     : undefined
                 }
-                banner={newReleaseGuideBanner}
+                banner={
+                  <>
+                    {newReleaseGuideBanner}
+                    {isDesktopViewport ? distributionStatusStrip : null}
+                  </>
+                }
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
                 panelActivitiesBanner={
                   editorialPitchBanner ?? kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner
