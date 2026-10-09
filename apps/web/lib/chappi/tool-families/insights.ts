@@ -16,6 +16,7 @@
 
 import { TaskService } from '@/lib/services/task-service';
 import { listVisibleReleases } from '../release-scope';
+import { assistantReleaseStatus } from '../release-status';
 import { apiError, callInternalApi, fail, type ChappiTool } from './shared';
 
 const DEFAULT_COMPARE_LIMIT = 5;
@@ -161,12 +162,13 @@ export const INSIGHTS_TOOLS: ChappiTool[] = [
           const tasks = await taskService.getTasksForUser(ctx.user.id, ctx.workspaceIds, {
             releaseId: release.id,
           });
+          const tasksDone = tasks.filter((t) => t.status === 'done').length;
           return {
             id: release.id,
             title: release.title,
-            status: release.status,
+            status: assistantReleaseStatus(release, { done: tasksDone, total: tasks.length }),
             releaseDate: release.releaseDate,
-            tasksDone: tasks.filter((t) => t.status === 'done').length,
+            tasksDone,
             tasksTotal: tasks.length,
           };
         })

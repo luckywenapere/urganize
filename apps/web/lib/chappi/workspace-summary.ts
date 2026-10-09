@@ -14,6 +14,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
+import { assistantReleaseStatus, dayToDate } from './release-status';
 import type { ChappiToolContext } from './tool-families/shared';
 
 /** How many releases survive into the prompt. Unchanged from the original
@@ -197,7 +198,7 @@ export function formatWorkspaceSummary(input: {
       .map((r) => {
         const forRelease = tasks.filter((t) => t.releaseId === r.id);
         const done = forRelease.filter((t) => t.status === 'done').length;
-        return `- ${r.title} (id: ${r.id}, status: ${r.status}, ${done}/${forRelease.length} tasks done, date: ${r.releaseDate ?? 'unset'})`;
+        return `- ${r.title} (id: ${r.id}, status: ${assistantReleaseStatus(r, { done, total: forRelease.length }, dayToDate(today))}, ${done}/${forRelease.length} tasks done, date: ${r.releaseDate ?? 'unset'})`;
       })
       .join('\n')}`
   );

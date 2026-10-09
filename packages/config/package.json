@@ -1,6 +1,6 @@
 {
   "name": "@urganize/config",
-  "version": "1.92.8",
+  "version": "1.92.9",
   "private": true,
   "type": "module",
   "exports": {

@@ -34,6 +34,7 @@ import { sendPushToUsers, type PushPayload } from '@/lib/push-server';
 import { mapTaskOutcomeRow, type TaskOutcome } from '@/lib/task-outcomes';
 import { assignDueTier, type DueTier } from '@/lib/due-tiers';
 import { NOTIFICATION_LIST_LIMIT } from '@/lib/notification-groups';
+import { inChunks } from '@/lib/paged-rows';
 import { getNotificationPresets } from '@/lib/notification-presets-server';
 import type { NotificationPresets } from '@/lib/notification-presets';
 import { TEAM_TRIAL_DAYS, isHardPaywallEnabled } from '@/lib/team-billing';
@@ -1309,6 +1310,11 @@ async function loadTaskGroups(
   );
 }
 
+// Task ids per count request. A page of 1,000 uuids in one `.in()` is a ~38 KB
+// URL, past what the gateway accepts, and this function swallows errors, so a
+// refused request read as "no comments or files" for every activity.
+const TASK_COUNT_ID_CHUNK = 150;
+
 async function loadTaskCounts(
   adminClient: SupabaseClient,
   table: typeof TASK_COMMENTS_TABLE | typeof TASK_ATTACHMENTS_TABLE,
@@ -1319,19 +1325,25 @@ async function loadTaskCounts(
     return new Map<string, number>();
   }
 
-  const result = await adminClient.from(table).select('task_id').in('task_id', normalizedIds);
-  if (result.error || !Array.isArray(result.data)) {
-    return new Map<string, number>();
-  }
+  const results = await Promise.all(
+    inChunks(normalizedIds, TASK_COUNT_ID_CHUNK).map((ids) =>
+      adminClient.from(table).select('task_id').in('task_id', ids)
+    )
+  );
 
   const counts = new Map<string, number>();
-  for (const row of result.data) {
-    const taskId = readString((row as { task_id?: string }).task_id);
-    if (!taskId) {
+  for (const result of results) {
+    if (result.error || !Array.isArray(result.data)) {
       continue;
     }
+    for (const row of result.data) {
+      const taskId = readString((row as { task_id?: string }).task_id);
+      if (!taskId) {
+        continue;
+      }
 
-    counts.set(taskId, (counts.get(taskId) || 0) + 1);
+      counts.set(taskId, (counts.get(taskId) || 0) + 1);
+    }
   }
 
   return counts;
