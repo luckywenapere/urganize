@@ -32,6 +32,18 @@ export const KIND_LABEL: Record<OpportunityKind, string> = {
   other: 'Other',
 };
 
+/**
+ * What the Opportunities page says while a team has none (2026-10-09). One line
+ * on what the page is for, then the page's one action. Held to the help-copy
+ * fifth-grader bar by `opportunities.test.ts`, and the page reads it from here so
+ * the words and the guard cannot drift apart.
+ */
+export const OPPORTUNITIES_EMPTY_COPY = {
+  title: 'No opportunities yet',
+  description: 'Keep the deals, grants, sync and brand work you are chasing, each with its next step.',
+  action: 'Add opportunity',
+} as const;
+
 export const STATUS_LABEL: Record<OpportunityStatus, string> = {
   idea: 'Idea',
   reaching_out: 'Reaching out',
