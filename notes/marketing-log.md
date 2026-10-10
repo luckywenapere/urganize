@@ -21,6 +21,18 @@ Open, in the order they will be taken:
 9. `scripts/smoke-waitlist.mjs` looks for copy and an h1 that no longer exist.
 10. `/pricing` bottom block still says "Not ready to talk yet? ... We'll reach out when the time is right for your team." There is no longer a sales conversation on that page (every plan sends you to the form), so "talk" promises something the page does not offer.
 
+## 2026-10-10 | Waitlist form: no autofill, a bare "match the format" error, a silent error line
+
+**What is wrong.** The waitlist form is the only sign-up path from the site and it fights the browser on a phone. None of its three fields has a `name` or an `autocomplete` value, so a phone cannot offer the saved email, name or number and the visitor types all three by hand. The phone field's pattern fails with the browser's default "Please match the requested format." and nothing says what the format is. And when the sign-up request itself fails, the red error line appears with no `role="alert"`, so a screen reader says nothing and the form just looks like it did nothing.
+
+**Why it costs sign-ups.** The two-step form exists to keep the first touch light. Autofill is what makes step 2 (name and number) one tap instead of two typed fields on a phone keyboard, and step 2 is where the page already loses people. A rejected number with no hint reads as a dead button. A screen reader user whose request failed is not told.
+
+**Fix.** In `WaitlistForm.tsx` only: `name` and `autoComplete` on email (`email`), name (`name`) and phone (`tel`); a `title` on the phone field naming the characters it takes (the same set the pattern and the API accept), which is the attribute browsers show beside their format message; `role="alert"` on the error line. `inputMode` was on the original list and is left out on purpose: `type="email"` and `type="tel"` already select the right mobile keyboard, so it would change nothing. No copy, field, validation rule, request or layout changed.
+
+**Not done, and why.** Focus is not moved to the name field when step 2 appears, so a screen reader is not told the form changed. That is a separate behaviour change (and raises the keyboard on a phone), so it is left for its own entry.
+
+**Checked.** Homepage lint (0 errors, the 2 existing warnings). In the running form at `/pricing`: the email field carries `name="email"` and `autocomplete="email"`; step 2's name and phone carry `name`/`autocomplete` `name` and `tel`; the phone field has the `title`; `0801 abc 5678` fails the pattern and `+234 801 234 5678` passes; a forced 429 from `/api/signup` renders its message in an element with `role="alert"`. **Not seen:** the browser's own validation bubble (a headless browser does not draw it, and Chrome's `validationMessage` property returns only the generic sentence, not the title) and a real phone's autofill sheet, so the title text and the one-tap fill are set up as the HTML spec describes but not observed.
+
 ## 2026-10-10 | /pricing description still promises a demo
 
 **What is wrong.** The `/pricing` meta description ended "...and how to book a demo with the founders." Nothing on the page books a demo any more: the plan buttons say "Try Urganize" and go to the waitlist, Group says "Let's talk" and opens an email, and the page lead says "Join the waitlist". The same sentence is the Open Graph and Twitter description, so it is what a link preview and a search result show under the page title.
@@ -30,6 +42,8 @@ Open, in the order they will be taken:
 **Fix.** One sentence in `apps/homepage/app/pricing/page.tsx`: "...how to book a demo with the founders" became "...how to join the waitlist". The first half ("Everything after the music, at one price for your whole team...") is untouched, so the positioning guard still passes. A comment beside it records why, so the demo line is not put back. No page copy, price, plan or button changed.
 
 **Checked.** Homepage lint (0 errors, the 2 existing warnings), production build (`/pricing` still static) and the positioning and copy guard tests in `apps/web` (4 files, 137 tests) all pass. In the built `pricing.html`, the `description`, `og:description` and `twitter:description` tags all carry the new sentence and "book a demo" appears nowhere on the page. No other live copy on the site says it (the only other hits are code comments).
+
+**Merged.** #784, 2026-10-10 (squash).
 
 ## 2026-10-09 | Tapping "Try Urganize" lands on a bare email field
 
