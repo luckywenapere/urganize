@@ -150,6 +150,30 @@ html[data-marketing-theme="dark"] .theme-shot-light {
   display: none;
 }
 
+/* Phone crop of a desktop screenshot (ThemedProductShot `phoneCrop`). Only
+   below sm (40rem, the same line Tailwind's sm: uses); from sm up the wrapper is
+   a plain block and the image renders whole. The custom properties are set
+   inline per shot: --crop-ar is the crop's aspect ratio, --crop-w the image's
+   width as a share of the box, --crop-x and --crop-y how far to move it so the
+   crop's top-left corner lands on the box's. */
+@media (max-width: 639.98px) {
+  .shot-crop {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: var(--crop-ar);
+  }
+
+  .shot-crop > img {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--crop-w);
+    max-width: none;
+    height: auto;
+    transform: translate(var(--crop-x), var(--crop-y));
+  }
+}
+
 @layer base {
   body {
     background: var(--marketing-bg);
