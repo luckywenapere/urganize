@@ -28,7 +28,7 @@ const members = [
     role: "Co-Founder and CEO",
     photo: "/images/team/lucky-wenapere.webp",
     bio: "Ten years in the music industry as a videographer, director, and editor; now manages two artists. Studied Computer Engineering at Afe Babalola University; currently works with Afreximbank's Tech & Innovation team.",
-    linkedin: "https://linkedin.com/in/lucky-wenapere",
+    linkedin: "https://www.linkedin.com/in/oyinwenapere",
   },
   {
     name: "Tedum King",
