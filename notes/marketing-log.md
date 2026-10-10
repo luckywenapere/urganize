@@ -11,15 +11,15 @@ Clean: no horizontal overflow at 390px, no broken images, every image has alt te
 Open, in the order they will be taken:
 
 1. Everything below the first screen is invisible without JavaScript, and until it loads on a slow link. **Fixed in the first entry below.**
-2. Tapping "Try Urganize" lands on the waitlist form with its headline ("Put your next rollout on plan.") hidden behind the fixed header (`id="waitlist"` sits on the div under the heading).
-3. `/pricing` footnote says "Every plan is paid once a year." but the card has a Monthly / Yearly toggle that opens on Monthly, and `packages/pricing` sells both.
-4. `/pricing` meta description still says "how to book a demo with the founders" (stale; the page now has a waitlist and a free-trial style ask).
-5. Waitlist form fields have no `autocomplete` / `inputmode`, the phone field gives no hint when the pattern fails, and the error line is not announced to screen readers (`role="alert"` missing).
-6. Header "Try Urganize" is 36px tall and the "Product" button 20px tall at 390px (under the 44px target); theme toggle is 40x40.
-7. Product shots on a phone are desktop screenshots shrunk to about 330px wide and cannot be read.
-8. The press kit shot still reads "Made with Urganize, the operating system" (the app dropped that line). Retaking shots needs a signed-in headed Chrome, so it is in `notes/needs-lucky.md`.
+2. Tapping "Try Urganize" lands on the waitlist form with its headline ("Put your next rollout on plan.") hidden behind the fixed header (`id="waitlist"` sits on the div under the heading). **Fixed in the 2026-10-09 anchor entry below.**
+3. `/pricing` footnote says "Every plan is paid once a year." but the card has a Monthly / Yearly toggle that opens on Monthly, and `packages/pricing` sells both. **Fixed in the 2026-10-09 footnote entry below.**
+4. `/pricing` meta description still says "how to book a demo with the founders" (stale; the page now has a waitlist and a free-trial style ask). **Fixed in the 2026-10-10 description entry below.**
+5. Waitlist form fields have no `autocomplete` / `inputmode`, the phone field gives no hint when the pattern fails, and the error line is not announced to screen readers (`role="alert"` missing). **Fixed in the 2026-10-10 waitlist form entry below.**
+6. Header "Try Urganize" is 36px tall and the "Product" button 20px tall at 390px (under the 44px target); theme toggle is 40x40. **Fixed in the 2026-10-10 header entry below.**
+7. Product shots on a phone are desktop screenshots shrunk to about 330px wide and cannot be read. **Fixed in the 2026-10-10 product screenshots entry below (real phone captures of three screens are in `notes/needs-lucky.md`).**
+8. The press kit shot still reads "Made with Urganize, the operating system" (the app dropped that line). Retaking shots needs a signed-in headed Chrome, so it is in `notes/needs-lucky.md`. **The footer line is hidden in the 2026-10-10 press kit entry below; the retake is still open.**
 9. `scripts/smoke-waitlist.mjs` looks for copy and an h1 that no longer exist. **Fixed in the 2026-10-10 smoke-test entry below.**
-10. `/pricing` bottom block still says "Not ready to talk yet? ... We'll reach out when the time is right for your team." There is no longer a sales conversation on that page (every plan sends you to the form), so "talk" promises something the page does not offer. **Not built (it is a headline): written up in `notes/needs-lucky.md`.**
+10. `/pricing` bottom block still says "Not ready to talk yet? ... We'll reach out when the time is right for your team." There is no longer a sales conversation on that page (every plan sends you to the form), so "talk" promises something the page does not offer. **Not built (it is a headline): written up in `notes/needs-lucky.md`.** **Not built: it is the page headline, so it is written up for Lucky in the 2026-10-10 bottom-block entry below and in `notes/needs-lucky.md`.**
 
 ## 2026-10-10 | /pricing's bottom block promises a conversation (not built, for Lucky)
 
@@ -43,6 +43,18 @@ Open, in the order they will be taken:
 
 **Not done, and why.** One run against the production build printed "browser runtime exceptions were observed" on `127.0.0.1`; four later runs with `WAITLIST_SMOKE_STRICT_CONSOLE=1` were clean, so it was not reproduced and its text was not captured. The script does not submit the form, so the sign-up request itself (the `/api/signup` call) is still unchecked by it. It is not wired into any CI job (there are no GitHub Actions in this repo; it is run by hand).
 
+## 2026-10-10 | The press kit shot still says "the operating system"
+
+**What is wrong.** The press kit picture in the homepage's feature grid (the phone-shaped card next to "Press kit", "Shows and DJ packs" and "Cover art and song files") ends with a footer line reading "MADE WITH URGANIZE, THE OPERATING SYSTEM". The app dropped that wording when the product was repositioned (the public kit and credits footers now say "Made with Urganize. Everything after the music."), and "operating system for music" is on the site's retired-phrases list. It is baked into a PNG, so no copy check sees it.
+
+**Why it costs sign-ups.** It is the one place on the site that still describes the product in the old words, in the proof a visitor looks at after reading the new line. It also shows a retired page (see below), so it should not be the thing people remember.
+
+**Fix.** The frame around the image gets `aspect-[780/1540]`. The frame is already `overflow-hidden` and the image is top aligned, so the bottom of the capture is cut just above the footer line's rule (the capture is 780px wide; the rule is at 1581px and the cut is at about 1546px) and nothing else moves. One class and a comment saying to delete it when the shot is retaken. The capture file is untouched.
+
+**Not done, and why.** The shot is still the retired release-scoped press kit, not the per-artist kit at `/k/[slug]` with a bio, photos and credits; its alt text describes what it shows accurately, and the existing comment already says so. Retaking it needs a published kit on a seeded team and a signed-in headed Chrome, so it stays in `notes/needs-lucky.md` (updated to say to drop the class).
+
+**Checked.** At 390px, 800px and 1440px: the frame is 260x513, the image 258x559 inside it, 47px of the bottom cut, the cut at 1546 source pixels; the footer line is gone and the card ends after the "Format / Single" row; no horizontal scroll. Homepage lint (0 errors, the 2 existing warnings), tsc, production build (all pages static) and the four `apps/web` guard test files (137 tests) pass. **Not seen:** a real phone.
+
 ## 2026-10-10 | Product screenshots are unreadable on a phone
 
 **What is wrong.** On a phone, five product screenshots were 1920px desktop captures shrunk to the 340px column (0.18x), so they read as dark rectangles with grey dots. Three sit in the homepage's step-by-step section (the activity list under "Create the rollout. Get the plan.", the open activity under "Put a name on every activity.", the Timeline under "See where every rollout stands."), one on `/features` (the same activity list), and one on `/for-managers`, `/for-executives`, `/for-ai-artists` and `/why-urganize` (the catalog). The homepage hero already had a proper phone capture; none of these did.
@@ -57,6 +69,7 @@ Open, in the order they will be taken:
 
 **Checked.** At 390px in dark and light: the three crop boxes are 340 wide and 242, 210 and 163 tall; the activity list, the assignee row (Dami Okafor) and the week axis with TODAY and RELEASE are legible; the hidden theme's box is `display: none` and takes no space; no horizontal scroll. The persona page shows the phone catalog in a 342x428 frame (`fetchpriority="auto"`). At 1440px the crop box is a plain static block, the image renders whole (1022x518 on `/features`) and the persona page serves the desktop catalog on a fresh load. Served images are the full 1920px files (the preview pane reports a smaller `naturalWidth` that a direct fetch disproves). Homepage lint (0 errors, the 2 existing warnings), `tsc`, production build (all pages still static) and the four `apps/web` guard test files (137 tests) pass. **Not seen:** a real phone, or a retina screen where the crop's sharpness could be judged.
 
+**Merged.** #787, 2026-10-10 (squash).
 
 ## 2026-10-10 | Header buttons are too small to tap on a phone
 
