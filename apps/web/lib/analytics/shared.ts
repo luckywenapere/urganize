@@ -251,6 +251,20 @@ export interface AnalyticsEventPropertiesMap {
     results: '0' | '1-4' | '5-19' | '20+';
   };
   directory_profile_opened: { role: string | null };
+  /**
+   * The rest of the directory funnel (2026-10-10, spec test 4): a profile page
+   * seen, a request sent, a request answered. Built by lib/directory-events.ts
+   * from an allowlist: a role from the fixed vocabulary, booleans and one count.
+   * No names, no note, no reply text.
+   */
+  profile_viewed: { surface: 'public_page'; role: string | null; claimed: boolean };
+  request_sent: { role: string | null; has_release: boolean };
+  request_answered: {
+    role: string | null;
+    answer: 'interested' | 'passed';
+    has_reply: boolean;
+    hours_to_answer: number | null;
+  };
   /** The role gaps panel on a scoped release — the retention mechanic. `shown`
    *  against `role_clicked` says whether the rollout plan actually drives
    *  search; `dismissed` against a later `shown` says whether it merely

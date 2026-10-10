@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { AdminBarChart } from '@/components/admin/AdminBarChart';
 import { FunnelStrip } from '@/components/admin/FunnelStrip';
 import { UrgansPanel } from '@/components/admin/UrgansPanel';
+import { DirectoryTilePanel } from '@/components/admin/DirectoryTilePanel';
+import type { DirectoryTile } from '@/lib/directory-growth';
 import { ChurnPanel } from '@/components/admin/ChurnPanel';
 import { RunwayPanel, type RunwayFormValues } from '@/components/admin/RunwayPanel';
 import type { Runway } from '@/lib/admin-runway';
@@ -84,6 +86,7 @@ export function FounderCockpitView({
   cockpit,
   funnels = [],
   urgans = null,
+  directory = null,
   churn = null,
   runway = null,
   runwayReadable = true,
@@ -97,6 +100,8 @@ export function FounderCockpitView({
   funnels?: AdminFunnel[];
   /** UrgAns, credits and release outcomes. Null hides the panel. */
   urgans?: UrgansUsage | null;
+  /** The Directory tile. Null hides it. */
+  directory?: DirectoryTile | null;
   /** Logo churn and gross MRR churn by month. Null hides the panel. */
   churn?: ChurnSummary | null;
   /** Runway and default alive. Null hides the panel. */
@@ -308,6 +313,8 @@ export function FounderCockpitView({
       {funnels.length > 0 ? <FunnelStrip funnels={funnels} /> : null}
 
       {urgans ? <UrgansPanel usage={urgans} /> : null}
+
+      {directory ? <DirectoryTilePanel tile={directory} /> : null}
 
       <p className="mt-4 text-xs leading-5 text-content-tertiary">
         Past weeks use today&apos;s paying status and today&apos;s team members, because neither is

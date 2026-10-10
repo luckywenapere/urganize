@@ -91,6 +91,7 @@ does.
 | 11 | Funnel: waitlist → account → first rollout → activated → trial over → paid | Teams that signed up in the last 30 or 90 days (past their first 3 days), how far each got | Supabase via `ScoreboardInput`; waitlist from Neon `"User"`, matched to team owners by email | **Shipped** (iteration 2). Waitlist shows "Not tracked" where `DATABASE_URL` is unset |
 | 12 | UrgAns use + credits + AI cost | Share of weekly active paying teams that used UrgAns inside a rollout this week (seed bar: half; every usage-log feature counts, status updates and task outcome replies included since iteration 6 because they cost AI tokens); credits spent per week (spends minus refunds, 8 weeks) and per active team; AI cost this week per active team | `ai_usage_events` (cost + release + feature), `credit_ledger` spend/refund rows | **Shipped** (iteration 3). Cost per active team falls back to the ledger's `provider_cost_rodi`; "Not tracked" when neither reads |
 | 13 | Logo churn + gross MRR churn; NRR | Paying teams lost per calendar month out of those paying at its start; MRR of subscriptions that stopped out of start-of-month MRR; 3 full months + this month so far | `subscriptions.started_at` → last paid day (`expires_at` once passed), today's price; a renewing subscription (active / past_due) keeps counting as paying for Paystack's 3 retry days after its last paid day | **Shipped** (iteration 5; renewal grace iteration 6). Net MRR churn and NRR show "Not tracked": a plan change overwrites the price, so upgrades and downgrades are not stored |
+| 14 | Directory: rollouts live from it, profiles claimed, requests sent, reply rate | Tile: rollouts that a directory request named when accepted (`work_requests.accepted_release_id`) and that went live this month (`releaseLiveAt`); profiles claimed and requests sent this week vs last; reply rate over 8 weeks (answered over answered plus closed, waiting left out, a request open past 7 days counts as closed). Detail on `/admin/directory`: 8 rolling weeks of seeded profiles, claim invites, claimed, claimed people who started a rollout, searches by role, requests, said yes, said no, and 6 months of started and live | `person_profiles` (`created_at`, `claimed_at`, `created_by_workspace_id`), `person_claim_invites`, `work_requests`, `billing_events` (`directory_role_wanted`), `releases` of claimed people | **Shipped** (iteration 7). Every source that cannot be read, and the live numbers until `accepted_release_id` exists, show "Not tracked" |
 
 Rules every number on the cockpit follows: our own team's accounts left out
 (the `/admin/metrics` list, applied to the Scoreboard as well, since iteration
@@ -287,6 +288,54 @@ percentage.
   cost, so by the founder's rule ("only if they cost AI tokens or credits") they
   count. `URGANS_CHOSEN_FEATURES` is now every `AI_USAGE_FEATURES` entry; a guard
   test reads both routes and fails if either stops logging its call.
+
+- **Iteration 7 (2026-10-10): the directory's weekly numbers and spec test 4.**
+  One PR, the cockpit half of the Profiles and Directory spec. (a) **The pure
+  rules** in `lib/directory-growth.ts` (words in `lib/directory-growth-format.ts`,
+  reads in `lib/directory-growth-server.ts`, shared by `GET /api/admin/directory`
+  and `GET /api/admin/cockpit` so the two cannot count differently). Weeks are
+  the cockpit's rolling 7 days, so "this week" means the same days on both pages.
+  A source that cannot be read arrives as null and every number built from it
+  shows "Not tracked", never zero: several of these tables and columns are being
+  built by other work in parallel (`person_claim_invites`,
+  `work_requests.accepted_release_id`, the profile seeding columns), and a zero
+  would say "nobody did this" about something never looked at. (b) **What each
+  number means.** Seeded: a profile a team made (`created_by_workspace_id` set),
+  by the week it was made. Claimed: a profile with a claim time, by the week it
+  was claimed. Started a rollout: a claimed person's first real (not test)
+  rollout after claiming, by that rollout's week, once per person; read from
+  `releases` for claimed people only, in chunks of 150 ids. Requests, said yes,
+  said no and the reply rate follow `summarizeWorkRequests`'s rules (waiting
+  left out of the rate; a request open past 7 days reads as closed). **The
+  number that matters**, rollouts live from the directory, is rollouts a request
+  named when accepted, once each, by the month they went live under the
+  Scoreboard's `releaseLiveAt` rule; it is "Not tracked" until
+  `accepted_release_id` exists. If that other work records the shared rollout
+  differently, change `acceptedReleaseId` in `lib/directory-growth-server.ts`
+  and nothing else. (c) **Searches.** The only search that reaches a durable row
+  is the role-filtered one (`directory_role_wanted`), so "Searches by role" is
+  that count and says so. A search with no role, and a profile view, live in
+  PostHog only, which this admin cannot read (the project key is refused on
+  purpose). (d) **Three PostHog events**, built from an allowlist in
+  `lib/directory-events.ts` (a role from the fixed vocabulary, booleans, one
+  count; no search text, no names, no note, no reply text): `profile_viewed`
+  (browser beacon on `/p/[slug]`; surface, role, claimed), `request_sent` (role,
+  has_release) and `request_answered` (role, answer, has_reply, hours_to_answer),
+  both captured **from the server** in the two request routes through
+  `afterResponse`, so a content blocker cannot lose them and the reply is never
+  delayed. (e) **Our own accounts are left out** with the same exclusion as the
+  rest (`internalAccountEmails()`); `?team=1` brings us back. The rollouts' live
+  dates come from the Scoreboard's shared read cache. (f) **Where it shows:** a
+  "Directory" tile on the cockpit under the UrgAns panel, and a "Week by week"
+  table plus "Live from the directory" table on `/admin/directory` above
+  "Recruit these". A failed directory read never takes the rest of either page
+  down (try/catch in the directory route, `.catch` in the cockpit's parallel
+  read). `lib/directory-growth-guard.test.ts` reads the real sources: every read
+  paged and ordered by a unique column, read-only, chunked, behind `verifyAdmin`,
+  exclusion applied, events allowlisted, no bare `void`.
+  **Not tracked yet, on purpose:** views and searches with no role filter (need a
+  server record, a follow-up if PostHog stays unreadable), and anything about
+  the featured profiles table (not built yet).
 
 ## 6. Next (ordered; one PR each)
 
