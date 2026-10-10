@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.15",
+    date: "October 10, 2026",
+    highlights: [
+      "The Spotify pitch now tells you where to paste it and has a button that opens Spotify for Artists.",
+    ],
+  },
+  {
     version: "1.92.14",
     date: "October 10, 2026",
     highlights: [

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, Copy, Loader2, Sparkles } from '@/components/icons';
+import { Check, Copy, ExternalLink, Loader2, Sparkles } from '@/components/icons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
 import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
@@ -14,11 +14,15 @@ import {
   PITCH_DRAFT_LABEL,
   PITCH_FIELD_KEYS,
   PITCH_FIELD_LABELS,
+  SPOTIFY_FOR_ARTISTS_LABEL,
+  SPOTIFY_FOR_ARTISTS_URL,
+  SPOTIFY_PITCH_STEPS,
   allPitchFieldsFilled,
   pitchCounterCopy,
   type PitchFieldKey,
   type PitchFields,
 } from '@/lib/editorial-pitch';
+import { openExternalUrl } from '@/lib/external-link';
 import { supabase } from '@/lib/supabase/client';
 import { runDraftSpotifyPitch } from '@/lib/urgans-actions/client';
 
@@ -196,6 +200,20 @@ export function EditorialPitchPanel({ taskId, releaseId }: EditorialPitchPanelPr
         <p className="mt-2 text-sm text-content-secondary" role="status">
           You released without a Spotify pitch.
         </p>
+      ) : null}
+
+      {!skipped ? (
+        <div className="mt-2">
+          <p className="text-sm text-content-secondary">{SPOTIFY_PITCH_STEPS}</p>
+          <button
+            type="button"
+            onClick={() => void openExternalUrl(SPOTIFY_FOR_ARTISTS_URL)}
+            className={`${COPY_BUTTON_CLASS} mt-2 h-9 px-3 text-sm`}
+          >
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            {SPOTIFY_FOR_ARTISTS_LABEL}
+          </button>
+        </div>
       ) : null}
 
       <div className="mt-3 space-y-3">
