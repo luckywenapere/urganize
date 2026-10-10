@@ -12,6 +12,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomInt } from 'node:crypto';
+import { afterResponse } from './after-response';
 import { logBillingEvent } from './billing-events-server';
 import { adjustCredits, readBalances } from './credits/credits-server';
 import { isEmailConfigured, sendEmail } from './email';
@@ -236,13 +237,15 @@ export async function attachReferral(
         console.error('[referrals] could not tag a team:', error.message);
         return refused('no_team');
       }
-      void logBillingEvent(admin, {
-        workspaceId: workspace.id,
-        ownerUserId: input.ownerUserId,
-        actorUserId: input.byAdmin?.userId ?? input.ownerUserId,
-        type: 'referral_attached',
-        metadata: { kind: 'partner', partnerId: partner.id, code, source: input.byAdmin ? 'admin' : 'link' },
-      });
+      afterResponse('referral tagged record', () =>
+        logBillingEvent(admin, {
+          workspaceId: workspace.id,
+          ownerUserId: input.ownerUserId,
+          actorUserId: input.byAdmin?.userId ?? input.ownerUserId,
+          type: 'referral_attached',
+          metadata: { kind: 'partner', partnerId: partner.id, code, source: input.byAdmin ? 'admin' : 'link' },
+        })
+      );
       return { ok: true, kind: 'partner', partnerId: partner.id, partnerName: partner.name };
     }
 
@@ -258,13 +261,15 @@ export async function attachReferral(
         console.error('[referrals] could not record an invite:', error.message);
         return refused('no_team');
       }
-      void logBillingEvent(admin, {
-        workspaceId: workspace.id,
-        ownerUserId: input.ownerUserId,
-        actorUserId: input.byAdmin?.userId ?? input.ownerUserId,
-        type: 'referral_attached',
-        metadata: { kind: 'team', referrerWorkspaceId: referrer.workspaceId, code, source: input.byAdmin ? 'admin' : 'link' },
-      });
+      afterResponse('referral tagged record', () =>
+        logBillingEvent(admin, {
+          workspaceId: workspace.id,
+          ownerUserId: input.ownerUserId,
+          actorUserId: input.byAdmin?.userId ?? input.ownerUserId,
+          type: 'referral_attached',
+          metadata: { kind: 'team', referrerWorkspaceId: referrer.workspaceId, code, source: input.byAdmin ? 'admin' : 'link' },
+        })
+      );
       return { ok: true, kind: 'team', partnerId: referrer.workspaceId, partnerName: referrer.name };
     }
 

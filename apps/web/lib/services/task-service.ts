@@ -10,6 +10,7 @@ import {
 import { TaskStatus, TaskPriority, TaskRequirement } from '@/types/tasks';
 import { ReleasePipelineState } from '@/types/releases';
 import { getTaskCompletionBlocker } from '@/lib/release-execution';
+import { readAllPages, ROWS_MAX_PAGES, ROWS_PAGE_SIZE } from '@/lib/paged-rows';
 import {
   TASK_DONE_STATUS,
   TASK_LOCKED_STATUS,
@@ -24,11 +25,12 @@ export type CompleteTaskResult =
   | { ok: true; completedId: string; unlockedIds: string[] }
   | { ok: false; reason: 'not_found' | 'forbidden' | 'blocked'; message: string };
 
-// Hard ceiling on list queries. Invisible at v1 scale (a full roster is a
-// few hundred tasks) but stops response size and hydration cost from growing
-// without bound as workspaces accumulate releases. Deliberately logged when
-// hit — a silent cap would read as "that's all the tasks there are".
-const TASK_LIST_MAX_ROWS = 1_000;
+// Hard ceiling on list queries: ROWS_MAX_PAGES pages of ROWS_PAGE_SIZE. It used
+// to be one 1,000-row page, which a team of about sixteen rollouts reached, and
+// the rows past it (the latest-dated ones) silently dropped out of every count.
+// Pages are only read while the last one came back full, and the ceiling is
+// still logged when hit, because a silent cap would read as "that's all there is".
+const TASK_LIST_MAX_ROWS = ROWS_PAGE_SIZE * ROWS_MAX_PAGES;
 
 export class TaskService {
   constructor(private adminClient: SupabaseClient) {}
@@ -48,29 +50,35 @@ export class TaskService {
     status?: string;
     mineOnly?: boolean;
   } = {}, timings?: Timings) {
-    let query = this.adminClient
-      .from(TASKS_TABLE)
-      .select(TASKS_SELECT_COLUMNS)
-      .in('workspace_id', workspaceIds)
-      .order('due_date', { ascending: true, nullsFirst: false })
-      .order('position', { ascending: true })
-      .limit(TASK_LIST_MAX_ROWS);
+    // `id` is the last sort key so paging is stable: due date and position are
+    // not unique, and a tie could otherwise skip or repeat a row across pages.
+    const readRows = () =>
+      readAllPages<TaskRow>((from, to) => {
+        let query = this.adminClient
+          .from(TASKS_TABLE)
+          .select(TASKS_SELECT_COLUMNS)
+          .in('workspace_id', workspaceIds)
+          .order('due_date', { ascending: true, nullsFirst: false })
+          .order('position', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to);
 
-    if (filters.mineOnly) query = query.eq('assigned_to_user_id', userId);
-    if (filters.releaseId) query = query.eq('release_id', filters.releaseId);
-    if (filters.priority) query = query.eq('priority', filters.priority);
-    if (filters.status) query = query.eq('status', filters.status);
+        if (filters.mineOnly) query = query.eq('assigned_to_user_id', userId);
+        if (filters.releaseId) query = query.eq('release_id', filters.releaseId);
+        if (filters.priority) query = query.eq('priority', filters.priority);
+        if (filters.status) query = query.eq('status', filters.status);
+        return query as unknown as PromiseLike<{ data: TaskRow[] | null; error: { message?: string } | null }>;
+      });
 
-    const { data, error } = await (timings ? timings.time('t_rows', async () => await query) : query);
-    if (error) throw error;
+    const { rows, truncated } = await (timings ? timings.time('t_rows', readRows) : readRows());
 
-    if ((data || []).length === TASK_LIST_MAX_ROWS) {
+    if (truncated) {
       console.warn(
-        `[task-service] getTasksForUser hit the ${TASK_LIST_MAX_ROWS}-row cap for user ${userId} — results may be truncated; pagination is now a real need.`
+        `[task-service] getTasksForUser hit the ${TASK_LIST_MAX_ROWS}-row cap for user ${userId} — results may be truncated.`
       );
     }
 
-    return loadTasks(this.adminClient, (data || []) as TaskRow[], userId, undefined, timings);
+    return loadTasks(this.adminClient, rows, userId, undefined, timings);
   }
 
   async getWorkspaceTasks(workspaceId: string, userId: string, filters: {
@@ -78,27 +86,28 @@ export class TaskService {
     priority?: string;
     status?: string;
   } = {}) {
-    let query = this.adminClient
-      .from(TASKS_TABLE)
-      .select(TASKS_SELECT_COLUMNS)
-      .eq('workspace_id', workspaceId)
-      .order('updated_at', { ascending: false })
-      .limit(TASK_LIST_MAX_ROWS);
+    const { rows, truncated } = await readAllPages<TaskRow>((from, to) => {
+      let query = this.adminClient
+        .from(TASKS_TABLE)
+        .select(TASKS_SELECT_COLUMNS)
+        .eq('workspace_id', workspaceId)
+        .order('updated_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to);
 
-    if (filters.releaseId) query = query.eq('release_id', filters.releaseId);
-    if (filters.priority) query = query.eq('priority', filters.priority);
-    if (filters.status) query = query.eq('status', filters.status);
+      if (filters.releaseId) query = query.eq('release_id', filters.releaseId);
+      if (filters.priority) query = query.eq('priority', filters.priority);
+      if (filters.status) query = query.eq('status', filters.status);
+      return query as unknown as PromiseLike<{ data: TaskRow[] | null; error: { message?: string } | null }>;
+    });
 
-    const { data, error } = await query;
-    if (error) throw error;
-
-    if ((data || []).length === TASK_LIST_MAX_ROWS) {
+    if (truncated) {
       console.warn(
         `[task-service] getWorkspaceTasks hit the ${TASK_LIST_MAX_ROWS}-row cap for workspace ${workspaceId} — results may be truncated.`
       );
     }
 
-    return loadTasks(this.adminClient, (data || []) as TaskRow[], userId);
+    return loadTasks(this.adminClient, rows, userId);
   }
 
   async getTaskById(taskId: string, userId: string) {

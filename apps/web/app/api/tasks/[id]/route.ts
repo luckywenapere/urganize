@@ -18,6 +18,7 @@ import {
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
 import { isEditorialPitchTask } from '@/lib/editorial-pitch';
+import { afterResponse } from '@/lib/after-response';
 import { loadPitchBlocker } from '@/lib/editorial-pitch-server';
 import { ASSIGN_OUTSIDE_TEAM_MESSAGE, isTeamAssignee } from '@/lib/task-assignee-server';
 import {
@@ -192,14 +193,14 @@ export async function PATCH(
     // reader on screen since the feed was removed 2026-07-23, so this changes
     // nothing anyone sees. Fire-and-forget: a lost log row must never fail an
     // update that already succeeded.
-    void logTaskActivity(adminClient, {
-      taskId: id,
-      actorId: auth.user.id,
-      message: 'Updated the activity',
-      metadata: { kind: 'update', fields: Object.keys(mapped.updates) },
-    }).catch((logError: unknown) => {
-      console.error('[tasks] could not record the update:', logError);
-    });
+    afterResponse('task update record', () =>
+      logTaskActivity(adminClient, {
+        taskId: id,
+        actorId: auth.user.id,
+        message: 'Updated the activity',
+        metadata: { kind: 'update', fields: Object.keys(mapped.updates) },
+      })
+    );
 
     const task = updatedRow
       ? await loadTaskDetail(adminClient, updatedRow as TaskRow, auth.user.id, {
@@ -221,12 +222,14 @@ export async function PATCH(
       nextAssigneeUserId !== previousAssigneeUserId &&
       nextAssigneeUserId !== auth.user.id
     ) {
-      void createTaskNotification(adminClient, {
-        userId: nextAssigneeUserId,
-        type: 'task_assigned',
-        taskId: id,
-        actorId: auth.user.id,
-      });
+      afterResponse('task assigned notification', () =>
+        createTaskNotification(adminClient, {
+          userId: nextAssigneeUserId,
+          type: 'task_assigned',
+          taskId: id,
+          actorId: auth.user.id,
+        })
+      );
     }
 
     if (
@@ -237,12 +240,14 @@ export async function PATCH(
       // request also cleared the assignee) — not the actor themself.
       const notifyUserId = nextAssigneeUserId ?? previousAssigneeUserId;
       if (notifyUserId && notifyUserId !== auth.user.id) {
-        void createTaskNotification(adminClient, {
-          userId: notifyUserId,
-          type: 'task_status_changed',
-          taskId: id,
-          actorId: auth.user.id,
-        });
+        afterResponse('task status notification', () =>
+          createTaskNotification(adminClient, {
+            userId: notifyUserId,
+            type: 'task_status_changed',
+            taskId: id,
+            actorId: auth.user.id,
+          })
+        );
       }
     }
 

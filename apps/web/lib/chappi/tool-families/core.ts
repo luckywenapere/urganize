@@ -9,6 +9,7 @@ import { describeStatusFacts, type StatusFacts } from '@/lib/release-status';
 import { TaskService } from '@/lib/services/task-service';
 import { settingsDeepLink } from '@/lib/settings-nav';
 import { listVisibleReleases } from '../release-scope';
+import { assistantReleaseStatus } from '../release-status';
 import type { ChappiClientAction } from '../types';
 import {
   argBoolean,
@@ -32,7 +33,8 @@ export const CORE_TOOLS: ChappiTool[] = [
         id: r.id,
         title: r.title,
         artist: r.artistName,
-        status: r.status,
+        // The release date alone decides here: no activities are loaded for a list.
+        status: assistantReleaseStatus(r, null),
         releaseDate: r.releaseDate,
       }));
       return { ok: true, summary: `Found ${data.length} rollout(s).`, data };
@@ -67,7 +69,7 @@ export const CORE_TOOLS: ChappiTool[] = [
             id: release.id,
             title: release.title,
             artist: release.artistName,
-            status: release.status,
+            status: assistantReleaseStatus(release, { done, total: tasks.length }),
             releaseDate: release.releaseDate,
           },
           tasks: tasks.map(compactTask),

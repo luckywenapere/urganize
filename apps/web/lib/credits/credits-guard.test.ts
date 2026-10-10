@@ -55,7 +55,9 @@ describe('the ledger is append-only', () => {
   const writers = ['lib/credits/credits-server.ts', 'app/api/admin/credits/route.ts'];
   // Reads the provider cost on spend rows for the usage dashboard (/admin/metrics,
   // 2026-10-07) when the AI usage log is not there. Reading only, held below.
-  const readers = ['lib/usage-metrics-server.ts'];
+  // The founder cockpit's UrgAns panel (/admin, 2026-10-09) reads spends and
+  // refunds for credits spent per week. Reading only, held below.
+  const readers = ['lib/usage-metrics-server.ts', 'lib/admin-urgans-usage-server.ts'];
 
   it('lets the readers only read', () => {
     for (const file of readers) {

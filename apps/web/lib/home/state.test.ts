@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   daysUntilDate,
   isReleaseInFlight,
@@ -28,6 +28,34 @@ describe('daysUntilDate', () => {
   it('returns null for a missing or unparseable date', () => {
     expect(daysUntilDate(null, NOW)).toBeNull();
     expect(daysUntilDate('not-a-date', NOW)).toBeNull();
+  });
+
+  // A date column is a calendar day, not an instant. Read as UTC midnight it is
+  // the evening BEFORE in the Americas, so every count came out a day short.
+  describe('a calendar-day string in a western timezone', () => {
+    const original = process.env.TZ;
+    afterEach(() => {
+      if (original === undefined) delete process.env.TZ;
+      else process.env.TZ = original;
+    });
+
+    for (const zone of ['America/New_York', 'America/Los_Angeles', 'Africa/Lagos', 'Asia/Tokyo']) {
+      it(`counts whole days the same in ${zone}`, () => {
+        process.env.TZ = zone;
+        // Local noon, so "today" is unambiguous in every zone tested.
+        const now = new Date(2026, 8, 29, 12, 0, 0);
+        expect(daysUntilDate('2026-09-29', now)).toBe(0);
+        expect(daysUntilDate('2026-10-13', now)).toBe(14);
+        expect(daysUntilDate('2026-09-22', now)).toBe(-7);
+      });
+    }
+
+    it('still reads a full timestamp as the instant it names', () => {
+      process.env.TZ = 'America/New_York';
+      const now = new Date(2026, 8, 29, 12, 0, 0);
+      // 2026-10-13 18:00 UTC is 14:00 in New York: the same local day, 14 away.
+      expect(daysUntilDate('2026-10-13T18:00:00.000Z', now)).toBe(14);
+    });
   });
 });
 

@@ -29,6 +29,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CURRENT_VERSION } from '@urganize/changelog';
 import { createAdminClient } from '@/app/api/_shared/auth';
 import { requireActiveAccount } from '@/app/api/_shared/paywall';
+import { afterResponse } from '@/lib/after-response';
 import { logBillingEvent } from '@/lib/billing-events-server';
 import { executeToolCall, resolveChappiContext } from '@/lib/chappi/dispatch';
 import { listVisibleReleases } from '@/lib/chappi/release-scope';
@@ -313,13 +314,15 @@ export async function POST(request: NextRequest) {
 
       // Visibility only, never a ceiling. See the comment on 'mcp_tool_call'
       // in lib/billing-events.ts for why this is not metered.
-      void logBillingEvent(adminClient, {
-        workspaceId: ctx.workspaceIds[0] || null,
-        ownerUserId: null,
-        actorUserId: actor.userId,
-        type: 'mcp_tool_call',
-        metadata: { tool: name, ok: result.ok },
-      });
+      afterResponse('mcp tool call record', () =>
+        logBillingEvent(adminClient, {
+          workspaceId: ctx.workspaceIds[0] || null,
+          ownerUserId: null,
+          actorUserId: actor.userId,
+          type: 'mcp_tool_call',
+          metadata: { tool: name, ok: result.ok },
+        })
+      );
 
       // A failed tool is a successful call carrying isError — JSON-RPC errors
       // are reserved for protocol problems, so the model can see and reason

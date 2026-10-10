@@ -140,6 +140,12 @@ export function WorkRequestsInbox() {
 
             <p className="mt-2 text-sm text-content-secondary">{request.note}</p>
 
+            {request.status === 'expired' ? (
+              <p className="mt-2 text-sm text-content-tertiary">
+                You did not answer in 7 days, so this one closed.
+              </p>
+            ) : null}
+
             {request.status === 'new' ? (
               <>
                 <input

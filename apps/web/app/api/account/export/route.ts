@@ -3,7 +3,9 @@ import { getAuthenticatedUser, createAdminClient } from '@/app/api/_shared/auth'
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 import { toCsv } from '@/lib/csv';
+import { readInChunks } from '@/lib/paged-rows';
 import {
+  EXPORT_ROW_CAP,
   TASK_CSV_HEADER,
   buildExportEnvelope,
   buildExportFileName,
@@ -48,24 +50,43 @@ const FEATURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DATA_EXPORT === 'true';
  * of the app signs at; the envelope tells the reader they expire. */
 const ASSET_URL_TTL_SECONDS = 60 * 60;
 
-type Query = { table: string; column: string; values: readonly string[] };
+type Query = {
+  table: string;
+  column: string;
+  values: readonly string[];
+  /** A unique column to page by. Defaults to `id`; two tables have no such column. */
+  orderBy?: string;
+};
 
 /** Read a table, never throw, and distinguish "no rows" from "could not read".
- * The second is what makes a missing table survivable. */
+ * The second is what makes a missing table survivable.
+ *
+ * Read a page at a time and in chunks of ids (2026-10-09, v1.92.10). One select
+ * stops at 1,000 rows without saying so, which cut a team's activities short in
+ * the one file that exists to be complete, and one `.in(...)` carrying every
+ * task id is a URL too long to send, which made the comments section read as
+ * unavailable. One row past the cap is read so `buildSection` can tell a list
+ * that hit it from a list that ended there. */
 async function readSection(
   admin: SupabaseClient,
-  { table, column, values }: Query
+  { table, column, values, orderBy = 'id' }: Query
 ): Promise<ExportSection> {
   if (values.length === 0) return buildSection([]);
   try {
-    const { data, error } = await admin.from(table).select('*').in(column, values as string[]);
-    if (error) {
-      console.error(`[account/export] could not read ${table}:`, error.message);
-      return buildSection(null, error.message);
-    }
-    return buildSection((data ?? []) as ExportRow[]);
+    const { rows } = await readInChunks<string, ExportRow>(
+      values,
+      (group, from, to) =>
+        admin
+          .from(table)
+          .select('*')
+          .in(column, group)
+          .order(orderBy, { ascending: true })
+          .range(from, to),
+      { maxRows: EXPORT_ROW_CAP + 1 }
+    );
+    return buildSection(rows);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : (error as { message?: string })?.message ?? String(error);
     console.error(`[account/export] could not read ${table}:`, message);
     return buildSection(null, message);
   }
@@ -222,7 +243,12 @@ export async function GET(request: NextRequest) {
     // Amounts are integer kobo. Unavailable, not empty, where the table does not
     // exist yet.
     readSection(admin, { table: 'release_spend', column: 'release_id', values: releaseIds }),
-    readSection(admin, { table: 'release_payback', column: 'release_id', values: releaseIds }),
+    readSection(admin, {
+      table: 'release_payback',
+      column: 'release_id',
+      values: releaseIds,
+      orderBy: 'release_id',
+    }),
     // Saved UrgAns chats — the user's own words and the answers to them, kept
     // until they delete them (founder decision, 2026-09-24) and removed with
     // the account by the auth.users cascade, so they belong here by the rule
@@ -232,7 +258,12 @@ export async function GET(request: NextRequest) {
     // The days you opened the app (2026-10-07, the /admin/metrics ping): one
     // row per day with the first and last time and the kind of device. Removed
     // with the account by the cascade, so it belongs here by the same rule.
-    readSection(admin, { table: 'user_presence_days', column: 'user_id', values: [userId] }),
+    readSection(admin, {
+      table: 'user_presence_days',
+      column: 'user_id',
+      values: [userId],
+      orderBy: 'day',
+    }),
     withDownloadUrls(admin, assetsRaw),
   ]);
 

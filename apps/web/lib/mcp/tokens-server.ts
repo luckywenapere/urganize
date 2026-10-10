@@ -15,6 +15,7 @@
 // like one that never existed.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { afterResponse } from '../after-response';
 import { hashSecret, isTokenUsable, looksLikeOauthSecret } from './oauth';
 
 const MCP_OAUTH_TOKENS_TABLE = 'mcp_oauth_tokens';
@@ -68,7 +69,8 @@ export async function resolveMcpToken(
       return null;
     }
 
-    void touchLastUsed(adminClient, row.id);
+    const usedTokenId = row.id;
+    afterResponse('mcp token last used', () => touchLastUsed(adminClient, usedTokenId));
 
     return { tokenId: row.id, userId: row.user_id };
   } catch (error) {

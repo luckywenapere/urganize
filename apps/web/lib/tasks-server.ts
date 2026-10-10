@@ -30,10 +30,12 @@ import {
   type WorkspaceMemberRole,
   type WorkspaceMembersResponse,
 } from '@/lib/tasks';
+import { afterResponse } from '@/lib/after-response';
 import { sendPushToUsers, type PushPayload } from '@/lib/push-server';
 import { mapTaskOutcomeRow, type TaskOutcome } from '@/lib/task-outcomes';
 import { assignDueTier, type DueTier } from '@/lib/due-tiers';
 import { NOTIFICATION_LIST_LIMIT } from '@/lib/notification-groups';
+import { inChunks } from '@/lib/paged-rows';
 import { getNotificationPresets } from '@/lib/notification-presets-server';
 import type { NotificationPresets } from '@/lib/notification-presets';
 import { TEAM_TRIAL_DAYS, isHardPaywallEnabled } from '@/lib/team-billing';
@@ -816,17 +818,20 @@ export async function ensureOwnedWorkspace(
       // but there is no sense making a doomed round trip on every signup.
       if ('trial_ends_at' in trialStamp) {
         const stampedEnd = (trialStamp as { trial_ends_at: string }).trial_ends_at;
-        void logBillingEvent(adminClient, {
-          workspaceId: workspace.id,
-          ownerUserId: owner.id,
-          actorUserId: owner.id,
-          type: 'trial_started',
-          metadata: {
-            trialEndsAt: stampedEnd,
-            trialDays: TEAM_TRIAL_DAYS,
-            source: 'workspace_provisioned',
-          },
-        });
+        const trialWorkspaceId = workspace.id;
+        afterResponse('trial started record', () =>
+          logBillingEvent(adminClient, {
+            workspaceId: trialWorkspaceId,
+            ownerUserId: owner.id,
+            actorUserId: owner.id,
+            type: 'trial_started',
+            metadata: {
+              trialEndsAt: stampedEnd,
+              trialDays: TEAM_TRIAL_DAYS,
+              source: 'workspace_provisioned',
+            },
+          })
+        );
       }
     } else if ((insertResult.error as { code?: string } | null)?.code === '23505') {
       // Another request for this same user won the race to create the
@@ -1309,6 +1314,11 @@ async function loadTaskGroups(
   );
 }
 
+// Task ids per count request. A page of 1,000 uuids in one `.in()` is a ~38 KB
+// URL, past what the gateway accepts, and this function swallows errors, so a
+// refused request read as "no comments or files" for every activity.
+const TASK_COUNT_ID_CHUNK = 150;
+
 async function loadTaskCounts(
   adminClient: SupabaseClient,
   table: typeof TASK_COMMENTS_TABLE | typeof TASK_ATTACHMENTS_TABLE,
@@ -1319,19 +1329,25 @@ async function loadTaskCounts(
     return new Map<string, number>();
   }
 
-  const result = await adminClient.from(table).select('task_id').in('task_id', normalizedIds);
-  if (result.error || !Array.isArray(result.data)) {
-    return new Map<string, number>();
-  }
+  const results = await Promise.all(
+    inChunks(normalizedIds, TASK_COUNT_ID_CHUNK).map((ids) =>
+      adminClient.from(table).select('task_id').in('task_id', ids)
+    )
+  );
 
   const counts = new Map<string, number>();
-  for (const row of result.data) {
-    const taskId = readString((row as { task_id?: string }).task_id);
-    if (!taskId) {
+  for (const result of results) {
+    if (result.error || !Array.isArray(result.data)) {
       continue;
     }
+    for (const row of result.data) {
+      const taskId = readString((row as { task_id?: string }).task_id);
+      if (!taskId) {
+        continue;
+      }
 
-    counts.set(taskId, (counts.get(taskId) || 0) + 1);
+      counts.set(taskId, (counts.get(taskId) || 0) + 1);
+    }
   }
 
   return counts;
@@ -1925,12 +1941,15 @@ export async function logTaskActivity(
     metadata?: Record<string, unknown>;
   }
 ) {
-  await adminClient.from(TASK_ACTIVITY_TABLE).insert({
+  const { error } = await adminClient.from(TASK_ACTIVITY_TABLE).insert({
     task_id: input.taskId,
     actor_id: input.actorId,
     message: input.message,
     metadata: input.metadata || {},
   });
+  // A rejected insert comes back as a value, not a throw, so without this a
+  // lost row left no trace anywhere.
+  if (error) console.warn('[tasks] could not record activity:', error.message);
 }
 
 // Web Push copy per notification type. Bodies get the task title injected;

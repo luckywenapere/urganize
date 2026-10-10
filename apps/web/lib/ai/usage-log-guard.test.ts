@@ -47,9 +47,10 @@ describe('the scanner itself', () => {
 });
 
 describe('one writer', () => {
-  it('lets only usage-log-server.ts write the ai_usage_events table, and the usage dashboard and the release spend sweep read it', () => {
+  it('lets only usage-log-server.ts write the ai_usage_events table, and the usage dashboard, the cockpit and the release spend sweep read it', () => {
     const touching = [...sources.entries()].filter(([, source]) => source.includes('ai_usage_events')).map(([file]) => file);
     expect(touching.sort()).toEqual([
+      'lib/admin-urgans-usage-server.ts',
       'lib/ai/usage-log-server.ts',
       'lib/release-spend-sweeps-server.ts',
       'lib/usage-metrics-server.ts',
@@ -58,6 +59,12 @@ describe('one writer', () => {
 
   it('keeps the usage dashboard (/admin/metrics) to reading', () => {
     const source = sources.get('lib/usage-metrics-server.ts') ?? '';
+    expect(source).not.toMatch(/\.(insert|update|upsert|delete)\s*\(/);
+  });
+
+  it("keeps the founder cockpit's UrgAns panel (/admin) to reading", () => {
+    const source = sources.get('lib/admin-urgans-usage-server.ts') ?? '';
+    expect(source).toContain('ai_usage_events');
     expect(source).not.toMatch(/\.(insert|update|upsert|delete)\s*\(/);
   });
 

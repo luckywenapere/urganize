@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getPlanExpiry } from '@/lib/billing';
@@ -24,6 +23,8 @@ import {
   extractReusableAuthorization,
   isCardTrialPlan,
 } from '@/lib/trial-card';
+import { afterResponse } from '@/lib/after-response';
+import { validatePaystackSignature } from '@/lib/paystack-signature';
 import { isPitchPaymentReference } from '@/lib/pitch-payments';
 import { isCreditsReference } from '@/lib/credits/purchase';
 import { settleCreditsPurchase } from '@/lib/credits/purchase-server';
@@ -104,15 +105,6 @@ type PaystackWebhookPayload = {
     next_payment_date?: string;
     status?: string;
   };
-};
-
-const validateSignature = (rawBody: string, signature: string | null, secret: string): boolean => {
-  if (!signature) return false;
-  const expected = crypto.createHmac('sha512', secret).update(rawBody).digest('hex');
-  // Constant-time compare to avoid signature-timing oracle. Lengths must
-  // match before timingSafeEqual; mismatched lengths short-circuit false.
-  if (expected.length !== signature.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(signature, 'hex'));
 };
 
 const createAdminClient = () => {
@@ -257,27 +249,25 @@ async function applyInitialOrManualCharge(
   // wants to know, but an alert must never turn a successful payment into a
   // failed webhook. Guarded by the flag so nothing changes while it is off.
   if (isHardPaywallEnabled()) {
-    void (async () => {
-      try {
-        const workspaceResult = await admin
-          .from('workspaces')
-          .select('id')
-          .eq('owner_id', userId)
-          .maybeSingle();
-        const workspaceId = (workspaceResult.data as { id: string } | null)?.id;
-        if (!workspaceId) return;
-        await notifyFounder(admin, {
-          kind: 'checkout_completed',
-          workspaceId,
-          ownerUserId: userId,
-          actorUserId: userId,
-          planViewed: plan,
-          metadata: { plan, amountMinorUnit, reference },
-        });
-      } catch {
-        // Never surface: the money is already credited.
-      }
-    })();
+    // afterResponse keeps the work alive past the ack and never rethrows: the
+    // money is already credited.
+    afterResponse('checkout completed alert', async () => {
+      const workspaceResult = await admin
+        .from('workspaces')
+        .select('id')
+        .eq('owner_id', userId)
+        .maybeSingle();
+      const workspaceId = (workspaceResult.data as { id: string } | null)?.id;
+      if (!workspaceId) return;
+      await notifyFounder(admin, {
+        kind: 'checkout_completed',
+        workspaceId,
+        ownerUserId: userId,
+        actorUserId: userId,
+        planViewed: plan,
+        metadata: { plan, amountMinorUnit, reference },
+      });
+    });
   }
 
   return { profileWriteFailed };
@@ -341,29 +331,27 @@ async function handlePlanChangeCharge(
 
   const workspaceId = readWorkspaceId(payment.paystack_response);
   if (workspaceId) {
-    void (async () => {
-      try {
-        await notifyFounder(admin, {
-          kind: 'plan_change_requested',
-          workspaceId,
-          ownerUserId: payment.user_id,
-          actorUserId: payment.user_id,
-          planViewed: targetPlan,
-          note: `Prorated upgrade to ${targetPlan} has been PAID and applied. Swap their Paystack subscription to the ${targetPlan} plan before ${String(payment.paystack_response?.period_ends_at ?? 'the next charge')} or the next renewal bills the old price.`,
-          metadata: {
-            direction: 'upgrade',
-            from: payment.paystack_response?.change_from ?? null,
-            to: targetPlan,
-            interval,
-            reference,
-            paid: true,
-            oldSubscriptionCode: payment.paystack_response?.old_subscription_code ?? null,
-          },
-        });
-      } catch {
-        // Never surface: the upgrade is already applied.
-      }
-    })();
+    // The one alert here somebody has to ACT on (the founder swaps the Paystack
+    // subscription by hand), so it must not be lost when the ack goes out.
+    afterResponse('plan change swap alert', () =>
+      notifyFounder(admin, {
+        kind: 'plan_change_requested',
+        workspaceId,
+        ownerUserId: payment.user_id,
+        actorUserId: payment.user_id,
+        planViewed: targetPlan,
+        note: `Prorated upgrade to ${targetPlan} has been PAID and applied. Swap their Paystack subscription to the ${targetPlan} plan before ${String(payment.paystack_response?.period_ends_at ?? 'the next charge')} or the next renewal bills the old price.`,
+        metadata: {
+          direction: 'upgrade',
+          from: payment.paystack_response?.change_from ?? null,
+          to: targetPlan,
+          interval,
+          reference,
+          paid: true,
+          oldSubscriptionCode: payment.paystack_response?.old_subscription_code ?? null,
+        },
+      })
+    );
   }
 
   // The top-up is a subscription payment like any other, so it goes in the
@@ -1108,26 +1096,22 @@ async function handleInvoicePaymentFailed(payload: PaystackWebhookPayload) {
   // Paystack retries an event we already handled.
   const affectedUserId = (data as { user_id: string | null } | null)?.user_id ?? null;
   if (isHardPaywallEnabled() && affectedUserId) {
-    void (async () => {
-      try {
-        const workspaceResult = await admin
-          .from('workspaces')
-          .select('id')
-          .eq('owner_id', affectedUserId)
-          .maybeSingle();
-        const workspaceId = (workspaceResult.data as { id: string } | null)?.id;
-        if (!workspaceId) return;
-        await notifyFounder(admin, {
-          kind: 'payment_failed',
-          workspaceId,
-          ownerUserId: affectedUserId,
-          actorUserId: null,
-          metadata: { subscriptionCode },
-        });
-      } catch {
-        // Never surface: past_due is already recorded.
-      }
-    })();
+    afterResponse('payment failed alert', async () => {
+      const workspaceResult = await admin
+        .from('workspaces')
+        .select('id')
+        .eq('owner_id', affectedUserId)
+        .maybeSingle();
+      const workspaceId = (workspaceResult.data as { id: string } | null)?.id;
+      if (!workspaceId) return;
+      await notifyFounder(admin, {
+        kind: 'payment_failed',
+        workspaceId,
+        ownerUserId: affectedUserId,
+        actorUserId: null,
+        metadata: { subscriptionCode },
+      });
+    });
   }
 
   console.warn('[paystack-webhook] invoice.payment_failed', { subscription_code: subscriptionCode });
@@ -1220,7 +1204,7 @@ export async function POST(req: NextRequest) {
   const signature = req.headers.get('x-paystack-signature');
   const rawBody = await req.text();
 
-  if (!validateSignature(rawBody, signature, paystackSecretKey)) {
+  if (!validatePaystackSignature(rawBody, signature, paystackSecretKey)) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 

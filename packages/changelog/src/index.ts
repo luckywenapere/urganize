@@ -20,10 +20,51 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.14",
+    date: "October 10, 2026",
+    highlights: [
+      "Once your team has joined, you no longer see the \"invite your team\" tip.",
+    ],
+  },
+  {
+    version: "1.92.13",
+    date: "October 9, 2026",
+    highlights: [
+      "Home counts the days to a release right in the Americas too. It used to say a day too early for anyone west of Africa.",
+      "The week of your rollout plan on Home now matches the day you picked.",
+    ],
+  },
+  {
+    version: "1.92.12",
+    date: "October 9, 2026",
+    highlights: [
+      "When you assign or update an activity, the alert to your teammate no longer gets lost when the app is busy.",
+      "Who changed an activity is now always recorded.",
+    ],
+  },
+  {
+    version: "1.92.11",
+    date: "October 9, 2026",
+    highlights: [
+      "Starting a payment now tells you when Paystack is too slow, instead of spinning forever.",
+      "A slow phone notification service can no longer hold up your morning emails.",
+    ],
+  },
+  {
+    version: "1.92.10",
+    date: "October 9, 2026",
+    highlights: [
+      "Your data export now includes every activity, comment and file, no matter how big your team is.",
+      "Deleting your account now removes all of your attachment files, not just the first batch.",
+      "Home now shows your own upcoming shows even when other teams have many.",
+    ],
+  },
+  {
     version: "1.92.9",
     date: "October 9, 2026",
     highlights: [
-      "Once your team has joined, you no longer see the \"invite your team\" tip.",
+      "Teams with many rollouts now see every activity counted, so progress and \"Released\" are right.",
+      "UrgAns now calls a rollout released when it has come out, the same as your catalog.",
     ],
   },
   {

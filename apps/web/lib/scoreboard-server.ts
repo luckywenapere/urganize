@@ -45,6 +45,14 @@ export type ScoreboardExtras = {
   /** Every task row as read: id, release_id, status, completed_at, updated_at,
    *  auto_generated, created_at. */
   taskRows: Row[];
+  /** Each counted team's owner email (profiles.email), for matching the
+   *  waitlist to accounts on the cockpit's funnel. Only the cockpit's "Needs a
+   *  message" teams' emails reach the browser (admin-only, see ownerNames). */
+  ownerEmails: Map<string, string | null>;
+  /** Each counted team's owner name (profiles.name). With ownerEmails, sent to
+   *  the browser ONLY for the cockpit's "Needs a message" teams, behind
+   *  verifyAdmin, so the founder knows who to write to. */
+  ownerNames: Map<string, string | null>;
 };
 
 export async function loadScoreboardInput(
@@ -82,7 +90,7 @@ export async function loadScoreboardInput(
         (from, to) =>
           client
             .from('subscriptions')
-            .select('user_id, plan, status, amount, billing_interval, expires_at')
+            .select('user_id, plan, status, amount, billing_interval, expires_at, started_at')
             .order('user_id', { ascending: true })
             .range(from, to),
         TABLE_CAP
@@ -157,7 +165,7 @@ export async function loadScoreboardInput(
     const chunk = ownerIds.slice(i, i + 200);
     const { data, error } = await client
       .from('profiles')
-      .select('id, email, is_subscribed, paid_at, created_at')
+      .select('id, name, email, is_subscribed, paid_at, created_at')
       .in('id', chunk);
     if (error) {
       sources.push({ table: 'profiles', rows: profileRows.length, status: 'error', truncated: false, message: error.message });
@@ -179,6 +187,7 @@ export async function loadScoreboardInput(
       amountMinor: typeof row.amount === 'number' ? row.amount : null,
       billingInterval: str(row.billing_interval),
       expiresAt: str(row.expires_at),
+      startedAt: str(row.started_at),
     }));
   const subscriptionByUser = new Map(subscriptionRows.map((sub) => [sub.userId, sub]));
 
@@ -270,6 +279,8 @@ export async function loadScoreboardInput(
   }
 
   const teams: ScoreboardTeam[] = [];
+  const ownerEmails = new Map<string, string | null>();
+  const ownerNames = new Map<string, string | null>();
   for (const row of workspaces.rows) {
     const workspaceId = String(row.id);
     const ownerId = str(row.owner_id);
@@ -284,6 +295,8 @@ export async function loadScoreboardInput(
     }
 
     const profile = ownerId ? profiles.get(ownerId) : undefined;
+    ownerEmails.set(workspaceId, profile ? str(profile.email) : null);
+    ownerNames.set(workspaceId, profile ? str(profile.name) : null);
     const subscription = ownerId ? subscriptionByUser.get(ownerId) ?? null : null;
     const { resolution, ownerAllowlisted } = resolveAdminTeamAccess({
       workspace: {
@@ -358,6 +371,8 @@ export async function loadScoreboardInput(
       latestEvents: activity.latest,
       releaseRows: releases.rows,
       taskRows: tasks.rows,
+      ownerEmails,
+      ownerNames,
     },
   };
 }

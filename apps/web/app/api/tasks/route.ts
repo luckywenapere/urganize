@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { groupTasksIntoSections } from '@/lib/tasks';
+import { afterResponse } from '@/lib/after-response';
 import {
   TASKS_TABLE,
   buildReadOnlyResponse,
@@ -172,12 +173,14 @@ export async function POST(request: NextRequest) {
       (createdRow as { assigned_to_user_id?: string } | null)?.assigned_to_user_id || ''
     );
     if (createdTaskId && createdAssigneeId && createdAssigneeId !== auth.user.id) {
-      void createTaskNotification(adminClient, {
-        userId: createdAssigneeId,
-        type: 'task_assigned',
-        taskId: createdTaskId,
-        actorId: auth.user.id,
-      });
+      afterResponse('task assigned notification', () =>
+        createTaskNotification(adminClient, {
+          userId: createdAssigneeId,
+          type: 'task_assigned',
+          taskId: createdTaskId,
+          actorId: auth.user.id,
+        })
+      );
     }
 
     return NextResponse.json({ task });

@@ -24,6 +24,7 @@ import { TaskService } from '@/lib/services/task-service';
 // through metadata.template here (and no second definition to drift).
 import { isEventMilestone } from '@/lib/tasks';
 import type { Release } from '@/types/releases';
+import { assistantReleaseStatus, dayToDate } from './release-status';
 import type { Task } from '@/types/tasks';
 import {
   formatTeamBriefForPrompt,
@@ -168,7 +169,7 @@ export function formatReleaseContext(input: {
       `Artist: ${release.artistName || 'not set'}`,
       `Type: ${release.releaseType || 'single'}`,
       `Date: ${release.releaseDate || 'not set'} (${describeRunway(release.releaseDate ?? null, today)})`,
-      `Status: ${release.status}`,
+      `Status: ${assistantReleaseStatus(release, { done: done.length, total: tasks.length }, dayToDate(today))}`,
       `Activities: ${done.length} of ${tasks.length} done`,
     ].join('\n')
   );

@@ -6,6 +6,8 @@ import { isPricingV2Enabled } from '@/lib/entitlements';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { resolveCheckoutSubject } from '@/lib/billing-events';
 import { logBillingEvent } from '@/lib/billing-events-server';
+import { fetchPaystackInit } from '@/lib/paystack-init';
+import { afterResponse } from '@/lib/after-response';
 
 // App-initiated Paystack subscription checkout.
 //
@@ -52,8 +54,6 @@ type StartCheckoutResponse = {
   accessCode: string;
   reference: string;
 };
-
-const PAYSTACK_INIT_URL = 'https://api.paystack.co/transaction/initialize';
 
 function generateReference(): string {
   // `urganize_<timestamp>_<random>` — same convention as the (now-deleted)
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not start checkout.' }, { status: 500 });
   }
 
-  const paystackResponse = await fetch(PAYSTACK_INIT_URL, {
+  const paystackResponse = await fetchPaystackInit({
     method: 'POST',
     headers: {
       Authorization: `Bearer ${paystackSecretKey}`,
@@ -272,13 +272,16 @@ export async function POST(request: NextRequest) {
   // Funnel step: they reached Paystack. Fire-and-forget, after the checkout is
   // real, so a ledger hiccup can never cost someone their checkout.
   if (isHardPaywallEnabled() && body.workspaceId) {
-    void logBillingEvent(admin, {
-      workspaceId: body.workspaceId,
-      ownerUserId: subjectUserId,
-      actorUserId: userId,
-      type: 'checkout_started',
-      metadata: { plan: planId, interval: selectedInterval, currency, reference, amountMinorUnit },
-    });
+    const checkoutWorkspaceId = body.workspaceId;
+    afterResponse('checkout started record', () =>
+      logBillingEvent(admin, {
+        workspaceId: checkoutWorkspaceId,
+        ownerUserId: subjectUserId,
+        actorUserId: userId,
+        type: 'checkout_started',
+        metadata: { plan: planId, interval: selectedInterval, currency, reference, amountMinorUnit },
+      })
+    );
   }
 
   const response: StartCheckoutResponse = {
