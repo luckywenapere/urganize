@@ -86,6 +86,28 @@ describe('filters', () => {
   });
 });
 
+describe('profile type filter', () => {
+  const manager = person({ userId: 'm', profileType: 'manager' });
+  const creative = person({ userId: 'c', profileType: 'creative' });
+  const untyped = person({ userId: 'u' });
+
+  it('keeps only the chosen type', () => {
+    expect(
+      applyDirectoryFilters([manager, creative, untyped], { ...NONE, profileType: 'creative' })
+    ).toEqual([creative]);
+  });
+
+  it('filters nothing when no type is chosen', () => {
+    expect(applyDirectoryFilters([manager, creative, untyped], NONE)).toHaveLength(3);
+  });
+
+  it('never matches an untyped person to a chosen type', () => {
+    expect(
+      applyDirectoryFilters([untyped], { ...NONE, profileType: 'manager' })
+    ).toEqual([]);
+  });
+});
+
 describe('fallback counts', () => {
   it('counts from the WHOLE set, not the filtered one', () => {
     // The rule the whole empty state rests on. Computed from the filtered set

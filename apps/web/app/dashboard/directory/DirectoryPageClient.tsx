@@ -23,6 +23,15 @@ import type { PersonAvailability } from '@/types/directory';
 import { DirectoryEmptyState } from '@/components/directory/DirectoryEmptyState';
 import { WorkRequestSheet } from '@/components/directory/WorkRequestSheet';
 import { canReceiveRequests } from '@/lib/work-requests';
+import {
+  PROFILE_TYPES,
+  PROFILE_TYPE_LABELS,
+  canShowMessageButton,
+  isProfileType,
+  openToLabel,
+  orderForViewer,
+  type ProfileType,
+} from '@/lib/directory-profile-type';
 
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { bucketResultCount, type DirectoryDemandSource } from '@/lib/directory-demand';
@@ -44,9 +53,20 @@ const REQUESTS_ENABLED =
  * would hand a manager a 404.
  */
 
-type Person = DirectoryEntry & { slug: string | null; isPublic: boolean };
+type Person = DirectoryEntry & {
+  slug: string | null;
+  isPublic: boolean;
+  /** One line of what they lead with, built on the server. Empty is fine. */
+  lead?: string;
+};
 
-const NO_FILTERS: DirectoryFilters = { query: '', role: null, city: null, availability: null };
+const NO_FILTERS: DirectoryFilters = {
+  query: '',
+  role: null,
+  city: null,
+  availability: null,
+  profileType: null,
+};
 
 const controlClass =
   'h-11 rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none';
@@ -90,8 +110,10 @@ function DirectoryBody() {
   const [filters, setFilters] = useState<DirectoryFilters>(() => {
     const role = searchParams.get('role');
     const availability = searchParams.get('availability');
+    const type = searchParams.get('type');
     return {
       ...NO_FILTERS,
+      profileType: isProfileType(type) ? type : null,
       // Validated against the real vocabularies rather than trusted: a link
       // carrying a role that no longer exists must filter nothing rather than
       // filter everything out.
@@ -107,6 +129,8 @@ function DirectoryBody() {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
   const [truncated, setTruncated] = useState(false);
+  // Who is reading. Decides who comes first and who gets a Message button.
+  const [viewerType, setViewerType] = useState<ProfileType>('manager');
   const [asking, setAsking] = useState<Person | null>(null);
   const [sent, setSent] = useState('');
 
@@ -139,6 +163,7 @@ function DirectoryBody() {
 
         setPeople(Array.isArray(body.people) ? body.people : []);
         setTruncated(Boolean(body.truncated));
+        if (isProfileType(body.viewerType)) setViewerType(body.viewerType);
       } catch {
         if (!cancelled) setError('Could not open the directory. Check your connection.');
       } finally {
@@ -152,7 +177,12 @@ function DirectoryBody() {
     };
   }, [router]);
 
-  const results = useMemo(() => applyDirectoryFilters(people, filters), [people, filters]);
+  const results = useMemo(() => {
+    const filtered = applyDirectoryFilters(people, filters);
+    // A typed search ranks by name. With nothing typed, the people a reader most
+    // likely came for go first (managers for an artist, creatives for a manager).
+    return filters.query.trim() ? filtered : orderForViewer(filtered, viewerType);
+  }, [people, filters, viewerType]);
 
   // One report per settled filter, not per keystroke. The delay is what keeps
   // "designer" from also reporting d, de, des and desi.
@@ -165,7 +195,7 @@ function DirectoryBody() {
     if (!loaded || error) return;
 
     const timer = window.setTimeout(() => {
-      const signature = JSON.stringify([filters.query.trim(), filters.role, filters.city, filters.availability]);
+      const signature = JSON.stringify([filters.query.trim(), filters.role, filters.city, filters.availability, filters.profileType]);
       if (reportedRef.current === signature) return;
       reportedRef.current = signature;
 
@@ -216,13 +246,13 @@ function DirectoryBody() {
         <p role="alert" className="text-sm text-status-error">{error}</p>
       ) : (
         <>
-          <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <input
               value={filters.query}
               onChange={(event) => patch({ query: event.target.value })}
               placeholder="Search by name"
               aria-label="Search by name"
-              className={`${controlClass} sm:col-span-2 lg:col-span-1`}
+              className={`${controlClass} sm:col-span-2 lg:col-span-3`}
             />
             <select
               value={filters.role ?? ''}
@@ -234,6 +264,21 @@ function DirectoryBody() {
               {DIRECTORY_ROLES.map((role) => (
                 <option key={role} value={role}>
                   {DIRECTORY_ROLE_LABELS[role]}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filters.profileType ?? ''}
+              onChange={(event) =>
+                patch({ profileType: (event.target.value || null) as ProfileType | null })
+              }
+              aria-label="Filter by profile type"
+              className={controlClass}
+            >
+              <option value="">Any type</option>
+              {PROFILE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {PROFILE_TYPE_LABELS[type]}
                 </option>
               ))}
             </select>
@@ -255,10 +300,10 @@ function DirectoryBody() {
               onChange={(event) =>
                 patch({ availability: (event.target.value || null) as PersonAvailability | null })
               }
-              aria-label="Filter by availability"
+              aria-label="Filter by what they are open to"
               className={controlClass}
             >
-              <option value="">Any availability</option>
+              <option value="">Open to: any</option>
               {PERSON_AVAILABILITIES.map((value) => (
                 <option key={value} value={value}>
                   {PERSON_AVAILABILITY_COPY[value].label}
@@ -291,8 +336,17 @@ function DirectoryBody() {
                     // Somebody who is "Not taking work" is listed and findable
                     // but cannot be asked, and the server refuses it too. The
                     // button is the courtesy; the route is the rule.
+                    // The Message button also follows the type rule: an artist is
+                    // offered managers who are taking artists, a manager is
+                    // offered people who are open to hire.
                     onAsk={
-                      REQUESTS_ENABLED && canReceiveRequests(person.availability)
+                      REQUESTS_ENABLED &&
+                      canReceiveRequests(person.availability) &&
+                      canShowMessageButton({
+                        targetType: person.profileType ?? null,
+                        availability: person.availability,
+                        viewerType,
+                      })
                         ? () => setAsking(person)
                         : null
                     }
@@ -321,7 +375,7 @@ function DirectoryBody() {
           person={asking}
           // Prefilled when the manager arrived from the role gaps panel, which
           // is the whole point of that link: the plan already knows the job.
-          defaultRole={filters.role}
+          defaultRole={filters.role ?? (asking.profileType === 'manager' ? 'manager' : null)}
           releaseId={arrivedFromRoleGaps ? searchParams.get('release') : null}
           onClose={() => setAsking(null)}
           onSent={setSent}
@@ -363,10 +417,22 @@ function PersonCard({ person, onAsk }: { person: Person; onAsk: (() => void) | n
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-base font-semibold text-content-primary">{person.displayName}</span>
         <span className="text-xs text-content-tertiary">
-          {PERSON_AVAILABILITY_COPY[person.availability].label}
+          {openToLabel(person.profileType ?? null, person.availability)}
           {person.city ? ` · ${person.city}` : ''}
         </span>
       </div>
+
+      {person.profileType ? (
+        <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-content-tertiary">
+          {PROFILE_TYPE_LABELS[person.profileType]}
+        </p>
+      ) : null}
+
+      {/* What this type leads with. Empty for a creative, whose lead is the
+          delivered credits just below, and never a zero. */}
+      {person.lead ? (
+        <p className="mt-2 text-sm text-content-primary">{person.lead}</p>
+      ) : null}
 
       {/* Delivered and claimed are kept apart here exactly as they are on the
           profile and in Settings. A count is something the product vouches for;
