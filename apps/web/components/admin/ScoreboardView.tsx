@@ -61,9 +61,12 @@ function StatCard({
 export function ScoreboardView({
   board,
   sources,
+  ourTeamsLeftOut = 0,
 }: {
   board: Scoreboard;
   sources: ScoreboardSource[];
+  /** Teams owned by our own people, left out of every number (2026-10-10). */
+  ourTeamsLeftOut?: number;
 }) {
   const problems = sources.filter((source) => source.status !== 'ok' || source.truncated);
   const latestCohort = board.retention[0] ?? null;
@@ -264,6 +267,14 @@ export function ScoreboardView({
           <li>
             An invited teammate&apos;s own empty team is left out, so it doesn&apos;t count as a
             dead team.
+          </li>
+          <li>
+            Our own accounts (the admin list, plus any extra internal emails) are left out of every
+            number, the same people /admin/metrics hides
+            {ourTeamsLeftOut > 0
+              ? `: ${number.format(ourTeamsLeftOut)} ${ourTeamsLeftOut === 1 ? 'team' : 'teams'} this time`
+              : ''}
+            .
           </li>
         </ul>
         {problems.length > 0 ? (

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { churnSummary, monthStarts, payingStretch, CHURN_COMPLETE_MONTHS } from './admin-churn';
+import { churnSummary, inRenewalGrace, monthStarts, payingStretch, CHURN_COMPLETE_MONTHS, RENEWAL_GRACE_MS } from './admin-churn';
+import { PAYSTACK_RETRY_GRACE_DAYS } from './billing-plans';
 import { formatMonth, logoChurnVerdict, NOT_TRACKED_NET } from './admin-churn-format';
 import {
   monthlyRecurringMinor,
@@ -223,5 +224,56 @@ describe('churn words', () => {
     expect(formatMonth('2026-09')).toMatch(/^Sept? 2026$/);
     expect(formatMonth('2027-01')).toBe('Jan 2027');
     expect(formatMonth('nonsense')).toBe('nonsense');
+  });
+});
+
+describe("renewal grace: Paystack's retries before a failed renewal counts as churn (iteration 6)", () => {
+  const HOUR = 60 * 60 * 1000;
+  const hoursAgo = (hours: number) => new Date(NOW.getTime() - hours * HOUR).toISOString();
+
+  it('is the 3 days Paystack retries for', () => {
+    expect(PAYSTACK_RETRY_GRACE_DAYS).toBe(3);
+    expect(RENEWAL_GRACE_MS).toBe(3 * 24 * HOUR);
+  });
+
+  it('keeps a failed renewal (past_due) paying for 3 days after its last paid day', () => {
+    const failed = sub({ userId: 'a', status: 'past_due', expiresAt: hoursAgo(30) });
+    expect(inRenewalGrace(failed, NOW)).toBe(true);
+    expect(payingStretch(failed, NOW)).toMatchObject({ until: null });
+  });
+
+  it('gives the same grace to an active row whose renewal has not landed yet', () => {
+    const pending = sub({ userId: 'a', status: 'active', expiresAt: hoursAgo(2) });
+    expect(payingStretch(pending, NOW)).toMatchObject({ until: null });
+  });
+
+  it('counts it lost on its last paid day once the 3 days are over', () => {
+    const lapsed = sub({ userId: 'a', status: 'past_due', expiresAt: hoursAgo(72 + 1) });
+    expect(inRenewalGrace(lapsed, NOW)).toBe(false);
+    expect(payingStretch(lapsed, NOW)).toMatchObject({ until: Date.parse(hoursAgo(73)) });
+    // Exactly at the edge the grace is over.
+    expect(inRenewalGrace(sub({ userId: 'a', status: 'past_due', expiresAt: hoursAgo(72) }), NOW)).toBe(false);
+  });
+
+  it('gives no grace to a cancelled subscription, which was never going to renew', () => {
+    const cancelled = sub({ userId: 'a', status: 'cancelled', expiresAt: hoursAgo(5) });
+    expect(inRenewalGrace(cancelled, NOW)).toBe(false);
+    expect(payingStretch(cancelled, NOW)).toMatchObject({ until: Date.parse(hoursAgo(5)) });
+  });
+
+  it('is not lost this month while Paystack is still retrying, and is once it gives up', () => {
+    const inGrace = team('retrying', sub({ userId: 'u1', status: 'past_due', expiresAt: hoursAgo(24) }));
+    const gaveUp = team('gave-up', sub({ userId: 'u2', status: 'past_due', expiresAt: hoursAgo(24 * 4) }));
+    const oct = churnSummary(input([inGrace, gaveUp])).months[3];
+    expect(oct).toMatchObject({ payingTeamsAtStart: 2, teamsLost: 1, logoChurn: 0.5 });
+    expect(oct.mrrLostMinor).toBe(2_000_000);
+  });
+
+  it('puts a loss found after the grace in the month the last paid day fell in', () => {
+    // Last paid day 30 Sep, 10 days before now: grace long over, lost in September.
+    const lapsed = team('late', sub({ userId: 'u1', status: 'past_due', expiresAt: '2026-09-30T22:00:00.000Z' }));
+    const [, , sep, oct] = churnSummary(input([lapsed])).months;
+    expect(sep).toMatchObject({ teamsLost: 1 });
+    expect(oct).toMatchObject({ payingTeamsAtStart: 0, teamsLost: 0 });
   });
 });

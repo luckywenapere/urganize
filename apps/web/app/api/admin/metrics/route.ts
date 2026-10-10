@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getNeonClient, parseAdminEmails, verifyAdmin } from '../_shared';
+import { getNeonClient, internalAccountEmails, verifyAdmin } from '../_shared';
 import { loadUsageMetrics } from '@/lib/usage-metrics-server';
 
 // GET /api/admin/metrics — the usage dashboard (2026-10-07): who is online now,
@@ -14,17 +14,11 @@ import { loadUsageMetrics } from '@/lib/usage-metrics-server';
 //
 // "Our team" (ADMIN_EMAILS plus the optional METRICS_INTERNAL_EMAILS) is left
 // out of every number unless ?team=1. The response names who was left out.
+// The list itself is internalAccountEmails in ../_shared (shared with the
+// cockpit and the Scoreboard since 2026-10-10).
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
-
-function internalEmails(): Set<string> {
-  const extra = (process.env.METRICS_INTERNAL_EMAILS ?? '')
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-  return new Set([...parseAdminEmails(), ...extra]);
-}
 
 /** The marketing site's waitlist size, or null when it cannot be read. */
 async function readWaitlistTotal(): Promise<number | null> {
@@ -50,7 +44,7 @@ export async function GET(request: NextRequest) {
   try {
     const waitlistTotal = await readWaitlistTotal();
     const { metrics, sources, hiddenEmails } = await loadUsageMetrics(client, new Date(), {
-      hiddenEmails: includeTeam ? new Set() : internalEmails(),
+      hiddenEmails: includeTeam ? new Set() : internalAccountEmails(),
       waitlistTotal,
     });
     return NextResponse.json(

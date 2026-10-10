@@ -50,7 +50,7 @@ export function ChurnPanel({ churn }: { churn: ChurnSummary }) {
     <div className="mt-6">
       <Label
         text="Churn and revenue kept"
-        info="Monthly, by calendar month (UTC). A paying team is lost in the month its last paid day passed without a renewal. Lost counts are at least these: a team that stopped and later paid again is not stored as having stopped. Start-of-month MRR uses each subscription's price today. Benchmarks for small-business software (Lenny's Newsletter): monthly logo churn of 2.5 to 5% is good and under 1.5% is great; net revenue retention of about 90% is good and 110% is great."
+        info="Monthly, by calendar month (UTC). A paying team is lost in the month its last paid day passed without a renewal. A renewal that fails gets Paystack's 3 days of retries first: until those are over the team still counts as paying, so a card that fails and then clears is never counted as lost. Lost counts are at least these: a team that stopped and later paid again is not stored as having stopped. Start-of-month MRR uses each subscription's price today. Benchmarks for small-business software (Lenny's Newsletter): monthly logo churn of 2.5 to 5% is good and under 1.5% is great; net revenue retention of about 90% is good and 110% is great."
       />
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Tile

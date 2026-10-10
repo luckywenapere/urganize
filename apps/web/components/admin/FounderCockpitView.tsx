@@ -3,6 +3,8 @@ import { AdminBarChart } from '@/components/admin/AdminBarChart';
 import { FunnelStrip } from '@/components/admin/FunnelStrip';
 import { UrgansPanel } from '@/components/admin/UrgansPanel';
 import { ChurnPanel } from '@/components/admin/ChurnPanel';
+import { RunwayPanel, type RunwayFormValues } from '@/components/admin/RunwayPanel';
+import type { Runway } from '@/lib/admin-runway';
 import type { ChurnSummary } from '@/lib/admin-churn';
 import type { AdminFunnel } from '@/lib/admin-funnel';
 import type { UrgansUsage } from '@/lib/admin-urgans-usage';
@@ -26,7 +28,10 @@ import { firstName, messageComposeHref, messageMailto, stageLine } from '@/lib/a
 // Order, most important first (iteration 4 review): the North Star and the
 // number that moves before it, their 8-week trend, the stage numbers, who
 // needs a message this week, churn (iteration 5), then the funnel and the
-// UrgAns panel.
+// UrgAns panel. Iteration 6 (2026-10-10): runway and default alive sit right
+// under the stage numbers, from figures the founder types in (RunwayPanel, the
+// one form here; the hub saves them and reloads), and our own team's accounts
+// are left out of every number.
 //
 // House rule (2026-10-05): no grey sentence stacked under a heading. What a
 // number means sits behind its info icon; a line under a number is only ever a
@@ -80,6 +85,11 @@ export function FounderCockpitView({
   funnels = [],
   urgans = null,
   churn = null,
+  runway = null,
+  runwayReadable = true,
+  onRunwaySave,
+  onRunwayClear,
+  ourTeamsLeftOut = 0,
   sources,
 }: {
   cockpit: FounderCockpit;
@@ -89,6 +99,14 @@ export function FounderCockpitView({
   urgans?: UrgansUsage | null;
   /** Logo churn and gross MRR churn by month. Null hides the panel. */
   churn?: ChurnSummary | null;
+  /** Runway and default alive. Null hides the panel. */
+  runway?: Runway | null;
+  /** False when the saved runway figures could not be read. */
+  runwayReadable?: boolean;
+  onRunwaySave?: (values: RunwayFormValues) => Promise<string | null>;
+  onRunwayClear?: () => Promise<string | null>;
+  /** Teams owned by our own people, left out of every number. */
+  ourTeamsLeftOut?: number;
   sources: AdminReadSource[];
 }) {
   const problems = sources.filter((source) => source.status !== 'ok' || source.truncated);
@@ -109,7 +127,7 @@ export function FounderCockpitView({
           </h2>
           <InfoTip
             label="This week"
-            text="Every number here uses the Scoreboard's rules. A week is the last 7 days, so this week always matches the Scoreboard."
+            text="Every number here uses the Scoreboard's rules. A week is the last 7 days, so this week always matches the Scoreboard. Our own accounts (the admin list, plus any extra internal emails: the people /admin/metrics hides) are left out here and on the Scoreboard."
           />
         </div>
         <Link href="/admin/scoreboard" className="motion-focus text-sm font-medium text-brand hover:underline">
@@ -166,7 +184,7 @@ export function FounderCockpitView({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
           label="MRR"
           info="Monthly recurring revenue from subscriptions. Yearly plans count as a twelfth of their price. Credits are not included."
@@ -203,12 +221,16 @@ export function FounderCockpitView({
               : 'No team is 4 weeks old yet'
           }
         />
-        <Stat
-          label="Runway"
-          info="Months of cash left at the current monthly spend. Cash and spend are not recorded in Urganize, so this is not worked out here. Check it at the monthly money review."
-          value="Not tracked"
-        />
       </div>
+
+      {runway || !runwayReadable ? (
+        <RunwayPanel
+          runway={runway}
+          readable={runwayReadable}
+          onSave={onRunwaySave}
+          onClear={onRunwayClear}
+        />
+      ) : null}
 
       <div className="mt-6">
         <Label
@@ -290,6 +312,9 @@ export function FounderCockpitView({
       <p className="mt-4 text-xs leading-5 text-content-tertiary">
         Past weeks use today&apos;s paying status and today&apos;s team members, because neither is
         kept over time.
+        {ourTeamsLeftOut > 0
+          ? ` Our own ${plural(ourTeamsLeftOut, 'team is', 'teams are')} left out.`
+          : ''}
         {cockpit.activityTruncated ? ' Activity hit its read limit, so these counts are a floor.' : ''}
         {problems.length > 0
           ? ` Not fully read: ${problems.map((source) => source.table).join(', ')}.`

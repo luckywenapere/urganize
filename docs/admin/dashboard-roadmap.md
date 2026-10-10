@@ -86,13 +86,15 @@ does.
 | 6 | Week 4 retention | Newest 4 complete weekly cohorts, pooled | `weekFourRetention` | **Shipped** |
 | 7 | Paying teams + MRR | Doc section 2 | `subscriptions` | **Shipped** |
 | 8 | Needs a message | Paying teams under 2 active people; teams that went quiet this week; each with owner name + email, the lifecycle stage it stalled at (doc section 6) and its owner, and a "Draft in Emails" link (the admin composer, prefilled) with a mailto beside it | Board rows + activity; owner `profiles.name`/`email` | **Shipped** (contacts and stage: iteration 4; Draft in Emails: iteration 5) |
-| 9 | Runway / default alive | Months of cash at current burn | Cash and spend are not in the database | **Needs data**, shown as "Not tracked" |
+| 9 | Runway / default alive | Cash ÷ (monthly spend − MRR); default alive = MRR at its own 4-week compounded weekly rate passes spend before cash runs out (Paul Graham) | Founder types cash, monthly spend, as-of date and currency (NGN/USD + Naira per dollar) on the cockpit; kept in `app_settings` key `founder_runway` (service role only, no migration) | **Shipped** (iteration 6) |
 | 10 | Second-release rate + rollouts live this week | Doc section 7 (bar 60%); rollouts whose `releaseLiveAt` falls in the last 7 days | `secondReleaseSummary`, `releaseLiveAt` | **Shipped** (iteration 3) |
 | 11 | Funnel: waitlist → account → first rollout → activated → trial over → paid | Teams that signed up in the last 30 or 90 days (past their first 3 days), how far each got | Supabase via `ScoreboardInput`; waitlist from Neon `"User"`, matched to team owners by email | **Shipped** (iteration 2). Waitlist shows "Not tracked" where `DATABASE_URL` is unset |
-| 12 | UrgAns use + credits + AI cost | Share of weekly active paying teams that used UrgAns inside a rollout this week (seed bar: half); credits spent per week (spends minus refunds, 8 weeks) and per active team; AI cost this week per active team | `ai_usage_events` (cost + release + feature), `credit_ledger` spend/refund rows | **Shipped** (iteration 3). Cost per active team falls back to the ledger's `provider_cost_rodi`; "Not tracked" when neither reads |
-| 13 | Logo churn + gross MRR churn; NRR | Paying teams lost per calendar month out of those paying at its start; MRR of subscriptions that stopped out of start-of-month MRR; 3 full months + this month so far | `subscriptions.started_at` → last paid day (`expires_at` once passed), today's price | **Shipped** (iteration 5). Net MRR churn and NRR show "Not tracked": a plan change overwrites the price, so upgrades and downgrades are not stored |
+| 12 | UrgAns use + credits + AI cost | Share of weekly active paying teams that used UrgAns inside a rollout this week (seed bar: half; every usage-log feature counts, status updates and task outcome replies included since iteration 6 because they cost AI tokens); credits spent per week (spends minus refunds, 8 weeks) and per active team; AI cost this week per active team | `ai_usage_events` (cost + release + feature), `credit_ledger` spend/refund rows | **Shipped** (iteration 3). Cost per active team falls back to the ledger's `provider_cost_rodi`; "Not tracked" when neither reads |
+| 13 | Logo churn + gross MRR churn; NRR | Paying teams lost per calendar month out of those paying at its start; MRR of subscriptions that stopped out of start-of-month MRR; 3 full months + this month so far | `subscriptions.started_at` → last paid day (`expires_at` once passed), today's price; a renewing subscription (active / past_due) keeps counting as paying for Paystack's 3 retry days after its last paid day | **Shipped** (iteration 5; renewal grace iteration 6). Net MRR churn and NRR show "Not tracked": a plan change overwrites the price, so upgrades and downgrades are not stored |
 
-Rules every number on the cockpit follows: one definition (the Scoreboard's),
+Rules every number on the cockpit follows: our own team's accounts left out
+(the `/admin/metrics` list, applied to the Scoreboard as well, since iteration
+6), one definition (the Scoreboard's),
 a definition behind an info icon, empty data shown as "No data yet" or "Not
 tracked" and never as a made-up zero or percentage, and growth from zero has no
 percentage.
@@ -250,43 +252,75 @@ percentage.
   reads from it, and a test reads the strategy doc's section 6 table and fails
   if a label or owner drifts.
 
+- **Iteration 6 (2026-10-10): the founder's answers.** One PR. (a) **Our own
+  accounts left out** of the cockpit AND the Scoreboard: `internalAccountEmails()`
+  (moved from `/api/admin/metrics` into `app/api/admin/_shared.ts`, ADMIN_EMAILS
+  + METRICS_INTERNAL_EMAILS, so all three pages read one list), applied by the
+  pure `withoutInternalAccounts` (`lib/admin-internal-accounts.ts`): a team one
+  of us owns goes with its releases and referrals; our people's activity, their
+  memberships of other teams and their own subscriptions go too. Emails come
+  from the profiles the shared read already loads (`extras.emailByUserId`, no
+  new query). The cached rows are never changed. UrgAns usage and ledger rows
+  and waitlist entries that are ours are dropped in the cockpit route. `?team=1`
+  puts us back on either route, like `/admin/metrics`. A test builds the
+  cockpit and the Scoreboard from the left-out input and requires them equal.
+  (b) **Runway and default alive** (`lib/admin-runway.ts`, words in
+  `lib/admin-runway-format.ts`, panel `components/admin/RunwayPanel.tsx`): the
+  founder types cash, monthly spend, the day the cash was true, the currency
+  (NGN or USD) and Naira per dollar (required with dollars, optional with
+  Naira to show both). Billing is Naira only, so MRR is in kobo and is turned
+  into dollars at the typed rate. Runway = cash ÷ (spend − MRR) from the as-of
+  day; "not burning" when MRR covers spend. Default alive projects week by week
+  with spend constant and MRR growing at its own compounded rate over 4 weeks,
+  rebuilt from each subscription's `started_at` to last paid day (past MRR is
+  not stored); no MRR 4 weeks ago means no rate, and the projection assumes it
+  stays flat and says so. Looked at for 10 years. Figures older than 45 days are
+  flagged. Stored in `app_settings` (key `founder_runway`; RLS on with no
+  policies, the table's documented home for service-role-only settings, so **no
+  migration**), through `GET/PUT/DELETE /api/admin/runway` (verifyAdmin on every
+  method, every field checked). (c) **Renewal grace in churn**: an active or
+  past_due subscription whose last paid day passed less than
+  `PAYSTACK_RETRY_GRACE_DAYS` (3) ago still counts as paying; after that it is
+  lost on its last paid day as before. Cancelled gets no grace. (d) **UrgAns
+  share** counts status updates and task outcome replies: both charge no credits,
+  but both are model calls written to `ai_usage_events` with their provider
+  cost, so by the founder's rule ("only if they cost AI tokens or credits") they
+  count. `URGANS_CHOSEN_FEATURES` is now every `AI_USAGE_FEATURES` entry; a guard
+  test reads both routes and fails if either stops logging its call.
+
 ## 6. Next (ordered; one PR each)
 
-1. **Runway, the honest way.** A founder-entered monthly figure (cash, monthly
-   spend) needs storage, so it waits for a migration slot; until then, a link
-   to wherever the monthly money review lives. Default alive = MRR growth
-   carried forward vs spend, shown only when both numbers exist.
-2. **Net revenue retention, properly.** Needs a record of each plan change
+1. **Net revenue retention, properly.** Needs a record of each plan change
    with its old and new price (a `billing_events` row written on every
    upgrade, downgrade and Mark paid, no migration: `type` is free text), and
-   then a month or two of history before the number means anything. Until
-   then NRR stays "Not tracked".
-3. **Leave our own accounts out (if the founder says yes).** See the open
-   question below; `/admin/metrics` already has the internal-email list.
-4. **Last week's message list.** Whether each stalled team got its message
+   then a month or two of history before the number means anything. **Waiting
+   on the founder's yes** (not approved on 2026-10-10). Until then NRR stays
+   "Not tracked".
+2. **Last week's message list.** Whether each stalled team got its message
    within 3 days needs a record of messages sent. Drafts now go through the
    Emails tool (iteration 5), so its log can answer it: match each listed
    team's owner email to admin emails sent in the 3 days after it was listed.
-5. **Sean Ellis survey count.** Only if the founder runs the survey in-app or
+3. **Sean Ellis survey count.** Only if the founder runs the survey in-app or
    in a form we can read; otherwise leave it off.
 
 ## 7. Open questions for the founder
 
-- Should our own team's accounts be left out of the cockpit, the way
-  `/admin/metrics` hides them by default (`ADMIN_EMAILS` + `METRICS_INTERNAL_EMAILS`)?
-  The Scoreboard does not leave them out today, so the cockpit matches it.
-- Where do cash and monthly spend live today (a sheet, the bank)? That decides
-  how runway gets onto the cockpit.
-- Churn counts a team as lost on its last paid day. Should a failed monthly
-  renewal get a few days' grace (Paystack retries for about 3 days) before it
-  counts, so a card that fails and then clears is not counted as lost for a
-  day? Today it is counted until the renewal lands, then disappears.
 - Should we start logging every plan change (old price, new price) so net
   revenue retention can be worked out from next month on? It is a small
   write in the billing routes, not a migration, but it touches billing code,
-  so it waits for a yes.
-- The UrgAns share counts chat, plans, press kits, pitch kits and Spotify
-  pitches tied to a rollout, and leaves out status updates and task outcome
-  replies (the app makes those on the side of something else). If "use
-  UrgAns inside releases" should include them, it is one line in
-  `URGANS_CHOSEN_FEATURES` (`lib/admin-urgans-usage.ts`).
+  so it waits for a yes. **Asked again 2026-10-10: not approved yet.**
+
+## 8. Answers from the founder (2026-10-10)
+
+1. **Leave our own team's accounts out of the cockpit?** Yes, using the same
+   exclusion `/admin/metrics` already uses. Done in iteration 6, on the
+   Scoreboard too so the two pages still agree.
+2. **Where do cash and monthly spend live?** Entered by hand in the admin.
+   Done in iteration 6: a form on the cockpit, kept in `app_settings`, with
+   runway and default alive worked out from it.
+3. **Log plan changes for NRR?** Not approved yet; not built.
+4. **Grace for a failed renewal before it counts as churn?** Yes, Paystack's
+   ~3-day retry window. Done in iteration 6.
+5. **Count status updates and task outcome replies as using UrgAns?** Only if
+   they cost AI tokens or credits. They charge no credits but are logged model
+   calls with a provider cost, so they now count (iteration 6).

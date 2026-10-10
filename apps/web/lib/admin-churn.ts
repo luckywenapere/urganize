@@ -6,6 +6,7 @@ import {
   type ScoreboardSubscription,
 } from './scoreboard';
 import { NOT_TRACKED_NET } from './admin-churn-format';
+import { PAYSTACK_RETRY_GRACE_DAYS } from './billing-plans';
 
 // Churn and revenue retention on the founder cockpit (iteration 5, 2026-10-10).
 //
@@ -40,6 +41,22 @@ import { NOT_TRACKED_NET } from './admin-churn-format';
 //     least" numbers.
 // Because each start-of-month MRR uses today's price, a team that changed plan
 // since is counted at its new price. The page says so.
+//
+// RENEWAL GRACE (iteration 6, 2026-10-10, the founder's answer). Paystack
+// retries a failed renewal charge for about 3 days (PAYSTACK_RETRY_GRACE_DAYS
+// in ./billing-plans.ts). A subscription that is still meant to renew (status
+// active or past_due, not cancelled) and whose last paid day passed less than
+// that long ago is counted as STILL PAYING, not lost, so a card that fails and
+// then clears is never counted as churn for a day. Once the grace is over with
+// no renewal, it is lost on its last paid day, as before (so a loss can appear
+// in the previous month a few days into the new one). A cancelled subscription
+// was never going to renew, so it gets no grace.
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** How long after its last paid day a renewing subscription still counts as paying. */
+export const RENEWAL_GRACE_MS = PAYSTACK_RETRY_GRACE_DAYS * DAY_MS;
+/** Statuses that will try to renew: a failed renewal is past_due, one not yet charged is still active. */
+const RENEWING_STATUSES = new Set(['active', 'past_due']);
 
 /** Complete calendar months shown, plus the month so far. */
 export const CHURN_COMPLETE_MONTHS = 3;
@@ -104,7 +121,21 @@ export function payingStretch(
   if (expires === null || expires > now.getTime()) return 'undated';
   if (from === null) return 'undated';
   if (expires <= from) return null;
+  // Renewal grace: Paystack is still retrying, so it is not lost yet.
+  if (inRenewalGrace(sub, now)) return { from, until: null, monthlyMinor };
   return { from, until: expires, monthlyMinor };
+}
+
+/**
+ * True when a subscription meant to renew passed its last paid day less than
+ * RENEWAL_GRACE_MS ago: Paystack is still retrying the charge.
+ */
+export function inRenewalGrace(sub: ScoreboardSubscription, now: Date): boolean {
+  if (!RENEWING_STATUSES.has(String(sub.status))) return false;
+  const expires = ms(sub.expiresAt);
+  if (expires === null) return false;
+  const since = now.getTime() - expires;
+  return since >= 0 && since < RENEWAL_GRACE_MS;
 }
 
 /** Month starts, oldest first: `count` complete months, then the current one. */
