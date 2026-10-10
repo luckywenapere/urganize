@@ -21,6 +21,16 @@ Open, in the order they will be taken:
 9. `scripts/smoke-waitlist.mjs` looks for copy and an h1 that no longer exist.
 10. `/pricing` bottom block still says "Not ready to talk yet? ... We'll reach out when the time is right for your team." There is no longer a sales conversation on that page (every plan sends you to the form), so "talk" promises something the page does not offer.
 
+## 2026-10-10 | /pricing description still promises a demo
+
+**What is wrong.** The `/pricing` meta description ended "...and how to book a demo with the founders." Nothing on the page books a demo any more: the plan buttons say "Try Urganize" and go to the waitlist, Group says "Let's talk" and opens an email, and the page lead says "Join the waitlist". The same sentence is the Open Graph and Twitter description, so it is what a link preview and a search result show under the page title.
+
+**Why it costs sign-ups.** Someone who clicks through from search because they want to book a demo lands on a page with no demo to book and has to work out the next step. A snippet that promises a step the page does not have sends the click to the wrong place. Pricing is a standing sitelink candidate, so it is shown right under the brand result.
+
+**Fix.** One sentence in `apps/homepage/app/pricing/page.tsx`: "...how to book a demo with the founders" became "...how to join the waitlist". The first half ("Everything after the music, at one price for your whole team...") is untouched, so the positioning guard still passes. A comment beside it records why, so the demo line is not put back. No page copy, price, plan or button changed.
+
+**Checked.** Homepage lint (0 errors, the 2 existing warnings), production build (`/pricing` still static) and the positioning and copy guard tests in `apps/web` (4 files, 137 tests) all pass. In the built `pricing.html`, the `description`, `og:description` and `twitter:description` tags all carry the new sentence and "book a demo" appears nowhere on the page. No other live copy on the site says it (the only other hits are code comments).
+
 ## 2026-10-09 | Tapping "Try Urganize" lands on a bare email field
 
 **What is wrong.** Every "Try Urganize" button (hero, header, the four pricing cards, /signup) links to `/#waitlist`. The `id="waitlist"` sits on the div that wraps the form, which is *under* the headline "Put your next rollout on plan.", and `scroll-mt-28` then leaves the form just under the fixed header. So the page jumps to an email field and "JOIN THE WAITLIST", with the headline scrolled off the top. Seen at 390px: `cta/after-hero-tap.png`.
@@ -56,3 +66,5 @@ Open, in the order they will be taken:
 **Fix.** The sentence in `PricingTierCards.tsx` now reads "You can pay monthly or once a year." (the wording `/terms` uses) and is built from `SELLABLE_INTERVALS`, the same list the switch above the cards reads, so the two cannot disagree again. If only yearly were ever on sale it says "Every plan is paid once a year."; if only monthly, "Every plan is paid monthly." No price, interval or plan definition touched.
 
 **Checked.** `/pricing` at 390px and 1440px: the footnote now reads "You can pay monthly or once a year." with the Monthly / Yearly switch above it, on Monthly and on Yearly. No price, plan or interval changed. Before: `foot/before-m390-toggle-yearly.png`, `foot/before-m390-footnote.png`, `foot/before-d1440-footnote.png`. After: `foot/after-m390-toggle-monthly.png`, `foot/after-m390-toggle-yearly.png`, `foot/after-m390-footnote.png`, `foot/after-d1440-footnote.png`.
+
+**Merged.** #769, 2026-10-09 (squash).
