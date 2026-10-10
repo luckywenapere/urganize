@@ -6,7 +6,7 @@ import { UNSUBSCRIBE_SCOPE_LABELS, unsubscribeScopeFor } from '../unsubscribe';
 
 const base = {
   recipientName: 'Ada Obi',
-  authorLabel: 'Lucky',
+  authorLabel: 'Oyin',
   releaseTitle: 'Ohema',
   everyone: false,
   message: '@Ada Obi can you check the cover?\n\nThe label wants it by Friday.',
@@ -19,7 +19,7 @@ describe('ChatMentionEmail', () => {
       ChatMentionEmail({ ...base, unsubscribeUrl: 'https://app.urganize.app/unsubscribe?t=x' })
     );
     expect(text).toContain('Hey Ada,');
-    expect(text).toContain('Lucky tagged you in the chat on Ohema');
+    expect(text).toContain('Oyin tagged you in the chat on Ohema');
     expect(text).toContain('can you check the cover?');
     expect(text).toContain('The label wants it by Friday.');
     expect(html).toContain('scene=chat');
@@ -29,11 +29,11 @@ describe('ChatMentionEmail', () => {
 
   it('says the whole team was messaged for @everyone', async () => {
     const { text } = await renderEmail(ChatMentionEmail({ ...base, everyone: true }));
-    expect(text).toContain('Lucky sent this to everyone on Ohema');
+    expect(text).toContain('Oyin sent this to everyone on Ohema');
   });
 
   it('has subjects for both kinds', () => {
-    expect(chatMentionSubject('Lucky', 'Ohema', false)).toBe('Lucky tagged you on Ohema');
+    expect(chatMentionSubject('Oyin', 'Ohema', false)).toBe('Oyin tagged you on Ohema');
     expect(chatMentionSubject('', '', true)).toBe('Your teammate messaged everyone on your rollout');
   });
 

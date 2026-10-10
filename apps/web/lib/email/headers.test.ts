@@ -8,14 +8,14 @@ import { composeFromHeader, composeReplyTo, extractAddress } from './headers';
 
 describe('composeFromHeader', () => {
   it('replaces only the display name, keeping the verified address', () => {
-    expect(composeFromHeader('Urganize <team@send.urganize.app>', 'Lucky via Urganize')).toBe(
-      'Lucky via Urganize <team@send.urganize.app>'
+    expect(composeFromHeader('Urganize <team@send.urganize.app>', 'Oyin via Urganize')).toBe(
+      'Oyin via Urganize <team@send.urganize.app>'
     );
   });
 
   it('wraps a bare configured address', () => {
-    expect(composeFromHeader('team@send.urganize.app', 'Lucky via Urganize')).toBe(
-      'Lucky via Urganize <team@send.urganize.app>'
+    expect(composeFromHeader('team@send.urganize.app', 'Oyin via Urganize')).toBe(
+      'Oyin via Urganize <team@send.urganize.app>'
     );
   });
 

@@ -1,6 +1,6 @@
 # Urganize Company Strategy & Operating System
 
-2026-10-01 · Lucky Wenapere
+2026-10-01 · Oyin Wenapere
 
 > **About this copy.** This is a word-for-word copy of the founder's document
 > "Urganize Company Strategy & Operating System" (dated 2026-10-01), put in the
@@ -17,7 +17,7 @@ The strategy phase is closed. Execution and measurement are the default. New ide
 
 The loop is: strategy, build, distribute, measure, learn, adjust.
 
-Owner: Lucky. Changes are agreed at the Monday review and logged in the Major Decisions Archive.
+Owner: Oyin. Changes are agreed at the Monday review and logged in the Major Decisions Archive.
 
 Detail lives elsewhere: Product Build Direction, Architecture, GTM Strategy, Financial Model. This page links out, it doesn't repeat them.
 
@@ -74,15 +74,15 @@ The North Star is weekly active paying teams. It is 0 today: 8 teams are active,
 
 | Metric | What counts | Owner | Oct 1, 2026 |
 |---|---|---|---|
-| Weekly active paying teams | See section 7 | Lucky | 0 |
-| MRR | Subscriptions only, yearly plans at price ÷ 12 | Lucky | ₦0 |
+| Weekly active paying teams | See section 7 | Oyin | 0 |
+| MRR | Subscriptions only, yearly plans at price ÷ 12 | Oyin | ₦0 |
 | Second-release rate | See section 7 | Chidera | Not measured yet |
 | Week 4 retention | See section 7 | Chidera | Not measured yet |
 | Active teams, paid or not | Teams using Urganize this month | Chidera | 8, managing 10 artists |
 | Users | PostHog identified users | KB | 83 |
 | Users who created a release, last 30 days | PostHog | Chidera | 19 (9 through onboarding) |
 | Users who invited a teammate | PostHog, all time | Chidera | 8 |
-| Trial to paid | Share of 3-day trials that convert | Lucky | Not measured yet |
+| Trial to paid | Share of 3-day trials that convert | Oyin | Not measured yet |
 | Conversations started | Per week, against KB's weekly target | KB | Weekly report |
 | Referred signups | Signups from a user's invite | KB | Starts with referral credits |
 
@@ -94,48 +94,48 @@ The company runs on one weekly review, two-week product sprints and a monthly ch
 
 | Rhythm | When | Owner | What happens |
 |---|---|---|---|
-| Weekly company review | Monday, 3 PM | Lucky | Scoreboard first, then last week's commitments, blockers, and decisions to log |
+| Weekly company review | Monday, 3 PM | Oyin | Scoreboard first, then last week's commitments, blockers, and decisions to log |
 | Friday numbers | Friday | KB | Scoreboard numbers posted to the team group |
-| Product sprint | Every 2 weeks, starting the Monday of the review | Chidera runs it, Lucky sets scope | Plan on day one, demo what was delivered on the last day |
-| Roadmap review | First Monday of the month, after the weekly review | Lucky, with Tedum and Chidera | What comes next, what gets cut, judged against the scoreboard |
-| Financial review | First Monday of the month | Lucky | MRR, cash, burn, runway, credits and distribution revenue |
-| Strategy check | First Monday of Jan, Apr, Jul and Oct | Lucky | This doc against the numbers. Changes go through the decisions archive |
+| Product sprint | Every 2 weeks, starting the Monday of the review | Chidera runs it, Oyin sets scope | Plan on day one, demo what was delivered on the last day |
+| Roadmap review | First Monday of the month, after the weekly review | Oyin, with Tedum and Chidera | What comes next, what gets cut, judged against the scoreboard |
+| Financial review | First Monday of the month | Oyin | MRR, cash, burn, runway, credits and distribution revenue |
+| Strategy check | First Monday of Jan, Apr, Jul and Oct | Oyin | This doc against the numbers. Changes go through the decisions archive |
 
 Rule: if it isn't on the scoreboard or in a sprint, it isn't committed.
 
 ## 4. Decision-making authority
 
-Lucky makes the final call on anything hard to reverse. Everyone else decides inside their own area and tells the team.
+Oyin makes the final call on anything hard to reverse. Everyone else decides inside their own area and tells the team.
 
 | Decision | Decides | Consulted |
 |---|---|---|
-| Strategy, positioning, ICP | Lucky | Tedum |
-| Pricing and packaging | Lucky | Tedum, Chidera |
-| Product direction and roadmap | Lucky | Tedum, Chidera |
-| Sprint scope | Lucky | Chidera |
-| Task order inside a sprint | Chidera | Lucky |
-| AI architecture, models and providers | Tedum | Lucky |
-| Hiring, roles, equity and pay | Lucky | Tedum |
-| Budget and spending | Lucky | |
-| Partnerships and contracts | Lucky | Tedum |
-| Growth strategy and channels | Lucky | KB |
-| Content, community and Famously Notorious interviews | KB (inside the growth strategy) | Lucky |
-| Closing a sale | Lucky | KB |
+| Strategy, positioning, ICP | Oyin | Tedum |
+| Pricing and packaging | Oyin | Tedum, Chidera |
+| Product direction and roadmap | Oyin | Tedum, Chidera |
+| Sprint scope | Oyin | Chidera |
+| Task order inside a sprint | Chidera | Oyin |
+| AI architecture, models and providers | Tedum | Oyin |
+| Hiring, roles, equity and pay | Oyin | Tedum |
+| Budget and spending | Oyin | |
+| Partnerships and contracts | Oyin | Tedum |
+| Growth strategy and channels | Oyin | KB |
+| Content, community and Famously Notorious interviews | KB (inside the growth strategy) | Oyin |
+| Closing a sale | Oyin | KB |
 
 Rules
 
 - Reversible calls (copy, content, experiments, task order): the owner decides and posts it in the team group.
-- Hard-to-reverse calls (pricing, positioning, equity, hires, contracts, architecture): Lucky decides at the Monday review or in writing.
+- Hard-to-reverse calls (pricing, positioning, equity, hires, contracts, architecture): Oyin decides at the Monday review or in writing.
 - Logging: every hard-to-reverse call goes into the Major Decisions Archive the same day, with the date, the decision, the reason and the owner.
 - Once it's decided: disagree in the room, then commit. Reopening a decision needs new numbers, not a new opinion.
 
 ## 5. GTM and sales
 
-Urganize sells through founder-led sales to a named list of 100 to 150 music executives. Community and content start the conversations. Lucky owns growth strategy and KB owns execution.
+Urganize sells through founder-led sales to a named list of 100 to 150 music executives. Community and content start the conversations. Oyin owns growth strategy and KB owns execution.
 
 ### Sales split
 
-- Lucky: owns sales. Runs the calls, closes, and sets the price on anything custom.
+- Oyin: owns sales. Runs the calls, closes, and sets the price on anything custom.
 - KB: part of sales. Starts conversations, books calls, and follows up every trial until it converts or drops.
 
 ### Channels
@@ -144,11 +144,11 @@ Urganize sells through founder-led sales to a named list of 100 to 150 music exe
 |---|---|---|---|
 | Famously Notorious | Interview an artist first as the value exchange, then pitch their manager within two weeks. Subjects are picked so they can become paying teams | KB | Not started. In the plan |
 | Community | WhatsApp, Instagram, X, TikTok, Facebook, YouTube, Threads, LinkedIn | KB | Running |
-| Dear Creative | Lucky's personal series on Threads | Lucky | Running |
+| Dear Creative | Oyin's personal series on Threads | Oyin | Running |
 | Product demos | Short motion videos of the app in use | Michael | Running |
 | Referral credits | Credits for users who invite another team | KB | Next experiment |
-| Sound Wave Spotlight | Free Urganize for exposure and artist outreach, plus a referral commission on paying users | Lucky | MOU signed Sep 28, 2026. Terms in section 10 |
-| Soundscape | Urganize sponsors one release; Soundscape runs the promo; the release runs in Urganize as a case study | Lucky | Paused |
+| Sound Wave Spotlight | Free Urganize for exposure and artist outreach, plus a referral commission on paying users | Oyin | MOU signed Sep 28, 2026. Terms in section 10 |
+| Soundscape | Urganize sponsors one release; Soundscape runs the promo; the release runs in Urganize as a case study | Oyin | Paused |
 
 Rules
 
@@ -164,10 +164,10 @@ A customer moves through eight stages, and each stage has one owner. The stage t
 | 1. Reach | They hear about Urganize through Famously Notorious, Dear Creative, community, a partner or a referral | KB | Conversations started |
 | 2. Sign up | They create an account | KB | Users |
 | 3. Activate | They create a first release and invite a teammate within 3 days | Chidera | Activation rate |
-| 4. Convert | They pay before the 3-day trial ends | Lucky (KB follows up) | Trial to paid |
+| 4. Convert | They pay before the 3-day trial ends | Oyin (KB follows up) | Trial to paid |
 | 5. First release | The rollout runs in Urganize and the release goes live | Chidera | Releases live |
 | 6. Second release | They start a second release within 90 days of the first going live | Chidera | Second-release rate |
-| 7. Expand | They add artists, move to Label, buy credits or order distribution | Lucky | Expansion MRR |
+| 7. Expand | They add artists, move to Label, buy credits or order distribution | Oyin | Expansion MRR |
 | 8. Refer | They invite another team | KB | Referred signups |
 
 A team that stalls at any stage gets a direct message from that stage's owner within 3 days.
@@ -186,7 +186,7 @@ Product rule: a feature earns a sprint if it moves weekly active paying teams or
 
 ## 8. Financial operating model
 
-Revenue comes from monthly subscriptions, with pay-as-you-go credits and transaction revenue on top. Lucky owns the financial model and runs the monthly financial review.
+Revenue comes from monthly subscriptions, with pay-as-you-go credits and transaction revenue on top. Oyin owns the financial model and runs the monthly financial review.
 
 ### Pricing (Current state)
 
@@ -251,7 +251,7 @@ The 25 teams in the seed bar are planned as 20 Manager and 5 Label: ₦440,000 +
 
 12-month target: 65 paying teams, 40 Manager and 25 Label, about ₦2.13M a month. Projected burn at the full plan is ₦1.1M a month (a projection, not measured spend).
 
-Spending rule: Lucky approves all spend, and every spend line ties to a scoreboard number.
+Spending rule: Oyin approves all spend, and every spend line ties to a scoreboard number.
 
 ## 9. Team roles
 
@@ -259,7 +259,7 @@ Each person owns an outcome on the scoreboard, not a list of tasks.
 
 | Person | Role | Owns |
 |---|---|---|
-| Lucky Wenapere | Founder and CEO | Strategy, product direction, sales, billing and renewals, finance, partnerships, hiring. Builds the product |
+| Oyin Wenapere | Founder and CEO | Strategy, product direction, sales, billing and renewals, finance, partnerships, hiring. Builds the product |
 | Tedum King | Co-founder, AI | UrgAns and the AI layer: models, providers, the AI gateway |
 | Chidera | Product Operations (part-time) | Sprint process, PRDs, activation and retention numbers, onboarding quality |
 | Khaybee (KB) | Community Lead | Growth execution, community channels, Famously Notorious interviews, and part of sales |
@@ -366,7 +366,7 @@ The near-term moat is audience: direct reach into the artists and managers we se
 ### Audience today (Committed)
 
 - Famously Notorious: the interview series. Not started yet, but in the plan with KB running interviews.
-- Dear Creative: Lucky's series on Threads.
+- Dear Creative: Oyin's series on Threads.
 - Community: KB's channels across WhatsApp, Instagram, X, TikTok, Facebook, YouTube, Threads and LinkedIn.
 
 ### How the moat compounds (Future)
@@ -385,18 +385,18 @@ The rest of 2026 is about retention and getting distribution and Famously Notori
 
 | When | Priority | Owner | Done when |
 |---|---|---|---|
-| Q4 2026 | Retention sprint: credits, crypto payments, referral credits | Lucky | Live, with the second-release rate reported weekly |
-| Q4 2026 | Distribution ordering inside the rollout | Lucky | First distribution order paid through Paystack |
+| Q4 2026 | Retention sprint: credits, crypto payments, referral credits | Oyin | Live, with the second-release rate reported weekly |
+| Q4 2026 | Distribution ordering inside the rollout | Oyin | First distribution order paid through Paystack |
 | Q4 2026 | Famously Notorious launched | KB | First interviews published and the first manager pitched |
-| Q4 2026 | Company registered | Lucky | CAC registration complete |
-| Q4 2026 | Tangent Cohort 002 | Lucky | Completed Dec 8 |
-| Q4 2026 | iOS app | Lucky | Live on the App Store (target December) |
-| Q4 2026 | Directory and job market | Lucky | Live, with roles verified by delivered tasks |
+| Q4 2026 | Company registered | Oyin | CAC registration complete |
+| Q4 2026 | Tangent Cohort 002 | Oyin | Completed Dec 8 |
+| Q4 2026 | iOS app | Oyin | Live on the App Store (target December) |
+| Q4 2026 | Directory and job market | Oyin | Live, with roles verified by delivered tasks |
 | H1 2027 | Seed bar | Everyone | All five bars in section 11 hold |
 | H1 2027 | Chappi on WhatsApp | Tedum | Messages the team and acts through the Urganize API |
-| H1 2027 | Expo mobile | Lucky | Tasks, notifications and approvals live on mobile |
-| H2 2027 | Seed raise | Lucky | Round closed |
-| H2 2027 | Take-rate revenue | Lucky | First paid placement, booking or hire through Urganize |
+| H1 2027 | Expo mobile | Oyin | Tasks, notifications and approvals live on mobile |
+| H2 2027 | Seed raise | Oyin | Round closed |
+| H2 2027 | Take-rate revenue | Oyin | First paid placement, booking or hire through Urganize |
 | H2 2027 | 12-month target | Everyone | 65 paying teams, about ₦2.13M a month |
 
 Tauri desktop comes after these, only for workflows that need it.

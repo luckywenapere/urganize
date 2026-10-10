@@ -248,7 +248,7 @@ describe('groupPitchesByRelease', () => {
     note: '',
     status: over.status ?? 'new',
     reply: null,
-    pitcherName: 'Lucky',
+    pitcherName: 'Oyin',
     createdAt: over.createdAt ?? '2026-09-01T10:00:00.000Z',
     updatedAt: over.createdAt ?? '2026-09-01T10:00:00.000Z',
   });

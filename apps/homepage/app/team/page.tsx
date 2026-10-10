@@ -24,7 +24,7 @@ export const metadata: Metadata = buildPageMetadata({
 // display size from there, so replacing a portrait is a file swap only.
 const members = [
   {
-    name: "Lucky Wenapere",
+    name: "Oyin Wenapere",
     role: "Co-Founder and CEO",
     photo: "/images/team/lucky-wenapere.webp",
     bio: "Nine years in the music industry as a videographer, director, and editor; now manages two artists. Studied Computer Engineering at Afe Babalola University; currently works with Afreximbank's Tech & Innovation team.",
@@ -78,7 +78,7 @@ export default function TeamPage() {
             <div className="mt-6 max-w-[42rem] space-y-5 leading-8 text-[var(--marketing-text-muted)]">
               <p>
                 Urganize started in December 2025, in the middle of the mess.
-                Lucky was sorting out activities for a third artist&apos;s rollout
+                Oyin was sorting out activities for a third artist&apos;s rollout
                 across chats, notes, and memory. That is when it became clear
                 the problem was not effort. His artists&apos; music was not
                 getting the rollouts it deserved, because nothing held the

@@ -13,7 +13,7 @@ import {
 describe('firstNameFrom', () => {
   it('takes the first word when it reads like a name', () => {
     expect(firstNameFrom('Adenaiye Miracle')).toBe('Adenaiye');
-    expect(firstNameFrom('Lucky')).toBe('Lucky');
+    expect(firstNameFrom('Oyin')).toBe('Oyin');
   });
 
   it('degrades to nothing for an email handle or a blank', () => {

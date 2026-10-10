@@ -1,4 +1,4 @@
-# Needs a decision from Lucky
+# Needs a decision from Oyin
 
 Things the bug-fixing loop found that need a product call, with a one-line recommendation each.
 
