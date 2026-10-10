@@ -57,7 +57,9 @@ export function TopNav({ userName }: { userName?: string }) {
 
         <nav aria-label="Main" className="mx-auto hidden min-w-0 items-center gap-0.5 lg:flex xl:gap-1">
           {areas.map((area) => {
-            const isActive = active?.key === area.key;
+            // With Home's left column folded away the pill reads as off, so it
+            // says the column is hidden and pressing it brings it back.
+            const isActive = active?.key === area.key && !(area.key === 'home' && listCollapsed);
             return (
               <Link
                 key={area.key}
