@@ -13,6 +13,7 @@ import { RODI_PER_USD } from '@/lib/credits/pricing';
 import { internalUserIds, isInternalRow, withoutInternalAccounts } from '@/lib/admin-internal-accounts';
 import { buildRunway } from '@/lib/admin-runway';
 import { readRunwaySettings } from '@/lib/admin-runway-server';
+import { loadDirectoryGrowth } from '@/lib/directory-growth-server';
 
 // GET /api/admin/cockpit — the founder cockpit at the top of /admin
 // (2026-10-09). The Scoreboard's own reads and definitions, plus which way each
@@ -111,9 +112,15 @@ export async function GET(request: NextRequest) {
     const input = exclusion.input;
     // After the shared read, so the UrgAns windows end at the same moment as
     // every other number (a cached read keeps the time it was made).
-    const [urgansRows, runwayRead] = await Promise.all([
+    const [urgansRows, runwayRead, directoryRead] = await Promise.all([
       loadUrgansUsageRows(client, input.now),
       readRunwaySettings(client, input.now),
+      // Iteration 7 (2026-10-10): the Directory tile. Its own try inside, so a
+      // directory read that fails never takes the rest of the cockpit with it.
+      loadDirectoryGrowth(client, input, exclusion).catch((error) => {
+        console.error('[admin-cockpit] could not read the directory numbers', error);
+        return null;
+      }),
     ]);
     const usageRows = urgansRows.usage?.filter((row) => !isInternalRow(row, exclusion)) ?? null;
     const ledgerRows = urgansRows.ledger?.filter((row) => !isInternalRow(row, exclusion)) ?? null;
@@ -142,9 +149,16 @@ export async function GET(request: NextRequest) {
           now: input.now,
         }),
         runwayReadable: runwayRead.source.status === 'ok',
+        directory: directoryRead ? directoryRead.growth.tile : null,
         ourTeamsLeftOut: exclusion.workspaceIds.size,
         includeTeam,
-        sources: [...sources, waitlist.source, ...urgansRows.sources, runwayRead.source],
+        sources: [
+          ...sources,
+          waitlist.source,
+          ...urgansRows.sources,
+          runwayRead.source,
+          ...(directoryRead ? directoryRead.sources : []),
+        ],
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );

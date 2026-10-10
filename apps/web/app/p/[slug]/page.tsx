@@ -4,6 +4,7 @@ import { loadPublicPerson } from '@/lib/person-public-server';
 import { personSubtitle } from '@/lib/person-public';
 import { PROFILE_TYPE_LABELS, openToLabel } from '@/lib/directory-profile-type';
 import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
+import { ProfileViewBeacon } from '@/components/directory/ProfileViewBeacon';
 
 /**
  * A person's public record at /p/{slug}.
@@ -76,6 +77,8 @@ export default async function PersonPage({ params }: PageProps) {
   return (
     <div className="kit-island min-h-screen" style={{ backgroundColor: GROUND, color: CREAM }}>
       <main className="mx-auto w-full max-w-2xl px-6 py-16 sm:py-24">
+        {/* Only a public profile reaches this page, and a profile is only public once claimed. */}
+        <ProfileViewBeacon roles={roles.map((entry) => entry.role)} claimed />
         <header>
           <h1 className="font-display text-4xl leading-tight sm:text-5xl">{profile.displayName}</h1>
           {place ? (

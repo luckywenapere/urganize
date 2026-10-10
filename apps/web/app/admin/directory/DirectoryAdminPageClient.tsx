@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
 import type { DirectorySummary, WorkRequestSummary } from '@/lib/directory-admin-summary';
+import type { DirectoryGrowth } from '@/lib/directory-growth';
+import { DirectoryGrowthPanel } from '@/components/admin/DirectoryGrowthPanel';
 
 // /admin/directory — supply against demand, one row per role.
 //
@@ -18,7 +20,12 @@ import type { DirectorySummary, WorkRequestSummary } from '@/lib/directory-admin
 // Follows the /admin/urgans gate/load pattern exactly (authLoading -> !user ->
 // redirect; the backing GET's 401/403 is the real gate). Read only.
 
-type DirectoryPayload = DirectorySummary & { lookbackDays: number; requests: WorkRequestSummary };
+type DirectoryPayload = DirectorySummary & {
+  lookbackDays: number;
+  requests: WorkRequestSummary;
+  /** Null when the weekly numbers could not be worked out. */
+  growth: DirectoryGrowth | null;
+};
 
 const EMPTY_REQUESTS: WorkRequestSummary = {
   totals: { sent: 0, interested: 0, passed: 0, closed: 0, waiting: 0, replyRate: null },
@@ -69,6 +76,7 @@ export default function DirectoryAdminPageClient() {
           recruit: body.recruit || [],
           totals: body.totals || { listed: 0, withARecord: 0, wanted: 0, unmet: 0 },
           requests: body.requests || EMPTY_REQUESTS,
+          growth: body.growth ?? null,
         });
         setChecked(true);
       } catch {
@@ -126,6 +134,15 @@ export default function DirectoryAdminPageClient() {
         <Stat label="Roles wanted" value={totals.wanted} />
         <Stat label="Went unmet" value={totals.unmet} />
       </div>
+
+      {payload?.growth ? (
+        <DirectoryGrowthPanel growth={payload.growth} />
+      ) : (
+        <section className="mt-8">
+          <h2 className="text-base font-semibold text-content-primary">Week by week</h2>
+          <p className="mt-1 text-sm text-content-secondary">Not tracked: the weekly numbers could not be worked out.</p>
+        </section>
+      )}
 
       <section className="mt-8">
         <h2 className="text-base font-semibold text-content-primary">Recruit these</h2>

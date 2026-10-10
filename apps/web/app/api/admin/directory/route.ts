@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { verifyAdmin } from '../_shared';
+import { internalAccountEmails, verifyAdmin } from '../_shared';
 import { summarizeDirectory, summarizeWorkRequests } from '@/lib/directory-admin-summary';
 import { DIRECTORY_DEMAND_SOURCES, type DirectoryDemandSource } from '@/lib/directory-demand';
+import { scoreboardReadCache } from '@/lib/scoreboard-cache-server';
+import { internalUserIds, withoutInternalAccounts } from '@/lib/admin-internal-accounts';
+import { loadDirectoryGrowth } from '@/lib/directory-growth-server';
+import type { DirectoryGrowth } from '@/lib/directory-growth';
+import type { AdminReadSource } from '@/lib/admin-read-server';
 
 /**
  * GET /api/admin/directory — supply against demand, one row per role.
@@ -21,6 +26,8 @@ import { DIRECTORY_DEMAND_SOURCES, type DirectoryDemandSource } from '@/lib/dire
  * NEXT_PUBLIC_FEATURE_DIRECTORY off every table simply reads empty, and the
  * founder should be able to watch it fill from the day it is switched on.
  */
+
+export const maxDuration = 60;
 
 const LOOKBACK_DAYS = 90;
 const QUERY_LIMIT = 5000;
@@ -93,9 +100,35 @@ export async function GET(request: NextRequest) {
     createdAt: String(row.created_at || ''),
   }));
 
+  // The weekly numbers (2026-10-10): seeded, invited, claimed, rollouts started
+  // and live, requests and the reply rate. Read through the Scoreboard's shared
+  // cache for the rollouts' live dates, with our own accounts left out like the
+  // cockpit does (`?team=1` brings them back). A failure here never takes the
+  // rest of the page down: the page shows the growth section as "Not tracked".
+  let growth: DirectoryGrowth | null = null;
+  let growthSources: AdminReadSource[] = [];
+  const includeTeam = request.nextUrl.searchParams.get('team') === '1';
+  try {
+    const { input: fullInput, extras } = await scoreboardReadCache.get(client, {
+      fresh: request.nextUrl.searchParams.get('fresh') === '1',
+    });
+    const exclusion = withoutInternalAccounts(
+      fullInput,
+      internalUserIds(extras.emailByUserId, includeTeam ? new Set<string>() : internalAccountEmails())
+    );
+    const loaded = await loadDirectoryGrowth(client, exclusion.input, exclusion);
+    growth = loaded.growth;
+    growthSources = loaded.sources;
+  } catch (error) {
+    console.error('[admin-directory] could not build the weekly numbers', error);
+  }
+
   return NextResponse.json({
     lookbackDays: LOOKBACK_DAYS,
     ...summarizeDirectory({ profiles, records, demand }),
     requests: summarizeWorkRequests(requests),
+    growth,
+    growthSources,
+    includeTeam,
   });
 }
