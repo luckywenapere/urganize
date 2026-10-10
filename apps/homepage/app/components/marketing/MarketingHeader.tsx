@@ -39,6 +39,13 @@ export function MarketingHeader() {
             justify-between a gap is only a floor, so it binds at exactly the
             tight widths and nowhere else. If a control is ever added to this
             row, re-measure rather than assuming this still fits. */}
+        {/* TAP TARGETS (2026-10-10). Every control in this row is at least
+            44px tall: the CTA is min-h-11, and "Log in", "Product" and the
+            theme toggle keep their look and take the size as invisible hit
+            area (padding cancelled by an equal negative margin), so no control
+            changes width and the 375px budget above is untouched. The row is
+            already 44px tall (the logo link), 48px from sm, so none of this
+            moves the header or the spacer under it. */}
         <div className="mx-auto flex max-w-[84rem] items-center justify-between gap-3 px-6 py-4 sm:gap-6 sm:px-8 lg:px-10">
           {/* The wordmark's viewBox is cropped to the ink (see the comment in
               the SVG), so items-center alone lands it on the same centreline as
@@ -70,7 +77,7 @@ export function MarketingHeader() {
             <ProductMenu />
             <Link
               href="/login"
-              className="hidden text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)] sm:block"
+              className="-mx-2 hidden min-h-11 items-center px-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)] sm:inline-flex"
             >
               Log in
             </Link>
@@ -89,7 +96,7 @@ export function MarketingHeader() {
               href={WAITLIST_URL}
               data-track="start_trial_click"
               data-location="header"
-              className="inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--marketing-primary)] px-4 py-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)] sm:px-5 sm:py-2.5"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[var(--marketing-primary)] px-4 py-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)] sm:px-5 sm:py-2.5"
             >
               Try Urganize
             </a>
