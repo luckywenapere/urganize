@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.92.14",
+    date: "October 10, 2026",
+    highlights: [
+      "Once your team has joined, you no longer see the \"invite your team\" tip.",
+    ],
+  },
+  {
     version: "1.92.13",
     date: "October 9, 2026",
     highlights: [
