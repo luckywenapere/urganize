@@ -8,12 +8,22 @@ import { create } from 'zustand';
  */
 export type HomeChatPane = 'chat' | 'sessions';
 
+/**
+ * Which conversation the 'chat' pane shows (2026-10-10): Home's permanent chat,
+ * or a separate session the person started or opened from Sessions.
+ */
+export type HomeChatMode = 'home' | 'session';
+
 type HomeChatState = {
   pane: HomeChatPane;
   setPane: (pane: HomeChatPane) => void;
+  mode: HomeChatMode;
+  setMode: (mode: HomeChatMode) => void;
 };
 
 export const useHomeChatStore = create<HomeChatState>((set) => ({
   pane: 'chat',
   setPane: (pane) => set({ pane }),
+  mode: 'home',
+  setMode: (mode) => set({ mode }),
 }));

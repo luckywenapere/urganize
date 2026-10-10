@@ -10,6 +10,7 @@ import { ChappiConversationSkeleton } from '@/components/loading/ChappiConversat
 import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
 import { COMPOSER_FOCUS_EVENT } from '@/lib/composer-focus';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { showHomeChat, useChappiHistoryStore } from '@/stores/useChappiHistoryStore';
 import { useHomeChatStore } from '@/stores/useHomeChatStore';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 
@@ -40,9 +41,12 @@ const switchButtonClass = (active: boolean) =>
  * right, both on screen. The page itself never scrolls: each side scrolls on
  * its own and the message box stays at the bottom of the right side.
  *
+ * - The Home chat is one permanent conversation (lib/chappi/home-chat.ts); the
+ *   "Home" tab always returns to it. "+ New session" and the Sessions box make
+ *   separate chats that collect under Sessions.
  * - "+ New session" sits right after the last stack (not pinned, founder call)
  *   and starts a fresh session with the cursor in the box.
- * - With session history on, a "Chat | Sessions" switch at the top of the right
+ * - With session history on, a "Home | Sessions" switch at the top of the right
  *   side swaps the conversation for the list of past sessions, the way the
  *   reference swaps to its projects. The conversation stays mounted, only
  *   hidden, while the list shows: its upload and recap cards, and any reply
@@ -64,8 +68,19 @@ export function HomeDesktopSplit({
 }) {
   const pane = useHomeChatStore((state) => state.pane);
   const setPane = useHomeChatStore((state) => state.setPane);
+  const mode = useHomeChatStore((state) => state.mode);
+  const homeChatId = useChappiHistoryStore((state) => state.homeChatId);
   const [focusRequest, setFocusRequest] = useState(0);
   const showSessions = HISTORY_ENABLED && pane === 'sessions';
+  const onHome = !showSessions && mode === 'home';
+
+  // Home's chat is one permanent conversation (founder call, 2026-10-10): on
+  // arrival it is what is on screen, whatever a resume would otherwise have
+  // put there. Runs once history knows who this is.
+  useEffect(() => {
+    if (!HISTORY_ENABLED || !homeChatId) return;
+    if (useHomeChatStore.getState().mode === 'home') void showHomeChat();
+  }, [homeChatId]);
 
   // Put the switch back on the conversation when Home is left.
   useEffect(() => {
@@ -73,7 +88,10 @@ export function HomeDesktopSplit({
     return () => {
       liveSplits -= 1;
       window.setTimeout(() => {
-        if (liveSplits === 0) useHomeChatStore.getState().setPane('chat');
+        if (liveSplits === 0) {
+          useHomeChatStore.getState().setPane('chat');
+          useHomeChatStore.getState().setMode('home');
+        }
       }, 0);
     };
   }, []);
@@ -83,6 +101,8 @@ export function HomeDesktopSplit({
   useEffect(() => {
     const focus = () => {
       useHomeChatStore.getState().setPane('chat');
+      useHomeChatStore.getState().setMode('home');
+      void showHomeChat();
       setFocusRequest((count) => count + 1);
     };
     window.addEventListener(COMPOSER_FOCUS_EVENT, focus);
@@ -90,6 +110,7 @@ export function HomeDesktopSplit({
   }, []);
 
   const startNewSession = () => {
+    useHomeChatStore.getState().setMode('session');
     useChappiStore.getState().reset();
     setPane('chat');
     setFocusRequest((count) => count + 1);
@@ -119,18 +140,22 @@ export function HomeDesktopSplit({
             <div role="group" aria-label="Show" className="inline-flex rounded-full bg-bg-elevated p-1">
               <button
                 type="button"
-                aria-pressed={!showSessions}
-                onClick={() => setPane('chat')}
-                className={switchButtonClass(!showSessions)}
+                aria-pressed={onHome}
+                onClick={() => {
+                  useHomeChatStore.getState().setMode('home');
+                  setPane('chat');
+                  void showHomeChat();
+                }}
+                className={switchButtonClass(onHome)}
               >
                 <MessageCircle className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                Chat
+                Home
               </button>
               <button
                 type="button"
-                aria-pressed={showSessions}
+                aria-pressed={!onHome}
                 onClick={() => setPane('sessions')}
-                className={switchButtonClass(showSessions)}
+                className={switchButtonClass(!onHome)}
               >
                 Sessions
               </button>
@@ -143,9 +168,20 @@ export function HomeDesktopSplit({
 
         {showSessions ? (
           <div className="flex min-h-0 flex-1 flex-col pt-3">
-            <NewSessionBox onStarted={() => setPane('chat')} />
+            <NewSessionBox
+              onStarted={() => {
+                useHomeChatStore.getState().setMode('session');
+                setPane('chat');
+              }}
+            />
             <div className="mt-4 min-h-0 flex-1">
-              <ChappiHistoryList variant="panel" onDone={() => setPane('chat')} />
+              <ChappiHistoryList
+                variant="panel"
+                onDone={() => {
+                  useHomeChatStore.getState().setMode('session');
+                  setPane('chat');
+                }}
+              />
             </div>
           </div>
         ) : null}
