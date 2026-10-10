@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.94.0",
+    date: "October 10, 2026",
+    highlights: [
+      "On Home, tap Home in the top bar to fold the left side away and give the chat the full width. Tap it again to bring it back.",
+    ],
+  },
+  {
     version: "1.93.2",
     date: "October 10, 2026",
     highlights: [
