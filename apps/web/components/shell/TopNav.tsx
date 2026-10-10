@@ -12,6 +12,7 @@ import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { activeShellArea, buildShellAreas, readShellFlags } from '@/lib/shell-nav';
 import { useShellStore } from '@/stores/useShellStore';
+import { useHomeChatStore } from '@/stores/useHomeChatStore';
 import { ArtistSwitcher } from './ArtistSwitcher';
 import { CreditsChip } from './CreditsChip';
 import { useNavTip } from './useNavTip';
@@ -37,6 +38,7 @@ export function TopNav({ userName }: { userName?: string }) {
   const active = activeShellArea(areas, pathname);
   const openCommand = useShellStore((state) => state.openCommand);
   const tip = useNavTip();
+  const listCollapsed = useHomeChatStore((state) => state.listCollapsed);
 
   return (
     <header className="shell-band sticky top-0 z-30">
@@ -61,8 +63,18 @@ export function TopNav({ userName }: { userName?: string }) {
                 key={area.key}
                 href={area.href}
                 {...tip.bind(area.key)}
-                onClick={area.key === 'catalogue' ? leaveReleaseForCatalog : undefined}
+                onClick={(event) => {
+                  if (area.key === 'catalogue') leaveReleaseForCatalog();
+                  // On Home, the Home pill folds Home's left column away so the
+                  // chat fills the width; pressing it again brings it back.
+                  if (area.key === 'home' && pathname === area.href) {
+                    event.preventDefault();
+                    useHomeChatStore.getState().toggleListCollapsed();
+                  }
+                }}
                 aria-current={isActive ? 'page' : undefined}
+                aria-expanded={area.key === 'home' && pathname === area.href ? !listCollapsed : undefined}
+                aria-controls={area.key === 'home' && pathname === area.href ? 'home-list-column' : undefined}
                 data-tour={area.key === 'catalogue' ? 'nav-catalog' : `shell-${area.key}`}
                 className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium transition-colors xl:px-3.5 ${
                   isActive

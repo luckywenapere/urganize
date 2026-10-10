@@ -19,6 +19,10 @@ type HomeChatState = {
   setPane: (pane: HomeChatPane) => void;
   mode: HomeChatMode;
   setMode: (mode: HomeChatMode) => void;
+  /** Home's left column is folded away so the conversation fills the width. */
+  listCollapsed: boolean;
+  toggleListCollapsed: () => void;
+  setListCollapsed: (collapsed: boolean) => void;
 };
 
 export const useHomeChatStore = create<HomeChatState>((set) => ({
@@ -26,4 +30,7 @@ export const useHomeChatStore = create<HomeChatState>((set) => ({
   setPane: (pane) => set({ pane }),
   mode: 'home',
   setMode: (mode) => set({ mode }),
+  listCollapsed: false,
+  toggleListCollapsed: () => set((state) => ({ listCollapsed: !state.listCollapsed })),
+  setListCollapsed: (collapsed) => set({ listCollapsed: collapsed }),
 }));

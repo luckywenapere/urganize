@@ -81,6 +81,7 @@ export function HomeDesktopSplit({
     if (!HISTORY_ENABLED || !homeChatId) return;
     if (useHomeChatStore.getState().mode === 'home') void showHomeChat();
   }, [homeChatId]);
+  const listCollapsed = useHomeChatStore((state) => state.listCollapsed);
 
   // Put the switch back on the conversation when Home is left.
   useEffect(() => {
@@ -91,6 +92,7 @@ export function HomeDesktopSplit({
         if (liveSplits === 0) {
           useHomeChatStore.getState().setPane('chat');
           useHomeChatStore.getState().setMode('home');
+          useHomeChatStore.getState().setListCollapsed(false);
         }
       }, 0);
     };
@@ -118,7 +120,16 @@ export function HomeDesktopSplit({
 
   return (
     <div className="home-split-height flex gap-6 xl:gap-8">
-      <div className="home-scene-container w-[26rem] shrink-0 overflow-y-auto overscroll-contain pb-2 pr-1 xl:w-[28rem]">
+      {/* Folded by the Home pill in the top bar: hidden and inert, but kept
+          mounted so nothing in it reloads when it comes back. */}
+      <div
+        id="home-list-column"
+        aria-hidden={listCollapsed || undefined}
+        inert={listCollapsed || undefined}
+        className={`home-scene-container w-[26rem] shrink-0 overflow-y-auto overscroll-contain pb-2 pr-1 xl:w-[28rem] ${
+          listCollapsed ? 'hidden' : ''
+        }`}
+      >
         {children}
         <button
           type="button"
@@ -133,7 +144,9 @@ export function HomeDesktopSplit({
       <section
         aria-label="UrgAns"
         data-tour="nav-urgans"
-        className="flex min-w-0 flex-1 flex-col border-l border-stroke-subtle pl-6 xl:pl-8"
+        className={`flex min-w-0 flex-1 flex-col ${
+          listCollapsed ? '' : 'border-l border-stroke-subtle pl-6 xl:pl-8'
+        }`}
       >
         {HISTORY_ENABLED ? (
           <div className="flex shrink-0 justify-end">
