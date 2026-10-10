@@ -12,10 +12,15 @@ import { PricingPageClient } from "./PricingPageClient";
 // GETS. This used to open "No price list yet", and since Pricing is a standing
 // sitelink candidate, that negative rendered right beneath the homepage in
 // search.
+//
+// It said "how to book a demo with the founders" until 2026-10-10. Nothing on
+// the page books a demo any more: the plan buttons go to the waitlist and
+// Group's goes to an email, so the snippet promised a step the page does not
+// have. Name the step the page does have.
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing for artists, managers and labels",
   description:
-    "Everything after the music, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to book a demo with the founders.",
+    "Everything after the music, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to join the waitlist.",
   path: "/pricing",
 });
 
