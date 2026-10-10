@@ -3,12 +3,21 @@ import { profileRoles } from '@/lib/person-profile';
 import type { DirectoryRole } from '@/lib/directory-roles';
 import type { DirectoryEntry } from '@/lib/directory-search';
 import {
+  EMPTY_LEAD_STATS,
+  effectiveProfileType,
+  leadLine,
+  viewerTypeFor,
+  type ProfileType,
+} from '@/lib/directory-profile-type';
+import { loadLeadStats } from '@/lib/profile-lead-stats-server';
+import {
   DELIVERY_RECORDS_TABLE,
   PERSON_PROFILES_TABLE,
   asRow,
   createAdminClient,
   directoryDisabledResponse,
   isDirectoryFeatureEnabled,
+  loadProfileTypeOverrides,
   requireActiveAuthenticatedUser,
 } from './_shared';
 
@@ -32,6 +41,26 @@ import {
  */
 
 const DIRECTORY_PAGE_SIZE = 200;
+
+
+async function readViewerType(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  userId: string
+): Promise<ProfileType> {
+  let profileType: ProfileType | null = null;
+  try {
+    const [{ data: own }, overrides, { data: account }] = await Promise.all([
+      admin.from(PERSON_PROFILES_TABLE).select('roles').eq('user_id', userId).maybeSingle(),
+      loadProfileTypeOverrides(admin, [userId]),
+      admin.from('profiles').select('role').eq('id', userId).maybeSingle(),
+    ]);
+    const roles = Array.isArray(asRow(own).roles) ? (asRow(own).roles as DirectoryRole[]) : [];
+    profileType = own ? effectiveProfileType(overrides.get(userId), roles) : null;
+    return viewerTypeFor({ profileType, accountRole: String(asRow(account).role || '') });
+  } catch {
+    return viewerTypeFor({ profileType, accountRole: null });
+  }
+}
 
 export async function GET(request: NextRequest) {
   if (!isDirectoryFeatureEnabled()) return directoryDisabledResponse();
@@ -83,11 +112,27 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const entries: (DirectoryEntry & { slug: string | null; isPublic: boolean })[] = listed.map(
+  // The type each card leads with, and the line it leads with. Both are read
+  // tolerantly: no override column or an unreadable table just shortens a card.
+  const [overrides, leadStats] = await Promise.all([
+    loadProfileTypeOverrides(adminClient, userIds),
+    loadLeadStats(adminClient, userIds),
+  ]);
+
+  const entries: (DirectoryEntry & {
+    slug: string | null;
+    isPublic: boolean;
+    lead: string;
+  })[] = listed.map(
     (row) => {
       const userId = String(row.user_id || '');
       const claimed = Array.isArray(row.roles) ? (row.roles as DirectoryRole[]) : [];
       const visibility = String(row.visibility || 'private');
+      const heldRoles = [
+        ...claimed,
+        ...(recordsByUser.get(userId) ?? []),
+      ];
+      const profileType = effectiveProfileType(overrides.get(userId), heldRoles);
 
       return {
         userId,
@@ -103,9 +148,16 @@ export async function GET(request: NextRequest) {
         // person is findable here and their page is not open, so offering the
         // link would hand somebody a 404.
         isPublic: visibility === 'public',
+        profileType,
+        lead: leadLine(profileType, leadStats.get(userId) ?? EMPTY_LEAD_STATS),
       };
     }
   );
 
-  return NextResponse.json({ people: entries, truncated });
+  // What kind of reader this is, so the page can put the right people first and
+  // decide who gets a Message button. Their own profile type wins; without a
+  // profile their account role decides (lib/directory-profile-type.ts).
+  const viewerType = await readViewerType(adminClient, auth.user.id);
+
+  return NextResponse.json({ people: entries, truncated, viewerType });
 }

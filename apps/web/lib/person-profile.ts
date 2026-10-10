@@ -1,4 +1,5 @@
 import { DIRECTORY_ROLES, type DirectoryRole } from './directory-roles';
+import { isProfileType, type ProfileType } from './directory-profile-type';
 import type { PersonAvailability, PersonLink, PersonVisibility, ProfileRole } from '@/types/directory';
 
 /**
@@ -113,6 +114,8 @@ export type PersonProfileInput = {
   links?: PersonLink[];
   visibility?: PersonVisibility;
   slug?: string | null;
+  /** The owner's override of the derived type. Null clears it. */
+  profileType?: ProfileType | null;
 };
 
 const isRole = (value: unknown): value is DirectoryRole =>
@@ -206,6 +209,17 @@ export function parsePersonProfileInput(
       return { error: 'Pick one of the listing options.' };
     }
     input.visibility = raw as PersonVisibility;
+  }
+
+  if ('profileType' in payload) {
+    const raw = payload.profileType;
+    if (raw === null) {
+      input.profileType = null;
+    } else if (isProfileType(raw)) {
+      input.profileType = raw;
+    } else {
+      return { error: 'Pick one of the profile types.' };
+    }
   }
 
   if ('slug' in payload) {

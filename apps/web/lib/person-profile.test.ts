@@ -183,3 +183,24 @@ describe('slugConflictIsOurs', () => {
     expect(slugConflictIsOurs({ slug: null }, false)).toBe(false);
   });
 });
+
+describe('profile type input', () => {
+  it('accepts a known type and lets null clear the override', () => {
+    expect(parsePersonProfileInput({ profileType: 'artist' })).toEqual({
+      input: { profileType: 'artist' },
+    });
+    expect(parsePersonProfileInput({ profileType: null })).toEqual({
+      input: { profileType: null },
+    });
+  });
+
+  it('refuses a type it does not know', () => {
+    expect(parsePersonProfileInput({ profileType: 'wizard' })).toEqual({
+      error: 'Pick one of the profile types.',
+    });
+  });
+
+  it('leaves the override alone when the key is absent', () => {
+    expect(parsePersonProfileInput({ city: 'Lagos' })).toEqual({ input: { city: 'Lagos' } });
+  });
+});

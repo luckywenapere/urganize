@@ -27,6 +27,7 @@ import { FounderCockpitView } from '@/components/admin/FounderCockpitView';
 import type { FounderCockpit } from '@/lib/founder-cockpit';
 import type { AdminFunnel } from '@/lib/admin-funnel';
 import type { UrgansUsage } from '@/lib/admin-urgans-usage';
+import type { DirectoryTile } from '@/lib/directory-growth';
 import type { ChurnSummary } from '@/lib/admin-churn';
 import type { Runway } from '@/lib/admin-runway';
 import type { RunwayFormValues } from '@/components/admin/RunwayPanel';
@@ -36,6 +37,7 @@ type CockpitPayload = {
   cockpit: FounderCockpit;
   funnels: AdminFunnel[];
   urgans: UrgansUsage | null;
+  directory: DirectoryTile | null;
   churn: ChurnSummary | null;
   runway: Runway | null;
   runwayReadable: boolean;
@@ -115,6 +117,7 @@ export default function AdminHubClient() {
           cockpit: body.cockpit,
           funnels: body.funnels ?? [],
           urgans: body.urgans ?? null,
+          directory: body.directory ?? null,
           churn: body.churn ?? null,
           runway: body.runway ?? null,
           runwayReadable: body.runwayReadable !== false,
@@ -184,6 +187,7 @@ export default function AdminHubClient() {
           cockpit={cockpit.payload.cockpit}
           funnels={cockpit.payload.funnels}
           urgans={cockpit.payload.urgans}
+          directory={cockpit.payload.directory}
           churn={cockpit.payload.churn}
           runway={cockpit.payload.runway}
           runwayReadable={cockpit.payload.runwayReadable}

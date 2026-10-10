@@ -16,6 +16,7 @@ import {
 } from '@/lib/work-requests';
 import { expireStaleRequestsForPair } from '@/lib/work-request-expiry-server';
 import { notifyWorkRequest } from '@/lib/work-requests-server';
+import { captureRequestSent } from '@/lib/directory-events-server';
 import {
   PERSON_PROFILES_TABLE,
   WORK_REQUESTS_TABLE,
@@ -277,6 +278,8 @@ export async function POST(request: NextRequest) {
     role: input.role,
     note: input.note,
   });
+
+  captureRequestSent(auth.user.id, { role: input.role, releaseId: input.releaseId });
 
   return NextResponse.json({ request: asRow(data) }, { status: 201 });
 }
