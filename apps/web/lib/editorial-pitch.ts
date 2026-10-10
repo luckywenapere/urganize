@@ -99,6 +99,12 @@ export const PITCH_SKIP_LABEL = 'Release without a pitch';
 export const PITCH_DRAFT_LABEL = 'Draft my pitch';
 export const PITCH_COPY_LABEL = 'Copy';
 
+/** Where a manager submits the pitch. Urganize never submits it for them. */
+export const SPOTIFY_FOR_ARTISTS_URL = 'https://artists.spotify.com';
+export const SPOTIFY_FOR_ARTISTS_LABEL = 'Open Spotify for Artists';
+export const SPOTIFY_PITCH_STEPS =
+  'In Spotify for Artists, open Music, then Upcoming. Pick the song from this rollout and choose Pitch a song. Paste each field from here.';
+
 const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
 export function pitchCounterCopy(length: number): string {
