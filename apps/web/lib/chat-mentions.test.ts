@@ -16,7 +16,7 @@ import {
 const ada: ChatPerson = { userId: 'u-ada', name: 'Ada' };
 const adaObi: ChatPerson = { userId: 'u-ada-obi', name: 'Ada Obi' };
 const tunde: ChatPerson = { userId: 'u-tunde', name: 'Tunde Bakare' };
-const owner: ChatPerson = { userId: 'u-owner', name: 'Lucky' };
+const owner: ChatPerson = { userId: 'u-owner', name: 'Oyin' };
 const people = [ada, adaObi, tunde, owner];
 
 describe('findMentionQuery', () => {
@@ -127,7 +127,7 @@ describe('chatEmailRecipients', () => {
   });
 
   it('never emails the author for tagging themselves', () => {
-    expect(chatEmailRecipients({ content: '@Lucky note to self', people, authorId: 'u-owner' }).userIds).toEqual([]);
+    expect(chatEmailRecipients({ content: '@Oyin note to self', people, authorId: 'u-owner' }).userIds).toEqual([]);
   });
 
   it('cannot reach someone who is not on the list', () => {
@@ -169,7 +169,7 @@ describe('chatEmailExcerpt and the push', () => {
 
   it('builds a push that opens the chat and stacks per message', () => {
     const push = buildChatMentionPush({
-      authorName: 'Lucky',
+      authorName: 'Oyin',
       releaseTitle: 'Ohema',
       everyone: false,
       content: 'can you   check the art',
@@ -177,7 +177,7 @@ describe('chatEmailExcerpt and the push', () => {
       messageId: 'm1',
     });
     expect(push).toEqual({
-      title: 'Lucky tagged you on Ohema',
+      title: 'Oyin tagged you on Ohema',
       body: 'can you check the art',
       url: releaseChatPath('r 1'),
       tag: 'release-chat-m1',

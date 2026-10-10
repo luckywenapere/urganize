@@ -19,9 +19,9 @@ Open, in the order they will be taken:
 7. Product shots on a phone are desktop screenshots shrunk to about 330px wide and cannot be read. **Fixed in the 2026-10-10 product screenshots entry below (real phone captures of three screens are in `notes/needs-lucky.md`).**
 8. The press kit shot still reads "Made with Urganize, the operating system" (the app dropped that line). Retaking shots needs a signed-in headed Chrome, so it is in `notes/needs-lucky.md`. **The footer line is hidden in the 2026-10-10 press kit entry below; the retake is still open.**
 9. `scripts/smoke-waitlist.mjs` looks for copy and an h1 that no longer exist. **Fixed in the 2026-10-10 smoke-test entry below.**
-10. `/pricing` bottom block still says "Not ready to talk yet? ... We'll reach out when the time is right for your team." There is no longer a sales conversation on that page (every plan sends you to the form), so "talk" promises something the page does not offer. **Not built (it is a headline): written up in `notes/needs-lucky.md`.** **Not built: it is the page headline, so it is written up for Lucky in the 2026-10-10 bottom-block entry below and in `notes/needs-lucky.md`.**
+10. `/pricing` bottom block still says "Not ready to talk yet? ... We'll reach out when the time is right for your team." There is no longer a sales conversation on that page (every plan sends you to the form), so "talk" promises something the page does not offer. **Not built (it is a headline): written up in `notes/needs-lucky.md`.** **Not built: it is the page headline, so it is written up for Oyin in the 2026-10-10 bottom-block entry below and in `notes/needs-lucky.md`.**
 
-## 2026-10-10 | /pricing's bottom block promises a conversation (not built, for Lucky)
+## 2026-10-10 | /pricing's bottom block promises a conversation (not built, for Oyin)
 
 **What is wrong.** The last block on `/pricing` is headed "Not ready to talk yet?" and says "Leave your email. We'll reach out when the time is right for your team." Nothing above it asks anyone to talk. The three self-serve plans say "Try Urganize" and go to the waitlist, Group's "Let's talk" opens an email, and the three-step section that described a call and a demo was removed on 2026-09-09. The heading answers a question the page never asked, and the second sentence reads like a sales follow-up when the form is a place in the queue.
 

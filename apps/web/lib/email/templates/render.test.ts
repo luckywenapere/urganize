@@ -35,14 +35,14 @@ function expectMailSafe(html: string) {
 describe('WorkspaceInviteEmail', () => {
   const base = {
     workspaceName: 'Wavefront Records',
-    inviterLabel: 'Lucky',
+    inviterLabel: 'Oyin',
     inviteUrl: 'https://app.urganize.app/invite/accept?token=abc-123',
     accessLabel: 'manager access',
   };
 
   it('names the inviter and team in the subject', () => {
-    expect(workspaceInviteSubject('Lucky', 'Wavefront Records')).toBe(
-      'Lucky invited you to Wavefront Records on Urganize'
+    expect(workspaceInviteSubject('Oyin', 'Wavefront Records')).toBe(
+      'Oyin invited you to Wavefront Records on Urganize'
     );
     expect(workspaceInviteSubject('', '   ')).toBe('A teammate invited you to a team on Urganize');
   });
@@ -62,19 +62,19 @@ describe('WorkspaceInviteEmail', () => {
     const { html } = await render(
       WorkspaceInviteEmail({
         ...base,
-        workspaceName: "Lucky's <script>alert(1)</script> Team",
-        inviterLabel: '<b>Lucky</b>',
+        workspaceName: "Oyin's <script>alert(1)</script> Team",
+        inviterLabel: '<b>Oyin</b>',
       })
     );
     expect(html).not.toContain('<script>');
-    expect(html).not.toContain('<b>Lucky</b>');
+    expect(html).not.toContain('<b>Oyin</b>');
     expect(html).toContain('&lt;script&gt;');
   });
 });
 
 describe('WelcomeEmail', () => {
   it('keeps the founder-note register: no button, no dark banner', async () => {
-    const { html } = await render(WelcomeEmail({ recipientName: 'Lucky' }));
+    const { html } = await render(WelcomeEmail({ recipientName: 'Oyin' }));
     expect(WELCOME_SUBJECT).toBe('Welcome to Urganize: a note from Wena');
     expect(/background-color:#0d120e/i.test(html)).toBe(false);
     expectMailSafe(html);
@@ -92,7 +92,7 @@ describe('WelcomeEmail', () => {
   });
 
   it('links the founder WhatsApp and the app, and signs off as the founder', async () => {
-    const { html, text } = await render(WelcomeEmail({ recipientName: 'Lucky' }));
+    const { html, text } = await render(WelcomeEmail({ recipientName: 'Oyin' }));
     for (const part of [html, text]) {
       expect(part).toContain('https://wa.me/2347067367057');
       expect(part).toContain('https://app.urganize.app');
@@ -175,7 +175,7 @@ describe('CreditSubmissionEmail', () => {
 describe('TaskAssignedEmail', () => {
   const base = {
     recipientName: 'Tobi Adeyemi',
-    assignerLabel: 'Lucky Wenapere',
+    assignerLabel: 'Oyin Wenapere',
     taskTitle: 'Shoot cover art',
     releaseTitle: 'Midnight EP',
     dueDateLabel: 'Fri, Sep 4',
@@ -185,8 +185,8 @@ describe('TaskAssignedEmail', () => {
   };
 
   it('reads as a note from the assigner in the subject', () => {
-    expect(taskAssignedSubject('Lucky Wenapere', 'Shoot cover art')).toBe(
-      'Lucky Wenapere put "Shoot cover art" on your plate'
+    expect(taskAssignedSubject('Oyin Wenapere', 'Shoot cover art')).toBe(
+      'Oyin Wenapere put "Shoot cover art" on your plate'
     );
     expect(taskAssignedSubject('', '')).toBe('Your teammate put "An activity" on your plate');
   });
@@ -199,7 +199,7 @@ describe('TaskAssignedEmail', () => {
     expect(text).toContain('Midnight EP · due Fri, Sep 4 · High priority');
     // react-email inserts <!-- --> markers between adjacent JSX nodes, so the
     // footer sentence is split in the HTML but intact in the plain-text part.
-    expect(text).toContain('Lucky Wenapere assigned the activity to you');
+    expect(text).toContain('Oyin Wenapere assigned the activity to you');
     expect(html).toContain('https://app.urganize.app/dashboard?release=rel-1');
     expect(text).toContain('https://app.urganize.app/dashboard?release=rel-1');
     expect(/background-color:#0d120e/i.test(html)).toBe(false);
@@ -217,7 +217,7 @@ describe('TaskAssignedEmail', () => {
     const { text, html } = await render(
       TaskAssignedEmail({ ...base, releaseTitle: '', dueDateLabel: '', priorityLabel: '', note: '' })
     );
-    expect(text).toContain('Lucky Wenapere just handed you this one:');
+    expect(text).toContain('Oyin Wenapere just handed you this one:');
     expect(text).not.toContain(' · ');
     expect(html).not.toContain(' · ');
   });
@@ -237,14 +237,14 @@ describe('TaskAssignedEmail', () => {
 describe('WorkRequestEmail', () => {
   const base = {
     recipientName: 'Dami Cole',
-    senderName: 'Lucky',
+    senderName: 'Oyin',
     roleLabel: 'Graphic designer',
     note: 'Cover art for an EP dropping in October.',
     settingsUrl: 'https://app.urganize.app/settings#directory',
   };
 
   it('names the sender and role in the subject', () => {
-    expect(workRequestSubject('Lucky', 'Graphic designer')).toBe('Lucky is looking for a graphic designer');
+    expect(workRequestSubject('Oyin', 'Graphic designer')).toBe('Oyin is looking for a graphic designer');
     expect(workRequestSubject('', '')).toBe('Someone on Urganize is looking for a some work');
   });
 
@@ -259,7 +259,7 @@ describe('WorkRequestEmail', () => {
 
 describe('WorkRequestAnswerEmail', () => {
   const answered = {
-    recipientName: 'Lucky Wenapere',
+    recipientName: 'Oyin Wenapere',
     answererName: 'Dami Cole',
     roleLabel: 'Graphic designer',
     reply: 'Send the brief over.',

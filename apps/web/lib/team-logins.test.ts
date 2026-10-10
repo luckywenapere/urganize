@@ -79,20 +79,20 @@ describe('buildLoginShareMessage', () => {
   const url = 'https://app.urganize.app/join/AbCdEfGhJkLm';
 
   it('carries the link and says the recipient picks their own password', () => {
-    const message = buildLoginShareMessage({ url, workspaceName: 'Lucky Records' });
+    const message = buildLoginShareMessage({ url, workspaceName: 'Oyin Records' });
     expect(message).toContain(url);
-    expect(message).toContain('Lucky Records');
+    expect(message).toContain('Oyin Records');
     expect(message.toLowerCase()).toContain('your own password');
   });
 
   it('names the inviter and release when they are known', () => {
     const message = buildLoginShareMessage({
       url,
-      workspaceName: 'Lucky Records',
+      workspaceName: 'Oyin Records',
       releaseTitle: 'Midnight EP',
       inviterName: 'Wenapere',
     });
-    expect(message).toContain('Wenapere has added you to Lucky Records');
+    expect(message).toContain('Wenapere has added you to Oyin Records');
     expect(message).toContain('Midnight EP');
   });
 
@@ -109,7 +109,7 @@ describe('buildLoginShareMessage', () => {
   it('contains no markdown emphasis', () => {
     const message = buildLoginShareMessage({
       url,
-      workspaceName: 'Lucky Records',
+      workspaceName: 'Oyin Records',
       inviterName: 'Wenapere',
     });
     expect(message).not.toMatch(/[*_~`]/);
@@ -130,9 +130,9 @@ describe('share URLs', () => {
   });
 
   it('builds a mailto with a workspace-aware subject', () => {
-    const url = buildEmailShareUrl(message, 'Lucky Records');
+    const url = buildEmailShareUrl(message, 'Oyin Records');
     expect(url.startsWith('mailto:?subject=')).toBe(true);
-    expect(decodeURIComponent(url)).toContain('Your login for Lucky Records on Urganize');
+    expect(decodeURIComponent(url)).toContain('Your login for Oyin Records on Urganize');
   });
 
   it('falls back to a generic subject with no workspace name', () => {

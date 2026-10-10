@@ -156,7 +156,7 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
           aria-label="Team menu"
           className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-60 origin-top-right overflow-hidden rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
-          {/* Stage 2: the "Lucky / Workspace" identity used to live in the
+          {/* Stage 2: the "Oyin / Workspace" identity used to live in the
               sidebar footer. With the sidebar gone it lives here, as a
               non-interactive header above the menu items. Keeps the
               affordance the user relied on without re-introducing the

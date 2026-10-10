@@ -41,7 +41,7 @@ export type SendEmailParams<Id extends EmailTemplateId> = {
   recipientUserId?: string | null;
   /** Who caused it; null/undefined for a cron-driven send. */
   actorUserId?: string | null;
-  /** Display-name override, e.g. "Lucky via Urganize". The sending ADDRESS is
+  /** Display-name override, e.g. "Oyin via Urganize". The sending ADDRESS is
    *  unchanged (the verified sender), so deliverability is untouched. */
   fromLabel?: string;
   /** Reply-To address override for this one message (validated; falls back). */

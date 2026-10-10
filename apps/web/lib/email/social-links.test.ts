@@ -137,14 +137,14 @@ describe('every email carries the social links', () => {
     invite: () =>
       WorkspaceInviteEmail({
         workspaceName: 'Wavefront Records',
-        inviterLabel: 'Lucky',
+        inviterLabel: 'Oyin',
         inviteUrl: 'https://app.urganize.app/invite/accept?token=abc',
         accessLabel: 'manager access',
       }),
     assigned: () =>
       TaskAssignedEmail({
         recipientName: 'Tobi Adeyemi',
-        assignerLabel: 'Lucky',
+        assignerLabel: 'Oyin',
         taskTitle: 'Shoot cover art',
         releaseTitle: 'Midnight EP',
         dueDateLabel: 'Fri, Sep 4',

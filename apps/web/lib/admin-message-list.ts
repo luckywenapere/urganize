@@ -35,16 +35,16 @@ import { composeDraftHref } from './email/compose-prefill';
 export type LifecycleStage = { number: number; label: string; owner: string };
 
 /** The strategy doc's customer lifecycle (section 6), all eight stages, with
- *  each stage's owner. The doc's Convert row reads "Lucky (KB follows up)":
- *  Lucky owns it, so Lucky writes. */
+ *  each stage's owner. The doc's Convert row reads "Oyin (KB follows up)":
+ *  Oyin owns it, so Oyin writes. */
 export const LIFECYCLE_STAGES = [
   { number: 1, label: 'Reach', owner: 'KB' },
   { number: 2, label: 'Sign up', owner: 'KB' },
   { number: 3, label: 'Activate', owner: 'Chidera' },
-  { number: 4, label: 'Convert', owner: 'Lucky' },
+  { number: 4, label: 'Convert', owner: 'Oyin' },
   { number: 5, label: 'First release', owner: 'Chidera' },
   { number: 6, label: 'Second release', owner: 'Chidera' },
-  { number: 7, label: 'Expand', owner: 'Lucky' },
+  { number: 7, label: 'Expand', owner: 'Oyin' },
   { number: 8, label: 'Refer', owner: 'KB' },
 ] as const satisfies readonly LifecycleStage[];
 
@@ -97,7 +97,7 @@ export function stalledStage(facts: StageFacts): StalledAt {
   return { stage: 'expand', missing: 'Every stage done, quiet anyway' };
 }
 
-/** "Stage 4, Convert. Lucky writes." */
+/** "Stage 4, Convert. Oyin writes." */
 export function stageLine(stage: StalledStage): string {
   const info = STAGE_INFO[stage];
   return `Stage ${info.number}, ${info.label}. ${info.owner} writes`;

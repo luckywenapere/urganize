@@ -53,7 +53,7 @@ describe('stalledStage', () => {
 
 describe('stage words', () => {
   it('names the stage number and its owner from the strategy doc', () => {
-    expect(stageLine('convert')).toBe('Stage 4, Convert. Lucky writes');
+    expect(stageLine('convert')).toBe('Stage 4, Convert. Oyin writes');
     expect(stageLine('activate')).toBe('Stage 3, Activate. Chidera writes');
     expect(Object.values(STAGE_INFO).map((info) => info.number)).toEqual([3, 4, 5, 6, 7]);
   });
@@ -147,7 +147,7 @@ describe('stage owners, kept in one place', () => {
     for (const stage of LIFECYCLE_STAGES) {
       const row = rows.find((entry) => entry.number === stage.number);
       expect(row?.label).toBe(stage.label);
-      // "Lucky (KB follows up)" is owned by Lucky.
+      // "Oyin (KB follows up)" is owned by Oyin.
       expect(row?.owner.split(' (')[0]).toBe(stage.owner);
     }
   });
