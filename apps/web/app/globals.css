@@ -2898,3 +2898,11 @@ html.urgans-leaving .home-scene-container > :not([data-urgans-source]) {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* First-rollout focus (lib/first-release-focus.ts): while it is on, the
+   in-app areas that are locked read as locked. The click catch in
+   FirstReleaseFocus.tsx does the actual blocking; this is only the look.
+   Home and Settings stay at full strength. */
+html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/home']) {
+  opacity: 0.5;
+}

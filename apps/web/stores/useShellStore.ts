@@ -24,11 +24,15 @@ type ShellStore = {
   /** The create-rollout modal, mounted once by AppShell. Any page's primary
    *  button opens it through here, so no page owns a second copy. */
   createOpen: boolean;
+  /** How the create modal should start: 'template' (UrgAns plans it) or
+   *  'blank' (the manager plans it). null = the modal's own default. Set by
+   *  the first-rollout focus (lib/first-release-focus.ts) after its choice. */
+  createPlan: 'template' | 'blank' | null;
   setSelectedArtistId: (id: string | null) => void;
   hydrateSelectedArtistId: (id: string | null) => void;
   openCommand: () => void;
   closeCommand: () => void;
-  openCreate: () => void;
+  openCreate: (plan?: 'template' | 'blank') => void;
   closeCreate: () => void;
 };
 
@@ -36,6 +40,7 @@ export const useShellStore = create<ShellStore>((set) => ({
   selectedArtistId: null,
   commandOpen: false,
   createOpen: false,
+  createPlan: null,
   setSelectedArtistId: (id) => {
     set({ selectedArtistId: id });
     try {
@@ -47,8 +52,8 @@ export const useShellStore = create<ShellStore>((set) => ({
   hydrateSelectedArtistId: (id) => set({ selectedArtistId: id }),
   openCommand: () => set({ commandOpen: true }),
   closeCommand: () => set({ commandOpen: false }),
-  openCreate: () => set({ createOpen: true }),
-  closeCreate: () => set({ createOpen: false }),
+  openCreate: (plan) => set({ createOpen: true, createPlan: plan ?? null }),
+  closeCreate: () => set({ createOpen: false, createPlan: null }),
 }));
 
 /** Reads the saved choice. Returns undefined when there is none, so a stored

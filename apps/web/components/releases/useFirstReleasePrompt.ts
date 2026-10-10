@@ -36,6 +36,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
 import { isFirstReleaseRequired } from '@/lib/first-release-required';
+import { isFirstReleaseFocusEnabled } from '@/lib/first-release-focus';
 import { isBodyScrollLocked } from '@/lib/body-scroll-lock';
 import { tourBlocksPrompts, useTourStore } from '@/stores/useTourStore';
 import {
@@ -79,6 +80,10 @@ export function useFirstReleasePrompt(onPrompt: () => void): void {
   useEffect(() => {
     if (!required || tourBlocking) return;
     if (typeof window === 'undefined') return;
+    // The first-rollout focus (components/releases/FirstReleaseFocus.tsx)
+    // supersedes this nudge: it offers the same create flow, with the plan
+    // choice, right after the tour. Two prompts for one job would stack.
+    if (isFirstReleaseFocusEnabled()) return;
 
     let timerId: number | null = null;
     let cancelled = false;

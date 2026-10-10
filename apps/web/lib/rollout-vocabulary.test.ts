@@ -34,6 +34,8 @@ const APP_ROOT = process.cwd();
 
 const GUARDED_FILES = [
   'components/releases/CreateReleaseModal.tsx',
+  'components/releases/FirstReleaseFocus.tsx',
+  'lib/first-release-focus.ts',
   'components/workspace/WorkspaceView.tsx',
   'components/workspace/TasksPanel.tsx',
   // The rollout menu (2026-09-30). Its row labels, the "On <title>" header and
