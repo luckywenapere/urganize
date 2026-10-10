@@ -28,13 +28,26 @@ type Props = {
   /** `sizes` for the desktop source (matches the frame it renders in). */
   sizes: string;
   className?: string;
+  /**
+   * "high" for the first product visual on a page (the homepage hero, where it
+   * is the Largest Contentful Paint candidate); "auto" for one further down,
+   * so two captures do not compete with the real above-the-fold assets.
+   */
+  fetchPriority?: "high" | "auto";
 };
 
-export function ResponsiveProductShot({ desktop, phone, alt, sizes, className = "" }: Props) {
+export function ResponsiveProductShot({
+  desktop,
+  phone,
+  alt,
+  sizes,
+  className = "",
+  fetchPriority = "high",
+}: Props) {
   return (
     <>
-      <ThemedPicture theme="light" desktop={desktop} phone={phone} alt={alt} sizes={sizes} className={className} />
-      <ThemedPicture theme="dark" desktop={desktop} phone={phone} alt={alt} sizes={sizes} className={className} />
+      <ThemedPicture theme="light" desktop={desktop} phone={phone} alt={alt} sizes={sizes} className={className} fetchPriority={fetchPriority} />
+      <ThemedPicture theme="dark" desktop={desktop} phone={phone} alt={alt} sizes={sizes} className={className} fetchPriority={fetchPriority} />
     </>
   );
 }
@@ -46,8 +59,9 @@ function ThemedPicture({
   alt,
   sizes,
   className,
+  fetchPriority,
 }: Props & { theme: "light" | "dark" }) {
-  const common = { alt, loading: "eager" as const, fetchPriority: "high" as const };
+  const common = { alt, loading: "eager" as const, fetchPriority };
   const { props: desktopProps } = getImageProps({
     ...common,
     src: desktop[theme],
