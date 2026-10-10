@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getNeonClient, verifyAdmin } from '../_shared';
+import { getNeonClient, internalAccountEmails, verifyAdmin } from '../_shared';
 import { buildScoreboard } from '@/lib/scoreboard';
 import { attachOwnerContacts, buildFounderCockpit } from '@/lib/founder-cockpit';
 import { buildFunnels, FUNNEL_WINDOWS, type WaitlistEntry } from '@/lib/admin-funnel';
@@ -10,6 +10,9 @@ import { churnSummary } from '@/lib/admin-churn';
 import { buildUrgansUsage } from '@/lib/admin-urgans-usage';
 import { loadUrgansUsageRows } from '@/lib/admin-urgans-usage-server';
 import { RODI_PER_USD } from '@/lib/credits/pricing';
+import { internalUserIds, isInternalRow, withoutInternalAccounts } from '@/lib/admin-internal-accounts';
+import { buildRunway } from '@/lib/admin-runway';
+import { readRunwaySettings } from '@/lib/admin-runway-server';
 
 // GET /api/admin/cockpit — the founder cockpit at the top of /admin
 // (2026-10-09). The Scoreboard's own reads and definitions, plus which way each
@@ -31,6 +34,12 @@ import { RODI_PER_USD } from '@/lib/credits/pricing';
 // Scoreboard route shares (lib/scoreboard-cache-server.ts), so opening both
 // pages reads them once; and the churn numbers (lib/admin-churn.ts) are worked
 // out from the same rows, with no new read.
+// Iteration 6 (2026-10-10, the founder's answers): our own team's accounts are
+// left out (lib/admin-internal-accounts.ts, the same list /admin/metrics hides,
+// applied to the Scoreboard route too so the two still agree; `?team=1` puts
+// them back, like /admin/metrics); and runway / default alive from the figures
+// the founder typed in (one more read, app_settings, in parallel with the
+// UrgAns reads; written only by /api/admin/runway).
 
 export const maxDuration = 60;
 
@@ -90,13 +99,26 @@ export async function GET(request: NextRequest) {
 
   try {
     const fresh = request.nextUrl.searchParams.get('fresh') === '1';
-    const [{ input, sources, extras }, waitlist] = await Promise.all([
+    const includeTeam = request.nextUrl.searchParams.get('team') === '1';
+    const [{ input: fullInput, sources, extras }, waitlist] = await Promise.all([
       scoreboardReadCache.get(client, { fresh }),
       readWaitlist(),
     ]);
+    // Our own accounts out (the cached rows are never changed; a new input is
+    // made). Same call as GET /api/admin/scoreboard, so the pages agree.
+    const internalEmails = includeTeam ? new Set<string>() : internalAccountEmails();
+    const exclusion = withoutInternalAccounts(fullInput, internalUserIds(extras.emailByUserId, internalEmails));
+    const input = exclusion.input;
     // After the shared read, so the UrgAns windows end at the same moment as
     // every other number (a cached read keeps the time it was made).
-    const urgansRows = await loadUrgansUsageRows(client, input.now);
+    const [urgansRows, runwayRead] = await Promise.all([
+      loadUrgansUsageRows(client, input.now),
+      readRunwaySettings(client, input.now),
+    ]);
+    const usageRows = urgansRows.usage?.filter((row) => !isInternalRow(row, exclusion)) ?? null;
+    const ledgerRows = urgansRows.ledger?.filter((row) => !isInternalRow(row, exclusion)) ?? null;
+    const waitlistEntries =
+      waitlist.entries?.filter((entry) => !internalEmails.has(entry.email.trim().toLowerCase())) ?? null;
     const board = buildScoreboard(input);
     const cockpit = buildFounderCockpit(input, board);
     // Owner name and email for the "Needs a message" teams only (iteration 4),
@@ -105,16 +127,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         cockpit,
-        funnels: buildFunnels(input, waitlist.entries, extras.ownerEmails),
+        funnels: buildFunnels(input, waitlistEntries, extras.ownerEmails),
         churn: churnSummary(input),
         urgans: buildUrgansUsage(
           input,
           board.secondRelease,
-          urgansRows.usage,
-          urgansRows.ledger,
+          usageRows,
+          ledgerRows,
           RODI_PER_USD
         ),
-        sources: [...sources, waitlist.source, ...urgansRows.sources],
+        runway: buildRunway(runwayRead.settings, {
+          subscriptions: input.subscriptions,
+          mrrMinor: board.mrrMinor,
+          now: input.now,
+        }),
+        runwayReadable: runwayRead.source.status === 'ok',
+        ourTeamsLeftOut: exclusion.workspaceIds.size,
+        includeTeam,
+        sources: [...sources, waitlist.source, ...urgansRows.sources, runwayRead.source],
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );

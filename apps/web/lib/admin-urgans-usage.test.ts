@@ -186,15 +186,14 @@ describe('urgansShare', () => {
   const payingActive = new Set(['a', 'b', 'c', 'd']);
   const { fromMs, toMs } = weekWindow(NOW.getTime(), 0);
 
-  it('counts a team once, only inside a release, only chosen features', () => {
+  it('counts a team once, only inside a release, only features the usage log records', () => {
     const share = urgansShare(
       payingActive,
       [
         use({ workspaceId: 'a' }),
         use({ workspaceId: 'a', feature: 'plan' }),
         use({ workspaceId: 'b', releaseId: null }), // chat outside a release
-        use({ workspaceId: 'c', feature: 'status' }), // made on the side
-        use({ workspaceId: 'd', feature: 'outcome' }),
+        use({ workspaceId: 'd', feature: 'not_a_feature' }), // unknown feature
         use({ workspaceId: null, ownerUserId: 'd-owner', feature: 'spotify_pitch', costRodi: null }), // failed still counts
       ],
       resolve,
@@ -202,6 +201,20 @@ describe('urgansShare', () => {
       toMs
     );
     expect(share).toEqual({ activePayingTeams: 4, usingInReleases: 2, usingAnywhere: 3, rate: 0.5 });
+  });
+
+  it('counts status updates and task outcome replies, which cost AI tokens (iteration 6)', () => {
+    const share = urgansShare(
+      payingActive,
+      [
+        use({ workspaceId: 'c', feature: 'status' }),
+        use({ workspaceId: 'd', feature: 'outcome', costRodi: 3 }),
+      ],
+      resolve,
+      fromMs,
+      toMs
+    );
+    expect(share).toEqual({ activePayingTeams: 4, usingInReleases: 2, usingAnywhere: 2, rate: 0.5 });
   });
 
   it('ignores teams that are not active and paying, and calls outside the window', () => {

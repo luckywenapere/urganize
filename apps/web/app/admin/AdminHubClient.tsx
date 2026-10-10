@@ -7,8 +7,12 @@
 // (GET /api/admin/cockpit), so the links show at once while its numbers, which
 // take a few seconds to work out, fill in above them. A cockpit failure shows
 // its own message and never hides the links.
+//
+// Iteration 6 (2026-10-10): the runway form on the cockpit saves through
+// PUT /api/admin/runway (DELETE to clear), then the cockpit is read again so
+// runway and default alive are worked out on the server, in one place.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, LayoutDashboard } from '@/components/icons';
@@ -24,6 +28,8 @@ import type { FounderCockpit } from '@/lib/founder-cockpit';
 import type { AdminFunnel } from '@/lib/admin-funnel';
 import type { UrgansUsage } from '@/lib/admin-urgans-usage';
 import type { ChurnSummary } from '@/lib/admin-churn';
+import type { Runway } from '@/lib/admin-runway';
+import type { RunwayFormValues } from '@/components/admin/RunwayPanel';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 
 type CockpitPayload = {
@@ -31,6 +37,9 @@ type CockpitPayload = {
   funnels: AdminFunnel[];
   urgans: UrgansUsage | null;
   churn: ChurnSummary | null;
+  runway: Runway | null;
+  runwayReadable: boolean;
+  ourTeamsLeftOut: number;
   sources: AdminReadSource[];
 };
 type CockpitState =
@@ -85,42 +94,71 @@ export default function AdminHubClient() {
     };
   }, [authLoading, router, user]);
 
+  const loadCockpit = useCallback(async (isCancelled: () => boolean = () => false) => {
+    try {
+      const token = await getAccessToken();
+      const response = await fetch('/api/admin/cockpit', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      const body = (await response.json().catch(() => ({}))) as Partial<CockpitPayload> & {
+        error?: string;
+      };
+      if (isCancelled()) return;
+      if (!response.ok || !body.cockpit) {
+        setCockpit({ status: 'error', message: body.error || 'Could not work out this week\'s numbers.' });
+        return;
+      }
+      setCockpit({
+        status: 'ready',
+        payload: {
+          cockpit: body.cockpit,
+          funnels: body.funnels ?? [],
+          urgans: body.urgans ?? null,
+          churn: body.churn ?? null,
+          runway: body.runway ?? null,
+          runwayReadable: body.runwayReadable !== false,
+          ourTeamsLeftOut: body.ourTeamsLeftOut ?? 0,
+          sources: body.sources ?? [],
+        },
+      });
+    } catch {
+      if (!isCancelled()) setCockpit({ status: 'error', message: 'Could not work out this week\'s numbers.' });
+    }
+  }, []);
+
   useEffect(() => {
     if (!checked) return;
     let cancelled = false;
     (async () => {
-      try {
-        const token = await getAccessToken();
-        const response = await fetch('/api/admin/cockpit', {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-        const body = (await response.json().catch(() => ({}))) as Partial<CockpitPayload> & {
-          error?: string;
-        };
-        if (cancelled) return;
-        if (!response.ok || !body.cockpit) {
-          setCockpit({ status: 'error', message: body.error || 'Could not work out this week\'s numbers.' });
-          return;
-        }
-        setCockpit({
-          status: 'ready',
-          payload: {
-            cockpit: body.cockpit,
-            funnels: body.funnels ?? [],
-            urgans: body.urgans ?? null,
-            churn: body.churn ?? null,
-            sources: body.sources ?? [],
-          },
-        });
-      } catch {
-        if (!cancelled) setCockpit({ status: 'error', message: 'Could not work out this week\'s numbers.' });
-      }
+      await loadCockpit(() => cancelled);
     })();
     return () => {
       cancelled = true;
     };
-  }, [checked]);
+  }, [checked, loadCockpit]);
+
+  /** Save or clear the runway figures, then read the cockpit again. Resolves to an error, or null. */
+  const writeRunway = useCallback(
+    async (method: 'PUT' | 'DELETE', values?: RunwayFormValues): Promise<string | null> => {
+      try {
+        const token = await getAccessToken();
+        const response = await fetch('/api/admin/runway', {
+          method,
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: values ? JSON.stringify(values) : undefined,
+          cache: 'no-store',
+        });
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        if (!response.ok) return body.error || 'Could not save the figures.';
+        await loadCockpit();
+        return null;
+      } catch {
+        return 'Could not save the figures.';
+      }
+    },
+    [loadCockpit]
+  );
 
   if (authLoading || !user || !checked) {
     return <AdminPageSkeleton titleWidth="w-64" descriptionLines={2} hubGrid={ADMIN_SECTIONS.length} />;
@@ -147,6 +185,11 @@ export default function AdminHubClient() {
           funnels={cockpit.payload.funnels}
           urgans={cockpit.payload.urgans}
           churn={cockpit.payload.churn}
+          runway={cockpit.payload.runway}
+          runwayReadable={cockpit.payload.runwayReadable}
+          onRunwaySave={(values) => writeRunway('PUT', values)}
+          onRunwayClear={() => writeRunway('DELETE')}
+          ourTeamsLeftOut={cockpit.payload.ourTeamsLeftOut}
           sources={cockpit.payload.sources}
         />
       ) : cockpit.status === 'error' ? (
@@ -160,8 +203,8 @@ export default function AdminHubClient() {
             <SkeletonBlock className="h-32 rounded-xl" />
             <SkeletonBlock className="h-32 rounded-xl" />
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 5 }, (_, index) => (
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }, (_, index) => (
               <SkeletonBlock key={index} className="h-24 rounded-xl" />
             ))}
           </div>

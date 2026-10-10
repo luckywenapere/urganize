@@ -1,3 +1,4 @@
+import { AI_USAGE_FEATURES } from './ai/usage-log';
 import { activeMembersBetween } from './founder-cockpit';
 import {
   WEEKLY_ACTIVE_MIN_MEMBERS,
@@ -25,11 +26,16 @@ import {
 //     week". Active paying teams are the North Star's teams this week (paying,
 //     2+ members did something in the last 7 days). A team "used UrgAns inside
 //     a release" when the usage log has a call in the last 7 days tied to a
-//     release (release_id set) for one of its features a person asks for:
-//     chat, plan, press kit, pitch kit, Spotify pitch. The status update and
-//     the task outcome reply are left out: the app calls them on the side of
-//     something else, so they say nothing about choosing UrgAns. A failed call
-//     still counts: the person used UrgAns even if the provider let them down.
+//     release (release_id set) for any feature the log records: chat, plan,
+//     press kit, pitch kit, Spotify pitch, and (since iteration 6, 2026-10-10)
+//     the status update and the task outcome reply. The founder's rule: count
+//     them only if they cost AI tokens or credits. Both charge no credits
+//     (creditsCharged: 0), but both are real model calls written to
+//     ai_usage_events with their provider cost (generate-status and
+//     tasks/[id]/outcome call recordRequestUsage), so they cost tokens and
+//     count. A task outcome with no note makes no model call and writes no
+//     row, so it never counts. A failed call still counts: the person used
+//     UrgAns even if the provider let them down.
 //  2. A call belongs to a team by its workspace_id; an older row with no
 //     workspace falls back to the team its owner_user_id owns.
 //  3. Weeks are rolling 7 days ending now, the cockpit's own clock, so "this
@@ -52,8 +58,10 @@ const WEEK_MS = 7 * DAY_MS;
 export const URGANS_WEEKLY_TARGET = 0.5;
 /** Weeks of credits shown in the chart, newest last. */
 export const CREDIT_WEEKS = 8;
-/** The usage-log features a person asks for (lib/ai/usage-log.ts AI_USAGE_FEATURES). */
-export const URGANS_CHOSEN_FEATURES = new Set(['chat', 'plan', 'press_kit', 'pitch_kit', 'spotify_pitch']);
+/** The usage-log features that count as using UrgAns: every one the log
+ *  records (lib/ai/usage-log.ts AI_USAGE_FEATURES), because each is a model call
+ *  that costs tokens. Choice 1 says why status and outcome are in. */
+export const URGANS_CHOSEN_FEATURES = new Set<string>(AI_USAGE_FEATURES);
 
 export type AiUsageRow = {
   workspaceId: string | null;
