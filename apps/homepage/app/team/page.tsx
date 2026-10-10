@@ -27,7 +27,7 @@ const members = [
     name: "Oyin Wenapere",
     role: "Co-Founder and CEO",
     photo: "/images/team/lucky-wenapere.webp",
-    bio: "Nine years in the music industry as a videographer, director, and editor; now manages two artists. Studied Computer Engineering at Afe Babalola University; currently works with Afreximbank's Tech & Innovation team.",
+    bio: "Ten years in the music industry as a videographer, director, and editor; now manages two artists. Studied Computer Engineering at Afe Babalola University; currently works with Afreximbank's Tech & Innovation team.",
     linkedin: "https://linkedin.com/in/lucky-wenapere",
   },
   {
@@ -46,7 +46,7 @@ const members = [
   },
   {
     name: "Chidera Nnamani",
-    role: "Operations Manager",
+    role: "Product Ops",
     photo: "/images/team/chidera-nnamani.webp",
     bio: "Manages artists and has worked across startups, bringing both the operator's and the manager's view to Urganize's operations. Holds an MBA in Music Management from the Creative Business Academy for Africa, on a foundation of engineering and mathematics.",
     linkedin: "https://www.linkedin.com/in/chidera-nnamani/",
@@ -85,7 +85,7 @@ export default function TeamPage() {
                 rollout together.
               </p>
               <p>
-                After nine years in the industry as a videographer, director,
+                After ten years in the industry as a videographer, director,
                 and editor, he had seen that mess from every side of a
                 rollout. So he built the system he needed. Now he runs his
                 own artists&apos; rollouts on it.
