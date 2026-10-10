@@ -7,7 +7,9 @@ import {
   createAdminClient,
   directoryDisabledResponse,
   isDirectoryFeatureEnabled,
+  loadLeadSummary,
   loadProfileRoles,
+  loadProfileTypeOverrides,
   requireActiveAuthenticatedUser,
   toPersonProfile,
 } from '../_shared';
@@ -58,8 +60,10 @@ export async function GET(request: NextRequest) {
   }
 
   const profile = toPersonProfile(asRow(data));
+  profile.profileType = (await loadProfileTypeOverrides(adminClient, [auth.user.id])).get(auth.user.id) ?? null;
   const roles = await loadProfileRoles(adminClient, auth.user.id, profile.roles);
-  return NextResponse.json({ profile, roles });
+  const summary = await loadLeadSummary(adminClient, auth.user.id, profile, roles);
+  return NextResponse.json({ profile, roles, ...summary });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -108,6 +112,7 @@ export async function PATCH(request: NextRequest) {
   if (input.links !== undefined) patch.links = input.links;
   if (input.visibility !== undefined) patch.visibility = input.visibility;
   if (input.slug !== undefined) patch.slug = input.slug;
+  if (input.profileType !== undefined) patch.profile_type = input.profileType;
 
   // A handle is suggested once, on the first save, and never regenerated. It
   // is a URL somebody may already have shared, so a later rename must not
@@ -149,6 +154,11 @@ export async function PATCH(request: NextRequest) {
     if (error.code === '23505') {
       return NextResponse.json({ error: 'That handle is taken. Try another.' }, { status: 409 });
     }
+    // The profile-type column arrives with its own migration. Until it is in,
+    // saying so beats a raw database message.
+    if (error.code === '42703' && 'profile_type' in patch) {
+      return NextResponse.json({ error: 'Profile types are not ready yet. Try again soon.' }, { status: 503 });
+    }
     return NextResponse.json(
       { error: error.message || 'Could not save your profile.' },
       { status: 500 }
@@ -156,6 +166,8 @@ export async function PATCH(request: NextRequest) {
   }
 
   const profile = toPersonProfile(asRow(data));
+  profile.profileType = (await loadProfileTypeOverrides(adminClient, [auth.user.id])).get(auth.user.id) ?? null;
   const roles = await loadProfileRoles(adminClient, auth.user.id, profile.roles);
-  return NextResponse.json({ profile, roles });
+  const summary = await loadLeadSummary(adminClient, auth.user.id, profile, roles);
+  return NextResponse.json({ profile, roles, ...summary });
 }

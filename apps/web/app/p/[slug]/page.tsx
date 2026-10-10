@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { loadPublicPerson } from '@/lib/person-public-server';
 import { personSubtitle } from '@/lib/person-public';
-import { PERSON_AVAILABILITY_COPY } from '@/lib/person-profile';
+import { PROFILE_TYPE_LABELS, openToLabel } from '@/lib/directory-profile-type';
 import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
 
 /**
@@ -68,7 +68,7 @@ export default async function PersonPage({ params }: PageProps) {
   const person = await loadPublicPerson(slug);
   if (!person) notFound();
 
-  const { profile, roles } = person;
+  const { profile, roles, profileType, lead } = person;
   const delivered = roles.filter((entry) => entry.delivered > 0);
   const claimed = roles.filter((entry) => entry.delivered === 0);
   const place = personSubtitle(profile);
@@ -85,9 +85,31 @@ export default async function PersonPage({ params }: PageProps) {
           ) : null}
           <p className="mt-4 inline-flex rounded-full px-3 py-1 font-mono text-[11px] uppercase tracking-[0.16em]"
              style={{ border: `1px solid ${STROKE}`, color: ACCENT }}>
-            {PERSON_AVAILABILITY_COPY[profile.availability].label}
+            {openToLabel(profileType, profile.availability)}
           </p>
+          {profileType ? (
+            <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: FAINT }}>
+              {PROFILE_TYPE_LABELS[profileType]}
+            </p>
+          ) : null}
         </header>
+
+        {/* What this type leads with: for a manager, rollouts run; for an
+            artist, releases and team. A creative has no stat line here because
+            the delivered credits below are their lead. Never shows a zero. */}
+        {lead.length > 0 ? (
+          <ul className="mt-8 flex flex-wrap gap-2">
+            {lead.map((item) => (
+              <li
+                key={item.key}
+                className="rounded-full px-3 py-1.5 text-sm"
+                style={{ backgroundColor: SURFACE, border: `1px solid ${STROKE}` }}
+              >
+                {item.label}
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         {profile.bio ? (
           <p className="mt-10 text-base leading-relaxed" style={{ color: MUTED }}>

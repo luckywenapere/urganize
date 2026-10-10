@@ -5,14 +5,20 @@ import { Check, Loader2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import {
   DIRECTORY_SETTINGS_ANCHOR,
-  PERSON_AVAILABILITIES,
-  PERSON_AVAILABILITY_COPY,
   PERSON_BIO_MAX_CHARS,
   PERSON_ROLES_MAX,
   PERSON_VISIBILITIES,
   PERSON_VISIBILITY_COPY,
 } from '@/lib/person-profile';
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
+import {
+  PROFILE_TYPES,
+  PROFILE_TYPE_LABELS,
+  isProfileType,
+  openToChoices,
+  openToLabel,
+  type ProfileType,
+} from '@/lib/directory-profile-type';
 import type { PersonProfile, ProfileRole } from '@/types/directory';
 import { panelClass } from './panelClass';
 import { SentRequestsList } from '@/components/directory/SentRequestsList';
@@ -48,6 +54,10 @@ export function DirectoryProfileSection() {
   const [profile, setProfile] = useState<PersonProfile | null>(null);
   const [roles, setRoles] = useState<ProfileRole[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // The type this profile reads as (the override, or what the roles say) and
+  // the line it leads with, both worked out on the server.
+  const [effectiveType, setEffectiveType] = useState<ProfileType | null>(null);
+  const [lead, setLead] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [name, setName] = useState('');
@@ -63,11 +73,21 @@ export function DirectoryProfileSection() {
     return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : null;
   }, []);
 
-  const apply = useCallback((body: { profile: PersonProfile | null; roles: ProfileRole[] }) => {
+  const apply = useCallback(
+    (body: {
+      profile: PersonProfile | null;
+      roles: ProfileRole[];
+      effectiveType?: unknown;
+      lead?: unknown;
+    }) => {
     setProfile(body.profile);
+    setEffectiveType(isProfileType(body.effectiveType) ? body.effectiveType : null);
+    setLead(typeof body.lead === 'string' ? body.lead : '');
     setRoles(Array.isArray(body.roles) ? body.roles : []);
     if (body.profile) setName(body.profile.displayName);
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
     if (!DIRECTORY_ENABLED) return;
@@ -222,21 +242,51 @@ export function DirectoryProfileSection() {
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-xs text-content-tertiary">Are you taking work</span>
+            <span className="mb-1 block text-xs text-content-tertiary">Profile type</span>
+            <select
+              value={profile.profileType ?? ''}
+              disabled={busy}
+              onChange={(event) => void save({ profileType: event.target.value || null })}
+              className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
+            >
+              <option value="">
+                {effectiveType
+                  ? `Work it out from what I do (${PROFILE_TYPE_LABELS[effectiveType]})`
+                  : 'Work it out from what I do'}
+              </option>
+              {PROFILE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {PROFILE_TYPE_LABELS[type]}
+                </option>
+              ))}
+            </select>
+            {/* What readers see first on your card and page. Empty for a
+                creative, whose first thing is the delivered credits. */}
+            {lead ? (
+              <span className="mt-1 block text-xs text-content-tertiary">
+                Your card leads with: {lead}
+              </span>
+            ) : null}
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs text-content-tertiary">Open to</span>
             <select
               value={profile.availability}
               disabled={busy}
               onChange={(event) => void save({ availability: event.target.value })}
               className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
             >
-              {PERSON_AVAILABILITIES.map((value) => (
-                <option key={value} value={value}>
-                  {PERSON_AVAILABILITY_COPY[value].label}
+              {openToChoices(effectiveType, profile.availability).map((choice) => (
+                <option key={choice.value} value={choice.value}>
+                  {choice.label}
                 </option>
               ))}
             </select>
             <span className="mt-1 block text-xs text-content-tertiary">
-              {PERSON_AVAILABILITY_COPY[profile.availability].hint}
+              {openToChoices(effectiveType, profile.availability).find(
+                (choice) => choice.value === profile.availability
+              )?.hint ?? openToLabel(effectiveType, profile.availability)}
             </span>
           </label>
 

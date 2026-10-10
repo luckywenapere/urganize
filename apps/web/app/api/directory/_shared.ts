@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { profileRoles } from '@/lib/person-profile';
+import {
+  EMPTY_LEAD_STATS,
+  effectiveProfileType,
+  isProfileType,
+  leadLine,
+  type ProfileType,
+} from '@/lib/directory-profile-type';
+import { loadLeadStats } from '@/lib/profile-lead-stats-server';
 import type { DirectoryRole } from '@/lib/directory-roles';
 import type { PersonLink, PersonProfile, ProfileRole } from '@/types/directory';
 
@@ -109,4 +117,50 @@ export async function loadProfileRoles(
     claimed,
     data.map((row) => ({ role: String(asRow(row).role || '') as DirectoryRole }))
   );
+}
+
+/**
+ * The owner's profile-type override for each person, read apart from the main
+ * profile select on purpose. person_profiles.profile_type arrives with its own
+ * migration, and putting it in PERSON_PROFILE_COLUMNS would make every profile
+ * read fail (42703) until that migration was applied. Read on its own, a
+ * missing column or any error just means "no overrides": types fall back to
+ * what the roles say, and nothing else on the page notices.
+ */
+export async function loadProfileTypeOverrides(
+  admin: SupabaseClient,
+  userIds: string[]
+): Promise<Map<string, ProfileType>> {
+  const overrides = new Map<string, ProfileType>();
+  if (userIds.length === 0) return overrides;
+
+  const { data, error } = await admin
+    .from(PERSON_PROFILES_TABLE)
+    .select('user_id, profile_type')
+    .in('user_id', userIds);
+
+  if (error || !data) return overrides;
+
+  for (const raw of data) {
+    const row = asRow(raw);
+    if (isProfileType(row.profile_type)) overrides.set(String(row.user_id || ''), row.profile_type);
+  }
+  return overrides;
+}
+
+/**
+ * The type a profile reads as and the line it leads with, for the editor's
+ * preview. The owner's override wins; otherwise the roles decide, delivered
+ * ones included.
+ */
+export async function loadLeadSummary(
+  admin: SupabaseClient,
+  userId: string,
+  profile: PersonProfile,
+  roles: ProfileRole[]
+): Promise<{ effectiveType: ProfileType | null; lead: string }> {
+  const held = [...new Set([...profile.roles, ...roles.map((entry) => entry.role)])];
+  const effectiveType = effectiveProfileType(profile.profileType, held);
+  const stats = (await loadLeadStats(admin, [userId])).get(userId) ?? EMPTY_LEAD_STATS;
+  return { effectiveType, lead: leadLine(effectiveType, stats) };
 }
