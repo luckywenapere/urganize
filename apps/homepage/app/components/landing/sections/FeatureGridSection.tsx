@@ -79,7 +79,16 @@ export function FeatureGridSection() {
             </p>
           </div>
 
-          <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[1.5rem] border border-[color:var(--marketing-border)]">
+          {/* The frame is shorter than the capture on purpose (2026-10-10): the
+              bottom of the capture is a footer line that reads "Made with
+              Urganize, the operating system", wording the app dropped when the
+              product was repositioned. aspect-[780/1540] on this
+              overflow-hidden frame cuts the capture just above that line's
+              rule (the capture is 780 wide, the line's rule sits at 1581 and
+              the cut at about 1546) and nothing else moves. The image is top
+              aligned, so it is the bottom that goes. Delete the aspect class
+              when the shot is retaken (notes/needs-lucky.md). */}
+          <div className="mx-auto aspect-[780/1540] w-full max-w-[260px] overflow-hidden rounded-[1.5rem] border border-[color:var(--marketing-border)]">
             <ThemedProductShot
               {...PRODUCT_SHOTS.epkPhone}
               // STALE (2026-09-05): this shot is the retired release-scoped

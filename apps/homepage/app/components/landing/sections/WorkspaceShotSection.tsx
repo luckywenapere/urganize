@@ -1,15 +1,23 @@
-import { ThemedProductShot } from "../ThemedProductShot";
+import { PRODUCT_SHOTS } from "@/content/product-shots";
+import { ResponsiveProductShot } from "../ResponsiveProductShot";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { wideContainerClass } from "./shared";
 
-// Real screenshot of the current catalog. Since 2026-09-02 both files are
+// Real screenshot of the current catalog. Since 2026-09-02 the files are
 // written by scripts/capture-product-shots.mjs (`pnpm --filter
 // @urganize/homepage shots`), light and dark from the same DOM, so the shot
 // follows the site's theme toggle cleanly and retaking is one command when
 // the UI changes — never let marketing imagery lag the product again. The
-// homepage hero carries its own copy of this capture (HeroSection, since
-// 2026-09-02); this mount serves the four persona pages.
+// homepage hero uses the same pair (HeroSection, since 2026-09-02); this mount
+// serves the four persona pages.
+//
+// 2026-10-10: it reads PRODUCT_SHOTS.catalog and catalogPhone directly, the
+// way the hero does, instead of the `workspace-releases` files. Those are
+// byte-identical legacy copies the script still writes for old URLs, and they
+// had no phone version, so a phone got the 1920px desktop capture at 0.18x,
+// unreadable. Below sm it is now the phone capture in a 4:5 window onto its
+// top, exactly as in the hero.
 export function WorkspaceShotSection() {
   return (
     <ScrollReveal>
@@ -27,14 +35,14 @@ export function WorkspaceShotSection() {
             a fresh founder-supplied count — the numbers here were only ever
             true as of the 2026-08 brief. The /pricing Founding Member claim
             and FinalCTASection's 43% line are separate and untouched. */}
-        <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
-          <ThemedProductShot
-            light="/images/product/workspace-releases.png"
-            dark="/images/product/workspace-releases-dark.png"
+        <div className="aspect-[4/5] overflow-hidden rounded-xl border border-[color:var(--marketing-border)] sm:aspect-auto">
+          <ResponsiveProductShot
+            desktop={PRODUCT_SHOTS.catalog}
+            phone={PRODUCT_SHOTS.catalogPhone}
             alt="The Urganize catalog for a team running several artists: a grid of release cards, each with cover art, a release date and a progress bar counting finished activities against its plan."
-            width={1920}
-            height={973}
             sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
+            className="h-full w-full object-cover object-top sm:h-auto sm:object-contain"
+            fetchPriority="auto"
           />
         </div>
 

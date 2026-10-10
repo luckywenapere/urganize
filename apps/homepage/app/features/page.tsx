@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ProofLine } from "../components/landing/ProofLine";
 import { ThemedProductShot } from "../components/landing/ThemedProductShot";
+import { PHONE_CROPS } from "@/content/product-shot-crops";
 import { ScrollReveal } from "../components/landing/ScrollReveal";
 import { SectionShell } from "../components/landing/SectionShell";
 import { TrialButton } from "../components/landing/TrialButton";
@@ -190,6 +191,7 @@ export default function FeaturesPage() {
                     width={1920}
                     height={973}
                     sizes="(min-width: 1088px) 1024px, 100vw"
+                    phoneCrop={PHONE_CROPS.scopedRelease}
                   />
                 </div>
               ) : null}

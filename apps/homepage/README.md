@@ -33,7 +33,16 @@ To smoke-test the waitlist CTAs against a running local server:
 npm run smoke:waitlist
 ```
 
-Set `WAITLIST_SMOKE_URL` to test a different URL, or `CHROME_PATH` if Chrome,
+At a desktop and a phone size it taps the header's "Try Urganize" and checks
+you land on the waitlist headline (not hidden behind the fixed header), then
+types an email, presses "Join now" and checks the form reaches step 2. It
+stops before submitting, so it adds nothing to the waitlist database.
+
+It talks to `http://localhost:3000` by default. Use `localhost`, not
+`127.0.0.1`: Next's dev server blocks dev assets from another origin, so the
+page never hydrates and the checks time out. Set `WAITLIST_SMOKE_URL` to test a
+different URL (a deployed preview works), `WAITLIST_SMOKE_TIMEOUT_MS` if a cold
+`next dev` compile needs longer than 10 seconds, or `CHROME_PATH` if Chrome,
 Edge, or Chromium is not found automatically.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.

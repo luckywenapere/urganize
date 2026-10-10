@@ -11,15 +11,85 @@ Clean: no horizontal overflow at 390px, no broken images, every image has alt te
 Open, in the order they will be taken:
 
 1. Everything below the first screen is invisible without JavaScript, and until it loads on a slow link. **Fixed in the first entry below.**
-2. Tapping "Try Urganize" lands on the waitlist form with its headline ("Put your next rollout on plan.") hidden behind the fixed header (`id="waitlist"` sits on the div under the heading).
-3. `/pricing` footnote says "Every plan is paid once a year." but the card has a Monthly / Yearly toggle that opens on Monthly, and `packages/pricing` sells both.
-4. `/pricing` meta description still says "how to book a demo with the founders" (stale; the page now has a waitlist and a free-trial style ask).
-5. Waitlist form fields have no `autocomplete` / `inputmode`, the phone field gives no hint when the pattern fails, and the error line is not announced to screen readers (`role="alert"` missing).
-6. Header "Try Urganize" is 36px tall and the "Product" button 20px tall at 390px (under the 44px target); theme toggle is 40x40.
-7. Product shots on a phone are desktop screenshots shrunk to about 330px wide and cannot be read.
-8. The press kit shot still reads "Made with Urganize, the operating system" (the app dropped that line). Retaking shots needs a signed-in headed Chrome, so it is in `notes/needs-lucky.md`.
-9. `scripts/smoke-waitlist.mjs` looks for copy and an h1 that no longer exist.
-10. `/pricing` bottom block still says "Not ready to talk yet? ... We'll reach out when the time is right for your team." There is no longer a sales conversation on that page (every plan sends you to the form), so "talk" promises something the page does not offer.
+2. Tapping "Try Urganize" lands on the waitlist form with its headline ("Put your next rollout on plan.") hidden behind the fixed header (`id="waitlist"` sits on the div under the heading). **Fixed in the 2026-10-09 anchor entry below.**
+3. `/pricing` footnote says "Every plan is paid once a year." but the card has a Monthly / Yearly toggle that opens on Monthly, and `packages/pricing` sells both. **Fixed in the 2026-10-09 footnote entry below.**
+4. `/pricing` meta description still says "how to book a demo with the founders" (stale; the page now has a waitlist and a free-trial style ask). **Fixed in the 2026-10-10 description entry below.**
+5. Waitlist form fields have no `autocomplete` / `inputmode`, the phone field gives no hint when the pattern fails, and the error line is not announced to screen readers (`role="alert"` missing). **Fixed in the 2026-10-10 waitlist form entry below.**
+6. Header "Try Urganize" is 36px tall and the "Product" button 20px tall at 390px (under the 44px target); theme toggle is 40x40. **Fixed in the 2026-10-10 header entry below.**
+7. Product shots on a phone are desktop screenshots shrunk to about 330px wide and cannot be read. **Fixed in the 2026-10-10 product screenshots entry below (real phone captures of three screens are in `notes/needs-lucky.md`).**
+8. The press kit shot still reads "Made with Urganize, the operating system" (the app dropped that line). Retaking shots needs a signed-in headed Chrome, so it is in `notes/needs-lucky.md`. **The footer line is hidden in the 2026-10-10 press kit entry below; the retake is still open.**
+9. `scripts/smoke-waitlist.mjs` looks for copy and an h1 that no longer exist. **Fixed in the 2026-10-10 smoke-test entry below.**
+10. `/pricing` bottom block still says "Not ready to talk yet? ... We'll reach out when the time is right for your team." There is no longer a sales conversation on that page (every plan sends you to the form), so "talk" promises something the page does not offer. **Not built (it is a headline): written up in `notes/needs-lucky.md`.** **Not built: it is the page headline, so it is written up for Lucky in the 2026-10-10 bottom-block entry below and in `notes/needs-lucky.md`.**
+
+## 2026-10-10 | /pricing's bottom block promises a conversation (not built, for Lucky)
+
+**What is wrong.** The last block on `/pricing` is headed "Not ready to talk yet?" and says "Leave your email. We'll reach out when the time is right for your team." Nothing above it asks anyone to talk. The three self-serve plans say "Try Urganize" and go to the waitlist, Group's "Let's talk" opens an email, and the three-step section that described a call and a demo was removed on 2026-09-09. The heading answers a question the page never asked, and the second sentence reads like a sales follow-up when the form is a place in the queue.
+
+**Why it was not changed.** It is the headline of the page that sets the offer, so by the rule at the top of this log it goes to `notes/needs-lucky.md` with a recommendation instead of being rewritten here. The words are in `apps/homepage/app/pricing/PricingPageClient.tsx` (the section with `id="waitlist"`).
+
+**Also seen, not changed.** The plan buttons on `/pricing` all go to `/#waitlist`, which is the homepage's form, while this page carries a second waitlist form under them. A visitor who taps a plan leaves `/pricing` for the homepage. Whether that should scroll to this page's own form instead is a structure question, so it is in the same note.
+
+**Checked.** Read from the page source (it is static, so the source is the page): heading, body line, the form's `source="pricing"` and the card links. Not measured: how many visitors reach this block, because the site has no analytics report for it that this loop can read.
+
+**Merged.** #789, 2026-10-10 (squash).
+
+## 2026-10-10 | The waitlist smoke test checked a page that no longer exists
+
+**What is wrong.** `apps/homepage/scripts/smoke-waitlist.mjs` (`npm run smoke:waitlist`) waits for the sentence "runs to plan." on the homepage and then clicks a button labelled "Not ready yet? Join the waitlist". The homepage has had neither for a while: the h1 is the founder's short line, and since 2026-10-07 the waitlist form is open on the page. The disclosure component that owned that button is not mounted anywhere on the site. So the script times out on its first wait and can only fail, whether or not the waitlist works. Separately, its default address, `127.0.0.1`, cannot work against `next dev`: Next 16's dev server blocks dev assets from another origin, so the page never hydrates and any check that needs the form's JavaScript times out.
+
+**Why it costs sign-ups.** It is the only check that exercises the one sign-up path on the site, and a check that always fails gets ignored. The two things the earlier entries today fixed (the page showing without scripts, and "Try Urganize" landing on the form's headline) had nothing guarding them, and a future change to the header or the final section could break the waitlist with no signal.
+
+**Fix.** The script now does what a visitor does, at a desktop (1280x900) and a phone (390x844) size, each from a fresh page load: it taps the header's "Try Urganize" and checks the waitlist headline ends up fully on screen and below the fixed header (re-checked after the section's slide-in settles); then it waits for the form to hydrate, types an email, presses "Join now" and checks step 2 (name and phone) appears. It stops before submitting, because that request needs the waitlist database. The hero check matches the stable core of the founder's line, lower-cased, so rewording one sentence does not break it. Default address is now `localhost`; `WAITLIST_SMOKE_TIMEOUT_MS` lengthens the wait for a cold dev compile. README updated to match. No site code changed.
+
+**Checked.** Against `next dev` on `localhost`: all four checks pass (desktop and phone, both steps). Against a production build (`next start`): all four pass on both `localhost` and `127.0.0.1`, which confirms the origin block is dev-only. Then three deliberate breaks of the site, each restored byte for byte afterwards: removing the header offset from the anchor fails the phone headline check (the desktop page is too short to scroll that far, which is why both sizes are checked), making "Join now" not advance fails the step-2 check, and pointing the header button at `/#pricing` fails the headline check. One of my first attempts at the second break never applied (a pattern spanning a CRLF line break), so the pass it printed meant nothing; it was redone and failed as it should. Homepage lint (0 errors, the 2 existing warnings).
+
+**Not done, and why.** One run against the production build printed "browser runtime exceptions were observed" on `127.0.0.1`; four later runs with `WAITLIST_SMOKE_STRICT_CONSOLE=1` were clean, so it was not reproduced and its text was not captured. The script does not submit the form, so the sign-up request itself (the `/api/signup` call) is still unchecked by it. It is not wired into any CI job (there are no GitHub Actions in this repo; it is run by hand).
+
+**Merged.** #788, 2026-10-10 (squash).
+
+## 2026-10-10 | The press kit shot still says "the operating system"
+
+**What is wrong.** The press kit picture in the homepage's feature grid (the phone-shaped card next to "Press kit", "Shows and DJ packs" and "Cover art and song files") ends with a footer line reading "MADE WITH URGANIZE, THE OPERATING SYSTEM". The app dropped that wording when the product was repositioned (the public kit and credits footers now say "Made with Urganize. Everything after the music."), and "operating system for music" is on the site's retired-phrases list. It is baked into a PNG, so no copy check sees it.
+
+**Why it costs sign-ups.** It is the one place on the site that still describes the product in the old words, in the proof a visitor looks at after reading the new line. It also shows a retired page (see below), so it should not be the thing people remember.
+
+**Fix.** The frame around the image gets `aspect-[780/1540]`. The frame is already `overflow-hidden` and the image is top aligned, so the bottom of the capture is cut just above the footer line's rule (the capture is 780px wide; the rule is at 1581px and the cut is at about 1546px) and nothing else moves. One class and a comment saying to delete it when the shot is retaken. The capture file is untouched.
+
+**Not done, and why.** The shot is still the retired release-scoped press kit, not the per-artist kit at `/k/[slug]` with a bio, photos and credits; its alt text describes what it shows accurately, and the existing comment already says so. Retaking it needs a published kit on a seeded team and a signed-in headed Chrome, so it stays in `notes/needs-lucky.md` (updated to say to drop the class).
+
+**Checked.** At 390px, 800px and 1440px: the frame is 260x513, the image 258x559 inside it, 47px of the bottom cut, the cut at 1546 source pixels; the footer line is gone and the card ends after the "Format / Single" row; no horizontal scroll. Homepage lint (0 errors, the 2 existing warnings), tsc, production build (all pages static) and the four `apps/web` guard test files (137 tests) pass. **Not seen:** a real phone.
+
+**Merged.** #790, 2026-10-10 (squash).
+
+## 2026-10-10 | Product screenshots are unreadable on a phone
+
+**What is wrong.** On a phone, five product screenshots were 1920px desktop captures shrunk to the 340px column (0.18x), so they read as dark rectangles with grey dots. Three sit in the homepage's step-by-step section (the activity list under "Create the rollout. Get the plan.", the open activity under "Put a name on every activity.", the Timeline under "See where every rollout stands."), one on `/features` (the same activity list), and one on `/for-managers`, `/for-executives`, `/for-ai-artists` and `/why-urganize` (the catalog). The homepage hero already had a proper phone capture; none of these did.
+
+**Why it costs sign-ups.** These are the proof under each promise. On a phone, which is where this audience reads, the visitor cannot read a word of it, so the "Put a name on every activity" claim has nothing to back it.
+
+**Fix.** Two changes, both marketing-site only.
+- The catalog on the four persona pages now uses the same pair the hero uses (`PRODUCT_SHOTS.catalog` and `catalogPhone`) through `ResponsiveProductShot`: the phone capture in a 4:5 window below 640px, the desktop capture above it. The old `workspace-releases` files it read were byte-identical legacy copies of `catalog` with no phone version. `ResponsiveProductShot` gets an optional `fetchPriority` (default "high", so the hero is unchanged) and this mount passes "auto", because it is below the fold.
+- The other four get a phone crop. `ThemedProductShot` takes an optional `phoneCrop`; below 640px it shows only that window of the desktop capture at the full column width (about 0.5x instead of 0.18x), as CSS on the same image, so a phone still downloads one image per theme and desktop is untouched. The rectangles are in `content/product-shot-crops.ts` (hand-written, because `product-shots.ts` is regenerated by the capture script). A crop is only used if the shot's size still matches the size it was measured on.
+
+**Not done, and why.** There are still no real phone captures of the activity list, the open activity or the Timeline. Making them needs the capture script run from a signed-in headed Chrome on the demo team, which this loop cannot do, so it is in `notes/needs-lucky.md` with the crops' retake check. The crops also hide a stale detail: those captures show the side menu and top bar from before the app was redesigned, and a crop leaves them out, but desktop visitors still see them (that is the retake already in `needs-lucky.md`). The Timeline crop is the least readable (about 0.35x): the bars, TODAY and RELEASE read, the row labels are small.
+
+**Checked.** At 390px in dark and light: the three crop boxes are 340 wide and 242, 210 and 163 tall; the activity list, the assignee row (Dami Okafor) and the week axis with TODAY and RELEASE are legible; the hidden theme's box is `display: none` and takes no space; no horizontal scroll. The persona page shows the phone catalog in a 342x428 frame (`fetchpriority="auto"`). At 1440px the crop box is a plain static block, the image renders whole (1022x518 on `/features`) and the persona page serves the desktop catalog on a fresh load. Served images are the full 1920px files (the preview pane reports a smaller `naturalWidth` that a direct fetch disproves). Homepage lint (0 errors, the 2 existing warnings), `tsc`, production build (all pages still static) and the four `apps/web` guard test files (137 tests) pass. **Not seen:** a real phone, or a retina screen where the crop's sharpness could be judged.
+
+**Merged.** #787, 2026-10-10 (squash).
+
+## 2026-10-10 | Header buttons are too small to tap on a phone
+
+**What is wrong.** At 390px the header's three controls were under the 44px touch size: "Try Urganize" 36px tall, the "Product" menu button 20px tall (its hit area was just the word) and the theme toggle 40x40. Inside the menu each link was 40px tall. "Log in" (shown from 640px up, so on tablets) was 20px tall.
+
+**Why it costs sign-ups.** The header is on every page and "Try Urganize" in it is the primary ask. A 20px target next to a 36px one on a thumb-sized screen means mis-taps open the wrong thing, and "Product" is the only way to reach pricing, features and log in from a phone.
+
+**Fix.** Three small files. `MarketingHeader.tsx`: the CTA gets `min-h-11` (it grows from 36 to 44px; the header row is already 44px tall because of the logo link, 48px from 640px up, so the header and the spacer under it do not move); "Log in" gets `min-h-11` and an `-mx-2 px-2` pair. `ProductMenu.tsx`: the button gets `min-h-11` and the same `-mx-2 px-2` pair, the menu's `mt-4` becomes `mt-1` so it opens in the same place (the button is 24px taller, the gap 12px smaller, measured: menu top 64px), and each link goes from `py-2.5` to `py-3` (44px). `ThemeToggle.tsx`: the button is now the 44px target and the 40px disc is a span inside it, with `-mx-0.5` so the row is no wider. The `-mx-2 px-2` pairs make the extra width invisible hit area: nothing shifts and the 375px budget in the header comment still holds.
+
+**Not done, and why.** The menu is 10 x 44px (about 460px) tall and the header is fixed, so on a phone held sideways (about 390px high) the last items cannot be reached. It was 10 x 40px before, so this is not new, but it is a real problem for its own entry (a max height and `overflow-y-auto`). The video-modal close button in `WatchDemo.tsx` is also 40x40; it is not header chrome and is left alone.
+
+**Checked.** At 390px: CTA 109.6x44, Product hit area 82.9x44 (the word is still 66.9px wide), toggle 44x44 around the same 40px disc, header height 76.8px (unchanged), menu top 64px, all ten menu links 44px, no horizontal scroll. At 360px: the gap between the logo and "Product" is 14.6px (the minimum is 12), no horizontal scroll. At 1440px: CTA 117.6x44, "Log in" 53.6x44, header 80.8px, and the visible gaps between "Log in", "Product" and the CTA are the same 24px and 16px as before. The toggle still switches theme and the disc keeps its background in both themes. **Not seen:** a real thumb on a real phone.
+
+**Merged.** #786, 2026-10-10 (squash).
 
 ## 2026-10-10 | Waitlist form: no autofill, a bare "match the format" error, a silent error line
 
@@ -32,6 +102,8 @@ Open, in the order they will be taken:
 **Not done, and why.** Focus is not moved to the name field when step 2 appears, so a screen reader is not told the form changed. That is a separate behaviour change (and raises the keyboard on a phone), so it is left for its own entry.
 
 **Checked.** Homepage lint (0 errors, the 2 existing warnings). In the running form at `/pricing`: the email field carries `name="email"` and `autocomplete="email"`; step 2's name and phone carry `name`/`autocomplete` `name` and `tel`; the phone field has the `title`; `0801 abc 5678` fails the pattern and `+234 801 234 5678` passes; a forced 429 from `/api/signup` renders its message in an element with `role="alert"`. **Not seen:** the browser's own validation bubble (a headless browser does not draw it, and Chrome's `validationMessage` property returns only the generic sentence, not the title) and a real phone's autofill sheet, so the title text and the one-tap fill are set up as the HTML spec describes but not observed.
+
+**Merged.** #785, 2026-10-10 (squash).
 
 ## 2026-10-10 | /pricing description still promises a demo
 

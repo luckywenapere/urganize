@@ -85,7 +85,7 @@ export function ProductMenu() {
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-1.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
+        className="-mx-2 flex min-h-11 items-center gap-1.5 px-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:text-[var(--marketing-text)]"
       >
         Product
         <FaChevronDown
@@ -97,7 +97,7 @@ export function ProductMenu() {
       <div
         role="menu"
         hidden={!open}
-        className="absolute right-0 top-full z-50 mt-4 min-w-[11rem] border border-[color:var(--marketing-border)] bg-[var(--marketing-bg)] py-2 shadow-lg"
+        className="absolute right-0 top-full z-50 mt-1 min-w-[11rem] border border-[color:var(--marketing-border)] bg-[var(--marketing-bg)] py-2 shadow-lg"
       >
         {productLinks.map(({ href, label }) => (
           <Link
@@ -105,7 +105,7 @@ export function ProductMenu() {
             role="menuitem"
             href={href}
             onClick={() => setOpen(false)}
-            className="block px-5 py-2.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:bg-[var(--marketing-surface)] hover:text-[var(--marketing-text)]"
+            className="block px-5 py-3 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] hover:bg-[var(--marketing-surface)] hover:text-[var(--marketing-text)]"
           >
             {label}
           </Link>

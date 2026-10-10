@@ -1,4 +1,5 @@
 import { PRODUCT_SHOTS } from "@/content/product-shots";
+import { PHONE_CROPS, type ShotCrop } from "@/content/product-shot-crops";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
 import { ThemedProductShot } from "../ThemedProductShot";
@@ -51,24 +52,29 @@ const STEPS: readonly {
   kicker: string;
   title: string;
   shot: (typeof PRODUCT_SHOTS)[keyof typeof PRODUCT_SHOTS];
+  // The part of the desktop capture a phone shows (content/product-shot-crops.ts).
+  phoneCrop: ShotCrop;
   alt: string;
 }[] = [
   {
     kicker: "01",
     title: "Create the rollout. Get the plan.",
     shot: PRODUCT_SHOTS.scopedRelease,
+    phoneCrop: PHONE_CROPS.scopedRelease,
     alt: "A rollout open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
   },
   {
     kicker: "02",
     title: "Put a name on every activity.",
     shot: PRODUCT_SHOTS.activityDetail,
+    phoneCrop: PHONE_CROPS.activityDetail,
     alt: "An activity opened in Urganize, showing who it is assigned to, its due date and its place in the plan.",
   },
   {
     kicker: "03",
     title: "See where every rollout stands.",
     shot: PRODUCT_SHOTS.timeline,
+    phoneCrop: PHONE_CROPS.timeline,
     alt: "The Timeline view of a rollout in Urganize: every activity on a week axis with today marked.",
   },
 ] as const;
@@ -99,6 +105,7 @@ export function StorySection() {
                 <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
                   <ThemedProductShot
                     {...step.shot}
+                    phoneCrop={step.phoneCrop}
                     alt={step.alt}
                     sizes="(min-width: 1024px) 560px, 100vw"
                   />
