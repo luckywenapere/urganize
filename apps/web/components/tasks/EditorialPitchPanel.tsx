@@ -14,9 +14,7 @@ import {
   PITCH_DRAFT_LABEL,
   PITCH_FIELD_KEYS,
   PITCH_FIELD_LABELS,
-  SPOTIFY_FOR_ARTISTS_LABEL,
-  SPOTIFY_FOR_ARTISTS_URL,
-  SPOTIFY_PITCH_STEPS,
+  EDITORIAL_PLATFORMS,
   allPitchFieldsFilled,
   pitchCounterCopy,
   type PitchFieldKey,
@@ -188,7 +186,7 @@ export function EditorialPitchPanel({ taskId, releaseId }: EditorialPitchPanelPr
 
   return (
     <section className="rounded-[24px] border border-stroke-default bg-bg-elevated/50 p-4">
-      <h3 className="text-sm font-semibold text-content-primary">Spotify pitch details</h3>
+      <h3 className="text-sm font-semibold text-content-primary">Editorial pitch details</h3>
 
       {data.blocked ? (
         <p className="mt-2 text-sm text-content-secondary" role="status">
@@ -203,16 +201,20 @@ export function EditorialPitchPanel({ taskId, releaseId }: EditorialPitchPanelPr
       ) : null}
 
       {!skipped ? (
-        <div className="mt-2">
-          <p className="text-sm text-content-secondary">{SPOTIFY_PITCH_STEPS}</p>
-          <button
-            type="button"
-            onClick={() => void openExternalUrl(SPOTIFY_FOR_ARTISTS_URL)}
-            className={`${COPY_BUTTON_CLASS} mt-2 h-9 px-3 text-sm`}
-          >
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-            {SPOTIFY_FOR_ARTISTS_LABEL}
-          </button>
+        <div className="mt-2 space-y-3">
+          {EDITORIAL_PLATFORMS.map((platform) => (
+            <div key={platform.id}>
+              <p className="text-sm text-content-secondary">{platform.steps}</p>
+              <button
+                type="button"
+                onClick={() => void openExternalUrl(platform.url)}
+                className={`${COPY_BUTTON_CLASS} mt-2 h-9 px-3 text-sm`}
+              >
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                {platform.linkLabel}
+              </button>
+            </div>
+          ))}
         </div>
       ) : null}
 

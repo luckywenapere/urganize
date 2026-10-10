@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.93.1",
+    date: "October 10, 2026",
+    highlights: [
+      "The editorial pitch now also points you to Apple Music for Artists, with where to paste your pitch.",
+    ],
+  },
+  {
     version: "1.93.0",
     date: "October 10, 2026",
     highlights: [
