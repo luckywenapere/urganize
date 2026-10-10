@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.96.0",
+    date: "October 11, 2026",
+    highlights: [
+      "If you worked on someone's rollout, they can now claim their own profile with a link and a few quick steps.",
+      "Credited people get a page that shows their name, role and credits. They can ask for it to be removed.",
+      "On your rollout, send the claim link by email or copy a WhatsApp message for the person you credited.",
+    ],
+  },
+  {
     version: "1.95.0",
     date: "October 11, 2026",
     highlights: [
