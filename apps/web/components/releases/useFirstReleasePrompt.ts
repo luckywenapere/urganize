@@ -36,7 +36,6 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
 import { isFirstReleaseRequired } from '@/lib/first-release-required';
-import { isFirstReleaseFocusEnabled } from '@/lib/first-release-focus';
 import { isBodyScrollLocked } from '@/lib/body-scroll-lock';
 import { tourBlocksPrompts, useTourStore } from '@/stores/useTourStore';
 import {
@@ -46,6 +45,10 @@ import {
   readPromptState,
 } from '@/lib/first-release-prompt';
 import { useFirstReleaseRequired } from './useFirstReleaseRequired';
+
+/** The first-rollout focus (components/releases/FirstReleaseFocus.tsx) owns
+ *  this moment now, so the timed prompt never arms. */
+const FOCUS_SUPERSEDES_PROMPT = true;
 
 /** The predicate rebuilt from live snapshots — the same inputs
  *  useFirstReleaseRequired wires reactively, read imperatively at fire time
@@ -83,7 +86,7 @@ export function useFirstReleasePrompt(onPrompt: () => void): void {
     // The first-rollout focus (components/releases/FirstReleaseFocus.tsx)
     // supersedes this nudge: it offers the same create flow, with the plan
     // choice, right after the tour. Two prompts for one job would stack.
-    if (isFirstReleaseFocusEnabled()) return;
+    if (FOCUS_SUPERSEDES_PROMPT) return;
 
     let timerId: number | null = null;
     let cancelled = false;

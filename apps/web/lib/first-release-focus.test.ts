@@ -11,7 +11,6 @@ import {
 const ORIGIN = 'https://app.urganize.com';
 
 const READY = {
-  flag: true,
   firstReleaseRequired: true,
   isCurator: false,
   toursEnabled: true,
@@ -25,7 +24,6 @@ describe('decideFirstReleaseFocus', () => {
   });
 
   it.each([
-    ['flag off', { flag: false }],
     ['a rollout exists (or the load is unproven)', { firstReleaseRequired: false }],
     ['a curator', { isCurator: true }],
     ['a tour is running or requested', { tourBlocking: true }],
@@ -87,9 +85,9 @@ describe('first-rollout focus wiring', () => {
     expect(read('components/releases/CreateReleaseModal.tsx')).toContain("plan: initialPlan ?? 'template'");
   });
 
-  it('is mounted behind the flag and supersedes the timed prompt', () => {
-    expect(read('components/app/AppShell.tsx')).toContain('FIRST_RELEASE_FOCUS_ENABLED && isAuthenticated');
-    expect(read('components/releases/useFirstReleasePrompt.ts')).toContain('if (isFirstReleaseFocusEnabled()) return;');
+  it('is mounted and supersedes the timed prompt', () => {
+    expect(read('components/app/AppShell.tsx')).toContain('isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (\n        <FirstReleaseFocus');
+    expect(read('components/releases/useFirstReleasePrompt.ts')).toContain('if (FOCUS_SUPERSEDES_PROMPT) return;');
   });
 
   it('catches locked links in the capture phase', () => {

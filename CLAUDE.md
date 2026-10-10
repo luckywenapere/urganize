@@ -15217,12 +15217,11 @@ collapse is what returns.
 
 ---
 
-## First-rollout focus (2026-10-10, flag-off)
+## First-rollout focus (2026-10-10, always on, no flag)
 
 Founder ask: after the guided tour, a new team should be pushed to make a
 rollout before doing anything else, and choose between a plan UrgAns writes and
-one they write themselves. Behind `NEXT_PUBLIC_FEATURE_FIRST_RELEASE_FOCUS`,
-default `false`. **No migration, no route, nothing stored**: it is derived from
+one they write themselves. Founder call: no flag, live at merge. **No migration, no route, nothing stored**: it is derived from
 the tour's seen-mark and the release count, so it lifts the moment a rollout
 exists from any path.
 
