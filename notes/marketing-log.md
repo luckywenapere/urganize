@@ -21,6 +21,18 @@ Open, in the order they will be taken:
 9. `scripts/smoke-waitlist.mjs` looks for copy and an h1 that no longer exist.
 10. `/pricing` bottom block still says "Not ready to talk yet? ... We'll reach out when the time is right for your team." There is no longer a sales conversation on that page (every plan sends you to the form), so "talk" promises something the page does not offer.
 
+## 2026-10-10 | Header buttons are too small to tap on a phone
+
+**What is wrong.** At 390px the header's three controls were under the 44px touch size: "Try Urganize" 36px tall, the "Product" menu button 20px tall (its hit area was just the word) and the theme toggle 40x40. Inside the menu each link was 40px tall. "Log in" (shown from 640px up, so on tablets) was 20px tall.
+
+**Why it costs sign-ups.** The header is on every page and "Try Urganize" in it is the primary ask. A 20px target next to a 36px one on a thumb-sized screen means mis-taps open the wrong thing, and "Product" is the only way to reach pricing, features and log in from a phone.
+
+**Fix.** Three small files. `MarketingHeader.tsx`: the CTA gets `min-h-11` (it grows from 36 to 44px; the header row is already 44px tall because of the logo link, 48px from 640px up, so the header and the spacer under it do not move); "Log in" gets `min-h-11` and an `-mx-2 px-2` pair. `ProductMenu.tsx`: the button gets `min-h-11` and the same `-mx-2 px-2` pair, the menu's `mt-4` becomes `mt-1` so it opens in the same place (the button is 24px taller, the gap 12px smaller, measured: menu top 64px), and each link goes from `py-2.5` to `py-3` (44px). `ThemeToggle.tsx`: the button is now the 44px target and the 40px disc is a span inside it, with `-mx-0.5` so the row is no wider. The `-mx-2 px-2` pairs make the extra width invisible hit area: nothing shifts and the 375px budget in the header comment still holds.
+
+**Not done, and why.** The menu is 10 x 44px (about 460px) tall and the header is fixed, so on a phone held sideways (about 390px high) the last items cannot be reached. It was 10 x 40px before, so this is not new, but it is a real problem for its own entry (a max height and `overflow-y-auto`). The video-modal close button in `WatchDemo.tsx` is also 40x40; it is not header chrome and is left alone.
+
+**Checked.** At 390px: CTA 109.6x44, Product hit area 82.9x44 (the word is still 66.9px wide), toggle 44x44 around the same 40px disc, header height 76.8px (unchanged), menu top 64px, all ten menu links 44px, no horizontal scroll. At 360px: the gap between the logo and "Product" is 14.6px (the minimum is 12), no horizontal scroll. At 1440px: CTA 117.6x44, "Log in" 53.6x44, header 80.8px, and the visible gaps between "Log in", "Product" and the CTA are the same 24px and 16px as before. The toggle still switches theme and the disc keeps its background in both themes. **Not seen:** a real thumb on a real phone.
+
 ## 2026-10-10 | Waitlist form: no autofill, a bare "match the format" error, a silent error line
 
 **What is wrong.** The waitlist form is the only sign-up path from the site and it fights the browser on a phone. None of its three fields has a `name` or an `autocomplete` value, so a phone cannot offer the saved email, name or number and the visitor types all three by hand. The phone field's pattern fails with the browser's default "Please match the requested format." and nothing says what the format is. And when the sign-up request itself fails, the red error line appears with no `role="alert"`, so a screen reader says nothing and the form just looks like it did nothing.
@@ -32,6 +44,8 @@ Open, in the order they will be taken:
 **Not done, and why.** Focus is not moved to the name field when step 2 appears, so a screen reader is not told the form changed. That is a separate behaviour change (and raises the keyboard on a phone), so it is left for its own entry.
 
 **Checked.** Homepage lint (0 errors, the 2 existing warnings). In the running form at `/pricing`: the email field carries `name="email"` and `autocomplete="email"`; step 2's name and phone carry `name`/`autocomplete` `name` and `tel`; the phone field has the `title`; `0801 abc 5678` fails the pattern and `+234 801 234 5678` passes; a forced 429 from `/api/signup` renders its message in an element with `role="alert"`. **Not seen:** the browser's own validation bubble (a headless browser does not draw it, and Chrome's `validationMessage` property returns only the generic sentence, not the title) and a real phone's autofill sheet, so the title text and the one-tap fill are set up as the HTML spec describes but not observed.
+
+**Merged.** #785, 2026-10-10 (squash).
 
 ## 2026-10-10 | /pricing description still promises a demo
 
