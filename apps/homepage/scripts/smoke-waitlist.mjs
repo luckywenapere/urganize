@@ -6,13 +6,36 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-const baseUrl = process.env.WAITLIST_SMOKE_URL ?? "http://127.0.0.1:3000";
-// The waitlist lives behind a disclosure under the final CTA since the
-// 2026-09-02 homepage overhaul (WaitlistDisclosure.tsx): the smoke test opens
-// it and checks the form appears. The hero string below is the current h1.
-const disclosureLabel = "Not ready yet? Join the waitlist";
-const heroText = "runs to plan.";
-const waitTimeoutMs = 10_000;
+// localhost, NOT 127.0.0.1: Next 16's dev server blocks dev assets requested
+// from another origin ("Blocked cross-origin request to Next.js dev resource"),
+// so against `next dev` the page never hydrates and every check that needs
+// React times out. A production server has no such block.
+const baseUrl = process.env.WAITLIST_SMOKE_URL ?? "http://localhost:3000";
+// WHAT THIS CHECKS (rewritten 2026-10-10). It used to wait for a hero sentence
+// ("runs to plan.") and click a "Not ready yet? Join the waitlist" disclosure,
+// and neither exists on the homepage any more: the h1 is the founder's short
+// line, and since 2026-10-07 the waitlist form is open on the page (the
+// disclosure component is no longer mounted anywhere). So the script now does
+// what a visitor does, at a desktop and at a phone size:
+//   1. tap the header's "Try Urganize" and land on the form's headline, not
+//      behind the fixed header (the 2026-10-09 anchor fix);
+//   2. type an email, press "Join now", and reach step 2 (name and phone).
+// It stops before submitting, because POST /api/signup needs the waitlist
+// database and a smoke test must not add rows to it.
+//
+// The hero text is matched lower-cased on the stable core of the founder's
+// line, which both the h1 and the subhead carry, so a copy pass that rewords
+// one sentence does not break the test. If the positioning line ever changes,
+// change this string with it.
+const heroText = "everything after the music";
+const smokeEmail = "smoke-test@example.com";
+const viewports = [
+  { label: "desktop 1280x900", width: 1280, height: 900, mobile: false },
+  { label: "phone 390x844", width: 390, height: 844, mobile: true },
+];
+// A cold `next dev` compiles each route on first request, so a slow first run
+// can need longer: WAITLIST_SMOKE_TIMEOUT_MS=30000.
+const waitTimeoutMs = Number(process.env.WAITLIST_SMOKE_TIMEOUT_MS) || 10_000;
 const strictConsole = process.env.WAITLIST_SMOKE_STRICT_CONSOLE === "1";
 
 function fail(message) {
@@ -234,8 +257,8 @@ function createCdpClient(webSocketUrl) {
       fail(`could not find ${label}`);
     }
 
-    if (rect.tag !== "BUTTON") {
-      fail(`${label} was covered by ${rect.tag ?? "an unknown element"}`);
+    if (rect.covered) {
+      fail(`${label} was covered by ${rect.coveredBy ?? "an unknown element"}`);
     }
 
     await send("Input.dispatchMouseEvent", {
@@ -290,7 +313,7 @@ function createCdpClient(webSocketUrl) {
 async function navigateAndWait(client) {
   await client.send("Page.navigate", { url: baseUrl });
   await client.waitFor(
-    `document.readyState === "complete" && document.body.innerText.includes(${JSON.stringify(heroText)})`,
+    `document.readyState === "complete" && document.body.innerText.toLowerCase().includes(${JSON.stringify(heroText)})`,
     "homepage content",
   );
   await client.waitFor(
@@ -299,32 +322,76 @@ async function navigateAndWait(client) {
   );
 }
 
-function buttonRectExpression(scopeExpression) {
+// Finds an element, scrolls it to the middle of the screen, and reports where
+// to click plus whether something else is on top of that point. A control that
+// is covered (a fixed header, an overlay) is a real bug for a visitor, so the
+// click helper fails on it rather than clicking through.
+function clickTargetExpression(findExpression) {
   return `(() => {
-    const scope = ${scopeExpression};
-    if (!scope) return null;
-    const button = [...scope.querySelectorAll("button")]
-      .find((item) => item.innerText.trim() === ${JSON.stringify(disclosureLabel)});
-    if (!button) return null;
-    button.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
-    const rect = button.getBoundingClientRect();
+    const el = ${findExpression};
+    if (!el) return null;
+    el.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
+    const rect = el.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
     const top = document.elementFromPoint(x, y);
-    return {
-      x,
-      y,
-      tag: top?.tagName ?? null,
-      text: top?.innerText?.trim() ?? top?.ariaLabel ?? null
-    };
+    const covered = !(top && (top === el || el.contains(top)));
+    return { x, y, covered, coveredBy: covered ? (top?.tagName ?? null) : null };
   })()`;
 }
 
-async function assertDisclosureOpensForm(client, scopeExpression, label) {
-  await client.clickExpression(buttonRectExpression(scopeExpression), label);
-  await client.waitFor(`Boolean(document.querySelector('input[type="email"]'))`, `${label} form`);
+// The headline of the waitlist block sits fully on screen and below the fixed
+// header. The block slides up about 20px as it is revealed, so this is checked
+// again after that settles.
+const headlineVisibleExpression = `(() => {
+  const block = document.getElementById("waitlist");
+  const heading = block && block.querySelector("h2");
+  const header = document.querySelector("header");
+  if (!heading || !header) return false;
+  const rect = heading.getBoundingClientRect();
+  return (
+    location.hash === "#waitlist" &&
+    rect.top >= header.getBoundingClientRect().bottom &&
+    rect.bottom <= window.innerHeight
+  );
+})()`;
+
+async function assertTrialCtaLandsOnHeadline(client, label) {
+  await client.clickExpression(
+    clickTargetExpression(`document.querySelector('header a[data-location="header"]')`),
+    `${label}: header "Try Urganize"`,
+  );
+  await client.waitFor(headlineVisibleExpression, `${label}: waitlist headline in view after the tap`);
+  await sleep(900);
+  if (!(await client.evaluate(headlineVisibleExpression))) {
+    fail(`${label}: the waitlist headline ended up hidden behind the header or off screen`);
+  }
+  console.log(`PASS: ${label}: "Try Urganize" lands on the waitlist headline.`);
+}
+
+async function assertFormReachesStepTwo(client, label) {
+  const emailInput = `document.querySelector('#waitlist input[type="email"]')`;
+  await client.waitFor(`Boolean(${emailInput})`, `${label}: waitlist email field`);
+  // Wait for React to take over the form. Pressing "Join now" before that
+  // submits the page natively and reloads it, which looks like a flaky test.
+  await client.waitFor(
+    `(() => { const el = ${emailInput}; return Boolean(el) && Object.keys(el).some((key) => key.startsWith("__reactFiber")); })()`,
+    `${label}: the form to hydrate`,
+  );
+  await client.evaluate(`${emailInput}.focus()`);
+  await client.send("Input.insertText", { text: smokeEmail });
+  await client.clickExpression(
+    clickTargetExpression(
+      `[...document.querySelectorAll('#waitlist button')].find((item) => item.innerText.trim() === "Join now")`,
+    ),
+    `${label}: "Join now"`,
+  );
+  await client.waitFor(
+    `Boolean(document.querySelector('#waitlist input[type="tel"]'))`,
+    `${label}: step 2 (name and phone) after "Join now"`,
+  );
   await client.assertNoRuntimeExceptions();
-  console.log(`PASS: ${label} reveals the waitlist form.`);
+  console.log(`PASS: ${label}: the form takes an email and reaches step 2.`);
 }
 
 async function main() {
@@ -358,8 +425,21 @@ async function main() {
     await client.send("Page.enable");
     await client.send("Runtime.enable");
 
-    await navigateAndWait(client);
-    await assertDisclosureOpensForm(client, "document", "final-CTA waitlist disclosure");
+    for (const viewport of viewports) {
+      await client.send("Emulation.setDeviceMetricsOverride", {
+        width: viewport.width,
+        height: viewport.height,
+        deviceScaleFactor: 1,
+        mobile: viewport.mobile,
+      });
+
+      // Each check starts from a fresh load, so a #waitlist hash left by the
+      // first cannot make the second look like it passed.
+      await navigateAndWait(client);
+      await assertTrialCtaLandsOnHeadline(client, viewport.label);
+      await navigateAndWait(client);
+      await assertFormReachesStepTwo(client, viewport.label);
+    }
   } finally {
     client?.close();
     chrome.kill();
