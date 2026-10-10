@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.93.2",
+    date: "October 10, 2026",
+    highlights: [
+      "The Pitching page now shows where each rollout's editorial pitch stands, with a button to open the details.",
+    ],
+  },
+  {
     version: "1.93.1",
     date: "October 10, 2026",
     highlights: [

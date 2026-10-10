@@ -344,7 +344,7 @@ type ReleaseRow = {
   owner_user_id: string;
 };
 
-type WorkspaceAccessContext = {
+export type WorkspaceAccessContext = {
   memberships: WorkspaceMember[];
   workspaceIds: string[];
   membershipIds: string[];
