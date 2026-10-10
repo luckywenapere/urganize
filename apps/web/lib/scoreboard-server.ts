@@ -53,6 +53,12 @@ export type ScoreboardExtras = {
    *  the browser ONLY for the cockpit's "Needs a message" teams, behind
    *  verifyAdmin, so the founder knows who to write to. */
   ownerNames: Map<string, string | null>;
+  /** Every profile this read loaded (each workspace's owner, which is every
+   *  account, since each account is given a workspace of its own): user id to
+   *  lower-cased email. Used only to leave our own team's accounts out of the
+   *  cockpit and the Scoreboard (lib/admin-internal-accounts.ts, 2026-10-10).
+   *  Never sent to the browser. */
+  emailByUserId: Map<string, string>;
 };
 
 export async function loadScoreboardInput(
@@ -177,6 +183,11 @@ export async function loadScoreboardInput(
     sources.push({ table: 'profiles', rows: profileRows.length, status: 'ok', truncated: false });
   }
   const profiles = new Map(profileRows.map((row) => [String(row.id), row]));
+  const emailByUserId = new Map<string, string>();
+  for (const row of profileRows) {
+    const email = str(row.email)?.trim().toLowerCase();
+    if (email) emailByUserId.set(String(row.id), email);
+  }
 
   const subscriptionRows: ScoreboardSubscription[] = subscriptions.rows
     .filter((row) => str(row.user_id))
@@ -373,6 +384,7 @@ export async function loadScoreboardInput(
       taskRows: tasks.rows,
       ownerEmails,
       ownerNames,
+      emailByUserId,
     },
   };
 }

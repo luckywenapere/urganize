@@ -62,7 +62,7 @@ export function UrgansPanel({ usage }: { usage: UrgansUsage }) {
         <div className="rounded-xl border border-brand/40 bg-brand/5 p-5">
           <Label
             text="Paying teams using UrgAns in releases"
-            info="Of this week's active paying teams (the North Star teams), the share where someone used UrgAns inside a rollout in the last 7 days: chat, a plan, a press kit, a pitch kit or a Spotify pitch tied to a release. Status updates and task outcome replies are left out, because the app makes those on the side of something else. The seed-round target is half, every week."
+            info="Of this week's active paying teams (the North Star teams), the share where someone used UrgAns inside a rollout in the last 7 days: chat, a plan, a press kit, a pitch kit, a Spotify pitch, a status update or a task outcome reply tied to a release. Status updates and outcome replies charge no credits but each one is a real AI call we pay for, so they count. An outcome with no note makes no AI call and does not count. The seed-round target is half, every week."
           />
           <p className="mt-1 font-display text-4xl font-semibold tabular-nums text-content-primary">
             {share ? formatPercent(share.current.rate) : 'Not tracked'}

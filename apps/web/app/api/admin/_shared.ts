@@ -20,6 +20,21 @@ export const parseAdminEmails = (): string[] => {
     .filter(Boolean);
 };
 
+/**
+ * "Our team": ADMIN_EMAILS plus the optional METRICS_INTERNAL_EMAILS, lower
+ * case. /admin/metrics has left these people out of its numbers since
+ * 2026-10-07; since 2026-10-10 the founder cockpit and the Scoreboard leave
+ * the same people out (founder's answer, lib/admin-internal-accounts.ts). One
+ * list for every admin page, so the pages cannot disagree about who is us.
+ */
+export const internalAccountEmails = (): Set<string> => {
+  const extra = String(process.env.METRICS_INTERNAL_EMAILS ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  return new Set([...parseAdminEmails(), ...extra]);
+};
+
 // supabaseAdmin is annotated `SupabaseClient` rather than inferred via
 // ReturnType<typeof createClient>, matching createAdminClient in
 // app/api/_shared/auth.ts. The inferred form resolves to a client whose schema

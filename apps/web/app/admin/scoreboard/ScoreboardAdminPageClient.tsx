@@ -16,7 +16,7 @@ import type { ScoreboardSource } from '@/lib/scoreboard-server';
 // database each time it loads. Read-only. Follows the /admin/urgans gate:
 // authLoading -> no user -> /auth; the backing GET's 401/403 is the real gate.
 
-type Payload = { scoreboard: Scoreboard; sources: ScoreboardSource[] };
+type Payload = { scoreboard: Scoreboard; sources: ScoreboardSource[]; ourTeamsLeftOut?: number };
 
 export default function ScoreboardAdminPageClient() {
   const router = useRouter();
@@ -61,7 +61,7 @@ export default function ScoreboardAdminPageClient() {
           setChecked(true);
           return;
         }
-        setPayload({ scoreboard: body.scoreboard, sources: body.sources || [] });
+        setPayload({ scoreboard: body.scoreboard, sources: body.sources || [], ourTeamsLeftOut: body.ourTeamsLeftOut ?? 0 });
         setChecked(true);
       } catch {
         setError('Could not load the scoreboard.');
@@ -162,7 +162,7 @@ export default function ScoreboardAdminPageClient() {
         </p>
       ) : null}
 
-      {board ? <ScoreboardView board={board} sources={payload?.sources ?? []} /> : null}
+      {board ? <ScoreboardView board={board} sources={payload?.sources ?? []} ourTeamsLeftOut={payload?.ourTeamsLeftOut ?? 0} /> : null}
     </div>
   );
 }
