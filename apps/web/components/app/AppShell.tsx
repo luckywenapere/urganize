@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
+import { isFirstReleaseFocusEnabled } from '@/lib/first-release-focus';
 import { useShellStore } from '@/stores/useShellStore';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
@@ -58,6 +59,10 @@ import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 // next/dynamic moves each into its own async chunk that loads after hydration.
 // ssr:false is safe: all render nothing on the server today. (HelpMenu moved
 // into the top bar's right cluster 2026-07-23 and rides its bundle now.)
+const FirstReleaseFocus = dynamic(
+  () => import('@/components/releases/FirstReleaseFocus').then((m) => m.FirstReleaseFocus),
+  { ssr: false }
+);
 const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
   { ssr: false }
@@ -175,6 +180,7 @@ const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 // three platforms need three different mechanisms.
 const INSTALL_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_INSTALL_PROMPT === 'true';
 const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
+const FIRST_RELEASE_FOCUS_ENABLED = isFirstReleaseFocusEnabled();
 const SOCIAL_SHARE_ENABLED = isSocialShareEnabled();
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -189,6 +195,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // without navigating away.
   const isCreateReleaseOpen = useShellStore((state) => state.createOpen);
   const closeCreateRelease = useShellStore((state) => state.closeCreate);
+  const createPlan = useShellStore((state) => state.createPlan);
 
   const isAuthRoute =
     pathname?.startsWith('/auth') ||
@@ -569,6 +576,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <CreateReleaseModal
         open={isCreateReleaseOpen}
         onClose={closeCreateRelease}
+        initialPlan={createPlan}
         onCreated={(releaseId, _plan, result) => {
           // Stay on whatever page the user was on (no forced redirect); just
           // close and refresh the release store so the new release shows up.
@@ -658,6 +666,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           selector and no markup. */}
       {TOURS_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <TourOverlay />
+      ) : null}
+      {/* First-rollout focus: after the tour, with no rollout yet, locks the
+          other areas and asks how the first one should be planned. Same gate
+          as the tour (it explains app chrome); renders nothing with the flag
+          off or once a rollout exists. */}
+      {FIRST_RELEASE_FOCUS_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+        <FirstReleaseFocus />
       ) : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
       {/* FirstTimeOnboardingGate was mounted here until 2026-07-29 (URG-191).
