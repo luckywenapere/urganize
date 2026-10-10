@@ -10,7 +10,6 @@ import { isBodyScrollLocked, lockBodyScroll } from '@/lib/body-scroll-lock';
 import {
   FIRST_RELEASE_FOCUS_COPY as COPY,
   decideFirstReleaseFocus,
-  isFirstReleaseFocusEnabled,
   isLockedHref,
   planChoiceForMode,
   type FirstReleasePlanMode,
@@ -88,7 +87,6 @@ export function FirstReleaseFocus() {
   }, [userId, tourBlocking]);
 
   const active = decideFirstReleaseFocus({
-    flag: isFirstReleaseFocusEnabled(),
     firstReleaseRequired,
     isCurator,
     toursEnabled: TOURS_ENABLED,

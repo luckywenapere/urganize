@@ -10,7 +10,7 @@
  *  - only locks navigation INTO other areas (a click on an in-app link is
  *    caught and explained); Home, Settings, billing and sign-out always work;
  *  - only starts after the tour has been seen, so it never talks over it;
- *  - fails toward NOT locking on every uncertainty (flag off, unknown user,
+ *  - fails toward NOT locking on every uncertainty (unknown user,
  *    release store not loaded), the same direction as lib/first-release-required;
  *  - lifts the instant a rollout exists, from any path (UrgAns, MCP, another
  *    tab), because it is derived from the release count and stores nothing.
@@ -23,12 +23,6 @@
  *  field (app/api/releases/route.ts): 'template' is the UrgAns-planned rollout
  *  (with the planner on, the intake opens straight after creation) and 'blank'
  *  is an empty rollout the manager plans on their own, no AI involved. */
-/** NEXT_PUBLIC_FEATURE_FIRST_RELEASE_FOCUS, default off. A function rather than
- *  a module constant so a test can flip it. */
-export function isFirstReleaseFocusEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_FEATURE_FIRST_RELEASE_FOCUS === 'true';
-}
-
 export type FirstReleasePlanMode = 'urgans' | 'self';
 
 export function planChoiceForMode(mode: FirstReleasePlanMode): 'template' | 'blank' {
@@ -36,7 +30,6 @@ export function planChoiceForMode(mode: FirstReleasePlanMode): 'template' | 'bla
 }
 
 export function decideFirstReleaseFocus(input: {
-  flag: boolean;
   /** `isFirstReleaseRequired`: signed in, onboarded, loaded without error, and
    *  genuinely zero rollouts. Already fails open. */
   firstReleaseRequired: boolean;
@@ -47,7 +40,6 @@ export function decideFirstReleaseFocus(input: {
   /** A tour is running, or one has been asked for and not yet reached. */
   tourBlocking: boolean;
 }): boolean {
-  if (!input.flag) return false;
   if (input.isCurator) return false;
   if (!input.firstReleaseRequired) return false;
   if (input.tourBlocking) return false;

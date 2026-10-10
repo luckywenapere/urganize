@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
-import { isFirstReleaseFocusEnabled } from '@/lib/first-release-focus';
 import { useShellStore } from '@/stores/useShellStore';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
@@ -180,7 +179,6 @@ const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 // three platforms need three different mechanisms.
 const INSTALL_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_INSTALL_PROMPT === 'true';
 const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
-const FIRST_RELEASE_FOCUS_ENABLED = isFirstReleaseFocusEnabled();
 const SOCIAL_SHARE_ENABLED = isSocialShareEnabled();
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -669,9 +667,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       ) : null}
       {/* First-rollout focus: after the tour, with no rollout yet, locks the
           other areas and asks how the first one should be planned. Same gate
-          as the tour (it explains app chrome); renders nothing with the flag
-          off or once a rollout exists. */}
-      {FIRST_RELEASE_FOCUS_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
+          as the tour (it explains app chrome); renders nothing once a rollout
+          exists. */}
+      {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <FirstReleaseFocus />
       ) : null}
       {shouldLoadVercelAnalytics ? <Analytics /> : null}
