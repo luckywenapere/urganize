@@ -31,6 +31,8 @@ Open, in the order they will be taken:
 
 **Checked.** Read from the page source (it is static, so the source is the page): heading, body line, the form's `source="pricing"` and the card links. Not measured: how many visitors reach this block, because the site has no analytics report for it that this loop can read.
 
+**Merged.** #789, 2026-10-10 (squash).
+
 ## 2026-10-10 | The waitlist smoke test checked a page that no longer exists
 
 **What is wrong.** `apps/homepage/scripts/smoke-waitlist.mjs` (`npm run smoke:waitlist`) waits for the sentence "runs to plan." on the homepage and then clicks a button labelled "Not ready yet? Join the waitlist". The homepage has had neither for a while: the h1 is the founder's short line, and since 2026-10-07 the waitlist form is open on the page. The disclosure component that owned that button is not mounted anywhere on the site. So the script times out on its first wait and can only fail, whether or not the waitlist works. Separately, its default address, `127.0.0.1`, cannot work against `next dev`: Next 16's dev server blocks dev assets from another origin, so the page never hydrates and any check that needs the form's JavaScript times out.
@@ -43,6 +45,8 @@ Open, in the order they will be taken:
 
 **Not done, and why.** One run against the production build printed "browser runtime exceptions were observed" on `127.0.0.1`; four later runs with `WAITLIST_SMOKE_STRICT_CONSOLE=1` were clean, so it was not reproduced and its text was not captured. The script does not submit the form, so the sign-up request itself (the `/api/signup` call) is still unchecked by it. It is not wired into any CI job (there are no GitHub Actions in this repo; it is run by hand).
 
+**Merged.** #788, 2026-10-10 (squash).
+
 ## 2026-10-10 | The press kit shot still says "the operating system"
 
 **What is wrong.** The press kit picture in the homepage's feature grid (the phone-shaped card next to "Press kit", "Shows and DJ packs" and "Cover art and song files") ends with a footer line reading "MADE WITH URGANIZE, THE OPERATING SYSTEM". The app dropped that wording when the product was repositioned (the public kit and credits footers now say "Made with Urganize. Everything after the music."), and "operating system for music" is on the site's retired-phrases list. It is baked into a PNG, so no copy check sees it.
@@ -54,6 +58,8 @@ Open, in the order they will be taken:
 **Not done, and why.** The shot is still the retired release-scoped press kit, not the per-artist kit at `/k/[slug]` with a bio, photos and credits; its alt text describes what it shows accurately, and the existing comment already says so. Retaking it needs a published kit on a seeded team and a signed-in headed Chrome, so it stays in `notes/needs-lucky.md` (updated to say to drop the class).
 
 **Checked.** At 390px, 800px and 1440px: the frame is 260x513, the image 258x559 inside it, 47px of the bottom cut, the cut at 1546 source pixels; the footer line is gone and the card ends after the "Format / Single" row; no horizontal scroll. Homepage lint (0 errors, the 2 existing warnings), tsc, production build (all pages static) and the four `apps/web` guard test files (137 tests) pass. **Not seen:** a real phone.
+
+**Merged.** #790, 2026-10-10 (squash).
 
 ## 2026-10-10 | Product screenshots are unreadable on a phone
 
