@@ -1,6 +1,7 @@
 import { parseSearchTerms } from './task-search';
 import type { DirectoryRole } from './directory-roles';
 import type { PersonAvailability, ProfileRole } from '@/types/directory';
+import type { ProfileType } from './directory-profile-type';
 
 /**
  * The directory's filtering, and the counts its empty state needs.
@@ -43,6 +44,8 @@ export type DirectoryEntry = {
    *  says they design are both answers to "find me a designer", and the card
    *  shows which is which. */
   roles: ProfileRole[];
+  /** The effective type, derived or overridden. Absent on older callers. */
+  profileType?: ProfileType | null;
 };
 
 export type DirectoryFilters = {
@@ -50,6 +53,8 @@ export type DirectoryFilters = {
   role: DirectoryRole | null;
   city: string | null;
   availability: PersonAvailability | null;
+  /** Optional so callers that never set it keep compiling. */
+  profileType?: ProfileType | null;
 };
 
 const normalize = (value: string | null | undefined): string =>
@@ -101,7 +106,8 @@ export function applyDirectoryFilters<T extends DirectoryEntry>(
     (entry) =>
       (!filters.role || hasRole(entry, filters.role)) &&
       matchesCity(entry, filters.city) &&
-      matchesAvailability(entry, filters.availability)
+      matchesAvailability(entry, filters.availability) &&
+      (!filters.profileType || entry.profileType === filters.profileType)
   );
 
   const terms = parseSearchTerms(filters.query);

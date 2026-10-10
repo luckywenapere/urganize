@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.95.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Directory profiles now show what you are: Manager, Artist, Creative or Adjacent pro. The card leads with what matters most for that type.",
+      "Say what you are open to, like taking new artists or open to hire. The Message button only shows when it fits.",
+      "In the directory, filter by profile type and by what people are open to.",
+    ],
+  },
+  {
     version: "1.94.0",
     date: "October 10, 2026",
     highlights: [
