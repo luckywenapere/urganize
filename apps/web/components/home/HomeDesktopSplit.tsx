@@ -42,11 +42,11 @@ const switchButtonClass = (active: boolean) =>
  * its own and the message box stays at the bottom of the right side.
  *
  * - The Home chat is one permanent conversation (lib/chappi/home-chat.ts); the
- *   "Home" tab always returns to it. "+ New session" and the Sessions box make
+ *   "Chat" tab always returns to it. "+ New session" and the Sessions box make
  *   separate chats that collect under Sessions.
  * - "+ New session" sits right after the last stack (not pinned, founder call)
  *   and starts a fresh session with the cursor in the box.
- * - With session history on, a "Home | Sessions" switch at the top of the right
+ * - With session history on, a "Chat | Sessions" switch at the top of the right
  *   side swaps the conversation for the list of past sessions, the way the
  *   reference swaps to its projects. The conversation stays mounted, only
  *   hidden, while the list shows: its upload and recap cards, and any reply
@@ -162,7 +162,7 @@ export function HomeDesktopSplit({
                 className={switchButtonClass(onHome)}
               >
                 <MessageCircle className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                Home
+                Chat
               </button>
               <button
                 type="button"
