@@ -62,6 +62,7 @@ import {
   type ChatSyncResult,
   type StoredChatMessage,
 } from '@/lib/chappi/conversation-history';
+import { homeChatIdFor, isHomeChatId } from '@/lib/chappi/home-chat';
 import { clearChatCache, readChatCache, writeChatCache } from '@/lib/chappi/conversation-cache';
 
 const HISTORY_ENABLED = isChappiHistoryEnabled();
@@ -113,6 +114,8 @@ type ChappiHistoryState = {
   sync: Record<string, SyncEntry>;
   /** A 402/403 stopped saving for the rest of the session. */
   savingBlocked: boolean;
+  /** Home's permanent chat id (the user's id), or null before history starts. */
+  homeChatId: string | null;
   loadList: (options?: { force?: boolean }) => Promise<void>;
   loadMore: () => Promise<void>;
   /** Shows a saved chat. Resolves false if it could not be opened. */
@@ -681,6 +684,7 @@ export function startChappiHistory(userId: string): void {
   }
 
   sessionUserId = userId;
+  useChappiHistoryStore.setState({ homeChatId: homeChatIdFor(userId) });
   interacted = false;
   unsubscribe = useChappiStore.subscribe(onTranscriptChange);
 
@@ -759,6 +763,7 @@ export function stopChappiHistory(): void {
     openingId: null,
     sync: {},
     savingBlocked: false,
+    homeChatId: null,
   });
 }
 
@@ -828,6 +833,7 @@ export const useChappiHistoryStore = create<ChappiHistoryState>((set, get) => ({
   openingId: null,
   sync: {},
   savingBlocked: false,
+  homeChatId: null,
 
   loadList: async (options) => {
     if (!sessionUserId) return;
@@ -919,6 +925,9 @@ export const useChappiHistoryStore = create<ChappiHistoryState>((set, get) => ({
 
   remove: async (id) => {
     if (!sessionUserId) throw new Error('Sign in again to delete this session.');
+    if (isHomeChatId(id, homeChatIdFor(sessionUserId))) {
+      throw new Error("Home's chat stays. Start a session to chat about something else.");
+    }
     const owner = sessionUserId;
     // Tombstoned first, so no save can recreate the chat while the delete is out.
     tombstones.add(id);
@@ -973,6 +982,31 @@ export const useChappiHistoryStore = create<ChappiHistoryState>((set, get) => ({
     scheduleCacheWrite();
   },
 }));
+
+/**
+ * Puts Home's permanent chat on screen: opens it if it exists, otherwise a
+ * blank transcript whose first message will create it under the fixed id.
+ * Whatever was on screen is kept for the session by the usual leave-a-chat
+ * path, so a session (or a reply still on its way) is never lost.
+ */
+export async function showHomeChat(): Promise<void> {
+  if (!HISTORY_ENABLED || !sessionUserId) return;
+  const homeId = homeChatIdFor(sessionUserId);
+  if (!homeId) return;
+  const chappi = useChappiStore.getState();
+  if (chappi.conversationId === homeId) return;
+  if (chappi.conversationId === null && chappi.nextChatId === homeId) return;
+  interacted = true;
+  const opened = await openInternal(homeId, false);
+  if (opened || !sessionUserId) return;
+  // Nothing saved under the fixed id yet (or it could not be fetched): start
+  // it empty. A save that finds an existing row settles through the normal
+  // conflict rules.
+  const now = useChappiStore.getState();
+  if (now.conversationId === homeId) return;
+  now.reset();
+  useChappiStore.getState().setNextChatId(homeId);
+}
 
 /**
  * The one line the composer shows about saving for the chat on screen, or

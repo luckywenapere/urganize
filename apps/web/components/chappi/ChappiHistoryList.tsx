@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { displayChatTitle, type ChatSummary } from '@/lib/chappi/conversation-history';
+import { withoutHomeChat } from '@/lib/chappi/home-chat';
 import { useChappiHistoryStore } from '@/stores/useChappiHistoryStore';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { ChappiDeleteChatDialog } from './ChappiDeleteChatDialog';
@@ -34,7 +35,10 @@ type ChappiHistoryListProps = {
  * mounting this on every toggle free.
  */
 export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
-  const summaries = useChappiHistoryStore((state) => state.summaries);
+  const allSummaries = useChappiHistoryStore((state) => state.summaries);
+  const homeChatId = useChappiHistoryStore((state) => state.homeChatId);
+  // Home's own chat is not a session: it lives on Home and is never listed.
+  const summaries = withoutHomeChat(allSummaries, homeChatId);
   const listStatus = useChappiHistoryStore((state) => state.listStatus);
   const nextCursor = useChappiHistoryStore((state) => state.nextCursor);
   const isLoadingMore = useChappiHistoryStore((state) => state.isLoadingMore);
@@ -60,7 +64,7 @@ export function ChappiHistoryList({ variant, onDone }: ChappiHistoryListProps) {
   };
 
   const isMenu = variant === 'menu';
-  const showSkeleton = summaries.length === 0 && (listStatus === 'idle' || listStatus === 'loading');
+  const showSkeleton = allSummaries.length === 0 && (listStatus === 'idle' || listStatus === 'loading');
 
   return (
     <nav aria-label="Saved sessions" className="flex h-full min-h-0 flex-col">

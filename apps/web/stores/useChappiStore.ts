@@ -59,6 +59,11 @@ type ChappiStore = {
    * action — and "is a conversation in progress" readers count live turns
    * only (selectLiveTurnCount). Always 0 with history off. */
   restoredCount: number;
+  /** The id the NEXT first message should create its chat under, instead of a
+   * random one. Home's permanent chat uses it (lib/chappi/home-chat.ts). Cleared
+   * by anything that replaces the transcript. */
+  nextChatId: string | null;
+  setNextChatId: (id: string | null) => void;
   /** Release the conversation is pinned to via the scope picker under the
    * prompt box; null = all releases. Survives `reset` deliberately — picking
    * a release is a working-context choice, not part of one conversation. */
@@ -139,6 +144,8 @@ export const useChappiStore = create<ChappiStore>((set) => ({
   messages: [],
   conversationId: null,
   restoredCount: 0,
+  nextChatId: null,
+  setNextChatId: (id) => set({ nextChatId: id }),
   scopedReleaseId: null,
   railOpen: false,
   railWidth: DEFAULT_RAIL_WIDTH,
@@ -157,7 +164,8 @@ export const useChappiStore = create<ChappiStore>((set) => ({
       // The id is minted in the SAME update as the first message, so the
       // history store never sees a chat with messages and no id.
       conversationId:
-        current.conversationId ?? (HISTORY_ENABLED ? newChatId() : null),
+        current.conversationId ?? (HISTORY_ENABLED ? current.nextChatId ?? newChatId() : null),
+      nextChatId: null,
     })),
   truncateFromMessage: (messageId) =>
     set((current) => {
@@ -177,6 +185,7 @@ export const useChappiStore = create<ChappiStore>((set) => ({
       messages: chat.messages,
       conversationId: chat.id,
       restoredCount: chat.messages.length,
+      nextChatId: null,
       reply: null,
       pendingConfirmation: null,
       epoch: current.epoch + 1,
@@ -213,6 +222,7 @@ export const useChappiStore = create<ChappiStore>((set) => ({
       messages: [],
       conversationId: null,
       restoredCount: 0,
+      nextChatId: null,
       pendingConfirmation: null,
       epoch: current.epoch + 1,
     })),
@@ -223,6 +233,7 @@ export const useChappiStore = create<ChappiStore>((set) => ({
       messages: [],
       conversationId: null,
       restoredCount: 0,
+      nextChatId: null,
       pendingConfirmation: null,
       scopedReleaseId: null,
       epoch: current.epoch + 1,
