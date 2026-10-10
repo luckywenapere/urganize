@@ -143,8 +143,13 @@ export function WaitlistForm({ source }: { source: string }) {
         className="relative z-[60] mx-auto flex w-full max-w-[30rem] flex-col items-center gap-3"
       >
         <div className="flex w-full flex-col gap-3 sm:flex-row">
+          {/* name + autoComplete let a phone offer the saved address in one
+              tap. type="email" already picks the email keyboard, so no
+              inputMode is needed here or on the phone field. */}
           <input
             type="email"
+            name="email"
+            autoComplete="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -182,6 +187,8 @@ export function WaitlistForm({ source }: { source: string }) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <input
           type="text"
+          name="name"
+          autoComplete="name"
           required
           minLength={1}
           maxLength={160}
@@ -196,12 +203,18 @@ export function WaitlistForm({ source }: { source: string }) {
             class throw, and a throwing pattern is silently ignored (the old
             value logged "Invalid regular expression" and validated nothing).
             The API's Zod regex is a plain JS regex and is fine unescaped. */}
+        {/* title is what the browser shows beside its bare "Please match
+            the requested format." so the person is told what the format is.
+            It names the same characters the pattern and the API accept. */}
         <input
           type="tel"
+          name="phone"
+          autoComplete="tel"
           required
           minLength={7}
           maxLength={32}
           pattern="[+\d\s\(\)\.\-]+"
+          title="Use digits, spaces and + ( ) . - only, for example +234 801 234 5678."
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="Phone"
@@ -223,7 +236,14 @@ export function WaitlistForm({ source }: { source: string }) {
         </select>
       </div>
 
-      {error ? <p className="text-center text-sm text-red-600">{error}</p> : null}
+      {/* role="alert" so a screen reader announces a failed submit the
+          moment it appears; the line is only mounted on an error, which is
+          what makes the announcement fire. */}
+      {error ? (
+        <p role="alert" className="text-center text-sm text-red-600">
+          {error}
+        </p>
+      ) : null}
 
       <div className="flex flex-col items-center gap-3">
         <button type="submit" disabled={isSubmitting} className={buttonClassName}>
