@@ -41,6 +41,7 @@ import { isValidCuratorSlug } from '@/lib/curator-public';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { SentPitchRow } from '@/components/pitching/SentPitchRow';
 import { PitchPayments } from '@/components/pitching/PitchPayments';
+import { EditorialPitchSection } from '@/components/pitching/EditorialPitchSection';
 import { useToast } from '@/components/shared/ToastProvider';
 import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
 import { PAYMENT_FAILED } from '@/lib/pitch-payment-copy';
@@ -285,6 +286,8 @@ export default function PitchingPageClient() {
           </>
         )}
       </section>
+
+      <EditorialPitchSection />
 
       <section aria-label="Pitches sent" className="mt-10 space-y-4">
         <h2 className="text-sm font-semibold text-content-primary">Sent</h2>
