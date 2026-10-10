@@ -65,6 +65,7 @@ export const ADMIN_NAV_ITEMS: Array<{
   { key: 'issue-reports', label: 'Reports', icon: Bug, href: '/admin/issue-reports' },
   { key: 'urgans', label: 'UrgAns actions', icon: Sparkles, href: '/admin/urgans' },
   { key: 'directory', label: 'Directory', icon: UserPlus, href: '/admin/directory' },
+  { key: 'claims', label: 'Claims', icon: UserPlus, href: '/admin/claims' },
   { key: 'waitlist', label: 'Waitlist', icon: Users, href: '/admin/waitlist' },
   { key: 'growth', label: 'Growth', icon: TrendingUp, href: '/admin/growth' },
   { key: 'interviews', label: 'Interviews', icon: Mic, href: '/admin/interviews' },

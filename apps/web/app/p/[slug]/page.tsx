@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { loadPublicPerson } from '@/lib/person-public-server';
+import { loadUnclaimedPerson } from '@/lib/person-unclaimed-server';
+import { UnclaimedProfileView } from '@/components/people/UnclaimedProfileView';
 import { personSubtitle } from '@/lib/person-public';
 import { PERSON_AVAILABILITY_COPY } from '@/lib/person-profile';
 import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
@@ -47,7 +49,12 @@ type PageProps = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const person = await loadPublicPerson(slug);
-  if (!person) return { title: 'Not found', robots: { index: false, follow: false } };
+  if (!person) {
+    // Somebody a team credited who has not claimed their page. Name only.
+    const unclaimed = await loadUnclaimedPerson(slug);
+    if (unclaimed) return { title: unclaimed.displayName, robots: { index: false, follow: false } };
+    return { title: 'Not found', robots: { index: false, follow: false } };
+  }
 
   const delivered = person.roles.filter((entry) => entry.delivered > 0);
   const description = delivered.length
@@ -66,7 +73,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PersonPage({ params }: PageProps) {
   const { slug } = await params;
   const person = await loadPublicPerson(slug);
-  if (!person) notFound();
+  if (!person) {
+    const unclaimed = await loadUnclaimedPerson(slug);
+    if (unclaimed) return <UnclaimedProfileView person={unclaimed} />;
+    notFound();
+  }
 
   const { profile, roles } = person;
   const delivered = roles.filter((entry) => entry.delivered > 0);

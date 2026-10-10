@@ -47,6 +47,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.workRequestSubject(p.senderName, p.roleLabel),
     };
   },
+  claim_invite: async () => {
+    const m = await import('./ClaimInviteEmail');
+    return {
+      element: (p) => createElement(m.ClaimInviteEmail, p),
+      subject: (p) => m.claimInviteSubject(p.ownerName, p.releaseTitle),
+    };
+  },
   work_request_answer: async () => {
     const m = await import('./WorkRequestAnswerEmail');
     return {

@@ -1,4 +1,5 @@
 import { curatorPagePath, isValidCuratorSlug } from './curator-public';
+import { isValidClaimToken } from './claim-token-shape';
 
 /**
  * "This person came here to pitch a specific curator."
@@ -116,9 +117,13 @@ export function resolvePostSignupDestination(input: {
   cardTrialEnabled: boolean;
   cardTrialPath: string;
   pitchCuratorSlug: string | null;
+  /** A claim link they came from, so they land back on the page to claim
+   *  (2026-10-10). Optional so every existing caller is unchanged. */
+  claimToken?: string | null;
   homePath: string;
 }): string {
   if (input.cardTrialEnabled) return input.cardTrialPath;
+  if (input.claimToken && isValidClaimToken(input.claimToken)) return `/claim/${input.claimToken}`;
   const slug = String(input.pitchCuratorSlug || '').trim().toLowerCase();
   if (slug && isValidCuratorSlug(slug)) return scopedPitchingPath(slug);
   return input.homePath;

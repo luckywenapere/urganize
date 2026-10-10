@@ -73,6 +73,13 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description: 'Tells a directory member someone is asking them to work on a release.',
     placeholderCopy: false,
   },
+  claim_invite: {
+    id: 'claim_invite',
+    category: 'transactional',
+    name: 'Claim your page',
+    description: 'Sent when a rollout owner invites a credited collaborator to claim their unclaimed profile.',
+    placeholderCopy: false,
+  },
   work_request_answer: {
     id: 'work_request_answer',
     category: 'transactional',

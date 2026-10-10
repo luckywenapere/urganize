@@ -229,6 +229,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/k/') ||
     // A person's public record, opened by a manager deciding who to hire.
     pathname?.startsWith('/p/') ||
+    // A claim link, opened by a credited person who may have no account yet.
+    // The page runs its own sign-in and confirm steps.
+    pathname?.startsWith('/claim/') ||
     pathname?.startsWith('/capture/') ||
     // A curator's public page, opened by an artist who has no account yet and
     // is deciding whether to make one. Chrome here would be the product
