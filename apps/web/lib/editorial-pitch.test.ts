@@ -327,3 +327,24 @@ describe('validatePitchFieldsInput', () => {
     expect(validatePitchFieldsInput('x').ok).toBe(false);
   });
 });
+
+describe('editorial platforms', () => {
+  it('lists Spotify then Apple Music, each with its own link, label and steps', async () => {
+    const { EDITORIAL_PLATFORMS } = await import('./editorial-pitch');
+    expect(EDITORIAL_PLATFORMS.map((p) => p.id)).toEqual(['spotify', 'apple_music']);
+    expect(EDITORIAL_PLATFORMS[1].url).toBe('https://artists.apple.com');
+    for (const platform of EDITORIAL_PLATFORMS) {
+      expect(platform.url.startsWith('https://')).toBe(true);
+      expect(platform.linkLabel).toContain(platform.name);
+      expect(platform.steps.length).toBeGreaterThan(20);
+    }
+  });
+
+  it('never says release for the object and keeps every platform line under the house rules', async () => {
+    const { EDITORIAL_PLATFORMS } = await import('./editorial-pitch');
+    for (const platform of EDITORIAL_PLATFORMS) {
+      expect(platform.steps).not.toMatch(/\brelease\b/i);
+      expect(platform.steps).not.toMatch(/—|–/);
+    }
+  });
+});

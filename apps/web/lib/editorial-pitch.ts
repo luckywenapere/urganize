@@ -105,6 +105,43 @@ export const SPOTIFY_FOR_ARTISTS_LABEL = 'Open Spotify for Artists';
 export const SPOTIFY_PITCH_STEPS =
   'In Spotify for Artists, open Music, then Upcoming. Pick the song from this rollout and choose Pitch a song. Paste each field from here.';
 
+export const APPLE_MUSIC_FOR_ARTISTS_URL = 'https://artists.apple.com';
+export const APPLE_MUSIC_FOR_ARTISTS_LABEL = 'Open Apple Music for Artists';
+export const APPLE_MUSIC_PITCH_STEPS =
+  "In Apple Music for Artists, find the song from this rollout under your upcoming music and choose to pitch it. Paste each field from here. Apple's own deadline can differ, so check it there.";
+
+export type EditorialPlatformId = 'spotify' | 'apple_music';
+
+export type EditorialPlatform = {
+  id: EditorialPlatformId;
+  name: string;
+  url: string;
+  linkLabel: string;
+  steps: string;
+};
+
+/**
+ * The platforms the same four pitch fields go to, in the order they are shown.
+ * Only these two have a pitch form an artist can fill in; Audiomack and
+ * Boomplay are handled through the distributor, so they are not listed here.
+ */
+export const EDITORIAL_PLATFORMS: readonly EditorialPlatform[] = [
+  {
+    id: 'spotify',
+    name: 'Spotify',
+    url: SPOTIFY_FOR_ARTISTS_URL,
+    linkLabel: SPOTIFY_FOR_ARTISTS_LABEL,
+    steps: SPOTIFY_PITCH_STEPS,
+  },
+  {
+    id: 'apple_music',
+    name: 'Apple Music',
+    url: APPLE_MUSIC_FOR_ARTISTS_URL,
+    linkLabel: APPLE_MUSIC_FOR_ARTISTS_LABEL,
+    steps: APPLE_MUSIC_PITCH_STEPS,
+  },
+];
+
 const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
 export function pitchCounterCopy(length: number): string {
