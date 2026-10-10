@@ -43,9 +43,49 @@ export async function countTeamSeats(
       console.error('[seats] could not count team seats:', error.message);
       return null;
     }
-    return count ?? 0;
+    const hires = await countHireMembers(client, workspaceId);
+    // A hire is not a seat (lib/work-request-start.ts says why). Never below
+    // zero, whatever the two reads disagree about.
+    return Math.max(0, (count ?? 0) - (hires ?? 0));
   } catch (error) {
     console.error('[seats] could not count team seats:', error);
+    return null;
+  }
+}
+
+/**
+ * How many of a team's non-removed members joined as a hire. They are listed
+ * with everybody else and simply do not occupy a seat.
+ *
+ * Three answers, and the third is the one that matters. A count; zero because
+ * the column does not exist yet (Postgres 42703, the migration that adds
+ * `is_hire` has not been applied, so nobody can be a hire and nothing is
+ * subtracted); and null for any other failure. A null makes the seat count
+ * return the TOTAL, which is the strict direction: a blip on this read can at
+ * worst refuse one invite that would have fit, and can never hand out a free seat.
+ */
+export async function countHireMembers(
+  client: SupabaseClient,
+  workspaceId: string,
+  options: { activeOnly?: boolean } = {}
+): Promise<number | null> {
+  if (!workspaceId) return 0;
+  try {
+    let query = client
+      .from(WORKSPACE_MEMBERS_TABLE)
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .eq('is_hire', true);
+    query = options.activeOnly ? query.eq('status', 'active') : query.neq('status', 'removed');
+    const { count, error } = await query;
+    if (error) {
+      if (String((error as { code?: string }).code || '') === '42703') return 0;
+      console.error('[seats] could not count hires:', error.message);
+      return null;
+    }
+    return count ?? 0;
+  } catch (error) {
+    console.error('[seats] could not count hires:', error);
     return null;
   }
 }

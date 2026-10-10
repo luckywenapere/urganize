@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
+import { FeaturedPicker } from '@/components/admin/FeaturedPicker';
 import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
 import type { DirectorySummary, WorkRequestSummary } from '@/lib/directory-admin-summary';
 
@@ -21,7 +22,16 @@ import type { DirectorySummary, WorkRequestSummary } from '@/lib/directory-admin
 type DirectoryPayload = DirectorySummary & { lookbackDays: number; requests: WorkRequestSummary };
 
 const EMPTY_REQUESTS: WorkRequestSummary = {
-  totals: { sent: 0, interested: 0, passed: 0, closed: 0, waiting: 0, replyRate: null },
+  totals: {
+    sent: 0,
+    interested: 0,
+    passed: 0,
+    closed: 0,
+    waiting: 0,
+    replyRate: null,
+    started: 0,
+    startedLive: null,
+  },
   weeks: [],
 };
 
@@ -178,6 +188,21 @@ export default function DirectoryAdminPageClient() {
             </p>
           </div>
         </div>
+        {/* Does a yes turn into work: the rollouts those requests started, and how
+            many of them have come out. */}
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Stat label="Rollouts started from a yes" value={requests.totals.started} />
+          <div className="rounded-xl border border-stroke-default px-4 py-3">
+            <p className="text-xs uppercase tracking-wide text-content-tertiary">
+              Of those, out now
+            </p>
+            <p className="mt-1 font-display text-xl text-content-primary">
+              {requests.totals.startedLive === null
+                ? 'Not tracked'
+                : numberFormat.format(requests.totals.startedLive)}
+            </p>
+          </div>
+        </div>
         {requests.weeks.length > 0 ? (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[480px] text-sm">
@@ -211,6 +236,8 @@ export default function DirectoryAdminPageClient() {
           <p className="mt-3 text-sm text-content-tertiary">Nobody has sent a request yet.</p>
         )}
       </section>
+
+      <FeaturedPicker />
 
       <section className="mt-8">
         <h2 className="text-base font-semibold text-content-primary">Every role</h2>

@@ -32,6 +32,9 @@ type SentRequest = {
   status: WorkRequestStatus;
   reply: string | null;
   release_id: string | null;
+  /** The rollout a yes started, only when this person can open it. */
+  shared_release_id?: string | null;
+  shared_release_title?: string;
   recipient_name: string;
   recipient_slug: string;
   contact_email: string;
@@ -131,6 +134,18 @@ export function SentRequestsList({
             {request.status === 'expired' ? (
               <p className="mt-2 text-sm text-content-tertiary">
                 No answer in 7 days, so this one closed. You can ask again.
+              </p>
+            ) : null}
+
+            {request.shared_release_id && request.shared_release_title ? (
+              <p className="mt-2 text-sm text-content-primary">
+                Started “{request.shared_release_title}”.{' '}
+                <Link
+                  href={`/dashboard?release=${request.shared_release_id}`}
+                  className="motion-focus font-semibold underline underline-offset-2"
+                >
+                  Open it
+                </Link>
               </p>
             ) : null}
 

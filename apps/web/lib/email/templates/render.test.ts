@@ -255,6 +255,57 @@ describe('WorkRequestEmail', () => {
     expect(html).toContain(base.settingsUrl);
     expectMailSafe(html);
   });
+
+  describe('the fuller request (directory spec, step 2)', () => {
+    it('shows what is coming next and the links the sender chose', async () => {
+      const { html, text } = await render(
+        WorkRequestEmail({
+          ...base,
+          nextRelease: 'Midnight EP, out in November',
+          links: ['https://example.com/demo', 'http://example.com/past'],
+        })
+      );
+      expect(text).toContain('Next up: Midnight EP, out in November');
+      expect(html).toContain('href="https://example.com/demo"');
+      expect(html).toContain('href="http://example.com/past"');
+      expectMailSafe(html);
+    });
+
+    it('draws no next-up line and no links when there are none', async () => {
+      const { html, text } = await render(WorkRequestEmail(base));
+      expect(text).not.toContain('Next up');
+      expect(html).not.toContain('href="http://');
+      // The layout has its own links (the answer link, the footer), so count what
+      // the two links add rather than counting every link in the message.
+      const withLinks = await render(
+        WorkRequestEmail({ ...base, links: ['https://one.example', 'https://two.example'] })
+      );
+      const count = (value: string) => value.match(/href="https?:\/\//g)?.length ?? 0;
+      expect(count(withLinks.html)).toBe(count(html) + 2);
+    });
+
+    it('never renders a link that is not http or https', async () => {
+      const { html, text } = await render(
+        WorkRequestEmail({
+          ...base,
+          links: ['javascript:alert(1)', 'data:text/html,hi', 'mailto:a@b.co', 'https://ok.example/x'],
+        })
+      );
+      expect(html).not.toContain('javascript:');
+      expect(html).not.toContain('data:text');
+      expect(text).not.toContain('javascript:');
+      expect(html).toContain('href="https://ok.example/x"');
+    });
+
+    it('escapes what the sender wrote, since it is somebody else’s text in an inbox', async () => {
+      const { html } = await render(
+        WorkRequestEmail({ ...base, nextRelease: '<script>alert(1)</script>', note: '<img src=x onerror=1>' })
+      );
+      expect(html).not.toContain('<script>');
+      expect(html).not.toContain('<img src=x');
+      expect(html).toContain('&lt;script&gt;');
+    });
+  });
 });
 
 describe('WorkRequestAnswerEmail', () => {
@@ -305,6 +356,31 @@ describe('WorkRequestAnswerEmail', () => {
     expect(withPage.html).toContain('/p/dami-cole');
     const withoutPage = await render(WorkRequestAnswerEmail({ ...answered, interested: true }));
     expect(withoutPage.html).not.toContain('/p/');
+  });
+
+  describe('what the yes started (directory spec, step 2)', () => {
+    const startNote = 'Dami Cole started “Midnight EP” and you are on it.';
+
+    it('says what started when they said yes', async () => {
+      const { text, html } = await render(
+        WorkRequestAnswerEmail({ ...answered, interested: true, startNote })
+      );
+      expect(text).toContain(startNote);
+      expect(html).toContain('Midnight EP');
+    });
+
+    it('says nothing about starting on a pass, even if a caller hands it one', async () => {
+      const { text, html } = await render(
+        WorkRequestAnswerEmail({ ...answered, interested: false, startNote })
+      );
+      expect(text).not.toContain('Midnight EP');
+      expect(html).not.toContain('Midnight EP');
+    });
+
+    it('draws no line when nothing started', async () => {
+      const { text } = await render(WorkRequestAnswerEmail({ ...answered, interested: true }));
+      expect(text).not.toMatch(/started/i);
+    });
   });
 });
 

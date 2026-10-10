@@ -5,8 +5,15 @@ import { createPortal } from 'react-dom';
 import { Loader2, X } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
-import { WORK_REQUEST_NOTE_MAX_CHARS } from '@/lib/work-requests';
+import {
+  WORK_REQUEST_LINKS_MAX,
+  WORK_REQUEST_LINK_MAX_CHARS,
+  WORK_REQUEST_NEXT_RELEASE_MAX_CHARS,
+  WORK_REQUEST_NOTE_MAX_CHARS,
+  requiresNextRelease,
+} from '@/lib/work-requests';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
+import { InfoTip } from '@/components/shared/HelpTip';
 
 /**
  * Asking somebody to work on a release.
@@ -24,18 +31,25 @@ export function WorkRequestSheet({
   person,
   defaultRole,
   releaseId,
+  taskId = null,
   onClose,
   onSent,
 }: {
   person: { userId: string; displayName: string };
   defaultRole: DirectoryRole | null;
   releaseId: string | null;
+  /** The activity this is for, when the manager came from one. Lets a yes put
+   *  the person on that activity. */
+  taskId?: string | null;
   onClose: () => void;
   onSent: (message: string) => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [role, setRole] = useState<DirectoryRole>(defaultRole ?? 'graphic_designer');
   const [note, setNote] = useState('');
+  const [nextRelease, setNextRelease] = useState('');
+  const [links, setLinks] = useState<string[]>(['']);
+  const needsNext = requiresNextRelease(role);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -68,7 +82,15 @@ export function WorkRequestSheet({
       const response = await fetch('/api/directory/requests', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipientUserId: person.userId, role, note, releaseId }),
+        body: JSON.stringify({
+          recipientUserId: person.userId,
+          role,
+          note,
+          releaseId,
+          taskId,
+          nextRelease,
+          links: links.map((link) => link.trim()).filter(Boolean),
+        }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -100,16 +122,17 @@ export function WorkRequestSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative w-full max-w-md rounded-t-2xl border border-stroke-default bg-bg-surface p-5 focus:outline-none sm:rounded-2xl"
+        className="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-stroke-default bg-bg-surface p-5 focus:outline-none sm:rounded-2xl"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 id={titleId} className="text-base font-semibold text-content-primary">
+            <h2 id={titleId} className="flex items-center gap-1.5 text-base font-semibold text-content-primary">
               Ask {person.displayName}
+              <InfoTip
+                label="What they see"
+                text="They see your name, the job, your note, what you are putting out next and your links. Nothing else about the rollout."
+              />
             </h2>
-            <p className="mt-1 text-sm text-content-secondary">
-              They see your name, the job and your note. Nothing about the rollout.
-            </p>
           </div>
           <button
             type="button"
@@ -149,6 +172,55 @@ export function WorkRequestSheet({
           />
         </label>
 
+        <label className="mt-3 block">
+          <span className="mb-1 block text-xs text-content-tertiary">
+            What you are putting out next{needsNext ? '' : ' (optional)'}
+          </span>
+          <input
+            value={nextRelease}
+            onChange={(event) =>
+              setNextRelease(event.target.value.slice(0, WORK_REQUEST_NEXT_RELEASE_MAX_CHARS))
+            }
+            required={needsNext}
+            aria-required={needsNext}
+            placeholder="A title, or a line about it"
+            className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
+          />
+        </label>
+
+        <div className="mt-3">
+          <span className="mb-1 block text-xs text-content-tertiary">Links (optional)</span>
+          <div className="space-y-2">
+            {links.map((link, index) => (
+              <input
+                key={index}
+                value={link}
+                inputMode="url"
+                type="url"
+                aria-label={`Link ${index + 1}`}
+                onChange={(event) =>
+                  setLinks((current) =>
+                    current.map((entry, at) =>
+                      at === index ? event.target.value.slice(0, WORK_REQUEST_LINK_MAX_CHARS) : entry
+                    )
+                  )
+                }
+                placeholder="https://"
+                className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
+              />
+            ))}
+          </div>
+          {links.length < WORK_REQUEST_LINKS_MAX && links[links.length - 1].trim() ? (
+            <button
+              type="button"
+              onClick={() => setLinks((current) => [...current, ''])}
+              className="motion-focus mt-2 min-h-11 rounded-lg px-1 text-sm text-content-secondary underline underline-offset-2 hover:text-content-primary"
+            >
+              Add another link
+            </button>
+          ) : null}
+        </div>
+
         {error ? (
           <p role="alert" className="mt-3 text-sm text-status-error">
             {error}
@@ -165,7 +237,7 @@ export function WorkRequestSheet({
           </button>
           <button
             type="button"
-            disabled={busy || !note.trim()}
+            disabled={busy || !note.trim() || (needsNext && !nextRelease.trim())}
             onClick={() => void send()}
             className="motion-focus inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-brand text-sm font-semibold text-content-inverse disabled:opacity-60"
           >

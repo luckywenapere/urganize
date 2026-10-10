@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
-import { basename, join } from 'path';
+import { basename, join, relative } from 'path';
 import { describe, expect, it } from 'vitest';
 import { readableCopy } from './copy-scan';
 import { BANNED_COPY_CHARS, BANNED_COPY_WORDS, bannedCopyInstruction } from './press-kits';
@@ -33,7 +33,21 @@ const FILES = [
   // The directory joined this guard rather than growing a second one: same
   // house rules, same brief, and two guards would drift the moment one of them
   // gained a rule.
-  ...walk(join(WEB, 'lib')).filter((path) => /press-kit|press-photo|directory-|delivery-records|role-gaps|release-epk|activation|distribution|release-spend/.test(path)),
+  // Matched against the path RELATIVE to apps/web. The whole absolute path used
+  // to be tested, so a checkout living in a folder with one of these words in its
+  // name (a worktree called "directory-...") pulled every file under lib/ into
+  // this guard and failed it on code it was never meant to read.
+  ...walk(join(WEB, 'lib')).filter((path) =>
+    /press-kit|press-photo|directory-|delivery-records|role-gaps|release-epk|activation|distribution|release-spend/.test(
+      relative(WEB, path)
+    )
+  ),
+  // Directory step 2 (2026-10-10): a manager's record line and the sentences a
+  // yes writes, read by the person who just said it and by the person who asked.
+  join(WEB, 'lib', 'manager-record.ts'),
+  join(WEB, 'lib', 'work-request-start.ts'),
+  join(WEB, 'components', 'admin', 'FeaturedPicker.tsx'),
+  join(WEB, 'components', 'settings', 'WorkRequestsInbox.tsx'),
   ...walk(join(WEB, 'components', 'press-kits')),
   // The Distribute step (2026-10-03): a new surface born under the house rules.
   join(WEB, 'components', 'releases', 'DistributionSection.tsx'),

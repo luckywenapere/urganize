@@ -1,7 +1,6 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { Loader2 } from '@/components/icons';
@@ -10,7 +9,6 @@ import {
   applyDirectoryFilters,
   availableCities,
   fallbackCounts,
-  type DirectoryEntry,
   type DirectoryFilters,
 } from '@/lib/directory-search';
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
@@ -21,8 +19,11 @@ import {
 } from '@/lib/person-profile';
 import type { PersonAvailability } from '@/types/directory';
 import { DirectoryEmptyState } from '@/components/directory/DirectoryEmptyState';
+import { DirectoryShelves } from '@/components/directory/DirectoryShelves';
+import { PersonCard, type DirectoryPerson } from '@/components/directory/PersonCard';
 import { WorkRequestSheet } from '@/components/directory/WorkRequestSheet';
 import { canReceiveRequests } from '@/lib/work-requests';
+import type { Shelf } from '@/lib/directory-featuring';
 
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { bucketResultCount, type DirectoryDemandSource } from '@/lib/directory-demand';
@@ -44,7 +45,7 @@ const REQUESTS_ENABLED =
  * would hand a manager a 404.
  */
 
-type Person = DirectoryEntry & { slug: string | null; isPublic: boolean };
+type Person = DirectoryPerson;
 
 const NO_FILTERS: DirectoryFilters = { query: '', role: null, city: null, availability: null };
 
@@ -109,6 +110,9 @@ function DirectoryBody() {
   const [truncated, setTruncated] = useState(false);
   const [asking, setAsking] = useState<Person | null>(null);
   const [sent, setSent] = useState('');
+  // Featured and On the rise. An extra at the top, never a reason the page
+  // fails: it loads on its own and a failure just leaves it out.
+  const [shelves, setShelves] = useState<Shelf[]>([]);
 
   useEffect(() => {
     if (!DIRECTORY_ENABLED) {
@@ -122,6 +126,15 @@ function DirectoryBody() {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) return;
+
+      // Asked for in parallel and awaited separately, so the list never waits
+      // on the shelves.
+      const shelvesRequest = fetch('/api/directory/shelves', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .catch(() => null);
 
       try {
         const response = await fetch('/api/directory', {
@@ -143,6 +156,11 @@ function DirectoryBody() {
         if (!cancelled) setError('Could not open the directory. Check your connection.');
       } finally {
         if (!cancelled) setLoaded(true);
+      }
+
+      const shelfBody = await shelvesRequest;
+      if (!cancelled && shelfBody && Array.isArray(shelfBody.shelves)) {
+        setShelves(shelfBody.shelves as Shelf[]);
       }
     };
 
@@ -198,6 +216,20 @@ function DirectoryBody() {
 
   if (!DIRECTORY_ENABLED) return null;
 
+  // The shelves are for browsing. The moment somebody searches or filters they
+  // know what they want, and shelves above the results would just push it down.
+  const isFiltering =
+    filters.query.trim().length > 0 ||
+    filters.role !== null ||
+    filters.city !== null ||
+    filters.availability !== null;
+
+  const askFor = (person: Person) =>
+    // Somebody who is "Not taking work" is listed and findable but cannot be
+    // asked, and the server refuses it too. The button is the courtesy; the
+    // route is the rule.
+    REQUESTS_ENABLED && canReceiveRequests(person.availability) ? () => setAsking(person) : null;
+
   return (
     <div className="mx-auto w-full max-w-3xl">
       <header className="mb-6">
@@ -216,6 +248,8 @@ function DirectoryBody() {
         <p role="alert" className="text-sm text-status-error">{error}</p>
       ) : (
         <>
+          {isFiltering ? null : <DirectoryShelves shelves={shelves} onAsk={askFor} />}
+
           <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <input
               value={filters.query}
@@ -286,17 +320,7 @@ function DirectoryBody() {
             <ul className="space-y-3">
               {results.map((person) => (
                 <li key={person.userId}>
-                  <PersonCard
-                    person={person}
-                    // Somebody who is "Not taking work" is listed and findable
-                    // but cannot be asked, and the server refuses it too. The
-                    // button is the courtesy; the route is the rule.
-                    onAsk={
-                      REQUESTS_ENABLED && canReceiveRequests(person.availability)
-                        ? () => setAsking(person)
-                        : null
-                    }
-                  />
+                  <PersonCard person={person} onAsk={askFor(person)} />
                 </li>
               ))}
             </ul>
@@ -323,6 +347,9 @@ function DirectoryBody() {
           // is the whole point of that link: the plan already knows the job.
           defaultRole={filters.role}
           releaseId={arrivedFromRoleGaps ? searchParams.get('release') : null}
+          // The activity the manager came from ("Find someone" on a job), so a
+          // yes puts the person on that activity and not just on the rollout.
+          taskId={arrivedFromRoleGaps ? searchParams.get('task') : null}
           onClose={() => setAsking(null)}
           onSent={setSent}
         />
@@ -352,78 +379,4 @@ async function reportRoleDemand(demand: {
   } catch {
     // Nothing to do and nobody to tell.
   }
-}
-
-function PersonCard({ person, onAsk }: { person: Person; onAsk: (() => void) | null }) {
-  const delivered = person.roles.filter((entry) => entry.delivered > 0);
-  const claimed = person.roles.filter((entry) => entry.delivered === 0);
-
-  const body = (
-    <div className="rounded-xl border border-stroke-default p-4 transition-colors hover:border-brand">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-base font-semibold text-content-primary">{person.displayName}</span>
-        <span className="text-xs text-content-tertiary">
-          {PERSON_AVAILABILITY_COPY[person.availability].label}
-          {person.city ? ` · ${person.city}` : ''}
-        </span>
-      </div>
-
-      {/* Delivered and claimed are kept apart here exactly as they are on the
-          profile and in Settings. A count is something the product vouches for;
-          a bare role is the person's own word. */}
-      {delivered.length > 0 ? (
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {delivered.map((entry) => (
-            <li
-              key={entry.role}
-              className="rounded-full border border-stroke-default px-3 py-1 text-sm text-content-primary"
-            >
-              {DIRECTORY_ROLE_LABELS[entry.role]}
-              <span className="ml-1.5 text-brand">{entry.delivered} delivered</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {claimed.length > 0 ? (
-        <p className="mt-2 text-xs text-content-tertiary">
-          Also works as {claimed.map((entry) => DIRECTORY_ROLE_LABELS[entry.role]).join(', ')}
-        </p>
-      ) : null}
-    </div>
-  );
-
-  // The Ask button is a SIBLING of the card, never inside it. The card body is
-  // wrapped in a Link for a public profile, and a button inside an anchor is
-  // invalid markup whose click would navigate instead of opening the sheet.
-  return (
-    <div>
-      {person.isPublic && person.slug ? (
-        <Link
-          href={`/p/${person.slug}`}
-          className="motion-focus block"
-          onClick={() =>
-            captureAnalyticsEvent({
-              name: 'directory_profile_opened',
-              properties: { role: delivered[0]?.role ?? claimed[0]?.role ?? null },
-            })
-          }
-        >
-          {body}
-        </Link>
-      ) : (
-        body
-      )}
-
-      {onAsk ? (
-        <button
-          type="button"
-          onClick={onAsk}
-          className="motion-focus mt-2 h-10 w-full rounded-lg border border-stroke-default text-sm font-medium text-content-primary hover:border-brand"
-        >
-          Ask {person.displayName.split(' ')[0] || 'them'} about work
-        </button>
-      ) : null}
-    </div>
-  );
 }

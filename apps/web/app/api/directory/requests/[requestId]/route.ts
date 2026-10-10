@@ -7,6 +7,8 @@ import {
   type WorkRequestStatus,
 } from '@/lib/work-requests';
 import { notifyWorkRequestAnswer } from '@/lib/work-requests-server';
+import { startWorkFromRequest, type StartRequestRow } from '@/lib/work-request-start-server';
+import { describeStartResult, type StartResult } from '@/lib/work-request-start';
 import {
   WORK_REQUESTS_TABLE,
   asRow,
@@ -50,11 +52,25 @@ export async function PATCH(
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const { data: existing } = await adminClient
+  // Everything the start needs is read here, server side, and none of it is
+  // sent back: the release and the activity stay hidden from the recipient. The
+  // spec's new columns may not exist yet, so a read that fails on one retries
+  // with the columns that always did and the request simply cannot start.
+  const START_COLUMNS = 'workspace_id, release_id, task_id, next_release, sender_team';
+  const BASE_COLUMNS = 'id, recipient_user_id, sender_user_id, status, role, sender_name, created_at';
+  const withStart = await adminClient
     .from(WORK_REQUESTS_TABLE)
-    .select('id, recipient_user_id, sender_user_id, status, role, sender_name, created_at')
+    .select(`${BASE_COLUMNS}, ${START_COLUMNS}`)
     .eq('id', requestId)
     .maybeSingle();
+  let existing = withStart.data;
+  if (withStart.error && String(withStart.error.code || '') === '42703') {
+    ({ data: existing } = await adminClient
+      .from(WORK_REQUESTS_TABLE)
+      .select(BASE_COLUMNS)
+      .eq('id', requestId)
+      .maybeSingle());
+  }
 
   if (!existing) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
 
@@ -109,13 +125,55 @@ export async function PATCH(
     return NextResponse.json({ error: 'You already answered this one.' }, { status: 409 });
   }
 
+  // "Accept and start" is asked for outright (parseWorkRequestAnswer only lets a
+  // yes carry it) and runs AFTER the answer is saved, so a failure can never
+  // lose the yes. startWorkFromRequest answers null when there is nothing to
+  // start, which is most requests and is not a problem.
+  let start: StartResult | null = null;
+  if (answer.start) {
+    start = await startWorkFromRequest(
+      adminClient,
+      {
+        id: requestId,
+        sender_user_id: String(row.sender_user_id || ''),
+        recipient_user_id: auth.user.id,
+        workspace_id: typeof row.workspace_id === 'string' ? row.workspace_id : null,
+        role: String(row.role || ''),
+        release_id: typeof row.release_id === 'string' ? row.release_id : null,
+        task_id: typeof row.task_id === 'string' ? row.task_id : null,
+        next_release: typeof row.next_release === 'string' ? row.next_release : null,
+        // For a manager ask the artist is the sender, so this is the artist's name.
+        sender_name: String(row.sender_name || ''),
+      } satisfies StartRequestRow,
+      auth.user
+    );
+  }
+
+  // Who "they" are in the sentence the answerer reads: the team that asked them
+  // to do a job, or the artist who asked them to manage.
+  const otherName =
+    start?.kind === 'hire_join'
+      ? String(row.sender_team || row.sender_name || '')
+      : String(row.sender_name || '');
+
   await notifyWorkRequestAnswer(adminClient, {
     senderUserId: String(row.sender_user_id || ''),
     recipientUserId: auth.user.id,
     role: String(row.role || ''),
     status: answer.status,
     reply: answer.reply,
+    start,
   });
 
-  return NextResponse.json({ request: asRow(data) });
+  return NextResponse.json({
+    request: asRow(data),
+    start: start
+      ? {
+          status: start.status,
+          kind: start.kind,
+          releaseId: start.status === 'started' ? start.releaseId : null,
+          message: describeStartResult(start, { otherName }),
+        }
+      : null,
+  });
 }

@@ -36,6 +36,28 @@ export const WORK_REQUEST_NOTE_MAX_CHARS = 300;
 export const WORK_REQUEST_REPLY_MAX_CHARS = 300;
 
 /**
+ * THE TWO FIELDS THE SPEC ADDS TO A REQUEST (directory spec, "From profile to
+ * working together": "next release, links, what they need"). The note stays
+ * "what they need". These are the other two, and both are short on purpose, for
+ * the reason the note is: a request is an approach, not a brief.
+ *
+ * The next release is a line of TEXT the sender typed for this one purpose,
+ * never a release id. That is what lets the recipient see it without breaking
+ * the rule the table is shaped around (the recipient never sees `release_id`):
+ * the sender chose to say it, the same way they chose the words of the note.
+ */
+export const WORK_REQUEST_NEXT_RELEASE_MAX_CHARS = 120;
+export const WORK_REQUEST_LINKS_MAX = 3;
+export const WORK_REQUEST_LINK_MAX_CHARS = 300;
+
+/**
+ * How many people one team may have on a rollout as a hire. A hire does not take
+ * a seat (see lib/work-request-start.ts), so this is the ceiling that stops
+ * "hire" from becoming a way to run a ten-person team on a one-seat plan.
+ */
+export const MAX_HIRES_PER_TEAM = 10;
+
+/**
  * Open requests one team may have out at once.
  *
  * This is a cold-start marketplace and the failure mode is one manager
@@ -60,6 +82,10 @@ export const RECIPIENT_REQUEST_FIELDS = [
   'id',
   'role',
   'note',
+  // What the sender chose to tell them about the next release, as text. It is
+  // not the release: see WORK_REQUEST_NEXT_RELEASE_MAX_CHARS.
+  'next_release',
+  'links',
   'status',
   'reply',
   'sender_name',
@@ -84,10 +110,17 @@ export const SENDER_REQUEST_FIELDS = [
   'id',
   'role',
   'note',
+  'next_release',
+  'links',
   'status',
   'reply',
   'recipient_user_id',
   'release_id',
+  'task_id',
+  // Set once an accepted request has started real work: the rollout the two
+  // people are now on together. `started_at` is when.
+  'shared_release_id',
+  'started_at',
   'created_at',
   'answered_at',
 ] as const;
@@ -109,15 +142,63 @@ export function revealsContact(status: WorkRequestStatus): boolean {
   return status === 'interested';
 }
 
+/**
+ * The columns that existed before the spec's extra fields, kept so a read can
+ * fall back to them (on Postgres 42703, undefined column) when the migration
+ * that adds the new ones has not been applied yet. The inbox must keep working
+ * between a deploy and a hand-applied migration, so this is a retry with fewer
+ * columns, never a reason to show an error. Both lists are subsets of the
+ * current ones, and a test holds that.
+ */
+export const LEGACY_RECIPIENT_REQUEST_FIELDS = RECIPIENT_REQUEST_FIELDS.filter(
+  (field) => field !== 'next_release' && field !== 'links'
+);
+export const LEGACY_SENDER_REQUEST_FIELDS = SENDER_REQUEST_FIELDS.filter(
+  (field) =>
+    field !== 'next_release' &&
+    field !== 'links' &&
+    field !== 'task_id' &&
+    field !== 'shared_release_id' &&
+    field !== 'started_at'
+);
+
 export type WorkRequestInput = {
   recipientUserId: string;
   role: DirectoryRole;
   note: string;
   releaseId: string | null;
+  /** A line about what the sender is putting out next. Text, never an id. */
+  nextRelease: string | null;
+  /** Up to three https links (a demo, a past release, a page). */
+  links: string[];
+  /** The activity the sender is hiring for, when they came from one. */
+  taskId: string | null;
 };
 
 const isRole = (value: unknown): value is DirectoryRole =>
   typeof value === 'string' && (DIRECTORY_ROLES as readonly string[]).includes(value);
+
+/** A link somebody else's browser will follow: http and https only. A
+ *  `javascript:` or `data:` link is the one field here that could hurt a reader
+ *  rather than merely look wrong, the same rule a profile link follows. */
+function isSafeLink(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether asking this role needs a line about the next release. An artist
+ * asking a MANAGER is the case the spec leads with, and a manager cannot judge
+ * a request that does not say what is being released, so it is required there
+ * and optional for every other job (a designer's brief is the note itself).
+ */
+export function requiresNextRelease(role: DirectoryRole): boolean {
+  return role === 'manager';
+}
 
 export function parseWorkRequestInput(
   body: unknown
@@ -143,10 +224,85 @@ export function parseWorkRequestInput(
     ? payload.releaseId.trim()
     : null;
 
-  return { input: { recipientUserId, role: payload.role, note, releaseId } };
+  const nextRaw = typeof payload.nextRelease === 'string' ? payload.nextRelease.trim() : '';
+  if (nextRaw.length > WORK_REQUEST_NEXT_RELEASE_MAX_CHARS) {
+    return {
+      error: `Keep the next release to ${WORK_REQUEST_NEXT_RELEASE_MAX_CHARS} characters or fewer.`,
+    };
+  }
+  if (requiresNextRelease(payload.role) && !nextRaw) {
+    return { error: 'Say what you are releasing next.' };
+  }
+
+  const rawLinks = Array.isArray(payload.links)
+    ? payload.links
+    : typeof payload.links === 'string' && payload.links.trim()
+      ? [payload.links]
+      : [];
+  const links: string[] = [];
+  for (const entry of rawLinks) {
+    if (typeof entry !== 'string') return { error: 'A link has to be text.' };
+    const link = entry.trim();
+    // A blank line in the box is not a link, and not an error either.
+    if (!link) continue;
+    if (link.length > WORK_REQUEST_LINK_MAX_CHARS) return { error: 'One of those links is too long.' };
+    if (!isSafeLink(link)) return { error: 'A link has to start with http or https.' };
+    if (!links.includes(link)) links.push(link);
+  }
+  if (links.length > WORK_REQUEST_LINKS_MAX) {
+    return { error: `Add up to ${WORK_REQUEST_LINKS_MAX} links.` };
+  }
+
+  const taskId = typeof payload.taskId === 'string' && payload.taskId.trim()
+    ? payload.taskId.trim()
+    : null;
+
+  return {
+    input: {
+      recipientUserId,
+      role: payload.role,
+      note,
+      releaseId,
+      nextRelease: nextRaw || null,
+      links,
+      // A task only means something on a release; carrying one without the
+      // other would let a request point at work it cannot name.
+      taskId: releaseId ? taskId : null,
+    },
+  };
 }
 
-export type WorkRequestAnswer = { status: 'interested' | 'passed'; reply: string | null };
+/**
+ * WHAT SAYING YES CAN START. The directory ends where a shared rollout begins
+ * (spec, "From profile to working together"), and there are two ways in:
+ *
+ *   `manager_rollout`  an artist asked a MANAGER. The manager runs the rollout,
+ *                      so it is made in the manager's team and the artist is
+ *                      added to it.
+ *   `hire_join`        a manager asked a creative for a job on a rollout they
+ *                      already have. The person joins that rollout's team as a
+ *                      hire, on the one activity if one was named.
+ *
+ * Anything else (a request with no rollout behind it) has nothing to start, and
+ * saying yes is still just "I am interested", as before.
+ */
+export type WorkRequestStartKind = 'manager_rollout' | 'hire_join';
+
+export function startKindFor(request: {
+  role: DirectoryRole | string;
+  releaseId: string | null;
+}): WorkRequestStartKind | null {
+  if (request.role === 'manager') return 'manager_rollout';
+  return request.releaseId ? 'hire_join' : null;
+}
+
+export type WorkRequestAnswer = {
+  status: 'interested' | 'passed';
+  reply: string | null;
+  /** The recipient chose "accept and start". Only meaningful with a yes, and
+   *  only honoured when startKindFor says there is something to start. */
+  start: boolean;
+};
 
 export function parseWorkRequestAnswer(
   body: unknown
@@ -164,7 +320,11 @@ export function parseWorkRequestAnswer(
     return { error: `Keep your reply to ${WORK_REQUEST_REPLY_MAX_CHARS} characters or fewer.` };
   }
 
-  return { answer: { status: payload.status, reply: raw || null } };
+  // Starting work is a bigger yes than "interested": it puts somebody on a
+  // team. So it has to be asked for outright, and a pass can never carry it.
+  const start = payload.status === 'interested' && payload.start === true;
+
+  return { answer: { status: payload.status, reply: raw || null, start } };
 }
 
 /**

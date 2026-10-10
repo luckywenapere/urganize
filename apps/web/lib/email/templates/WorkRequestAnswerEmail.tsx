@@ -15,6 +15,10 @@ export type WorkRequestAnswerEmailProps = {
   contactEmail?: string;
   /** Their public profile, when they have one (only `public` records do). */
   profileUrl?: string;
+  /** One sentence about the rollout the yes just started, from
+   *  describeStartForSender. Absent when nothing was started. Only used with an
+   *  interested answer. */
+  startNote?: string;
 };
 
 // The answer coming back to whoever asked. THIS IS WHERE THE INTRODUCTION
@@ -32,6 +36,7 @@ export function WorkRequestAnswerEmail({
   reply,
   contactEmail,
   profileUrl,
+  startNote,
 }: WorkRequestAnswerEmailProps) {
   const answerer = answererName.trim() || 'They';
   const role = roleLabel.trim().toLowerCase() || 'the work';
@@ -45,6 +50,7 @@ export function WorkRequestAnswerEmail({
 
   const contact = interested ? (contactEmail || '').trim() : '';
   const profile = interested ? (profileUrl || '').trim() : '';
+  const started = interested ? (startNote || '').trim() : '';
 
   return (
     <EmailLayout preview={lead}>
@@ -57,6 +63,7 @@ export function WorkRequestAnswerEmail({
           </Text>
         </NoteCard>
       ) : null}
+      {started ? <Paragraph>{started}</Paragraph> : null}
       {contact ? (
         <Paragraph>
           Reply to this email to reach them, or write to{' '}

@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Loader2 } from '@/components/icons';
+import { InfoTip } from '@/components/shared/HelpTip';
 import { supabase } from '@/lib/supabase/client';
 import { DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
 import {
@@ -29,6 +31,12 @@ type IncomingRequest = {
   id: string;
   role: DirectoryRole;
   note: string;
+  /** What the sender said they are putting out next. Text they typed. */
+  next_release?: string | null;
+  links?: string[] | null;
+  /** What saying yes can start for this request, if anything. A word for the
+   *  button: the rollout behind it is never sent here. */
+  start_kind?: 'manager_rollout' | 'hire_join' | null;
   status: WorkRequestStatus;
   reply: string | null;
   sender_name: string;
@@ -36,11 +44,25 @@ type IncomingRequest = {
   created_at: string;
 };
 
+const START_COPY = {
+  manager_rollout: {
+    button: 'Accept and start a rollout',
+    tip: 'Starts a rollout for them in your team and adds them to it. They take a seat on your plan.',
+  },
+  hire_join: {
+    button: 'Accept and join the rollout',
+    tip: 'Puts you on their team for this job. You do not use one of their seats, and you only see this artist.',
+  },
+} as const;
+
 export function WorkRequestsInbox() {
   const [requests, setRequests] = useState<IncomingRequest[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busyId, setBusyId] = useState('');
   const [replies, setReplies] = useState<Record<string, string>>({});
+  // What happened when somebody accepted and started: said in plain words,
+  // kept on the row so it is still there after the list re-renders.
+  const [startNotes, setStartNotes] = useState<Record<string, { message: string; releaseId: string | null }>>({});
   const [error, setError] = useState('');
 
   const authHeaders = useCallback(async (): Promise<Record<string, string> | null> => {
@@ -75,7 +97,7 @@ export function WorkRequestsInbox() {
     };
   }, [authHeaders]);
 
-  const answer = async (id: string, status: 'interested' | 'passed') => {
+  const answer = async (id: string, status: 'interested' | 'passed', start = false) => {
     const headers = await authHeaders();
     if (!headers) return;
     setBusyId(id);
@@ -84,12 +106,21 @@ export function WorkRequestsInbox() {
       const response = await fetch(`/api/directory/requests/${id}`, {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({ status, reply: replies[id] || '' }),
+        body: JSON.stringify({ status, reply: replies[id] || '', start }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
         setError(typeof body.error === 'string' ? body.error : 'Could not save that.');
         return;
+      }
+      if (body.start && typeof body.start.message === 'string') {
+        setStartNotes((current) => ({
+          ...current,
+          [id]: {
+            message: body.start.message,
+            releaseId: typeof body.start.releaseId === 'string' ? body.start.releaseId : null,
+          },
+        }));
       }
       setRequests((current) =>
         current.map((request) =>
@@ -140,6 +171,32 @@ export function WorkRequestsInbox() {
 
             <p className="mt-2 text-sm text-content-secondary">{request.note}</p>
 
+            {request.next_release ? (
+              <p className="mt-2 text-sm text-content-secondary">
+                <span className="text-content-tertiary">Next up: </span>
+                {request.next_release}
+              </p>
+            ) : null}
+
+            {Array.isArray(request.links) && request.links.length > 0 ? (
+              <ul className="mt-2 space-y-1">
+                {request.links.map((link) => (
+                  <li key={link} className="min-w-0 text-sm">
+                    {/* Only ever an http or https link (the server refuses the
+                        rest), opened in a new tab and without the referrer. */}
+                    <a
+                      href={link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block truncate text-content-secondary underline underline-offset-2 hover:text-content-primary"
+                    >
+                      {link}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
             {request.status === 'expired' ? (
               <p className="mt-2 text-sm text-content-tertiary">
                 You did not answer in 7 days, so this one closed.
@@ -159,6 +216,25 @@ export function WorkRequestsInbox() {
                   placeholder="A line back, if you want (optional)"
                   className="mt-3 h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
                 />
+                {request.start_kind ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={busyId === request.id}
+                      onClick={() => void answer(request.id, 'interested', true)}
+                      className="motion-focus inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-brand px-3 text-sm font-semibold text-content-inverse disabled:opacity-60"
+                    >
+                      {busyId === request.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : null}
+                      {START_COPY[request.start_kind].button}
+                    </button>
+                    <InfoTip
+                      label={START_COPY[request.start_kind].button}
+                      text={START_COPY[request.start_kind].tip}
+                    />
+                  </div>
+                ) : null}
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
@@ -172,17 +248,38 @@ export function WorkRequestsInbox() {
                     type="button"
                     disabled={busyId === request.id}
                     onClick={() => void answer(request.id, 'interested')}
-                    className="motion-focus inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-brand text-sm font-semibold text-content-inverse disabled:opacity-60"
+                    className={
+                      request.start_kind
+                        ? 'motion-focus inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-stroke-default text-sm text-content-primary hover:bg-bg-hover disabled:opacity-60'
+                        : 'motion-focus inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-brand text-sm font-semibold text-content-inverse disabled:opacity-60'
+                    }
                   >
-                    {busyId === request.id ? (
+                    {busyId === request.id && !request.start_kind ? (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                     ) : null}
-                    Interested
+                    {request.start_kind ? 'Just interested' : 'Interested'}
                   </button>
                 </div>
               </>
             ) : request.reply ? (
               <p className="mt-2 text-xs text-content-tertiary">You said: {request.reply}</p>
+            ) : null}
+
+            {startNotes[request.id] ? (
+              <p role="status" className="mt-2 text-sm text-content-primary">
+                {startNotes[request.id].message}
+                {startNotes[request.id].releaseId ? (
+                  <>
+                    {' '}
+                    <Link
+                      href={`/dashboard?release=${startNotes[request.id].releaseId}`}
+                      className="motion-focus font-semibold underline underline-offset-2"
+                    >
+                      Open it
+                    </Link>
+                  </>
+                ) : null}
+              </p>
             ) : null}
           </li>
         ))}

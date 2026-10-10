@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { verifyAdmin } from '../_shared';
 import { summarizeDirectory, summarizeWorkRequests } from '@/lib/directory-admin-summary';
+import { loadLiveSharedRollouts } from '@/lib/directory-featuring-server';
 import { DIRECTORY_DEMAND_SOURCES, type DirectoryDemandSource } from '@/lib/directory-demand';
 
 /**
@@ -43,11 +44,7 @@ export async function GET(request: NextRequest) {
       .eq('type', 'directory_role_wanted')
       .gte('created_at', since)
       .limit(QUERY_LIMIT),
-    client
-      .from('work_requests')
-      .select('status, created_at')
-      .gte('created_at', since)
-      .limit(QUERY_LIMIT),
+    readWorkRequests(client, since),
   ]);
 
   // Reported separately rather than collapsed into one message: a directory
@@ -88,14 +85,47 @@ export async function GET(request: NextRequest) {
     )
     .map((meta) => ({ role: meta.role, matched: meta.matched, source: meta.source }));
 
-  const requests = ((requestsResult.data || []) as { status: string; created_at: string }[]).map((row) => ({
+  const requests = (
+    (requestsResult.data || []) as { status: string; created_at: string; shared_release_id?: string | null }[]
+  ).map((row) => ({
     status: String(row.status || ''),
     createdAt: String(row.created_at || ''),
+    sharedReleaseId: row.shared_release_id ? String(row.shared_release_id) : null,
   }));
+
+  // Of the rollouts a yes started, how many came out: the last step of the
+  // spec's measure ("requests sent, reply rate, accepted, shared releases
+  // started, releases live"). Null when it could not be read.
+  const liveShared = await loadLiveSharedRollouts(
+    client,
+    requests.map((row) => row.sharedReleaseId || '').filter(Boolean)
+  );
 
   return NextResponse.json({
     lookbackDays: LOOKBACK_DAYS,
     ...summarizeDirectory({ profiles, records, demand }),
-    requests: summarizeWorkRequests(requests),
+    requests: summarizeWorkRequests(requests, Date.now(), 7, liveShared),
   });
+}
+
+/**
+ * The requests read, with the spec's new column. Before the migration that adds
+ * it the select fails with Postgres 42703, and this page must keep working
+ * between a deploy and a hand-applied migration, so it retries without it (no
+ * rollout can have been started yet, so nothing is lost).
+ */
+async function readWorkRequests(client: SupabaseClient, since: string) {
+  const full = await client
+    .from('work_requests')
+    .select('status, created_at, shared_release_id')
+    .gte('created_at', since)
+    .limit(QUERY_LIMIT);
+  if (full.error && String((full.error as { code?: string }).code || '') === '42703') {
+    return client
+      .from('work_requests')
+      .select('status, created_at')
+      .gte('created_at', since)
+      .limit(QUERY_LIMIT);
+  }
+  return full;
 }

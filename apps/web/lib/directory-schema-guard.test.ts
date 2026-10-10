@@ -2,7 +2,12 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 import { DIRECTORY_ROLES } from './directory-roles';
-import { WORK_REQUEST_STATUSES } from './work-requests';
+import {
+  WORK_REQUEST_LINKS_MAX,
+  WORK_REQUEST_NEXT_RELEASE_MAX_CHARS,
+  WORK_REQUEST_STATUSES,
+} from './work-requests';
+import { FEATURED_NOTE_MAX_CHARS, SHELF_SIZE } from './directory-featuring';
 
 /**
  * The role vocabulary is written twice: once in TypeScript, once as a CHECK
@@ -32,6 +37,16 @@ const EXPIRED_MIGRATION = join(
   'supabase',
   'migrations',
   '20261009130000_work_requests_expired.sql'
+);
+
+const FEATURING_MIGRATION = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'supabase',
+  'migrations',
+  '20261010100000_directory_featuring.sql'
 );
 
 const REQUESTS_MIGRATION = join(
@@ -156,5 +171,84 @@ describe('work requests closing after seven days', () => {
     // The index is `where status = 'new'` in the original migration. This one
     // must not touch it: the whole point is that `expired` drops out of it.
     expect(sql).not.toContain('work_requests_open_key');
+  });
+});
+
+describe('the directory featuring migration (spec, step 2)', () => {
+  const sql = readFileSync(FEATURING_MIGRATION, 'utf8');
+  // The DDL with its comments taken off, so the header's rollback notes (which
+  // contain `drop table`) cannot satisfy or fail a check about the statements.
+  const code = sql.replace(/^\s*--.*$/gm, '');
+
+  it('lists the same roles as TypeScript on both new tables', () => {
+    for (const name of ['directory_featured_role_check', 'directory_rising_role_check']) {
+      const inSql = checkConstraintValues(sql, name);
+      expect(inSql.length).toBeGreaterThan(0);
+      expect([...inSql].sort()).toEqual([...DIRECTORY_ROLES].sort());
+    }
+  });
+
+  // The load-bearing property: Featured is Urganize's to give and On the rise is
+  // computed, so neither can be written by a signed-in person. A single `for all`
+  // policy would let anybody feature themselves.
+  it('gives neither new table a policy of any kind', () => {
+    expect(code).not.toMatch(/create policy/i);
+    expect(code).toContain('alter table public.directory_featured enable row level security');
+    expect(code).toContain('alter table public.directory_rising enable row level security');
+  });
+
+  it('only adds: nothing is dropped, deleted or rewritten', () => {
+    expect(code).not.toMatch(/\bdrop\s+(table|column|index|constraint)\b/i);
+    expect(code).not.toMatch(/\bdelete\s+from\b/i);
+    expect(code).not.toMatch(/\btruncate\b/i);
+    expect(code).not.toMatch(/\bupdate\s+public\./i);
+    // Every column and table it makes can be made twice.
+    expect(code.match(/add column/gi)?.length).toBe(code.match(/add column if not exists/gi)?.length);
+    expect(code).not.toMatch(/create table (?!if not exists)/i);
+    expect(code).not.toMatch(/create (unique )?index (?!if not exists)/i);
+  });
+
+  it('keeps the new request fields in step with the limits in code', () => {
+    expect(sql).toMatch(/char_length\(btrim\(next_release\)\) between 1 and (\d+)/);
+    const max = Number(/char_length\(btrim\(next_release\)\) between 1 and (\d+)/.exec(sql)?.[1]);
+    expect(max).toBe(WORK_REQUEST_NEXT_RELEASE_MAX_CHARS);
+    expect(sql).toMatch(/jsonb_array_length\(links\) <= (\d+)/);
+    expect(Number(/jsonb_array_length\(links\) <= (\d+)/.exec(sql)?.[1])).toBe(WORK_REQUEST_LINKS_MAX);
+    expect(sql).toMatch(/char_length\(note\) <= (\d+)/);
+    expect(Number(/char_length\(note\) <= (\d+)/.exec(sql)?.[1])).toBe(FEATURED_NOTE_MAX_CHARS);
+  });
+
+  it('holds a shelf to six people, the number the code uses', () => {
+    expect(sql).toMatch(/rank between 1 and (\d+)/);
+    expect(Number(/rank between 1 and (\d+)/.exec(sql)?.[1])).toBe(SHELF_SIZE);
+  });
+
+  it('makes a hire the default of nobody: a person is a seat unless they say otherwise', () => {
+    expect(sql).toMatch(/add column if not exists is_hire boolean not null default false/);
+  });
+
+  it('keeps the rollout off the recipient: the new request fields are all nullable or defaulted', () => {
+    // Existing rows must keep working and a plain ask must still insert.
+    expect(sql).toMatch(/add column if not exists next_release text/);
+    expect(sql).toMatch(/links jsonb not null default '\[\]'/);
+    expect(sql).toMatch(/task_id uuid references public\.tasks\(id\) on delete set null/);
+    expect(sql).toMatch(/shared_release_id uuid references public\.releases\(id\) on delete set null/);
+    expect(sql).toMatch(/started_at timestamptz/);
+  });
+
+  it('never lets a deleted rollout or activity take a request with it', () => {
+    // Both are set null, so the request (and the count of work it started)
+    // outlives what it pointed at.
+    expect(code).not.toMatch(/on delete cascade[^\n]*releases/i);
+    expect(code.match(/on delete set null/gi)?.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('makes featuring one person for one role from one day only once', () => {
+    expect(sql).toMatch(/unique index if not exists directory_featured_pick_key[\s\S]*?\(user_id, role, starts_on\)/);
+    expect(sql).toMatch(/unique index if not exists directory_rising_month_key[\s\S]*?\(month, role, user_id\)/);
+  });
+
+  it('refuses a pick that ends before it starts', () => {
+    expect(sql).toMatch(/check \(ends_on >= starts_on\)/);
   });
 });

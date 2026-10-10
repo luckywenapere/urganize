@@ -146,7 +146,13 @@ export function summarizeDirectory(input: {
  * answered plus closed, the requests whose outcome is known. Null when there is
  * nothing to divide, never a made-up zero.
  */
-export type WorkRequestRow = { status: string; createdAt: string };
+export type WorkRequestRow = {
+  status: string;
+  createdAt: string;
+  /** The rollout a yes started, when it started one (directory spec: "shared
+   *  releases started"). Absent on a request that did not. */
+  sharedReleaseId?: string | null;
+};
 
 export type WorkRequestCounts = {
   sent: number;
@@ -165,6 +171,11 @@ export type WorkRequestSummary = {
   totals: WorkRequestCounts & {
     /** Answered over answered plus closed. Null until anything has a known outcome. */
     replyRate: number | null;
+    /** Requests whose yes started a shared rollout. */
+    started: number;
+    /** Of the rollouts those started, how many have come out. Null when that
+     *  could not be read, never a made-up zero. */
+    startedLive: number | null;
   };
   /** Newest week first, only weeks that had a request. */
   weeks: WorkRequestWeek[];
@@ -188,15 +199,27 @@ function emptyCounts(): WorkRequestCounts {
 export function summarizeWorkRequests(
   rows: WorkRequestRow[],
   now: Date | number = Date.now(),
-  expiryDays = 7
+  expiryDays = 7,
+  /** Which of the started rollouts have come out, by id. Null when it could not
+   *  be worked out; the summary then reports that rather than a zero. */
+  liveSharedIds: ReadonlySet<string> | null = null
 ): WorkRequestSummary {
   const nowMs = now instanceof Date ? now.getTime() : now;
   const cutoff = nowMs - expiryDays * DAY_MS;
 
   const totals = emptyCounts();
   const byWeek = new Map<string, WorkRequestCounts>();
+  let started = 0;
+  const startedRollouts = new Set<string>();
 
   for (const row of rows) {
+    // Counted from the row itself, for every status, so it cannot drift from
+    // what happened: only a yes ever sets it.
+    if (row.sharedReleaseId) {
+      started += 1;
+      startedRollouts.add(row.sharedReleaseId);
+    }
+
     const created = Date.parse(row.createdAt);
     // A row with no readable date cannot be placed in a week, and guessing
     // would put it in the wrong one. Left out of the weekly table, still counted
@@ -225,7 +248,16 @@ export function summarizeWorkRequests(
   const known = answered + totals.closed;
 
   return {
-    totals: { ...totals, replyRate: known === 0 ? null : answered / known },
+    totals: {
+      ...totals,
+      replyRate: known === 0 ? null : answered / known,
+      started,
+      // A rollout shared by two requests is one rollout that came out.
+      startedLive:
+        liveSharedIds === null
+          ? null
+          : [...startedRollouts].filter((id) => liveSharedIds.has(id)).length,
+    },
     weeks: [...byWeek.entries()]
       .sort((a, b) => (a[0] < b[0] ? 1 : -1))
       .map(([weekStart, counts]) => ({ weekStart, ...counts })),

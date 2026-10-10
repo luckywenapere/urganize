@@ -3,6 +3,7 @@ import { isEmailConfigured, sendEmail } from './email';
 import { APP_URL } from './email/links';
 import { DIRECTORY_ROLE_LABELS, type DirectoryRole } from './directory-roles';
 import { revealsContact, type WorkRequestStatus } from './work-requests';
+import { describeStartForSender, type StartResult } from './work-request-start';
 import { DIRECTORY_SETTINGS_ANCHOR } from './person-profile';
 
 /**
@@ -66,7 +67,14 @@ async function lookupPublicProfileUrl(
 
 export async function notifyWorkRequest(
   admin: SupabaseClient,
-  input: { recipientUserId: string; senderName: string; role: string; note: string }
+  input: {
+    recipientUserId: string;
+    senderName: string;
+    role: string;
+    note: string;
+    nextRelease?: string | null;
+    links?: string[];
+  }
 ): Promise<void> {
   try {
     if (!isEmailConfigured()) return;
@@ -81,6 +89,8 @@ export async function notifyWorkRequest(
         senderName: input.senderName,
         roleLabel: DIRECTORY_ROLE_LABELS[input.role as DirectoryRole] || input.role,
         note: input.note,
+        nextRelease: input.nextRelease || undefined,
+        links: input.links && input.links.length > 0 ? input.links : undefined,
         settingsUrl: settingsUrl(),
       },
       trigger: 'work_request_sent',
@@ -102,6 +112,9 @@ export async function notifyWorkRequestAnswer(
     role: string;
     status: WorkRequestStatus;
     reply: string | null;
+    /** What the yes started, when it started something. The sentence for the
+     *  sender is worked out here, once the answerer's name is known. */
+    start?: StartResult | null;
   }
 ): Promise<void> {
   try {
@@ -134,6 +147,10 @@ export async function notifyWorkRequestAnswer(
         reply: input.reply || '',
         contactEmail,
         profileUrl,
+        startNote:
+          reveal && input.start
+            ? describeStartForSender(input.start, answererName) || undefined
+            : undefined,
       },
       trigger: 'work_request_answered',
       recipientUserId: input.senderUserId,

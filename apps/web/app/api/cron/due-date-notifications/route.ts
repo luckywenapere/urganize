@@ -8,6 +8,7 @@ import { runPitchWindowSweep } from '@/lib/pitch-payments-server';
 import { runEditorialPitchReminderSweep } from '@/lib/editorial-pitch-server';
 import { runPaybackQuestionSweep, runSpendCreditsSweep } from '@/lib/release-spend-sweeps-server';
 import { runWorkRequestExpirySweep } from '@/lib/work-request-expiry-server';
+import { runOnTheRiseSweep } from '@/lib/directory-featuring-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -113,6 +114,14 @@ export async function GET(request: NextRequest) {
   // sent keeps closing if the feature is switched off.
   const workRequestSweep = await runWorkRequestExpirySweep(adminClient);
 
+  // The directory's "On the rise" shelf (spec, section 6): written once a month,
+  // from delivered work, so the shelf does not reshuffle whenever somebody
+  // finishes a task. Another passenger on this run. Once a month is written
+  // every later run returns at its first read, and while nobody qualifies it
+  // tries again each day. Never throws, and not behind the directory flag, since
+  // nothing reads what it writes until the directory is on.
+  const risingSweep = await runOnTheRiseSweep(adminClient);
+
   return NextResponse.json({
     ok: true,
     trialSweep,
@@ -123,5 +132,6 @@ export async function GET(request: NextRequest) {
     spendCreditsSweep,
     paybackSweep,
     workRequestSweep,
+    risingSweep,
   });
 }

@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  LEGACY_RECIPIENT_REQUEST_FIELDS,
+  LEGACY_SENDER_REQUEST_FIELDS,
+  MAX_HIRES_PER_TEAM,
   MAX_OPEN_REQUESTS_PER_TEAM,
   RECIPIENT_REQUEST_FIELDS,
   SENDER_REQUEST_FIELDS,
   WORK_REQUEST_EXPIRY_DAYS,
+  WORK_REQUEST_LINKS_MAX,
+  WORK_REQUEST_LINK_MAX_CHARS,
+  WORK_REQUEST_NEXT_RELEASE_MAX_CHARS,
   WORK_REQUEST_STATUSES,
   canAnswerWorkRequest,
   canReceiveRequests,
@@ -13,7 +19,9 @@ import {
   parseWorkRequestAnswer,
   parseWorkRequestInput,
   refusalForClosedAvailability,
+  requiresNextRelease,
   revealsContact,
+  startKindFor,
   withEffectiveStatus,
   withinOpenRequestCap,
   workRequestCutoff,
@@ -34,6 +42,9 @@ describe('parseWorkRequestInput', () => {
         role: 'graphic_designer',
         note: 'Cover art for a single, out in six weeks.',
         releaseId: 'r1',
+        nextRelease: null,
+        links: [],
+        taskId: null,
       },
     });
   });
@@ -104,8 +115,23 @@ describe('canAnswerWorkRequest', () => {
 describe('parseWorkRequestAnswer', () => {
   it('takes a decision and an optional line back', () => {
     expect(parseWorkRequestAnswer({ status: 'interested', reply: 'Send the brief.' })).toEqual({
-      answer: { status: 'interested', reply: 'Send the brief.' },
+      answer: { status: 'interested', reply: 'Send the brief.', start: false },
     });
+  });
+
+  // ACCEPT AND START puts somebody on a team, which is a bigger yes than
+  // "interested", so it has to be asked for outright and can never ride on a pass.
+  it('only honours start on a yes, and only when it is exactly true', () => {
+    const yes = parseWorkRequestAnswer({ status: 'interested', start: true });
+    expect('answer' in yes && yes.answer.start).toBe(true);
+
+    const pass = parseWorkRequestAnswer({ status: 'passed', start: true });
+    expect('answer' in pass && pass.answer.start).toBe(false);
+
+    for (const loose of ['true', 1, 'yes', {}, [], null]) {
+      const parsed = parseWorkRequestAnswer({ status: 'interested', start: loose });
+      expect('answer' in parsed && parsed.answer.start).toBe(false);
+    }
   });
 
   it('allows an answer with no reply', () => {
@@ -317,5 +343,147 @@ describe('withEffectiveStatus', () => {
   it('keeps every other field on the row', () => {
     const out = withEffectiveStatus([{ id: 'a', status: 'new', created_at: daysAgo(9), note: 'Hi.' }], NOW);
     expect(out[0]).toMatchObject({ id: 'a', note: 'Hi.' });
+  });
+});
+
+describe('the fuller request (directory spec, step 2)', () => {
+  const base = { recipientUserId: 'u1', role: 'graphic_designer', note: 'Cover art.' };
+
+  it('carries a next release as text and trims it', () => {
+    const parsed = parseWorkRequestInput({ ...base, nextRelease: '  Midnight EP  ' });
+    expect('input' in parsed && parsed.input.nextRelease).toBe('Midnight EP');
+  });
+
+  it('refuses a next release past its cap rather than cutting it', () => {
+    const parsed = parseWorkRequestInput({
+      ...base,
+      nextRelease: 'x'.repeat(WORK_REQUEST_NEXT_RELEASE_MAX_CHARS + 1),
+    });
+    expect(parsed).toHaveProperty('error');
+    expect(
+      parseWorkRequestInput({ ...base, nextRelease: 'x'.repeat(WORK_REQUEST_NEXT_RELEASE_MAX_CHARS) })
+    ).toHaveProperty('input');
+  });
+
+  // An artist asking a MANAGER is the case the spec leads with, and a manager
+  // cannot judge a request that does not say what is being released.
+  it('requires a next release when the job is a manager, and only then', () => {
+    expect(requiresNextRelease('manager')).toBe(true);
+    for (const role of ['producer', 'graphic_designer', 'pr', 'booking_agent'] as const) {
+      expect(requiresNextRelease(role)).toBe(false);
+    }
+    const missing = parseWorkRequestInput({ recipientUserId: 'u1', role: 'manager', note: 'Hi.' });
+    expect(missing).toEqual({ error: 'Say what you are releasing next.' });
+    expect(
+      parseWorkRequestInput({ recipientUserId: 'u1', role: 'manager', note: 'Hi.', nextRelease: '   ' })
+    ).toHaveProperty('error');
+    expect(
+      parseWorkRequestInput({ recipientUserId: 'u1', role: 'manager', note: 'Hi.', nextRelease: 'My EP' })
+    ).toHaveProperty('input');
+  });
+
+  describe('links', () => {
+    it('keeps up to three http and https links, trimmed and without repeats', () => {
+      const parsed = parseWorkRequestInput({
+        ...base,
+        links: [' https://a.example/demo ', 'http://b.example', 'https://a.example/demo', ''],
+      });
+      expect('input' in parsed && parsed.input.links).toEqual([
+        'https://a.example/demo',
+        'http://b.example',
+      ]);
+    });
+
+    it('takes a single link given as a string', () => {
+      const parsed = parseWorkRequestInput({ ...base, links: 'https://a.example' });
+      expect('input' in parsed && parsed.input.links).toEqual(['https://a.example']);
+    });
+
+    // A link is something somebody else's browser will follow. javascript: and
+    // data: are the two that could hurt a reader rather than merely look wrong.
+    it('refuses any link that is not http or https', () => {
+      for (const link of ['javascript:alert(1)', 'data:text/html,hi', 'ftp://x.example', 'mailto:a@b.co', 'not a url']) {
+        expect(parseWorkRequestInput({ ...base, links: [link] })).toHaveProperty('error');
+      }
+    });
+
+    it('refuses a fourth link and an overlong one', () => {
+      const four = ['https://a.example', 'https://b.example', 'https://c.example', 'https://d.example'];
+      expect(parseWorkRequestInput({ ...base, links: four })).toEqual({
+        error: `Add up to ${WORK_REQUEST_LINKS_MAX} links.`,
+      });
+      expect(parseWorkRequestInput({ ...base, links: four.slice(0, 3) })).toHaveProperty('input');
+      const long = `https://a.example/${'x'.repeat(WORK_REQUEST_LINK_MAX_CHARS)}`;
+      expect(parseWorkRequestInput({ ...base, links: [long] })).toHaveProperty('error');
+    });
+
+    it('refuses a link that is not text', () => {
+      expect(parseWorkRequestInput({ ...base, links: [42] })).toHaveProperty('error');
+    });
+
+    it('does not count a blank line as a link', () => {
+      const parsed = parseWorkRequestInput({ ...base, links: ['', '  ', ''] });
+      expect('input' in parsed && parsed.input.links).toEqual([]);
+    });
+  });
+
+  it('keeps an activity only when there is a rollout to put it on', () => {
+    // A task id means something on a rollout and nothing without one. Carrying it
+    // alone would let a request point at work it cannot name.
+    const withRelease = parseWorkRequestInput({ ...base, releaseId: 'r1', taskId: 't1' });
+    expect('input' in withRelease && withRelease.input.taskId).toBe('t1');
+    const without = parseWorkRequestInput({ ...base, taskId: 't1' });
+    expect('input' in without && without.input.taskId).toBeNull();
+  });
+
+  describe('what a yes can start', () => {
+    it('starts a rollout for a manager, whether or not a release is attached', () => {
+      expect(startKindFor({ role: 'manager', releaseId: null })).toBe('manager_rollout');
+      expect(startKindFor({ role: 'manager', releaseId: 'r1' })).toBe('manager_rollout');
+    });
+
+    it('puts a creative on the rollout they were asked about', () => {
+      expect(startKindFor({ role: 'producer', releaseId: 'r1' })).toBe('hire_join');
+    });
+
+    it('starts nothing for a plain ask with no rollout behind it', () => {
+      expect(startKindFor({ role: 'producer', releaseId: null })).toBeNull();
+    });
+  });
+
+  describe('the recipient never sees the rollout', () => {
+    it('carries what the sender chose to write, and still no rollout or team id', () => {
+      expect(RECIPIENT_REQUEST_FIELDS).toContain('next_release');
+      expect(RECIPIENT_REQUEST_FIELDS).toContain('links');
+      for (const forbidden of ['release_id', 'task_id', 'shared_release_id', 'workspace_id', 'sender_user_id', 'started_at']) {
+        expect(RECIPIENT_REQUEST_FIELDS).not.toContain(forbidden);
+      }
+    });
+
+    it('lets the sender see the rollout their yes started', () => {
+      for (const field of ['next_release', 'links', 'task_id', 'shared_release_id', 'started_at', 'release_id']) {
+        expect(SENDER_REQUEST_FIELDS).toContain(field);
+      }
+    });
+  });
+
+  describe('falling back before the migration is applied', () => {
+    it('drops exactly the new columns and keeps every old one', () => {
+      const added = ['next_release', 'links', 'task_id', 'shared_release_id', 'started_at'];
+      for (const field of LEGACY_RECIPIENT_REQUEST_FIELDS) {
+        expect(RECIPIENT_REQUEST_FIELDS).toContain(field);
+        expect(added).not.toContain(field);
+      }
+      for (const field of LEGACY_SENDER_REQUEST_FIELDS) {
+        expect(SENDER_REQUEST_FIELDS).toContain(field);
+        expect(added).not.toContain(field);
+      }
+      expect(RECIPIENT_REQUEST_FIELDS.length - LEGACY_RECIPIENT_REQUEST_FIELDS.length).toBe(2);
+      expect(SENDER_REQUEST_FIELDS.length - LEGACY_SENDER_REQUEST_FIELDS.length).toBe(5);
+    });
+  });
+
+  it('caps how many hires one team can have', () => {
+    expect(MAX_HIRES_PER_TEAM).toBe(10);
   });
 });

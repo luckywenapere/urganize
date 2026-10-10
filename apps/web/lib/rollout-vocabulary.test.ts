@@ -88,6 +88,15 @@ const GUARDED_FILES = [
   'lib/email/templates/TaskAssignedEmail.tsx',
   'lib/email/templates/WorkRequestEmail.tsx',
   'lib/email/templates/WorkRequestAnswerEmail.tsx',
+  // Directory step 2 (2026-10-10): the request sheet, the inbox, the shelves and
+  // the sentences a yes writes. All read by a manager or by the person they asked.
+  'components/directory/WorkRequestSheet.tsx',
+  'components/directory/DirectoryShelves.tsx',
+  'components/directory/PersonCard.tsx',
+  'components/directory/SentRequestsList.tsx',
+  'components/settings/WorkRequestsInbox.tsx',
+  'lib/work-request-start.ts',
+  'lib/manager-record.ts',
   'lib/email/templates/NotifyAdminEmail.tsx',
   // The onboarding sequence (2026-09-30).
   'lib/email/onboarding-sequence.ts',

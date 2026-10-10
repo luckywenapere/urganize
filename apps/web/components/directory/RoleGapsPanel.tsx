@@ -112,7 +112,11 @@ export function RoleGapsPanel({ releaseId, gaps }: { releaseId: string; gaps: Ro
                 demand somebody typed, which is the whole question of whether
                 this panel works. */}
             <Link
-              href={`/dashboard/directory?role=${gap.role}&availability=open&from=role_gaps`}
+              // Carries the rollout and the activity, so a request sent from
+              // here is FOR that job: a yes can then put the person on it. The
+              // directory reads them once and only while `from` says it came
+              // from this panel.
+              href={`/dashboard/directory?role=${gap.role}&availability=open&from=role_gaps&release=${encodeURIComponent(releaseId)}&task=${encodeURIComponent(gap.taskId)}`}
               onClick={() =>
                 captureAnalyticsEvent({
                   name: 'role_gaps_role_clicked',

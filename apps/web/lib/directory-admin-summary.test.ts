@@ -215,4 +215,74 @@ describe('summarizeWorkRequests', () => {
     expect(summary.totals.sent).toBe(1);
     expect(summary.weeks).toEqual([]);
   });
+
+  describe('shared rollouts (directory spec, section 7)', () => {
+    it('counts the requests whose yes started a rollout', () => {
+      const summary = summarizeWorkRequests(
+        [
+          { status: 'interested', createdAt: daysAgo(3), sharedReleaseId: 'r1' },
+          { status: 'interested', createdAt: daysAgo(4), sharedReleaseId: 'r2' },
+          { status: 'interested', createdAt: daysAgo(5) },
+          { status: 'passed', createdAt: daysAgo(5), sharedReleaseId: null },
+        ],
+        now
+      );
+      expect(summary.totals.started).toBe(2);
+    });
+
+    it('is null, not zero, for how many came out when that could not be worked out', () => {
+      const summary = summarizeWorkRequests(
+        [{ status: 'interested', createdAt: daysAgo(3), sharedReleaseId: 'r1' }],
+        now
+      );
+      expect(summary.totals.started).toBe(1);
+      expect(summary.totals.startedLive).toBeNull();
+    });
+
+    it('counts the started rollouts that have come out', () => {
+      const rows = [
+        { status: 'interested', createdAt: daysAgo(3), sharedReleaseId: 'r1' },
+        { status: 'interested', createdAt: daysAgo(4), sharedReleaseId: 'r2' },
+        { status: 'interested', createdAt: daysAgo(5), sharedReleaseId: 'r3' },
+      ];
+      expect(summarizeWorkRequests(rows, now, 7, new Set(['r1', 'r3'])).totals.startedLive).toBe(2);
+      expect(summarizeWorkRequests(rows, now, 7, new Set()).totals.startedLive).toBe(0);
+    });
+
+    it('counts one rollout once when two requests started it', () => {
+      const summary = summarizeWorkRequests(
+        [
+          { status: 'interested', createdAt: daysAgo(3), sharedReleaseId: 'r1' },
+          { status: 'interested', createdAt: daysAgo(4), sharedReleaseId: 'r1' },
+        ],
+        now,
+        7,
+        new Set(['r1'])
+      );
+      // Two requests started work, on one rollout, and that rollout came out once.
+      expect(summary.totals.started).toBe(2);
+      expect(summary.totals.startedLive).toBe(1);
+    });
+
+    it('ignores a live rollout that no request started', () => {
+      const summary = summarizeWorkRequests(
+        [{ status: 'interested', createdAt: daysAgo(3), sharedReleaseId: 'r1' }],
+        now,
+        7,
+        new Set(['somebody-elses'])
+      );
+      expect(summary.totals.startedLive).toBe(0);
+    });
+
+    it('counts a start however old the request is, since the work happened', () => {
+      const summary = summarizeWorkRequests(
+        [{ status: 'interested', createdAt: daysAgo(40), sharedReleaseId: 'r1' }],
+        now,
+        7,
+        new Set(['r1'])
+      );
+      expect(summary.totals.started).toBe(1);
+      expect(summary.totals.startedLive).toBe(1);
+    });
+  });
 });

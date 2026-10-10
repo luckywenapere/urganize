@@ -9,6 +9,11 @@ export type WorkRequestEmailProps = {
   senderName: string;
   roleLabel: string;
   note: string;
+  /** What the sender is putting out next, as they typed it. Optional: only
+   *  an ask to a manager requires it. Text, never a release id. */
+  nextRelease?: string;
+  /** Up to three links the sender chose to share (http and https only). */
+  links?: string[];
   settingsUrl: string;
 };
 
@@ -22,11 +27,18 @@ export function WorkRequestEmail({
   senderName,
   roleLabel,
   note,
+  nextRelease,
+  links,
   settingsUrl,
 }: WorkRequestEmailProps) {
   const sender = senderName.trim() || 'Someone on Urganize';
   const role = (roleLabel.trim() || 'some work').toLowerCase();
   const noteText = note.trim();
+  const nextText = (nextRelease || '').trim();
+  // http and https only, again: lib/work-requests.ts already refuses anything
+  // else, but this is a link in somebody else's inbox and the template should not
+  // trust whoever calls it to have checked.
+  const linkList = (links || []).map((link) => link.trim()).filter((link) => /^https?:\/\//i.test(link));
   const firstName = firstNameFrom(recipientName);
   const greeting = firstName ? `Hey ${firstName},` : 'Hey,';
 
@@ -42,6 +54,19 @@ export function WorkRequestEmail({
             {noteText}
           </Text>
         </NoteCard>
+      ) : null}
+      {nextText ? <Paragraph>Next up: {nextText}</Paragraph> : null}
+      {linkList.length > 0 ? (
+        <Paragraph>
+          {linkList.map((link, index) => (
+            <span key={link}>
+              {index > 0 ? <br /> : null}
+              <a href={link} style={{ color: INK, fontWeight: 600 }}>
+                {link}
+              </a>
+            </span>
+          ))}
+        </Paragraph>
       ) : null}
       <Paragraph>You can say you are interested, or pass, in a tap. Passing is quiet.</Paragraph>
       <Paragraph>
