@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { DialogPanel } from '@/components/shared/DialogPanel';
 import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
   ChevronDown,
   Menu,
   Plus,
+  X,
 } from '@/components/icons';
 import {
   getTaskSectionLabel,
@@ -68,10 +71,6 @@ export const taskPanelPillClass =
  *  and 44px tall, so a thumb finds it without guessing what a bare icon does. */
 const MOBILE_DOCK_TRIGGER_CLASS =
   'motion-focus motion-press inline-flex h-11 shrink-0 touch-manipulation items-center gap-2 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-5 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover';
-
-/** The panel the dock's button opens. */
-const MOBILE_DOCK_PANEL_CLASS =
-  'rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]';
 
 /**
  * An action WorkspaceView owns and the rollout menu places — modal-shaped rather
@@ -374,7 +373,10 @@ export function TasksPanel({
   // The dock renders only when the menu has actions to list. Search is not here
   // any more (2026-10-04): the top bar's search is the one search, and it finds
   // this rollout's activities first when a rollout is open.
-  const hasMobileDockControls = moreMenuActions.length > 0;
+  // Hidden on the Chat scene (2026-10-11, founder call): the floating pill sat
+  // over the chat's pinned composer and its Send button. The chat scene brings
+  // its own "Activities" back control, which is the way out to the menu.
+  const hasMobileDockControls = moreMenuActions.length > 0 && urlScene !== 'chat';
 
   const closeMobilePanels = () => {
     setOpenMobilePanel(null);
@@ -683,6 +685,7 @@ export function TasksPanel({
           The bottom offset still clears whichever fixed surface already
           owns the screen's edge — see TASKS_PILL_DOCK_OFFSET_CLASS. The
           -mx/px bleed still matches <main>'s own gutter at each breakpoint. */}
+      {hasMobileDockControls ? (
       <div
         className={`sticky z-20 -mx-4 mt-auto flex flex-col gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
       >
@@ -726,51 +729,103 @@ export function TasksPanel({
           ) : null}
         </div>
 
-        {/* The menu: the plain list, no field. Since 2026-08-31 this is every
-            release surface on a phone, not an overflow — see
-            `moreMenuActions` above, and lib/release-menu.ts for the order.
-
-            `50dvh` rather than the old fixed `max-h-60` (240px, about five
-            rows): the list is up to fourteen entries now, and the top of it is
-            where the most-used surfaces sit, so the cap decides how much of
-            the ranking a user sees without scrolling. `dvh` and not `vh`
-            deliberately — on a phone `vh` is the LARGE viewport, so with
-            browser chrome showing a `vh` cap overshoots the space actually on
-            screen (the same unit that had the UrgAns composer drifting for
-            eight PRs). */}
+        {/* The menu, as a bottom sheet (2026-10-11, founder fix). It opened
+            inline under the pill until then and the bottom tab bar cut off
+            its lower rows, so not every entry could be reached. Now it is
+            portalled to <body> above the bar (z-[170], the More sheet's
+            layer) with a scrim, capped at the screen minus the safe areas,
+            and scrolls on its own when long. Tap the scrim, the close
+            button, or press Escape to dismiss. Rows are still drawn
+            upside down (orderForThumb), so the list opens scrolled to the
+            bottom, where the most-used rows sit by the thumb. */}
         {openMobilePanel === 'menu' ? (
-          <div id={moreMenuListId} className={MOBILE_DOCK_PANEL_CLASS}>
-            <ul className="max-h-[50dvh] overflow-y-auto">
-              {orderForThumb(moreMenuActions).map((action) => (
-                <li key={action.key}>
-                  <button
-                    type="button"
-                    onClick={() => handleMoreMenuSelect(action)}
-                    disabled={action.disabled}
-                    // Undefined on the modal actions, which omits the
-                    // attribute entirely rather than announcing them as
-                    // unpressed toggles.
-                    aria-pressed={action.isActive}
-                    className={`motion-focus flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm transition-colors disabled:opacity-60 ${
-                      action.isActive
-                        ? 'bg-brand/10 font-semibold text-content-primary'
-                        : 'text-content-primary hover:bg-bg-hover'
-                    }`}
-                  >
-                    <action.icon
-                      className={`h-4 w-4 shrink-0 ${
-                        action.isActive ? 'text-brand' : 'text-content-tertiary'
-                      }`}
-                      aria-hidden="true"
-                    />
-                    {action.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <RolloutMenuSheet
+            id={moreMenuListId}
+            actions={orderForThumb(moreMenuActions)}
+            onSelect={handleMoreMenuSelect}
+            onClose={closeMobilePanels}
+          />
         ) : null}
       </div>
+      ) : null}
     </aside>
+  );
+}
+
+/**
+ * The phone's rollout menu sheet. Lives below `lg` only; the desktop menu is
+ * the card at the top of the right-hand column and never had this clipping.
+ */
+function RolloutMenuSheet({
+  id,
+  actions,
+  onSelect,
+  onClose,
+}: {
+  id: string;
+  actions: readonly RolloutMenuAction[];
+  onSelect: (action: RolloutMenuAction) => void;
+  onClose: () => void;
+}) {
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const list = listRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, []);
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[170] lg:hidden">
+      <button
+        type="button"
+        aria-label="Close rollout menu"
+        tabIndex={-1}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/50"
+      />
+      <DialogPanel
+        label="Rollout menu"
+        onClose={onClose}
+        className="absolute inset-x-0 bottom-0 flex max-h-[calc(100dvh-env(safe-area-inset-top,0px)-1rem)] flex-col rounded-t-3xl border-t border-stroke-default bg-bg-surface pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3"
+      >
+        <div className="mx-auto mb-1 h-1 w-10 shrink-0 rounded-full bg-stroke-strong" aria-hidden="true" />
+        <div className="flex shrink-0 items-center justify-between px-4 pb-1">
+          <h2 className="font-display text-xl font-semibold text-content-primary">Rollout menu</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="motion-focus grid h-11 w-11 place-items-center rounded-full text-content-tertiary hover:bg-bg-hover"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+        <ul id={id} ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
+          {actions.map((action) => (
+            <li key={action.key}>
+              <button
+                type="button"
+                onClick={() => onSelect(action)}
+                disabled={action.disabled}
+                // Undefined on the modal actions, which omits the attribute
+                // entirely rather than announcing them as unpressed toggles.
+                aria-pressed={action.isActive}
+                className={`motion-focus flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-base transition-colors disabled:opacity-60 ${
+                  action.isActive
+                    ? 'bg-brand/10 font-semibold text-content-primary'
+                    : 'text-content-primary hover:bg-bg-hover'
+                }`}
+              >
+                <action.icon
+                  className={`h-5 w-5 shrink-0 ${action.isActive ? 'text-brand' : 'text-content-tertiary'}`}
+                  aria-hidden="true"
+                />
+                {action.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </DialogPanel>
+    </div>,
+    document.body
   );
 }

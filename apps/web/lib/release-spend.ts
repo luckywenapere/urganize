@@ -81,6 +81,10 @@ export const SPEND_COPY = {
   totalLabel: 'Spent on this release',
   exportButton: 'Download CSV',
   homeTitle: 'Where the money went',
+  // Home's card with nothing spent yet (2026-10-11): the brief's empty line,
+  // without "on this release", since the card is for every rollout.
+  homeEmpty: 'Nothing logged yet. Add what you pay for, so you can see where the money went.',
+  homePickerLabel: 'Rollout',
   paybackLabels: {
     amount: 'Amount (₦)',
     note: 'Anything to add?',

@@ -181,16 +181,17 @@ export default function PitchingPageClient() {
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      {/* Restyled 2026-10-11 (founder brief): one line of words, then faces. */}
+      {/* Restyled 2026-10-11 (founder brief): the title, the filter chips, then
+          faces. The subtitle under the title was cut the same day; the spacing
+          below is one 20px step (mt-5 / space-y-5) between every block. */}
       <header>
         <h1 className="font-display text-3xl font-semibold text-content-primary">Pitch</h1>
-        <p className="mt-1 text-base text-content-secondary">Send your song to a curator.</p>
         {/* A dual account owns playlists as well as releases. This page is the
             sending side; the inbox is a separate surface with its own shell. */}
         {hasCuratorProfile === true ? (
           <Link
             href="/curator"
-            className="motion-focus mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand hover:underline"
+            className="motion-focus mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand hover:underline"
           >
             Your curator inbox
           </Link>
@@ -200,14 +201,14 @@ export default function PitchingPageClient() {
       {paymentsOn && paymentCancelled ? (
         <p
           role="status"
-          className="mt-6 rounded-lg border border-status-warning/30 bg-status-warning/10 p-4 text-sm text-status-warning"
+          className="mt-5 rounded-lg border border-status-warning/30 bg-status-warning/10 p-4 text-sm text-status-warning"
         >
           {PAYMENT_FAILED}
         </p>
       ) : null}
 
       {error ? (
-        <div role="alert" className="mt-6 rounded-lg border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
+        <div role="alert" className="mt-5 rounded-lg border border-status-error/30 bg-status-error/10 p-4 text-sm text-status-error">
           <p>{error}</p>
           <button
             type="button"
@@ -222,7 +223,7 @@ export default function PitchingPageClient() {
         </div>
       ) : null}
 
-      <section aria-label="Send a pitch" className="mt-8 space-y-5">
+      <section aria-label="Send a pitch" className="mt-5 space-y-5">
         {releases.length === 0 ? (
           <p className="rounded-2xl bg-bg-surface p-6 text-center text-sm text-content-secondary">
             Make a rollout first.{' '}
@@ -238,7 +239,7 @@ export default function PitchingPageClient() {
               <div
                 role="radiogroup"
                 aria-label="Which song"
-                className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+                className="no-scrollbar -mx-1 -my-1 flex gap-2 overflow-x-auto px-1 py-1"
               >
                 {releases.map((release) => {
                   const active = release.id === releaseId;

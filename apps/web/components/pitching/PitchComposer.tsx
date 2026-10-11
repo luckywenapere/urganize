@@ -33,6 +33,8 @@ import {
   PITCH_PLATFORMS,
   PITCH_PLATFORM_LABELS,
   isValidSongUrl,
+  SONG_LINK_PLACEHOLDER,
+  SONG_LINK_PLACEHOLDER_SHORT,
 } from '@/lib/pitching';
 import { openExternalUrl } from '@/lib/external-link';
 import { MAX_PITCHES_PER_CHECKOUT, isPitchPaymentsEnabled } from '@/lib/pitch-payments';
@@ -109,6 +111,7 @@ export function PitchComposer({
     setSongTitle(initialSongTitle);
   }
   const [songUrl, setSongUrl] = useState('');
+  const songLinkPlaceholder = useSongLinkPlaceholder();
   const [note, setNote] = useState('');
   // The story from this rollout's Pitch kit, if the team wrote one. '' = none.
   const storyNote = pitchNoteFromStory(usePitchKitStory(releaseId), MAX_PITCH_NOTE_LENGTH);
@@ -322,7 +325,7 @@ export function PitchComposer({
       <div
         role="radiogroup"
         aria-label="Platform"
-        className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+        className="no-scrollbar -mx-1 -my-1 flex gap-2 overflow-x-auto px-1 py-1"
       >
         {['', ...PITCH_PLATFORMS.filter((platform) => platform !== 'other')].map((platform) => {
           const active = platformFilter === platform;
@@ -333,7 +336,7 @@ export function PitchComposer({
               role="radio"
               aria-checked={active}
               onClick={() => setPlatformFilter(platform)}
-              className={`h-9 shrink-0 rounded-full px-4 text-sm font-medium transition-colors ${
+              className={`h-11 shrink-0 rounded-full px-4 text-sm font-medium transition-colors ${
                 active
                   ? 'bg-content-primary text-bg-base'
                   : 'bg-bg-elevated text-content-secondary hover:text-content-primary'
@@ -460,7 +463,7 @@ export function PitchComposer({
             className={inputClass}
             value={songUrl}
             onChange={(event) => setSongUrl(event.target.value)}
-            placeholder="Paste your song link"
+            placeholder={songLinkPlaceholder}
             required
           />
 
@@ -522,4 +525,22 @@ function CuratorGridSkeleton() {
       ))}
     </div>
   );
+}
+
+/**
+ * The long placeholder from `sm` up, the short one on a narrow phone, where
+ * the long one would be cut off. Starts short so a phone never flashes the long
+ * one, then reads the width once and follows it.
+ */
+function useSongLinkPlaceholder(): string {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const query = window.matchMedia('(min-width: 640px)');
+    const update = () => setWide(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return wide ? SONG_LINK_PLACEHOLDER : SONG_LINK_PLACEHOLDER_SHORT;
 }

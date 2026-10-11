@@ -10,7 +10,7 @@ const full: HomeBlocksInput = {
   hasNextShow: true,
   rolloutCount: 2,
   placementCount: 4,
-  hasSpend: true,
+  showSpend: true,
   lateCount: 0,
 };
 
@@ -39,7 +39,7 @@ describe('orderHomeBlocks', () => {
         hasNextShow: false,
         rolloutCount: 0,
         placementCount: 0,
-        hasSpend: false,
+        showSpend: false,
       })
     ).toEqual(['tasks', 'daily-line']);
   });
@@ -66,11 +66,11 @@ describe('orderHomeBlocks', () => {
     expect(orderHomeBlocks({ ...full, upNext: 'show' })).toContain('next-show');
   });
 
-  it('shows Where the money went after Placements and before the daily line, and only with spend', () => {
+  it('shows Where the money went after Placements and before the daily line, and only when the manager may track spend', () => {
     const blocks = orderHomeBlocks(full);
     expect(blocks.indexOf('spend')).toBe(blocks.indexOf('placements') + 1);
     expect(blocks.indexOf('spend')).toBe(blocks.indexOf('daily-line') - 1);
-    expect(orderHomeBlocks({ ...full, hasSpend: false })).not.toContain('spend');
+    expect(orderHomeBlocks({ ...full, showSpend: false })).not.toContain('spend');
   });
 
   it("keeps UrgAns' daily line for days when nothing is late", () => {

@@ -4,7 +4,6 @@ import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal'
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Logo } from '@urganize/ui';
 import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
@@ -13,17 +12,27 @@ import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { activeShellArea, buildShellAreas, readShellFlags } from '@/lib/shell-nav';
 import { useShellStore } from '@/stores/useShellStore';
 import { useHomeChatStore } from '@/stores/useHomeChatStore';
-import { ArtistSwitcher } from './ArtistSwitcher';
 import { CreditsChip } from './CreditsChip';
+import { useArtistFilterSync } from './useArtistFilter';
 import { useNavTip } from './useNavTip';
 
 /**
  * The top bar (design overhaul, 2026-10-04): the Deel shell with Urganize's skin.
  *
- * Left to right: the mark, the team and artist switcher, the six areas as
- * pills, then search, credits, help, notifications and the account menu. Below
- * `lg` the pills hand over to the bottom bar (BottomBar), leaving the switcher,
- * search, the bell and the account here.
+ * 2026-10-11, founder call: the top-left block (the Urganize mark and the team
+ * and artist label beside it) is gone on every screen, at every width. On a
+ * desktop the bar is the six areas as pills on the left, then search, credits,
+ * help, notifications ("live") and the account menu on the right. On a phone
+ * (below `lg`, where the bottom bar carries the areas) it is the search button
+ * alone, right-aligned in a short row; notifications, the account menu, credits
+ * and the artist filter that used to sit here all live in the bottom bar's More
+ * sheet. The bell itself stays MOUNTED on a phone, only its button is hidden,
+ * because it also runs the realtime subscription that toasts a new notification
+ * and it draws the panel More opens.
+ *
+ * Rollout context is no longer in the bar: a rollout's own screen names it.
+ * The artist filter the label opened is in the account menu (desktop) and More
+ * (phone); useArtistFilterSync keeps it hydrated on every screen.
  *
  * The soft tinted band behind it is the brand colour at a whisper, Deel's
  * lavender done in spring green; it fades into the page so the bar reads as part
@@ -39,23 +48,21 @@ export function TopNav({ userName }: { userName?: string }) {
   const openCommand = useShellStore((state) => state.openCommand);
   const tip = useNavTip();
   const listCollapsed = useHomeChatStore((state) => state.listCollapsed);
+  useArtistFilterSync();
+  // The UrgAns tab on a phone has no header row at all (2026-10-11, founder
+  // call): with only search left on the phone bar, it goes too, so the chat's
+  // Sessions / New session row sits at the top. Only the safe-area padding
+  // stays. Keep in step with .chappi-shell-height-nav in globals.css.
+  const isUrgansPage = pathname === '/dashboard/urgans' || pathname.startsWith('/dashboard/urgans/');
 
   return (
-    <header className="shell-band sticky top-0 z-30">
-      <div className="mx-auto flex h-[72px] w-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5 lg:px-8">
-        <Link
-          href="/dashboard/home"
-          aria-label="Urganize home"
-          className="motion-focus shrink-0 rounded-md transition-opacity hover:opacity-80"
-        >
-          <Logo size="sm" priority className="opacity-95" />
-        </Link>
-
-        <span aria-hidden="true" className="hidden h-8 w-px shrink-0 bg-stroke-default sm:block" />
-
-        <ArtistSwitcher />
-
-        <nav aria-label="Main" className="mx-auto hidden min-w-0 items-center gap-0.5 lg:flex xl:gap-1">
+    <header className="shell-band sticky top-0 z-30 pt-[env(safe-area-inset-top,0px)]">
+      <div
+        className={`mx-auto h-14 w-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5 lg:flex lg:h-[72px] lg:px-8 ${
+          isUrgansPage ? 'hidden' : 'flex'
+        }`}
+      >
+        <nav aria-label="Main" className="hidden min-w-0 items-center gap-0.5 lg:-ml-2.5 lg:flex xl:gap-1">
           {areas.map((area) => {
             // With Home's left column folded away the pill reads as off, so it
             // says the column is hidden and pressing it brings it back.
@@ -91,22 +98,26 @@ export function TopNav({ userName }: { userName?: string }) {
           {tip.panel}
         </nav>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:ml-0">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => (hasPullReveal() ? revealListSearch() : openCommand())}
             data-tour="shell-search"
             aria-label="Search or ask UrgAns"
-            className="motion-focus motion-press inline-flex h-10 items-center gap-2 rounded-full border border-stroke-default bg-bg-surface/70 px-2.5 text-sm text-content-secondary hover:text-content-primary sm:px-3"
+            className="motion-focus motion-press inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface/70 px-2.5 text-sm text-content-secondary hover:text-content-primary sm:px-3 lg:h-10 lg:min-w-0"
           >
             <Search className="h-[18px] w-[18px]" aria-hidden="true" />
           </button>
-          <CreditsChip />
+          <span className="hidden lg:contents">
+            <CreditsChip />
+          </span>
           <span className="hidden xl:contents">
             <HelpMenu />
           </span>
+          {/* Mounted at every width (see the note above); its own button is
+              desktop only and More opens its panel on a phone. */}
           <NotificationsBell />
-          <WorkspaceMenu userName={userName} />
+          <WorkspaceMenu userName={userName} className="hidden lg:block" />
         </div>
       </div>
     </header>

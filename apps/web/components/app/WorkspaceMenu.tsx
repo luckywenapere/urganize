@@ -6,6 +6,8 @@ import { ExitIcon, GearIcon, ProfileIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
+import { useArtistFilterOptions } from '@/components/shell/useArtistFilter';
+import { Check } from '@/components/icons';
 
 type WorkspaceMenuProps = {
   /** Display name shown in the menu's identity header. The trigger itself
@@ -47,6 +49,10 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
   // with the real team name. Falls back to a generic "Your team" when the
   // card's flag is off or hasn't loaded yet.
   const workspaceName = useWorkspaceIdentityStore((state) => state.name);
+  // The artist filter moved here from the top bar's left block (2026-10-11).
+  // Listed only when the roster has more than one artist.
+  const { options: artistOptions, select: selectArtist } = useArtistFilterOptions();
+  const settingsIndex = artistOptions.length;
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -180,14 +186,42 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
             </div>
           </div>
 
+          {artistOptions.length > 0 ? (
+            <div role="group" aria-label="Showing" className="border-b border-stroke-subtle py-1">
+              <p role="presentation" className="px-3 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">
+                Showing
+              </p>
+              {artistOptions.map((artist, index) => (
+                <button
+                  key={artist.id ?? 'all'}
+                  ref={(el) => {
+                    itemRefs.current[index] = el;
+                  }}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={artist.active}
+                  onClick={() => {
+                    selectArtist(artist.id);
+                    closeMenu(true);
+                  }}
+                  onKeyDown={(event) => handleItemKeyDown(event, index)}
+                  className="motion-focus flex min-h-11 w-full items-center justify-between gap-2 px-3 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover"
+                >
+                  <span className="truncate">{artist.name}</span>
+                  {artist.active ? <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /> : null}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <button
             ref={(el) => {
-              itemRefs.current[0] = el;
+              itemRefs.current[settingsIndex] = el;
             }}
             type="button"
             role="menuitem"
             onClick={handleSettings}
-            onKeyDown={(event) => handleItemKeyDown(event, 0)}
+            onKeyDown={(event) => handleItemKeyDown(event, settingsIndex)}
             className="motion-focus flex w-full items-center gap-3 px-3 py-2.5 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover"
           >
             <GearIcon className="h-4 w-4 text-content-tertiary" />
@@ -195,12 +229,12 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
           </button>
           <button
             ref={(el) => {
-              itemRefs.current[1] = el;
+              itemRefs.current[settingsIndex + 1] = el;
             }}
             type="button"
             role="menuitem"
             onClick={() => void handleSignOut()}
-            onKeyDown={(event) => handleItemKeyDown(event, 1)}
+            onKeyDown={(event) => handleItemKeyDown(event, settingsIndex + 1)}
             className="motion-focus flex w-full items-center gap-3 border-t border-stroke-subtle px-3 py-2.5 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover"
           >
             <ExitIcon className="h-4 w-4 text-content-tertiary" />

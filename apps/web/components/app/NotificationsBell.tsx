@@ -6,6 +6,7 @@ import { SignalIcon } from '@/components/app/BrandIcons';
 import { ChevronDown } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useToast } from '@/components/shared/ToastProvider';
 import { getNotificationMessage, type TaskNotification } from '@/lib/tasks';
@@ -319,6 +320,25 @@ export function NotificationsBell() {
     return () => window.removeEventListener('keydown', handler);
   }, [isOpen]);
 
+  // The phone's door (2026-10-11): the button below is desktop only, so the
+  // bottom bar's More sheet shows the unread count and asks the panel to open
+  // through this store. Reported here so More never offers a door to a bell
+  // that is switched off.
+  const reportDoor = useNotificationsDoorStore((state) => state.report);
+  const openRequest = useNotificationsDoorStore((state) => state.openRequest);
+  const doorAvailable = WORKSPACE_FEATURE_ENABLED && isAuthenticated;
+  useEffect(() => {
+    reportDoor({ available: doorAvailable, unread: unreadCount });
+  }, [reportDoor, doorAvailable, unreadCount]);
+  useEffect(() => () => reportDoor({ available: false, unread: 0 }), [reportDoor]);
+  const lastOpenRequest = useRef(openRequest);
+  useEffect(() => {
+    if (openRequest === lastOpenRequest.current) return;
+    lastOpenRequest.current = openRequest;
+    setIsOpen(true);
+    void fetchNotifications();
+  }, [openRequest, fetchNotifications]);
+
   // Mark a specific set of notifications read (or all when `ids === 'all'`).
   // Empty body → server marks every unread row for this user; with ids →
   // restricted to that subset. See app/api/notifications/read/route.ts:33-36.
@@ -443,7 +463,7 @@ export function NotificationsBell() {
         aria-expanded={isOpen}
         aria-controls={isOpen ? panelId : undefined}
         aria-label={badge.ariaLabel}
-        className="motion-focus motion-press relative grid h-10 w-10 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        className="motion-focus motion-press relative hidden h-10 w-10 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary lg:grid"
       >
         <SignalIcon className="h-[18px] w-[18px]" />
         {badge.visible ? (
@@ -472,7 +492,7 @@ export function NotificationsBell() {
           // panel; it's full-width and viewport-pinned, so the math is the
           // same. From `sm` up it reverts to the WorkspaceMenu-style
           // trigger-anchored dropdown.
-          className="animate-menu-down fixed inset-x-4 top-[4.5rem] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
+          className="animate-menu-down fixed inset-x-4 top-[calc(env(safe-area-inset-top,0px)+4rem)] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
         >
           <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle px-3 py-3">
             {/* No Beta pill here (founder call, 2026-07-23). The Settings row

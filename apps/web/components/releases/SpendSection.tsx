@@ -24,6 +24,12 @@ type SpendSectionProps = {
   /** The rollout's activities, for the Task picker and the spreadsheet's Task column. */
   tasks: ReadonlyArray<{ id: string; title: string }>;
   onToast?: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  /**
+   * Arrive with the add form open (Home's "Add spend" button, `?field=add`,
+   * 2026-10-11). Read once on mount; the panel keys this section by release
+   * and by the request, so a second arrival opens it again.
+   */
+  startAdding?: boolean;
 };
 
 const PRIMARY_BUTTON =
@@ -77,9 +83,11 @@ function valuesFromLine(line: SpendLine): SpendFormValues {
  * itself (today the daily UrgAns credits) is shown with a tag and has no Edit or
  * Delete, matching a server that refuses both.
  */
-export function SpendSection({ releaseId, releaseTitle, tasks, onToast }: SpendSectionProps) {
+export function SpendSection({ releaseId, releaseTitle, tasks, onToast, startAdding = false }: SpendSectionProps) {
   const { state, total, reload, add, change, remove, answerPayback } = useSpend(releaseId);
-  const [form, setForm] = useState<{ mode: 'add' } | { mode: 'edit'; line: SpendLine } | null>(null);
+  const [form, setForm] = useState<{ mode: 'add' } | { mode: 'edit'; line: SpendLine } | null>(
+    startAdding ? { mode: 'add' } : null
+  );
   const [announcement, setAnnouncement] = useState('');
   const [isExporting, setIsExporting] = useState(false);
 

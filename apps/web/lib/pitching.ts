@@ -23,6 +23,15 @@ export const MAX_PITCH_REPLY_LENGTH = 200;
 
 export const MAX_SONG_TITLE_LENGTH = 200;
 export const MAX_SONG_URL_LENGTH = 500;
+
+/**
+ * What the curator-pitch song link box asks for (2026-10-11, founder copy):
+ * the private links a song is shared on before it is out. "untitled" is the
+ * private music-sharing app (untitled.stream) and is always lowercase. The
+ * short form is for a narrow phone, where the long one would be cut off.
+ */
+export const SONG_LINK_PLACEHOLDER = 'Paste your untitled, SoundCloud or other private link';
+export const SONG_LINK_PLACEHOLDER_SHORT = 'Your untitled, SoundCloud or private link';
 export const MAX_PLAYLIST_NAME_LENGTH = 120;
 export const MAX_PLAYLIST_URL_LENGTH = 500;
 export const MAX_CURATOR_DISPLAY_NAME_LENGTH = 80;

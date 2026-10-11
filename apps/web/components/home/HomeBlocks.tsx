@@ -21,6 +21,7 @@ import { TasksStack } from './TasksStack';
 import { UpNextCard } from './UpNextCard';
 import { WaitingStack } from './WaitingStack';
 import { useHomeFocusData } from './useHomeFocusData';
+import { useSpendRollouts } from './useSpendRollouts';
 import { useSpendSummary } from './useSpendSummary';
 
 /**
@@ -42,7 +43,11 @@ export function HomeBlocks({
   const { live, releases, yourTasks, waitingTasks, placements } = useHomeFocusData(home, viewerId);
   // The money card is for managers (a label is a team of them). The server adds
   // up only what this person may see, so anyone else gets nothing and no card.
-  const spend = useSpendSummary(home.role === 'manager' || home.role === 'label');
+  const isManager = home.role === 'manager' || home.role === 'label';
+  const spend = useSpendSummary(isManager);
+  // The rollouts the card can open (2026-10-11): it opens a rollout's Spend
+  // scene, and shows with no spend yet once there is one to add to.
+  const spendRollouts = useSpendRollouts(releases, isManager);
 
   const taskStack = buildTaskStack(yourTasks);
   const upNext = pickUpNext(home.nextShow, releases);
@@ -65,7 +70,7 @@ export function HomeBlocks({
     hasNextShow: home.nextShow !== null,
     rolloutCount: releases.length,
     placementCount: placementItems.length,
-    hasSpend: (spend?.totalKobo ?? 0) > 0,
+    showSpend: spend !== null && (spend.totalKobo > 0 || spendRollouts.length > 0),
     lateCount: yourTasks.late.length,
   });
 
@@ -96,7 +101,7 @@ export function HomeBlocks({
       case 'placements':
         return <PlacementsStack items={placementItems} />;
       case 'spend':
-        return spend ? <SpendCard summary={spend} /> : null;
+        return spend ? <SpendCard summary={spend} rollouts={spendRollouts} /> : null;
       case 'daily-line':
         return <ChappiSpeaksCard line={pickChappiSpeaks({ releases })} />;
     }

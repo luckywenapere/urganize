@@ -18,7 +18,10 @@ import {
   X,
   type LucideProps,
 } from '@/components/icons';
-import { UserCircle2 } from '@/components/icons';
+import { Check, UserCircle2 } from '@/components/icons';
+import { SignalIcon } from '@/components/app/BrandIcons';
+import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
+import { useArtistFilterOptions } from './useArtistFilter';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { useSettingsLinkClick } from '@/components/settings/useOpenSettings';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
@@ -56,7 +59,10 @@ const TAB_ICON: Record<string, IconComponent> = {
  *
  * More opens a sheet with the areas the bar does not carry (Relationships,
  * Opportunities, Audience; Shows is a tab inside Relationships) plus credits
- * and settings. Areas with nothing built
+ * and settings. Since 2026-10-11 it also carries what the phone's top bar no
+ * longer does (founder call: the bar is the search button alone): the artist
+ * filter ("Showing"), Notifications (the bell's "live" panel, with its unread
+ * count, also shown as a dot on More) and Settings for the account. Areas with nothing built
  * yet are listed like any other, and their page explains what is coming.
  *
  * Labels stay visible. Icon-only tabs were tried here before (v1.10.3) and cost
@@ -71,6 +77,7 @@ export function BottomBar() {
   const collapsed = useBarCollapsedOnScroll(pathname);
   const tip = useNavTip();
   const ActiveIcon = active === 'more' ? MoreHorizontal : (TAB_ICON[active ?? ''] ?? Home);
+  const unread = useNotificationsDoorStore((state) => (state.available ? state.unread : 0));
 
   return (
     <>
@@ -147,8 +154,14 @@ export function BottomBar() {
                   ellipsis's three 1px circles, not the button. The button
                   always handled it; this just makes the whole 56px cell the
                   target, so taps and their analytics land on the button. */}
-              <MoreHorizontal className="pointer-events-none h-[18px] w-[18px]" aria-hidden="true" />
+              <span className="pointer-events-none relative">
+                <MoreHorizontal className="h-[18px] w-[18px]" aria-hidden="true" />
+                {unread > 0 ? (
+                  <span aria-hidden="true" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-brand" />
+                ) : null}
+              </span>
               More
+              {unread > 0 ? <span className="sr-only">, unread notifications</span> : null}
             </button>
           </li>
         </ul>
@@ -221,6 +234,8 @@ function MoreSheet({
   const openSettings = useSettingsLinkClick();
   const tip = useNavTip({ overSheet: true });
   const items = buildMoreItems(areas);
+  const notifications = useNotificationsDoorStore();
+  const { options: artistOptions, select: selectArtist } = useArtistFilterOptions();
   if (typeof document === 'undefined') return null;
 
   // Portalled: AppShell's fade-in transform would otherwise anchor this fixed
@@ -237,9 +252,9 @@ function MoreSheet({
       <DialogPanel
         label="More"
         onClose={onClose}
-        className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-stroke-default bg-bg-surface px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3"
+        className="absolute inset-x-0 bottom-0 max-h-[calc(100dvh-env(safe-area-inset-top,0px)-1rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-stroke-default bg-bg-surface px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3"
       >
-        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-stroke-strong" aria-hidden="true" />
+        <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-stroke-strong" aria-hidden="true" />
         <div className="flex items-center justify-between pb-2">
           <h2 className="font-display text-xl font-semibold text-content-primary">More</h2>
           <button
@@ -268,6 +283,27 @@ function MoreSheet({
               </Link>
             </li>
           ))}
+          {notifications.available ? (
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  notifications.requestOpen();
+                }}
+                className="motion-focus flex min-h-14 w-full items-center gap-2.5 text-left text-base text-content-primary"
+              >
+                <SignalIcon className="h-5 w-5 text-content-tertiary" />
+                Notifications
+                {notifications.unread > 0 ? (
+                  <span className="ml-auto grid min-h-6 min-w-6 place-items-center rounded-full bg-brand px-1.5 text-xs font-semibold text-content-inverse">
+                    {notifications.unread > 9 ? '9+' : notifications.unread}
+                    <span className="sr-only"> unread</span>
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          ) : null}
           <li>
             <Link
               href="/dashboard/credits"
@@ -292,6 +328,29 @@ function MoreSheet({
             </Link>
           </li>
         </ul>
+        {artistOptions.length > 0 ? (
+          <div role="group" aria-label="Showing" className="mt-2 border-t border-stroke-subtle pt-3">
+            <p className="pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">Showing</p>
+            <ul>
+              {artistOptions.map((artist) => (
+                <li key={artist.id ?? 'all'}>
+                  <button
+                    type="button"
+                    aria-pressed={artist.active}
+                    onClick={() => {
+                      selectArtist(artist.id);
+                      onClose();
+                    }}
+                    className="motion-focus flex min-h-12 w-full items-center justify-between gap-2 text-left text-base text-content-primary"
+                  >
+                    <span className="truncate">{artist.name}</span>
+                    {artist.active ? <Check className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" /> : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {tip.panel}
       </DialogPanel>
     </div>,

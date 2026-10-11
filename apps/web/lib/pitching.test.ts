@@ -25,6 +25,9 @@ describe('isValidSongUrl', () => {
     'http://example.com/song.mp3',
     'https://untitled.stream/library/project/xyz',
     'https://soundcloud.com/artist/private-track/s-Abc123',
+    'https://soundcloud.com/artist/private-track/s-Abc123?si=0f1e2d3c&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing',
+    'https://on.soundcloud.com/AbC123xYz',
+    'https://untitled.stream/library/project/xyz?token=abc-123',
     'https://drive.google.com/file/d/abc/view?usp=sharing',
   ])('accepts %s', (url) => {
     expect(isValidSongUrl(url)).toBe(true);

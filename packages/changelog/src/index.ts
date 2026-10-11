@@ -20,6 +20,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.112.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Tap \"Where the money went\" on Home to see a rollout's spend, or tap Add spend to log a cost straight away. The card now shows even before you have logged anything.",
+      "The top bar is simpler. The logo and the name next to it are gone. On a phone only search is left at the top, and the UrgAns tab has no top bar at all.",
+      "On a phone, notifications, your account and the artist you are looking at are now under More.",
+      "The rollout menu on a phone opens as a full sheet, so you can reach every option.",
+      "Rollout chat works like a messenger: the message box stays at the bottom, above the keyboard, and new messages are always in view.",
+      "The Pitch screen is tidier, and the link box now asks for your untitled, SoundCloud or other private link.",
+    ],
+  },
+  {
     version: "1.111.0",
     date: "October 11, 2026",
     highlights: [

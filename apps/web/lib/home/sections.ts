@@ -4,11 +4,12 @@
  *
  *   Getting started (only while a team is setting up), Tasks (or Up next when
  *   there are none), For you today, Waiting on others, Next show, Rollouts,
- *   Placements, Where the money went (managers, when there is spend), then
+ *   Placements, Where the money went (managers who may track spend), then
  *   UrgAns' line for the day.
  *
  * A group with nothing in it is left out entirely: Home never shows an empty
- * state. Pure so the order and the drops can be tested.
+ * state. The one exception is Where the money went, which a manager sees empty
+ * so the first spend has a place to be added from. Pure so the order and the drops can be tested.
  */
 
 import { SPEND_COPY } from '../release-spend';
@@ -36,8 +37,13 @@ export type HomeBlocksInput = {
   hasNextShow: boolean;
   rolloutCount: number;
   placementCount: number;
-  /** The viewer is a manager and their rollouts spent something in the last 90 days. */
-  hasSpend: boolean;
+  /**
+   * The viewer is a manager and either their rollouts spent something in the
+   * last 90 days or there is a rollout they may track spend on. Since
+   * 2026-10-11 the card shows with no spend yet (empty copy plus Add spend), so
+   * the first figure has somewhere to go.
+   */
+  showSpend: boolean;
   /** Late tasks of the viewer's own: UrgAns' daily line waits for a day with none. */
   lateCount: number;
 };
@@ -69,7 +75,7 @@ export function orderHomeBlocks(input: HomeBlocksInput): HomeBlockKey[] {
   if (input.hasNextShow && !(showUpNext && input.upNext === 'show')) blocks.push('next-show');
   if (input.rolloutCount > 0) blocks.push('rollouts');
   if (input.placementCount > 0) blocks.push('placements');
-  if (input.hasSpend) blocks.push('spend');
+  if (input.showSpend) blocks.push('spend');
   if (input.lateCount === 0) blocks.push('daily-line');
   return blocks;
 }

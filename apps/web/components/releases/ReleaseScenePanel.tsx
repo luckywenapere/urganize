@@ -21,6 +21,7 @@ import { ReleaseChatSection } from '@/components/releases/ReleaseChatSection';
 import { PitchKitSection } from '@/components/releases/PitchKitSection';
 import { DistributionSection } from '@/components/releases/DistributionSection';
 import { SpendSection } from '@/components/releases/SpendSection';
+import { SPEND_ADD_FIELD } from '@/lib/home/spend-card';
 import { calendarFontVariables } from '@/components/content-calendar/calendar-fonts';
 
 /**
@@ -160,6 +161,8 @@ export function ReleaseScenePanel({
   const searchParams = useSearchParams();
   const requestedField = searchParams.get(FIELD_PARAM);
   const focusField = scene === 'metadata' && isMetadataFixField(requestedField) ? requestedField : null;
+  // Home's money card sends `field=add` to land on Spend with the form open.
+  const spendStartAdding = scene === 'spend' && requestedField === SPEND_ADD_FIELD;
 
   // Feature-discovery analytics used to ride the route change (a
   // featureRouteMatchers entry for the old /metadata path). With no route change
@@ -279,7 +282,8 @@ export function ReleaseScenePanel({
       ) : null}
       {scene === 'spend' ? (
         <SpendSection
-          key={release.id}
+          key={`${release.id}:${spendStartAdding ? 'add' : 'view'}`}
+          startAdding={spendStartAdding}
           releaseId={release.id}
           releaseTitle={release.title}
           tasks={tasks.map((task) => ({ id: task.id, title: task.title }))}

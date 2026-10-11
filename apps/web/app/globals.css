@@ -2457,10 +2457,14 @@ body:focus-within .keyboard-hint,
 
 /* .chappi-shell-height's flag-on twin — shared by ChappiPageClient and
    ChappiPageSkeleton, keep both in sync. Chrome being subtracted below lg:
-   topbar min-h-16 + 1px border (4rem) + main pt-5 (1.25rem) +
-   chappi-main-padding-nav (1rem + 4rem + safe-area) = 10.25rem. */
+   since 2026-10-11 the top bar has NO row on this page on a phone (TopNav's
+   isUrgansPage), only its safe-area top padding, then main pt-5 (1.25rem) +
+   chappi-main-padding-nav (1rem + 4rem + safe-area bottom) = 6.25rem plus
+   both safe areas. Until then it also took the 72px row (10.75rem). */
 .chappi-shell-height-nav {
-  height: calc(100dvh - 10.75rem - env(safe-area-inset-bottom, 0px) - 1px);
+  height: calc(
+    100dvh - 6.25rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1px
+  );
 }
 
 /* Desktop-only floor, same reasoning as .chappi-shell-height above — and it
@@ -2515,7 +2519,9 @@ body:focus-within .keyboard-hint,
   :root[data-keyboard-open='true'] .chappi-shell-height {
     position: fixed;
     z-index: 20;
-    top: calc(max(var(--app-visual-top, 0px), calc(4.5rem + 1px)) + 0.75rem);
+    /* The top bar on this page is only its safe-area padding below lg since
+       2026-10-11 (it was the 72px row, written here as 4.5rem + 1px). */
+    top: calc(max(var(--app-visual-top, 0px), env(safe-area-inset-top, 0px)) + 0.75rem);
     /* AN EXPLICIT HEIGHT, NOT `bottom` + `height: auto`. Both place the box
        identically, but only this one keeps the height DEFINITE, and the
        column's whole interior depends on that: the transcript is a
@@ -2531,7 +2537,7 @@ body:focus-within .keyboard-hint,
        0.75rem of air at each end. */
     height: calc(
       var(--app-viewport-height, 100dvh) -
-        max(0px, calc(4.5rem + 1px - var(--app-visual-top, 0px))) - 1.5rem
+        max(0px, calc(env(safe-area-inset-top, 0px) - var(--app-visual-top, 0px))) - 1.5rem
     );
     left: 1rem;
     right: 1rem;
