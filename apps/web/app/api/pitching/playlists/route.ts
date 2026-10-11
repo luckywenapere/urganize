@@ -6,6 +6,7 @@ import {
   flagOffResponse,
   isPitchingFeatureEnabled,
   loadCuratorNames,
+  loadCuratorPhotoUrls,
   requireTeamUser,
   toBrowsablePlaylist,
 } from '../_shared';
@@ -106,10 +107,11 @@ export async function GET(request: NextRequest) {
     ? allRows.filter((row) => !states.get(String(row.curator_user_id || ''))?.paused)
     : allRows;
 
-  const names = await loadCuratorNames(
-    auth.adminClient,
-    rows.map((row) => String(row.curator_user_id || ''))
-  );
+  const curatorIds = rows.map((row) => String(row.curator_user_id || ''));
+  const [names, photos] = await Promise.all([
+    loadCuratorNames(auth.adminClient, curatorIds),
+    loadCuratorPhotoUrls(auth.adminClient, curatorIds),
+  ]);
 
   return NextResponse.json({
     playlists: rows.map((row) => {
@@ -120,7 +122,8 @@ export async function GET(request: NextRequest) {
         names.get(curatorId) || 'Playlist owner',
         states
           ? { priceKobo: state?.priceKobo ?? null, responseWindowHours: state?.responseWindowHours ?? 0 }
-          : null
+          : null,
+        photos.get(curatorId) || null
       );
     }),
   });

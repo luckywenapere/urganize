@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.104.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Pitching is simpler. Curators now show as a picture grid. Tap one, paste your song link and send. Less text everywhere, on phone and desktop.",
+    ],
+  },
+  {
     version: "1.103.0",
     date: "October 11, 2026",
     highlights: [

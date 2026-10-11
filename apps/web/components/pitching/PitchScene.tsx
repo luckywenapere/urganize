@@ -53,34 +53,12 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
   const waitingCount = useMemo(() => countWaitingPitches(pitches), [pitches]);
   const atLimit = waitingCount >= MAX_WAITING_PITCHES_PER_RELEASE;
 
+  // Curators first, as a picture grid (founder, 2026-10-11). What was already
+  // sent comes after, and only when there is something to show.
   return (
-    <div className="mt-8 space-y-8">
-      <section aria-label="Pitches sent" className="space-y-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <h3 className="text-sm font-semibold text-content-primary">Sent</h3>
-          <span className="font-mono text-[11px] text-content-tertiary">
-            {waitingCount}/{MAX_WAITING_PITCHES_PER_RELEASE} waiting
-          </span>
-        </div>
-
-        {isLoadingPitches ? (
-          <CuratorCardListSkeleton rows={2} />
-        ) : pitches.length === 0 ? (
-          <p className="rounded-xl border border-stroke-default bg-bg-surface p-4 text-sm text-content-secondary">
-            No pitches yet for this rollout.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {pitches.map((pitch) => (
-              <SentPitchRow key={pitch.id} pitch={pitch} onChanged={() => void refreshPitches(true)} />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section aria-label="Send a pitch" className="space-y-4">
-        <h3 className="text-sm font-semibold text-content-primary">Pitch a playlist</h3>
-
+    <div className="mt-6 space-y-10">
+      <section aria-label="Pick a curator" className="space-y-4">
+        <h3 className="font-display text-xl font-semibold text-content-primary">Pick a curator</h3>
         <PitchComposer
           releaseId={release.id}
           initialSongTitle={release.title || ''}
@@ -94,6 +72,19 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
           onToast={onToast}
         />
       </section>
+
+      {isLoadingPitches ? (
+        <CuratorCardListSkeleton rows={1} />
+      ) : pitches.length > 0 ? (
+        <section aria-label="Pitches sent" className="space-y-3">
+          <h3 className="text-sm font-semibold text-content-primary">Sent</h3>
+          <ul className="space-y-2">
+            {pitches.map((pitch) => (
+              <SentPitchRow key={pitch.id} pitch={pitch} onChanged={() => void refreshPitches(true)} />
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }
