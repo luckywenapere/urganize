@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { profileRoles } from '@/lib/person-profile';
 import type { DirectoryRole } from '@/lib/directory-roles';
 import type { DirectoryEntry } from '@/lib/directory-search';
+import { loadKitCitiesForUsers } from '@/lib/profile-kit-server';
 import {
   DELIVERY_RECORDS_TABLE,
   PERSON_PROFILES_TABLE,
@@ -83,6 +84,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // An artist's place comes from their PUBLISHED press kit when one stands
+  // behind the profile (lib/profile-kit.ts), the profile's own city otherwise.
+  // Three queries for the whole list, never one per card. NO BIO is selected or
+  // returned here at all, which is also what keeps a bio off every unclaimed
+  // profile: this read has never carried one.
+  const kitCities = await loadKitCitiesForUsers(adminClient, userIds);
+
   const entries: (DirectoryEntry & { slug: string | null; isPublic: boolean })[] = listed.map(
     (row) => {
       const userId = String(row.user_id || '');
@@ -92,7 +100,7 @@ export async function GET(request: NextRequest) {
       return {
         userId,
         displayName: String(row.display_name || ''),
-        city: row.city ? String(row.city) : null,
+        city: kitCities.get(userId) ?? (row.city ? String(row.city) : null),
         availability: (row.availability as DirectoryEntry['availability']) || 'selective',
         roles: profileRoles(
           claimed,

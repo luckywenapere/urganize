@@ -58,6 +58,13 @@ const CHAT_COUNTERPARTS: Record<string, ChatCounterpart> = {
       'In conversation the same words are written with write_press_kit_section (kit prose) and ' +
       'saved through the pitch kit scene, and neither writes anything this action would have.',
   },
+  'directory.draft_bio': {
+    tools: null,
+    because:
+      'It drafts the bio on the signed-in person\'s OWN directory profile from their verified ' +
+      'delivery record, which is a button job inside their profile editor. The chat has no tool ' +
+      'that reads or writes a directory profile, and a bio is theirs to say.',
+  },
   'release.draft_spotify_pitch': {
     tools: null,
     because:

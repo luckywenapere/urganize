@@ -14,6 +14,10 @@ const FEATURE_BY_ACTION: Readonly<Record<string, AiUsageFeature>> = {
   'presskit.draft_section': 'press_kit',
   'epk.fill_both': 'pitch_kit',
   'release.draft_spotify_pitch': 'spotify_pitch',
+  // Filed with the press kit drafts: it is the same job (prose about a person
+  // from facts the product holds), and a new feature label would reach the admin
+  // usage panel's shared feature list for no gain.
+  'directory.draft_bio': 'press_kit',
 };
 
 export function usageFeatureForAction(actionId: string): AiUsageFeature | null {

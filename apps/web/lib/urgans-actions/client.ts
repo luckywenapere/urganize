@@ -338,6 +338,54 @@ export async function runDraftSpotifyPitch(params: {
   }
 }
 
+export type DirectoryBioDraftResult =
+  | { ok: true; actionId: string; bio: string }
+  | { ok: false; status: number; error: string; planRequired?: boolean };
+
+/**
+ * Ask UrgAns to draft the bio on the signed-in person's own directory profile.
+ * Nothing is written until they accept it (applyRunAction). `planRequired`
+ * comes back flagged so the caller can show the locked sheet.
+ */
+export async function runDraftDirectoryBio(params: {
+  profileId: string;
+  notes?: string;
+}): Promise<DirectoryBioDraftResult> {
+  const token = await getAccessToken();
+  if (!token) return { ok: false, status: 401, error: 'Your session expired. Sign in again.' };
+  try {
+    const response = await postJson('/api/urgans/actions', token, {
+      actionType: 'directory.draft_bio',
+      objectId: params.profileId,
+      input: { notes: params.notes ?? '' },
+    });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error:
+          typeof payload.error === 'string'
+            ? payload.error
+            : 'UrgAns could not write that just now. Try again.',
+        planRequired: payload.reason === 'plan_required',
+      };
+    }
+    const output = (payload.output || {}) as { bio?: unknown };
+    const bio = typeof output.bio === 'string' ? output.bio : '';
+    const actionId = typeof payload.actionId === 'string' ? payload.actionId : '';
+    if (!bio || !actionId) {
+      return { ok: false, status: 502, error: 'UrgAns could not write that just now. Try again.' };
+    }
+    return { ok: true, actionId, bio };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return { ok: false, status: 504, error: 'That took too long. Your bio is untouched. Try again.' };
+    }
+    return { ok: false, status: 0, error: 'Could not reach UrgAns. Your bio is untouched. Try again.' };
+  }
+}
+
 export type RunActionApplyResult =
   | { ok: true; result: unknown }
   | { ok: false; status: number; error: string };

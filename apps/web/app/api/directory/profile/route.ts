@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { parsePersonProfileInput, slugConflictIsOurs, suggestSlug } from '@/lib/person-profile';
+import { bioForPayload, resolveProfileView } from '@/lib/profile-kit';
+import { loadKitFactsForUser } from '@/lib/profile-kit-server';
+import { canRunEmbeddedAction } from '@/lib/urgans-actions/server';
 import {
   PERSON_PROFILES_TABLE,
   PERSON_PROFILE_COLUMNS,
@@ -29,6 +33,40 @@ import {
  * belongs with the directory itself rather than being bolted onto this.
  */
 
+const DRAFT_BIO_ACTION = 'directory.draft_bio';
+
+/**
+ * Everything the editor needs about one profile in one answer.
+ *
+ * `view` is what the directory and the public page actually SHOW: the artist's
+ * published press kit laid over the profile's own fields (lib/profile-kit.ts).
+ * The editor uses it to point at the kit instead of duplicating its fields, and
+ * `profile` stays the person's own stored record, untouched.
+ *
+ * `canDraftBio` is the server's answer to "may this person use Draft my bio":
+ * Manager and up with embedded actions on. A Solo person sees the field and
+ * edits by hand, with no button, which is why no client works this out itself.
+ */
+async function profileResponseBody(
+  adminClient: SupabaseClient,
+  user: User,
+  profile: ReturnType<typeof toPersonProfile>
+) {
+  const [roles, kit] = await Promise.all([
+    loadProfileRoles(adminClient, user.id, profile.roles),
+    loadKitFactsForUser(adminClient, user.id),
+  ]);
+  // This is somebody's OWN claimed profile, but the rule is applied anyway so no
+  // read path can carry a bio on a profile nobody has claimed.
+  const safe = { ...profile, bio: bioForPayload({ userId: profile.userId, bio: profile.bio }) };
+  const view = resolveProfileView(safe, kit);
+  // No draft button when the artist's kit already supplies the bio: it would be
+  // written to a field the directory then does not show.
+  const canDraftBio =
+    !view.fromKit.bio && (await canRunEmbeddedAction(adminClient, DRAFT_BIO_ACTION, profile.id, user));
+  return { profile: safe, roles, view, canDraftBio };
+}
+
 export async function GET(request: NextRequest) {
   if (!isDirectoryFeatureEnabled()) return directoryDisabledResponse();
 
@@ -54,12 +92,12 @@ export async function GET(request: NextRequest) {
   }
 
   if (!data) {
-    return NextResponse.json({ profile: null, roles: [] });
+    return NextResponse.json({ profile: null, roles: [], view: null, canDraftBio: false });
   }
 
-  const profile = toPersonProfile(asRow(data));
-  const roles = await loadProfileRoles(adminClient, auth.user.id, profile.roles);
-  return NextResponse.json({ profile, roles });
+  return NextResponse.json(
+    await profileResponseBody(adminClient, auth.user, toPersonProfile(asRow(data)))
+  );
 }
 
 export async function PATCH(request: NextRequest) {
@@ -155,7 +193,7 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const profile = toPersonProfile(asRow(data));
-  const roles = await loadProfileRoles(adminClient, auth.user.id, profile.roles);
-  return NextResponse.json({ profile, roles });
+  return NextResponse.json(
+    await profileResponseBody(adminClient, auth.user, toPersonProfile(asRow(data)))
+  );
 }

@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Loader2 } from '@/components/icons';
+import Link from 'next/link';
+import { Check, Loader2, Sparkles } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import {
   DIRECTORY_SETTINGS_ANCHOR,
@@ -14,6 +15,11 @@ import {
 } from '@/lib/person-profile';
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
 import type { PersonProfile, ProfileRole } from '@/types/directory';
+import { kitFieldNames, type ResolvedProfileView } from '@/lib/profile-kit';
+import { BioDraftCard } from '@/components/directory/BioDraftCard';
+import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
+import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
+import { applyRunAction, discardRunAction, runDraftDirectoryBio } from '@/lib/urgans-actions/client';
 import { panelClass } from './panelClass';
 import { SentRequestsList } from '@/components/directory/SentRequestsList';
 import { WorkRequestsInbox } from './WorkRequestsInbox';
@@ -47,6 +53,16 @@ const REQUESTS_ENABLED =
 export function DirectoryProfileSection() {
   const [profile, setProfile] = useState<PersonProfile | null>(null);
   const [roles, setRoles] = useState<ProfileRole[]>([]);
+  // What the directory actually SHOWS: the artist's published press kit laid
+  // over the stored profile. `profile` stays the person's own record.
+  const [view, setView] = useState<ResolvedProfileView | null>(null);
+  const [canDraftBio, setCanDraftBio] = useState(false);
+  const [draft, setDraft] = useState<{ actionId: string; bio: string } | null>(null);
+  const [drafting, setDrafting] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+  const [draftError, setDraftError] = useState('');
+  const [lockedMessage, setLockedMessage] = useState('');
+  const { balance, refresh: refreshBalance } = useCreditBalance();
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -63,11 +79,21 @@ export function DirectoryProfileSection() {
     return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : null;
   }, []);
 
-  const apply = useCallback((body: { profile: PersonProfile | null; roles: ProfileRole[] }) => {
-    setProfile(body.profile);
-    setRoles(Array.isArray(body.roles) ? body.roles : []);
-    if (body.profile) setName(body.profile.displayName);
-  }, []);
+  const apply = useCallback(
+    (body: {
+      profile: PersonProfile | null;
+      roles: ProfileRole[];
+      view?: ResolvedProfileView | null;
+      canDraftBio?: boolean;
+    }) => {
+      setProfile(body.profile);
+      setRoles(Array.isArray(body.roles) ? body.roles : []);
+      setView(body.view ?? null);
+      setCanDraftBio(body.canDraftBio === true);
+      if (body.profile) setName(body.profile.displayName);
+    },
+    []
+  );
 
   useEffect(() => {
     if (!DIRECTORY_ENABLED) return;
@@ -133,6 +159,62 @@ export function DirectoryProfileSection() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const draftBio = async (notes = '') => {
+    if (!profile) return;
+    setDrafting(true);
+    setDraftError('');
+    const result = await runDraftDirectoryBio({ profileId: profile.id, notes });
+    setDrafting(false);
+    // The run has settled, so the balance has moved (a failed run costs nothing).
+    void refreshBalance();
+    if (!result.ok) {
+      if (result.planRequired) {
+        setLockedMessage(result.error);
+        return;
+      }
+      setDraftError(result.error);
+      return;
+    }
+    setDraft({ actionId: result.actionId, bio: result.bio });
+  };
+
+  const acceptDraft = async () => {
+    if (!draft) return;
+    const headers = await authHeaders();
+    if (!headers) return;
+    setAccepting(true);
+    setDraftError('');
+    const result = await applyRunAction(draft.actionId, headers.Authorization.replace('Bearer ', ''));
+    if (!result.ok) {
+      setAccepting(false);
+      setDraftError(result.error);
+      return;
+    }
+    // Read it back rather than trusting the draft on screen: what is shown is
+    // what the directory now holds.
+    try {
+      const response = await fetch('/api/directory/profile', { headers, cache: 'no-store' });
+      if (response.ok) apply(await response.json());
+    } catch {
+      // The bio is saved either way; the next load shows it.
+    }
+    setDrafts((current) => ({ ...current, bio: undefined }));
+    setDraft(null);
+    setAccepting(false);
+  };
+
+  const discardDraft = () => {
+    const current = draft;
+    setDraft(null);
+    setDraftError('');
+    if (!current) return;
+    void (async () => {
+      const headers = await authHeaders();
+      // Best effort: nothing was written, so a failed discard costs nothing.
+      if (headers) await discardRunAction(current.actionId, headers.Authorization.replace('Bearer ', ''));
+    })();
   };
 
   const hasUnsavedText =
@@ -291,47 +373,116 @@ export function DirectoryProfileSection() {
             )}
           </div>
 
-          <label className="block">
-            <span className="mb-1 block text-xs text-content-tertiary">
-              A line about you. Optional.
-            </span>
-            <textarea
-              value={drafts.bio ?? profile.bio ?? ''}
-              onChange={(event) => setDrafts((current) => ({ ...current, bio: event.target.value }))}
-              disabled={busy}
-              rows={3}
-              maxLength={PERSON_BIO_MAX_CHARS}
-              onBlur={(event) => {
-                const next = event.target.value.trim();
-                if (next !== (profile.bio ?? '')) void save({ bio: next || null });
-              }}
-              className="w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
-            />
-          </label>
+          {/* ONE RECORD, SEEN TWO WAYS. For an artist whose press kit is
+              published, the bio, place, links and photo the directory shows
+              come from that kit, so they are edited there once and never
+              twice. A field the kit leaves empty still falls back to the one
+              typed here. */}
+          {view?.kit && kitFieldNames(view).length > 0 ? (
+            <div className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-3">
+              <p className="text-sm text-content-primary">
+                Your page uses {view.kit.artistName}&apos;s press kit for {kitFieldNames(view).join(', ')}.
+              </p>
+              <Link
+                href={`/dashboard/press-kits/${view.kit.artistId}`}
+                className="motion-focus mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-brand underline underline-offset-4"
+              >
+                Edit it in the press kit
+              </Link>
+              {view.fromKit.bio && view.bio ? (
+                <p className="line-clamp-4 whitespace-pre-line text-sm text-content-secondary">{view.bio}</p>
+              ) : null}
+            </div>
+          ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(['city', 'country'] as const).map((field) => (
-              <label key={field} className="block">
-                <span className="mb-1 block text-xs capitalize text-content-tertiary">{field}</span>
-                <input
-                  value={drafts[field] ?? profile[field] ?? ''}
-                  onChange={(event) =>
-                    setDrafts((current) => ({ ...current, [field]: event.target.value }))
-                  }
-                  disabled={busy}
-                  onBlur={(event) => {
-                    const next = event.target.value.trim();
-                    if (next !== (profile[field] ?? '')) void save({ [field]: next || null });
-                  }}
-                  className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none disabled:opacity-60"
-                />
-              </label>
-            ))}
-          </div>
+          {!view?.fromKit.bio ? (
+            <div>
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <label htmlFor="directory-bio" className="block text-xs text-content-tertiary">
+                  A line about you. Optional.
+                </label>
+                {canDraftBio && !draft ? (
+                  <button
+                    type="button"
+                    onClick={() => void draftBio()}
+                    disabled={drafting || busy}
+                    className="motion-focus inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-brand disabled:opacity-60"
+                  >
+                    {drafting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <Sparkles className="h-4 w-4" aria-hidden />
+                    )}
+                    Draft my bio
+                  </button>
+                ) : null}
+              </div>
+              {draft ? (
+                <div className="mb-3">
+                  <BioDraftCard
+                    bio={draft.bio}
+                    balance={balance}
+                    isBusy={drafting || accepting}
+                    error={draftError}
+                    onAccept={() => void acceptDraft()}
+                    onRetry={(notes) => void draftBio(notes)}
+                    onDiscard={discardDraft}
+                  />
+                </div>
+              ) : null}
+              {!draft && draftError ? (
+                <p role="alert" className="mb-2 text-sm text-status-error">
+                  {draftError}
+                </p>
+              ) : null}
+              <textarea
+                id="directory-bio"
+                value={drafts.bio ?? profile.bio ?? ''}
+                onChange={(event) => setDrafts((current) => ({ ...current, bio: event.target.value }))}
+                disabled={busy}
+                rows={3}
+                maxLength={PERSON_BIO_MAX_CHARS}
+                onBlur={(event) => {
+                  const next = event.target.value.trim();
+                  if (next !== (profile.bio ?? '')) void save({ bio: next || null });
+                }}
+                className="w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary hover:border-content-secondary focus:border-brand focus:outline-none disabled:opacity-60"
+              />
+            </div>
+          ) : null}
+
+          {!view?.fromKit.location ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(['city', 'country'] as const).map((field) => (
+                <label key={field} className="block">
+                  <span className="mb-1 block text-xs capitalize text-content-tertiary">{field}</span>
+                  <input
+                    value={drafts[field] ?? profile[field] ?? ''}
+                    onChange={(event) =>
+                      setDrafts((current) => ({ ...current, [field]: event.target.value }))
+                    }
+                    disabled={busy}
+                    onBlur={(event) => {
+                      const next = event.target.value.trim();
+                      if (next !== (profile[field] ?? '')) void save({ [field]: next || null });
+                    }}
+                    className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary hover:border-content-secondary focus:border-brand focus:outline-none disabled:opacity-60"
+                  />
+                </label>
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
 
       {error ? <p role="alert" className="mt-3 text-sm text-status-error">{error}</p> : null}
+
+      <UrgansLockedSheet
+        open={Boolean(lockedMessage)}
+        message={lockedMessage}
+        actionType="directory.draft_bio"
+        onClose={() => setLockedMessage('')}
+      />
 
       {/* Requests waiting for you. Rendered only once you have a record —
           nobody can ask somebody who is not listed — and the inbox itself
