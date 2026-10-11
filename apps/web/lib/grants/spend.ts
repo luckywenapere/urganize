@@ -10,9 +10,14 @@
 
 export type SpendKind = 'search' | 'extraction';
 
-/** UNVERIFIED. A search with page text, and one model read of one page, in US dollars. */
+/**
+ * A search with page text, and one model read of one page, in US dollars.
+ * Search CHECKED 2026-10-11 against exa.ai/pricing: auto search is $7 per 1,000
+ * requests (up to 10 results) plus $1 per 1,000 pages of text, so a search with 8
+ * pages of text is $0.015. Extraction is still an estimate: it depends on the model.
+ */
 export const DEFAULT_SPEND_PRICES_USD: Record<SpendKind, number> = {
-  search: 0.007,
+  search: 0.015,
   extraction: 0.002,
 };
 

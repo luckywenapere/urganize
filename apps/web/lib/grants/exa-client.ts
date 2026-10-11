@@ -17,9 +17,9 @@
 
 import type { FetchedPage } from './types';
 
-/** UNVERIFIED. */
+/** Checked 2026-10-11 against docs.exa.ai/reference/search. */
 export const EXA_SEARCH_URL = 'https://api.exa.ai/search';
-/** UNVERIFIED. */
+/** Checked 2026-10-11 against docs.exa.ai/reference/search. */
 export const EXA_KEY_HEADER = 'x-api-key';
 
 export const DEFAULT_RESULTS = 8;
