@@ -4,6 +4,7 @@ import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal'
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Logo } from '@urganize/ui';
 import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { HelpMenu } from '@/components/app/HelpMenu';
@@ -29,6 +30,12 @@ import { useNavTip } from './useNavTip';
  * sheet. The bell itself stays MOUNTED on a phone, only its button is hidden,
  * because it also runs the realtime subscription that toasts a new notification
  * and it draws the panel More opens.
+ *
+ * Later the same day (2026-10-11, founder call) the Urganize mark came back on
+ * a DESKTOP only (`lg` and up), at the far left before the area pills, linking
+ * to Home as it did before. The team and artist label stays gone (it lives in
+ * the account menu), and the phone bar is unchanged: search alone, and no row
+ * at all on the UrgAns tab.
  *
  * Rollout context is no longer in the bar: a rollout's own screen names it.
  * The artist filter the label opened is in the account menu (desktop) and More
@@ -62,7 +69,16 @@ export function TopNav({ userName }: { userName?: string }) {
           isUrgansPage ? 'hidden' : 'flex'
         }`}
       >
-        <nav aria-label="Main" className="hidden min-w-0 items-center gap-0.5 lg:-ml-2.5 lg:flex xl:gap-1">
+        {/* Desktop only: the phone bar stays search alone. */}
+        <Link
+          href="/dashboard/home"
+          aria-label="Urganize home"
+          className="motion-focus hidden shrink-0 rounded-md transition-opacity hover:opacity-80 lg:inline-flex"
+        >
+          <Logo size="sm" priority className="opacity-95" />
+        </Link>
+
+        <nav aria-label="Main" className="hidden min-w-0 items-center gap-0.5 lg:ml-2 lg:flex xl:gap-1">
           {areas.map((area) => {
             // With Home's left column folded away the pill reads as off, so it
             // says the column is hidden and pressing it brings it back.

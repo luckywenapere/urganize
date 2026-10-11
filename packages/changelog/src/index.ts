@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.115.1",
+    date: "October 11, 2026",
+    highlights: [
+      "On a computer, the Urganize logo is back at the top left of the top bar. Click it to go to Home. On a phone the top bar stays the same.",
+    ],
+  },
+  {
     version: "1.115.0",
     date: "October 11, 2026",
     highlights: [
