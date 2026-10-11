@@ -1,11 +1,32 @@
 # Grant finder: from spike to an in-app feed
 
-Status: **decisions approved by Oyin 2026-10-11 (all section 8 defaults, paid plans only); ship still gated on the labelled run passing section 5.** Written 2026-10-11 after the live evaluation
+Status: **decisions approved by Oyin 2026-10-11 (all section 8 defaults, paid plans only).
+Revised the same day:** the labelled live run failed its bars (`grant-finder-results.md`),
+and Oyin approved feeding the feed from the **curated list**, with Exa as the curator's
+tool rather than a per-team live search. Section 0 is the change; the rest of this
+plan is kept as written where it still holds. Written 2026-10-11 after the live evaluation
 (20 cases, 111 results, about $0.92). Nothing here gets built until the results are
 labelled, scored, and written up in `grant-finder-results.md`, and the founder picks
 "plan a product version" at the step 6 decision gate in `grant-finder-plan.md`.
 This replaces section 10 of that plan, which assumed a chat tool. The founder asked
 for a feed that updates by itself.
+
+## 0. The change (2026-10-11)
+
+- **Source:** a staff-kept `grant_programmes` table, seeded from
+  `grant-funders-curated.csv`, replaces per-team Exa searches. Every row is read by a
+  person before it can be suggested.
+- **The weekly job matches, it doesn't search.** It compares each team's facts
+  (country, genre, stage, need, applicant type) with open programmes and writes
+  `grant_suggestions`. No Exa or model call per team, so the per-team cost in
+  section 4 drops to roughly zero, and the cron time limit stops mattering.
+- **Exa moves to the curator.** A monthly sweep uses the spike pipeline (search,
+  extraction, verifier, dedupe against `grant_programmes`) to propose candidate
+  rows for a person to check. The spike code is reused there, not thrown away.
+- **Router surface `grant_extract`** is needed only for the curator sweep, so it
+  drops from the user path to a later step.
+- Unchanged: the UI, Add and Dismiss, tombstones, weekly in-app notification, paid
+  plans only, feature flag, two weeks on our own team first.
 
 ## 1. What the user sees
 
@@ -123,10 +144,12 @@ call.
 ## 7. Build order
 
 1. ~~Fix the two field errors and add funder aliases (section 5), tests first.~~ Done.
-2. Migration: `grant_suggestions`, plus `source_url`/`source_read_on` on
-   opportunities.
-3. Router surface `grant_extract` and the guard updates.
-4. The weekly job inside the notifications cron, with caps and carry-over.
+2. Migration: `grant_programmes` and `grant_suggestions`, plus
+   `source_url`/`source_read_on` on opportunities
+   (`supabase/migrations/20261011100000_grant_suggestions.sql`). Written; Oyin applies it.
+3. Seed `grant_programmes` from the curated CSV (grants, residencies, scholarships and
+   prizes suggestable; loans kept but never suggested).
+4. The weekly matcher inside the notifications cron (pure matching, tests first).
 5. The Suggested grants strip with Add and Dismiss, behind a flag.
 6. The weekly notification.
 7. Turn it on for our own team first and read every card for two weeks, then roll
@@ -139,6 +162,6 @@ call.
 | Approve the migration? | Yes, it's needed to remember what was dismissed. |
 | Ride the daily cron or add a worker? | Ride the cron, and move to a worker only if carry-over lags. |
 | Paid plans only? | Yes. Cost is about $0.20 per team per month. |
-| Curated list plus Exa, or Exa alone? | Curated plus Exa, for Nigerian coverage. |
+| Curated list plus Exa, or Exa alone? | Curated plus Exa, for Nigerian coverage. **Revised:** curated list is the feed's only source; Exa helps the curator (after the failed live run). |
 | How often? | Weekly per team. |
 | Notification channel? | In-app now. Email digest later, if it gets read. |
