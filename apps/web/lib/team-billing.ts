@@ -75,6 +75,11 @@ export type WorkspaceBillingFields = {
   billingPlan: string | null;
   /** Agreed rate in kobo, for founding/custom deals. Display is admin-only. */
   billingLockedAmount: number | null;
+  /** Days of access the team holds AFTER its owner's paid period ends
+   *  (workspaces.paid_bonus_days, 20261011120000_share_reward.sql). Today only
+   *  the share reward writes it (lib/share-reward.ts). Optional, and absent
+   *  means 0, so every reader that predates the column behaves as before. */
+  paidBonusDays?: number | null;
 };
 
 export type TeamAccessState =
@@ -111,7 +116,10 @@ export type TeamAccessReason =
   /** No plan, credits in the balance. The credits-only state. */
   | 'credits_funded'
   /** trial_ends_at was never stamped. Fails OPEN — see resolveTeamAccess. */
-  | 'no_trial_stamp';
+  | 'no_trial_stamp'
+  /** The owner's paid period ended, and the team is inside the bonus days it
+   *  holds on top of it (the share reward). Paid access, not a trial. */
+  | 'share_bonus';
 
 export type TeamAccessResolution = {
   state: TeamAccessState;
@@ -141,6 +149,27 @@ export function computeTeamTrialDaysLeft(
   const diff = endsMs - now.getTime();
   if (diff <= 0) return 0;
   return Math.ceil(diff / DAY_MS);
+}
+
+/**
+ * When a team's bonus days run out: the owner's paid-through date plus
+ * `bonusDays`. Null when there are no bonus days or no paid-through date.
+ *
+ * RELATIVE ON PURPOSE. The bonus is stored as a number of days, not a date,
+ * so it always sits on the END of whatever the owner has paid for. A Paystack
+ * renewal advances subscriptions.expires_at from its current value, so a date
+ * computed at claim time would be overtaken by the next renewal and the month
+ * silently lost; days counted from the live paid-through date are not.
+ */
+export function paidBonusEndsAt(
+  ownerPaidThrough: string | null | undefined,
+  bonusDays: number | null | undefined
+): Date | null {
+  const days = Math.max(0, Math.floor(Number(bonusDays) || 0));
+  if (days === 0 || !ownerPaidThrough) return null;
+  const throughMs = Date.parse(ownerPaidThrough);
+  if (!Number.isFinite(throughMs)) return null;
+  return new Date(throughMs + days * DAY_MS);
 }
 
 /**
@@ -222,6 +251,9 @@ export function resolveTeamAccess(input: {
    *  otherwise be read-only or the wall: a trial, a paid plan or a comp is never
    *  narrowed to Solo by having credits. */
   creditsFunded?: boolean;
+  /** The owner's paid-through date (their snapshot's expiresAt). Only read
+   *  when the team holds bonus days; see paidBonusEndsAt. */
+  ownerPaidThrough?: string | null;
 }): TeamAccessResolution {
   const now = input.now ?? new Date();
   const graceMs = Math.max(0, input.graceMs ?? 0);
@@ -258,6 +290,23 @@ export function resolveTeamAccess(input: {
       hasAccess: true,
       canWrite: true,
       reason: 'comped',
+      trialEndsAt,
+      trialDaysLeft,
+      inGrace: false,
+    };
+  }
+
+  // The share reward's month for a paying team: the days straight after the
+  // owner's paid period are still paid access. Below comped (a comp needs no
+  // bonus) and above the trial checks, so it reads as paid, keeping the owner's
+  // tier, rather than as a trial.
+  const bonusEnds = paidBonusEndsAt(input.ownerPaidThrough, input.team.paidBonusDays);
+  if (bonusEnds && now.getTime() < bonusEnds.getTime()) {
+    return {
+      state: 'paid',
+      hasAccess: true,
+      canWrite: true,
+      reason: 'share_bonus',
       trialEndsAt,
       trialDaysLeft,
       inGrace: false,

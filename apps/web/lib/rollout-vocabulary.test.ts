@@ -71,6 +71,7 @@ const GUARDED_FILES = [
   'components/releases/ReleaseScenePanel.tsx',
   'components/chappi/ChappiConversation.tsx',
   'components/share/ShareSheet.tsx',
+  'lib/share-reward.ts',
   'components/settings/BrandColorsSection.tsx',
   // Curator pitch payments (2026-09-25) found the drift while adding an
   // Earnings tab right beside it: the dual-account link back to the team side

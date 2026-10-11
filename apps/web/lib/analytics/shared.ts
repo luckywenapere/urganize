@@ -329,6 +329,15 @@ export interface AnalyticsEventPropertiesMap {
     /** `x_intent`: opened X's own "write a post" page with the text filled in. */
     method: 'share' | 'download' | 'copy' | 'whatsapp' | 'instagram_dm' | 'more' | 'x_intent';
   };
+  /**
+   * The share reward (2026-10-11, lib/share-reward.ts). Server-side, from
+   * /api/workspace/share-reward, once per team. `kind` says which way the
+   * month went: onto a trial, or onto the end of a paid period.
+   */
+  share_reward_claimed: {
+    kind: 'trial_extended' | 'paid_bonus';
+    team_state: string;
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;
