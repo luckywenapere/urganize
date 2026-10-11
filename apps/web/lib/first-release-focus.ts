@@ -1,7 +1,6 @@
 /**
- * First-release focus (2026-10-10, founder request): once a new team has been
- * through the guided tour and still has no rollout, the rest of the app is
- * LOCKED and the one thing on offer is making the first rollout — either
+ * First-release focus (2026-10-10, founder request): while a new team still
+ * has no rollout, the rest of the app is LOCKED and the one thing on offer is making the first rollout — either
  * planned by UrgAns or planned by the manager themselves.
  *
  * This is deliberately NOT the URG-217 wall that was removed 2026-08-28. That
@@ -9,7 +8,9 @@
  * not have. This one:
  *  - only locks navigation INTO other areas (a click on an in-app link is
  *    caught and explained); Home, Settings, billing and sign-out always work;
- *  - only starts after the tour has been seen, so it never talks over it;
+ *  - never talks over a running tour. It used to wait until the welcome tour
+ *    had been SEEN as well; that tour was removed on 2026-10-11 (lib/tours.ts),
+ *    so a new account now lands straight in this flow;
  *  - fails toward NOT locking on every uncertainty (unknown user,
  *    release store not loaded), the same direction as lib/first-release-required;
  *  - lifts the instant a rollout exists, from any path (UrgAns, MCP, another
@@ -34,16 +35,12 @@ export function decideFirstReleaseFocus(input: {
    *  genuinely zero rollouts. Already fails open. */
   firstReleaseRequired: boolean;
   isCurator: boolean;
-  /** Guided tours are on. When they are off there is no tour to wait for. */
-  toursEnabled: boolean;
-  tourSeen: boolean;
-  /** A tour is running, or one has been asked for and not yet reached. */
+  /** A tour is running. */
   tourBlocking: boolean;
 }): boolean {
   if (input.isCurator) return false;
   if (!input.firstReleaseRequired) return false;
   if (input.tourBlocking) return false;
-  if (input.toursEnabled && !input.tourSeen) return false;
   return true;
 }
 

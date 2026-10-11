@@ -5,19 +5,17 @@ import { create } from 'zustand';
 import type { TourId, TourStep } from '@/lib/tours';
 
 /**
- * The running tour, and a replay request waiting to be picked up.
+ * The running tour.
  *
- * A store rather than props for the usePlannerStore reason: the two things
- * that START a tour (the auto-start hook inside WorkspaceView, and the two
- * replay entry points in the HelpMenu and Settings) sit in different ownership
- * islands from the overlay, which AppShell mounts once.
+ * A store rather than props for the usePlannerStore reason: the things that
+ * START a tour (the "Take the tour" card in WorkspaceView, and the replay rows
+ * in the HelpMenu and Settings) sit in different ownership islands from the
+ * overlay, which AppShell mounts once.
  *
- * `pendingReplay` exists because a replay can be asked for from a page the
- * tour cannot run on. Settings has no catalog to point at, so the request is
- * parked here, the caller navigates, and useCatalogTourAutoStart consumes it
- * on arrival. It is a REQUEST, not a running tour — which is why
- * `blocksPrompts` counts it: the first-release prompt must not fire into the
- * gap between asking for a tour and landing where it runs.
+ * There used to be a `pendingReplay` here too, a request parked for the
+ * welcome ("catalog") tour to pick up on arrival. That tour was removed on
+ * 2026-10-11 (lib/tours.ts says why) and the rollout tour starts directly, so
+ * nothing parks a request any more.
  */
 export type ActiveTour = {
   tourId: TourId;
@@ -27,23 +25,15 @@ export type ActiveTour = {
 
 type TourState = {
   active: ActiveTour | null;
-  pendingReplay: TourId | null;
   start: (tourId: TourId, steps: readonly TourStep[]) => void;
   next: () => void;
   skip: () => void;
   finish: () => void;
-  requestReplay: (tourId: TourId) => void;
-  consumeReplay: (tourId: TourId) => boolean;
 };
 
-export const useTourStore = create<TourState>((set, get) => ({
+export const useTourStore = create<TourState>((set) => ({
   active: null,
-  pendingReplay: null,
-  // Starting always clears any pending replay: this IS the replay being
-  // honoured in the case that matters, and a stale request left behind would
-  // re-run the tour the next time the hook looked.
-  start: (tourId, steps) =>
-    set({ active: steps.length ? { tourId, stepIndex: 0, steps } : null, pendingReplay: null }),
+  start: (tourId, steps) => set({ active: steps.length ? { tourId, stepIndex: 0, steps } : null }),
   next: () =>
     set((state) => {
       if (!state.active) return state;
@@ -53,12 +43,6 @@ export const useTourStore = create<TourState>((set, get) => ({
     }),
   skip: () => set({ active: null }),
   finish: () => set({ active: null }),
-  requestReplay: (tourId) => set({ pendingReplay: tourId }),
-  consumeReplay: (tourId) => {
-    if (get().pendingReplay !== tourId) return false;
-    set({ pendingReplay: null });
-    return true;
-  },
 }));
 
 /** Imperative read for callers outside React — the first-release prompt's
@@ -67,9 +51,7 @@ export function isTourRunning(): boolean {
   return useTourStore.getState().active !== null;
 }
 
-/** A tour is running OR one has been asked for and not yet reached. Both must
- *  hold back anything that would interrupt. */
+/** A running tour holds back anything that would interrupt it. */
 export function tourBlocksPrompts(): boolean {
-  const state = useTourStore.getState();
-  return state.active !== null || state.pendingReplay !== null;
+  return useTourStore.getState().active !== null;
 }

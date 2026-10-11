@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Check, Copy } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -33,7 +33,7 @@ type TeammatesSectionProps = {
  * decision) -- only the initial teammates LIST is centrally loaded by the
  * parent shell, passed down here as a prop.
  */
-export function TeammatesSection({
+function TeammatesSectionView({
   teammates,
   isLoadingTeammates,
   onTeammatesChange,
@@ -447,3 +447,10 @@ export function TeammatesSection({
     </section>
   );
 }
+
+/**
+ * Memoised (2026-10-11) alongside the Settings segments: with useTeammates'
+ * refetch now a stable callback, the section re-renders only when the list,
+ * loading flag, seat limit or artists change, not on every Settings keystroke.
+ */
+export const TeammatesSection = memo(TeammatesSectionView);

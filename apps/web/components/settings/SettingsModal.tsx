@@ -74,7 +74,7 @@ import { UrgansSegment } from './segments/UrgansSegment';
  * `position: fixed` relative to it, the shared ref-counted body scroll lock,
  * Escape and Tab handled on the dialog itself so one keypress can never close
  * two things, and z-[170]. While it holds the scroll lock the first-rollout
- * prompt, the catalog tour and the first-share offer decline to fire, which is
+ * prompt and the first-share offer decline to fire, which is
  * the intended reading of `isBodyScrollLocked()`.
  */
 

@@ -93,7 +93,7 @@ export function BottomBar() {
             collapsed ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
         >
-          <ActiveIcon className="h-5 w-5" aria-hidden="true" />
+          <ActiveIcon className="pointer-events-none h-5 w-5" aria-hidden="true" />
         </button>
         <ul
           className={`mx-auto flex h-14 w-[calc(100vw-1.5rem)] max-w-xl items-stretch gap-0.5 px-1.5 py-1 transition-opacity duration-200 ${
@@ -123,7 +123,7 @@ export function BottomBar() {
                     isActive ? 'bg-bg-hover text-brand' : 'text-content-tertiary'
                   }`}
                 >
-                  <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                  <Icon className="pointer-events-none h-[18px] w-[18px]" aria-hidden="true" />
                   {tab.label}
                 </Link>
               </li>
@@ -141,7 +141,12 @@ export function BottomBar() {
                 active === 'more' ? 'bg-bg-hover text-brand' : 'text-content-tertiary'
               }`}
             >
-              <MoreHorizontal className="h-[18px] w-[18px]" aria-hidden="true" />
+              {/* pointer-events-none on the icon (2026-10-11): a first-session
+                  replay recorded a "dead" tap here whose target was one of the
+                  ellipsis's three 1px circles, not the button. The button
+                  always handled it; this just makes the whole 56px cell the
+                  target, so taps and their analytics land on the button. */}
+              <MoreHorizontal className="pointer-events-none h-[18px] w-[18px]" aria-hidden="true" />
               More
             </button>
           </li>

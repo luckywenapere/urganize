@@ -242,7 +242,7 @@ export const useChappiStore = create<ChappiStore>((set) => ({
 
 /**
  * Turns added in THIS session. A restored chat is on screen but not "in
- * progress": the first-release prompt, the catalog tour and the usage strip
+ * progress": the first-release prompt and the usage strip
  * read this instead of `messages.length`, so reopening yesterday's chat does
  * not silence them for the whole session. Identical to `messages.length` when
  * history is off, because `restoredCount` is then always 0.

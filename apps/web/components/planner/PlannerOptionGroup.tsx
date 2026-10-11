@@ -11,6 +11,14 @@
  * real radio or checkbox inside a label, the way the onboarding wizard does it,
  * so arrow-key groups, screen readers and the 44px hit target all come for
  * free.
+ *
+ * THE WHOLE ROW IS THE TARGET (2026-10-11, after a first-session replay). The
+ * label is a full-width block at least 52px tall, `touch-manipulation` so a
+ * quick second tap is a tap and not a zoom, and its children ignore the
+ * pointer so a tap on the words or the dot lands on the label itself. The
+ * selected row also got its fill back: it used `bg-brand/8`, which is off
+ * Tailwind's opacity scale and generated no rule (the Button's danger variant
+ * records the same trap), so the only sign of a choice was a thin border.
  */
 
 type Option<T extends string> = { value: T; label: string };
@@ -26,9 +34,9 @@ type SingleProps<T extends string> = {
 
 const rowClass = (selected: boolean, disabled?: boolean) =>
   [
-    'flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors',
+    'flex min-h-[52px] w-full cursor-pointer touch-manipulation select-none items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors',
     selected
-      ? 'border-brand bg-brand/8 text-content-primary'
+      ? 'border-brand bg-brand/10 text-content-primary'
       : 'border-stroke-default bg-bg-elevated text-content-secondary hover:border-stroke-strong hover:bg-bg-hover hover:text-content-primary',
     disabled ? 'cursor-not-allowed opacity-60' : '',
   ]
@@ -57,9 +65,9 @@ export function PlannerRadioGroup<T extends string>({
               checked={selected}
               onChange={() => onChange(option.value)}
               disabled={disabled}
-              className="h-4 w-4 shrink-0 accent-brand"
+              className="pointer-events-none h-4 w-4 shrink-0 accent-brand"
             />
-            <span className="min-w-0">{option.label}</span>
+            <span className="pointer-events-none min-w-0 flex-1">{option.label}</span>
           </label>
         );
       })}
@@ -94,9 +102,9 @@ export function PlannerCheckboxGroup<T extends string>({
               checked={selected}
               onChange={() => onToggle(option.value)}
               disabled={disabled}
-              className="h-4 w-4 shrink-0 accent-brand"
+              className="pointer-events-none h-4 w-4 shrink-0 accent-brand"
             />
-            <span className="min-w-0">{option.label}</span>
+            <span className="pointer-events-none min-w-0 flex-1">{option.label}</span>
           </label>
         );
       })}

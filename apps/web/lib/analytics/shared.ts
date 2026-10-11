@@ -277,6 +277,17 @@ export interface AnalyticsEventPropertiesMap {
   role_gaps_shown: { release_id: string; gaps: number };
   role_gaps_role_clicked: { release_id: string; role: string };
   role_gaps_dismissed: { release_id: string; gaps: number };
+  // The checklist before distribution on the rollout (2026-10-11). One event per
+  // item done: `fixed` when the check stopped raising it, `ticked` when a
+  // warning was ticked off by hand. `item` is the rule's code.
+  role_gap_fixed: {
+    release_id: string;
+    item: string;
+    level: 'error' | 'warning';
+    how: 'fixed' | 'ticked';
+    done: number;
+    total: number;
+  };
   asset_upload_failed: {
     surface: 'workspace_logo' | 'curator_photo';
     step: 1 | 2 | 3;

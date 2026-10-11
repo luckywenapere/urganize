@@ -11,8 +11,6 @@ import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
 import { TopNav } from '@/components/shell/TopNav';
 import { SubNav } from '@/components/shell/SubNav';
 import { BottomBar } from '@/components/shell/BottomBar';
-import { CommandBar } from '@/components/shell/CommandBar';
-import { FloatingUrgAns } from '@/components/shell/FloatingUrgAns';
 import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
 import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
@@ -59,6 +57,19 @@ import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 // next/dynamic moves each into its own async chunk that loads after hydration.
 // ssr:false is safe: all render nothing on the server today. (HelpMenu moved
 // into the top bar's right cluster 2026-07-23 and rides its bundle now.)
+// The search bar and the floating UrgAns launcher are workspace chrome: /auth
+// and the public pages never render them, yet as static imports their code
+// (and UrgAns's drawer behind it) rode in every route's first-load bundle,
+// /auth included (2026-10-11, PostHog replay of a slow first sign-in).
+// next/dynamic splits each into its own chunk that is only requested where
+// the chrome actually mounts. SSR is kept (no ssr:false) so a signed-in first
+// paint is unchanged.
+const CommandBar = dynamic(() =>
+  import('@/components/shell/CommandBar').then((m) => m.CommandBar)
+);
+const FloatingUrgAns = dynamic(() =>
+  import('@/components/shell/FloatingUrgAns').then((m) => m.FloatingUrgAns)
+);
 const FirstReleaseFocus = dynamic(
   () => import('@/components/releases/FirstReleaseFocus').then((m) => m.FirstReleaseFocus),
   { ssr: false }
@@ -675,16 +686,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       {INSTALL_PROMPT_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <InstallAppPrompt />
       ) : null}
-      {/* The guided tours (lib/tours.ts). Same gate again — a tour points at
-          app chrome, so there has to be app chrome. It renders nothing until
-          something calls useTourStore.start, so mounting it costs a subscribed
-          selector and no markup. */}
+      {/* The guided tour (lib/tours.ts), offered after a plan is approved.
+          Same gate again — a tour points at app chrome, so there has to be
+          app chrome. It renders nothing until something calls
+          useTourStore.start, so mounting it costs a subscribed selector and no
+          markup. */}
       {TOURS_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <TourOverlay />
       ) : null}
-      {/* First-rollout focus: after the tour, with no rollout yet, locks the
-          other areas and asks how the first one should be planned. Same gate
-          as the tour (it explains app chrome); renders nothing once a rollout
+      {/* First-rollout focus: with no rollout yet, locks the other areas and
+          asks how the first one should be planned. Since 2026-10-11 it opens
+          straight away for a new account (the welcome tour it used to wait
+          for is gone, see lib/tours.ts). Renders nothing once a rollout
           exists. */}
       {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <FirstReleaseFocus />

@@ -1,12 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { AlertCircle, AlertTriangle, ChevronDown } from '@/components/icons';
-import {
-  DistributionIssueList,
-  DistributionRejectionList,
-} from '@/components/releases/DistributionIssueList';
+import { DistributionRejectionList } from '@/components/releases/DistributionIssueList';
 import { useDistributionStatus } from '@/components/releases/useDistributionStatus';
+import { DistributionChecklist, hasChecklistRecord } from './DistributionChecklist';
 
 type DistributionStatusStripProps = {
   releaseId: string;
@@ -34,10 +30,13 @@ type DistributionStatusStripProps = {
  * nothing at all: a "you're ready" banner on every release would be chrome that
  * teaches people to stop reading the banners.
  *
- * COLLAPSED BY DEFAULT. A new rollout with no details yet can carry eight items,
- * and a stack of them above the activities is the wall this app has been
- * removing from other screens. The header says what the list is and how many
- * there are; one tap opens it, with a Fix button on each item.
+ * A CHECKLIST, NOT A WALL (2026-10-11, founder call). A new rollout with no
+ * details yet can carry eight items, and a replay showed a first-time manager
+ * open "Fix these before you order distribution (8)" and close it within six
+ * seconds. So the readiness half is DistributionChecklist now: progress in the
+ * header ("3 of 8 done"), the next open item in view with its Fix button, the
+ * rest one tap away, warnings tickable by hand, and a `role_gap_fixed` event
+ * each time an item is done. See lib/distribution-checklist.ts.
  *
  * NOT ON A RELEASED ROLLOUT (v1.92.5). Once the rollout reads Released (the
  * Catalogue's derived status), WorkspaceView passes `showReadiness={false}`:
@@ -55,63 +54,34 @@ export function DistributionStatusStrip({
   showReadiness = true,
 }: DistributionStatusStripProps) {
   const { data } = useDistributionStatus(releaseId);
-  const [open, setOpen] = useState(false);
 
   // Nothing until the check has answered: a failed or slow read draws no banner
   // rather than a wrong one.
   if (!data) return null;
 
-  const issueCount = data.errors.length + data.warnings.length;
-  const showIssues = showReadiness && !data.lastHandoffAt && issueCount > 0;
+  // Mounted even with nothing open, so a checklist the team has worked through
+  // keeps saying "8 of 8 done" until the order is handed off. It draws nothing
+  // for a rollout the check has never raised anything about.
+  const showIssues = showReadiness && !data.lastHandoffAt;
   // The newest answer only: the Distribute scene keeps the history.
   const rejections = data.rejections.slice(0, 1);
   if (!showIssues && rejections.length === 0) return null;
-
-  const hasErrors = data.errors.length > 0;
-  const bodyId = `distribution-status-${releaseId}`;
+  if (rejections.length === 0 && data.errors.length + data.warnings.length === 0 && !hasChecklistRecord(releaseId)) {
+    return null;
+  }
 
   return (
     <section aria-label="Check before distribution" className="mb-3 space-y-2">
       {rejections.length > 0 ? <DistributionRejectionList rejections={rejections} /> : null}
 
       {showIssues ? (
-        <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
-          <button
-            type="button"
-            onClick={() => setOpen((current) => !current)}
-            aria-expanded={open}
-            aria-controls={bodyId}
-            className="motion-focus flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover"
-          >
-            {hasErrors ? (
-              <AlertCircle className="h-4 w-4 shrink-0 text-status-error" aria-hidden="true" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 shrink-0 text-status-warning" aria-hidden="true" />
-            )}
-            <span className="min-w-0 flex-1 text-sm font-semibold text-content-primary">
-              {hasErrors ? 'Fix these before you order distribution' : 'Worth a look'}
-            </span>
-            <span className="shrink-0 font-mono text-xs text-content-tertiary">{issueCount}</span>
-            <ChevronDown
-              className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${
-                open ? '' : '-rotate-90'
-              }`}
-              aria-hidden="true"
-            />
-          </button>
-          {open ? (
-            <div id={bodyId} className="border-t border-stroke-subtle p-3">
-              <DistributionIssueList
-                releaseId={releaseId}
-                errors={data.errors}
-                warnings={data.warnings}
-                onOpenDetails={onOpenDetails}
-                onChangeArtist={onChangeArtist}
-                skipFirstHeading
-              />
-            </div>
-          ) : null}
-        </div>
+        <DistributionChecklist
+          releaseId={releaseId}
+          errors={data.errors}
+          warnings={data.warnings}
+          onOpenDetails={onOpenDetails}
+          onChangeArtist={onChangeArtist}
+        />
       ) : null}
     </section>
   );

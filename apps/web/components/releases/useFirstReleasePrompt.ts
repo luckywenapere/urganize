@@ -71,7 +71,7 @@ export function useFirstReleasePrompt(onPrompt: () => void): void {
   // Subscribed, not read imperatively: this holds the ARMING effect, so it has
   // to retrigger it when a tour ends. `tourBlocksPrompts()` above is the
   // fire-time half, which runs in a timer callback outside render.
-  const tourBlocking = useTourStore((state) => state.active !== null || state.pendingReplay !== null);
+  const tourBlocking = useTourStore((state) => state.active !== null);
 
   // Latest-ref so callers can pass an inline closure without churning the
   // arming effect — its deps stay [required].

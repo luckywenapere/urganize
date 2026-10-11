@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { useAuthStore } from '@/lib/auth-store';
 import { canDeleteRollouts } from '@/lib/settings-nav';
 import { DeleteAccountSection } from '../DeleteAccountSection';
@@ -15,7 +16,7 @@ import { SecuritySection } from '../SecuritySection';
  * setting any more. Log out is not here; it is pinned to the foot of the pop-up's
  * list so it is one tap from any segment.
  */
-export function SecuritySegment() {
+function SecuritySegmentView() {
   const role = useAuthStore((state) => state.user?.role);
 
   return (
@@ -34,3 +35,12 @@ export function SecuritySegment() {
     </div>
   );
 }
+
+/**
+ * Memoised (2026-10-11): every segment opened in this visit stays mounted, and
+ * the dialog re-renders on each keystroke in its search box and each dirty or
+ * URL change, which used to re-render every one of them. Measured as a 304ms
+ * INP on the Team segment. With stable props it now re-renders only when its
+ * own inputs change.
+ */
+export const SecuritySegment = memo(SecuritySegmentView);

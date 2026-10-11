@@ -7,6 +7,7 @@ import { Button } from '@urganize/ui';
 import { placeHelpTip, type PlacedHelpTip } from '@/lib/help-tip-position';
 import { pickVisibleAnchor, tourStepProgress, type TourAnchor } from '@/lib/tours';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
+import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { useTourStore } from '@/stores/useTourStore';
 
 /**
@@ -49,12 +50,12 @@ import { useTourStore } from '@/stores/useTourStore';
  * 5. A STEP WITH NO ANCHOR ON SCREEN ADVANCES rather than stranding the user
  *    on an empty spotlight, and a tour whose steps ALL fail to resolve simply
  *    closes. Note what that means: seen-state is written by the caller at
- *    START (see useCatalogTourAutoStart), so such a tour is burned. Accepted
- *    rather than engineered around, because it cannot really arise — Tour A's
- *    first two anchors are nav chrome that exists wherever this overlay is
- *    mounted at all (AppShell gates both on `showWorkspaceChrome`), and Tour
- *    B is offered from inside the scoped rollout whose panel carries its
- *    anchors. Replay is the recovery if it ever does.
+ *    START (WorkspaceView marks the rollout tour seen as it starts it), so such a tour is burned. Accepted
+ *    rather than engineered around, because it cannot really arise — the
+ *    rollout tour is offered from inside the scoped rollout whose panel
+ *    carries its anchors. Replay is the recovery if it ever does. (The
+ *    welcome tour, removed 2026-10-11, is where this bit: on a phone two of
+ *    its three steps resolved to the same Catalogue tab, so Next looked dead.)
  */
 
 /** Above sheets (z-[170]) and toasts (z-[200]) so neither can cover the card,
@@ -90,6 +91,7 @@ export function TourOverlay() {
   const active = useTourStore((state) => state.active);
   const next = useTourStore((state) => state.next);
   const skip = useTourStore((state) => state.skip);
+  const openSettings = useOpenSettings();
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
@@ -197,6 +199,12 @@ export function TourOverlay() {
 
   const isLast = active.stepIndex === active.steps.length - 1;
   const primaryLabel = step.ctaLabel ?? (isLast ? 'Done' : 'Next');
+  // "Go to Team" used to end the tour and go nowhere, which is a dead tap with
+  // a promise on it. A last step with an action now does what it says.
+  const onPrimary = () => {
+    next();
+    if (isLast && step.action === 'open-team') openSettings({ segment: 'team' });
+  };
   const progress = tourStepProgress(active.stepIndex, active.steps.length);
 
   return createPortal(
@@ -263,7 +271,7 @@ export function TourOverlay() {
           >
             Skip
           </button>
-          <Button ref={nextButtonRef} size="md" className="min-h-11" onClick={next}>
+          <Button ref={nextButtonRef} size="md" className="min-h-11" onClick={onPrimary}>
             {primaryLabel}
           </Button>
         </div>

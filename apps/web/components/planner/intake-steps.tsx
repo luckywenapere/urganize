@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   BUDGET_OPTIONS,
@@ -141,7 +141,13 @@ function ReleaseTypeStep({ draft, patch, disabled }: StepBodyProps) {
 }
 
 function ArtistStep({ draft, patch, disabled, knownArtistName }: StepBodyProps) {
-  const matchesKnown = Boolean(knownArtistName) && draft.artistName === knownArtistName;
+  // The choice is held here, not derived from the name. Derived, typing a name
+  // that happened to equal the known one flipped the radio back to "That's
+  // right" and unmounted the input mid-word.
+  const [choice, setChoice] = useState<'yes' | 'other'>(() =>
+    Boolean(knownArtistName) && draft.artistName === knownArtistName ? 'yes' : 'other'
+  );
+  const matchesKnown = choice === 'yes';
 
   // A team that has never named an artist gets the plain input. Everyone else
   // gets a confirm, because the answer is almost always yes.
@@ -179,10 +185,11 @@ function ArtistStep({ draft, patch, disabled, knownArtistName }: StepBodyProps) 
             { value: 'yes', label: "That's right" },
             { value: 'other', label: 'Use a different name' },
           ]}
-          value={matchesKnown ? 'yes' : 'other'}
-          onChange={(choice) =>
-            patch({ artistName: choice === 'yes' ? knownArtistName : '' })
-          }
+          value={choice}
+          onChange={(next) => {
+            setChoice(next);
+            patch({ artistName: next === 'yes' ? knownArtistName : '' });
+          }}
           disabled={disabled}
         />
       </div>
@@ -240,7 +247,7 @@ function DateStep({ draft, patch, disabled, suggestedDate, leadTimeDays }: StepB
           type="button"
           onClick={() => patch({ releaseDate: suggestedDate, dateSuggested: true })}
           disabled={disabled}
-          className="motion-focus motion-press mt-3 inline-flex h-9 items-center rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:border-brand/50 hover:bg-bg-hover disabled:opacity-60"
+          className="motion-focus motion-press mt-3 inline-flex h-11 touch-manipulation items-center rounded-full border border-stroke-default bg-bg-surface px-4 text-sm font-semibold text-content-primary transition-colors hover:border-brand/50 hover:bg-bg-hover disabled:opacity-60"
         >
           Help me pick
         </button>
