@@ -87,6 +87,7 @@ import { shouldStartOnboardingTrial } from '@/lib/onboarding-trial';
 import { isSocialShareEnabled } from '@/lib/social-share';
 import { markPendingFirstShare } from '@/lib/social-share-offer';
 import { resolvePostSignupDestination, takePitchIntent } from '@/lib/pitch-intent';
+import { takeClaimIntent } from '@/lib/claim-intent';
 import { readWelcomeIntent } from '@/lib/welcome-intent';
 import { captureReferralFromSearch, reportReferralCode } from '@/lib/referral-intent';
 import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT, isPasswordLongEnough } from '@/lib/password-rules';
@@ -620,6 +621,7 @@ export default function OnboardingPage() {
         cardTrialEnabled: CARD_TRIAL_ENABLED,
         cardTrialPath: '/start-trial',
         pitchCuratorSlug: takePitchIntent(),
+        claimToken: takeClaimIntent(),
         homePath: HOME_PATH,
         welcomeToken: readWelcomeIntent(),
       })

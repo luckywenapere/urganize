@@ -8,6 +8,7 @@ import { runPitchWindowSweep } from '@/lib/pitch-payments-server';
 import { runEditorialPitchReminderSweep } from '@/lib/editorial-pitch-server';
 import { runPaybackQuestionSweep, runSpendCreditsSweep } from '@/lib/release-spend-sweeps-server';
 import { runWorkRequestExpirySweep } from '@/lib/work-request-expiry-server';
+import { runCreditProfileSweepIfEnabled } from '@/lib/claim-sweep-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -113,6 +114,14 @@ export async function GET(request: NextRequest) {
   // sent keeps closing if the feature is switched off.
   const workRequestSweep = await runWorkRequestExpirySweep(adminClient);
 
+  // Unclaimed profiles from credits (2026-10-10, Profiles and Directory spec,
+  // Lane A). Another passenger, for the same reason. A collaborator credited on
+  // a rollout that has come out gets a profile they can claim. It writes ONLY
+  // while the admin has switched it on at /admin/claims (after reading a dry
+  // run there), and never throws, so a bad run cannot take the steps above
+  // down with it.
+  const creditProfileSweep = await runCreditProfileSweepIfEnabled(adminClient);
+
   return NextResponse.json({
     ok: true,
     trialSweep,
@@ -123,5 +132,6 @@ export async function GET(request: NextRequest) {
     spendCreditsSweep,
     paybackSweep,
     workRequestSweep,
+    creditProfileSweep,
   });
 }

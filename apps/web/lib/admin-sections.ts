@@ -119,6 +119,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Roles managers ask for against people listed.',
   },
   {
+    key: 'claims',
+    label: 'Claims',
+    href: '/admin/claims',
+    group: 'operations',
+    description: 'Unclaimed profiles from credits, and removal requests.',
+  },
+  {
     key: 'seeding',
     label: 'Seeding',
     href: '/admin/seeding',

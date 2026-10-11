@@ -1,4 +1,5 @@
 import { curatorPagePath, isValidCuratorSlug } from './curator-public';
+import { isValidClaimToken } from './claim-token-shape';
 import { isPlausibleClaimToken } from './seeding';
 
 /**
@@ -117,11 +118,15 @@ export function resolvePostSignupDestination(input: {
   cardTrialEnabled: boolean;
   cardTrialPath: string;
   pitchCuratorSlug: string | null;
+  /** A claim link they came from, so they land back on the page to claim
+   *  (2026-10-10). Optional so every existing caller is unchanged. */
+  claimToken?: string | null;
   homePath: string;
   /** A seeding link they still have to finish (lib/welcome-intent.ts). */
   welcomeToken?: string | null;
 }): string {
   if (input.cardTrialEnabled) return input.cardTrialPath;
+  if (input.claimToken && isValidClaimToken(input.claimToken)) return `/claim/${input.claimToken}`;
   // Somebody Wena invited has one thing left to do, and it is on that page.
   if (isPlausibleClaimToken(input.welcomeToken)) return `/welcome/${input.welcomeToken}`;
   const slug = String(input.pitchCuratorSlug || '').trim().toLowerCase();

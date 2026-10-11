@@ -1,5 +1,6 @@
 'use client';
 
+import { CreditClaimInvites } from './CreditClaimInvites';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   Check,
@@ -1152,6 +1153,7 @@ export function MetadataSection({
                         />
                       ))}
                     </div>
+                    <CreditClaimInvites releaseId={releaseId} refreshKey={submissions.length} />
                   </>
                 )}
               </div>
