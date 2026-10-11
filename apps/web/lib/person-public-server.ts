@@ -4,6 +4,14 @@ import { isPubliclyReadable } from './person-public';
 import { bioForPayload, isClaimedProfile, resolveProfileView, type ResolvedProfileView } from './profile-kit';
 import { loadKitFactsForUser } from './profile-kit-server';
 import type { DirectoryRole } from './directory-roles';
+import { loadLeadStats } from './profile-lead-stats-server';
+import {
+  EMPTY_LEAD_STATS,
+  effectiveProfileType,
+  leadItems,
+  type LeadItem,
+  type ProfileType,
+} from './directory-profile-type';
 import type { PersonProfile, ProfileRole } from '@/types/directory';
 
 /**
@@ -34,6 +42,10 @@ export type PublicPerson = {
    * reaches this loader at all; both rules are held anyway.
    */
   view: ResolvedProfileView;
+  /** What this person's page leads with. Null when nothing says (no roles, no override). */
+  profileType: ProfileType | null;
+  /** Their lead numbers, never containing a zero. Empty for a creative. */
+  lead: LeadItem[];
 };
 
 function adminClient() {
@@ -108,10 +120,29 @@ export async function loadPublicPerson(slug: string): Promise<PublicPerson | nul
       }))
     );
 
+    // The override is read on its own and tolerantly: the column arrives with
+    // its own migration, and a failure here only means the type is worked out
+    // from the roles instead.
+    let override: unknown = null;
+    try {
+      const { data: typeRow, error: typeError } = await admin
+        .from(PERSON_PROFILES_TABLE)
+        .select('profile_type')
+        .eq('id', profile.id)
+        .maybeSingle();
+      if (!typeError) override = (typeRow as Record<string, unknown> | null)?.profile_type ?? null;
+    } catch {
+      override = null;
+    }
+
+    const heldRoles = [...claimed, ...(records || []).map((entry) => String((entry as Record<string, unknown>).role || '') as DirectoryRole)];
+    const profileType = effectiveProfileType(override, heldRoles);
+    const stats = (await loadLeadStats(admin, [profile.userId])).get(profile.userId) ?? EMPTY_LEAD_STATS;
+
     const kit = await loadKitFactsForUser(admin, profile.userId);
     const view = resolveProfileView(profile, kit);
 
-    return { profile, roles, view };
+    return { profile, roles, view, profileType, lead: leadItems(profileType, stats) };
   } catch {
     return null;
   }

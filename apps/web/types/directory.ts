@@ -1,4 +1,5 @@
 import type { DirectoryRole } from '@/lib/directory-roles';
+import type { ProfileType } from '@/lib/directory-profile-type';
 
 /** How findable a person has chosen to be. Default is `private`: nobody is
  *  listed without opting in. */
@@ -26,6 +27,9 @@ export type PersonProfile = {
   links: PersonLink[];
   avatarUrl: string | null;
   visibility: PersonVisibility;
+  /** The owner's override. Null means the type is worked out from roles.
+   *  Read tolerantly, so it is absent until the migration is in. */
+  profileType?: ProfileType | null;
   createdAt: string;
   updatedAt: string;
 };

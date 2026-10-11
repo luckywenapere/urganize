@@ -7,6 +7,7 @@ import {
   type WorkRequestStatus,
 } from '@/lib/work-requests';
 import { notifyWorkRequestAnswer } from '@/lib/work-requests-server';
+import { captureRequestAnswered } from '@/lib/directory-events-server';
 import {
   WORK_REQUESTS_TABLE,
   asRow,
@@ -115,6 +116,13 @@ export async function PATCH(
     role: String(row.role || ''),
     status: answer.status,
     reply: answer.reply,
+  });
+
+  captureRequestAnswered(auth.user.id, {
+    role: row.role,
+    createdAt,
+    reply: answer.reply,
+    status: answer.status,
   });
 
   return NextResponse.json({ request: asRow(data) });

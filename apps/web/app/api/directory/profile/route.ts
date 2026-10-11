@@ -11,7 +11,9 @@ import {
   createAdminClient,
   directoryDisabledResponse,
   isDirectoryFeatureEnabled,
+  loadLeadSummary,
   loadProfileRoles,
+  loadProfileTypeOverrides,
   requireActiveAuthenticatedUser,
   toPersonProfile,
 } from '../_shared';
@@ -52,6 +54,8 @@ async function profileResponseBody(
   user: User,
   profile: ReturnType<typeof toPersonProfile>
 ) {
+  profile.profileType =
+    (await loadProfileTypeOverrides(adminClient, [user.id])).get(user.id) ?? null;
   const [roles, kit] = await Promise.all([
     loadProfileRoles(adminClient, user.id, profile.roles),
     loadKitFactsForUser(adminClient, user.id),
@@ -64,7 +68,8 @@ async function profileResponseBody(
   // written to a field the directory then does not show.
   const canDraftBio =
     !view.fromKit.bio && (await canRunEmbeddedAction(adminClient, DRAFT_BIO_ACTION, profile.id, user));
-  return { profile: safe, roles, view, canDraftBio };
+  const summary = await loadLeadSummary(adminClient, user.id, safe, roles);
+  return { profile: safe, roles, view, canDraftBio, ...summary };
 }
 
 export async function GET(request: NextRequest) {
@@ -146,6 +151,7 @@ export async function PATCH(request: NextRequest) {
   if (input.links !== undefined) patch.links = input.links;
   if (input.visibility !== undefined) patch.visibility = input.visibility;
   if (input.slug !== undefined) patch.slug = input.slug;
+  if (input.profileType !== undefined) patch.profile_type = input.profileType;
 
   // A handle is suggested once, on the first save, and never regenerated. It
   // is a URL somebody may already have shared, so a later rename must not
@@ -186,6 +192,11 @@ export async function PATCH(request: NextRequest) {
     // typed themselves.
     if (error.code === '23505') {
       return NextResponse.json({ error: 'That handle is taken. Try another.' }, { status: 409 });
+    }
+    // The profile-type column arrives with its own migration. Until it is in,
+    // saying so beats a raw database message.
+    if (error.code === '42703' && 'profile_type' in patch) {
+      return NextResponse.json({ error: 'Profile types are not ready yet. Try again soon.' }, { status: 503 });
     }
     return NextResponse.json(
       { error: error.message || 'Could not save your profile.' },

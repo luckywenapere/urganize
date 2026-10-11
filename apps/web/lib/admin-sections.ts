@@ -119,6 +119,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Roles managers ask for against people listed.',
   },
   {
+    key: 'seeding',
+    label: 'Seeding',
+    href: '/admin/seeding',
+    group: 'operations',
+    description: 'Invite managers to a profile built with them.',
+  },
+  {
     key: 'urgans',
     label: 'UrgAns actions',
     href: '/admin/urgans',
