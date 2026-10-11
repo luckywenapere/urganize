@@ -283,7 +283,10 @@ Not planned here, listed so nobody builds it by accident:
 
 ---
 
-## Next chat: the same pattern for finding grants (Exa)
+## The same pattern for finding grants (Exa)
+
+**Now planned in full: see `grant-finder-plan.md`.** The outline below is what that
+plan started from.
 
 Kept short so it can be planned on its own. It is the **read-only** job, so it is
 far lower risk, and it fits the strategy doc's Opportunities area (deals, grants,
