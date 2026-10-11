@@ -1378,9 +1378,20 @@ h1, h2, h3, h4 {
     transform var(--motion-base) var(--motion-out);
 }
 
+/* `transform: none` at rest, NEVER `translateY(0)` (2026-10-11, v1.115.6).
+   AppShell puts `.app-layout lazy-fade lazy-fade-in` on the wrapper around
+   every authenticated page, and any transform other than `none` (even a zero
+   one) makes that wrapper the containing block for every `position: fixed`
+   element inside it. Fixed panels then anchored to the PAGE, not the screen:
+   Notifications opened from More after scrolling landed at the top of the
+   page, off screen, and the rollout chat could not pin its composer over the
+   iOS keyboard. Both classes are applied in the same render, so the fade never
+   actually animated there and nothing visible changes; reduced-motion users
+   (the block near the end of this file) already had `none`.
+   lib/fixed-containing-block-guard.test.ts holds this. */
 .lazy-fade-in {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
 }
 
 .skeleton-shimmer {
@@ -2639,9 +2650,10 @@ body:focus-within .keyboard-hint,
    On a phone the UrgAns box is pinned to the bottom of Home, just above the
    floating bottom bar, and everything else scrolls above it
    (components/home/HomeAskBar.tsx). It is portalled to <body>: .app-layout
-   carries a transform (lazy-fade-in), and a transform makes it the anchor of
-   any fixed element inside it, so the box would sit at the end of the page
-   instead of the bottom of the screen.
+   carried a transform (lazy-fade-in) until 2026-10-11, and a transform makes
+   it the anchor of any fixed element inside it, so the box would sit at the
+   end of the page instead of the bottom of the screen. The transform is gone
+   now (see .lazy-fade-in); the portal stays, as it is harmless.
 
    Bar geometry (BottomBar.tsx): 0.75rem off the bottom edge, 3.5rem tall, so
    its top is at 4.25rem; the box sits 0.5rem above that. The box publishes

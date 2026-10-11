@@ -489,10 +489,12 @@ export function NotificationsBell() {
           // the 4rem it used to clear is gone) instead of anchoring to the
           // trigger — a 360px panel
           // anchored right-0 to a bell that sits ~3.5rem in from the edge
-          // runs off the left side of a phone screen. Note the topbar's
-          // backdrop-blur makes it the containing block for this `fixed`
-          // panel; it's full-width and viewport-pinned, so the math is the
-          // same. From `sm` up it reverts to the WorkspaceMenu-style
+          // runs off the left side of a phone screen. Nothing above it may
+          // become a containing block for `fixed` (a transform, filter or
+          // backdrop-filter on an ancestor): until 2026-10-11 AppShell's
+          // lazy-fade transform did, so opening this from More after
+          // scrolling put it at the top of the PAGE, off screen
+          // (lib/fixed-containing-block-guard.test.ts). From `sm` up it reverts to the WorkspaceMenu-style
           // trigger-anchored dropdown.
           className="animate-menu-down fixed inset-x-4 top-[calc(env(safe-area-inset-top,0px)+1rem)] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
         >

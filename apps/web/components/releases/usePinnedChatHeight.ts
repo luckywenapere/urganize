@@ -34,14 +34,22 @@ function scrollParentBottom(el: HTMLElement): number | null {
  * Re-measured on resize, on any scroll (the box's top moves when the page
  * does) and whenever the keyboard state changes. Null until measured, so the
  * first paint falls back to the caller's CSS.
+ *
+ * `frozen` (2026-10-11): while true the last measurement is kept and nothing
+ * is re-measured. The rollout chat passes it while a phone's keyboard is up,
+ * because the box is pinned to the visual viewport then (lib/release-chat-layout.ts)
+ * and this height only holds its place in the page.
  */
-export function usePinnedChatHeight(ref: RefObject<HTMLElement | null>): number | null {
+export function usePinnedChatHeight(
+  ref: RefObject<HTMLElement | null>,
+  frozen = false
+): number | null {
   const keyboard = useKeyboardViewport();
   const [height, setHeight] = useState<number | null>(null);
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el || typeof window === 'undefined') return;
+    if (!el || typeof window === 'undefined' || frozen) return;
 
     let frame = 0;
     const measure = () => {
@@ -80,7 +88,7 @@ export function usePinnedChatHeight(ref: RefObject<HTMLElement | null>): number 
       window.visualViewport?.removeEventListener('resize', schedule);
       window.visualViewport?.removeEventListener('scroll', schedule);
     };
-  }, [ref, keyboard.open, keyboard.viewportHeightPx, keyboard.offsetTopPx]);
+  }, [ref, frozen, keyboard.open, keyboard.viewportHeightPx, keyboard.offsetTopPx]);
 
   return height;
 }

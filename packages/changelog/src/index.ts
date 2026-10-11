@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.115.6",
+    date: "October 11, 2026",
+    highlights: [
+      "On a phone, typing in a rollout's Chat works like a messenger again: the box you type in sits right above the keyboard, with your messages filling the screen above it and the newest one in view. When the keyboard closes, the box goes back to just above the bottom bar, and the page behind the chat no longer slides off screen while you type.",
+      "On a phone, Notifications opens at the top of your screen even after you have scrolled down a page. It used to open at the top of the page, out of sight. On a computer nothing changes.",
+    ],
+  },
+  {
     version: "1.115.5",
     date: "October 11, 2026",
     highlights: [
