@@ -17,7 +17,7 @@ export type ComingSoonCopy = {
   meanwhile?: { label: string; href: string };
 };
 
-export const COMING_SOON: Partial<Record<ShellAreaKey, ComingSoonCopy>> = {
+export const COMING_SOON: Partial<Record<ShellAreaKey | 'shows', ComingSoonCopy>> = {
   audience: {
     title: 'Audience',
     question: 'Who are the fans, and what is the data saying?',
@@ -48,5 +48,5 @@ export const COMING_SOON: Partial<Record<ShellAreaKey, ComingSoonCopy>> = {
 };
 
 export function comingSoonFor(area: string): ComingSoonCopy | null {
-  return COMING_SOON[area as ShellAreaKey] ?? null;
+  return COMING_SOON[area as ShellAreaKey | 'shows'] ?? null;
 }

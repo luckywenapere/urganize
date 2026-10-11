@@ -13,7 +13,7 @@ import {
   MoreHorizontal,
   Spotlight,
   Sparkles,
-  Ticket,
+  Send,
   Wallet2,
   X,
   type LucideProps,
@@ -46,16 +46,17 @@ const TAB_ICON: Record<string, IconComponent> = {
   home: Home,
   catalogue: Disc3,
   urgans: Sparkles,
-  shows: Ticket,
+  pitching: Send,
 };
 
 /**
- * The phone's bottom bar: Home, Catalogue, UrgAns, Shows and More. Thumb
+ * The phone's bottom bar: Home, Catalogue, UrgAns, Pitching and More. Thumb
  * reachable, and the same destinations as the desktop pills, because both read
  * lib/shell-nav.ts.
  *
  * More opens a sheet with the areas the bar does not carry (Relationships,
- * Opportunities, Audience) plus credits and settings. Areas with nothing built
+ * Opportunities, Audience; Shows is a tab inside Relationships) plus credits
+ * and settings. Areas with nothing built
  * yet are listed like any other, and their page explains what is coming.
  *
  * Labels stay visible. Icon-only tabs were tried here before (v1.10.3) and cost

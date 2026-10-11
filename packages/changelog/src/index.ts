@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.110.1",
+    date: "October 11, 2026",
+    highlights: [
+      "Pitching now has its own spot in the menu: on a phone it sits in the bottom bar where Shows was, and on a computer it gets its own button at the top.",
+      "Shows moved into Relationships, next to People and Directory. On a phone, find it under More.",
+    ],
+  },
+  {
     version: "1.110.0",
     date: "October 11, 2026",
     highlights: [

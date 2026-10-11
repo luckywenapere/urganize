@@ -16,7 +16,7 @@ export type ShellAreaKey =
   | 'relationships'
   | 'opportunities'
   | 'audience'
-  | 'shows';
+  | 'pitching';
 
 export type ShellFlags = {
   notes: boolean;
@@ -123,22 +123,24 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, '/dashboard/directory'),
     });
   }
-  if (flags.pitching) {
+  // Shows sits with Relationships and Pitching has its own pill (founder call,
+  // 2026-10-11: the two swapped places on desktop and on the phone).
+  if (flags.events) {
     relationshipTabs.push({
-      key: 'pitching',
-      label: 'Pitching',
-      href: '/dashboard/pitching',
-      isActive: (p) => startsWithPath(p, '/dashboard/pitching'),
+      key: 'shows',
+      label: 'Shows',
+      href: '/dashboard/shows',
+      isActive: (p) => startsWithPath(p, '/dashboard/shows'),
     });
   }
 
-  const showsTabs: ShellSubTab[] = flags.events
+  const pitchingTabs: ShellSubTab[] = flags.pitching
     ? [
         {
-          key: 'shows',
-          label: 'Shows',
-          href: '/dashboard/shows',
-          isActive: (p) => startsWithPath(p, '/dashboard/shows'),
+          key: 'pitching',
+          label: 'Pitching',
+          href: '/dashboard/pitching',
+          isActive: (p) => startsWithPath(p, '/dashboard/pitching'),
         },
       ]
     : [];
@@ -174,7 +176,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) =>
         startsWithPath(p, '/dashboard/relationships') ||
         startsWithPath(p, '/dashboard/directory') ||
-        startsWithPath(p, '/dashboard/pitching'),
+        startsWithPath(p, '/dashboard/shows'),
     },
     {
       key: 'opportunities',
@@ -193,12 +195,12 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, '/dashboard/audience'),
     },
     {
-      key: 'shows',
-      label: 'Shows',
-      href: showsTabs[0]?.href ?? '/dashboard/shows',
-      live: showsTabs.length > 0,
-      subTabs: showsTabs,
-      isActive: (p) => startsWithPath(p, '/dashboard/shows'),
+      key: 'pitching',
+      label: 'Pitching',
+      href: pitchingTabs[0]?.href ?? '/dashboard/pitching',
+      live: pitchingTabs.length > 0,
+      subTabs: pitchingTabs,
+      isActive: (p) => startsWithPath(p, '/dashboard/pitching'),
     },
   ];
 }
@@ -225,7 +227,7 @@ export function buildMobileTabs(): MobileTab[] {
     { key: 'home', label: 'Home', href: HOME_HREF, area: 'home' },
     { key: 'catalogue', label: 'Catalogue', href: CATALOGUE_HREF, area: 'catalogue' },
     { key: 'urgans', label: 'UrgAns', href: '/dashboard/urgans', area: 'urgans' },
-    { key: 'shows', label: 'Shows', href: '/dashboard/shows', area: 'shows' },
+    { key: 'pitching', label: 'Pitching', href: '/dashboard/pitching', area: 'pitching' },
   ];
 }
 
@@ -244,6 +246,6 @@ export function activeMobileTab(areas: ShellArea[], pathname: string): string {
   if (startsWithPath(pathname, '/dashboard/urgans')) return 'urgans';
   const area = activeShellArea(areas, pathname);
   if (!area) return 'more';
-  if (area.key === 'home' || area.key === 'catalogue' || area.key === 'shows') return area.key;
+  if (area.key === 'home' || area.key === 'catalogue' || area.key === 'pitching') return area.key;
   return 'more';
 }
