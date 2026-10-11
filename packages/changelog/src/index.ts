@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.102.0",
+    date: "October 11, 2026",
+    highlights: [
+      "On the Distribute step, you can now sign up with Fanlly to get paid by fans directly. Upload a track, share one link, and fans tip you by bank transfer or card. You keep 75% of every tip.",
+      "Fanlly does not put your music in stores, so keep using your distributor for that.",
+    ],
+  },
+  {
     version: "1.101.0",
     date: "October 11, 2026",
     highlights: [

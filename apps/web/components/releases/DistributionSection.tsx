@@ -8,6 +8,7 @@ import type { DistributionPayload } from '@/lib/distribution-server';
 import type { DistributionIssue } from '@/lib/distribution-rules';
 import type { Release } from '@/types/releases';
 import { DistributionIssueList, DistributionRejectionList } from './DistributionIssueList';
+import { FanPaymentsCard } from './FanPaymentsCard';
 import { distributionAuthHeaders, useDistributionStatus } from './useDistributionStatus';
 
 type DistributionSectionProps = {
@@ -45,6 +46,9 @@ const formatDay = (iso: string): string => {
  * signs up on the partner's site and pays them there; see lib/distribution.ts.
  * Fetches for itself and is not cached, so coming back after fixing something
  * shows the fix.
+ *
+ * Below the check sits Fanlly, the fan payments partner (2026-10-11). It is not
+ * a distributor and is never gated by the check; see lib/fan-payments.ts.
  */
 export function DistributionSection({ release, onOpenDetails, onChangeArtist }: DistributionSectionProps) {
   const { data, setData, loadError, reload } = useDistributionStatus(release.id);
@@ -190,6 +194,9 @@ export function DistributionSection({ release, onOpenDetails, onChangeArtist }: 
           Free ISRC and UPC codes come with their sign-up, so you do not need your own.
         </p>
       </section>
+
+      {/* A separate partner, not a distributor: shown whatever the check says. */}
+      <FanPaymentsCard />
     </div>
   );
 }
