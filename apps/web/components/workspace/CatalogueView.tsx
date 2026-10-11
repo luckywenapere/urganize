@@ -1,11 +1,13 @@
 'use client';
 
 import { PullReveal } from '@/components/shared/PullReveal';
-import { useMemo, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { ChevronDown, Plus, Search, X } from '@/components/icons';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { SUBNAV_SLOT_END, SUBNAV_SLOT_START } from '@/components/shell/SubNav';
 import {
   SORT_OPTIONS,
   STATUS_FILTERS,
@@ -172,18 +174,28 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
     [rows, query, selectedArtistId]
   );
 
-  const addButton = (
+  const renderAddButton = (tour = true) => (
     <button
       type="button"
       onClick={onCreate}
       disabled={testRelease?.isStarting}
-      data-tour="new-rollout"
+      data-tour={tour ? 'new-rollout' : undefined}
       className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full bg-content-primary px-4 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <Plus className="h-4 w-4" aria-hidden="true" />
       Add rollout
     </button>
   );
+  const addButton = renderAddButton();
+
+  // On desktop the count and Add rollout sit in the section tab row (founder
+  // mock, 2026-10-11); phones keep them on the card, since that row scrolls.
+  const [slots, setSlots] = useState<{ start: HTMLElement | null; end: HTMLElement | null }>({ start: null, end: null });
+  useEffect(() => {
+    setSlots({ start: document.getElementById(SUBNAV_SLOT_START), end: document.getElementById(SUBNAV_SLOT_END) });
+  }, []);
+  const totalLabel = `Total ${visible.length} ${visible.length === 1 ? 'rollout' : 'rollouts'}`;
+  const inSubNav = Boolean(slots.start && slots.end);
 
   const open = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -337,15 +349,22 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
       ) : null}
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+        <div className={`flex items-center justify-between gap-3 px-4 py-3 sm:px-5 ${inSubNav ? 'md:hidden' : ''}`}>
           <p className="text-sm text-content-secondary" aria-live="polite">
-            Total {visible.length} {visible.length === 1 ? 'rollout' : 'rollouts'}
+            {totalLabel}
           </p>
-          {addButton}
+          {renderAddButton(!inSubNav)}
         </div>
+        {inSubNav && slots.start
+          ? createPortal(
+              <p className="hidden whitespace-nowrap pl-3 text-sm text-content-secondary md:block">{totalLabel}</p>,
+              slots.start
+            )
+          : null}
+        {inSubNav && slots.end ? createPortal(<div className="hidden md:block">{addButton}</div>, slots.end) : null}
 
         {visible.length === 0 ? (
-          <div className="border-t border-stroke-subtle px-5 py-10">
+          <div className={`border-t border-stroke-subtle px-5 py-10 ${inSubNav ? 'md:border-t-0' : ''}`}>
             <EmptyState
               title="No rollouts match that"
               description="Try a different word or filter, or clear them to see everything."
@@ -364,7 +383,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
             />
           </div>
         ) : view === 'cards' ? (
-          <div className="hidden grid-cols-2 gap-4 border-t border-stroke-subtle p-4 md:grid xl:grid-cols-3 2xl:grid-cols-4">
+          <div className={`hidden grid-cols-2 gap-4 border-stroke-subtle p-4 md:grid ${inSubNav ? '' : 'border-t'} xl:grid-cols-3 2xl:grid-cols-4`}>
             {visible.map((row) => (
               <WorkspaceReleaseCard
                 key={row.id}
@@ -390,7 +409,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
           <div className={view === 'cards' ? 'md:hidden' : ''}>
             <div
               role="row"
-              className={`hidden border-y border-stroke-subtle px-5 py-3 text-xs font-medium text-content-tertiary md:grid md:gap-4 ${COLUMNS}`}
+              className={`hidden ${inSubNav ? 'border-b' : 'border-y'} border-stroke-subtle px-5 py-3 text-xs font-medium text-content-tertiary md:grid md:gap-4 ${COLUMNS}`}
             >
               <span role="columnheader">Rollout</span>
               <span role="columnheader">Status</span>

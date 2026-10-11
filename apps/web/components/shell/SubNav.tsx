@@ -15,6 +15,9 @@ import { activeShellArea, buildShellAreas, readShellFlags, visibleSubTabs } from
  * On a phone it scrolls sideways instead of wrapping, and the active tab is
  * kept in view so a deep link never lands with its own tab off screen.
  */
+export const SUBNAV_SLOT_START = 'subnav-slot-start';
+export const SUBNAV_SLOT_END = 'subnav-slot-end';
+
 export function SubNav() {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
@@ -24,7 +27,8 @@ export function SubNav() {
 
   return (
     <nav aria-label="Section" className="shell-band-sub">
-      <div className="mx-auto flex h-14 w-full max-w-[1440px] items-center gap-1 overflow-x-auto px-3 sm:px-5 lg:px-8">
+      <div className="mx-auto flex h-14 w-full max-w-[1440px] items-center gap-3 px-3 sm:px-5 lg:px-8">
+      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
         {tabs.map((tab) => {
           const isActive = tab.isActive(pathname);
           return (
@@ -47,7 +51,12 @@ export function SubNav() {
             </Link>
           );
         })}
+        {/* Pages can portal a quiet summary (e.g. "Total 14 rollouts") here. */}
+        <div id={SUBNAV_SLOT_START} className="flex shrink-0 items-center empty:hidden" />
         {tip.panel}
+      </div>
+      {/* Pages can portal their primary action (e.g. Add rollout) here. */}
+      <div id={SUBNAV_SLOT_END} className="flex shrink-0 items-center empty:hidden" />
       </div>
     </nav>
   );
