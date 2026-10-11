@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.117.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Find promo inside any rollout: radio stations in Lagos, Abuja and the UK, music blogs, X communities and SoundCloud networks. Each one shows how to submit, who to contact, the lead time and whether it is free. Add one to your plan and it becomes an activity dated ahead of release day.",
+      "Know a station, blog or community we are missing? Suggest it from the same screen. We check every suggestion before it is listed.",
+      "When UrgAns builds your plan, it names a few promo channels that fit your song, one tap from the full list.",
+    ],
+  },
+  {
     version: "1.116.0",
     date: "October 11, 2026",
     highlights: [

@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   ListMusic,
   Mail,
+  Megaphone,
   Mic,
   PiggyBank,
   Send,
@@ -76,6 +77,8 @@ export const ADMIN_NAV_ITEMS: Array<{
   { key: 'claims', label: 'Claims', icon: UserPlus, href: '/admin/claims' },
   { key: 'seeding', label: 'Seeding', icon: Send, href: '/admin/seeding' },
   { key: 'featured', label: 'Featured', icon: Spotlight, href: '/admin/featured' },
+  // Promo channel directory (GitHub #833): suggested channels wait here.
+  { key: 'promo-channels', label: 'Promo channels', icon: Megaphone, href: '/admin/promo-channels' },
   { key: 'waitlist', label: 'Waitlist', icon: Users, href: '/admin/waitlist' },
   { key: 'growth', label: 'Growth', icon: TrendingUp, href: '/admin/growth' },
   { key: 'interviews', label: 'Interviews', icon: Mic, href: '/admin/interviews' },

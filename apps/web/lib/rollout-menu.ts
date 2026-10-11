@@ -157,6 +157,9 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.contentCalendar ? scene('calendar', 'Plan content') : null,
     flags.pitching ? scene('pitch', 'Pitch this!') : null,
     flags.pitchKit ? scene('pitchkit', 'Build your pitch kit') : null,
+    // No flag: shipped on (GitHub #833). Before its table exists the scene
+    // says "coming soon" instead of erroring.
+    scene('promo', 'Find promo'),
     flags.metadata ? scene('metadata', 'Fill in details') : null,
     scene('distribute', 'Distribute now'),
     // TODO(copy): the brief names the section (Spend), not the menu row.

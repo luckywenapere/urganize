@@ -18,6 +18,8 @@ import { readAskAfterTasks } from '@/lib/task-outcome-prompt';
 
 type TaskCreateInput = {
   title: string;
+  /** Optional body text (a promo channel's how-to-submit, 2026-10-11). */
+  description?: string | null;
   releaseId: string;
   dueDate?: string | null;
   requirement?: TaskRequirement | null;
@@ -199,6 +201,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       },
       body: JSON.stringify({
         title: input.title,
+        ...(input.description ? { description: input.description } : {}),
         releaseId: input.releaseId,
         dueDate: input.dueDate || null,
         status: hasIncompleteDependencies ? TASK_LOCKED_STATUS : TASK_PENDING_STATUS,

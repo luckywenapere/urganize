@@ -16,6 +16,7 @@ import { SongSection } from '@/components/releases/SongSection';
 import { CoverArtSection } from '@/components/releases/CoverArtSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
 import { PitchScene } from '@/components/pitching/PitchScene';
+import { PromoChannelsSection } from '@/components/promo/PromoChannelsSection';
 import { TimelineScene } from '@/components/releases/TimelineScene';
 import { ReleaseChatSection } from '@/components/releases/ReleaseChatSection';
 import { PitchKitSection } from '@/components/releases/PitchKitSection';
@@ -63,6 +64,7 @@ const SECTION_SCENES = [
   'pitchkit',
   'distribute',
   'spend',
+  'promo',
 ] as const;
 
 // No compile-time coverage check beside this list, deliberately. One was
@@ -94,6 +96,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   distribute: 'Distribute',
   // The brief's own section title.
   spend: 'Spend',
+  promo: 'Promo',
 };
 
 type ReleaseScenePanelProps = {
@@ -290,6 +293,15 @@ export function ReleaseScenePanel({
           releaseId={release.id}
           releaseTitle={release.title}
           tasks={tasks.map((task) => ({ id: task.id, title: task.title }))}
+          onToast={onToast}
+        />
+      ) : null}
+      {scene === 'promo' ? (
+        <PromoChannelsSection
+          key={release.id}
+          release={release}
+          tasks={tasks}
+          onTaskAdded={onTaskRescheduled ?? (() => {})}
           onToast={onToast}
         />
       ) : null}

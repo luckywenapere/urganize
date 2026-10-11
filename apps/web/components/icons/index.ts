@@ -73,7 +73,11 @@ export {
   Instagram,
   KeyRound, Layers, LayoutDashboard, LayoutGrid,
   Link2, ListChecks, LockOpen, LogOut,
-  MapPin, Maximize2, Mic,
+  MapPin, Maximize2,
+  // Promo channels (2026-10-11): the rollout menu row for radio, blogs and
+  // communities.
+  Megaphone,
+  Mic,
   Minimize2, MonitorDown, MoreHorizontal,
   Newspaper, PanelLeftClose, PanelLeftOpen,
   // Brand colors (2026-09-24): the share sheet's link to Settings.

@@ -95,6 +95,11 @@ export const RELEASE_MENU_ORDER = [
   // pitch carries, and ahead of Metadata because writing the pitch is the work
   // that precedes collecting the paperwork.
   'pitchkit',
+  // Promo channels (GitHub #833, 2026-10-11): radio, blogs, X communities and
+  // SoundCloud networks to add to the plan. Beside Pitch and the pitch kit
+  // because it is the same job (getting the song in front of people), for the
+  // places that are not playlists. No usage data yet; a reasoned placement.
+  'promo',
   // Distribution, 11 of 64 — nine release-level fields plus a collect link and
   // the submissions that come back, so it is returned to across the whole
   // rollout rather than filled in once. Also a promoted tab.

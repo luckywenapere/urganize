@@ -46,7 +46,12 @@ export type SceneName =
   // itself and is NEVER cached or persisted, for a reason no other scene has:
   // the payload is MONEY, visible to the owner and team managers only, and a
   // copy painted from disk or memory could outlive a change in who may see it.
-  | 'spend';
+  | 'spend'
+  // Promo channels (GitHub #833, 2026-10-11): the directory of radio, blogs, X
+  // communities and SoundCloud networks a team can add to the plan. Fetches for
+  // itself and is not cached: the directory changes as admins approve
+  // suggestions, and it is opened a few times a rollout, not tapped around.
+  | 'promo';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'activities',
@@ -62,6 +67,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'pitchkit',
   'distribute',
   'spend',
+  'promo',
 ];
 
 // Inlined at build time, same read every UI gate uses. Both consumers below
@@ -266,7 +272,7 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
  */
 export type CacheableSceneName = Exclude<
   SceneName,
-  'timeline' | 'activities' | 'pitchkit' | 'distribute' | 'spend'
+  'timeline' | 'activities' | 'pitchkit' | 'distribute' | 'spend' | 'promo'
 >;
 
 export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName =>
@@ -274,7 +280,8 @@ export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName 
   scene !== 'activities' &&
   scene !== 'pitchkit' &&
   scene !== 'distribute' &&
-  scene !== 'spend';
+  scene !== 'spend' &&
+  scene !== 'promo';
 
 /**
  * Which scenes may touch localStorage.
@@ -314,6 +321,8 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   distribute: false,
   // Never to disk: it is money (see SceneName).
   spend: false,
+  // Fetches for itself and is not cached (see SceneName).
+  promo: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of

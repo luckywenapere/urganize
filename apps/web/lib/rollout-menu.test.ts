@@ -72,6 +72,7 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'calendar',
   'pitch',
   'pitchkit',
+  'promo',
   'metadata',
   'distribute',
   'spend',
@@ -104,11 +105,12 @@ describe('buildRolloutMenu', () => {
     }
   });
 
-  it('is only Distribute and the dialog rows when every feature is off (Distribute has no switch)', () => {
+  it('is only Promo, Distribute and the dialog rows when every feature is off (neither has a switch)', () => {
     const allOff = Object.fromEntries(
       Object.keys(ALL_ON).map((flag) => [flag, false])
     ) as RolloutMenuFlags;
     expect(keysOf(build({ flags: allOff, showSpend: false }))).toEqual([
+      'promo',
       'distribute',
       'share',
       'change-artist',

@@ -154,6 +154,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Pick who is Featured in the directory each quarter.',
   },
   {
+    key: 'promo-channels',
+    label: 'Promo channels',
+    href: '/admin/promo-channels',
+    group: 'operations',
+    description: 'Review suggested radio, blogs and communities.',
+  },
+  {
     key: 'urgans',
     label: 'UrgAns actions',
     href: '/admin/urgans',

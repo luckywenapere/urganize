@@ -12,6 +12,7 @@ import {
   Image as ImageIcon,
   ListChecks,
   Mail,
+  Megaphone,
   MessageCircle,
   Music,
   Newspaper,
@@ -48,6 +49,8 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   calendar: CalendarDays,
   pitch: Radio,
   pitchkit: Newspaper,
+  // Radio, blogs and communities: a loudhailer, not the Pitch radio mark.
+  promo: Megaphone,
   metadata: ClipboardList,
   // Their own mark is a globe ("upload once, distribute everywhere").
   distribute: Globe,

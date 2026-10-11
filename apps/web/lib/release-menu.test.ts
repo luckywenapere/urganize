@@ -25,6 +25,7 @@ describe('RELEASE_MENU_ORDER', () => {
       'calendar',
       'pitch',
       'pitchkit',
+      'promo',
       'metadata',
       'distribute',
       'spend',

@@ -64,6 +64,9 @@ const TEAM_ACCESS_GROUPS = [
   // is on this rollout's team at all; WHO MAY SEE A COST is the narrower rule
   // public.can_view_release_spend, which every route asks as well.
   'spend',
+  // Promo channels (GitHub #833, 2026-10-11): a read of the directory plus the
+  // rollout's genre, for any member. Adding one is a plain POST /api/tasks.
+  'promo-channels',
 ];
 
 const BANNED = /ensureReleaseOwnership|ensureOwnedRelease/;

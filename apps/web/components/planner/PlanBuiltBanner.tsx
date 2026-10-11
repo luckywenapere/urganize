@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 
-import { Sparkles } from '@/components/icons';
+import { Megaphone, Sparkles } from '@/components/icons';
+import { useSceneOverlay } from '@/components/workspace/useSceneOverlay';
 import { supabase } from '@/lib/supabase/client';
+import { DEFAULT_PROMO_COUNTRY, suggestPromoChannels, type PromoChannel } from '@/lib/promo-channels';
 import {
   BUDGET_OPTIONS,
   GOAL_OPTIONS,
@@ -141,6 +143,12 @@ export function PlanBuiltBanner({
   onDismiss: () => void;
 }) {
   const [summary, setSummary] = useState<Summary | null>(null);
+  // Promo channels that fit this rollout (GitHub #833). Deterministic, from the
+  // same rule the Promo scene's "Good fits" uses, so the plan names a few and
+  // the scene is one tap away. Empty (and the line hidden) on any failure,
+  // including before the directory's table exists.
+  const [promoFits, setPromoFits] = useState<PromoChannel[]>([]);
+  const { openScene } = useSceneOverlay();
 
   useEffect(() => {
     let cancelled = false;
@@ -160,6 +168,22 @@ export function PlanBuiltBanner({
         const body = (await res.json().catch(() => null)) as PlanResponse | null;
         const plan = body?.plan;
         if (!plan || cancelled) return;
+        void fetch(`/api/releases/${releaseId}/promo-channels`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        })
+          .then((response) => (response.ok ? response.json() : null))
+          .then((promo: { ready?: boolean; channels?: PromoChannel[]; genre?: string | null } | null) => {
+            if (cancelled || !promo?.ready || !Array.isArray(promo.channels)) return;
+            setPromoFits(
+              suggestPromoChannels(
+                promo.channels,
+                { genre: promo.genre ?? null, country: DEFAULT_PROMO_COUNTRY },
+                3
+              )
+            );
+          })
+          .catch(() => undefined);
         const approvedAt = plan.approvedAt ? Date.parse(plan.approvedAt) : NaN;
         if (Number.isFinite(approvedAt) && Date.now() - approvedAt > SHOW_FOR_MS) return;
         setSummary(
@@ -212,6 +236,23 @@ export function PlanBuiltBanner({
               <span className="font-medium text-content-primary">Start with: </span>
               {summary.focus.map((task) => task.title).join(' · ')}
             </p>
+          ) : null}
+
+          {promoFits.length > 0 ? (
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm leading-6 text-content-secondary">
+              <p className="min-w-0">
+                <span className="font-medium text-content-primary">Promo that fits: </span>
+                {promoFits.map((channel) => channel.name).join(' · ')}
+              </p>
+              <button
+                type="button"
+                onClick={() => openScene('promo', releaseId)}
+                className="motion-focus inline-flex h-9 items-center gap-1.5 rounded-lg border border-brand/40 px-3 text-xs font-semibold text-brand hover:bg-brand/10"
+              >
+                <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />
+                Find promo
+              </button>
+            </div>
           ) : null}
 
           {summary.added.length > 0 ? (
