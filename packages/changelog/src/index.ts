@@ -20,12 +20,21 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.96.0",
+    version: "1.97.0",
     date: "October 11, 2026",
     highlights: [
       "If you worked on someone's rollout, they can now claim their own profile with a link and a few quick steps.",
       "Credited people get a page that shows their name, role and credits. They can ask for it to be removed.",
       "On your rollout, send the claim link by email or copy a WhatsApp message for the person you credited.",
+    ],
+  },
+  {
+    version: "1.96.0",
+    date: "October 11, 2026",
+    highlights: [
+      "UrgAns can now draft your directory bio from the work you have done. You read it, change it, and only then does it save.",
+      "If you are an artist, your directory page now shows the photo, bio, city and genre from your published press kit. You edit them in one place.",
+      "A bio never shows on a profile that nobody has claimed yet.",
     ],
   },
   {
