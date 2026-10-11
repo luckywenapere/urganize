@@ -111,7 +111,7 @@ export async function createClaimInvite(
   input: {
     personId: string;
     workspaceId: string;
-    createdBy: string;
+    createdBy: string | null;
     releaseId: string | null;
     channel: 'email' | 'link';
   }
@@ -151,6 +151,23 @@ export async function createClaimInvite(
 /** Stamped only once the email actually went out. */
 export async function markInviteSent(admin: SupabaseClient, inviteId: string): Promise<void> {
   await admin.from(INVITES).update({ sent_at: new Date().toISOString() }).eq('id', inviteId);
+}
+
+/** Turns off one link that was made but never reached anybody (the automatic
+ *  claim email could not send it), so it cannot sit open in the owner's panel
+ *  as "Link made". Only a link nobody has used. */
+export async function revokeUnsentInvite(admin: SupabaseClient, inviteId: string): Promise<void> {
+  try {
+    await admin
+      .from(INVITES)
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('id', inviteId)
+      .is('used_at', null)
+      .is('sent_at', null)
+      .is('revoked_at', null);
+  } catch {
+    // Harmless if it stays: the next link made for this person revokes it.
+  }
 }
 
 type InviteLookup = {

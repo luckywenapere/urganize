@@ -75,6 +75,57 @@ function roleLabel(roles: unknown): string {
   return names.join(', ').slice(0, 40).replace(/[, ]+$/, '');
 }
 
+/**
+ * Which of these rollouts count as delivered: the lib/recap-eligibility.ts rule
+ * (release day passed, or every task done), never archived, never a test
+ * rollout. The rows are `releases` rows with at least id, release_date, status
+ * and metadata. Null when the task read fails, so a caller does nothing rather
+ * than guess. Shared with the automatic claim email (lib/claim-auto-email-server.ts),
+ * so "has this come out" has one answer.
+ */
+export async function deliveredReleaseIds(
+  admin: SupabaseClient,
+  releases: Map<string, Record<string, unknown>>,
+  now: Date = new Date()
+): Promise<Set<string> | null> {
+  const releaseIds = [...releases.keys()];
+  const delivered = new Set<string>();
+  if (releaseIds.length === 0) return delivered;
+  let tasks;
+  try {
+    tasks = await readInChunks(releaseIds, (group, from, to) =>
+      admin.from('tasks').select('release_id, status').in('release_id', group).range(from, to)
+    );
+  } catch {
+    return null;
+  }
+  const totals = new Map<string, { total: number; done: number }>();
+  for (const task of tasks.rows.map(asRow)) {
+    const id = text(task.release_id);
+    const entry = totals.get(id) ?? { total: 0, done: 0 };
+    entry.total += 1;
+    if (text(task.status) === 'done') entry.done += 1;
+    totals.set(id, entry);
+  }
+
+  for (const [id, release] of releases) {
+    if (text(release.status) === 'archived') continue;
+    if (readTestRelease((release.metadata as never) ?? {})) continue;
+    const total = totals.get(id) ?? { total: 0, done: 0 };
+    const date = text(release.release_date);
+    if (
+      isRecapEligible(
+        { releaseDate: date || null, status: text(release.status) },
+        { totalTasks: total.total, allTasksDone: total.total > 0 && total.done === total.total },
+        now
+      )
+    ) {
+      delivered.add(id);
+    }
+  }
+  return delivered;
+}
+
 /** Reads what the planner needs. Returns null when a read it cannot do
  *  without fails, so the run does nothing instead of guessing. */
 async function loadSweepInput(
@@ -110,40 +161,8 @@ async function loadSweepInput(
     for (const row of (result.data || []).map(asRow)) releases.set(text(row.id), row);
   }
 
-  let tasks;
-  try {
-    tasks = await readInChunks(releaseIds, (group, from, to) =>
-      admin.from('tasks').select('release_id, status').in('release_id', group).range(from, to)
-    );
-  } catch {
-    return null;
-  }
-  const totals = new Map<string, { total: number; done: number }>();
-  for (const task of tasks.rows.map(asRow)) {
-    const id = text(task.release_id);
-    const entry = totals.get(id) ?? { total: 0, done: 0 };
-    entry.total += 1;
-    if (text(task.status) === 'done') entry.done += 1;
-    totals.set(id, entry);
-  }
-
-  const now = new Date();
-  const delivered = new Set<string>();
-  for (const [id, release] of releases) {
-    if (text(release.status) === 'archived') continue;
-    if (readTestRelease((release.metadata as never) ?? {})) continue;
-    const total = totals.get(id) ?? { total: 0, done: 0 };
-    const date = text(release.release_date);
-    if (
-      isRecapEligible(
-        { releaseDate: date || null, status: text(release.status) },
-        { totalTasks: total.total, allTasksDone: total.total > 0 && total.done === total.total },
-        now
-      )
-    ) {
-      delivered.add(id);
-    }
-  }
+  const delivered = await deliveredReleaseIds(admin, releases);
+  if (!delivered) return null;
 
   // The team each rollout belongs to: its artist's team, else the owner's.
   const artistIds = [...new Set([...releases.values()].map((r) => text(r.artist_id)).filter(Boolean))];

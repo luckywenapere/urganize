@@ -270,6 +270,14 @@ export interface AnalyticsEventPropertiesMap {
     has_reply: boolean;
     hours_to_answer: number | null;
   };
+  /**
+   * Urganize emailed a credited collaborator their claim link on its own
+   * (lib/claim-auto-email-server.ts, 2026-10-11), or sent the one reminder.
+   * Captured server-side from the daily cron, against the rollout owner, since
+   * the collaborator has no account. No name, email or role text.
+   */
+  claim_email_sent: { release_id: string; role_count: number };
+  claim_reminder_sent: { release_id: string; first_link_expired: boolean };
   /** The role gaps panel on a scoped release — the retention mechanic. `shown`
    *  against `role_clicked` says whether the rollout plan actually drives
    *  search; `dismissed` against a later `shown` says whether it merely

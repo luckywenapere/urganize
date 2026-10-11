@@ -19,6 +19,7 @@ import type { ChatMentionEmailProps } from './ChatMentionEmail';
 import type { TeamAdminNoticeEmailProps } from './TeamAdminNoticeEmail';
 import type { ReleasePaybackQuestionEmailProps } from './ReleasePaybackQuestionEmail';
 import type { ClaimInviteEmailProps } from './ClaimInviteEmail';
+import type { ClaimPageEmailProps } from './ClaimPageEmail';
 
 export type EmailTemplateProps = {
   welcome: WelcomeEmailProps;
@@ -39,6 +40,8 @@ export type EmailTemplateProps = {
   team_admin_notice: TeamAdminNoticeEmailProps;
   release_payback_question: ReleasePaybackQuestionEmailProps;
   claim_invite: ClaimInviteEmailProps;
+  claim_auto_invite: ClaimPageEmailProps;
+  claim_reminder: ClaimPageEmailProps;
 };
 
 export type EmailTemplateId = keyof EmailTemplateProps;

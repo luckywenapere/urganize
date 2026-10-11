@@ -19,6 +19,10 @@ export type EmailCategory =
   /** Being tagged in a rollout's chat. Unsubscribable, on its own, so turning
    *  it off never silences anything else (founder call, 2026-10-07). */
   | 'chat'
+  /** The claim email Urganize sends on its own to a credited collaborator, and
+   *  its one reminder (2026-10-11). They never signed up, so it is
+   *  unsubscribable, on its own. The owner's own "Email" stays transactional. */
+  | 'claim'
   /** Founder-only operational mail. Never sent to a customer; no unsubscribe. */
   | 'internal';
 
@@ -78,6 +82,22 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     category: 'transactional',
     name: 'Claim your page',
     description: 'Sent when a rollout owner invites a credited collaborator to claim their unclaimed profile.',
+    placeholderCopy: false,
+  },
+  claim_auto_invite: {
+    id: 'claim_auto_invite',
+    category: 'claim',
+    name: 'Your page is ready',
+    description:
+      'Sent once, on its own, to a credited collaborator with an unclaimed page when the rollout has come out. Behind NEXT_PUBLIC_FEATURE_CLAIM_AUTO_EMAIL. Copy in lib/claim-email-copy.ts.',
+    placeholderCopy: false,
+  },
+  claim_reminder: {
+    id: 'claim_reminder',
+    category: 'claim',
+    name: 'Your page is still waiting',
+    description:
+      'The one reminder, 7 days after the automatic claim email, if the page is still unclaimed and nobody sent a newer link. Copy in lib/claim-email-copy.ts.',
     placeholderCopy: false,
   },
   work_request_answer: {
@@ -180,6 +200,7 @@ const UNSUBSCRIBABLE: ReadonlySet<EmailCategory> = new Set<EmailCategory>([
   'reminders',
   'announcements',
   'chat',
+  'claim',
 ]);
 
 /** Categories a recipient can turn off, and which therefore carry an unsubscribe

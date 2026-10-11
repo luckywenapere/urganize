@@ -20,7 +20,7 @@ export const UNSUBSCRIBE_API_PATH = '/api/email/unsubscribe';
 
 export type UnsubscribeScope = Extract<
   EmailCategory,
-  'onboarding' | 'reminders' | 'announcements' | 'chat'
+  'onboarding' | 'reminders' | 'announcements' | 'chat' | 'claim'
 >;
 
 export const UNSUBSCRIBE_SCOPE_LABELS: Record<UnsubscribeScope, string> = {
@@ -28,6 +28,7 @@ export const UNSUBSCRIBE_SCOPE_LABELS: Record<UnsubscribeScope, string> = {
   reminders: 'rollout reminders',
   announcements: 'product announcements',
   chat: 'rollout chat emails',
+  claim: 'emails about claiming your Urganize page',
 };
 
 export function isUnsubscribeScope(value: unknown): value is UnsubscribeScope {

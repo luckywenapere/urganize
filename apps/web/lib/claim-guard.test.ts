@@ -73,18 +73,51 @@ describe('what a stranger can read about an unclaimed person', () => {
   });
 });
 
-describe('nothing emails a stranger on its own', () => {
-  it('the daily sweep and the claim server never import the email sender', () => {
-    for (const file of ['lib/claim-sweep-server.ts', 'lib/claim-server.ts', 'lib/claim-sweep.ts']) {
+describe('claim mail has one sender, and the automatic one is switched off by default', () => {
+  it('the daily sweep, the claim server and the pure rules never import the email sender', () => {
+    for (const file of ['lib/claim-sweep-server.ts', 'lib/claim-server.ts', 'lib/claim-sweep.ts', 'lib/claim-auto-email.ts']) {
       expect(read(file), file).not.toMatch(/sendEmail|from '\.\/email'|from '\.\/email\//);
     }
   });
-  it('only the owner invite path sends the email', () => {
-    const senders = walk(join(ROOT, 'lib'))
+  it('every claim email is sent from the one path in claim-owner-server', () => {
+    // Read every source once: the tree is large, and three walks time out.
+    const sources = walk(join(ROOT, 'lib'))
       .concat(walk(join(ROOT, 'app')))
-      .filter((file) => /templateId:\s*'claim_invite'/.test(strip(readFileSync(file, 'utf8'))))
-      .map((file) => file.slice(ROOT.length + 1).replace(/\\/g, '/'));
-    expect(senders).toEqual(['lib/claim-owner-server.ts']);
+      .map((file) => ({ file: file.slice(ROOT.length + 1).replace(/\\/g, '/'), source: strip(readFileSync(file, 'utf8')) }));
+    for (const template of ['claim_invite', 'claim_auto_invite', 'claim_reminder']) {
+      const pattern = new RegExp(`templateId:\\s*'${template}'`);
+      const senders = sources.filter((entry) => pattern.test(entry.source)).map((entry) => entry.file);
+      expect(senders, template).toEqual(['lib/claim-owner-server.ts']);
+    }
+  }, 60_000);
+  it('the automatic step sends only through that path, never sendEmail itself', () => {
+    const server = read('lib/claim-auto-email-server.ts');
+    expect(server).not.toContain('sendEmail(');
+    expect(server).toContain('emailClaimLink(');
+    expect(server).toContain('mintClaimLink(');
+  });
+  it('the automatic step checks its flag before anything else, and the flag starts off', () => {
+    const server = read('lib/claim-auto-email-server.ts');
+    const run = server.slice(server.indexOf('export async function runClaimAutoEmailSweep('));
+    expect(run.indexOf('isClaimAutoEmailEnabled()')).toBeGreaterThan(-1);
+    expect(run.indexOf('isClaimAutoEmailEnabled()')).toBeLessThan(run.indexOf('loadPeople('));
+    expect(run.indexOf('isClaimAutoEmailEnabled()')).toBeLessThan(run.indexOf('countEmailsSentToday('));
+    expect(read('lib/claim-auto-email.ts')).toContain("env.NEXT_PUBLIC_FEATURE_CLAIM_AUTO_EMAIL === 'true'");
+  });
+  it('rides the existing cron, after the profiles are made', () => {
+    const cron = read('app/api/cron/due-date-notifications/route.ts');
+    expect(cron).toContain('runClaimAutoEmailSweep(adminClient)');
+    expect(cron.indexOf('runCreditProfileSweepIfEnabled(adminClient)')).toBeLessThan(
+      cron.indexOf('runClaimAutoEmailSweep(adminClient)')
+    );
+  });
+  it('reserves the once-only row before it makes a link or sends', () => {
+    const server = read('lib/claim-auto-email-server.ts');
+    const one = server.slice(server.indexOf('async function sendOne('), server.indexOf('export async function runClaimAutoEmailSweep('));
+    const reserve = one.indexOf('.insert(');
+    expect(reserve).toBeGreaterThan(-1);
+    expect(reserve).toBeLessThan(one.indexOf('mintClaimLink('));
+    expect(reserve).toBeLessThan(one.indexOf('emailClaimLink('));
   });
 });
 
@@ -119,6 +152,7 @@ describe('who may write the claim tables', () => {
   const allowed: Record<string, string[]> = {
     person_claim_invites: ['lib/claim-server.ts'],
     person_removal_requests: ['lib/claim-server.ts'],
+    person_claim_emails: ['lib/claim-auto-email-server.ts'],
   };
   it('only the claim server writes invites and removal requests', () => {
     const files = walk(join(ROOT, 'lib')).concat(walk(join(ROOT, 'app')), walk(join(ROOT, 'components')));
@@ -127,12 +161,15 @@ describe('who may write the claim tables', () => {
         .filter((file) => {
           const source = strip(readFileSync(file, 'utf8'));
           return new RegExp(`from\\(['"]${table}['"]\\)\\s*\\.(insert|update|upsert|delete)\\(`).test(source) ||
-            new RegExp(`(INVITES|REMOVALS)\\)\\s*\\.(insert|update|upsert|delete)\\(`).test(source) && file.includes('claim-server');
+            (table !== 'person_claim_emails' &&
+              new RegExp(`(INVITES|REMOVALS)\\)\\s*\\.(insert|update|upsert|delete)\\(`).test(source) &&
+              file.includes('claim-server')) ||
+            (table === 'person_claim_emails' && /EMAILS\)\s*\.(insert|update|upsert|delete)\(/.test(source) && /'person_claim_emails'/.test(source));
         })
         .map((file) => file.slice(ROOT.length + 1).replace(/\\/g, '/'));
       for (const writer of writers) expect(owners, `${table} written by ${writer}`).toContain(writer);
     }
-  });
+  }, 60_000);
 });
 
 describe('the claim page', () => {

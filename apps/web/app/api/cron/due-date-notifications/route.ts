@@ -9,6 +9,7 @@ import { runEditorialPitchReminderSweep } from '@/lib/editorial-pitch-server';
 import { runPaybackQuestionSweep, runSpendCreditsSweep } from '@/lib/release-spend-sweeps-server';
 import { runWorkRequestExpirySweep } from '@/lib/work-request-expiry-server';
 import { runCreditProfileSweepIfEnabled } from '@/lib/claim-sweep-server';
+import { runClaimAutoEmailSweep } from '@/lib/claim-auto-email-server';
 import { runOnTheRiseSweep } from '@/lib/featured-shelves-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
@@ -122,6 +123,12 @@ export async function GET(request: NextRequest) {
   // run there), and never throws, so a bad run cannot take the steps above
   // down with it.
   const creditProfileSweep = await runCreditProfileSweepIfEnabled(adminClient);
+  // The claim email sends itself (2026-10-11). Right after the step above, so
+  // a page made this morning is emailed this morning: once per person, and one
+  // reminder a week later if they have not claimed it. Another passenger, for
+  // the same reason. Does nothing unless NEXT_PUBLIC_FEATURE_CLAIM_AUTO_EMAIL
+  // is on, stays inside the day's email budget, and never throws.
+  const claimAutoEmail = await runClaimAutoEmailSweep(adminClient);
   // The directory's On the rise shelf (2026-10-10). Another passenger, for the
   // same reason. It only recomputes when the Lagos month changed, so on every
   // other day it costs one settings read, and it stays empty until thirty days of
@@ -140,6 +147,7 @@ export async function GET(request: NextRequest) {
     paybackSweep,
     workRequestSweep,
     creditProfileSweep,
+    claimAutoEmail,
     onTheRiseSweep,
   });
 }
