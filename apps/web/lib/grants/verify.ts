@@ -10,7 +10,7 @@
 // Pure. No network, no clock: the caller passes today in.
 
 import { dateAppearsIn, detectClosedSignal, detectRollingSignal, isCalendarDate } from './dates';
-import { amountAppearsIn, describeFigure, type GrantCurrency } from './money';
+import { amountAppearsAsAwardIn, describeFigure, type GrantCurrency } from './money';
 import type { BlankedField, ExtractedFields, FetchedPage, GrantStatus, VerifiedGrant, VerifyResult } from './types';
 
 export const MAX_ELIGIBILITY_LINES = 5;
@@ -84,10 +84,10 @@ function verifyAmount(
   if (!/^[A-Z]{3}$/.test(code)) return blank;
 
   if (SAVEABLE_CURRENCIES.has(code)) {
-    return amountAppearsIn(claimedAmount, code as GrantCurrency, text) ? { amount: claimedAmount, currency: code as GrantCurrency, figureNote: null, blanked: false } : blank;
+    return amountAppearsAsAwardIn(claimedAmount, code as GrantCurrency, text) ? { amount: claimedAmount, currency: code as GrantCurrency, figureNote: null, blanked: false } : blank;
   }
   // A currency the table cannot hold: keep the figure as text, leave the amount empty.
-  if (!amountAppearsIn(claimedAmount, 'OTHER', text, code)) return blank;
+  if (!amountAppearsAsAwardIn(claimedAmount, 'OTHER', text, code)) return blank;
   return { amount: null, currency: null, figureNote: describeFigure({ amount: claimedAmount, currency: 'OTHER', otherCode: code, raw: '' }), blanked: false };
 }
 

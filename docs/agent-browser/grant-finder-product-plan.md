@@ -100,11 +100,14 @@ call.
 2. Two field errors are already known from the run and must be fixed first:
    - an amount that is the fund's **total pot** (£3,000,000), not a per-artist award;
    - a **fee** read as an award ($500 on an academy brochure).
-   Fix: the verifier only accepts an amount stated next to award words ("up to",
-   "grant of", "award", "receive"), and blanks one stated next to "fee", "cost",
-   "total fund" or "pot".
+   **Done (2026-10-11):** the verifier now blanks a figure whose own sentence calls it
+   a fee or the whole fund (fee/tuition/deposit, total/budget, "... Debt Fund"),
+   unless award words ("up to", "grants of", "between", "apply for") sit beside it.
+   This also catches the iDICE "$45 million Debt Fund" figure.
 3. **Funder aliases:** MOBO UnSung came back twice (credited once to PRS Foundation,
-   once to MOBO). Add a small alias list for known funders.
+   once to MOBO). **Done (2026-10-11)** without a hand-kept list: two funders count as
+   one programme when one title names the other funder, the deadlines match, and the
+   shorter title sits whole inside the longer.
 4. **Nigeria coverage is thin.** The UK and EU queries found strong, dated calls;
    the Nigerian ones mostly found reposts and closed rounds. Recommendation: seed
    the feed with the hand-curated Nigerian/African funder list (plan section 8),
@@ -119,7 +122,7 @@ call.
 
 ## 7. Build order
 
-1. Fix the two field errors and add funder aliases (section 5), tests first.
+1. ~~Fix the two field errors and add funder aliases (section 5), tests first.~~ Done.
 2. Migration: `grant_suggestions`, plus `source_url`/`source_read_on` on
    opportunities.
 3. Router surface `grant_extract` and the guard updates.

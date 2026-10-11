@@ -164,6 +164,30 @@ describe('dedupeGrants: the same grant reposted on another site', () => {
     expect(dedupeGrants([a, b], []).kept).toHaveLength(2);
   });
 
+  // From the live run (Oct 11, 2026): one page credited the partner, the other the owner.
+  const unsungNews = grant({
+    title: 'MOBO UNSUNG, SUPPORTED BY PRS FOUNDATION, OPENS APPLICATIONS ACROSS THE UK & IRELAND FOR THE MOBO UNSUNG CLASS OF 2027',
+    funder: 'PRS FOUNDATION',
+    link: 'https://www.mobo.com/news/mobo-unsung-supported-prs-foundation',
+    deadline: '2026-10-15',
+  });
+  const unsungPage = grant({ title: 'MOBO UnSung', funder: 'MOBO Organisation', link: 'https://www.mobo.com/unsung', deadline: '2026-10-15' });
+
+  it('merges a programme credited to its owner on one page and its partner on another', () => {
+    expect(dedupeGrants([unsungNews, unsungPage], []).kept).toHaveLength(1);
+  });
+
+  it('keeps partner-credited pages apart when the deadlines are unknown', () => {
+    const a = { ...unsungNews, deadline: null };
+    const b = { ...unsungPage, deadline: null };
+    expect(dedupeGrants([a, b], []).kept).toHaveLength(2);
+  });
+
+  it('keeps a different programme apart even when one title names the other funder', () => {
+    const other = grant({ title: 'MOBO Awards Fund 2027', funder: 'MOBO Organisation', link: 'https://b.example/y', deadline: '2026-10-15' });
+    expect(dedupeGrants([unsungNews, other], []).kept).toHaveLength(2);
+  });
+
   it('keeps two rounds apart: a different year', () => {
     const a = grant({ title: 'Music Futures Fund 2026', link: 'https://a.example/x', deadline: null });
     const b = grant({ title: 'Music Futures Fund 2027', link: 'https://b.example/y', deadline: null });

@@ -261,6 +261,45 @@ describe('amount and currency', () => {
     expect(grant.blanked).toContain('amount');
   });
 
+  // From the live run (Oct 11, 2026): figures the model read as awards that were not.
+  it('blanks a figure the page states only as a fee to pay', () => {
+    const text = 'Creative Business Academy 2027. Every admitted student pays a subsidised fee of ₦500,000 (US$500 diaspora). Enrolment closes 31 January 2027.';
+    const grant = grantOf(run({ ...honest, amount: 500, currency: 'USD' }, text));
+    expect(grant.amount).toBeNull();
+    expect(grant.blanked).toContain('amount');
+  });
+
+  it('blanks a figure the page states only as the whole fund', () => {
+    const text = 'Music Creators Growth Fund. The total annual budget for the Music Creators Growth Fund in 2026/27 is £3 million. You can apply for between £10,000 and £20,000.';
+    const grant = grantOf(run({ ...honest, amount: 3_000_000, currency: 'GBP' }, text));
+    expect(grant.amount).toBeNull();
+    expect(grant.blanked).toContain('amount');
+  });
+
+  it('blanks a figure that names a fund, not an award', () => {
+    const text = 'Two facilities, the BOI-iDICE $45 million Debt Fund and the IsDB-iDICE $65 million Debt Fund, are now open.';
+    const grant = grantOf(run({ ...honest, amount: 45_000_000, currency: 'USD' }, text));
+    expect(grant.amount).toBeNull();
+  });
+
+  it('keeps the per-applicant award on a page that also states the whole fund', () => {
+    const text = 'Music Creators Growth Fund. The total annual budget is £3 million. You can apply for between £10,000 and £20,000.';
+    const grant = grantOf(run({ ...honest, amount: 20_000, currency: 'GBP' }, text));
+    expect(grant.amount).toBe(20_000);
+  });
+
+  it('keeps an award even when fees are mentioned beside it', () => {
+    const text = 'To help with studio fees and travel costs, grants of up to $5,000 are available. Closes 30 November 2026.';
+    const grant = grantOf(run({ ...honest, amount: 5_000, currency: 'USD' }, text));
+    expect(grant.amount).toBe(5_000);
+  });
+
+  it('keeps a figure stated plainly, with no fee or fund words near it', () => {
+    const text = 'Music Futures Fund 2027.\nSupport: $25,000.\nCloses 30 November 2026.';
+    const grant = grantOf(run({ ...honest, amount: 25_000, currency: 'USD' }, text));
+    expect(grant.amount).toBe(25_000);
+  });
+
   it('keeps no amount when the model gives none', () => {
     const grant = grantOf(run({ ...honest, amount: null, currency: null }));
     expect(grant.amount).toBeNull();

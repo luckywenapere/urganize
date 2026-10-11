@@ -150,25 +150,70 @@ function scanSuffixed(text: string): Hit[] {
   return hits;
 }
 
-export function readAmounts(text: string): FoundAmount[] {
+function readHits(text: string): Hit[] {
   if (!text) return [];
   const all = [...scanPrefixed(text), ...scanSuffixed(text)].sort((a, b) => a.index - b.index || b.end - a.end);
-  const out: FoundAmount[] = [];
+  const out: Hit[] = [];
   let lastEnd = -1;
   for (const hit of all) {
     if (hit.index < lastEnd) continue;
-    const { index: _index, end, ...found } = hit;
-    out.push(found);
-    lastEnd = end;
+    out.push(hit);
+    lastEnd = hit.end;
   }
   return out;
 }
 
+export function readAmounts(text: string): FoundAmount[] {
+  return readHits(text).map(({ index: _index, end: _end, ...found }) => found);
+}
+
+// What a figure is for, read from the words around it in its own sentence.
+// From the live run (Oct 11, 2026): a model read "a subsidised fee of ₦500,000
+// (US$500 diaspora)" and "the total annual budget ... is £3 million" as awards.
+// A figure counts as an award unless the words beside it say it is a fee or the
+// whole fund, and award words ("up to", "grants of", "between") beat both.
+const WINDOW_BEFORE = 80;
+const WINDOW_AFTER = 40;
+const AWARD_CUE = /\b(up to|grants? of|awards? of|prizes? of|bursar(?:y|ies) of|stipends? of|between|each|per (?:artist|applicant|project|person|recipient|grant|award)|receives?|will get|apply for)\b/i;
+const FEE_BEFORE = /\b(fees?|tuition|deposit|costs?|pays?|paid|price|registration|charges?|charged|subscription|tickets?)\b/i;
+const POT_BEFORE = /\b(total|budget|pot|overall|counterpart|commitment|invested|has invested)\b/i;
+const FEE_AFTER = /^\W*(?:[\w-]+\s+){0,2}(fees?|deposit|registration|entry|tuition)\b/i;
+const POT_AFTER = /^\W*(?:[\w-]+\s+){0,2}(funds?|pots?|budgets?|programmes?|programs?|facilit(?:y|ies)|window)\b/i;
+
+function sentenceAround(text: string, index: number, end: number): { before: string; after: string } {
+  const from = Math.max(0, index - WINDOW_BEFORE);
+  let before = text.slice(from, index);
+  const stop = Math.max(before.lastIndexOf('. '), before.lastIndexOf('\n'), before.lastIndexOf('! '), before.lastIndexOf('? '));
+  if (stop >= 0) before = before.slice(stop + 1);
+  let after = text.slice(end, end + WINDOW_AFTER);
+  const cut = after.search(/\.(\s|$)|\n|[!?]\s/);
+  if (cut >= 0) after = after.slice(0, cut);
+  return { before, after };
+}
+
+export type FigureRole = 'award' | 'fee' | 'pot';
+
+/** Whether the words around a figure call it an award, a fee, or the whole fund. */
+export function figureRole(text: string, index: number, end: number): FigureRole {
+  const { before, after } = sentenceAround(text, index, end);
+  if (AWARD_CUE.test(before) || AWARD_CUE.test(after)) return 'award';
+  if (FEE_BEFORE.test(before) || FEE_AFTER.test(after)) return 'fee';
+  if (POT_BEFORE.test(before) || POT_AFTER.test(after)) return 'pot';
+  return 'award';
+}
+
+function sameFigure(found: FoundAmount, amount: number, currency: FoundAmount['currency'], otherCode?: string): boolean {
+  return found.currency === currency && found.amount === round(amount) && (currency !== 'OTHER' || otherCode === undefined || found.otherCode === otherCode);
+}
+
 /** True only when the page text holds this number in this currency. */
 export function amountAppearsIn(amount: number, currency: FoundAmount['currency'], text: string, otherCode?: string): boolean {
-  return readAmounts(text).some(
-    (found) => found.currency === currency && found.amount === round(amount) && (currency !== 'OTHER' || otherCode === undefined || found.otherCode === otherCode)
-  );
+  return readAmounts(text).some((found) => sameFigure(found, amount, currency, otherCode));
+}
+
+/** True only when the page holds this figure at least once where it reads as an award, not a fee or the whole fund. */
+export function amountAppearsAsAwardIn(amount: number, currency: FoundAmount['currency'], text: string, otherCode?: string): boolean {
+  return readHits(text).some((hit) => sameFigure(hit, amount, currency, otherCode) && figureRole(text, hit.index, hit.end) === 'award');
 }
 
 function formatNumber(value: number): string {

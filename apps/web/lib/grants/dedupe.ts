@@ -141,10 +141,37 @@ function overlap(a: string[], b: string[]): number {
 
 type Comparable = { title: string; funder: string | null; deadline: string | null };
 
+function funderNamedIn(funder: string | null, title: string): boolean {
+  const words = new Set(normalizeName(title).split(' '));
+  for (const w of funderWords(funder)) if (words.has(w)) return true;
+  return false;
+}
+
+/** True when the shorter title's words appear, in order and together, inside the longer one. */
+function containsRun(a: string[], b: string[]): boolean {
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  if (short.length < 2) return false;
+  for (let i = 0; i + short.length <= long.length; i += 1) {
+    if (short.every((w, k) => long[i + k] === w)) return true;
+  }
+  return false;
+}
+
+// From the live run (Oct 11, 2026): "MOBO UnSung" was credited to MOBO on its own
+// page and to PRS Foundation, its partner, on a news post whose title names both.
+// Two different funders are still one programme when one page's title names the
+// other page's funder, both state the same deadline, and the shorter title sits
+// whole inside the longer one.
+function partnerCredited(a: Comparable, b: Comparable, wa: string[], wb: string[]): boolean {
+  if (!a.deadline || a.deadline !== b.deadline) return false;
+  if (!funderNamedIn(a.funder, b.title) && !funderNamedIn(b.funder, a.title)) return false;
+  return containsRun(wa, wb);
+}
+
 /**
  * The same programme under another title, usually a repost on another site.
  * Never the same when the rounds differ (a year, a cohort number, a deadline) or
- * the funders differ. Otherwise the same when the funder matches and both titles
+ * the funders differ, unless one title credits the other funder as a partner. Otherwise the same when the funder matches and both titles
  * share a programme name, or when the titles are near identical and at least one
  * side names the funder.
  */
@@ -154,7 +181,7 @@ export function sameGrant(a: Comparable, b: Comparable): boolean {
   const tb = titleShape(b.title);
   if (numbersConflict(ta.numbers, tb.numbers)) return false;
   const funders = compareFunders(a.funder, b.funder);
-  if (funders === 'different') return false;
+  if (funders === 'different') return partnerCredited(a, b, ta.words, tb.words);
   if (funders === 'same' && shareProgrammeName(ta.words, tb.words)) return true;
   const someFunderKnown = Boolean(a.funder?.trim() || b.funder?.trim());
   return someFunderKnown && Math.min(new Set(ta.words).size, new Set(tb.words).size) >= 3 && overlap(ta.words, tb.words) >= 0.8;
