@@ -37,6 +37,12 @@ import { useNavTip } from './useNavTip';
  * the account menu), and the phone bar is unchanged: search alone, and no row
  * at all on the UrgAns tab.
  *
+ * Later again that day (2026-10-11, founder call) the area pills went back to
+ * the centre of the desktop bar, where they sat before the top-left block was
+ * removed (then a `mx-auto` nav between the mark and the icons). They are now
+ * truly centred in the bar: a three-column grid at `lg` and up, mark left,
+ * pills centre, icons right. The phone bar is untouched.
+ *
  * Rollout context is no longer in the bar: a rollout's own screen names it.
  * The artist filter the label opened is in the account menu (desktop) and More
  * (phone); useArtistFilterSync keeps it hydrated on every screen.
@@ -68,20 +74,27 @@ export function TopNav({ userName }: { userName?: string }) {
   return (
     <header className="shell-band sticky top-0 z-30 pt-[env(safe-area-inset-top,0px)]">
       <div
-        className={`mx-auto h-14 w-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5 lg:flex lg:h-[72px] lg:px-8 ${
+        className={`mx-auto h-14 w-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5 lg:grid lg:h-[72px] lg:grid-cols-[1fr_auto_1fr] lg:px-8 ${
           isUrgansPage ? 'hidden' : 'flex'
         }`}
       >
-        {/* Desktop only: the phone bar stays search alone. */}
+        {/* Desktop only: the phone bar stays search alone. At lg and up the
+            row is a three-column grid (1fr auto 1fr): the mark in the left
+            column, the area pills in the middle one, the icons in the right.
+            The two side columns share the leftover width equally, so the pills
+            sit at the true centre of the bar, and neither side column can
+            shrink below its own content, so at the narrowest lg widths the
+            pills give up a few pixels of centring rather than overlap the mark
+            or the icons. */}
         <Link
           href="/dashboard/home"
           aria-label="Urganize home"
-          className="motion-focus hidden shrink-0 rounded-md transition-opacity hover:opacity-80 lg:inline-flex"
+          className="motion-focus hidden shrink-0 justify-self-start rounded-md transition-opacity hover:opacity-80 lg:inline-flex"
         >
           <Logo size="sm" priority className="opacity-95" />
         </Link>
 
-        <nav aria-label="Main" className="hidden min-w-0 items-center gap-0.5 lg:ml-2 lg:flex xl:gap-1">
+        <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex xl:gap-1">
           {areas.map((area) => {
             // With Home's left column folded away the pill reads as off, so it
             // says the column is hidden and pressing it brings it back.
@@ -117,7 +130,7 @@ export function TopNav({ userName }: { userName?: string }) {
           {tip.panel}
         </nav>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 justify-self-end sm:gap-2">
           <button
             type="button"
             onClick={() => (hasPullReveal() ? revealListSearch() : openCommand())}
