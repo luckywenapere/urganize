@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.105.0",
+    date: "October 11, 2026",
+    highlights: [
+      "After you sign up, Urganize takes you straight to your new rollout and starts its plan. It only asks the four things it does not know yet.",
+      "Sign up now asks for the artist name, so you never type it twice.",
+      "Your first plan is free.",
+      "The last planner question is now \"What should the plan cover?\" Everything starts ticked. Untick what you do not want.",
+    ],
+  },
+  {
     version: "1.104.0",
     date: "October 11, 2026",
     highlights: [
