@@ -91,6 +91,8 @@ function verifyAmount(
   return { amount: null, currency: null, figureNote: describeFigure({ amount: claimedAmount, currency: 'OTHER', otherCode: code, raw: '' }), blanked: false };
 }
 
+const HOLDS_A_LINK = /\b(https?:\/\/|www\.)|\b[a-z0-9-]+\.(com|org|net|ng|io|co|africa|gov|edu|info)(\/|\b)/i;
+
 function verifyEligibility(raw: unknown, text: string): { lines: string[]; blanked: boolean } {
   if (!Array.isArray(raw)) return { lines: [], blanked: false };
   const lines: string[] = [];
@@ -100,6 +102,12 @@ function verifyEligibility(raw: unknown, text: string): { lines: string[]; blank
     if (typeof item !== 'string') continue;
     const claim = collapse(item);
     if (claim.length < MIN_ELIGIBILITY_LINE_LENGTH) continue;
+    // A grant's only link is the page's own address. A quoted line holding another
+    // one is how a page would smuggle a second link in, so it never survives.
+    if (HOLDS_A_LINK.test(claim)) {
+      blanked = true;
+      continue;
+    }
     const onPage = findOnPage(text, claim);
     if (!onPage) {
       blanked = true;

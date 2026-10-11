@@ -18,6 +18,7 @@ import { parseOpportunityCreate, type OpportunityCreate } from '../opportunities
 import { isCalendarDate } from './dates';
 import { dedupeGrants, normalizeLink, trackedLinkSet, type Duplicate, type ExistingOpportunity } from './dedupe';
 import type { SearchOutcome } from './exa-client';
+import { looksHostile } from './hostile';
 import { grantToOpportunity } from './map';
 import { buildGrantQueries, titleCase, type GrantFacts } from './query-builder';
 import { createSpendMeter, type SpendKind } from './spend';
@@ -214,6 +215,11 @@ export async function runGrantSearch(deps: PipelineDeps, input: PipelineInput): 
 
       if (trackedLinks.has(key)) {
         dropped.push({ url: page.url, reason: 'already_tracked' });
+        continue;
+      }
+      // A page that speaks to the model is refused before any model reads it.
+      if (looksHostile(page.text) || looksHostile(page.title)) {
+        dropped.push({ url: page.url, reason: 'hostile_page' });
         continue;
       }
       if (pagesRead >= maxPages) {

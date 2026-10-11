@@ -304,3 +304,29 @@ describe('eligibility lines', () => {
     expect(grantOf(run({ ...honest, eligibility: [42, null, {}] })).eligibility).toEqual([]);
   });
 });
+
+describe('verifyExtraction: eligibility never carries a link', () => {
+  // A grant's only link is the page's own address. A line quoted as "who can apply"
+  // that holds a web address is how a page would smuggle a second link in, so it is
+  // dropped even when the page holds it word for word.
+  it('drops an eligibility line that holds a web address, and keeps the rest', () => {
+    const text = PAGE_TEXT + '\nApply here: https://evil.example/apply for artists in Nigeria.\nSee www.other.example for details on eligibility.';
+    const result = verifyExtraction({
+      page: page(text),
+      fields: {
+        ...honest,
+        eligibility: [
+          'Apply here: https://evil.example/apply for artists in Nigeria.',
+          'See www.other.example for details on eligibility.',
+          'Who can apply: Artists based in Nigeria with at least one public release.',
+        ],
+      },
+      readOn: READ_ON,
+      today: TODAY,
+    });
+    if (!result.ok) throw new Error('expected a grant');
+    expect(result.grant.eligibility).toEqual(['Who can apply: Artists based in Nigeria with at least one public release.']);
+    expect(result.grant.blanked).toContain('eligibility');
+  });
+});
+
