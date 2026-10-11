@@ -5,14 +5,17 @@ import { InfoTip } from '@/components/shared/HelpTip';
 import { getAccessToken } from '@/components/settings/getAccessToken';
 import { firstNameFrom } from '@/lib/email/format';
 import { whatsappShareHref } from '@/lib/claim-copy';
+import { AUTO_EMAIL_HINT, autoEmailStatusLine, emailAgainLabel } from '@/lib/claim-email-copy';
 import type { CreditClaimRow } from '@/lib/claim-owner-server';
 
 // Under the credits a rollout collected: the credited people who now have a
 // page they can claim, and a way to send each one the link.
 //
-// Nothing sends on its own. "Email" sends one email from the owner, and "Share
-// link" makes a link the owner pastes into WhatsApp or anywhere else. People
-// with no email on the credit only get the second.
+// "Email" sends one email from the owner, and "Share link" makes a link the
+// owner pastes into WhatsApp or anywhere else. People with no email on the
+// credit only get the second. When the automatic claim email is on
+// (NEXT_PUBLIC_FEATURE_CLAIM_AUTO_EMAIL), Urganize may already have emailed the
+// link, and the row says so and when, so the owner does not send a second one.
 
 const TIP =
   'When a rollout is out, each credited person gets a page. Send them a link so they can claim it and add their own details.';
@@ -25,10 +28,22 @@ const when = (iso: string | null): string => {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
+/** The newest link is Urganize's own and it went out. */
+function sentAutomatically(row: CreditClaimRow): boolean {
+  return Boolean(row.invite?.automatic && row.autoEmail?.invitedAt);
+}
+
 function statusText(row: CreditClaimRow): string {
   if (row.personStatus === 'claimed') return 'Claimed';
   if (!row.invite) return 'Not sent yet';
   if (row.invite.state === 'used') return 'Claimed';
+  if (sentAutomatically(row) && (row.invite.state === 'open' || row.invite.state === 'expired')) {
+    return autoEmailStatusLine({
+      name: row.name,
+      invitedOn: when(row.autoEmail?.invitedAt ?? null),
+      remindedOn: row.autoEmail?.remindedAt ? when(row.autoEmail.remindedAt) : null,
+    });
+  }
   if (row.invite.state === 'expired') return 'Link ran out';
   if (row.invite.state === 'locked') return 'Link locked';
   if (row.invite.state === 'revoked') return 'Link turned off';
@@ -127,6 +142,9 @@ export function CreditClaimInvites({ releaseId, refreshKey }: { releaseId: strin
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-content-primary">{row.name}</p>
                 <p className="text-xs text-content-secondary">{statusText(row)}</p>
+                {!claimed && sentAutomatically(row) && row.invite?.state === 'open' && !row.autoEmail?.remindedAt ? (
+                  <p className="text-xs text-content-tertiary">{AUTO_EMAIL_HINT}</p>
+                ) : null}
               </div>
               {claimed ? null : (
                 <div className="flex flex-wrap gap-2">
@@ -137,7 +155,7 @@ export function CreditClaimInvites({ releaseId, refreshKey }: { releaseId: strin
                       onClick={() => void send(row, 'email')}
                       className="min-h-11 rounded-full border border-stroke-control px-4 text-sm hover:border-content-secondary disabled:opacity-60"
                     >
-                      Email {first}
+                      {sentAutomatically(row) ? emailAgainLabel(row.name) : `Email ${first}`}
                     </button>
                   ) : null}
                   <button

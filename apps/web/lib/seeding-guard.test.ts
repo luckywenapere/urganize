@@ -106,6 +106,10 @@ describe('the operator tables are touched only by the seeding code', () => {
     // The account export reads every table a user owns.
     'app/api/account/export/route.ts',
     'lib/account-export.ts',
+    // The automatic claim email reads person_id ONLY, so it never emails a
+    // founder-seeded profile (his link is his to send). claim-guard.test.ts
+    // holds that select to that one column.
+    'lib/claim-auto-email-server.ts',
   ]);
 
   it('seeded_profiles has no other reader or writer', () => {
