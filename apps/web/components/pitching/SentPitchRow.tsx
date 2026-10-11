@@ -90,14 +90,14 @@ export function SentPitchRow({ pitch, onChanged }: SentPitchRowProps) {
   };
 
   return (
-    <li className="rounded-xl border border-stroke-default bg-bg-surface p-3">
+    <li className="rounded-2xl bg-bg-surface p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 break-words text-sm font-semibold text-content-primary">
+          <p className="truncate text-sm font-semibold text-content-primary">
             {pitch.playlistName}
           </p>
-          <p className="line-clamp-2 break-words text-xs text-content-secondary">
-            {pitch.curatorName} · {pitch.songTitle}
+          <p className="truncate text-xs text-content-secondary">
+            {pitch.curatorName} · {formatRelativeTime(pitch.createdAt)}
           </p>
         </div>
         <span className={statusPillClass(pitch.status)}>
@@ -164,10 +164,7 @@ export function SentPitchRow({ pitch, onChanged }: SentPitchRowProps) {
         </p>
       ) : null}
 
-      <p className="mt-2 font-mono text-[11px] text-content-tertiary">
-        {pitch.status === 'awaiting_payment' ? 'Saved' : 'Sent'} {formatRelativeTime(pitch.createdAt)} by{' '}
-        {pitch.pitcherName}
-      </p>
+
     </li>
   );
 }

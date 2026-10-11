@@ -58,6 +58,8 @@ export interface BrowsablePlaylist {
   id: string;
   name: string;
   curatorName: string;
+  /** Signed read URL for the curator's photo, or null. Expires, never cached. */
+  curatorPhotoUrl: string | null;
   platform: PitchPlatform;
   genres: string[];
   followerCount: number | null;
