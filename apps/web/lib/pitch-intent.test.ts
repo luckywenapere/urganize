@@ -131,4 +131,23 @@ describe('resolvePostSignupDestination', () => {
     );
     expect(resolvePostSignupDestination({ ...base, pitchCuratorSlug: '' })).toBe('/dashboard/urgans');
   });
+
+  it('sends somebody Wena invited back to the link they came from, ahead of a pitch', () => {
+    const token = 'a'.repeat(32);
+    expect(resolvePostSignupDestination({ ...base, welcomeToken: token })).toBe(`/welcome/${token}`);
+    expect(
+      resolvePostSignupDestination({ ...base, welcomeToken: token, pitchCuratorSlug: 'soundrise' })
+    ).toBe(`/welcome/${token}`);
+  });
+
+  it('still puts the card trial ahead of a seeding link', () => {
+    expect(
+      resolvePostSignupDestination({ ...base, cardTrialEnabled: true, welcomeToken: 'a'.repeat(32) })
+    ).toBe('/start-trial');
+  });
+
+  it('ignores a seeding token that could not have come from us', () => {
+    expect(resolvePostSignupDestination({ ...base, welcomeToken: '../admin' })).toBe('/dashboard/urgans');
+    expect(resolvePostSignupDestination({ ...base, welcomeToken: null })).toBe('/dashboard/urgans');
+  });
 });
