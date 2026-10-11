@@ -68,6 +68,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.claimPageSubject('reminder', p),
     };
   },
+  directory_invite: async () => {
+    const m = await import('./DirectoryInviteEmail');
+    return {
+      element: (p) => createElement(m.DirectoryInviteEmail, p),
+      subject: (p) => m.directoryInviteSubject(p.inviterName),
+    };
+  },
   work_request_answer: async () => {
     const m = await import('./WorkRequestAnswerEmail');
     return {

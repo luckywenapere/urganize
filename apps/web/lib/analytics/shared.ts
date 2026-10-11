@@ -406,6 +406,26 @@ export interface AnalyticsEventPropertiesMap {
   public_profile_cta_clicked: PublicProfileCtaClickedProperties;
   profile_link_shared: ProfileLinkSharedProperties;
   signup_from_profile: SignupFromProfileProperties;
+  /**
+   * Directory referral invites (2026-10-11, GitHub #834, lib/directory-invites).
+   * Server-side, all three sent against the INVITER's id, so "invites sent"
+   * and "invites joined" are one person's funnel. No names, emails or slugs:
+   * the role, how it went out, and for a join whether they also published.
+   * `opened` is reported by the invitee's browser (a link preview never runs
+   * it), then captured on the server.
+   */
+  directory_invite_sent: {
+    role: string;
+    channel: 'email' | 'link';
+    emailed: boolean;
+  };
+  directory_invite_opened: {
+    role: string;
+  };
+  directory_invite_joined: {
+    role: string;
+    published: boolean;
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;

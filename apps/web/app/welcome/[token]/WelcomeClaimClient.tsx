@@ -1,6 +1,8 @@
 'use client';
 
 // The page an invited manager lands on (founder-led seeding, 2026-10-10).
+// Since 2026-10-11 it is also where a Directory invite lands: a manager invited
+// somebody they work with, and `invitedBy` names that manager on the page.
 //
 // Wena built a private profile with them. They check it, change anything, pick
 // whether they are open to work, and publish it only if they want to. Nothing
@@ -97,7 +99,7 @@ export default function WelcomeClaimClient({ token, initial }: { token: string; 
         ? 'This profile is already set up. Sign in to open it.'
         : initial.state === 'missing'
           ? 'This link is not available.'
-          : 'This link has expired. Ask Wena for a new one.';
+          : `This link has expired. Ask ${initial.invitedBy || 'Wena'} for a new one.`;
     return (
       <Shell>
         <h1 className="mt-4 font-display text-3xl font-semibold">{message}</h1>
@@ -185,6 +187,9 @@ export default function WelcomeClaimClient({ token, initial }: { token: string; 
 
   return (
     <Shell>
+      {initial.invitedBy ? (
+        <p className="mt-4 text-sm text-content-secondary">{initial.invitedBy} invited you to the Urganize Directory.</p>
+      ) : null}
       <h1 className="mt-4 font-display text-3xl font-semibold">Your profile is ready to check</h1>
       <p className="mt-3 inline-flex rounded-full bg-bg-elevated px-3 py-1 text-xs font-semibold text-content-secondary">
         Private. Only you can see it.

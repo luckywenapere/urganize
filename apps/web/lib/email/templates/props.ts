@@ -20,6 +20,7 @@ import type { TeamAdminNoticeEmailProps } from './TeamAdminNoticeEmail';
 import type { ReleasePaybackQuestionEmailProps } from './ReleasePaybackQuestionEmail';
 import type { ClaimInviteEmailProps } from './ClaimInviteEmail';
 import type { ClaimPageEmailProps } from './ClaimPageEmail';
+import type { DirectoryInviteEmailProps } from './DirectoryInviteEmail';
 
 export type EmailTemplateProps = {
   welcome: WelcomeEmailProps;
@@ -42,6 +43,7 @@ export type EmailTemplateProps = {
   claim_invite: ClaimInviteEmailProps;
   claim_auto_invite: ClaimPageEmailProps;
   claim_reminder: ClaimPageEmailProps;
+  directory_invite: DirectoryInviteEmailProps;
 };
 
 export type EmailTemplateId = keyof EmailTemplateProps;

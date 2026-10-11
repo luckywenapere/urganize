@@ -15,6 +15,11 @@ import {
   type SeedRowInput,
   type SeedState,
 } from './seeding';
+import {
+  loadDirectoryInviteForPerson,
+  stampDirectoryInviteJoined,
+  stampDirectoryInviteOpened,
+} from './directory-invites-claim-server';
 
 // Founder-led seeding, the reads and writes (2026-10-10). The rules are in
 // lib/seeding.ts; nothing here decides anything that needs a test of its own.
@@ -53,27 +58,43 @@ export function hashClaimToken(token: string): string {
  */
 export async function mintClaimLink(
   admin: SupabaseClient,
-  input: { personId: string; actorUserId: string; now?: Date }
+  input: {
+    personId: string;
+    actorUserId: string;
+    now?: Date;
+    /** The inviter's team, for a Directory invite. Null for the founder's own. */
+    workspaceId?: string | null;
+    /** Stamp seeded_profiles.invited_at. False for a Directory invite, which
+     *  keeps its own record in directory_invites. */
+    stampSeed?: boolean;
+    /** End this person's unused links first (default). False when a second
+     *  manager invites somebody whose unclaimed page another link points at:
+     *  that manager's link must keep working. */
+    revokeEarlier?: boolean;
+  }
 ): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
   const now = input.now ?? new Date();
   const token = generateClaimToken();
 
-  const revoked = await admin
-    .from(CLAIM_INVITES)
-    .update({ revoked_at: now.toISOString() })
-    .eq('person_id', input.personId)
-    .is('used_at', null)
-    .is('revoked_at', null);
-  if (revoked.error) return { ok: false, error: 'Could not make the link.' };
+  if (input.revokeEarlier !== false) {
+    const revoked = await admin
+      .from(CLAIM_INVITES)
+      .update({ revoked_at: now.toISOString() })
+      .eq('person_id', input.personId)
+      .is('used_at', null)
+      .is('revoked_at', null);
+    if (revoked.error) return { ok: false, error: 'Could not make the link.' };
+  }
 
   const inserted = await admin.from(CLAIM_INVITES).insert({
     person_id: input.personId,
-    workspace_id: null,
+    workspace_id: input.workspaceId ?? null,
     token_hash: hashClaimToken(token),
     created_by: input.actorUserId,
     expires_at: claimLinkExpiry(now),
   });
   if (inserted.error) return { ok: false, error: 'Could not make the link.' };
+  if (input.stampSeed === false) return { ok: true, token };
 
   const stamp = await admin.from(SEEDED).update({ invited_at: now.toISOString() }).eq('person_id', input.personId);
   if (stamp.error) return { ok: false, error: 'Could not make the link.' };
@@ -254,10 +275,13 @@ export async function listSeeded(
 // The manager's side
 
 export type ClaimView =
-  | { state: 'missing' | 'used' | 'revoked' | 'expired' }
+  | { state: 'missing' | 'used' | 'revoked' | 'expired'; invitedBy?: string | null }
   | {
       state: 'ok';
       personId: string;
+      /** The manager behind a Directory invite (2026-10-11). Null for the
+       *  founder's own seeding links, which the page signs as Wena. */
+      invitedBy?: string | null;
       profile: {
         displayName: string;
         bio: string | null;
@@ -299,8 +323,10 @@ async function loadInvite(admin: SupabaseClient, token: string) {
 export async function openClaimLink(admin: SupabaseClient, token: string, now: Date = new Date()): Promise<ClaimView> {
   const invite = await loadInvite(admin, token);
   if (!invite) return { state: 'missing' };
+  const directoryInvite = await loadDirectoryInviteForPerson(admin, invite.personId);
+  const invitedBy = directoryInvite ? directoryInvite.inviterName ?? 'your manager' : null;
   const state = claimInviteState(invite, now);
-  if (state !== 'ok') return { state };
+  if (state !== 'ok') return { state, invitedBy };
 
   const person = await admin
     .from(PERSON_PROFILES)
@@ -309,11 +335,12 @@ export async function openClaimLink(admin: SupabaseClient, token: string, now: D
     .maybeSingle();
   if (person.error || !person.data) return { state: 'missing' };
   const row = asRow(person.data);
-  if (text(row.status) !== 'unclaimed') return { state: 'used' };
+  if (text(row.status) !== 'unclaimed') return { state: 'used', invitedBy };
 
   return {
     state: 'ok',
     personId: invite.personId,
+    invitedBy,
     profile: {
       displayName: text(row.display_name),
       bio: textOrNull(row.bio),
@@ -338,6 +365,8 @@ export async function recordClaimOpened(admin: SupabaseClient, token: string, no
     .update({ opened_at: now.toISOString() })
     .eq('person_id', invite.personId)
     .is('opened_at', null);
+  // A Directory invite keeps its own record; a seeding link finds none.
+  await stampDirectoryInviteOpened(admin, invite.personId, now);
 }
 
 export type ClaimResult =
@@ -364,14 +393,16 @@ export async function claimProfile(
   if (!invite) return { ok: false, error: 'This link is not available.', status: 404 };
   const state = claimInviteState(invite, now);
   if (state !== 'ok') {
+    const directoryInvite = await loadDirectoryInviteForPerson(admin, invite.personId);
+    const askWho = directoryInvite ? directoryInvite.inviterName ?? 'your manager' : 'Wena';
     return {
       ok: false,
       error:
         state === 'used'
           ? 'This link has already been used.'
           : state === 'revoked'
-            ? 'This link was replaced. Ask Wena for a new one.'
-            : 'This link has expired. Ask Wena for a new one.',
+            ? `This link was replaced. Ask ${askWho} for a new one.`
+            : `This link has expired. Ask ${askWho} for a new one.`,
       status: 410,
     };
   }
@@ -441,6 +472,8 @@ export async function claimProfile(
       .eq('person_id', invite.personId)
       .is('published_at', null);
   }
+  // The manager who invited them (if any) sees they joined. Never throws.
+  await stampDirectoryInviteJoined(admin, { personId: invite.personId, userId: input.userId, published: publish, now });
   const saved = asRow((result.data || [])[0]);
   return { ok: true, published: publish, slug: textOrNull(saved.slug) };
 }

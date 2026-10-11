@@ -33,6 +33,7 @@ import {
   type ProfileType,
 } from '@/lib/directory-profile-type';
 import { DirectoryShelves } from '@/components/directory/DirectoryShelves';
+import { DirectoryInvites } from '@/components/directory/DirectoryInvites';
 import type { ShelfPerson } from '@/lib/featured-shelves-server';
 
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -272,6 +273,10 @@ function DirectoryBody() {
         <p role="alert" className="text-sm text-status-error">{error}</p>
       ) : (
         <>
+          {/* Invite your producers, engineers and directors (#834). Draws
+              nothing until the server says invites are ready. */}
+          <DirectoryInvites />
+
           <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <input
               value={filters.query}

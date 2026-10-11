@@ -100,6 +100,14 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
       'The one reminder, 7 days after the automatic claim email, if the page is still unclaimed and nobody sent a newer link. Copy in lib/claim-email-copy.ts.',
     placeholderCopy: false,
   },
+  directory_invite: {
+    id: 'directory_invite',
+    category: 'transactional',
+    name: 'Directory invite',
+    description:
+      'Sent when a manager invites someone they work with into the Directory and types their email. Carries the /welcome link to their private profile.',
+    placeholderCopy: false,
+  },
   work_request_answer: {
     id: 'work_request_answer',
     category: 'transactional',

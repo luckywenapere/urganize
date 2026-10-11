@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.119.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Invite your producers, engineers and directors into the Directory. Add their name and what they do, then email them or share a link.",
+      "They get a profile only they can see until they publish it. You see who opened it and who joined.",
+    ],
+  },
+  {
     version: "1.118.0",
     date: "October 11, 2026",
     highlights: [
