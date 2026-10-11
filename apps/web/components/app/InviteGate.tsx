@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Check, Users } from '@/components/icons';
 import { Button } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
@@ -11,6 +11,7 @@ import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { useAuthStore } from '@/lib/auth-store';
 import {
   INVITE_GATE_OFF,
+  inviteGateContinueUrl,
   inviteGateStorageKey,
   isInviteGateEnabled,
   isPlanView,
@@ -188,6 +189,19 @@ function InviteGateDialog({
   onReleased: () => void;
 }) {
   const logout = useAuthStore((state) => state.logout);
+  const router = useRouter();
+
+  // "Continue to my plan" means the plan: close Settings (or any other panel
+  // that was open when the gate fired) on the way out, so it is the rollout
+  // that is on screen. Replace, so Back does not reopen the panel.
+  const continueToPlan = () => {
+    onReleased();
+    if (typeof window === 'undefined') return;
+    const next = inviteGateContinueUrl(window.location.pathname, window.location.search);
+    if (next !== `${window.location.pathname}${window.location.search}`) {
+      router.replace(next, { scroll: false });
+    }
+  };
   const [isMounted, setIsMounted] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<string>('team-member');
@@ -307,7 +321,7 @@ function InviteGateDialog({
               </p>
             ) : null}
             <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button type="button" onClick={onReleased} className="w-full sm:w-auto">
+              <Button type="button" onClick={continueToPlan} className="w-full sm:w-auto">
                 Continue to my plan
               </Button>
               {whatsappHref ? (

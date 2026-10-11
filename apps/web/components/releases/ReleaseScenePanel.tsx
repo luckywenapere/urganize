@@ -192,7 +192,16 @@ export function ReleaseScenePanel({
     return (
       <section
         aria-label={`${release.title} content calendar`}
-        className={`cc-island overflow-hidden border border-[var(--cc-border)] bg-[var(--cc-ground)] text-[var(--cc-text)] ${calendarFontVariables}`}
+        // `shrink-0` is load-bearing (2026-10-11, founder: "on desktop I can't
+        // even scroll on it"). This section is a flex item inside TasksPanel's
+        // desktop scroll box (a `flex-col` with `lg:overflow-y-auto`). A flex
+        // item with `overflow-hidden` loses its automatic `min-height: auto`
+        // floor, so the default `flex-shrink: 1` squeezed the whole calendar
+        // down to the box's height and the overflow-hidden clipped the rest:
+        // the box never overflowed, so there was nothing to scroll, and the
+        // bottom weeks of the month were simply cut off. The other scenes
+        // never hit this because they carry no overflow of their own.
+        className={`cc-island shrink-0 overflow-hidden border border-[var(--cc-border)] bg-[var(--cc-ground)] text-[var(--cc-text)] ${calendarFontVariables}`}
       >
         <CalendarScene release={release} onClose={onClose} onToast={onToast} />
       </section>

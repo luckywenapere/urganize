@@ -27,6 +27,7 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { resetChappiHistory } from '@/stores/useChappiHistoryStore';
 import { resetSpendAccess } from '@/stores/useSpendAccessStore';
 import { clearPendingFirstShare } from '@/lib/social-share-offer';
+import { clearFirstSession } from '@/lib/first-session';
 import { useHomeStore } from '@/stores/useHomeStore';
 import { clearLoginCookie, setLoginCookie } from '@/lib/login-cookie';
 import {
@@ -1169,6 +1170,9 @@ if (typeof window !== 'undefined') {
       // account B on the next load, on a rollout B cannot see, and spend B's
       // once-only offer on an error.
       clearPendingFirstShare();
+      // Same for the first-session record onboarding leaves (lib/first-session.ts):
+      // it names account A's rollout and holds A's deferred share offer.
+      clearFirstSession();
       // Home's role, state and brief are account A's too — a same-tab
       // sign-out/sign-in must not paint account B's landing screen with the
       // previous account's "Good morning, Ada" header for a frame.

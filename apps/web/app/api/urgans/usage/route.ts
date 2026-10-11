@@ -6,6 +6,7 @@ import { getUsageSnapshot } from '@/lib/urgans-usage-server';
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { isLowOnCredits } from '@/lib/credits/copy';
 import { getCreditSnapshot } from '@/lib/credits/credits-server';
+import { isFirstPlanFreeForTeam } from '@/lib/credits/first-plan-server';
 
 // GET /api/urgans/usage — how much of the assistant window this team has spent.
 //
@@ -37,11 +38,21 @@ export async function GET(request: NextRequest) {
   }
 
   if (isCreditsEnabled()) {
-    const credits = await getCreditSnapshot(auth.adminClient, {
-      workspaceId: team.primaryWorkspaceId,
-      ownerUserId: team.ownerUserId,
-      team,
-    });
+    // `?firstPlan=1` (the planner's footer, 2026-10-11) also asks whether the
+    // team's next plan is its free first one, read the same way the planner
+    // routes decide it (credits/first-plan-server.ts). Only on request, so the
+    // banner's frequent reads stay one query.
+    const wantsFirstPlan = request.nextUrl.searchParams.get('firstPlan') === '1';
+    const [credits, firstPlanFree] = await Promise.all([
+      getCreditSnapshot(auth.adminClient, {
+        workspaceId: team.primaryWorkspaceId,
+        ownerUserId: team.ownerUserId,
+        team,
+      }),
+      wantsFirstPlan
+        ? isFirstPlanFreeForTeam(auth.adminClient, 'release.draft_plan', team.ownerUserId)
+        : Promise.resolve(false),
+    ]);
     // Unreadable: say nothing rather than guess, the same as every other counter here.
     if (!credits) return NextResponse.json({ used: 0, limit: null, approaching: false });
     return NextResponse.json({
@@ -57,6 +68,7 @@ export async function GET(request: NextRequest) {
         monthlyAllowance: credits.monthlyAllowance,
         nextGrantAt: credits.nextGrantAt,
         low: isLowOnCredits(credits.total),
+        ...(wantsFirstPlan ? { firstPlanFree } : {}),
       },
     });
   }

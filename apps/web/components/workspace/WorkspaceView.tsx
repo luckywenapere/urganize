@@ -49,6 +49,8 @@ import { TimelineFullScreen } from '@/components/releases/TimelineFullScreen';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
 import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
+import { scopedRolloutIntakePrefill } from '@/lib/planner-intake-steps';
+import { isInFirstSession, takeOnboardingPlannerHandoff } from '@/lib/first-session';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
@@ -453,7 +455,9 @@ export function WorkspaceView() {
     // decides for itself whether there is anything to say and renders
     // nothing when there is not.
     setKitPromptFor(lastBuilt.releaseId);
-    if (TOURS_ENABLED) setRolloutTourOfferFor(lastBuilt.releaseId);
+    // Not in the first session after onboarding (lib/first-session.ts): that
+    // session belongs to the plan and the invite step, nothing else.
+    if (TOURS_ENABLED && !isInFirstSession()) setRolloutTourOfferFor(lastBuilt.releaseId);
   }, [lastBuilt, scopedReleaseId, clearBuilt, loadCommandCenter]);
 
   useEffect(() => {
@@ -760,8 +764,38 @@ export function WorkspaceView() {
    *  there is no separate one-tap path here any more. */
   const openPlanIntake = () => {
     if (!scopedReleaseId) return;
-    openIntake({ source: 'empty_state', releaseId: scopedReleaseId });
+    // What the rollout already knows rides along (2026-10-11), so the planner
+    // does not ask the type, the date or the artist a second time. Each value
+    // only skips its question when it is usable (lib/planner-intake-steps.ts).
+    const prefill = scopedReleaseSlim ? scopedRolloutIntakePrefill(scopedReleaseSlim) : {};
+    openIntake({ source: 'empty_state', releaseId: scopedReleaseId, prefill });
   };
+
+  // Onboarding lands here, on the rollout it just created, and opens the
+  // planner straight away (2026-10-11). The hand-off is a per-tab marker
+  // onboarding left (lib/first-session.ts), taken only once this exact rollout
+  // is in the catalog, so the prefill is the rollout's own facts. Its answers
+  // (type, date, artist) skip their questions, so the first plan asks four.
+  useEffect(() => {
+    if (!PLANNER_ENABLED || !scopedReleaseId || !scopedReleaseSlim) return;
+    if (usePlannerStore.getState().intake) return;
+    const handoff = takeOnboardingPlannerHandoff(scopedReleaseId);
+    if (!handoff) return;
+    // Already planned (another tab, or a plan built some other way): the
+    // marker is spent and there is nothing to ask.
+    if (scopedTasks.length > 0) return;
+    const fromRelease = scopedRolloutIntakePrefill(scopedReleaseSlim);
+    openIntake({
+      source: 'onboarding',
+      releaseId: scopedReleaseId,
+      prefill: {
+        ...fromRelease,
+        ...(handoff.releaseType ? { releaseType: handoff.releaseType } : {}),
+        ...(handoff.releaseDate ? { releaseDate: handoff.releaseDate } : {}),
+        ...(handoff.artistName ? { artistName: handoff.artistName } : {}),
+      },
+    });
+  }, [scopedReleaseId, scopedReleaseSlim, scopedTasks.length, openIntake]);
 
 
   // "Has this release actually happened", via the SAME

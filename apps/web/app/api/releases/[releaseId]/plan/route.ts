@@ -18,7 +18,9 @@ import { resolvePlannerReasoningEffort } from '@/lib/ai/planner-model';
 import { loadTeamForRouting } from '@/lib/ai/routing-team-server';
 import { resolvePlannerModel } from '@/lib/ai/planner-model';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
-import { beginEmbeddedRun, settleEmbeddedRun } from '@/lib/credits/embedded-server';
+import { beginEmbeddedRun, settleEmbeddedRun, type EmbeddedRunGate } from '@/lib/credits/embedded-server';
+import { isFirstPlanFreeForTeam } from '@/lib/credits/first-plan-server';
+import { isCreditsEnabled } from '@/lib/credits/config';
 import { createUsageCollector } from '@/lib/credits/embedded';
 import { recordRequestUsage } from '@/lib/ai/usage-log-server';
 
@@ -149,11 +151,18 @@ export async function POST(
   // this a plan asked for in chat would be free. 429 and not 402, which the
   // browser turns into a redirect to the paywall.
   const ownerTeam = await getTeamAccessForUser(auth.user.id, auth.user.email);
-  const gate = await beginEmbeddedRun(adminClient, {
-    workspaceId: ownerTeam.primaryWorkspaceId,
-    ownerUserId: ownerTeam.ownerUserId,
-    team: ownerTeam,
-  });
+  // A team's first plan is free (credits/first-plan.ts), through this door too,
+  // or the chat path would charge for what the planner gives away.
+  const firstPlanFree =
+    isCreditsEnabled() &&
+    (await isFirstPlanFreeForTeam(adminClient, 'release.draft_plan', ownerTeam.ownerUserId));
+  const gate: EmbeddedRunGate = firstPlanFree
+    ? { metered: false }
+    : await beginEmbeddedRun(adminClient, {
+        workspaceId: ownerTeam.primaryWorkspaceId,
+        ownerUserId: ownerTeam.ownerUserId,
+        team: ownerTeam,
+      });
   if (gate.metered && !gate.ok) {
     return NextResponse.json({ error: gate.message, code: 'out_of_credits' }, { status: 429 });
   }

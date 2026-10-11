@@ -20,13 +20,56 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.103.0",
+    version: "1.107.0",
     date: "October 11, 2026",
     highlights: [
       "Your first visit no longer opens the welcome tour, so you can start your first rollout straight away. The rollout tour is still in the help menu, and its Go to Team button now opens your team in Settings.",
       "In the rollout planner, Continue now says what is missing when it cannot move on yet, and the options are easier to tap on a phone.",
       "Before you order distribution, your rollout shows a checklist you can work through, with how many items are done.",
       "Buttons in the share sheet and on an activity are bigger and easier to tap on a phone, and Settings opens and types faster.",
+    ],
+  },
+  {
+    version: "1.106.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Pitching, redesigned. You see curators' faces everywhere: when you pick, when you pay and when they answer. Their replies read like messages.",
+      "After you send, the screen shows who it went to. Pick your song from a row of chips instead of a dropdown.",
+      "Curators: tap Listen and it counts as listened. Then Add it or Pass, one tap each.",
+      "Curator pages you share now open on a big photo, one button and your playlists as tiles.",
+    ],
+  },
+  {
+    version: "1.105.1",
+    date: "October 11, 2026",
+    highlights: [
+      "The content calendar scrolls on desktop again. On shorter laptop screens the last weeks of the month were cut off with no way to reach them; now the whole month, including release week, scrolls into view.",
+      "On laptop screens the calendar is more compact, so the whole month fits without scrolling on most of them.",
+      "Long captions in the post editor now grow as you type instead of hiding behind a small box.",
+    ],
+  },
+  {
+    version: "1.105.0",
+    date: "October 11, 2026",
+    highlights: [
+      "After you sign up, Urganize takes you straight to your new rollout and starts its plan. It only asks the four things it does not know yet.",
+      "Sign up now asks for the artist name, so you never type it twice.",
+      "Your first plan is free.",
+      "The last planner question is now \"What should the plan cover?\" Everything starts ticked. Untick what you do not want.",
+    ],
+  },
+  {
+    version: "1.104.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Pitching is simpler. Curators now show as a picture grid. Tap one, paste your song link and send. Less text everywhere, on phone and desktop.",
+    ],
+  },
+  {
+    version: "1.103.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Share your rollout and get 1 month free. The first time you share, copy or save a post from the share sheet, we add 30 free days for your team. One free month per team.",
     ],
   },
   {

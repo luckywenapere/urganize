@@ -164,11 +164,11 @@ export interface AnalyticsEventPropertiesMap {
   // model got to tailor the rest. (Until 2026-09-15 the intake produced a
   // draft to review and approve; the scene, approve and discard events went
   // with that step.)
-  planner_intake_opened: { source: 'empty_state' | 'note' | 'chip'; has_release: boolean };
+  planner_intake_opened: { source: 'empty_state' | 'note' | 'chip' | 'onboarding'; has_release: boolean };
   planner_intake_step: { step: number };
   planner_intake_dismissed: { step: number };
   planner_plan_created: {
-    source: 'empty_state' | 'note' | 'chip';
+    source: 'empty_state' | 'note' | 'chip' | 'onboarding';
     release_type: 'single' | 'ep' | 'album';
     task_count: number;
     tasks_removed: number;
@@ -339,6 +339,15 @@ export interface AnalyticsEventPropertiesMap {
     channel: 'instagram' | 'whatsapp_status' | 'x' | 'snapchat' | 'message';
     /** `x_intent`: opened X's own "write a post" page with the text filled in. */
     method: 'share' | 'download' | 'copy' | 'whatsapp' | 'instagram_dm' | 'more' | 'x_intent';
+  };
+  /**
+   * The share reward (2026-10-11, lib/share-reward.ts). Server-side, from
+   * /api/workspace/share-reward, once per team. `kind` says which way the
+   * month went: onto a trial, or onto the end of a paid period.
+   */
+  share_reward_claimed: {
+    kind: 'trial_extended' | 'paid_bonus';
+    team_state: string;
   };
 }
 

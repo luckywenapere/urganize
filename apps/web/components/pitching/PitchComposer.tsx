@@ -22,7 +22,7 @@
 // The price on a card is for reading only. The quote route prices everything
 // again on the server, and that is the number the artist pays.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, ExternalLink, Send } from '@/components/icons';
 import type { BrowsablePlaylist, SentPitch } from '@/types/pitching';
 import { supabase } from '@/lib/supabase/client';
@@ -32,22 +32,16 @@ import {
   MAX_WAITING_PITCHES_PER_RELEASE,
   PITCH_PLATFORMS,
   PITCH_PLATFORM_LABELS,
-  detectPitchPlatform,
-  formatFollowerCount,
   isValidSongUrl,
 } from '@/lib/pitching';
 import { openExternalUrl } from '@/lib/external-link';
-import { CuratorCardListSkeleton } from '@/components/loading/CuratorSkeleton';
 import { MAX_PITCHES_PER_CHECKOUT, isPitchPaymentsEnabled } from '@/lib/pitch-payments';
-import {
-  PAY_ON_THE_WEB,
-  REVIEW_AND_PAY,
-  TOO_MANY_IN_ONE_CHECKOUT,
-  curatorCardPrice,
-} from '@/lib/pitch-payment-copy';
+import { PAY_ON_THE_WEB, REVIEW_AND_PAY, TOO_MANY_IN_ONE_CHECKOUT } from '@/lib/pitch-payment-copy';
+import { formatNaira } from '@/lib/money';
 import { canPayForPitchesHere, requestPitchQuote } from '@/lib/pitch-payments-client';
 import type { PitchQuote } from '@/types/pitch-payments';
 import { PitchCheckoutPanel } from './PitchCheckoutPanel';
+import { CuratorFace } from './CuratorFace';
 import { usePitchKitStory } from './usePitchKitStory';
 import { pitchNoteFromStory } from '@/lib/release-epk';
 
@@ -76,7 +70,6 @@ type PitchComposerProps = {
 
 const inputClass =
   'h-11 w-full rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
-const labelClass = 'block text-[11px] uppercase tracking-[0.16em] text-content-tertiary';
 
 async function getAccessToken(): Promise<string> {
   const {
@@ -99,7 +92,9 @@ export function PitchComposer({
   const [playlists, setPlaylists] = useState<BrowsablePlaylist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const [platformFilter, setPlatformFilter] = useState('');
-  const [genreFilter, setGenreFilter] = useState('');
+  // The genre box was cut from the screen (2026-10-11); the route still takes
+  // ?genre= for anything that wants it.
+  const genreFilter = '';
   const curatorFilter = (curatorSlug || '').trim();
 
   // Several ids only when they are all paid curators (up to
@@ -107,11 +102,20 @@ export function PitchComposer({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [quote, setQuote] = useState<PitchQuote | null>(null);
   const [songTitle, setSongTitle] = useState(initialSongTitle);
+  // Follow the release when the caller switches it (the team-wide page does).
+  const [titleSeed, setTitleSeed] = useState(initialSongTitle);
+  if (titleSeed !== initialSongTitle) {
+    setTitleSeed(initialSongTitle);
+    setSongTitle(initialSongTitle);
+  }
   const [songUrl, setSongUrl] = useState('');
   const [note, setNote] = useState('');
   // The story from this rollout's Pitch kit, if the team wrote one. '' = none.
   const storyNote = pitchNoteFromStory(usePitchKitStory(releaseId), MAX_PITCH_NOTE_LENGTH);
   const [isSending, setIsSending] = useState(false);
+  // The moment after a free send. A toast vanishes; this stays until the
+  // artist picks again, so the send feels like it went to a person.
+  const [justSent, setJustSent] = useState<{ name: string; photoUrl: string | null } | null>(null);
   const [error, setError] = useState('');
 
   // Playlists are global inventory, refetched when a filter changes rather than
@@ -156,8 +160,19 @@ export function PitchComposer({
     .filter((playlist): playlist is BrowsablePlaylist => Boolean(playlist));
   const paidSelection = selectedPlaylists.length > 0 && isPaidPlaylist(selectedPlaylists[0]);
 
+  const formRef = useRef<HTMLFormElement>(null);
+  // On a phone the send card lands under a long grid, so bring it into view
+  // on the first pick rather than leaving the artist to hunt for it.
+  const revealForm = () => {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
+  };
+
   const toggleSelection = (playlist: BrowsablePlaylist) => {
     setError('');
+    setJustSent(null);
+    if (selectedIds.length === 0) revealForm();
     if (selectedIds.includes(playlist.id)) {
       setSelectedIds(selectedIds.filter((id) => id !== playlist.id));
       return;
@@ -174,7 +189,6 @@ export function PitchComposer({
     setSelectedIds([...selectedIds, playlist.id]);
   };
 
-  const detectedPlatform = detectPitchPlatform(songUrl);
   const canSend =
     Boolean(releaseId) &&
     selectedPlaylists.length > 0 &&
@@ -213,6 +227,10 @@ export function PitchComposer({
       if (!response.ok) throw new Error(payload?.error || 'Could not send the pitch.');
 
       onToast('Pitch sent.', 'success');
+      setJustSent({
+        name: selectedPlaylists[0]?.curatorName || '',
+        photoUrl: selectedPlaylists[0]?.curatorPhotoUrl || null,
+      });
       setSelectedIds([]);
       setNote('');
       if (payload?.pitch) onSent(payload.pitch);
@@ -251,20 +269,11 @@ export function PitchComposer({
     }
   }
 
-  const selectionLine = (() => {
-    if (!selectedPlaylists.length) {
-      return paymentsOn
-        ? `Pick a playlist above to pitch to. You can pick up to ${MAX_PITCHES_PER_CHECKOUT} that charge and pay once.`
-        : 'Pick a playlist above to pitch to.';
-    }
-    if (selectedPlaylists.length === 1) return `Pitching to ${selectedPlaylists[0].name}.`;
-    return `Pitching to ${selectedPlaylists.length} playlists.`;
-  })();
-
   if (quote) {
     return (
       <PitchCheckoutPanel
         quote={quote}
+        faces={Object.fromEntries(selectedPlaylists.map((playlist) => [playlist.curatorName, playlist.curatorPhotoUrl]))}
         songTitle={songTitle.trim()}
         onCancel={() => {
           // The pitches stay saved and waiting for payment, so they can be paid
@@ -278,224 +287,239 @@ export function PitchComposer({
   }
 
 
+  // Pick-a-curator grid first, then (only once something is picked) the two
+  // fields that matter. Founder brief 2026-10-11: "images of the curators first
+  // in a grid like a menu", and cut the text so a 5th grader is not
+  // overwhelmed. So: no labels where a placeholder says it, no helper lines,
+  // no genre box, a counter only near the limit, and the song title is the
+  // release's own unless the release has none.
+  const single = selectedPlaylists.length === 1 ? selectedPlaylists[0] : null;
+  const showCounter = note.length > MAX_PITCH_NOTE_LENGTH - 60;
+
   return (
-    <>
+    <div className="space-y-5">
       {atLimit ? (
-        <p className="rounded-xl border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-sm text-status-warning">
-          This rollout has {MAX_WAITING_PITCHES_PER_RELEASE} pitches waiting. Wait for replies
-          before sending more.
+        <p className="rounded-xl bg-status-warning/10 px-3 py-2 text-sm text-status-warning">
+          {MAX_WAITING_PITCHES_PER_RELEASE} pitches are waiting. Wait for a reply first.
         </p>
       ) : null}
 
       {curatorFilter ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand/30 bg-brand/10 px-3 py-2">
-          <p className="text-sm text-content-primary">
-            Showing one playlist owner, because you came from their page.
-          </p>
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-brand/10 px-3 py-2 text-sm">
+          <span className="text-content-primary">One curator</span>
           {onClearCurator ? (
             <button
               type="button"
               onClick={onClearCurator}
-              className="text-sm underline underline-offset-4 text-content-secondary hover:text-content-primary"
+              className="font-semibold text-brand hover:underline"
             >
-              See everyone
+              See all
             </button>
           ) : null}
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <select
-          aria-label="Filter by platform"
-          className={`${inputClass} appearance-none sm:max-w-[12rem]`}
-          value={platformFilter}
-          onChange={(event) => setPlatformFilter(event.target.value)}
-        >
-          <option value="">All platforms</option>
-          {PITCH_PLATFORMS.map((platform) => (
-            <option key={platform} value={platform}>
-              {PITCH_PLATFORM_LABELS[platform]}
-            </option>
-          ))}
-        </select>
-        <input
-          aria-label="Filter by genre"
-          className={inputClass}
-          value={genreFilter}
-          onChange={(event) => setGenreFilter(event.target.value)}
-          placeholder="Filter by genre"
-        />
+      <div
+        role="radiogroup"
+        aria-label="Platform"
+        className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+      >
+        {['', ...PITCH_PLATFORMS.filter((platform) => platform !== 'other')].map((platform) => {
+          const active = platformFilter === platform;
+          return (
+            <button
+              key={platform || 'all'}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => setPlatformFilter(platform)}
+              className={`h-9 shrink-0 rounded-full px-4 text-sm font-medium transition-colors ${
+                active
+                  ? 'bg-content-primary text-bg-base'
+                  : 'bg-bg-elevated text-content-secondary hover:text-content-primary'
+              }`}
+            >
+              {platform ? PITCH_PLATFORM_LABELS[platform as keyof typeof PITCH_PLATFORM_LABELS] : 'All'}
+            </button>
+          );
+        })}
       </div>
 
       {isLoadingPlaylists ? (
-        <CuratorCardListSkeleton rows={2} />
+        <CuratorGridSkeleton />
       ) : playlists.length === 0 ? (
-        <p className="rounded-xl border border-stroke-default bg-bg-surface p-4 text-sm text-content-secondary">
-          {curatorFilter
-            ? 'This playlist owner has nothing listed right now. See everyone to keep looking.'
-            : 'No playlists match that. Clear the filters to see everything on offer.'}
+        <p className="rounded-2xl bg-bg-surface p-6 text-center text-sm text-content-secondary">
+          No curators here yet.
         </p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {playlists.map((playlist) => {
             const isSelected = selectedIds.includes(playlist.id);
-            const followers = formatFollowerCount(playlist.followerCount);
             const price =
               isPaidPlaylist(playlist) && typeof playlist.pitchPriceKobo === 'number'
-                ? curatorCardPrice(playlist.pitchPriceKobo, playlist.responseWindowHours || undefined)
+                ? formatNaira(playlist.pitchPriceKobo)
                 : '';
             return (
               <li key={playlist.id}>
-                <div
-                  className={`rounded-xl border p-3 transition-colors ${
-                    isSelected
-                      ? 'border-brand bg-brand/8'
-                      : 'border-stroke-default bg-bg-surface hover:border-stroke-strong'
+                <button
+                  type="button"
+                  aria-pressed={isSelected}
+                  aria-label={`${playlist.curatorName}, ${playlist.name}${price ? `, ${price}` : ''}`}
+                  onClick={() => toggleSelection(playlist)}
+                  className={`group relative block aspect-square w-full overflow-hidden rounded-2xl text-left transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98] ${
+                    isSelected ? 'ring-[3px] ring-brand ring-offset-2 ring-offset-bg-base' : ''
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <button
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() => toggleSelection(playlist)}
-                      className="min-w-0 flex-1 text-left"
-                    >
-                      <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
-                        {isSelected ? <Check className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" /> : null}
-                        <span className="truncate">
-                          {PITCH_PLATFORM_LABELS[playlist.platform]}
-                          {followers ? ` · ${followers} followers` : ''}
-                        </span>
-                      </p>
-                      <p className="mt-0.5 truncate text-sm font-semibold text-content-primary">
-                        {playlist.name}
-                      </p>
-                      <p className="truncate text-xs text-content-secondary">
-                        {playlist.curatorName}
-                      </p>
-                      {price ? (
-                        <p className="mt-1 truncate font-mono text-[11px] font-semibold text-brand">{price}</p>
-                      ) : null}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void openExternalUrl(playlist.url)}
-                      aria-label={`Open ${playlist.name}`}
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-stroke-default text-content-tertiary transition-colors hover:border-stroke-strong hover:text-content-primary"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  {playlist.genres.length ? (
-                    <ul className="mt-2 flex flex-wrap gap-1.5">
-                      {playlist.genres.map((genre) => (
-                        <li
-                          key={genre}
-                          className="rounded-full bg-bg-elevated px-2 py-0.5 font-mono text-[11px] text-content-secondary"
-                        >
-                          {genre}
-                        </li>
-                      ))}
-                    </ul>
+                  <CuratorFace name={playlist.curatorName} photoUrl={playlist.curatorPhotoUrl} className="transition-transform duration-300 group-hover:scale-105" />
+                  <span className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                  <span className="absolute inset-x-0 bottom-0 p-3">
+                    <span className="block truncate text-sm font-semibold text-white sm:text-base">
+                      {playlist.curatorName}
+                    </span>
+                    <span className="block truncate text-xs text-white/75">{playlist.name}</span>
+                  </span>
+                  {price ? (
+                    <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur">
+                      {price}
+                    </span>
                   ) : null}
-                </div>
+                  {isSelected ? (
+                    <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-content-inverse shadow">
+                      <Check className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                  ) : null}
+                </button>
               </li>
             );
           })}
         </ul>
       )}
 
-      <form
-        onSubmit={handleSend}
-        className="space-y-4 rounded-xl border border-stroke-default bg-bg-surface p-4"
-      >
-        <p className="text-sm text-content-secondary">{selectionLine}</p>
-
-        <div className="space-y-1.5">
-          <label className={labelClass} htmlFor="pitch-song-title">
-            Song
-          </label>
-          <input
-            id="pitch-song-title"
-            className={inputClass}
-            value={songTitle}
-            maxLength={MAX_SONG_TITLE_LENGTH}
-            onChange={(event) => setSongTitle(event.target.value)}
-            required
-          />
+      {justSent && selectedPlaylists.length === 0 ? (
+        <div
+          role="status"
+          className="flex items-center gap-4 rounded-2xl bg-brand/10 p-4 animate-enter"
+        >
+          <span className="rounded-full ring-2 ring-brand">
+            <CuratorFace name={justSent.name} photoUrl={justSent.photoUrl} size={48} />
+          </span>
+          <div className="min-w-0">
+            <p className="font-display text-lg font-semibold text-content-primary">Sent</p>
+            <p className="truncate text-sm text-content-secondary">
+              {justSent.name ? `${justSent.name} will answer here.` : 'Their answer shows here.'}
+            </p>
+          </div>
         </div>
+      ) : null}
 
-        <div className="space-y-1.5">
-          <label className={labelClass} htmlFor="pitch-song-url">
-            Link to the song
-          </label>
+      {selectedPlaylists.length > 0 ? (
+        <form
+          ref={formRef}
+          onSubmit={handleSend}
+          className="animate-enter space-y-3 rounded-2xl border border-stroke-default bg-bg-surface p-4 shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2">
+              {selectedPlaylists.slice(0, 3).map((playlist) => (
+                <span key={playlist.id} className="rounded-full ring-2 ring-bg-surface">
+                  <CuratorFace name={playlist.curatorName} photoUrl={playlist.curatorPhotoUrl} size={36} />
+                </span>
+              ))}
+            </div>
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-content-primary">
+              {single ? `To ${single.curatorName}` : `To ${selectedPlaylists.length} curators`}
+            </p>
+            {single?.url ? (
+              <button
+                type="button"
+                onClick={() => void openExternalUrl(single.url)}
+                aria-label={`Open ${single.name}`}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-content-tertiary transition-colors hover:bg-bg-elevated hover:text-content-primary"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+
+          {!initialSongTitle.trim() ? (
+            <input
+              aria-label="Song name"
+              className={inputClass}
+              value={songTitle}
+              maxLength={MAX_SONG_TITLE_LENGTH}
+              onChange={(event) => setSongTitle(event.target.value)}
+              placeholder="Song name"
+              required
+            />
+          ) : null}
+
           <input
-            id="pitch-song-url"
+            aria-label="Song link"
             type="url"
             inputMode="url"
             className={inputClass}
             value={songUrl}
             onChange={(event) => setSongUrl(event.target.value)}
-            placeholder="https://…"
+            placeholder="Paste your song link"
             required
           />
-          <p className="text-xs text-content-tertiary">
-            {detectedPlatform
-              ? `Looks like ${PITCH_PLATFORM_LABELS[detectedPlatform]}.`
-              : 'Any link works: a private stream, a demo host or a live page.'}
-          </p>
-        </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-baseline justify-between gap-3">
-            <label className={labelClass} htmlFor="pitch-note">
-              Note
-            </label>
+          <div className="relative">
+            <textarea
+              aria-label="Note"
+              rows={2}
+              className="w-full resize-none rounded-xl border border-stroke-control bg-bg-base p-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
+              value={note}
+              maxLength={MAX_PITCH_NOTE_LENGTH}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Say hi (optional)"
+            />
             {storyNote && note.trim() === '' ? (
               <button
                 type="button"
                 onClick={() => setNote(storyNote)}
-                className="text-xs text-brand underline-offset-2 hover:underline focus-visible:underline"
+                className="absolute bottom-3 right-3 rounded-full bg-bg-elevated px-2.5 py-1 text-xs font-medium text-brand hover:bg-brand/10"
               >
-                Start from the story
+                Use story
               </button>
             ) : null}
+            {showCounter ? (
+              <p className="mt-1 text-right font-mono text-[11px] text-content-tertiary">
+                {note.length}/{MAX_PITCH_NOTE_LENGTH}
+              </p>
+            ) : null}
           </div>
-          <textarea
-            id="pitch-note"
-            rows={3}
-            className="w-full rounded-xl border border-stroke-control bg-bg-base p-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
-            value={note}
-            maxLength={MAX_PITCH_NOTE_LENGTH}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="Why this playlist, in a line or two."
-          />
-          <p className="text-right font-mono text-[11px] text-content-tertiary">
-            {note.length}/{MAX_PITCH_NOTE_LENGTH}
-          </p>
-        </div>
 
-        {error ? (
-          <p role="alert" className="text-sm text-status-error">
-            {error}
-          </p>
-        ) : null}
+          {error ? (
+            <p role="alert" className="text-sm text-status-error">
+              {error}
+            </p>
+          ) : null}
 
-        <button
-          type="submit"
-          disabled={!canSend}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50 sm:w-auto"
-        >
-          <Send className="h-4 w-4" />
-          {isSending
-            ? paidSelection
-              ? 'Getting the price…'
-              : 'Sending…'
-            : paidSelection
-              ? REVIEW_AND_PAY
-              : 'Send pitch'}
-        </button>
-      </form>
-    </>
+          <button
+            type="submit"
+            disabled={!canSend}
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50"
+          >
+            <Send className="h-4 w-4" />
+            {isSending ? 'Sending…' : paidSelection ? REVIEW_AND_PAY : 'Send'}
+          </button>
+        </form>
+      ) : error ? (
+        <p role="alert" className="text-sm text-status-error">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function CuratorGridSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" aria-hidden="true">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div key={index} className="aspect-square animate-pulse rounded-2xl bg-bg-elevated" />
+      ))}
+    </div>
   );
 }

@@ -27,14 +27,18 @@ import { ARTIST_PITCH_TERMS } from '@/lib/pitch-payment-terms';
 import { canPayForPitchesHere, openPaystackCheckout, startPitchCheckout } from '@/lib/pitch-payments-client';
 import type { PitchQuote } from '@/types/pitch-payments';
 import { PitchTerms } from './PitchTerms';
+import { CuratorFace } from './CuratorFace';
 
 type PitchCheckoutPanelProps = {
   quote: PitchQuote;
   songTitle: string;
   onCancel: () => void;
+  /** Curator photos by name, when the caller has them, so the checkout shows
+   *  the people being paid rather than a list of names. */
+  faces?: Record<string, string | null>;
 };
 
-export function PitchCheckoutPanel({ quote: initialQuote, songTitle, onCancel }: PitchCheckoutPanelProps) {
+export function PitchCheckoutPanel({ quote: initialQuote, songTitle, onCancel, faces = {} }: PitchCheckoutPanelProps) {
   const [quote, setQuote] = useState<PitchQuote>(initialQuote);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -64,40 +68,55 @@ export function PitchCheckoutPanel({ quote: initialQuote, songTitle, onCancel }:
     }
   };
 
+  // Restyled 2026-10-11 (founder brief: faces first, much less to read). Every
+  // sentence is still the spec's own copy; CHECKOUT_DISCLOSURE in particular is
+  // pinned by its test and is shown in full, never folded away.
   return (
     <section
       aria-label="Pay for your pitch"
-      className="space-y-4 rounded-xl border border-brand/30 bg-bg-surface p-4"
+      className="animate-enter space-y-5 rounded-2xl border border-stroke-default bg-bg-surface p-5 shadow-sm"
     >
-      <h3 className="font-display text-lg font-semibold text-content-primary">
-        {checkoutTitle(songTitle, quote.lines.length)}
-      </h3>
+      <div className="flex items-center gap-3">
+        <div className="flex -space-x-3">
+          {quote.lines.slice(0, 4).map((line) => (
+            <span key={line.pitchId} className="rounded-full ring-2 ring-bg-surface">
+              <CuratorFace name={line.curatorName} photoUrl={faces[line.curatorName]} size={44} />
+            </span>
+          ))}
+        </div>
+        <h3 className="min-w-0 font-display text-lg font-semibold leading-tight text-content-primary">
+          {checkoutTitle(songTitle, quote.lines.length)}
+        </h3>
+      </div>
 
       {notice ? (
-        <p role="status" className="rounded-lg border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-sm text-status-warning">
+        <p role="status" className="rounded-xl bg-status-warning/10 px-3 py-2 text-sm text-status-warning">
           {notice}
         </p>
       ) : null}
 
-      <ul className="divide-y divide-stroke-subtle rounded-xl border border-stroke-default">
+      <ul className="space-y-2">
         {quote.lines.map((line) => (
-          <li key={line.pitchId} className="flex items-center justify-between gap-3 px-3 py-2.5">
-            <div className="min-w-0">
-              <p className="line-clamp-2 break-words text-sm font-semibold text-content-primary">{line.curatorName}</p>
-              <p className="line-clamp-2 break-words text-xs text-content-secondary">{line.playlistName}</p>
+          <li key={line.pitchId} className="flex items-center gap-3">
+            <CuratorFace name={line.curatorName} photoUrl={faces[line.curatorName]} size={32} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-content-primary">{line.curatorName}</p>
+              <p className="truncate text-xs text-content-secondary">{line.playlistName}</p>
             </div>
             <span className="shrink-0 font-mono text-sm text-content-primary">{formatNaira(line.priceKobo)}</span>
           </li>
         ))}
       </ul>
 
-      <p className="text-sm font-semibold text-content-primary">{CHECKOUT_DISCLOSURE}</p>
+      <p className="rounded-xl bg-bg-elevated px-3 py-2.5 text-sm font-medium text-content-primary">
+        {CHECKOUT_DISCLOSURE}
+      </p>
 
-      <details className="rounded-xl border border-stroke-default bg-bg-base px-3 py-2">
-        <summary className="cursor-pointer select-none text-sm font-semibold text-content-primary marker:text-content-tertiary">
+      <details className="group text-sm">
+        <summary className="cursor-pointer select-none font-semibold text-content-secondary marker:text-content-tertiary hover:text-content-primary">
           {PLAYLIST_SPOT_HELP_TITLE}
         </summary>
-        <p className="mt-2 pb-1 text-sm text-content-secondary">{PLAYLIST_SPOT_HELP_BODY}</p>
+        <p className="mt-2 text-content-secondary">{PLAYLIST_SPOT_HELP_BODY}</p>
       </details>
 
       <PitchTerms terms={ARTIST_PITCH_TERMS} />
@@ -110,25 +129,23 @@ export function PitchCheckoutPanel({ quote: initialQuote, songTitle, onCancel }:
 
       {canPay ? (
         <div className="space-y-2">
-          <p className="text-xs text-content-tertiary">{BY_PAYING_YOU_AGREE}</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void handlePay()}
-              disabled={isPaying}
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50"
-            >
-              {isPaying ? 'Opening Paystack…' : payButton(quote.totalKobo)}
-            </button>
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={isPaying}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-stroke-default px-4 text-sm font-semibold text-content-secondary transition-colors hover:border-stroke-strong disabled:opacity-50"
-            >
-              Back
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => void handlePay()}
+            disabled={isPaying}
+            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-content-inverse transition-colors hover:bg-brand-hover disabled:opacity-50"
+          >
+            {isPaying ? 'Opening Paystack…' : payButton(quote.totalKobo)}
+          </button>
+          <p className="text-center text-xs text-content-tertiary">{BY_PAYING_YOU_AGREE}</p>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isPaying}
+            className="block w-full py-2 text-center text-sm font-semibold text-content-secondary hover:text-content-primary disabled:opacity-50"
+          >
+            Back
+          </button>
         </div>
       ) : (
         <div className="space-y-2">
@@ -136,7 +153,7 @@ export function PitchCheckoutPanel({ quote: initialQuote, songTitle, onCancel }:
           <button
             type="button"
             onClick={onCancel}
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-stroke-default px-4 text-sm font-semibold text-content-secondary"
+            className="block w-full py-2 text-center text-sm font-semibold text-content-secondary hover:text-content-primary"
           >
             Back
           </button>

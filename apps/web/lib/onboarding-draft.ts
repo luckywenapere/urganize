@@ -1,7 +1,8 @@
 // Anonymous onboarding draft state. Lives in sessionStorage so that step
 // navigation and a mid-flow refresh don't lose progress. Every field here is
-// consumed by the completion hand-off: releaseType, title and releaseDate
-// create the release; planningPreference, whereStuck and stage are PATCHed
+// consumed by the completion hand-off: releaseType, title, releaseDate and
+// artistName create the release (artistName since 2026-10-11, so the planner
+// that opens right after never asks who the artist is); planningPreference, whereStuck and stage are PATCHed
 // onto the profile (whereStuck + stage since URG-192 — before that they were
 // collected and then discarded).
 
@@ -56,6 +57,10 @@ export interface OnboardingDraft {
   stage: OnboardingStage | null;
   title: string;
   releaseDate: string;
+  // Who the rollout is for. Asked on the rollout step beside the title and
+  // date (2026-10-11), sent with the release, and handed to the planner so
+  // its "Who's the artist?" question is skipped.
+  artistName: string;
   // URG-158: which way the user wants releases planned going forward.
   // Defaults to 'ai_recommendations' — the "Your first move" step (4)
   // already demonstrates a tailored suggestion, so that's the path of
@@ -69,10 +74,14 @@ export const EMPTY_ONBOARDING_DRAFT: OnboardingDraft = {
   stage: null,
   title: '',
   releaseDate: '',
+  artistName: '',
   planningPreference: 'ai_recommendations',
 };
 
 const STORAGE_KEY = 'urganize.onboarding.draft';
+
+/** Same ceiling as every other artist name field (the planner, /api/releases, Settings). */
+export const MAX_ONBOARDING_ARTIST_NAME_LENGTH = 120;
 
 const isReleaseType = (value: unknown): value is OnboardingReleaseType =>
   value === 'single' || value === 'ep' || value === 'album' || value === 'music_video';
@@ -96,6 +105,10 @@ export function loadOnboardingDraft(): OnboardingDraft {
       stage: isOnboardingStage(parsed.stage) ? parsed.stage : null,
       title: typeof parsed.title === 'string' ? parsed.title : '',
       releaseDate: typeof parsed.releaseDate === 'string' ? parsed.releaseDate : '',
+      artistName:
+        typeof parsed.artistName === 'string'
+          ? parsed.artistName.slice(0, MAX_ONBOARDING_ARTIST_NAME_LENGTH)
+          : '',
       planningPreference: isOnboardingPlanningPreference(parsed.planningPreference)
         ? parsed.planningPreference
         : EMPTY_ONBOARDING_DRAFT.planningPreference,

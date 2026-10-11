@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPlanView, shouldRequireInvite, type InviteGateFacts } from './invite-gate';
+import { inviteGateContinueUrl, isPlanView, shouldRequireInvite, type InviteGateFacts } from './invite-gate';
 
 const newTeam: InviteGateFacts = {
   role: 'owner',
@@ -53,5 +53,30 @@ describe('isPlanView', () => {
     expect(isPlanView('/dashboard', 'abc')).toBe(true);
     expect(isPlanView('/dashboard', null)).toBe(false);
     expect(isPlanView('/dashboard/notes', 'abc')).toBe(false);
+  });
+});
+
+describe('inviteGateContinueUrl', () => {
+  it('closes Settings and every other panel, keeping the plan', () => {
+    expect(inviteGateContinueUrl('/dashboard', '?release=r1&settings=team&section=invite')).toBe(
+      '/dashboard?release=r1'
+    );
+    expect(inviteGateContinueUrl('/dashboard', '?release=r1&scene=metadata&task=t1&new=1&month=2026-12')).toBe(
+      '/dashboard?release=r1'
+    );
+  });
+
+  it('leaves a clean URL alone and keeps unrelated params', () => {
+    expect(inviteGateContinueUrl('/dashboard', '?release=r1')).toBe('/dashboard?release=r1');
+    expect(inviteGateContinueUrl('/dashboard', '')).toBe('/dashboard');
+    expect(inviteGateContinueUrl('/dashboard/home', 'settings=menu&ref=abc')).toBe('/dashboard/home?ref=abc');
+  });
+
+  it('is what the gate’s Continue button uses', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const source = readFileSync(join(__dirname, '..', 'components', 'app', 'InviteGate.tsx'), 'utf8');
+    expect(source).toMatch(/onClick=\{continueToPlan\}[\s\S]{0,80}Continue to my plan/);
+    expect(source).toContain('inviteGateContinueUrl(window.location.pathname, window.location.search)');
   });
 });

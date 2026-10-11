@@ -111,8 +111,14 @@ export async function ensureReleaseOpsSchema(
     },
   ];
 
-  for (const check of checks) {
-    const result = await check.run();
+  // The probes are independent reads, so they run together (2026-10-11: the
+  // first rollout made during onboarding was waiting on six round trips in a
+  // row). Results are still read in the listed order, so the first failing
+  // check is the one reported, exactly as before.
+  const results = await Promise.all(checks.map((check) => check.run()));
+  for (let index = 0; index < checks.length; index += 1) {
+    const check = checks[index];
+    const result = results[index];
     if (!result.error) continue;
 
     if (isOptionalTableMissingError(result.error)) {

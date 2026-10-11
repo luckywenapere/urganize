@@ -10,6 +10,8 @@ import {
   isValidSongUrl,
 } from '@/lib/pitching';
 import type { BrowsablePlaylist, SentPitch } from '@/types/pitching';
+import { generateSignedUrl } from '@/lib/asset-helpers';
+import { ASSET_SIGNED_URL_TTL_SECONDS, RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 
 // Shared helpers for the team side of playlist pitching.
 //
@@ -122,12 +124,14 @@ export async function ensureReleaseVisible(
 export const toBrowsablePlaylist = (
   row: Record<string, unknown>,
   curatorName: string,
-  price?: { priceKobo: number | null; responseWindowHours: number } | null
+  price?: { priceKobo: number | null; responseWindowHours: number } | null,
+  curatorPhotoUrl: string | null = null
 ): BrowsablePlaylist => {
   const playlist: BrowsablePlaylist = {
     id: String(row.id || ''),
     name: typeof row.name === 'string' ? row.name : '',
     curatorName,
+    curatorPhotoUrl,
     platform: isPitchPlatform(row.platform) ? row.platform : 'other',
     genres: Array.isArray(row.genres) ? row.genres.map((tag) => String(tag)) : [],
     followerCount: typeof row.follower_count === 'number' ? row.follower_count : null,
@@ -154,7 +158,8 @@ export const toSentPitch = (
   row: Record<string, unknown>,
   curatorName: string,
   releaseTitle: string | null = null,
-  payment?: { priceKobo: number | null } | null
+  payment?: { priceKobo: number | null } | null,
+  curatorPhotoUrl: string | null = null
 ): SentPitch => {
   const pitch: SentPitch = {
     id: String(row.id || ''),
@@ -163,6 +168,7 @@ export const toSentPitch = (
     playlistId: row.playlist_id ? String(row.playlist_id) : null,
     playlistName: typeof row.playlist_name === 'string' ? row.playlist_name : '',
     curatorName,
+    curatorPhotoUrl,
     songTitle: typeof row.song_title === 'string' ? row.song_title : '',
     songUrl: typeof row.song_url === 'string' ? row.song_url : '',
     songPlatform: isPitchPlatform(row.song_platform) ? row.song_platform : null,
@@ -266,4 +272,42 @@ export async function loadCuratorNames(
     names.set(String(row.user_id || ''), String(row.display_name || ''));
   }
   return names;
+}
+
+/**
+ * A signed photo URL per curator, for the picture grid on the Pitch screen
+ * (2026-10-11, founder: "images of the curators first in a grid like a menu").
+ *
+ * The curator profile says the display name is what teams see beside every
+ * playlist; the photo is the same kind of thing, chosen by her for exactly that.
+ * Only the SIGNED URL leaves this function, never the storage path, the same
+ * rule the public curator page follows. A curator with no photo is simply
+ * missing from the map and the tile shows her initials.
+ */
+export async function loadCuratorPhotoUrls(
+  adminClient: SupabaseClient,
+  curatorUserIds: string[]
+): Promise<Map<string, string>> {
+  const urls = new Map<string, string>();
+  const ids = Array.from(new Set(curatorUserIds.filter(Boolean)));
+  if (!ids.length) return urls;
+  const { data } = await adminClient
+    .from(CURATOR_PROFILES_TABLE)
+    .select('user_id,photo_path')
+    .in('user_id', ids);
+  const rows = ((data || []) as Array<Record<string, unknown>>).filter(
+    (row) => typeof row.photo_path === 'string' && row.photo_path
+  );
+  await Promise.all(
+    rows.map(async (row) => {
+      const signed = await generateSignedUrl(
+        adminClient,
+        RELEASE_ASSETS_BUCKET,
+        String(row.photo_path),
+        ASSET_SIGNED_URL_TTL_SECONDS
+      );
+      if (signed) urls.set(String(row.user_id || ''), signed);
+    })
+  );
+  return urls;
 }
