@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -929,6 +930,25 @@ function TaskDetailModal() {
   const panelRef = useRef<HTMLDivElement>(null);
   useDialogFocus(isOpen, panelRef, { initialFocus: 'panel' });
 
+  // The pop-up always opens on its title (founder screenshot, 2026-10-11: the
+  // title and its checkbox opened half hidden under the sticky Delete / Close
+  // bar). The body starts at the top for each activity and again once its
+  // details finish loading, and scroll anchoring is off so the skeleton giving
+  // way to the real fields can never nudge it down.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const openTaskId = state?.task?.id ?? null;
+  const loading = Boolean(state?.isLoading);
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const body = bodyRef.current;
+    if (!body) return;
+    body.scrollTop = 0;
+    const frame = requestAnimationFrame(() => {
+      body.scrollTop = 0;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen, openTaskId, loading]);
+
   if (!state || !state.isOpen) {
     return null;
   }
@@ -950,7 +970,7 @@ function TaskDetailModal() {
         aria-label="Activity detail"
         className="urg-cartouche flex max-h-[92dvh] focus:outline-none w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface sm:rounded-2xl shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200 sm:max-h-[85dvh] sm:max-w-2xl sm:border"
       >
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6">
+        <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 [overflow-anchor:none] sm:p-6">
           <TaskDetailView
             isLoading={state.isLoading}
             isLoadingMembers={state.isLoadingMembers}

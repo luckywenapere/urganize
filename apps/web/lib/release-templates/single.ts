@@ -71,7 +71,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w8_brief_marketing_lead',
       title: 'Brief the marketing lead on the song',
       description:
-        'Walk the marketing lead through the song: theme, story, target audience, mood. Owner: manager with artist input (Artist + Manager in v0.3).',
+        'Walk the marketing lead through the song: theme, story, target audience, mood. Owner: manager with artist input.',
       role: 'manager',
       type: 'task',
       offset_days: -56,
@@ -135,7 +135,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w7_write_song_metadata',
       title: 'Write song metadata',
       description:
-        'Write the song metadata: title, ISRC if pre-assigned, songwriter splits, producer credits, language. Owner: manager with artist input (Artist + Manager in v0.3).',
+        'Write the song metadata: title, ISRC if pre-assigned, songwriter splits, producer credits, language. Owner: manager with artist input.',
       role: 'manager',
       type: 'task',
       offset_days: -49,
@@ -303,7 +303,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w5_cover_art_final_approved',
       title: 'Cover art final approved',
       description:
-        'Sign off on the final cover art. Same file used everywhere: distributor, social, press, merch. Owner: manager with artist sign-off (Artist + Manager in v0.3).',
+        'Sign off on the final cover art. Same file used everywhere: distributor, social, press, merch. Owner: manager with artist sign-off.',
       role: 'manager',
       type: 'task',
       offset_days: -35,
@@ -602,7 +602,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'release_day_thankyou_content',
       title: 'Release day: thank-you content, share early stats with team',
       description:
-        'Post thank-you content to audience, team, collaborators, and curators. Share early stats with the team internally. Owner: manager with artist co-posting (Artist + Manager in v0.3).',
+        'Post thank-you content to audience, team, collaborators, and curators. Share early stats with the team internally. Owner: manager with artist co-posting.',
       role: 'manager',
       type: 'event_milestone',
       offset_days: 0,
@@ -666,7 +666,7 @@ export const SINGLE_RELEASE_TEMPLATE: Template = {
       id: 'w0_thankyou_posts',
       title: 'Thank-you posts to playlist curators, press, and collaborators',
       description:
-        'Public thank-you posts to playlist curators, press, and collaborators who supported the release. Owner: manager with artist co-posting (Artist + Manager in v0.3).',
+        'Public thank-you posts to playlist curators, press, and collaborators who supported the release. Owner: manager with artist co-posting.',
       role: 'manager',
       type: 'task',
       offset_days: 1,

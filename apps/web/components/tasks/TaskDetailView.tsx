@@ -206,11 +206,36 @@ export function TaskDetailView({
 
   // Title is a textarea (so long titles WRAP on narrow screens instead of
   // cropping inside a single-line input) that auto-grows to fit its content.
+  // Re-measured when its width changes and once the display font has loaded,
+  // and its own scroll pinned to the top (2026-10-11): measured too early, the
+  // box came out shorter than the heading and showed only the bottom of it.
   useEffect(() => {
     const el = titleRef.current;
     if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
+    const fit = () => {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+      el.scrollTop = 0;
+    };
+    fit();
+    let cancelled = false;
+    void document.fonts?.ready.then(() => {
+      if (!cancelled) fit();
+    });
+    let width = el.clientWidth;
+    const observer =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            if (el.clientWidth === width) return;
+            width = el.clientWidth;
+            fit();
+          })
+        : null;
+    observer?.observe(el);
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+    };
   }, [title]);
 
   useEffect(() => {
