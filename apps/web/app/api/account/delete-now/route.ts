@@ -140,6 +140,26 @@ async function removeUserStorageObjects(supabaseAdmin: SupabaseClient, userId: s
     collectPath(RELEASE_ASSETS_BUCKET, row.photo_path);
   }
 
+  // Profile photos (2026-10-11): the person's directory face and the faces of
+  // artists whose rows cascade with this user. Both live in release-assets.
+  // Read tolerantly: a missing column only means there is nothing to collect.
+  const personPhotoResult = await supabaseAdmin
+    .from('person_profiles')
+    .select('avatar_storage_path')
+    .eq('user_id', userId);
+  logQueryError('directory profile photo', personPhotoResult.error);
+  for (const row of personPhotoResult.data ?? []) {
+    collectPath(RELEASE_ASSETS_BUCKET, row.avatar_storage_path);
+  }
+  const artistPhotoResult = await supabaseAdmin
+    .from('artists')
+    .select('photo_path')
+    .eq('owner_user_id', userId);
+  logQueryError('artist photos', artistPhotoResult.error);
+  for (const row of artistPhotoResult.data ?? []) {
+    collectPath(RELEASE_ASSETS_BUCKET, row.photo_path);
+  }
+
   for (const [bucket, paths] of pathsByBucket) {
     const removeResult = await supabaseAdmin.storage.from(bucket).remove([...paths]);
     if (removeResult.error) {

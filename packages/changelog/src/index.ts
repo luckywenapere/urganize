@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.111.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Artists now have profile photos. Tap the face next to an artist on the Artists list, or on their page, to add or change one. Artists without a photo show their initials.",
+      "Add your own photo to your directory record in Settings, and every card in the directory now shows a face. Your photo also leads your public profile page.",
+    ],
+  },
+  {
     version: "1.110.2",
     date: "October 11, 2026",
     highlights: [

@@ -4,6 +4,8 @@ import { parsePersonProfileInput, slugConflictIsOurs, suggestSlug } from '@/lib/
 import { bioForPayload, resolveProfileView } from '@/lib/profile-kit';
 import { loadKitFactsForUser } from '@/lib/profile-kit-server';
 import { canRunEmbeddedAction } from '@/lib/urgans-actions/server';
+import { parsePhotoPathInput, personPhotoPathPrefix } from '@/lib/profile-photo';
+import { removePhotoObject, signPhotoPath } from '@/lib/profile-photo-server';
 import {
   PERSON_PROFILES_TABLE,
   PERSON_PROFILE_COLUMNS,
@@ -52,10 +54,13 @@ const DRAFT_BIO_ACTION = 'directory.draft_bio';
 async function profileResponseBody(
   adminClient: SupabaseClient,
   user: User,
-  profile: ReturnType<typeof toPersonProfile>
+  profile: ReturnType<typeof toPersonProfile>,
+  avatarPath: unknown
 ) {
   profile.profileType =
     (await loadProfileTypeOverrides(adminClient, [user.id])).get(user.id) ?? null;
+  // Signed per response, never stored (lib/profile-photo.ts).
+  profile.avatarUrl = await signPhotoPath(adminClient, avatarPath);
   const [roles, kit] = await Promise.all([
     loadProfileRoles(adminClient, user.id, profile.roles),
     loadKitFactsForUser(adminClient, user.id),
@@ -101,7 +106,7 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json(
-    await profileResponseBody(adminClient, auth.user, toPersonProfile(asRow(data)))
+    await profileResponseBody(adminClient, auth.user, toPersonProfile(asRow(data)), asRow(data).avatar_storage_path)
   );
 }
 
@@ -121,6 +126,11 @@ export async function PATCH(request: NextRequest) {
   const parsed = parsePersonProfileInput(body);
   if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
   const { input } = parsed;
+
+  // The photo rides on the same PATCH: a path under your own prefix sets it,
+  // null clears it, absent leaves it alone.
+  const photo = parsePhotoPathInput(body, personPhotoPathPrefix(auth.user.id));
+  if (photo.kind === 'error') return NextResponse.json({ error: photo.error }, { status: 400 });
 
   const adminClient = createAdminClient(auth.supabaseUrl);
   if (!adminClient) {
@@ -152,6 +162,9 @@ export async function PATCH(request: NextRequest) {
   if (input.visibility !== undefined) patch.visibility = input.visibility;
   if (input.slug !== undefined) patch.slug = input.slug;
   if (input.profileType !== undefined) patch.profile_type = input.profileType;
+  if (photo.kind === 'set') patch.avatar_storage_path = photo.path;
+  if (photo.kind === 'clear') patch.avatar_storage_path = null;
+  if (photo.kind !== 'absent') patch.avatar_file_name = null;
 
   // A handle is suggested once, on the first save, and never regenerated. It
   // is a URL somebody may already have shared, so a later rename must not
@@ -204,7 +217,13 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
+  // A replaced or removed photo is dropped from storage, best effort.
+  const previousPhoto = existing ? asRow(existing).avatar_storage_path : null;
+  if (photo.kind !== 'absent' && previousPhoto && previousPhoto !== patch.avatar_storage_path) {
+    await removePhotoObject(adminClient, previousPhoto);
+  }
+
   return NextResponse.json(
-    await profileResponseBody(adminClient, auth.user, toPersonProfile(asRow(data)))
+    await profileResponseBody(adminClient, auth.user, toPersonProfile(asRow(data)), asRow(data).avatar_storage_path)
   );
 }

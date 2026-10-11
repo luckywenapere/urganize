@@ -66,6 +66,8 @@ export type ProfileOwnFields = {
   city: string | null;
   country: string | null;
   links: PersonLink[];
+  /** The person's own uploaded photo, already signed. */
+  avatarUrl?: string | null;
 };
 
 export type ResolvedProfileView = {
@@ -100,7 +102,10 @@ export function resolveProfileView(profile: ProfileOwnFields, kit: KitFacts | nu
     bio: Boolean(kit && kitBio(kit.bios)),
     location: Boolean(kit && kit.homeCity),
     links: Boolean(kit && kit.links.length > 0),
-    photo: Boolean(kit && kit.photoUrl),
+    // THE ONE FIELD WHERE THE PROFILE WINS (2026-10-11). A photo somebody
+    // uploaded as their face was chosen for exactly this; a kit's first press
+    // shot is often a wide stage photo. The kit photo is the fallback.
+    photo: Boolean(kit && kit.photoUrl) && !profile.avatarUrl,
     genre: Boolean(kit && kit.genre),
   };
 
@@ -110,7 +115,7 @@ export function resolveProfileView(profile: ProfileOwnFields, kit: KitFacts | nu
     location: (fromKit.location && kit ? kit.homeCity : own.location) || null,
     genre: fromKit.genre && kit ? kit.genre : null,
     links: (fromKit.links && kit ? kit.links : profile.links).slice(0, PERSON_LINKS_MAX),
-    photoUrl: fromKit.photo && kit ? kit.photoUrl : null,
+    photoUrl: profile.avatarUrl || (fromKit.photo && kit ? kit.photoUrl : null),
     kit: kit ? { artistId: kit.artistId, artistName: kit.artistName, slug: kit.slug } : null,
     fromKit,
   };

@@ -13,6 +13,8 @@ import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useEventsStore } from '@/stores/useEventsStore';
 import { usePressKitsStore } from '@/stores/usePressKitsStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
+import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 
@@ -82,6 +84,7 @@ export default function ArtistPageClient() {
   const artists = useArtistRosterStore((state) => state.artists);
   const rosterLoaded = useArtistRosterStore((state) => state.loaded);
   const loadRoster = useArtistRosterStore((state) => state.load);
+  const setArtistPhoto = useArtistRosterStore((state) => state.setArtistPhoto);
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const events = useEventsStore((state) => state.events);
@@ -214,9 +217,22 @@ export default function ArtistPageClient() {
         <ArrowLeft className="h-4 w-4" aria-hidden /> All artists
       </Link>
 
-      <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">Artist</p>
-        <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">{artist.name}</h1>
+      <header className="flex items-start gap-4">
+        <ProfilePhotoPicker
+          name={artist.name}
+          photoUrl={artist.photoUrl}
+          size={72}
+          square
+          signUrl={artistPhotoUrl(artist.id)}
+          save={(path) => saveArtistPhoto(artist.id, path)}
+          onChange={(url) => setArtistPhoto(artist.id, url)}
+          surface="artist_photo"
+          showActions
+        />
+        <div className="min-w-0 pt-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">Artist</p>
+          <h1 className="mt-2 truncate font-display text-2xl font-semibold text-content-primary">{artist.name}</h1>
+        </div>
       </header>
 
       <SectionCard

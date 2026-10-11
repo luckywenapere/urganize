@@ -17,7 +17,7 @@
  * through.
  */
 
-export type UploadSurface = 'workspace_logo' | 'curator_photo';
+export type UploadSurface = 'workspace_logo' | 'curator_photo' | 'artist_photo' | 'person_photo';
 export type UploadStep = 1 | 2 | 3;
 
 export type UploadFailureReport = {

@@ -46,6 +46,8 @@ export type DirectoryEntry = {
   roles: ProfileRole[];
   /** The effective type, derived or overridden. Absent on older callers. */
   profileType?: ProfileType | null;
+  /** Their own photo, signed per response. Absent or null shows initials. */
+  avatarUrl?: string | null;
 };
 
 export type DirectoryFilters = {

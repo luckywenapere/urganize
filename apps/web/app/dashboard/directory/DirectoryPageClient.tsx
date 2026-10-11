@@ -36,6 +36,7 @@ import { DirectoryShelves } from '@/components/directory/DirectoryShelves';
 import type { ShelfPerson } from '@/lib/featured-shelves-server';
 
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { ProfileFace } from '@/components/shared/ProfileFace';
 import { bucketResultCount, type DirectoryDemandSource } from '@/lib/directory-demand';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
@@ -456,19 +457,27 @@ function PersonCard({ person, onAsk }: { person: Person; onAsk: (() => void) | n
 
   const body = (
     <div className="rounded-xl border border-stroke-default p-4 transition-colors hover:border-brand">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-base font-semibold text-content-primary">{person.displayName}</span>
-        <span className="text-xs text-content-tertiary">
-          {openToLabel(person.profileType ?? null, person.availability)}
-          {person.city ? ` · ${person.city}` : ''}
-        </span>
-      </div>
+      {/* Face first (2026-10-11): hiring is person to person, and a list of
+          faces is scanned faster than a list of names. No photo is initials
+          on a gradient, never a grey silhouette. */}
+      <div className="flex items-start gap-3">
+        <ProfileFace name={person.displayName} photoUrl={person.avatarUrl} size={48} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+            <span className="truncate text-base font-semibold text-content-primary">{person.displayName}</span>
+            <span className="text-xs text-content-tertiary">
+              {openToLabel(person.profileType ?? null, person.availability)}
+              {person.city ? ` · ${person.city}` : ''}
+            </span>
+          </div>
 
-      {person.profileType ? (
-        <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-content-tertiary">
-          {PROFILE_TYPE_LABELS[person.profileType]}
-        </p>
-      ) : null}
+          {person.profileType ? (
+            <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-content-tertiary">
+              {PROFILE_TYPE_LABELS[person.profileType]}
+            </p>
+          ) : null}
+        </div>
+      </div>
 
       {/* What this type leads with. Empty for a creative, whose lead is the
           delivered credits just below, and never a zero. */}

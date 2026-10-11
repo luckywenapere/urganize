@@ -8,6 +8,7 @@ import {
 import { recordLimitHit } from '@/lib/seats-server';
 import { NO_BRAND_COLORS, isBrandColorsEnabled, type BrandColors } from '@/lib/social-share-colors';
 import { loadArtistBrandColors } from '@/lib/social-share-colors-server';
+import { loadArtistPhotoUrls } from '@/lib/profile-photo-server';
 
 // The team's artist roster.
 //
@@ -32,11 +33,17 @@ const isFlagOn = () => process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
  * `brandColors` rides along only while the brand-colors flag is on, so with it
  * off the payload is exactly what it always was.
  */
-function toPayload(artist: { id: string; name: string; slug: string }, brandColors?: BrandColors) {
+function toPayload(
+  artist: { id: string; name: string; slug: string },
+  brandColors?: BrandColors,
+  photoUrl: string | null = null
+) {
   return {
     id: artist.id,
     name: artist.name,
     slug: artist.slug,
+    // A short-lived signed URL, minted per response (lib/profile-photo.ts).
+    photoUrl,
     ...(brandColors ? { brandColors } : {}),
   };
 }
@@ -76,10 +83,21 @@ export async function GET(request: NextRequest) {
         )
       : null;
 
+    // Faces, in their own tolerant query: a failure here is initials, never
+    // a roster that fails to load.
+    const photoUrls = await loadArtistPhotoUrls(
+      adminClient,
+      artists.map((artist) => artist.id)
+    );
+
     return NextResponse.json({
       workspaceId: access.primaryWorkspaceId,
       artists: artists.map((artist) =>
-        toPayload(artist, brandColors ? (brandColors.get(artist.id) ?? NO_BRAND_COLORS) : undefined)
+        toPayload(
+          artist,
+          brandColors ? (brandColors.get(artist.id) ?? NO_BRAND_COLORS) : undefined,
+          photoUrls.get(artist.id) ?? null
+        )
       ),
       artistLimit: allowance.limit,
     });

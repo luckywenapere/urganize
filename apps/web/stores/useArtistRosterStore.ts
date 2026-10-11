@@ -23,7 +23,13 @@ import { supabase } from '@/lib/supabase/client';
 // which is the pre-roster behaviour. A broken fetch must never block creating
 // a release.
 
-export type RosterArtist = { id: string; name: string; slug: string };
+export type RosterArtist = {
+  id: string;
+  name: string;
+  slug: string;
+  /** Signed, short-lived. Absent on payloads that predate artist photos. */
+  photoUrl?: string | null;
+};
 
 type ArtistRosterStore = {
   artists: RosterArtist[];
@@ -33,6 +39,8 @@ type ArtistRosterStore = {
   load: (options?: { force?: boolean }) => Promise<void>;
   /** Replace the roster after a mutation elsewhere (Settings add/rename). */
   setArtists: (artists: RosterArtist[]) => void;
+  /** Swap one artist's face in place after an upload or removal. */
+  setArtistPhoto: (artistId: string, photoUrl: string | null) => void;
 };
 
 // Recency guard + in-flight coalescing, the useWorkspaceIdentityStore pattern.
@@ -93,6 +101,11 @@ export const useArtistRosterStore = create<ArtistRosterStore>((set) => ({
     rosterLoadedAt = Date.now();
     set({ artists, loaded: true });
   },
+
+  setArtistPhoto: (artistId, photoUrl) =>
+    set((state) => ({
+      artists: state.artists.map((artist) => (artist.id === artistId ? { ...artist, photoUrl } : artist)),
+    })),
 }));
 
 /**

@@ -174,3 +174,21 @@ describe('kitFieldNames', () => {
     expect(kitFieldNames(resolveProfileView(profile, null))).toEqual([]);
   });
 });
+
+describe('own photo', () => {
+  it('wins over the kit photo, and the kit photo is the fallback', () => {
+    const own = resolveProfileView({ ...profile, avatarUrl: 'https://signed/own.jpg' }, kit());
+    expect(own.photoUrl).toBe('https://signed/own.jpg');
+    expect(own.fromKit.photo).toBe(false);
+    expect(kitFieldNames(own)).not.toContain('your photo');
+
+    const fallback = resolveProfileView({ ...profile, avatarUrl: null }, kit());
+    expect(fallback.fromKit.photo).toBe(true);
+  });
+
+  it('shows with no kit at all', () => {
+    expect(resolveProfileView({ ...profile, avatarUrl: 'https://signed/own.jpg' }, null).photoUrl).toBe(
+      'https://signed/own.jpg'
+    );
+  });
+});

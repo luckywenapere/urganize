@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { signPhotoPath } from './profile-photo-server';
 import { profileRoles } from './person-profile';
 import { isPubliclyReadable } from './person-public';
 import { bioForPayload, isClaimedProfile, resolveProfileView, type ResolvedProfileView } from './profile-kit';
@@ -68,7 +69,7 @@ export async function loadPublicPerson(slug: string): Promise<PublicPerson | nul
     const { data, error } = await admin
       .from(PERSON_PROFILES_TABLE)
       .select(
-        'id, user_id, display_name, slug, roles, city, country, availability, bio, links, visibility, created_at, updated_at'
+        'id, user_id, display_name, slug, roles, city, country, availability, bio, links, avatar_storage_path, visibility, created_at, updated_at'
       )
       .eq('slug', handle)
       .maybeSingle();
@@ -107,7 +108,7 @@ export async function loadPublicPerson(slug: string): Promise<PublicPerson | nul
       // Null for an unclaimed profile, in every payload (lib/profile-kit.ts).
       bio: bioForPayload({ userId: row.user_id ? String(row.user_id) : null, bio: row.bio ? String(row.bio) : null }),
       links,
-      avatarUrl: null,
+      avatarUrl: await signPhotoPath(admin, row.avatar_storage_path),
       visibility,
       createdAt: String(row.created_at || ''),
       updatedAt: String(row.updated_at || ''),

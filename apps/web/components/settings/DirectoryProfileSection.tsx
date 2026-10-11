@@ -32,6 +32,8 @@ import { WorkRequestsInbox } from './WorkRequestsInbox';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { HelpTip } from '@/components/shared/HelpTip';
 import { useReportDirty } from './useReportDirty';
+import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
+import { PERSON_PHOTO_SIGN_URL } from '@/lib/profile-photo-client';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const REQUESTS_ENABLED =
@@ -175,6 +177,25 @@ export function DirectoryProfileSection() {
     }
   };
 
+  // The photo's own save: same PATCH, but it answers with the signed URL the
+  // picker shows, and throws so the picker can say what went wrong.
+  const savePhoto = async (photoPath: string | null): Promise<string | null> => {
+    const headers = await authHeaders();
+    if (!headers) throw new Error('Sign in again to change your photo.');
+    const response = await fetch('/api/directory/profile', {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ photoPath }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(typeof body.error === 'string' ? body.error : 'Could not save your photo.');
+    }
+    apply(body);
+    const saved = body?.profile as PersonProfile | null | undefined;
+    return saved?.avatarUrl ?? null;
+  };
+
   const draftBio = async (notes = '') => {
     if (!profile) return;
     setDrafting(true);
@@ -298,6 +319,26 @@ export function DirectoryProfileSection() {
         </div>
       ) : (
         <div className="space-y-5">
+          {/* Your face on your card and your page. Your own photo wins over a
+              press kit photo (lib/profile-kit.ts), so this is never overridden. */}
+          <div className="flex items-center gap-4">
+            <ProfilePhotoPicker
+              name={profile.displayName}
+              photoUrl={profile.avatarUrl}
+              size={64}
+              signUrl={PERSON_PHOTO_SIGN_URL}
+              save={savePhoto}
+              onChange={(url) => setProfile((current) => (current ? { ...current, avatarUrl: url } : current))}
+              surface="person_photo"
+              showActions
+            />
+            <p className="text-xs text-content-tertiary">
+              {profile.avatarUrl
+                ? 'This is the face on your card and your page.'
+                : 'Add a photo so people know who they are asking.'}
+            </p>
+          </div>
+
           <label className="block">
             <span className="mb-1 block text-xs text-content-tertiary">Who can find you</span>
             <select

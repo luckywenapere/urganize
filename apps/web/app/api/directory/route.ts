@@ -11,6 +11,7 @@ import {
   type ProfileType,
 } from '@/lib/directory-profile-type';
 import { loadLeadStats } from '@/lib/profile-lead-stats-server';
+import { loadPersonPhotoUrls } from '@/lib/profile-photo-server';
 import {
   DELIVERY_RECORDS_TABLE,
   PERSON_PROFILES_TABLE,
@@ -123,9 +124,13 @@ export async function GET(request: NextRequest) {
 
   // The type each card leads with, and the line it leads with. Both are read
   // tolerantly: no override column or an unreadable table just shortens a card.
-  const [overrides, leadStats] = await Promise.all([
+  // Faces ride in the same parallel batch: one tolerant query plus cached
+  // signatures, so a card with no photo shows initials and a failure shows
+  // initials everywhere rather than an error page.
+  const [overrides, leadStats, photoUrls] = await Promise.all([
     loadProfileTypeOverrides(adminClient, userIds),
     loadLeadStats(adminClient, userIds),
+    loadPersonPhotoUrls(adminClient, userIds),
   ]);
 
   const entries: (DirectoryEntry & {
@@ -159,6 +164,7 @@ export async function GET(request: NextRequest) {
         isPublic: visibility === 'public',
         profileType,
         lead: leadLine(profileType, leadStats.get(userId) ?? EMPTY_LEAD_STATS),
+        avatarUrl: photoUrls.get(userId) ?? null,
       };
     }
   );

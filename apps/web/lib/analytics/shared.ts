@@ -299,8 +299,13 @@ export interface AnalyticsEventPropertiesMap {
     done: number;
     total: number;
   };
+  /** A face was added or swapped on the roster or a directory record (2026-10-11). */
+  profile_photo_saved: {
+    surface: 'workspace_logo' | 'curator_photo' | 'artist_photo' | 'person_photo';
+    replaced: boolean;
+  };
   asset_upload_failed: {
-    surface: 'workspace_logo' | 'curator_photo';
+    surface: 'workspace_logo' | 'curator_photo' | 'artist_photo' | 'person_photo';
     step: 1 | 2 | 3;
     status?: number;
     reason: string;

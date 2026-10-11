@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { profileRoles } from './person-profile';
 import { DIRECTORY_ROLES, type DirectoryRole } from './directory-roles';
 import type { DirectoryEntry } from './directory-search';
+import { loadPersonPhotoUrls } from './profile-photo-server';
 import {
   FEATURED_PER_ROLE,
   checkFeatureRequest,
@@ -80,6 +81,8 @@ async function loadPublishedPeople(
     }
   }
 
+  const photoUrls = await loadPersonPhotoUrls(admin, userIds);
+
   for (const raw of profiles) {
     const row = asRow(raw);
     const userId = String(row.user_id || '');
@@ -95,6 +98,7 @@ async function loadPublishedPeople(
       roles: profileRoles(claimed, recordsByUser.get(userId) ?? []),
       slug: row.slug ? String(row.slug) : null,
       isPublic: String(row.visibility) === 'public',
+      avatarUrl: photoUrls.get(userId) ?? null,
     });
   }
   return people;

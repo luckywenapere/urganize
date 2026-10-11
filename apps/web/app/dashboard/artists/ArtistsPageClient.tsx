@@ -10,6 +10,8 @@ import { artistHref, describeArtistCounts, isArtistPageEnabled } from '@/lib/art
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useEventsStore } from '@/stores/useEventsStore';
 import { usePressKitsStore } from '@/stores/usePressKitsStore';
+import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
+import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
@@ -23,6 +25,7 @@ export default function ArtistsPageClient() {
   const artists = useArtistRosterStore((state) => state.artists);
   const rosterLoaded = useArtistRosterStore((state) => state.loaded);
   const loadRoster = useArtistRosterStore((state) => state.load);
+  const setArtistPhoto = useArtistRosterStore((state) => state.setArtistPhoto);
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const events = useEventsStore((state) => state.events);
@@ -75,7 +78,8 @@ export default function ArtistsPageClient() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-          <div className="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)_2rem] gap-4 border-b border-stroke-subtle px-5 py-3 text-xs font-medium text-content-tertiary md:grid">
+          {/* pl matches the rows below, which leave room for the face. */}
+          <div className="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)_2rem] gap-4 border-b border-stroke-subtle py-3 pl-[4.25rem] pr-5 text-xs font-medium text-content-tertiary md:grid">
             <span>Artist</span>
             <span>Rollouts</span>
             <span>Planned</span>
@@ -85,10 +89,23 @@ export default function ArtistsPageClient() {
           </div>
           <ul className="divide-y divide-stroke-subtle">
             {cards.map(({ artist, summary, kit }) => (
-              <li key={artist.id}>
+              <li key={artist.id} className="relative">
+                {/* The face is a SIBLING of the row link, laid over it, never
+                    inside it: a button inside an anchor is invalid markup and
+                    its tap would open the artist instead of the file picker. */}
+                <ProfilePhotoPicker
+                  name={artist.name}
+                  photoUrl={artist.photoUrl}
+                  size={40}
+                  signUrl={artistPhotoUrl(artist.id)}
+                  save={(path) => saveArtistPhoto(artist.id, path)}
+                  onChange={(url) => setArtistPhoto(artist.id, url)}
+                  surface="artist_photo"
+                  className="absolute left-5 top-3 z-10"
+                />
                 <Link
                   href={artistHref(artist.id)}
-                  className="motion-focus grid min-h-16 items-center gap-x-4 gap-y-1 px-5 py-3 transition-colors hover:bg-bg-hover/60 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)_2rem]"
+                  className="motion-focus grid min-h-16 items-center gap-x-4 gap-y-1 py-3 pl-[4.25rem] pr-5 transition-colors hover:bg-bg-hover/60 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)_2rem]"
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-display text-base font-semibold text-content-primary">
