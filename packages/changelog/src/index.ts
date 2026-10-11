@@ -23,6 +23,15 @@ export const changelog: Release[] = [
     version: "1.109.0",
     date: "October 11, 2026",
     highlights: [
+      "When you claim your page, you can share it right away. Copy the link, send it on WhatsApp, or use your phone's share button.",
+      "On your own page, when you are signed in, the same share buttons show at the bottom.",
+      "People who read a page can now get their own page, or run their rollouts on Urganize, from a link at the bottom.",
+    ],
+  },
+  {
+    version: "1.109.0",
+    date: "October 11, 2026",
+    highlights: [
       "Your first visit no longer opens the welcome tour, so you can start your first rollout straight away. The rollout tour is still in the help menu, and its Go to Team button now opens your team in Settings.",
       "In the rollout planner, Continue now says what is missing when it cannot move on yet, and the options are easier to tap on a phone.",
       "Before you order distribution, your rollout shows a checklist you can work through, with how many items are done.",
