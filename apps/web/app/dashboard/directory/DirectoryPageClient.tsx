@@ -32,6 +32,8 @@ import {
   orderForViewer,
   type ProfileType,
 } from '@/lib/directory-profile-type';
+import { DirectoryShelves } from '@/components/directory/DirectoryShelves';
+import type { ShelfPerson } from '@/lib/featured-shelves-server';
 
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { bucketResultCount, type DirectoryDemandSource } from '@/lib/directory-demand';
@@ -135,6 +137,12 @@ function DirectoryBody() {
   const [truncated, setTruncated] = useState(false);
   // Who is reading. Decides who comes first and who gets a Message button.
   const [viewerType, setViewerType] = useState<ProfileType>('manager');
+  // The two shelves. Fetched with the list so they arrive together and never
+  // push the results down after the page has painted. A failed read is no shelf.
+  const [shelves, setShelves] = useState<{ featured: ShelfPerson[]; onTheRise: ShelfPerson[] }>({
+    featured: [],
+    onTheRise: [],
+  });
   const [asking, setAsking] = useState<Person | null>(null);
   const [sent, setSent] = useState('');
 
@@ -152,11 +160,14 @@ function DirectoryBody() {
       if (!token) return;
 
       try {
-        const response = await fetch('/api/directory', {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
+        const headers = { Authorization: `Bearer ${token}` };
+        const [response, shelvesResponse] = await Promise.all([
+          fetch('/api/directory', { headers, cache: 'no-store' }),
+          fetch('/api/directory/shelves', { headers, cache: 'no-store' }).catch(() => null),
+        ]);
         const body = await response.json().catch(() => ({}));
+        const shelvesBody =
+          shelvesResponse && shelvesResponse.ok ? await shelvesResponse.json().catch(() => null) : null;
 
         if (cancelled) return;
 
@@ -166,6 +177,10 @@ function DirectoryBody() {
         }
 
         setPeople(Array.isArray(body.people) ? body.people : []);
+        setShelves({
+          featured: Array.isArray(shelvesBody?.featured) ? shelvesBody.featured : [],
+          onTheRise: Array.isArray(shelvesBody?.onTheRise) ? shelvesBody.onTheRise : [],
+        });
         setTruncated(Boolean(body.truncated));
         if (isProfileType(body.viewerType)) setViewerType(body.viewerType);
       } catch {
@@ -223,6 +238,8 @@ function DirectoryBody() {
   }, [filters, results.length, loaded, error, arrivedFromRoleGaps]);
 
   const counts = useMemo(() => fallbackCounts(people, filters), [people, filters]);
+  const isDefaultView =
+    !filters.query.trim() && !filters.role && !filters.city && !filters.availability;
   const cities = useMemo(() => availableCities(people), [people]);
 
   const patch = useCallback(
@@ -315,6 +332,26 @@ function DirectoryBody() {
               ))}
             </select>
           </div>
+
+          {/* Shelves are for browsing, so they step aside the moment somebody
+              searches or filters. Search results are never ranked or mixed
+              with them. */}
+          {isDefaultView ? (
+            <DirectoryShelves
+              featured={shelves.featured}
+              onTheRise={shelves.onTheRise}
+              renderCard={(person) => (
+                <PersonCard
+                  person={person}
+                  onAsk={
+                    REQUESTS_ENABLED && canReceiveRequests(person.availability)
+                      ? () => setAsking(person)
+                      : null
+                  }
+                />
+              )}
+            />
+          ) : null}
 
           {results.length === 0 ? (
             <DirectoryEmptyState

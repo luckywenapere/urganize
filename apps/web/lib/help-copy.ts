@@ -256,6 +256,17 @@ export const HELP_COPY = {
     text: "Renaming one updates that artist's rollouts too. You pick one when you make a new rollout.",
   },
 
+  // ------------------------------------------------------- directory shelves
+  // The two shelves above the directory's search (2026-10-10).
+  'directory.featured': {
+    label: 'Featured',
+    text: 'People we picked by hand this quarter. Nobody can pay to be on this list.',
+  },
+  'directory.rising': {
+    label: 'On the rise this month',
+    text: 'People whose work helped a rollout come out lately. We work this out from real activity.',
+  },
+
   // ------------------------------------------------------- nav: menu items
   // Shown when a pointer rests on an item in the top bar or the tab row under
   // it (2026-10-07: these replaced the info icon beside each page's title).

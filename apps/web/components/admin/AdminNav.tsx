@@ -22,6 +22,7 @@ import {
   UserPlus,
   Building2,
   Link2,
+  Spotlight,
 } from '@/components/icons';
 
 // The admin hub's left menu — one place linking every internal dashboard
@@ -68,6 +69,7 @@ export const ADMIN_NAV_ITEMS: Array<{
   { key: 'directory', label: 'Directory', icon: UserPlus, href: '/admin/directory' },
   { key: 'claims', label: 'Claims', icon: UserPlus, href: '/admin/claims' },
   { key: 'seeding', label: 'Seeding', icon: Send, href: '/admin/seeding' },
+  { key: 'featured', label: 'Featured', icon: Spotlight, href: '/admin/featured' },
   { key: 'waitlist', label: 'Waitlist', icon: Users, href: '/admin/waitlist' },
   { key: 'growth', label: 'Growth', icon: TrendingUp, href: '/admin/growth' },
   { key: 'interviews', label: 'Interviews', icon: Mic, href: '/admin/interviews' },
