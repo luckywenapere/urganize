@@ -77,7 +77,7 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
         <CuratorCardListSkeleton rows={1} />
       ) : pitches.length > 0 ? (
         <section aria-label="Pitches sent" className="space-y-3">
-          <h3 className="text-sm font-semibold text-content-primary">Sent</h3>
+          <h3 className="font-display text-xl font-semibold text-content-primary">Answers</h3>
           <ul className="space-y-2">
             {pitches.map((pitch) => (
               <SentPitchRow key={pitch.id} pitch={pitch} onChanged={() => void refreshPitches(true)} />

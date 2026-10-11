@@ -158,7 +158,8 @@ export const toSentPitch = (
   row: Record<string, unknown>,
   curatorName: string,
   releaseTitle: string | null = null,
-  payment?: { priceKobo: number | null } | null
+  payment?: { priceKobo: number | null } | null,
+  curatorPhotoUrl: string | null = null
 ): SentPitch => {
   const pitch: SentPitch = {
     id: String(row.id || ''),
@@ -167,6 +168,7 @@ export const toSentPitch = (
     playlistId: row.playlist_id ? String(row.playlist_id) : null,
     playlistName: typeof row.playlist_name === 'string' ? row.playlist_name : '',
     curatorName,
+    curatorPhotoUrl,
     songTitle: typeof row.song_title === 'string' ? row.song_title : '',
     songUrl: typeof row.song_url === 'string' ? row.song_url : '',
     songPlatform: isPitchPlatform(row.song_platform) ? row.song_platform : null,

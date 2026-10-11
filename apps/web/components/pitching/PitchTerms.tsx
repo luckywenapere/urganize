@@ -12,8 +12,8 @@ type PitchTermsProps = {
 
 export function PitchTerms({ terms }: PitchTermsProps) {
   return (
-    <details className="group rounded-xl border border-stroke-default bg-bg-base px-3 py-2">
-      <summary className="cursor-pointer select-none text-sm font-semibold text-content-primary marker:text-content-tertiary">
+    <details className="group text-sm">
+      <summary className="cursor-pointer select-none font-semibold text-content-secondary marker:text-content-tertiary hover:text-content-primary">
         {terms.title}
       </summary>
       <ul className="mt-2 space-y-2 pb-1">
