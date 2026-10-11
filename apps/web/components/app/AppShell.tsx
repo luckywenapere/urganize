@@ -232,6 +232,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     // A claim link, opened by a credited person who may have no account yet.
     // The page runs its own sign-in and confirm steps.
     pathname?.startsWith('/claim/') ||
+    // A manager Wena invited, opening the link to a profile built with them.
+    pathname?.startsWith('/welcome/') ||
     pathname?.startsWith('/capture/') ||
     // A curator's public page, opened by an artist who has no account yet and
     // is deciding whether to make one. Chrome here would be the product
