@@ -1,6 +1,6 @@
 {
   "name": "@urganize/mobile",
-  "version": "1.115.3",
+  "version": "1.115.4",
   "private": true,
   "description": "Expo native shell (iOS + Android) for Urganize, where music teams do everything after the music is made. Shows the live web app in a webview and bridges the device features it needs; see docs/mobile/expo-shell.md.",
   "main": "index.ts",

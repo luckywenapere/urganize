@@ -60,6 +60,11 @@ export function shouldRequireInvite(facts: InviteGateFacts): boolean {
 export const inviteGateStorageKey = (workspaceId: string): string =>
   `urganize:invite-gate:${workspaceId}`;
 
+/** Fired on window by any invite form outside the gate (the first-win
+ * reveal's invite step, Settings) the moment an invite succeeds, so a gate
+ * holding an earlier "invite needed" answer drops it at once. */
+export const TEAMMATE_INVITED_EVENT = 'urganize:teammate-invited';
+
 /** The plan is the scoped rollout view: /dashboard?release=<id>. */
 export function isPlanView(pathname: string | null | undefined, releaseParam: string | null): boolean {
   return pathname === '/dashboard' && Boolean(releaseParam);

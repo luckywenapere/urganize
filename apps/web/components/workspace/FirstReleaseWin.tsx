@@ -7,6 +7,7 @@ import { Button } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
+import { TEAMMATE_INVITED_EVENT } from '@/lib/invite-gate';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { getTemplate, getTemplateSpanDays } from '@/lib/release-templates/loader';
@@ -118,6 +119,8 @@ export function FirstReleaseWin({ releaseId, onDone }: FirstReleaseWinProps) {
       const payload = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) throw new Error(payload.error || 'Could not send the invite.');
       setInvitedEmail(trimmed);
+      // Tell the invite gate: this invite is the one it would ask for.
+      window.dispatchEvent(new Event(TEAMMATE_INVITED_EVENT));
     } catch (error) {
       setInviteError(error instanceof Error ? error.message : 'Could not send the invite.');
     } finally {

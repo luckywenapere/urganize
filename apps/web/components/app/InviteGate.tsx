@@ -16,6 +16,7 @@ import {
   isInviteGateEnabled,
   isPlanView,
   isScrollInsideDialog,
+  TEAMMATE_INVITED_EVENT,
   type InviteGateAnswer,
 } from '@/lib/invite-gate';
 
@@ -125,6 +126,21 @@ export function InviteGate() {
     });
   }, [isAuthenticated, releaseParam, refresh]);
 
+  // An invite sent anywhere else (the first-win reveal, Settings) clears the
+  // gate on the spot, whatever the last answer said.
+  useEffect(() => {
+    if (!ENABLED) return;
+    const onInvited = () => {
+      setAnswer((current) => {
+        writeTriggered(current.workspaceId, false);
+        return INVITE_GATE_OFF;
+      });
+      setOpen(false);
+    };
+    window.addEventListener(TEAMMATE_INVITED_EVENT, onInvited);
+    return () => window.removeEventListener(TEAMMATE_INVITED_EVENT, onInvited);
+  }, []);
+
   // Once fired, follow the person to any page.
   useEffect(() => {
     if (answer.required && readTriggered(answer.workspaceId)) setOpen(true);
@@ -143,13 +159,13 @@ export function InviteGate() {
 
     const onScroll = (event: Event) => {
       if (stopped || isScrollInsideDialog(event.target)) return;
-      if (answer.required) {
-        fire(answer.workspaceId);
-        return;
-      }
-      // Not gated on the last answer, but that answer may predate the plan's
-      // activities landing. Re-ask, throttled.
-      if (Date.now() - fetchedAtRef.current < REFRESH_MS) return;
+      // Never freeze the app on a remembered answer. A "yes" can be stale:
+      // the first-win reveal asks for an invite too, and someone who sent one
+      // there was then frozen again by the gate's earlier answer (founder
+      // report, 2026-10-11). So a remembered "yes" is always re-checked with
+      // the server before the gate opens; a remembered "no" is re-asked,
+      // throttled, because it may predate the plan's activities landing.
+      if (!answer.required && Date.now() - fetchedAtRef.current < REFRESH_MS) return;
       void refresh().then((next) => {
         if (next.required) fire(next.workspaceId);
       });

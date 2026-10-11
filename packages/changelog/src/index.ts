@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.115.4",
+    date: "October 11, 2026",
+    highlights: [
+      "If you invite a teammate when your first plan is ready, Urganize no longer asks you to invite someone again a moment later. One invite is enough to keep going.",
+    ],
+  },
+  {
     version: "1.115.3",
     date: "October 11, 2026",
     highlights: [
