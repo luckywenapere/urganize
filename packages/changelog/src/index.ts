@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.105.1",
+    date: "October 11, 2026",
+    highlights: [
+      "The content calendar scrolls on desktop again. On shorter laptop screens the last weeks of the month were cut off with no way to reach them; now the whole month, including release week, scrolls into view.",
+      "On laptop screens the calendar is more compact, so the whole month fits without scrolling on most of them.",
+      "Long captions in the post editor now grow as you type instead of hiding behind a small box.",
+    ],
+  },
+  {
     version: "1.105.0",
     date: "October 11, 2026",
     highlights: [

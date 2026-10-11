@@ -349,6 +349,11 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
               <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--cc-text-muted)]">
                 Caption
               </span>
+              {/* Grows with the caption (2026-10-11): `field-sizing: content`
+                  lets a long caption show in full instead of hiding behind a
+                  fixed four-line box, capped at half the screen so the modal
+                  body (which scrolls) still shows the fields around it.
+                  Browsers without field-sizing keep the old rows={4} box. */}
               <textarea
                 value={caption}
                 onChange={(event) => setCaption(event.target.value)}
@@ -356,7 +361,7 @@ export function PostModal({ open, releaseId, calendarId, initialDate, post, onCl
                 disabled={isBusy}
                 rows={4}
                 placeholder="Optional caption"
-                className="min-h-24 w-full resize-none border border-[var(--cc-field-border)] bg-transparent px-3 py-2 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
+                className="min-h-24 max-h-[50dvh] w-full resize-none border [field-sizing:content] border-[var(--cc-field-border)] bg-transparent px-3 py-2 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-faint)] focus:border-[var(--cc-accent)] disabled:opacity-60"
               />
             </label>
 
