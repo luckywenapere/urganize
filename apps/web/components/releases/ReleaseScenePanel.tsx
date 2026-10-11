@@ -226,8 +226,11 @@ export function ReleaseScenePanel({
     <section aria-label={`${release.title} — ${SCENE_LABELS[scene]}`} className={`min-w-0 ${scene === 'chat' ? 'flex flex-1 flex-col' : ''}`}>
       {/* `items-start`, not `items-center`: the heading block is two lines now,
           and the back control should sit level with the scene name. */}
-      <div className="flex items-start justify-between gap-3 border-b border-stroke-subtle pb-3">
-        <div className="min-w-0">
+      {/* Pitch hides its title block (founder, 2026-10-11: "remove this from
+          the pitching screen"); the tab strip already says Pitch this! and the
+          rollout header names the release. Kept for screen readers. */}
+      <div className={`flex items-start gap-3 border-b border-stroke-subtle pb-3 ${scene === 'pitch' ? 'justify-end' : 'justify-between'}`}>
+        <div className={scene === 'pitch' ? 'sr-only' : 'min-w-0'}>
           <h2 className="font-display text-lg font-semibold text-content-primary">
             {SCENE_LABELS[scene]}
           </h2>
