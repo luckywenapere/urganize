@@ -1,6 +1,6 @@
 # Grant finder: from spike to an in-app feed
 
-Status: **draft, not approved.** Written 2026-10-11 after the live evaluation
+Status: **decisions approved by Oyin 2026-10-11 (all section 8 defaults, paid plans only); ship still gated on the labelled run passing section 5.** Written 2026-10-11 after the live evaluation
 (20 cases, 111 results, about $0.92). Nothing here gets built until the results are
 labelled, scored, and written up in `grant-finder-results.md`, and the founder picks
 "plan a product version" at the step 6 decision gate in `grant-finder-plan.md`.
@@ -131,11 +131,11 @@ call.
 
 ## 8. Decisions for Oyin
 
-| Question | Default proposed |
+| Question | Decided 2026-10-11 |
 |---|---|
 | Approve the migration? | Yes, it's needed to remember what was dismissed. |
 | Ride the daily cron or add a worker? | Ride the cron, and move to a worker only if carry-over lags. |
-| Paid plans only? | Open. Cost is about $0.20 per team per month. |
+| Paid plans only? | Yes. Cost is about $0.20 per team per month. |
 | Curated list plus Exa, or Exa alone? | Curated plus Exa, for Nigerian coverage. |
 | How often? | Weekly per team. |
 | Notification channel? | In-app now. Email digest later, if it gets read. |
