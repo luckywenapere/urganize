@@ -166,7 +166,9 @@ export function buildTaskRowsFromDraft(params: {
       title: task.title,
       description: task.why,
       status: preCompleted ? 'done' : 'todo',
-      priority: 'none',
+      // A focus task UrgAns marked for the manager's goal lands high, so the
+      // board's own priority sort and badge carry it with nothing new to build.
+      priority: task.focus ? 'high' : 'none',
       state: 'planning',
       position: index,
       auto_generated: true,
@@ -227,6 +229,9 @@ function buildTaskMetadata(params: {
       schema_version: doc.schema_version,
       origin: task.origin,
       approved_at: approvedAtIso,
+      ...(task.focus ? { focus: true, focus_reason: task.focus_reason ?? null } : {}),
+      // An added task has no playbook provenance, so its role and tags live here.
+      ...(task.origin === 'ai' ? { role: task.role, tags: task.tags } : {}),
     },
   };
 }

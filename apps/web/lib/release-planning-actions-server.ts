@@ -55,11 +55,13 @@ import {
   buildPlannerMessages,
   deriveIntakeExclusions,
   deriveScheduleWarnings,
+  offsetFromTaskYmd,
   parsePlannerAiDelta,
+  sanitizePlannerDelta,
   summarizeRemovedTasks,
   toPromptTasks,
-  validatePlannerDelta,
   type CreatedPlan,
+  type PlannerOnboardingContext,
   type PlannerAiDelta,
   type PlannerPromptMember,
   type PlanDraftFailure,
@@ -85,6 +87,8 @@ import { writePlannedByUrgans } from './release-planned-by-urgans';
 import { loadPastAssignments } from './task-owners-server';
 import { proposeTaskOwners, type AssignableMember } from './task-owners';
 import type { WorkspaceMember } from '@/types/auth';
+import { ONBOARDING_WHERE_STUCK_OPTIONS } from './onboarding-draft';
+import { ONBOARDING_PLANNING_PREFERENCE_LABELS, isOnboardingPlanningPreference } from './onboarding';
 
 const PLAN_DRAFTS_TABLE = 'release_plan_drafts';
 const RELEASES_TABLE = 'releases';
@@ -186,6 +190,8 @@ export type AiFailureDecision =
 const NOTES_UNREAD_ERROR = 'UrgAns could not read your notes just now. Try again in a moment.';
 const UNTAILORED_WARNING =
   'UrgAns could not tailor the rest this time. The plan follows the playbook and your answers.';
+const FIRST_PLAN_NOTES_WARNING =
+  'UrgAns could not read your notes this time. Your first plan follows the playbook and your selected answers.';
 const NOT_CONFIGURED_NOTES_WARNING =
   'UrgAns is not set up to read notes on this environment. The plan follows the playbook and your selected answers.';
 
@@ -208,12 +214,22 @@ const NOT_CONFIGURED_NOTES_WARNING =
  */
 export function decidePlanCreationOnAiFailure(
   failure: PlanDraftFailure,
-  intake: Pick<ReleasePlanIntake, 'extra_notes' | 'goal_text'>
+  intake: Pick<ReleasePlanIntake, 'extra_notes' | 'goal_text'>,
+  options: { firstPlan?: boolean } = {}
 ): AiFailureDecision {
   const typedText = Boolean(intake.extra_notes?.trim()) || Boolean(intake.goal_text?.trim());
 
   if (failure === 'not_configured') {
     return { action: 'proceed', warning: typedText ? NOT_CONFIGURED_NOTES_WARNING : null };
+  }
+  // A team's FIRST plan is never refused (2026-10-11, the hybrid first plan):
+  // it is the moment a brand-new manager, straight out of onboarding, sees
+  // what the product does, and a "try again" there is the worst first
+  // impression available. The backbone (playbook, dates, readiness, their
+  // selected answers) is built and saved, the failure is recorded on the
+  // document, and the warning says plainly the typed text was not read.
+  if (typedText && options.firstPlan) {
+    return { action: 'proceed', warning: FIRST_PLAN_NOTES_WARNING };
   }
   if (typedText) {
     return { action: 'refuse', status: 503, code: 'tailoring_unavailable', error: NOTES_UNREAD_ERROR };
@@ -287,6 +303,43 @@ function toAssignableMembers(
   };
 }
 
+/**
+ * What the manager told us at signup, for the tailoring prompt: the pain
+ * points from "Where does a rollout usually fall apart?" and the planning
+ * preference, both already stored on the profile by the onboarding PATCH
+ * (URG-158, URG-192). Best effort: an unreadable profile is an empty context,
+ * never a failed plan.
+ */
+export async function readPlannerOnboardingContext(
+  admin: SupabaseClient,
+  userId: string
+): Promise<PlannerOnboardingContext | null> {
+  try {
+    const { data, error } = await admin
+      .from('profiles')
+      .select('onboarding_where_stuck,onboarding_planning_preference')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return toPlannerOnboardingContext(data as Record<string, unknown>);
+  } catch {
+    return null;
+  }
+}
+
+/** Pure half of {@link readPlannerOnboardingContext}: profile columns to labels. */
+export function toPlannerOnboardingContext(row: Record<string, unknown>): PlannerOnboardingContext | null {
+  const stuck = Array.isArray(row.onboarding_where_stuck) ? row.onboarding_where_stuck : [];
+  const painPoints = stuck
+    .map((value) => ONBOARDING_WHERE_STUCK_OPTIONS.find((option) => option.value === value)?.label)
+    .filter((label): label is string => Boolean(label));
+  const preference = isOnboardingPlanningPreference(row.onboarding_planning_preference)
+    ? ONBOARDING_PLANNING_PREFERENCE_LABELS[row.onboarding_planning_preference]
+    : null;
+  if (painPoints.length === 0 && !preference) return null;
+  return { painPoints, planningPreference: preference };
+}
+
 // ---------------------------------------------------------------------------
 // The pipeline
 // ---------------------------------------------------------------------------
@@ -332,6 +385,12 @@ export async function createReleasePlan(
      *  anything (never with the router off). Which model really answered is
      *  the last entry of `models`. */
     onTrace?: (trace: RoutingTrace) => void;
+    /** This is the team's first plan (credits/first-plan.ts's facts). A first
+     *  plan is never refused over a model failure; see
+     *  decidePlanCreationOnAiFailure. Absent = not first, the old behaviour. */
+    firstPlan?: boolean;
+    /** Signup answers for the prompt. Absent = read from the actor's profile. */
+    onboarding?: PlannerOnboardingContext | null;
   }
 ): Promise<CreateReleasePlanResult> {
   const {
@@ -348,6 +407,7 @@ export async function createReleasePlan(
     onUsage,
     onFailure,
     onTrace,
+    firstPlan = false,
   } = params;
   const releaseId = release.id;
 
@@ -456,6 +516,10 @@ export async function createReleasePlan(
     failure = 'not_configured';
   } else {
     const remaining = activeDraftTasks(doc);
+    const onboarding =
+      params.onboarding !== undefined
+        ? params.onboarding
+        : await readPlannerOnboardingContext(admin, actor.id);
     const messages = buildPlannerMessages({
       release: {
         title: release.title || '',
@@ -468,6 +532,7 @@ export async function createReleasePlan(
       todayYmd,
       fallbackToSingle,
       appliedExclusions: doc.applied_exclusions,
+      onboarding,
     });
 
     try {
@@ -496,23 +561,38 @@ export async function createReleasePlan(
     }
 
     if (delta) {
-      const validation = validatePlannerDelta(delta, {
-        tasks: remaining.map((task) => ({ id: task.id, optional: task.optional, tags: task.tags })),
+      // Item by item since 2026-10-11: a bad id, a protected drop or an
+      // invalid add is dropped on its own and the rest of the delta stands.
+      // The plan's window is the playbook's own date range; an added task
+      // also may not land before today.
+      const templateOffsets = template.tasks.map((task) => task.offset_days);
+      const { delta: clean, rejected } = sanitizePlannerDelta(delta, {
+        tasks: remaining.map((task) => ({
+          id: task.id,
+          optional: task.optional,
+          tags: task.tags,
+          title: task.title,
+          offset_days: task.offset_days,
+        })),
         memberUserIds: Array.from(assignable.ids),
         excludedScopes: doc.applied_exclusions.map((entry) => entry.scope),
+        budget: intake.budget,
+        preset: intake.preset,
+        todayOffset: offsetFromTaskYmd(releaseDate, todayYmd),
+        window: templateOffsets.length
+          ? { min: Math.min(...templateOffsets), max: Math.max(...templateOffsets) }
+          : undefined,
       });
-      if (validation.ok) {
-        doc = applyDeltaToDraft(doc, delta);
-      } else {
-        console.error('[plan] tailoring rejected for rollout', releaseId, validation.error);
-        delta = null;
-        failure = 'invalid_output';
+      if (rejected.length) {
+        console.error('[plan] tailoring items refused for rollout', releaseId, rejected.length, rejected);
       }
+      delta = clean;
+      doc = applyDeltaToDraft(doc, clean, { ownerUserId: actor.id, rejectedItems: rejected.length });
     }
   }
 
   if (failure) {
-    const decision = decidePlanCreationOnAiFailure(failure, intake);
+    const decision = decidePlanCreationOnAiFailure(failure, intake, { firstPlan });
     if (decision.action === 'refuse') {
       // Nothing has been written to the plan yet. The answers were saved in
       // step 3, so the manager comes back to the same questions filled in.

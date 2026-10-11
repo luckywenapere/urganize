@@ -14,6 +14,8 @@ import {
   type OnboardingStage,
   type OnboardingWhereStuck,
 } from './onboarding';
+import { deriveOnboardingStage, normalizeReadyToday } from './onboarding-readiness';
+import type { ReadyItem } from './release-planning';
 
 // Re-exported so existing importers (OnboardingPageClient, onboarding-ai-
 // moment) keep their import site. Canonical declarations live in
@@ -54,6 +56,13 @@ export const ONBOARDING_STAGE_OPTIONS: Array<{ value: OnboardingStage; label: st
 export interface OnboardingDraft {
   releaseType: OnboardingReleaseType | null;
   whereStuck: OnboardingWhereStuck[];
+  // "What's already done?" (2026-10-11): the planner's readiness checklist,
+  // asked once here and handed to the planner, which then skips its own copy.
+  // Same values as the planner's ReadyItem, so the pre-completion of playbook
+  // steps (isTaskPreCompletedByReady) works on it unchanged.
+  readyToday: ReadyItem[];
+  // DERIVED from readyToday (lib/onboarding-readiness.ts), no longer asked.
+  // Still stored on the profile (admin tallies) and read by "Your first move".
   stage: OnboardingStage | null;
   title: string;
   releaseDate: string;
@@ -71,6 +80,7 @@ export interface OnboardingDraft {
 export const EMPTY_ONBOARDING_DRAFT: OnboardingDraft = {
   releaseType: null,
   whereStuck: [],
+  readyToday: [],
   stage: null,
   title: '',
   releaseDate: '',
@@ -102,7 +112,19 @@ export function loadOnboardingDraft(): OnboardingDraft {
       whereStuck: Array.isArray(parsed.whereStuck)
         ? parsed.whereStuck.filter(isOnboardingWhereStuck)
         : [],
-      stage: isOnboardingStage(parsed.stage) ? parsed.stage : null,
+      ...(() => {
+        // A draft saved before 2026-10-11 has a stage and no readiness: it
+        // keeps its stage, and the readiness question is simply unanswered.
+        const readyToday = Array.isArray(parsed.readyToday) ? normalizeReadyToday(parsed.readyToday) : [];
+        return {
+          readyToday,
+          stage: readyToday.length
+            ? deriveOnboardingStage(readyToday)
+            : isOnboardingStage(parsed.stage)
+              ? parsed.stage
+              : null,
+        };
+      })(),
       title: typeof parsed.title === 'string' ? parsed.title : '',
       releaseDate: typeof parsed.releaseDate === 'string' ? parsed.releaseDate : '',
       artistName:

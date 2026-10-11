@@ -904,7 +904,19 @@ export const MAX_DELTA_WARNINGS = 5;
 const MIN_TASK_OFFSET = -120;
 const MAX_TASK_OFFSET = 60;
 
-export type DraftTaskOrigin = 'template' | 'user';
+/** The most tasks UrgAns may add on top of the playbook in one plan. */
+export const MAX_AI_ADDED_TASKS = 5;
+/** The most tasks UrgAns may mark as the focus for the goal. */
+export const MAX_DELTA_FOCUS = 5;
+/** An added task's title: short, like the playbook's own. */
+export const MAX_AI_TASK_TITLE_LENGTH = 80;
+export const MIN_AI_TASK_TITLE_LENGTH = 4;
+export const MAX_FOCUS_REASON_LENGTH = 120;
+
+/** 'ai' (2026-10-11): a task UrgAns added on top of the playbook, through the
+ *  delta's bounded `add_tasks`. Editable like any other row; it carries no
+ *  template provenance, and `metadata.planner.origin` keeps it recognisable. */
+export type DraftTaskOrigin = 'template' | 'user' | 'ai';
 
 export type DraftTask = {
   /**
@@ -969,6 +981,12 @@ export type DraftTask = {
    *  be edited in. Still readable from older documents; the model never
    *  touches such a row. */
   edited: boolean;
+  /** One of the few tasks UrgAns marked as the focus for the manager's goal
+   *  (delta `focus`, at most {@link MAX_DELTA_FOCUS}). Lands as priority
+   *  'high'. Optional so every existing literal keeps compiling; absent = false. */
+  focus?: boolean;
+  /** The one-line reason it is a focus task. Null/absent when not focus. */
+  focus_reason?: string | null;
 };
 
 /**
@@ -999,6 +1017,11 @@ export type PlanDraftAiState = {
    *  this codebase keeps compiling unchanged. Absent means the same thing as
    *  empty — read via `doc.ai.warnings ?? []`, never assume the key exists. */
   warnings?: string[];
+  /** How many individual items of the model's delta the deterministic gate
+   *  refused (an unknown id, a protected drop, an invalid add). Since
+   *  2026-10-11 a bad item is dropped on its own rather than costing the
+   *  whole delta. Optional and absent on older documents. */
+  rejected_items?: number;
 };
 
 /** One kind of work left out of the plan, and who asked for it. */
@@ -1240,8 +1263,29 @@ export type PlannerAiDrop = {
 };
 
 /**
+ * The tasks UrgAns may add on top of the playbook (2026-10-11, the hybrid
+ * first plan). Bounded and checked by code: at most {@link MAX_AI_ADDED_TASKS},
+ * a short title and why, a date inside the plan's own window and never before
+ * today, tags from the playbooks' own vocabulary, nothing inside a scope the
+ * manager left out, nothing paid without a budget, and nothing that repeats a
+ * playbook task. The phase is never taken from the model: it is derived from
+ * the offset, the same as every other row.
+ */
+export type PlannerAiAddTask = {
+  title: string;
+  why: string;
+  offset_days: number;
+  role: TaskRole | null;
+  tags: string[];
+};
+
+/** A task UrgAns marks as a focus for the goal, with its one-line reason. */
+export type PlannerAiFocus = { id: string; reason: string };
+
+/**
  * The only thing the model is allowed to return: adjustments to a draft we
- * already built. There is no "add task" operation, by design.
+ * already built, plus (since 2026-10-11) a small, bounded set of added tasks
+ * and focus marks. Every item is checked by code before it touches the plan.
  */
 export type PlannerAiDelta = {
   /**
@@ -1261,6 +1305,10 @@ export type PlannerAiDelta = {
    */
   role_assignments: Array<{ role: TaskRole; member_user_id: string }>;
   rewrite_why: Array<{ id: string; why: string }>;
+  /** Tasks to mark as the focus for the goal. Absent parses as empty. */
+  focus: PlannerAiFocus[];
+  /** Tasks to add, tailored to the goal and pain points. Absent parses as empty. */
+  add_tasks: PlannerAiAddTask[];
   /** Things worth the manager's attention — a schedule risk, an assumption
    *  the model made. Never a reason to change a task by itself; the plan
    *  summary shows these beside the deterministic warnings from
@@ -1333,10 +1381,46 @@ function parseWarnings(value: unknown): string[] | null {
   return warnings.slice(0, MAX_DELTA_WARNINGS);
 }
 
+/** The two 2026-10-11 keys are tolerant per ENTRY: absent or not an array is
+ *  empty, and a malformed entry is skipped rather than failing the parse,
+ *  because neither is worth losing the rest of a good response over. */
+function parseFocus(value: unknown): PlannerAiFocus[] {
+  if (!Array.isArray(value)) return [];
+  const entries: PlannerAiFocus[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const e = entry as Record<string, unknown>;
+    if (typeof e.id !== 'string' || !e.id.trim()) continue;
+    entries.push({ id: e.id.trim(), reason: typeof e.reason === 'string' ? e.reason.trim() : '' });
+  }
+  return entries;
+}
+
+function parseAddTasks(value: unknown): PlannerAiAddTask[] {
+  if (!Array.isArray(value)) return [];
+  const entries: PlannerAiAddTask[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const e = entry as Record<string, unknown>;
+    if (typeof e.title !== 'string' || typeof e.why !== 'string') continue;
+    if (typeof e.offset_days !== 'number' || !Number.isFinite(e.offset_days)) continue;
+    entries.push({
+      title: e.title.trim().replace(/\s+/g, ' '),
+      why: e.why.trim(),
+      offset_days: Math.round(e.offset_days),
+      role: typeof e.role === 'string' && e.role.trim() ? (e.role.trim() as TaskRole) : null,
+      tags: Array.isArray(e.tags)
+        ? e.tags.filter((tag): tag is string => typeof tag === 'string').map((tag) => tag.trim())
+        : [],
+    });
+  }
+  return entries;
+}
+
 /**
  * Shape-only parse of raw model output. Returns null on any structural
  * problem, which the provider treats as a malformed response and retries.
- * Whether the ids are real is {@link validatePlannerDelta}'s job.
+ * Whether the ids are real is {@link sanitizePlannerDelta}'s job.
  */
 export function parsePlannerAiDelta(raw: string): PlannerAiDelta | null {
   let parsed: unknown;
@@ -1396,125 +1480,353 @@ export function parsePlannerAiDelta(raw: string): PlannerAiDelta | null {
     adjust_offsets: adjustOffsets,
     role_assignments: roleAssignments,
     rewrite_why: rewriteWhy,
+    focus: parseFocus(record.focus),
+    add_tasks: parseAddTasks(record.add_tasks),
     warnings,
     rationale: rationale.slice(0, MAX_RATIONALE_LENGTH),
   };
 }
 
 /** The subset of a draft task the validator needs. Tags are what decide
- *  whether a required task sits inside a scope the manager ruled out. */
+ *  whether a required task sits inside a scope the manager ruled out. Title
+ *  and offset are optional so older callers keep compiling: without a title
+ *  an added task cannot be checked for duplicating it, and without an offset
+ *  a date move cannot be checked for pushing work into the past. */
 export type PlannerValidationTask = {
   id: string;
   optional: boolean;
   tags: string[];
+  title?: string;
+  offset_days?: number;
+};
+
+/** Tags an added task may carry: the playbooks' own vocabulary, minus the two
+ *  keep tags (an added task must never become unremovable by a scope). */
+export const AI_ADD_TASK_TAGS = [
+  'planning',
+  'asset_production',
+  'marketing',
+  'editorial',
+  'event',
+  'analytics',
+  'followup',
+  'paid',
+  'physical',
+] as const;
+
+const AI_ADD_TAG_SET = new Set<string>(AI_ADD_TASK_TAGS);
+
+/** Words that mean spending money on promotion. With no budget, an added
+ *  task that says them is refused even when it is not tagged paid. */
+const PAID_WORDS = /\b(paid|boost(?:ed|ing)?|ads?|ad spend|sponsor(?:ed|ship)?|promoted posts?)\b/i;
+
+/** Lowercase letters and digits only, single spaced: what "the same title" means. */
+export function normalizeTaskTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+const STOP_WORDS = new Set(['a', 'an', 'and', 'the', 'to', 'for', 'of', 'on', 'in', 'your', 'with', 'all']);
+
+function titleWords(title: string): Set<string> {
+  return new Set(
+    normalizeTaskTitle(title)
+      .split(' ')
+      .filter((word) => word && !STOP_WORDS.has(word))
+  );
+}
+
+/**
+ * Whether an added title repeats one already in the plan: the same words, or
+ * one title's meaningful words all inside the other's, or at least 80% of
+ * them shared. Deliberately strict — a task the playbook already has, in
+ * slightly different words, is the most likely bad add.
+ */
+export function isDuplicateTaskTitle(candidate: string, existing: readonly string[]): boolean {
+  const normalized = normalizeTaskTitle(candidate);
+  const words = titleWords(candidate);
+  for (const title of existing) {
+    if (normalizeTaskTitle(title) === normalized) return true;
+    const other = titleWords(title);
+    if (words.size === 0 || other.size === 0) continue;
+    let shared = 0;
+    for (const word of words) if (other.has(word)) shared += 1;
+    const smaller = Math.min(words.size, other.size);
+    if (smaller >= 2 && shared === smaller) return true;
+    if (shared / Math.max(words.size, other.size) >= 0.8) return true;
+  }
+  return false;
+}
+
+export type PlannerSanitizeOptions = {
+  tasks: PlannerValidationTask[];
+  memberUserIds: string[];
+  excludedScopes?: PlanScope[];
+  /** No budget: an added task may not be paid work. */
+  budget?: PlanBudget;
+  /** A named preset is an exact plan shape: nothing may be added to it. */
+  preset?: PlanPreset;
+  /** Days from release day to today (negative = before release). An added
+   *  task may not land before it, and a date move may not push a task that
+   *  was still ahead of today behind it. Null/absent = not checked. */
+  todayOffset?: number | null;
+  /** The plan's own window (the playbook's earliest and latest offsets). An
+   *  added task must land inside it. Absent = the absolute offset bounds. */
+  window?: { min: number; max: number };
 };
 
 /**
- * The hard correctness gate. Confirms the model only referenced tasks we gave
- * it, only excluded scopes this module knows, only dropped tasks that were
- * either optional or inside a scope the manager asked to leave out, only named
- * people who can actually be assigned, and kept offsets inside a sane window.
+ * The hard correctness gate, ITEM BY ITEM (2026-10-11). Returns the delta
+ * with every invalid item removed, plus one line per item it refused.
  *
- * `excludedScopes` are the scopes the answers already ruled out; the delta's
- * own `exclude_scopes` count too. A required task outside every one of those
- * can never be dropped, and a keep-tagged task can never be dropped at all —
- * {@link isTaskInScope} is the one definition of "inside a scope" on both
- * sides, so the validator and the removal cannot disagree.
+ * Until 2026-10-11 a single violation discarded the whole response, and in
+ * production that threw away about one plan in three ("invalid_output") over
+ * one bad id. Each item here stands alone — a drop, a date, an assignment, a
+ * rewrite, a focus mark, an add — so dropping a bad one cannot change what a
+ * good one means. The rules themselves are unchanged and the new ones only
+ * add refusals:
  *
- * A single violation rejects the entire response: partial application of a
- * response we already know is wrong is how a plan quietly loses a required
- * task. The caller keeps the deterministic draft and tells the manager the
- * plan follows the playbook and their answers.
+ *  - a referenced id must be one we gave the model;
+ *  - a required task may only be dropped inside a scope the manager ruled
+ *    out, and a task carrying a keep tag (release day, distribution) is never
+ *    dropped at all, optional or not;
+ *  - offsets stay inside the absolute window, and a move may not push work
+ *    that was still ahead of today into the past;
+ *  - only joined team members can be assigned;
+ *  - rewrites and focus reasons have length limits; at most
+ *    {@link MAX_DELTA_FOCUS} focus marks, on tasks that are not dropped;
+ *  - adds: see {@link PlannerAiAddTask}.
+ */
+export function sanitizePlannerDelta(
+  delta: PlannerAiDelta,
+  options: PlannerSanitizeOptions
+): { delta: PlannerAiDelta; rejected: string[] } {
+  const { tasks, memberUserIds, excludedScopes = [], budget, preset, todayOffset, window } = options;
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const members = new Set(memberUserIds);
+  const rejected: string[] = [];
+
+  const excludeScopes = delta.exclude_scopes.filter((entry) => {
+    if (!isPlanScope(entry.scope)) {
+      rejected.push(`exclude_scopes names an unknown scope: ${entry.scope}`);
+      return false;
+    }
+    if (!entry.reason.trim()) {
+      rejected.push(`exclude_scopes entry needs a reason: ${entry.scope}`);
+      return false;
+    }
+    if (entry.reason.length > MAX_DROP_REASON_LENGTH) {
+      rejected.push(`exclude_scopes reason is too long for ${entry.scope}`);
+      return false;
+    }
+    return true;
+  });
+
+  const scopes: PlanScope[] = [...excludedScopes, ...excludeScopes.map((e) => e.scope)];
+  const isKeep = (task: PlannerValidationTask) =>
+    task.tags.some((tag) => (KEEP_TAGS as readonly string[]).includes(tag));
+
+  const drops = delta.drops.filter((drop) => {
+    const task = byId.get(drop.id);
+    if (!task) {
+      rejected.push(`drops references unknown task: ${drop.id}`);
+      return false;
+    }
+    if (isKeep(task)) {
+      rejected.push(`drops references a release-day or distribution task, which is never removed: ${drop.id}`);
+      return false;
+    }
+    if (!task.optional && !scopes.some((scope) => isTaskInScope(task, scope))) {
+      rejected.push(
+        `drops references a required task outside what the manager asked to leave out: ${drop.id}`
+      );
+      return false;
+    }
+    if (!drop.reason.trim()) {
+      rejected.push(`drops entry needs a reason: ${drop.id}`);
+      return false;
+    }
+    if (drop.reason.length > MAX_DROP_REASON_LENGTH) {
+      rejected.push(`drops reason is too long for task ${drop.id}`);
+      return false;
+    }
+    return true;
+  });
+  const droppedIds = new Set(drops.map((drop) => drop.id));
+
+  const adjustOffsets = delta.adjust_offsets.filter((adjustment) => {
+    const task = byId.get(adjustment.id);
+    if (!task) {
+      rejected.push(`adjust_offsets references unknown task: ${adjustment.id}`);
+      return false;
+    }
+    if (adjustment.offset_days < MIN_TASK_OFFSET || adjustment.offset_days > MAX_TASK_OFFSET) {
+      rejected.push(
+        `adjust_offsets is out of range for task ${adjustment.id}: ${adjustment.offset_days}`
+      );
+      return false;
+    }
+    if (
+      typeof todayOffset === 'number' &&
+      typeof task.offset_days === 'number' &&
+      task.offset_days >= todayOffset &&
+      adjustment.offset_days < todayOffset
+    ) {
+      rejected.push(`adjust_offsets moves task ${adjustment.id} into the past`);
+      return false;
+    }
+    return true;
+  });
+
+  const roleAssignments = delta.role_assignments.filter((assignment) => {
+    if (!members.has(assignment.member_user_id)) {
+      rejected.push(
+        `role_assignments references someone who cannot be assigned: ${assignment.member_user_id}`
+      );
+      return false;
+    }
+    return true;
+  });
+
+  const rewriteWhy = delta.rewrite_why.filter((rewrite) => {
+    if (!byId.has(rewrite.id)) {
+      rejected.push(`rewrite_why references unknown task: ${rewrite.id}`);
+      return false;
+    }
+    if (rewrite.why.length > MAX_AI_WHY_LENGTH) {
+      rejected.push(`rewrite_why is too long for task ${rewrite.id}`);
+      return false;
+    }
+    return true;
+  });
+
+  const focusSeen = new Set<string>();
+  const focus: PlannerAiFocus[] = [];
+  for (const entry of delta.focus) {
+    if (!byId.has(entry.id)) {
+      rejected.push(`focus references unknown task: ${entry.id}`);
+      continue;
+    }
+    if (droppedIds.has(entry.id)) {
+      rejected.push(`focus references a task it also drops: ${entry.id}`);
+      continue;
+    }
+    if (focusSeen.has(entry.id)) continue;
+    if (entry.reason.length > MAX_FOCUS_REASON_LENGTH) {
+      rejected.push(`focus reason is too long for task ${entry.id}`);
+      continue;
+    }
+    if (focus.length >= MAX_DELTA_FOCUS) {
+      rejected.push(`focus has more than ${MAX_DELTA_FOCUS} tasks: ${entry.id}`);
+      continue;
+    }
+    focusSeen.add(entry.id);
+    focus.push(entry);
+  }
+
+  const minOffset = Math.max(MIN_TASK_OFFSET, window?.min ?? MIN_TASK_OFFSET);
+  const maxOffset = Math.min(MAX_TASK_OFFSET, window?.max ?? MAX_TASK_OFFSET);
+  const existingTitles = tasks.map((task) => task.title).filter((t): t is string => Boolean(t));
+  const roles = new Set<string>(PLANNER_ROLE_VALUES);
+  const addTasks: PlannerAiAddTask[] = [];
+  for (const add of delta.add_tasks) {
+    const label = add.title || '(untitled)';
+    if (preset) {
+      rejected.push(`add_tasks is not allowed on a ${preset} plan: ${label}`);
+      continue;
+    }
+    if (add.title.length < MIN_AI_TASK_TITLE_LENGTH || add.title.length > MAX_AI_TASK_TITLE_LENGTH) {
+      rejected.push(`add_tasks title length is out of bounds: ${label}`);
+      continue;
+    }
+    if (!add.why || add.why.length > MAX_AI_WHY_LENGTH) {
+      rejected.push(`add_tasks why is missing or too long: ${label}`);
+      continue;
+    }
+    if (add.offset_days < minOffset || add.offset_days > maxOffset) {
+      rejected.push(`add_tasks date is outside the plan window: ${label} (${add.offset_days})`);
+      continue;
+    }
+    if (typeof todayOffset === 'number' && add.offset_days < todayOffset) {
+      rejected.push(`add_tasks date is before today: ${label} (${add.offset_days})`);
+      continue;
+    }
+    if (add.role !== null && !roles.has(add.role)) {
+      rejected.push(`add_tasks role is not one of the planner roles: ${label}`);
+      continue;
+    }
+    if (add.tags.length === 0 || add.tags.some((tag) => !AI_ADD_TAG_SET.has(tag))) {
+      rejected.push(`add_tasks tags are missing or outside the playbook vocabulary: ${label}`);
+      continue;
+    }
+    if (scopes.some((scope) => add.tags.includes(SCOPE_TAGS[scope]))) {
+      rejected.push(`add_tasks sits inside a scope that is left out: ${label}`);
+      continue;
+    }
+    if (budget === 'none' && (add.tags.includes('paid') || PAID_WORDS.test(`${add.title} ${add.why}`))) {
+      rejected.push(`add_tasks is paid work on a plan with no budget: ${label}`);
+      continue;
+    }
+    if (isDuplicateTaskTitle(add.title, [...existingTitles, ...addTasks.map((t) => t.title)])) {
+      rejected.push(`add_tasks repeats a task already in the plan: ${label}`);
+      continue;
+    }
+    if (addTasks.length >= MAX_AI_ADDED_TASKS) {
+      rejected.push(`add_tasks has more than ${MAX_AI_ADDED_TASKS} tasks: ${label}`);
+      continue;
+    }
+    addTasks.push({ ...add, tags: Array.from(new Set(add.tags)) });
+  }
+
+  return {
+    delta: {
+      ...delta,
+      exclude_scopes: excludeScopes,
+      drops,
+      adjust_offsets: adjustOffsets,
+      role_assignments: roleAssignments,
+      rewrite_why: rewriteWhy,
+      focus,
+      add_tasks: addTasks,
+    },
+    rejected,
+  };
+}
+
+/**
+ * The whole-response form of {@link sanitizePlannerDelta}: ok only when no
+ * item would be refused, otherwise the first refusal. Kept for callers and
+ * tests that want a yes or no; the planner pipeline itself sanitizes, so one
+ * bad item no longer costs the whole delta.
  */
 export function validatePlannerDelta(
   delta: PlannerAiDelta,
-  options: {
-    tasks: PlannerValidationTask[];
-    memberUserIds: string[];
-    excludedScopes?: PlanScope[];
-  }
+  options: PlannerSanitizeOptions
 ): { ok: true } | { ok: false; error: string } {
-  const { tasks, memberUserIds, excludedScopes = [] } = options;
-  const byId = new Map(tasks.map((t) => [t.id, t]));
-  const members = new Set(memberUserIds);
-
-  for (const entry of delta.exclude_scopes) {
-    if (!isPlanScope(entry.scope)) {
-      return { ok: false, error: `exclude_scopes names an unknown scope: ${entry.scope}` };
-    }
-    if (!entry.reason.trim()) {
-      return { ok: false, error: `exclude_scopes entry needs a reason: ${entry.scope}` };
-    }
-    if (entry.reason.length > MAX_DROP_REASON_LENGTH) {
-      return { ok: false, error: `exclude_scopes reason is too long for ${entry.scope}` };
-    }
-  }
-
-  const scopes: PlanScope[] = [...excludedScopes, ...delta.exclude_scopes.map((e) => e.scope)];
-
-  for (const drop of delta.drops) {
-    const task = byId.get(drop.id);
-    if (!task) {
-      return { ok: false, error: `drops references unknown task: ${drop.id}` };
-    }
-    if (!task.optional && !scopes.some((scope) => isTaskInScope(task, scope))) {
-      return {
-        ok: false,
-        error: `drops references a required task outside what the manager asked to leave out: ${drop.id}`,
-      };
-    }
-    if (!drop.reason.trim()) {
-      return { ok: false, error: `drops entry needs a reason: ${drop.id}` };
-    }
-    if (drop.reason.length > MAX_DROP_REASON_LENGTH) {
-      return { ok: false, error: `drops reason is too long for task ${drop.id}` };
-    }
-  }
-
-  for (const adjustment of delta.adjust_offsets) {
-    if (!byId.has(adjustment.id)) {
-      return { ok: false, error: `adjust_offsets references unknown task: ${adjustment.id}` };
-    }
-    if (adjustment.offset_days < MIN_TASK_OFFSET || adjustment.offset_days > MAX_TASK_OFFSET) {
-      return {
-        ok: false,
-        error: `adjust_offsets is out of range for task ${adjustment.id}: ${adjustment.offset_days}`,
-      };
-    }
-  }
-
-  for (const assignment of delta.role_assignments) {
-    if (!members.has(assignment.member_user_id)) {
-      return {
-        ok: false,
-        error: `role_assignments references someone who cannot be assigned: ${assignment.member_user_id}`,
-      };
-    }
-  }
-
-  for (const rewrite of delta.rewrite_why) {
-    if (!byId.has(rewrite.id)) {
-      return { ok: false, error: `rewrite_why references unknown task: ${rewrite.id}` };
-    }
-    if (rewrite.why.length > MAX_AI_WHY_LENGTH) {
-      return { ok: false, error: `rewrite_why is too long for task ${rewrite.id}` };
-    }
-  }
-
-  return { ok: true };
+  const { rejected } = sanitizePlannerDelta(delta, options);
+  return rejected.length === 0 ? { ok: true } : { ok: false, error: rejected[0] };
 }
 
 /**
  * Fold a validated delta into a draft: the model's excluded scopes first
  * (through {@link applyScopeExclusions}, so a scope the answers already
- * removed is not re-attributed), then the per-task drops, dates, why lines
- * and role assignments.
+ * removed is not re-attributed), then the per-task drops, dates, why lines,
+ * focus marks and role assignments, then the added tasks at the end.
  *
  * Rows already removed, rows the manager edited by hand, and rows the manager
  * added are never touched: a drop the model names against a task the answers
  * already removed is a no-op, so the reason on it stays the manager's own.
+ *
+ * Pass a SANITIZED delta ({@link sanitizePlannerDelta}); this function trusts
+ * it. `ownerUserId` holds the added tasks no role assignment covers.
  */
-export function applyDeltaToDraft(doc: ReleasePlanDraftDoc, delta: PlannerAiDelta): ReleasePlanDraftDoc {
+export function applyDeltaToDraft(
+  doc: ReleasePlanDraftDoc,
+  delta: PlannerAiDelta,
+  options: { ownerUserId?: string | null; rejectedItems?: number } = {}
+): ReleasePlanDraftDoc {
   const excluded = applyScopeExclusions(
     doc,
     delta.exclude_scopes.map((entry) => ({ scope: entry.scope, by: 'ai' as const, reason: entry.reason }))
@@ -1523,6 +1835,7 @@ export function applyDeltaToDraft(doc: ReleasePlanDraftDoc, delta: PlannerAiDelt
   const dropReasons = new Map(delta.drops.map((d) => [d.id, d.reason]));
   const offsets = new Map(delta.adjust_offsets.map((a) => [a.id, a]));
   const whys = new Map(delta.rewrite_why.map((r) => [r.id, r.why]));
+  const focusReasons = new Map((delta.focus ?? []).map((f) => [f.id, f.reason]));
   const roleToMember = new Map(delta.role_assignments.map((a) => [a.role, a.member_user_id]));
 
   const tasks = excluded.tasks.map((task) => {
@@ -1552,6 +1865,12 @@ export function applyDeltaToDraft(doc: ReleasePlanDraftDoc, delta: PlannerAiDelt
       next.why = why;
     }
 
+    const focusReason = focusReasons.get(task.id);
+    if (focusReason !== undefined && !next.removed) {
+      next.focus = true;
+      next.focus_reason = focusReason || null;
+    }
+
     // The deterministic history/role heuristic (proposeTaskOwners, run before
     // the model is ever called) outranks a model role-archetype guess — a
     // specific person who has actually done this before is worth more than a
@@ -1567,10 +1886,52 @@ export function applyDeltaToDraft(doc: ReleasePlanDraftDoc, delta: PlannerAiDelt
     return next;
   });
 
+  // Added tasks: ids `ai_1`, `ai_2`, … that no row already uses, appended in
+  // the order the model gave them (the row builder sorts by date anyway).
+  const usedIds = new Set(tasks.map((task) => task.id));
+  let counter = 0;
+  const nextAiId = () => {
+    do counter += 1;
+    while (usedIds.has(`ai_${counter}`));
+    usedIds.add(`ai_${counter}`);
+    return `ai_${counter}`;
+  };
+  const added: DraftTask[] = (delta.add_tasks ?? []).map((add) => {
+    const member = add.role ? roleToMember.get(add.role) : undefined;
+    return {
+      id: nextAiId(),
+      template_task_id: null,
+      origin: 'ai' as const,
+      title: add.title.slice(0, MAX_AI_TASK_TITLE_LENGTH),
+      why: add.why.slice(0, MAX_AI_WHY_LENGTH),
+      phase: derivePlanPhase(add.offset_days),
+      offset_days: add.offset_days,
+      duration_days: 1,
+      role: add.role,
+      assignee_user_id: member ?? options.ownerUserId ?? null,
+      optional: true,
+      task_type: 'task' as const,
+      tags: add.tags,
+      depends_on: [],
+      removed: false,
+      removed_by: null,
+      removed_reason: null,
+      change_reason: null,
+      assignee_basis: member ? ('ai' as const) : null,
+      edited: false,
+    };
+  });
+
   return {
     ...excluded,
-    ai: { applied: true, rationale: delta.rationale || null, failure: null, warnings: delta.warnings },
-    tasks,
+    ai: {
+      applied: true,
+      rationale: delta.rationale || null,
+      failure: null,
+      warnings: delta.warnings,
+      ...(options.rejectedItems ? { rejected_items: options.rejectedItems } : {}),
+    },
+    tasks: [...tasks, ...added],
   };
 }
 
@@ -1606,7 +1967,7 @@ export function applyOwnerProposals(
 // Whole-document validation
 // ---------------------------------------------------------------------------
 
-const DRAFT_ORIGINS: DraftTaskOrigin[] = ['template', 'user'];
+const DRAFT_ORIGINS: DraftTaskOrigin[] = ['template', 'user', 'ai'];
 const DRAFT_TASK_TYPES: Array<DraftTask['task_type']> = ['task', 'event_milestone'];
 
 /** Reads an untrusted assignee_basis value, the removed_by precedent exactly:
@@ -1754,6 +2115,15 @@ export function parseDraftDoc(
           : null,
       assignee_basis: readAssigneeBasis(t.assignee_basis),
       edited: t.edited === true,
+      ...(t.focus === true
+        ? {
+            focus: true,
+            focus_reason:
+              typeof t.focus_reason === 'string' && t.focus_reason.trim()
+                ? t.focus_reason.trim().slice(0, MAX_FOCUS_REASON_LENGTH)
+                : null,
+          }
+        : {}),
     });
   }
 
@@ -1812,6 +2182,9 @@ export function parseDraftDoc(
             .map((w) => w.trim().slice(0, MAX_WARNING_LENGTH))
             .slice(0, MAX_DELTA_WARNINGS)
         : [],
+      ...(typeof aiRecord.rejected_items === 'number' && aiRecord.rejected_items > 0
+        ? { rejected_items: Math.round(aiRecord.rejected_items) }
+        : {}),
     },
     applied_exclusions: appliedExclusions,
     tasks,
@@ -1894,11 +2267,14 @@ export type PlannerPromptMember = {
 };
 
 /** The draft tasks the model is allowed to reference, in prompt shape. */
+/** The playbook's why lines run long; the model needs the gist, not the essay. */
+const PROMPT_WHY_LENGTH = 140;
+
 export function toPromptTasks(tasks: DraftTask[]): PlannerPromptTask[] {
   return tasks.map((task) => ({
     id: task.id,
     title: task.title,
-    why: task.why,
+    why: task.why.length > PROMPT_WHY_LENGTH ? `${task.why.slice(0, PROMPT_WHY_LENGTH - 1)}…` : task.why,
     role: task.role,
     offset_days: task.offset_days,
     optional: task.optional,
@@ -1906,18 +2282,46 @@ export function toPromptTasks(tasks: DraftTask[]): PlannerPromptTask[] {
   }));
 }
 
-function describeIntake(intake: ReleasePlanIntake): string[] {
+/**
+ * What the manager told us at signup, already turned into labels by the
+ * server caller (lib/release-planning-actions-server.ts reads the profile).
+ * Plain strings so this pure module never imports the onboarding modules.
+ */
+export type PlannerOnboardingContext = {
+  /** "Where does a rollout usually fall apart?" — the labels they picked. */
+  painPoints: string[];
+  /** "How do you want to plan rollouts?" — the label they picked. */
+  planningPreference?: string | null;
+};
+
+/** Days from today to release day, or null when either date is unusable. */
+export function daysUntilRelease(releaseDate: string | null, todayYmd: string): number | null {
+  if (!releaseDate) return null;
+  const offset = offsetFromTaskYmd(releaseDate, todayYmd);
+  return offset === null ? null : -offset;
+}
+
+function describeIntake(intake: ReleasePlanIntake, todayYmd?: string): string[] {
   const ready = intake.ready_today.length
     ? intake.ready_today.map((item) => READY_LABELS[item] || item).join('; ')
     : 'not stated';
 
+  const daysOut = todayYmd ? daysUntilRelease(intake.release_date, todayYmd) : null;
+  const excluded = new Set(intake.exclusions ?? []);
+  const covered = PLAN_SCOPES.filter((scope) => !excluded.has(scope)).map(
+    (scope) => PLAN_SCOPE_LABELS[scope]
+  );
+
   const lines = [
     `- Format: ${RELEASE_TYPE_LABELS[intake.release_type] || intake.release_type}`,
     `- Artist: ${intake.artist_name}`,
-    `- Release date: ${intake.release_date || 'not set'}`,
-    `- Ready today: ${ready}`,
-    `- Main goal: ${GOAL_LABELS[intake.goal] || intake.goal}`,
-    `- Rollout budget: ${BUDGET_LABELS[intake.budget] || intake.budget}`,
+    `- Release date: ${intake.release_date || 'not set'}${
+      daysOut === null ? '' : ` (${daysOut} days from today)`
+    }`,
+    `- Already done: ${ready}`,
+    `- What matters most: ${GOAL_LABELS[intake.goal] || intake.goal}`,
+    `- Promo budget: ${BUDGET_LABELS[intake.budget] || intake.budget}`,
+    `- The plan should cover: ${covered.length ? covered.join(', ') : 'only release-day and distribution work'}`,
   ];
   if (intake.preset) {
     lines.push(`- Preset: ${PLAN_PRESET_LABELS[intake.preset]}`);
@@ -1944,6 +2348,8 @@ const OUTPUT_SCHEMA_BLOCK = [
   '  "adjust_offsets": [{ "id": "<task id>", "offset_days": <integer>, "reason": "<one short line, or null>" }],',
   '  "role_assignments": [{ "role": "<role>", "member_user_id": "<member user_id>" }],',
   '  "rewrite_why": [{ "id": "<task id>", "why": "<one short line>" }],',
+  `  "focus": [{ "id": "<task id>", "reason": "<one short line>" }],`,
+  `  "add_tasks": [{ "title": "<short, at most ${MAX_AI_TASK_TITLE_LENGTH} chars>", "why": "<one short line>", "offset_days": <integer>, "role": "<role or null>", "tags": ["<${AI_ADD_TASK_TAGS.join('|')}>"] }],`,
   '  "warnings": ["<one short line for the manager, at most 5>"],',
   '  "rationale": "<2-3 sentences for the manager>"',
   '}',
@@ -1957,7 +2363,8 @@ function buildSystemPrompt(): string {
     '',
     'Rules:',
     "- The manager's answers and notes are instructions, not hints. If they rule something out, the plan must not contain it. If they ask for less of something, keep that work and drop its optional tasks.",
-    '- You cannot add tasks. There is no operation for it. The manager adds anything the playbook is missing.',
+    `- You may ADD at most ${MAX_AI_ADDED_TASKS} tasks in "add_tasks", and only when this rollout's goal, pain points or notes genuinely need work the playbook does not have. Never add something the plan already covers in other words, never per-track busywork, nothing inside a scope that is left out, nothing paid when there is no budget, and nothing dated before today or outside the plan's existing date range. Each needs a short title, a why tied to their goal, an offset_days, a role from the list or null, and tags from the given vocabulary. Zero adds is a fine answer.`,
+    `- Mark at most ${MAX_DELTA_FOCUS} tasks in "focus": the few that matter most for what the manager said matters most, each with a one-line reason. Only ids from the list.`,
     '- Drop an optional task ("optional": true) whenever this rollout does not need it, with a reason.',
     '- A task whose "optional" is false may be dropped ONLY when the manager plainly asked to leave that kind of work out. The way to do that is "exclude_scopes": name the scope, and the product removes every task in it except release-day and distribution work. Inside a scope you excluded you may also drop single required tasks. Never exclude a scope they did not ask for. "Less", "light" or "small" means keep the scope and drop its optional tasks.',
     SCOPE_VOCABULARY_LINE,
@@ -1966,7 +2373,7 @@ function buildSystemPrompt(): string {
     '- A task landing before today is never by itself a reason to drop it or move it. It stays in the plan; the product shows it under "Catch up".',
     '- Every id you return MUST be copied verbatim from the task list provided. Never invent an id.',
     '- Only assign people from the team list provided, using their exact member_user_id.',
-    '- Rewrite a "why" line only when this rollout\'s context genuinely changes it. Keep each rewrite under 160 characters, plain and specific. Leave the rest alone.',
+    '- Rewrite the "why" line of the tasks that matter for this rollout in terms of the manager\'s goal and situation (their artist, their date, what is done, what usually falls apart for them). Keep each rewrite under 160 characters, plain and specific. Leave generic housekeeping alone.',
     '- offset_days is days relative to release day. Negative is before, 0 is release day, positive is after.',
     '- Use "warnings" for anything worth the manager\'s attention — a real schedule risk, an assumption you made. Not a reason to change a task by itself. At most 5, each one short line.',
     '- Adjust across the whole plan.',
@@ -2041,7 +2448,7 @@ function buildGuidance(
 
   if (intake.goal_text || intake.extra_notes) {
     lines.push(
-      '- Their notes above are instructions. If they rule out a kind of work, return it in exclude_scopes with their words as the reason. If they ask for less of something, keep the scope and drop its optional tasks. If they ask for something the playbook has no task for, say so in a warning rather than inventing one.'
+      '- Their notes above are instructions. If they rule out a kind of work, return it in exclude_scopes with their words as the reason. If they ask for less of something, keep the scope and drop its optional tasks. If they ask for something the playbook has no task for, add it in add_tasks when it fits the rules, otherwise say so in a warning.'
     );
   }
 
@@ -2055,7 +2462,7 @@ function buildGuidance(
       // No playbook for this format is switched on, so the draft really did
       // come from the single one and the model should compensate for that.
       lines.push(
-        `- This is ${formatLabel} planned from the single playbook. Stretch the asset and content work to cover more tracks, and mention a lead single in the why lines where it fits. Do not try to invent per-track tasks: there is no operation for adding them.`
+        `- This is ${formatLabel} planned from the single playbook. Stretch the asset and content work to cover more tracks, and mention a lead single in the why lines where it fits. Do not invent per-track tasks.`
       );
     } else {
       // The draft came from the format's own playbook, which already carries
@@ -2067,7 +2474,7 @@ function buildGuidance(
           ? 'The lead single drop and its runway are already in the plan'
           : 'Both staggered single drops and their runways are already in the plan';
       lines.push(
-        `- This is ${formatLabel} planned from the ${intake.release_type === 'ep' ? 'EP' : 'album'} playbook, so the multi-track work is already there. ${singles} — adjust their dates to this rollout's context rather than restating them, and do not try to invent per-track tasks: there is no operation for adding them.`
+        `- This is ${formatLabel} planned from the ${intake.release_type === 'ep' ? 'EP' : 'album'} playbook, so the multi-track work is already there. ${singles} — adjust their dates to this rollout's context rather than restating them, and do not invent per-track tasks.`
       );
     }
   }
@@ -2095,11 +2502,31 @@ export function buildPlannerMessages(params: {
    * guidance line, so the prompt never claims a provenance it does not have. */
   fallbackToSingle?: boolean;
   appliedExclusions?: AppliedExclusion[];
+  /** What the manager told us at signup (pain points, planning preference). */
+  onboarding?: PlannerOnboardingContext | null;
 }): Array<{ role: 'system' | 'user'; content: string }> {
-  const { release, intake, tasks, members, todayYmd, fallbackToSingle, appliedExclusions } = params;
+  const { release, intake, tasks, members, todayYmd, fallbackToSingle, appliedExclusions, onboarding } =
+    params;
 
   const system = buildSystemPrompt();
 
+  const onboardingLines: string[] = [];
+  if (onboarding?.painPoints.length) {
+    onboardingLines.push(`- Where their rollouts usually fall apart: ${onboarding.painPoints.join('; ')}`);
+  }
+  if (onboarding?.planningPreference) {
+    onboardingLines.push(`- How they like to plan: ${onboarding.planningPreference}`);
+  }
+
+  const offsets = tasks.map((task) => task.offset_days);
+  const windowLine = offsets.length
+    ? `- The plan runs from offset ${Math.min(...offsets)} to ${Math.max(...offsets)}. Added tasks must stay inside that range${
+        release.releaseDate ? ' and not before today' : ''
+      }.`
+    : '';
+
+  // Compact JSON (no indentation): the task list is most of the prompt, and
+  // pretty-printing it cost about a third of the tokens for nothing.
   const user = [
     'Release:',
     `- Title: ${release.title}`,
@@ -2108,15 +2535,22 @@ export function buildPlannerMessages(params: {
     `- Today: ${todayYmd}`,
     '',
     'What the manager told us:',
-    ...describeIntake(intake),
+    ...describeIntake(intake, todayYmd),
+    ...(onboardingLines.length ? ['', 'About this manager (from signup):', ...onboardingLines] : []),
     '',
     buildGuidance(intake, { fallbackToSingle, appliedExclusions }),
+    ...(onboardingLines.length
+      ? [
+          '- Use where their rollouts usually fall apart: focus, why lines and any added task should guard against exactly that.',
+        ]
+      : []),
+    ...(windowLine ? [windowLine] : []),
     '',
     'Team available for assignment (use member_user_id verbatim):',
-    JSON.stringify(members, null, 2),
+    JSON.stringify(members),
     '',
     'Current plan (only these ids may appear in your response):',
-    JSON.stringify(tasks, null, 2),
+    JSON.stringify(tasks),
     '',
     'Return the JSON now.',
   ].join('\n');
@@ -2191,6 +2625,20 @@ export const PLANNER_DELTA_JSON_SCHEMA = strictObject({
   rewrite_why: {
     type: 'array',
     items: strictObject({ id: { type: 'string' }, why: { type: 'string' } }),
+  },
+  focus: {
+    type: 'array',
+    items: strictObject({ id: { type: 'string' }, reason: { type: 'string' } }),
+  },
+  add_tasks: {
+    type: 'array',
+    items: strictObject({
+      title: { type: 'string' },
+      why: { type: 'string' },
+      offset_days: { type: 'integer' },
+      role: { type: ['string', 'null'], enum: [...PLANNER_ROLE_VALUES, null] },
+      tags: { type: 'array', items: { type: 'string', enum: [...AI_ADD_TASK_TAGS] } },
+    }),
   },
   warnings: { type: 'array', items: { type: 'string' } },
   rationale: { type: 'string' },

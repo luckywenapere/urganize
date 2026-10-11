@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.107.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Signing up asks what's already done just once. Your first plan then asks only three quick questions.",
+      "UrgAns now shapes your first plan around what matters most to you and your budget. It marks where to start and can add a few steps made for you.",
+      "Your first plan always gets built, even when UrgAns is busy.",
+    ],
+  },
+  {
     version: "1.106.0",
     date: "October 11, 2026",
     highlights: [

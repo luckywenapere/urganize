@@ -153,9 +153,10 @@ export async function POST(
   const ownerTeam = await getTeamAccessForUser(auth.user.id, auth.user.email);
   // A team's first plan is free (credits/first-plan.ts), through this door too,
   // or the chat path would charge for what the planner gives away.
-  const firstPlanFree =
-    isCreditsEnabled() &&
-    (await isFirstPlanFreeForTeam(adminClient, 'release.draft_plan', ownerTeam.ownerUserId));
+  // Read whether credits are on or not: a first plan is also never refused
+  // over a model failure (createReleasePlan's firstPlan).
+  const firstPlan = await isFirstPlanFreeForTeam(adminClient, 'release.draft_plan', ownerTeam.ownerUserId);
+  const firstPlanFree = isCreditsEnabled() && firstPlan;
   const gate: EmbeddedRunGate = firstPlanFree
     ? { metered: false }
     : await beginEmbeddedRun(adminClient, {
@@ -199,6 +200,7 @@ export async function POST(
     deadlineMs: startedAt + PLANNER_DEADLINE_MS,
     onUsage: collector.onUsage,
     onFailure: collector.onFailure,
+    firstPlan,
   });
 
   if (!result.ok) {

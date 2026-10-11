@@ -33,6 +33,9 @@
  * thin storage wrappers, so vitest holds the rules.
  */
 
+import { normalizeReadyToday } from './onboarding-readiness';
+import type { ReadyItem } from './release-planning';
+
 export const FIRST_SESSION_KEY = 'urganize.first-session';
 export const FIRST_SESSION_TAB_KEY = 'urganize.first-session.tab';
 
@@ -189,6 +192,9 @@ export type OnboardingPlannerHandoff = {
   releaseType?: 'single' | 'ep' | 'album';
   releaseDate?: string;
   artistName?: string;
+  /** "What's already done?", asked once in onboarding (2026-10-11). Present
+   *  and non-empty means the planner skips its own copy of the question. */
+  readyToday?: ReadyItem[];
   at: number;
 };
 
@@ -212,6 +218,10 @@ export function parseOnboardingPlannerHandoff(
       ...(typeof parsed.artistName === 'string' && parsed.artistName.trim()
         ? { artistName: parsed.artistName.trim().slice(0, 120) }
         : {}),
+      ...(() => {
+        const ready = Array.isArray(parsed.readyToday) ? normalizeReadyToday(parsed.readyToday) : [];
+        return ready.length ? { readyToday: ready } : {};
+      })(),
       at: parsed.at,
     };
   } catch {

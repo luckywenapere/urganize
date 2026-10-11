@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { Sparkles } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import {
+  BUDGET_OPTIONS,
+  GOAL_OPTIONS,
   PLAN_SCOPE_OPTIONS,
   deriveScheduleWarnings,
   isTaskInScope,
@@ -56,7 +58,28 @@ type Summary = {
   drops: Array<{ id: string; title: string; reason: string | null }>;
   removedCount: number;
   warnings: string[];
+  /** "Reach new listeners · Under ₦100k": what UrgAns fitted the plan to.
+   *  Only when the tailoring actually ran; null otherwise. */
+  shapedFor: string | null;
+  /** Tasks UrgAns added on top of the playbook (origin 'ai'). */
+  added: Array<{ id: string; title: string; why: string }>;
+  /** The few tasks UrgAns marked as the focus for the goal, still in the plan. */
+  focus: Array<{ id: string; title: string }>;
 };
+
+/** What the plan was fitted to, in the intake's own labels. Exported for tests. */
+export function shapedForLine(doc: ReleasePlanDraftDoc): string | null {
+  if (!doc.ai.applied) return null;
+  const goal =
+    doc.intake.goal_text?.trim() ||
+    GOAL_OPTIONS.find((option) => option.value === doc.intake.goal)?.label ||
+    null;
+  const budget = BUDGET_OPTIONS.find((option) => option.value === doc.intake.budget)?.label ?? null;
+  const parts = [goal ? goal.charAt(0).toLowerCase() + goal.slice(1) : null, budget ? budget.charAt(0).toLowerCase() + budget.slice(1) : null].filter(
+    (part): part is string => Boolean(part)
+  );
+  return parts.length ? parts.join(' · ') : null;
+}
 
 function scopeLabel(scope: AppliedExclusion['scope']): string {
   return PLAN_SCOPE_OPTIONS.find((option) => option.value === scope)?.label ?? scope;
@@ -100,6 +123,13 @@ export function summarizePlanForBanner(
     drops,
     removedCount: removed.length,
     warnings: [...(doc.ai.warnings ?? []), ...deriveScheduleWarnings(doc, releaseDate, todayYmd)],
+    shapedFor: shapedForLine(doc),
+    added: doc.tasks
+      .filter((task) => task.origin === 'ai' && !task.removed)
+      .map((task) => ({ id: task.id, title: task.title, why: task.why })),
+    focus: doc.tasks
+      .filter((task) => task.focus && !task.removed)
+      .map((task) => ({ id: task.id, title: task.title })),
   };
 }
 
@@ -170,8 +200,37 @@ export function PlanBuiltBanner({
           <h3 className="mt-1 font-display text-lg font-semibold leading-tight text-content-primary">
             UrgAns built this plan: {summary.count} {summary.count === 1 ? 'activity' : 'activities'}.
           </h3>
+          {summary.shapedFor ? (
+            <p className="mt-1 text-xs font-medium text-brand">Shaped for: {summary.shapedFor}</p>
+          ) : null}
           {summary.rationale ? (
             <p className="mt-2 max-w-prose text-sm leading-6 text-content-secondary">{summary.rationale}</p>
+          ) : null}
+
+          {summary.focus.length > 0 ? (
+            <p className="mt-3 text-sm leading-6 text-content-secondary">
+              <span className="font-medium text-content-primary">Start with: </span>
+              {summary.focus.map((task) => task.title).join(' · ')}
+            </p>
+          ) : null}
+
+          {summary.added.length > 0 ? (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-content-primary">
+                Added by UrgAns ({summary.added.length})
+              </p>
+              <ul className="mt-1.5 space-y-1.5 text-sm leading-6 text-content-secondary">
+                {summary.added.map((task) => (
+                  <li key={task.id} className="flex gap-1.5">
+                    <Sparkles className="mt-1.5 h-3 w-3 shrink-0 text-brand" aria-label="Added by UrgAns" />
+                    <span>
+                      <span className="font-medium text-content-primary">{task.title}</span>
+                      {task.why ? `: ${task.why}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
 
           {leftOut ? (

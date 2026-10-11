@@ -16,7 +16,8 @@
 // Landing (2026-10-11, first-user flow): every exit now goes to the rollout
 // onboarding created (/dashboard?release=<id>) and, when that rollout is
 // waiting to be planned, opens the planner on it with the type, date and
-// artist already answered, so the first plan asks four questions. The rest of
+// artist already answered, and (since the readiness merge, same day) what is
+// already done, so the first plan asks three questions. The rest of
 // that first session stays quiet (no share sheet, tours or install card); see
 // lib/first-session.ts. The "Tell people it's coming" share offer moves to
 // Home on the next visit.
@@ -79,17 +80,21 @@ import {
   EMPTY_ONBOARDING_DRAFT,
   MAX_ONBOARDING_ARTIST_NAME_LENGTH,
   ONBOARDING_RELEASE_TYPES,
-  ONBOARDING_STAGE_OPTIONS,
   ONBOARDING_WHERE_STUCK_OPTIONS,
   type OnboardingDraft,
   type OnboardingReleaseType,
-  type OnboardingStage,
   type OnboardingWhereStuck,
   clearOnboardingDraft,
   loadOnboardingDraft,
   saveOnboardingDraft,
 } from '@/lib/onboarding-draft';
 import { getOnboardingAiMoment } from '@/lib/onboarding-ai-moment';
+import {
+  ONBOARDING_READY_OPTIONS,
+  deriveOnboardingStage,
+  toggleOnboardingReadyItem,
+} from '@/lib/onboarding-readiness';
+import type { ReadyItem } from '@/lib/release-planning';
 import { getAvailableReleaseTypes } from '@/lib/release-templates/loader';
 import { isCardTrialEnabled, shouldRunAuthedOnboardingSetup } from '@/lib/trial-card';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
@@ -152,7 +157,9 @@ const TOTAL_STEPS = WORKSPACE_ENABLED ? 7 : 6;
 const STEP_TITLES: Record<StepIndex, string> = {
   0: "What are you working on?",
   1: 'Where does a rollout usually fall apart?',
-  2: 'Where is this rollout in its lifecycle?',
+  // Asked once, here, since 2026-10-11: the planner's own readiness
+  // question, handed to the planner so it does not ask again.
+  2: "What's already done?",
   3: 'Tell us about this rollout',
   4: 'Your first move',
   5: 'Create your account',
@@ -561,7 +568,8 @@ export default function OnboardingPage() {
   const canAdvance = useMemo(() => {
     if (step === 0) return isReleaseTypeAvailable(draft.releaseType);
     if (step === 1) return draft.whereStuck.length > 0;
-    if (step === 2) return Boolean(draft.stage);
+    // "None of it yet" is a real answer; nothing ticked is not.
+    if (step === 2) return draft.readyToday.length > 0;
     if (step === 3)
       return (
         draft.title.trim().length > 0 &&
@@ -588,7 +596,7 @@ export default function OnboardingPage() {
     step,
     releaseTypeAvailable: isReleaseTypeAvailable(draft.releaseType),
     whereStuckCount: draft.whereStuck.length,
-    hasStage: Boolean(draft.stage),
+    hasStage: draft.readyToday.length > 0,
     hasTitle: draft.title.trim().length > 0,
     dateValid: isReleaseDateValid(draft.releaseDate),
     hasReleaseArtist: draft.artistName.trim().length > 0,
@@ -625,6 +633,14 @@ export default function OnboardingPage() {
     // exists and there's nothing meaningful to revise from this side.
     if (accountCreated) return;
     setStep((current) => (current > 0 ? ((current - 1) as StepIndex) : current));
+  };
+
+  // "None of it yet" is exclusive of the rest; the stage is derived, not asked.
+  const toggleReadyItem = (item: ReadyItem) => {
+    setDraft((current) => {
+      const readyToday = toggleOnboardingReadyItem(current.readyToday, item);
+      return { ...current, readyToday, stage: deriveOnboardingStage(readyToday) };
+    });
   };
 
   const toggleWhereStuck = (value: OnboardingWhereStuck) => {
@@ -701,6 +717,8 @@ export default function OnboardingPage() {
           ...(type === 'single' || type === 'ep' || type === 'album' ? { releaseType: type } : {}),
           ...(isReleaseDateValid(draft.releaseDate) ? { releaseDate: draft.releaseDate } : {}),
           ...(draft.artistName.trim() ? { artistName: draft.artistName.trim() } : {}),
+          // Asked once in onboarding, so the planner skips "What's already done?".
+          ...(draft.readyToday.length ? { readyToday: draft.readyToday } : {}),
         });
       }
     }
@@ -1295,31 +1313,28 @@ export default function OnboardingPage() {
             </div>
           ) : null}
 
-          {/* ----- Step 2: stage (single) ------------------------------- */}
+          {/* ----- Step 2: what's already done (multi) ----------------- */}
           {step === 2 ? (
             <div className="mt-5 space-y-4">
               <p className="text-sm leading-relaxed text-content-secondary">
-                Pick the stage that matches today. We&apos;ll start your plan from there instead of from
-                week one.
+                Tick everything that&apos;s finished. Your plan marks it done and starts from there.
               </p>
-              <div className="space-y-2">
-                {ONBOARDING_STAGE_OPTIONS.map((option) => {
-                  const selected = draft.stage === option.value;
+              <div role="group" aria-labelledby="onboarding-step-heading" className="space-y-2">
+                {ONBOARDING_READY_OPTIONS.map((option) => {
+                  const checked = draft.readyToday.includes(option.value);
                   return (
                     <label
                       key={option.value}
                       className={`flex items-center gap-3 rounded-xl border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
-                        selected
+                        checked
                           ? 'border-brand bg-brand/8'
                           : 'border-stroke-default hover:border-stroke-strong'
                       }`}
                     >
                       <input
-                        type="radio"
-                        name="stage"
-                        value={option.value}
-                        checked={selected}
-                        onChange={() => setDraft((current) => ({ ...current, stage: option.value as OnboardingStage }))}
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleReadyItem(option.value)}
                         className="h-4 w-4 accent-brand"
                       />
                       <span className="flex-1 text-sm text-content-primary">{option.label}</span>

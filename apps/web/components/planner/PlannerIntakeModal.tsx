@@ -45,6 +45,7 @@ import {
   intakeStepPosition,
   nextIntakeStep,
   previousIntakeStep,
+  readyPrefillAnswers,
   visibleIntakeSteps,
 } from '@/lib/planner-intake-steps';
 import { PlannerTemplatePreview } from './PlannerTemplatePreview';
@@ -149,8 +150,10 @@ export function PlannerIntakeModal() {
   // silently overwrite the row's type at generate time. Since 2026-10-11 a
   // usable future date and an artist name the caller vouches for (the scoped
   // rollout's own artist, or the one onboarding just typed) skip theirs too,
-  // so a first plan from onboarding asks only the four questions nothing else
-  // has asked. Back, Continue and "Question N of M" all walk this one list.
+  // and (later the same day) a readiness answer onboarding already took
+  // skips "What's already done?", so a first plan from onboarding asks only
+  // the three questions nothing else has asked: what matters most, budget,
+  // what to cover. Back, Continue and "Question N of M" all walk this one list.
   const prefill = intakePayload?.prefill;
   const visibleSteps = useMemo(
     () =>
@@ -159,10 +162,12 @@ export function PlannerIntakeModal() {
           prefilledReleaseType: prefill?.releaseType,
           prefilledReleaseDate: prefill?.releaseDate,
           prefilledArtistName: prefill?.artistName,
+          // Onboarding asked "What's already done?" (2026-10-11): not again.
+          prefilledReadyToday: prefill?.readyToday,
           todayYmd: todayYmd(),
         })
       ),
-    [prefill?.releaseType, prefill?.releaseDate, prefill?.artistName]
+    [prefill?.releaseType, prefill?.releaseDate, prefill?.artistName, prefill?.readyToday]
   );
   const firstStep: StepIndex = visibleSteps[0] ?? 0;
 
@@ -196,6 +201,10 @@ export function PlannerIntakeModal() {
       ...(prefill.releaseType ? { releaseType: prefill.releaseType } : {}),
       ...(prefill.releaseDate
         ? { releaseDate: prefill.releaseDate, dateSuggested: false }
+        : {}),
+      // A skipped readiness question must also be the answer.
+      ...(readyPrefillAnswers(prefill.readyToday).length
+        ? { readyToday: readyPrefillAnswers(prefill.readyToday) }
         : {}),
       ...(prefill.budget ? { budget: prefill.budget } : {}),
       ...(prefill.extraNotes ? { extraNotes: prefill.extraNotes } : {}),
