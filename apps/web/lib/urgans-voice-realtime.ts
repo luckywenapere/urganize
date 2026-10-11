@@ -1,5 +1,5 @@
 // Talk to UrgAns: a live, two-way voice call that can do anything typed UrgAns
-// can do (NEXT_PUBLIC_FEATURE_URGANS_REALTIME, default off).
+// can do (NEXT_PUBLIC_FEATURE_URGANS_REALTIME, default on; set "false" to turn off).
 //
 // This module is CLIENT-SAFE and PURE: the rate, the caps, the minute maths, the
 // call states and the one delegate tool's schema, shared by the routes and the

@@ -35,11 +35,11 @@ export function isUrgansVoiceEnabled(): boolean {
 }
 
 /** Talk to UrgAns, the live two-way voice call (NEXT_PUBLIC_FEATURE_URGANS_REALTIME,
- * default off). Only meaningful alongside NEXT_PUBLIC_FEATURE_CHAPPI. When off,
+ * default on; "false" turns it off). Only meaningful alongside NEXT_PUBLIC_FEATURE_CHAPPI. When off,
  * the Talk button is hidden and every /api/urgans/voice route 404s. Independent
  * of NEXT_PUBLIC_FEATURE_URGANS_VOICE (dictation), so either can ship alone. */
 export function isUrgansRealtimeEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_FEATURE_URGANS_REALTIME === 'true';
+  return process.env.NEXT_PUBLIC_FEATURE_URGANS_REALTIME !== 'false';
 }
 
 /** Resolve the transcription transport, or null when not fully configured.
