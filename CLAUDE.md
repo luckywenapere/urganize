@@ -19224,3 +19224,14 @@ Founder ask: "put an NPS survey in Urganize, examine and determine the best plac
 - **Analytics:** server-side PostHog events `nps_shown`, `nps_dismissed`, `nps_submitted` (score, category, account_age_days), `nps_reason_added`.
 - **Admin:** `/admin/nps` (Numbers group): overall NPS (each person counted once by their latest answer), the last 90 days, promoters / passives / detractors, shown / closed, and every answer with its reason. Our own accounts (`internalAccountEmails`) are left out.
 - **Why no feature flag, against this file's flag-starts-off convention:** the founder asked for it live without waiting, and a `NEXT_PUBLIC_*` flag needs a Vercel env save, which is itself a deployment against the Hobby limit that had just been hit. The server-side kill switch above is the reversible lever instead.
+
+
+## The invite gate (2026-10-11, founder request)
+
+Once a manager starts scrolling their FIRST generated plan (`/dashboard?release=<id>`), the app freezes behind a dialog until they invite one teammate by email. Founder's words: "the app should freeze until they send out the invitation". Rules live in `apps/web/lib/invite-gate.ts` (pure, tested in `invite-gate.test.ts`); the server answer is `GET /api/workspace/invite-gate`; the dialog is `components/app/InviteGate.tsx`, mounted once in AppShell on dashboard and settings routes.
+
+- **Who is gated:** owner or admin of their primary team, seats in use = 1 (nobody else invited or active), the plan has a free seat, exactly ONE rollout, and at least one activity. Teams with 2+ rollouts predate the gate and are left alone. Paid Solo (1 seat) is never gated, because the invite would be refused.
+- **No new storage.** A pending invite occupies a seat, so sending one makes seats 2 and the gate never asks again on any device. A localStorage key per team only makes the gate follow the person to other pages after it fires once.
+- **Fails open** on every unreadable fact, and a 409 seat refusal from the invite route releases the gate.
+- **On by default, deliberately breaking the "flags start off" rule** (founder asked for it live). Kill switch: `NEXT_PUBLIC_FEATURE_INVITE_GATE=false` in Vercel Web, then redeploy.
+- Scrolls inside any `[role="dialog"]` (first-win reveal, share sheet, team-login step) do not count, so the gate waits until those are closed.

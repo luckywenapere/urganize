@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { Suspense, useEffect, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
@@ -29,6 +29,7 @@ import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge';
 import { CardTrialGate } from '@/components/providers/CardTrialGate';
 import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
+import { InviteGate } from '@/components/app/InviteGate';
 import { NativePushBridge } from '@/components/providers/NativePushBridge';
 import { NativeAppearanceBridge } from '@/components/providers/NativeAppearanceBridge';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
@@ -462,6 +463,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         team. Renders nothing; a no-op while NEXT_PUBLIC_FEATURE_HARD_PAYWALL
         is off. */}
     <HardPaywallGate />
+    {/* The invite gate (founder request, 2026-10-11): once a new manager
+        scrolls their first plan, the app freezes until one teammate is
+        invited. Only on app chrome, never on auth, onboarding or public pages.
+        Suspense because it reads the search params. See lib/invite-gate.ts. */}
+    {isAuthenticated && (isDashboardRoute || isSettingsRoute) ? (
+      <ErrorBoundary name="invite-gate" onError={reportBoundaryError}>
+        <Suspense fallback={null}>
+          <InviteGate />
+        </Suspense>
+      </ErrorBoundary>
+    ) : null}
     <TaskUIProvider>
       {requiresArtistNameGate ? (
         <ArtistNameGate />
