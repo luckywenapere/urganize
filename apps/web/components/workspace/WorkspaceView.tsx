@@ -22,7 +22,6 @@ import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
-import { useCatalogTourAutoStart } from '@/components/tours/useCatalogTourAutoStart';
 import { markTourSeen, ROLLOUT_TOUR_STEPS } from '@/lib/tours';
 import { useTourStore } from '@/stores/useTourStore';
 import { TourOfferCard } from '@/components/tours/TourOfferCard';
@@ -253,8 +252,7 @@ export function WorkspaceView() {
   const [kitPromptFor, setKitPromptFor] = useState<string | null>(null);
   // Tour B is OFFERED after a plan is approved, never auto-run. Held in
   // component state rather than the tour store: this is a card in the banner
-  // slot, not a running tour, and the store's `pendingReplay` means something
-  // different (a replay asked for from another page).
+  // slot, not a running tour.
   const [rolloutTourOfferFor, setRolloutTourOfferFor] = useState<string | null>(null);
   const [testReleaseToDelete, setTestReleaseToDelete] = useState<Pick<
     Release,
@@ -649,22 +647,10 @@ export function WorkspaceView() {
     });
   }, [pitchBackfillReleaseId, loadCommandCenter]);
 
-  // Tour A. Mounted here rather than in AppShell because it needs the scoped
-  // rollout, its activity count and the release list to build the contextual
-  // last step — and because being here IS "the user reached the catalog": the
-  // post-auth landing is UrgAns when its flag is on, so a first-run user
-  // arrives at the catalog by tapping rather than by signing in. It sits below
-  // `scopedTasks` because it reads it.
+  // The rollout tour is OFFERED from here after a plan is approved (the
+  // TourOfferCard below). The welcome tour that used to auto-start on this view
+  // was removed on 2026-10-11; see lib/tours.ts.
   const startTour = useTourStore((state) => state.start);
-  useCatalogTourAutoStart({
-    enabled: TOURS_ENABLED,
-    plannerEnabled: PLANNER_ENABLED,
-    releasesLoaded: !isInitialLoading,
-    releaseCount: releases.length,
-    scopedReleaseId,
-    scopedTaskCount: scopedTasks.length,
-    canCreate: true,
-  });
 
   // The jobs on this release nobody is on yet (the directory's role gaps,
   // 2026-09-05). Owner-only, like the other release-row affordances here:

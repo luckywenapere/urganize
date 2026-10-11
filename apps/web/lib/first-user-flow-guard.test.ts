@@ -79,9 +79,8 @@ describe('onboarding', () => {
 });
 
 describe('the first session stays quiet', () => {
-  it('holds back the install card, the catalog tour, the rollout tour offer and the pending share', () => {
+  it('holds back the install card, the rollout tour offer (the catalog tour is gone) and the pending share', () => {
     expect(code('components/app/InstallAppPrompt.tsx')).toContain('isInFirstSession()');
-    expect(code('components/tours/useCatalogTourAutoStart.ts')).toContain('isInFirstSession()');
     expect(code('components/workspace/WorkspaceView.tsx')).toMatch(
       /TOURS_ENABLED && !isInFirstSession\(\)\) setRolloutTourOfferFor/
     );

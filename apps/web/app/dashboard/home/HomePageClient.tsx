@@ -4,12 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
-import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useHomeStore } from '@/stores/useHomeStore';
 import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
 import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
-import { useCatalogTourAutoStart } from '@/components/tours/useCatalogTourAutoStart';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { ManagerMidReleaseView } from '@/components/home/ManagerMidReleaseView';
 import { ManagerQuietView } from '@/components/home/ManagerQuietView';
@@ -20,8 +18,6 @@ import { NpsPrompt } from '@/components/home/NpsPrompt';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 
-const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
-const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 
 /**
@@ -64,18 +60,10 @@ export default function HomePageClient() {
   // The deferred first-release prompt — same hook every landing surface uses.
   useFirstReleasePrompt(() => setIsCreateModalOpen(true));
 
-  // The first-visit tour. Home is where people land, so that is where it starts.
-  const releaseCount = useReleaseStore((state) => state.releases.length);
-  useCatalogTourAutoStart({
-    enabled: TOURS_ENABLED,
-    plannerEnabled: PLANNER_ENABLED,
-    releasesLoaded: !homeLoading && Boolean(home),
-    releaseCount,
-    scopedReleaseId: null,
-    scopedTaskCount: 0,
-    canCreate: true,
-    onHome: true,
-  });
+  // No welcome tour here any more (2026-10-11, founder call): a new account
+  // lands straight in the first-rollout flow (FirstReleaseFocus, mounted in
+  // AppShell, opens the plan choice), and the rollout tour is offered once a
+  // plan exists. See lib/tours.ts.
 
   if (authLoading || homeLoading || !home) {
     return <HomeSkeleton />;

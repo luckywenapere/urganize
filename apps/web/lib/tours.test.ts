@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import path from 'node:path';
+
 import {
-  CATALOG_TOUR_STEPS,
   ROLLOUT_TOUR_STEPS,
-  decideCatalogTourAutoStart,
   markTourSeen,
   pickVisibleAnchor,
   readTourSeen,
-  resolveCatalogTourCta,
   tourSeenKey,
   tourStepProgress,
 } from './tours';
@@ -35,19 +35,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const READY = {
-  flag: true,
-  seen: false,
-  authResolved: true,
-  isCurator: false,
-  onCatalog: true,
-  releasesLoaded: true,
-  bodyLocked: false,
-  chappiMessageCount: 0,
-};
-
 describe('tour step data', () => {
-  const all = [...CATALOG_TOUR_STEPS, ...ROLLOUT_TOUR_STEPS];
+  const all = [...ROLLOUT_TOUR_STEPS];
 
   it('gives every step an id, an anchor and copy', () => {
     for (const step of all) {
@@ -59,7 +48,7 @@ describe('tour step data', () => {
   });
 
   it('keeps step ids unique within a tour', () => {
-    for (const steps of [CATALOG_TOUR_STEPS, ROLLOUT_TOUR_STEPS]) {
+    for (const steps of [ROLLOUT_TOUR_STEPS]) {
       expect(new Set(steps.map((s) => s.id)).size).toBe(steps.length);
     }
   });
@@ -71,67 +60,33 @@ describe('tour step data', () => {
   });
 });
 
-describe('decideCatalogTourAutoStart', () => {
-  it('starts when everything is ready', () => {
-    expect(decideCatalogTourAutoStart(READY)).toBe(true);
-  });
-
-  it.each([
-    ['the flag is off', { flag: false }],
-    ['it has been seen', { seen: true }],
-    ['auth has not resolved', { authResolved: false }],
-    ['the account is a curator', { isCurator: true }],
-    ['the user is not on the catalog', { onCatalog: false }],
-    ['releases have not loaded', { releasesLoaded: false }],
-    ['another modal holds the scroll lock', { bodyLocked: true }],
-    ['a conversation with UrgAns is underway', { chappiMessageCount: 3 }],
-  ])('does not start when %s', (_why, override) => {
-    expect(decideCatalogTourAutoStart({ ...READY, ...override })).toBe(false);
+describe('the rollout tour', () => {
+  it('sends "Go to Team" to Team rather than just closing', () => {
+    const last = ROLLOUT_TOUR_STEPS[ROLLOUT_TOUR_STEPS.length - 1];
+    expect(last.ctaLabel).toBe('Go to Team');
+    expect(last.action).toBe('open-team');
   });
 });
 
-describe('resolveCatalogTourCta', () => {
-  const base = {
-    plannerEnabled: true,
-    scopedReleaseId: 'rel-1',
-    scopedTaskCount: 0,
-    releaseCount: 1,
-    canCreate: true,
-  };
+describe('the welcome tour stays removed (2026-10-11, founder call)', () => {
+  // Structural: nothing under the app starts a tour by itself or reads the old
+  // welcome tour's seen-flag. A new account lands in the first-rollout flow.
+  function walk(dir: string, out: string[] = []): string[] {
+    for (const name of readdirSync(dir)) {
+      if (name === 'node_modules' || name.startsWith('.')) continue;
+      const full = path.join(dir, name);
+      if (statSync(full).isDirectory()) walk(full, out);
+      else if (/\.(ts|tsx)$/.test(name) && !name.endsWith('.test.ts')) out.push(full);
+    }
+    return out;
+  }
+  const root = path.resolve(__dirname, '..');
+  const files = ['app', 'components', 'lib', 'stores'].flatMap((dir) => walk(path.join(root, dir)));
 
-  it('offers planning when a scoped rollout has no activities yet', () => {
-    expect(resolveCatalogTourCta(base).action).toBe('open-intake');
-  });
-
-  it('offers creating when there is nothing to plan', () => {
-    expect(
-      resolveCatalogTourCta({ ...base, scopedReleaseId: null, releaseCount: 0 }).action
-    ).toBe('open-create');
-  });
-
-  it('just points at a card for someone who can do neither', () => {
-    const cta = resolveCatalogTourCta({
-      ...base,
-      plannerEnabled: false,
-      scopedReleaseId: null,
-      releaseCount: 4,
-      canCreate: false,
-    });
-    expect(cta.action).toBe('done');
-    expect(cta.anchor).toBe('release-card');
-  });
-
-  it('prefers planning over creating when both are possible', () => {
-    // A teammate with one unplanned rollout AND the ability to create: the
-    // rollout in front of them wins. Reversing this precedence sends someone
-    // who already has work to do off to make more.
-    expect(resolveCatalogTourCta({ ...base, releaseCount: 0 }).action).toBe('open-intake');
-  });
-
-  it('never says release', () => {
-    for (const input of [base, { ...base, scopedReleaseId: null, releaseCount: 0 }]) {
-      const cta = resolveCatalogTourCta(input);
-      expect(`${cta.title} ${cta.body} ${cta.ctaLabel}`).not.toMatch(/\brelease/i);
+  it('has no auto-start hook and no catalog tour left in the source', () => {
+    for (const file of files) {
+      const source = readFileSync(file, 'utf8');
+      expect(source, file).not.toMatch(/useCatalogTourAutoStart|CATALOG_TOUR_STEPS|requestReplay\(|readTourSeen\([^)]*'catalog'/);
     }
   });
 });
@@ -166,16 +121,15 @@ describe('pickVisibleAnchor', () => {
 
 describe('seen state', () => {
   it('keys per user and per tour, so one does not silence the other', () => {
-    expect(tourSeenKey('u1', 'catalog')).not.toBe(tourSeenKey('u1', 'rollout'));
-    expect(tourSeenKey('u1', 'catalog')).not.toBe(tourSeenKey('u2', 'catalog'));
+    expect(tourSeenKey('u1', 'rollout')).not.toBe(tourSeenKey('u2', 'rollout'));
   });
 
   it('round-trips', () => {
     stubStorage();
-    expect(readTourSeen('u1', 'catalog')).toBe(false);
-    markTourSeen('u1', 'catalog');
-    expect(readTourSeen('u1', 'catalog')).toBe(true);
     expect(readTourSeen('u1', 'rollout')).toBe(false);
+    markTourSeen('u1', 'rollout');
+    expect(readTourSeen('u1', 'rollout')).toBe(true);
+    expect(readTourSeen('u2', 'rollout')).toBe(false);
   });
 
   it('reads false rather than throwing when storage is unusable', () => {
@@ -184,7 +138,7 @@ describe('seen state', () => {
         throw new Error('blocked');
       },
     });
-    expect(readTourSeen('u1', 'catalog')).toBe(false);
+    expect(readTourSeen('u1', 'rollout')).toBe(false);
   });
 
   it('swallows a failing write, because a lost mark costs one repeat', () => {
@@ -193,14 +147,14 @@ describe('seen state', () => {
         throw new Error('quota');
       },
     });
-    expect(() => markTourSeen('u1', 'catalog')).not.toThrow();
+    expect(() => markTourSeen('u1', 'rollout')).not.toThrow();
   });
 
   it('never marks anything for a signed-out user', () => {
     const map = stubStorage();
-    markTourSeen('', 'catalog');
+    markTourSeen('', 'rollout');
     expect(map.size).toBe(0);
-    expect(readTourSeen('', 'catalog')).toBe(false);
+    expect(readTourSeen('', 'rollout')).toBe(false);
   });
 });
 

@@ -113,11 +113,17 @@ export function useTeammates(userId: string, accessToken: string): TeammatesStat
     void loadTeammates();
   }, [userId, accessToken, loadTeammates]);
 
+  // Stable identity so memoised consumers (TeammatesSection) don't re-render
+  // every time the Settings shell does.
+  const refetch = useCallback(() => {
+    void loadTeammates();
+  }, [loadTeammates]);
+
   return {
     teammates,
     isLoadingTeammates: isLoadingTeammates && !primed,
     setTeammates,
     seatLimit,
-    refetch: () => void loadTeammates(),
+    refetch,
   };
 }

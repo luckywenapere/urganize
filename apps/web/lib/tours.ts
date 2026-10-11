@@ -1,12 +1,24 @@
 /**
- * The two guided tours: what they say, when the catalog one starts itself, and
- * which of several candidate anchors is actually on screen.
+ * The guided tour: what it says, and which of several candidate anchors is
+ * actually on screen.
  *
- * Founder ask (2026-09-09): a short walk-through the first time, Bitwarden's
- * shape — a spotlight, a card beside the thing it is pointing at, "1 of 3",
- * Next and Skip. TOUR A (catalog) starts itself once per user. TOUR B
- * (rollout) is OFFERED after a plan is approved, never auto-run, because that
- * is the moment the founder means by "they created one".
+ * Founder ask (2026-09-09): a short walk-through, Bitwarden's shape — a
+ * spotlight, a card beside the thing it is pointing at, "1 of 3", Next and
+ * Skip. The ROLLOUT tour is OFFERED after a plan is approved ("Take the tour"),
+ * never auto-run, because that is the moment the founder means by "they
+ * created one".
+ *
+ * THE WELCOME TOUR IS GONE (2026-10-11, founder call). There used to be a
+ * second, "catalog" tour that started itself the first time a person landed on
+ * Home, before they had made anything. A new user's replay showed it in the way
+ * of the one thing a first visit is for: Next tapped twice with nothing
+ * visibly changing (on a phone two of its three steps pointed at the same
+ * Catalogue tab), then Done to get out, then Create rollout. The rollout tour
+ * covers the same ground once there is a rollout to point at, so the welcome
+ * one was removed outright, with its replay rows, its seen-flag readers and
+ * the first-rollout focus's wait for it. A new account now lands straight in the
+ * create-first-rollout flow. Its old localStorage key
+ * (`urganize.tour.seen.catalog.<user>`) is simply never read again.
  *
  * WHY THIS IS A lib MODULE and not state inside the overlay: vitest runs
  * node-only in this repo with no jsdom and there are no component tests, so
@@ -14,37 +26,21 @@
  * same call for the same reason, and the copy below is subject to the same
  * fifth-grader bar.
  *
- * THREE THINGS THIS FILE DELIBERATELY DOES NOT DO.
- *
- *  - It does not place the card. `placeHelpTip` in lib/help-tip-position.ts
- *    already prefers a side, flips when there is no room, clamps to a viewport
- *    margin and never returns a negative offset, and it is unit-tested. Call
- *    it with `prefer: 'bottom'`. A second placer is the duplication this whole
- *    feature is written to avoid.
- *  - It does not restate what a HelpTip already says. The side menu's rows
- *    carry their own pullouts, so the two nav steps point and move on; read
- *    lib/help-copy.ts alongside this when editing them.
- *  - It does not decide WHERE the tour starts from. That is
- *    useCatalogTourAutoStart, mounted in WorkspaceView — see `onCatalog`.
+ * It does not place the card. `placeHelpTip` in lib/help-tip-position.ts
+ * already prefers a side, flips when there is no room, clamps to a viewport
+ * margin and never returns a negative offset, and it is unit-tested. Call it
+ * with `prefer: 'bottom'`.
  */
 
 import { readPersistedState, writePersistedState } from './persisted-state';
 
-export type TourId = 'catalog' | 'rollout';
+export type TourId = 'rollout';
 
 /** The `data-tour` value a step points at. An anchor may exist more than once
  *  in the DOM (the topbar and the side menu both carry the nav ones, and this
  *  app splits mobile and desktop by CSS rather than by mounting), which is
  *  what `pickVisibleAnchor` is for. */
-export type TourAnchor =
-  | 'nav-catalog'
-  | 'nav-urgans'
-  | 'plan-rollout'
-  | 'new-rollout'
-  | 'release-card'
-  | 'activities'
-  | 'rollout-menu'
-  | 'nav-settings';
+export type TourAnchor = 'activities' | 'rollout-menu' | 'nav-settings';
 
 export type TourStep = {
   id: string;
@@ -53,41 +49,9 @@ export type TourStep = {
   body: string;
   /** Overrides "Next" on the last step. */
   ctaLabel?: string;
-};
-
-export const CATALOG_TOUR_STEPS: readonly TourStep[] = [
-  {
-    id: 'catalog',
-    anchor: 'nav-catalog',
-    title: 'Your rollouts live here.',
-    body: 'Open Catalogue to see every rollout you are running. Tap one to open it.',
-  },
-  {
-    id: 'urgans',
-    anchor: 'nav-urgans',
-    title: 'Ask UrgAns anything.',
-    body: 'UrgAns knows your rollouts. Ask it to add work, move a date, or say what is due.',
-  },
-  // The third step is replaced at start time by resolveCatalogTourCta. This
-  // entry is the fallback shape and the one a teammate sees.
-  {
-    id: 'finish',
-    anchor: 'release-card',
-    title: 'Open a rollout.',
-    body: 'Tap one to see its activities and what is due.',
-    ctaLabel: 'Done',
-  },
-];
-
-/** The last step when the tour starts on Home: the rollout cards and the New rollout
- *  button only exist on the Catalogue page, so on Home the step points at the
- *  Catalogue pill that gets there. */
-export const HOME_TOUR_FINISH = {
-  anchor: 'nav-catalog' as TourAnchor,
-  title: 'Start in Catalogue.',
-  body: 'Open Catalogue to see every rollout, or start a new one from there.',
-  ctaLabel: 'Done',
-  action: 'done' as CatalogTourCtaAction,
+  /** What the last step's button does besides ending the tour. 'open-team'
+   *  opens Settings on the Team segment, so "Go to Team" goes to Team. */
+  action?: 'open-team';
 };
 
 export const ROLLOUT_TOUR_STEPS: readonly TourStep[] = [
@@ -109,107 +73,9 @@ export const ROLLOUT_TOUR_STEPS: readonly TourStep[] = [
     title: 'Bring your team in.',
     body: 'Invite people from Settings, then assign work to them.',
     ctaLabel: 'Go to Team',
+    action: 'open-team',
   },
 ];
-
-export function stepsForTour(tourId: TourId): readonly TourStep[] {
-  return tourId === 'catalog' ? CATALOG_TOUR_STEPS : ROLLOUT_TOUR_STEPS;
-}
-
-/**
- * Whether the catalog tour may start itself right now.
- *
- * Every input is a reason NOT to, and the whole thing fails toward silence:
- * an unknown is an unmet condition, never an assumed one. Two are worth
- * naming because they are not obvious.
- *
- *  - `onCatalog` is NOT "this is the landing page". #568 made
- *    /dashboard/urgans the post-auth landing when the assistant is on, so a
- *    first-run user lands on UrgAns and reaches the catalog by tapping. The
- *    tour fires on the first visit to the catalog in the session, whenever
- *    that happens, which is why its hook lives in WorkspaceView.
- *  - `chappiMessageCount` keeps somebody who started by TALKING to UrgAns
- *    from being interrupted the moment they arrive. The assistant is itself
- *    an activation path; a tour talking over it is the worse of the two.
- */
-export function decideCatalogTourAutoStart(input: {
-  flag: boolean;
-  seen: boolean;
-  authResolved: boolean;
-  isCurator: boolean;
-  onCatalog: boolean;
-  releasesLoaded: boolean;
-  bodyLocked: boolean;
-  chappiMessageCount: number;
-}): boolean {
-  if (!input.flag) return false;
-  if (input.seen) return false;
-  if (!input.authResolved) return false;
-  if (input.isCurator) return false;
-  if (!input.onCatalog) return false;
-  // Anchors are read from the DOM at step time, and the catalog's own cards
-  // are one of them; starting before the list has painted points step three
-  // at nothing.
-  if (!input.releasesLoaded) return false;
-  if (input.bodyLocked) return false;
-  if (input.chappiMessageCount > 0) return false;
-  return true;
-}
-
-export type CatalogTourCtaAction = 'open-intake' | 'open-create' | 'done';
-
-export type CatalogTourCta = {
-  anchor: TourAnchor;
-  title: string;
-  body: string;
-  ctaLabel: string;
-  action: CatalogTourCtaAction;
-};
-
-/**
- * The last step of the catalog tour, which is the only one that has to know
- * anything about the account.
- *
- * PRECEDENCE IS PLANNING, THEN CREATING, THEN NEITHER — and that order is the
- * decision rather than an accident of the ifs. Somebody looking at an
- * unplanned rollout already has the thing in front of them; sending them off
- * to make a second one is the wrong next move even when they could.
- */
-export function resolveCatalogTourCta(input: {
-  plannerEnabled: boolean;
-  scopedReleaseId: string | null;
-  scopedTaskCount: number;
-  releaseCount: number;
-  canCreate: boolean;
-}): CatalogTourCta {
-  if (input.plannerEnabled && input.scopedReleaseId && input.scopedTaskCount === 0) {
-    return {
-      anchor: 'plan-rollout',
-      title: 'Plan this rollout.',
-      body: 'Answer a few questions and UrgAns lays out every step, shaped to your answers. Change anything after.',
-      ctaLabel: 'Plan it',
-      action: 'open-intake',
-    };
-  }
-
-  if (input.canCreate && input.releaseCount === 0) {
-    return {
-      anchor: 'new-rollout',
-      title: 'Start your first rollout.',
-      body: 'Pick a format, add a date, and the plan builds itself.',
-      ctaLabel: 'New rollout',
-      action: 'open-create',
-    };
-  }
-
-  return {
-    anchor: 'release-card',
-    title: 'Open a rollout.',
-    body: 'Tap one to see its activities and what is due.',
-    ctaLabel: 'Done',
-    action: 'done',
-  };
-}
 
 /**
  * The card's step indicator: "Step 2 of 3" and how far along the bar is.
@@ -256,8 +122,7 @@ export function pickVisibleAnchor(candidates: readonly AnchorCandidate[]): numbe
 
 const SEEN_VERSION = 1;
 
-/** Per user AND per tour: one machine can be two people, and finishing the
- *  catalog tour says nothing about having seen the rollout one. */
+/** Per user AND per tour: one machine can be two people. */
 export function tourSeenKey(userId: string, tourId: TourId): string {
   return `urganize.tour.seen.${tourId}.${userId}`;
 }

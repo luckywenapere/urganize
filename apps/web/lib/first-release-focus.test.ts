@@ -13,27 +13,20 @@ const ORIGIN = 'https://app.urganize.com';
 const READY = {
   firstReleaseRequired: true,
   isCurator: false,
-  toursEnabled: true,
-  tourSeen: true,
   tourBlocking: false,
 };
 
 describe('decideFirstReleaseFocus', () => {
-  it('is on for a zero-rollout team that has been through the tour', () => {
+  it('is on straight away for a zero-rollout team (no welcome tour to wait for since 2026-10-11)', () => {
     expect(decideFirstReleaseFocus(READY)).toBe(true);
   });
 
   it.each([
     ['a rollout exists (or the load is unproven)', { firstReleaseRequired: false }],
     ['a curator', { isCurator: true }],
-    ['a tour is running or requested', { tourBlocking: true }],
-    ['the tour has not been seen yet', { tourSeen: false }],
+    ['a tour is running', { tourBlocking: true }],
   ])('is off for %s', (_name, patch) => {
     expect(decideFirstReleaseFocus({ ...READY, ...patch })).toBe(false);
-  });
-
-  it('does not wait for a tour that cannot run', () => {
-    expect(decideFirstReleaseFocus({ ...READY, toursEnabled: false, tourSeen: false })).toBe(true);
   });
 });
 

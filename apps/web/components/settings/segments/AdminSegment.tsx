@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import Link from 'next/link';
 import { ADMIN_NAV_ITEMS } from '@/components/admin/AdminNav';
 
@@ -9,7 +10,7 @@ import { ADMIN_NAV_ITEMS } from '@/components/admin/AdminNav';
  * Shown only to accounts `visibleSettingsSegments` lets in; each page still
  * checks ADMIN_EMAILS on its own API, so this list is navigation, not the guard.
  */
-export function AdminSegment() {
+function AdminSegmentView() {
   return (
     <ul className="divide-y divide-stroke-subtle">
       {ADMIN_NAV_ITEMS.map((item) => {
@@ -29,3 +30,12 @@ export function AdminSegment() {
     </ul>
   );
 }
+
+/**
+ * Memoised (2026-10-11): every segment opened in this visit stays mounted, and
+ * the dialog re-renders on each keystroke in its search box and each dirty or
+ * URL change, which used to re-render every one of them. Measured as a 304ms
+ * INP on the Team segment. With stable props it now re-renders only when its
+ * own inputs change.
+ */
+export const AdminSegment = memo(AdminSegmentView);

@@ -146,8 +146,12 @@ const FOCUSABLE =
  * reads as a field in both themes, and it is the same well the toggles sit in,
  * so the whole sheet shares one idea of "something you set".
  */
+// 16px, not 15: iOS Safari zooms the whole page into any field whose text is
+// under 16px the moment it is tapped, and on a phone that zoom (with nothing
+// else changing) reads as a tap on the caption that did nothing. The planner's
+// fields made the same call.
 const FIELD_CLASS =
-  'block w-full rounded-xl border border-stroke-control bg-bg-base px-4 text-[15px] text-content-primary transition-[border-color,box-shadow] duration-200 placeholder:text-content-tertiary hover:border-content-secondary focus:border-brand focus:outline-none focus:ring-[3px] focus:ring-brand/15';
+  'block w-full rounded-xl border border-stroke-control bg-bg-base px-4 text-[16px] text-content-primary transition-[border-color,box-shadow] duration-200 placeholder:text-content-tertiary hover:border-content-secondary focus:border-brand focus:outline-none focus:ring-[3px] focus:ring-brand/15';
 
 /**
  * The track behind the toggles and the tabs. The house pattern (the Shows
@@ -478,12 +482,12 @@ function ShareDialog({ request }: { request: ShareRequest }) {
           className="shrink-0 px-5 pt-3 sm:px-6 sm:pt-5"
         >
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-stroke-strong sm:hidden" aria-hidden="true" />
-          <div className="flex h-9 items-center justify-between gap-2">
+          <div className="flex h-11 items-center justify-between gap-2">
             {step === 'share' ? (
               <button
                 type="button"
                 onClick={() => setStep('ask')}
-                className="motion-focus motion-press -ml-2 inline-flex h-9 items-center gap-1 rounded-full px-2 text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+                className="motion-focus motion-press -ml-2 inline-flex h-11 items-center gap-1 rounded-full px-2 text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                 Edit answers
@@ -498,7 +502,7 @@ function ShareDialog({ request }: { request: ShareRequest }) {
               type="button"
               onClick={close}
               aria-label="Close"
-              className="motion-focus motion-press -mr-2 grid h-9 w-9 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              className="motion-focus motion-press -mr-2 grid h-11 w-11 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -885,7 +889,7 @@ function Segmented<Value extends string>({
             tabIndex={selected ? 0 : -1}
             name={name}
             onClick={() => onChange(option.value)}
-            className={`motion-focus motion-press h-9 truncate rounded-full px-3 text-sm font-medium transition-[background-color,color,box-shadow] duration-200 ${
+            className={`motion-focus motion-press h-11 w-full touch-manipulation truncate rounded-full px-3 text-sm font-medium transition-[background-color,color,box-shadow] duration-200 ${
               selected
                 ? 'bg-bg-surface text-content-primary shadow-[0_1px_3px_rgb(var(--shadow-ink)/calc(0.25*var(--shadow-alpha-scale)))]'
                 : 'text-content-secondary hover:text-content-primary'
@@ -1120,11 +1124,17 @@ function ShareStep({
     // min-h-full resolves only where the panel has a fixed height (a phone, on
     // this step), so on a computer this is the plain column it always was.
     <div className="flex min-h-full flex-col">
+      {/* The tabs (2026-10-11, after a first-session replay showed taps on
+          Status doing nothing visible): every tab is at least 44px tall at
+          every width (it was 36px from sm up), fills its whole grid cell, and
+          is `touch-manipulation`, so a quick second tap is a tap rather than a
+          double-tap zoom. The row sits above the panel in its own stacking
+          context, so nothing in the panel can ever paint over it. */}
       <div
         role="tablist"
         aria-label="Where to share"
         onKeyDown={onTabKeyDown}
-        className={`grid grid-cols-5 ${TAB_TRACK_CLASS}`}
+        className={`relative z-[1] grid grid-cols-5 ${TAB_TRACK_CLASS}`}
       >
         {TABS.map((item) => {
           const selected = item.id === tab;
@@ -1139,14 +1149,16 @@ function ShareStep({
               aria-controls={`share-panel-${item.id}`}
               tabIndex={selected ? 0 : -1}
               onClick={() => selectTab(item.id)}
-              className={`motion-focus motion-press flex h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-[16px] px-0.5 text-[11px] font-medium leading-none tracking-tight transition-[background-color,color,box-shadow] duration-200 sm:h-9 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-2 sm:text-sm sm:tracking-normal ${
+              className={`motion-focus motion-press flex h-12 w-full min-w-0 touch-manipulation select-none flex-col items-center justify-center gap-1 rounded-[16px] px-0.5 text-[11px] font-medium leading-none tracking-tight transition-[background-color,color,box-shadow] duration-200 sm:h-11 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-2 sm:text-sm sm:tracking-normal ${
                 selected
                   ? 'bg-bg-surface text-content-primary shadow-[0_1px_3px_rgb(var(--shadow-ink)/calc(0.25*var(--shadow-alpha-scale)))]'
                   : 'text-content-secondary hover:text-content-primary'
               }`}
             >
-              <Icon className={`${item.iconClass ?? 'h-4 w-4'} shrink-0`} aria-hidden="true" />
-              <span className="max-w-full truncate">{item.label}</span>
+              {/* The icon and label ignore the pointer, so every tap anywhere in
+                  the cell lands on the tab itself. */}
+              <Icon className={`${item.iconClass ?? 'h-4 w-4'} pointer-events-none shrink-0`} aria-hidden="true" />
+              <span className="pointer-events-none max-w-full truncate">{item.label}</span>
             </button>
           );
         })}
@@ -1446,7 +1458,10 @@ function ImagePanel({
         )}
       </div>
 
-      <div className="mt-4 sm:mt-0">
+      {/* relative + its own z: the caption pane is a tap target in its own
+          right (tap to edit), so no sibling, including the poster's frame
+          beside it on a computer, may ever overlap it. */}
+      <div className="relative z-[1] mt-4 sm:mt-0">
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <label htmlFor={`share-caption-${tab}`} className="text-sm font-medium text-content-primary">
             {copy.captionLabel}
@@ -1462,7 +1477,7 @@ function ImagePanel({
             <button
               type="button"
               onClick={onCopyCaption}
-              className="motion-focus motion-press -mr-1 inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+              className="motion-focus motion-press -my-1.5 -mr-1 inline-flex h-11 touch-manipulation items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
             >
               <Copy className="h-3.5 w-3.5" aria-hidden="true" />
               Copy
@@ -1478,7 +1493,7 @@ function ImagePanel({
           // the edge.
           rows={4}
           aria-invalid={xOver ? true : undefined}
-          className={`${FIELD_CLASS} resize-none py-2.5 leading-6 aria-[invalid=true]:border-status-error`}
+          className={`${FIELD_CLASS} min-h-28 touch-manipulation resize-none py-2.5 leading-6 aria-[invalid=true]:border-status-error`}
         />
         {tab === 'instagram' && fanLink ? (
           <p className="mt-1.5 text-xs leading-5 text-content-tertiary">
@@ -1498,7 +1513,7 @@ function ImagePanel({
               <button
                 type="button"
                 onClick={onCopyLink}
-                className="motion-focus motion-press -mr-1 inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+                className="motion-focus motion-press -my-1.5 -mr-1 inline-flex h-11 touch-manipulation items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
               >
                 <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                 Copy

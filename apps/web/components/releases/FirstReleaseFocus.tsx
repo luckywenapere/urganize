@@ -15,13 +15,11 @@ import {
   type FirstReleasePlanMode,
 } from '@/lib/first-release-focus';
 import { placeHelpTip, type PlacedHelpTip } from '@/lib/help-tip-position';
-import { readTourSeen } from '@/lib/tours';
 import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
 import { useShellStore } from '@/stores/useShellStore';
 import { useTourStore } from '@/stores/useTourStore';
 import { useFirstReleaseRequired } from './useFirstReleaseRequired';
 
-const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
 /** Above the tour (z-[210]/[211]) so the choice can never be covered by it,
@@ -57,8 +55,8 @@ function markChoiceShown(userId: string): void {
 type Callout = { rect: { top: number; left: number; width: number; height: number } };
 
 /**
- * The first-rollout focus (lib/first-release-focus.ts): after the tour, with
- * no rollout yet, the rest of the app is locked and the one thing on offer is
+ * The first-rollout focus (lib/first-release-focus.ts): with no rollout yet
+ * (and since 2026-10-11 straight away, with no welcome tour first), the rest of the app is locked and the one thing on offer is
  * making the first rollout, planned by UrgAns or by the manager.
  *
  * Three surfaces, one switch:
@@ -74,23 +72,13 @@ export function FirstReleaseFocus() {
   const userId = useAuthStore((state) => state.user?.id ?? '');
   const isCurator = useAuthStore((state) => state.user?.role === 'curator');
   const firstReleaseRequired = useFirstReleaseRequired();
-  const tourBlocking = useTourStore((state) => state.active !== null || state.pendingReplay !== null);
+  const tourBlocking = useTourStore((state) => state.active !== null);
   const createOpen = useShellStore((state) => state.createOpen);
   const openCreate = useShellStore((state) => state.openCreate);
-
-  // Read in an effect, not during render: storage during render is the
-  // hydration mismatch this repo has fixed before. Re-read whenever a tour
-  // starts or ends, because the tour marks itself seen at START.
-  const [tourSeen, setTourSeen] = useState(false);
-  useEffect(() => {
-    setTourSeen(readTourSeen(userId, 'catalog'));
-  }, [userId, tourBlocking]);
 
   const active = decideFirstReleaseFocus({
     firstReleaseRequired,
     isCurator,
-    toursEnabled: TOURS_ENABLED,
-    tourSeen,
     tourBlocking,
   });
 

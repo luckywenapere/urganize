@@ -16,34 +16,24 @@ const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
  * a phone this section IS the way back to a tour — the same reasoning that put
  * issue reporting in Settings → Account.
  *
- * Neither button runs a tour here: Settings has nothing to point at. They park
- * a request in the store and navigate, and the surface that CAN run it picks
- * the request up on arrival (useCatalogTourAutoStart for the catalog; the
- * rollout one starts directly once a rollout is scoped, which is why it needs
- * one to exist).
+ * The button navigates to a rollout and starts the tour there, which is why it
+ * needs one to exist. The welcome ("catalog") tour and its row were removed on
+ * 2026-10-11; see lib/tours.ts.
  *
  * Renders nothing when NEXT_PUBLIC_FEATURE_TOURS is off, gated here rather
  * than by the tab so the gate travels with the component.
  */
 export function GuidedToursSection() {
   const router = useRouter();
-  const requestReplay = useTourStore((state) => state.requestReplay);
   const start = useTourStore((state) => state.start);
   const releases = useReleaseStore((state) => state.releases);
 
   const firstReleaseId = releases[0]?.id ?? null;
 
-  const replayCatalog = () => {
-    requestReplay('catalog');
-    router.push('/dashboard');
-  };
-
   const replayRollout = () => {
     if (!firstReleaseId) return;
-    // Started directly rather than parked: the rollout tour's anchors are all
-    // on the scoped view, so navigating there IS the whole precondition, and
-    // there is no hook watching for a pending rollout replay the way
-    // useCatalogTourAutoStart watches for a catalog one.
+    // The rollout tour's anchors are all on the scoped view, so navigating
+    // there IS the whole precondition.
     router.push(`/dashboard?release=${firstReleaseId}`);
     start('rollout', ROLLOUT_TOUR_STEPS);
   };
@@ -51,13 +41,6 @@ export function GuidedToursSection() {
   if (!TOURS_ENABLED) return null;
 
   const rows: Array<{ id: TourId; label: string; hint: string; onClick: () => void; disabled: boolean }> = [
-    {
-      id: 'catalog',
-      label: 'Show me the catalog again',
-      hint: 'Where your rollouts live and how to ask UrgAns for things.',
-      onClick: replayCatalog,
-      disabled: false,
-    },
     {
       id: 'rollout',
       label: 'Show me a rollout again',

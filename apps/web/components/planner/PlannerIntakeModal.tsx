@@ -34,6 +34,7 @@ import {
   savePlannerIntakeDraft,
   type PlannerIntakeDraft,
 } from '@/lib/planner-intake-draft';
+import { intakeStepBlocker } from '@/lib/planner-intake-validation';
 import {
   INTAKE_STEPS,
   StepBody,
@@ -296,28 +297,25 @@ export function PlannerIntakeModal() {
     [draft.readyToday, leadTimeDays]
   );
 
-  const canAdvance = useMemo(() => {
-    switch (step) {
-      case 0:
-        return Boolean(draft.releaseType);
-      case 1:
-        return draft.artistName.trim().length > 0;
-      case 2:
-        return Boolean(draft.releaseDate) && draft.releaseDate >= todayYmd();
-      case 3:
-        // Nothing selected is a real answer: none of it is ready.
-        return true;
-      case 4:
-        return Boolean(draft.goal) || draft.goalText.trim().length > 0;
-      case 5:
-        return Boolean(draft.budget);
-      default:
-        return true;
-    }
-  }, [draft, step]);
+  // What this question still needs, as the sentence shown under Continue, or
+  // null when it is ready (lib/planner-intake-validation.ts). One answer drives
+  // both the button's disabled look and the sentence, so they cannot disagree.
+  const blocker = useMemo(() => intakeStepBlocker(step, draft, todayYmd()), [draft, step]);
+  const canAdvance = blocker === null;
+  // Set when a tap lands on a Continue that cannot move yet, so the sentence
+  // under it is emphasised instead of the tap doing nothing visible. Cleared
+  // on every step change and every answer.
+  const [nudged, setNudged] = useState(false);
+  useEffect(() => {
+    setNudged(false);
+  }, [step, draft]);
 
   const goNext = () => {
-    if (!canAdvance || isBusy) return;
+    if (isBusy) return;
+    if (!canAdvance) {
+      setNudged(true);
+      return;
+    }
     setError('');
     const next = nextIntakeStep(visibleSteps, step);
     if (next !== null) {
@@ -580,11 +578,22 @@ export function PlannerIntakeModal() {
               <span className="hidden sm:block" />
             )}
 
+            {/* aria-disabled rather than disabled while an answer is missing:
+                a disabled button swallows the tap with no feedback, which is
+                the rage-click the replay showed. This one LOOKS disabled (grey,
+                not a faded brand pill that still reads as live on a phone) and
+                a tap on it points at the sentence below saying what is missing. */}
             <Button
               type="button"
               onClick={goNext}
-              disabled={!canAdvance || isBusy}
-              className="h-11 w-full justify-center sm:w-auto"
+              disabled={isBusy}
+              aria-disabled={!canAdvance || isBusy}
+              aria-describedby={blocker ? 'planner-intake-blocker' : undefined}
+              className={`h-11 w-full justify-center sm:w-auto ${
+                canAdvance || isBusy
+                  ? ''
+                  : '!cursor-not-allowed !border-stroke-default !bg-bg-hover !text-content-tertiary !shadow-none hover:!translate-y-0 hover:!bg-bg-hover'
+              }`}
             >
               {isBusy ? (
                 <>
@@ -598,6 +607,19 @@ export function PlannerIntakeModal() {
               )}
             </Button>
           </div>
+
+          {blocker && !isBusy ? (
+            <p
+              id="planner-intake-blocker"
+              role="status"
+              aria-live="polite"
+              className={`mt-3 text-center text-xs leading-5 sm:text-right ${
+                nudged ? 'font-semibold text-status-warning' : 'text-content-secondary'
+              }`}
+            >
+              {blocker}
+            </p>
+          ) : null}
 
           <p className="mt-3 text-center text-[11px] leading-5 text-content-tertiary sm:text-left">
             UrgAns builds the plan when you finish. You can change any activity after.

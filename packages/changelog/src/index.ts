@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.109.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Your first visit no longer opens the welcome tour, so you can start your first rollout straight away. The rollout tour is still in the help menu, and its Go to Team button now opens your team in Settings.",
+      "In the rollout planner, Continue now says what is missing when it cannot move on yet, and the options are easier to tap on a phone.",
+      "Before you order distribution, your rollout shows a checklist you can work through, with how many items are done.",
+      "Buttons in the share sheet and on an activity are bigger and easier to tap on a phone, and Settings opens and types faster.",
+    ],
+  },
+  {
     version: "1.108.0",
     date: "October 11, 2026",
     highlights: [

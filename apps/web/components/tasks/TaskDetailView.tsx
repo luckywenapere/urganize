@@ -399,7 +399,12 @@ export function TaskDetailView({
           the loudest thing on screen. The status / release / due facts that
           used to sit here moved BELOW the title, so the pop-up now leads with
           the name of the thing rather than with its metadata. */}
-      <div className="mb-3 flex items-center justify-end gap-1">
+      {/* Sticky, opaque and above the body (2026-10-11): on a phone the pop-up
+          is a bottom sheet whose body scrolls, and the close button used to
+          scroll away with it or sit under whatever scrolled past. Both buttons
+          are 44px, the house minimum; Close was 32px and dead-clicked on a
+          phone in a first-session replay. */}
+      <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-1 flex items-center justify-end gap-1 bg-bg-surface px-3 py-1.5 sm:-mx-6 sm:-mt-6 sm:px-4">
         {task ? (
           <button
             type="button"
@@ -410,9 +415,9 @@ export function TaskDetailView({
             }}
             aria-label="Delete activity"
             title="Delete activity"
-            className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors hover:bg-status-error/10 hover:text-status-error"
+            className="motion-focus motion-press grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors hover:bg-status-error/10 hover:text-status-error"
           >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            <Trash2 className="pointer-events-none h-4 w-4" aria-hidden="true" />
           </button>
         ) : null}
 
@@ -421,7 +426,7 @@ export function TaskDetailView({
           onClick={onBack}
           aria-label="Close activity"
           title="Close"
-          className="motion-focus motion-press grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors hover:border-stroke-default hover:bg-bg-hover hover:text-content-primary"
+          className="motion-focus motion-press grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors hover:border-stroke-default hover:bg-bg-hover hover:text-content-primary"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>

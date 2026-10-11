@@ -28,6 +28,11 @@ const spaceMono = Space_Mono({
   subsets: ['latin'],
   weight: ['400', '700'],
   display: 'swap',
+  // Not preloaded (2026-10-11): the mono face only dresses dates, counts and
+  // statuses inside the workspace. /auth never uses it, but a preload hint
+  // made every first visit fetch both weights before sign-in. It still loads
+  // on demand (display: swap) wherever --font-mono is used.
+  preload: false,
   variable: '--font-space-mono',
 });
 

@@ -72,7 +72,6 @@ export function HelpMenu() {
 
   const openReportIssue = useReportIssueStore((state) => state.openReportIssue);
   const router = useRouter();
-  const requestReplay = useTourStore((state) => state.requestReplay);
   const startTour = useTourStore((state) => state.start);
   const firstReleaseId = useReleaseStore((state) => state.releases[0]?.id ?? null);
 
@@ -114,45 +113,28 @@ export function HelpMenu() {
         },
       ],
       // Last group: replay is the thing you reach for least, and it is the
-      // only group whose items can be absent.
-      ...(TOURS_ENABLED
+      // only group that can be absent. Hidden rather than disabled when there
+      // is no rollout to point at — a menu is not the place for a dead row,
+      // and Settings carries the explanatory hint instead. (The welcome tour's
+      // "Show me the catalog again" row went with that tour on 2026-10-11.)
+      ...(TOURS_ENABLED && firstReleaseId
         ? [
             [
               {
-                label: 'Show me the catalog again',
+                label: 'Show me a rollout again',
                 icon: <TourIcon />,
-                // Parked rather than started: the menu opens from any chrome
-                // page, and the catalog tour's anchors only resolve on
-                // /dashboard. useCatalogTourAutoStart consumes the request
-                // when it mounts there.
+                // Started directly: navigating to a scoped rollout IS the whole
+                // precondition.
                 onClick: () => {
-                  requestReplay('catalog');
-                  router.push('/dashboard');
+                  router.push(`/dashboard?release=${firstReleaseId}`);
+                  startTour('rollout', ROLLOUT_TOUR_STEPS);
                 },
               },
-              ...(firstReleaseId
-                ? [
-                    {
-                      label: 'Show me a rollout again',
-                      icon: <TourIcon />,
-                      // Started directly, unlike the catalog one: navigating
-                      // to a scoped rollout IS the whole precondition, and
-                      // nothing watches for a pending rollout replay. Hidden
-                      // rather than disabled when there is no rollout to
-                      // point at — a menu is not the place for a dead row,
-                      // and Settings carries the explanatory hint instead.
-                      onClick: () => {
-                        router.push(`/dashboard?release=${firstReleaseId}`);
-                        startTour('rollout', ROLLOUT_TOUR_STEPS);
-                      },
-                    },
-                  ]
-                : []),
             ],
           ]
         : []),
     ],
-    [openReportIssue, requestReplay, startTour, router, firstReleaseId]
+    [openReportIssue, startTour, router, firstReleaseId]
   );
 
   useEffect(() => {
