@@ -9,6 +9,7 @@ import { runEditorialPitchReminderSweep } from '@/lib/editorial-pitch-server';
 import { runPaybackQuestionSweep, runSpendCreditsSweep } from '@/lib/release-spend-sweeps-server';
 import { runWorkRequestExpirySweep } from '@/lib/work-request-expiry-server';
 import { runCreditProfileSweepIfEnabled } from '@/lib/claim-sweep-server';
+import { runOnTheRiseSweep } from '@/lib/featured-shelves-server';
 
 // Scheduled sweep — see apps/web/vercel.json for the cron schedule. Vercel
 // Cron automatically sends `Authorization: Bearer ${CRON_SECRET}` when that
@@ -121,6 +122,12 @@ export async function GET(request: NextRequest) {
   // run there), and never throws, so a bad run cannot take the steps above
   // down with it.
   const creditProfileSweep = await runCreditProfileSweepIfEnabled(adminClient);
+  // The directory's On the rise shelf (2026-10-10). Another passenger, for the
+  // same reason. It only recomputes when the Lagos month changed, so on every
+  // other day it costs one settings read, and it stays empty until thirty days of
+  // task activity exist. Not behind the directory flag: it only writes picks
+  // nothing shows while the page is dark. Never throws.
+  const onTheRiseSweep = await runOnTheRiseSweep(adminClient);
 
   return NextResponse.json({
     ok: true,
@@ -133,5 +140,6 @@ export async function GET(request: NextRequest) {
     paybackSweep,
     workRequestSweep,
     creditProfileSweep,
+    onTheRiseSweep,
   });
 }

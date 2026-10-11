@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.99.0",
+    date: "October 11, 2026",
+    highlights: [
+      "The directory now shows two short lists at the top: Featured, picked by hand each quarter, and On the rise this month, for people whose recent work helped a rollout come out.",
+      "Nobody can pay to be on either list, and a list with nobody on it does not show.",
+      "Search results are not ranked. The lists only show when you have not searched or filtered.",
+    ],
+  },
+  {
     version: "1.98.0",
     date: "October 11, 2026",
     highlights: [

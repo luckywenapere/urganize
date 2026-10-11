@@ -133,6 +133,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Invite managers to a profile built with them.',
   },
   {
+    key: 'featured',
+    label: 'Featured',
+    href: '/admin/featured',
+    group: 'operations',
+    description: 'Pick who is Featured in the directory each quarter.',
+  },
+  {
     key: 'urgans',
     label: 'UrgAns actions',
     href: '/admin/urgans',
