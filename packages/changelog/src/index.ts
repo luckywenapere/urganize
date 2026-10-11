@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.96.0",
+    date: "October 11, 2026",
+    highlights: [
+      "UrgAns can now draft your directory bio from the work you have done. You read it, change it, and only then does it save.",
+      "If you are an artist, your directory page now shows the photo, bio, city and genre from your published press kit. You edit them in one place.",
+      "A bio never shows on a profile that nobody has claimed yet.",
+    ],
+  },
+  {
     version: "1.95.0",
     date: "October 11, 2026",
     highlights: [
