@@ -426,6 +426,8 @@ describe('supportsReasoningEffort', () => {
     ['openai/gpt-5.4-mini', true],
     ['openai/o3', true],
     ['gpt-5.4', true],
+    ['openai/gpt-6.1-sol', true],
+    ['gpt-6-luna', true],
     ['openai/gpt-4o-mini', false],
     ['meta/llama-3.3-70b', false],
     ['qwen2.5:3b', false],
@@ -495,6 +497,21 @@ describe('effortForTools', () => {
         expect(effortForTools(model, effort), `${model} ${effort}`).toBe('none');
       }
     }
+  });
+
+  it('sends GPT-6 no effort at all on a request with tools, until that is measured live (2026-10-11)', () => {
+    for (const model of ['openai/gpt-6.1-sol', 'openai/gpt-6-sol', 'openai/gpt-6-luna', 'gpt-6-sol']) {
+      for (const effort of ['minimal', 'low', 'medium', 'high'] as const) {
+        expect(effortForTools(model, effort), `${model} ${effort}`).toBeNull();
+      }
+    }
+  });
+
+  it('still sends GPT-6 its effort on a request WITHOUT tools (the planner)', async () => {
+    const { buildOpenAiRequestBody } = await import('./provider');
+    const messages = [{ role: 'user' as const, content: 'hi' }];
+    const body = buildOpenAiRequestBody({ model: 'openai/gpt-6.1-sol', messages, format: 'json', reasoningEffort: 'low' });
+    expect(body.reasoning_effort).toBe('low');
   });
 
   it('leaves every other model, and no effort at all, as it was asked', () => {

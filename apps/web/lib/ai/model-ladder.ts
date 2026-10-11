@@ -93,6 +93,19 @@ export type LadderRung = {
 
 export type Ladder = Record<ModelTier, LadderRung>;
 
+// GPT-6 (2026-10-11, founder call: the Sol tier, not Astra). pro and max both
+// lead with gpt-6.1-sol, which the catalogue prices the same as gpt-6-sol and
+// describes as approaching Astra; it is about 20% cheaper on input and 33% on
+// output than the gpt-5.4 it replaces on pro. pro keeps gpt-6-sol as its
+// same-tier sibling; max runs 6.1-sol at medium effort (pro is low) and falls to
+// gpt-5.5, the previous max primary. standard is unchanged, and quick stays on
+// gpt-4o-mini: gpt-6-luna is cheaper on paper (75.4 / 376.8 RODI per 1M against
+// 113.1 / 452.2) but every GPT-6 model answered provider_unavailable the day
+// this was written, so it could not be evaluated, and the rule here is that a
+// rung only moves after the eval says so. Like 5.6, GPT-6 is sent no
+// reasoning_effort on a request that carries tools until that is measured (see
+// effortForTools in provider.ts).
+//
 // Each rung ends on a model from an OLDER provider pool (gpt-5, gpt-5.2,
 // gpt-5-mini). On 2026-10-11 RodiumAi returned 502 provider_unavailable for
 // every gpt-5.4/5.5/5.6 model at once for hours, so a rung made only of
@@ -121,7 +134,7 @@ export const DEFAULT_LADDER: Ladder = {
   },
   pro: {
     tier: 'pro',
-    models: ['openai/gpt-5.4', 'openai/gpt-5.6-terra', 'openai/gpt-5'],
+    models: ['openai/gpt-6.1-sol', 'openai/gpt-6-sol', 'openai/gpt-5'],
     reasoningEffort: 'low',
     maxOutputTokens: 3000,
     streamMaxOutputTokens: 8192,
@@ -131,8 +144,8 @@ export const DEFAULT_LADDER: Ladder = {
   },
   max: {
     tier: 'max',
-    models: ['openai/gpt-5.5', 'openai/gpt-5.6-sol', 'openai/gpt-5.2'],
-    reasoningEffort: 'low',
+    models: ['openai/gpt-6.1-sol', 'openai/gpt-5.5', 'openai/gpt-5.2'],
+    reasoningEffort: 'medium',
     maxOutputTokens: 3000,
     streamMaxOutputTokens: 8192,
     typicalLatencyMs: 25_000,

@@ -73,7 +73,7 @@ export function extractCachedTokens(payload: Record<string, unknown>): number | 
 }
 
 /**
- * How hard a reasoning model thinks before it answers. Only the GPT-5 and
+ * How hard a reasoning model thinks before it answers. Only the GPT-5, GPT-6 and
  * o-series families accept the parameter (see supportsReasoningEffort); it is
  * never sent to anything else, so a caller can pass it unconditionally.
  */
@@ -167,13 +167,13 @@ const SCHEMA_REJECTION = /response_format|json_schema|\bschema\b/i;
 const EFFORT_REJECTION = /reasoning/i;
 
 /**
- * Whether a model id accepts `reasoning_effort`: the GPT-5 family and the
- * o-series, with or without the `openai/` vendor prefix RodiumAi's catalogue
+ * Whether a model id accepts `reasoning_effort`: the GPT-5 and GPT-6 families
+ * and the o-series, with or without the `openai/` vendor prefix RodiumAi's catalogue
  * uses. Anything else (gpt-4o, llama, qwen, an unset model) rejects the
  * parameter outright, so it is never sent there.
  */
 export function supportsReasoningEffort(model?: string | null): boolean {
-  return /^(openai\/)?(gpt-5|o\d)/i.test(String(model ?? '').trim());
+  return /^(openai\/)?(gpt-5|gpt-6|o\d)/i.test(String(model ?? '').trim());
 }
 
 /**
@@ -186,7 +186,18 @@ export function supportsReasoningEffort(model?: string | null): boolean {
  */
 export function effortForTools(model: string | null | undefined, effort: ReasoningEffort | null): ReasoningEffort | null {
   if (!effort || effort === 'none') return effort;
-  return /^(openai\/)?gpt-5\.6/i.test(String(model ?? '').trim()) ? 'none' : effort;
+  const id = String(model ?? '').trim();
+  if (/^(openai\/)?gpt-5\.6/i.test(id)) return 'none';
+  // GPT-6 (added 2026-10-11) takes the safe path: no effort at all on a request
+  // with tools, so the provider's own default applies. It could not be measured
+  // the day it went on the ladder (every GPT-6 model answered
+  // provider_unavailable), its catalogue entry lists low to max but not 'none',
+  // so the 5.6 answer ('none') could be the one value it rejects, and omitting
+  // the parameter is accepted by every model. Requests WITHOUT tools (the
+  // planner's structured output) still send the effort asked for. Re-measure
+  // with model-eval.integration.test.ts and relax this when it passes.
+  if (/^(openai\/)?gpt-6/i.test(id)) return null;
+  return effort;
 }
 
 class AiProviderError extends Error {

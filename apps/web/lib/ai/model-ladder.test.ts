@@ -20,8 +20,22 @@ describe('the default ladder', () => {
     expect([...MODEL_TIERS]).toEqual(['quick', 'standard', 'pro', 'max']);
     expect(DEFAULT_LADDER.quick.models[0]).toBe('openai/gpt-4o-mini');
     expect(DEFAULT_LADDER.standard.models[0]).toBe('openai/gpt-5.4-mini');
-    expect(DEFAULT_LADDER.pro.models[0]).toBe('openai/gpt-5.4');
-    expect(DEFAULT_LADDER.max.models[0]).toBe('openai/gpt-5.5');
+    // GPT-6.1 Sol leads both top rungs since 2026-10-11 (founder call: Sol, not
+    // Astra); max differs from pro by thinking harder, then by its fallback.
+    expect(DEFAULT_LADDER.pro.models[0]).toBe('openai/gpt-6.1-sol');
+    expect(DEFAULT_LADDER.max.models[0]).toBe('openai/gpt-6.1-sol');
+    expect(DEFAULT_LADDER.pro.reasoningEffort).toBe('low');
+    expect(DEFAULT_LADDER.max.reasoningEffort).toBe('medium');
+  });
+
+  it('never routes to GPT-6 Astra (founder call, 2026-10-11)', () => {
+    for (const tier of MODEL_TIERS) {
+      expect(DEFAULT_LADDER[tier].models.some((m) => /astra/i.test(m)), tier).toBe(false);
+    }
+  });
+
+  it('keeps quick on gpt-4o-mini until gpt-6-luna has been evaluated live', () => {
+    expect(DEFAULT_LADDER.quick.models).not.toContain('openai/gpt-6-luna');
   });
 
   it('gives every rung a same-tier fallback that differs from its primary', () => {
@@ -32,11 +46,11 @@ describe('the default ladder', () => {
     }
   });
 
-  it('puts the same-price, higher-limit siblings behind the rate-limited rungs', () => {
-    // Terra and Sol are capped at 10 requests a minute by the provider; these
-    // are the models that carry the same work at three times the limit.
-    expect(DEFAULT_LADDER.pro.models[1]).toBe('openai/gpt-5.6-terra');
-    expect(DEFAULT_LADDER.max.models[1]).toBe('openai/gpt-5.6-sol');
+  it('gives each top rung a sibling from outside its primary, so one outage cannot empty it', () => {
+    // pro falls to gpt-6-sol (same price, its own limits); max falls to gpt-5.5,
+    // its primary before GPT-6, so a GPT-6 pool outage still leaves max a model.
+    expect(DEFAULT_LADDER.pro.models[1]).toBe('openai/gpt-6-sol');
+    expect(DEFAULT_LADDER.max.models[1]).toBe('openai/gpt-5.5');
   });
 
   it('gives each rung a positive token cap and a positive typical latency', () => {
@@ -176,8 +190,10 @@ describe('tier helpers', () => {
 });
 
 describe('usesMaxCompletionTokens', () => {
-  it('is true for the GPT-5 and o-series families, with or without the vendor prefix', () => {
+  it('is true for the GPT-5, GPT-6 and o-series families, with or without the vendor prefix', () => {
     for (const model of [
+      'openai/gpt-6.1-sol',
+      'gpt-6-luna',
       'openai/gpt-5.6-sol',
       'openai/gpt-5.4-mini',
       'gpt-5.5',

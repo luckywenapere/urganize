@@ -16,7 +16,10 @@ import { isRodiumGateway, REASONING_EFFORTS, type ReasoningEffort } from './prov
  * the other two gateways serve different catalogues, and naming a model they
  * do not carry would turn every plan into a 4xx.
  */
-export const RODIUM_PLANNER_MODEL = 'openai/gpt-5.4';
+// GPT-6.1 Sol since 2026-10-11 (founder call: plans on the Sol tier). It was
+// gpt-5.4; 6.1 Sol is priced lower (1,507.1 / 7,535.4 RODI per 1M against
+// 1,883.9 / 11,303.1) and takes structured outputs with reasoning effort.
+export const RODIUM_PLANNER_MODEL = 'openai/gpt-6.1-sol';
 
 export function resolvePlannerModel(): string | undefined {
   const override = String(process.env.AI_PLANNER_MODEL || '').trim();

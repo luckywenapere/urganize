@@ -129,3 +129,26 @@ describe('mergeTranscript', () => {
     expect(mergeTranscript('typed already', '   ')).toBe('typed already');
   });
 });
+
+describe('what a dictation records about itself (2026-10-11)', () => {
+  it('reads the seconds the provider reports, and nothing else', async () => {
+    const { parseTranscriptionSeconds } = await import('./urgans-voice');
+    expect(parseTranscriptionSeconds({ text: 'hi', usage: { type: 'duration', seconds: 5 } })).toBe(5);
+    expect(parseTranscriptionSeconds({ text: 'hi' })).toBeNull();
+    expect(parseTranscriptionSeconds({ text: 'hi', usage: { seconds: -1 } })).toBeNull();
+    expect(parseTranscriptionSeconds({ text: 'hi', usage: { seconds: '5' } })).toBeNull();
+    expect(parseTranscriptionSeconds('plain text')).toBeNull();
+    expect(parseTranscriptionSeconds(null)).toBeNull();
+  });
+
+  it('records the model, the bytes, the base mime type and the seconds', async () => {
+    const { transcriptionMetadata } = await import('./urgans-voice');
+    expect(
+      transcriptionMetadata({ model: 'openai/gpt-transcribe', bytes: 76032.4, mimeType: 'audio/webm;codecs=opus', seconds: 4.96 })
+    ).toEqual({ model: 'openai/gpt-transcribe', bytes: 76032, mime: 'audio/webm', seconds: 5 });
+    expect(transcriptionMetadata({ model: 'm', bytes: 10, mimeType: '', seconds: null })).toMatchObject({
+      mime: 'unknown',
+      seconds: null,
+    });
+  });
+});

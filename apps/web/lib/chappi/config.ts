@@ -1,3 +1,5 @@
+import { DEFAULT_TRANSCRIBE_MODEL } from '@/lib/ai/audio-models';
+
 // Server-side Chappi config. Kept separate from lib/ai/provider.ts because the
 // Chappi agent uses its OWN transport (OpenAI-protocol tool calling against the
 // RodiumAi gateway; rewritten 2026-08-13 off the Anthropic SDK) and its OWN
@@ -34,12 +36,13 @@ export function isUrgansVoiceEnabled(): boolean {
 
 /** Resolve the transcription transport, or null when not fully configured.
  * Reuses the RodiumAi key and base UrgAns already uses (one vendor, founder
- * call). The model is a separate env var because the transcription model id
- * differs from the chat model id. */
+ * call). The model defaults to DEFAULT_TRANSCRIBE_MODEL (openai/gpt-transcribe
+ * since 2026-10-11; before that there was no default and nothing recorded which
+ * model ran), and URGANS_TRANSCRIBE_MODEL still overrides it. */
 export function getTranscriptionConfig(): { apiKey: string; model: string; baseURL: string } | null {
   const apiKey = String(process.env.CHAPPI_API_KEY || '').trim();
-  const model = String(process.env.URGANS_TRANSCRIBE_MODEL || '').trim();
-  if (!apiKey || !model) return null;
+  const model = String(process.env.URGANS_TRANSCRIBE_MODEL || '').trim() || DEFAULT_TRANSCRIBE_MODEL;
+  if (!apiKey) return null;
 
   const baseURL =
     String(process.env.CHAPPI_API_BASE || '').trim().replace(/\/+$/, '') || DEFAULT_CHAPPI_API_BASE;

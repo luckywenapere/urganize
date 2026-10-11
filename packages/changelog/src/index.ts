@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.110.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Rollout plans and bigger UrgAns questions now run on GPT-6.1 Sol, a stronger model that also costs fewer credits per plan.",
+      "Speaking to UrgAns now uses OpenAI's newest speech-to-text model, so what you say lands in the message box more accurately.",
+      "Talk to UrgAns: start a voice call from the Talk button and UrgAns answers out loud, and can make plans, add tasks and move dates after you confirm. Calls cost 2 credits a minute.",
+    ],
+  },
+  {
     version: "1.109.0",
     date: "October 11, 2026",
     highlights: [
