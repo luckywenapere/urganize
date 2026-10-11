@@ -27,6 +27,7 @@ afterEach(() => {
 const full: OnboardingDraft = {
   releaseType: 'single',
   whereStuck: ['marketing_promo'],
+  readyToday: ['master', 'artwork', 'distributor'],
   stage: 'date_set',
   title: 'Love Me JeJe',
   releaseDate: '2026-12-04',

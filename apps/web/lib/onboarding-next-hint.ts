@@ -39,7 +39,9 @@ export function describeNextBlocker(input: NextBlockerInput): string | null {
     case 1:
       return input.whereStuckCount > 0 ? null : 'Choose at least one to go on.';
     case 2:
-      return input.hasStage ? null : 'Choose one to go on.';
+      // "What's already done?" since 2026-10-11. hasStage keeps its name: it is
+      // the readiness answer now, and the stage is derived from it.
+      return input.hasStage ? null : 'Choose one to go on, or tick "None of it yet".';
     case 3: {
       const missing: string[] = [];
       if (!input.hasTitle) missing.push('a title');

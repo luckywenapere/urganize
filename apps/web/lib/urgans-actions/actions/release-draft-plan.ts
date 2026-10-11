@@ -51,6 +51,7 @@ import { loadTeamForRouting } from '../../ai/routing-team-server';
 import { summarizeTrace, type RoutingTrace } from '../../ai/model-router';
 import { resolveReleaseTaskWorkspace } from '../../tasks-server';
 import { createUsageCollector, sumTokens } from '../../credits/embedded';
+import { isFirstPlanFreeForTeam } from '../../credits/first-plan-server';
 import type { WorkspaceMember } from '@/types/auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { UrgansActionDefinition } from '../types';
@@ -141,6 +142,10 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
 
     // Every model call the run makes, retries and hops included: each is billed
     // by the provider, so the credits charge sums them (credits/embedded.ts).
+    // A team's first plan is never refused over a model failure (and is free,
+    // which the runner decides separately before this runs).
+    const firstPlan = await isFirstPlanFreeForTeam(admin, 'release.draft_plan', ownerUserId);
+
     const collector = createUsageCollector(resolvePlannerModel() ?? null);
     let routed: RoutingTrace | null = null;
 
@@ -164,6 +169,7 @@ export const releaseDraftPlanAction: UrgansActionDefinition<
       onTrace: (trace) => {
         routed = trace;
       },
+      firstPlan,
     });
 
     if (!result.ok) {

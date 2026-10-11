@@ -36,6 +36,10 @@ export const MODEL_PRICES: Readonly<Record<string, ModelPrice>> = {
   'openai/gpt-5.4': { inputPer1M: 1861.0, outputPer1M: 11165.9, cachedInputPer1M: 186.1 },
   'openai/gpt-5.5': { inputPer1M: 3722.0, outputPer1M: 22331.7, cachedInputPer1M: 372.2 },
   'openai/gpt-5.6-sol': { inputPer1M: 3722.0, outputPer1M: 22331.7, cachedInputPer1M: 372.2 },
+  // Cross-generation fallbacks on the ladder (2026-10-11), from the live catalogue.
+  'openai/gpt-5-mini': { inputPer1M: 186.1, outputPer1M: 1489.0, cachedInputPer1M: 18.7 },
+  'openai/gpt-5': { inputPer1M: 930.7, outputPer1M: 7445.0, cachedInputPer1M: 93.1 },
+  'openai/gpt-5.2': { inputPer1M: 1302.9, outputPer1M: 10422.9, cachedInputPer1M: 130.3 },
 };
 
 /** The dearest model priced here, by output price. An unknown model is charged as this one. */

@@ -105,10 +105,10 @@ export function RolloutBanner({
         <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-content-tertiary" aria-hidden />
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold text-content-primary">
-            Newer work is not on this kit yet
+            New from your rollouts
           </h2>
           <p className="mt-1 text-sm text-content-secondary">
-            Nothing changes until you say so. Take the parts you want.
+            Add what you want. Nothing changes until you tap.
           </p>
 
           <ul className="mt-3 space-y-2">
@@ -120,7 +120,7 @@ export function RolloutBanner({
                 <p className="text-sm text-content-primary">{describeProposal(proposal)}</p>
                 {proposal.handWritten ? (
                   <p className="mt-1 text-xs text-status-warning">
-                    You wrote this section. Check it before you take the update.
+                    This replaces something you wrote.
                   </p>
                 ) : null}
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -133,7 +133,7 @@ export function RolloutBanner({
                     {busy === proposal.section ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                     ) : null}
-                    Take this update
+                    Add it
                   </button>
                   <button
                     type="button"
@@ -143,7 +143,7 @@ export function RolloutBanner({
                     disabled={busy !== null}
                     className="motion-focus inline-flex items-center rounded-md px-3 py-1.5 text-xs text-content-secondary hover:bg-bg-hover disabled:opacity-60"
                   >
-                    Not this one
+                    Skip
                   </button>
                 </div>
               </li>

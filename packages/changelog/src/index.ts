@@ -20,13 +20,41 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.107.0",
+    version: "1.109.0",
     date: "October 11, 2026",
     highlights: [
       "Your first visit no longer opens the welcome tour, so you can start your first rollout straight away. The rollout tour is still in the help menu, and its Go to Team button now opens your team in Settings.",
       "In the rollout planner, Continue now says what is missing when it cannot move on yet, and the options are easier to tap on a phone.",
       "Before you order distribution, your rollout shows a checklist you can work through, with how many items are done.",
       "Buttons in the share sheet and on an activity are bigger and easier to tap on a phone, and Settings opens and types faster.",
+    ],
+  },
+  {
+    version: "1.108.0",
+    date: "October 11, 2026",
+    highlights: [
+      "The pitch kit is now three simple steps: tell the story, add who made it, share it. Each number turns into a check when it is done.",
+      "One button, Write it for me, fills in what is missing. Give it a hint if you like.",
+      "No more Save buttons. Your story and credits save when you click away.",
+      "The press kit starts with four must-haves (About, Bio, Photos, Contact). Everything else sits under Extras, and Next walks you through.",
+      "Sharing is one button and one link. Search, embargo and interview settings moved under More options.",
+      "Plainer names everywhere: Assets is now Photos, Live is Shows, and the bio opens on one box.",
+    ],
+  },
+  {
+    version: "1.107.1",
+    date: "October 11, 2026",
+    highlights: [
+      "UrgAns keeps working when its usual AI models are down. It switches to a backup model, so your plan is still shaped around your answers.",
+    ],
+  },
+  {
+    version: "1.107.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Signing up asks what's already done just once. Your first plan then asks only three quick questions.",
+      "UrgAns now shapes your first plan around what matters most to you and your budget. It marks where to start and can add a few steps made for you.",
+      "Your first plan always gets built, even when UrgAns is busy.",
     ],
   },
   {

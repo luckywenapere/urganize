@@ -55,7 +55,12 @@ describe('isUsableFutureYmd', () => {
 
 describe('decideIntakeSkips', () => {
   it('asks everything when nothing is prefilled', () => {
-    expect(decideIntakeSkips({ todayYmd: TODAY })).toEqual({ releaseType: false, artist: false, date: false });
+    expect(decideIntakeSkips({ todayYmd: TODAY })).toEqual({
+      releaseType: false,
+      artist: false,
+      date: false,
+      ready: false,
+    });
   });
 
   it('skips the type when it was prefilled, as before', () => {

@@ -61,7 +61,7 @@ export function SectionDraftCard({
       <div className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 shrink-0 text-brand" aria-hidden />
         <p className="text-sm font-semibold text-content-primary">
-          UrgAns wrote this. Nothing is saved until you accept it.
+          Here is a draft. Nothing changes until you tap Use this.
         </p>
       </div>
 
@@ -95,7 +95,7 @@ export function SectionDraftCard({
             className="mt-1.5 w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
           />
           <p className="mt-1 text-xs text-content-tertiary">
-            Rough notes are fine. UrgAns turns them into press copy.
+            Tell it what to change. Rough notes are fine.
           </p>
         </div>
       ) : null}
