@@ -5,7 +5,7 @@ import { InfoTip } from '@/components/shared/HelpTip';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 import { PRESENCE_SURFACES, SURFACE_LABEL } from '@/lib/presence';
 import type { PlanSplit, QuietPerson, UsageMetrics } from '@/lib/usage-metrics';
-import { formatDate, formatShare, formatUsd, people, timeAgo } from '@/lib/usage-metrics-format';
+import { formatDate, formatGrowth, formatShare, formatUsd, people, timeAgo } from '@/lib/usage-metrics-format';
 
 // The usage dashboard's numbers, laid out (2026-10-07). Display only: it
 // fetches nothing and holds no state, so /admin/metrics owns the loading, the
@@ -152,13 +152,29 @@ export function MetricsView({
       <Section
         id="metrics-active"
         title="Active people"
-        info="A person counts on a day if the app was open on their screen, they did something (an activity, a rollout, UrgAns, a note and so on), they opened the app, or they signed in. Days are Lagos days. The check-in that sees people who only look around started on the day this page went live, so earlier days only count people who did something or opened the app."
+        info="Weekly growth compares people active in the last 7 days with the 7 days before, the number YC asks for: 5 to 7% a week is good, 10% is exceptional. Our own team's accounts are left out of every number here. A person counts on a day if the app was open on their screen, they did something (an activity, a rollout, UrgAns, a note and so on), they opened the app, or they signed in. Days are Lagos days. The check-in that sees people who only look around started on the day this page went live, so earlier days only count people who did something or opened the app."
       >
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Stat label="Today" value={number.format(active.today)} />
           <Stat label="Last 7 days" value={number.format(active.last7d)} fact={`${number.format(active.newPeople7d)} of them joined this week`} />
           <Stat label="Last 30 days" value={number.format(active.last30d)} />
           <Stat label="Today ÷ 30 days" value={formatShare(active.stickiness)} />
+          <Stat
+            label="Weekly growth"
+            value={formatGrowth(active.growth7d)}
+            fact={
+              active.targetFor10pct === null
+                ? `${number.format(active.prev7d)} the week before`
+                : `${number.format(active.prev7d)} the week before · ${number.format(active.targetFor10pct)} next week for +10%`
+            }
+          />
+        </div>
+        <div className="mt-3 rounded-xl border border-stroke-default bg-bg-surface p-4">
+          <AdminBarChart
+            title="Active people each week, last 12 weeks"
+            bars={active.weekly}
+            formatValue={(value) => `${people(value)} active`}
+          />
         </div>
         <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div className="rounded-xl border border-stroke-default bg-bg-surface p-4">

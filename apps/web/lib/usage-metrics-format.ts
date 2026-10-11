@@ -61,6 +61,13 @@ export function formatShare(rate: number | null): string {
   return `${Math.round(rate * 100)}%`;
 }
 
+/** Week-over-week growth with its sign: "+86%", "-14%", "0%". */
+export function formatGrowth(rate: number | null): string {
+  if (rate === null || !Number.isFinite(rate)) return 'No data';
+  const percent = Math.round(rate * 100);
+  return percent > 0 ? `+${percent}%` : `${percent}%`;
+}
+
 /** Dollars with cents under $100, whole dollars above. */
 export function formatUsd(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return 'Not tracked';

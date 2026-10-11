@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatClock, formatDate, formatShare, formatUsd, people, timeAgo } from './usage-metrics-format';
+import { formatClock, formatDate, formatGrowth, formatShare, formatUsd, people, timeAgo } from './usage-metrics-format';
 
 const NOW = new Date('2026-10-07T12:00:00.000Z');
 const ago = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
@@ -46,5 +46,14 @@ describe('numbers', () => {
     expect(formatUsd(null)).toBe('Not tracked');
     expect(people(1)).toBe('1 person');
     expect(people(3)).toBe('3 people');
+  });
+});
+
+describe('formatGrowth', () => {
+  it('signs growth and reads a missing week plainly', () => {
+    expect(formatGrowth(0.857)).toBe('+86%');
+    expect(formatGrowth(-0.14)).toBe('-14%');
+    expect(formatGrowth(0)).toBe('0%');
+    expect(formatGrowth(null)).toBe('No data');
   });
 });
