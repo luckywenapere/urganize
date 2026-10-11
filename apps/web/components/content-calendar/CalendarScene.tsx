@@ -463,8 +463,12 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
           keeps the month grid at a 1440px window (lib/layout-columns.ts pins
           it). With UrgAns open the container query below swaps to the agenda. */}
       <div className="mx-auto max-w-[1200px] pb-8 pt-6 sm:px-6 [@media(min-width:1024px)_and_(max-height:900px)]:pb-4 [@media(min-width:1024px)_and_(max-height:900px)]:pt-3">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
+        {/* The artist and release title are screen-reader only (founder,
+            2026-10-11: "remove this from all the tabs, I don't want the title
+            to appear twice"); the rollout header right above already names
+            both. The month controls take the row, aligned right on desktop. */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-end">
+          <div className="sr-only">
             {/* The way back to the activity list is the lit Content row in the
                 rollout menu (pressing it again closes the scene) — the tiny
                 duplicate back link this header used to carry (~16px tall,

@@ -2,13 +2,11 @@
 
 import { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ArrowLeft } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
 import { FIELD_PARAM, type SceneName } from '@/components/workspace/useSceneOverlay';
 import { isMetadataFixField } from '@/lib/distribution-fix';
 import { captureFeatureDiscoveryByName } from '@/lib/analytics';
-import { resolveMainView } from '@/lib/scene-cache';
 import { MetadataSection } from '@/components/releases/MetadataSection';
 import { CaptureSection } from '@/components/releases/CaptureSection';
 import { AssetSection } from '@/components/releases/AssetSection';
@@ -120,32 +118,6 @@ type ReleaseScenePanelProps = {
   onChangeArtist?: () => void;
 };
 
-/** Shared "get me back to the activity list" control. Reads as a return
- * affordance rather than a modal dismissal, because that is what it is. */
-/**
- * The way out of a scene: back to whatever the release's main view is.
- *
- * The label is derived rather than the literal "Activities" it was until
- * 2026-09-06, because closing a scene lands on the main view and that is the
- * timeline once its flag is on — a control promising "Activities" that hands
- * you a week grid is a control that lies about where it goes.
- */
-function BackToMainView({ onClose }: { onClose: () => void }) {
-  const label = resolveMainView() === 'timeline' ? 'Timeline' : 'Activities';
-  return (
-    <button
-      type="button"
-      onClick={onClose}
-      // shrink-0 because the heading block beside this can now carry a long
-      // release title; without it a wide title squeezes the label into a
-      // wrap. The title truncates instead (min-w-0 + truncate over there).
-      className="motion-focus inline-flex shrink-0 items-center gap-1 text-xs text-content-tertiary transition-colors hover:text-content-primary"
-    >
-      <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> {label}
-    </button>
-  );
-}
-
 export function ReleaseScenePanel({
   scene,
   release,
@@ -226,43 +198,29 @@ export function ReleaseScenePanel({
   if (!(SECTION_SCENES as readonly string[]).includes(scene)) return null;
 
   return (
-    <section aria-label={`${release.title} — ${SCENE_LABELS[scene]}`} className={`min-w-0 ${scene === 'chat' ? 'flex flex-1 flex-col' : ''}`}>
-      {/* `items-start`, not `items-center`: the heading block is two lines now,
-          and the back control should sit level with the scene name. */}
-      {/* Pitch hides its title block (founder, 2026-10-11: "remove this from
-          the pitching screen"); the tab strip already says Pitch this! and the
-          rollout header names the release. Kept for screen readers. */}
-      <div className={`flex items-start gap-3 border-b border-stroke-subtle pb-3 ${scene === 'pitch' ? 'justify-end' : 'justify-between'}`}>
-        <div className={scene === 'pitch' ? 'sr-only' : 'min-w-0'}>
-          <h2 className="font-display text-lg font-semibold text-content-primary">
-            {SCENE_LABELS[scene]}
-          </h2>
-          {/* Which release this scene belongs to (founder report, 2026-08-12:
-              "no way for any user to know which particular release they are
-              collecting metadata for"). The panel always KNEW — the release is
-              in this section's aria-label and in the tab title just above —
-              but neither is visible on screen, and the topbar's own copy sits
-              far from the form and reads as generic page context rather than
-              "this is what you are editing".
-
-              Phrased "for <release>" rather than shown as a bare eyebrow so
-              the relationship is stated, not inferred. Applies to every scene
-              that uses this generic header — Files, Press kit and Pitch had
-              the same ambiguity. The calendar scene is unaffected: it bypasses
-              this header and has always named its release in its own. */}
-          <p className="mt-0.5 truncate text-xs text-content-secondary">
-            for <span className="font-medium text-content-primary">{release.title}</span>
-            {release.artistName ? ` · ${release.artistName}` : ''}
-          </p>
-        </div>
-        <BackToMainView onClose={onClose} />
-      </div>
+    <section
+      aria-label={`${release.title} — ${SCENE_LABELS[scene]}`}
+      // No visible header on any scene (founder, 2026-10-11: "remove this from
+      // all the tabs, I don't want the title to appear twice"). The tab strip
+      // already names the scene and the rollout header names the release and
+      // artist, so the old "<Scene> / for <release> · <artist>" block and its
+      // "← Timeline" back link were pure repetition; the way back is the tab
+      // strip (See the timeline). The h2 stays for screen readers, and
+      // `[&>h2+*]:mt-4` pulls the first section up into the space the header
+      // left: each section brings its own mt-6/mt-8, which used to sit under
+      // the divider and now would only leave a gap under the tabs.
+      className={`min-w-0 [&>h2+*]:mt-4 ${scene === 'chat' ? 'flex flex-1 flex-col' : ''}`}
+    >
+      <h2 className="sr-only">
+        {SCENE_LABELS[scene]} for {release.title}
+        {release.artistName ? ` by ${release.artistName}` : ''}
+      </h2>
 
       {/* Each section fetches its own data and renders its own internal
           loading/empty/error states, so there is nothing panel-level to gate
           on — this is why an inline open feels instant where the old route
-          navigation did not. The sections carry an `mt-8` top margin of their
-          own, which sits fine under the divider above. */}
+          navigation did not. Their own top margins are overridden by the
+          section's `[&>h2+*]` rule above. */}
       {scene === 'metadata' ? (
         <MetadataSection
           key={focusField ?? 'metadata'}
