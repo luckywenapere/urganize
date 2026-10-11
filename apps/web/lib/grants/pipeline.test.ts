@@ -124,8 +124,8 @@ describe('runGrantSearch: facts and limits', () => {
 
   it('stops reading when the cap would be passed mid run and keeps what it had', async () => {
     const { built } = deps({ pages: [openPage(1), openPage(2), openPage(3)] });
-    // room for one search and one page read, not two
-    const report = await run(built, { maxQueries: 1, limits: { maxUsd: 0.0095 } });
+    // room for one search and one page read, not two (prices pinned so the default rate card can move)
+    const report = await run(built, { maxQueries: 1, limits: { maxUsd: 0.0095, prices: { search: 0.007, extraction: 0.002 } } });
     expect(report.endedBy).toBe('spend_cap');
     expect(report.open).toHaveLength(1);
     expect(report.spentUsd).toBeLessThanOrEqual(0.0095);
