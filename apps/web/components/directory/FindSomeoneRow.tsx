@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Users } from '@/components/icons';
+import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { supabase } from '@/lib/supabase/client';
 import { roleNeededForTask } from '@/lib/directory-roles';
 import { describeFindSomeone, findSomeoneHref, type TaskAsk } from '@/lib/find-someone';
@@ -44,6 +45,7 @@ export function FindSomeoneRow({
     Boolean(releaseId) &&
     status !== 'done' &&
     status !== 'cancelled';
+  const { closeTask } = useTaskUI();
   const [asks, setAsks] = useState<TaskAsk[]>([]);
 
   useEffect(() => {
@@ -79,6 +81,9 @@ export function FindSomeoneRow({
       {view.kind === 'find' ? (
         <Link
           href={findSomeoneHref({ role, releaseId, taskId })}
+          // The pop-up is app-wide and survives a route change, so it has to
+          // close or it stays open over the directory.
+          onClick={closeTask}
           className="motion-focus -mx-2 min-h-11 flex-1 rounded-lg px-2 py-2.5 text-left text-sm text-brand hover:bg-bg-hover"
         >
           {view.label}
