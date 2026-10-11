@@ -7,10 +7,19 @@
 //   0  what are you working on
 //   1  where are you stuck
 //   2  where in lifecycle
-//   3  release details (title + date)
+//   3  release details (title + date + artist name — the artist since
+//      2026-10-11, so the planner that opens next never asks for it)
 //   4  AI Moment (deterministic — apps/web/lib/onboarding-ai-moment.ts)
 //   5  create account                                  ← anonymous → authenticated
 //   6  invite teammates (workspace flag only)          ← Skip always reaches /dashboard
+//
+// Landing (2026-10-11, first-user flow): every exit now goes to the rollout
+// onboarding created (/dashboard?release=<id>) and, when that rollout is
+// waiting to be planned, opens the planner on it with the type, date and
+// artist already answered, so the first plan asks four questions. The rest of
+// that first session stays quiet (no share sheet, tours or install card); see
+// lib/first-session.ts. The "Tell people it's coming" share offer moves to
+// Home on the next visit.
 //
 // Auth carve-out: /onboarding is allow-listed in apps/web/lib/access-redirect.ts
 // (SAFE_PATHS) and apps/web/lib/auth-store.ts (SAFE_AUTH_PATHS). AppShell
@@ -68,6 +77,7 @@ import { errorMessage } from '@/lib/errors';
 import { ONBOARDING_PLANNING_PREFERENCE_LABELS, type OnboardingPlanningPreference } from '@/lib/onboarding';
 import {
   EMPTY_ONBOARDING_DRAFT,
+  MAX_ONBOARDING_ARTIST_NAME_LENGTH,
   ONBOARDING_RELEASE_TYPES,
   ONBOARDING_STAGE_OPTIONS,
   ONBOARDING_WHERE_STUCK_OPTIONS,
@@ -85,7 +95,17 @@ import { isCardTrialEnabled, shouldRunAuthedOnboardingSetup } from '@/lib/trial-
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { shouldStartOnboardingTrial } from '@/lib/onboarding-trial';
 import { isSocialShareEnabled } from '@/lib/social-share';
-import { markPendingFirstShare } from '@/lib/social-share-offer';
+import {
+  markOnboardingPlannerHandoff,
+  onboardingLandingPath,
+  startFirstSession,
+} from '@/lib/first-session';
+import {
+  ONBOARDING_ALMOST_THERE_AFTER_MS,
+  ONBOARDING_PROGRESS_NOTE,
+  inviteStepButtonLabels,
+  onboardingProgressMessage,
+} from '@/lib/onboarding-progress';
 import { resolvePostSignupDestination, takePitchIntent } from '@/lib/pitch-intent';
 import { takeClaimIntent } from '@/lib/claim-intent';
 import { readWelcomeIntent } from '@/lib/welcome-intent';
@@ -370,7 +390,9 @@ export default function OnboardingPage() {
   // to 'artist-manager' so anyone hitting the previous code path gets the
   // same result as before.
   const [role, setRole] = useState<OnboardingRole>(DEFAULT_ONBOARDING_ROLE);
-  const [artistName, setArtistName] = useState('');
+  // The artist name lives on the draft since 2026-10-11 (asked on step 3 for
+  // everyone, sent with the release). The account step reads it from there.
+  const artistName = draft.artistName;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleRedirecting, setIsGoogleRedirecting] = useState(false);
@@ -395,7 +417,21 @@ export default function OnboardingPage() {
   const [hasSetupParam, setHasSetupParam] = useState(false);
 
   const [inviteRows, setInviteRows] = useState<InviteRow[]>(() => [makeInviteRow()]);
-  const [isFinishing, setIsFinishing] = useState(false);
+  // Which invite-step exit is running, so each button says its own word
+  // ("Sending…" for send, "Continuing…" for skip).
+  const [finishing, setFinishing] = useState<'send' | 'skip' | null>(null);
+  const isFinishing = finishing !== null;
+
+  // The rollout the hand-off created, kept in a ref so finishToDashboard can
+  // read it in the same tick it was set (the workspace-off path calls it
+  // straight from the hand-off, before any re-render).
+  const createdReleaseRef = useRef<{ id: string; plannerPending: boolean; firstRelease: boolean } | null>(
+    null
+  );
+  // Guards the create step against a second tap or a resumed effect running
+  // the hand-off twice. State alone is a render late.
+  const handoffRunningRef = useRef(false);
+  const almostThereTimerRef = useRef<number | null>(null);
 
   // ---- hydration ---------------------------------------------------------
   // Runs before the first paint (see lib/use-isomorphic-layout-effect.ts) so
@@ -417,7 +453,13 @@ export default function OnboardingPage() {
     if (resume) {
       setResumeData(resume);
       setRole(resume.role);
-      setArtistName(resume.artistName);
+      // The draft (sessionStorage) normally survives the Google round trip
+      // with the artist in it; the marker's copy only fills a gap.
+      if (resume.artistName) {
+        setDraft((current) =>
+          current.artistName ? current : { ...current, artistName: resume.artistName }
+        );
+      }
       setStep(5);
     }
     // Identifier-first hand-off from /auth: an email with no account arrives
@@ -446,6 +488,28 @@ export default function OnboardingPage() {
     if (!hasHydrated) return;
     saveOnboardingDraft(draft);
   }, [draft, hasHydrated]);
+
+  // While the account and rollout are being created, leaving the page would
+  // strand a half-made account, so the browser asks first. Only during that
+  // work (the create step), never on the invite step or anywhere else.
+  const creatingAccount = isSubmitting && step !== 6;
+  useEffect(() => {
+    if (!creatingAccount) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      // Older browsers need a returnValue to show their own prompt.
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [creatingAccount]);
+
+  useEffect(
+    () => () => {
+      if (almostThereTimerRef.current) window.clearTimeout(almostThereTimerRef.current);
+    },
+    []
+  );
 
   // Authed-setup: a signed-in account that never finished onboarding, sent
   // here deliberately (?setup=1) so it gets its release and plan before
@@ -498,7 +562,12 @@ export default function OnboardingPage() {
     if (step === 0) return isReleaseTypeAvailable(draft.releaseType);
     if (step === 1) return draft.whereStuck.length > 0;
     if (step === 2) return Boolean(draft.stage);
-    if (step === 3) return draft.title.trim().length > 0 && isReleaseDateValid(draft.releaseDate);
+    if (step === 3)
+      return (
+        draft.title.trim().length > 0 &&
+        isReleaseDateValid(draft.releaseDate) &&
+        draft.artistName.trim().length > 0
+      );
     if (step === 4) return true;
     if (step === 5) {
       // Email/password path requires all three fields plus, if the user
@@ -522,6 +591,7 @@ export default function OnboardingPage() {
     hasStage: Boolean(draft.stage),
     hasTitle: draft.title.trim().length > 0,
     dateValid: isReleaseDateValid(draft.releaseDate),
+    hasReleaseArtist: draft.artistName.trim().length > 0,
     hasName: Boolean(name.trim()),
     hasEmail: Boolean(email.trim()),
     passwordLongEnough: isPasswordLongEnough(password),
@@ -531,14 +601,14 @@ export default function OnboardingPage() {
   const nextHintId = !canAdvance && nextHint ? 'onboarding-next-hint' : undefined;
 
   // Google button has its own gate — doesn't require name/email/password
-  // (Google provides those) but DOES require a complete draft and the
-  // artist-name field when role='artist' (we still need to write it).
+  // (Google provides those) but DOES require a complete draft, artist name
+  // included (asked on the rollout step for every role since 2026-10-11).
   const canStartGoogle = useMemo(() => {
     if (!isReleaseTypeAvailable(draft.releaseType)) return false;
     if (!draft.title.trim() || !isReleaseDateValid(draft.releaseDate)) return false;
-    if (role === 'artist' && !artistName.trim()) return false;
+    if (!draft.artistName.trim()) return false;
     return true;
-  }, [draft, role, artistName]);
+  }, [draft]);
 
   const aiMoment = useMemo(() => getOnboardingAiMoment(draft), [draft]);
 
@@ -582,6 +652,9 @@ export default function OnboardingPage() {
     // workspace; we just keep the draft (below) so the answers aren't lost.
     let persisted = false;
     if (token) {
+      // The answers and the referral report do not depend on each other, so
+      // they go together (2026-10-11): one round trip of waiting, not two.
+      const referral = reportReferralCode(token);
       const response = await fetch('/api/user/onboarding', {
         method: 'PATCH',
         headers: {
@@ -599,10 +672,10 @@ export default function OnboardingPage() {
         }),
       }).catch(() => undefined);
       persisted = Boolean(response?.ok);
+      // Tell the server which partner's link this person came in through, now
+      // that their team exists. A no-op unless a code was remembered.
+      await referral;
     }
-    // Tell the server which partner's link this person came in through, now
-    // that their team exists. A no-op unless a code was remembered.
-    if (token) await reportReferralCode(token);
     await checkAuth({ force: true });
     // Only drop the draft once the server has the answers. If the PATCH
     // failed, leaving sessionStorage intact is strictly better than wiping
@@ -610,6 +683,26 @@ export default function OnboardingPage() {
     // is the bug URG-192 exists to fix.
     if (persisted) {
       clearOnboardingDraft();
+    }
+    // The first session (lib/first-session.ts): land on the rollout just made,
+    // open the planner on it when it is waiting for a plan, keep everything
+    // else quiet until the next visit, and hold the first-rollout share offer
+    // for Home on that visit.
+    const created = createdReleaseRef.current;
+    if (created) {
+      startFirstSession({
+        releaseId: created.id,
+        shareReleaseId: isSocialShareEnabled() && created.firstRelease ? created.id : null,
+      });
+      if (created.plannerPending) {
+        const type = draft.releaseType;
+        markOnboardingPlannerHandoff({
+          releaseId: created.id,
+          ...(type === 'single' || type === 'ep' || type === 'album' ? { releaseType: type } : {}),
+          ...(isReleaseDateValid(draft.releaseDate) ? { releaseDate: draft.releaseDate } : {}),
+          ...(draft.artistName.trim() ? { artistName: draft.artistName.trim() } : {}),
+        });
+      }
     }
     // Where they land, decided in one pure place so the ORDER is checkable
     // rather than a reading of one line inside this file. Card trial first
@@ -622,8 +715,9 @@ export default function OnboardingPage() {
         cardTrialPath: '/start-trial',
         pitchCuratorSlug: takePitchIntent(),
         claimToken: takeClaimIntent(),
-        homePath: HOME_PATH,
         welcomeToken: readWelcomeIntent(),
+        // The new rollout (and its planner) rather than Home, 2026-10-11.
+        homePath: onboardingLandingPath(created?.id, HOME_PATH),
       })
     );
   };
@@ -661,7 +755,14 @@ export default function OnboardingPage() {
     // themself — the same `plan` contract CreateReleaseModal uses (URG-201:
     // before this, the preference was recorded on the profile but the
     // release was always created with the full template).
-    setProgressMessage('Setting up your first rollout...');
+    setProgressMessage(onboardingProgressMessage('rollout', draft.title));
+    // A slow server still gets a later line, so the screen never sits on one
+    // sentence long enough to look frozen.
+    if (almostThereTimerRef.current) window.clearTimeout(almostThereTimerRef.current);
+    almostThereTimerRef.current = window.setTimeout(() => {
+      almostThereTimerRef.current = null;
+      setProgressMessage(onboardingProgressMessage('almost', draft.title));
+    }, ONBOARDING_ALMOST_THERE_AFTER_MS);
     const releaseResponse = await fetch('/api/releases', {
       method: 'POST',
       headers: {
@@ -672,6 +773,9 @@ export default function OnboardingPage() {
         title: draft.title.trim(),
         releaseDate: draft.releaseDate,
         releaseType: draft.releaseType,
+        // Stored on the rollout (and as the team's artist when it is new), so
+        // the planner's artist question is answered before it is asked.
+        artistName: draft.artistName.trim().slice(0, MAX_ONBOARDING_ARTIST_NAME_LENGTH),
         source: 'onboarding',
         plan: draft.planningPreference === 'start_from_scratch' ? 'blank' : 'template',
       }),
@@ -680,34 +784,45 @@ export default function OnboardingPage() {
       release?: { id?: string };
       releaseId?: string;
       firstRelease?: boolean;
+      plannerPending?: boolean;
       error?: string;
     };
+    if (almostThereTimerRef.current) {
+      window.clearTimeout(almostThereTimerRef.current);
+      almostThereTimerRef.current = null;
+    }
     if (!releaseResponse.ok) {
       throw new Error(releasePayload.error || 'Could not create your rollout.');
     }
 
-    // Share to socials (2026-09-23): this is where most people's first
-    // rollout is made, but the share sheet lives in the app, and onboarding
-    // still has the invite step and a redirect to get through. So it leaves a
-    // marker in this tab, and the sheet offers itself once they land and
-    // nothing else is open. The server's answer decides, not a guess here.
+    // Remembered for finishToDashboard, which lands on this rollout and opens
+    // its planner. Share to socials (2026-09-23) used to leave a pending
+    // marker here so the "Tell people it's coming" sheet opened on arrival;
+    // since 2026-10-11 that offer waits for Home on the NEXT visit instead
+    // (founder call), recorded by startFirstSession. The server's answer
+    // decides whether it is a first rollout, not a guess here.
     const createdReleaseId = releasePayload.releaseId ?? releasePayload.release?.id;
-    if (isSocialShareEnabled() && releasePayload.firstRelease === true && createdReleaseId) {
-      markPendingFirstShare(createdReleaseId);
-    }
+    createdReleaseRef.current = createdReleaseId
+      ? {
+          id: createdReleaseId,
+          plannerPending: releasePayload.plannerPending === true,
+          firstRelease: releasePayload.firstRelease === true,
+        }
+      : null;
 
     // 3a. If the workspace flag is OFF, mark complete + ship to dashboard.
     // 3b. If ON, advance to the invite step. The PATCH to mark onboarding
     // complete happens in finishToDashboard, called from Send-and-finish
     // or Skip on the invite screen.
     if (!WORKSPACE_ENABLED) {
-      setProgressMessage('Finishing up...');
+      setProgressMessage(onboardingProgressMessage('almost', draft.title));
       await finishToDashboard(accessToken);
       return;
     }
 
     setProgressMessage('');
     setIsSubmitting(false);
+    handoffRunningRef.current = false;
     setStep(6);
   };
 
@@ -717,15 +832,22 @@ export default function OnboardingPage() {
       return;
     }
 
+    // One run at a time: a second tap while the first is still creating the
+    // account would try to sign up twice.
+    if (handoffRunningRef.current) return;
+    handoffRunningRef.current = true;
     setError('');
     setIsSubmitting(true);
-    setProgressMessage('Creating your account...');
+    setProgressMessage(onboardingProgressMessage('account', draft.title));
 
     try {
       // Pass the chosen role + artistName so the signup result matches
       // what standalone /auth signup would produce. The auth-store handler
       // already updates artist_name when role='artist' (auth-store.ts:423).
-      const trimmedArtistName = role === 'artist' ? artistName.trim() : undefined;
+      // The name is asked of everyone since 2026-10-11 (step 3); a manager's
+      // goes into the account's metadata only, which the release route reads
+      // as its default artist.
+      const trimmedArtistName = artistName.trim() || undefined;
       await signup(
         email.trim().toLowerCase(),
         password,
@@ -740,6 +862,7 @@ export default function OnboardingPage() {
       setError(errorMessage(handoffError, 'Could not finish creating your team.'));
       setProgressMessage('');
       setIsSubmitting(false);
+      handoffRunningRef.current = false;
     }
   };
 
@@ -754,6 +877,8 @@ export default function OnboardingPage() {
       setError('Please complete the previous steps.');
       return;
     }
+    if (handoffRunningRef.current) return;
+    handoffRunningRef.current = true;
     setError('');
     setIsSubmitting(true);
     // Suppresses the bounce-home effect for the rest of this flow: the PATCH
@@ -761,7 +886,7 @@ export default function OnboardingPage() {
     // otherwise end authed-setup mode mid-run and eject the user before
     // finishToDashboard's own redirect lands.
     setAccountCreated(true);
-    setProgressMessage('Setting up your first rollout...');
+    setProgressMessage(onboardingProgressMessage('rollout', draft.title));
     try {
       const accessToken = await getAccessToken();
       await runPostSignupHandoff(accessToken);
@@ -769,6 +894,7 @@ export default function OnboardingPage() {
       setError(errorMessage(handoffError, 'Could not finish setting up your team.'));
       setProgressMessage('');
       setIsSubmitting(false);
+      handoffRunningRef.current = false;
     }
   };
 
@@ -791,7 +917,7 @@ export default function OnboardingPage() {
     try {
       writeResumeMarker({
         role,
-        artistName: role === 'artist' ? artistName.trim() : '',
+        artistName: artistName.trim(),
       });
       // loginWithGoogle redirects the browser via supabase.auth.signInWithOAuth.
       // After the function awaits, the redirect should have been triggered
@@ -830,7 +956,8 @@ export default function OnboardingPage() {
       setError('');
       setIsSubmitting(true);
       setAccountCreated(true);
-      setProgressMessage('Setting up your account...');
+      handoffRunningRef.current = true;
+      setProgressMessage(onboardingProgressMessage('account', draft.title));
 
       try {
         const accessToken = await getAccessToken();
@@ -872,6 +999,7 @@ export default function OnboardingPage() {
         setError(errorMessage(handoffError, 'Could not finish setting up your team.'));
         setProgressMessage('');
         setIsSubmitting(false);
+        handoffRunningRef.current = false;
       } finally {
         // Clear the snapshot regardless of outcome so the marker doesn't
         // hang around if the user retries.
@@ -921,7 +1049,8 @@ export default function OnboardingPage() {
   };
 
   const handleSendAndFinish = async () => {
-    setIsFinishing(true);
+    if (finishing) return;
+    setFinishing('send');
     setError('');
     let token: string | null = null;
     try {
@@ -981,7 +1110,8 @@ export default function OnboardingPage() {
   };
 
   const handleSkipInvites = async () => {
-    setIsFinishing(true);
+    if (finishing) return;
+    setFinishing('skip');
     setError('');
     let token: string | null = null;
     try {
@@ -1013,6 +1143,7 @@ export default function OnboardingPage() {
   // step 5 never renders; every question step counts as itself.
   const visibleStepNumber = isAuthedSetup && step === 6 ? 6 : step + 1;
   const stepKicker = `Step ${visibleStepNumber} of ${visibleTotalSteps}`;
+  const inviteLabels = inviteStepButtonLabels(finishing);
 
   return (
     <main className="relative min-h-screen text-content-primary">
@@ -1203,7 +1334,7 @@ export default function OnboardingPage() {
           {step === 3 ? (
             <div className="mt-5 space-y-5">
               <p className="text-sm leading-relaxed text-content-secondary">
-                What&apos;s the rollout called, and when is the release date?
+                What&apos;s the rollout called, when is the release date, and who is the artist?
               </p>
               <label className="block space-y-1.5">
                 <span className={labelBase}>Title</span>
@@ -1227,6 +1358,27 @@ export default function OnboardingPage() {
                 />
                 <span className="block text-xs text-content-tertiary">
                   Even a working date is fine. You can change it later.
+                </span>
+              </label>
+              <label className="block space-y-1.5">
+                <span className={labelBase}>Artist name</span>
+                <input
+                  type="text"
+                  value={draft.artistName}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      artistName: event.target.value.slice(0, MAX_ONBOARDING_ARTIST_NAME_LENGTH),
+                    }))
+                  }
+                  placeholder="e.g. Tems"
+                  autoComplete="off"
+                  maxLength={MAX_ONBOARDING_ARTIST_NAME_LENGTH}
+                  className={inputBase}
+                  required
+                />
+                <span className="block text-xs text-content-tertiary">
+                  The artist this rollout is for. You or the artist you manage.
                 </span>
               </label>
             </div>
@@ -1357,26 +1509,10 @@ export default function OnboardingPage() {
                 </div>
               </fieldset>
 
-              {/* Artist name. Required when role='artist' to satisfy the
-                  ArtistNameGate downstream; otherwise hidden because the
-                  manager role has no use for an account-level artist name. */}
-              {role === 'artist' ? (
-                <label className="block space-y-1.5">
-                  <span className={labelBase}>Your artist name</span>
-                  <input
-                    type="text"
-                    value={artistName}
-                    onChange={(event) => setArtistName(event.target.value)}
-                    placeholder="e.g. Tems"
-                    autoComplete="off"
-                    className={inputBase}
-                    required
-                  />
-                  <span className="block text-xs text-content-tertiary">
-                    Used across the app. Change later in Settings.
-                  </span>
-                </label>
-              ) : null}
+              {/* The artist name moved to the rollout step (2026-10-11) and is
+                  asked of everyone there, so an 'artist' account already has
+                  it by now: signup writes it to the profile, which keeps the
+                  ArtistNameGate in AppShell satisfied. */}
 
               {/* Google sign-in. Disabled when the draft or role-specific
                   fields aren't ready; clicking redirects through Google +
@@ -1416,9 +1552,7 @@ export default function OnboardingPage() {
                 </button>
                 {!canStartGoogle ? (
                   <p className="mt-2 text-xs text-content-tertiary">
-                    {role === 'artist' && !artistName.trim()
-                      ? 'Add your artist name above to continue with Google.'
-                      : 'Complete the previous steps to continue with Google.'}
+                    Complete the previous steps to continue with Google.
                   </p>
                 ) : null}
               </div>
@@ -1564,7 +1698,12 @@ export default function OnboardingPage() {
             </p>
           ) : null}
           {progressMessage ? (
-            <p className="mt-5 text-sm text-content-tertiary">{progressMessage}</p>
+            <div className="mt-5" role="status" aria-live="polite">
+              <p className="text-sm text-content-secondary">{progressMessage}</p>
+              {isSubmitting ? (
+                <p className="mt-1 text-xs text-content-tertiary">{ONBOARDING_PROGRESS_NOTE}</p>
+              ) : null}
+            </div>
           ) : null}
           {nextHintId ? (
             <p id={nextHintId} className="mt-5 text-sm text-content-secondary">
@@ -1581,7 +1720,7 @@ export default function OnboardingPage() {
                 disabled={isFinishing}
                 className={secondaryButton}
               >
-                Skip for now
+                {inviteLabels.skip}
               </button>
             ) : step > 0 && !accountCreated ? (
               <button
@@ -1613,7 +1752,7 @@ export default function OnboardingPage() {
                 disabled={isFinishing}
                 className={primaryButton}
               >
-                {isFinishing ? 'Sending…' : 'Send invites & continue'}
+                {inviteLabels.send}
               </button>
             ) : isAuthedSetup && step === 4 ? (
               // Authed-setup: step 4 is the last question, since the account

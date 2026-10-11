@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { isInFirstSession } from '@/lib/first-session';
 import { MonitorDown, Share, Smartphone, X } from '@/components/icons';
 import {
   INSTALL_PROMPT_DELAY_MS,
@@ -131,6 +132,9 @@ export function InstallAppPrompt() {
       // to their Home Screen while the minute ran.
       const fireVariant = resolveDeviceInstallVariant();
       if (fireVariant === null || readInstallPromptAccepted()) return;
+      // The first session after onboarding belongs to the first plan
+      // (lib/first-session.ts). Nothing is spent, so the next visit offers it.
+      if (isInFirstSession()) return;
       // Spend this visit's offer at FIRE time, not when it is answered:
       // leaving app chrome unmounts this card, and coming back must not
       // produce a second one.
@@ -144,6 +148,9 @@ export function InstallAppPrompt() {
 
     const evaluate = () => {
       if (cancelled || timer) return;
+      // Not armed during the first session after onboarding either, so its
+      // minute does not run down while the person is building their plan.
+      if (isInFirstSession()) return;
       const decision = decideInstallPrompt({
         state: readInstallPromptState(),
         now: Date.now(),

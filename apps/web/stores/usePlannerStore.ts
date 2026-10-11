@@ -25,12 +25,20 @@ import type { CreatedPlan, PlanBudget, PlanReleaseType } from '@/lib/release-pla
  * again, and the answers are still in sessionStorage).
  */
 
-export type PlannerIntakeSource = 'empty_state' | 'note' | 'chip';
+/** 'onboarding' (2026-10-11): the first plan, opened straight after signup. */
+export type PlannerIntakeSource = 'empty_state' | 'note' | 'chip' | 'onboarding';
 
 export type PlannerIntakePrefill = {
   releaseType?: PlanReleaseType;
-  /** YYYY-MM-DD, already resolved by the caller. */
+  /** YYYY-MM-DD, already resolved by the caller. A usable future date skips the date question. */
   releaseDate?: string;
+  /**
+   * The artist the caller vouches for: the scoped rollout's own artist, or the
+   * one onboarding just asked for. Present means the artist question is
+   * skipped (lib/planner-intake-steps.ts). Leave it out when the caller does
+   * not actually know whose rollout this is.
+   */
+  artistName?: string;
   budget?: PlanBudget;
   /** Free text for the last question. A note's body arrives here. */
   extraNotes?: string;

@@ -23,6 +23,8 @@ import { suggestReleaseDate, type ReleasePlanIntake } from '@/lib/release-planni
 import { createReleasePlan } from '@/lib/urgans-actions/client';
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { embeddedCostLine } from '@/lib/credits/copy';
+import { FIRST_PLAN_FREE_LINE } from '@/lib/credits/first-plan';
+import { invalidateUrgansUsage } from '@/components/app/useUrgansUsage';
 import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
 import { buildDraftDiscardPath } from '@/lib/release-draft-discard';
 import {
@@ -35,10 +37,16 @@ import {
 import {
   INTAKE_STEPS,
   StepBody,
-  TOTAL_STEPS,
   getStepKicker,
   type StepIndex,
 } from './intake-steps';
+import {
+  decideIntakeSkips,
+  intakeStepPosition,
+  nextIntakeStep,
+  previousIntakeStep,
+  visibleIntakeSteps,
+} from '@/lib/planner-intake-steps';
 import { PlannerTemplatePreview } from './PlannerTemplatePreview';
 
 /**
@@ -105,7 +113,9 @@ async function discardAbandonedRollout(releaseId: string, createdTitle: string |
 const todayYmd = () => new Date().toISOString().slice(0, 10);
 
 export function PlannerIntakeModal() {
-  const { balance } = useCreditBalance();
+  // withFirstPlan: the footer says "Your first plan is free." instead of the
+  // cost when the server says this team has not had a plan yet.
+  const { balance, firstPlanFree, refresh: refreshCredits } = useCreditBalance({ withFirstPlan: true });
   const router = useRouter();
   const intakePayload = usePlannerStore((state) => state.intake);
   const closeIntake = usePlannerStore((state) => state.closeIntake);
@@ -133,17 +143,34 @@ export function PlannerIntakeModal() {
   // this modal already moves focus to each question itself.
   useDialogFocus(open, panelRef, { initialFocus: 'none' });
 
-  // When the release type arrived as a prefill — the create modal's picker or
-  // an UrgAns chip preset already asked — the intake starts past question 1
-  // and never shows it: asking again is the double-ask this exists to avoid,
-  // and re-answering differently would silently overwrite the row's type at
-  // generate time. No prefill (Plan card, note) → the intake is the one ask.
-  const firstStep: StepIndex = intakePayload?.prefill?.releaseType ? 1 : 0;
-  const visibleSteps = TOTAL_STEPS - firstStep;
+  // Questions already answered are not asked again (lib/planner-intake-steps.ts).
+  // A prefilled release type (the create picker, an UrgAns chip, onboarding)
+  // skips question 1, as it always did: re-answering differently would
+  // silently overwrite the row's type at generate time. Since 2026-10-11 a
+  // usable future date and an artist name the caller vouches for (the scoped
+  // rollout's own artist, or the one onboarding just typed) skip theirs too,
+  // so a first plan from onboarding asks only the four questions nothing else
+  // has asked. Back, Continue and "Question N of M" all walk this one list.
+  const prefill = intakePayload?.prefill;
+  const visibleSteps = useMemo(
+    () =>
+      visibleIntakeSteps(
+        decideIntakeSkips({
+          prefilledReleaseType: prefill?.releaseType,
+          prefilledReleaseDate: prefill?.releaseDate,
+          prefilledArtistName: prefill?.artistName,
+          todayYmd: todayYmd(),
+        })
+      ),
+    [prefill?.releaseType, prefill?.releaseDate, prefill?.artistName]
+  );
+  const firstStep: StepIndex = visibleSteps[0] ?? 0;
 
-  // The artist this release is for. The identity card knows it; the profile is
-  // the fallback for a workspace that has not named one yet.
-  const knownArtistName = identityArtist || profile?.artist_name || '';
+  // The artist this release is for. The caller's own answer first (the scoped
+  // rollout's artist), then the identity card, then the profile for a
+  // workspace that has not named one yet.
+  const knownArtistName =
+    prefill?.artistName?.trim() || identityArtist || profile?.artist_name || '';
 
   // Hydrate on open, not in a state initializer, so server and client render
   // the same first frame. Presets from the caller win over anything stored:
@@ -160,10 +187,12 @@ export function PlannerIntakeModal() {
       stored.releaseId === targetReleaseId ? stored : { ...EMPTY_PLANNER_INTAKE_DRAFT };
 
     const prefill = intakePayload.prefill || {};
+    const prefilledArtist = prefill.artistName?.trim() || '';
     const next: PlannerIntakeDraft = {
       ...base,
       releaseId: targetReleaseId,
-      artistName: base.artistName || knownArtistName,
+      // A vouched-for artist skips the question, so it must also be the answer.
+      artistName: prefilledArtist || base.artistName || knownArtistName,
       ...(prefill.releaseType ? { releaseType: prefill.releaseType } : {}),
       ...(prefill.releaseDate
         ? { releaseDate: prefill.releaseDate, dateSuggested: false }
@@ -173,11 +202,14 @@ export function PlannerIntakeModal() {
     };
 
     setDraft(next);
-    // A prefilled release type skips its question entirely — see firstStep.
-    setStep(prefill.releaseType ? 1 : 0);
+    // Start on the first question actually asked — see visibleSteps.
+    setStep(firstStep);
     setView('steps');
     setError('');
     setHydrated(true);
+    // The modal stays mounted between opens, so the balance and the
+    // first-plan answer are re-read each time it opens.
+    void refreshCredits();
 
     captureFeatureDiscoveryByName('release_planner');
     captureAnalyticsEvent(
@@ -186,7 +218,7 @@ export function PlannerIntakeModal() {
         has_release: Boolean(intakePayload.releaseId),
       })
     );
-  }, [open, intakePayload, knownArtistName]);
+  }, [open, intakePayload, knownArtistName, firstStep, refreshCredits]);
 
   // Persist every answer change once hydrated, so a refresh resumes.
   useEffect(() => {
@@ -278,8 +310,8 @@ export function PlannerIntakeModal() {
   const goNext = () => {
     if (!canAdvance || isBusy) return;
     setError('');
-    if (step < TOTAL_STEPS - 1) {
-      const next = (step + 1) as StepIndex;
+    const next = nextIntakeStep(visibleSteps, step);
+    if (next !== null) {
       setStep(next);
       captureAnalyticsEvent(createPostHogEvent('planner_intake_step', { step: next }));
       return;
@@ -290,8 +322,8 @@ export function PlannerIntakeModal() {
   const goBack = () => {
     if (isBusy) return;
     setError('');
-    // Floors at firstStep, not 0 — Back must never reach a skipped question.
-    setStep((current) => (current > firstStep ? ((current - 1) as StepIndex) : current));
+    // Walks the visible list, so Back never reaches a skipped question.
+    setStep((current) => previousIntakeStep(visibleSteps, current) ?? current);
   };
 
   const submit = async () => {
@@ -403,6 +435,9 @@ export function PlannerIntakeModal() {
         .finally(() => {
           setGenerating(releaseId, false);
           void loadCommandCenter({ force: true });
+          // A build may have spent credits: the header pill and the strip
+          // re-read now rather than showing the old balance.
+          invalidateUrgansUsage();
         });
 
       closeIntake();
@@ -421,7 +456,8 @@ export function PlannerIntakeModal() {
   if (typeof document === 'undefined') return null;
 
   const stepMeta = INTAKE_STEPS[step];
-  const isLastStep = step === TOTAL_STEPS - 1;
+  const isLastStep = nextIntakeStep(visibleSteps, step) === null;
+  const stepPosition = intakeStepPosition(visibleSteps, step);
 
   const modal = (
     <div
@@ -448,7 +484,7 @@ export function PlannerIntakeModal() {
                 UrgAns planner
               </p>
               <p className="mt-1 font-mono text-[11px] text-content-tertiary">
-                {getStepKicker(step, firstStep)}
+                {getStepKicker(step, visibleSteps)}
               </p>
             </div>
             <IconButton
@@ -464,14 +500,14 @@ export function PlannerIntakeModal() {
 
           <div
             className="mt-4 flex items-center gap-1.5"
-            aria-label={getStepKicker(step, firstStep)}
+            aria-label={getStepKicker(step, visibleSteps)}
           >
-            {Array.from({ length: visibleSteps }).map((_, index) => (
+            {visibleSteps.map((visibleStep, index) => (
               <span
-                key={index}
+                key={visibleStep}
                 aria-hidden="true"
                 className={`h-1 flex-1 rounded-full transition-colors duration-base ease-standard ${
-                  index <= step - firstStep ? 'bg-brand' : 'bg-stroke-strong'
+                  index < stepPosition ? 'bg-brand' : 'bg-stroke-strong'
                 }`}
               />
             ))}
@@ -510,7 +546,7 @@ export function PlannerIntakeModal() {
           ) : null}
 
           <p aria-live="polite" role="status" className="sr-only">
-            {`${getStepKicker(step, firstStep)}: ${stepMeta.title}`}
+            {`${getStepKicker(step, visibleSteps)}: ${stepMeta.title}`}
           </p>
 
           {error ? (
@@ -522,7 +558,7 @@ export function PlannerIntakeModal() {
 
         <div className="shrink-0 border-t border-stroke-subtle p-4 sm:p-5">
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {step > firstStep ? (
+            {previousIntakeStep(visibleSteps, step) !== null ? (
               <button
                 type="button"
                 onClick={goBack}
@@ -556,7 +592,9 @@ export function PlannerIntakeModal() {
 
           <p className="mt-3 text-center text-[11px] leading-5 text-content-tertiary sm:text-left">
             UrgAns builds the plan when you finish. You can change any activity after.
-            {isCreditsEnabled() ? ` ${embeddedCostLine('release.draft_plan', balance)}` : ''}
+            {isCreditsEnabled()
+              ? ` ${firstPlanFree === true ? FIRST_PLAN_FREE_LINE : embeddedCostLine('release.draft_plan', balance)}`
+              : ''}
           </p>
         </div>
       </div>

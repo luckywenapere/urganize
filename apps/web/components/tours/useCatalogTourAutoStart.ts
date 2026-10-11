@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 
 import { useAuthStore } from '@/lib/auth-store';
 import { isBodyScrollLocked } from '@/lib/body-scroll-lock';
+import { isInFirstSession } from '@/lib/first-session';
 import {
   CATALOG_TOUR_STEPS,
   HOME_TOUR_FINISH,
@@ -74,6 +75,9 @@ export function useCatalogTourAutoStart({
     const replay = consumeReplay('catalog');
     if (!replay) {
       if (attempted.current) return;
+      // The first session after onboarding belongs to the first plan
+      // (lib/first-session.ts). Not marked seen, so it starts next visit.
+      if (isInFirstSession()) return;
       const ready = decideCatalogTourAutoStart({
         flag: enabled,
         seen: readTourSeen(userId, 'catalog'),

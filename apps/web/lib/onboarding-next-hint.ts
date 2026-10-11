@@ -23,6 +23,8 @@ export type NextBlockerInput = {
   hasStage: boolean;
   hasTitle: boolean;
   dateValid: boolean;
+  /** Step 3 asks for the artist too since 2026-10-11, so the planner never has to. */
+  hasReleaseArtist: boolean;
   hasName: boolean;
   hasEmail: boolean;
   passwordLongEnough: boolean;
@@ -42,8 +44,9 @@ export function describeNextBlocker(input: NextBlockerInput): string | null {
       const missing: string[] = [];
       if (!input.hasTitle) missing.push('a title');
       if (!input.dateValid) missing.push('a release date');
+      if (!input.hasReleaseArtist) missing.push('the artist name');
       if (missing.length === 0) return null;
-      return `Add ${missing.join(' and ')} to go on.`;
+      return `Add ${joinWithAnd(missing)} to go on.`;
     }
     case 5: {
       const missing: string[] = [];

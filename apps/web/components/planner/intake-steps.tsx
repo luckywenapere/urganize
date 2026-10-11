@@ -18,6 +18,12 @@ import {
 } from '@/lib/release-planning';
 import type { PlannerIntakeDraft } from '@/lib/planner-intake-draft';
 import {
+  coveredScopes,
+  intakeStepKicker,
+  toggleCoveredScope,
+  type StepIndex,
+} from '@/lib/planner-intake-steps';
+import {
   getTemplateStats,
   isEpAlbumTemplatesEnabled,
 } from '@/lib/release-templates/loader';
@@ -34,7 +40,7 @@ const EP_ALBUM_PLAYBOOKS_LIVE = isEpAlbumTemplatesEnabled();
  * and calls `patch`, and knows nothing about navigation or submission.
  */
 
-export type StepIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export type { StepIndex };
 
 export const TOTAL_STEPS = 7;
 
@@ -45,19 +51,17 @@ export const INTAKE_STEPS: Record<StepIndex, { title: string }> = {
   3: { title: "What's already done?" },
   4: { title: 'What matters most this time?' },
   5: { title: "What's the promo budget?" },
-  6: { title: 'Anything to leave out?' },
+  6: { title: 'What should the plan cover?' },
 };
 
 /**
- * "Question N of M", computed rather than baked into INTAKE_STEPS: when the
- * release type arrives as a prefill (the create modal's picker already asked),
- * the intake starts at step 1 and only six questions are ever shown — the
- * numbering has to agree with what the user actually gets asked, so it shifts
- * by the first visible step. (Same idea as the onboarding wizard's
- * flag-conditional TOTAL_STEPS.)
+ * "Question N of M", counted over the questions this intake actually asks.
+ * A prefilled type, a vouched-for artist and a usable prefilled date each
+ * remove their question (lib/planner-intake-steps.ts), so the numbering is
+ * computed from the visible list rather than baked into INTAKE_STEPS.
  */
-export function getStepKicker(step: StepIndex, firstStep: StepIndex): string {
-  return `Question ${step + 1 - firstStep} of ${TOTAL_STEPS - firstStep}`;
+export function getStepKicker(step: StepIndex, visibleSteps: readonly StepIndex[]): string {
+  return intakeStepKicker(visibleSteps, step);
 }
 
 const helperClass = 'mt-3 text-xs leading-5 text-content-secondary';
@@ -345,26 +349,27 @@ function BudgetStep({ draft, patch, disabled }: StepBodyProps) {
 function ExtrasStep({ draft, patch, disabled, fromNote }: StepBodyProps) {
   const remaining = MAX_EXTRA_NOTES_LENGTH - draft.extraNotes.length;
 
-  const toggleExclusion = (scope: PlanScope) => {
-    patch({
-      exclusions: draft.exclusions.includes(scope)
-        ? draft.exclusions.filter((value) => value !== scope)
-        : [...draft.exclusions, scope],
-    });
+  // Asked the other way round since 2026-10-11: every scope starts ticked
+  // and unticking one leaves it out. The draft still holds exclusions (the
+  // unticked scopes), so nothing downstream changed.
+  const covered = coveredScopes(draft.exclusions);
+  const toggleCovered = (scope: PlanScope) => {
+    patch({ exclusions: toggleCoveredScope(draft.exclusions, scope) });
   };
 
   return (
     <>
       <PlannerCheckboxGroup<PlanScope>
-        legend="Anything to leave out?"
+        legend="What should the plan cover?"
         options={PLAN_SCOPE_OPTIONS}
-        value={draft.exclusions}
-        onToggle={toggleExclusion}
+        value={covered}
+        onToggle={toggleCovered}
         disabled={disabled}
       />
       <p className={helperClass}>
-        Pick as many as apply. UrgAns leaves that kind of work out of the plan
-        completely. Release day and getting it to stores stay either way.
+        Everything is in to start. Untick anything you do not want, and UrgAns
+        leaves that kind of work out. Release day and getting it to stores stay
+        either way.
       </p>
 
       <label className="mt-5 block">
