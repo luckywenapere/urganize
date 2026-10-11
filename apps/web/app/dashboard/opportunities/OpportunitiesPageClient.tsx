@@ -29,6 +29,7 @@ import {
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useOpportunitiesStore } from '@/stores/useOpportunitiesStore';
 import { GrantProfileCard } from '@/components/opportunities/GrantProfileCard';
+import { GrantSuggestionsStrip } from '@/components/opportunities/GrantSuggestionsStrip';
 import { grantSuggestionsEnabled } from '@/lib/grants/grant-suggestions-flag';
 
 const FIELD =
@@ -207,7 +208,12 @@ export default function OpportunitiesPageClient() {
           action on screen, not two stacked on a phone. */}
       <PageHeader action={editing === null && opportunities.length > 0 ? addButton : null} />
 
-      {grantSuggestionsEnabled() ? <GrantProfileCard /> : null}
+      {grantSuggestionsEnabled() ? (
+        <>
+          <GrantSuggestionsStrip />
+          <GrantProfileCard />
+        </>
+      ) : null}
 
       {editing !== null ? (
         <form onSubmit={handleSave} className="mb-6 space-y-3 rounded-xl border border-stroke-default bg-bg-surface p-4">

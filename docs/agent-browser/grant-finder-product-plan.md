@@ -158,7 +158,12 @@ call.
    paying, on any plan, Solo included ("gate seats, not features"), plus our allowlisted
    staff team. Trial, grace, comped and credits-only teams get nothing. The run is
    behind `NEXT_PUBLIC_FEATURE_GRANT_SUGGESTIONS`.
-5. The Suggested grants strip with Add and Dismiss, behind a flag.
+5. ~~The Suggested grants strip with Add and Dismiss, behind a flag.~~ Done 2026-10-11.
+   `GET /api/opportunities/grant-suggestions` and `POST .../[suggestionId]` take
+   `{action: add|dismiss}`. Add first claims the row while it is still new, then
+   creates a grant at Idea through `parseOpportunityCreate`, and records
+   source_url/source_read_on. If the create fails, the row goes back to new. Closed,
+   switched-off or past-deadline programmes are hidden.
 6. The weekly notification.
 7. Turn it on for our own team first and read every card for two weeks, then roll
    it out.
