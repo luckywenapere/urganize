@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getWorkspaceAccess } from '@/lib/team-billing-server';
 import type { GrantProfileRow } from './grant-profile';
 import { grantSuggestionsEnabled } from './grant-suggestions-flag';
-import { programmeFromRow, type GrantProgrammeRow } from './weekly-run';
+import { GRANT_PUSH_KIND, GRANT_PUSH_URL, grantPushCopy, programmeFromRow, type GrantProgrammeRow } from './weekly-run';
 import { runGrantSuggestionsWith, type GrantRunResult, type GrantRunStore } from './weekly-run-core';
 
 // The weekly Suggested grants run, against the real database. Called from the
@@ -60,7 +60,54 @@ function storeFor(admin: SupabaseClient): GrantRunStore {
       if (error) throw new Error('grant_suggestions insert failed');
       return (data ?? []).length;
     },
+    async queueTeamPush(workspaceId, count) {
+      const recipients = await teamPushRecipients(admin, workspaceId);
+      if (recipients.length === 0) return 0;
+      const { title, body } = grantPushCopy(count);
+      const nowIso = new Date().toISOString();
+      const { error } = await admin.from('scheduled_notifications').insert(
+        recipients.map((userId) => ({
+          user_id: userId,
+          kind: GRANT_PUSH_KIND,
+          title,
+          body,
+          url: GRANT_PUSH_URL,
+          send_at: nowIso,
+        }))
+      );
+      if (error) throw new Error('scheduled_notifications insert failed');
+      await admin
+        .from('grant_suggestions')
+        .update({ notified_at: nowIso })
+        .eq('workspace_id', workspaceId)
+        .eq('state', 'new')
+        .is('notified_at', null);
+      return recipients.length;
+    },
   };
+}
+
+/**
+ * Who gets the push: the owner and every active member, except a member limited
+ * to one artist, who cannot open the team's Opportunities. If the scope column
+ * cannot be read, only the owner is told rather than guessing.
+ */
+async function teamPushRecipients(admin: SupabaseClient, workspaceId: string): Promise<string[]> {
+  const ids = new Set<string>();
+  const { data: workspace } = await admin.from('workspaces').select('owner_id').eq('id', workspaceId).maybeSingle();
+  const ownerId = (workspace as { owner_id: string | null } | null)?.owner_id;
+  if (ownerId) ids.add(ownerId);
+  const { data: members, error } = await admin
+    .from('workspace_members')
+    .select('user_id, artist_scope_id')
+    .eq('workspace_id', workspaceId)
+    .eq('status', 'active');
+  if (!error) {
+    for (const member of (members ?? []) as Array<{ user_id: string | null; artist_scope_id: string | null }>) {
+      if (member.user_id && !member.artist_scope_id) ids.add(member.user_id);
+    }
+  }
+  return [...ids];
 }
 
 export async function runWeeklyGrantSuggestions(

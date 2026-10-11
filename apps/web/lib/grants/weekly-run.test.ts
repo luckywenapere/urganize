@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   GRANT_RUN_BUDGET_MS,
+  grantPushCopy,
   isGrantFeedEligible,
   lagosDay,
   programmeFromRow,
@@ -95,18 +96,35 @@ describe('the cron keeps the grant run inside its minute', () => {
     expect(route).toMatch(/runWeeklyGrantSuggestions\([^)]*timeBudgetMs:\s*GRANT_RUN_BUDGET_MS/);
   });
 
-  it('runs after the push flush and before the email drain, which gets what is left', () => {
-    const flush = route.indexOf('flushDueNotifications(');
+  it('runs after the clock starts and before the push flush, so the pushes it queues go out the same morning', () => {
+    const clock = route.indexOf('const startedAt = Date.now()');
     const grants = route.indexOf('runWeeklyGrantSuggestions(');
+    const flush = route.indexOf('flushDueNotifications(');
     const drain = route.indexOf('drainEmailOutbox(');
-    expect(flush).toBeGreaterThan(-1);
-    expect(grants).toBeGreaterThan(flush);
-    expect(drain).toBeGreaterThan(grants);
+    expect(clock).toBeGreaterThan(-1);
+    expect(grants).toBeGreaterThan(clock);
+    expect(flush).toBeGreaterThan(grants);
+    expect(drain).toBeGreaterThan(flush);
   });
 
   it('still leaves the email drain real time when flush and grants both use their whole budget', () => {
     const worst = PUSH_FLUSH_BUDGET_MS + PUSH_SEND_TIMEOUT_MS + GRANT_RUN_BUDGET_MS;
     expect(emailBudgetMs(worst)).toBeGreaterThan(0);
     expect(worst).toBeLessThan(NOTIFICATION_CRON_BUDGET_MS);
+  });
+});
+
+describe('grantPushCopy', () => {
+  it('counts the grants, singular and plural', () => {
+    expect(grantPushCopy(1).title).toBe('1 new grant for your team');
+    expect(grantPushCopy(3).title).toBe('3 new grants for your team');
+    expect(grantPushCopy(0).title).toBe('1 new grant for your team');
+  });
+  it('is short enough for a lock screen and names no person or funder', () => {
+    for (const n of [1, 3]) {
+      const { title, body } = grantPushCopy(n);
+      expect(title.length).toBeLessThanOrEqual(40);
+      expect(body.length).toBeLessThanOrEqual(80);
+    }
   });
 });

@@ -16,6 +16,8 @@ export type GrantRunStore = {
   resolveAccessState(workspaceId: string): Promise<string | null>;
   /** Writes new suggestions. Returns how many rows went in. */
   insertSuggestions(rows: Array<{ workspaceId: string; programmeId: string; why: string }>): Promise<number>;
+  /** Queues the weekly phone push for the team's people. Returns how many were queued. */
+  queueTeamPush(workspaceId: string, count: number): Promise<number>;
 };
 
 export type GrantRunResult = {
@@ -23,6 +25,7 @@ export type GrantRunResult = {
   teamsDue: number;
   teamsSuggested: number;
   suggestions: number;
+  pushesQueued: number;
   skipped: { notPaying: number; recent: number; noMatch: number; failed: number; outOfTime: number };
 };
 
@@ -38,6 +41,7 @@ export async function runGrantSuggestionsWith(
     teamsDue: 0,
     teamsSuggested: 0,
     suggestions: 0,
+    pushesQueued: 0,
     skipped: { notPaying: 0, recent: 0, noMatch: 0, failed: 0, outOfTime: 0 },
   };
 
@@ -86,6 +90,12 @@ export async function runGrantSuggestionsWith(
       if (inserted > 0) {
         result.teamsSuggested += 1;
         result.suggestions += inserted;
+        // The suggestions are in either way; a push that fails is only a missed nudge.
+        try {
+          result.pushesQueued += await store.queueTeamPush(workspaceId, inserted);
+        } catch {
+          // Counted nowhere on purpose: the strip still shows them.
+        }
       }
     } catch {
       // One team's failure never stops the others, and never fails the cron.

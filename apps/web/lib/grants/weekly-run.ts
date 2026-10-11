@@ -115,3 +115,19 @@ export function programmeFromRow(row: GrantProgrammeRow): GrantProgramme {
     active: row.active === true,
   };
 }
+
+/**
+ * The phone push sent when a team gets new suggestions (founder, 2026-10-11:
+ * a push rather than the in-app bell, which only holds task alerts). Rides the
+ * scheduled_notifications queue, so the cron's own flush sends it.
+ */
+export const GRANT_PUSH_KIND = 'grant_suggestions';
+export const GRANT_PUSH_URL = '/dashboard/opportunities';
+
+export function grantPushCopy(count: number): { title: string; body: string } {
+  const n = Math.max(1, Math.floor(count));
+  return {
+    title: n === 1 ? '1 new grant for your team' : `${n} new grants for your team`,
+    body: n === 1 ? 'An open grant fits your profile. Take a look in Opportunities.' : 'Open grants that fit your profile. Take a look in Opportunities.',
+  };
+}

@@ -35,13 +35,16 @@ export async function GET(request: NextRequest) {
   // stops starting sends after PUSH_FLUSH_BUDGET_MS and the drain gets what is
   // left, so a slow push service can no longer starve the email outbox.
   const startedAt = Date.now();
-  const result = await flushDueNotifications(adminClient, 100, { timeBudgetMs: PUSH_FLUSH_BUDGET_MS });
-
   // Suggested grants (2026-10-11, flag NEXT_PUBLIC_FEATURE_GRANT_SUGGESTIONS):
   // the weekly run for the teams whose weekday slot is today. Database reads
-  // only, no web search, bounded by its own small budget; the email drain below
-  // is handed whatever is left. Never throws, does nothing while the flag is off.
+  // only, no web search, bounded by its own small budget. It runs BEFORE the
+  // push flush because it queues each team's phone push in
+  // scheduled_notifications, and the flush then sends it this same morning. The
+  // email drain is handed whatever is left. Never throws, does nothing while the
+  // flag is off.
   const grants = await runWeeklyGrantSuggestions(adminClient, { timeBudgetMs: GRANT_RUN_BUDGET_MS });
+
+  const result = await flushDueNotifications(adminClient, 100, { timeBudgetMs: PUSH_FLUSH_BUDGET_MS });
 
   // The email outbox (2026-09-30): the onboarding sequence's days 2 to 7, and
   // any broadcast the day's email limit held back. A passenger on this cron for

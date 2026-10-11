@@ -47,6 +47,7 @@ const NIGERIA: GrantProfileRow = { country: 'nigeria', stage: null, applicant_ty
 function store(over: Partial<GrantRunStore> & { profiles?: Array<{ workspaceId: string; row: GrantProfileRow }> } = {}) {
   const inserted: Array<{ workspaceId: string; programmeId: string; why: string }> = [];
   const calls = { access: [] as string[] };
+  const pushes: Array<{ workspaceId: string; count: number }> = [];
   const s: GrantRunStore = {
     loadProgrammes: async () => [
       { id: 'p1', programme: programme('one') },
@@ -65,12 +66,43 @@ function store(over: Partial<GrantRunStore> & { profiles?: Array<{ workspaceId: 
       inserted.push(...rows);
       return rows.length;
     },
+    queueTeamPush: async (workspaceId, count) => {
+      pushes.push({ workspaceId, count });
+      return 2;
+    },
     ...over,
   };
-  return { s, inserted, calls };
+  return { s, inserted, calls, pushes };
 }
 
 describe('runGrantSuggestionsWith', () => {
+  it('queues one push per team that got suggestions, with the count', async () => {
+    const team = idInSlot(0);
+    const { s, pushes } = store({ profiles: [{ workspaceId: team, row: NIGERIA }] });
+    const result = await runGrantSuggestionsWith(s, { now: NOW, timeBudgetMs: 5000 });
+    expect(pushes).toEqual([{ workspaceId: team, count: 3 }]);
+    expect(result.pushesQueued).toBe(2);
+  });
+
+  it('sends no push when nothing was suggested', async () => {
+    const { s, pushes } = store({ profiles: [{ workspaceId: idInSlot(0), row: { ...NIGERIA, country: 'kenya' } }] });
+    await runGrantSuggestionsWith(s, { now: NOW, timeBudgetMs: 5000 });
+    expect(pushes).toEqual([]);
+  });
+
+  it('keeps the suggestions when the push fails', async () => {
+    const { s, inserted } = store({
+      profiles: [{ workspaceId: idInSlot(0), row: NIGERIA }],
+      queueTeamPush: async () => {
+        throw new Error('boom');
+      },
+    });
+    const result = await runGrantSuggestionsWith(s, { now: NOW, timeBudgetMs: 5000 });
+    expect(inserted.length).toBe(3);
+    expect(result.suggestions).toBe(3);
+    expect(result.skipped.failed).toBe(0);
+  });
+
   it('suggests up to three programmes to a paying team whose slot is today, with the right ids', async () => {
     const team = idInSlot(0);
     const { s, inserted } = store({ profiles: [{ workspaceId: team, row: NIGERIA }] });
