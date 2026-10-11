@@ -112,7 +112,7 @@ export function RoleGapsPanel({ releaseId, gaps }: { releaseId: string; gaps: Ro
                 demand somebody typed, which is the whole question of whether
                 this panel works. */}
             <Link
-              href={`/dashboard/directory?role=${gap.role}&availability=open&from=role_gaps`}
+              href={`/dashboard/directory?role=${gap.role}&availability=open&from=role_gaps&release=${releaseId}&task=${gap.taskId}`}
               onClick={() =>
                 captureAnalyticsEvent({
                   name: 'role_gaps_role_clicked',
