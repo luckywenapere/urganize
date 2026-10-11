@@ -17,6 +17,7 @@ import {
   Send,
   Smile,
   Sparkles,
+  ThumbsUp,
   TrendingUp,
   Users,
   UserPlus,
@@ -48,6 +49,8 @@ export const ADMIN_NAV_ITEMS: Array<{
   // Third: who is using Urganize right now and how (2026-10-07).
   { key: 'metrics', label: 'Metrics', icon: Activity, href: '/admin/metrics' },
   { key: 'onboarding', label: 'Onboarding', icon: ClipboardList, href: '/admin/onboarding' },
+  // Net Promoter Score from the in-app ask on Home (2026-10-11).
+  { key: 'nps', label: 'NPS', icon: ThumbsUp, href: '/admin/nps' },
   { key: 'emails', label: 'Emails', icon: Mail, href: '/admin/emails' },
   { key: 'notifications', label: 'Notifications', icon: BellRing, href: '/admin/notifications' },
   {

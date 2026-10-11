@@ -19212,9 +19212,33 @@ From the Profiles and Directory spec. Search results are never ranked. Two shelv
 - **Never sold**: no price, plan or payment in the logic, routes or schema, held by `lib/featured-shelves-guard.test.ts`.
 - **Not verified**: nothing has run against the real database or a real session. The migration was run on a real Postgres engine (PGlite) twice with 15 checks; the shelves were looked at in a throwaway page (deleted) at 375px and desktop with made-up people. `lib/press-kit-copy-guard.test.ts` fails 4 cases in a worktree whose folder name contains `directory-` (the guard matches that substring in the absolute path); none are in this change's files.
 
+## Net Promoter Score (2026-10-11, v1.100.0, live, no flag)
+
+Founder ask: "put an NPS survey in Urganize, examine and determine the best place to ask users, make all the decisions, merge live". Every decision below was made in that session on his instruction; change any of them freely, they are product calls rather than load-bearing architecture.
+
+- **The question:** "How likely are you to recommend Urganize to another artist, manager or music team?" 0 to 10, then ONE optional follow-up worded by band: 9-10 "What do you love most about Urganize?", 7-8 "What would make it a 10 for you?", 0-6 "What is the one thing we should fix first?". Copy and bands live in `lib/nps.ts`.
+- **Where:** Home (`/dashboard/home`) only, as a non-modal card (bottom right on a computer, above the UrgAns box and bottom bar on a phone, `mobile-nav-raise-card`), 6 seconds after Home draws. Chosen because Home is where people land BETWEEN pieces of work: it never interrupts a task, the planner, a payment, or the "How did it go?" sheet, which owns the moment right after a task is done. It stays away for that visit (and records nothing) if any `role="dialog"` is open when it would appear, so it never stacks on the install or notification prompts, and it is unmounted while the create-rollout flow is open.
+- **Who and how often (`decideNpsEligibility`, tested in `lib/nps.test.ts`):** account at least 14 days old AND active on at least 5 different days; re-asked 90 days after an answer; 30 days after a close, 180 days after three closes in a row; 7 days after it was shown and ignored. Curator-only accounts are never asked. Activity days are the union of `user_presence_days`, `task_activity.actor_id` and `activity_logs.actor_user_id`, each optional, because `user_presence_days` was recorded as not applied when this shipped.
+- **Storage: NO MIGRATION, on purpose.** One `ui_state_drafts` row per user (`scope = 'nps'`, `draft_key = 'nps'`, `payload_json` = `{ responses[], lastShownAt, lastDismissedAt, dismissalsInARow }`, history capped at 16). That table was already in production, which is what let this ship the same day without anyone applying SQL. If NPS ever needs SQL-level reporting, move it to its own table with a migration and backfill from these rows.
+- **Route:** `app/api/nps/route.ts`. GET answers `{ eligible }` and answers `false` on ANY failure so Home can never break; POST takes `shown | dismiss | score | reason`. Open route (`getAuthenticatedUser`, never the paywall wrapper), the `/api/presence` reasoning: walled and read-only teams are exactly whose score matters, and a 402 would redirect to /locked. **Kill switch:** server env `NPS_PROMPT_OFF=true` stops all asks without a code change.
+- **Analytics:** server-side PostHog events `nps_shown`, `nps_dismissed`, `nps_submitted` (score, category, account_age_days), `nps_reason_added`.
+- **Admin:** `/admin/nps` (Numbers group): overall NPS (each person counted once by their latest answer), the last 90 days, promoters / passives / detractors, shown / closed, and every answer with its reason. Our own accounts (`internalAccountEmails`) are left out.
+- **Why no feature flag, against this file's flag-starts-off convention:** the founder asked for it live without waiting, and a `NEXT_PUBLIC_*` flag needs a Vercel env save, which is itself a deployment against the Hobby limit that had just been hit. The server-side kill switch above is the reversible lever instead.
+
+
+## The invite gate (2026-10-11, founder request)
+
+Once a manager starts scrolling their FIRST generated plan (`/dashboard?release=<id>`), the app freezes behind a dialog until they invite one teammate by email. Founder's words: "the app should freeze until they send out the invitation". Rules live in `apps/web/lib/invite-gate.ts` (pure, tested in `invite-gate.test.ts`); the server answer is `GET /api/workspace/invite-gate`; the dialog is `components/app/InviteGate.tsx`, mounted once in AppShell on dashboard and settings routes.
+
+- **Who is gated:** owner or admin of their primary team, seats in use = 1 (nobody else invited or active), the plan has a free seat, exactly ONE rollout, and at least one activity. Teams with 2+ rollouts predate the gate and are left alone. Paid Solo (1 seat) is never gated, because the invite would be refused.
+- **No new storage.** A pending invite occupies a seat, so sending one makes seats 2 and the gate never asks again on any device. A localStorage key per team only makes the gate follow the person to other pages after it fires once.
+- **Fails open** on every unreadable fact, and a 409 seat refusal from the invite route releases the gate.
+- **On by default, deliberately breaking the "flags start off" rule** (founder asked for it live). Kill switch: `NEXT_PUBLIC_FEATURE_INVITE_GATE=false` in Vercel Web, then redeploy.
+- Scrolls inside any `[role="dialog"]` (first-win reveal, share sheet, team-login step) do not count, so the gate waits until those are closed.
+
 ---
 
-## Fan payments: Fanlly beside distribution (2026-10-11, v1.100.0, live at merge, no flag)
+## Fan payments: Fanlly beside distribution (2026-10-11, v1.102.0, live at merge, no flag)
 
 Fanlly (fanlly.co, Lagos) is a second partner on the Distribute step. An artist uploads a track, shares one link, and fans tip by bank transfer (Nigeria) or card / Apple Pay abroad, with no fan account; the artist is paid in naira and keeps 75% of every tip. **It is not a distributor** (it does not deliver to stores), so it never replaces Therealmusic Distro and is never the default; it is a separate "Fan payments" card below the check before distribution.
 

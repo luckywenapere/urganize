@@ -20,11 +20,27 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.100.0",
+    version: "1.102.0",
     date: "October 11, 2026",
     highlights: [
       "On the Distribute step, you can now sign up with Fanlly to get paid by fans directly. Upload a track, share one link, and fans tip you by bank transfer or card. You keep 75% of every tip.",
       "Fanlly does not put your music in stores, so keep using your distributor for that.",
+    ],
+  },
+  {
+    version: "1.101.0",
+    date: "October 11, 2026",
+    highlights: [
+      "When your first rollout plan is ready, Urganize asks you to invite one teammate before you carry on, so your team sees the plan from day one.",
+      "Pick who they are, send the invite, and share the link on WhatsApp if you like. Your plan opens straight back up.",
+    ],
+  },
+  {
+    version: "1.100.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Now and then, Home asks how likely you are to recommend Urganize. Tap a number from 0 to 10 and tell us why if you like.",
+      "You can close it in one tap, and it will not ask again for a while.",
     ],
   },
   {
