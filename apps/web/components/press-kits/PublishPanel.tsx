@@ -27,7 +27,7 @@ const VISIBILITY_OPTIONS: { value: PressKitVisibility; label: string; hint: stri
   },
   {
     value: 'public',
-    label: 'Only people I send it to (old setting)',
+    label: 'Only people I send it to',
     hint: 'Google will not show it.',
   },
   {
@@ -235,10 +235,12 @@ export function PublishPanel({
               }
               className={selectClass}
             >
-              {/* 'public' reads the same as link_only today, so it is only
-                  offered to a kit already set to it. Two choices, not three. */}
-              {VISIBILITY_OPTIONS.filter(
-                (option) => option.value !== 'public' || kit.visibility === 'public'
+              {/* 'public' reads the same as link_only today, so a kit shows one of
+                  the two, never both: its own when it is already 'public',
+                  link_only otherwise. Two choices, never three, and no
+                  "(old setting)" label (live check 2026-10-11). */}
+              {VISIBILITY_OPTIONS.filter((option) =>
+                kit.visibility === 'public' ? option.value !== 'link_only' : option.value !== 'public'
               ).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -283,15 +285,17 @@ export function PublishPanel({
         </label>
 
         {isLive ? (
-          <button
-            type="button"
-            onClick={() => void unpublish()}
-            disabled={Boolean(busy)}
-            className="motion-focus mt-3 inline-flex items-center gap-2 text-xs font-semibold text-status-error hover:underline disabled:opacity-60"
-          >
-            {busy === 'unpublish' ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-            Turn off the link
-          </button>
+          <div className="mt-4 border-t border-stroke-default pt-4">
+            <button
+              type="button"
+              onClick={() => void unpublish()}
+              disabled={Boolean(busy)}
+              className="motion-focus inline-flex items-center gap-2 text-xs font-semibold text-status-error hover:underline disabled:opacity-60"
+            >
+              {busy === 'unpublish' ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+              Turn off the link
+            </button>
+          </div>
         ) : null}
       </details>
 

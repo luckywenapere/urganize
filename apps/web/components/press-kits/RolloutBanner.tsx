@@ -119,8 +119,8 @@ export function RolloutBanner({
               >
                 <p className="text-sm text-content-primary">{describeProposal(proposal)}</p>
                 {proposal.handWritten ? (
-                  <p className="mt-1 text-xs text-status-warning">
-                    This replaces something you wrote.
+                  <p className="mt-1 text-xs text-content-secondary">
+                    You wrote this part yourself. Adding it swaps in the new words.
                   </p>
                 ) : null}
                 <div className="mt-2 flex flex-wrap gap-2">
