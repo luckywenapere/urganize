@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@urganize/ui';
@@ -8,6 +8,11 @@ import { useAuthStore } from '@/lib/auth-store';
 import { getAccessToken } from '@/components/settings/getAccessToken';
 import { CLAIM_COPY } from '@/lib/claim-copy';
 import { markClaimIntent } from '@/lib/claim-intent';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { createPostHogEvent } from '@/lib/analytics/shared';
+import { claimPageViewedProperties, publicProfileUrl } from '@/lib/profile-growth';
+import { markSignupSource } from '@/lib/signup-source-intent';
+import { ShareProfileLink } from './ShareProfileLink';
 import { PERSON_AVAILABILITIES, PERSON_AVAILABILITY_COPY, PERSON_BIO_MAX_CHARS } from '@/lib/person-profile';
 import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
 import type { ClaimCredit } from '@/lib/claim-server';
@@ -59,6 +64,28 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
   const [published, setPublished] = useState(true);
 
   useEffect(() => setMounted(true), []);
+
+  // claim_page_viewed, from the browser: a chat app fetches a pasted link on
+  // the server before anyone reads it, so a server count would report opens
+  // that never happened (the seeding page's rule). Once per mount.
+  const viewSent = useRef(false);
+  useEffect(() => {
+    if (!mounted || viewSent.current) return;
+    viewSent.current = true;
+    captureAnalyticsEvent(
+      createPostHogEvent(
+        'claim_page_viewed',
+        claimPageViewedProperties({
+          ok: preview.ok,
+          reason: preview.ok ? undefined : preview.reason,
+          signedIn: isAuthenticated,
+          credits: preview.ok ? preview.credits.length : 0,
+        })
+      )
+    );
+    // Fires once, whatever the props do afterwards.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted]);
 
   if (!preview.ok) {
     return (
@@ -246,11 +273,20 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
   }
 
   if (step === 'done') {
+    const shareUrl = published && slug && mounted ? publicProfileUrl(window.location.origin, slug) : null;
     return (
       <Shell>
         <h1 className="font-display text-3xl">{CLAIM_COPY.nextHeading}</h1>
-        <p className="mt-2 text-content-secondary">{CLAIM_COPY.nextText}</p>
-        <div className="mt-6 flex flex-wrap gap-3">
+        {/* The moment to share it: right now, before they close the tab.
+            Only for a page they chose to show; a private page has no link. */}
+        {shareUrl ? <ShareProfileLink url={shareUrl} surface="claim_done" /> : null}
+        {published && slug ? (
+          <Link href={`/p/${slug}`} className="mt-2 inline-flex min-h-11 items-center text-brand underline underline-offset-4">
+            See your page
+          </Link>
+        ) : null}
+        <p className="mt-8 text-content-secondary">{CLAIM_COPY.nextText}</p>
+        <div className="mt-4 flex flex-wrap gap-3">
           <Button className="min-h-11" onClick={() => router.push('/dashboard')}>
             {CLAIM_COPY.startRollout}
           </Button>
@@ -258,11 +294,6 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
             {CLAIM_COPY.inviteTeam}
           </Button>
         </div>
-        {published && slug ? (
-          <Link href={`/p/${slug}`} className="mt-6 inline-flex min-h-11 items-center text-brand underline underline-offset-4">
-            See your page
-          </Link>
-        ) : null}
       </Shell>
     );
   }
@@ -290,6 +321,8 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
             className="min-h-11"
             onClick={() => {
               markClaimIntent(token);
+              // A sign-up that came from a claim link (signup_from_profile).
+              markSignupSource({ source: 'claim', slug: null, cta: null });
               router.push('/onboarding');
             }}
           >

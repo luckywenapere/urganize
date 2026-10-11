@@ -70,6 +70,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Would people recommend us? The score and what they said.',
   },
   {
+    key: 'profile-funnel',
+    label: 'Profile funnel',
+    href: '/admin/profile-funnel',
+    group: 'numbers',
+    description: 'Credits to claimed pages to sign-ups, last 30 days.',
+  },
+  {
     key: 'teams',
     label: 'Teams',
     href: '/admin/teams',

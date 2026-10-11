@@ -15,6 +15,7 @@ import {
   Mic,
   PiggyBank,
   Send,
+  Share2,
   Smile,
   Sparkles,
   ThumbsUp,
@@ -51,6 +52,8 @@ export const ADMIN_NAV_ITEMS: Array<{
   { key: 'onboarding', label: 'Onboarding', icon: ClipboardList, href: '/admin/onboarding' },
   // Net Promoter Score from the in-app ask on Home (2026-10-11).
   { key: 'nps', label: 'NPS', icon: ThumbsUp, href: '/admin/nps' },
+  // The profile growth loop, credit to sign-up (2026-10-11).
+  { key: 'profile-funnel', label: 'Profile funnel', icon: Share2, href: '/admin/profile-funnel' },
   { key: 'emails', label: 'Emails', icon: Mail, href: '/admin/emails' },
   { key: 'notifications', label: 'Notifications', icon: BellRing, href: '/admin/notifications' },
   {

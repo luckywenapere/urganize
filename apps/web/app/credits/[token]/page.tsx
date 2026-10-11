@@ -3,6 +3,7 @@ import { SHORT_LINE } from '@/lib/positioning';
 import { notFound } from 'next/navigation';
 import { loadPublicCreditForm } from '@/lib/credits-server';
 import { CreditSubmissionForm } from '@/components/credits/CreditSubmissionForm';
+import { CreditLinkBeacon } from '@/components/credits/CreditLinkBeacon';
 
 // The public credit-submission form (URG-108). Server component, no auth:
 // the unguessable share token is the access control, resolved by
@@ -65,6 +66,7 @@ export default async function PublicCreditsPage({ params }: PageProps) {
   return (
     <main className="credits-island min-h-screen" style={{ backgroundColor: INK, color: CREAM }}>
       <div className="mx-auto max-w-[720px] px-5 pb-16 pt-12 sm:px-8 sm:pt-16">
+        <CreditLinkBeacon closed={isClosed} />
         <p className="font-mono text-[11px] uppercase tracking-[0.22em]" style={{ color: FAINT }}>
           {isClosed ? 'Request closed' : 'Submit your credits'}
         </p>

@@ -1,6 +1,7 @@
 import type { PublicUnclaimed } from '@/lib/person-unclaimed-server';
 import { UNCLAIMED_COPY } from '@/lib/claim-copy';
 import { RemovalForm } from './RemovalForm';
+import { ProfileGrowthFooter } from './ProfileGrowthFooter';
 
 // The public page for somebody who has not claimed their profile: a name, an
 // "Unclaimed" label and the credits a team collected. Nothing the person did
@@ -62,6 +63,8 @@ export function UnclaimedProfileView({ person }: { person: PublicUnclaimed }) {
         </section>
 
         <RemovalForm slug={person.slug} />
+
+        <ProfileGrowthFooter slug={person.slug} />
       </main>
     </div>
   );
