@@ -34,10 +34,10 @@ describe('shell nav', () => {
       expect(buildShellAreas(flags).map((a) => a.key)).toEqual([
         'home',
         'catalogue',
+        'pitching',
         'relationships',
         'opportunities',
         'audience',
-        'pitching',
       ]);
     }
   });

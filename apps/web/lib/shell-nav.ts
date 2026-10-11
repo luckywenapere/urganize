@@ -167,6 +167,15 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
         startsWithPath(p, '/dashboard/press-kits') ||
         startsWithPath(p, '/dashboard/notes'),
     },
+    // Pitching is third on the desktop top bar (founder, 2026-10-11).
+    {
+      key: 'pitching',
+      label: 'Pitching',
+      href: pitchingTabs[0]?.href ?? '/dashboard/pitching',
+      live: pitchingTabs.length > 0,
+      subTabs: pitchingTabs,
+      isActive: (p) => startsWithPath(p, '/dashboard/pitching'),
+    },
     {
       key: 'relationships',
       label: 'Relationships',
@@ -193,14 +202,6 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       live: false,
       subTabs: [],
       isActive: (p) => startsWithPath(p, '/dashboard/audience'),
-    },
-    {
-      key: 'pitching',
-      label: 'Pitching',
-      href: pitchingTabs[0]?.href ?? '/dashboard/pitching',
-      live: pitchingTabs.length > 0,
-      subTabs: pitchingTabs,
-      isActive: (p) => startsWithPath(p, '/dashboard/pitching'),
     },
   ];
 }
