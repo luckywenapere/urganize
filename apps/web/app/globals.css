@@ -2860,12 +2860,21 @@ html[data-auth-session='1'] .auth-form-shell {
   inset: 0 -100vw;
   z-index: -1;
   background-color: rgb(var(--color-bg-base));
-  background-image: linear-gradient(
-    to bottom,
-    rgb(var(--color-brand) / 0.12),
-    rgb(var(--color-brand) / 0.04) 70%,
-    rgb(var(--color-brand) / 0)
-  );
+}
+/* The brand tint is a desktop thing only (2026-10-11, founder call). On a
+   phone the bar is a short row holding the search button alone, and the tint
+   fading out under it read as an odd gradient behind the button, so below `lg`
+   the band is the plain page ground (still solid, so content scrolling under
+   the sticky bar does not show through). */
+@media (min-width: 1024px) {
+  .shell-band::before {
+    background-image: linear-gradient(
+      to bottom,
+      rgb(var(--color-brand) / 0.12),
+      rgb(var(--color-brand) / 0.04) 70%,
+      rgb(var(--color-brand) / 0)
+    );
+  }
 }
 .shell-band-sub {
   position: relative;

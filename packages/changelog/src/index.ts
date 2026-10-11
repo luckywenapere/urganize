@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.115.2",
+    date: "October 11, 2026",
+    highlights: [
+      "On a phone, the search button at the top of the screen now sits on the plain page background, without the tinted fade behind it. On a computer the top bar stays the same.",
+    ],
+  },
+  {
     version: "1.115.1",
     date: "October 11, 2026",
     highlights: [

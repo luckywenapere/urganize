@@ -43,7 +43,10 @@ import { useNavTip } from './useNavTip';
  *
  * The soft tinted band behind it is the brand colour at a whisper, Deel's
  * lavender done in spring green; it fades into the page so the bar reads as part
- * of the surface and not a fixed slab on top of it.
+ * of the surface and not a fixed slab on top of it. That tint is desktop only
+ * (2026-10-11, founder call): on a phone it read as an odd gradient behind the
+ * lone search button, so below `lg` the band is the plain page ground
+ * (.shell-band in globals.css).
  *
  * Every destination comes from lib/shell-nav.ts, so what is offered here, in the
  * sub-tab row and on a phone cannot disagree.
