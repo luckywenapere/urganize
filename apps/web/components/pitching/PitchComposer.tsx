@@ -22,7 +22,7 @@
 // The price on a card is for reading only. The quote route prices everything
 // again on the server, and that is the number the artist pays.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, ExternalLink, Send } from '@/components/icons';
 import type { BrowsablePlaylist, SentPitch } from '@/types/pitching';
 import { supabase } from '@/lib/supabase/client';
@@ -41,6 +41,7 @@ import { formatNaira } from '@/lib/money';
 import { canPayForPitchesHere, requestPitchQuote } from '@/lib/pitch-payments-client';
 import type { PitchQuote } from '@/types/pitch-payments';
 import { PitchCheckoutPanel } from './PitchCheckoutPanel';
+import { CuratorFace } from './CuratorFace';
 import { usePitchKitStory } from './usePitchKitStory';
 import { pitchNoteFromStory } from '@/lib/release-epk';
 
@@ -112,6 +113,9 @@ export function PitchComposer({
   // The story from this rollout's Pitch kit, if the team wrote one. '' = none.
   const storyNote = pitchNoteFromStory(usePitchKitStory(releaseId), MAX_PITCH_NOTE_LENGTH);
   const [isSending, setIsSending] = useState(false);
+  // The moment after a free send. A toast vanishes; this stays until the
+  // artist picks again, so the send feels like it went to a person.
+  const [justSent, setJustSent] = useState<{ name: string; photoUrl: string | null } | null>(null);
   const [error, setError] = useState('');
 
   // Playlists are global inventory, refetched when a filter changes rather than
@@ -156,8 +160,19 @@ export function PitchComposer({
     .filter((playlist): playlist is BrowsablePlaylist => Boolean(playlist));
   const paidSelection = selectedPlaylists.length > 0 && isPaidPlaylist(selectedPlaylists[0]);
 
+  const formRef = useRef<HTMLFormElement>(null);
+  // On a phone the send card lands under a long grid, so bring it into view
+  // on the first pick rather than leaving the artist to hunt for it.
+  const revealForm = () => {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
+  };
+
   const toggleSelection = (playlist: BrowsablePlaylist) => {
     setError('');
+    setJustSent(null);
+    if (selectedIds.length === 0) revealForm();
     if (selectedIds.includes(playlist.id)) {
       setSelectedIds(selectedIds.filter((id) => id !== playlist.id));
       return;
@@ -212,6 +227,10 @@ export function PitchComposer({
       if (!response.ok) throw new Error(payload?.error || 'Could not send the pitch.');
 
       onToast('Pitch sent.', 'success');
+      setJustSent({
+        name: selectedPlaylists[0]?.curatorName || '',
+        photoUrl: selectedPlaylists[0]?.curatorPhotoUrl || null,
+      });
       setSelectedIds([]);
       setNote('');
       if (payload?.pitch) onSent(payload.pitch);
@@ -254,6 +273,7 @@ export function PitchComposer({
     return (
       <PitchCheckoutPanel
         quote={quote}
+        faces={Object.fromEntries(selectedPlaylists.map((playlist) => [playlist.curatorName, playlist.curatorPhotoUrl]))}
         songTitle={songTitle.trim()}
         onCancel={() => {
           // The pitches stay saved and waiting for payment, so they can be paid
@@ -302,7 +322,7 @@ export function PitchComposer({
       <div
         role="radiogroup"
         aria-label="Platform"
-        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
       >
         {['', ...PITCH_PLATFORMS.filter((platform) => platform !== 'other')].map((platform) => {
           const active = platformFilter === platform;
@@ -350,7 +370,7 @@ export function PitchComposer({
                     isSelected ? 'ring-[3px] ring-brand ring-offset-2 ring-offset-bg-base' : ''
                   }`}
                 >
-                  <CuratorPhoto name={playlist.curatorName} photoUrl={playlist.curatorPhotoUrl} />
+                  <CuratorFace name={playlist.curatorName} photoUrl={playlist.curatorPhotoUrl} className="transition-transform duration-300 group-hover:scale-105" />
                   <span className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
                   <span className="absolute inset-x-0 bottom-0 p-3">
                     <span className="block truncate text-sm font-semibold text-white sm:text-base">
@@ -375,19 +395,34 @@ export function PitchComposer({
         </ul>
       )}
 
+      {justSent && selectedPlaylists.length === 0 ? (
+        <div
+          role="status"
+          className="flex items-center gap-4 rounded-2xl bg-brand/10 p-4 animate-enter"
+        >
+          <span className="rounded-full ring-2 ring-brand">
+            <CuratorFace name={justSent.name} photoUrl={justSent.photoUrl} size={48} />
+          </span>
+          <div className="min-w-0">
+            <p className="font-display text-lg font-semibold text-content-primary">Sent</p>
+            <p className="truncate text-sm text-content-secondary">
+              {justSent.name ? `${justSent.name} will answer here.` : 'Their answer shows here.'}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {selectedPlaylists.length > 0 ? (
         <form
+          ref={formRef}
           onSubmit={handleSend}
-          className="space-y-3 rounded-2xl border border-stroke-default bg-bg-surface p-4 shadow-sm"
+          className="animate-enter space-y-3 rounded-2xl border border-stroke-default bg-bg-surface p-4 shadow-sm"
         >
           <div className="flex items-center gap-3">
             <div className="flex -space-x-2">
               {selectedPlaylists.slice(0, 3).map((playlist) => (
-                <span
-                  key={playlist.id}
-                  className="relative h-9 w-9 overflow-hidden rounded-full ring-2 ring-bg-surface"
-                >
-                  <CuratorPhoto name={playlist.curatorName} photoUrl={playlist.curatorPhotoUrl} small />
+                <span key={playlist.id} className="rounded-full ring-2 ring-bg-surface">
+                  <CuratorFace name={playlist.curatorName} photoUrl={playlist.curatorPhotoUrl} size={36} />
                 </span>
               ))}
             </div>
@@ -476,47 +511,6 @@ export function PitchComposer({
         </p>
       ) : null}
     </div>
-  );
-}
-
-// A soft colour per name, so a curator with no photo still gets a tile that
-// looks chosen rather than empty. Deterministic: the same name, the same tile.
-const TILE_HUES = [262, 200, 330, 20, 160, 45, 290, 180];
-function hueFor(name: string): number {
-  let hash = 0;
-  for (let index = 0; index < name.length; index += 1) hash = (hash * 31 + name.charCodeAt(index)) | 0;
-  return TILE_HUES[Math.abs(hash) % TILE_HUES.length];
-}
-
-const initialsOf = (name: string): string =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() || '')
-    .join('') || '?';
-
-function CuratorPhoto({ name, photoUrl, small = false }: { name: string; photoUrl: string | null; small?: boolean }) {
-  if (photoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- a short-lived signed URL; the optimizer would cache it past expiry
-      <img
-        src={photoUrl}
-        alt=""
-        loading="lazy"
-        className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-      />
-    );
-  }
-  const hue = hueFor(name);
-  return (
-    <span
-      aria-hidden="true"
-      className={`absolute inset-0 flex items-center justify-center font-display font-semibold text-white/90 ${small ? 'text-xs' : 'text-4xl sm:text-5xl'}`}
-      style={{ background: `linear-gradient(135deg, hsl(${hue} 70% 55%), hsl(${(hue + 40) % 360} 65% 35%))` }}
-    >
-      {initialsOf(name)}
-    </span>
   );
 }
 

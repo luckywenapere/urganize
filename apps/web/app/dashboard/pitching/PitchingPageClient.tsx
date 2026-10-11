@@ -25,7 +25,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Radio } from '@/components/icons';
+import { Music, Radio } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -181,23 +181,18 @@ export default function PitchingPageClient() {
 
   return (
     <div className="mx-auto w-full max-w-3xl">
+      {/* Restyled 2026-10-11 (founder brief): one line of words, then faces. */}
       <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Promotion
-        </p>
-        <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">Pitching</h1>
-        <p className="mt-1 text-sm text-content-secondary">
-          Send a song to a playlist and see what the owner said.
-          {scopeLine ? ` ${scopeLine}.` : ''}
-        </p>
+        <h1 className="font-display text-3xl font-semibold text-content-primary">Pitch</h1>
+        <p className="mt-1 text-base text-content-secondary">Send your song to a curator.</p>
         {/* A dual account owns playlists as well as releases. This page is the
             sending side; the inbox is a separate surface with its own shell. */}
         {hasCuratorProfile === true ? (
           <Link
             href="/curator"
-            className="motion-focus mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand underline"
+            className="motion-focus mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand hover:underline"
           >
-            Playlists you own: open your inbox
+            Your curator inbox
           </Link>
         ) : null}
       </header>
@@ -227,45 +222,46 @@ export default function PitchingPageClient() {
         </div>
       ) : null}
 
-      <section aria-label="Send a pitch" className="mt-8 space-y-4">
-        <h2 className="text-sm font-semibold text-content-primary">Pitch a song</h2>
-
+      <section aria-label="Send a pitch" className="mt-8 space-y-5">
         {releases.length === 0 ? (
-          <p className="rounded-xl border border-stroke-default bg-bg-surface p-4 text-sm text-content-secondary">
-            You need a rollout before you can pitch a song from it.{' '}
-            <Link href="/dashboard" className="font-semibold text-brand underline">
-              Go to your catalog
+          <p className="rounded-2xl bg-bg-surface p-6 text-center text-sm text-content-secondary">
+            Make a rollout first.{' '}
+            <Link href="/dashboard" className="font-semibold text-brand hover:underline">
+              Start one
             </Link>
-            .
           </p>
         ) : (
           <>
-            <div className="space-y-1.5">
-              <label
-                className="block text-[11px] uppercase tracking-[0.16em] text-content-tertiary"
-                htmlFor="pitching-release"
+            {/* Which song: a row of chips rather than a dropdown, so the choice
+                is visible at a glance. One rollout needs no choice at all. */}
+            {releases.length > 1 ? (
+              <div
+                role="radiogroup"
+                aria-label="Which song"
+                className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
               >
-                Which rollout
-              </label>
-              <select
-                id="pitching-release"
-                className="h-11 w-full appearance-none rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary focus:border-brand focus:outline-none"
-                value={releaseId}
-                onChange={(event) => setChosenReleaseId(event.target.value)}
-              >
-                {releases.map((release) => (
-                  <option key={release.id} value={release.id}>
-                    {release.artistName
-                      ? `${release.title} · ${release.artistName}`
-                      : release.title}
-                  </option>
-                ))}
-              </select>
-              <p className="font-mono text-[11px] text-content-tertiary">
-                {waitingForSelected}/{MAX_WAITING_PITCHES_PER_RELEASE} waiting on a reply for this
-                rollout
-              </p>
-            </div>
+                {releases.map((release) => {
+                  const active = release.id === releaseId;
+                  return (
+                    <button
+                      key={release.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setChosenReleaseId(release.id)}
+                      className={`flex h-11 max-w-[14rem] shrink-0 items-center gap-2 rounded-full border px-4 text-sm transition-colors ${
+                        active
+                          ? 'border-brand bg-brand/10 font-semibold text-content-primary'
+                          : 'border-stroke-default text-content-secondary hover:border-stroke-strong hover:text-content-primary'
+                      }`}
+                    >
+                      <Music className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{release.title || 'Untitled'}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
 
             <PitchComposer
               releaseId={releaseId}
@@ -289,8 +285,9 @@ export default function PitchingPageClient() {
 
       <EditorialPitchSection />
 
-      <section aria-label="Pitches sent" className="mt-10 space-y-4">
-        <h2 className="text-sm font-semibold text-content-primary">Sent</h2>
+      <section aria-label="Pitches sent" className="mt-12 space-y-4">
+        <h2 className="font-display text-xl font-semibold text-content-primary">Answers</h2>
+        {truncated && scopeLine ? <p className="text-xs text-content-tertiary">{scopeLine}.</p> : null}
 
         {loading ? (
           <>
@@ -302,12 +299,9 @@ export default function PitchingPageClient() {
             ))}
           </>
         ) : groups.length === 0 && !error ? (
-          <div className="rounded-xl border border-stroke-default bg-bg-surface p-6 text-center">
+          <div className="rounded-2xl bg-bg-surface p-6 text-center">
             <Radio className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden />
-            <p className="mt-3 text-sm text-content-secondary">
-              Nothing pitched yet. Pick a rollout above, choose a playlist and send your first
-              song.
-            </p>
+            <p className="mt-3 text-sm text-content-secondary">Curators answer here.</p>
           </div>
         ) : (
           <div className="space-y-6">

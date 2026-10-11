@@ -109,6 +109,8 @@ export interface SentPitch {
   playlistId: string | null;
   playlistName: string;
   curatorName: string;
+  /** Signed read URL for the curator's photo, or null. Expires, never cached. */
+  curatorPhotoUrl?: string | null;
   songTitle: string;
   songUrl: string;
   songPlatform: PitchPlatform | null;

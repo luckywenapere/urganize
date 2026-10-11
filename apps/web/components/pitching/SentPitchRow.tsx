@@ -28,6 +28,7 @@ import { removeUnpaidPitch, requestPitchQuote } from '@/lib/pitch-payments-clien
 import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
 import type { PitchQuote } from '@/types/pitch-payments';
 import { PitchCheckoutPanel } from './PitchCheckoutPanel';
+import { CuratorFace } from './CuratorFace';
 
 // Read once: a NEXT_PUBLIC_ flag is inlined at build time, so it cannot change
 // under a mounted row.
@@ -89,15 +90,16 @@ export function SentPitchRow({ pitch, onChanged }: SentPitchRowProps) {
     }
   };
 
+  // Restyled 2026-10-11: the curator's face leads, and a reply reads like a
+  // message from her rather than a field on a record.
   return (
     <li className="rounded-2xl bg-bg-surface p-3">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <CuratorFace name={pitch.curatorName} photoUrl={pitch.curatorPhotoUrl} size={40} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-content-primary">
-            {pitch.playlistName}
-          </p>
+          <p className="truncate text-sm font-semibold text-content-primary">{pitch.curatorName}</p>
           <p className="truncate text-xs text-content-secondary">
-            {pitch.curatorName} · {formatRelativeTime(pitch.createdAt)}
+            {pitch.playlistName} · {formatRelativeTime(pitch.createdAt)}
           </p>
         </div>
         <span className={statusPillClass(pitch.status)}>
@@ -105,17 +107,17 @@ export function SentPitchRow({ pitch, onChanged }: SentPitchRowProps) {
         </span>
       </div>
       {pitch.reply ? (
-        <p className="mt-2 whitespace-pre-wrap rounded-lg bg-bg-elevated px-2 py-1.5 text-sm text-content-secondary">
+        <p className="ml-[52px] mt-2 whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-bg-elevated px-3 py-2 text-sm text-content-primary">
           {pitch.reply}
         </p>
       ) : null}
       {deadline ? (
-        <p className="mt-2 text-xs text-content-secondary">{replyDueLine(deadline)}</p>
+        <p className="ml-[52px] mt-2 text-xs text-content-secondary">{replyDueLine(deadline)}</p>
       ) : null}
       {/* Only with a known price: the price arrives with the payment fields, and
           a line saying "We refunded ₦0" is worse than no line. */}
       {pitch.status === 'expired' && typeof pitch.priceKobo === 'number' ? (
-        <p className="mt-2 text-xs text-content-secondary">
+        <p className="ml-[52px] mt-2 text-xs text-content-secondary">
           {autoRefundLine(pitch.curatorName, pitch.priceKobo)}
         </p>
       ) : null}
@@ -130,7 +132,7 @@ export function SentPitchRow({ pitch, onChanged }: SentPitchRowProps) {
             />
           </div>
         ) : (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="ml-[52px] mt-3 flex flex-wrap items-center gap-2">
             {/* Pay now needs payments switched on. Remove does not: an unpaid
                 pitch holds its playlist's one waiting slot, so it has to stay
                 removable even if paid pitching is switched off. */}

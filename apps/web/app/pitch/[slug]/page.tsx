@@ -85,82 +85,86 @@ export default async function PublicCuratorPage({ params }: PageProps) {
   const page = await loadPublicCuratorPage(slug);
   if (!page) notFound();
 
+  // Redesigned 2026-10-11 (founder brief): this is the page curators post to
+  // their status and bio, so it is the front door for most new artists. One
+  // big face, one sentence, one button, then her playlists as tiles.
+  const totalFollowers = page.playlists.reduce(
+    (sum, playlist) => sum + (playlist.followerCount ?? 0),
+    0
+  );
+
   return (
     <div className="kit-island min-h-screen" style={{ backgroundColor: GROUND }}>
-      <main className="mx-auto max-w-2xl px-5 py-16 sm:px-8">
-        <header>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
-            Playlist owner
-          </p>
+      <main className="mx-auto max-w-2xl px-5 pb-24 pt-14 sm:px-8 sm:pt-20">
+        <header className="flex flex-col items-center text-center">
+          {page.photoUrl ? (
+            // A signed Storage URL with a one hour life. next/image would
+            // proxy and cache it past its own expiry.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={page.photoUrl}
+              alt={page.displayName}
+              className="h-32 w-32 rounded-full object-cover shadow-2xl sm:h-40 sm:w-40"
+              style={{ backgroundColor: SURFACE, boxShadow: `0 0 0 4px ${GROUND}, 0 0 0 6px ${ACCENT}` }}
+            />
+          ) : (
+            <span
+              className="flex h-32 w-32 items-center justify-center rounded-full font-display text-4xl sm:h-40 sm:w-40"
+              style={{ backgroundColor: SURFACE, color: CREAM, boxShadow: `0 0 0 4px ${GROUND}, 0 0 0 6px ${ACCENT}` }}
+            >
+              {initials(page.displayName)}
+            </span>
+          )}
 
-          <div className="mt-6 flex items-center gap-4">
-            {page.photoUrl ? (
-              // A signed Storage URL with a one hour life. next/image would
-              // proxy and cache it past its own expiry.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={page.photoUrl}
-                alt={page.displayName}
-                className="h-16 w-16 shrink-0 rounded-full object-cover"
-                style={{ backgroundColor: SURFACE }}
-              />
-            ) : (
-              <span
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full font-display text-xl"
-                style={{ backgroundColor: SURFACE, color: MUTED }}
-              >
-                {initials(page.displayName)}
-              </span>
-            )}
-            <h1 className="font-display text-4xl sm:text-5xl" style={{ color: CREAM }}>
-              {page.displayName}
-            </h1>
-          </div>
+          <h1 className="mt-7 font-display text-4xl leading-tight sm:text-6xl" style={{ color: CREAM }}>
+            {page.displayName}
+          </h1>
+
+          {page.playlists.length > 0 ? (
+            <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em]" style={{ color: FAINT }}>
+              {page.playlists.length === 1 ? '1 playlist' : `${page.playlists.length} playlists`}
+              {totalFollowers > 0 ? ` · ${totalFollowers.toLocaleString('en')} followers` : ''}
+            </p>
+          ) : null}
 
           {page.bio ? (
-            <p className="mt-6 whitespace-pre-line text-[15px] leading-7" style={{ color: MUTED }}>
+            <p className="mt-6 max-w-lg whitespace-pre-line text-[16px] leading-7" style={{ color: MUTED }}>
               {page.bio}
             </p>
           ) : null}
+
+          <CuratorPageCta
+            slug={page.slug}
+            displayName={page.displayName}
+            hasPlaylists={page.playlists.length > 0}
+          />
         </header>
 
-        <CuratorPageCta
-          slug={page.slug}
-          displayName={page.displayName}
-          hasPlaylists={page.playlists.length > 0}
-        />
-
         {page.playlists.length > 0 ? (
-          <section className="mt-14">
-            <h2
-              className="font-mono text-[11px] uppercase tracking-[0.18em]"
-              style={{ color: FAINT }}
-            >
-              {page.playlists.length === 1 ? 'The playlist' : 'The playlists'}
-            </h2>
-            <ul className="mt-4 space-y-3">
+          <section className="mt-16">
+            <ul className="grid grid-cols-2 gap-3 sm:gap-4">
               {page.playlists.map((playlist) => (
                 <li
                   key={playlist.id}
-                  className="rounded-lg border px-4 py-4"
-                  style={{ borderColor: STROKE, backgroundColor: SURFACE }}
+                  className="flex aspect-square flex-col justify-end overflow-hidden rounded-2xl p-4"
+                  style={{
+                    background: `linear-gradient(160deg, ${SURFACE} 0%, ${GROUND} 100%)`,
+                    border: `1px solid ${STROKE}`,
+                  }}
                 >
-                  <p className="text-[15px]" style={{ color: CREAM }}>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: ACCENT }}>
+                    {PITCH_PLATFORM_LABELS[playlist.platform] || PITCH_PLATFORM_LABELS.other}
+                  </p>
+                  <p className="mt-1 line-clamp-2 font-display text-lg leading-snug sm:text-xl" style={{ color: CREAM }}>
                     {playlist.url ? (
                       <SafeLink href={playlist.url}>{playlist.name}</SafeLink>
                     ) : (
                       playlist.name
                     )}
                   </p>
-                  <p className="mt-1 font-mono text-xs" style={{ color: FAINT }}>
-                    {PITCH_PLATFORM_LABELS[playlist.platform] || PITCH_PLATFORM_LABELS.other}
-                    {playlist.followerCount !== null
-                      ? ` · ${playlist.followerCount.toLocaleString('en')} followers`
-                      : ''}
-                  </p>
-                  {playlist.genres.length > 0 ? (
-                    <p className="mt-2 text-[13px]" style={{ color: MUTED }}>
-                      {playlist.genres.join(', ')}
+                  {playlist.followerCount !== null ? (
+                    <p className="mt-1 text-xs" style={{ color: FAINT }}>
+                      {playlist.followerCount.toLocaleString('en')} followers
                     </p>
                   ) : null}
                 </li>
@@ -169,10 +173,14 @@ export default async function PublicCuratorPage({ params }: PageProps) {
           </section>
         ) : null}
 
-        <footer className="mt-16 border-t pt-6" style={{ borderColor: STROKE }}>
-          <p className="font-mono text-[11px]" style={{ color: FAINT }}>
+        <footer className="mt-20 text-center">
+          <a
+            href="https://urganize.app"
+            className="font-mono text-[11px] tracking-[0.12em] hover:underline"
+            style={{ color: FAINT }}
+          >
             Made with Urganize
-          </p>
+          </a>
         </footer>
       </main>
     </div>

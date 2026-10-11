@@ -20,6 +20,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.106.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Pitching, redesigned. You see curators' faces everywhere: when you pick, when you pay and when they answer. Their replies read like messages.",
+      "After you send, the screen shows who it went to. Pick your song from a row of chips instead of a dropdown.",
+      "Curators: tap Listen and it counts as listened. Then Add it or Pass, one tap each.",
+      "Curator pages you share now open on a big photo, one button and your playlists as tiles.",
+    ],
+  },
+  {
     version: "1.105.1",
     date: "October 11, 2026",
     highlights: [

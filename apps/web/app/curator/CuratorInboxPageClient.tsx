@@ -14,7 +14,7 @@
 // keeps asking for its reply even if paid pitching is switched off later.
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ExternalLink, Inbox } from '@/components/icons';
+import { Check, Headphones, ExternalLink, Inbox } from '@/components/icons';
 import { CuratorShell } from '@/components/curator/CuratorShell';
 import { CuratorInboxSkeleton } from '@/components/loading/CuratorSkeleton';
 import { CuratorLoadError } from '@/components/curator/CuratorLoadError';
@@ -22,7 +22,6 @@ import { useCuratorStore } from '@/stores/useCuratorStore';
 import {
   MAX_PITCH_REPLY_LENGTH,
   PITCH_PLATFORM_LABELS,
-  PITCH_STATUSES,
   PITCH_STATUS_LABELS,
   acceptsPitchReply,
   pitchStateLabel,
@@ -97,55 +96,70 @@ function PitchCard({ pitch }: { pitch: CuratorPitch }) {
   };
 
   const platformLabel = pitch.songPlatform ? PITCH_PLATFORM_LABELS[pitch.songPlatform] : '';
+  // Listening IS the "Listened" status (2026-10-11): one tap opens the song and
+  // records it, so the curator never has to bookkeep. Then two big choices.
+  const listen = () => {
+    void openExternalUrl(pitch.songUrl);
+    if (pitch.status === 'new') void applyStatus('listened');
+  };
 
   return (
-    <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
+    <article className="rounded-2xl bg-bg-surface p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 break-words text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
-            {pitch.playlistName}
-          </p>
-          <h2 className="mt-1 line-clamp-2 break-words text-base font-semibold text-content-primary">
+          <h2 className="line-clamp-2 break-words font-display text-lg font-semibold leading-snug text-content-primary">
             {pitch.songTitle}
           </h2>
-          <p className="line-clamp-2 break-words text-sm text-content-secondary">{pitch.artistName}</p>
+          <p className="truncate text-sm text-content-secondary">
+            {pitch.artistName} · {pitch.playlistName}
+          </p>
         </div>
         <span className="shrink-0 font-mono text-[11px] text-content-tertiary">
           {formatRelativeTime(pitch.createdAt)}
         </span>
       </div>
 
-      <button
-        type="button"
-        onClick={() => void openExternalUrl(pitch.songUrl)}
-        className="mt-3 inline-flex h-10 max-w-full items-center gap-2 rounded-xl border border-stroke-default bg-bg-elevated px-3 text-sm font-semibold text-content-primary transition-colors hover:border-stroke-strong"
-      >
-        <ExternalLink className="h-4 w-4 shrink-0 text-content-tertiary" />
-        <span className="truncate">Listen{platformLabel ? ` on ${platformLabel}` : ''}</span>
-      </button>
-
       {pitch.note ? (
-        <p className="mt-3 whitespace-pre-wrap text-sm text-content-secondary">{pitch.note}</p>
+        <p className="mt-3 whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-bg-elevated px-3 py-2 text-sm text-content-primary">
+          {pitch.note}
+        </p>
       ) : null}
 
-      <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.12em] text-content-tertiary">
-        Sent by {pitch.pitcherName}
-      </p>
+      <button
+        type="button"
+        onClick={listen}
+        className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-stroke-default bg-bg-elevated px-4 text-sm font-semibold text-content-primary transition-colors hover:border-stroke-strong"
+      >
+        <Headphones className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span className="truncate">Listen{platformLabel ? ` on ${platformLabel}` : ''}</span>
+        {pitch.status !== 'new' ? <Check className="h-4 w-4 shrink-0 text-brand" aria-label="Listened" /> : null}
+      </button>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {PITCH_STATUSES.map((status) => (
-          <button
-            key={status}
-            type="button"
-            disabled={isSaving}
-            aria-pressed={pitch.status === status}
-            onClick={() => void applyStatus(status)}
-            className={statusChipClass(status, pitch.status === status)}
-          >
-            {pitch.status === status ? <Check className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
-            {PITCH_STATUS_LABELS[status]}
-          </button>
-        ))}
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {(['added', 'passed'] as const).map((status) => {
+          const active = pitch.status === status;
+          return (
+            <button
+              key={status}
+              type="button"
+              disabled={isSaving}
+              aria-pressed={active}
+              onClick={() => void applyStatus(status)}
+              className={`inline-flex h-12 items-center justify-center gap-1.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 ${
+                active
+                  ? status === 'added'
+                    ? 'bg-brand text-content-inverse'
+                    : 'bg-content-primary text-bg-base'
+                  : status === 'added'
+                    ? 'bg-brand/10 text-brand hover:bg-brand/20'
+                    : 'bg-bg-elevated text-content-secondary hover:text-content-primary'
+              }`}
+            >
+              {active ? <Check className="h-4 w-4 shrink-0" aria-hidden="true" /> : null}
+              {status === 'added' ? 'Add it' : 'Pass'}
+            </button>
+          );
+        })}
       </div>
 
       {acceptsPitchReply(pitch.status) ? (
@@ -163,10 +177,7 @@ function PitchCard({ pitch }: { pitch: CuratorPitch }) {
             </div>
           ) : (
             <div className="space-y-2">
-              <label
-                htmlFor={`reply-${pitch.id}`}
-                className="block text-[11px] uppercase tracking-[0.16em] text-content-tertiary"
-              >
+              <label htmlFor={`reply-${pitch.id}`} className="sr-only">
                 Reply (optional)
               </label>
               <input
@@ -175,7 +186,7 @@ function PitchCard({ pitch }: { pitch: CuratorPitch }) {
                 value={reply}
                 maxLength={MAX_PITCH_REPLY_LENGTH}
                 onChange={(event) => setDraft(event.target.value)}
-                placeholder="Add a short reply"
+                placeholder="Say something back (optional)"
                 className="h-11 w-full rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
               />
               <div className="flex items-center gap-2">
@@ -267,7 +278,7 @@ function PaidPitchCard({ pitch }: { pitch: CuratorPitch }) {
   };
 
   return (
-    <article className="rounded-xl border border-stroke-default bg-bg-surface p-4">
+    <article className="rounded-2xl bg-bg-surface p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="line-clamp-2 break-words text-[11px] uppercase tracking-[0.16em] text-content-tertiary">
@@ -420,12 +431,11 @@ export function CuratorInboxPageClient() {
       {(
         <div className="space-y-6">
           <header className="space-y-2">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-content-tertiary">Inbox</p>
-            <h1 className="font-display text-2xl text-content-primary">Pitches</h1>
+            <h1 className="font-display text-3xl font-semibold text-content-primary">Pitches</h1>
             <p className="text-sm text-content-secondary">
               {waitingCount > 0
-                ? `${waitingCount} waiting on you.`
-                : 'Nothing waiting on you right now.'}
+                ? `${waitingCount} new ${waitingCount === 1 ? 'song' : 'songs'} for you.`
+                : 'All caught up.'}
             </p>
           </header>
 

@@ -8,6 +8,7 @@ import {
   flagOffResponse,
   isPitchingFeatureEnabled,
   loadCuratorNames,
+  loadCuratorPhotoUrls,
   parsePitchSongFields,
   requireTeamUser,
   resolvePitcherName,
@@ -81,12 +82,16 @@ export async function GET(request: NextRequest) {
     }
 
     const rows = (data || []) as unknown as Array<Record<string, unknown>>;
-    const [names, prices] = await Promise.all([
+    const [names, prices, photos] = await Promise.all([
       loadCuratorNames(
         auth.adminClient,
         rows.map((row) => String(row.curator_user_id || ''))
       ),
       loadPaidPrices(auth.adminClient, rows),
+      loadCuratorPhotoUrls(
+        auth.adminClient,
+        rows.map((row) => String(row.curator_user_id || ''))
+      ),
     ]);
 
     return NextResponse.json({
@@ -95,7 +100,8 @@ export async function GET(request: NextRequest) {
           row,
           names.get(String(row.curator_user_id || '')) || 'Playlist owner',
           visible.title || null,
-          { priceKobo: prices.get(String(row.id)) ?? null }
+          { priceKobo: prices.get(String(row.id)) ?? null },
+          photos.get(String(row.curator_user_id || '')) || null
         )
       ),
     });
@@ -147,12 +153,16 @@ export async function GET(request: NextRequest) {
     );
   });
 
-  const [names, prices] = await Promise.all([
+  const [names, prices, photos] = await Promise.all([
     loadCuratorNames(
       auth.adminClient,
       readable.map((row) => String(row.curator_user_id || ''))
     ),
     loadPaidPrices(auth.adminClient, readable),
+    loadCuratorPhotoUrls(
+      auth.adminClient,
+      readable.map((row) => String(row.curator_user_id || ''))
+    ),
   ]);
 
   return NextResponse.json({
@@ -161,7 +171,8 @@ export async function GET(request: NextRequest) {
         row,
         names.get(String(row.curator_user_id || '')) || 'Playlist owner',
         releases.get(String(row.release_id || ''))?.title || null,
-        { priceKobo: prices.get(String(row.id)) ?? null }
+        { priceKobo: prices.get(String(row.id)) ?? null },
+        photos.get(String(row.curator_user_id || '')) || null
       )
     ),
     // The list is capped, so say when it was cut rather than letting the page
@@ -372,7 +383,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not send the pitch.' }, { status: 500 });
   }
 
-  const names = await loadCuratorNames(auth.adminClient, [curatorUserId]);
+  const [names, photos] = await Promise.all([
+    loadCuratorNames(auth.adminClient, [curatorUserId]),
+    loadCuratorPhotoUrls(auth.adminClient, [curatorUserId]),
+  ]);
 
   return NextResponse.json(
     {
@@ -382,7 +396,8 @@ export async function POST(request: NextRequest) {
         // So a pitch sent from the Pitching page lands in the right group
         // without waiting for a refetch.
         visible.title || null,
-        withPayments ? { priceKobo: null } : null
+        withPayments ? { priceKobo: null } : null,
+        photos.get(curatorUserId) || null
       ),
     },
     { status: 201 }
