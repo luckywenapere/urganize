@@ -152,7 +152,7 @@ export function MetricsView({
       <Section
         id="metrics-active"
         title="Active people"
-        info="Weekly growth compares people active in the last 7 days with the 7 days before, the number YC asks for: 5 to 7% a week is good, 10% is exceptional. Our own team's accounts are left out of every number here. A person counts on a day if the app was open on their screen, they did something (an activity, a rollout, UrgAns, a note and so on), they opened the app, or they signed in. Days are Lagos days. The check-in that sees people who only look around started on the day this page went live, so earlier days only count people who did something or opened the app."
+        info="Growth this week compares people active this calendar week (Monday to Sunday, Lagos time) with all of last week, so mid-week it shows progress toward the target and it settles on Sunday night. It is the number YC asks for: 5 to 7% a week is good, 10% is exceptional. Our own team's accounts are left out of every number here. A person counts on a day if the app was open on their screen, they did something (an activity, a rollout, UrgAns, a note and so on), they opened the app, or they signed in. Days are Lagos days. The check-in that sees people who only look around started on the day this page went live, so earlier days only count people who did something or opened the app."
       >
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Stat label="Today" value={number.format(active.today)} />
@@ -160,12 +160,12 @@ export function MetricsView({
           <Stat label="Last 30 days" value={number.format(active.last30d)} />
           <Stat label="Today ÷ 30 days" value={formatShare(active.stickiness)} />
           <Stat
-            label="Weekly growth"
-            value={formatGrowth(active.growth7d)}
+            label="Growth this week"
+            value={formatGrowth(active.weeklyGrowth)}
             fact={
               active.targetFor10pct === null
-                ? `${number.format(active.prev7d)} the week before`
-                : `${number.format(active.prev7d)} the week before · ${number.format(active.targetFor10pct)} next week for +10%`
+                ? `${number.format(active.thisWeek)} so far, ${number.format(active.lastWeek)} last week`
+                : `${number.format(active.thisWeek)} so far of ${number.format(active.targetFor10pct)} for +10% · last week ${formatGrowth(active.lastWeekGrowth)}`
             }
           />
         </div>

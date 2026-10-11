@@ -143,28 +143,30 @@ describe('active people', () => {
     expect(metrics.active.newPeople7d).toBe(1);
   });
 
-  it('measures weekly growth against the 7 days before, with the +10% target', () => {
-    const at = (days: number) => NOW.getTime() - days * DAY;
+  it('measures growth on calendar weeks, not a rolling window', () => {
+    // NOW is Wednesday Oct 7: this week started Monday Oct 5, last week Sep 28.
+    const day = (iso: string) => Date.parse(`${iso}T12:00:00+01:00`);
     const metrics = buildUsageMetrics(
       input({
-        people: ['a', 'b', 'c', 'd'].map((id) => person(id)),
+        people: ['a', 'b', 'c', 'd', 'e'].map((id) => person(id)),
         activity: new Map([
-          ['a', [at(1), at(9)]],
-          ['b', [at(2)]],
-          ['c', [at(3)]],
-          ['d', [at(10)]],
+          ['a', [day('2026-10-05'), day('2026-09-29')]],
+          ['b', [day('2026-10-06')]],
+          ['c', [day('2026-10-07')]],
+          // Sunday Oct 4 is last week, though it is within the last 7 days.
+          ['d', [day('2026-10-04')]],
+          ['e', [day('2026-09-22')]],
         ]),
       })
     );
-    expect(metrics.active.last7d).toBe(3);
-    expect(metrics.active.prev7d).toBe(2);
-    expect(metrics.active.growth7d).toBe(0.5);
-    expect(metrics.active.targetFor10pct).toBe(4);
+    expect(metrics.active.thisWeek).toBe(3);
+    expect(metrics.active.lastWeek).toBe(2);
+    expect(metrics.active.weeklyGrowth).toBe(0.5);
+    expect(metrics.active.targetFor10pct).toBe(3);
+    expect(metrics.active.lastWeekGrowth).toBe(1);
     expect(metrics.active.weekly).toHaveLength(12);
-    const total = metrics.active.weekly.reduce((sum, point) => sum + point.value, 0);
-    // a is in two weeks; b, c and d in one each, whichever weeks those days fall in.
-    expect(total).toBeGreaterThanOrEqual(4);
-    expect(total).toBeLessThanOrEqual(5);
+    expect(metrics.active.weekly[11].key).toBe('2026-10-05');
+    expect(metrics.active.weekly[11].value).toBe(3);
   });
 
   it('counts a person once a week however many days they came', () => {
@@ -175,12 +177,12 @@ describe('active people', () => {
     expect(metrics.active.weekly[metrics.active.weekly.length - 1].value).toBe(1);
   });
 
-  it('has no weekly growth when nobody was active the week before', () => {
+  it('has no weekly growth when nobody was active last week', () => {
     const metrics = buildUsageMetrics(
-      input({ people: [person('a')], activity: new Map([['a', [NOW.getTime() - DAY]]]) })
+      input({ people: [person('a')], activity: new Map([['a', [NOW.getTime() - 60 * 60 * 1000]]]) })
     );
-    expect(metrics.active.growth7d).toBeNull();
-    expect(metrics.active.targetFor10pct).toBe(2);
+    expect(metrics.active.weeklyGrowth).toBeNull();
+    expect(metrics.active.targetFor10pct).toBeNull();
   });
 
   it('has no stickiness when nobody was active', () => {

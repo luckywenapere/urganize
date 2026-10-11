@@ -132,14 +132,18 @@ export type UsageMetrics = {
     stickiness: number | null;
     /** Active in the last 7 days and joined in the last 7 days. */
     newPeople7d: number;
-    /** Active in the 7 days before the last 7 (days 8 to 14 back). */
-    prev7d: number;
-    /** Week-over-week growth of people active: last 7 days against the 7
-     *  before. Null when nobody was active the week before. */
-    growth7d: number | null;
-    /** People active over the next 7 days that would make 10% growth on the
-     *  last 7: the YC "exceptional" bar. Null when nobody was active. */
+    /** Calendar weeks (Lagos, Monday to Sunday), never a rolling window:
+     *  distinct people active this week so far, and all of last week. */
+    thisWeek: number;
+    lastWeek: number;
+    /** This calendar week so far against all of last week. Mid-week it reads
+     *  as progress, and it settles on Sunday night. Null with nobody last week. */
+    weeklyGrowth: number | null;
+    /** People active this calendar week that make +10% on last week: the YC
+     *  "exceptional" bar. Null with nobody last week. */
     targetFor10pct: number | null;
+    /** Last completed week against the one before it: the settled number. */
+    lastWeekGrowth: number | null;
     daily: SeriesPoint[];
     /** Distinct people active in each Lagos week (Monday start), last 12. */
     weekly: SeriesPoint[];
@@ -345,11 +349,9 @@ export function buildUsageMetrics(input: UsageMetricsInput): UsageMetrics {
   // Active counts.
   const days30 = trailingDays(now, DAILY_POINTS);
   const days7 = new Set(days30.slice(-7));
-  const daysPrev7 = new Set(days30.slice(-14, -7));
   const activeWeeks = trailingWeeks(now, WEEKLY_POINTS);
   const activeWeekIndex = new Map(activeWeeks.map((week, index) => [week, index]));
   const weeklyActive = activeWeeks.map(() => 0);
-  let prev7 = 0;
   const window30 = new Set(days30);
   let today1 = 0;
   let last7 = 0;
@@ -358,19 +360,16 @@ export function buildUsageMetrics(input: UsageMetricsInput): UsageMetrics {
   const dailyCounts = new Map<string, number>(days30.map((day) => [day, 0]));
   for (const [userId, days] of activeDays) {
     let in7 = false;
-    let inPrev7 = false;
     let in30 = false;
     const weeksSeen = new Set<number>();
     for (const day of days) {
       if (dailyCounts.has(day)) dailyCounts.set(day, (dailyCounts.get(day) ?? 0) + 1);
       if (days7.has(day)) in7 = true;
-      if (daysPrev7.has(day)) inPrev7 = true;
       if (window30.has(day)) in30 = true;
       const weekIndex = activeWeekIndex.get(weekStartDay(day));
       if (weekIndex !== undefined) weeksSeen.add(weekIndex);
     }
     for (const index of weeksSeen) weeklyActive[index] += 1;
-    if (inPrev7) prev7 += 1;
     if (days.has(today)) today1 += 1;
     if (in7) last7 += 1;
     if (in30) last30 += 1;
@@ -544,9 +543,14 @@ export function buildUsageMetrics(input: UsageMetricsInput): UsageMetrics {
       last30d: last30,
       stickiness: last30 > 0 ? today1 / last30 : null,
       newPeople7d,
-      prev7d: prev7,
-      growth7d: weeklyGrowth(last7, prev7),
-      targetFor10pct: last7 > 0 ? Math.ceil(last7 * 1.1 - 1e-9) : null,
+      thisWeek: weeklyActive[WEEKLY_POINTS - 1] ?? 0,
+      lastWeek: weeklyActive[WEEKLY_POINTS - 2] ?? 0,
+      weeklyGrowth: weeklyGrowth(weeklyActive[WEEKLY_POINTS - 1] ?? 0, weeklyActive[WEEKLY_POINTS - 2] ?? 0),
+      targetFor10pct:
+        (weeklyActive[WEEKLY_POINTS - 2] ?? 0) > 0
+          ? Math.ceil((weeklyActive[WEEKLY_POINTS - 2] ?? 0) * 1.1 - 1e-9)
+          : null,
+      lastWeekGrowth: weeklyGrowth(weeklyActive[WEEKLY_POINTS - 2] ?? 0, weeklyActive[WEEKLY_POINTS - 3] ?? 0),
       daily: series(
         days30,
         days30.map((day) => dailyCounts.get(day) ?? 0),
