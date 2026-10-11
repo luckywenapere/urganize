@@ -106,6 +106,16 @@ export function MarketingFooter() {
                 {label}
               </Link>
             ))}
+            {/* The funder one-pager (founder call, 2026-10-11): a Hark Page,
+                so it opens in a new tab. */}
+            <a
+              href="https://hark.site/s/62947350-2627-4b85-b1fd-eb6a66ffe317?hark_region=us"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[var(--marketing-text)]"
+            >
+              One-pager
+            </a>
             <a
               href="mailto:contact@urganize.app"
               className="hover:text-[var(--marketing-text)]"
