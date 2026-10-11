@@ -18,7 +18,9 @@ import {
   X,
   type LucideProps,
 } from '@/components/icons';
-import { Check, UserCircle2, Users } from '@/components/icons';
+import { Check, Search, UserCircle2, Users } from '@/components/icons';
+import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
+import { useShellStore } from '@/stores/useShellStore';
 import { SignalIcon } from '@/components/app/BrandIcons';
 import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
 import { ProfileFace } from '@/components/shared/ProfileFace';
@@ -63,7 +65,11 @@ const TAB_ICON: Record<string, IconComponent> = {
  * and settings. Since 2026-10-11 it also carries what the phone's top bar no
  * longer does (founder call: the bar is the search button alone): the artist
  * filter ("Showing"), Notifications (the bell's "live" panel, with its unread
- * count, also shown as a dot on More) and Settings for the account. Areas with nothing built
+ * count, also shown as a dot on More) and Settings for the account. Later that
+ * day the phone's top bar went altogether (founder call: it looked bad), so
+ * More's first row is Search now: the same action the bar's search button had
+ * (the page's folded list search where there is one, the search bar otherwise).
+ * Areas with nothing built
  * yet are listed like any other, and their page explains what is coming.
  *
  * Labels stay visible. Icon-only tabs were tried here before (v1.10.3) and cost
@@ -236,6 +242,7 @@ function MoreSheet({
   const tip = useNavTip({ overSheet: true });
   const items = buildMoreItems(areas);
   const notifications = useNotificationsDoorStore();
+  const openCommand = useShellStore((state) => state.openCommand);
   const { options: artistOptions, select: selectArtist } = useArtistFilterOptions();
   if (typeof document === 'undefined') return null;
 
@@ -268,6 +275,26 @@ function MoreSheet({
           </button>
         </div>
         <ul className="divide-y divide-stroke-subtle">
+          {/* Search first: the phone has no top bar since 2026-10-11, and this
+              is where its search button went. Same action as the desktop
+              button: a page with a folded list search (PullReveal) opens and
+              focuses that, every other page opens the search bar. The sheet
+              closes first so the field it opens is the one left focused. */}
+          <li>
+            <button
+              type="button"
+              data-tour="shell-mobile-search"
+              onClick={() => {
+                onClose();
+                if (hasPullReveal()) revealListSearch();
+                else openCommand();
+              }}
+              className="motion-focus flex min-h-14 w-full items-center gap-2.5 text-left text-base text-content-primary"
+            >
+              <Search className="h-5 w-5 text-content-tertiary" aria-hidden="true" />
+              Search
+            </button>
+          </li>
           {items.map((item) => (
             <li key={item.key}>
               <Link

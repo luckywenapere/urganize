@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.115.5",
+    date: "October 11, 2026",
+    highlights: [
+      "On a phone, the bar across the top of the screen is gone, on every screen, so your page starts right at the top. Search is now the first item when you tap More in the bottom bar. On a computer the top bar stays the same.",
+    ],
+  },
+  {
     version: "1.115.4",
     date: "October 11, 2026",
     highlights: [

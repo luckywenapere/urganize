@@ -146,9 +146,11 @@ export function FirstReleaseFocus() {
   return createPortal(
     <>
       {!choiceOpen && !createOpen ? (
+        // Under the desktop bar (72px + 12px) at lg and up; on a phone, where
+        // there is no top bar since 2026-10-11, just under the safe area.
         <div
           role="status"
-          className="fixed left-1/2 top-[84px] z-40 flex w-[min(28rem,calc(100vw-1.5rem))] -translate-x-1/2 items-center justify-between gap-3 rounded-full border border-stroke-default bg-bg-elevated py-1.5 pl-4 pr-1.5 shadow-lg"
+          className="fixed left-1/2 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-40 lg:top-[84px] flex w-[min(28rem,calc(100vw-1.5rem))] -translate-x-1/2 items-center justify-between gap-3 rounded-full border border-stroke-default bg-bg-elevated py-1.5 pl-4 pr-1.5 shadow-lg"
         >
           <span className="text-xs font-medium text-content-secondary sm:text-sm">
             {COPY.barLabel}

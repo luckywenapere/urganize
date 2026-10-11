@@ -409,7 +409,10 @@ export function TasksPanel({
     // even when the content is short (an empty chat, a thin scene). Without a
     // floor, `sticky` has nothing to stick against and the dock sat mid-page
     // right under the content. `mt-auto` on the dock pushes it to the end.
-    <aside id={id} data-tour="activities" className="flex min-h-[calc(100dvh-9rem)] min-w-0 flex-1 flex-col scroll-mt-20 lg:min-h-0">
+    // The floor and the scroll margin both lost the phone top bar's 3.5rem on
+    // 2026-10-11, when that bar went (TopNav.tsx): 9rem -> 5.5rem, and
+    // scroll-mt-20 is desktop only now, where the 72px bar still sticks.
+    <aside id={id} data-tour="activities" className="flex min-h-[calc(100dvh-5.5rem)] min-w-0 flex-1 flex-col scroll-mt-4 lg:min-h-0 lg:scroll-mt-20">
       {/* (The desktop's row of scene pills that sat here until 2026-09-30 is
           the rollout menu now: a vertical card at the top of the right-hand
           column, above the UrgAns chat, rendered by WorkspaceView and drawn from

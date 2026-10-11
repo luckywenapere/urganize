@@ -54,6 +54,17 @@ import { useNavTip } from './useNavTip';
  * lone search button, so below `lg` the band is the plain page ground
  * (.shell-band in globals.css).
  *
+ * And later still (2026-10-11, founder call: "it looks bad") the phone bar
+ * went altogether, on every screen, the way it had already gone on the UrgAns
+ * tab. Below `lg` the header is its safe-area top padding and nothing else, so
+ * content clears the iOS status bar and notch and starts right under it.
+ * Search moved to the first row of the bottom bar's More sheet (BottomBar.tsx);
+ * the keyboard shortcut and the command palette are unchanged. The row itself
+ * stays in the DOM at zero height below `lg`, every visible piece of it hidden,
+ * because the notifications bell inside it must stay mounted (its realtime
+ * subscription, and the panel More opens is drawn from here). The desktop bar
+ * is exactly as it was.
+ *
  * Every destination comes from lib/shell-nav.ts, so what is offered here, in the
  * sub-tab row and on a phone cannot disagree.
  */
@@ -65,20 +76,14 @@ export function TopNav({ userName }: { userName?: string }) {
   const tip = useNavTip();
   const listCollapsed = useHomeChatStore((state) => state.listCollapsed);
   useArtistFilterSync();
-  // The UrgAns tab on a phone has no header row at all (2026-10-11, founder
-  // call): with only search left on the phone bar, it goes too, so the chat's
-  // Sessions / New session row sits at the top. Only the safe-area padding
-  // stays. Keep in step with .chappi-shell-height-nav in globals.css.
-  const isUrgansPage = pathname === '/dashboard/urgans' || pathname.startsWith('/dashboard/urgans/');
 
   return (
     <header className="shell-band sticky top-0 z-30 pt-[env(safe-area-inset-top,0px)]">
       <div
-        className={`mx-auto h-14 w-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5 lg:grid lg:h-[72px] lg:grid-cols-[1fr_auto_1fr] lg:px-8 ${
-          isUrgansPage ? 'hidden' : 'flex'
-        }`}
+        className="mx-auto flex h-0 w-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5 lg:grid lg:h-[72px] lg:grid-cols-[1fr_auto_1fr] lg:px-8"
       >
-        {/* Desktop only: the phone bar stays search alone. At lg and up the
+        {/* Desktop only: there is no phone bar (h-0 below lg, every visible
+            child hidden there; see the note above). At lg and up the
             row is a three-column grid (1fr auto 1fr): the mark in the left
             column, the area pills in the middle one, the icons in the right.
             The two side columns share the leftover width equally, so the pills
@@ -136,7 +141,7 @@ export function TopNav({ userName }: { userName?: string }) {
             onClick={() => (hasPullReveal() ? revealListSearch() : openCommand())}
             data-tour="shell-search"
             aria-label="Search or ask UrgAns"
-            className="motion-focus motion-press inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface/70 px-2.5 text-sm text-content-secondary hover:text-content-primary sm:px-3 lg:h-10 lg:min-w-0"
+            className="motion-focus motion-press hidden h-10 items-center justify-center gap-2 rounded-full border border-stroke-default bg-bg-surface/70 px-3 text-sm text-content-secondary hover:text-content-primary lg:inline-flex"
           >
             <Search className="h-[18px] w-[18px]" aria-hidden="true" />
           </button>
@@ -147,7 +152,9 @@ export function TopNav({ userName }: { userName?: string }) {
             <HelpMenu />
           </span>
           {/* Mounted at every width (see the note above); its own button is
-              desktop only and More opens its panel on a phone. */}
+              desktop only and More opens its panel on a phone. The search
+              button before it is desktop only too: on a phone search is the
+              first row of More. */}
           <NotificationsBell />
           <WorkspaceMenu userName={userName} className="hidden lg:block" />
         </div>

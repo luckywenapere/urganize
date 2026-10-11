@@ -484,15 +484,17 @@ export function NotificationsBell() {
           // Tab, and a menu promises arrow-key movement they never had.
           role="group"
           aria-label="Notifications"
-          // Below `sm` the panel pins to the viewport (inset-x-4 under the
-          // 4rem topbar) instead of anchoring to the trigger — a 360px panel
+          // Below `sm` the panel pins to the viewport (inset-x-4, 1rem under
+          // the safe area: the phone has no top bar row since 2026-10-11, so
+          // the 4rem it used to clear is gone) instead of anchoring to the
+          // trigger — a 360px panel
           // anchored right-0 to a bell that sits ~3.5rem in from the edge
           // runs off the left side of a phone screen. Note the topbar's
           // backdrop-blur makes it the containing block for this `fixed`
           // panel; it's full-width and viewport-pinned, so the math is the
           // same. From `sm` up it reverts to the WorkspaceMenu-style
           // trigger-anchored dropdown.
-          className="animate-menu-down fixed inset-x-4 top-[calc(env(safe-area-inset-top,0px)+4rem)] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
+          className="animate-menu-down fixed inset-x-4 top-[calc(env(safe-area-inset-top,0px)+1rem)] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
         >
           <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle px-3 py-3">
             {/* No Beta pill here (founder call, 2026-07-23). The Settings row

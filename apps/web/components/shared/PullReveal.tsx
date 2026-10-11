@@ -10,7 +10,7 @@ import {
   shouldRevealOnPull,
 } from '@/lib/pull-reveal';
 
-// How many PullReveal panels are on screen. The top bar's search button asks
+// How many PullReveal panels are on screen. More's Search row (and the desktop search button) asks
 // this to decide whether to reveal a list's own search or open the command bar.
 let mountedCount = 0;
 
@@ -26,7 +26,7 @@ export function revealListSearch() {
 
 /**
  * Folds a list's search and filters away on a phone until the person pulls the
- * page down from the very top (or taps the top bar's search button). Folds
+ * page down from the very top (or taps Search in the bottom bar's More sheet). Folds
  * again when they scroll down. While a search or filter is doing something it
  * stays open, so the list never looks mysteriously short. From `sm` up it is
  * simply always there.

@@ -2457,10 +2457,11 @@ body:focus-within .keyboard-hint,
 
 /* .chappi-shell-height's flag-on twin — shared by ChappiPageClient and
    ChappiPageSkeleton, keep both in sync. Chrome being subtracted below lg:
-   since 2026-10-11 the top bar has NO row on this page on a phone (TopNav's
-   isUrgansPage), only its safe-area top padding, then main pt-5 (1.25rem) +
-   chappi-main-padding-nav (1rem + 4rem + safe-area bottom) = 6.25rem plus
-   both safe areas. Until then it also took the 72px row (10.75rem). */
+   the top bar has NO row on a phone (on this page since 2026-10-11, on every
+   page later that day; TopNav.tsx), only its safe-area top padding, then
+   main pt-5 (1.25rem) + chappi-main-padding-nav (1rem + 4rem + safe-area
+   bottom) = 6.25rem plus both safe areas. Until then it also took the 72px
+   row (10.75rem). */
 .chappi-shell-height-nav {
   height: calc(
     100dvh - 6.25rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1px
@@ -2519,8 +2520,8 @@ body:focus-within .keyboard-hint,
   :root[data-keyboard-open='true'] .chappi-shell-height {
     position: fixed;
     z-index: 20;
-    /* The top bar on this page is only its safe-area padding below lg since
-       2026-10-11 (it was the 72px row, written here as 4.5rem + 1px). */
+    /* The top bar is only its safe-area padding below lg since 2026-10-11,
+       on every page (it was the 72px row, written here as 4.5rem + 1px). */
     top: calc(max(var(--app-visual-top, 0px), env(safe-area-inset-top, 0px)) + 0.75rem);
     /* AN EXPLICIT HEIGHT, NOT `bottom` + `height: auto`. Both place the box
        identically, but only this one keeps the height DEFINITE, and the
@@ -2862,10 +2863,10 @@ html[data-auth-session='1'] .auth-form-shell {
   background-color: rgb(var(--color-bg-base));
 }
 /* The brand tint is a desktop thing only (2026-10-11, founder call). On a
-   phone the bar is a short row holding the search button alone, and the tint
-   fading out under it read as an odd gradient behind the button, so below `lg`
-   the band is the plain page ground (still solid, so content scrolling under
-   the sticky bar does not show through). */
+   phone the band is only the safe-area strip at the top since the phone bar
+   went (later on 2026-10-11, founder call; TopNav.tsx), so below `lg` it is
+   the plain page ground: solid, so content scrolling under the sticky strip
+   does not show through the iOS status bar. */
 @media (min-width: 1024px) {
   .shell-band::before {
     background-image: linear-gradient(
