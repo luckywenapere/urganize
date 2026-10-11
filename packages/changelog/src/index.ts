@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.114.0",
+    date: "October 11, 2026",
+    highlights: [
+      "When you claim your page, you can share it right away. Copy the link, send it on WhatsApp, or use your phone's share button.",
+      "On your own page, when you are signed in, the same share buttons show at the bottom.",
+      "People who read a page can now get their own page, or run their rollouts on Urganize, from a link at the bottom.",
+    ],
+  },
+  {
     version: "1.113.0",
     date: "October 11, 2026",
     highlights: [

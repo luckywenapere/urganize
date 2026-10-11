@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 import { getAuthenticatedUser } from '@/app/api/_shared/auth';
 import { isValidClaimToken } from '@/lib/claim';
 import { loadClaimPreview, redeemClaim } from '@/lib/claim-server';
+import { createPostHogEvent } from '@/lib/analytics/shared';
+import { claimCompletedProperties } from '@/lib/profile-growth';
+import { captureProfileGrowthEvent } from '@/lib/profile-growth-server';
 
 // A credited person opens a claim link.
 //
@@ -47,13 +50,30 @@ export async function POST(request: NextRequest, context: { params: Promise<{ to
   const admin = adminClient();
   if (!admin) return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
 
+  const typedContact = typeof body.contact === 'string' ? body.contact : '';
   const result = await redeemClaim(admin, {
     token,
     userId: auth.user.id,
     accountEmail: auth.user.email ?? null,
     accountEmailConfirmed: Boolean(auth.user.email_confirmed_at),
-    typedContact: typeof body.contact === 'string' ? body.contact : '',
+    typedContact,
   });
+  if (result.ok) {
+    // Profile growth funnel: the page is theirs now. Server-side, after the
+    // reply, with whether it merged into a profile they had and which proof
+    // was used. Nothing they typed is sent.
+    captureProfileGrowthEvent(
+      'profile-growth claim_completed',
+      auth.user.id,
+      createPostHogEvent(
+        'claim_completed',
+        claimCompletedProperties({
+          merged: result.merged,
+          proof: typedContact.trim() ? 'typed_contact' : 'account_email',
+        })
+      )
+    );
+  }
   const status = result.ok ? 200 : result.reason === 'no_match' ? 422 : result.reason === 'error' ? 500 : 409;
   return NextResponse.json(result, { status, headers: { 'cache-control': 'no-store' } });
 }

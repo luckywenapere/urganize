@@ -6,6 +6,9 @@ import {
 } from '@/lib/credits-server';
 import { findSubmissionIdByEmail, validateSubmissionSplits } from '@/lib/credit-submissions';
 import { notifyCreditSubmission } from '@/lib/credit-notifications-server';
+import { createPostHogEvent } from '@/lib/analytics/shared';
+import { creditSubmittedProperties } from '@/lib/profile-growth';
+import { captureProfileGrowthEvent } from '@/lib/profile-growth-server';
 import { RELEASE_CREDIT_ROLE_OPTIONS } from '@/types/credits';
 import type { CreditSubmissionInput, ReleaseCreditRole } from '@/types/credits';
 
@@ -138,6 +141,17 @@ export async function POST(
     confirmed_accurate: true,
   };
 
+  // Profile growth funnel (credit_submitted): server-side, after the reply,
+  // anonymous (the collaborator has no account here). How many roles, whether
+  // it corrected an earlier answer, whether a phone was given. No name, no
+  // email, no splits.
+  const reportSubmitted = (updated: boolean) =>
+    captureProfileGrowthEvent(
+      'profile-growth credit_submitted',
+      null,
+      createPostHogEvent('credit_submitted', creditSubmittedProperties({ roles, updated, phone: row.phone }))
+    );
+
   // Same email on the same release = the same person correcting themselves, so
   // the earlier answer is UPDATED rather than duplicated (founder spec,
   // 2026-08-27). Before this, one person submitting twice at 50% each made the
@@ -181,6 +195,7 @@ export async function POST(
   try {
     const existingId = await findExisting();
     if (existingId && (await updateExisting(existingId))) {
+      reportSubmitted(true);
       return NextResponse.json({ ok: true, updated: true });
     }
 
@@ -212,6 +227,7 @@ export async function POST(
       if (insertResult.error.code === '23505') {
         const racedId = await findExisting();
         if (racedId && (await updateExisting(racedId))) {
+          reportSubmitted(true);
           return NextResponse.json({ ok: true, updated: true });
         }
       }
@@ -244,6 +260,7 @@ export async function POST(
       contribution: row.contribution || '',
     });
 
+    reportSubmitted(false);
     return NextResponse.json({ ok: true, updated: false }, { status: 201 });
   } catch (error) {
     const message =

@@ -115,6 +115,7 @@ import { resolvePostSignupDestination, takePitchIntent } from '@/lib/pitch-inten
 import { takeClaimIntent } from '@/lib/claim-intent';
 import { readWelcomeIntent } from '@/lib/welcome-intent';
 import { captureReferralFromSearch, reportReferralCode } from '@/lib/referral-intent';
+import { captureSignupSourceFromSearch, reportSignupSource } from '@/lib/signup-source-intent';
 import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT, isPasswordLongEnough } from '@/lib/password-rules';
 
 // ---------------------------------------------------------------------------
@@ -478,6 +479,9 @@ export default function OnboardingPage() {
     // A partner's link carries ?ref=. Remembered here, read post-mount for the
     // same reason as the email above, and handed to the server when signup ends.
     captureReferralFromSearch(window.location.search);
+    // A public profile's call to action carries ?from=profile (never ?ref=,
+    // which is a partner code). Remembered the same way, reported at the end.
+    captureSignupSourceFromSearch(window.location.search);
     const handoffEmail = normalizeHandoffEmail(window.location.search);
     if (handoffEmail) {
       setEmail((current) => current || handoffEmail);
@@ -671,6 +675,8 @@ export default function OnboardingPage() {
       // The answers and the referral report do not depend on each other, so
       // they go together (2026-10-11): one round trip of waiting, not two.
       const referral = reportReferralCode(token);
+      // And whether a public profile or a claim link sent them (profile growth).
+      const signupSource = reportSignupSource(token);
       const response = await fetch('/api/user/onboarding', {
         method: 'PATCH',
         headers: {
@@ -690,7 +696,7 @@ export default function OnboardingPage() {
       persisted = Boolean(response?.ok);
       // Tell the server which partner's link this person came in through, now
       // that their team exists. A no-op unless a code was remembered.
-      await referral;
+      await Promise.all([referral, signupSource]);
     }
     await checkAuth({ force: true });
     // Only drop the draft once the server has the answers. If the PATCH

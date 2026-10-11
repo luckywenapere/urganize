@@ -6,6 +6,12 @@ import { UnclaimedProfileView } from '@/components/people/UnclaimedProfileView';
 import { PROFILE_TYPE_LABELS, openToLabel } from '@/lib/directory-profile-type';
 import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
 import { ProfileViewBeacon } from '@/components/directory/ProfileViewBeacon';
+import { ProfileGrowthFooter } from '@/components/people/ProfileGrowthFooter';
+import { OwnProfileShare } from '@/components/people/OwnProfileShare';
+import { createPostHogEvent } from '@/lib/analytics/shared';
+import { isLikelyBot, isPrefetchRequest, publicProfileViewedProperties } from '@/lib/profile-growth';
+import { recordPublicProfileView } from '@/lib/profile-growth-server';
+import { headers } from 'next/headers';
 
 /**
  * A person's public record at /p/{slug}.
@@ -70,16 +76,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+/** One counted read of the page (public_profile_viewed), after the reply. */
+async function countView(input: { slug: string; claimed: boolean; personId: string | null }) {
+  const requestHeaders = await headers();
+  recordPublicProfileView({
+    ...input,
+    isBotOrPrefetch:
+      isLikelyBot(requestHeaders.get('user-agent')) || isPrefetchRequest((name) => requestHeaders.get(name)),
+    event: createPostHogEvent(
+      'public_profile_viewed',
+      publicProfileViewedProperties({ slug: input.slug, claimed: input.claimed })
+    ),
+  });
+}
+
 export default async function PersonPage({ params }: PageProps) {
   const { slug } = await params;
   const person = await loadPublicPerson(slug);
   if (!person) {
     const unclaimed = await loadUnclaimedPerson(slug);
-    if (unclaimed) return <UnclaimedProfileView person={unclaimed} />;
+    if (unclaimed) {
+      await countView({ slug: unclaimed.slug, claimed: false, personId: null });
+      return <UnclaimedProfileView person={unclaimed} />;
+    }
     notFound();
   }
 
   const { profile, roles, view, profileType, lead } = person;
+  const pageSlug = profile.slug || slug.trim().toLowerCase();
+  await countView({ slug: pageSlug, claimed: true, personId: profile.id });
   const delivered = roles.filter((entry) => entry.delivered > 0);
   const claimed = roles.filter((entry) => entry.delivered === 0);
 
@@ -216,11 +241,10 @@ export default async function PersonPage({ params }: PageProps) {
           </section>
         ) : null}
 
-        <footer className="mt-20 pt-8" style={{ borderTop: `1px solid ${STROKE}` }}>
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: FAINT }}>
-            Delivered with Urganize
-          </p>
-        </footer>
+        {/* Shown only to the signed-in owner of this page, after it draws. */}
+        <OwnProfileShare slug={pageSlug} />
+
+        <ProfileGrowthFooter slug={pageSlug} />
       </main>
     </div>
   );

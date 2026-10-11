@@ -4,6 +4,9 @@ import { getAuthenticatedUser } from '@/app/api/_shared/auth';
 import { loadPersonCredits, setCreditHidden } from '@/lib/claim-server';
 import { PERSON_AVAILABILITIES, PERSON_BIO_MAX_CHARS } from '@/lib/person-profile';
 import type { PersonAvailability, PersonVisibility } from '@/types/directory';
+import { createPostHogEvent } from '@/lib/analytics/shared';
+import { isPublishTransition, profilePublishedProperties } from '@/lib/profile-growth';
+import { captureProfileGrowthEvent } from '@/lib/profile-growth-server';
 
 // What somebody does right after claiming their page: review their credits,
 // write a short bio, say if they are open to work, and choose whether the page
@@ -97,6 +100,18 @@ export async function PATCH(request: NextRequest) {
   }
   if (Object.keys(patch).length === 0) return NextResponse.json({ error: 'Nothing to save.' }, { status: 400 });
 
+  // What the page was before this save, so profile_published fires on the
+  // move to shown and not on every later save of a page already shown.
+  let visibilityBefore: unknown = null;
+  if ('visibility' in patch) {
+    const before = await admin
+      .from('person_profiles')
+      .select('visibility')
+      .eq('user_id', auth.user.id)
+      .maybeSingle();
+    visibilityBefore = (before.data as { visibility?: unknown } | null)?.visibility ?? null;
+  }
+
   const updated = await admin
     .from('person_profiles')
     .update(patch)
@@ -106,5 +121,18 @@ export async function PATCH(request: NextRequest) {
     .maybeSingle();
   if (updated.error) return NextResponse.json({ error: 'Could not save. Try again.' }, { status: 500 });
   if (!updated.data) return NextResponse.json({ error: 'Claim your page first.' }, { status: 404 });
+  if (isPublishTransition(visibilityBefore, updated.data.visibility)) {
+    const properties = profilePublishedProperties({
+      visibility: updated.data.visibility,
+      hasBio: typeof patch.bio === 'string' && patch.bio.length > 0,
+    });
+    if (properties) {
+      captureProfileGrowthEvent(
+        'profile-growth profile_published',
+        auth.user.id,
+        createPostHogEvent('profile_published', properties)
+      );
+    }
+  }
   return NextResponse.json({ ok: true, slug: updated.data.slug, visibility: updated.data.visibility });
 }

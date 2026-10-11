@@ -1,4 +1,15 @@
 import type { Profile } from '@/lib/supabase/client';
+import type {
+  ClaimCompletedProperties,
+  ClaimPageViewedProperties,
+  CreditLinkOpenedProperties,
+  CreditSubmittedProperties,
+  ProfileLinkSharedProperties,
+  ProfilePublishedProperties,
+  PublicProfileCtaClickedProperties,
+  PublicProfileViewedProperties,
+  SignupFromProfileProperties,
+} from '@/lib/profile-growth';
 
 /**
  * Audit findings before the PostHog integration:
@@ -365,6 +376,28 @@ export interface AnalyticsEventPropertiesMap {
     kind: 'trial_extended' | 'paid_bonus';
     team_state: string;
   };
+  /**
+   * The profile growth loop (2026-10-11): credit link, credit, claim, publish,
+   * a public page read, its call to action, the person sharing their own page,
+   * and a sign-up that came from it. Every payload is built from an allowlist
+   * in lib/profile-growth.ts: no names, no contacts, no release titles, and a
+   * slug only for a page its owner published.
+   *
+   * Server-side (lib/profile-growth-server.ts): credit_submitted,
+   * claim_completed, profile_published, public_profile_viewed,
+   * public_profile_cta_clicked, signup_from_profile. Browser-side, because a
+   * link preview fetches the page on the server before anyone reads it:
+   * credit_link_opened, claim_page_viewed, profile_link_shared.
+   */
+  credit_link_opened: CreditLinkOpenedProperties;
+  credit_submitted: CreditSubmittedProperties;
+  claim_page_viewed: ClaimPageViewedProperties;
+  claim_completed: ClaimCompletedProperties;
+  profile_published: ProfilePublishedProperties;
+  public_profile_viewed: PublicProfileViewedProperties;
+  public_profile_cta_clicked: PublicProfileCtaClickedProperties;
+  profile_link_shared: ProfileLinkSharedProperties;
+  signup_from_profile: SignupFromProfileProperties;
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;
