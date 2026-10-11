@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.112.1",
+    date: "October 11, 2026",
+    highlights: [
+      "On a computer, the Pitch and Directory screens no longer repeat the page name and a line about it at the top, since the tab above already says where you are.",
+    ],
+  },
+  {
     version: "1.112.0",
     date: "October 11, 2026",
     highlights: [

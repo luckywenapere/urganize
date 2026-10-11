@@ -87,9 +87,11 @@ export function DirectoryPageClient() {
 function DirectoryFrame() {
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <header className="mb-6">
-        <h1 className="font-display text-2xl text-content-primary">Directory</h1>
-        <p className="mt-1 text-sm text-content-secondary">
+      {/* Title + subtitle hidden on desktop (founder call, 2026-10-11): the
+          Directory tab above already names the page. Phones keep them. */}
+      <header className="mb-6 lg:mb-0">
+        <h1 className="font-display text-2xl text-content-primary lg:sr-only">Directory</h1>
+        <p className="mt-1 text-sm text-content-secondary lg:hidden">
           Find people who have delivered the work your rollout needs.
         </p>
       </header>
@@ -252,9 +254,11 @@ function DirectoryBody() {
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <header className="mb-6">
-        <h1 className="font-display text-2xl text-content-primary">Directory</h1>
-        <p className="mt-1 text-sm text-content-secondary">
+      {/* Title + subtitle hidden on desktop (founder call, 2026-10-11): the
+          Directory tab above already names the page. Phones keep them. */}
+      <header className="mb-6 lg:mb-0">
+        <h1 className="font-display text-2xl text-content-primary lg:sr-only">Directory</h1>
+        <p className="mt-1 text-sm text-content-secondary lg:hidden">
           Find people who have delivered the work your rollout needs.
         </p>
       </header>

@@ -184,14 +184,17 @@ export default function PitchingPageClient() {
       {/* Restyled 2026-10-11 (founder brief): the title, the filter chips, then
           faces. The subtitle under the title was cut the same day; the spacing
           below is one 20px step (mt-5 / space-y-5) between every block. */}
+      {/* Desktop drops the title (founder call, 2026-10-11): the Pitching tab
+          above already names the page. Phones keep it. The h1 stays for screen
+          readers. */}
       <header>
-        <h1 className="font-display text-3xl font-semibold text-content-primary">Pitch</h1>
+        <h1 className="font-display text-3xl font-semibold text-content-primary lg:sr-only">Pitch</h1>
         {/* A dual account owns playlists as well as releases. This page is the
             sending side; the inbox is a separate surface with its own shell. */}
         {hasCuratorProfile === true ? (
           <Link
             href="/curator"
-            className="motion-focus mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand hover:underline"
+            className="motion-focus mt-2 inline-flex min-h-11 lg:mt-0 items-center gap-2 text-sm font-semibold text-brand hover:underline"
           >
             Your curator inbox
           </Link>
