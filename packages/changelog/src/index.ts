@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.120.1",
+    date: "October 11, 2026",
+    highlights: [
+      "On a computer, the timeline now opens full screen every time you go to it. Exit full screen and it stays that way until you leave the timeline.",
+    ],
+  },
+  {
     version: "1.120.0",
     date: "October 11, 2026",
     highlights: [

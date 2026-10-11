@@ -1004,6 +1004,25 @@ export function WorkspaceView() {
   // and to the timeline being the body, so switching rollout or tab ends it with
   // no effect to reset it. The timeline mounts ONCE: while the overlay is up the
   // panel slot holds an empty placeholder rather than a second copy.
+  // Desktop opens the timeline full screen (founder, 2026-10-11: "anytime a
+  // user enters into the timeline view let it always start in full screen for
+  // desktop"). Fires once per entry: keyed to the rollout and to the timeline
+  // being the body, so "Exit full screen" sticks until they leave the timeline
+  // (another tab or rollout) and come back. Phones keep the inline timeline.
+  const autoFullKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key =
+      panelBody === 'timeline' && scopedReleaseSlim?.id && isDesktopViewport
+        ? scopedReleaseSlim.id
+        : null;
+    if (key === null) {
+      autoFullKeyRef.current = null;
+      return;
+    }
+    if (autoFullKeyRef.current === key) return;
+    autoFullKeyRef.current = key;
+    setTimelineFullFor(key);
+  }, [panelBody, scopedReleaseSlim?.id, isDesktopViewport]);
   const timelineIsFull =
     timelineFullFor !== null &&
     timelineFullFor === scopedReleaseSlim?.id &&
