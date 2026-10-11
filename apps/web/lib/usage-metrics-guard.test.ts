@@ -73,6 +73,9 @@ describe('who may touch the presence table', () => {
       'lib/usage-metrics-server.ts',
       'lib/presence.ts',
       'app/api/account/export/route.ts',
+      // NPS eligibility (2026-10-11): counts the asking person's OWN days only,
+      // never returns them, to decide "used Urganize on 5+ days". lib/nps.ts.
+      'app/api/nps/route.ts',
     ]);
     const touching = walk(ROOT)
       .map((file) => posix(relative(ROOT, file)))

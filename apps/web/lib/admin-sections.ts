@@ -63,6 +63,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     description: 'What sign-ups pick in the setup wizard.',
   },
   {
+    key: 'nps',
+    label: 'NPS',
+    href: '/admin/nps',
+    group: 'numbers',
+    description: 'Would people recommend us? The score and what they said.',
+  },
+  {
     key: 'teams',
     label: 'Teams',
     href: '/admin/teams',

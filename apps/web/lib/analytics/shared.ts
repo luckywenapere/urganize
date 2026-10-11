@@ -142,6 +142,11 @@ export interface AnalyticsEventPropertiesMap {
   signup_completed: Record<string, unknown>;
   artist_created: Record<string, unknown>;
   pricing_validation_submitted: Record<string, unknown>;
+  // Net Promoter Score (2026-10-11, lib/nps.ts). Server-side, from /api/nps.
+  nps_shown: { account_age_days: number };
+  nps_dismissed: { dismissals_in_a_row: number };
+  nps_submitted: { score: number; category: 'detractor' | 'passive' | 'promoter'; account_age_days: number; surface: string };
+  nps_reason_added: { score: number; category: 'detractor' | 'passive' | 'promoter'; reason_length: number };
   trial_started: Record<string, unknown>;
   trial_converted: Record<string, unknown>;
   // Activation funnel timing (2026-07-23): the two numbers that matter while
