@@ -20,6 +20,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.116.0",
+    date: "October 11, 2026",
+    highlights: [
+      "The row of rollout tabs now fades at the edge and shows an arrow when more tabs are hidden, so Add cover art and the pitch kit are always easy to find.",
+      "The pitch kit's progress is three short bars you can always see, one per step, even before you start.",
+      "The note about UrgAns credits next to Write it for me is bigger and easier to read, and the gap under the story box is even with the other steps.",
+      "In a press kit, Turn off the link sits on its own line under More options, and older kits no longer show an \"(old setting)\" label.",
+      "When a rollout suggestion would change words you wrote yourself, it says so calmly instead of in a warning colour.",
+    ],
+  },
+  {
     version: "1.115.6",
     date: "October 11, 2026",
     highlights: [

@@ -371,18 +371,24 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
                 : 'Everything a playlist or a blog needs to say yes to this song.'}
             </p>
             <div className="mt-3 flex items-center gap-3">
+              {/* Three segments, one per step, on a track you can see even at 0 of 3
+                  (live check 2026-10-11: the empty bar vanished into the hero). */}
               <div
-                className="h-2 flex-1 overflow-hidden rounded-full bg-bg-elevated"
+                className="flex flex-1 gap-1.5"
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={3}
                 aria-valuenow={doneCount}
                 aria-label="Steps done"
               >
-                <div
-                  className="h-full rounded-full bg-brand transition-[width] duration-500"
-                  style={{ width: `${(doneCount / 3) * 100}%` }}
-                />
+                {[0, 1, 2].map((index) => (
+                  <span
+                    key={index}
+                    className={`h-2 flex-1 rounded-full transition-colors duration-500 ${
+                      index < doneCount ? 'bg-brand' : 'bg-content-tertiary/25'
+                    }`}
+                  />
+                ))}
               </div>
               <span className="shrink-0 text-xs font-semibold text-content-secondary">
                 {doneCount} of 3
@@ -457,7 +463,7 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
               />
             ) : null}
             {isCreditsEnabled() ? (
-              <p className="mt-2 text-xs text-content-tertiary">
+              <p className="mt-2 text-sm text-content-secondary">
                 {embeddedCostLine('epk.fill_both', balance)}
               </p>
             ) : null}
@@ -489,7 +495,7 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
             placeholder="A few sentences is plenty."
             className={`${FIELD_CLASS} resize-y`}
           />
-          <div className="mt-1.5 flex min-h-[1.25rem] items-center gap-3">
+          <div className="mt-1.5 flex items-center gap-3 empty:hidden">
             {savedNote('story', savingStory)}
             {!savingStory && savedAt !== 'story' && data.fields.storySource === 'ai' && data.fields.story ? (
               <span className="text-xs text-content-tertiary">Written by UrgAns. Change anything.</span>

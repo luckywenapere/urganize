@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { MoreHorizontal } from '@/components/icons';
+import { ChevronLeft, ChevronRight, MoreHorizontal } from '@/components/icons';
 import { sceneRowTarget } from '@/lib/nav-stall';
 import { watchNavigationStall } from '@/lib/nav-stall-watch';
 import {
@@ -30,7 +30,9 @@ type RolloutTabsProps = {
  * sit behind the overflow button at the end instead of reading as tabs.
  *
  * The row scrolls sideways when it is wider than the screen, and keeps the lit
- * tab in view.
+ * tab in view. When tabs hide past an edge, that edge fades and shows an arrow
+ * (pitch kit polish, 2026-10-11): a live check found "Add cover art" and the
+ * pitch kit sitting off-screen with nothing saying there was more.
  */
 export function RolloutTabs({ releaseId, share, changeArtist, archive }: RolloutTabsProps) {
   const actions = useRolloutMenuActions({
@@ -47,13 +49,73 @@ export function RolloutTabs({ releaseId, share, changeArtist, archive }: Rollout
 
   return (
     <nav aria-label="Rollout" data-tour="rollout-menu" className="flex items-center gap-1">
-      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+      <ScrollRow>
         {places.map((action) => (
           <Tab key={action.key} action={action} />
         ))}
-      </div>
+      </ScrollRow>
       {dialogs.length > 0 ? <OverflowMenu actions={dialogs} /> : null}
     </nav>
+  );
+}
+
+/** A sideways-scrolling row that fades and offers an arrow at any edge with hidden tabs. */
+function ScrollRow({ children }: { children: ReactNode }) {
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    const measure = () => {
+      const left = row.scrollLeft > 4;
+      const right = row.scrollLeft + row.clientWidth < row.scrollWidth - 4;
+      setEdges((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
+    };
+    measure();
+    row.addEventListener('scroll', measure, { passive: true });
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    observer?.observe(row);
+    return () => {
+      row.removeEventListener('scroll', measure);
+      observer?.disconnect();
+    };
+  }, []);
+
+  const nudge = (direction: -1 | 1) => {
+    const row = rowRef.current;
+    if (!row) return;
+    row.scrollBy({ left: direction * Math.max(160, row.clientWidth * 0.6), behavior: 'smooth' });
+  };
+
+  const arrowClass =
+    'motion-focus absolute top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary shadow-sm hover:text-content-primary';
+
+  return (
+    <div className="relative min-w-0 flex-1">
+      <div
+        ref={rowRef}
+        className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {children}
+      </div>
+      {edges.left ? (
+        <>
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-bg-base to-transparent" />
+          <button type="button" aria-label="Show earlier tabs" onClick={() => nudge(-1)} className={`${arrowClass} left-0`}>
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </>
+      ) : null}
+      {edges.right ? (
+        <>
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-bg-base to-transparent" />
+          <button type="button" aria-label="Show more tabs" onClick={() => nudge(1)} className={`${arrowClass} right-0`}>
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </>
+      ) : null}
+    </div>
   );
 }
 
