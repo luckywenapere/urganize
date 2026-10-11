@@ -124,6 +124,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     href: '/admin/claims',
     group: 'operations',
     description: 'Unclaimed profiles from credits, and removal requests.',
+  },
+  {
     key: 'seeding',
     label: 'Seeding',
     href: '/admin/seeding',
