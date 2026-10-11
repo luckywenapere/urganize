@@ -36,6 +36,11 @@ import { StatusMark } from './StatusMark';
  * gets the grid > row > columnheader/gridcell shape screen readers need.
  */
 
+// Short desktop screens (a 1366x768 laptop and anything up to 900px tall)
+// get 56px rows instead of 72px, via the arbitrary media variant on the day
+// cells below (2026-10-11). Six weeks at 72px plus the shell above them left
+// release week below the fold on a laptop; at 56px the whole month fits in the
+// panel on most of them, and the panel still scrolls when it doesn't.
 const WEEKDAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 function formatMonthDay(dateIso: string): string {
@@ -101,7 +106,7 @@ function DayCell({
         onFocus={() => setFocusedDate(day.date)}
         onClick={() => onCreatePost(day.date)}
         aria-label={`Plan a post on ${monthDayLabel}`}
-        className={`group relative flex min-h-[72px] flex-col items-start gap-1 border-b border-r p-1.5 text-left transition-colors hover:bg-[var(--cc-text)]/[0.03] ${borderClass} ${
+        className={`group relative flex min-h-[72px] flex-col items-start gap-1 [@media(min-width:1024px)_and_(max-height:900px)]:min-h-[56px] border-b border-r p-1.5 text-left transition-colors hover:bg-[var(--cc-text)]/[0.03] ${borderClass} ${
           isReleaseDay ? 'border-[var(--cc-accent)]' : ''
         }`}
       >
@@ -145,7 +150,7 @@ function DayCell({
         }
       }}
       aria-label={`${dayPosts.length} post${dayPosts.length === 1 ? '' : 's'} on ${monthDayLabel}. Press Enter to view.`}
-      className={`flex min-h-[72px] flex-col gap-1 border-b border-r p-1.5 text-left transition-colors hover:bg-[var(--cc-text)]/[0.03] ${borderClass} ${
+      className={`flex min-h-[72px] flex-col gap-1 [@media(min-width:1024px)_and_(max-height:900px)]:min-h-[56px] border-b border-r p-1.5 text-left transition-colors hover:bg-[var(--cc-text)]/[0.03] ${borderClass} ${
         isReleaseDay ? 'border-[var(--cc-accent)]' : ''
       }`}
     >
@@ -286,7 +291,7 @@ export function MonthGrid({ month, releaseDate, posts, today, onCreatePost, onOp
             <div
               key={label}
               role="columnheader"
-              className="border-b border-r border-[var(--cc-border)] px-2 py-2 text-center font-[family-name:var(--font-cc-mono)] text-[10px] font-bold tracking-wide text-[var(--cc-text-faint)]"
+              className="border-b border-r border-[var(--cc-border)] px-2 py-2 [@media(min-width:1024px)_and_(max-height:900px)]:py-1 text-center font-[family-name:var(--font-cc-mono)] text-[10px] font-bold tracking-wide text-[var(--cc-text-faint)]"
             >
               {label}
             </div>

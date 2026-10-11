@@ -36,7 +36,7 @@ export function CalendarGridSkeleton() {
             <SkeletonBlock key={`header-${index}`} className="h-8 rounded-none" />
           ))}
           {Array.from({ length: WEEK_ROW_COUNT * 8 }).map((_, index) => (
-            <SkeletonBlock key={`cell-${index}`} className="min-h-[72px] rounded-none" />
+            <SkeletonBlock key={`cell-${index}`} className="min-h-[72px] rounded-none [@media(min-width:1024px)_and_(max-height:900px)]:min-h-[56px]" />
           ))}
         </div>
       </div>

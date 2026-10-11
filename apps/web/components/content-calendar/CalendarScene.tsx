@@ -237,8 +237,17 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
   // and Chappi alike, per the spec. No-ops once the param already matches.
   useEffect(() => {
     if (monthParam === month) return;
-    setMonthParam(month);
-  }, [month, monthParam, setMonthParam]);
+    // Native history.replaceState rather than router.replace (2026-10-11):
+    // this runs on the same commit as the scene's own open, and the
+    // router.replace it used to make lost the race with that open's
+    // router.push, so a fresh open never showed &month= in the address bar.
+    // Next.js syncs replaceState into useSearchParams, so the effect still
+    // settles, and nothing re-renders or navigates just to write the param.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('month') === month) return;
+    params.set('month', month);
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}?${params.toString()}`);
+  }, [month, monthParam]);
 
   // --- Posts: self-contained fetch, scoped to the active calendar + month ---
   const [posts, setPosts] = useState<ContentPost[]>([]);
@@ -453,7 +462,7 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
           with UrgAns closed the right-hand column is only the 208px menu, which
           keeps the month grid at a 1440px window (lib/layout-columns.ts pins
           it). With UrgAns open the container query below swaps to the agenda. */}
-      <div className="mx-auto max-w-[1200px] pb-8 pt-6 sm:px-6">
+      <div className="mx-auto max-w-[1200px] pb-8 pt-6 sm:px-6 [@media(min-width:1024px)_and_(max-height:900px)]:pb-4 [@media(min-width:1024px)_and_(max-height:900px)]:pt-3">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             {/* The way back to the activity list is the lit Content row in the
@@ -470,7 +479,7 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
                 bare <h1>: it is the heading row of this island, and a future
                 sibling belongs beside the title, not under it. */}
             <div className="mt-1 flex items-center gap-3">
-              <h1 className="font-[family-name:var(--font-cc-display)] text-3xl font-medium tracking-tight text-[var(--cc-text)]">
+              <h1 className="font-[family-name:var(--font-cc-display)] text-3xl font-medium tracking-tight text-[var(--cc-text)] [@media(min-width:1024px)_and_(max-height:900px)]:text-2xl">
                 {release.title}
               </h1>
             </div>
@@ -531,7 +540,7 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
           </div>
         ) : null}
 
-        <div className="mt-6">
+        <div className="mt-6 [@media(min-width:1024px)_and_(max-height:900px)]:mt-3">
           {isLoadingCalendars ? (
             <div className="flex gap-2 border-b border-[var(--cc-border)] pb-3">
               <div className="skeleton-shimmer h-8 w-24" />
@@ -644,7 +653,7 @@ export function CalendarScene({ release, onToast }: CalendarSceneProps) {
                   </button>
                 </div>
               ) : (
-                <div className="mt-4">
+                <div className="mt-4 [@media(min-width:1024px)_and_(max-height:900px)]:mt-2">
                   <MonthGrid
                     month={month}
                     releaseDate={release.releaseDate}
