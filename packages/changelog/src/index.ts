@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.119.1",
+    date: "October 11, 2026",
+    highlights: [
+      "Opening an activity now shows its full title. The Delete and Close bar no longer covers the top of it.",
+    ],
+  },
+  {
     version: "1.119.0",
     date: "October 11, 2026",
     highlights: [
