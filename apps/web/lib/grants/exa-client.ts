@@ -30,6 +30,16 @@ export const DEFAULT_SEARCH_TIMEOUT_MS = 20_000;
 
 const MAX_DETAIL_CHARS = 200;
 
+/**
+ * Checked 2026-10-11 against Exa's build-with-exa skill (v0.3.0). It recommends
+ * query + type auto + contents.highlights, with nothing else unless the task needs it.
+ * We part from that on purpose in two places:
+ * - contents.text instead of highlights: the verifier must find every claimed field
+ *   (deadline, amount, eligibility) in the page itself, and highlights are fragments.
+ *   maxCharacters is the budget cap the skill allows for this case.
+ * - numResults: the plan's page cap per query, a product decision, not boilerplate.
+ * No category, domain filters, dates or maxAgeHours. Funder preferences go in the query.
+ */
 export function buildSearchBody(query: string, options: { numResults?: number } = {}): Record<string, unknown> {
   const wanted = typeof options.numResults === 'number' && Number.isFinite(options.numResults) ? Math.floor(options.numResults) : DEFAULT_RESULTS;
   const numResults = Math.min(MAX_RESULTS, Math.max(1, wanted));
