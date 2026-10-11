@@ -16,7 +16,7 @@ describe('resolvePlannerModel', () => {
   it('defaults to the strong OpenAI model on RodiumAi, where the catalogue carries it', () => {
     vi.stubEnv('AI_API_BASE', 'https://api.rodiumai.io');
     vi.stubEnv('AI_PLANNER_MODEL', '');
-    expect(resolvePlannerModel()).toBe('openai/gpt-5.4');
+    expect(resolvePlannerModel()).toBe('openai/gpt-6.1-sol');
   });
 
   it('leaves the choice to the gateway default anywhere else', () => {

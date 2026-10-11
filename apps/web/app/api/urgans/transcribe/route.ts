@@ -4,7 +4,13 @@ import { requireUrgansAccess } from '@/app/api/_shared/urgans-access';
 import { getTranscriptionConfig, isChappiEnabled, isUrgansVoiceEnabled } from '@/lib/chappi/config';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
 import { countBillingEventsSince, logBillingEvent } from '@/lib/billing-events-server';
-import { VOICE_DAILY_CAP, parseTranscription, validateVoiceClip } from '@/lib/urgans-voice';
+import {
+  VOICE_DAILY_CAP,
+  parseTranscription,
+  parseTranscriptionSeconds,
+  transcriptionMetadata,
+  validateVoiceClip,
+} from '@/lib/urgans-voice';
 
 // Proxy a short voice clip to the speech model and return the transcript. The
 // browser records it (components/chappi/useVoiceInput.ts) and drops the result
@@ -153,6 +159,15 @@ export async function POST(request: NextRequest) {
       ownerUserId: team.ownerUserId,
       actorUserId: auth.user.id,
       type: 'urgans_voice_transcription',
+      // Which model ran and how much audio it heard, so the cost of free
+      // dictation can be summed later (the seconds are the provider's own count
+      // when it reports one; the bytes are always known).
+      metadata: transcriptionMetadata({
+        model: config.model,
+        bytes: file.size,
+        mimeType: file.type || '',
+        seconds: parseTranscriptionSeconds(rawBody),
+      }),
     });
   }
 

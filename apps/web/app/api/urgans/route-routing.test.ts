@@ -259,7 +259,7 @@ describe('POST /api/urgans with the router in shadow', () => {
     expect(recorded.metadata.routing).toMatchObject({
       mode: 'shadow',
       start_tier: 'pro',
-      would_use_model: 'openai/gpt-5.4',
+      would_use_model: 'openai/gpt-6.1-sol',
       models: ['openai/gpt-4o-mini'],
       tokens_in: 700,
     });

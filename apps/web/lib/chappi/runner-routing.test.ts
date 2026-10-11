@@ -194,18 +194,20 @@ describe('without routing (the router off)', () => {
 });
 
 describe('with routing on', () => {
-  it('uses the decision\'s model, a token cap for that rung and its reasoning effort', async () => {
+  it('uses the decision\'s model and a token cap for that rung, and sends GPT-6 no effort with tools', async () => {
     fetchMock.mockResolvedValue(say('Considered answer.'));
 
     const result = await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision: at('pro'), now: () => T0 } });
 
     expect(result.reply).toBe('Considered answer.');
     const body = bodyOf(0);
-    expect(body.model).toBe('openai/gpt-5.4');
+    expect(body.model).toBe('openai/gpt-6.1-sol');
     expect(body.max_completion_tokens).toBe(DEFAULT_LADDER.pro.maxOutputTokens);
-    expect(body.reasoning_effort).toBe('low');
+    // The chat turn carries tools, and GPT-6 takes the safe path there until it
+    // is measured (effortForTools, 2026-10-11).
+    expect(body).not.toHaveProperty('reasoning_effort');
     expect(body).not.toHaveProperty('max_tokens');
-    expect(result.trace).toMatchObject({ mode: 'on', startTier: 'pro', endTier: 'pro', models: ['openai/gpt-5.4'] });
+    expect(result.trace).toMatchObject({ mode: 'on', startTier: 'pro', endTier: 'pro', models: ['openai/gpt-6.1-sol'] });
   });
 
   it('keeps the classic parameters for a non-reasoning model on the quick rung', async () => {
@@ -228,9 +230,9 @@ describe('with routing on', () => {
     const result = await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision: at('pro'), now: () => T0 } });
 
     expect(result.reply).toBe('Answered by the sibling.');
-    expect(modelsCalled()).toEqual(['openai/gpt-5.4', 'openai/gpt-5.6-terra']);
-    expect(result.trace.hops).toEqual([{ from: 'openai/gpt-5.4', to: 'openai/gpt-5.6-terra', kind: 'rate_limited' }]);
-    expect(result.trace.models).toEqual(['openai/gpt-5.4', 'openai/gpt-5.6-terra']);
+    expect(modelsCalled()).toEqual(['openai/gpt-6.1-sol', 'openai/gpt-6-sol']);
+    expect(result.trace.hops).toEqual([{ from: 'openai/gpt-6.1-sol', to: 'openai/gpt-6-sol', kind: 'rate_limited' }]);
+    expect(result.trace.models).toEqual(['openai/gpt-6.1-sol', 'openai/gpt-6-sol']);
     // A sibling is the same rung, so the tier does not move.
     expect(result.trace).toMatchObject({ startTier: 'pro', endTier: 'pro' });
   });
@@ -299,8 +301,8 @@ describe('with routing on', () => {
 
     const result = await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision: at('standard'), now: () => T0 } });
 
-    expect(modelsCalled()).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.4']);
-    expect(result.trace.hops).toEqual([{ from: 'openai/gpt-5.4-mini', to: 'openai/gpt-5.4', kind: 'tool_errors' }]);
+    expect(modelsCalled()).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-6.1-sol']);
+    expect(result.trace.hops).toEqual([{ from: 'openai/gpt-5.4-mini', to: 'openai/gpt-6.1-sol', kind: 'tool_errors' }]);
     // The trace says where the turn started and where it ended up.
     expect(result.trace).toMatchObject({ startTier: 'standard', endTier: 'pro' });
     expect(result.reply).toBe('Sorted it out.');
@@ -313,7 +315,7 @@ describe('with routing on', () => {
 
     await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision: at('standard'), now: () => T0 } });
 
-    expect(modelsCalled()).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.4']);
+    expect(modelsCalled()).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-6.1-sol']);
   });
 
   it('does not count an empty arguments string as a failure: some models send that for a tool with no parameters', async () => {
@@ -367,7 +369,7 @@ describe('with routing on', () => {
     const result = await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision: at('standard'), now: () => T0 } });
 
     expect(result.reply).toBe('A real answer.');
-    expect(modelsCalled()).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.4']);
+    expect(modelsCalled()).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-6.1-sol']);
   });
 
   it('does not treat an empty last round as a failure when an earlier round already said something', async () => {
@@ -423,7 +425,8 @@ describe('with routing on', () => {
       .mockResolvedValueOnce(callTools([{ name: 'list_releases' }]))
       .mockResolvedValueOnce(say('Done.'));
 
-    await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision: at('pro'), now: () => T0 } });
+    // standard (gpt-5.4-mini) sends an effort with tools; pro's GPT-6 does not.
+    await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision: at('standard'), now: () => T0 } });
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(bodyOf(0)).toHaveProperty('reasoning_effort');
@@ -452,7 +455,7 @@ describe('with routing on', () => {
     await runChappiAgent({ ctx, system: 'sys', messages, routing: { decision: at('standard'), now: () => T0 } });
 
     // standard -> pro after two failures; one more failure is not two.
-    expect(modelsCalled()).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.4', 'openai/gpt-5.4']);
+    expect(modelsCalled()).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-6.1-sol', 'openai/gpt-6.1-sol']);
   });
 
   it('leaves an empty answer alone when the router is off, as before', async () => {
@@ -564,7 +567,7 @@ describe('with routing on', () => {
       expect(bodyOf(last).model).toBe('openai/gpt-4o-mini');
       expect(bodyOf(last)).not.toHaveProperty('tools');
       // The five tool rounds all ran on the turn's own rung.
-      for (let i = 0; i < last; i += 1) expect(bodyOf(i).model).toBe('openai/gpt-5.4');
+      for (let i = 0; i < last; i += 1) expect(bodyOf(i).model).toBe('openai/gpt-6.1-sol');
     });
   });
 
@@ -580,7 +583,9 @@ describe('with routing on', () => {
         routing: { decision: at('max'), deadlineMs: T0 + 20_000, now: () => T0 },
       });
 
-      expect(bodyOf(0).model).toBe('openai/gpt-5.4');
+      // pro's primary is max's own model (gpt-6.1-sol), already chosen, so the
+      // drop lands on pro's sibling.
+      expect(bodyOf(0).model).toBe('openai/gpt-6-sol');
       expect(result.trace.reasons.join(' ')).toMatch(/time: max -> pro/);
     });
 
@@ -600,7 +605,7 @@ describe('with routing on', () => {
         routing: { decision: at('pro'), deadlineMs: T0 + 40_000, now: () => clock },
       });
 
-      expect(modelsCalled()).toEqual(['openai/gpt-5.4', 'openai/gpt-5.4-mini']);
+      expect(modelsCalled()).toEqual(['openai/gpt-6.1-sol', 'openai/gpt-5.4-mini']);
       expect(result.reply).toBe('Finished in time.');
       expect(result.trace.hops).toEqual([]);
       expect(result.trace.reasons.join(' ')).toMatch(/time: pro -> standard/);
@@ -789,7 +794,7 @@ describe('what a turn leaves in the log', () => {
     ).rejects.toBeInstanceOf(GatewayError);
 
     expect(console.info).toHaveBeenCalledTimes(1);
-    expect(logged()[0]).toMatchObject({ mode: 'on', models: ['openai/gpt-5.4'] });
+    expect(logged()[0]).toMatchObject({ mode: 'on', models: ['openai/gpt-6.1-sol'] });
   });
 
   it('never logs a turn the router did not route, even one that failed', async () => {
@@ -872,7 +877,7 @@ describe('tokenParamAfterRejection', () => {
 
 describe('defaultTokenParam', () => {
   it('sends max_completion_tokens to the GPT-5 family and max_tokens to everything else', () => {
-    for (const model of ['openai/gpt-5.6-terra', 'openai/gpt-5.5', 'openai/gpt-5.4-mini', 'openai/o3-mini']) {
+    for (const model of ['openai/gpt-6-sol', 'openai/gpt-6.1-sol', 'openai/gpt-5.4-mini', 'openai/o3-mini']) {
       expect(defaultTokenParam(model)).toBe('max_completion_tokens');
     }
     for (const model of ['openai/gpt-4o-mini', 'openai/gpt-4o', 'meta/llama-3.1-8b', 'test-model']) {
@@ -953,6 +958,29 @@ describe('buildChatCompletionBody', () => {
       reasoningEffort: 'low',
     });
     expect(body.reasoning_effort).toBe('low');
+  });
+
+  it('sends GPT-6 no effort with tools (the safe path until measured, 2026-10-11), but keeps it without tools', () => {
+    const tools = [{ type: 'function', function: { name: 't', description: 'd', parameters: { type: 'object' } } }] as never;
+    for (const model of ['openai/gpt-6.1-sol', 'openai/gpt-6-sol']) {
+      const withTools = buildChatCompletionBody({
+        model,
+        messages,
+        tools,
+        maxOutputTokens: 100,
+        tokenParam: 'max_completion_tokens',
+        reasoningEffort: 'low',
+      });
+      expect('reasoning_effort' in withTools, model).toBe(false);
+      const without = buildChatCompletionBody({
+        model,
+        messages,
+        maxOutputTokens: 100,
+        tokenParam: 'max_completion_tokens',
+        reasoningEffort: 'low',
+      });
+      expect(without.reasoning_effort, model).toBe('low');
+    }
   });
 
   it('keeps the effort asked for with tools on models that accept it', () => {

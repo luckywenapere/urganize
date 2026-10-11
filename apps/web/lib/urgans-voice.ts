@@ -153,3 +153,35 @@ export function mergeTranscript(current: string, spoken: string): string {
   if (!existing) return addition;
   return `${existing} ${addition}`;
 }
+
+/**
+ * The seconds of audio the provider says it transcribed, when it says
+ * (RodiumAi answers `usage: { type: 'duration', seconds }` for gpt-transcribe,
+ * measured 2026-10-11). Null for any other shape: a count we cannot read is
+ * recorded as unknown, never as zero.
+ */
+export function parseTranscriptionSeconds(body: unknown): number | null {
+  const usage = (body as { usage?: unknown } | null)?.usage;
+  if (!usage || typeof usage !== 'object') return null;
+  const seconds = (usage as { seconds?: unknown }).seconds;
+  return typeof seconds === 'number' && Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
+}
+
+/**
+ * What a dictation's billing event records: the model that ran and how much
+ * audio it heard. Dictation is free, so nothing is charged from this; it is
+ * what lets its cost be summed later. The mime type is reduced to its base.
+ */
+export function transcriptionMetadata(input: {
+  model: string;
+  bytes: number;
+  mimeType: string;
+  seconds: number | null;
+}): { model: string; bytes: number; mime: string; seconds: number | null } {
+  return {
+    model: input.model,
+    bytes: Math.max(0, Math.round(input.bytes)),
+    mime: stripCodecs(input.mimeType || '') || 'unknown',
+    seconds: input.seconds === null ? null : Math.round(input.seconds * 10) / 10,
+  };
+}

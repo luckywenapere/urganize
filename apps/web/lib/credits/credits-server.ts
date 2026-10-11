@@ -448,3 +448,55 @@ export async function adjustCredits(
     return false;
   }
 }
+
+/**
+ * Charge started minutes of a voice call (Talk to UrgAns): a flat number of
+ * credits, written through settleTurn so it lands on the same ledger, split
+ * across sources the same way and deduplicated the same way. The request id is
+ * the call and the minute it brings the call up to, so a tick sent twice charges
+ * once. `reason: 'voice_minute'` is what the history and the admin views read.
+ *
+ * The provider cost written on the row is the planning estimate for one busy
+ * minute (pricing.ts, voiceMinuteCostRodi), not a measurement; the call's real
+ * token counts are kept on voice_sessions for the weekly reconciliation.
+ */
+export async function settleVoiceMinutes(
+  client: SupabaseClient,
+  input: {
+    workspaceId: string;
+    ownerUserId: string | null;
+    actorUserId: string;
+    sessionId: string;
+    /** Minutes being charged now. */
+    minutes: number;
+    /** The call's billed minutes once these are charged. */
+    minutesBilled: number;
+    credits: number;
+    estimatedRodiPerMinute: number | null;
+    model: string;
+    balances?: SourceBalances | null;
+  }
+): Promise<void> {
+  if (!(input.credits > 0) || !(input.minutes > 0)) return;
+  await settleTurn(client, {
+    workspaceId: input.workspaceId,
+    ownerUserId: input.ownerUserId,
+    actorUserId: input.actorUserId,
+    requestId: `voice:${input.sessionId}:m${input.minutesBilled}`,
+    charge: {
+      credits: input.credits,
+      rodi: (input.estimatedRodiPerMinute ?? 0) * input.minutes,
+      assumed: true,
+    },
+    calls: [],
+    balances: input.balances ?? null,
+    context: {
+      reason: 'voice_minute',
+      source: 'voice',
+      voice_session_id: input.sessionId,
+      minutes: input.minutes,
+      minutes_billed: input.minutesBilled,
+      voice_model: input.model,
+    },
+  });
+}

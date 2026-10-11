@@ -87,7 +87,7 @@ describe('with the router off', () => {
       reasoningEffort: 'low',
     });
 
-    expect(bodyOf(fetchMock, 0).model).toBe('openai/gpt-5.4');
+    expect(bodyOf(fetchMock, 0).model).toBe('openai/gpt-6.1-sol');
     expect(bodyOf(fetchMock, 0).reasoning_effort).toBe('low');
   });
 
@@ -124,9 +124,9 @@ describe('in shadow', () => {
   beforeEach(() => vi.stubEnv('AI_ROUTER', 'shadow'));
 
   it('keeps using the old model but records what the router would have used', async () => {
-    // The default pro rung and the planner's old model are both gpt-5.4 now, so pin
-    // the rung to Terra for the router to have something different to record.
-    vi.stubEnv('AI_LADDER_PRO', 'openai/gpt-5.6-terra');
+    // The default pro rung and the planner's old model are both gpt-6.1-sol now, so pin
+    // the rung to gpt-6-sol for the router to have something different to record.
+    vi.stubEnv('AI_LADDER_PRO', 'openai/gpt-6-sol');
     const fetchMock = vi.fn().mockResolvedValue(ok({ ok: true }));
     vi.stubGlobal('fetch', fetchMock);
     const traces: RoutingTrace[] = [];
@@ -139,11 +139,11 @@ describe('in shadow', () => {
       onTrace: (t) => traces.push(t),
     });
 
-    // The planner used gpt-5.4; the router would choose Terra.
-    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4']);
+    // The planner used gpt-6.1-sol; the router would choose gpt-6-sol.
+    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-6.1-sol']);
     expect(traces).toHaveLength(1);
-    expect(traces[0]).toMatchObject({ mode: 'shadow', wouldUseModel: 'openai/gpt-5.6-terra', legacyModel: 'openai/gpt-5.4' });
-    expect(traces[0].models).toEqual(['openai/gpt-5.4']);
+    expect(traces[0]).toMatchObject({ mode: 'shadow', wouldUseModel: 'openai/gpt-6-sol', legacyModel: 'openai/gpt-6.1-sol' });
+    expect(traces[0].models).toEqual(['openai/gpt-6.1-sol']);
   });
 
   it('never hops, even when the router would have', async () => {
@@ -178,7 +178,7 @@ describe('with the router on', () => {
     expect(modelsCalled(fetchMock)).toEqual([
       'openai/gpt-4o-mini',
       'openai/gpt-5.4-mini',
-      'openai/gpt-5.4',
+      'openai/gpt-6.1-sol',
     ]);
   });
 
@@ -241,7 +241,7 @@ describe('with the router on', () => {
     });
 
     expect(value).toEqual({ ok: true });
-    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4', 'openai/gpt-5.6-terra']);
+    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-6.1-sol', 'openai/gpt-6-sol']);
     for (const call of [0, 1]) {
       expect(bodyOf(fetchMock, call).response_format).toMatchObject({ type: 'json_schema' });
       expect(bodyOf(fetchMock, call).reasoning_effort).toBe('low');
@@ -262,7 +262,7 @@ describe('with the router on', () => {
     expect(value).toEqual({ ok: true });
     // Press-kit drafting starts on standard and, with no team information to
     // say otherwise, may climb as far as pro.
-    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.4']);
+    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-6.1-sol']);
   });
 
   it('treats an unparseable answer as bad output whatever wording the caller gave its error', async () => {
@@ -281,7 +281,7 @@ describe('with the router on', () => {
     });
 
     expect(value).toEqual({ ok: true });
-    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-5.4']);
+    expect(modelsCalled(fetchMock)).toEqual(['openai/gpt-5.4-mini', 'openai/gpt-6.1-sol']);
   });
 
   it('stops escalating at the ceiling and lets the failure through', async () => {

@@ -17,6 +17,8 @@ import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray } from '@/components/chappi/ChappiAttachments';
 import { useAttachments } from '@/components/chappi/useAttachments';
 import { useVoiceInput } from '@/components/chappi/useVoiceInput';
+import { TALK_ENABLED, TalkButton } from '@/components/chappi/voice/TalkButton';
+import { useVoiceCallStore } from '@/stores/useVoiceCallStore';
 import { isUrgansVoiceEnabled } from '@/lib/chappi/config';
 import { mergeTranscript } from '@/lib/urgans-voice';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -210,7 +212,8 @@ export function HomeAskBar() {
               type="button"
               onClick={voice.toggle}
               data-recording={isRecording ? 'true' : undefined}
-              aria-label={isRecording ? 'Stop recording' : 'Talk to UrgAns'}
+              aria-label={isRecording ? 'Stop recording' : TALK_ENABLED ? 'Dictate' : 'Talk to UrgAns'}
+              title={TALK_ENABLED && !isRecording ? 'Dictate' : undefined}
               disabled={isTranscribing || voice.state === 'requesting'}
               className="motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error"
             >
@@ -223,6 +226,7 @@ export function HomeAskBar() {
               )}
             </button>
           ) : null}
+          <TalkButton size="lg" disabled={isRecording || isTranscribing} onClick={() => useVoiceCallStore.getState().openCall(null)} />
           <button
             type="submit"
             aria-label="Send to UrgAns"

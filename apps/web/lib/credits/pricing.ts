@@ -1,4 +1,4 @@
-import { priceFor } from './model-prices';
+import { AUDIO_MODEL_PRICES, priceFor } from './model-prices';
 
 /**
  * Turning what the provider charged into what a team is charged, in credits.
@@ -188,3 +188,38 @@ export function holdCredits(model: string, completionTokens: number = HOLD_COMPL
 
 /** Whether a balance covers the hold. Equal is enough. */
 export const canStartTurn = (balance: number, hold: number): boolean => balance >= hold;
+
+/**
+ * What a speech model's usage cost the provider, in RODI, from the speech price
+ * table. Used to RECONCILE a voice call's flat per-minute charge against what it
+ * cost (never to charge it: the minute rate is VOICE_CREDITS_PER_MINUTE in
+ * lib/urgans-voice-realtime.ts). An unknown model, or no usage, is null: an
+ * estimate that has to guess a price is worse than none.
+ */
+export function audioCostRodi(
+  model: string,
+  usage: { inputTokens?: number | null; outputTokens?: number | null; cachedTokens?: number | null }
+): number | null {
+  const price = AUDIO_MODEL_PRICES[model] ?? AUDIO_MODEL_PRICES[`openai/${model}`];
+  if (!price) return null;
+  const input = finite(usage.inputTokens ?? null) ?? 0;
+  const output = finite(usage.outputTokens ?? null) ?? 0;
+  const cached = Math.min(finite(usage.cachedTokens ?? null) ?? 0, input);
+  if (input === 0 && output === 0) return null;
+  const cachedPrice = price.cachedInputPer1M ?? price.inputPer1M;
+  return ((input - cached) * price.inputPer1M + cached * cachedPrice + output * price.outputPer1M) / 1_000_000;
+}
+
+/**
+ * A planning estimate of one busy minute of a realtime call on `model`, in RODI:
+ * about 16k prompt tokens re-read across four replies (three quarters served
+ * from cache) and about 600 output audio tokens (30 seconds of speech at 20 a
+ * second). On gpt-realtime-2.1-mini that is about 3.4 RODI, roughly 1.4 credits
+ * at the 3x markup, which is why the flat rate is 2. Live captions
+ * (gpt-live-transcribe) add about 1.3 RODI for 30 seconds of the user talking.
+ */
+export const VOICE_MINUTE_ESTIMATE = { inputTokens: 16_000, cachedTokens: 12_000, outputTokens: 600 } as const;
+
+export function voiceMinuteCostRodi(model: string): number | null {
+  return audioCostRodi(model, VOICE_MINUTE_ESTIMATE);
+}

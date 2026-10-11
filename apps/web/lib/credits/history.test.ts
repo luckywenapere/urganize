@@ -104,3 +104,26 @@ describe('formatSignedCredits', () => {
     expect(formatSignedCredits(1500)).toBe('+1,500');
   });
 });
+
+describe('a voice call in the history (2026-10-11)', () => {
+  const voiceRow = (minute: number, credits: number, at: string) => ({
+    id: `v${minute}`,
+    kind: 'spend',
+    pool: 'allowance',
+    credits,
+    dedupe_key: `spend:voice:call-1:m${minute}:allowance`,
+    created_at: at,
+    metadata: { reason: 'voice_minute', voice_session_id: 'call-1' },
+  });
+
+  it('shows the whole call as one line, summing its minutes', async () => {
+    const { buildHistory } = await import('./history');
+    const entries = buildHistory([
+      voiceRow(1, -2, '2026-10-11T10:00:00Z'),
+      voiceRow(2, -2, '2026-10-11T10:01:00Z'),
+      voiceRow(3, -2, '2026-10-11T10:02:00Z'),
+    ] as never);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ label: 'Voice call with UrgAns', credits: -6 });
+  });
+});

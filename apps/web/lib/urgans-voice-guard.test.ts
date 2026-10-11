@@ -60,3 +60,10 @@ describe('the audio is never stored', () => {
     expect(source).not.toMatch(/\.insert\(/);
   });
 });
+
+describe('a dictation says which model ran (2026-10-11)', () => {
+  it('writes the model and the audio size onto its billing event', () => {
+    expect(source).toMatch(/metadata:\s*transcriptionMetadata\(\{\s*model:\s*config\.model/);
+    expect(source).toMatch(/bytes:\s*file\.size/);
+  });
+});
