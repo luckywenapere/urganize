@@ -304,7 +304,10 @@ export async function POST(request: NextRequest) {
       // shape, and the log checks it is a uuid before it is written.
       const usageContext: UsageLogContext = {
         requestId,
-        feature: 'chat',
+        // A turn a voice call asked for (app/api/urgans/voice/tool sets the
+        // header) is logged as 'voice'. Only a label on the cost log: the turn,
+        // its tools, its guards and its charge are exactly a typed turn's.
+        feature: request.headers.get('x-urgans-surface') === 'voice' ? 'voice' : 'chat',
         workspaceId: team.primaryWorkspaceId ?? null,
         ownerUserId: team.ownerUserId ?? null,
         actorUserId: auth.user.id,

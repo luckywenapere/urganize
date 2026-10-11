@@ -85,4 +85,6 @@ export {
   Undo2, UserPlus,
   // Read-aloud on UrgAns replies.
   Volume2,
+  // Talk to UrgAns (2026-10-11): the Talk button, mute, hang up, captions.
+  AudioWaveform, Captions, MicOff, PhoneOff,
 } from 'lucide-react';

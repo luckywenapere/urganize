@@ -26,7 +26,9 @@ export type { FailedCall };
  *    a release counts them once however many calls the request made.
  */
 
-export const AI_USAGE_FEATURES = ['chat', 'plan', 'press_kit', 'pitch_kit', 'spotify_pitch', 'status', 'outcome'] as const;
+// 'voice' (2026-10-11): an UrgAns turn asked for by a voice call's urgans_do
+// tool (app/api/urgans/voice/tool), recorded apart from typed chat.
+export const AI_USAGE_FEATURES = ['chat', 'plan', 'press_kit', 'pitch_kit', 'spotify_pitch', 'status', 'outcome', 'voice'] as const;
 export type AiUsageFeature = (typeof AI_USAGE_FEATURES)[number];
 
 /** Who a request belongs to. Every id is optional in the log and checked before it is written. */

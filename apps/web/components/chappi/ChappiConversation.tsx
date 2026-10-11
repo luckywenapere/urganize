@@ -67,6 +67,8 @@ import { actionsForLeftChat, firstShareOffersIn } from '@/lib/chappi/left-chat-a
 import { mayAutoFocusComposer, readAutoFocusContext } from '@/lib/composer-focus';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useVoiceInput } from '@/components/chappi/useVoiceInput';
+import { TALK_ENABLED, TalkButton } from '@/components/chappi/voice/TalkButton';
+import { useVoiceCallStore } from '@/stores/useVoiceCallStore';
 import { useAttachments } from '@/components/chappi/useAttachments';
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray, ChappiMessageAttachments } from '@/components/chappi/ChappiAttachments';
@@ -153,6 +155,16 @@ const CHIP_DESCRIPTIONS: Record<string, string> = {
  * nextMessageId is: the clock must not be read during render. */
 function ymdWeeksFromNow(weeks: number): string {
   return new Date(Date.now() + weeks * 7 * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** Whole days from today to a YYYY-MM-DD date, for the voice greeting; null when unknown. */
+function daysUntil(date: string | null | undefined): number | null {
+  if (!date) return null;
+  const at = Date.parse(`${date.slice(0, 10)}T00:00:00`);
+  if (!Number.isFinite(at)) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((at - today.getTime()) / 86_400_000);
 }
 
 async function getAccessToken(): Promise<string> {
@@ -1349,7 +1361,9 @@ export function ChappiConversation({
             // so no aria-pressed as well: announcing both reads as a double
             // negative. The recording colour keys off a data attribute.
             data-recording={isRecording ? 'true' : undefined}
-            aria-label={isRecording ? 'Stop recording' : 'Talk to UrgAns'}
+            // "Dictate" once Talk sits beside it, so the two never share a name.
+            aria-label={isRecording ? 'Stop recording' : TALK_ENABLED ? 'Dictate' : 'Talk to UrgAns'}
+            title={TALK_ENABLED && !isRecording ? 'Dictate' : undefined}
             // Ghost style so Send stays the primary action.
             disabled={isThinking || isTranscribing || voice.state === 'requesting'}
             className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-elevated hover:text-content-primary disabled:opacity-40 data-[recording=true]:text-status-error"
@@ -1363,6 +1377,14 @@ export function ChappiConversation({
             )}
           </button>
         ) : null}
+        <TalkButton
+          disabled={isThinking || isRecording || isTranscribing}
+          onClick={() =>
+            useVoiceCallStore
+              .getState()
+              .openCall(scopedRelease ? { id: scopedRelease.id, title: scopedRelease.title, daysToRelease: daysUntil(scopedRelease.releaseDate) } : null)
+          }
+        />
         <button
           type="submit"
           aria-label="Send"

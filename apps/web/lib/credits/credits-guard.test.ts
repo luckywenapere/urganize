@@ -123,6 +123,13 @@ describe('only the chat route charges, and only after the confirmation branch', 
     expect(callers).toEqual(['app/api/urgans/route.ts']);
   });
 
+  it('charges voice minutes from one place, the voice server module (2026-10-11)', () => {
+    const callers = [...sources]
+      .filter(([file, source]) => !file.startsWith('lib/credits/') && /\bsettleVoiceMinutes\s*\(/.test(source))
+      .map(([file]) => file);
+    expect(callers).toEqual(['lib/urgans-voice-realtime-server.ts']);
+  });
+
   it('reads and charges credits only after the approve path has returned', () => {
     const approve = route.indexOf('closeConfirmedAction(');
     expect(approve).toBeGreaterThan(0);
@@ -305,9 +312,13 @@ describe('a credits-only team can use UrgAns, and only UrgAns', () => {
   });
 
   it('puts every UrgAns route behind the UrgAns gate, and none behind the plain paywalled ones', () => {
+    // The voice routes (2026-10-11) open the same gate through their shared
+    // openVoiceGate, which checks the voice flag first.
+    const voiceGate = sources.get('app/api/urgans/voice/_shared.ts') ?? '';
+    expect(voiceGate).toMatch(/requireUrgansAccess\(request\)/);
     for (const file of urgansRoutes) {
       const source = sources.get(file) ?? '';
-      expect(source, file).toMatch(/requireUrgansAccess/);
+      expect(source, file).toMatch(file.startsWith('app/api/urgans/voice/') ? /openVoiceGate\(request\)/ : /requireUrgansAccess/);
       expect(source, file).not.toMatch(/requireAuthenticatedAdmin|requireActiveAuthenticatedUser|requireActiveAccount/);
     }
   });

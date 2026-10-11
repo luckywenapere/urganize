@@ -46,6 +46,12 @@ const text = (value: unknown): string => (typeof value === 'string' ? value.trim
 /** `spend:<request id>:<source>` shares its middle part across the rows of one turn. */
 function spendGroupKey(row: LedgerHistoryRow): string | null {
   if (row.kind !== 'spend' || !row.dedupe_key) return null;
+  // A voice call is charged a minute at a time (`spend:voice:<call>:m<n>:<source>`),
+  // and the history shows it as ONE line for the whole call.
+  const meta = row.metadata ?? {};
+  if (meta.reason === 'voice_minute' && typeof meta.voice_session_id === 'string' && meta.voice_session_id) {
+    return `voice:${meta.voice_session_id}`;
+  }
   const parts = row.dedupe_key.split(':');
   if (parts[0] !== 'spend' || parts.length < 3) return null;
   return parts.slice(1, -1).join(':');
@@ -61,6 +67,9 @@ function labelFor(row: LedgerHistoryRow): { label: string; detail: string } {
     case 'topup':
       return { label: 'Credits you bought', detail: '' };
     case 'spend': {
+      if (meta.reason === 'voice_minute') {
+        return { label: 'Voice call with UrgAns', detail: '' };
+      }
       if (meta.source === 'embedded_action') {
         const action = text(meta.action);
         return { label: ACTION_HISTORY_LABELS[action] ?? 'UrgAns did some work', detail: '' };

@@ -41,6 +41,9 @@ import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
 import { CURATOR_HOME_PATH, HOME_PATH } from '@/lib/home-path';
 import { isSocialShareEnabled } from '@/lib/social-share';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
+import { isChappiEnabled, isUrgansRealtimeEnabled } from '@/lib/chappi/config';
+
+const TALK_ENABLED = isChappiEnabled() && isUrgansRealtimeEnabled();
 
 // The prefetch list moved to lib/prefetch-routes.ts (2026-08-31) so it can be
 // flag- and account-aware and unit-tested. It used to be three hardcoded
@@ -104,6 +107,13 @@ const ReportIssueDialog = dynamic(
 // the share sheet, the directory and UrgAns) live in different ownership islands,
 // and it opens from the URL (`?settings=`), so they all just navigate. Lazy, so
 // nobody downloads the nine segments until somebody opens it.
+// Talk to UrgAns (2026-10-11, NEXT_PUBLIC_FEATURE_URGANS_REALTIME). Mounted
+// once so a call outlives the composer it was started from and survives moving
+// between pages. Lazy and flag-gated: with the flag off its chunk is never asked for.
+const VoiceSheetHost = dynamic(
+  () => import('@/components/chappi/voice/VoiceSheetHost').then((m) => m.VoiceSheetHost),
+  { ssr: false }
+);
 const SettingsModalHost = dynamic(
   () => import('@/components/settings/SettingsModal').then((m) => m.SettingsModalHost),
   { ssr: false }
@@ -660,6 +670,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           page with app chrome. showWorkspaceChrome already excludes a
           curator-only account, whose settings live under /curator. */}
       {isAuthenticated && !isAuthLoading && showWorkspaceChrome ? <SettingsModalHost /> : null}
+      {TALK_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? <VoiceSheetHost /> : null}
       {/* "What's new" (founder request, 2026-07-23): announces changelog
           entries this device hasn't seen yet, once per release, on signed-in
           app surfaces only.

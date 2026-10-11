@@ -188,6 +188,17 @@ export interface AnalyticsEventPropertiesMap {
     outcome: 'ok' | 'empty' | 'error';
     status?: number;
   };
+  /** Talk to UrgAns, the live voice call (2026-10-11, flag-off). Started, ended
+   * (why, how long, how many actions) and failed (at which stage). Never any
+   * audio or transcript text. */
+  urgans_voice_call_started: { transport: 'realtime' | 'cascade' };
+  urgans_voice_call_ended: {
+    transport: 'realtime' | 'cascade';
+    reason: string;
+    minutes: number;
+    actions: number;
+  };
+  urgans_voice_call_failed: { stage: 'mic' | 'session' | 'connect' | 'turn'; status?: number };
   /** The permission gate in use (2026-08-14). `shown` fires when UrgAns
    * proposes a gated action, the other two when the user decides. Watching the
    * approve:cancel ratio per tool is how we find out whether the assistant is

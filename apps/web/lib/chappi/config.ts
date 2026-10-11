@@ -34,6 +34,14 @@ export function isUrgansVoiceEnabled(): boolean {
   return process.env.NEXT_PUBLIC_FEATURE_URGANS_VOICE === 'true';
 }
 
+/** Talk to UrgAns, the live two-way voice call (NEXT_PUBLIC_FEATURE_URGANS_REALTIME,
+ * default off). Only meaningful alongside NEXT_PUBLIC_FEATURE_CHAPPI. When off,
+ * the Talk button is hidden and every /api/urgans/voice route 404s. Independent
+ * of NEXT_PUBLIC_FEATURE_URGANS_VOICE (dictation), so either can ship alone. */
+export function isUrgansRealtimeEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_FEATURE_URGANS_REALTIME === 'true';
+}
+
 /** Resolve the transcription transport, or null when not fully configured.
  * Reuses the RodiumAi key and base UrgAns already uses (one vendor, founder
  * call). The model defaults to DEFAULT_TRANSCRIBE_MODEL (openai/gpt-transcribe
