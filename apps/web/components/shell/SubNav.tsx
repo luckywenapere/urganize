@@ -17,6 +17,9 @@ import { activeShellArea, buildShellAreas, readShellFlags, visibleSubTabs } from
  */
 export const SUBNAV_SLOT_START = 'subnav-slot-start';
 export const SUBNAV_SLOT_END = 'subnav-slot-end';
+/** A list page's search and filters (ListToolbar), right-aligned before the
+ *  primary action. Filled from `lg` up only (founder mock, 2026-10-11). */
+export const SUBNAV_SLOT_TOOLS = 'subnav-slot-tools';
 
 export function SubNav() {
   const pathname = usePathname() ?? '/dashboard';
@@ -55,6 +58,8 @@ export function SubNav() {
         <div id={SUBNAV_SLOT_START} className="flex shrink-0 items-center empty:hidden" />
         {tip.panel}
       </div>
+      {/* List pages portal their search and filters here (ListToolbar). */}
+      <div id={SUBNAV_SLOT_TOOLS} className="hidden min-w-0 shrink-0 items-center lg:flex lg:empty:hidden" />
       {/* Pages can portal their primary action (e.g. Add rollout) here. */}
       <div id={SUBNAV_SLOT_END} className="flex shrink-0 items-center empty:hidden" />
       </div>

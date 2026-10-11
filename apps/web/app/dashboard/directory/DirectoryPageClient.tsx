@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { Loader2 } from '@/components/icons';
+import { ListToolbar } from '@/components/shell/ListToolbar';
 import { supabase } from '@/lib/supabase/client';
 import {
   applyDirectoryFilters,
@@ -71,9 +72,6 @@ const NO_FILTERS: DirectoryFilters = {
   availability: null,
   profileType: null,
 };
-
-const controlClass =
-  'h-11 rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none';
 
 export function DirectoryPageClient() {
   return (
@@ -277,71 +275,59 @@ function DirectoryBody() {
               nothing until the server says invites are ready. */}
           <DirectoryInvites />
 
-          <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <input
-              value={filters.query}
-              onChange={(event) => patch({ query: event.target.value })}
-              placeholder="Search by name"
-              aria-label="Search by name"
-              className={`${controlClass} sm:col-span-2 lg:col-span-3`}
-            />
-            <select
-              value={filters.role ?? ''}
-              onChange={(event) => patch({ role: (event.target.value || null) as DirectoryRole | null })}
-              aria-label="Filter by role"
-              className={controlClass}
-            >
-              <option value="">Any role</option>
-              {DIRECTORY_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {DIRECTORY_ROLE_LABELS[role]}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filters.profileType ?? ''}
-              onChange={(event) =>
-                patch({ profileType: (event.target.value || null) as ProfileType | null })
-              }
-              aria-label="Filter by profile type"
-              className={controlClass}
-            >
-              <option value="">Any type</option>
-              {PROFILE_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {PROFILE_TYPE_LABELS[type]}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filters.city ?? ''}
-              onChange={(event) => patch({ city: event.target.value || null })}
-              aria-label="Filter by city"
-              className={controlClass}
-            >
-              <option value="">Anywhere</option>
-              {cities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filters.availability ?? ''}
-              onChange={(event) =>
-                patch({ availability: (event.target.value || null) as PersonAvailability | null })
-              }
-              aria-label="Filter by what they are open to"
-              className={controlClass}
-            >
-              <option value="">Open to: any</option>
-              {PERSON_AVAILABILITIES.map((value) => (
-                <option key={value} value={value}>
-                  {PERSON_AVAILABILITY_COPY[value].label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Search and filters: in the tab row on a computer, one compact
+              row with a Filters sheet on a phone (founder mock, 2026-10-11). */}
+          <ListToolbar
+            className="mb-5"
+            search={{
+              value: filters.query,
+              onChange: (query) => patch({ query }),
+              placeholder: 'Search by name',
+            }}
+            controls={[
+              {
+                kind: 'filter',
+                key: 'role',
+                label: 'Role',
+                value: filters.role ?? '',
+                options: [
+                  { value: '', label: 'Any role' },
+                  ...DIRECTORY_ROLES.map((role) => ({ value: role, label: DIRECTORY_ROLE_LABELS[role] })),
+                ],
+                onChange: (value) => patch({ role: (value || null) as DirectoryRole | null }),
+              },
+              {
+                kind: 'filter',
+                key: 'type',
+                label: 'Profile type',
+                value: filters.profileType ?? '',
+                options: [
+                  { value: '', label: 'Any type' },
+                  ...PROFILE_TYPES.map((type) => ({ value: type, label: PROFILE_TYPE_LABELS[type] })),
+                ],
+                onChange: (value) => patch({ profileType: (value || null) as ProfileType | null }),
+              },
+              {
+                kind: 'filter',
+                key: 'city',
+                label: 'City',
+                value: filters.city ?? '',
+                options: [{ value: '', label: 'Anywhere' }, ...cities.map((city) => ({ value: city, label: city }))],
+                onChange: (value) => patch({ city: value || null }),
+              },
+              {
+                kind: 'filter',
+                key: 'availability',
+                label: 'Open to',
+                value: filters.availability ?? '',
+                options: [
+                  { value: '', label: 'Open to: any' },
+                  ...PERSON_AVAILABILITIES.map((value) => ({ value, label: PERSON_AVAILABILITY_COPY[value].label })),
+                ],
+                onChange: (value) => patch({ availability: (value || null) as PersonAvailability | null }),
+              },
+            ]}
+          />
 
           {/* Shelves are for browsing, so they step aside the moment somebody
               searches or filters. Search results are never ranked or mixed

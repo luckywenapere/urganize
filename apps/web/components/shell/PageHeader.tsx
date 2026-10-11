@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import { InfoTip } from '@/components/shared/HelpTip';
 
+/** Where a list page's search and filters go on a computer when its area has no
+ *  section tab row to hold them (ListToolbar looks for the tab row first). */
+export const PAGE_HEADER_SLOT_TOOLS = 'page-header-slot-tools';
+
 type PageHeaderProps = {
   /** The page's one title, in the display face. Every page has exactly one. */
   title?: string;
@@ -40,6 +44,7 @@ export function PageHeader({ title, description, info, action, className = '' }:
           </div>
         ) : null}
         {description ? <p className="mt-1.5 text-sm text-content-secondary">{description}</p> : null}
+        <div id={PAGE_HEADER_SLOT_TOOLS} className="hidden items-center lg:flex lg:empty:hidden lg:[&:not(:first-child)]:mt-3" />
       </div>
       {action ? <div className="flex shrink-0 [&>*]:w-full sm:[&>*]:w-auto">{action}</div> : null}
     </div>

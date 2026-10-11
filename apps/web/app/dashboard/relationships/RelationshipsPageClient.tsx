@@ -15,6 +15,7 @@ import {
 import { useRelationshipsStore } from '@/stores/useRelationshipsStore';
 import { ComingSoon } from '@/components/shell/ComingSoon';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { ListToolbar } from '@/components/shell/ListToolbar';
 
 const PAGE_ENABLED = isRelationshipsPageEnabled();
 
@@ -278,61 +279,50 @@ export default function RelationshipsPageClient() {
 
       {relationships.length > 0 ? (
         <PullReveal filtering={filtering}>
-        <div className="mb-4 space-y-3">
-          <input
-            className={FIELD}
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by name, role or tag"
-            aria-label="Search people"
-            autoComplete="off"
+          {/* In the tab row on a computer, one compact row with a Filters
+              sheet on a phone (founder mock, 2026-10-11). */}
+          <ListToolbar
+            className="mb-4"
+            search={{
+              value: query,
+              onChange: setQuery,
+              placeholder: 'Search by name, role or tag',
+              label: 'Search people',
+            }}
+            controls={[
+              ...(roles.length > 0
+                ? [
+                    {
+                      kind: 'filter' as const,
+                      key: 'role',
+                      label: 'What they do',
+                      value: role,
+                      options: [{ value: '', label: 'Any role' }, ...roles.map((item) => ({ value: item, label: item }))],
+                      onChange: setRole,
+                    },
+                  ]
+                : []),
+              ...(allTags.length > 0
+                ? [
+                    {
+                      kind: 'filter' as const,
+                      key: 'tag',
+                      label: 'Tag',
+                      value: tag,
+                      options: [{ value: '', label: 'Any tag' }, ...allTags.map((item) => ({ value: item, label: item }))],
+                      onChange: setTag,
+                    },
+                  ]
+                : []),
+              {
+                kind: 'toggle' as const,
+                key: 'stale',
+                label: `Not in touch for ${STALE_DAYS} days`,
+                pressed: staleOnly,
+                onToggle: setStaleOnly,
+              },
+            ]}
           />
-          <div className="flex flex-wrap items-center gap-2">
-            {roles.length > 0 ? (
-              <select
-                className={`${FIELD} w-auto`}
-                value={role}
-                onChange={(event) => setRole(event.target.value)}
-                aria-label="Filter by what they do"
-              >
-                <option value="">Any role</option>
-                {roles.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            {allTags.length > 0 ? (
-              <select
-                className={`${FIELD} w-auto`}
-                value={tag}
-                onChange={(event) => setTag(event.target.value)}
-                aria-label="Filter by tag"
-              >
-                <option value="">Any tag</option>
-                {allTags.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            <button
-              type="button"
-              aria-pressed={staleOnly}
-              onClick={() => setStaleOnly((value) => !value)}
-              className={`motion-focus rounded-lg border px-3 py-2 text-sm font-semibold ${
-                staleOnly
-                  ? 'border-brand bg-brand/10 text-content-primary'
-                  : 'border-stroke-control text-content-secondary hover:border-content-secondary'
-              }`}
-            >
-              Not in touch for {STALE_DAYS} days
-            </button>
-          </div>
-        </div>
         </PullReveal>
       ) : null}
 

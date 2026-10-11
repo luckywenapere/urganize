@@ -1,6 +1,7 @@
 'use client';
 
 import { PageHeader } from '@/components/shell/PageHeader';
+import { ListToolbar } from '@/components/shell/ListToolbar';
 import { ComingSoon } from '@/components/shell/ComingSoon';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -340,27 +341,52 @@ export default function ShowsPageClient() {
       ) : null}
 
       {!isLoading && artistsWithShows.length > 1 ? (
-        <div role="group" aria-label="Show shows for" className="mt-5 flex flex-wrap gap-1.5">
-          {[{ id: null as string | null, name: 'All artists' }, ...artistsWithShows].map((artist) => {
-            const active = activeFilter === artist.id;
-            return (
-              <button
-                key={artist.id ?? 'all'}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setArtistFilter(artist.id)}
-                className={`motion-focus inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
-                  active
-                    ? 'border-brand bg-brand/10 text-brand'
-                    : 'border-stroke-default text-content-secondary hover:text-content-primary'
-                }`}
-              >
-                {active ? <Check className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
-                {artist.name}
-              </button>
-            );
-          })}
-        </div>
+        // The artist filter: a pill in the tab row on a computer; on a phone
+        // one sideways-scrolling row of chips, so it never wraps onto a
+        // second line (founder mock, 2026-10-11).
+        <ListToolbar
+          className="mt-5"
+          controls={[
+            {
+              kind: 'filter',
+              key: 'artist',
+              label: 'Artist',
+              value: activeFilter ?? '',
+              options: [
+                { value: '', label: 'All artists' },
+                ...artistsWithShows.map((artist) => ({ value: artist.id, label: artist.name })),
+              ],
+              onChange: (value) => setArtistFilter(value || null),
+            },
+          ]}
+          phoneRow={
+            <div
+              role="group"
+              aria-label="Show shows for"
+              className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4 sm:-mx-5 sm:px-5"
+            >
+              {[{ id: null as string | null, name: 'All artists' }, ...artistsWithShows].map((artist) => {
+                const active = activeFilter === artist.id;
+                return (
+                  <button
+                    key={artist.id ?? 'all'}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setArtistFilter(artist.id)}
+                    className={`motion-focus inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3.5 text-sm font-semibold transition-colors ${
+                      active
+                        ? 'border-brand bg-brand/10 text-brand'
+                        : 'border-stroke-default text-content-secondary hover:text-content-primary'
+                    }`}
+                  >
+                    {active ? <Check className="h-3 w-3 shrink-0" aria-hidden="true" /> : null}
+                    {artist.name}
+                  </button>
+                );
+              })}
+            </div>
+          }
+        />
       ) : null}
 
       <div className="mt-6">

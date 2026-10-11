@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.120.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Search and filters take less room. On a computer they sit in the tab row at the top of Rollouts, Notes, People, Directory and Shows, and next to Add on Opportunities.",
+      "On a phone it is one row: a search box and a Filters button. The button shows how many filters are on, and opens a sheet with the choices. Shows keeps a single sliding row of artists.",
+    ],
+  },
+  {
     version: "1.119.1",
     date: "October 11, 2026",
     highlights: [

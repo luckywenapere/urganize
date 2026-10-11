@@ -4,9 +4,10 @@ import { PullReveal } from '@/components/shared/PullReveal';
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { ChevronDown, Plus, Search, X } from '@/components/icons';
+import { Plus, X } from '@/components/icons';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { ListToolbar } from '@/components/shell/ListToolbar';
 import { SUBNAV_SLOT_END, SUBNAV_SLOT_START } from '@/components/shell/SubNav';
 import {
   SORT_OPTIONS,
@@ -263,78 +264,44 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
 
       {showFilters ? (
       <PullReveal filtering={Boolean(query.trim()) || status !== 'all'}>
-      <div className="mb-4 rounded-2xl border border-stroke-default bg-bg-surface p-3 sm:mb-0 sm:p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <label className="relative w-full sm:min-w-[200px] sm:max-w-xs sm:flex-1">
-            <span className="sr-only">Search rollouts</span>
-            <Search
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search rollouts"
-              className="h-11 w-full rounded-full border border-stroke-control bg-bg-base pl-10 pr-4 text-base text-content-primary placeholder:text-content-tertiary hover:border-content-secondary"
-            />
-          </label>
-
-          <div
-            role="group"
-            aria-label="Filter by status"
-            className="-mx-3 flex items-center gap-1.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
-          >
-            {STATUS_FILTERS.map((filter) => {
-              const active = status === filter.key;
-              return (
-                <button
-                  key={filter.key}
-                  type="button"
-                  onClick={() => setStatus(filter.key)}
-                  aria-pressed={active}
-                  className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors ${
-                    active
-                      ? 'border-content-primary bg-bg-base text-content-primary'
-                      : 'border-stroke-control text-content-secondary hover:border-content-secondary hover:text-content-primary'
-                  }`}
-                >
-                  {filter.label}
-                  <span className="font-mono text-xs tabular-nums text-content-tertiary">{counts[filter.key]}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
-            <label className="flex w-full items-center gap-2 text-sm text-content-secondary sm:w-auto">
-              <span className="sr-only sm:not-sr-only">Sort</span>
-              <span className="relative inline-flex w-full sm:w-auto">
-              <select
-                value={sort}
-                onChange={(event) => setSort(event.target.value as SortKey)}
-                className="h-11 w-full appearance-none rounded-full sm:w-auto border border-stroke-control bg-bg-base pl-4 pr-10 text-base text-content-primary hover:border-content-secondary"
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.key} value={option.key}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary"
-                aria-hidden="true"
-              />
-              </span>
-            </label>
-            <div role="group" aria-label="Layout" className="hidden items-center rounded-full border border-stroke-control p-0.5 md:flex">
+        {/* Search, status and sort: in the tab row on a computer, one compact
+            row with a Filters sheet on a phone (founder mock, 2026-10-11). */}
+        <ListToolbar
+          inlineFrom="2xl"
+          search={{ value: query, onChange: setQuery, placeholder: 'Search rollouts' }}
+          controls={[
+            {
+              kind: 'filter',
+              key: 'status',
+              label: 'Status',
+              value: status,
+              defaultValue: 'all',
+              options: STATUS_FILTERS.map((filter) => ({
+                value: filter.key,
+                label: `${filter.label} (${counts[filter.key]})`,
+              })),
+              onChange: (value) => setStatus(value as StatusFilterKey),
+            },
+            {
+              kind: 'sort',
+              key: 'sort',
+              label: 'Sort',
+              value: sort,
+              defaultValue: 'recent',
+              options: SORT_OPTIONS.map((option) => ({ value: option.key, label: option.label })),
+              onChange: (value) => setSort(value as SortKey),
+            },
+          ]}
+          extra={
+            // Table or cards: from xl, where it fits beside the tabs.
+            <div role="group" aria-label="Layout" className="hidden items-center rounded-full border border-stroke-control p-0.5 xl:flex">
               {(['table', 'cards'] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
                   onClick={() => setView(option)}
                   aria-pressed={view === option}
-                  className={`motion-focus h-10 rounded-full px-3.5 text-sm font-medium ${
+                  className={`motion-focus h-8 rounded-full px-3 text-sm font-medium ${
                     view === option ? 'bg-bg-hover text-content-primary' : 'text-content-secondary hover:text-content-primary'
                   }`}
                 >
@@ -342,9 +309,8 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      </div>
+          }
+        />
       </PullReveal>
       ) : null}
 

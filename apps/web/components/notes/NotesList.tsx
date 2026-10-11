@@ -1,6 +1,7 @@
 'use client';
 
-import { Archive, ArrowLeft, Pin, Plus, Search, X } from '@/components/icons';
+import { Archive, ArrowLeft, Pin, Plus, X } from '@/components/icons';
+import { ListToolbar } from '@/components/shell/ListToolbar';
 import type { NotesView } from '@/lib/note-archive';
 import Image from 'next/image';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -148,20 +149,12 @@ export function NotesList({
           autoFocus: this is a persistent bar on a page you land on, not a
           palette you opened, so stealing focus would put the phone keyboard
           over the list every time Notes is opened. */}
-      <div className="relative shrink-0 pb-3">
-        <Search
-          className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-content-tertiary"
-          aria-hidden="true"
-        />
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search notes"
-          aria-label="Search notes"
-          className="h-9 w-full rounded-full border border-stroke-control bg-bg-surface pl-9 pr-3 text-lg text-content-primary outline-none transition-colors placeholder:text-content-tertiary focus:border-brand"
-        />
-      </div>
+      {/* In the tab row on a computer (founder mock, 2026-10-11), here on a
+          phone. ListToolbar keeps the phone box at 16px so iOS does not zoom. */}
+      <ListToolbar
+        className="shrink-0 pb-3"
+        search={{ value: searchQuery, onChange: onSearchChange, placeholder: 'Search notes' }}
+      />
 
       {isFiltering ? (
         <div className="shrink-0 pb-3">

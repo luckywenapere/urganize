@@ -4,6 +4,7 @@ import { PullReveal } from '@/components/shared/PullReveal';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Pencil, Trash2, X } from '@/components/icons';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { ListToolbar } from '@/components/shell/ListToolbar';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { useAuthStore } from '@/lib/auth-store';
 import {
@@ -407,62 +408,59 @@ export default function OpportunitiesPageClient() {
             ) : null}
           </p>
           <PullReveal filtering={Boolean(query.trim()) || state !== 'open' || Boolean(kind) || Boolean(artistId)}>
-          <div className="mb-4 space-y-3">
-            <input
-              className={FIELD}
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by title, who it is with or notes"
-              aria-label="Search opportunities"
-              autoComplete="off"
+            {/* This area has no tab row, so on a computer the search and
+                filters sit in the header line beside Add; on a phone they are
+                one compact row with a Filters sheet (founder mock, 2026-10-11). */}
+            <ListToolbar
+              className="mb-4"
+              search={{
+                value: query,
+                onChange: setQuery,
+                placeholder: 'Search by title, who it is with or notes',
+                label: 'Search opportunities',
+              }}
+              controls={[
+                {
+                  kind: 'filter',
+                  key: 'state',
+                  label: 'Show',
+                  value: state,
+                  defaultValue: 'open',
+                  options: [
+                    { value: 'open', label: 'Open' },
+                    { value: 'closed', label: 'Closed' },
+                    { value: 'all', label: 'All' },
+                  ],
+                  onChange: (value) => setState(value as 'open' | 'closed' | 'all'),
+                },
+                {
+                  kind: 'filter',
+                  key: 'kind',
+                  label: 'Type',
+                  value: kind,
+                  options: [
+                    { value: '', label: 'Any type' },
+                    ...OPPORTUNITY_KINDS.map((item) => ({ value: item, label: KIND_LABEL[item] })),
+                  ],
+                  onChange: (value) => setKind(value as OpportunityKind | ''),
+                },
+                ...(artists.length > 1
+                  ? [
+                      {
+                        kind: 'filter' as const,
+                        key: 'artist',
+                        label: 'Artist',
+                        value: artistId,
+                        options: [
+                          { value: '', label: 'All artists' },
+                          ...artists.map((artist) => ({ value: artist.id, label: artist.name })),
+                        ],
+                        onChange: setArtistId,
+                      },
+                    ]
+                  : []),
+              ]}
             />
-            <div className="flex flex-wrap items-center gap-2">
-              {(['open', 'closed', 'all'] as const).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  aria-pressed={state === item}
-                  onClick={() => setState(item)}
-                  className={`motion-focus rounded-full border px-4 py-2 text-sm font-semibold ${
-                    state === item
-                      ? 'border-brand bg-brand/10 text-content-primary'
-                      : 'border-stroke-control text-content-secondary hover:border-content-secondary'
-                  }`}
-                >
-                  {item === 'open' ? 'Open' : item === 'closed' ? 'Closed' : 'All'}
-                </button>
-              ))}
-              <select
-                className={`${FIELD} w-auto`}
-                value={kind}
-                onChange={(event) => setKind(event.target.value as OpportunityKind | '')}
-                aria-label="Filter by type"
-              >
-                <option value="">Any type</option>
-                {OPPORTUNITY_KINDS.map((item) => (
-                  <option key={item} value={item}>
-                    {KIND_LABEL[item]}
-                  </option>
-                ))}
-              </select>
-              {artists.length > 1 ? (
-                <select
-                  className={`${FIELD} w-auto`}
-                  value={artistId}
-                  onChange={(event) => setArtistId(event.target.value)}
-                  aria-label="Filter by artist"
-                >
-                  <option value="">All artists</option>
-                  {artists.map((artist) => (
-                    <option key={artist.id} value={artist.id}>
-                      {artist.name}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-            </div>
-          </div>
           </PullReveal>
         </>
       ) : null}

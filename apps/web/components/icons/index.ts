@@ -84,7 +84,7 @@ export {
   Palette,
   PartyPopper, Pencil, Phone, PiggyBank, Pin,
   Plug, Rocket, Send, Share,
-  Share2, ShieldCheck, Slash, Smartphone,
+  Share2, ShieldCheck, Slash, SlidersHorizontal, Smartphone,
   Smile, Square, ThumbsDown, ThumbsUp, TrendingUp,
   Undo2, UserPlus,
   // Read-aloud on UrgAns replies.
