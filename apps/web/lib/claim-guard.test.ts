@@ -111,6 +111,12 @@ describe('claim mail has one sender, and the automatic one is switched off by de
       cron.indexOf('runClaimAutoEmailSweep(adminClient)')
     );
   });
+  it('reads only the id from the founder-seeding table, never his notes or contacts', () => {
+    const server = read('lib/claim-auto-email-server.ts');
+    const reads = [...server.matchAll(/'seeded_profiles',\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(reads).toEqual(['person_id']);
+    expect(server.match(/seeded_profiles/g)?.length).toBe(1);
+  });
   it('reserves the once-only row before it makes a link or sends', () => {
     const server = read('lib/claim-auto-email-server.ts');
     const one = server.slice(server.indexOf('async function sendOne('), server.indexOf('export async function runClaimAutoEmailSweep('));
