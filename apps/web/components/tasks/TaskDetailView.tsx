@@ -429,7 +429,11 @@ export function TaskDetailView({
           scroll away with it or sit under whatever scrolled past. Both buttons
           are 44px, the house minimum; Close was 32px and dead-clicked on a
           phone in a first-session replay. */}
-      <div className="sticky top-0 z-10 -mx-5 -mt-5 mb-1 flex items-center justify-end gap-1 bg-bg-surface px-3 py-1.5 sm:-mx-6 sm:-mt-6 sm:px-4">
+      {/* -top-5 / sm:-top-6, not top-0 (2026-10-11): browsers stick an element
+          at the scroll body's PADDING edge, so top-0 held this bar 24px down
+          and it sat over the title and its checkbox. The negative top matches
+          the body's p-5 / sm:p-6 so the bar sits flush at the very top. */}
+      <div className="sticky -top-5 z-10 -mx-5 -mt-5 mb-1 flex items-center justify-end gap-1 bg-bg-surface px-3 py-1.5 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-4">
         {task ? (
           <button
             type="button"

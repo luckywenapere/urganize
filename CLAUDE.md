@@ -19433,6 +19433,8 @@ A read-only walkthrough of production found rough edges in v1.108.0's simple pit
 
 Same release, from a founder screenshot: the activity pop-up opened with its title and checkbox half under the sticky Delete/Close bar. TaskUIProvider now resets the scroll body to the top on open, per activity and when loading ends (useLayoutEffect + one rAF), with overflow-anchor: none; TaskDetailView's title auto-grow re-fits on width change and after document.fonts.ready and pins its own scrollTop to 0. Also dropped the internal "(Artist + Manager in v0.3)" note from five single-template activity descriptions (new rollouts only; existing tasks keep their stored text).
 
+v1.119.1 correction: the real cause of the hidden activity title was the sticky Delete/Close bar using top-0 inside a padded scroll body. Browsers stick at the padding edge, so the bar sat 24px down over the title. Use -top-5 sm:-top-6 (matching p-5 sm:p-6) for any sticky header inside a padded scroller.
+
 ## Promo channel directory in the rollout (2026-10-11, v1.117.0, GitHub #833, no flag)
 
 From the Oct 11 demo with a Nigeria-based manager: X music communities, SoundCloud networks, online and FM radio and blogs are the underused way to push music without a media budget. **No feature flag** (shipped on, per the founder's standing "always ship them on"). One migration, `20261011190000_promo_channels.sql`, **not applied to production when this shipped**: until it is, the scene says "Promo channels are coming soon.", the plan banner line stays hidden, a suggestion answers 503 and `/admin/promo-channels` says the table is missing. Nothing crashes.
