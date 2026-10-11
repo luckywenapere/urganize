@@ -122,6 +122,33 @@ const toBillingFields = (row: WorkspaceRow): WorkspaceBillingFields => ({
   billingLockedAmount: row.billing_locked_amount,
 });
 
+/**
+ * workspaces.paid_bonus_days for these teams, as a map. Never throws, and any
+ * failure (including the column not existing yet) is an empty map, which reads
+ * as "no bonus": strictly the behaviour before the share reward existed.
+ */
+export async function readPaidBonusDays(
+  client: SupabaseClient,
+  workspaceIds: string[]
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (workspaceIds.length === 0) return out;
+  try {
+    const { data, error } = await client
+      .from(WORKSPACES_TABLE)
+      .select('id, paid_bonus_days')
+      .in('id', workspaceIds);
+    if (error || !Array.isArray(data)) return out;
+    for (const row of data as Array<{ id: string; paid_bonus_days: number | null }>) {
+      const days = Number(row.paid_bonus_days) || 0;
+      if (days > 0) out.set(row.id, days);
+    }
+  } catch {
+    // An empty map is the safe answer.
+  }
+  return out;
+}
+
 /** The answer when we cannot tell. Access granted, never cached. */
 const openSnapshot = (): TeamAccessSnapshot => ({
   hasAccess: true,
@@ -310,6 +337,8 @@ export async function getTeamAccessForUser(
         /** profiles.paid_at — the read-only discriminator. Carried for the same
          *  reason `plan` is: this read already happens, so it costs nothing. */
         paidAt: string | null;
+        /** The snapshot's expiresAt, for the share reward's bonus days. */
+        paidThrough: string | null;
       }
     >();
     await Promise.all(
@@ -324,6 +353,7 @@ export async function getTeamAccessForUser(
             allowlisted: true,
             plan: null,
             paidAt: null,
+            paidThrough: null,
           });
           return;
         }
@@ -333,9 +363,26 @@ export async function getTeamAccessForUser(
           allowlisted: false,
           plan: snapshot.plan,
           paidAt: snapshot.paidAt,
+          paidThrough: snapshot.expiresAt,
         });
       })
     );
+
+    // The share reward's bonus days (lib/share-reward.ts). Read ONLY when some
+    // owner has no access of their own, since that is the only case they can
+    // change the answer, and read on their own so a missing column (the
+    // migration not yet applied) costs nothing: an error reads as no bonus.
+    // Folding the column into WORKSPACE_COLUMNS would instead fail that whole
+    // read before the migration, and this resolver fails OPEN on a failed read.
+    const bonusDays = new Map<string, number>();
+    const needsBonus = workspaces.some(
+      (row) => !row.owner_id || !ownerAccess.get(row.owner_id)?.hasAccess
+    );
+    if (needsBonus) {
+      for (const [id, days] of await readPaidBonusDays(client, workspaces.map((row) => row.id))) {
+        bonusDays.set(id, days);
+      }
+    }
 
     const accessInput = (row: WorkspaceRow, creditsFunded: boolean) => {
       const owner = row.owner_id ? ownerAccess.get(row.owner_id) : undefined;
@@ -346,9 +393,10 @@ export async function getTeamAccessForUser(
           ownerHasAccess: Boolean(owner?.hasAccess),
           ownerPaidAt: owner?.paidAt ?? null,
         }),
-        team: toBillingFields(row),
+        team: { ...toBillingFields(row), paidBonusDays: bonusDays.get(row.id) ?? 0 },
         graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
         creditsFunded,
+        ownerPaidThrough: owner?.paidThrough ?? null,
       });
     };
 
@@ -505,14 +553,18 @@ export async function getWorkspaceTier(workspaceId: string): Promise<PricingTier
     if (isAllowlistedEmail(ownerEmail)) return 'label';
 
     const snapshot = await getSubscriptionSnapshot(row.owner_id);
+    const paidBonusDays = snapshot.hasAccess
+      ? 0
+      : ((await readPaidBonusDays(client, [row.id])).get(row.id) ?? 0);
     const baseInput = {
       ownerHasAccess: snapshot.hasAccess,
       ownerLapsedFromPayment: lapsedFromPayment({
         ownerHasAccess: snapshot.hasAccess,
         ownerPaidAt: snapshot.paidAt,
       }),
-      team: toBillingFields(row),
+      team: { ...toBillingFields(row), paidBonusDays },
       graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
+      ownerPaidThrough: snapshot.expiresAt,
     };
     let access = resolveTeamAccess(baseInput);
     // A credits-only team joins under Solo's seat ceiling, not the fail-open one.

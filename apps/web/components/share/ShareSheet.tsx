@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   Copy,
   Download,
+  Gift,
   Instagram,
   Loader2,
   MessageCircle,
@@ -84,7 +85,10 @@ import { useShareStore, type ShareRequest } from '@/stores/useShareStore';
 import { tourBlocksPrompts } from '@/stores/useTourStore';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
+import { InfoTip } from '@/components/shared/HelpTip';
+import { SHARE_REWARD_OFFER, SHARE_REWARD_OFFER_DETAIL } from '@/lib/share-reward';
 import { useShareImages, type ShareImageState } from './useShareImages';
+import { useShareReward, type ShareRewardState } from './useShareReward';
 
 /**
  * Share to socials (founder request, 2026-09-23): the one sheet that turns a
@@ -353,6 +357,16 @@ function ShareDialog({ request }: { request: ShareRequest }) {
 
   const isFirst = request.source === 'first_release';
 
+  // The share reward (2026-10-11): one month free, once per team, claimed on
+  // the first tap of any share, copy, save or send button. Claimed on the next
+  // tick so nothing runs inside the tap before the share call itself: Web
+  // Share only opens from a live gesture, and its call is the tap's first await.
+  const reward = useShareReward();
+  const claimReward = reward.claim;
+  const onShareTap = useCallback(() => {
+    window.setTimeout(claimReward, 0);
+  }, [claimReward]);
+
   return (
     <div
       className="fixed inset-0 z-[170] flex items-end justify-center bg-black/55 backdrop-blur-[2px] sm:items-center sm:p-6"
@@ -428,6 +442,7 @@ function ShareDialog({ request }: { request: ShareRequest }) {
           ref={bodyRef}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6"
         >
+          {facts ? <ShareRewardBanner state={reward.state} /> : null}
           {!facts ? (
             lookupFailed ? (
               <div className="py-8 text-center">
@@ -483,6 +498,7 @@ function ShareDialog({ request }: { request: ShareRequest }) {
               edits={edits}
               onEdit={(tab, value) => setEdits((current) => ({ ...current, [tab]: value }))}
               onDone={close}
+              onShareTap={onShareTap}
               onOpenBrandColors={
                 isBrandColorsEnabled()
                   ? () => {
@@ -910,6 +926,7 @@ function ShareStep({
   edits,
   onEdit,
   onDone,
+  onShareTap,
   onOpenBrandColors,
 }: {
   releaseId: string;
@@ -921,6 +938,8 @@ function ShareStep({
   edits: CaptionEdits;
   onEdit: (tab: Tab, value: string) => void;
   onDone: () => void;
+  /** Any share, copy, save or send tap. Claims the share reward the first time. */
+  onShareTap: () => void;
   /** Closes the sheet and opens the Settings editor; null when the flag is off. */
   onOpenBrandColors: (() => void) | null;
 }) {
@@ -970,6 +989,7 @@ function ShareStep({
   const sendImage = async (imageTab: ImageTab) => {
     const state = images[formatForTab(imageTab)];
     if (state.kind !== 'ready' || busy) return;
+    onShareTap();
     const file = fileForTab(state.file, facts.title, imageTab);
     const caption = textFor(imageTab);
     const channel = SENT_CHANNEL[imageTab];
@@ -1014,6 +1034,7 @@ function ShareStep({
   };
 
   const copyAndSay = async (text: string, channel: SentChannel, ok: string) => {
+    onShareTap();
     const didCopy = await copyText(text);
     if (didCopy) report(channel, 'copy');
     setFeedback(
@@ -1070,6 +1091,7 @@ function ShareStep({
             text={textFor('message')}
             onChange={(value) => onEdit('message', value)}
             onWhatsApp={() => {
+              onShareTap();
               report('message', 'whatsapp');
               void openExternalUrl(buildWhatsAppShareUrl(textFor('message')));
             }}
@@ -1079,6 +1101,7 @@ function ShareStep({
               // for a web page to fill in a DM, so pasting is the honest route.
               const copied = copyText(textFor('message'));
               void openExternalUrl(INSTAGRAM_INBOX_URL);
+              onShareTap();
               void copied.then((didCopy) => {
                 if (didCopy) report('message', 'instagram_dm');
                 setFeedback(
@@ -1091,6 +1114,7 @@ function ShareStep({
             onMore={
               canShareTextToApps()
                 ? () => {
+                    onShareTap();
                     void shareTextToApps({ text: textFor('message') }).then((outcome) => {
                       if (outcome === 'shared') report('message', 'more');
                     });
@@ -1112,6 +1136,7 @@ function ShareStep({
             onOpenX={() => {
               // X's own "write a post" page, text filled in. It cannot carry
               // the image, which the main button shares or saves.
+              onShareTap();
               report('x', 'x_intent');
               void openExternalUrl(buildXIntentUrl(textFor('x')));
             }}
@@ -1156,6 +1181,35 @@ function ShareStep({
           Done
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The share reward's line (founder call, 2026-10-11). One line, no grey
+ * sentence under it (the 2026-10-05 rule): the how-it-works sits behind the
+ * info icon. Once claimed it turns into the confirmation, announced politely.
+ * Only shown to an owner or admin of a team that has not claimed yet; the
+ * server decides that, and every failure shows nothing.
+ */
+function ShareRewardBanner({ state }: { state: ShareRewardState }) {
+  if (state.status === 'hidden') return null;
+  const claimed = state.status === 'claimed';
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="mb-4 flex items-center gap-2.5 rounded-xl border border-brand/25 bg-brand/10 px-3.5 py-2.5 text-sm font-medium text-content-primary"
+    >
+      {claimed ? (
+        <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+      ) : state.status === 'claiming' ? (
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-brand" aria-hidden="true" />
+      ) : (
+        <Gift className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+      )}
+      <span className="min-w-0 flex-1 leading-5">{claimed ? state.message : SHARE_REWARD_OFFER}</span>
+      {claimed ? null : <InfoTip label="How the free month works" text={SHARE_REWARD_OFFER_DETAIL} />}
     </div>
   );
 }

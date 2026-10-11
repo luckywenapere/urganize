@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.103.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Share your rollout and get 1 month free. The first time you share, copy or save a post from the share sheet, we add 30 free days for your team. One free month per team.",
+    ],
+  },
+  {
     version: "1.102.0",
     date: "October 11, 2026",
     highlights: [
