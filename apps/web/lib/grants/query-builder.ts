@@ -122,7 +122,8 @@ export function readGrantFacts(input: unknown): GrantFacts {
   return facts;
 }
 
-function titleCase(words: string): string {
+/** `south africa` becomes `South Africa`. Used for the place in a query and in a reason. */
+export function titleCase(words: string): string {
   return words
     .split(' ')
     .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : word))

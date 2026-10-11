@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dedupeGrants, normalizeLink, normalizeName } from './dedupe';
+import { dedupeGrants, normalizeLink, normalizeName, trackedLinkSet } from './dedupe';
 import type { VerifiedGrant } from './types';
 
 function grant(over: Partial<VerifiedGrant> = {}): VerifiedGrant {
@@ -100,5 +100,21 @@ describe('dedupeGrants', () => {
     const copy = JSON.stringify(input);
     dedupeGrants(input, []);
     expect(JSON.stringify(input)).toBe(copy);
+  });
+});
+
+describe('trackedLinkSet', () => {
+  it('collects every link the existing notes cite, normalized', () => {
+    const set = trackedLinkSet([
+      { title: 'a', counterparty: '', notes: 'Source: https://www.Example.org/fund/?utm_source=x. Also https://other.example.org/call.' },
+      { title: 'b', counterparty: '', notes: 'no link here' },
+    ]);
+    expect(set.has('example.org/fund')).toBe(true);
+    expect(set.has('other.example.org/call')).toBe(true);
+    expect(set.size).toBe(2);
+  });
+
+  it('is empty when nothing is tracked', () => {
+    expect(trackedLinkSet([]).size).toBe(0);
   });
 });

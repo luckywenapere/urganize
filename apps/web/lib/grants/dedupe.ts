@@ -47,14 +47,23 @@ const nameKey = (funder: string | null, title: string): string | null => {
 
 const LINK_IN_TEXT = /https?:\/\/[^\s)>\]"']+/g;
 
-export function dedupeGrants(grants: VerifiedGrant[], existing: ExistingOpportunity[]): { kept: VerifiedGrant[]; duplicates: Duplicate[] } {
-  const trackedLinks = new Set<string>();
-  const trackedNames = new Set<string>();
+/** Every link the team's existing Opportunities cite in their notes, normalized. */
+export function trackedLinkSet(existing: ExistingOpportunity[]): Set<string> {
+  const links = new Set<string>();
   for (const item of existing) {
     for (const found of item.notes.match(LINK_IN_TEXT) ?? []) {
-      const normalized = normalizeLink(found);
-      if (normalized) trackedLinks.add(normalized);
+      // A link at the end of a sentence carries the full stop with it.
+      const normalized = normalizeLink(found.replace(/[.,;:!?]+$/, ''));
+      if (normalized) links.add(normalized);
     }
+  }
+  return links;
+}
+
+export function dedupeGrants(grants: VerifiedGrant[], existing: ExistingOpportunity[]): { kept: VerifiedGrant[]; duplicates: Duplicate[] } {
+  const trackedLinks = trackedLinkSet(existing);
+  const trackedNames = new Set<string>();
+  for (const item of existing) {
     const key = nameKey(item.counterparty, item.title);
     if (key) trackedNames.add(key);
   }
