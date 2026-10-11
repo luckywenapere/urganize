@@ -2,7 +2,6 @@
 
 import { useState, type ReactNode } from 'react';
 import { Check, Copy, Plus, Trash2 } from '@/components/icons';
-import { PRESS_KIT_SECTION_HINTS } from '@/lib/press-kits';
 import { looksLikeWebAddress } from '@/lib/press-kit-public';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
 
@@ -108,7 +107,7 @@ function BioField({
         onChange={(event) => onChange(event.target.value)}
         onBlur={onBlur}
         className={inputClass}
-        placeholder="Write it in the third person, the way press will run it."
+        placeholder="Write it like a fan telling a friend. Use the artist name, not I."
       />
       <p className="text-xs text-content-tertiary">{hint}</p>
     </div>
@@ -260,6 +259,72 @@ function FedFromElsewhere({ source }: { source: string }) {
   );
 }
 
+/**
+ * The bio, one box first (founder brief, 2026-10-11: too overwhelming). The
+ * medium and long versions are still here for press who want them, but they
+ * open on a tap unless something is already written in them, so a new person
+ * sees one box and not three.
+ */
+function BiosEditor({
+  draft,
+  readOnly,
+  setField,
+  onBlur,
+}: {
+  draft: PressKitSectionContent;
+  readOnly: boolean;
+  setField: (key: string, value: unknown) => void;
+  onBlur: () => void;
+}) {
+  const hasLonger = Boolean(str(draft.medium).trim() || str(draft.long).trim());
+  const [showLonger, setShowLonger] = useState(hasLonger);
+  return (
+    <div className="space-y-5">
+      <BioField
+        label="Short"
+        words={50}
+        hint="Two or three sentences."
+        value={str(draft.short)}
+        readOnly={readOnly}
+        onBlur={onBlur}
+        onChange={(next) => setField('short', next)}
+      />
+      {showLonger || hasLonger ? (
+        <>
+          <BioField
+            label="Medium"
+            words={150}
+            hint="A paragraph. Most writers use this one."
+            value={str(draft.medium)}
+            readOnly={readOnly}
+            onBlur={onBlur}
+            onChange={(next) => setField('medium', next)}
+          />
+          <BioField
+            label="Long"
+            words={300}
+            hint="The full story, for a big feature."
+            value={str(draft.long)}
+            readOnly={readOnly}
+            onBlur={onBlur}
+            onChange={(next) => setField('long', next)}
+          />
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowLonger(true)}
+          disabled={readOnly}
+          className="motion-focus inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline disabled:opacity-60"
+        >
+          <Plus className="h-3.5 w-3.5" aria-hidden />
+          Add longer versions
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function SectionEditor({ section, draft, readOnly, setField, onBlur, photos }: Props) {
   const text = (key: string, label: string, placeholder?: string, hint?: string) => (
     <Field label={label} hint={hint}>
@@ -277,15 +342,13 @@ export function SectionEditor({ section, draft, readOnly, setField, onBlur, phot
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-content-secondary">{PRESS_KIT_SECTION_HINTS[section]}</p>
-
       {section === 'header' ? (
         <div className="space-y-4">
           {text(
             'descriptor',
             'One line',
             'Afrobeats singer and songwriter',
-            'The sentence a journalist will reuse in their intro.'
+            'Say it like you would to a friend.'
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             {text('homeCity', 'Home city', 'Lagos')}
@@ -296,35 +359,7 @@ export function SectionEditor({ section, draft, readOnly, setField, onBlur, phot
       ) : null}
 
       {section === 'bios' ? (
-        <div className="space-y-5">
-          <BioField
-            label="Short"
-            words={50}
-            hint="For a listing or a caption."
-            value={str(draft.short)}
-            readOnly={readOnly}
-            onBlur={onBlur}
-            onChange={(next) => setField('short', next)}
-          />
-          <BioField
-            label="Medium"
-            words={150}
-            hint="The one most editors will use."
-            value={str(draft.medium)}
-            readOnly={readOnly}
-            onBlur={onBlur}
-            onChange={(next) => setField('medium', next)}
-          />
-          <BioField
-            label="Long"
-            words={300}
-            hint="For a feature, or a programme note."
-            value={str(draft.long)}
-            readOnly={readOnly}
-            onBlur={onBlur}
-            onChange={(next) => setField('long', next)}
-          />
-        </div>
+        <BiosEditor draft={draft} readOnly={readOnly} setField={setField} onBlur={onBlur} />
       ) : null}
 
       {section === 'latest_release' ? (

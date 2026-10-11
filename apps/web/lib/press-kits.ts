@@ -24,41 +24,55 @@ import {
 export const PRESS_KIT_SECTION_ORDER: readonly PressKitSectionKey[] = PRESS_KIT_SECTIONS;
 
 export const PRESS_KIT_SECTION_LABELS: Record<PressKitSectionKey, string> = {
-  header: 'Header',
-  bios: 'Bios',
-  latest_release: 'Latest release',
+  header: 'About',
+  bios: 'Bio',
+  latest_release: 'New release',
   music: 'Music',
-  assets: 'Assets',
-  video: 'Video',
+  assets: 'Photos',
+  video: 'Videos',
   credits: 'Credits',
-  numbers: 'Numbers',
+  numbers: 'Big numbers',
   press: 'Press',
-  live: 'Live',
+  live: 'Shows',
   contact: 'Contact',
   links: 'Links',
 };
 
 /**
- * What each section is for, in the reader's terms.
- *
- * Shown under the section heading and reused as the caption on the matching
- * interview question, so a person is never asked for something without being
- * told why press want it.
+ * What each section is for, said so a ten year old gets it (founder brief,
+ * 2026-10-11: "look at it from the point of a fifth grader, it is too
+ * overwhelming"). One short sentence each. Shown under the section heading and
+ * reused as the caption on the matching interview question.
  */
 export const PRESS_KIT_SECTION_HINTS: Record<PressKitSectionKey, string> = {
-  header: 'The first thing anyone reads. Who the artist is, in one line.',
-  bios: 'Three lengths, so press can take the one that fits their column.',
-  latest_release: 'The release you are pushing right now. This gets replaced by the next one.',
-  music: 'Where to listen. A private link before release day, the real thing after.',
-  assets: 'Photos press can run, at the size a magazine needs, with the credit on each one.',
-  video: 'Music video, visualizer, live footage.',
-  credits: 'Writers, producers, features. Pulled from the metadata you already collected.',
-  numbers: 'Only figures you can stand behind, each stamped with the date it was true.',
-  press: 'Where the artist has been written about before.',
-  live: 'Notable past shows, and what is coming up.',
-  contact: 'Who to email. A kit without this is a dead end, so it is needed before you publish.',
-  links: 'Every place the artist lives online.',
+  header: 'Who the artist is, in one short line.',
+  bios: 'The artist story. Start with the short one.',
+  latest_release: 'The song you are pushing right now.',
+  music: 'Where people can listen.',
+  assets: 'Photos anyone can use, with who took them.',
+  video: 'Music videos and live clips.',
+  credits: 'Who wrote it, made the beat and sang on it.',
+  numbers: 'Big wins you can prove, with the date.',
+  press: 'Places that wrote about the artist.',
+  live: 'Shows played and shows coming up.',
+  contact: 'Who to email. You need this one before you share.',
+  links: 'Where to follow the artist.',
 };
+
+/**
+ * The four sections a kit cannot do without. The editor shows these first,
+ * as "Start here", and tucks the rest under "Extras", so a new person sees
+ * four things to do rather than twelve.
+ */
+export const PRESS_KIT_ESSENTIAL_SECTIONS: readonly PressKitSectionKey[] = [
+  'header',
+  'bios',
+  'assets',
+  'contact',
+];
+
+export const isEssentialSection = (key: PressKitSectionKey): boolean =>
+  PRESS_KIT_ESSENTIAL_SECTIONS.includes(key);
 
 type ScalarSpec = { kind: 'fields'; fields: readonly string[] };
 type ListSpec = { kind: 'list'; key: string; requiredItemFields?: readonly string[] };
@@ -212,7 +226,7 @@ export function canPublishKit(
   if (!contact || contact.status !== 'ready') {
     return {
       ok: false,
-      reason: 'Add a contact before you publish. Press need a name, a role and an email.',
+      reason: 'Add a contact first, so people know who to email.',
     };
   }
   return { ok: true };

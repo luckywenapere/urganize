@@ -52,11 +52,11 @@ export function AutofillSummary({ counts, filled, gapCount, onStart }: Props) {
         <div className="min-w-0 flex-1">
           {found ? (
             <p className="text-sm text-content-primary">
-              Filled in from your {found}.
+              We filled in parts from your {found}.
             </p>
           ) : (
             <p className="text-sm text-content-primary">
-              Some of this kit is already filled in from your rollouts.
+              We filled in parts from your rollouts.
             </p>
           )}
 
@@ -70,21 +70,21 @@ export function AutofillSummary({ counts, filled, gapCount, onStart }: Props) {
             <>
               <p className="mt-3 text-sm text-content-secondary">
                 {gapCount === 1
-                  ? 'One thing is still missing, and only you can answer it.'
-                  : `${gapCount} things are still missing, and only you can answer them.`}{' '}
-                It takes a couple of minutes and you can stop partway.
+                  ? 'One quick question left.'
+                  : `${gapCount} quick questions left.`}{' '}
+                About two minutes.
               </p>
               <button
                 type="button"
                 onClick={onStart}
                 className="motion-focus mt-3 inline-flex items-center rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-content-inverse"
               >
-                Fill in the gaps
+                Answer them
               </button>
             </>
           ) : (
             <p className="mt-1 text-sm text-content-secondary">
-              Nothing is missing. Edit any section below.
+              Nothing is missing.
             </p>
           )}
         </div>

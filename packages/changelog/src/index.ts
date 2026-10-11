@@ -20,6 +20,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.108.0",
+    date: "October 11, 2026",
+    highlights: [
+      "The pitch kit is now three simple steps: tell the story, add who made it, share it. Each number turns into a check when it is done.",
+      "One button, Write it for me, fills in what is missing. Give it a hint if you like.",
+      "No more Save buttons. Your story and credits save when you click away.",
+      "The press kit starts with four must-haves (About, Bio, Photos, Contact). Everything else sits under Extras, and Next walks you through.",
+      "Sharing is one button and one link. Search, embargo and interview settings moved under More options.",
+      "Plainer names everywhere: Assets is now Photos, Live is Shows, and the bio opens on one box.",
+    ],
+  },
+  {
     version: "1.107.1",
     date: "October 11, 2026",
     highlights: [
