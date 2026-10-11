@@ -525,6 +525,23 @@ export function toTeamAccessPayload(snapshot: TeamAccessSnapshot): TeamAccessPay
  * already 30s-cached, so the marginal cost is one workspace row.
  */
 export async function getWorkspaceTier(workspaceId: string): Promise<PricingTierId | null> {
+  return (await getWorkspaceAccess(workspaceId))?.tier ?? null;
+}
+
+/**
+ * The same resolution as getWorkspaceTier, keeping the access state as well.
+ *
+ * Added for Suggested grants (2026-10-11), which is for paying teams only: the
+ * tier alone cannot say that, because a trial, a grace period and a walled team
+ * all resolve to the flagship tier on purpose. `allowlisted` is our own staff
+ * team, which resolves to Label before any subscription is read.
+ *
+ * Returns null when it cannot tell. Same rule as getWorkspaceTier's callers:
+ * null never grants anything paid.
+ */
+export async function getWorkspaceAccess(
+  workspaceId: string
+): Promise<{ state: TeamAccessState | 'allowlisted'; tier: PricingTierId } | null> {
   if (!workspaceId) return null;
 
   try {
@@ -550,7 +567,7 @@ export async function getWorkspaceTier(workspaceId: string): Promise<PricingTier
     // email, which simply means the allowlist cannot match.
     const ownerEmail = (ownerResult.data as { email: string | null } | null)?.email ?? null;
 
-    if (isAllowlistedEmail(ownerEmail)) return 'label';
+    if (isAllowlistedEmail(ownerEmail)) return { state: 'allowlisted', tier: 'label' };
 
     const snapshot = await getSubscriptionSnapshot(row.owner_id);
     const paidBonusDays = snapshot.hasAccess
@@ -574,11 +591,12 @@ export async function getWorkspaceTier(workspaceId: string): Promise<PricingTier
       }
     }
 
-    return resolveTeamTier({
+    const tier = resolveTeamTier({
       state: access.state,
       ownerPlan: snapshot.plan,
       billingPlan: row.billing_plan,
     });
+    return { state: access.state, tier };
   } catch (error) {
     console.error('[team-billing] could not resolve workspace tier:', error);
     return null;

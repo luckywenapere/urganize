@@ -28,6 +28,9 @@ import {
 } from '@/lib/opportunities';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useOpportunitiesStore } from '@/stores/useOpportunitiesStore';
+import { GrantProfileCard } from '@/components/opportunities/GrantProfileCard';
+import { GrantSuggestionsStrip } from '@/components/opportunities/GrantSuggestionsStrip';
+import { grantSuggestionsEnabled } from '@/lib/grants/grant-suggestions-flag';
 
 const FIELD =
   'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary placeholder:text-content-tertiary hover:border-content-secondary';
@@ -204,6 +207,13 @@ export default function OpportunitiesPageClient() {
           button, so the header holds none (the Shows page's rule): one primary
           action on screen, not two stacked on a phone. */}
       <PageHeader action={editing === null && opportunities.length > 0 ? addButton : null} />
+
+      {grantSuggestionsEnabled() ? (
+        <>
+          <GrantSuggestionsStrip />
+          <GrantProfileCard />
+        </>
+      ) : null}
 
       {editing !== null ? (
         <form onSubmit={handleSave} className="mb-6 space-y-3 rounded-xl border border-stroke-default bg-bg-surface p-4">
