@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/tasks-server';
 import { flushDueNotifications } from '@/lib/engagement-server';
 import { drainEmailOutbox } from '@/lib/email/outbox-server';
 import { PUSH_FLUSH_BUDGET_MS, emailBudgetMs } from '@/lib/push-limits';
+import { runWeeklyGrantSuggestions } from '@/lib/grants/weekly-run-server';
+import { GRANT_RUN_BUDGET_MS } from '@/lib/grants/weekly-run';
 
 // The push flush and the outbox drain below share this minute (lib/push-limits.ts).
 export const maxDuration = 60;
@@ -35,6 +37,12 @@ export async function GET(request: NextRequest) {
   const startedAt = Date.now();
   const result = await flushDueNotifications(adminClient, 100, { timeBudgetMs: PUSH_FLUSH_BUDGET_MS });
 
+  // Suggested grants (2026-10-11, flag NEXT_PUBLIC_FEATURE_GRANT_SUGGESTIONS):
+  // the weekly run for the teams whose weekday slot is today. Database reads
+  // only, no web search, bounded by its own small budget; the email drain below
+  // is handed whatever is left. Never throws, does nothing while the flag is off.
+  const grants = await runWeeklyGrantSuggestions(adminClient, { timeBudgetMs: GRANT_RUN_BUDGET_MS });
+
   // The email outbox (2026-09-30): the onboarding sequence's days 2 to 7, and
   // any broadcast the day's email limit held back. A passenger on this cron for
   // the reason the due-date cron gives for its own: the Hobby plan allows two
@@ -47,5 +55,5 @@ export async function GET(request: NextRequest) {
     maxSends: 80,
   });
 
-  return NextResponse.json({ ok: true, ...result, email });
+  return NextResponse.json({ ok: true, ...result, email, grants });
 }

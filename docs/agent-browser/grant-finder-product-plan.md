@@ -149,7 +149,15 @@ call.
    (`supabase/migrations/20261011100000_grant_suggestions.sql`). Written; Oyin applies it.
 3. Seed `grant_programmes` from the curated CSV (grants, residencies, scholarships and
    prizes suggestable; loans kept but never suggested).
-4. The weekly matcher inside the notifications cron (pure matching, tests first).
+4. ~~The weekly matcher inside the notifications cron (pure matching, tests first).~~ Done
+   2026-10-11. Teams set a grant profile on Opportunities (`grant_profiles`, migration
+   20261011120000). The cron (`lib/grants/weekly-run-server.ts`) runs after the push
+   flush with a 5 second budget. It picks the teams whose slot is today and that have a
+   country, and gives them at most 3 new programmes. A team gets nothing more within 6
+   days of its last batch, so a rerun is safe. "Paid plans only" means the owner is
+   paying, on any plan, Solo included ("gate seats, not features"), plus our allowlisted
+   staff team. Trial, grace, comped and credits-only teams get nothing. The run is
+   behind `NEXT_PUBLIC_FEATURE_GRANT_SUGGESTIONS`.
 5. The Suggested grants strip with Add and Dismiss, behind a flag.
 6. The weekly notification.
 7. Turn it on for our own team first and read every card for two weeks, then roll
