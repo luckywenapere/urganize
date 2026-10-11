@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 
-import type { CreatedPlan, PlanBudget, PlanReleaseType } from '@/lib/release-planning';
+import type { CreatedPlan, PlanBudget, PlanReleaseType, ReadyItem } from '@/lib/release-planning';
 
 /**
  * The planner intake's launcher, plus the two answers a build can leave
@@ -39,6 +39,12 @@ export type PlannerIntakePrefill = {
    * not actually know whose rollout this is.
    */
   artistName?: string;
+  /**
+   * "What's already done?", when the caller already asked it (onboarding,
+   * 2026-10-11). Present and non-empty means the planner skips the question
+   * and uses this as the answer.
+   */
+  readyToday?: ReadyItem[];
   budget?: PlanBudget;
   /** Free text for the last question. A note's body arrives here. */
   extraNotes?: string;

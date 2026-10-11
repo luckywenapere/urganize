@@ -73,6 +73,8 @@ const emptyDelta = (): PlannerAiDelta => ({
   adjust_offsets: [],
   role_assignments: [],
   rewrite_why: [],
+  focus: [],
+  add_tasks: [],
   warnings: [],
   rationale: '',
 });
@@ -649,7 +651,7 @@ describe('parsePlannerAiDelta', () => {
     expect(parsePlannerAiDelta(raw)).toBeNull();
   });
 
-  it('has no way to express an added task', () => {
+  it('reads add_tasks since 2026-10-11, skipping a malformed entry rather than failing the parse', () => {
     const parsed = parsePlannerAiDelta(
       JSON.stringify({
         drops: [],
@@ -661,10 +663,10 @@ describe('parsePlannerAiDelta', () => {
         add_tasks: [{ title: 'Invented task' }],
       })
     );
-    // The extra key is simply not read: nothing the model invents can reach a
-    // draft, which is the whole point of the delta shape.
+    // An add with no why and no date is skipped at parse; every add that
+    // does parse still has to pass sanitizePlannerDelta before reaching a plan.
     expect(parsed).not.toBeNull();
-    expect(Object.keys(parsed ?? {})).not.toContain('add_tasks');
+    expect(parsed?.add_tasks).toEqual([]);
   });
 });
 
@@ -807,6 +809,8 @@ describe('applyDeltaToDraft', () => {
       ],
       role_assignments: [{ role: 'designer', member_user_id: TEAMMATE }],
       rewrite_why: [{ id: designerTask!.id, why: 'Artwork gates the distributor upload.' }],
+      focus: [],
+      add_tasks: [],
       warnings: ['Release date lands during a public holiday week.'],
       rationale: 'Tightened the art pass.',
     });
@@ -1171,7 +1175,7 @@ describe('buildPlannerMessages', () => {
     expect(messages).toHaveLength(2);
     const [system, user] = messages;
     expect(system.content).toContain('Output schema:');
-    expect(system.content).toContain('You cannot add tasks.');
+    expect(system.content).toContain('You may ADD at most 5 tasks');
     // The old absolute rule is gone: a required task may go when, and only
     // when, the manager asked to leave that kind of work out.
     expect(system.content).not.toContain('NEVER drop a task whose "optional" is false');
@@ -1364,8 +1368,8 @@ describe('PLANNER_DELTA_JSON_SCHEMA', () => {
         Object.keys(node.properties ?? {}).sort()
       );
     });
-    // The root plus the five array item shapes.
-    expect(objects).toBe(6);
+    // The root plus the seven array item shapes (focus and add_tasks since 2026-10-11).
+    expect(objects).toBe(8);
   });
 
   it('describes exactly the delta the parser reads', () => {

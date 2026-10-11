@@ -807,6 +807,8 @@ export function WorkspaceView() {
         ...(handoff.releaseType ? { releaseType: handoff.releaseType } : {}),
         ...(handoff.releaseDate ? { releaseDate: handoff.releaseDate } : {}),
         ...(handoff.artistName ? { artistName: handoff.artistName } : {}),
+        // Asked once in onboarding: the planner skips "What's already done?".
+        ...(handoff.readyToday?.length ? { readyToday: handoff.readyToday } : {}),
       },
     });
   }, [scopedReleaseId, scopedReleaseSlim, scopedTasks.length, openIntake]);

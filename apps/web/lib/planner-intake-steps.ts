@@ -14,7 +14,7 @@
  * `components/planner/intake-steps.tsx` re-exports `StepIndex` from here.
  */
 
-import { PLAN_SCOPES, type PlanScope } from './release-planning';
+import { PLAN_SCOPES, READY_TODAY_OPTIONS, type PlanScope, type ReadyItem } from './release-planning';
 
 export type StepIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -55,16 +55,34 @@ export type IntakeSkipInput = {
    * entry point with no release (a note, a chip) keeps its confirm question.
    */
   prefilledArtistName?: string | null;
+  /**
+   * "What's already done?", asked once in onboarding (2026-10-11) and handed
+   * over. Skips the question only when it holds at least one real answer
+   * ("None of it yet" counts: it is an answer). Every other entry point
+   * passes nothing and keeps the question.
+   */
+  prefilledReadyToday?: readonly string[] | null;
   todayYmd: string;
 };
 
-export type IntakeSkips = { releaseType: boolean; artist: boolean; date: boolean };
+export type IntakeSkips = { releaseType: boolean; artist: boolean; date: boolean; ready?: boolean };
+
+const READY_VALUES = new Set<string>(READY_TODAY_OPTIONS.map((option) => option.value));
+
+/** The valid readiness answers in a prefill, or [] when there are none. */
+export function readyPrefillAnswers(value: readonly string[] | null | undefined): ReadyItem[] {
+  if (!Array.isArray(value)) return [];
+  const items = value.filter((item): item is ReadyItem => READY_VALUES.has(item));
+  if (items.includes('none')) return ['none'];
+  return READY_TODAY_OPTIONS.map((option) => option.value).filter((item) => items.includes(item));
+}
 
 export function decideIntakeSkips(input: IntakeSkipInput): IntakeSkips {
   return {
     releaseType: Boolean(input.prefilledReleaseType),
     artist: Boolean(input.prefilledArtistName && input.prefilledArtistName.trim()),
     date: isUsableFutureYmd(input.prefilledReleaseDate, input.todayYmd),
+    ready: readyPrefillAnswers(input.prefilledReadyToday).length > 0,
   };
 }
 
@@ -74,6 +92,7 @@ export function visibleIntakeSteps(skips: IntakeSkips): StepIndex[] {
     if (step === INTAKE_STEP.releaseType) return !skips.releaseType;
     if (step === INTAKE_STEP.artist) return !skips.artist;
     if (step === INTAKE_STEP.date) return !skips.date;
+    if (step === INTAKE_STEP.ready) return !skips.ready;
     return true;
   });
 }
