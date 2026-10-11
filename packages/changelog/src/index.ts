@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.118.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Suggested grants in Opportunities. Tell us your country, career stage, genres and what you need, and each week we suggest up to three open grants that fit your team, with the award, the deadline and why it matched.",
+      "Add a suggestion and it becomes a grant opportunity in your list, linked to the original call. Dismiss it and we will not suggest it again.",
+      "When new grants arrive, you get a notification on your phone. Suggested grants are part of paid plans.",
+    ],
+  },
+  {
     version: "1.117.0",
     date: "October 11, 2026",
     highlights: [
