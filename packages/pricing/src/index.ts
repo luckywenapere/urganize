@@ -567,17 +567,13 @@ export function annualSavingCopy(id: PricingTierId): string | null {
  *  Four pasted strings drift the moment one card is edited, and this repo has
  *  the receipts on that.
  *
- *  ⚠️ "Distribution included" IS A FOUNDER OVERRIDE, NOT DRIFT, and the doc on
- *  `perks` above forbids exactly this — nothing there may name an unbuilt
- *  feature. Urganize does not distribute music: it has no DSP integration, and
- *  third-party music platform integrations are on the v1 out-of-scope list. The
- *  real thing behind the word is the Metadata scene, which assembles the ISRC,
- *  UPC, splits and credits a distributor asks for so the handoff is one paste
- *  rather than a week of chasing. Honest wording for that was offered and the
- *  founder chose this line as written (2026-09-08). Recorded here so the next
- *  reader treats it as a decision to take back to him rather than a mistake to
- *  quietly correct. */
-const UNIVERSAL_HIGHLIGHTS: readonly string[] = ['Distribution included'] as const;
+ *  Distribution line (founder, 2026-10-11): Urganize does not distribute
+ *  music itself. Teams release through a distribution partner and pay that
+ *  partner directly; Urganize earns a share of what they pay. The Metadata
+ *  scene assembles the ISRC, UPC, splits and credits the partner asks for, so
+ *  the handoff is one paste. "Distribution included" implied the plan price
+ *  covered distribution, which it does not, so the line now names the partner. */
+const UNIVERSAL_HIGHLIGHTS: readonly string[] = ['Distribution through our partner'] as const;
 
 export function tierHighlights(id: PricingTierId): string[] {
   const { limits, perks } = PRICING_TIERS[id];
