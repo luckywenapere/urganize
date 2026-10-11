@@ -9,6 +9,7 @@ function input(over: Partial<NextBlockerInput>): NextBlockerInput {
     hasStage: true,
     hasTitle: true,
     dateValid: true,
+    hasReleaseArtist: true,
     hasName: true,
     hasEmail: true,
     passwordLongEnough: true,
@@ -44,6 +45,18 @@ describe('describeNextBlocker', () => {
     const both = describeNextBlocker(input({ step: 3, hasTitle: false, dateValid: false }));
     expect(both).toMatch(/title/i);
     expect(both).toMatch(/date/i);
+  });
+
+  it('asks for the artist name on the rollout step, alone or with the others', () => {
+    expect(describeNextBlocker(input({ step: 3, hasReleaseArtist: false }))).toBe(
+      'Add the artist name to go on.'
+    );
+    expect(
+      describeNextBlocker(input({ step: 3, hasTitle: false, dateValid: false, hasReleaseArtist: false }))
+    ).toBe('Add a title, a release date and the artist name to go on.');
+    expect(describeNextBlocker(input({ step: 3, hasTitle: false, hasReleaseArtist: false }))).toBe(
+      'Add a title and the artist name to go on.'
+    );
   });
 
   it('lists exactly the account fields still missing', () => {

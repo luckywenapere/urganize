@@ -164,11 +164,11 @@ export interface AnalyticsEventPropertiesMap {
   // model got to tailor the rest. (Until 2026-09-15 the intake produced a
   // draft to review and approve; the scene, approve and discard events went
   // with that step.)
-  planner_intake_opened: { source: 'empty_state' | 'note' | 'chip'; has_release: boolean };
+  planner_intake_opened: { source: 'empty_state' | 'note' | 'chip' | 'onboarding'; has_release: boolean };
   planner_intake_step: { step: number };
   planner_intake_dismissed: { step: number };
   planner_plan_created: {
-    source: 'empty_state' | 'note' | 'chip';
+    source: 'empty_state' | 'note' | 'chip' | 'onboarding';
     release_type: 'single' | 'ep' | 'album';
     task_count: number;
     tasks_removed: number;

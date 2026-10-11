@@ -87,6 +87,19 @@ async function fetchUsage(): Promise<UsageSnapshot | null> {
   }
 }
 
+// Anything that just moved the balance outside a chat turn (a plan build, the
+// press-kit draft) calls invalidateUrgansUsage(), so the credits pill in the
+// header and the strip re-read instead of showing the old number for up to
+// the cache window. 2026-10-11: after a plan was built the pill still showed
+// the balance from before it.
+const usageListeners = new Set<() => void>();
+
+export function invalidateUrgansUsage(): void {
+  cache = null;
+  inFlight = null;
+  for (const listener of usageListeners) listener();
+}
+
 /** One request per user at a time, whoever asks. */
 function loadUsage(userId: string): Promise<UsageSnapshot | null> {
   if (inFlight && inFlight.userId === userId) return inFlight.promise;
@@ -122,6 +135,16 @@ export function useUrgansUsage(): UsageSnapshot | null {
   // it must not re-render, and it is read inside the effect that sets it.
   const noCeiling = useRef(false);
 
+  // Bumped by invalidateUrgansUsage(), which re-runs the read below.
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const listener = () => setRevision((value) => value + 1);
+    usageListeners.add(listener);
+    return () => {
+      usageListeners.delete(listener);
+    };
+  }, []);
+
   useEffect(() => {
     if (!CHAPPI_ENABLED) return;
     if (isAuthLoading || !isAuthenticated || !userId) return;
@@ -139,7 +162,7 @@ export function useUrgansUsage(): UsageSnapshot | null {
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoading, isAuthenticated, userId, user?.role, turnCount]);
+  }, [isAuthLoading, isAuthenticated, userId, user?.role, turnCount, revision]);
 
   return CHAPPI_ENABLED ? usage : null;
 }

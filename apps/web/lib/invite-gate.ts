@@ -83,3 +83,21 @@ export const INVITE_GATE_OFF: InviteGateAnswer = {
   workspaceId: null,
   workspaceName: null,
 };
+
+/**
+ * Panels that can be open over the plan when the gate fires: the Settings
+ * pop-up (`settings` + `section`), a rollout scene (`scene`, plus the content
+ * calendar's `month`), an activity drawer (`task`) and the new-rollout guide
+ * (`new`). "Continue to my plan" closes all of them (2026-10-11): a browser
+ * test sent its invite from Settings, pressed Continue, and was left looking
+ * at Settings instead of the plan the button named.
+ */
+export const INVITE_GATE_PANEL_PARAMS = ['settings', 'section', 'scene', 'month', 'task', 'new'] as const;
+
+/** Where "Continue to my plan" goes: the same page with every panel param removed. */
+export function inviteGateContinueUrl(pathname: string, search: string): string {
+  const params = new URLSearchParams(search.replace(/^\?/, ''));
+  for (const key of INVITE_GATE_PANEL_PARAMS) params.delete(key);
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}

@@ -36,7 +36,8 @@ import {
 import { ensurePressKitAccess } from '../press-kit-access-server';
 import { checkEmbeddedActionsGuard } from './guard-server';
 import { getTeamAccessForUser } from '../team-billing-server';
-import { beginEmbeddedRun, settleEmbeddedRun } from '../credits/embedded-server';
+import { beginEmbeddedRun, settleEmbeddedRun, type EmbeddedRunGate } from '../credits/embedded-server';
+import { isFirstPlanFreeForTeam } from '../credits/first-plan-server';
 import { recordRequestUsage } from '../ai/usage-log-server';
 import { usageFeatureForAction } from './usage-feature';
 import { isCreditsEnabled } from '../credits/config';
@@ -353,11 +354,18 @@ export async function runUrgansAction(
   // here costs nothing. 429 and not 402, which the browser turns into a redirect
   // to the paywall. Which team pays: the OWNER's, the same as the entitlement.
   const ownerTeam = await getTeamAccessForUser(scope.ownerUserId, null);
-  const gate = await beginEmbeddedRun(admin, {
-    workspaceId: ownerTeam.primaryWorkspaceId ?? scope.workspaceId,
-    ownerUserId: scope.ownerUserId,
-    team: ownerTeam,
-  });
+  // A team's first plan is free (credits/first-plan.ts): no hold, no charge, so
+  // a short balance cannot refuse it either. Decided here, on the server,
+  // before the run; every later plan is metered below as before.
+  const firstPlanFree =
+    isCreditsEnabled() && (await isFirstPlanFreeForTeam(admin, action.id, scope.ownerUserId));
+  const gate: EmbeddedRunGate = firstPlanFree
+    ? { metered: false }
+    : await beginEmbeddedRun(admin, {
+        workspaceId: ownerTeam.primaryWorkspaceId ?? scope.workspaceId,
+        ownerUserId: scope.ownerUserId,
+        team: ownerTeam,
+      });
   if (gate.metered && !gate.ok) {
     return { ok: false, status: 429, error: gate.message, reason: 'out_of_credits' };
   }

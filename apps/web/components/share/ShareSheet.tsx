@@ -31,7 +31,16 @@ import {
   Share2,
   X,
 } from '@/components/icons';
+import { usePathname } from 'next/navigation';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import {
+  clearDeferredShare,
+  decideDeferredShareOffer,
+  isInFirstSession,
+  readFirstSessionRecord,
+  readFirstSessionTabId,
+} from '@/lib/first-session';
+import { HOME_PATH } from '@/lib/home-path';
 import { useAuthStore } from '@/lib/auth-store';
 import { isBodyScrollLocked, lockBodyScroll } from '@/lib/body-scroll-lock';
 import { openExternalUrl } from '@/lib/external-link';
@@ -157,6 +166,7 @@ export function ShareSheet() {
 
   useEffect(() => registerSheet(), [registerSheet]);
   usePendingFirstShareOffer();
+  useDeferredFirstShareOffer();
 
   if (!request || typeof document === 'undefined') return null;
   // Keyed by the request token, so every open starts fresh.
@@ -189,6 +199,12 @@ function usePendingFirstShareOffer() {
         }
         return;
       }
+      // Never in the first session after onboarding (lib/first-session.ts):
+      // onboarding no longer leaves this marker, and this is the belt to that.
+      if (isInFirstSession()) {
+        clearPendingFirstShare();
+        return;
+      }
       const releaseId = readPendingFirstShare();
       clearPendingFirstShare();
       if (!releaseId) return;
@@ -201,6 +217,57 @@ function usePendingFirstShareOffer() {
     timer = window.setTimeout(tick, PENDING_OFFER_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, []);
+}
+
+/**
+ * The first-rollout share offer onboarding deferred (2026-10-11, founder call):
+ * "Tell people it's coming" is not shown in the first session, it is shown
+ * once on Home at the start of the NEXT visit (lib/first-session.ts decides
+ * which visit that is). Same quiet-moment rules as the pending offer above,
+ * and the same once-per-person record, so it can never show twice.
+ */
+function useDeferredFirstShareOffer() {
+  const pathname = usePathname();
+  const onHome = pathname === HOME_PATH;
+  useEffect(() => {
+    if (!onHome) return;
+    const initial = decideDeferredShareOffer({
+      record: readFirstSessionRecord(),
+      tabId: readFirstSessionTabId(),
+      now: Date.now(),
+      onHome: true,
+    });
+    if (!initial) return;
+    let attempts = 0;
+    let timer: number | undefined;
+
+    const tick = () => {
+      attempts += 1;
+      const busy =
+        isBodyScrollLocked() || tourBlocksPrompts() || useShareStore.getState().request !== null;
+      if (busy) {
+        if (attempts < PENDING_OFFER_MAX_ATTEMPTS) {
+          timer = window.setTimeout(tick, PENDING_OFFER_DELAY_MS);
+        }
+        return;
+      }
+      const releaseId = decideDeferredShareOffer({
+        record: readFirstSessionRecord(),
+        tabId: readFirstSessionTabId(),
+        now: Date.now(),
+        onHome: window.location.pathname === HOME_PATH,
+      });
+      if (!releaseId) return;
+      clearDeferredShare();
+      const userId = useAuthStore.getState().user?.id;
+      if (hasOfferedFirstShare(userId)) return;
+      markFirstShareOffered(userId);
+      useShareStore.getState().open({ releaseId, source: 'first_release' });
+    };
+
+    timer = window.setTimeout(tick, PENDING_OFFER_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [onHome]);
 }
 
 // ── The dialog ──────────────────────────────────────────────────────────────

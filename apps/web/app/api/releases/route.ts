@@ -1,3 +1,4 @@
+import { afterResponse } from '@/lib/after-response';
 import { NextRequest, NextResponse } from 'next/server';
 import type { User } from '@supabase/supabase-js';
 import {
@@ -298,13 +299,17 @@ export async function POST(request: NextRequest) {
 
     const { adminClient } = auth;
 
-    const schemaStatus = await ensureReleaseOpsSchema(adminClient);
+    // Independent reads, run together (2026-10-11, first-user flow: the
+    // onboarding create was a long chain of sequential round trips). The
+    // schema answer is still checked first, so its error wins as before.
+    const [schemaStatus, existingReleaseCountResult] = await Promise.all([
+      ensureReleaseOpsSchema(adminClient),
+      adminClient
+        .from('releases')
+        .select('id', { count: 'exact', head: true })
+        .eq('owner_user_id', auth.user.id),
+    ]);
     if ('error' in schemaStatus) return schemaStatus.error;
-
-    const existingReleaseCountResult = await adminClient
-      .from('releases')
-      .select('id', { count: 'exact', head: true })
-      .eq('owner_user_id', auth.user.id);
 
     if (existingReleaseCountResult.error) {
       if (isOptionalTableMissingError(existingReleaseCountResult.error)) {
@@ -655,17 +660,30 @@ export async function POST(request: NextRequest) {
 
     const releaseId = String(releaseResult.data.id);
 
-    const metadataResult = await adminClient
-      .from(RELEASE_METADATA_TABLE)
-      .insert({
+    // The metadata row and the created event both hang off the new release
+    // and not off each other, so they are written together. Errors are read
+    // in the old order: metadata first, then the event.
+    const [metadataResult, eventResult] = await Promise.all([
+      adminClient
+        .from(RELEASE_METADATA_TABLE)
+        .insert({
+          release_id: releaseId,
+          primary_artist_name: artistName,
+          release_title: title,
+          artwork_url: coverArtUrl || null,
+          updated_at: now,
+        })
+        .select('id')
+        .single(),
+      adminClient.from(RELEASE_EVENTS_TABLE).insert({
         release_id: releaseId,
-        primary_artist_name: artistName,
-        release_title: title,
-        artwork_url: coverArtUrl || null,
-        updated_at: now,
-      })
-      .select('id')
-      .single();
+        type: 'release_created',
+        payload_json: {
+          title,
+          artistName,
+        },
+      }),
+    ]);
 
     if (metadataResult.error) {
       if (isOptionalTableMissingError(metadataResult.error)) {
@@ -673,15 +691,6 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json({ error: metadataResult.error.message || 'Could not initialize metadata.' }, { status: 500 });
     }
-
-    const eventResult = await adminClient.from(RELEASE_EVENTS_TABLE).insert({
-      release_id: releaseId,
-      type: 'release_created',
-      payload_json: {
-        title,
-        artistName,
-      },
-    });
 
     if (eventResult.error) {
       if (isOptionalTableMissingError(eventResult.error)) {
@@ -765,12 +774,18 @@ export async function POST(request: NextRequest) {
     // Activation (2026-10-01): a first REAL rollout plus one teammate invited,
     // within 3 days of signup. A test rollout is practice and cannot complete
     // it. Never throws; see lib/activation-server.ts.
+    // After the reply (2026-10-11): it only records, and never throws, so the
+    // person creating the rollout does not wait on it.
     if (!isTest) {
-      await captureActivationIfReached(adminClient, {
-        ownerUserId: auth.user.id,
-        trigger: 'release',
-        signupAt: auth.user.created_at,
-      });
+      const activationOwnerId = auth.user.id;
+      const activationSignupAt = auth.user.created_at;
+      afterResponse('release activation check', () =>
+        captureActivationIfReached(adminClient, {
+          ownerUserId: activationOwnerId,
+          trigger: 'release',
+          signupAt: activationSignupAt,
+        })
+      );
     }
 
     if (releaseDateResult.value) {
@@ -800,12 +815,17 @@ export async function POST(request: NextRequest) {
     // creation. Rides the existing scheduled_notifications flusher, no new
     // cron. Skipped for a test release: a "come back to your release" push
     // about a practice release is the pressure the test path removes.
+    // Queued after the reply (2026-10-11), for the same reason as activation.
     if (!isTest) {
-      await enqueueReleaseReminders(adminClient, {
-        userId: auth.user.id,
-        releaseId,
-        releaseTitle: String(releaseResult.data.title || title),
-      });
+      const reminderUserId = auth.user.id;
+      const reminderTitle = String(releaseResult.data.title || title);
+      afterResponse('release reminders', () =>
+        enqueueReleaseReminders(adminClient, {
+          userId: reminderUserId,
+          releaseId,
+          releaseTitle: reminderTitle,
+        })
+      );
     }
 
     return NextResponse.json({
