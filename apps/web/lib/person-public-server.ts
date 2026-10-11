@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { profileRoles } from './person-profile';
 import { isPubliclyReadable } from './person-public';
+import { bioForPayload, isClaimedProfile, resolveProfileView, type ResolvedProfileView } from './profile-kit';
+import { loadKitFactsForUser } from './profile-kit-server';
 import type { DirectoryRole } from './directory-roles';
 import { loadLeadStats } from './profile-lead-stats-server';
 import {
@@ -31,6 +33,15 @@ const DELIVERY_RECORDS_TABLE = 'delivery_records';
 export type PublicPerson = {
   profile: PersonProfile;
   roles: ProfileRole[];
+  /**
+   * What the page SHOWS: the bio, place, genre, links and photo after the
+   * artist's published press kit has been laid over the profile's own fields
+   * (lib/profile-kit.ts). The page reads this and not `profile`, so the two
+   * records stay one record seen two ways. `profile.bio` is already stripped
+   * for an unclaimed person, but an unclaimed profile is private and never
+   * reaches this loader at all; both rules are held anyway.
+   */
+  view: ResolvedProfileView;
   /** What this person's page leads with. Null when nothing says (no roles, no override). */
   profileType: ProfileType | null;
   /** Their lead numbers, never containing a zero. Empty for a creative. */
@@ -67,6 +78,9 @@ export async function loadPublicPerson(slug: string): Promise<PublicPerson | nul
     const row = data as Record<string, unknown>;
     const visibility = String(row.visibility || 'private') as PersonProfile['visibility'];
     if (!isPubliclyReadable(visibility)) return null;
+    // Belt and braces: an unclaimed profile is private by constraint, so this
+    // cannot fire today, and it must keep failing closed if that ever moved.
+    if (!isClaimedProfile({ userId: row.user_id ? String(row.user_id) : null })) return null;
 
     const claimed = Array.isArray(row.roles) ? (row.roles as DirectoryRole[]) : [];
 
@@ -90,7 +104,8 @@ export async function loadPublicPerson(slug: string): Promise<PublicPerson | nul
       city: row.city ? String(row.city) : null,
       country: row.country ? String(row.country) : null,
       availability: (row.availability as PersonProfile['availability']) || 'selective',
-      bio: row.bio ? String(row.bio) : null,
+      // Null for an unclaimed profile, in every payload (lib/profile-kit.ts).
+      bio: bioForPayload({ userId: row.user_id ? String(row.user_id) : null, bio: row.bio ? String(row.bio) : null }),
       links,
       avatarUrl: null,
       visibility,
@@ -124,7 +139,10 @@ export async function loadPublicPerson(slug: string): Promise<PublicPerson | nul
     const profileType = effectiveProfileType(override, heldRoles);
     const stats = (await loadLeadStats(admin, [profile.userId])).get(profile.userId) ?? EMPTY_LEAD_STATS;
 
-    return { profile, roles, profileType, lead: leadItems(profileType, stats) };
+    const kit = await loadKitFactsForUser(admin, profile.userId);
+    const view = resolveProfileView(profile, kit);
+
+    return { profile, roles, view, profileType, lead: leadItems(profileType, stats) };
   } catch {
     return null;
   }

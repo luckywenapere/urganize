@@ -3,6 +3,7 @@
 // an action file directly — so a route/actionType string is always resolved
 // against the same set.
 
+import { directoryDraftBioAction } from './actions/directory-draft-bio';
 import { epkFillBothAction } from './actions/epk-fill-both';
 import { pressKitDraftSectionAction } from './actions/press-kit-draft-section';
 import { releaseDraftPlanAction } from './actions/release-draft-plan';
@@ -21,6 +22,7 @@ export const URGANS_ACTIONS: Record<string, UrgansActionDefinition<unknown, unkn
   [pressKitDraftSectionAction.id]: pressKitDraftSectionAction,
   [epkFillBothAction.id]: epkFillBothAction,
   [releaseDraftSpotifyPitchAction.id]: releaseDraftSpotifyPitchAction,
+  [directoryDraftBioAction.id]: directoryDraftBioAction,
 };
 
 export function getUrgansAction(

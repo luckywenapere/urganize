@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { loadPublicPerson } from '@/lib/person-public-server';
-import { personSubtitle } from '@/lib/person-public';
 import { PROFILE_TYPE_LABELS, openToLabel } from '@/lib/directory-profile-type';
 import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
 import { ProfileViewBeacon } from '@/components/directory/ProfileViewBeacon';
@@ -55,7 +54,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? `${delivered
         .map((entry) => `${DIRECTORY_ROLE_LABELS[entry.role]}, ${entry.delivered} delivered`)
         .join('. ')}.`
-    : person.profile.bio || undefined;
+    : person.view.bio || undefined;
 
   return {
     title: person.profile.displayName,
@@ -69,10 +68,9 @@ export default async function PersonPage({ params }: PageProps) {
   const person = await loadPublicPerson(slug);
   if (!person) notFound();
 
-  const { profile, roles, profileType, lead } = person;
+  const { profile, roles, view, profileType, lead } = person;
   const delivered = roles.filter((entry) => entry.delivered > 0);
   const claimed = roles.filter((entry) => entry.delivered === 0);
-  const place = personSubtitle(profile);
 
   return (
     <div className="kit-island min-h-screen" style={{ backgroundColor: GROUND, color: CREAM }}>
@@ -80,10 +78,26 @@ export default async function PersonPage({ params }: PageProps) {
         {/* Only a public profile reaches this page, and a profile is only public once claimed. */}
         <ProfileViewBeacon roles={roles.map((entry) => entry.role)} claimed />
         <header>
+          {view.photoUrl ? (
+            // A plain img on purpose: this is a signed url with a short life, and
+            // routing it through next/image would proxy and cache it past that.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={view.photoUrl}
+              alt=""
+              className="mb-6 h-28 w-28 rounded-2xl object-cover"
+              style={{ border: `1px solid ${STROKE}` }}
+            />
+          ) : null}
           <h1 className="font-display text-4xl leading-tight sm:text-5xl">{profile.displayName}</h1>
-          {place ? (
+          {view.location ? (
             <p className="mt-2 text-sm" style={{ color: MUTED }}>
-              {place}
+              {view.location}
+            </p>
+          ) : null}
+          {view.genre ? (
+            <p className="mt-1 text-sm" style={{ color: MUTED }}>
+              {view.genre}
             </p>
           ) : null}
           <p className="mt-4 inline-flex rounded-full px-3 py-1 font-mono text-[11px] uppercase tracking-[0.16em]"
@@ -114,9 +128,9 @@ export default async function PersonPage({ params }: PageProps) {
           </ul>
         ) : null}
 
-        {profile.bio ? (
-          <p className="mt-10 text-base leading-relaxed" style={{ color: MUTED }}>
-            {profile.bio}
+        {view.bio ? (
+          <p className="mt-10 whitespace-pre-line text-base leading-relaxed" style={{ color: MUTED }}>
+            {view.bio}
           </p>
         ) : null}
 
@@ -168,13 +182,13 @@ export default async function PersonPage({ params }: PageProps) {
           </section>
         ) : null}
 
-        {profile.links.length > 0 ? (
+        {view.links.length > 0 ? (
           <section className="mt-10">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
               Elsewhere
             </h2>
             <ul className="mt-4 flex flex-wrap gap-3">
-              {profile.links.map((link) => (
+              {view.links.map((link) => (
                 <li key={`${link.label}-${link.url}`}>
                   <a
                     href={link.url}

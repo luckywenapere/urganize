@@ -25,13 +25,15 @@ import type { UsageCall } from '../credits/pricing';
 /**
  * What an action can act on. 'press_kit' is the second, added when the press
  * kit's section drafting arrived — the extension point this comment always
- * described rather than a speculative one.
+ * described rather than a speculative one. 'person_profile' is the third, and
+ * the first that is not a team's object at all: it is one person's own
+ * directory profile, so only that person may act on it.
  *
  * An action declares exactly ONE of these. resolveActionScope has to pick a
  * single access check, and a list of two would make that choice arbitrary;
  * registry-guard.test.ts asserts it.
  */
-export type UrgansActionObjectType = 'release' | 'press_kit';
+export type UrgansActionObjectType = 'release' | 'press_kit' | 'person_profile';
 
 /**
  * - 'team_write': any team member may run/apply/discard; a guest is refused

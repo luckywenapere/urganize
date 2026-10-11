@@ -163,6 +163,41 @@ export async function resolveActionScope(
   // exist" — see the access-level comment in ./types.ts.
   const write = action.access === 'team_write';
 
+  if (objectType === 'person_profile') {
+    // A directory profile is one PERSON's own record, not a team's object, so
+    // there is no team access rule to reuse: only the person it belongs to may
+    // act on it, and everyone else gets the same 404 a missing profile gets
+    // (never a refusal that would confirm the profile exists).
+    const profileResult = await admin
+      .from('person_profiles')
+      .select('user_id')
+      .eq('id', objectId)
+      .maybeSingle();
+    const profileOwner = String((profileResult.data as { user_id?: string | null } | null)?.user_id || '');
+    if (profileResult.error || !profileOwner || profileOwner !== user.id) {
+      return { ok: false, status: 404, error: 'Profile not found.' };
+    }
+
+    // The plan and the credits are the PERSON's team's: the team they actually
+    // work in (an artist-scoped login belongs to somebody else's team and owns
+    // only an empty shell of their own). Fails open to 'label' like every other
+    // tier check here.
+    const team = await getTeamAccessForUser(user.id, user.email);
+    const profileWorkspaceId = team.primaryWorkspaceId ?? (await findOwnedWorkspaceId(admin, user.id));
+    const profileTier = profileWorkspaceId ? await getWorkspaceTier(profileWorkspaceId) : null;
+
+    return {
+      ok: true,
+      scope: {
+        objectType,
+        release: null,
+        ownerUserId: user.id,
+        workspaceId: profileWorkspaceId,
+        tier: profileTier ?? 'label',
+      },
+    };
+  }
+
   if (objectType === 'press_kit') {
     const kitAccess = await ensurePressKitAccess(admin, objectId, user, write);
     if ('error' in kitAccess) {
