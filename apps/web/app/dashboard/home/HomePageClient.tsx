@@ -16,6 +16,7 @@ import { ManagerQuietView } from '@/components/home/ManagerQuietView';
 import { ManagerNewView } from '@/components/home/ManagerNewView';
 import { HomeAskBar } from '@/components/home/HomeAskBar';
 import { HomeDesktopSplit } from '@/components/home/HomeDesktopSplit';
+import { NpsPrompt } from '@/components/home/NpsPrompt';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 
@@ -109,6 +110,10 @@ export default function HomePageClient() {
           <HomeAskBar />
         </>
       )}
+
+      {/* Net Promoter Score (2026-10-11): asked on Home, between pieces of
+          work, never mid-task. Who and when: lib/nps.ts. */}
+      {!isCreateModalOpen ? <NpsPrompt /> : null}
 
       <RolloutCreateFlow
         open={isCreateModalOpen}
