@@ -34,6 +34,10 @@ describe('parseWorkRequestInput', () => {
         role: 'graphic_designer',
         note: 'Cover art for a single, out in six weeks.',
         releaseId: 'r1',
+        kind: 'crew',
+        askLinks: [],
+        askReleaseNote: null,
+        taskId: null,
       },
     });
   });

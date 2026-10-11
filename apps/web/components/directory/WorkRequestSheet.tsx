@@ -5,7 +5,11 @@ import { createPortal } from 'react-dom';
 import { Loader2, X } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
-import { WORK_REQUEST_NOTE_MAX_CHARS } from '@/lib/work-requests';
+import {
+  ASK_RELEASE_NOTE_MAX_CHARS,
+  MAX_ASK_LINKS,
+  WORK_REQUEST_NOTE_MAX_CHARS,
+} from '@/lib/work-requests';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
 
 /**
@@ -24,18 +28,27 @@ export function WorkRequestSheet({
   person,
   defaultRole,
   releaseId,
+  taskId = null,
   onClose,
   onSent,
 }: {
   person: { userId: string; displayName: string };
   defaultRole: DirectoryRole | null;
   releaseId: string | null;
+  /** The open activity this ask is for, carried in from the activity pop-up or
+   *  the role gaps panel. The server derives the rollout from it. */
+  taskId?: string | null;
   onClose: () => void;
   onSent: (message: string) => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [role, setRole] = useState<DirectoryRole>(defaultRole ?? 'graphic_designer');
   const [note, setNote] = useState('');
+  // The artist's short structured ask (an artist asking a manager to take them
+  // on): links to their music and a line about the next release.
+  const [linksText, setLinksText] = useState('');
+  const [nextRelease, setNextRelease] = useState('');
+  const isManagerAsk = role === 'manager';
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -68,7 +81,19 @@ export function WorkRequestSheet({
       const response = await fetch('/api/directory/requests', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipientUserId: person.userId, role, note, releaseId }),
+        body: JSON.stringify({
+          recipientUserId: person.userId,
+          role,
+          note,
+          releaseId,
+          ...(isManagerAsk
+            ? {
+                kind: 'manager',
+                askLinks: linksText.split(/\r?\n/).filter((line) => line.trim()),
+                askReleaseNote: nextRelease,
+              }
+            : { taskId }),
+        }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -108,7 +133,9 @@ export function WorkRequestSheet({
               Ask {person.displayName}
             </h2>
             <p className="mt-1 text-sm text-content-secondary">
-              They see your name, the job and your note. Nothing about the rollout.
+              {isManagerAsk
+                ? 'They see your name, your note and your links. Your next release line only after they say yes.'
+                : 'They see your name, the job and your note. Nothing about the rollout.'}
             </p>
           </div>
           <button
@@ -138,7 +165,7 @@ export function WorkRequestSheet({
 
         <label className="mt-3 block">
           <span className="mb-1 block text-xs text-content-tertiary">
-            Your note ({WORK_REQUEST_NOTE_MAX_CHARS - note.length} left)
+            {isManagerAsk ? 'What you need' : 'Your note'} ({WORK_REQUEST_NOTE_MAX_CHARS - note.length} left)
           </span>
           <textarea
             value={note}
@@ -148,6 +175,37 @@ export function WorkRequestSheet({
             className="w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary focus:border-brand focus:outline-none"
           />
         </label>
+
+        {isManagerAsk ? (
+          <>
+            <label className="mt-3 block">
+              <span className="mb-1 block text-xs text-content-tertiary">
+                Links to your music (one on each line, up to {MAX_ASK_LINKS})
+              </span>
+              <textarea
+                value={linksText}
+                onChange={(event) => setLinksText(event.target.value)}
+                rows={3}
+                inputMode="url"
+                placeholder="open.spotify.com/artist/..."
+                className="w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary focus:border-brand focus:outline-none"
+              />
+            </label>
+            <label className="mt-3 block">
+              <span className="mb-1 block text-xs text-content-tertiary">
+                Your next release, if you have one ({ASK_RELEASE_NOTE_MAX_CHARS - nextRelease.length} left)
+              </span>
+              <input
+                value={nextRelease}
+                onChange={(event) =>
+                  setNextRelease(event.target.value.slice(0, ASK_RELEASE_NOTE_MAX_CHARS))
+                }
+                placeholder="A single, out in spring"
+                className="h-11 w-full rounded-lg border border-stroke-control bg-bg-base px-3 text-base text-content-primary focus:border-brand focus:outline-none"
+              />
+            </label>
+          </>
+        ) : null}
 
         {error ? (
           <p role="alert" className="mt-3 text-sm text-status-error">

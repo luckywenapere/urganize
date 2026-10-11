@@ -14,6 +14,7 @@ import { useReleaseStore } from '@/stores/useReleaseStore';
 import { TaskCompletionCheckbox } from '@/components/tasks/TaskCompletionCheckbox';
 import { TaskMemberSelect } from '@/components/tasks/TaskMemberSelect';
 import { EditorialPitchPanel } from '@/components/tasks/EditorialPitchPanel';
+import { FindSomeoneRow } from '@/components/directory/FindSomeoneRow';
 import { isEditorialPitchTask } from '@/lib/editorial-pitch';
 import { ShareLoginActions } from '@/components/team/ShareLoginActions';
 import { supabase } from '@/lib/supabase/client';
@@ -578,6 +579,19 @@ export function TaskDetailView({
               />
             </label>
           </div>
+
+          {/* "Find someone" for an open activity that needs a person
+              (directory spec, From profile to working together). Renders
+              nothing unless the playbook step names a job and the feature is
+              on, so most activities are untouched. */}
+          <FindSomeoneRow
+            taskId={task.id}
+            releaseId={task.releaseId ?? null}
+            templateTaskId={task.templateTaskId}
+            status={task.status}
+            rowClassName={DETAIL_ROW_CLASS}
+            iconClassName={DETAIL_ICON_CLASS}
+          />
 
           <TaskDependenciesSection
             dependencyIds={task.dependencies}

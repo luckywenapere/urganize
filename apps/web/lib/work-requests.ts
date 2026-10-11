@@ -30,6 +30,22 @@ export type WorkRequestStatus = (typeof WORK_REQUEST_STATUSES)[number];
  */
 export const WORK_REQUEST_EXPIRY_DAYS = 7;
 
+/**
+ * What the ask is. `crew` is a manager asking somebody to do a job (every
+ * request before 2026-10-10). `manager` is an artist asking a manager to take
+ * them on, with a short structured ask beside the note. A manager ask is always
+ * for the manager role; the table's CHECK holds the same rule.
+ */
+export const WORK_REQUEST_KINDS = ['crew', 'manager'] as const;
+export type WorkRequestKind = (typeof WORK_REQUEST_KINDS)[number];
+
+/** Music links an artist can put on an ask, and how long each may be. */
+export const MAX_ASK_LINKS = 3;
+export const ASK_LINK_MAX_CHARS = 300;
+/** The artist's line about their next release. Hidden from the recipient until
+ *  they say yes: see revealsAskReleaseNote. */
+export const ASK_RELEASE_NOTE_MAX_CHARS = 140;
+
 /** Long enough to say what the job is, short enough that nobody writes a brief
  *  into it. Same cap a pitch note carries, and the CHECK enforces it too. */
 export const WORK_REQUEST_NOTE_MAX_CHARS = 300;
@@ -59,7 +75,9 @@ export const MAX_OPEN_REQUESTS_PER_TEAM = 10;
 export const RECIPIENT_REQUEST_FIELDS = [
   'id',
   'role',
+  'kind',
   'note',
+  'ask_links',
   'status',
   'reply',
   'sender_name',
@@ -83,11 +101,18 @@ export const RECIPIENT_REQUEST_FIELDS = [
 export const SENDER_REQUEST_FIELDS = [
   'id',
   'role',
+  'kind',
   'note',
+  'ask_links',
+  'ask_release_note',
   'status',
   'reply',
   'recipient_user_id',
   'release_id',
+  'task_id',
+  'accepted_release_id',
+  'shared_at',
+  'assigned_at',
   'created_at',
   'answered_at',
 ] as const;
@@ -109,12 +134,67 @@ export function revealsContact(status: WorkRequestStatus): boolean {
   return status === 'interested';
 }
 
+/**
+ * WHETHER THE RECIPIENT MAY NOW READ THE ARTIST'S NEXT-RELEASE LINE.
+ *
+ * The standing rule is that an unannounced release never reaches somebody who
+ * is about to say no, and this line is a release even though the artist typed
+ * it. So it is withheld until they have answered `interested`, the same
+ * moment contact is revealed the other way. A pass, a waiting request and a
+ * closed one all keep it hidden.
+ */
+export function revealsAskReleaseNote(status: WorkRequestStatus): boolean {
+  return status === 'interested';
+}
+
 export type WorkRequestInput = {
   recipientUserId: string;
   role: DirectoryRole;
   note: string;
   releaseId: string | null;
+  kind: WorkRequestKind;
+  askLinks: string[];
+  askReleaseNote: string | null;
+  /** The open activity this ask is for. The route derives the release from it
+   *  and refuses one the sender cannot work on. */
+  taskId: string | null;
 };
+
+/**
+ * The links on an artist's ask: up to three, http(s) only, each parsed as a
+ * real URL. A scheme-less "open.spotify.com/..." gets https:// put in front,
+ * because that is what somebody pasting from a share sheet means; anything else
+ * that is not http(s) (javascript:, data:, mailto:) is refused, since these
+ * render as links in the recipient's inbox. Duplicates collapse.
+ */
+export function parseAskLinks(raw: unknown): { error: string } | { links: string[] } {
+  if (raw === undefined || raw === null) return { links: [] };
+  if (!Array.isArray(raw)) return { error: 'Links must be a list.' };
+  const links: string[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'string') return { error: 'Each link must be text.' };
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+    if (trimmed.length > ASK_LINK_MAX_CHARS) return { error: 'One of those links is too long.' };
+    const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    let url: URL;
+    try {
+      url = new URL(withScheme);
+    } catch {
+      return { error: 'One of those links does not look right.' };
+    }
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      return { error: 'Links must start with https://.' };
+    }
+    if (!url.hostname.includes('.')) return { error: 'One of those links does not look right.' };
+    const href = url.toString();
+    if (!links.includes(href)) links.push(href);
+  }
+  if (links.length > MAX_ASK_LINKS) {
+    return { error: `Keep it to ${MAX_ASK_LINKS} links or fewer.` };
+  }
+  return { links };
+}
 
 const isRole = (value: unknown): value is DirectoryRole =>
   typeof value === 'string' && (DIRECTORY_ROLES as readonly string[]).includes(value);
@@ -143,7 +223,47 @@ export function parseWorkRequestInput(
     ? payload.releaseId.trim()
     : null;
 
-  return { input: { recipientUserId, role: payload.role, note, releaseId } };
+  const kind: WorkRequestKind = payload.kind === 'manager' ? 'manager' : 'crew';
+  if (kind === 'manager' && payload.role !== 'manager') {
+    return { error: 'Only a manager can be asked to take you on.' };
+  }
+
+  // The structured ask belongs to an artist asking a manager. A crew request
+  // carries none of it, so a stray field on one is dropped rather than stored.
+  let askLinks: string[] = [];
+  let askReleaseNote: string | null = null;
+  if (kind === 'manager') {
+    const links = parseAskLinks(payload.askLinks);
+    if ('error' in links) return links;
+    askLinks = links.links;
+    const rawRelease =
+      typeof payload.askReleaseNote === 'string' ? payload.askReleaseNote.trim() : '';
+    if (rawRelease.length > ASK_RELEASE_NOTE_MAX_CHARS) {
+      return {
+        error: `Keep the next release line to ${ASK_RELEASE_NOTE_MAX_CHARS} characters or fewer.`,
+      };
+    }
+    askReleaseNote = rawRelease || null;
+  }
+
+  // An ask for a task is a crew ask: the task is a job on the sender's rollout.
+  const taskId =
+    kind === 'crew' && typeof payload.taskId === 'string' && payload.taskId.trim()
+      ? payload.taskId.trim()
+      : null;
+
+  return {
+    input: {
+      recipientUserId,
+      role: payload.role,
+      note,
+      releaseId,
+      kind,
+      askLinks,
+      askReleaseNote,
+      taskId,
+    },
+  };
 }
 
 export type WorkRequestAnswer = { status: 'interested' | 'passed'; reply: string | null };
@@ -277,4 +397,26 @@ const STATUS_COPY: Record<WorkRequestStatus, string> = {
 
 export function describeRequestStatus(status: WorkRequestStatus): string {
   return STATUS_COPY[status];
+}
+
+/**
+ * WHAT SAYING YES DOES, and the reason this is pure: the answer route is the
+ * only caller and it must not grow a second reading of the table.
+ *
+ * - a manager ask starts a shared rollout and puts the artist on the team;
+ * - a crew ask tied to an activity links the person to that activity;
+ * - anything else (a plain crew ask, a pass) does nothing beyond recording the
+ *   answer.
+ */
+export type AnswerEffect = 'start_share' | 'assign_task' | 'none';
+
+export function decideAnswerEffect(request: {
+  kind: WorkRequestKind;
+  taskId: string | null;
+  status: 'interested' | 'passed';
+}): AnswerEffect {
+  if (request.status !== 'interested') return 'none';
+  if (request.kind === 'manager') return 'start_share';
+  if (request.taskId) return 'assign_task';
+  return 'none';
 }

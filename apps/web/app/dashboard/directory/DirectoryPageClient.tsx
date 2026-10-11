@@ -106,7 +106,11 @@ function DirectoryBody() {
   // Where this visit's role filter came from. The role gaps panel links here
   // pre-filtered, and demand it created is worth telling apart from demand
   // somebody typed: it is the retention mechanic either working or not.
-  const arrivedFromRoleGaps = searchParams.get('from') === 'role_gaps';
+  // `from=task` is the activity pop-up's "Find someone": the same plan-driven
+  // demand as the role gaps panel (the task IS the gap), so it reports as the
+  // same source and the demand summary is left untouched.
+  const arrivedFrom = searchParams.get('from');
+  const arrivedFromRoleGaps = arrivedFrom === 'role_gaps' || arrivedFrom === 'task';
   const [filters, setFilters] = useState<DirectoryFilters>(() => {
     const role = searchParams.get('role');
     const availability = searchParams.get('availability');
@@ -377,6 +381,7 @@ function DirectoryBody() {
           // is the whole point of that link: the plan already knows the job.
           defaultRole={filters.role ?? (asking.profileType === 'manager' ? 'manager' : null)}
           releaseId={arrivedFromRoleGaps ? searchParams.get('release') : null}
+          taskId={arrivedFromRoleGaps ? searchParams.get('task') : null}
           onClose={() => setAsking(null)}
           onSent={setSent}
         />

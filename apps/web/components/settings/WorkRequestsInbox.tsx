@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Loader2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
@@ -28,6 +29,10 @@ import {
 type IncomingRequest = {
   id: string;
   role: DirectoryRole;
+  kind?: 'crew' | 'manager';
+  ask_links?: string[];
+  /** Only present once they have said yes: it is the artist's next release. */
+  ask_release_note?: string | null;
   note: string;
   status: WorkRequestStatus;
   reply: string | null;
@@ -42,6 +47,10 @@ export function WorkRequestsInbox() {
   const [busyId, setBusyId] = useState('');
   const [replies, setReplies] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
+  // The rollout a yes just started, so the manager can open it from the row.
+  const [started, setStarted] = useState<Record<string, { releaseId: string; artistName: string }>>({});
+  // A refusal that has a next step (no seat, no room): offer the plans link.
+  const [needsPlan, setNeedsPlan] = useState(false);
 
   const authHeaders = useCallback(async (): Promise<Record<string, string> | null> => {
     const { data } = await supabase.auth.getSession();
@@ -80,6 +89,7 @@ export function WorkRequestsInbox() {
     if (!headers) return;
     setBusyId(id);
     setError('');
+    setNeedsPlan(false);
     try {
       const response = await fetch(`/api/directory/requests/${id}`, {
         method: 'PATCH',
@@ -89,12 +99,30 @@ export function WorkRequestsInbox() {
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
         setError(typeof body.error === 'string' ? body.error : 'Could not save that.');
+        // These three leave the request waiting and are fixed by a plan, so the
+        // row says so and offers the way, rather than a dead end.
+        setNeedsPlan(
+          body.reason === 'seat_limit' ||
+            body.reason === 'artist_limit' ||
+            body.reason === 'rollout_limit'
+        );
         return;
+      }
+      if (body.share?.releaseId) {
+        setStarted((current) => ({
+          ...current,
+          [id]: { releaseId: body.share.releaseId, artistName: body.share.artistName },
+        }));
       }
       setRequests((current) =>
         current.map((request) =>
           request.id === id
-            ? { ...request, status, reply: replies[id] || null }
+            ? {
+                ...request,
+                status,
+                reply: replies[id] || null,
+                ask_release_note: body.request?.ask_release_note ?? request.ask_release_note,
+              }
             : request
         )
       );
@@ -120,7 +148,16 @@ export function WorkRequestsInbox() {
           : 'People who asked about work'}
       </h3>
 
-      {error ? <p role="alert" className="mt-2 text-sm text-status-error">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="mt-2 text-sm text-status-error">
+          {error}{' '}
+          {needsPlan ? (
+            <Link href="/locked?intent=upgrade" className="font-medium underline">
+              See plans
+            </Link>
+          ) : null}
+        </p>
+      ) : null}
 
       <ul className="mt-3 space-y-3">
         {requests.map((request) => (
@@ -138,7 +175,45 @@ export function WorkRequestsInbox() {
               </span>
             </div>
 
+            {request.kind === 'manager' ? (
+              <p className="mt-2 text-xs font-medium text-brand">Wants you to manage them</p>
+            ) : null}
             <p className="mt-2 text-sm text-content-secondary">{request.note}</p>
+
+            {request.ask_links && request.ask_links.length > 0 ? (
+              <ul className="mt-2 space-y-1">
+                {request.ask_links.map((href) => (
+                  <li key={href} className="truncate text-sm">
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="motion-focus text-brand hover:underline"
+                    >
+                      {href.replace(/^https?:\/\//, '')}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {request.status === 'interested' && request.ask_release_note ? (
+              <p className="mt-2 text-sm text-content-secondary">
+                Next release: {request.ask_release_note}
+              </p>
+            ) : null}
+
+            {started[request.id] ? (
+              <p className="mt-2 text-sm text-content-primary">
+                {started[request.id].artistName} is on your team and has their rollout.{' '}
+                <Link
+                  href={`/dashboard?release=${started[request.id].releaseId}`}
+                  className="motion-focus font-medium text-brand hover:underline"
+                >
+                  Open it
+                </Link>
+              </p>
+            ) : null}
 
             {request.status === 'expired' ? (
               <p className="mt-2 text-sm text-content-tertiary">

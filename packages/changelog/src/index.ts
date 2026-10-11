@@ -20,6 +20,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.98.0",
+    date: "October 11, 2026",
+    highlights: [
+      "Artists can ask a manager to work with them, and say what they need. A yes starts a shared rollout for you both.",
+      "On an open activity, tap Find someone to see people for that job. A yes puts them on the activity.",
+      "If your plan has no room for another person, you get a clear message and a next step.",
+    ],
+  },
+  {
     version: "1.97.0",
     date: "October 11, 2026",
     highlights: [

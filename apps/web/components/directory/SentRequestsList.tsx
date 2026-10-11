@@ -32,6 +32,10 @@ type SentRequest = {
   status: WorkRequestStatus;
   reply: string | null;
   release_id: string | null;
+  kind?: 'crew' | 'manager';
+  task_id?: string | null;
+  accepted_release_id?: string | null;
+  assigned_at?: string | null;
   recipient_name: string;
   recipient_slug: string;
   contact_email: string;
@@ -132,6 +136,22 @@ export function SentRequestsList({
               <p className="mt-2 text-sm text-content-tertiary">
                 No answer in 7 days, so this one closed. You can ask again.
               </p>
+            ) : null}
+
+            {request.accepted_release_id ? (
+              <p className="mt-2 text-sm text-content-primary">
+                You are on their team now.{' '}
+                <Link
+                  href={`/dashboard?release=${request.accepted_release_id}`}
+                  className="motion-focus font-medium text-brand hover:underline"
+                >
+                  Open the shared rollout
+                </Link>
+              </p>
+            ) : null}
+
+            {request.assigned_at ? (
+              <p className="mt-2 text-sm text-content-primary">They are down for this activity.</p>
             ) : null}
 
             {contact ? (

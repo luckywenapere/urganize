@@ -8,6 +8,7 @@ import {
   canReceiveRequests,
   parseWorkRequestInput,
   refusalForClosedAvailability,
+  revealsAskReleaseNote,
   revealsContact,
   withEffectiveStatus,
   withinOpenRequestCap,
@@ -17,6 +18,7 @@ import {
 import { expireStaleRequestsForPair } from '@/lib/work-request-expiry-server';
 import { notifyWorkRequest } from '@/lib/work-requests-server';
 import { captureRequestSent } from '@/lib/directory-events-server';
+import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import {
   PERSON_PROFILES_TABLE,
   WORK_REQUESTS_TABLE,
@@ -116,6 +118,46 @@ async function decorateSentRequests(
   });
 }
 
+/**
+ * The artist's next-release line, put back on the rows the recipient may now
+ * read it for. It is NOT in RECIPIENT_REQUEST_FIELDS: it is a release, and a
+ * release never reaches somebody who has not said yes (revealsAskReleaseNote).
+ * A second query for the answered manager asks only, so the withheld column is
+ * never selected for a row that has not earned it.
+ */
+async function withRevealedReleaseNotes(
+  adminClient: SupabaseClient,
+  rows: Record<string, unknown>[]
+): Promise<Record<string, unknown>[]> {
+  const ids = rows
+    .filter(
+      (row) =>
+        row.kind === 'manager' &&
+        revealsAskReleaseNote(String(row.status || 'new') as WorkRequestStatus)
+    )
+    .map((row) => String(row.id || ''))
+    .filter(Boolean);
+  if (ids.length === 0) return rows;
+
+  const notes = new Map<string, string>();
+  try {
+    const { data } = await adminClient
+      .from(WORK_REQUESTS_TABLE)
+      .select('id, ask_release_note')
+      .in('id', ids)
+      .eq('status', 'interested');
+    for (const entry of data || []) {
+      const row = asRow(entry);
+      if (typeof row.ask_release_note === 'string' && row.ask_release_note) {
+        notes.set(String(row.id), row.ask_release_note);
+      }
+    }
+  } catch {
+    // A missing line is a thinner card, never a broken inbox.
+  }
+  return rows.map((row) => ({ ...row, ask_release_note: notes.get(String(row.id)) ?? null }));
+}
+
 export async function GET(request: NextRequest) {
   if (!isWorkRequestsFeatureEnabled()) return directoryDisabledResponse();
 
@@ -127,7 +169,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
   }
 
-  const box = new URL(request.url).searchParams.get('box') === 'sent' ? 'sent' : 'received';
+  const url = new URL(request.url);
+  const box = url.searchParams.get('box') === 'sent' ? 'sent' : 'received';
+  // The activity pop-up asks "who did I ask for this task". Sent side only.
+  const taskFilter = box === 'sent' ? (url.searchParams.get('taskId') || '').trim() : '';
 
   const query =
     box === 'received'
@@ -142,7 +187,9 @@ export async function GET(request: NextRequest) {
           .select(SENDER_REQUEST_FIELDS.join(', '))
           .eq('sender_user_id', auth.user.id);
 
-  const { data, error } = await query.order('created_at', { ascending: false }).limit(100);
+  const { data, error } = await (taskFilter ? query.eq('task_id', taskFilter) : query)
+    .order('created_at', { ascending: false })
+    .limit(100);
 
   if (error) {
     return NextResponse.json(
@@ -156,7 +203,10 @@ export async function GET(request: NextRequest) {
   const requests = withEffectiveStatus((data || []).map(asRow));
   return NextResponse.json({
     box,
-    requests: box === 'sent' ? await decorateSentRequests(adminClient, requests) : requests,
+    requests:
+      box === 'sent'
+        ? await decorateSentRequests(adminClient, requests)
+        : await withRevealedReleaseNotes(adminClient, requests),
   });
 }
 
@@ -204,6 +254,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // A rollout or an activity the ask is about has to be one the sender can
+  // work on. The release is DERIVED from the activity, never trusted from the
+  // body, and a stranger's id is the same 404 a missing one is.
+  let releaseId = input.releaseId;
+  if (input.taskId) {
+    const { data: taskRow } = await adminClient
+      .from('tasks')
+      .select('id, release_id')
+      .eq('id', input.taskId)
+      .maybeSingle();
+    const taskReleaseId = typeof taskRow?.release_id === 'string' ? taskRow.release_id : '';
+    if (!taskRow || !taskReleaseId) {
+      return NextResponse.json({ error: 'That activity was not found.' }, { status: 404 });
+    }
+    if (releaseId && releaseId !== taskReleaseId) {
+      return NextResponse.json({ error: 'That activity belongs to another rollout.' }, { status: 400 });
+    }
+    releaseId = taskReleaseId;
+  }
+  if (releaseId) {
+    const access = await ensureReleaseTeamWriteAccess(adminClient, releaseId, auth.user);
+    if ('error' in access) return access.error;
+  }
+
   const team = await getTeamAccessForUser(auth.user.id, auth.user.email);
 
   // The cap counts OPEN requests only, so a team that follows up on what it
@@ -246,7 +320,11 @@ export async function POST(request: NextRequest) {
       workspace_id: team.primaryWorkspaceId,
       role: input.role,
       note: input.note,
-      release_id: input.releaseId,
+      release_id: releaseId,
+      kind: input.kind,
+      ask_links: input.askLinks,
+      ask_release_note: input.askReleaseNote,
+      task_id: input.taskId,
       // Denormalised so the recipient's read path cannot touch profiles or
       // workspaces. Written server-side, never accepted from the client.
       sender_name: String(senderName).slice(0, 120),
