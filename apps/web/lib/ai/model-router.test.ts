@@ -365,20 +365,31 @@ describe('nextAfterFailure', () => {
       expect(next(at('standard'), 'server')?.model).toBe('openai/gpt-5.6-luna');
     });
 
+    it('falls to the older-generation sibling when both newer ones are down (2026-10-11 outage)', () => {
+      const planner = decisionForTier({ surface: 'planner', tier: 'pro', ceiling: 'pro', env: {} });
+      const first = next(planner, 'server');
+      expect(first?.model).toBe('openai/gpt-5.6-terra');
+      const second = first ? next(first, 'server') : null;
+      expect(second).toMatchObject({ tier: 'pro', model: 'openai/gpt-5', hops: 2 });
+    });
+
     it('steps down a rung once the siblings are used up', () => {
-      const exhausted = at('pro', { tried: ['openai/gpt-5.4', 'openai/gpt-5.6-terra'], hops: 1 });
+      const exhausted = at('pro', { tried: ['openai/gpt-5.4', 'openai/gpt-5.6-terra', 'openai/gpt-5'], hops: 1 });
       const d = next(exhausted, 'rate_limited');
       expect(d).toMatchObject({ tier: 'standard', model: 'openai/gpt-5.4-mini', hops: 2 });
     });
 
     it('never steps below the surface floor, so a plan is never built on a weaker model', () => {
       const planner = decisionForTier({ surface: 'planner', tier: 'pro', ceiling: 'pro', env: {} });
-      const exhausted = { ...planner, tried: ['openai/gpt-5.4', 'openai/gpt-5.6-terra'], hops: 1 };
+      const exhausted = { ...planner, tried: ['openai/gpt-5.4', 'openai/gpt-5.6-terra', 'openai/gpt-5'], hops: 1 };
       expect(next(exhausted, 'rate_limited')).toBeNull();
     });
 
     it('does not return to a model it already tried', () => {
-      const d = next(at('standard', { tried: ['openai/gpt-5.4-mini', 'openai/gpt-5.6-luna'], hops: 1 }), 'server');
+      const d = next(
+        at('standard', { tried: ['openai/gpt-5.4-mini', 'openai/gpt-5.6-luna', 'openai/gpt-5-mini'], hops: 1 }),
+        'server'
+      );
       expect(d?.tier).toBe('quick');
       expect(d?.model).toBe('openai/gpt-4o-mini');
     });
