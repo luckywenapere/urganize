@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.107.1",
+    date: "October 11, 2026",
+    highlights: [
+      "UrgAns keeps working when its usual AI models are down. It switches to a backup model, so your plan is still shaped around your answers.",
+    ],
+  },
+  {
     version: "1.107.0",
     date: "October 11, 2026",
     highlights: [

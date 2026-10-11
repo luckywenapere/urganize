@@ -93,6 +93,11 @@ export type LadderRung = {
 
 export type Ladder = Record<ModelTier, LadderRung>;
 
+// Each rung ends on a model from an OLDER provider pool (gpt-5, gpt-5.2,
+// gpt-5-mini). On 2026-10-11 RodiumAi returned 502 provider_unavailable for
+// every gpt-5.4/5.5/5.6 model at once for hours, so a rung made only of
+// same-generation siblings failed whole and every first plan lost its AI layer.
+// A cross-generation last sibling keeps a server hop inside the rung.
 export const DEFAULT_LADDER: Ladder = {
   quick: {
     tier: 'quick',
@@ -106,7 +111,7 @@ export const DEFAULT_LADDER: Ladder = {
   },
   standard: {
     tier: 'standard',
-    models: ['openai/gpt-5.4-mini', 'openai/gpt-5.6-luna'],
+    models: ['openai/gpt-5.4-mini', 'openai/gpt-5.6-luna', 'openai/gpt-5-mini'],
     reasoningEffort: 'low',
     maxOutputTokens: 4096,
     streamMaxOutputTokens: 6144,
@@ -116,7 +121,7 @@ export const DEFAULT_LADDER: Ladder = {
   },
   pro: {
     tier: 'pro',
-    models: ['openai/gpt-5.4', 'openai/gpt-5.6-terra'],
+    models: ['openai/gpt-5.4', 'openai/gpt-5.6-terra', 'openai/gpt-5'],
     reasoningEffort: 'low',
     maxOutputTokens: 3000,
     streamMaxOutputTokens: 8192,
@@ -126,7 +131,7 @@ export const DEFAULT_LADDER: Ladder = {
   },
   max: {
     tier: 'max',
-    models: ['openai/gpt-5.5', 'openai/gpt-5.6-sol'],
+    models: ['openai/gpt-5.5', 'openai/gpt-5.6-sol', 'openai/gpt-5.2'],
     reasoningEffort: 'low',
     maxOutputTokens: 3000,
     streamMaxOutputTokens: 8192,
