@@ -41,7 +41,8 @@ export function useArtistFilterSync(): void {
   }, [rosterLoaded, artists, selectedArtistId, hydrateSelectedArtistId]);
 }
 
-export type ArtistFilterOption = { id: string | null; name: string; active: boolean };
+/** `photoUrl` is the artist's face (null for "All artists" or no photo). */
+export type ArtistFilterOption = { id: string | null; name: string; active: boolean; photoUrl: string | null };
 
 /** The choices, "All artists" first, or none when the roster has one artist. */
 export function useArtistFilterOptions(): {
@@ -54,11 +55,14 @@ export function useArtistFilterOptions(): {
   const options = useMemo(
     () =>
       artists.length > 1
-        ? [{ id: null as string | null, name: 'All artists' }, ...artists].map((artist) => ({
-            id: artist.id,
-            name: artist.name,
-            active: artist.id === selectedArtistId,
-          }))
+        ? [{ id: null as string | null, name: 'All artists', photoUrl: null as string | null | undefined }, ...artists].map(
+            (artist) => ({
+              id: artist.id,
+              name: artist.name,
+              active: artist.id === selectedArtistId,
+              photoUrl: artist.photoUrl ?? null,
+            })
+          )
         : [],
     [artists, selectedArtistId]
   );

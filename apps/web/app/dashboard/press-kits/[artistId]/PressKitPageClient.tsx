@@ -1,6 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
+import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
+import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -123,6 +126,12 @@ export default function PressKitPageClient() {
     (state) => state.entries.find((entry) => entry.artistId === artistId)?.kit?.id || ''
   );
   const loadRoster = usePressKitsStore((state) => state.load);
+  const rosterArtist = useArtistRosterStore((state) => state.artists.find((entry) => entry.id === artistId));
+  const loadArtistRoster = useArtistRosterStore((state) => state.load);
+  const setArtistPhoto = useArtistRosterStore((state) => state.setArtistPhoto);
+  useEffect(() => {
+    void loadArtistRoster();
+  }, [loadArtistRoster]);
   const syncKit = usePressKitsStore((state) => state.syncKit);
 
   const [artistName, setArtistName] = useState('');
@@ -633,13 +642,25 @@ export default function PressKitPageClient() {
       ) : (
         <>
           <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-                Press kit
-              </p>
-              <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">
-                {artistName || rosterName}
-              </h1>
+            <div className="flex min-w-0 items-center gap-4">
+              {/* The roster face, editable here too: it also heads the public kit. */}
+              <ProfilePhotoPicker
+                name={artistName || rosterName}
+                photoUrl={rosterArtist?.photoUrl}
+                size={56}
+                signUrl={artistPhotoUrl(artistId)}
+                save={(path) => saveArtistPhoto(artistId, path)}
+                onChange={(url) => setArtistPhoto(artistId, url)}
+                surface="artist_photo"
+              />
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                  Press kit
+                </p>
+                <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">
+                  {artistName || rosterName}
+                </h1>
+              </div>
             </div>
             <p className="text-sm text-content-secondary">
               <span className="font-semibold text-content-primary">

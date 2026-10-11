@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.113.0",
+    date: "October 11, 2026",
+    highlights: [
+      "When you add a profile photo you can now frame it first. Drag to move it, zoom in, and the circle shows exactly what everyone will see.",
+      "Artist photos now show in more places: the artist picker under your account or More, the Press kits list and editor, the public press kit page, and the top of every rollout.",
+    ],
+  },
+  {
     version: "1.112.1",
     date: "October 11, 2026",
     highlights: [

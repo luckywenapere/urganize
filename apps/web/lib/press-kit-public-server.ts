@@ -13,6 +13,7 @@
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { loadArtistPhotoUrls } from './profile-photo-server';
 import {
   ASSET_SIGNED_URL_TTL_SECONDS,
   RELEASE_ASSETS_BUCKET,
@@ -46,6 +47,8 @@ export type PublicPressKit = {
    *  scan the ordered list to find the header. */
   byKey: Record<string, PressKitSectionContent>;
   photos: PublicKitPhoto[];
+  /** The artist's profile photo (roster face), signed. Null when none. */
+  artistPhotoUrl?: string | null;
 };
 
 function createServiceClient(): SupabaseClient | null {
@@ -147,6 +150,11 @@ export async function loadPublicPressKit(slug: string): Promise<PublicPressKit |
       )
     );
 
+    // The roster face, in its own tolerant read: no photo or a failure is
+    // simply no face in the header (lib/profile-photo-server.ts).
+    const artistPhotoUrl =
+      (await loadArtistPhotoUrls(client, [String(kit.artist_id || '')])).get(String(kit.artist_id || '')) ?? null;
+
     const photos: PublicKitPhoto[] = photoRows
       .map((row, index) => ({
         id: String(row.id || ''),
@@ -163,6 +171,7 @@ export async function loadPublicPressKit(slug: string): Promise<PublicPressKit |
       kitId,
       slug: String(kit.slug || normalized),
       artistName,
+      artistPhotoUrl,
       visibility: (kit.visibility as PressKitVisibility) || 'public',
       embargoDate: kit.embargo_date ? String(kit.embargo_date) : null,
       availableForInterview: kit.available_for_interview === true,

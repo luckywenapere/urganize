@@ -55,7 +55,9 @@ export function ProfileFace({ name, photoUrl, size = 'fill', className = '', squ
   }
 
   const px = fill ? 0 : (size as number);
-  const textSize = fill ? 'text-4xl sm:text-5xl' : px >= 80 ? 'text-2xl' : px >= 48 ? 'text-base' : px >= 36 ? 'text-xs' : 'text-[11px]';
+  const textSize = fill
+    ? 'text-4xl sm:text-5xl'
+    : px >= 80 ? 'text-2xl' : px >= 48 ? 'text-base' : px >= 36 ? 'text-xs' : px >= 28 ? 'text-[11px]' : px >= 20 ? 'text-[9px]' : 'text-[7px]';
   return (
     <span
       aria-hidden="true"

@@ -9,6 +9,7 @@ import type { Task } from '@/lib/tasks';
 import { TasksPanel } from './TasksPanel';
 import { RolloutTabs } from './RolloutTabs';
 import type { ReleaseCardData } from './catalogue-types';
+import { ArtistFace } from '@/components/shared/ArtistFace';
 import type { RolloutMenuDialogInput } from './useRolloutMenuActions';
 import { displayStatus, statusGroup } from '@/lib/catalogue-table';
 
@@ -16,7 +17,7 @@ type WorkspaceDesktopFocusedProps = {
   /** Tasks already filtered to the scoped release. */
   scopedTasks: Task[];
   /** Slim release shape for the panel's scope copy. */
-  scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'>;
+  scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'> & Partial<Pick<Release, 'artistId'>>;
   /** The focused rollout's card: cover, status, date, and who it is by. */
   card: ReleaseCardData;
   /** The "Catalogue" crumb's action. Owned entirely by WorkspaceView's
@@ -175,9 +176,12 @@ export function WorkspaceDesktopFocused({
                 {STATUS_LABEL[status] ?? status.replace(/_/g, ' ')}
               </span>
             </div>
-            <p className="mt-0.5 text-sm text-content-secondary">
-              {scopedRelease.artistName || 'Unassigned artist'}
-              {date ? <span className="text-content-tertiary"> · {date}</span> : null}
+            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-content-secondary">
+              <ArtistFace artistId={scopedRelease.artistId} name={scopedRelease.artistName} size={20} />
+              <span className="truncate">
+                {scopedRelease.artistName || 'Unassigned artist'}
+                {date ? <span className="text-content-tertiary"> · {date}</span> : null}
+              </span>
             </p>
           </div>
 

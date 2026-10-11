@@ -18,9 +18,10 @@ import {
   X,
   type LucideProps,
 } from '@/components/icons';
-import { Check, UserCircle2 } from '@/components/icons';
+import { Check, UserCircle2, Users } from '@/components/icons';
 import { SignalIcon } from '@/components/app/BrandIcons';
 import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
+import { ProfileFace } from '@/components/shared/ProfileFace';
 import { useArtistFilterOptions } from './useArtistFilter';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { useSettingsLinkClick } from '@/components/settings/useOpenSettings';
@@ -343,7 +344,16 @@ function MoreSheet({
                     }}
                     className="motion-focus flex min-h-12 w-full items-center justify-between gap-2 text-left text-base text-content-primary"
                   >
-                    <span className="truncate">{artist.name}</span>
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      {artist.id ? (
+                        <ProfileFace name={artist.name} photoUrl={artist.photoUrl} size={32} />
+                      ) : (
+                        <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full border border-stroke-default text-content-tertiary" style={{ width: 32, height: 32 }}>
+                          <Users className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                      <span className="truncate">{artist.name}</span>
+                    </span>
                     {artist.active ? <Check className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" /> : null}
                   </button>
                 </li>

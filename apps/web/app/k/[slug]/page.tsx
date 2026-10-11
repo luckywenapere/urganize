@@ -428,6 +428,17 @@ export default async function PublicPressKitPage({ params }: PageProps) {
 
       <main className="mx-auto max-w-2xl px-5 py-16 sm:px-8">
         <header>
+          {kit.artistPhotoUrl ? (
+            // The artist's roster face. A plain img: the url is signed with a
+            // short life, and next/image would cache it past that.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={kit.artistPhotoUrl}
+              alt=""
+              className="mb-6 h-24 w-24 rounded-full object-cover"
+              style={{ backgroundColor: SURFACE }}
+            />
+          ) : null}
           <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
             Press kit
           </p>

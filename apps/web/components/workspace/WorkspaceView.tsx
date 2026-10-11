@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArtistFace } from '@/components/shared/ArtistFace';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AlertCircle, ArrowLeft } from '@/components/icons';
@@ -1391,8 +1392,9 @@ export function WorkspaceView() {
                     <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                   </button>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-                      {scopedReleaseSlim.artistName || 'Unassigned artist'}
+                    <p className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                      <ArtistFace artistId={scopedReleaseSlim.artistId} name={scopedReleaseSlim.artistName} size={16} />
+                      <span className="truncate">{scopedReleaseSlim.artistName || 'Unassigned artist'}</span>
                     </p>
                     <h2 className="truncate font-display text-lg font-semibold leading-tight text-content-primary">
                       {scopedReleaseSlim.title}

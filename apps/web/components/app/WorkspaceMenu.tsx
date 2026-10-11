@@ -6,8 +6,9 @@ import { ExitIcon, GearIcon, ProfileIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
 import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
+import { ProfileFace } from '@/components/shared/ProfileFace';
 import { useArtistFilterOptions } from '@/components/shell/useArtistFilter';
-import { Check } from '@/components/icons';
+import { Check, Users } from '@/components/icons';
 
 type WorkspaceMenuProps = {
   /** Display name shown in the menu's identity header. The trigger itself
@@ -207,7 +208,16 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
                   onKeyDown={(event) => handleItemKeyDown(event, index)}
                   className="motion-focus flex min-h-11 w-full items-center justify-between gap-2 px-3 text-left text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover"
                 >
-                  <span className="truncate">{artist.name}</span>
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    {artist.id ? (
+                      <ProfileFace name={artist.name} photoUrl={artist.photoUrl} size={24} />
+                    ) : (
+                      <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full border border-stroke-default text-content-tertiary" style={{ width: 24, height: 24 }}>
+                        <Users className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                    <span className="truncate">{artist.name}</span>
+                  </span>
                   {artist.active ? <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" /> : null}
                 </button>
               ))}

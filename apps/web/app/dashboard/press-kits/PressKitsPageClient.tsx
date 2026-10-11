@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Newspaper } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { usePressKitsStore } from '@/stores/usePressKitsStore';
+import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
+import { ProfileFace } from '@/components/shared/ProfileFace';
 import type { PressKit } from '@/types/press-kits';
 
 // Same flag the API routes read. A direct link followed while the flag is off
@@ -37,6 +39,16 @@ export default function PressKitsPageClient() {
   const isInitialLoading = usePressKitsStore((state) => state.isInitialLoading);
   const error = usePressKitsStore((state) => state.error);
   const load = usePressKitsStore((state) => state.load);
+  // Faces come from the roster, which already carries signed photo urls.
+  const rosterArtists = useArtistRosterStore((state) => state.artists);
+  const loadRoster = useArtistRosterStore((state) => state.load);
+  const photoById = useMemo(
+    () => new Map(rosterArtists.map((artist) => [artist.id, artist.photoUrl ?? null])),
+    [rosterArtists]
+  );
+  useEffect(() => {
+    void loadRoster();
+  }, [loadRoster]);
 
   useEffect(() => {
     if (!PRESS_KITS_ENABLED) {
@@ -103,13 +115,16 @@ export default function PressKitsPageClient() {
                 href={`/dashboard/press-kits/${entry.artistId}`}
                 className="motion-focus flex items-center justify-between gap-3 rounded-xl border border-stroke-default bg-bg-surface p-4 transition-colors hover:border-stroke-strong"
               >
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-3">
+                  <ProfileFace name={entry.artistName} photoUrl={photoById.get(entry.artistId)} size={44} />
+                  <div className="min-w-0">
                   <h2 className="line-clamp-2 break-words font-display text-base font-semibold text-content-primary">
                     {entry.artistName}
                   </h2>
                   <p className="mt-1 line-clamp-2 break-words text-xs text-content-secondary">
                     {entry.kit ? `urganize.app/k/${entry.kit.slug}` : 'No kit yet'}
                   </p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span

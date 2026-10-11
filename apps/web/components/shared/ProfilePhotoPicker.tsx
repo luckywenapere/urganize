@@ -13,6 +13,7 @@ import {
 } from '@/lib/upload-failure-report';
 import { PROFILE_PHOTO_MIME_TYPES } from '@/lib/profile-photo';
 import { ProfileFace } from './ProfileFace';
+import { PhotoCropDialog } from './PhotoCropDialog';
 
 /**
  * A face you can tap to change. Used on the Artists list, the artist page and
@@ -20,9 +21,9 @@ import { ProfileFace } from './ProfileFace';
  *
  * THE SLOT IS ALWAYS THERE. No photo shows the gradient + initials with a small
  * camera badge, so the empty state reads as "add one" rather than as a broken
- * image. Tapping opens the file picker straight away: no modal, no crop step —
- * the image is downsized on the device and shown cropped to a circle by CSS,
- * which is what every phone user expects from an avatar.
+ * image. Tapping opens the file picker; the chosen photo is downsized on the
+ * device, then framed in a square crop step (PhotoCropDialog) so the face, not
+ * the background, is what every avatar shows.
  *
  * The upload is the three-step flow the workspace logo and curator photo use:
  * sign (POST `signUrl`) → PUT the bytes to storage → `save(path)`. A failure
@@ -60,23 +61,37 @@ export function ProfilePhotoPicker({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [cropping, setCropping] = useState<File | null>(null);
 
   const pick = () => {
     if (!busy) inputRef.current?.click();
   };
 
-  const upload = async (file: File) => {
+  // Shrink first (a phone original can be past what a browser will decode),
+  // then hand it to the crop step. 2048px leaves room to zoom in sharply.
+  const choose = async (file: File) => {
+    setError('');
+    setBusy(true);
+    try {
+      const prepared = await prepareAvatarImage(file, 2048);
+      if (!prepared) {
+        setError('Could not read that image. Try a JPEG.');
+        return;
+      }
+      setCropping(prepared.file);
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  /** `body` is the cropped square, already small. */
+  const upload = async (body: File) => {
     setError('');
     setBusy(true);
     let step: UploadStep = 1;
     let status: number | undefined;
     try {
-      const prepared = await prepareAvatarImage(file);
-      if (!prepared) {
-        setError('Could not read that image. Try a JPEG.');
-        return;
-      }
-      const body = prepared.file;
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       if (!token) throw new Error('Sign in again to change the photo.');
@@ -190,7 +205,7 @@ export function ProfilePhotoPicker({
         onClick={(event) => event.stopPropagation()}
         onChange={(event) => {
           const file = event.target.files?.[0];
-          if (file) void upload(file);
+          if (file) void choose(file);
         }}
       />
 
@@ -215,6 +230,18 @@ export function ProfilePhotoPicker({
             </button>
           ) : null}
         </div>
+      ) : null}
+
+      {cropping ? (
+        <PhotoCropDialog
+          file={cropping}
+          name={name}
+          onCancel={() => setCropping(null)}
+          onConfirm={(cropped) => {
+            setCropping(null);
+            void upload(cropped);
+          }}
+        />
       ) : null}
 
       {error ? (
