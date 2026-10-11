@@ -17,7 +17,8 @@
 --    their own suggestions.
 --
 -- 2. MATCHING FACTS ARE ARRAYS OF SHORT CODES. countries holds ISO 3166 alpha-2
---    codes plus 'AFRICA' and 'ANY'; applicant_types is 'individual' and/or
+--    codes plus the regions 'AFRICA', 'SSA' (sub-Saharan) and 'EU', and 'ANY';
+--    applicant_types is 'individual' and/or
 --    'organisation'; needs, genres and stages use the same vocabulary as the
 --    grant search facts. An empty genres or stages array means "any".
 --
