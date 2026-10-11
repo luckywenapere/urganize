@@ -103,6 +103,100 @@ describe('dedupeGrants', () => {
   });
 });
 
+describe('dedupeGrants: the same grant reposted on another site', () => {
+  // Real titles from the 2026-10-11 live run: one programme, three blogs, three titles.
+  const fundA = grant({
+    title: 'The Creative Fund 2026 for Film, Fashion and Music Projects in Nigeria',
+    funder: 'UK-Nigeria Tech Hub and implemented by Tech4Dev',
+    link: 'https://drpcngr.org/the-creative-fund-2026',
+    deadline: null,
+    amount: null,
+    status: 'unknown',
+  });
+  const fundB = grant({
+    title: 'Call for Applications: UK–Nigeria Creative Fund 2026 (Project-Based - MSME Africa',
+    funder: 'UK-Nigeria Tech Hub in partnership with Tech4Dev',
+    link: 'https://msmeafricaonline.com/call-for-applications-uk-nigeria-creative-fund-2026',
+    deadline: null,
+    amount: null,
+    status: 'unknown',
+  });
+
+  it('drops a repost when the funder matches and the titles name the same programme', () => {
+    const { kept, duplicates } = dedupeGrants([fundA, fundB], []);
+    expect(kept).toEqual([fundA]);
+    expect(duplicates).toEqual([{ grant: fundB, reason: 'same_grant_elsewhere' }]);
+  });
+
+  it('sees past a shortened name and a plural (scholarship programme, scholars programme)', () => {
+    const a = grant({ title: 'MTN Foundation/MUSON Music Scholarship Programme 2026/2027 For Aspiring Musicians', funder: 'MTN Foundation & Musical Society of Nigeria', link: 'https://olainfo.com.ng/mtn-muson' });
+    const b = grant({ title: 'MTNF MUSON Music Scholars Programme 2026/2027', funder: 'MTN Foundation', link: 'https://studygreen.info/mtn-muson' });
+    expect(dedupeGrants([a, b], []).kept).toHaveLength(1);
+  });
+
+  it('drops a near-identical title when only one side names the funder', () => {
+    const a = grant({ title: 'UK–Nigeria Creative Fund 2026', funder: 'UK–Nigeria Tech Hub', link: 'https://a.example/x' });
+    const b = grant({ title: 'Applications open: UK Nigeria Creative Fund 2026', funder: null, link: 'https://b.example/y' });
+    expect(dedupeGrants([a, b], []).kept).toHaveLength(1);
+  });
+
+  it('looks past the site name a blog adds to the end of a title', () => {
+    const a = grant({ title: 'Music Futures Fund - Opportunity Desk', funder: null, link: 'https://a.example/x' });
+    const b = grant({ title: 'Music Futures Fund | Get Creative Money', link: 'https://b.example/y' });
+    expect(dedupeGrants([a, b], []).kept).toHaveLength(1);
+  });
+
+  it('never mistakes a trailing year for a site name', () => {
+    const a = grant({ title: 'Creative Business Academy for Africa — 2026', link: 'https://a.example/x', deadline: null });
+    const b = grant({ title: 'Creative Business Academy for Africa — 2027', link: 'https://b.example/y', deadline: null });
+    expect(dedupeGrants([a, b], []).kept).toHaveLength(2);
+  });
+
+  it('keeps loosely similar titles apart when a funder is missing', () => {
+    const a = grant({ title: 'UK–Nigeria Creative Fund 2026', funder: 'UK–Nigeria Tech Hub', link: 'https://a.example/x' });
+    const b = grant({ title: 'The Creative Fund 2026 for Film, Fashion and Music Projects in Nigeria', funder: null, link: 'https://b.example/y' });
+    expect(dedupeGrants([a, b], []).kept).toHaveLength(2);
+  });
+
+  it('keeps the same programme name from two different funders apart', () => {
+    const a = grant({ title: 'Emerging Artist Touring Grant 2027', funder: 'Arts Council Alpha', link: 'https://a.example/x' });
+    const b = grant({ title: 'Emerging Artist Touring Grant 2027', funder: 'Beta Music Trust', link: 'https://b.example/y' });
+    expect(dedupeGrants([a, b], []).kept).toHaveLength(2);
+  });
+
+  it('keeps two rounds apart: a different year', () => {
+    const a = grant({ title: 'Music Futures Fund 2026', link: 'https://a.example/x', deadline: null });
+    const b = grant({ title: 'Music Futures Fund 2027', link: 'https://b.example/y', deadline: null });
+    expect(dedupeGrants([a, b], []).kept).toHaveLength(2);
+  });
+
+  it('keeps two rounds apart: a different cohort number', () => {
+    const a = grant({ title: 'Creative Catalyst Initiative cohort 1', funder: 'Chapel Hill Denham', link: 'https://a.example/x' });
+    const b = grant({ title: 'Creative Catalyst Initiative cohort 2', funder: 'Chapel Hill Denham', link: 'https://b.example/y' });
+    expect(dedupeGrants([a, b], []).kept).toHaveLength(2);
+  });
+
+  it('keeps two rounds apart: different deadlines', () => {
+    const a = grant({ title: 'Creative Fund Nigeria', funder: 'UK-Nigeria Tech Hub', link: 'https://a.example/x', deadline: '2026-11-30' });
+    const b = grant({ title: 'UK-Nigeria Creative Fund', funder: 'UK-Nigeria Tech Hub', link: 'https://b.example/y', deadline: '2027-03-31' });
+    expect(dedupeGrants([a, b], []).kept).toHaveLength(2);
+  });
+
+  it('keeps the copy that carries more checked facts, wherever it came in the list', () => {
+    const rich = { ...fundB, deadline: '2026-12-15', amount: 5000, status: 'open' as const };
+    const { kept, duplicates } = dedupeGrants([fundA, rich], []);
+    expect(kept).toEqual([rich]);
+    expect(duplicates).toEqual([{ grant: fundA, reason: 'same_grant_elsewhere' }]);
+  });
+
+  it('treats a repost of something the team already tracks as tracked', () => {
+    const existing = [{ title: 'UK-Nigeria Creative Fund 2026', counterparty: 'UK-Nigeria Tech Hub', notes: '' }];
+    const { kept, duplicates } = dedupeGrants([fundB], existing);
+    expect(kept).toEqual([]);
+    expect(duplicates[0].reason).toBe('already_tracked');
+  });
+});
+
 describe('trackedLinkSet', () => {
   it('collects every link the existing notes cite, normalized', () => {
     const set = trackedLinkSet([
