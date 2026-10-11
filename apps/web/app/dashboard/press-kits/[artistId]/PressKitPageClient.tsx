@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
   ChevronDown,
   History,
@@ -24,7 +25,12 @@ import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { authHeaders, readError } from '@/components/press-kits/press-kit-client';
 import { usePressKitSection } from '@/components/press-kits/usePressKitSection';
 import { SectionEditor } from '@/components/press-kits/SectionEditor';
-import { PRESS_KIT_SECTION_LABELS, deriveSectionStatus } from '@/lib/press-kits';
+import {
+  PRESS_KIT_SECTION_HINTS,
+  PRESS_KIT_SECTION_LABELS,
+  deriveSectionStatus,
+  isEssentialSection,
+} from '@/lib/press-kits';
 import { countInterviewGaps } from '@/lib/press-kit-interview';
 import type { AutofillSummary as AutofillCounts } from '@/lib/press-kit-autofill';
 import { AutofillSummary } from '@/components/press-kits/AutofillSummary';
@@ -54,16 +60,35 @@ import type {
 const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 
 const STATUS_COPY: Record<PressKitSectionStatus, string> = {
-  empty: 'Empty',
-  draft: 'Draft',
-  ready: 'Ready',
+  empty: 'Not started',
+  draft: 'Started',
+  ready: 'Done',
 };
 
-const statusChipClass = (status: PressKitSectionStatus): string => {
-  if (status === 'ready') return 'bg-brand/10 text-brand';
-  if (status === 'draft') return 'bg-bg-elevated text-content-secondary';
-  return 'bg-transparent text-content-tertiary';
-};
+/**
+ * One mark per section instead of a mono EMPTY / DRAFT / READY chip (founder
+ * brief, 2026-10-11: a fifth grader should get it at a glance). A filled
+ * check is done, a half ring is started, an empty ring is not started.
+ */
+function StatusMark({ status }: { status: PressKitSectionStatus }) {
+  if (status === 'ready') {
+    return (
+      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand text-content-inverse">
+        <Check className="h-3 w-3" aria-hidden />
+        <span className="sr-only">{STATUS_COPY.ready}</span>
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`h-5 w-5 shrink-0 rounded-full border-2 ${
+        status === 'draft' ? 'border-brand/60 border-r-transparent' : 'border-stroke-control'
+      }`}
+    >
+      <span className="sr-only">{STATUS_COPY[status]}</span>
+    </span>
+  );
+}
 
 const relative = (iso: string): string => {
   const at = Date.parse(iso);
@@ -490,6 +515,61 @@ export default function PressKitPageClient() {
     [kit, active]
   );
 
+  // Must-haves first, extras after, each in the kit's own order. "Next" walks
+  // the same order the rail shows, so the button and the list never disagree.
+  const visibleSections = sections.filter((section) => !section.hidden);
+  const essentials = visibleSections.filter((section) => isEssentialSection(section.section));
+  const extras = visibleSections.filter((section) => !isEssentialSection(section.section));
+  const ordered = [...essentials, ...extras];
+  const essentialsDone = essentials.filter((section) => statusFor(section) === 'ready').length;
+  const activeIndex = ordered.findIndex((section) => section.section === activeKey);
+  const nextSection = activeIndex >= 0 ? ordered[activeIndex + 1] ?? null : null;
+
+  const renderSectionList = (inSheet: boolean) => {
+    const row = (section: PressKitSection) => (
+      <li key={section.id}>
+        <button
+          type="button"
+          onClick={() => {
+            autosave.flush();
+            setActiveKey(section.section);
+            void discardDraft();
+            if (inSheet) setSheetOpen(false);
+          }}
+          aria-current={section.section === activeKey ? 'true' : undefined}
+          className={`motion-focus flex w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm transition-colors ${
+            inSheet ? 'py-3' : 'py-2'
+          } ${
+            section.section === activeKey
+              ? 'bg-brand/10 font-semibold text-content-primary'
+              : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
+          }`}
+        >
+          <StatusMark status={statusFor(section)} />
+          <span className="truncate">{PRESS_KIT_SECTION_LABELS[section.section]}</span>
+        </button>
+      </li>
+    );
+    return (
+      <div className="space-y-5">
+        <div>
+          <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+            Start here
+          </p>
+          <ul className="space-y-0.5">{essentials.map(row)}</ul>
+        </div>
+        {extras.length > 0 ? (
+          <div>
+            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+              Extras
+            </p>
+            <ul className="space-y-0.5">{extras.map(row)}</ul>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   if (!PRESS_KITS_ENABLED) return null;
 
   const loading = authLoading || isLoading;
@@ -538,7 +618,7 @@ export default function PressKitPageClient() {
               : 'No press kit yet'}
           </p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-content-secondary">
-            One kit, one link, kept current. Start it now and fill it in as you go.
+            One page with everything people need to write about the artist. We fill in what we already know.
           </p>
           <button
             type="button"
@@ -547,23 +627,31 @@ export default function PressKitPageClient() {
             className="motion-focus mt-4 inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-content-inverse disabled:opacity-60"
           >
             {isCreating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-            Start the press kit
+            Make the press kit
           </button>
         </div>
       ) : (
         <>
-          <header className="mb-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-              Press kit
+          <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+                Press kit
+              </p>
+              <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">
+                {artistName || rosterName}
+              </h1>
+            </div>
+            <p className="text-sm text-content-secondary">
+              <span className="font-semibold text-content-primary">
+                {essentialsDone} of {essentials.length}
+              </span>{' '}
+              must-haves done
             </p>
-            <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">
-              {artistName || rosterName}
-            </h1>
           </header>
 
-          <RolloutBanner kitId={kit.id} onAccepted={() => loadDetail(kit.id)} />
-
           <PublishPanel kit={kit} sections={sections} onKitChange={setKit} />
+
+          <RolloutBanner kitId={kit.id} onAccepted={() => loadDetail(kit.id)} />
 
           <AutofillSummary
             counts={autofillCounts}
@@ -573,38 +661,9 @@ export default function PressKitPageClient() {
           />
 
           <div className="lg:flex lg:gap-8">
-            {/* The rail: every section, and how far along each one is. */}
-            <nav className="hidden w-52 shrink-0 lg:block" aria-label="Press kit sections">
-              <ul className="space-y-0.5">
-                {sections.map((section) => (
-                  <li key={section.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveKey(section.section);
-                        void discardDraft();
-                      }}
-                      aria-current={section.section === activeKey ? 'true' : undefined}
-                      className={`motion-focus flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                        section.section === activeKey
-                          ? 'bg-brand/10 text-brand'
-                          : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
-                      }`}
-                    >
-                      <span className="truncate">
-                        {PRESS_KIT_SECTION_LABELS[section.section]}
-                      </span>
-                      <span
-                        className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] uppercase ${statusChipClass(
-                          statusFor(section)
-                        )}`}
-                      >
-                        {STATUS_COPY[statusFor(section)]}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            {/* The rail: four must-haves first, the rest as extras. */}
+            <nav className="hidden w-56 shrink-0 lg:block" aria-label="Press kit sections">
+              {renderSectionList(false)}
             </nav>
 
             <div className="min-w-0 flex-1">
@@ -613,40 +672,40 @@ export default function PressKitPageClient() {
               <button
                 type="button"
                 onClick={() => setSheetOpen(true)}
-                className="motion-focus mb-4 flex w-full items-center justify-between gap-2 rounded-lg border border-stroke-default bg-bg-surface px-3 py-2.5 text-left lg:hidden"
+                className="motion-focus mb-4 flex w-full items-center justify-between gap-2 rounded-lg border border-stroke-default bg-bg-surface px-3 py-3 text-left lg:hidden"
               >
-                <span className="text-sm font-semibold text-content-primary">
-                  {active ? PRESS_KIT_SECTION_LABELS[active.section] : 'Sections'}
+                <span className="flex min-w-0 items-center gap-2.5">
+                  {active ? <StatusMark status={statusFor(active)} /> : null}
+                  <span className="truncate text-sm font-semibold text-content-primary">
+                    {active ? PRESS_KIT_SECTION_LABELS[active.section] : 'Sections'}
+                  </span>
                 </span>
-                <span className="flex items-center gap-2">
-                  {active ? (
-                    <span
-                      className={`rounded px-1.5 py-0.5 font-mono text-[10px] uppercase ${statusChipClass(
-                        statusFor(active)
-                      )}`}
-                    >
-                      {STATUS_COPY[statusFor(active)]}
-                    </span>
-                  ) : null}
+                <span className="flex shrink-0 items-center gap-1 text-xs text-content-secondary">
+                  All parts
                   <ChevronDown className="h-4 w-4 text-content-tertiary" aria-hidden />
                 </span>
               </button>
 
               {active ? (
-                <section className="rounded-xl border border-stroke-default bg-bg-surface p-4 sm:p-5">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <h2 className="font-display text-lg font-semibold text-content-primary">
-                      {PRESS_KIT_SECTION_LABELS[active.section]}
-                    </h2>
-                    <div className="flex items-center gap-2">
+                <section className="rounded-xl border border-stroke-default bg-bg-surface p-4 sm:p-6">
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="font-display text-xl font-semibold text-content-primary">
+                        {PRESS_KIT_SECTION_LABELS[active.section]}
+                      </h2>
+                      <p className="mt-1 text-sm text-content-secondary">
+                        {PRESS_KIT_SECTION_HINTS[active.section]}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
                       <span className="inline-flex items-center gap-1.5 text-xs text-content-tertiary">
                         {savedLabel}
                       </span>
                       <button
                         type="button"
                         onClick={() => void openHistory()}
-                        aria-label="Change history"
-                        title="Change history"
+                        aria-label="Undo changes"
+                        title="Undo changes"
                         className="motion-focus grid h-8 w-8 place-items-center rounded-full text-content-tertiary hover:bg-bg-hover hover:text-content-primary"
                       >
                         <History className="h-4 w-4" aria-hidden />
@@ -678,7 +737,7 @@ export default function PressKitPageClient() {
                         ) : (
                           <Sparkles className="h-4 w-4" aria-hidden />
                         )}
-                        {draftBusy ? 'UrgAns is writing' : 'Ask UrgAns to write this'}
+                        {draftBusy ? 'Writing…' : 'Write it for me'}
                       </button>
                       {isCreditsEnabled() ? (
                         <p className="mt-2 text-xs text-content-tertiary">{embeddedCostLine('presskit.draft_section', balance)}</p>
@@ -705,6 +764,23 @@ export default function PressKitPageClient() {
                       ) : null
                     }
                   />
+
+                  {nextSection ? (
+                    <div className="mt-6 flex justify-end border-t border-stroke-subtle pt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          autosave.flush();
+                          setActiveKey(nextSection.section);
+                          void discardDraft();
+                        }}
+                        className="motion-focus motion-press inline-flex items-center gap-2 rounded-lg border border-stroke-default bg-bg-elevated px-3.5 py-2 text-sm font-semibold text-content-primary hover:bg-bg-hover"
+                      >
+                        Next: {PRESS_KIT_SECTION_LABELS[nextSection.section]}
+                        <ArrowRight className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
             </div>
@@ -741,29 +817,7 @@ export default function PressKitPageClient() {
                 onClose={() => setSheetOpen(false)}
                 className="absolute inset-x-0 bottom-0 max-h-[70dvh] overflow-y-auto rounded-t-2xl border-t border-stroke-default bg-bg-surface p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
               >
-                <ul className="space-y-0.5">
-                  {sections.map((section) => (
-                    <li key={section.id}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveKey(section.section);
-                          setSheetOpen(false);
-                        }}
-                        className="motion-focus flex w-full items-center justify-between gap-2 rounded-lg px-3 py-3 text-left text-sm text-content-primary hover:bg-bg-hover"
-                      >
-                        <span>{PRESS_KIT_SECTION_LABELS[section.section]}</span>
-                        <span
-                          className={`rounded px-1.5 py-0.5 font-mono text-[10px] uppercase ${statusChipClass(
-                            statusFor(section)
-                          )}`}
-                        >
-                          {STATUS_COPY[statusFor(section)]}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                {renderSectionList(true)}
               </DialogPanel>
             </div>,
             document.body
@@ -780,15 +834,15 @@ export default function PressKitPageClient() {
                 className="absolute inset-0 bg-black/50"
               />
               <DialogPanel
-                label="What this said before"
+                label="Undo changes"
                 onClose={() => setHistoryOpen(false)}
                 className="relative w-full max-w-md rounded-xl border border-stroke-default bg-bg-surface p-4"
               >
                 <h3 className="font-display text-base font-semibold text-content-primary">
-                  What this said before
+                  Undo changes
                 </h3>
                 <p className="mt-1 text-sm text-content-secondary">
-                  The last thirty days. Putting one back can itself be undone.
+                  Pick an older version to bring it back.
                 </p>
 
                 <div className="mt-4 max-h-72 space-y-2 overflow-y-auto">
@@ -796,7 +850,7 @@ export default function PressKitPageClient() {
                     <p className="text-sm text-content-tertiary">Loading…</p>
                   ) : versions.length === 0 ? (
                     <p className="text-sm text-content-tertiary">
-                      Nothing yet. Versions appear here once you have edited this section.
+                      Nothing to undo yet.
                     </p>
                   ) : (
                     versions.map((version) => (
@@ -814,7 +868,7 @@ export default function PressKitPageClient() {
                           className="motion-focus inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-content-secondary hover:bg-bg-hover hover:text-content-primary disabled:opacity-60"
                         >
                           <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-                          Put this back
+                          Bring back
                         </button>
                       </div>
                     ))
