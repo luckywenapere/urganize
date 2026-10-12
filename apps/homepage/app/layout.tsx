@@ -206,6 +206,22 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  // Favicons at FIXED root paths (2026-10-12: Bing showed a blank globe
+  // instead of the logo). They used to sit in app/ as Next's file-convention
+  // icons, which emit fingerprinted hrefs ("/favicon.ico?favicon.10-...ico")
+  // and an SVG Bing does not use. Bing reads the plain /favicon.ico and a PNG
+  // whose size is a multiple of 48, so those lead; the SVG stays for browsers.
+  // The files live in public/, so these hrefs never change between deploys.
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48", type: "image/x-icon" },
+      { url: "/icon-96.png", sizes: "96x96", type: "image/png" },
+      { url: "/web-app-manifest-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: { url: "/apple-touch-icon.png", sizes: "180x180" },
+  },
   // Bing Webmaster Tools ownership proof. Renders nothing until the env var
   // is set in Vercel (Production), so this is inert for local/preview builds.
   ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
