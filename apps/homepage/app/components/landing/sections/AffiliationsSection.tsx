@@ -45,37 +45,70 @@ const AFFILIATIONS = [
   },
 ] as const;
 
+// "Backed by" (founder call, 2026-10-13): Urganize is in Greylight's Tangent
+// Cohort 002, a venture-building programme, so "Backed by" is a true line for
+// Greylight alone. Keep it to backers; the people-based logos stay in the
+// "Built with people from" row below. Same mask treatment as above, made from
+// Greylight's own lockup (greylight.co).
+const BACKERS = [
+  {
+    name: "Greylight",
+    src: "/images/affiliations/greylight.png",
+    width: 926,
+    height: 160,
+    shown: 30,
+  },
+] as const;
+
+type Logo = (typeof AFFILIATIONS)[number] | (typeof BACKERS)[number];
+
+function LogoMark({ logo }: { logo: Logo }) {
+  return (
+    <span
+      role="img"
+      aria-label={logo.name}
+      title={logo.name}
+      className="block bg-[var(--marketing-text-muted)]"
+      style={{
+        height: logo.shown,
+        width: Math.round((logo.shown * logo.width) / logo.height),
+        WebkitMaskImage: `url(${logo.src})`,
+        maskImage: `url(${logo.src})`,
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        maskPosition: "center",
+      }}
+    />
+  );
+}
+
 export function AffiliationsSection() {
   return (
     <section aria-labelledby="affiliations-heading" className="pb-16 sm:pb-20">
       <div className={`mx-auto ${wideContainerClass}`}>
+        <p className="text-balance text-center text-sm leading-6 text-[var(--marketing-text-muted)]">
+          Backed by
+        </p>
+        <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
+          {BACKERS.map((logo) => (
+            <li key={logo.name} className="flex items-center">
+              <LogoMark logo={logo} />
+            </li>
+          ))}
+        </ul>
         <p
           id="affiliations-heading"
-          className="text-balance text-center text-sm leading-6 text-[var(--marketing-text-muted)]"
+          className="mt-12 text-balance text-center text-sm leading-6 text-[var(--marketing-text-muted)]"
         >
           Built with people from
         </p>
         <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-12 gap-y-8 sm:gap-x-16">
           {AFFILIATIONS.map((logo) => (
             <li key={logo.name} className="flex items-center">
-              <span
-                role="img"
-                aria-label={logo.name}
-                title={logo.name}
-                className="block bg-[var(--marketing-text-muted)]"
-                style={{
-                  height: logo.shown,
-                  width: Math.round((logo.shown * logo.width) / logo.height),
-                  WebkitMaskImage: `url(${logo.src})`,
-                  maskImage: `url(${logo.src})`,
-                  WebkitMaskSize: "contain",
-                  maskSize: "contain",
-                  WebkitMaskRepeat: "no-repeat",
-                  maskRepeat: "no-repeat",
-                  WebkitMaskPosition: "center",
-                  maskPosition: "center",
-                }}
-              />
+              <LogoMark logo={logo} />
             </li>
           ))}
         </ul>
