@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.120.4",
+    date: "October 13, 2026",
+    highlights: [
+      "Help me pick now shows you three Fridays to choose from. Each one says how many weeks you get, whether there is time to pitch Spotify editorial, and whether another of your rollouts lands that week.",
+    ],
+  },
+  {
     version: "1.120.3",
     date: "October 13, 2026",
     highlights: [
