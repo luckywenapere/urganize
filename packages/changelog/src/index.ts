@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.120.3",
+    date: "October 13, 2026",
+    highlights: [
+      "You can now skip the invite step on your first plan. Tap Skip for now and it stays away for a day. Inviting a teammate still clears it for good.",
+    ],
+  },
+  {
     version: "1.120.2",
     date: "October 13, 2026",
     highlights: [

@@ -1,9 +1,16 @@
 // The invite gate (founder request, 2026-10-11).
 //
 // Once a manager starts scrolling through their FIRST generated rollout plan,
-// the app stops and asks them to invite one teammate. Nothing else works until
-// an invite has gone out: Urganize is a team product, and a plan nobody else
-// can see is the moment the second-release rate is lost.
+// the app stops and asks them to invite one teammate: Urganize is a team
+// product, and a plan nobody else can see is the moment the second-release
+// rate is lost.
+//
+// AMENDED 2026-10-13 (founder): the gate can be skipped. A prospect in a live
+// walkthrough found the app "unusable" without inviting someone first, and an
+// artist trying Urganize alone has nobody to invite yet. "Skip for now" (or
+// Escape) hides it on this device for INVITE_GATE_SKIP_MS; after that it asks
+// again the next time they scroll the plan. An invite still clears it for
+// good, on every device.
 //
 // What this file holds is the pure half, so it can be unit-tested:
 //   - whether the gate is switched on at all,
@@ -20,7 +27,8 @@
 //    person through.
 //  - NEVER A WALL NOBODY CAN CLIMB. Only owners and admins can invite, so only
 //    they are gated, and a team whose plan has no free seat (paid Solo) is
-//    never gated, because the invite would be refused.
+//    never gated, because the invite would be refused. Since 2026-10-13 it can
+//    also be skipped (see above).
 //  - FIRST PLAN ONLY. A team that already has two or more rollouts was using
 //    Urganize before the gate existed and is left alone. Since a gated team
 //    cannot get past the plan to create a second rollout, "exactly one rollout"
@@ -59,6 +67,24 @@ export function shouldRequireInvite(facts: InviteGateFacts): boolean {
  * sent. */
 export const inviteGateStorageKey = (workspaceId: string): string =>
   `urganize:invite-gate:${workspaceId}`;
+
+/** How long "Skip for now" keeps the gate away on this device. */
+export const INVITE_GATE_SKIP_MS = 24 * 60 * 60 * 1000;
+
+/** Remembers, per team, when the gate was last skipped in this browser. */
+export const inviteGateSkipKey = (workspaceId: string): string =>
+  `urganize:invite-gate:skipped:${workspaceId}`;
+
+/**
+ * Is a skip still in force? Only for a real time in the past that is less than
+ * INVITE_GATE_SKIP_MS ago. A missing, unreadable or future time (a clock that
+ * moved back) is not a skip, so a bad value can never hide the gate for good.
+ */
+export function isInviteGateSkipped(skippedAt: number | null | undefined, now: number): boolean {
+  if (typeof skippedAt !== 'number' || !Number.isFinite(skippedAt)) return false;
+  const age = now - skippedAt;
+  return age >= 0 && age < INVITE_GATE_SKIP_MS;
+}
 
 /** Fired on window by any invite form outside the gate (the first-win
  * reveal's invite step, Settings) the moment an invite succeeds, so a gate

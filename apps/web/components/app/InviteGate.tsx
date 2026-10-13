@@ -9,11 +9,14 @@ import { supabase } from '@/lib/supabase/client';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { useAuthStore } from '@/lib/auth-store';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import {
   INVITE_GATE_OFF,
   inviteGateContinueUrl,
+  inviteGateSkipKey,
   inviteGateStorageKey,
   isInviteGateEnabled,
+  isInviteGateSkipped,
   isPlanView,
   isScrollInsideDialog,
   TEAMMATE_INVITED_EVENT,
@@ -24,10 +27,11 @@ import {
 //
 // Asks the server whether this person must invite a teammate (see
 // lib/invite-gate.ts), and once they start scrolling their first plan, covers
-// the whole app with a dialog that only an invite clears. After the gate has
-// fired once in this browser it comes straight back on any page, so a reload
-// or a jump to Settings cannot slip past it. The server's fresh answer is
-// always the one that decides; this component never decides who is gated.
+// the whole app with a dialog that an invite clears for good. "Skip for now"
+// (or Escape) hides it on this device for a day (2026-10-13). Until it is
+// skipped or answered, it comes straight back on any page, so a reload or a
+// jump to Settings cannot slip past it. The server's fresh answer is always
+// the one that decides; this component never decides who is gated.
 
 const ENABLED = isInviteGateEnabled();
 // Re-ask at most this often while waiting for a plan to appear.
@@ -85,6 +89,30 @@ function writeTriggered(workspaceId: string | null, value: boolean) {
   }
 }
 
+function readSkipped(workspaceId: string | null): boolean {
+  if (!workspaceId || typeof window === 'undefined') return false;
+  try {
+    const raw = window.localStorage.getItem(inviteGateSkipKey(workspaceId));
+    return isInviteGateSkipped(raw === null ? null : Number(raw), Date.now());
+  } catch {
+    return false;
+  }
+}
+
+function writeSkipped(workspaceId: string | null) {
+  if (!workspaceId || typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(inviteGateSkipKey(workspaceId), String(Date.now()));
+  } catch {
+    // Private mode: the skip lasts until the next scroll of the plan.
+  }
+}
+
+/** Fired once and not skipped: hold the gate open on any page. */
+function isHeld(workspaceId: string | null): boolean {
+  return readTriggered(workspaceId) && !readSkipped(workspaceId);
+}
+
 function isValidEmail(value: string): boolean {
   return /\S+@\S+\.\S+/.test(value.trim());
 }
@@ -118,7 +146,7 @@ export function InviteGate() {
   useEffect(() => {
     if (!ENABLED || !isAuthenticated) return;
     void refresh().then((next) => {
-      if (next.required && readTriggered(next.workspaceId)) setOpen(true);
+      if (next.required && isHeld(next.workspaceId)) setOpen(true);
       if (!next.required) {
         writeTriggered(next.workspaceId, false);
         setOpen(false);
@@ -141,10 +169,14 @@ export function InviteGate() {
     return () => window.removeEventListener(TEAMMATE_INVITED_EVENT, onInvited);
   }, []);
 
-  // Once fired, follow the person to any page.
+  // Once fired, follow the person to any page, unless they skipped it.
   useEffect(() => {
-    if (answer.required && readTriggered(answer.workspaceId)) setOpen(true);
+    if (answer.required && isHeld(answer.workspaceId)) setOpen(true);
   }, [pathname, answer]);
+
+  useEffect(() => {
+    if (open) captureAnalyticsEvent({ name: 'invite_gate_shown', properties: {} });
+  }, [open]);
 
   // Watch for the first scroll through the plan.
   useEffect(() => {
@@ -159,6 +191,9 @@ export function InviteGate() {
 
     const onScroll = (event: Event) => {
       if (stopped || isScrollInsideDialog(event.target)) return;
+      // Skipped on this device: stay away, and do not ask the server on every
+      // scroll event while it is.
+      if (answer.required && readSkipped(answer.workspaceId)) return;
       // Never freeze the app on a remembered answer. A "yes" can be stale:
       // the first-win reveal asks for an invite too, and someone who sent one
       // there was then frozen again by the gate's earlier answer (founder
@@ -167,7 +202,7 @@ export function InviteGate() {
       // throttled, because it may predate the plan's activities landing.
       if (!answer.required && Date.now() - fetchedAtRef.current < REFRESH_MS) return;
       void refresh().then((next) => {
-        if (next.required) fire(next.workspaceId);
+        if (next.required && !readSkipped(next.workspaceId)) fire(next.workspaceId);
       });
     };
 
@@ -193,6 +228,14 @@ export function InviteGate() {
         setAnswer(INVITE_GATE_OFF);
         setOpen(false);
       }}
+      onSkip={() => {
+        // The answer stays "required": the gate asks again once the skip runs
+        // out, the next time they scroll the plan.
+        writeSkipped(answer.workspaceId);
+        writeTriggered(answer.workspaceId, false);
+        setOpen(false);
+        captureAnalyticsEvent({ name: 'invite_gate_skipped', properties: {} });
+      }}
     />
   );
 }
@@ -200,9 +243,11 @@ export function InviteGate() {
 function InviteGateDialog({
   workspaceName,
   onReleased,
+  onSkip,
 }: {
   workspaceName: string | null;
   onReleased: () => void;
+  onSkip: () => void;
 }) {
   const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
@@ -233,16 +278,22 @@ function InviteGateDialog({
   useEffect(() => lockBodyScroll(), []);
   useDialogFocus(isMounted, panelRef);
 
-  // No Escape, no backdrop click: an invite is the only way through.
+  // Escape skips (or, once an invite is sent, continues to the plan). It is
+  // caught in the capture phase so it never also closes a panel underneath,
+  // such as Settings. A backdrop click does nothing: too easy to do by accident.
+  const escapeRef = useRef<() => void>(onSkip);
   useEffect(() => {
-    const block = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
-      }
+    escapeRef.current = sent ? continueToPlan : onSkip;
+  });
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      escapeRef.current();
     };
-    window.addEventListener('keydown', block, true);
-    return () => window.removeEventListener('keydown', block, true);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -411,13 +462,22 @@ function InviteGateDialog({
                 <Button type="submit" isLoading={isSending} disabled={!email.trim()} className="w-full sm:w-auto">
                   Send invite
                 </Button>
-                <button
-                  type="button"
-                  onClick={() => void logout()}
-                  className="motion-focus w-full px-4 py-2 text-xs text-content-tertiary transition-colors hover:text-content-secondary sm:w-auto"
-                >
-                  Log out
-                </button>
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
+                  <button
+                    type="button"
+                    onClick={onSkip}
+                    className="motion-focus min-h-11 w-full touch-manipulation rounded-full px-4 py-2 text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary sm:w-auto"
+                  >
+                    Skip for now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void logout()}
+                    className="motion-focus w-full px-4 py-2 text-xs text-content-tertiary transition-colors hover:text-content-secondary sm:w-auto"
+                  >
+                    Log out
+                  </button>
+                </div>
               </div>
             </form>
           </div>
