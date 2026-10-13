@@ -20,6 +20,8 @@ import {
 } from '@/lib/analytics';
 import { getTemplateStats } from '@/lib/release-templates/loader';
 import { suggestReleaseDate, type ReleasePlanIntake } from '@/lib/release-planning';
+import { datedOtherRollouts } from '@/lib/release-date-options';
+import { readTestRelease } from '@/lib/test-release';
 import { createReleasePlan } from '@/lib/urgans-actions/client';
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { embeddedCostLine } from '@/lib/credits/copy';
@@ -297,6 +299,26 @@ export function PlannerIntakeModal() {
     [draft.readyToday, leadTimeDays]
   );
 
+  // The team's other dated rollouts, so "Help me pick" can flag a Friday one of
+  // them already lands in. Read from the catalog the app already holds; the
+  // rollout being planned is left out.
+  const releases = useReleaseStore((state) => state.releases);
+  const otherRollouts = useMemo(
+    () =>
+      datedOtherRollouts(
+        releases.map((release) => ({
+          id: release.id,
+          title: release.title,
+          artistName: release.artistName,
+          releaseDate: release.releaseDate,
+          status: release.status,
+          isTest: readTestRelease(release.metadata),
+        })),
+        intakePayload?.releaseId ?? null
+      ),
+    [releases, intakePayload?.releaseId]
+  );
+
   // What this question still needs, as the sentence shown under Continue, or
   // null when it is ready (lib/planner-intake-validation.ts). One answer drives
   // both the button's disabled look and the sentence, so they cannot disagree.
@@ -541,6 +563,7 @@ export function PlannerIntakeModal() {
               suggestedDate={suggestedDate}
               leadTimeDays={leadTimeDays}
               fromNote={intakePayload.source === 'note'}
+              otherRollouts={otherRollouts}
             />
           </div>
 

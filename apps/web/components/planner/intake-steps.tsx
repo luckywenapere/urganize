@@ -27,6 +27,16 @@ import {
   getTemplateStats,
   isEpAlbumTemplatesEnabled,
 } from '@/lib/release-templates/loader';
+import {
+  DATE_OPTIONS_LIMIT_NOTE,
+  buildReleaseDateOptions,
+  describeClash,
+  rolloutsSameWeek,
+  type DateOptionRollout,
+} from '@/lib/release-date-options';
+import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
+import { AlertTriangle, Check } from '@/components/icons';
+import { InfoTip } from '@/components/shared/HelpTip';
 import { PlannerCheckboxGroup, PlannerRadioGroup } from './PlannerOptionGroup';
 
 /** Whether an EP or album plan really comes from its own playbook right now. */
@@ -89,6 +99,9 @@ type StepBodyProps = {
   suggestedDate: string | null;
   leadTimeDays: number;
   fromNote: boolean;
+  /** The team's other dated rollouts, for the date question's clash check
+   *  (lib/release-date-options.ts: `datedOtherRollouts`). */
+  otherRollouts: readonly DateOptionRollout[];
 };
 
 export function StepBody(props: StepBodyProps) {
@@ -216,8 +229,24 @@ function ArtistStep({ draft, patch, disabled, knownArtistName }: StepBodyProps) 
   );
 }
 
-function DateStep({ draft, patch, disabled, suggestedDate, leadTimeDays }: StepBodyProps) {
+function DateStep({ draft, patch, disabled, leadTimeDays, otherRollouts }: StepBodyProps) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  // "Help me pick" opens a short list of Fridays, each checked against what
+  // Urganize knows (lib/release-date-options.ts). It used to fill in one date
+  // with no reason beyond runway; a prospect asked for something he could
+  // decide with, such as not landing on top of another release.
+  const [showOptions, setShowOptions] = useState(false);
+
+  const options = useMemo(
+    () =>
+      buildReleaseDateOptions({
+        todayYmd: today,
+        ready: draft.readyToday,
+        leadTimeDays,
+        others: otherRollouts,
+      }),
+    [today, draft.readyToday, leadTimeDays, otherRollouts]
+  );
 
   const daysOut = useMemo(() => {
     if (!draft.releaseDate) return null;
@@ -231,6 +260,29 @@ function DateStep({ draft, patch, disabled, suggestedDate, leadTimeDays }: StepB
     daysOut !== null && daysOut < leadTimeDays
       ? Math.max(1, Math.ceil((leadTimeDays - daysOut) / 7))
       : null;
+
+  // A date typed by hand gets the same clash check the options show.
+  const typedClashes = useMemo(
+    () => (draft.releaseDate ? rolloutsSameWeek(draft.releaseDate, otherRollouts) : []),
+    [draft.releaseDate, otherRollouts]
+  );
+  const pickedIndex = options.findIndex((option) => option.date === draft.releaseDate);
+  const panelOpen = showOptions && options.length > 0;
+  const showTypedClash = typedClashes.length > 0 && !(panelOpen && pickedIndex >= 0);
+
+  const pick = (date: string) => patch({ releaseDate: date, dateSuggested: true });
+
+  const toggleOptions = () => {
+    if (showOptions) {
+      setShowOptions(false);
+      return;
+    }
+    setShowOptions(true);
+    // Nothing chosen yet: start on the best fit, or the earliest Friday.
+    if (!draft.releaseDate && options.length > 0) {
+      pick((options.find((option) => option.best) ?? options[0]).date);
+    }
+  };
 
   return (
     <>
@@ -246,20 +298,99 @@ function DateStep({ draft, patch, disabled, suggestedDate, leadTimeDays }: StepB
         />
       </label>
 
-      {suggestedDate ? (
+      {options.length > 0 ? (
         <button
           type="button"
-          onClick={() => patch({ releaseDate: suggestedDate, dateSuggested: true })}
+          onClick={toggleOptions}
           disabled={disabled}
+          aria-expanded={panelOpen}
+          aria-controls="planner-date-options"
           className="motion-focus motion-press mt-3 inline-flex h-11 touch-manipulation items-center rounded-full border border-stroke-default bg-bg-surface px-4 text-sm font-semibold text-content-primary transition-colors hover:border-brand/50 hover:bg-bg-hover disabled:opacity-60"
         >
-          Help me pick
+          {panelOpen ? 'Hide suggestions' : 'Help me pick'}
         </button>
       ) : null}
 
-      {draft.dateSuggested && draft.releaseDate === suggestedDate ? (
+      {panelOpen ? (
+        <div id="planner-date-options" className="mt-4">
+          <div className="mb-2 flex items-center gap-1.5">
+            <p id="planner-date-options-label" className="text-sm font-medium text-content-primary">
+              Fridays that work
+            </p>
+            <InfoTip label="this list" text={DATE_OPTIONS_LIMIT_NOTE} />
+          </div>
+          <div
+            role="radiogroup"
+            aria-labelledby="planner-date-options-label"
+            onKeyDown={(event) =>
+              onRadioGroupKeyDown(event, Math.max(pickedIndex, 0), (index) =>
+                pick(options[index].date)
+              )
+            }
+            className="space-y-2"
+          >
+            {options.map((option, index) => {
+              const selected = index === pickedIndex;
+              const focusable = selected || (pickedIndex < 0 && index === 0);
+              return (
+                <button
+                  key={option.date}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  tabIndex={focusable ? 0 : -1}
+                  disabled={disabled}
+                  onClick={() => pick(option.date)}
+                  className={`motion-focus w-full touch-manipulation rounded-lg border px-4 py-3 text-left text-sm transition-colors disabled:opacity-60 ${
+                    selected
+                      ? 'border-brand bg-brand/10 text-content-primary'
+                      : 'border-stroke-default bg-bg-elevated text-content-secondary hover:border-stroke-strong hover:bg-bg-hover hover:text-content-primary'
+                  }`}
+                >
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="font-semibold text-content-primary">
+                      {formatYmdLabel(option.date)}
+                    </span>
+                    {option.best ? (
+                      <span className="shrink-0 rounded-full bg-brand/15 px-2 py-0.5 text-xs font-semibold text-content-primary">
+                        Best fit
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="mt-2 block space-y-1">
+                    {option.checks.map((check) => (
+                      <span key={check.key} className="flex items-start gap-2 text-xs leading-5">
+                        {check.ok ? (
+                          <Check aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" />
+                        ) : (
+                          <AlertTriangle
+                            aria-hidden="true"
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-warning"
+                          />
+                        )}
+                        <span className={check.ok ? 'text-content-secondary' : 'text-content-primary'}>
+                          {check.label}
+                        </span>
+                      </span>
+                    ))}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {showTypedClash ? (
+        <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-content-primary">
+          <AlertTriangle aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-warning" />
+          <span>{describeClash(typedClashes)}. You can still pick it.</span>
+        </p>
+      ) : null}
+
+      {panelOpen ? null : draft.dateSuggested && draft.releaseDate ? (
         <p className={helperClass}>
-          {formatYmdLabel(suggestedDate)} leaves you enough runway for the work that is left.
+          {formatYmdLabel(draft.releaseDate)} leaves you enough runway for the work that is left.
           Change it if you need to.
         </p>
       ) : compressedWeeks ? (
