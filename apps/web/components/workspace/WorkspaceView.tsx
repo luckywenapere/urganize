@@ -118,7 +118,8 @@ const TYPE_FIRST_CREATE_ENABLED =
 // predicate so the env var name is typed exactly once (lib/test-release.ts).
 const TEST_RELEASE_ENABLED = isTestReleaseEnabled();
 // Share to socials (2026-09-23): the Share button on every rollout, and the
-// once-only offer after the first one (see withFirstShareOffer).
+// once-only offer after the first one, made on Home in the next visit (see
+// withFirstShareOffer).
 const SOCIAL_SHARE_ENABLED = isSocialShareEnabled();
 
 // Dynamic for the same reason AppShell already loads it that way — a static
@@ -1561,12 +1562,11 @@ export function WorkspaceView() {
           // plannerPending branch is kept for safety even though the two
           // flags are documented as incompatible.
           if (TYPE_FIRST_CREATE_ENABLED) {
-            // The first-rollout share sheet (2026-09-23) goes first here too,
-            // then the landing. See withFirstShareOffer.
+            // The first-rollout share offer is saved for the next visit here
+            // too, then the landing. See withFirstShareOffer.
             withFirstShareOffer({
               releaseId,
               firstRelease: result?.firstRelease,
-              snapshot: result?.share,
               then: () => {
                 router.push(`/dashboard?release=${releaseId}`);
                 if (plannerPending) {
@@ -1622,14 +1622,12 @@ export function WorkspaceView() {
           };
 
           // Share to socials (founder request, 2026-09-23): after the person's
-          // FIRST rollout, the share sheet opens once, straight after the
-          // team-login step and before the planner or the guide, so one thing
-          // is on screen at a time. Not their first, or the feature off, and
-          // this is `resume` itself.
+          // FIRST rollout, the once-only share offer is saved for the next
+          // visit (2026-10-13; it used to open here, before the planner, which
+          // was too early) and `resume` runs straight away.
           const continueAfterAccess = withFirstShareOffer({
             releaseId,
             firstRelease: result?.firstRelease,
-            snapshot: result?.share,
             then: resume,
           });
 

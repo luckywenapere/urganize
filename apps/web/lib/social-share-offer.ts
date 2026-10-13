@@ -1,19 +1,22 @@
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import type { ShareAnswers } from '@/lib/social-share';
+import { decideDeferredShareOffer } from '@/lib/first-session';
 
 /**
  * When the share sheet opens by itself, and what it remembers between opens.
  *
- * Founder call, 2026-09-23: the sheet opens by itself ONCE, right after
- * somebody creates their first rollout. Every rollout after that has a Share
- * button instead. Two routes lead to that moment and both are covered:
+ * Founder call, 2026-09-23: the sheet opens by itself ONCE after somebody
+ * creates their first rollout. Every rollout after that has a Share button
+ * instead.
  *
- *  - The create-rollout modal. Its callers chain the sheet straight after the
- *    team-login step, BEFORE the planner or the new-rollout guide, so one
- *    thing is on screen at a time.
- *  - Onboarding, which is where most people create their first rollout. It
- *    finishes on another page, so it leaves a PENDING marker in this tab and
- *    the sheet host picks it up once the person lands in the app.
+ * WHEN it opens changed twice. It used to open straight after the create, before
+ * the planner, which asked people to announce a rollout with no plan behind it
+ * (a prospect flagged it as "too early" in a live walkthrough). Onboarding moved
+ * its offer to Home on the NEXT visit on 2026-10-11 (lib/first-session.ts), and
+ * on 2026-10-13 every other create path followed: the create-rollout modal (all
+ * three of its callers) and UrgAns's create_release now save a DEFERRED offer
+ * here, and the sheet host opens it once on Home in a later visit, at a quiet
+ * moment. One rule for both, `decideDeferredShareOffer`, so they cannot drift.
  *
  * "First" is decided by the SERVER (POST /api/releases answers `firstRelease`
  * from the person's own releases, test rollouts excluded), because the client's
@@ -99,46 +102,123 @@ export function markFirstShareOffered(userId: string | null | undefined): void {
   }
 }
 
-// ── Pending from onboarding, per tab ────────────────────────────────────────
+// ── Deferred to the next visit, per person ─────────────────────────────────
 
-const PENDING_KEY = 'urganize.share.pending-first';
+const DEFERRED_KEY = 'urganize.share.deferred-first';
+const DEFERRED_TAB_KEY = 'urganize.share.deferred-first.tab';
 
 /**
- * How long a pending offer waits. Onboarding ends with an invite step and a
- * trial page, which take minutes, not hours. A tab left open overnight and
- * reopened should not greet anybody with a sheet about yesterday.
+ * A first-rollout share offer waiting for the next visit. Kept in localStorage
+ * (it has to outlive the tab it was made in) with the id of that tab, so
+ * "the next visit" is a new tab or the same tab more than FIRST_SESSION_MAX_MS
+ * later: the same rule onboarding's deferred offer uses, through the same
+ * function (`decideDeferredShareOffer`), so the two cannot drift apart.
  */
-export const FIRST_SHARE_PENDING_TTL_MS = 30 * 60 * 1000;
+export type DeferredFirstShare = {
+  v: 1;
+  userId: string;
+  releaseId: string;
+  /** Epoch ms when the rollout was made. */
+  at: number;
+  /** The tab it was made in. */
+  tabId: string;
+};
 
-export function markPendingFirstShare(releaseId: string, now: number = Date.now()): void {
-  if (typeof window === 'undefined' || !releaseId) return;
+export function parseDeferredFirstShare(raw: string | null): DeferredFirstShare | null {
+  if (!raw) return null;
   try {
-    window.sessionStorage.setItem(PENDING_KEY, JSON.stringify({ releaseId, at: now }));
-  } catch {
-    // Blocked storage: this person simply finds the Share button instead.
-  }
-}
-
-export function readPendingFirstShare(now: number = Date.now()): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.sessionStorage.getItem(PENDING_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { releaseId?: unknown; at?: unknown };
+    const parsed = JSON.parse(raw) as Partial<DeferredFirstShare> | null;
+    if (!parsed || typeof parsed !== 'object' || parsed.v !== 1) return null;
+    if (typeof parsed.userId !== 'string' || !parsed.userId) return null;
     if (typeof parsed.releaseId !== 'string' || !parsed.releaseId) return null;
-    if (typeof parsed.at !== 'number' || now - parsed.at > FIRST_SHARE_PENDING_TTL_MS) return null;
-    return parsed.releaseId;
+    if (typeof parsed.at !== 'number' || !Number.isFinite(parsed.at)) return null;
+    if (typeof parsed.tabId !== 'string' || !parsed.tabId) return null;
+    return { v: 1, userId: parsed.userId, releaseId: parsed.releaseId, at: parsed.at, tabId: parsed.tabId };
   } catch {
     return null;
   }
 }
 
-export function clearPendingFirstShare(): void {
+/**
+ * Pure: the rollout to offer the share sheet for on this Home visit, or null.
+ * Only for the person it was saved for, only on Home, only on a later visit
+ * than the one the rollout was made in, and only while it is recent.
+ */
+export function decideDeferredFirstShare(input: {
+  record: DeferredFirstShare | null;
+  userId: string | null | undefined;
+  tabId: string | null;
+  now: number;
+  onHome: boolean;
+}): string | null {
+  const { record, userId, tabId, now, onHome } = input;
+  if (!record || !userId || record.userId !== userId) return null;
+  return decideDeferredShareOffer({
+    record: {
+      v: 1,
+      startedAt: record.at,
+      tabId: record.tabId,
+      releaseId: record.releaseId,
+      shareReleaseId: record.releaseId,
+    },
+    tabId,
+    now,
+    onHome,
+  });
+}
+
+function readOrCreateTabId(): string {
+  const existing = window.sessionStorage.getItem(DEFERRED_TAB_KEY);
+  if (existing) return existing;
+  const id =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `tab-${Math.random().toString(36).slice(2, 12)}-${Date.now().toString(36)}`;
+  window.sessionStorage.setItem(DEFERRED_TAB_KEY, id);
+  return id;
+}
+
+/** Save the offer for the next visit. Never throws: every caller is mid-flow. */
+export function deferFirstShare(
+  userId: string | null | undefined,
+  releaseId: string,
+  now: number = Date.now()
+): void {
+  if (typeof window === 'undefined' || !userId || !releaseId) return;
+  try {
+    const record: DeferredFirstShare = { v: 1, userId, releaseId, at: now, tabId: readOrCreateTabId() };
+    window.localStorage.setItem(DEFERRED_KEY, JSON.stringify(record));
+  } catch {
+    // Blocked storage: no offer comes later, and the rollout's own Share
+    // button still works.
+  }
+}
+
+export function readDeferredFirstShare(): DeferredFirstShare | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return parseDeferredFirstShare(window.localStorage.getItem(DEFERRED_KEY));
+  } catch {
+    return null;
+  }
+}
+
+export function readDeferredFirstShareTabId(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.sessionStorage.getItem(DEFERRED_TAB_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** The offer was made, or is moot (sign-out). Best effort. */
+export function clearDeferredFirstShare(): void {
   if (typeof window === 'undefined') return;
   try {
-    window.sessionStorage.removeItem(PENDING_KEY);
+    window.localStorage.removeItem(DEFERRED_KEY);
   } catch {
-    // Nothing to clear in a store that cannot be read.
+    // Nothing to clear in a store that cannot be written.
   }
 }
 

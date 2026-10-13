@@ -1,63 +1,51 @@
 'use client';
 
 import { useAuthStore } from '@/lib/auth-store';
-import { isSocialShareEnabled, type ShareReleaseFacts } from '@/lib/social-share';
-import {
-  hasOfferedFirstShare,
-  markFirstShareOffered,
-  markPendingFirstShare,
-  shouldOfferFirstShare,
-} from '@/lib/social-share-offer';
-import { useShareStore } from '@/stores/useShareStore';
+import { isSocialShareEnabled } from '@/lib/social-share';
+import { deferFirstShare, hasOfferedFirstShare, shouldOfferFirstShare } from '@/lib/social-share-offer';
 
 /**
- * Put the first-rollout share sheet into a create flow's sequence.
+ * Save the first-rollout share offer for the NEXT visit, when this was the
+ * person's first rollout and the offer has not been made yet.
  *
- * The three create flows (the workspace, the UrgAns page and the topbar's
- * modal) each end in their own continuation: the planner intake, the
- * new-rollout guide, or a navigation. This wraps that continuation so the
- * sheet opens FIRST when this was the person's first rollout, and the rest of
- * the flow runs when it closes. Otherwise it is the continuation, untouched,
- * which is what keeps the flag-off path byte-for-byte what it was.
+ * It does not open the sheet. Until 2026-10-13 the sheet opened straight after
+ * the create, before the planner, which asked people to tell fans about a
+ * rollout that had no plan yet (flagged as "too early" by a prospect in a live
+ * walkthrough). Onboarding had already moved its offer to Home on the next
+ * visit (2026-10-11); this is the same move for every other way in. The sheet
+ * host (`ShareSheet`) opens the saved offer once, on Home, in a later visit, at
+ * a quiet moment. The rollout's own Share button works the whole time.
  *
- * One helper rather than three copies, because the three create flows have
- * already drifted apart once (the team-login step existed in two of them for
- * a while) and "open once" is exactly the kind of rule that drifts.
+ * Never throws: every caller is in the middle of a create flow.
+ */
+export function deferFirstShareOffer(releaseId: string, firstRelease: boolean | undefined): void {
+  const userId = useAuthStore.getState().user?.id ?? null;
+  if (!userId) return;
+  const offer = shouldOfferFirstShare({
+    enabled: isSocialShareEnabled(),
+    firstRelease: firstRelease === true,
+    alreadyOffered: hasOfferedFirstShare(userId),
+  });
+  if (offer) deferFirstShare(userId, releaseId);
+}
+
+/**
+ * A create flow's continuation, with the first-rollout share offer saved for
+ * the next visit on the way through. The continuation always runs straight
+ * away: nothing waits on a sheet any more.
  *
- * The decision is made when the wrapper RUNS, not when it is built: the
- * team-login step sits between the two, and the answer should be the one true
- * at the moment the sheet would open.
- *
- * The offer is only spent when a sheet actually took it. The sheet is a lazy
- * chunk in AppShell, so on a slow connection a very quick first create can
- * finish before it has mounted. Then the flow carries straight on and a
- * pending marker is left instead, the same one onboarding uses, so the sheet
- * offers itself once it is up and nothing else is open.
+ * Kept as a wrapper (rather than a call at each site) because the three create
+ * flows (the workspace, the UrgAns page and the topbar's modal) have drifted
+ * apart before, and because the decision should be made when the wrapper RUNS,
+ * after the team-login step, not when it is built.
  */
 export function withFirstShareOffer(input: {
   releaseId: string;
   firstRelease: boolean | undefined;
-  snapshot?: ShareReleaseFacts;
   then: () => void;
 }): () => void {
   return () => {
-    const userId = useAuthStore.getState().user?.id ?? null;
-    const offer = shouldOfferFirstShare({
-      enabled: isSocialShareEnabled(),
-      firstRelease: input.firstRelease === true,
-      alreadyOffered: hasOfferedFirstShare(userId),
-    });
-    if (!offer) {
-      input.then();
-      return;
-    }
-    const opened = useShareStore.getState().open({
-      releaseId: input.releaseId,
-      source: 'first_release',
-      snapshot: input.snapshot,
-      then: input.then,
-    });
-    if (opened) markFirstShareOffered(userId);
-    else markPendingFirstShare(input.releaseId);
+    deferFirstShareOffer(input.releaseId, input.firstRelease);
+    input.then();
   };
 }

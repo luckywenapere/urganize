@@ -81,10 +81,12 @@ import {
 import { BRAND_COLORS_SETTINGS_ANCHOR, isBrandColorsEnabled } from '@/lib/social-share-colors';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import {
-  clearPendingFirstShare,
+  clearDeferredFirstShare,
+  decideDeferredFirstShare,
   hasOfferedFirstShare,
   markFirstShareOffered,
-  readPendingFirstShare,
+  readDeferredFirstShare,
+  readDeferredFirstShareTabId,
   readSavedShareAnswers,
   saveShareAnswers,
 } from '@/lib/social-share-offer';
@@ -125,8 +127,8 @@ import { useShareReward, type ShareRewardState } from './useShareReward';
  */
 
 const SWIPE_DISMISS_PX = 80;
-const PENDING_OFFER_DELAY_MS = 1500;
-const PENDING_OFFER_MAX_ATTEMPTS = 40;
+const DEFERRED_OFFER_DELAY_MS = 1500;
+const DEFERRED_OFFER_MAX_ATTEMPTS = 40;
 const INSTAGRAM_INBOX_URL = 'https://www.instagram.com/direct/inbox/';
 
 type Step = 'ask' | 'share';
@@ -169,7 +171,6 @@ export function ShareSheet() {
   const registerSheet = useShareStore((state) => state.registerSheet);
 
   useEffect(() => registerSheet(), [registerSheet]);
-  usePendingFirstShareOffer();
   useDeferredFirstShareOffer();
 
   if (!request || typeof document === 'undefined') return null;
@@ -178,70 +179,49 @@ export function ShareSheet() {
 }
 
 /**
- * The onboarding hand-off. Onboarding creates most people's first rollout and
- * then finishes on pages outside the app, so it leaves a pending marker in this
- * tab and this picks it up once the person lands in the app.
- *
- * It waits for a quiet moment rather than opening on arrival: never over
- * another modal (the body scroll lock is held), never over a guided tour, and
- * never twice. It gives up after about a minute of other things being open,
- * because an offer arriving long after the moment is an interruption.
+ * Which rollout's deferred first-rollout share offer to make on this Home
+ * visit, if any. Two sources, one rule
+ * (`decideDeferredShareOffer`): onboarding's, kept on the first-session record
+ * (lib/first-session.ts), and every other create path's (the create-rollout
+ * modal and UrgAns), kept by lib/social-share-offer.ts.
  */
-function usePendingFirstShareOffer() {
-  useEffect(() => {
-    if (!readPendingFirstShare()) return;
-    let attempts = 0;
-    let timer: number | undefined;
-
-    const tick = () => {
-      attempts += 1;
-      const busy =
-        isBodyScrollLocked() || tourBlocksPrompts() || useShareStore.getState().request !== null;
-      if (busy) {
-        if (attempts < PENDING_OFFER_MAX_ATTEMPTS) {
-          timer = window.setTimeout(tick, PENDING_OFFER_DELAY_MS);
-        }
-        return;
-      }
-      // Never in the first session after onboarding (lib/first-session.ts):
-      // onboarding no longer leaves this marker, and this is the belt to that.
-      if (isInFirstSession()) {
-        clearPendingFirstShare();
-        return;
-      }
-      const releaseId = readPendingFirstShare();
-      clearPendingFirstShare();
-      if (!releaseId) return;
-      const userId = useAuthStore.getState().user?.id;
-      if (hasOfferedFirstShare(userId)) return;
-      markFirstShareOffered(userId);
-      useShareStore.getState().open({ releaseId, source: 'first_release' });
-    };
-
-    timer = window.setTimeout(tick, PENDING_OFFER_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
+function pickDeferredFirstShare(userId: string | null, onHome: boolean): string | null {
+  const now = Date.now();
+  const fromOnboarding = decideDeferredShareOffer({
+    record: readFirstSessionRecord(),
+    tabId: readFirstSessionTabId(),
+    now,
+    onHome,
+  });
+  if (fromOnboarding) return fromOnboarding;
+  return decideDeferredFirstShare({
+    record: readDeferredFirstShare(),
+    userId,
+    tabId: readDeferredFirstShareTabId(),
+    now,
+    onHome,
+  });
 }
 
 /**
- * The first-rollout share offer onboarding deferred (2026-10-11, founder call):
- * "Tell people it's coming" is not shown in the first session, it is shown
- * once on Home at the start of the NEXT visit (lib/first-session.ts decides
- * which visit that is). Same quiet-moment rules as the pending offer above,
- * and the same once-per-person record, so it can never show twice.
+ * The first-rollout share offer, made once, on Home, in a LATER visit than the
+ * one the rollout was made in (founder call 2026-10-11 for onboarding,
+ * 2026-10-13 for every other create path). Showing it right after the create
+ * asked people to announce a rollout with no plan behind it.
+ *
+ * It waits for a quiet moment rather than opening on arrival: never over
+ * another modal (the body scroll lock is held), never over a guided tour, never
+ * in the first session after onboarding, and never twice (the once-per-person
+ * record). It gives up after about a minute of other things being open, and
+ * tries again on the next Home visit.
  */
 function useDeferredFirstShareOffer() {
   const pathname = usePathname();
   const onHome = pathname === HOME_PATH;
+  const userId = useAuthStore((state) => state.user?.id ?? null);
   useEffect(() => {
     if (!onHome) return;
-    const initial = decideDeferredShareOffer({
-      record: readFirstSessionRecord(),
-      tabId: readFirstSessionTabId(),
-      now: Date.now(),
-      onHome: true,
-    });
-    if (!initial) return;
+    if (!pickDeferredFirstShare(userId, true)) return;
     let attempts = 0;
     let timer: number | undefined;
 
@@ -250,28 +230,28 @@ function useDeferredFirstShareOffer() {
       const busy =
         isBodyScrollLocked() || tourBlocksPrompts() || useShareStore.getState().request !== null;
       if (busy) {
-        if (attempts < PENDING_OFFER_MAX_ATTEMPTS) {
-          timer = window.setTimeout(tick, PENDING_OFFER_DELAY_MS);
+        if (attempts < DEFERRED_OFFER_MAX_ATTEMPTS) {
+          timer = window.setTimeout(tick, DEFERRED_OFFER_DELAY_MS);
         }
         return;
       }
-      const releaseId = decideDeferredShareOffer({
-        record: readFirstSessionRecord(),
-        tabId: readFirstSessionTabId(),
-        now: Date.now(),
-        onHome: window.location.pathname === HOME_PATH,
-      });
+      // The quiet first session after onboarding (lib/first-session.ts) holds
+      // every offer back, this one included.
+      if (isInFirstSession()) return;
+      const currentUserId = useAuthStore.getState().user?.id ?? null;
+      const releaseId = pickDeferredFirstShare(currentUserId, window.location.pathname === HOME_PATH);
       if (!releaseId) return;
+      // Both records go once one offer is made: the person gets one offer.
       clearDeferredShare();
-      const userId = useAuthStore.getState().user?.id;
-      if (hasOfferedFirstShare(userId)) return;
-      markFirstShareOffered(userId);
+      clearDeferredFirstShare();
+      if (hasOfferedFirstShare(currentUserId)) return;
+      markFirstShareOffered(currentUserId);
       useShareStore.getState().open({ releaseId, source: 'first_release' });
     };
 
-    timer = window.setTimeout(tick, PENDING_OFFER_DELAY_MS);
+    timer = window.setTimeout(tick, DEFERRED_OFFER_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [onHome]);
+  }, [onHome, userId]);
 }
 
 // ── The dialog ──────────────────────────────────────────────────────────────

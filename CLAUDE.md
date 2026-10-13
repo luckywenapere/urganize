@@ -15925,6 +15925,11 @@ clarity". Four founder answers shaped it before any code was written:
    means just the message.
 4. **The images carry a small, quiet "Made with Urganize" mark.**
 
+**AMENDED 2026-10-13 (v1.120.2): the sheet no longer opens straight after the
+first rollout, on ANY path.** Points 2 to 4 under "Eight things worth knowing"
+below are the record of how it used to work. See "The first-rollout share
+offer waits for the next visit" at the end of this file.
+
 Behind `NEXT_PUBLIC_FEATURE_SOCIAL_SHARE`, default `false`, and **ON in
 production since 2026-09-24** (see Activation below). **No migration, no new
 table, nothing stored server-side.** Scope reasoning is in the 2026-09-23
@@ -19466,3 +19471,41 @@ From the Oct 11 demo: a manager offered to introduce his mix engineers, video di
 - **Not built:** a generic, reusable personal link (each link is per invitee, so it can carry the name and role); reminders; marking `published_at` when somebody publishes later from Settings rather than on the welcome page; a lighter sign-up for creatives (the welcome flow still sends a new account through onboarding, which makes a team and a first rollout; the seeding section's open founder call).
 - **Verified:** `lib/directory-invites.test.ts` (rules, limit, statuses, copy), `lib/directory-invites-server.test.ts` (the real create, list and the real welcome claim against an in-memory database: private profile, link hashed, email only when asked, failed email keeps the link, 21st invite refused, 24h window per inviter, not_ready before the migration, known person refused or reused without revoking, open/join/publish stamps, founder links still say Wena), `lib/directory-invites-guard.test.ts`, `lib/email/templates/directory-invite-render.test.ts`. Deliberate breaks (limit off by one, the join stamp dropped) were each caught. Full suite green, `tsc --noEmit` clean. **Not verified:** nothing in a browser (375px or desktop) or against the real database; no real email sent.
 - **Activation:** apply `supabase/migrations/20261011210000_directory_invites.sql` to production (founder go-ahead). Nothing else.
+
+## The first-rollout share offer waits for the next visit (2026-10-13, v1.120.2, no flag)
+
+A prospect, in a live walkthrough, called the share sheet "too early": after
+creating a first rollout inside the app, "Tell people it’s coming" opened
+before the planner, so he was asked to announce a rollout with no plan behind
+it. Onboarding had already moved its offer to Home on the next visit
+(v1.105.0); every other way in still opened it on the spot. Now none do.
+
+- **`withFirstShareOffer` saves, it does not show.** It still wraps each
+  create flow's continuation (the workspace, `RolloutCreateFlow`, AppShell's
+  modal), but it now records a deferred offer through `deferFirstShareOffer`
+  and runs the continuation straight away. UrgAns's `create_release` (and a
+  reply that lands after you left the chat) call `deferFirstShareOffer`
+  directly. Same checks as before: share on, a first rollout (the server's
+  answer), not already offered, a signed-in person.
+- **The record** is `urganize.share.deferred-first` in localStorage (person,
+  rollout, time, and the id of the tab it was made in, kept in sessionStorage),
+  in `lib/social-share-offer.ts`. `decideDeferredFirstShare` offers it only to
+  the same person, only on Home, only in a later visit (a new tab, or the same
+  tab after 12 hours) and only within 14 days. It calls onboarding's
+  `decideDeferredShareOffer`, so the two records follow ONE rule.
+- **`ShareSheet`'s `useDeferredFirstShareOffer`** reads both records
+  (onboarding's first, then this one), waits for a quiet moment (no modal, no
+  tour, not the quiet first session after onboarding), clears both, and opens
+  the sheet once. The old per-tab "pending" marker and its hook are deleted:
+  nothing wrote it any more.
+- **Cleared on sign-out** (`clearDeferredFirstShare` in the auth store), like
+  the first-session record. The once-per-person "offered" list is unchanged.
+- The create modal no longer passes the new rollout's facts (`share`) to its
+  callers: they were only there so the sheet could open before the catalog
+  caught up, and by the next visit it has.
+- Guard: `lib/first-user-flow-guard.test.ts` fails if any file under
+  `components/` or `app/` other than `ShareSheet.tsx` opens a
+  `'first_release'` sheet.
+- **Not verified in a browser or with a real session.** Worth one pass: create
+  a first rollout in the app and confirm no share sheet; open the app in a new
+  tab and go to Home and confirm the sheet offers itself once.

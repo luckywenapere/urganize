@@ -1,21 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// withFirstShareOffer decides whether a create flow's continuation runs now or
-// after the once-only share sheet. The property worth pinning is that the offer
-// is only SPENT when a sheet actually showed it: the sheet is a lazy chunk, so
-// a very quick first create on a slow connection can finish before it mounts,
-// and marking the offer used then would burn it on a sheet nobody saw.
+// withFirstShareOffer runs a create flow's continuation and, when this was the
+// person's first rollout, saves the once-only share offer for the NEXT visit.
+// The property worth pinning (2026-10-13): it never opens the sheet straight
+// after a create any more, even when a sheet is mounted and ready. Opening it
+// there asked people to announce a rollout before it had a plan.
 //
 // Lives under lib/ only because that is where vitest looks. The auth store is
 // mocked because importing the real one pulls in the Supabase client, which
 // refuses to load without its env.
 
+let currentUserId: string | null = 'user-1';
 vi.mock('@/lib/auth-store', () => ({
-  useAuthStore: { getState: () => ({ user: { id: 'user-1' } }) },
+  useAuthStore: { getState: () => ({ user: currentUserId ? { id: currentUserId } : null }) },
 }));
 
-import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
-import { hasOfferedFirstShare, readPendingFirstShare } from './social-share-offer';
+import { deferFirstShareOffer, withFirstShareOffer } from '@/components/share/withFirstShareOffer';
+import {
+  hasOfferedFirstShare,
+  markFirstShareOffered,
+  readDeferredFirstShare,
+} from './social-share-offer';
 import { useShareStore } from '@/stores/useShareStore';
 
 function memoryStorage() {
@@ -32,6 +37,7 @@ function memoryStorage() {
 }
 
 beforeEach(() => {
+  currentUserId = 'user-1';
   vi.stubGlobal('window', { sessionStorage: memoryStorage(), localStorage: memoryStorage() });
   vi.stubEnv('NEXT_PUBLIC_FEATURE_SOCIAL_SHARE', 'true');
   useShareStore.setState({ request: null, mounted: 0 });
@@ -43,65 +49,85 @@ afterEach(() => {
 });
 
 describe('withFirstShareOffer', () => {
-  it('opens the sheet first on a first rollout, and runs the rest when it closes', () => {
+  it('runs the rest of the flow straight away and opens no sheet, even with one mounted', () => {
     const unregister = useShareStore.getState().registerSheet();
     const then = vi.fn();
     withFirstShareOffer({ releaseId: 'rel-1', firstRelease: true, then })();
 
-    expect(useShareStore.getState().request?.releaseId).toBe('rel-1');
-    expect(useShareStore.getState().request?.source).toBe('first_release');
-    expect(then).not.toHaveBeenCalled();
-    expect(hasOfferedFirstShare('user-1')).toBe(true);
-
-    useShareStore.getState().close();
     expect(then).toHaveBeenCalledTimes(1);
+    expect(useShareStore.getState().request).toBeNull();
     unregister();
   });
 
-  it('does not spend the offer when no sheet is mounted, and leaves it pending instead', () => {
-    const then = vi.fn();
-    withFirstShareOffer({ releaseId: 'rel-1', firstRelease: true, then })();
-
-    // The flow never waits on a sheet that is not there...
-    expect(then).toHaveBeenCalledTimes(1);
-    expect(useShareStore.getState().request).toBeNull();
-    // ...and the once-only offer survives, handed to the sheet for later.
-    expect(hasOfferedFirstShare('user-1')).toBe(false);
-    expect(readPendingFirstShare()).toBe('rel-1');
-  });
-
-  it('offers once: a second first-rollout signal carries straight on', () => {
-    const unregister = useShareStore.getState().registerSheet();
+  it('saves the offer for the next visit, for this person and rollout, without spending it', () => {
     withFirstShareOffer({ releaseId: 'rel-1', firstRelease: true, then: () => {} })();
-    useShareStore.getState().close();
 
-    const then = vi.fn();
-    withFirstShareOffer({ releaseId: 'rel-2', firstRelease: true, then })();
-    expect(then).toHaveBeenCalledTimes(1);
-    expect(useShareStore.getState().request).toBeNull();
-    unregister();
+    const saved = readDeferredFirstShare();
+    expect(saved?.releaseId).toBe('rel-1');
+    expect(saved?.userId).toBe('user-1');
+    // Spent only when the sheet actually shows it, on a later visit.
+    expect(hasOfferedFirstShare('user-1')).toBe(false);
   });
 
-  it('is the continuation, untouched, for any rollout that is not the first', () => {
-    const unregister = useShareStore.getState().registerSheet();
+  it('saves nothing for a rollout that is not the first', () => {
     for (const firstRelease of [false, undefined]) {
       const then = vi.fn();
       withFirstShareOffer({ releaseId: 'rel-1', firstRelease, then })();
       expect(then).toHaveBeenCalledTimes(1);
-      expect(useShareStore.getState().request).toBeNull();
     }
-    expect(hasOfferedFirstShare('user-1')).toBe(false);
-    unregister();
+    expect(readDeferredFirstShare()).toBeNull();
   });
 
-  it('is the continuation, untouched, with the feature switched off', () => {
+  it('saves nothing once the offer has been made', () => {
+    markFirstShareOffered('user-1');
+    withFirstShareOffer({ releaseId: 'rel-2', firstRelease: true, then: () => {} })();
+    expect(readDeferredFirstShare()).toBeNull();
+  });
+
+  it('saves nothing with the feature switched off', () => {
     vi.stubEnv('NEXT_PUBLIC_FEATURE_SOCIAL_SHARE', 'false');
-    const unregister = useShareStore.getState().registerSheet();
     const then = vi.fn();
     withFirstShareOffer({ releaseId: 'rel-1', firstRelease: true, then })();
     expect(then).toHaveBeenCalledTimes(1);
+    expect(readDeferredFirstShare()).toBeNull();
+  });
+
+  it('saves nothing without a signed-in person, and still runs the flow', () => {
+    currentUserId = null;
+    const then = vi.fn();
+    withFirstShareOffer({ releaseId: 'rel-1', firstRelease: true, then })();
+    expect(then).toHaveBeenCalledTimes(1);
+    expect(readDeferredFirstShare()).toBeNull();
+  });
+
+  it('decides when it runs, not when it is built (the team-login step sits between)', () => {
+    const run = withFirstShareOffer({ releaseId: 'rel-1', firstRelease: true, then: () => {} });
+    markFirstShareOffered('user-1');
+    run();
+    expect(readDeferredFirstShare()).toBeNull();
+  });
+});
+
+describe('deferFirstShareOffer (UrgAns create_release, and a reply that lands late)', () => {
+  it('follows the same rules as the create flows', () => {
+    deferFirstShareOffer('rel-9', true);
+    expect(readDeferredFirstShare()?.releaseId).toBe('rel-9');
     expect(useShareStore.getState().request).toBeNull();
-    expect(readPendingFirstShare()).toBeNull();
-    unregister();
+  });
+
+  it('never throws on a blocked store', () => {
+    vi.stubGlobal('window', {
+      sessionStorage: {
+        getItem: () => {
+          throw new Error('blocked');
+        },
+        setItem: () => {
+          throw new Error('blocked');
+        },
+        removeItem: () => {},
+      },
+      localStorage: memoryStorage(),
+    });
+    expect(() => deferFirstShareOffer('rel-1', true)).not.toThrow();
   });
 });

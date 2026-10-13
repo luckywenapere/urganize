@@ -1,17 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   FIRST_RELEASE_TEST_SCAN,
-  FIRST_SHARE_PENDING_TTL_MS,
-  clearPendingFirstShare,
+  clearDeferredFirstShare,
+  decideDeferredFirstShare,
   decideFirstRelease,
+  deferFirstShare,
   hasOfferedFirstShare,
   markFirstShareOffered,
-  markPendingFirstShare,
-  readPendingFirstShare,
+  parseDeferredFirstShare,
+  readDeferredFirstShare,
+  readDeferredFirstShareTabId,
   readSavedShareAnswers,
   saveShareAnswers,
   shouldOfferFirstShare,
+  type DeferredFirstShare,
 } from './social-share-offer';
+import { DEFERRED_SHARE_MAX_MS, FIRST_SESSION_MAX_MS } from './first-session';
 import type { ShareAnswers } from './social-share';
 
 type Storage = {
@@ -118,28 +122,67 @@ describe('the once-per-person marker', () => {
   });
 });
 
-describe('the pending offer from onboarding', () => {
-  it('round trips the rollout it was set for, and clears', () => {
-    markPendingFirstShare('rel-1', 1_000);
-    expect(readPendingFirstShare(1_000 + 5_000)).toBe('rel-1');
-    clearPendingFirstShare();
-    expect(readPendingFirstShare(1_000 + 5_000)).toBeNull();
+describe('the first-rollout offer saved for the next visit', () => {
+  const HOUR = 60 * 60 * 1000;
+  const record: DeferredFirstShare = { v: 1, userId: 'user-a', releaseId: 'rel-1', at: 1_000, tabId: 'tab-1' };
+  const decide = (over: Partial<Parameters<typeof decideDeferredFirstShare>[0]> = {}) =>
+    decideDeferredFirstShare({ record, userId: 'user-a', tabId: 'tab-2', now: 1_000 + HOUR, onHome: true, ...over });
+
+  it('is offered on Home in another tab, for the person it was saved for', () => {
+    expect(decide()).toBe('rel-1');
   });
 
-  it('expires, so a tab left open for a day does not pop it up out of nowhere', () => {
-    markPendingFirstShare('rel-1', 1_000);
-    expect(readPendingFirstShare(1_000 + FIRST_SHARE_PENDING_TTL_MS + 1)).toBeNull();
+  it('waits while it is still the visit the rollout was made in', () => {
+    expect(decide({ tabId: 'tab-1' })).toBeNull();
+    // ...until that tab has been open too long to count as the same visit.
+    expect(decide({ tabId: 'tab-1', now: 1_000 + FIRST_SESSION_MAX_MS })).toBe('rel-1');
+  });
+
+  it('is only made on Home', () => {
+    expect(decide({ onHome: false })).toBeNull();
+  });
+
+  it('is never made for somebody else on this browser', () => {
+    expect(decide({ userId: 'user-b' })).toBeNull();
+    expect(decide({ userId: null })).toBeNull();
+  });
+
+  it('lapses once it is about a moment long gone', () => {
+    expect(decide({ now: 1_000 + DEFERRED_SHARE_MAX_MS + 1 })).toBeNull();
+  });
+
+  it('is nothing without a record', () => {
+    expect(decide({ record: null })).toBeNull();
+  });
+
+  it('round trips through storage, keeps the tab it was made in, and clears', () => {
+    deferFirstShare('user-a', 'rel-1', 5_000);
+    const saved = readDeferredFirstShare();
+    expect(saved).toMatchObject({ v: 1, userId: 'user-a', releaseId: 'rel-1', at: 5_000 });
+    expect(saved?.tabId).toBe(readDeferredFirstShareTabId());
+    // The same tab keeps the same id, so a second save in it is the same visit.
+    deferFirstShare('user-a', 'rel-2', 6_000);
+    expect(readDeferredFirstShare()?.tabId).toBe(saved?.tabId);
+    clearDeferredFirstShare();
+    expect(readDeferredFirstShare()).toBeNull();
+  });
+
+  it('saves nothing without a person or a rollout', () => {
+    deferFirstShare(null, 'rel-1');
+    deferFirstShare('user-a', '');
+    expect(readDeferredFirstShare()).toBeNull();
   });
 
   it('ignores junk and a blocked store instead of throwing', () => {
-    (window as unknown as { sessionStorage: Storage }).sessionStorage.setItem(
-      'urganize.share.pending-first',
-      '{not json'
-    );
-    expect(readPendingFirstShare(1_000)).toBeNull();
-    install({ session: throwing });
-    expect(() => markPendingFirstShare('rel-1', 1_000)).not.toThrow();
-    expect(readPendingFirstShare(1_000)).toBeNull();
+    expect(parseDeferredFirstShare('{not json')).toBeNull();
+    expect(parseDeferredFirstShare(JSON.stringify({ ...record, v: 2 }))).toBeNull();
+    expect(parseDeferredFirstShare(JSON.stringify({ ...record, userId: '' }))).toBeNull();
+    expect(parseDeferredFirstShare(JSON.stringify({ ...record, at: 'soon' }))).toBeNull();
+    install({ session: throwing, local: throwing });
+    expect(() => deferFirstShare('user-a', 'rel-1')).not.toThrow();
+    expect(readDeferredFirstShare()).toBeNull();
+    expect(readDeferredFirstShareTabId()).toBeNull();
+    expect(() => clearDeferredFirstShare()).not.toThrow();
   });
 });
 

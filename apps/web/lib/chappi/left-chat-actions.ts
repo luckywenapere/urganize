@@ -30,10 +30,9 @@ export function actionsForLeftChat(actions: readonly ChappiClientAction[]): Chap
 /**
  * The rollouts a left chat's reply wanted to offer the first-rollout share
  * sheet for (share to socials). That offer happens once, so a reply that lands
- * late must not simply drop it: the caller hands each id to the pending marker,
- * the fallback withFirstShareOffer already uses when the sheet cannot open, and
- * the sheet offers itself at a quiet moment on the next load instead of over
- * the chat the user moved to.
+ * late must not simply drop it: the caller saves each one for the next visit
+ * (deferFirstShareOffer), exactly as every create path now does, and the sheet
+ * offers itself once on Home then instead of over the chat the user moved to.
  *
  * Only the once-only offer. An explicit `open_share` is the user asking to
  * share, which is a screen question like any other card: a late one is dropped.

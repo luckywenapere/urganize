@@ -26,7 +26,7 @@ import { clearKitDetailCache } from '@/lib/press-kit-detail-cache';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { resetChappiHistory } from '@/stores/useChappiHistoryStore';
 import { resetSpendAccess } from '@/stores/useSpendAccessStore';
-import { clearPendingFirstShare } from '@/lib/social-share-offer';
+import { clearDeferredFirstShare } from '@/lib/social-share-offer';
 import { clearFirstSession } from '@/lib/first-session';
 import { useHomeStore } from '@/stores/useHomeStore';
 import { clearLoginCookie, setLoginCookie } from '@/lib/login-cookie';
@@ -1165,11 +1165,10 @@ if (typeof window !== 'undefined') {
       resetReleaseStore();
       resetTaskStore();
       resetActivityStore();
-      // A first-rollout share offer still waiting (share to socials) names
-      // account A's rollout but not account A. Left behind, it would open for
-      // account B on the next load, on a rollout B cannot see, and spend B's
-      // once-only offer on an error.
-      clearPendingFirstShare();
+      // A first-rollout share offer still waiting for the next visit (share
+      // to socials) names account A's rollout. It is keyed to A, so B would
+      // never see it, but another person may use this browser next.
+      clearDeferredFirstShare();
       // Same for the first-session record onboarding leaves (lib/first-session.ts):
       // it names account A's rollout and holds A's deferred share offer.
       clearFirstSession();
