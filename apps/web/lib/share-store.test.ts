@@ -60,8 +60,8 @@ describe('useShareStore', () => {
   });
 
   it('says whether a sheet took the request, so an offer is only spent when shown', () => {
-    // withFirstShareOffer marks the once-only offer as used only on true. A
-    // false here with the offer marked would burn it on a sheet nobody saw.
+    // A caller that spends a once-only offer should do so only on true. A
+    // false here with the offer spent would burn it on a sheet nobody saw.
     expect(useShareStore.getState().open({ releaseId: 'rel-1', source: 'first_release' })).toBe(
       false
     );

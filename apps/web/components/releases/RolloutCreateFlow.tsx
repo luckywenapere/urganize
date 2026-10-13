@@ -34,8 +34,9 @@ type RolloutCreateFlowProps = {
  *
  * The order after a rollout is made is the one WorkspaceView's onCreated
  * records in full: type-first create goes straight into the rollout; otherwise
- * the team-login step (when on) comes first, then the first-rollout share
- * offer, then the first-win reveal, the planner, or the new-rollout guide.
+ * the team-login step (when on) comes first, then the first-win reveal, the
+ * planner, or the new-rollout guide. A first rollout's share offer is saved
+ * for the next visit on the way through (withFirstShareOffer).
  */
 export function RolloutCreateFlow({ open, onClose, onCreated }: RolloutCreateFlowProps) {
   const router = useRouter();
@@ -81,7 +82,6 @@ export function RolloutCreateFlow({ open, onClose, onCreated }: RolloutCreateFlo
             withFirstShareOffer({
               releaseId,
               firstRelease: result?.firstRelease,
-              snapshot: result?.share,
               then: () => {
                 router.push(`/dashboard?release=${releaseId}`);
                 if (plannerPending) openIntake();
@@ -107,7 +107,6 @@ export function RolloutCreateFlow({ open, onClose, onCreated }: RolloutCreateFlo
           const continueAfterAccess = withFirstShareOffer({
             releaseId,
             firstRelease: result?.firstRelease,
-            snapshot: result?.share,
             then: resume,
           });
           if (TEAM_LOGINS_ENABLED) {

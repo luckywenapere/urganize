@@ -139,8 +139,9 @@ const InstallAppPrompt = dynamic(
   { ssr: false }
 );
 // Share to socials (2026-09-23). Mounted once for the whole app for the
-// planner intake's reason: it opens from the three create flows, the rollout's
-// Share button and UrgAns, which live in different ownership islands. Lazy and
+// planner intake's reason: it opens from the rollout's Share button, UrgAns and
+// the once-only first-rollout offer on Home, which live in different ownership
+// islands. Lazy and
 // flag-gated, so with the flag off its chunk is never requested.
 const ShareSheet = dynamic(
   () => import('@/components/share/ShareSheet').then((m) => m.ShareSheet),
@@ -619,14 +620,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           // loadCommandCenter refreshes quietly when data already exists.
           closeCreateRelease();
           void useReleaseStore.getState().loadCommandCenter();
-          // Share to socials (2026-09-23): a first rollout gets the share
-          // sheet before anything below, and the rest runs when it closes.
-          // Every other create is the continuation, untouched. See
+          // Share to socials (2026-09-23): a first rollout's share offer is
+          // saved for the next visit, and the rest runs straight away. See
           // withFirstShareOffer.
           withFirstShareOffer({
             releaseId,
             firstRelease: result?.firstRelease,
-            snapshot: result?.share,
             then: () => {
               // One exception to "stay put": a rollout-plan creation continues
               // straight into the planner intake (mounted right below), the

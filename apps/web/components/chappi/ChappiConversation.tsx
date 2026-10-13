@@ -61,8 +61,7 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { useNotesStore } from '@/stores/useNotesStore';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { useShareStore } from '@/stores/useShareStore';
-import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
-import { markPendingFirstShare } from '@/lib/social-share-offer';
+import { deferFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { actionsForLeftChat, firstShareOffersIn } from '@/lib/chappi/left-chat-actions';
 import { mayAutoFocusComposer, readAutoFocusContext } from '@/lib/composer-focus';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
@@ -961,17 +960,10 @@ export function ChappiConversation({
       if (action.type === 'navigate') {
         const href = action.href;
         // create_release sets this when that was the person's first rollout.
-        // The once-only share sheet then comes first and the navigation runs
-        // when it closes, exactly as it does after the create buttons.
-        if (action.offerFirstShareFor) {
-          withFirstShareOffer({
-            releaseId: action.offerFirstShareFor,
-            firstRelease: true,
-            then: () => router.push(href),
-          })();
-        } else {
-          router.push(href);
-        }
+        // The once-only share offer is saved for the next visit, exactly as it
+        // is after the create buttons, and the navigation runs straight away.
+        if (action.offerFirstShareFor) deferFirstShareOffer(action.offerFirstShareFor, true);
+        router.push(href);
       } else if (action.type === 'open_share') openShareSheet(action.releaseId);
       else if (action.type === 'open_create_release') onNewRelease();
       else if (action.type === 'open_quick_create')
@@ -984,13 +976,12 @@ export function ChappiConversation({
   };
 
   // A reply whose chat has left the screen keeps only a catalog refresh (its
-  // tools did run), and hands a first-rollout share offer to the pending
-  // marker rather than dropping it: that offer happens once, and the sheet
-  // then offers itself at a quiet moment the next time the app loads instead
-  // of over the chat the user moved to. See lib/chappi/left-chat-actions.ts.
+  // tools did run), and still saves a first-rollout share offer for the next
+  // visit rather than dropping it: that offer happens once. See
+  // lib/chappi/left-chat-actions.ts.
   const settleLeftChatActions = (actions: ChappiClientAction[]) => {
     executeClientActions(actionsForLeftChat(actions));
-    for (const releaseId of firstShareOffersIn(actions)) markPendingFirstShare(releaseId);
+    for (const releaseId of firstShareOffersIn(actions)) deferFirstShareOffer(releaseId, true);
   };
 
   const runDeterministic = (prompt: string) => handleIntent(resolveIntent(prompt));

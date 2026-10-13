@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.120.2",
+    date: "October 13, 2026",
+    highlights: [
+      "After your first rollout, the \"Tell people it’s coming\" sheet now waits for your next visit, on Home, instead of popping up before you have a plan. The Share button on every rollout works any time.",
+    ],
+  },
+  {
     version: "1.120.1",
     date: "October 11, 2026",
     highlights: [

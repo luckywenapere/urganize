@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { INTAKE_STEPS } from '@/components/planner/intake-steps';
@@ -79,7 +79,7 @@ describe('onboarding', () => {
 });
 
 describe('the first session stays quiet', () => {
-  it('holds back the install card, the rollout tour offer (the catalog tour is gone) and the pending share', () => {
+  it('holds back the install card, the rollout tour offer (the catalog tour is gone) and the deferred share', () => {
     expect(code('components/app/InstallAppPrompt.tsx')).toContain('isInFirstSession()');
     expect(code('components/workspace/WorkspaceView.tsx')).toMatch(
       /TOURS_ENABLED && !isInFirstSession\(\)\) setRolloutTourOfferFor/
@@ -92,6 +92,49 @@ describe('the first session stays quiet', () => {
 
   it('is forgotten on sign-out', () => {
     expect(code('lib/auth-store.ts')).toContain('clearFirstSession();');
+  });
+});
+
+// 2026-10-13: a prospect called the share sheet "too early" in a live
+// walkthrough. Onboarding already saved its offer for the next visit; every
+// other create path now does the same, and nothing opens the sheet straight
+// after a create.
+describe('the first-rollout share offer waits for the next visit', () => {
+  function sourceFiles(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(join(APP_ROOT, dir))) {
+      const path = join(dir, entry);
+      if (statSync(join(APP_ROOT, path)).isDirectory()) out.push(...sourceFiles(path));
+      else if (/\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry)) out.push(path);
+    }
+    return out;
+  }
+
+  it('is opened by the sheet host alone, never by a create flow', () => {
+    const opening = [...sourceFiles('components'), ...sourceFiles('app')]
+      .filter((path) => /source:\s*'first_release'/.test(code(path)))
+      .map((path) => path.replace(/\\/g, '/'));
+    expect(opening).toEqual(['components/share/ShareSheet.tsx']);
+  });
+
+  it('is saved, not shown, by the create-flow wrapper and by UrgAns', () => {
+    const wrapper = code('components/share/withFirstShareOffer.ts');
+    expect(wrapper).toContain('deferFirstShare(userId, releaseId)');
+    expect(wrapper).not.toContain('useShareStore');
+    const chat = code('components/chappi/ChappiConversation.tsx');
+    expect(chat).toContain('deferFirstShareOffer(action.offerFirstShareFor, true)');
+    expect(chat).toContain('deferFirstShareOffer(releaseId, true)');
+  });
+
+  it('is made on Home in a later visit, from either record', () => {
+    const sheet = code('components/share/ShareSheet.tsx');
+    expect(sheet).toContain('decideDeferredShareOffer(');
+    expect(sheet).toContain('decideDeferredFirstShare(');
+    expect(sheet).toContain('clearDeferredFirstShare();');
+  });
+
+  it('is forgotten on sign-out', () => {
+    expect(code('lib/auth-store.ts')).toContain('clearDeferredFirstShare();');
   });
 });
 

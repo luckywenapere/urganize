@@ -17,8 +17,7 @@ import {
   getTemplate,
   getTemplateLeadTimeDays,
 } from '@/lib/release-templates/loader';
-import { DEFAULT_RELEASE_TITLE, isDbReleaseType, type DbReleaseType } from '@/types/releases';
-import type { ShareReleaseFacts } from '@/lib/social-share';
+import { DEFAULT_RELEASE_TITLE, type DbReleaseType } from '@/types/releases';
 import { isBrowserOnline } from '@/lib/offline/status';
 
 // The release types this modal can create: authored AND switched on AND
@@ -110,11 +109,9 @@ type CreateReleaseModalProps = {
        * prefill only what was actually asked. */
       releaseType?: DbReleaseType | null;
       /** The person's first real rollout (the server's answer, test rollouts
-       * excluded). The caller opens the share sheet once off the back of it. */
+       * excluded). The caller saves the once-only share offer for the next
+       * visit off the back of it (withFirstShareOffer). */
       firstRelease?: boolean;
-      /** What the share sheet needs to say about the new rollout, taken from
-       * the create response, so it can open before the catalog resyncs. */
-      share?: ShareReleaseFacts;
     }
   ) => void;
   /**
@@ -446,14 +443,6 @@ export function CreateReleaseModal({
         savedTitle: payload.release?.title ?? null,
         releaseType: input.typeWasPicked ? input.releaseType : null,
         firstRelease: payload.firstRelease === true,
-        share: {
-          title: payload.release?.title ?? (input.title || ''),
-          artistName: payload.release?.artistName ?? '',
-          releaseType: isDbReleaseType(payload.release?.releaseType)
-            ? payload.release.releaseType
-            : input.releaseType,
-          releaseDate: payload.release?.releaseDate ?? (input.releaseDate || null),
-        },
       });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not create rollout.');
