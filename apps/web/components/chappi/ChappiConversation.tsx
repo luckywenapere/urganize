@@ -260,7 +260,6 @@ export function ChappiConversation({
     messages,
     appendMessage,
     truncateFromMessage,
-    reset,
     scopedReleaseId,
     setScopedReleaseId,
     pendingConfirmation,
