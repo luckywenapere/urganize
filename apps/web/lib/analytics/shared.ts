@@ -376,6 +376,13 @@ export interface AnalyticsEventPropertiesMap {
     method: 'share' | 'download' | 'copy' | 'whatsapp' | 'instagram_dm' | 'more' | 'x_intent';
   };
   /**
+   * The invite gate (lib/invite-gate.ts). `shown` each time it opens,
+   * `skipped` each time "Skip for now" (or Escape) closes it (2026-10-13).
+   * The two side by side say how often the gate is waved off.
+   */
+  invite_gate_shown: EmptyAnalyticsProperties;
+  invite_gate_skipped: EmptyAnalyticsProperties;
+  /**
    * The share reward (2026-10-11, lib/share-reward.ts). Server-side, from
    * /api/workspace/share-reward, once per team. `kind` says which way the
    * month went: onto a trial, or onto the end of a paid period.

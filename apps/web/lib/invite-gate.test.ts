@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { inviteGateContinueUrl, isPlanView, shouldRequireInvite, type InviteGateFacts } from './invite-gate';
+import {
+  INVITE_GATE_SKIP_MS,
+  inviteGateContinueUrl,
+  inviteGateSkipKey,
+  inviteGateStorageKey,
+  isInviteGateSkipped,
+  isPlanView,
+  shouldRequireInvite,
+  type InviteGateFacts,
+} from './invite-gate';
 
 const newTeam: InviteGateFacts = {
   role: 'owner',
@@ -78,5 +87,45 @@ describe('inviteGateContinueUrl', () => {
     const source = readFileSync(join(__dirname, '..', 'components', 'app', 'InviteGate.tsx'), 'utf8');
     expect(source).toMatch(/onClick=\{continueToPlan\}[\s\S]{0,80}Continue to my plan/);
     expect(source).toContain('inviteGateContinueUrl(window.location.pathname, window.location.search)');
+  });
+});
+
+describe('Skip for now (2026-10-13)', () => {
+  const now = 10_000_000_000;
+
+  it('keeps the gate away for a day after a skip', () => {
+    expect(isInviteGateSkipped(now, now)).toBe(true);
+    expect(isInviteGateSkipped(now - INVITE_GATE_SKIP_MS + 1, now)).toBe(true);
+  });
+
+  it('asks again once the day is up', () => {
+    expect(INVITE_GATE_SKIP_MS).toBe(24 * 60 * 60 * 1000);
+    expect(isInviteGateSkipped(now - INVITE_GATE_SKIP_MS, now)).toBe(false);
+  });
+
+  it('never treats a missing, broken or future time as a skip', () => {
+    expect(isInviteGateSkipped(null, now)).toBe(false);
+    expect(isInviteGateSkipped(undefined, now)).toBe(false);
+    expect(isInviteGateSkipped(Number.NaN, now)).toBe(false);
+    expect(isInviteGateSkipped(now + 60_000, now)).toBe(false);
+  });
+
+  it('is kept per team, apart from the "has fired" key', () => {
+    expect(inviteGateSkipKey('ws-1')).not.toBe(inviteGateSkipKey('ws-2'));
+    expect(inviteGateSkipKey('ws-1')).not.toBe(inviteGateStorageKey('ws-1'));
+  });
+
+  it('is wired into the gate: a button, Escape, and no firing while skipped', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const source = readFileSync(join(__dirname, '..', 'components', 'app', 'InviteGate.tsx'), 'utf8');
+    expect(source).toMatch(/onClick=\{onSkip\}[\s\S]{0,300}Skip for now/);
+    expect(source).toContain('escapeRef.current = sent ? continueToPlan : onSkip;');
+    expect(source).toContain('if (next.required && !readSkipped(next.workspaceId)) fire(next.workspaceId);');
+    expect(source).toContain('return readTriggered(workspaceId) && !readSkipped(workspaceId);');
+    // A skip must not clear the answer, or the gate would never come back.
+    const onSkip = source.slice(source.indexOf('onSkip={() => {'), source.indexOf('/>', source.indexOf('onSkip={() => {')));
+    expect(onSkip).toContain('writeSkipped(answer.workspaceId)');
+    expect(onSkip).not.toContain('setAnswer(');
   });
 });
