@@ -6,6 +6,10 @@ import {
   allowRecovery,
   allowStallReport,
   describeConnection,
+  didNavigate,
+  isDuplicateNavClick,
+  routerJustReceived,
+  type PendingNav,
   linkClickTarget,
   resolveRecoverTarget,
   shouldRecover,
@@ -17,6 +21,76 @@ import {
 // a reload is a fresh start.
 const recentReports: Array<{ at: number; label: string }> = [];
 let lastRecoveryAt: number | null = null;
+
+// The newest watched tap. Only the newest may recover: a tap on A followed by a
+// tap on B must never hard-load A seven seconds later.
+let generation = 0;
+let pending: PendingNav | null = null;
+let pendingPoll: number | null = null;
+const pendingListeners = new Set<(isPending: boolean) => void>();
+
+function setPending(next: PendingNav | null): void {
+  const was = pending !== null;
+  pending = next;
+  if (pendingPoll !== null) {
+    window.clearInterval(pendingPoll);
+    pendingPoll = null;
+  }
+  if (next) {
+    // The router changes the URL with history.pushState, which fires no event,
+    // so watch the address while (and only while) a tap is in flight.
+    pendingPoll = window.setInterval(() => {
+      if (!pending) return;
+      const landed = didNavigate(pending.before, window.location.href);
+      const expired = Date.now() - pending.at > NAV_RECOVER_MS + 5000;
+      if (landed || expired) setPending(null);
+    }, 100);
+  }
+  if (was !== (next !== null)) {
+    for (const fn of pendingListeners) {
+      try {
+        fn(next !== null);
+      } catch {
+        // a listener must never break navigation
+      }
+    }
+  }
+}
+
+/** Is an in-app navigation from a tap still loading? Drives the top bar. */
+export function subscribeNavPending(fn: (isPending: boolean) => void): () => void {
+  pendingListeners.add(fn);
+  return () => {
+    pendingListeners.delete(fn);
+  };
+}
+
+export function isNavPending(): boolean {
+  return pending !== null;
+}
+
+/**
+ * After a recovery has started a hard load, the router may still land the same
+ * page on its own a moment later. That used to show as the page arriving and
+ * then loading again. If the address changes before the hard load replaces the
+ * document, the soft navigation won: stop the hard one.
+ */
+function cancelHardLoadIfRouterLands(before: string): void {
+  const startedAt = Date.now();
+  const timer = window.setInterval(() => {
+    if (didNavigate(before, window.location.href)) {
+      window.clearInterval(timer);
+      try {
+        window.stop();
+      } catch {
+        // nothing to stop
+      }
+      return;
+    }
+    if (Date.now() - startedAt > 10_000) window.clearInterval(timer);
+  }, 50);
+  window.addEventListener('pagehide', () => window.clearInterval(timer), { once: true });
+}
 
 /**
  * Call from a click handler whose job is to change the address.
@@ -42,6 +116,10 @@ export function watchNavigationStall(label: NavStallLabel, recoverTo?: string | 
   try {
     const before = window.location.href;
     const target = recoverTo ? resolveRecoverTarget(recoverTo, before) : null;
+    const myGeneration = ++generation;
+    if (target && didNavigate(before, target)) {
+      setPending({ target, before, at: Date.now() });
+    }
 
     window.setTimeout(() => {
       try {
@@ -73,8 +151,17 @@ export function watchNavigationStall(label: NavStallLabel, recoverTo?: string | 
     if (!target) return;
     window.setTimeout(() => {
       try {
+        // A newer tap is in charge now.
+        if (myGeneration !== generation) return;
         const after = window.location.href;
         const now = Date.now();
+        // Slow but alive: the router already has the page's data and is
+        // rendering it. Loading it again on top would be the double load.
+        const entries =
+          typeof performance !== 'undefined' && performance.getEntriesByType
+            ? (performance.getEntriesByType('resource') as PerformanceResourceTiming[])
+            : [];
+        if (routerJustReceived(entries, target, performance.now())) return;
         if (
           !shouldRecover({
             before,
@@ -92,6 +179,7 @@ export function watchNavigationStall(label: NavStallLabel, recoverTo?: string | 
           name: 'nav_recovered',
           properties: { label, waited_ms: NAV_RECOVER_MS, online: navigator.onLine },
         });
+        cancelHardLoadIfRouterLands(before);
         window.location.assign(target);
       } catch {
         // Same: never the thing that breaks the page.
@@ -128,6 +216,16 @@ export function installLinkStallWatchdog(): () => void {
         currentHref: window.location.href,
       });
       if (!target) return;
+      // The same link tapped again while its first tap is still loading: let
+      // the first one finish instead of starting a second load. Capture phase
+      // on document runs before React's root listener, so stopping here keeps
+      // Next's Link from starting another navigation, and preventDefault keeps
+      // the browser from doing a full load of its own.
+      if (isDuplicateNavClick(pending, target, window.location.href, Date.now())) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       const path = target.split(/[?#]/)[0] || '/';
       watchNavigationStall(`link:${path}`, target);
     } catch {

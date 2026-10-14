@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   NAV_RECOVER_MIN_GAP_MS,
+  NAV_RECOVER_MS,
+  isDuplicateNavClick,
+  routerJustReceived,
   NAV_STALL_MAX_PER_MINUTE,
   NAV_STALL_MIN_GAP_MS,
   allowRecovery,
@@ -231,5 +234,58 @@ describe('sceneRowTarget', () => {
 
   it('gives nothing off a release page, where there is nothing sensible to load', () => {
     expect(sceneRowTarget('https://a.test/dashboard', 'metadata', false)).toBeNull();
+  });
+});
+
+describe('isDuplicateNavClick (double tap while loading)', () => {
+  const before = 'https://a.test/dashboard/home';
+  const pending = { target: '/dashboard/catalogue', before, at: 1000 };
+
+  it('is true for the same link tapped again while the first is loading', () => {
+    expect(isDuplicateNavClick(pending, '/dashboard/catalogue', before, 1800)).toBe(true);
+  });
+
+  it('is false with nothing pending', () => {
+    expect(isDuplicateNavClick(null, '/dashboard/catalogue', before, 1800)).toBe(false);
+  });
+
+  it('is false for a different link: that is a change of mind, not a repeat', () => {
+    expect(isDuplicateNavClick(pending, '/dashboard/pitching', before, 1800)).toBe(false);
+  });
+
+  it('is false once the first tap has landed', () => {
+    expect(
+      isDuplicateNavClick(pending, '/dashboard/catalogue', 'https://a.test/dashboard/catalogue', 1800)
+    ).toBe(false);
+  });
+
+  it('is false once the first tap is old enough that recovery has had its turn', () => {
+    expect(isDuplicateNavClick(pending, '/dashboard/catalogue', before, 1000 + NAV_RECOVER_MS)).toBe(false);
+  });
+
+  it('ignores the hash when comparing targets', () => {
+    expect(isDuplicateNavClick(pending, '/dashboard/catalogue#top', before, 1800)).toBe(true);
+  });
+});
+
+describe('routerJustReceived (slow but alive)', () => {
+  it('is true when the target RSC payload arrived inside the window', () => {
+    const entries = [{ name: 'https://a.test/dashboard/catalogue?_rsc=abc', responseEnd: 9000 }];
+    expect(routerJustReceived(entries, '/dashboard/catalogue', 10_000)).toBe(true);
+  });
+
+  it('keeps the rest of the query in the comparison', () => {
+    const entries = [{ name: 'https://a.test/dashboard?release=1&_rsc=abc', responseEnd: 9000 }];
+    expect(routerJustReceived(entries, '/dashboard?release=1', 10_000)).toBe(true);
+    expect(routerJustReceived(entries, '/dashboard?release=2', 10_000)).toBe(false);
+  });
+
+  it('is false for an old payload or a plain asset', () => {
+    expect(
+      routerJustReceived([{ name: 'https://a.test/dashboard/catalogue?_rsc=abc', responseEnd: 1000 }], '/dashboard/catalogue', 10_000)
+    ).toBe(false);
+    expect(
+      routerJustReceived([{ name: 'https://a.test/dashboard/catalogue', responseEnd: 9900 }], '/dashboard/catalogue', 10_000)
+    ).toBe(false);
   });
 });

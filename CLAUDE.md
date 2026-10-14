@@ -14589,6 +14589,10 @@ From Femi's design review (2026-10-13): the 36px grid and textile weave behind t
 - **Hierarchy (URG-257) at token level.** `content-secondary` (inactive nav, meta, secondary labels) sits near 60% of primary and `content-tertiary` near 55%, both 4.5:1 on every ground; controls 3:1. Anything already on those tokens got the hierarchy app-wide; components that put meta text on `content-primary` are the remaining follow-up. No shell component was edited (URG-254/255 owns them).
 - **Guards:** `lib/text-contrast.test.ts` runs every tier and control check on the green block, plus the accent 4.5:1 on every ground and the button label 4.5:1 on the accent.
 
+## No double loads on a tapped link (2026-10-14, founder report)
+
+"I click a link, land on the page, then it refreshes again." Cause: the nav-stall recovery (`lib/nav-stall-watch.ts`, 7s) hard-loaded the target while a slow soft navigation was still alive, so the router landed the page and then the hard load replaced it; each extra tap armed another navigation and another timer. Fixes, all in `lib/nav-stall*.ts`: a repeat tap on the same pending link is swallowed in the document capture listener (`isDuplicateNavClick`); only the newest tap may recover (generation counter); recovery holds off when the target's `_rsc` payload arrived in the last 3s (`routerJustReceived`); and if the router lands after a recovery started, `window.stop()` cancels the hard load. `components/app/NavPendingBar.tsx` (mounted in `app/layout.tsx`, CSS `.nav-pending-bar`) shows a 2px brand bar while a tap is pending, after 150ms, so a slow page no longer reads as a dead link. Buttons that call `router.push` themselves are not deduped.
+
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
   - `Web` → https://app.urganize.app (builds `apps/web`)

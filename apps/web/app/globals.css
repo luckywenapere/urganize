@@ -2985,3 +2985,31 @@ html.urgans-leaving .home-scene-container > :not([data-urgans-source]) {
 html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/home']) {
   opacity: 0.5;
 }
+
+/* Top bar while a tapped link is still loading (components/app/NavPendingBar.tsx,
+   2026-10-14). Creeps toward 85% and never claims to finish; it simply goes
+   away when the page lands. */
+.nav-pending-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 85%;
+  z-index: 9999;
+  pointer-events: none;
+  background: rgb(var(--color-brand));
+  transform-origin: left center;
+  animation: nav-pending-grow 8s cubic-bezier(0.1, 0.7, 0.2, 1) forwards;
+}
+@keyframes nav-pending-grow {
+  from { transform: scaleX(0.05); }
+  to { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-pending-bar {
+    animation: none;
+    transform: none;
+    width: 100%;
+    opacity: 0.6;
+  }
+}

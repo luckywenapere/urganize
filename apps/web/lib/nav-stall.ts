@@ -206,3 +206,58 @@ export function sceneRowTarget(
     return null;
   }
 }
+
+/**
+ * A second tap on a link whose first tap is still loading (2026-10-14, founder
+ * report: "I click a link, land on the page, then it refreshes again"). Each tap
+ * used to start its own navigation and arm its own recovery timer, so an
+ * impatient double tap could load the page twice. A repeat is the same target,
+ * the address still where the first tap left it, and the first tap still young
+ * enough that its navigation (or its recovery) is the one in charge.
+ */
+export type PendingNav = { target: string; before: string; at: number };
+
+export function isDuplicateNavClick(
+  pending: PendingNav | null,
+  target: string,
+  currentHref: string,
+  now: number
+): boolean {
+  if (!pending) return false;
+  if (now - pending.at >= NAV_RECOVER_MS) return false;
+  if (didNavigate(pending.before, currentHref)) return false;
+  return comparable(pending.target) === comparable(target);
+}
+
+/** How recently the router must have received the target's data for the
+ *  recovery to hold off: it has the page and is rendering it, so a hard load
+ *  now would land on top of it and show as a second load. */
+export const NAV_RSC_LANDING_MS = 3000;
+
+/**
+ * Did the router just receive the server payload for `target`? Next fetches a
+ * route's RSC payload with an `_rsc` query param; a completed one for the same
+ * path and search, within `windowMs`, means the navigation is slow but alive.
+ * `entries` are PerformanceResourceTiming-shaped; `nowPerf` is
+ * performance.now().
+ */
+export function routerJustReceived(
+  entries: ReadonlyArray<{ name: string; responseEnd: number }>,
+  target: string,
+  nowPerf: number,
+  windowMs: number = NAV_RSC_LANDING_MS
+): boolean {
+  const want = comparable(target);
+  for (const entry of entries) {
+    if (nowPerf - entry.responseEnd > windowMs) continue;
+    try {
+      const u = new URL(entry.name, 'http://x.invalid');
+      if (!u.searchParams.has('_rsc')) continue;
+      u.searchParams.delete('_rsc');
+      if (`${u.pathname}${u.search}` === want) return true;
+    } catch {
+      // not a URL we can read
+    }
+  }
+  return false;
+}

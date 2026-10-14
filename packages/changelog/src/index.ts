@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.125.1",
+    date: "October 14, 2026",
+    highlights: [
+      "Pages no longer load twice when you tap a link. A thin bar along the top shows a page is on its way, and tapping the same link again while it loads does nothing extra.",
+    ],
+  },
+  {
     version: "1.125.0",
     date: "October 14, 2026",
     highlights: [

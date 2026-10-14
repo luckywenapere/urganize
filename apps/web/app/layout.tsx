@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Instrument_Sans, Young_Serif, Space_Mono } from 'next/font/google';
 import { AppShell } from '@/components/app/AppShell';
 import { CursorRefresher } from '@/components/app/CursorRefresher';
+import { NavPendingBar } from '@/components/app/NavPendingBar';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import { CANONICAL_DESCRIPTION } from '@/lib/positioning';
 import './globals.css';
@@ -199,6 +200,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="app-body bg-bg-base text-content-primary antialiased">
         <CursorRefresher />
+        <NavPendingBar />
         <PostHogProvider>
           <AppShell>{children}</AppShell>
         </PostHogProvider>
