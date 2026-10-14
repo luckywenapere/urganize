@@ -7,7 +7,6 @@ import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import { useShellStore } from '@/stores/useShellStore';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
-import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
 import { TopNav } from '@/components/shell/TopNav';
 import { SubNav } from '@/components/shell/SubNav';
 import { Sidebar } from '@/components/shell/Sidebar';
@@ -137,10 +136,6 @@ const TourOverlay = dynamic(
   { ssr: false }
 );
 
-const InstallAppPrompt = dynamic(
-  () => import('@/components/app/InstallAppPrompt').then((m) => m.InstallAppPrompt),
-  { ssr: false }
-);
 // Share to socials (2026-09-23). Mounted once for the whole app for the
 // planner intake's reason: it opens from the rollout's Share button, UrgAns and
 // the once-only first-rollout offer on Home, which live in different ownership
@@ -182,11 +177,6 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 const TYPE_FIRST_CREATE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_TYPE_FIRST_CREATE === 'true';
 
-// Soft, dismissible prompt steering Android browser visitors toward the
-// native app (docs/mobile/*.md) instead of mobile web. Shown app-wide,
-// independent of auth/route state — deliberately never inside the native
-// shell itself (AndroidAppBanner's own isAndroidBrowser() check excludes it).
-const ANDROID_APP_BANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ANDROID_APP_BANNER === 'true';
 
 // First-login soft ask for notification permission (2026-08-21). Push itself
 // has been live and configured since 2026-07-23; the only way in was a row in
@@ -197,13 +187,6 @@ const ANDROID_APP_BANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_ANDROID_APP_B
 const PUSH_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PUSH_PROMPT === 'true';
 const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 
-// "Put us on your Home Screen" (founder request 2026-08-30, retriggered
-// 2026-08-31). Offered a minute into every visit, once per visit, at the
-// bottom of the screen where a thumb reaches, and the notification ask above
-// follows only if this one is turned down. See lib/install-prompt.ts for the
-// countdown and the once-per-visit rule, and InstallAppPrompt.tsx for why the
-// three platforms need three different mechanisms.
-const INSTALL_PROMPT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_INSTALL_PROMPT === 'true';
 const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
 const SOCIAL_SHARE_ENABLED = isSocialShareEnabled();
 
@@ -448,16 +431,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     // provider is available for any future "save succeeded" / "upload failed"
     // moments that currently render inline toast boxes.
     <ToastProvider>
-    {/* Stands down when the install prompt is on: both point Android at the
-        same /download page, and two asks for one thing is one too many. The
-        newer one wins because it is the founder's brief — bottom of the
-        screen where a thumb reaches, and only once the visitor has actually
-        looked around, rather than a top banner on arrival. */}
-    {ANDROID_APP_BANNER_ENABLED && !INSTALL_PROMPT_ENABLED ? (
-      <ErrorBoundary name="android-app-banner" onError={reportBoundaryError}>
-        <AndroidAppBanner />
-      </ErrorBoundary>
-    ) : null}
     {/* Reloads a tab left holding a previous deployment's chunk URLs, which
         otherwise presents as "the page scrolls but nothing is clickable"
         after a Back navigation. Renders nothing — see lib/chunk-recovery.ts. */}
@@ -698,14 +671,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           about. */}
       {PUSH_PROMPT_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
         <PushPermissionPrompt />
-      ) : null}
-      {/* Same gate again, and the same slot at the bottom of the screen — the
-          two never collide because the notification ask holds itself until
-          this one has been answered (see the install-owed branch in
-          PushPermissionPrompt). Signed-in chrome only: the minute is meant to
-          be a minute of using the app, not a minute spent on /auth. */}
-      {INSTALL_PROMPT_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (
-        <InstallAppPrompt />
       ) : null}
       {/* The guided tour (lib/tours.ts), offered after a plan is approved.
           Same gate again — a tour points at app chrome, so there has to be

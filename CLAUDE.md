@@ -19634,3 +19634,8 @@ Founder-approved brief: cancelling must stay as easy as signing up (every screen
 - **Flag** `NEXT_PUBLIC_FEATURE_CANCEL_FLOW`, ON unless `'false'` (founder rule: flags ship on). In turbo.json and .env.example with the six retention Plan vars.
 - **Activation checklist**: (1) apply `supabase/migrations/20261014150000_cancel_flow.sql` (safe in either order; until then the flow simply does not offer itself); (2) optionally mint the six monthly retention Plans in Paystack (Solo ₦3,500 / ₦4,500, Manager ₦15,000 / ₦20,000, Label ₦35,000 / ₦45,000) and set `PAYSTACK_PLAN_{SOLO,MANAGER,LABEL}_RETENTION_<price>` in Vercel Web; (3) walk it on our own team: discount, pause + resume in period, cancel, the thank-you screen.
 - **Not verified**: nothing has run in a browser, against a real session, database or Paystack. Paystack `subscription/enable` behaviour on a re-enabled non-renewing subscription is from the API docs, not observed. Type-check and unit tests only.
+
+
+## Install prompt removed (2026-10-14, v1.130.4)
+
+Founder: the "Keep Urganize on your Home Screen" card "should stop showing, delete it completely". Deleted InstallAppPrompt.tsx, lib/install-prompt.ts (+ test), the beforeinstallprompt capture in NavigationTracker, and PushPermissionPrompt's wait-for-install branch (the notification card now just uses its own delay). The AndroidAppBanner mount was removed from AppShell too: it was already hidden while the install prompt flag was on, and un-gating it would have swapped one pop-up for another. Its component file remains, unmounted. NEXT_PUBLIC_FEATURE_INSTALL_PROMPT is now read by nothing. Don't bring back an install ask without asking.

@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.130.4",
+    date: "October 14, 2026",
+    highlights: [
+      "The \"Keep Urganize on your Home Screen\" pop-up is gone for good.",
+    ],
+  },
+  {
     version: "1.130.3",
     date: "October 14, 2026",
     highlights: [
