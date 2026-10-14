@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.130.3",
+    date: "October 14, 2026",
+    highlights: [
+      "Home is calmer: the welcome screen is one line and one button, and the extra New session button under your lists is gone. Start a new chat from Sessions.",
+    ],
+  },
+  {
     version: "1.130.2",
     date: "October 14, 2026",
     highlights: [

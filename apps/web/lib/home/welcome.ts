@@ -8,6 +8,5 @@
 
 export const WELCOME_EYEBROW = 'Welcome to Urganize';
 export const WELCOME_LINE = 'Tell me about your next release. I will help you plan it.';
-export const WELCOME_REASSURANCE = 'It takes about a minute, and you can change anything later.';
 export const WELCOME_PRIMARY = 'Start a rollout';
 export const WELCOME_SECONDARY = 'Just looking? Try a practice rollout';

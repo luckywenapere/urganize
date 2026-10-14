@@ -8,7 +8,6 @@ import {
   WELCOME_EYEBROW,
   WELCOME_LINE,
   WELCOME_PRIMARY,
-  WELCOME_REASSURANCE,
   WELCOME_SECONDARY,
 } from '@/lib/home/welcome';
 import type { HomePayload } from '@/lib/home/types';
@@ -46,7 +45,6 @@ export function ManagerNewView({
           <p className="font-display text-2xl leading-snug text-content-primary sm:text-3xl">
             {WELCOME_LINE}
           </p>
-          <p className="text-sm text-content-secondary">{WELCOME_REASSURANCE}</p>
         </div>
         <Button onClick={onNewRollout}>{WELCOME_PRIMARY}</Button>
         {isTestReleaseEnabled() ? (

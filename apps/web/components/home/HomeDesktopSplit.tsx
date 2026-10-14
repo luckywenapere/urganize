@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
-import { ArrowUp, MessageCircle, Plus } from '@/components/icons';
+import { ArrowUp, MessageCircle } from '@/components/icons';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
@@ -42,10 +42,9 @@ const switchButtonClass = (active: boolean) =>
  * its own and the message box stays at the bottom of the right side.
  *
  * - The Home chat is one permanent conversation (lib/chappi/home-chat.ts); the
- *   "Chat" tab always returns to it. "+ New session" and the Sessions box make
- *   separate chats that collect under Sessions.
- * - "+ New session" sits right after the last stack (not pinned, founder call)
- *   and starts a fresh session with the cursor in the box.
+ *   "Chat" tab always returns to it. The Sessions box makes separate chats
+ *   that collect under Sessions. (The "+ New session" button under the stacks
+ *   was removed 2026-10-14, founder call.)
  * - With session history on, a "Chat | Sessions" switch at the top of the right
  *   side swaps the conversation for the list of past sessions, the way the
  *   reference swaps to its projects. The conversation stays mounted, only
@@ -111,13 +110,6 @@ export function HomeDesktopSplit({
     return () => window.removeEventListener(COMPOSER_FOCUS_EVENT, focus);
   }, []);
 
-  const startNewSession = () => {
-    useHomeChatStore.getState().setMode('session');
-    useChappiStore.getState().reset();
-    setPane('chat');
-    setFocusRequest((count) => count + 1);
-  };
-
   return (
     <div className="home-split-height flex gap-6 xl:gap-8">
       {/* Folded by the Home pill in the top bar: hidden and inert, but kept
@@ -131,14 +123,6 @@ export function HomeDesktopSplit({
         }`}
       >
         {children}
-        <button
-          type="button"
-          onClick={startNewSession}
-          className="motion-focus motion-press mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-stroke-strong px-4 py-4 text-sm font-medium text-content-secondary transition-colors hover:border-brand/60 hover:bg-bg-hover hover:text-content-primary"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          New session
-        </button>
       </div>
 
       <section
