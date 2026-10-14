@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.130.1",
+    date: "October 14, 2026",
+    highlights: [
+      "Signing up with Google now takes you through the same quick setup as signing up with email.",
+    ],
+  },
+  {
     version: "1.130.0",
     date: "October 14, 2026",
     highlights: [

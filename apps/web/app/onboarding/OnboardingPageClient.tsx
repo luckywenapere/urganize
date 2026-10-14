@@ -599,7 +599,9 @@ export default function OnboardingPage() {
   // un-onboarded, or a stale link would re-run the wizard for someone who
   // already finished (see shouldRunAuthedOnboardingSetup).
   const isAuthedSetup = shouldRunAuthedOnboardingSetup({
-    enabled: CARD_TRIAL_ENABLED,
+    // Also on with onboarding v2 (Oct 14, 2026): /auth/callback now sends a
+    // brand-new Google sign-up here (?setup=1) even with the card trial off.
+    enabled: CARD_TRIAL_ENABLED || ONBOARDING_V2,
     hasSetupParam,
     isAuthLoading,
     isAuthenticated,

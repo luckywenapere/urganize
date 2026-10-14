@@ -11,6 +11,7 @@ import { isCardTrialEnabled, resolveCardTrialRequirement } from '@/lib/trial-car
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { getTeamAccessForUser, toTeamAccessPayload } from '@/lib/team-billing-server';
 import { purchasableTiers } from '@/lib/billing-plans';
+import { resolveOnboardingSetupRequired } from '@/lib/onboarding-setup';
 
 // cardTrialRequired — the card-before-trial gate signal (NEXT_PUBLIC_FEATURE_CARD_TRIAL).
 //
@@ -101,6 +102,36 @@ async function computeCardTrialRequired(
   }
 }
 
+// onboardingSetupRequired: a brand-new sign-up (e.g. Google from /auth) that
+// never went through /onboarding. Independent of the card-trial flag. See
+// lib/onboarding-setup.ts. Fails closed (false) on any read error.
+async function computeOnboardingSetupRequired(userId: string, supabaseUrl: string): Promise<boolean> {
+  const admin = createAdminClient(supabaseUrl);
+  if (!admin) return false;
+  try {
+    const [profileResult, membershipResult] = await Promise.all([
+      admin.from('profiles').select('created_at, role, onboarding_completed').eq('id', userId).maybeSingle(),
+      admin
+        .from('workspace_members')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .neq('role', 'owner')
+        .limit(1),
+    ]);
+    if (profileResult.error || !profileResult.data || membershipResult.error) return false;
+    return resolveOnboardingSetupRequired({
+      onboardingCompleted:
+        typeof profileResult.data.onboarding_completed === 'boolean' ? profileResult.data.onboarding_completed : null,
+      role: profileResult.data.role ? String(profileResult.data.role) : null,
+      isWorkspaceMember: (membershipResult.data?.length ?? 0) > 0,
+      createdAtIso: profileResult.data.created_at ? String(profileResult.data.created_at) : null,
+    });
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const auth = await getAuthenticatedUser(request);
   if ('error' in auth) {
@@ -138,6 +169,12 @@ export async function GET(request: NextRequest) {
     auth.supabaseUrl,
     snapshot
   );
+  // Only asked for by /auth/callback (?onboardingCheck=1), so every other
+  // consumer of this hot endpoint pays nothing extra.
+  const onboardingSetupRequired =
+    request.nextUrl.searchParams.get('onboardingCheck') === '1'
+      ? await computeOnboardingSetupRequired(auth.user.id, auth.supabaseUrl)
+      : false;
 
   // Team access (NEXT_PUBLIC_FEATURE_HARD_PAYWALL). Added ONLY when the flag is
   // on, so with it off this payload is byte-identical to what every existing
@@ -167,6 +204,7 @@ export async function GET(request: NextRequest) {
     pendingPlan: snapshot.pendingPlan,
     cardTrialRequired: cardTrialFacts.required,
     onboardingCompleted: cardTrialFacts.onboardingCompleted,
+    onboardingSetupRequired,
     ...(teamAccess ? { teamAccess } : {}),
     // Which tiers this deployment can actually charge. The wall renders exactly
     // these, so it can never offer a tier whose Paystack Plan has not been

@@ -27,7 +27,10 @@ const CARD_TRIAL_ENABLED = isCardTrialEnabled();
  * just see the app for a moment first.
  */
 async function shouldSendToOnboardingSetup(profile: Profile | null): Promise<boolean> {
-  if (!CARD_TRIAL_ENABLED) return false;
+  // No longer gated on the card trial (Oct 14, 2026): a brand-new Google
+  // sign-up from /auth must still get onboarding v2. The server decides via
+  // onboardingSetupRequired (fresh profile, not onboarded, not a teammate or
+  // curator), so established accounts never get pulled into the wizard.
   if (profile?.onboarding_completed !== false) return false;
   if (String(profile?.role || '').toLowerCase() === 'curator') return false;
 
@@ -39,7 +42,7 @@ async function shouldSendToOnboardingSetup(profile: Profile | null): Promise<boo
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return false;
-    const response = await fetch('/api/subscription-status', {
+    const response = await fetch('/api/subscription-status?onboardingCheck=1', {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
@@ -48,8 +51,9 @@ async function shouldSendToOnboardingSetup(profile: Profile | null): Promise<boo
     if (!response.ok) return false;
     const payload = (await response.json().catch(() => ({}))) as {
       cardTrialRequired?: boolean;
+      onboardingSetupRequired?: boolean;
     };
-    return payload.cardTrialRequired === true;
+    return (CARD_TRIAL_ENABLED && payload.cardTrialRequired === true) || payload.onboardingSetupRequired === true;
   } catch {
     return false;
   } finally {
