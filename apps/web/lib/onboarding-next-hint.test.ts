@@ -60,34 +60,38 @@ describe('describeNextBlocker', () => {
   });
 
   it('lists exactly the account fields still missing', () => {
-    const onlyPassword = describeNextBlocker(input({ step: 5, passwordLongEnough: false }));
+    const onlyPassword = describeNextBlocker(input({ step: 7, passwordLongEnough: false }));
     expect(fieldsOf(onlyPassword)).toMatch(/password/i);
     expect(fieldsOf(onlyPassword)).not.toMatch(/name|email/i);
 
-    const nameAndEmail = describeNextBlocker(input({ step: 5, hasName: false, hasEmail: false }));
+    const nameAndEmail = describeNextBlocker(input({ step: 7, hasName: false, hasEmail: false }));
     expect(fieldsOf(nameAndEmail)).toMatch(/name/i);
     expect(fieldsOf(nameAndEmail)).toMatch(/email/i);
     expect(fieldsOf(nameAndEmail)).not.toMatch(/password/i);
   });
 
   it('asks for the artist name only when the role needs one', () => {
-    expect(describeNextBlocker(input({ step: 5, needsArtistName: true, hasArtistName: false }))).toMatch(
+    expect(describeNextBlocker(input({ step: 7, needsArtistName: true, hasArtistName: false }))).toMatch(
       /artist name/i
     );
-    expect(describeNextBlocker(input({ step: 5, needsArtistName: false, hasArtistName: false }))).toBeNull();
-    expect(describeNextBlocker(input({ step: 5, needsArtistName: true, hasArtistName: true }))).toBeNull();
+    expect(describeNextBlocker(input({ step: 7, needsArtistName: false, hasArtistName: false }))).toBeNull();
+    expect(describeNextBlocker(input({ step: 7, needsArtistName: true, hasArtistName: true }))).toBeNull();
   });
 
   it('never blames a field on a step that does not ask for it', () => {
     // A bad password count must not block the question steps.
     expect(describeNextBlocker(input({ step: 2, passwordLongEnough: false, hasName: false }))).toBeNull();
     // And a missing title must not block the account step.
-    expect(describeNextBlocker(input({ step: 5, hasTitle: false, dateValid: false }))).toBeNull();
+    expect(describeNextBlocker(input({ step: 7, hasTitle: false, dateValid: false }))).toBeNull();
   });
 
   it('the invite step and the last question never block', () => {
     expect(describeNextBlocker(input({ step: 4, hasName: false, hasTitle: false }))).toBeNull();
-    expect(describeNextBlocker(input({ step: 6, hasName: false, hasTitle: false }))).toBeNull();
+    // The preview (5), the opt-in (6), the paywall (8), the welcome (9) and
+    // the invite step (10) never block either.
+    for (const step of [5, 6, 8, 9, 10]) {
+      expect(describeNextBlocker(input({ step, hasName: false, hasTitle: false }))).toBeNull();
+    }
   });
 
   it('is written for someone reading a phone, with no jargon and no em dashes', () => {
@@ -97,7 +101,7 @@ describe('describeNextBlocker', () => {
       describeNextBlocker(input({ step: 2, hasStage: false })),
       describeNextBlocker(input({ step: 3, hasTitle: false, dateValid: false })),
       describeNextBlocker(
-        input({ step: 5, hasName: false, hasEmail: false, passwordLongEnough: false, needsArtistName: true })
+        input({ step: 7, hasName: false, hasEmail: false, passwordLongEnough: false, needsArtistName: true })
       ),
     ];
     for (const text of all) {

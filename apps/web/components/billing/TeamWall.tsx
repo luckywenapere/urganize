@@ -29,6 +29,7 @@ import { isPricingV2Enabled } from '@/lib/entitlements';
 import { HelpTip } from '@/components/shared/HelpTip';
 import { TierPlanPicker } from '@/components/billing/TierPlanPicker';
 import { WallUrgansCard } from '@/components/billing/WallUrgansCard';
+import { readPaywallPlanChoice } from '@/lib/onboarding-paywall';
 import {
   wallStatTiles,
   type WallSummaryCounts,
@@ -119,6 +120,15 @@ export function TeamWall() {
   // has always been SENT on both requests — checkout and change-plan require it,
   // and it is what tells the webhook how far to set expires_at. What came back
   // is the toggle, not the field.
+  // The plan picked on onboarding's paywall (URG-251 Part 3) opens selected
+  // here when the trial ends. Read after mount (localStorage). effectiveTier
+  // below still falls back if that tier is not purchasable here.
+  useEffect(() => {
+    const choice = readPaywallPlanChoice();
+    if (!choice) return;
+    setSelectedTier(choice.tier);
+    setSelectedInterval(choice.interval);
+  }, []);
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   /** Set when a change completed without a redirect: a downgrade, or an upgrade

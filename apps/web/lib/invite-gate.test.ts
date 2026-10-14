@@ -4,6 +4,7 @@ import {
   inviteGateContinueUrl,
   inviteGateSkipKey,
   inviteGateStorageKey,
+  isInviteGateHeldBack,
   isInviteGateSkipped,
   isPlanView,
   shouldRequireInvite,
@@ -127,5 +128,30 @@ describe('Skip for now (2026-10-13)', () => {
     const onSkip = source.slice(source.indexOf('onSkip={() => {'), source.indexOf('/>', source.indexOf('onSkip={() => {')));
     expect(onSkip).toContain('writeSkipped(answer.workspaceId)');
     expect(onSkip).not.toContain('setAnswer(');
+  });
+});
+
+// URG-274: a brand-new account reaches its plan with zero invites.
+
+describe('isInviteGateHeldBack (URG-274)', () => {
+  const now = 1_800_000_000_000;
+
+  it('holds the gate back for the whole first session after onboarding', () => {
+    expect(isInviteGateHeldBack({ inFirstSession: true, onboardingSkippedAt: null, now })).toBe(true);
+  });
+
+  it('treats Skip on the onboarding team step as a skip of the gate', () => {
+    expect(isInviteGateHeldBack({ inFirstSession: false, onboardingSkippedAt: now - 1000, now })).toBe(true);
+  });
+
+  it('lets the gate ask again once that skip runs out', () => {
+    expect(
+      isInviteGateHeldBack({ inFirstSession: false, onboardingSkippedAt: now - INVITE_GATE_SKIP_MS - 1, now })
+    ).toBe(false);
+  });
+
+  it('never holds it back on a missing or future time', () => {
+    expect(isInviteGateHeldBack({ inFirstSession: false, onboardingSkippedAt: null, now })).toBe(false);
+    expect(isInviteGateHeldBack({ inFirstSession: false, onboardingSkippedAt: now + 60_000, now })).toBe(false);
   });
 });

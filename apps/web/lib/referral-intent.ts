@@ -71,6 +71,48 @@ export function readReferralCode(now: number = Date.now()): string | null {
   }
 }
 
+/**
+ * The optional "Referral code" field on onboarding's account step (URG-251
+ * Part 1): somebody who heard about Urganize by word of mouth has no `?ref=`
+ * link, so they type the code. It feeds the SAME store the link does, so the
+ * same POST /api/referrals/attach hands it to the server once the team exists;
+ * the server stays the authority (new team, not an invitee, once only).
+ *
+ * Pure in its decision: an empty field is fine, a malformed one is 'invalid'
+ * (shown as one calm line, never a block), and a good one is normalised.
+ */
+export type TypedReferralVerdict =
+  | { kind: 'empty' }
+  | { kind: 'invalid' }
+  | { kind: 'valid'; code: string };
+
+export function judgeTypedReferralCode(raw: unknown): TypedReferralVerdict {
+  if (typeof raw !== 'string' || !raw.trim()) return { kind: 'empty' };
+  const code = normalizeReferralCode(raw);
+  return code ? { kind: 'valid', code } : { kind: 'invalid' };
+}
+
+/**
+ * Remember what the person typed, as the code to attach. Last code wins, the
+ * same rule as two links. An emptied field forgets a remembered code (they
+ * cleared the prefill on purpose); a malformed one changes nothing and is
+ * reported back so the field can say so.
+ */
+export function rememberTypedReferralCode(raw: unknown, now: number = Date.now()): TypedReferralVerdict {
+  const verdict = judgeTypedReferralCode(raw);
+  if (typeof window === 'undefined' || !isReferralsEnabled()) return verdict;
+  try {
+    if (verdict.kind === 'valid') {
+      window.localStorage.setItem(REFERRAL_KEY, JSON.stringify({ code: verdict.code, at: now }));
+    } else if (verdict.kind === 'empty') {
+      window.localStorage.removeItem(REFERRAL_KEY);
+    }
+  } catch {
+    // Storage blocked: they are not attributed, and sign-up carries on.
+  }
+  return verdict;
+}
+
 export function clearReferralCode(): void {
   if (typeof window === 'undefined') return;
   try {

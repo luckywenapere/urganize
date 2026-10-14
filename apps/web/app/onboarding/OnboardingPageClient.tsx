@@ -1,9 +1,10 @@
 'use client';
 
-// Onboarding flow — Phases 1–3.
+// Onboarding flow — Phases 1–3, reworked for URG-251 + URG-274 (2026-10-14).
 //
-// Seven steps when NEXT_PUBLIC_FEATURE_WORKSPACE is on; six when it's off,
-// after one screen in front of them all:
+// The steps and their order live in lib/onboarding-steps.ts (a list, walked by
+// Next/Back, because several steps are conditional). After one screen in front
+// of them all:
 //
 //   -  who are you (URG-262, 2026-10-14): one tap, saved as
 //      onboarding_persona and, for the new account, profiles.role. Rendered
@@ -15,8 +16,17 @@
 //   3  release details (title + date + artist name — the artist since
 //      2026-10-11, so the planner that opens next never asks for it)
 //   4  AI Moment (deterministic — apps/web/lib/onboarding-ai-moment.ts)
-//   5  create account                                  ← anonymous → authenticated
-//   6  invite teammates (workspace flag only)          ← Skip always reaches /dashboard
+//   5  plan preview, week by week (read-only, client-side from the playbook;
+//      only for people who did NOT choose start_from_scratch)
+//   6  "Stay on top of your next move": push + email toggles, both OFF;
+//      push permission asked only on the toggle tap (lib/onboarding-optin.ts)
+//   7  create account (+ optional referral code)       ← anonymous → authenticated
+//   8  paywall: "Start my free trial" (3-day team trial, no card; no skip)
+//   9  welcome to Urganize (once per user)
+//  10  invite teammates (workspace flag only)          ← Skip always reaches the rollout (URG-274)
+//
+// Steps 5, 6, 8, 9 and the referral field are NEXT_PUBLIC_FEATURE_ONBOARDING_V2
+// (on unless set to 'false').
 //
 // Landing (2026-10-11, first-user flow): every exit now goes to the rollout
 // onboarding created (/dashboard?release=<id>) and, when that rollout is
@@ -128,6 +138,40 @@ import { takeClaimIntent } from '@/lib/claim-intent';
 import { readWelcomeIntent } from '@/lib/welcome-intent';
 import { captureReferralFromSearch, reportReferralCode } from '@/lib/referral-intent';
 import { captureSignupSourceFromSearch, reportSignupSource } from '@/lib/signup-source-intent';
+import {
+  readReferralCode,
+  rememberTypedReferralCode,
+  judgeTypedReferralCode,
+} from '@/lib/referral-intent';
+import { isReferralsEnabled } from '@/lib/referrals';
+import {
+  ONBOARDING_STEP,
+  ONBOARDING_STEP_TITLES,
+  firstStepAfterAccount,
+  isOnboardingV2Enabled,
+  isPostAccountStep,
+  lastQuestionStep,
+  nextOnboardingStep,
+  onboardingStepKicker,
+  onboardingStepSequence,
+  previousOnboardingStep,
+  type OnboardingStepIndex,
+} from '@/lib/onboarding-steps';
+import {
+  attachOptInChoices,
+  clearOptInChoices,
+  readOptInChoices,
+  saveMarketingEmailConsent,
+} from '@/lib/onboarding-optin';
+import { enablePush, getNotificationPermission } from '@/lib/push';
+import { enableNativePush, getNativePushPermission, isNativePushAvailable } from '@/lib/native-push';
+import { hasSeenWelcome, markWelcomeSeen } from '@/lib/onboarding-welcome';
+import { markOnboardingInviteSkipped } from '@/lib/invite-gate';
+import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { OnboardingPlanPreview } from '@/components/onboarding/OnboardingPlanPreview';
+import { OnboardingOptInStep } from '@/components/onboarding/OnboardingOptInStep';
+import { OnboardingPaywall } from '@/components/onboarding/OnboardingPaywall';
+import { OnboardingWelcome } from '@/components/onboarding/OnboardingWelcome';
 import { MIN_PASSWORD_LENGTH, PASSWORD_LENGTH_HINT, isPasswordLongEnough } from '@/lib/password-rules';
 
 // ---------------------------------------------------------------------------
@@ -162,24 +206,27 @@ const AVAILABLE_RELEASE_TYPE_SET: ReadonlySet<OnboardingReleaseType> = new Set(
 const isReleaseTypeAvailable = (type: OnboardingReleaseType | null): boolean =>
   type !== null && AVAILABLE_RELEASE_TYPE_SET.has(type);
 
-type StepIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+type StepIndex = OnboardingStepIndex;
 
-const LAST_STEP: StepIndex = WORKSPACE_ENABLED ? 6 : 5;
-const TOTAL_STEPS = WORKSPACE_ENABLED ? 7 : 6;
+// URG-251 + URG-274 (2026-10-14): the preview, opt-in, referral field, paywall
+// and welcome screen. On unless NEXT_PUBLIC_FEATURE_ONBOARDING_V2 is 'false'.
+const ONBOARDING_V2 = isOnboardingV2Enabled();
+// The new paywall replaces nothing under the retired card trial, which has its
+// own card-first page; with that flag off (production) it is the paywall.
+const PAYWALL_ENABLED = ONBOARDING_V2 && !CARD_TRIAL_ENABLED;
+// The referral field feeds the partner-code path, so it shows only when that
+// path is on (otherwise a typed code would go nowhere).
+const REFERRAL_FIELD_ENABLED = ONBOARDING_V2 && isReferralsEnabled();
+const NATIVE_PUSH_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NATIVE_PUSH === 'true';
+// The opt-in hand-over never holds the sign-up up for longer than this.
+const OPT_IN_ATTACH_TIMEOUT_MS = 6000;
 
 const PERSONA_TITLE = 'Who are you?';
 
-const STEP_TITLES: Record<StepIndex, string> = {
-  0: "What are you working on?",
-  1: 'Where does a rollout usually fall apart?',
-  // Asked once, here, since 2026-10-11: the planner's own readiness
-  // question, handed to the planner so it does not ask again.
-  2: "What's already done?",
-  3: 'Tell us about this rollout',
-  4: 'Your first move',
-  5: 'Create your account',
-  6: 'Bring your team in',
-};
+// "What's already done?" (step 2) is asked once, here, since 2026-10-11: the
+// planner's own readiness question, handed to the planner so it does not ask
+// again. Titles live with the step list in lib/onboarding-steps.ts.
+const STEP_TITLES: Record<StepIndex, string> = ONBOARDING_STEP_TITLES;
 
 // The "Step N of M" kicker is computed in the render body, not a table:
 // authed-setup mode (?setup=1) skips the account step, so both the number and
@@ -420,6 +467,14 @@ export default function OnboardingPage() {
   const [accountCreated, setAccountCreated] = useState(false);
   const [error, setError] = useState('');
   const [progressMessage, setProgressMessage] = useState('');
+  // URG-251 Part 1: optional referral code on the account step, prefilled from
+  // a remembered ?ref= link. Invalid shows one calm line and never blocks.
+  const [referralInput, setReferralInput] = useState('');
+  const [referralInvalid, setReferralInvalid] = useState(false);
+  // The paywall's and the welcome screen's own buttons, while they move on.
+  const [postAccountBusy, setPostAccountBusy] = useState(false);
+  // Whether this account has already seen the welcome (per user, localStorage).
+  const [welcomeAlreadySeen, setWelcomeAlreadySeen] = useState(false);
 
   // OAuth resume state. Set on mount if we detect a sessionStorage marker
   // from a previous loginWithGoogle call. Drives two effects: (1) suppress
@@ -479,7 +534,7 @@ export default function OnboardingPage() {
           current.artistName ? current : { ...current, artistName: resume.artistName }
         );
       }
-      setStep(5);
+      setStep(ONBOARDING_STEP.account);
     }
     // Identifier-first hand-off from /auth: an email with no account arrives
     // as ?email= so the person doesn't retype it at the account step. Read
@@ -490,6 +545,11 @@ export default function OnboardingPage() {
     // A partner's link carries ?ref=. Remembered here, read post-mount for the
     // same reason as the email above, and handed to the server when signup ends.
     captureReferralFromSearch(window.location.search);
+    // ...and prefills the optional referral field on the account step.
+    if (REFERRAL_FIELD_ENABLED) {
+      const remembered = readReferralCode();
+      if (remembered) setReferralInput((current) => current || remembered);
+    }
     // A public profile's call to action carries ?from=profile (never ?ref=,
     // which is a partner code). Remembered the same way, reported at the end.
     captureSignupSourceFromSearch(window.location.search);
@@ -514,7 +574,7 @@ export default function OnboardingPage() {
   // While the account and rollout are being created, leaving the page would
   // strand a half-made account, so the browser asks first. Only during that
   // work (the create step), never on the invite step or anywhere else.
-  const creatingAccount = isSubmitting && step !== 6;
+  const creatingAccount = isSubmitting && !isPostAccountStep(step);
   useEffect(() => {
     if (!creatingAccount) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -546,6 +606,31 @@ export default function OnboardingPage() {
     onboardingCompleted: user?.onboarding_completed,
     role: user?.role,
   });
+
+  // The steps this person walks, in order (lib/onboarding-steps.ts). Next and
+  // Back walk this list; "Step N of M" is a position in it.
+  const startFromScratch = draft.planningPreference === 'start_from_scratch';
+  const sequence = useMemo(
+    () =>
+      onboardingStepSequence({
+        workspaceEnabled: WORKSPACE_ENABLED,
+        authedSetup: isAuthedSetup,
+        startFromScratch,
+        paywallEnabled: PAYWALL_ENABLED,
+        welcomeEnabled: ONBOARDING_V2 && !welcomeAlreadySeen,
+        previewEnabled: ONBOARDING_V2,
+        optInEnabled: ONBOARDING_V2,
+      }),
+    [isAuthedSetup, startFromScratch, welcomeAlreadySeen]
+  );
+  const LAST_STEP = sequence[sequence.length - 1];
+  const TOTAL_STEPS = sequence.length;
+
+  // Read once per account, not on every render: the welcome step marks itself
+  // seen as it hands over, and must not drop out of the list under its own feet.
+  useEffect(() => {
+    setWelcomeAlreadySeen(hasSeenWelcome(user?.id));
+  }, [user?.id]);
 
   // If the user is already signed in BEFORE starting onboarding, send them
   // home. Once the onboarding flow has created an account (accountCreated),
@@ -591,8 +676,10 @@ export default function OnboardingPage() {
         isReleaseDateValid(draft.releaseDate) &&
         draft.artistName.trim().length > 0
       );
-    if (step === 4) return true;
-    if (step === 5) {
+    if (step === ONBOARDING_STEP.firstMove) return true;
+    // The preview and the opt-in never block: both toggles may stay off.
+    if (step === ONBOARDING_STEP.preview || step === ONBOARDING_STEP.optIn) return true;
+    if (step === ONBOARDING_STEP.account) {
       // Email/password path requires all three fields plus, if the user
       // picked 'artist', an artistName. The Google button is gated
       // separately and bypasses the email/password requirement.
@@ -600,8 +687,14 @@ export default function OnboardingPage() {
       const hasRequiredArtistName = role !== 'artist' || artistName.trim().length > 0;
       return hasEmailPasswordFields && hasRequiredArtistName;
     }
-    // Step 6 (invite) intentionally has no gate — Skip is always reachable.
-    if (step === 6) return true;
+    // The paywall and the welcome screen move on with their own buttons, and
+    // the invite step intentionally has no gate — Skip is always reachable.
+    if (
+      step === ONBOARDING_STEP.paywall ||
+      step === ONBOARDING_STEP.welcome ||
+      step === ONBOARDING_STEP.invite
+    )
+      return true;
     return false;
   }, [draft, name, email, password, role, artistName, step]);
 
@@ -638,7 +731,15 @@ export default function OnboardingPage() {
   const handleNext = () => {
     if (!canAdvance) return;
     setError('');
-    setStep((current) => (current < LAST_STEP ? ((current + 1) as StepIndex) : current));
+    if (step === ONBOARDING_STEP.optIn) {
+      const choices = readOptInChoices();
+      captureAnalyticsEvent({
+        name: 'onboarding_optin_choices',
+        properties: { push: choices?.push === true, email: choices?.email === true },
+      });
+    }
+    const next = step === LAST_STEP ? null : nextOnboardingStep(sequence, step);
+    if (next !== null) setStep(next);
   };
 
 
@@ -651,7 +752,8 @@ export default function OnboardingPage() {
       setPersonaOpen(true);
       return;
     }
-    setStep((current) => (current > 0 ? ((current - 1) as StepIndex) : current));
+    const previous = previousOnboardingStep(sequence, step);
+    if (previous !== null) setStep(previous);
   };
 
   // One tap answers and moves on (URG-262: "one tap, no extra words").
@@ -860,11 +962,21 @@ export default function OnboardingPage() {
         }
       : null;
 
-    // 3a. If the workspace flag is OFF, mark complete + ship to dashboard.
-    // 3b. If ON, advance to the invite step. The PATCH to mark onboarding
-    // complete happens in finishToDashboard, called from Send-and-finish
-    // or Skip on the invite screen.
-    if (!WORKSPACE_ENABLED) {
+    // 3. Hand the opt-in choices to the new account (URG-251 Part 2): the
+    // push subscription (only when the person's tap already got permission)
+    // and the email answer. Bounded, so a slow service worker never holds the
+    // sign-up up.
+    if (ONBOARDING_V2) {
+      setProgressMessage(onboardingProgressMessage('almost', draft.title));
+      await attachOnboardingOptIn(accessToken);
+    }
+
+    // 4a. Nothing left after the account (no paywall, welcome or invite step):
+    // mark complete + ship to the rollout.
+    // 4b. Otherwise go to the first of them. The PATCH to mark onboarding
+    // complete happens in finishToDashboard, called from the last of them.
+    const after = firstStepAfterAccount(sequence);
+    if (after === null) {
       setProgressMessage(onboardingProgressMessage('almost', draft.title));
       await finishToDashboard(accessToken);
       return;
@@ -873,7 +985,66 @@ export default function OnboardingPage() {
     setProgressMessage('');
     setIsSubmitting(false);
     handoffRunningRef.current = false;
-    setStep(6);
+    setStep(after);
+  };
+
+  const attachOnboardingOptIn = async (accessToken: string) => {
+    const native = NATIVE_PUSH_ENABLED && isNativePushAvailable();
+    const attach = attachOptInChoices(readOptInChoices(), {
+      getPermission: () =>
+        native ? getNativePushPermission() : Promise.resolve(getNotificationPermission()),
+      enablePush: () => (native ? enableNativePush() : enablePush()),
+      saveEmailConsent: (consent) => saveMarketingEmailConsent(accessToken, consent),
+    })
+      .then(() => clearOptInChoices())
+      .catch(() => undefined);
+    await Promise.race([
+      attach,
+      new Promise<void>((resolve) => window.setTimeout(resolve, OPT_IN_ATTACH_TIMEOUT_MS)),
+    ]);
+  };
+
+  // After the account: "Start my free trial" on the paywall, then "Let's go"
+  // on the welcome screen. Each moves to the next step, or finishes.
+  const continueAfterAccountStep = async (from: StepIndex) => {
+    if (postAccountBusy) return;
+    const next = nextOnboardingStep(sequence, from);
+    if (next !== null) {
+      setError('');
+      setStep(next);
+      return;
+    }
+    setPostAccountBusy(true);
+    let token: string | null = null;
+    try {
+      token = await getAccessToken();
+    } catch {
+      token = null;
+    }
+    await finishToDashboard(token);
+  };
+
+  const handleStartTrial = () => {
+    // The 3-day team trial (no card) began when the team was created, so this
+    // records nothing server-side; the paywall saved their plan choice.
+    void continueAfterAccountStep(ONBOARDING_STEP.paywall);
+  };
+
+  const handleWelcomeGo = () => {
+    markWelcomeSeen(user?.id);
+    void continueAfterAccountStep(ONBOARDING_STEP.welcome);
+  };
+
+  // The typed (or prefilled) referral code goes into the same store a ?ref=
+  // link uses, and reportReferralCode attaches it once the team exists. A
+  // malformed code says so in one line and sign-up carries on regardless.
+  const rememberReferralField = () => {
+    if (!REFERRAL_FIELD_ENABLED) return;
+    const verdict = rememberTypedReferralCode(referralInput);
+    setReferralInvalid(verdict.kind === 'invalid');
+    if (verdict.kind === 'invalid') {
+      captureAnalyticsEvent({ name: 'onboarding_referral_invalid', properties: {} });
+    }
   };
 
   const handleCreateAccount = async () => {
@@ -886,6 +1057,7 @@ export default function OnboardingPage() {
     // account would try to sign up twice.
     if (handoffRunningRef.current) return;
     handoffRunningRef.current = true;
+    rememberReferralField();
     setError('');
     setIsSubmitting(true);
     setProgressMessage(onboardingProgressMessage('account', draft.title));
@@ -962,6 +1134,8 @@ export default function OnboardingPage() {
     }
 
     setError('');
+    // Stored in localStorage, so the code survives the Google round trip.
+    rememberReferralField();
     setIsGoogleRedirecting(true);
     setProgressMessage('Redirecting to Google...');
     try {
@@ -1117,6 +1291,7 @@ export default function OnboardingPage() {
     const validRows = inviteRows.filter((row) => isEmailValid(row.email));
     if (validRows.length === 0) {
       // Nothing to send — equivalent to Skip.
+      markOnboardingInviteSkipped();
       await finishToDashboard(token);
       return;
     }
@@ -1163,6 +1338,10 @@ export default function OnboardingPage() {
     if (finishing) return;
     setFinishing('skip');
     setError('');
+    // URG-274: skipping here also keeps the in-app invite gate away for its
+    // skip window, so a brand-new account reaches its plan with zero invites.
+    markOnboardingInviteSkipped();
+    captureAnalyticsEvent({ name: 'onboarding_invite_skipped', properties: {} });
     let token: string | null = null;
     try {
       token = await getAccessToken();
@@ -1189,11 +1368,16 @@ export default function OnboardingPage() {
   // progress bar and the "Step N of M" kicker both read from these so they
   // cannot disagree with the flow the user is actually walking.
   // "Who are you?" (URG-262) is the first slot, so everything counts one on.
-  const visibleTotalSteps = (isAuthedSetup ? TOTAL_STEPS - 1 : TOTAL_STEPS) + 1;
-  // Step 6 (invite) sits one slot earlier in authed-setup's counting because
-  // step 5 never renders; every question step counts as itself.
-  const visibleStepNumber = personaOpen ? 1 : (isAuthedSetup && step === 6 ? 6 : step + 1) + 1;
+  // Both come from the step list, so a skipped step (the preview for a
+  // start-from-scratch person, the account step in authed-setup) is never
+  // counted. TOTAL_STEPS is the list's length; the persona slot adds one.
+  const kicker = onboardingStepKicker(sequence, personaOpen ? 'persona' : step);
+  const visibleTotalSteps = TOTAL_STEPS + 1;
+  const visibleStepNumber = kicker.number;
   const stepKicker = `Step ${visibleStepNumber} of ${visibleTotalSteps}`;
+  // The paywall and the welcome screen carry their own heading and button.
+  const ownsItsScreen = !personaOpen && (step === ONBOARDING_STEP.paywall || step === ONBOARDING_STEP.welcome);
+  const authedSetupFinishStep = lastQuestionStep(sequence);
   const inviteLabels = inviteStepButtonLabels(finishing);
 
   return (
@@ -1260,7 +1444,11 @@ export default function OnboardingPage() {
           </p>
           <h2
             id="onboarding-step-heading"
-            className="mt-1 font-display text-xl font-semibold leading-tight text-content-primary sm:text-2xl"
+            className={
+              ownsItsScreen
+                ? 'sr-only'
+                : 'mt-1 font-display text-xl font-semibold leading-tight text-content-primary sm:text-2xl'
+            }
           >
             {personaOpen ? PERSONA_TITLE : STEP_TITLES[step]}
           </h2>
@@ -1455,7 +1643,7 @@ export default function OnboardingPage() {
           ) : null}
 
           {/* ----- Step 4: AI Moment ------------------------------------ */}
-          {step === 4 && aiMoment ? (
+          {step === ONBOARDING_STEP.firstMove && aiMoment ? (
             <div className="mt-5">
               <div className="rounded-2xl border border-brand/30 bg-brand/8 px-4 py-5 sm:px-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">
@@ -1533,8 +1721,22 @@ export default function OnboardingPage() {
             </div>
           ) : null}
 
-          {/* ----- Step 5: signup --------------------------------------- */}
-          {step === 5 ? (
+          {/* ----- Step 5: plan preview (read-only) --------------------- */}
+          {step === ONBOARDING_STEP.preview ? (
+            <OnboardingPlanPreview
+              releaseType={draft.releaseType}
+              releaseDate={draft.releaseDate}
+              title={draft.title}
+            />
+          ) : null}
+
+          {/* ----- Step 6: push + email opt-in (both off) -------------- */}
+          {step === ONBOARDING_STEP.optIn ? (
+            <OnboardingOptInStep authed={isAuthedSetup} getToken={getAccessToken} />
+          ) : null}
+
+          {/* ----- Step 7: signup --------------------------------------- */}
+          {step === ONBOARDING_STEP.account ? (
             <div className="mt-5 space-y-5">
               <p className="text-sm leading-relaxed text-content-secondary">
                 Create your account to lock in your rollout and pick up this task on the other side.
@@ -1636,9 +1838,53 @@ export default function OnboardingPage() {
               </label>
             </div>
           ) : null}
+          {/* Optional referral code (URG-251 Part 1). Applies to Google and
+              email alike, so it sits below both. Never blocks sign-up. */}
+          {step === ONBOARDING_STEP.account && REFERRAL_FIELD_ENABLED ? (
+            <label className="mt-5 block space-y-1.5">
+              <span className={labelBase}>Referral code</span>
+              <input
+                type="text"
+                value={referralInput}
+                onChange={(event) => {
+                  setReferralInput(event.target.value);
+                  if (referralInvalid) setReferralInvalid(false);
+                }}
+                onBlur={() => setReferralInvalid(judgeTypedReferralCode(referralInput).kind === 'invalid')}
+                placeholder="Optional"
+                autoComplete="off"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                maxLength={40}
+                className={inputBase}
+              />
+              {referralInvalid ? (
+                <span className="block text-xs text-content-tertiary">
+                  That code doesn&apos;t look right. You can still sign up without it.
+                </span>
+              ) : null}
+            </label>
+          ) : null}
 
-          {/* ----- Step 6: invite (workspace flag) ---------------------- */}
-          {step === 6 ? (
+          {/* ----- Step 8: paywall (no skip, no close) ----------------- */}
+          {step === ONBOARDING_STEP.paywall ? (
+            <OnboardingPaywall
+              persona={draft.persona}
+              whereStuck={draft.whereStuck}
+              startFromScratch={startFromScratch}
+              busy={postAccountBusy}
+              onStartTrial={handleStartTrial}
+            />
+          ) : null}
+
+          {/* ----- Step 9: welcome (once) ------------------------------ */}
+          {step === ONBOARDING_STEP.welcome ? (
+            <OnboardingWelcome busy={postAccountBusy} onGo={handleWelcomeGo} />
+          ) : null}
+
+          {/* ----- Step 10: invite (workspace flag; skippable, URG-274) -- */}
+          {step === ONBOARDING_STEP.invite ? (
             <div className="mt-5 space-y-5">
               <p className="text-sm leading-relaxed text-content-secondary">
                 Optional. Bring the people who&apos;ll touch this rollout with you. We&apos;ll email them
@@ -1742,10 +1988,11 @@ export default function OnboardingPage() {
             </p>
           ) : null}
 
-          {/* Footer / nav. None on "Who are you?": a tap is the answer. */}
-          {personaOpen ? null : (
+          {/* Footer / nav. None on "Who are you?": a tap is the answer. None
+              on the paywall or the welcome screen either: each has one button. */}
+          {personaOpen || ownsItsScreen ? null : (
           <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {step === 6 ? (
+            {step === ONBOARDING_STEP.invite ? (
               <button
                 type="button"
                 onClick={() => void handleSkipInvites()}
@@ -1767,7 +2014,7 @@ export default function OnboardingPage() {
               <span />
             )}
 
-            {step === 5 ? (
+            {step === ONBOARDING_STEP.account ? (
               <button
                 type="button"
                 onClick={() => void handleCreateAccount()}
@@ -1777,7 +2024,7 @@ export default function OnboardingPage() {
               >
                 {isSubmitting ? 'Working…' : 'Create account & rollout'}
               </button>
-            ) : step === 6 ? (
+            ) : step === ONBOARDING_STEP.invite ? (
               <button
                 type="button"
                 onClick={() => void handleSendAndFinish()}
@@ -1786,11 +2033,12 @@ export default function OnboardingPage() {
               >
                 {inviteLabels.send}
               </button>
-            ) : isAuthedSetup && step === 4 ? (
-              // Authed-setup: step 4 is the last question, since the account
-              // already exists and step 5 is skipped. This button does what
-              // "Create account & release" does for a signup — creates the
-              // release and its plan, then hands off to billing.
+            ) : isAuthedSetup && step === authedSetupFinishStep ? (
+              // Authed-setup: the last question step (the opt-in, or "Your
+              // first move" with v2 off), since the account already exists and
+              // the account step is skipped. This button does what "Create
+              // account & rollout" does for a signup — creates the rollout and
+              // its plan, then hands off to billing.
               <button
                 type="button"
                 onClick={() => void handleAuthedSetupFinish()}
@@ -1808,7 +2056,11 @@ export default function OnboardingPage() {
                 aria-describedby={nextHintId}
                 className={primaryButton}
               >
-                {step === 4 ? 'Continue' : 'Next'}
+                {step === ONBOARDING_STEP.optIn
+                  ? 'Let’s go'
+                  : step === ONBOARDING_STEP.firstMove || step === ONBOARDING_STEP.preview
+                    ? 'Continue'
+                    : 'Next'}
               </button>
             )}
           </div>
@@ -1818,7 +2070,7 @@ export default function OnboardingPage() {
         {/* Skip-to-dashboard escape hatch on the invite step — duplicated
             from the footer so it's also reachable above the fold on mobile,
             and aria-clear that the user is never blocked. */}
-        {step === 6 ? (
+        {step === ONBOARDING_STEP.invite ? (
           <p className="mt-5 text-center text-xs text-content-tertiary">
             You can always invite teammates later from{' '}
             <span className="text-content-secondary">Settings → Teammates</span>.

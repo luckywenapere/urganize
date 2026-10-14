@@ -12,7 +12,9 @@ import { useAuthStore } from '@/lib/auth-store';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import {
   INVITE_GATE_OFF,
+  INVITE_GATE_ONBOARDING_SKIP_KEY,
   inviteGateContinueUrl,
+  isInviteGateHeldBack,
   inviteGateSkipKey,
   inviteGateStorageKey,
   isInviteGateEnabled,
@@ -23,6 +25,7 @@ import {
   type InviteGateAnswer,
 } from '@/lib/invite-gate';
 import { useNextMovesStore } from '@/stores/useNextMovesStore';
+import { isInFirstSession } from '@/lib/first-session';
 
 // InviteGate (founder request, 2026-10-11). Mounted once by AppShell.
 //
@@ -90,8 +93,27 @@ function writeTriggered(workspaceId: string | null, value: boolean) {
   }
 }
 
+function readOnboardingSkippedAt(): number | null {
+  try {
+    const raw = window.localStorage.getItem(INVITE_GATE_ONBOARDING_SKIP_KEY);
+    return raw === null ? null : Number(raw);
+  } catch {
+    return null;
+  }
+}
+
 function readSkipped(workspaceId: string | null): boolean {
   if (!workspaceId || typeof window === 'undefined') return false;
+  // URG-274: the first session, and a skip on onboarding's team step, hold it back.
+  if (
+    isInviteGateHeldBack({
+      inFirstSession: isInFirstSession(),
+      onboardingSkippedAt: readOnboardingSkippedAt(),
+      now: Date.now(),
+    })
+  ) {
+    return true;
+  }
   try {
     const raw = window.localStorage.getItem(inviteGateSkipKey(workspaceId));
     return isInviteGateSkipped(raw === null ? null : Number(raw), Date.now());

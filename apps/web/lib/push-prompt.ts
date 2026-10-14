@@ -55,16 +55,22 @@ export type PushPromptDecision =
  *    Re-subscribing needs no prompt and therefore needs no card — the same
  *    passive re-register NativePushBridge already does for native.
  *  - default: the one state where a prompt is possible. Ask unless the user
- *    has recently said "Not now".
+ *    has recently said "Not now", or already answered onboarding's opt-in
+ *    step on this device.
  */
 export function decidePushPrompt(input: {
   status: PushStatus;
   permission: PushPermissionState;
   snoozed: boolean;
+  /** Onboarding's "Stay on top of your next move" step was shown on this
+   * device (URG-251 Part 2). The person already answered there, so the soft
+   * ask stays away for good; a granted device is still repaired silently. */
+  askedInOnboarding?: boolean;
 }): PushPromptDecision {
   if (input.status === 'unsupported') return 'skip';
   if (input.status === 'blocked' || input.permission === 'denied') return 'skip';
   if (input.status === 'enabled') return 'skip';
   if (input.permission === 'granted') return 'auto-enable';
+  if (input.askedInOnboarding) return 'skip';
   return input.snoozed ? 'skip' : 'ask';
 }

@@ -52,7 +52,13 @@ import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
 import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
 import { scopedRolloutIntakePrefill } from '@/lib/planner-intake-steps';
-import { isInFirstSession, takeOnboardingPlannerHandoff } from '@/lib/first-session';
+import {
+  isInFirstSession,
+  readFirstSessionRecord,
+  takeOnboardingPlannerHandoff,
+} from '@/lib/first-session';
+import { findPinnedConfirmDateTask } from '@/lib/pinned-confirm-date';
+import { PinnedConfirmDateCard } from './PinnedConfirmDateCard';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
@@ -963,6 +969,26 @@ export function WorkspaceView() {
       />
     ) : null;
 
+  // "Confirm your release date" pinned on top of a new user's first plan
+  // (URG-251 flow, 2026-10-14): the rollout onboarding made in this browser,
+  // until that activity is done. Read after mount (localStorage), never in
+  // render, so the server HTML and the first client render agree.
+  const [onboardingRolloutId, setOnboardingRolloutId] = useState<string | null>(null);
+  useEffect(() => {
+    setOnboardingRolloutId(readFirstSessionRecord()?.releaseId ?? null);
+  }, [scopedReleaseId]);
+  const pinnedConfirmDateTask = findPinnedConfirmDateTask({
+    tasks: scopedTasks,
+    isNewUserRollout: Boolean(scopedReleaseId && onboardingRolloutId === scopedReleaseId),
+  });
+  const pinnedConfirmDateCard = pinnedConfirmDateTask ? (
+    <PinnedConfirmDateCard
+      title={pinnedConfirmDateTask.title}
+      dueDate={pinnedConfirmDateTask.dueDate ?? null}
+      onOpen={() => openTask(pinnedConfirmDateTask.id)}
+    />
+  ) : null;
+
   // Any scoped release without a date gets the card at the top of its
   // activity list (URG-230). It reports its own success through the existing
   // workspace toast and unmounts on its own once the store reports a date.
@@ -979,6 +1005,20 @@ export function WorkspaceView() {
         }
       />
     ) : null;
+
+  // The one banner the activity list carries, with the pinned activity above
+  // it for a new user. Null when there is neither, so the panel renders no gap.
+  const otherActivitiesBanner =
+    editorialPitchBanner ?? kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner;
+  const activitiesBannerNode =
+    pinnedConfirmDateCard && otherActivitiesBanner ? (
+      <div className="space-y-3">
+        {pinnedConfirmDateCard}
+        {otherActivitiesBanner}
+      </div>
+    ) : (
+      pinnedConfirmDateCard ?? otherActivitiesBanner
+    );
 
   // Only a card that explains the empty list AND offers a way to act on it
   // replaces the generic empty state; the compact date row does neither, so a
@@ -1371,6 +1411,7 @@ export function WorkspaceView() {
                 </div>
               ) : null}
               <div className="mt-4">{nextMovesBanner}</div>
+              {pinnedConfirmDateCard ? <div className="mb-3 mt-3">{pinnedConfirmDateCard}</div> : null}
               {timelineScene}
             </TimelineFullScreen>
           ) : null}
@@ -1495,9 +1536,7 @@ export function WorkspaceView() {
                   changeArtistAction={changeArtistAction}
                   shareAction={shareAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
-                  activitiesBanner={
-                    editorialPitchBanner ?? kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner
-                  }
+                  activitiesBanner={activitiesBannerNode}
                   activitiesFooter={roleGapsFooter}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
                 />
@@ -1544,9 +1583,7 @@ export function WorkspaceView() {
                   </>
                 }
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}
-                panelActivitiesBanner={
-                  editorialPitchBanner ?? kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner
-                }
+                panelActivitiesBanner={activitiesBannerNode}
                 panelActivitiesFooter={roleGapsFooter}
                 panelBannerReplacesEmptyState={bannerReplacesEmptyState}
               />

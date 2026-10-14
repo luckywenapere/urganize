@@ -94,6 +94,32 @@ export interface AnalyticsEventPropertiesMap {
   onboarding_spotlight_skipped: { step: number };
   onboarding_task_created_during_flow: { release_id: string; task_id: string };
   onboarding_invite_sent_during_flow: EmptyAnalyticsProperties;
+  /** URG-251 funnel (2026-10-14). The read-only week-by-week preview was shown. */
+  onboarding_preview_viewed: { release_type: string; weeks: number; activities: number };
+  /** The opt-in step was shown (both toggles start off). */
+  onboarding_optin_viewed: EmptyAnalyticsProperties;
+  /** A toggle was tapped. `result` is what the device allowed for push. */
+  onboarding_optin_toggled: {
+    channel: 'push' | 'email';
+    on: boolean;
+    result?: 'granted' | 'denied' | 'default' | 'unsupported';
+  };
+  /** The opt-in step was left with these choices. */
+  onboarding_optin_choices: { push: boolean; email: boolean };
+  /** The typed referral code was not a valid code (never blocks sign-up). */
+  onboarding_referral_invalid: EmptyAnalyticsProperties;
+  /** The paywall was shown, with the plan pre-selected from the persona. */
+  onboarding_paywall_viewed: { preselected_tier: string; cards: number; ios_app: boolean };
+  /** A swipe card came into view. `index` is 0-based. */
+  onboarding_paywall_card_swiped: { index: number; card: string };
+  /** "Start my free trial". */
+  onboarding_trial_started: { tier: string; interval: string; changed_from_preselected: boolean };
+  /** "Questions? Chat with us". */
+  onboarding_paywall_chat: EmptyAnalyticsProperties;
+  onboarding_welcome_viewed: EmptyAnalyticsProperties;
+  onboarding_welcome_go: EmptyAnalyticsProperties;
+  /** "Bring your team in" was skipped (URG-274). */
+  onboarding_invite_skipped: EmptyAnalyticsProperties;
   onboarding_completion_screen_shown: {
     release_created: boolean;
     task_created: boolean;

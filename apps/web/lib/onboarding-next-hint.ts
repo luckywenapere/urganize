@@ -17,7 +17,8 @@
 import { MIN_PASSWORD_LENGTH } from './password-rules';
 
 export type NextBlockerInput = {
-  step: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  /** The wizard's step id (lib/onboarding-steps.ts ONBOARDING_STEP). */
+  step: number;
   releaseTypeAvailable: boolean;
   whereStuckCount: number;
   hasStage: boolean;
@@ -50,7 +51,8 @@ export function describeNextBlocker(input: NextBlockerInput): string | null {
       if (missing.length === 0) return null;
       return `Add ${joinWithAnd(missing)} to go on.`;
     }
-    case 5: {
+    // The account step: id 7 since the URG-251 rework (it was 5).
+    case 7: {
       const missing: string[] = [];
       if (!input.hasName) missing.push('your name');
       if (!input.hasEmail) missing.push('your email');

@@ -32,6 +32,13 @@ function sanitizeTextField(value: string, maxLength: number): string {
 }
 import { ensureOwnedWorkspace, loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { instantiateTemplate } from '@/lib/release-templates/instantiate';
+import {
+  CONFIRM_RELEASE_DATE_DESCRIPTION,
+  CONFIRM_RELEASE_DATE_TITLE,
+  ONBOARDING_BLANK_TEMPLATE_ID,
+  ONBOARDING_CONFIRM_DATE_TASK_ID,
+  blankSeedDueDate,
+} from '@/lib/pinned-confirm-date';
 import { getTemplate } from '@/lib/release-templates/loader';
 import type { ReleaseType } from '@/lib/release-templates/types';
 import { loadCoverArtUrlMap } from '@/lib/cover-art';
@@ -743,6 +750,58 @@ export async function POST(request: NextRequest) {
           `Release ${releaseId} created without tasks: template instantiation failed.`,
           templateError
         );
+      }
+    }
+
+    // A start-from-scratch rollout made in onboarding (URG-251 flow, agreed
+    // with Oyin 2026-10-14) begins with exactly one activity, "Confirm your
+    // release date", which the planner pins on top for a new user (see
+    // lib/pinned-confirm-date.ts). Only from onboarding: a blank rollout made
+    // in the app stays truly blank, as it always has. Best-effort, like the
+    // template above: the rollout exists either way.
+    if (releasePlan === 'blank' && releaseSource === 'onboarding' && !isTest) {
+      try {
+        const workspaceIdForSeed =
+          workspaceIdForArtist ?? (await ensureOwnedWorkspace(adminClient, auth.user)).id;
+        const seedReleaseDate = releaseResult.data.release_date
+          ? String(releaseResult.data.release_date).slice(0, 10)
+          : null;
+        const { error: seedError } = await adminClient.from('tasks').insert({
+          release_id: releaseId,
+          workspace_id: workspaceIdForSeed,
+          group_id: null,
+          created_by: auth.user.id,
+          assigned_to_user_id: auth.user.id,
+          assigned_to: null,
+          assigned_collaborator_id: null,
+          title: CONFIRM_RELEASE_DATE_TITLE,
+          description: CONFIRM_RELEASE_DATE_DESCRIPTION,
+          status: 'todo',
+          priority: 'none',
+          state: 'planning',
+          position: 0,
+          auto_generated: true,
+          due_date: blankSeedDueDate({ now: Date.now(), releaseDate: seedReleaseDate }),
+          dependencies: [],
+          metadata: {
+            template: {
+              template_id: ONBOARDING_BLANK_TEMPLATE_ID,
+              template_version: '1.0.0',
+              task_id: ONBOARDING_CONFIRM_DATE_TASK_ID,
+              role: 'manager',
+              task_type: 'task',
+              duration_days: 1,
+              optional: false,
+              tags: ['planning'],
+              compressed_runway: false,
+            },
+          },
+        });
+        if (seedError) {
+          console.error(`Release ${releaseId}: could not seed its first activity.`, seedError);
+        }
+      } catch (seedError) {
+        console.error(`Release ${releaseId}: could not seed its first activity.`, seedError);
       }
     }
 

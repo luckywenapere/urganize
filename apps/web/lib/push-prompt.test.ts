@@ -98,3 +98,24 @@ describe('PUSH_PROMPT_SNOOZE_MS', () => {
     expect(PUSH_PROMPT_SNOOZE_MS).toBeLessThanOrEqual(180 * day);
   });
 });
+
+// URG-251 Part 2: onboarding's opt-in step already asked on this device.
+describe('decidePushPrompt after the onboarding opt-in step', () => {
+  it('does not show the soft ask once the step was shown', () => {
+    expect(
+      decidePushPrompt({ status: 'disabled', permission: 'default', snoozed: false, askedInOnboarding: true })
+    ).toBe('skip');
+  });
+
+  it('still repairs a granted device silently', () => {
+    expect(
+      decidePushPrompt({ status: 'disabled', permission: 'granted', snoozed: false, askedInOnboarding: true })
+    ).toBe('auto-enable');
+  });
+
+  it('asks as before when the step was never shown', () => {
+    expect(
+      decidePushPrompt({ status: 'disabled', permission: 'default', snoozed: false, askedInOnboarding: false })
+    ).toBe('ask');
+  });
+});

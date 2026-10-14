@@ -22,6 +22,18 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.129.0",
+    date: "October 14, 2026",
+    highlights: [
+      "Signing up now shows your plan week by week before you make an account.",
+      "You can turn on reminders by push or email when you sign up. Both stay off unless you pick them.",
+      "Got a referral code? Type it in when you create your account.",
+      "Pick your plan and start a 3-day free trial with no card.",
+      "You can skip inviting your team and go straight to your plan.",
+      "Your first plan opens with \"Confirm your release date\" pinned at the top.",
+    ],
+  },
+  {
     version: "1.128.2",
     date: "October 14, 2026",
     highlights: [

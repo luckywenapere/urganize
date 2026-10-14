@@ -27,6 +27,7 @@ import {
   pushPromptSnoozeKey,
 } from '@/lib/push-prompt';
 import { isInstallPromptOwed, subscribeInstallPromptSettled } from '@/lib/install-prompt';
+import { wasPushAskedInOnboarding } from '@/lib/onboarding-optin';
 
 const NATIVE_PUSH_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NATIVE_PUSH === 'true';
 const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
@@ -138,7 +139,12 @@ export function PushPermissionPrompt() {
           PUSH_PROMPT_SNOOZE_MS
         ) === true;
 
-      const decision = decidePushPrompt({ status, permission, snoozed });
+      const decision = decidePushPrompt({
+        status,
+        permission,
+        snoozed,
+        askedInOnboarding: wasPushAskedInOnboarding(),
+      });
 
       if (decision === 'ask') {
         // SEQUENCING (founder request, 2026-08-30): where an install is on

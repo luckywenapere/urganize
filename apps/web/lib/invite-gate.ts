@@ -86,6 +86,39 @@ export function isInviteGateSkipped(skippedAt: number | null | undefined, now: n
   return age >= 0 && age < INVITE_GATE_SKIP_MS;
 }
 
+/**
+ * URG-274 (2026-10-14, founder-approved): a brand-new account must reach its
+ * rollout and its plan with zero invites. Two things hold the gate back:
+ *
+ *  - The first session after onboarding (lib/first-session.ts) stays quiet,
+ *    as it already does for the share sheet, tours and the install card, so
+ *    the plan a new person just made is never covered on their first look.
+ *  - "Skip for now" on onboarding's own "Bring your team in" step counts as a
+ *    skip of the gate, for the same INVITE_GATE_SKIP_MS. They already said no.
+ *
+ * After that the gate asks as before, and an invite still clears it for good.
+ */
+export const INVITE_GATE_ONBOARDING_SKIP_KEY = 'urganize:invite-gate:onboarding-skipped';
+
+export function isInviteGateHeldBack(input: {
+  inFirstSession: boolean;
+  onboardingSkippedAt: number | null | undefined;
+  now: number;
+}): boolean {
+  if (input.inFirstSession) return true;
+  return isInviteGateSkipped(input.onboardingSkippedAt, input.now);
+}
+
+/** Onboarding's team step was skipped (or left with no invite sent). */
+export function markOnboardingInviteSkipped(now: number = Date.now()): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(INVITE_GATE_ONBOARDING_SKIP_KEY, String(now));
+  } catch {
+    // Private mode: the first-session hold still covers the first look.
+  }
+}
+
 /** Fired on window by any invite form outside the gate (the first-win
  * reveal's invite step, Settings) the moment an invite succeeds, so a gate
  * holding an earlier "invite needed" answer drops it at once. */
