@@ -48,16 +48,27 @@ export function LoadingScreen({
   title = 'Loading',
   asPage = true,
 }: LoadingScreenProps) {
+  // Just the mark, still, at the size and spot the phone app's splash draws it
+  // (founder, 2026-10-14: the splash logo followed by a pulsing mark and an
+  // "Opening Urganize" line read as two loaders). On the phone the splash hands
+  // straight over to this frame, so it looks like one screen. The title stays
+  // for screen readers only.
   const content = (
     <div
       className="flex min-h-screen items-center justify-center px-4"
       role="status"
       aria-live="polite"
     >
-      <div className="flex flex-col items-center gap-3 text-center">
-        <LoadingMark />
-        <p className="text-sm text-content-secondary">{title}</p>
-      </div>
+      <Image
+        src="/images/urganize-mark.png"
+        alt=""
+        aria-hidden="true"
+        width={62}
+        height={68}
+        priority
+        className="app-wordmark h-auto w-[62px]"
+      />
+      <span className="sr-only">{title}</span>
     </div>
   );
 

@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.132.4",
+    date: "October 14, 2026",
+    highlights: [
+      "Opening the app shows one loading screen, the Urganize mark on its own, with no second loader or Opening Urganize line.",
+    ],
+  },
+  {
     version: "1.132.3",
     date: "October 14, 2026",
     highlights: [
