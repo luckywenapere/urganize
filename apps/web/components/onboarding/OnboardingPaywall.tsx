@@ -103,15 +103,20 @@ export function OnboardingPaywall({
   };
 
   return (
-    <div className="mt-2 space-y-6">
-      <h3 className="font-display text-2xl font-semibold leading-tight text-content-primary sm:text-3xl">
+    // Desktop (lg+, Oct 14, 2026): two columns. The pitch (headline, logos,
+    // cards) on the left; the plans and the trial button on the right, sticky,
+    // so the button is on screen without scrolling. Mobile is unchanged: one
+    // column in the same order.
+    <div className="mt-2 space-y-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] lg:items-start lg:gap-10 lg:space-y-0">
+      <div className="space-y-6 lg:pt-2">
+      <h3 className="font-display text-2xl font-semibold leading-tight text-content-primary sm:text-3xl lg:text-4xl">
         {PAYWALL_HEADLINE}
       </h3>
 
       {/* The landing page's line and logos, never "Trusted by". */}
       <div>
-        <p className="text-center text-xs text-content-tertiary">{PAYWALL_LOGOS_LINE}</p>
-        <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
+        <p className="text-center text-xs text-content-tertiary lg:text-left">{PAYWALL_LOGOS_LINE}</p>
+        <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 lg:justify-start">
           {PAYWALL_LOGOS.map((logo) => {
             const shown = Math.round(logo.shown * 0.75);
             return (
@@ -174,7 +179,7 @@ export function OnboardingPaywall({
           ))}
         </div>
         {cards.length > 1 ? (
-          <div className="mt-3 flex justify-center gap-2" role="tablist" aria-label="Choose a card">
+          <div className="mt-3 flex justify-center gap-2 lg:justify-start" role="tablist" aria-label="Choose a card">
             {cards.map((card, index) => (
               <button
                 key={card.id}
@@ -191,8 +196,9 @@ export function OnboardingPaywall({
           </div>
         ) : null}
       </div>
+      </div>
 
-      <div className="space-y-4 rounded-2xl border border-stroke-default bg-bg-surface px-4 py-4">
+      <div className="space-y-4 rounded-2xl border border-stroke-default bg-bg-surface px-4 py-4 lg:sticky lg:top-8 lg:px-5 lg:py-5">
         {iosApp ? null : (
           <TierPlanPicker
             tiers={PAYWALL_TIERS}

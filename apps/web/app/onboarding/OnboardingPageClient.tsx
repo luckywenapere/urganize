@@ -1388,7 +1388,13 @@ export default function OnboardingPage() {
           fading out before they reach the wizard's own content. Inert with the
           flag off; this page is `○ Static` and nothing here changes that. */}
       <div className="urg-ground-ikat" aria-hidden="true" />
-      <div className="urg-above mx-auto w-full max-w-xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12 md:max-w-2xl">
+      <div
+        className={`urg-above mx-auto w-full max-w-xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12 md:max-w-2xl ${
+          // The paywall goes two-column on desktop (Oct 14, 2026), so it gets
+          // the room: pitch on the left, plans and the trial button on the right.
+          !personaOpen && step === ONBOARDING_STEP.paywall ? 'lg:max-w-5xl' : ''
+        }`}
+      >
         {/* Brand / title. Chappi introduces himself here and nowhere else in
             the flow (mascot brief, 2026-08-30) — he sits beside the greeting
             on the first screen and does not follow the user through the
