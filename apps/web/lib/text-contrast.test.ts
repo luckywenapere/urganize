@@ -55,10 +55,8 @@ const THEMES: Array<[string, string]> = [
   ['dark (:root)', ':root'],
   ['dark (data-theme)', "html[data-theme='dark']"],
   ['light', "html[data-theme='light']"],
-  // Palette preview (URG-256): the three candidates the founder is choosing between.
-  ['palette orange', ":root[data-palette='orange']"],
-  ['palette green', ":root[data-palette='green']"],
-  ['palette forest', ":root[data-palette='forest']"],
+  // The green dark palette the founder picked (URG-256).
+  ['dark green palette', ":root:not([data-theme='light'])"],
 ];
 
 describe('text tiers keep 4.5:1 on every ground', () => {
@@ -202,10 +200,10 @@ describe('field borders on the dark-locked pages and the calendar', () => {
   });
 });
 
-describe('palette preview accents (URG-256)', () => {
-  for (const name of ['orange', 'green', 'forest']) {
-    const scope = block(`:root[data-palette='${name}']`);
-    it(`the ${name} accent is 4.5:1 on every ground, and its button label is 4.5:1 on it`, () => {
+describe('green palette accent (URG-256)', () => {
+  {
+    const scope = block(":root:not([data-theme='light'])");
+    it('the green accent is 4.5:1 on every ground, and its button label is 4.5:1 on it', () => {
       const brand = token(scope, 'color-brand');
       for (const ground of CONTROL_GROUNDS) {
         expect(contrast(brand, token(scope, ground)), ground).toBeGreaterThanOrEqual(4.5);

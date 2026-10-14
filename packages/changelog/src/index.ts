@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.124.0",
+    date: "October 14, 2026",
+    highlights: [
+      "A calmer look in dark mode: a plain near-black background instead of the grid, green as the one accent colour, and less important text set back so the key things stand out.",
+    ],
+  },
+  {
     version: "1.123.0",
     date: "October 14, 2026",
     highlights: [
