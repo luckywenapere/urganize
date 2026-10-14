@@ -19545,3 +19545,7 @@ From Femi's design review (Oct 13): after something happens on a rollout, sugges
 - **Facts:** Home reads activities from `useTaskStore` and pitches from Home's placements; the rollout page gets its pitch facts from `GET /api/next-moves?releaseId=`. No other new request.
 - **Migration:** `supabase/migrations/20261014120000_next_move_dismissals.sql` must be applied; until then dismissals live only on the device.
 - **Checked** on a throwaway page with made-up rollouts (390px, light), **not with a real session.**
+
+## Timeline full screen waits for a plan (2026-10-14, v1.122.1)
+
+Founder report: clicking a rollout with no plan opened the desktop timeline full screen with nothing on it, hiding the planner card. `WorkspaceView` now gates the auto full screen, `timelineIsFull` and the full-screen button on `timelineHasPlan` (`scopedTasks.length > 0`); it opens full screen as soon as activities exist. Held by `lib/timeline-fullscreen-guard.test.ts`. Not checked with a real session.

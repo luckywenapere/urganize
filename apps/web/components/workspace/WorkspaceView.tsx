@@ -1011,10 +1011,16 @@ export function WorkspaceView() {
   // desktop"). Fires once per entry: keyed to the rollout and to the timeline
   // being the body, so "Exit full screen" sticks until they leave the timeline
   // (another tab or rollout) and come back. Phones keep the inline timeline.
+  //
+  // Not before there is a plan (founder, 2026-10-14): a rollout with no
+  // activities opened onto a blank full-screen timeline that hid the planner
+  // card, the one thing to do there. It stays inline until activities exist,
+  // and opens full screen the moment the plan lands.
+  const timelineHasPlan = scopedTasks.length > 0;
   const autoFullKeyRef = useRef<string | null>(null);
   useEffect(() => {
     const key =
-      panelBody === 'timeline' && scopedReleaseSlim?.id && isDesktopViewport
+      panelBody === 'timeline' && scopedReleaseSlim?.id && isDesktopViewport && timelineHasPlan
         ? scopedReleaseSlim.id
         : null;
     if (key === null) {
@@ -1024,8 +1030,9 @@ export function WorkspaceView() {
     if (autoFullKeyRef.current === key) return;
     autoFullKeyRef.current = key;
     setTimelineFullFor(key);
-  }, [panelBody, scopedReleaseSlim?.id, isDesktopViewport]);
+  }, [panelBody, scopedReleaseSlim?.id, isDesktopViewport, timelineHasPlan]);
   const timelineIsFull =
+    timelineHasPlan &&
     timelineFullFor !== null &&
     timelineFullFor === scopedReleaseSlim?.id &&
     panelBody === 'timeline';
@@ -1039,7 +1046,9 @@ export function WorkspaceView() {
         onRescheduled={() => void loadCommandCenter({ force: true })}
         suppressEmptyState={bannerReplacesEmptyState}
         onFullScreen={
-          timelineIsFull ? undefined : () => setTimelineFullFor(scopedReleaseSlim.id)
+          timelineIsFull || !timelineHasPlan
+            ? undefined
+            : () => setTimelineFullFor(scopedReleaseSlim.id)
         }
       />
     ) : null;

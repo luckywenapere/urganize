@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.122.1",
+    date: "October 14, 2026",
+    highlights: [
+      "A rollout with no plan yet no longer opens onto an empty full-screen timeline. The timeline goes full screen once the plan is built.",
+    ],
+  },
+  {
     version: "1.122.0",
     date: "October 14, 2026",
     highlights: [
