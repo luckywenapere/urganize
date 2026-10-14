@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Search, SlidersHorizontal, X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import {
@@ -138,7 +138,7 @@ function FilterSelects({ plan }: { plan: PlanListState }) {
  * One row: a search field and three filters. On a phone the three filters sit
  * behind one button so the row still fits a 375px screen without wrapping.
  */
-export function PlanListControls({ plan }: { plan: PlanListState }) {
+export function PlanListControls({ plan, trailing }: { plan: PlanListState; trailing?: ReactNode }) {
   const { filters, setFilters } = plan;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement | null>(null);
@@ -160,7 +160,7 @@ export function PlanListControls({ plan }: { plan: PlanListState }) {
 
   return (
     <div className="flex items-center gap-2" role="search" aria-label="Search this plan">
-      <label className="relative min-w-0 flex-1">
+      <label className="relative min-w-0 flex-1 sm:max-w-xs">
         <span className="sr-only">Search activities</span>
         <Search
           className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-tertiary"
@@ -175,11 +175,9 @@ export function PlanListControls({ plan }: { plan: PlanListState }) {
         />
       </label>
 
-      <div className="hidden items-center gap-2 sm:flex">
-        <FilterSelects plan={plan} />
-      </div>
-
-      <div ref={popoverRef} className="relative sm:hidden">
+      {/* One Filter button at every width (2026-10-14 declutter): three
+          dropdowns in a row were the loudest thing above the timeline. */}
+      <div ref={popoverRef} className="relative">
         <button
           type="button"
           onClick={() => setFiltersOpen((open) => !open)}
@@ -195,7 +193,7 @@ export function PlanListControls({ plan }: { plan: PlanListState }) {
           ) : null}
         </button>
         {filtersOpen ? (
-          <div className="absolute right-0 top-11 z-20 flex w-48 flex-col gap-2 rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg [&>select]:w-full">
+          <div className="absolute left-0 top-11 z-20 flex w-48 flex-col gap-2 rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg [&>select]:w-full">
             <FilterSelects plan={plan} />
           </div>
         ) : null}
@@ -212,6 +210,7 @@ export function PlanListControls({ plan }: { plan: PlanListState }) {
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
       ) : null}
+      {trailing ? <div className="ml-auto flex shrink-0 items-center gap-1">{trailing}</div> : null}
     </div>
   );
 }

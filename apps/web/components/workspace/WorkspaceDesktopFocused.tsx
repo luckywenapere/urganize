@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { SIDEBAR_SLOT_ROLLOUT, useSidebarSlot } from '@/components/shell/Sidebar';
+import { usePageBarCrumbSlot } from '@/components/shell/PageBar';
 import Image from 'next/image';
 import { ChevronRight, Plus } from '@/components/icons';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
@@ -105,9 +106,9 @@ export function WorkspaceDesktopFocused({
 }: WorkspaceDesktopFocusedProps) {
   const tasksTotal = scopedTasks.length;
   const tasksDone = scopedTasks.filter((t) => t.status === 'done').length;
-  const motionProgress = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
   const [failedCover, setFailedCover] = useState<string | null>(null);
   const rolloutMenuSlot = useSidebarSlot(SIDEBAR_SLOT_ROLLOUT);
+  const crumbSlot = usePageBarCrumbSlot(true);
   const showCover = Boolean(card.coverArtUrl) && card.coverArtUrl !== failedCover;
   const date = formatDate(card.release.releaseDate);
   // The same derived status the Catalogue row shows, so opening a rollout
@@ -127,50 +128,51 @@ export function WorkspaceDesktopFocused({
   return (
     <div className="workspace-mode-enter flex h-[calc(100dvh-10.5rem)] min-h-[30rem] flex-col gap-4">
       <div className="shrink-0">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 pt-4 text-sm text-content-secondary">
-          {onClose ? (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={closeLabel ?? 'Back to Catalogue'}
-              className="motion-focus rounded-md hover:text-content-primary"
-            >
-              Rollouts
-            </button>
-          ) : (
-            <span>Rollouts</span>
-          )}
-          <ChevronRight className="h-3.5 w-3.5 text-content-tertiary" aria-hidden="true" />
-          <span className="min-w-0 truncate text-content-primary">{card.release.title}</span>
-        </nav>
+        {/* Where you are, said once (2026-10-14 declutter): the breadcrumb
+            takes the page bar's title slot, so the page bar, a breadcrumb row
+            and the heading no longer all say Rollouts. */}
+        {crumbSlot
+          ? createPortal(
+              <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[15px] text-content-secondary">
+                {onClose ? (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label={closeLabel ?? 'Back to Catalogue'}
+                    className="motion-focus rounded-md hover:text-content-primary"
+                  >
+                    Rollouts
+                  </button>
+                ) : (
+                  <span>Rollouts</span>
+                )}
+                <ChevronRight className="h-3.5 w-3.5 text-content-tertiary" aria-hidden="true" />
+                <span className="min-w-0 truncate font-semibold text-content-primary">{card.release.title}</span>
+              </nav>,
+              crumbSlot
+            )
+          : null}
 
-        <div className="mt-3 flex items-center gap-4">
-          <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-bg-elevated" aria-hidden="true">
-            {showCover ? (
+        <div className="flex items-center gap-4 pt-1">
+          {/* The cover only when there is one (2026-10-14 declutter): an
+              empty tile with the mark in it said nothing, and Add cover art
+              is in the menu. */}
+          {showCover ? (
+            <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-bg-elevated" aria-hidden="true">
               <Image
                 src={card.coverArtUrl as string}
                 alt=""
                 fill
-                sizes="64px"
+                sizes="56px"
                 unoptimized
                 className="object-cover"
                 onError={() => setFailedCover(card.coverArtUrl ?? null)}
               />
-            ) : (
-              <span className="grid h-full w-full place-items-center">
-                <Image
-                  src="/images/urganize-mark.png"
-                  alt=""
-                  width={161}
-                  height={173}
-                  className="app-wordmark h-5 w-auto opacity-35"
-                />
-              </span>
-            )}
-          </span>
+            </span>
+          ) : null}
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-              <h1 className="truncate font-display text-3xl font-semibold leading-tight text-content-primary">
+              <h1 className="truncate font-display text-2xl font-semibold leading-tight text-content-primary">
                 {card.release.title}
               </h1>
               <span
@@ -189,15 +191,11 @@ export function WorkspaceDesktopFocused({
             </p>
           </div>
 
-          <div className="hidden items-center gap-3 xl:flex">
-            <div className="h-1.5 w-40 rounded-full bg-stroke-strong" aria-hidden="true">
-              <div
-                className="h-full rounded-full bg-brand transition-[width] duration-300"
-                style={{ width: `${motionProgress}%` }}
-              />
-            </div>
-            <span className="font-mono text-xs font-semibold tabular-nums text-content-primary">
-              {tasksDone}/{tasksTotal}
+          {/* One plain count instead of a bar and a mono fraction (2026-10-14
+              declutter), worded like the distribution checklist's. */}
+          <div className="hidden items-center gap-2 xl:flex">
+            <span className="text-sm tabular-nums text-content-secondary">
+              {tasksDone} of {tasksTotal} done
             </span>
             <ReleaseDeliveredMark total={tasksTotal} done={tasksDone} />
           </div>
@@ -206,7 +204,7 @@ export function WorkspaceDesktopFocused({
             <button
               type="button"
               onClick={onNewActivity}
-              className="motion-focus motion-press inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-content-primary px-6 text-sm font-semibold text-content-inverse hover:opacity-90"
+              className="motion-focus motion-press inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-stroke-control px-4 text-sm font-medium text-content-primary transition-colors hover:bg-bg-hover"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               New activity

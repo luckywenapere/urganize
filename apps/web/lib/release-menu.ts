@@ -206,3 +206,53 @@ export function orderReleaseMenu<T extends { key: string }>(entries: T[]): T[] {
 export function orderForThumb<T>(rows: readonly T[]): T[] {
   return [...rows].reverse();
 }
+
+/**
+ * The rollout menu's groups on a computer (founder call, 2026-10-14: "add the
+ * short group labels ... decide based on how a user would use it"). Fifteen
+ * rows in one run were too many to scan, so they sit under three jobs a
+ * manager does with a rollout, in the order the work happens day to day:
+ * plan it and run the team, get the release itself ready and out, then push
+ * it. The two corrections (change artist, archive) sit last under no label.
+ * Order inside a group stays RELEASE_MENU_ORDER's.
+ */
+export type RolloutMenuGroupKey = 'plan' | 'release' | 'promote' | 'manage';
+
+export const ROLLOUT_MENU_GROUPS: { key: RolloutMenuGroupKey; label: string | null }[] = [
+  { key: 'plan', label: 'Plan' },
+  { key: 'release', label: 'Release' },
+  { key: 'promote', label: 'Promote' },
+  { key: 'manage', label: null },
+];
+
+const GROUP_BY_KEY: Record<ReleaseMenuKey, RolloutMenuGroupKey> = {
+  timeline: 'plan',
+  activities: 'plan',
+  chat: 'plan',
+  calendar: 'plan',
+  note: 'plan',
+  spend: 'plan',
+  metadata: 'release',
+  coverart: 'release',
+  song: 'release',
+  files: 'release',
+  distribute: 'release',
+  pitch: 'promote',
+  pitchkit: 'promote',
+  promo: 'promote',
+  share: 'promote',
+  capture: 'promote',
+  'change-artist': 'manage',
+  archive: 'manage',
+};
+
+/** Split menu entries into the groups above, empty groups dropped. */
+export function groupRolloutMenu<T extends { key: ReleaseMenuKey }>(
+  entries: T[]
+): { key: RolloutMenuGroupKey; label: string | null; entries: T[] }[] {
+  const ordered = orderReleaseMenu(entries);
+  return ROLLOUT_MENU_GROUPS.map((group) => ({
+    ...group,
+    entries: ordered.filter((entry) => (GROUP_BY_KEY[entry.key] ?? 'manage') === group.key),
+  })).filter((group) => group.entries.length > 0);
+}

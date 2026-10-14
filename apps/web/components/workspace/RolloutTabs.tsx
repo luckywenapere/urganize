@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, MoreHorizontal } from '@/components/icons';
 import { sceneRowTarget } from '@/lib/nav-stall';
 import { watchNavigationStall } from '@/lib/nav-stall-watch';
+import { groupRolloutMenu } from '@/lib/release-menu';
 import {
   useRolloutMenuActions,
   type RolloutMenuAction,
@@ -52,27 +53,33 @@ export function RolloutTabs({ releaseId, variant = 'row', share, changeArtist, a
   if (places.length === 0 && dialogs.length === 0) return null;
 
   if (variant === 'side') {
-    // Nested under Rollouts in the side menu: every place one per row, then
-    // the three dialog actions as rows after a hairline, since a narrow
-    // column has room for them and an overflow button would hide them.
+    // Nested under Rollouts in the side menu, in three labelled groups (Plan,
+    // Release, Promote; lib/release-menu.ts) with the two corrections last.
+    // Places and dialogs share a group when they share a job: Share to socials
+    // sits under Promote.
     return (
-      <nav aria-label="Rollout" data-tour="rollout-menu">
-        <ul className="flex flex-col gap-0.5">
-          {places.map((action) => (
-            <li key={action.key}>
-              <SideRow action={action} />
-            </li>
-          ))}
-        </ul>
-        {dialogs.length > 0 ? (
-          <ul className="mt-1.5 flex flex-col gap-0.5 border-t border-stroke-subtle pt-1.5">
-            {dialogs.map((action) => (
-              <li key={action.key}>
-                <SideRow action={action} />
-              </li>
-            ))}
-          </ul>
-        ) : null}
+      <nav aria-label="Rollout" data-tour="rollout-menu" className="flex flex-col gap-3">
+        {groupRolloutMenu(actions).map((group) => (
+          <div
+            key={group.key}
+            role="group"
+            aria-label={group.label ?? undefined}
+            className={group.label ? '' : 'border-t border-stroke-subtle pt-2'}
+          >
+            {group.label ? (
+              <p className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-content-tertiary">
+                {group.label}
+              </p>
+            ) : null}
+            <ul className="flex flex-col gap-0.5">
+              {group.entries.map((action) => (
+                <li key={action.key}>
+                  <SideRow action={action} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
     );
   }

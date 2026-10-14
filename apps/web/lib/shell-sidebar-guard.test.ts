@@ -20,7 +20,7 @@ describe('the top bar', () => {
 
   it('keeps the areas as centred pills with every behaviour they had', () => {
     expect(nav).toContain('lg:grid-cols-[1fr_auto_1fr]');
-    expect(nav).toContain('buildShellAreas(readShellFlags())');
+    expect(nav).toContain('useShellAreas()');
     expect(nav).toContain('areas.map(');
     expect(nav).toContain('leaveReleaseForCatalog()');
     expect(nav).toContain('useHomeChatStore.getState().toggleListCollapsed()');

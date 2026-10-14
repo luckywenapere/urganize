@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { buildShellAreas, readShellFlags, shellPageTitle, shellSideMenu } from '@/lib/shell-nav';
+import { shellPageTitle, shellSideMenu } from '@/lib/shell-nav';
+import { useShellAreas } from './useShellAreas';
 import { SidebarToggle } from './Sidebar';
 import { SUBNAV_SLOT_END, SUBNAV_SLOT_START, SUBNAV_SLOT_TOOLS } from './SubNav';
 
@@ -17,9 +18,24 @@ import { SUBNAV_SLOT_END, SUBNAV_SLOT_START, SUBNAV_SLOT_TOOLS } from './SubNav'
  * `lg` and up only. On a phone the tab row (SubNav) is unchanged and pages
  * keep their tools in the page.
  */
+/** Where a page swaps the plain title for its own breadcrumb (a rollout:
+ *  Rollouts > its name), so where you are is said once. */
+export const PAGEBAR_SLOT_CRUMB = 'pagebar-slot-crumb';
+
+/** The page bar's breadcrumb slot, once it is in the document; null on a
+ *  phone, where the bar is hidden and a page keeps its own breadcrumb. */
+export function usePageBarCrumbSlot(enabled: boolean): HTMLElement | null {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSlot(enabled ? document.getElementById(PAGEBAR_SLOT_CRUMB) : null);
+  }, [enabled]);
+  return slot;
+}
+
 export function PageBar() {
   const pathname = usePathname() ?? '/dashboard';
-  const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
+  const areas = useShellAreas();
   const title = shellPageTitle(areas, pathname);
   // With a side menu the bar always shows (it holds the fold button). Without
   // one (Home, Pitching) it shows only when the page put tools in it, so Home
@@ -28,12 +44,17 @@ export function PageBar() {
 
   return (
     <div
-      className={`hidden h-14 min-w-0 items-center gap-3 ${
+      className={`group/pagebar hidden h-14 min-w-0 items-center gap-3 ${
         always ? 'lg:flex' : 'lg:has-[>[id^=subnav-slot]:not(:empty)]:flex'
       }`}
     >
       <SidebarToggle />
-      {title ? <p className="min-w-0 shrink-0 truncate text-[15px] font-semibold text-content-primary">{title}</p> : null}
+      {title ? (
+        <p className="min-w-0 shrink-0 truncate text-[15px] font-semibold text-content-primary group-has-[[data-crumb-slot]:not(:empty)]/pagebar:hidden">
+          {title}
+        </p>
+      ) : null}
+      <div id={PAGEBAR_SLOT_CRUMB} data-crumb-slot className="flex min-w-0 items-center empty:hidden" />
       <div id={SUBNAV_SLOT_START} className="flex shrink-0 items-center empty:hidden" />
       <div className="flex-1" />
       <div id={SUBNAV_SLOT_TOOLS} className="flex min-w-0 shrink items-center empty:hidden" />

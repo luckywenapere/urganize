@@ -22,6 +22,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.128.0",
+    date: "October 14, 2026",
+    highlights: [
+      "A cleaner rollout page on a computer. The timeline now starts much higher, with less above it.",
+      "The rollout menu is sorted into Plan, Release and Promote, so it's quicker to find what you need.",
+      "The distribution checklist is now one line showing your next fix. Open it to see the whole list.",
+      "Search, filters and the timeline's legend now sit in one row.",
+    ],
+  },
+  {
     version: "1.127.0",
     date: "October 14, 2026",
     highlights: [

@@ -120,7 +120,7 @@ export function Sidebar() {
       <nav aria-label={menu.area.label}>
         <ul className="flex flex-col gap-0.5">
           {menu.pages.map((page) => (
-            <li key={page.key}>
+            <li key={page.key} className="group/page">
               <Link
                 href={page.href}
                 {...tip.bind(page.key)}
@@ -129,7 +129,10 @@ export function Sidebar() {
                 data-active={page.active ? 'true' : undefined}
                 className={`motion-focus flex h-10 items-center rounded-lg px-3 text-sm font-medium transition-[color,background-color,opacity] ${
                   page.active
-                    ? 'bg-bg-hover text-content-primary'
+                    ? // Inside a rollout the lit row is the rollout's page
+                      // under this one, so the parent keeps its weight but
+                      // drops its fill: one lit row, not two.
+                      'bg-bg-hover text-content-primary group-has-[[data-rollout-slot]:not(:empty)]/page:bg-transparent group-has-[[data-rollout-slot]:not(:empty)]/page:font-semibold'
                     : 'text-content-secondary opacity-60 hover:bg-bg-hover/60 hover:text-content-primary hover:opacity-100'
                 }`}
               >
@@ -139,7 +142,7 @@ export function Sidebar() {
                   open (RolloutTabs portals it in). Empty, and so hidden,
                   otherwise. */}
               {page.key === 'releases' ? (
-                <div id={SIDEBAR_SLOT_ROLLOUT} className="mb-1 mt-0.5 pl-3 empty:hidden" />
+                <div id={SIDEBAR_SLOT_ROLLOUT} data-rollout-slot className="mb-1 mt-1 pl-3 empty:hidden" />
               ) : null}
             </li>
           ))}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, AlertTriangle, Check, ChevronDown, ListChecks } from '@/components/icons';
+import { AlertCircle, AlertTriangle, Check, ChevronDown } from '@/components/icons';
 import { useSceneOverlay } from '@/components/workspace/useSceneOverlay';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import {
@@ -134,86 +134,105 @@ export function DistributionChecklist({
   const hasOpenErrors = checklist.items.some((item) => !item.done && item.level === 'error');
   const percent = Math.round((checklist.doneCount / checklist.total) * 100);
   const nextOpen = checklist.items.find((item) => !item.done) ?? null;
-  const shown = expanded ? checklist.items : nextOpen ? [nextOpen] : [];
-  const hiddenCount = checklist.total - shown.length;
   const bodyId = `distribution-checklist-${releaseId}`;
 
+  const nextCanFix =
+    nextOpen?.issue ? fixDestinationFor(nextOpen.issue.fieldPath, availability) !== null : false;
+  const progress = checklistProgressLabel(checklist);
+
+  // One line until it is opened (2026-10-14 declutter, founder: "you decide
+  // the best based on how a user would use it"). It is ticked off over days,
+  // so it stays on the rollout, but folded it is one row: where you stand,
+  // the next thing to do and its Fix button. Opening it shows the bar and
+  // every item with its tick, as before.
   return (
     <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
-      <div className="px-4 pb-3 pt-3.5">
-        <div className="flex items-center gap-3">
-          {allDone ? (
-            <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-          ) : hasOpenErrors ? (
-            <AlertCircle className="h-4 w-4 shrink-0 text-status-error" aria-hidden="true" />
-          ) : (
-            <AlertTriangle className="h-4 w-4 shrink-0 text-status-warning" aria-hidden="true" />
-          )}
-          <h3 className="min-w-0 flex-1 text-sm font-semibold text-content-primary">
-            {allDone ? 'Ready to order distribution' : 'Before you order distribution'}
-          </h3>
-          <span className="shrink-0 font-mono text-xs text-content-secondary">
-            {checklistProgressLabel(checklist)}
-          </span>
-        </div>
-        <div
-          role="progressbar"
-          aria-label="Checklist before distribution"
-          aria-valuemin={0}
-          aria-valuemax={checklist.total}
-          aria-valuenow={checklist.doneCount}
-          aria-valuetext={checklistProgressLabel(checklist)}
-          className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-stroke-strong"
-        >
-          <div className="h-full rounded-full bg-brand transition-[width] duration-base" style={{ width: `${percent}%` }} />
-        </div>
-      </div>
-
-      {shown.length > 0 ? (
-        <ul id={bodyId} className="divide-y divide-stroke-subtle border-t border-stroke-subtle">
-          {shown.map((item) => {
-            const canFix = item.issue ? fixDestinationFor(item.issue.fieldPath, availability) !== null : false;
-            return (
-              <li key={item.key} className="flex min-h-14 items-center gap-2 py-1 pl-1.5 pr-3">
-                <TickControl item={item} onTick={() => tick(item)} />
-                <p
-                  className={`min-w-0 flex-1 text-sm ${
-                    item.done ? 'text-content-tertiary line-through decoration-content-tertiary' : 'text-content-primary'
-                  }`}
-                >
-                  {item.message}
-                  {!item.done && item.level === 'error' ? (
-                    <span className="sr-only"> Needed before you order. Ticks itself when fixed.</span>
-                  ) : null}
-                </p>
-                {!item.done && canFix && item.issue ? (
-                  <button
-                    type="button"
-                    onClick={() => fix(item.issue as DistributionIssue)}
-                    aria-label={`Fix: ${item.message}`}
-                    className="motion-focus inline-flex h-11 min-w-14 shrink-0 items-center justify-center rounded-lg border border-stroke-control px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/10"
-                  >
-                    Fix
-                  </button>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-
-      {checklist.total > 1 ? (
+      <div className="flex min-h-12 items-center gap-3 py-1 pl-4 pr-2">
+        {allDone ? (
+          <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+        ) : hasOpenErrors ? (
+          <AlertCircle className="h-4 w-4 shrink-0 text-status-error" aria-hidden="true" />
+        ) : (
+          <AlertTriangle className="h-4 w-4 shrink-0 text-status-warning" aria-hidden="true" />
+        )}
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}
           aria-expanded={expanded}
           aria-controls={bodyId}
-          className="motion-focus flex min-h-11 w-full items-center justify-center gap-1.5 border-t border-stroke-subtle px-4 text-xs font-semibold text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          className="motion-focus flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-md text-left"
         >
-          <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
-          {expanded ? 'Show less' : allDone ? `Show all ${checklist.total}` : `Show all ${checklist.total} (${hiddenCount} more)`}
-          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />
+          <h3 className="shrink-0 text-sm font-semibold text-content-primary">
+            {allDone ? 'Ready to order distribution' : 'Before you order distribution'}
+          </h3>
+          {!expanded && nextOpen ? (
+            <span className="hidden min-w-0 truncate text-sm text-content-secondary sm:inline">
+              <span aria-hidden="true">· </span>
+              {nextOpen.message}
+            </span>
+          ) : null}
+          <span className="ml-auto shrink-0 pl-2 text-xs tabular-nums text-content-secondary">{progress}</span>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${expanded ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
         </button>
+        {!expanded && nextOpen && nextCanFix && nextOpen.issue ? (
+          <button
+            type="button"
+            onClick={() => fix(nextOpen.issue as DistributionIssue)}
+            aria-label={`Fix: ${nextOpen.message}`}
+            className="motion-focus inline-flex h-11 min-w-14 shrink-0 items-center justify-center rounded-lg px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/10 lg:h-9"
+          >
+            Fix
+          </button>
+        ) : null}
+      </div>
+
+      {expanded ? (
+        <div id={bodyId} className="border-t border-stroke-subtle">
+          <div
+            role="progressbar"
+            aria-label="Checklist before distribution"
+            aria-valuemin={0}
+            aria-valuemax={checklist.total}
+            aria-valuenow={checklist.doneCount}
+            aria-valuetext={progress}
+            className="mx-4 mt-3 h-1.5 overflow-hidden rounded-full bg-stroke-strong"
+          >
+            <div className="h-full rounded-full bg-brand transition-[width] duration-base" style={{ width: `${percent}%` }} />
+          </div>
+          <ul className="mt-2 divide-y divide-stroke-subtle">
+            {checklist.items.map((item) => {
+              const canFix = item.issue ? fixDestinationFor(item.issue.fieldPath, availability) !== null : false;
+              return (
+                <li key={item.key} className="flex min-h-14 items-center gap-2 py-1 pl-1.5 pr-3">
+                  <TickControl item={item} onTick={() => tick(item)} />
+                  <p
+                    className={`min-w-0 flex-1 text-sm ${
+                      item.done ? 'text-content-tertiary line-through decoration-content-tertiary' : 'text-content-primary'
+                    }`}
+                  >
+                    {item.message}
+                    {!item.done && item.level === 'error' ? (
+                      <span className="sr-only"> Needed before you order. Ticks itself when fixed.</span>
+                    ) : null}
+                  </p>
+                  {!item.done && canFix && item.issue ? (
+                    <button
+                      type="button"
+                      onClick={() => fix(item.issue as DistributionIssue)}
+                      aria-label={`Fix: ${item.message}`}
+                      className="motion-focus inline-flex h-11 min-w-14 shrink-0 items-center justify-center rounded-lg border border-stroke-control px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/10"
+                    >
+                      Fix
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       ) : null}
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { CalendarClock, ChevronDown, Flag, Maximize2 } from '@/components/icons';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarClock, ChevronDown, Flag, Info, Maximize2 } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
 import {
@@ -242,11 +242,13 @@ export function TimelineScene({
   };
 
   return (
-    <div className="tl-scene-container mt-8">
+    <div className="tl-scene-container mt-6 pb-16">
+      {/* One toolbar row (2026-10-14 declutter): search, the Filter button,
+          and at the end the legend behind a small button and Full screen as
+          an icon. It was two rows of controls before the first bar. */}
       <div className="mb-4">
-        <PlanListControls plan={plan} />
+        <PlanListControls plan={plan} trailing={<TimelineChrome onFullScreen={onFullScreen} />} />
       </div>
-      <Legend onFullScreen={onFullScreen} />
 
       {/* ---- Wide: the week grid ---------------------------------------- */}
       <div className="tl-grid-view">
@@ -719,41 +721,76 @@ function TimelineWeekList({
 // Chrome
 // ---------------------------------------------------------------------------
 
-function Legend({ onFullScreen }: { onFullScreen?: () => void }) {
+function TimelineChrome({ onFullScreen }: { onFullScreen?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const iconButton =
+    'motion-focus motion-press grid h-9 w-9 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary';
+
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-content-tertiary">
-      <span className="inline-flex items-center gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-full border border-stroke-control bg-bg-surface" />
-        One day
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span className="h-2 w-6 rounded-full bg-stroke-control" />
-        Runs several days
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span className="h-2.5 w-2.5 rotate-45 border border-brand bg-brand" />
-        Milestone
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-full border border-status-error bg-status-error" />
-        Overdue
-      </span>
-      <span className="tl-grid-view">Drag to move · tap to open</span>
+    <>
+      <div ref={rootRef} className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-label="Legend"
+          title="Legend"
+          className={iconButton}
+        >
+          <Info className="h-4 w-4" aria-hidden="true" />
+        </button>
+        {open ? (
+          <div className="absolute right-0 top-11 z-20 flex w-52 flex-col gap-2.5 rounded-xl border border-stroke-default bg-bg-surface p-3 text-xs text-content-secondary shadow-lg">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full border border-stroke-control bg-bg-surface" />
+              One day
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-6 rounded-full bg-stroke-control" />
+              Runs several days
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rotate-45 border border-brand bg-brand" />
+              Milestone
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full border border-status-error bg-status-error" />
+              Overdue
+            </span>
+            <span className="tl-grid-view border-t border-stroke-subtle pt-2 text-content-tertiary">
+              Drag to move · tap to open
+            </span>
+          </div>
+        ) : null}
+      </div>
       {/* Only where the week grid shows (`tl-grid-view`): the narrow list is
           already the whole width of a phone, so there is nothing to enlarge. */}
       {onFullScreen ? (
-        <span className="tl-grid-view ml-auto">
-          <button
-            type="button"
-            onClick={onFullScreen}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-stroke-control px-2.5 text-xs font-medium text-content-secondary transition-colors hover:border-content-secondary hover:text-content-primary"
-          >
-            <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
-            Full screen
+        <span className="tl-grid-view">
+          <button type="button" onClick={onFullScreen} aria-label="Full screen" title="Full screen" className={iconButton}>
+            <Maximize2 className="h-4 w-4" aria-hidden="true" />
           </button>
         </span>
       ) : null}
-    </div>
+    </>
   );
 }
 
