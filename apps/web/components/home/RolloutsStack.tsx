@@ -45,7 +45,7 @@ function RolloutCard({ rollout }: { rollout: HomeReleaseSummary }) {
             {rollout.progress.done} of {rollout.progress.total} done
           </span>
         </div>
-        <div className="h-1.5 w-full rounded-full bg-stroke-strong" aria-hidden="true">
+        <div className="h-1.5 w-full rounded-full bg-stroke-default" aria-hidden="true">
           <div className="h-full rounded-full bg-brand transition-[width] duration-300" style={{ width: `${progressPct}%` }} />
         </div>
       </div>

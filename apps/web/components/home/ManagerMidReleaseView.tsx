@@ -22,7 +22,7 @@ export function ManagerMidReleaseView({
   viewerId: string;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <HomeHeaderRow header={home.header} />
       <HomeBlocks home={home} viewerId={viewerId} />
     </div>

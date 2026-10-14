@@ -33,7 +33,7 @@ export function FocusTaskCard({ focus }: { focus: FocusTask }) {
         <button
           type="button"
           onClick={() => openTask(task.id)}
-          className="motion-focus group block w-full cursor-pointer break-words text-left font-display text-xl leading-snug after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-brand/60"
+          className="motion-focus group block w-full cursor-pointer break-words text-left font-display text-lg leading-snug after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-brand/60"
         >
           <span className="font-semibold text-content-primary group-hover:text-brand">{line.title}</span>
           <span className={line.isOverdue ? 'text-status-error' : 'text-content-secondary'}>

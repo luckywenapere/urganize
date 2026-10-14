@@ -14,14 +14,14 @@ export function ChappiSpeaksCard({ line }: { line: ChappiSpeaksLine }) {
   return (
     <section
       aria-label="Chappi speaks"
-      className="flex items-center gap-4 rounded-xl border border-stroke-default bg-bg-surface p-4 sm:gap-5 sm:p-5"
+      className="flex items-center gap-4 rounded-2xl border border-stroke-default bg-bg-surface p-4"
     >
-      <Chappi pose={line.occasion === 'release_today' ? 'celebrating' : 'resting'} size={72} className="shrink-0" />
+      <Chappi pose={line.occasion === 'release_today' ? 'celebrating' : 'resting'} size={56} className="shrink-0" />
       <div className="min-w-0">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
           Chappi speaks
         </p>
-        <p className="mt-1.5 font-display text-lg font-semibold leading-snug text-content-primary sm:text-xl">
+        <p className="mt-1.5 font-display text-base font-semibold leading-snug text-content-primary sm:text-lg">
           {line.text}
         </p>
       </div>

@@ -11,7 +11,7 @@ import type { UpNext } from '@/lib/home/up-next';
 export function UpNextCard({ next }: { next: UpNext }) {
   return (
     <div>
-      <p className="break-words font-display text-xl font-semibold leading-snug text-content-primary">
+      <p className="break-words font-display text-lg font-semibold leading-snug text-content-primary">
         {next.title}
       </p>
       <p className="mt-1 text-sm text-content-secondary">{next.detail}</p>

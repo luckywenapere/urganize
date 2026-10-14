@@ -26,7 +26,7 @@ export function OnboardingBar({ progress }: { progress: OnboardingProgress }) {
   const next = progress.steps.find((step) => !step.done);
 
   return (
-    <section aria-label="Getting started" className="rounded-2xl border border-stroke-default bg-bg-surface p-5">
+    <section aria-label="Getting started" className="rounded-2xl border border-stroke-default bg-bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-lg font-semibold text-content-primary">Getting started</h2>
@@ -52,7 +52,7 @@ export function OnboardingBar({ progress }: { progress: OnboardingProgress }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label="Getting started progress"
-        className="mt-3 h-1.5 w-full rounded-full bg-stroke-strong"
+        className="mt-3 h-1.5 w-full rounded-full bg-stroke-default"
       >
         <div className="h-full rounded-full bg-brand transition-[width] duration-300" style={{ width: `${progress.percent}%` }} />
       </div>

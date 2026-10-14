@@ -70,7 +70,7 @@ export function HomeStack<T>({
             onClick={() => setOpen((current) => !current)}
             aria-expanded={open}
             aria-controls={listId}
-            className="motion-focus relative inline-flex h-7 items-center gap-1 rounded-full border border-stroke-strong bg-bg-base px-2.5 text-[11px] font-semibold text-content-secondary transition-colors before:absolute before:-inset-2 before:content-[''] hover:text-content-primary"
+            className="motion-focus relative inline-flex h-7 items-center gap-1 rounded-full border border-stroke-default bg-bg-base px-2.5 text-[11px] font-semibold text-content-secondary transition-colors before:absolute before:-inset-2 before:content-[''] hover:text-content-primary"
           >
             {chip}
             <ChevronDown
@@ -81,7 +81,7 @@ export function HomeStack<T>({
         ) : (
           <span
             id={chipId}
-            className="inline-flex h-7 items-center rounded-full border border-stroke-strong bg-bg-base px-2.5 text-[11px] font-semibold text-content-secondary"
+            className="inline-flex h-7 items-center rounded-full border border-stroke-default bg-bg-base px-2.5 text-[11px] font-semibold text-content-secondary"
           >
             {chip}
           </span>

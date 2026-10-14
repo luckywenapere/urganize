@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from '@/components/icons';
-import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { OpportunitiesBlockSkeleton } from '@/components/loading/HomeSkeleton';
 import { loadGrantSuggestions } from '@/components/opportunities/load-grant-suggestions';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { grantSuggestionsEnabled } from '@/lib/grants/grant-suggestions-flag';
@@ -59,7 +59,7 @@ export function OpportunitiesCard() {
   }, [suggestionsOn]);
 
   if (opportunitiesLoading || !suggestionsSettled) {
-    return <SkeletonBlock className="h-[7.5rem] rounded-2xl" />;
+    return <OpportunitiesBlockSkeleton />;
   }
 
   const items = pickHomeOpportunities({ suggestions, opportunities }, todayKey());
@@ -83,7 +83,7 @@ export function OpportunitiesCard() {
       <h2 className="absolute left-3 top-0 z-20">
         <span
           id={headingId}
-          className="inline-flex h-7 items-center rounded-full border border-stroke-strong bg-bg-base px-2.5 text-[11px] font-semibold text-content-secondary"
+          className="inline-flex h-7 items-center rounded-full border border-stroke-default bg-bg-base px-2.5 text-[11px] font-semibold text-content-secondary"
         >
           {HOME_OPPORTUNITIES_COPY.label}
         </span>
@@ -110,18 +110,17 @@ export function OpportunitiesCard() {
                   <Link
                     href={HOME_OPPORTUNITIES_HREF}
                     onClick={() => track('item', item, index + 1)}
-                    className="motion-focus group -mx-2 flex min-h-11 items-center gap-3 rounded-lg px-2 py-2.5"
+                    className="motion-focus group -mx-2 flex min-h-11 items-center gap-3 rounded-lg px-2 py-3 hover:bg-bg-hover"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-content-primary group-hover:underline">
+                      <span className="block truncate text-sm font-medium text-content-primary">
                         {item.title}
                       </span>
-                      <span className="mt-0.5 block truncate text-xs text-content-tertiary">
-                        {homeOpportunityMeta(item)}
+                      {/* One quiet line under the title: three stacked grey
+                          lines per row made the card hard to scan (2026-10-14). */}
+                      <span className="mt-1 block truncate text-xs text-content-tertiary">
+                        {item.detail ? `${homeOpportunityMeta(item)} · ${item.detail}` : homeOpportunityMeta(item)}
                       </span>
-                      {item.detail ? (
-                        <span className="mt-0.5 block truncate text-xs text-content-secondary">{item.detail}</span>
-                      ) : null}
                     </span>
                     <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-content-tertiary" />
                   </Link>

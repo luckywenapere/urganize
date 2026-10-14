@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.133.3",
+    date: "October 15, 2026",
+    highlights: [
+      "Home's loading screen now matches the real page, Opportunities card first, so nothing jumps when it loads.",
+      "Home's cards are calmer: softer outlines and progress bars, smaller headlines, one line under each opportunity, and more space between groups.",
+    ],
+  },
+  {
     version: "1.133.2",
     date: "October 14, 2026",
     highlights: [

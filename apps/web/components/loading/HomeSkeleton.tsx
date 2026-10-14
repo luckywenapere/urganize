@@ -45,20 +45,52 @@ function StackBlock({ height }: { height: string }) {
 }
 
 /**
+ * The Opportunities card at the top of Home (OpportunitiesCard): the chip on
+ * the top edge, then three rows (a title over a one-line meta) and the See all
+ * row under a divider. Exported so the card draws this same shape while its own
+ * data loads, and Home does not change height when it lands.
+ */
+export function OpportunitiesBlockSkeleton() {
+  return (
+    <div aria-hidden="true" className="relative pt-3.5">
+      <div className="relative z-10 rounded-2xl border border-stroke-default bg-bg-surface px-4 pb-2 pt-6">
+        <div className="divide-y divide-stroke-subtle">
+          {['w-3/4', 'w-2/3', 'w-4/5'].map((width) => (
+            <div key={width} className="flex min-h-11 items-center gap-3 py-3">
+              <div className="min-w-0 flex-1">
+                <SkeletonBlock className={`h-4 rounded-md ${width}`} />
+                <SkeletonBlock className="mt-2 h-3 w-1/2 rounded-md" />
+              </div>
+              <SkeletonBlock className="h-4 w-4 shrink-0 rounded-md" />
+            </div>
+          ))}
+        </div>
+        <div className="flex min-h-11 items-center justify-end border-t border-stroke-subtle pt-1">
+          <SkeletonBlock className="h-4 w-16 rounded-md" />
+        </div>
+      </div>
+      <SkeletonBlock className="absolute left-3 top-0 z-20 h-7 w-28 rounded-full" />
+    </div>
+  );
+}
+
+/**
  * The left column's reading order, as ManagerMidReleaseView lays it out: the
- * date and greeting, then the stacks, with the same space-y-5 between them.
+ * date and greeting, then the stacks, with the same space-y-6 between them, Opportunities first.
  * The top card is the task to do first (a big title), the rest are one line.
  */
 function HomeColumnBlocks() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
         {/* 11px caps line, then the greeting (text-2xl, sm:text-3xl) 4px below. */}
         <SkeletonBlock className="h-4 w-28" />
         <SkeletonBlock className="mt-1 h-8 w-64 sm:h-9" />
       </div>
-      <StackBlock height="h-[7.5rem]" />
-      <StackBlock height="h-[5.5rem]" />
+      {/* Opportunities sits first, above every group (URG-266). */}
+      <OpportunitiesBlockSkeleton />
+      {/* Then your tasks: the task to do first (a big title) on top. */}
+      <StackBlock height="h-[6.5rem]" />
       <StackBlock height="h-[5.5rem]" />
     </div>
   );

@@ -31,7 +31,7 @@ export function ManagerQuietView({
   const between = home.state === 'manager_between';
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <HomeHeaderRow header={home.header} />
       <HomeBlocks home={home} viewerId={viewerId} hideStartUpNext={between} />
       <div className="flex flex-wrap items-center gap-3">
