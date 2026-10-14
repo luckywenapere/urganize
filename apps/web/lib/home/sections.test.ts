@@ -29,6 +29,14 @@ describe('orderHomeBlocks', () => {
     ]);
   });
 
+  it('puts Next moves straight after the tasks, only when there are some (URG-259)', () => {
+    const blocks = orderHomeBlocks({ ...full, nextMoveCount: 2 });
+    expect(blocks.slice(0, 4)).toEqual(['onboarding', 'tasks', 'next-moves', 'attention']);
+    expect(orderHomeBlocks({ ...full, nextMoveCount: 0 })).not.toContain('next-moves');
+    expect(orderHomeBlocks({ ...full, taskCount: 0, nextMoveCount: 1 }).slice(1, 3)).toEqual(['up-next', 'next-moves']);
+    expect(HOME_BLOCK_LABELS['next-moves']).toBe('Next moves');
+  });
+
   it('leaves out every group with nothing in it', () => {
     expect(
       orderHomeBlocks({

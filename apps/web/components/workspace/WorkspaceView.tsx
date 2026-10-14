@@ -31,6 +31,7 @@ import { TestReleaseBanner } from './TestReleaseBanner';
 import { PostPlanKitPrompt } from '@/components/press-kits/PostPlanKitPrompt';
 import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
 import { DistributionStatusStrip } from './DistributionStatusStrip';
+import { RolloutNextMoves } from '@/components/next-moves/RolloutNextMoves';
 import { requestEditorialPitchBackfill } from '@/lib/editorial-pitch-client';
 import { daysToRelease, isEditorialPitchTask, pitchWindowState } from '@/lib/editorial-pitch';
 import { DeleteReleaseDialog } from './DeleteReleaseDialog';
@@ -1128,6 +1129,14 @@ export function WorkspaceView() {
       />
     ) : null;
 
+  // Next moves (URG-259): up to three one-tap cards on the main view, worked
+  // out from this rollout and its activities. Mounted ONCE: in the full-screen
+  // timeline while that is up, otherwise in the one layout branch on screen.
+  const nextMovesBanner =
+    bodyIsMainView && scopedReleaseSlim && !scopedReleaseSlim.isTest ? (
+      <RolloutNextMoves release={scopedReleaseSlim} tasks={scopedTasks} isOwner={scopedReleaseIsOwn} />
+    ) : null;
+
   const handleSelect = (releaseId: string) => {
     const nextScope = scopedReleaseId === releaseId ? null : releaseId;
     const stacked =
@@ -1352,6 +1361,7 @@ export function WorkspaceView() {
                   <Toast message={toast.message} tone={toast.tone} />
                 </div>
               ) : null}
+              <div className="mt-4">{nextMovesBanner}</div>
               {timelineScene}
             </TimelineFullScreen>
           ) : null}
@@ -1466,6 +1476,7 @@ export function WorkspaceView() {
                   </div>
                 )}
                 {newReleaseGuideBanner}
+                {isDesktopViewport || timelineIsFull ? null : nextMovesBanner}
                 {isDesktopViewport ? null : distributionStatusStrip}
                 <TasksPanel
                   id={TASKS_PANEL_ID}
@@ -1519,6 +1530,7 @@ export function WorkspaceView() {
                 banner={
                   <>
                     {newReleaseGuideBanner}
+                    {isDesktopViewport && !timelineIsFull ? nextMovesBanner : null}
                     {isDesktopViewport ? distributionStatusStrip : null}
                   </>
                 }

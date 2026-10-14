@@ -21,6 +21,8 @@ import { TasksStack } from './TasksStack';
 import { UpNextCard } from './UpNextCard';
 import { WaitingStack } from './WaitingStack';
 import { useHomeFocusData } from './useHomeFocusData';
+import { NextMovesStack } from './NextMovesStack';
+import { useHomeNextMoves } from './useHomeNextMoves';
 import { useSpendRollouts } from './useSpendRollouts';
 import { useSpendSummary } from './useSpendSummary';
 
@@ -60,11 +62,15 @@ export function HomeBlocks({
   const waitingItems = buildWaitingItems(waitingTasks, home.waiting.djLinks);
   const placementItems = buildPlacementItems(placements);
   const onboarding = buildOnboardingProgress(live.releases);
+  // What to do next on each rollout (URG-259): rules over what Home already
+  // loaded, no model call. Dismissed ones never come back.
+  const nextMoves = useHomeNextMoves({ releases, viewerId, placements });
 
   const blocks = orderHomeBlocks({
     onboardingVisible: live.releases.length > 0 && !onboarding.complete,
     taskCount: taskStack ? 1 + taskStack.rest.length : 0,
     upNext: upNext.kind === 'start' && hideStartUpNext ? null : upNext.kind,
+    nextMoveCount: nextMoves.moves.length,
     attentionCount: attention.length,
     waitingCount: waitingItems.length,
     hasNextShow: home.nextShow !== null,
@@ -88,6 +94,14 @@ export function HomeBlocks({
             showCount={false}
             getKey={(next) => next.kind}
             renderItem={(next) => <UpNextCard next={next} />}
+          />
+        );
+      case 'next-moves':
+        return (
+          <NextMovesStack
+            moves={nextMoves.moves}
+            showRollout={releases.length > 1}
+            onDismiss={nextMoves.dismiss}
           />
         );
       case 'attention':

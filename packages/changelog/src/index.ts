@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.122.0",
+    date: "October 14, 2026",
+    highlights: [
+      "Next moves: after something happens on a rollout, Home and the rollout page show up to three things to do next, each one tap. Build the plan, run the distribution check, pitch Spotify editorial, start the next block of work, pitch more curators or invite your team. Tap the cross and that one never comes back.",
+    ],
+  },
+  {
     version: "1.121.0",
     date: "October 14, 2026",
     highlights: [
