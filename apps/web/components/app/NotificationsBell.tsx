@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { SignalIcon } from '@/components/app/BrandIcons';
-import { ChevronDown } from '@/components/icons';
+import { Bell, ChevronDown } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
@@ -465,14 +464,16 @@ export function NotificationsBell() {
         aria-label={badge.ariaLabel}
         className="motion-focus motion-press relative hidden h-10 w-10 place-items-center rounded-full text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary lg:grid"
       >
-        <SignalIcon className="h-[18px] w-[18px]" />
+        {/* A plain outline bell (URG-255, 2026-10-14: the "live" signal mark
+            read as one more thing to decode). Unread is a small dot, not a
+            number; the count is still spoken through aria-label. */}
+        <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
         {badge.visible ? (
           <span
             aria-hidden="true"
-            className="absolute -right-1 -top-1 grid min-h-[18px] min-w-[18px] place-items-center rounded-full border border-bg-base bg-brand px-1 text-[10px] font-semibold leading-none text-content-inverse"
-          >
-            {badge.label}
-          </span>
+            data-unread-dot
+            className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand ring-2 ring-bg-base"
+          />
         ) : null}
       </button>
 

@@ -10,6 +10,8 @@ import { ArtistNameGate } from '@/components/ArtistNameGate';
 import { AndroidAppBanner } from '@/components/app/AndroidAppBanner';
 import { TopNav } from '@/components/shell/TopNav';
 import { SubNav } from '@/components/shell/SubNav';
+import { Sidebar } from '@/components/shell/Sidebar';
+import { PageBar } from '@/components/shell/PageBar';
 import { BottomBar } from '@/components/shell/BottomBar';
 import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
@@ -59,7 +61,8 @@ const TALK_ENABLED = isChappiEnabled() && isUrgansRealtimeEnabled();
 // included) in the render-blocking bundle of every route, /auth included.
 // next/dynamic moves each into its own async chunk that loads after hydration.
 // ssr:false is safe: all render nothing on the server today. (HelpMenu moved
-// into the top bar's right cluster 2026-07-23 and rides its bundle now.)
+// into the top bar's right cluster 2026-07-23; since 2026-10-14 its rows are
+// in the account menu, useHelpMenuGroups.)
 // The search bar and the floating UrgAns launcher are workspace chrome: /auth
 // and the public pages never render them, yet as static imports their code
 // (and UrgAns's drawer behind it) rode in every route's first-load bundle,
@@ -95,7 +98,7 @@ const WhatsNewModal = dynamic(
   { ssr: false }
 );
 // Report a bug or a request. Mounted once for the same reason the planner
-// intake is: its entry points (the `?` HelpMenu, and a section in
+// intake is: its entry points (the account menu's help rows, and a section in
 // Settings → Account) live in different ownership islands, so they open it
 // through useReportIssueStore rather than each owning an instance.
 const ReportIssueDialog = dynamic(
@@ -550,18 +553,26 @@ export function AppShell({ children }: { children: ReactNode }) {
                 the capped tier yet. */}
             <UrgansUsageStrip />
             {/* The shell (design overhaul, 2026-10-04): a top bar of the six
-                areas, a second row of tabs for the area you are in, the page,
-                and on a phone a bottom bar. It replaces the left menu and the
-                right-hand column. */}
-            <TopNav userName={workspaceUserName} />
+                areas, the page, and on a phone a bottom bar.
+                URG-254 (founder call, 2026-10-14): on a computer the second
+                row of tabs is gone. The open area's pages run down a side
+                menu under the top bar (an open rollout's own menu nested
+                under Rollouts), and the page's name and tools sit in a page
+                bar above the page. An area with one page has no side menu.
+                On a phone, the tab row and the bottom bar, unchanged. */}
+            <TopNav userName={workspaceUserName} showHelp={showHelpMenu} />
             <SubNav />
-            <main
-              id="main-content"
-              tabIndex={-1}
-              className={`min-w-0 flex-1 px-4 focus:outline-none sm:px-5 lg:px-8 ${mainPaddingClass}`}
-            >
-              {children}
-            </main>
+            <div className="flex min-w-0 flex-1">
+              <Sidebar />
+              <main
+                id="main-content"
+                tabIndex={-1}
+                className={`min-w-0 flex-1 px-4 focus:outline-none sm:px-5 lg:px-8 ${mainPaddingClass}`}
+              >
+                <PageBar />
+                {children}
+              </main>
+            </div>
           </div>
         </div>
       ) : (
@@ -599,9 +610,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <BottomBar />
         </>
       ) : null}
-      {/* Gated on the same showHelpMenu the `?` launcher uses — signed in, not
-          mid-auth, not on a public page, not a curator. It opens from the help
-          menu and from Settings, both of which live inside that same set. */}
+      {/* Gated on the same showHelpMenu the account menu's help rows use —
+          signed in, not mid-auth, not on a public page, not a curator. It
+          opens from those rows and from Settings, both inside that same set. */}
       {REPORT_ISSUE_ENABLED && showHelpMenu ? <ReportIssueDialog /> : null}
       {/* Deliberately NO onStartTestRelease on this instance, unlike the two
           the first-release prompt opens (WorkspaceView, ChappiPageClient).

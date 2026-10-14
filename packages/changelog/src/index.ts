@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.126.0",
+    date: "October 14, 2026",
+    highlights: [
+      "On a computer, the pages of the part you are in are now in a menu down the left side. Open a rollout and its own menu sits right under Rollouts. You can fold the side menu away for more room.",
+      "The top bar is calmer. Your credits and the help links are in the menu under your name now.",
+    ],
+  },
+  {
     version: "1.125.3",
     date: "October 14, 2026",
     highlights: [

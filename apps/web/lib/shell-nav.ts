@@ -250,3 +250,40 @@ export function activeMobileTab(areas: ShellArea[], pathname: string): string {
   if (area.key === 'home' || area.key === 'catalogue' || area.key === 'pitching') return area.key;
   return 'more';
 }
+
+export type SideMenuPage = ShellSubTab & { active: boolean };
+
+export type SideMenu = {
+  /** The area on screen, whose pages these are. */
+  area: ShellArea;
+  /** Its pages, in shell-nav order, the one on screen lit. */
+  pages: SideMenuPage[];
+};
+
+/** The desktop side menu (URG-254; founder call 2026-10-14): the areas stay
+ *  across the top, and the side menu lists the open area's pages as parent
+ *  rows (a rollout's own menu nests under Rollouts, drawn by the rollout
+ *  screen). Null, and so no side menu at all, on a page in no area and in an
+ *  area with a single page. Catalogue always gets one, even with Rollouts as
+ *  its only page, because an open rollout's menu lives under that row. */
+export function shellSideMenu(areas: ShellArea[], pathname: string): SideMenu | null {
+  const area = activeShellArea(areas, pathname);
+  if (!area) return null;
+  const tabs = visibleSubTabs(area);
+  const pages = (tabs.length > 0 ? tabs : area.key === 'catalogue' ? area.subTabs : []).map((tab) => ({
+    ...tab,
+    active: tab.isActive(pathname),
+  }));
+  if (pages.length === 0) return null;
+  if (pages.length === 1 && area.key !== 'catalogue') return null;
+  return { area, pages };
+}
+
+/** The desktop page bar's title: the page on screen (the lit side-menu row,
+ *  or the area itself when it has one page). Null on a page in no area. */
+export function shellPageTitle(areas: ShellArea[], pathname: string): string | null {
+  const area = activeShellArea(areas, pathname);
+  if (!area) return null;
+  const tab = visibleSubTabs(area).find((candidate) => candidate.isActive(pathname));
+  return tab?.label ?? area.label;
+}

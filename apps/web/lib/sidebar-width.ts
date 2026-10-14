@@ -78,10 +78,12 @@ export const SIDEBAR_COLLAPSE_AT = 160;
 export const SIDEBAR_WIDTH_KEY = 'urganize.workspace.sidebar-width';
 export const SIDEBAR_WIDTH_VERSION = 1;
 
-/** Unchanged from when this lived in the component — an existing account's
- *  collapsed choice has to survive the move into the store. */
+/** Unchanged from when this lived in the component. The version went to 2
+ *  when the side menu came back (URG-254, 2026-10-14): a choice saved in the
+ *  pre-overhaul menu, which was deleted on 2026-10-04, should not fold the new
+ *  one for someone who has never seen it. */
 export const SIDEBAR_COLLAPSED_KEY = 'urganize.workspace.sidebar-collapsed';
-export const SIDEBAR_COLLAPSED_VERSION = 1;
+export const SIDEBAR_COLLAPSED_VERSION = 2;
 
 /** Arrow keys, and the same with shift held. Same steps as the rail: they are
  *  a property of a keyboard, not of which column is being resized. */

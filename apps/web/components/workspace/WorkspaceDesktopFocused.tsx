@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { SIDEBAR_SLOT_ROLLOUT, useSidebarSlot } from '@/components/shell/Sidebar';
 import Image from 'next/image';
 import { ChevronRight, Plus } from '@/components/icons';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
@@ -105,6 +107,7 @@ export function WorkspaceDesktopFocused({
   const tasksDone = scopedTasks.filter((t) => t.status === 'done').length;
   const motionProgress = tasksTotal > 0 ? Math.round((tasksDone / tasksTotal) * 100) : 0;
   const [failedCover, setFailedCover] = useState<string | null>(null);
+  const rolloutMenuSlot = useSidebarSlot(SIDEBAR_SLOT_ROLLOUT);
   const showCover = Boolean(card.coverArtUrl) && card.coverArtUrl !== failedCover;
   const date = formatDate(card.release.releaseDate);
   // The same derived status the Catalogue row shows, so opening a rollout
@@ -119,7 +122,8 @@ export function WorkspaceDesktopFocused({
   // Viewport-locked, as it has always been: the page never scrolls here; long
   // lists scroll inside the panel so the header and tabs never leave view. The
   // 10.5rem is the shell around it: top bar 4.5rem + section row 3.5rem + main's
-  // bottom padding 2.5rem.
+  // bottom padding 2.5rem. (Since URG-254 the section row is the page bar,
+  // PageBar's h-14, so the sum is unchanged.)
   return (
     <div className="workspace-mode-enter flex h-[calc(100dvh-10.5rem)] min-h-[30rem] flex-col gap-4">
       <div className="shrink-0">
@@ -210,14 +214,30 @@ export function WorkspaceDesktopFocused({
           ) : null}
         </div>
 
-        <div className="mt-4 border-b border-stroke-subtle pb-2">
-          <RolloutTabs
-            releaseId={scopedRelease.id}
-            share={share}
-            changeArtist={changeArtist}
-            archive={archive}
-          />
-        </div>
+        {/* The rollout's menu (URG-254, founder call 2026-10-14): nested
+            under Rollouts in the desktop side menu when it is on screen, and
+            a row of tabs here when the side menu is folded away. */}
+        {rolloutMenuSlot ? (
+          createPortal(
+            <RolloutTabs
+              releaseId={scopedRelease.id}
+              variant="side"
+              share={share}
+              changeArtist={changeArtist}
+              archive={archive}
+            />,
+            rolloutMenuSlot
+          )
+        ) : (
+          <div className="mt-4 border-b border-stroke-subtle pb-2">
+            <RolloutTabs
+              releaseId={scopedRelease.id}
+              share={share}
+              changeArtist={changeArtist}
+              archive={archive}
+            />
+          </div>
+        )}
       </div>
 
       {/* The panel. TasksPanel owns its own scroll, so this stacks the one-time

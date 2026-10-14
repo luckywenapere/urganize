@@ -13,6 +13,10 @@ import {
 
 type RolloutTabsProps = {
   releaseId: string;
+  /** `row` (default): a row of tabs under the rollout's header. `side`: the
+   *  same menu as a nested list, portalled into the desktop side menu under
+   *  Rollouts (URG-254, founder call 2026-10-14). */
+  variant?: 'row' | 'side';
   share?: RolloutMenuDialogInput | null;
   changeArtist?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
@@ -34,7 +38,7 @@ type RolloutTabsProps = {
  * (pitch kit polish, 2026-10-11): a live check found "Add cover art" and the
  * pitch kit sitting off-screen with nothing saying there was more.
  */
-export function RolloutTabs({ releaseId, share, changeArtist, archive }: RolloutTabsProps) {
+export function RolloutTabs({ releaseId, variant = 'row', share, changeArtist, archive }: RolloutTabsProps) {
   const actions = useRolloutMenuActions({
     releaseId,
     variant: 'rail',
@@ -46,6 +50,32 @@ export function RolloutTabs({ releaseId, share, changeArtist, archive }: Rollout
   const dialogs = actions.filter((action) => action.isActive === undefined && !action.href);
 
   if (places.length === 0 && dialogs.length === 0) return null;
+
+  if (variant === 'side') {
+    // Nested under Rollouts in the side menu: every place one per row, then
+    // the three dialog actions as rows after a hairline, since a narrow
+    // column has room for them and an overflow button would hide them.
+    return (
+      <nav aria-label="Rollout" data-tour="rollout-menu">
+        <ul className="flex flex-col gap-0.5">
+          {places.map((action) => (
+            <li key={action.key}>
+              <SideRow action={action} />
+            </li>
+          ))}
+        </ul>
+        {dialogs.length > 0 ? (
+          <ul className="mt-1.5 flex flex-col gap-0.5 border-t border-stroke-subtle pt-1.5">
+            {dialogs.map((action) => (
+              <li key={action.key}>
+                <SideRow action={action} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </nav>
+    );
+  }
 
   return (
     <nav aria-label="Rollout" data-tour="rollout-menu" className="flex items-center gap-1">
@@ -160,6 +190,56 @@ function Tab({ action }: { action: RolloutMenuAction }) {
       }}
       aria-pressed={lit}
       className={tabClass(lit)}
+    >
+      {content}
+    </button>
+  );
+}
+
+function sideRowClass(lit: boolean): string {
+  return `motion-focus flex min-h-9 w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-[13px] transition-[color,background-color,opacity] disabled:opacity-40 ${
+    lit
+      ? 'bg-bg-hover/70 font-medium text-content-primary'
+      : 'text-content-secondary opacity-70 hover:bg-bg-hover/50 hover:text-content-primary hover:opacity-100'
+  }`;
+}
+
+/** One row of a rollout's menu in the side menu: the same three kinds as the
+ *  tabs (a scene, the Notes link, a dialog), the same stall watch. */
+function SideRow({ action }: { action: RolloutMenuAction }) {
+  const lit = Boolean(action.isActive);
+  const Icon = action.icon;
+  const content = (
+    <>
+      <Icon className={`h-4 w-4 shrink-0 ${lit ? 'text-brand' : 'text-content-tertiary'}`} aria-hidden="true" />
+      <span className="min-w-0 truncate">{action.label}</span>
+    </>
+  );
+
+  if (action.href) {
+    return (
+      <Link href={action.href} className={sideRowClass(false)}>
+        {content}
+      </Link>
+    );
+  }
+
+  const isPlace = action.isActive !== undefined;
+  return (
+    <button
+      type="button"
+      disabled={action.disabled}
+      onClick={() => {
+        if (isPlace) {
+          watchNavigationStall(
+            `rollout_menu:${action.key}`,
+            sceneRowTarget(window.location.href, action.key, lit)
+          );
+        }
+        action.onClick();
+      }}
+      aria-pressed={isPlace ? lit : undefined}
+      className={sideRowClass(lit)}
     >
       {content}
     </button>
