@@ -189,8 +189,9 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
   );
   const addButton = renderAddButton();
 
-  // On desktop the count and Add rollout sit in the section tab row (founder
-  // mock, 2026-10-11); phones keep them on the card, since that row scrolls.
+  // On desktop the count and Add rollout sit in the top bar (founder mock,
+  // 2026-10-11, in the tab row then; the top bar since URG-255, 2026-10-14,
+  // whose slots are desktop only). Below `lg` they stay on the card.
   const [slots, setSlots] = useState<{ start: HTMLElement | null; end: HTMLElement | null }>({ start: null, end: null });
   useEffect(() => {
     setSlots({ start: document.getElementById(SUBNAV_SLOT_START), end: document.getElementById(SUBNAV_SLOT_END) });
@@ -315,7 +316,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
       ) : null}
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-        <div className={`flex items-center justify-between gap-3 px-4 py-3 sm:px-5 ${inSubNav ? 'md:hidden' : ''}`}>
+        <div className={`flex items-center justify-between gap-3 px-4 py-3 sm:px-5 ${inSubNav ? 'lg:hidden' : ''}`}>
           <p className="text-sm text-content-secondary" aria-live="polite">
             {totalLabel}
           </p>
@@ -323,14 +324,14 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
         </div>
         {inSubNav && slots.start
           ? createPortal(
-              <p className="hidden whitespace-nowrap pl-3 text-sm text-content-secondary md:block">{totalLabel}</p>,
+              <p className="hidden whitespace-nowrap text-sm text-content-secondary lg:block">{totalLabel}</p>,
               slots.start
             )
           : null}
-        {inSubNav && slots.end ? createPortal(<div className="hidden md:block">{addButton}</div>, slots.end) : null}
+        {inSubNav && slots.end ? createPortal(<div className="hidden lg:block">{addButton}</div>, slots.end) : null}
 
         {visible.length === 0 ? (
-          <div className={`border-t border-stroke-subtle px-5 py-10 ${inSubNav ? 'md:border-t-0' : ''}`}>
+          <div className={`border-t border-stroke-subtle px-5 py-10 ${inSubNav ? 'lg:border-t-0' : ''}`}>
             <EmptyState
               title="No rollouts match that"
               description="Try a different word or filter, or clear them to see everything."
@@ -349,7 +350,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
             />
           </div>
         ) : view === 'cards' ? (
-          <div className={`hidden grid-cols-2 gap-4 border-stroke-subtle p-4 md:grid ${inSubNav ? '' : 'border-t'} xl:grid-cols-3 2xl:grid-cols-4`}>
+          <div className={`hidden grid-cols-2 gap-4 border-stroke-subtle p-4 md:grid border-t ${inSubNav ? 'lg:border-t-0' : ''} xl:grid-cols-3 2xl:grid-cols-4`}>
             {visible.map((row) => (
               <WorkspaceReleaseCard
                 key={row.id}
@@ -375,7 +376,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
           <div className={view === 'cards' ? 'md:hidden' : ''}>
             <div
               role="row"
-              className={`hidden ${inSubNav ? 'border-b' : 'border-y'} border-stroke-subtle px-5 py-3 text-xs font-medium text-content-tertiary md:grid md:gap-4 ${COLUMNS}`}
+              className={`hidden ${inSubNav ? 'border-y lg:border-t-0' : 'border-y'} border-stroke-subtle px-5 py-3 text-xs font-medium text-content-tertiary md:grid md:gap-4 ${COLUMNS}`}
             >
               <span role="columnheader">Rollout</span>
               <span role="columnheader">Status</span>

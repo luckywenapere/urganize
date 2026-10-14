@@ -7,13 +7,11 @@ import { usePathname } from 'next/navigation';
 import { Logo } from '@urganize/ui';
 import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
-import { HelpMenu } from '@/components/app/HelpMenu';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { activeShellArea, buildShellAreas, readShellFlags } from '@/lib/shell-nav';
 import { useShellStore } from '@/stores/useShellStore';
 import { useHomeChatStore } from '@/stores/useHomeChatStore';
-import { CreditsChip } from './CreditsChip';
 import { useArtistFilterSync } from './useArtistFilter';
 import { useNavTip } from './useNavTip';
 
@@ -65,10 +63,21 @@ import { useNavTip } from './useNavTip';
  * subscription, and the panel More opens is drawn from here). The desktop bar
  * is exactly as it was.
  *
+ * URG-255 (2026-10-14; design review with Femi, 2026-10-13: credits, help,
+ * the bell and search all competed for the eye): the right of the bar is now
+ * search, a plain outline bell and the account menu, nothing else. The credits
+ * chip is gone (the balance is a row in the account menu, with a warning dot
+ * on its icon when low) and so is the `?` button (its rows are in the account
+ * menu too, behind the same showHelpMenu gate). The pills stay centred
+ * (founder call, 2026-10-14: "i even liked the central layout of the top
+ * menu"); the open area's pages moved from the tab row under this bar into
+ * the side menu (Sidebar.tsx), and the page's name and tools into the page
+ * bar above the page (PageBar.tsx).
+ *
  * Every destination comes from lib/shell-nav.ts, so what is offered here, in the
  * sub-tab row and on a phone cannot disagree.
  */
-export function TopNav({ userName }: { userName?: string }) {
+export function TopNav({ userName, showHelp = false }: { userName?: string; showHelp?: boolean }) {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
   const active = activeShellArea(areas, pathname);
@@ -145,18 +154,12 @@ export function TopNav({ userName }: { userName?: string }) {
           >
             <Search className="h-[18px] w-[18px]" aria-hidden="true" />
           </button>
-          <span className="hidden lg:contents">
-            <CreditsChip />
-          </span>
-          <span className="hidden xl:contents">
-            <HelpMenu />
-          </span>
           {/* Mounted at every width (see the note above); its own button is
               desktop only and More opens its panel on a phone. The search
               button before it is desktop only too: on a phone search is the
               first row of More. */}
           <NotificationsBell />
-          <WorkspaceMenu userName={userName} className="hidden lg:block" />
+          <WorkspaceMenu userName={userName} showHelp={showHelp} className="hidden lg:block" />
         </div>
       </div>
     </header>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ExitIcon, GearIcon, ProfileIcon } from '@/components/app/BrandIcons';
 import { useAuthStore } from '@/lib/auth-store';
@@ -8,7 +9,9 @@ import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { ProfileFace } from '@/components/shared/ProfileFace';
 import { useArtistFilterOptions } from '@/components/shell/useArtistFilter';
-import { Check, Users } from '@/components/icons';
+import { Check, Sparkles, Users } from '@/components/icons';
+import { useUrgansUsage } from '@/components/app/useUrgansUsage';
+import { useHelpMenuGroups } from '@/components/app/HelpMenu';
 
 type WorkspaceMenuProps = {
   /** Display name shown in the menu's identity header. The trigger itself
@@ -18,14 +21,19 @@ type WorkspaceMenuProps = {
    * below lg when MobileNavBar's "You" tab already covers Settings/sign-out
    * there. */
   className?: string;
+  /** The help rows (Report an issue, Docs, Contact us, Community, tour replay)
+   *  that used to sit behind the top bar's `?` button. AppShell's showHelpMenu
+   *  gate decides, exactly as it decided the `?` button. */
+  showHelp?: boolean;
 };
 
 /**
- * Top-bar workspace menu. Replaces the avatar slot that briefly lived in the
- * topbar (and the workspace identity that lived in the sidebar footer pre-
- * Stage-2). Renders a round person-icon trigger; clicking opens a small menu
- * with exactly two items: Settings (navigates to /settings) and Sign out
- * (calls the existing useAuthStore.logout flow, then redirects to /auth).
+ * The account menu at the right of the desktop top bar. The trigger is the
+ * person icon (with a warning dot only when credits are low); since URG-255
+ * (2026-10-14) the menu holds, top to bottom: who you are and which team, the artist
+ * filter (when there is more than one artist), Settings, the credit balance
+ * (when credits are on), the help rows that used to sit behind the `?` button,
+ * and Sign out (the existing useAuthStore.logout flow, then /auth).
  *
  * Sign-out path is intentionally identical to the existing Settings → Log out
  * button (app/settings/page.tsx:710-715): await logout(); router.push('/auth').
@@ -42,7 +50,7 @@ type WorkspaceMenuProps = {
  *     handle this — it closes the menu via the outside-click handler)
  *   - Outside click closes
  */
-export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
+export function WorkspaceMenu({ userName, className, showHelp = false }: WorkspaceMenuProps) {
   const router = useRouter();
   const openSettings = useOpenSettings();
   const logout = useAuthStore((state) => state.logout);
@@ -54,10 +62,22 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
   // Listed only when the roster has more than one artist.
   const { options: artistOptions, select: selectArtist } = useArtistFilterOptions();
   const settingsIndex = artistOptions.length;
+  // Credits moved here from the top bar's chip (URG-255, 2026-10-14): one row,
+  // "N credits", linking to the credit history. Nothing while the balance is
+  // unknown or credits are off, exactly as the chip behaved.
+  const credits = useUrgansUsage()?.credits ?? null;
+  const creditTotal = credits ? Math.max(0, Math.floor(credits.total)) : 0;
+  const creditLabel = `${creditTotal.toLocaleString('en')} ${creditTotal === 1 ? 'credit' : 'credits'}`;
+  const creditsIndex = settingsIndex + 1;
+  const helpGroups = useHelpMenuGroups();
+  const helpItems = showHelp ? helpGroups.flat() : [];
+  const helpStart = creditsIndex + (credits ? 1 : 0);
+  const signOutIndex = helpStart + helpItems.length;
+  const displayName = userName?.trim() || 'Urganize';
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const itemRefs = useRef<Array<HTMLButtonElement | HTMLAnchorElement | null>>([]);
 
   const closeMenu = useCallback((returnFocus = false) => {
     setOpen(false);
@@ -109,9 +129,13 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
     }
   }, [open]);
 
-  const handleItemKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const items = itemRefs.current.filter(Boolean) as HTMLButtonElement[];
+  const handleItemKeyDown = (event: KeyboardEvent<HTMLElement>, index: number) => {
+    const items = itemRefs.current.filter(Boolean) as HTMLElement[];
     if (items.length === 0) return;
+    // Where this item sits among the rows on screen. The rows that come and go
+    // (artists, credits, help) leave no gaps this way.
+    const found = items.indexOf(event.currentTarget);
+    index = found >= 0 ? found : index;
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
@@ -148,12 +172,20 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Team menu"
-        className="motion-focus motion-press grid h-10 w-10 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        aria-label={credits?.low ? 'Team menu, credits are low' : 'Team menu'}
+        className="motion-focus motion-press relative grid h-10 w-10 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
       >
         {/* Person icon, not initials (founder call, 2026-07-23) — drawn in
-            the house style like the rest of the topbar set. */}
+            the house style like the rest of the top bar set. The warning dot
+            shows only when credits are low (URG-255). */}
         <ProfileIcon className="h-[18px] w-[18px]" />
+        {credits?.low ? (
+          <span
+            aria-hidden="true"
+            data-credits-low-dot
+            className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-status-warning ring-2 ring-bg-base"
+          />
+        ) : null}
       </button>
 
       {open ? (
@@ -161,7 +193,7 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
           ref={menuRef}
           role="menu"
           aria-label="Team menu"
-          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-60 origin-top-right overflow-hidden rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
+          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           {/* Stage 2: the "Oyin / Workspace" identity used to live in the
               sidebar footer. With the sidebar gone it lives here, as a
@@ -179,7 +211,7 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-content-primary">
-                {userName?.trim() || 'Urganize'}
+                {displayName}
               </p>
               <p className="truncate text-[11px] text-content-tertiary">
                 {workspaceName.trim() || 'Your team'}
@@ -237,14 +269,58 @@ export function WorkspaceMenu({ userName, className }: WorkspaceMenuProps) {
             <GearIcon className="h-4 w-4 text-content-tertiary" />
             Settings
           </button>
+          {credits ? (
+            <Link
+              ref={(el) => {
+                itemRefs.current[creditsIndex] = el;
+              }}
+              href="/dashboard/credits"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              onKeyDown={(event) => handleItemKeyDown(event, creditsIndex)}
+              aria-label={`${creditLabel} left. Open credit history`}
+              className={`motion-focus flex w-full items-center gap-3 px-3 py-2.5 text-sm tabular-nums transition-colors hover:bg-bg-hover focus:bg-bg-hover ${
+                credits.low ? 'text-status-warning' : 'text-content-primary'
+              }`}
+            >
+              <Sparkles className={`h-4 w-4 ${credits.low ? 'text-status-warning' : 'text-content-tertiary'}`} aria-hidden="true" />
+              {creditLabel}
+            </Link>
+          ) : null}
+          {helpItems.length > 0 ? (
+            <div role="group" aria-label="Help" className="border-t border-stroke-subtle py-1">
+              {helpItems.map((item, offset) => {
+                const index = helpStart + offset;
+                return (
+                  <button
+                    key={item.label}
+                    ref={(el) => {
+                      itemRefs.current[index] = el;
+                    }}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpen(false);
+                      item.onClick();
+                    }}
+                    onKeyDown={(event) => handleItemKeyDown(event, index)}
+                    className="motion-focus flex w-full items-center gap-3 px-3 py-2 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-content-tertiary"
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
           <button
             ref={(el) => {
-              itemRefs.current[settingsIndex + 1] = el;
+              itemRefs.current[signOutIndex] = el;
             }}
             type="button"
             role="menuitem"
             onClick={() => void handleSignOut()}
-            onKeyDown={(event) => handleItemKeyDown(event, settingsIndex + 1)}
+            onKeyDown={(event) => handleItemKeyDown(event, signOutIndex)}
             className="motion-focus flex w-full items-center gap-3 border-t border-stroke-subtle px-3 py-2.5 text-sm text-content-primary transition-colors hover:bg-bg-hover focus:bg-bg-hover"
           >
             <ExitIcon className="h-4 w-4 text-content-tertiary" />
