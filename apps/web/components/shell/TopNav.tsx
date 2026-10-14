@@ -1,14 +1,15 @@
 'use client';
 
 import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
+import { useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@urganize/ui';
 import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
-import { activeShellArea } from '@/lib/shell-nav';
+import { HOME_HREF, activeShellArea } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
 import { useShellStore } from '@/stores/useShellStore';
 import { useHomeChatStore } from '@/stores/useHomeChatStore';
@@ -74,6 +75,12 @@ import { useNavTip } from './useNavTip';
  * the side menu (Sidebar.tsx), and the page's name and tools into the page
  * bar above the page (PageBar.tsx).
  *
+ * UrgAns pill (founder, 2026-10-15): right after Home. Pressing Home while on
+ * Home folds Home's left column so the chat fills the width; that view IS
+ * UrgAns, so the UrgAns pill lights instead of Home and takes keyboard focus.
+ * Pressing UrgAns anywhere opens that same view (Home, chat full width);
+ * pressing Home brings Home's column back.
+ *
  * Every destination comes from lib/shell-nav.ts, so what is offered here, in the
  * sub-tab row and on a phone cannot disagree.
  */
@@ -84,6 +91,13 @@ export function TopNav({ userName, showHelp = false }: { userName?: string; show
   const openCommand = useShellStore((state) => state.openCommand);
   const tip = useNavTip();
   const listCollapsed = useHomeChatStore((state) => state.listCollapsed);
+  const router = useRouter();
+  const urgansPill = useRef<HTMLAnchorElement | null>(null);
+  const onHome = pathname === HOME_HREF;
+  // Home with its column folded: the chat fills the screen, which is UrgAns.
+  const urgansOpenOnHome = onHome && listCollapsed;
+  // After the view switches, the pill that now names it takes focus.
+  const focusUrgans = () => requestAnimationFrame(() => urgansPill.current?.focus());
   useArtistFilterSync();
 
   return (
@@ -112,19 +126,38 @@ export function TopNav({ userName, showHelp = false }: { userName?: string; show
           {areas.map((area) => {
             // With Home's left column folded away the pill reads as off, so it
             // says the column is hidden and pressing it brings it back.
-            const isActive = active?.key === area.key && !(area.key === 'home' && listCollapsed);
+            const isActive =
+              area.key === 'urgans'
+                ? active?.key === 'urgans' || urgansOpenOnHome
+                : active?.key === area.key && !(area.key === 'home' && listCollapsed);
             return (
               <Link
                 key={area.key}
                 href={area.href}
+                ref={area.key === 'urgans' ? urgansPill : undefined}
                 {...tip.bind(area.key)}
                 onClick={(event) => {
                   if (area.key === 'catalogue') leaveReleaseForCatalog();
-                  // On Home, the Home pill folds Home's left column away so the
-                  // chat fills the width; pressing it again brings it back.
-                  if (area.key === 'home' && pathname === area.href) {
+                  if (area.key === 'home') {
+                    if (onHome) {
+                      // On Home, the Home pill folds Home's left column away so
+                      // the chat fills the width (UrgAns, which lights and takes
+                      // focus); pressing it again brings the column back.
+                      event.preventDefault();
+                      const willCollapse = !listCollapsed;
+                      useHomeChatStore.getState().setListCollapsed(willCollapse);
+                      if (willCollapse) focusUrgans();
+                    } else {
+                      // Arriving from elsewhere, Home opens as Home.
+                      useHomeChatStore.getState().setListCollapsed(false);
+                    }
+                  }
+                  if (area.key === 'urgans' && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
+                    // The UrgAns pill opens Home's chat full width.
                     event.preventDefault();
-                    useHomeChatStore.getState().toggleListCollapsed();
+                    useHomeChatStore.getState().setListCollapsed(true);
+                    if (!onHome) router.push(HOME_HREF);
+                    focusUrgans();
                   }
                 }}
                 aria-current={isActive ? 'page' : undefined}

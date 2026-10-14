@@ -1,7 +1,7 @@
 // The app's navigation, as data (design overhaul, 2026-10-04).
 //
-// One top bar of six areas (the strategy doc's seven, with UrgAns carried by the
-// floating button instead of a pill), a second row of tabs for the area you are
+// One top bar of areas (UrgAns got its own pill after Home on 2026-10-15; the
+// floating button stays as its door on other screens), a second row of tabs for the area you are
 // in, and a bottom bar on a phone. Everything the desktop top bar, the sub-tab
 // row, the phone's bottom bar and its "More" sheet show comes from here, so they
 // cannot disagree about what exists, what it is called or where it goes.
@@ -12,6 +12,7 @@
 
 export type ShellAreaKey =
   | 'home'
+  | 'urgans'
   | 'catalogue'
   | 'relationships'
   | 'opportunities'
@@ -72,6 +73,7 @@ export function readShellFlags(): ShellFlags {
 }
 
 export const HOME_HREF = '/dashboard/home';
+export const URGANS_HREF = '/dashboard/urgans';
 export const CATALOGUE_HREF = '/dashboard';
 export const DISTRIBUTE_HREF = '/dashboard/distribute';
 
@@ -145,6 +147,18 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       live: true,
       subTabs: [],
       isActive: (p) => startsWithPath(p, HOME_HREF),
+    },
+    // UrgAns sits right after Home on the desktop top bar (founder, 2026-10-15).
+    // On a desktop the pill opens Home's chat full width (TopNav), the same view
+    // pressing Home again on Home gives, and lights while that view is up. Its
+    // href is the assistant's own page, for a new tab or a direct link.
+    {
+      key: 'urgans',
+      label: 'UrgAns',
+      href: URGANS_HREF,
+      live: true,
+      subTabs: [],
+      isActive: (p) => startsWithPath(p, URGANS_HREF),
     },
     {
       key: 'catalogue',
@@ -229,7 +243,7 @@ export function buildMoreItems(
 
 /** Which bottom-bar tab is lit. More lights for any area it holds. */
 export function activeMobileTab(areas: ShellArea[], pathname: string): string {
-  if (startsWithPath(pathname, '/dashboard/urgans')) return 'urgans';
+  if (startsWithPath(pathname, URGANS_HREF)) return 'urgans';
   const area = activeShellArea(areas, pathname);
   if (!area) return 'more';
   if (area.key === 'home' || area.key === 'catalogue') return area.key;

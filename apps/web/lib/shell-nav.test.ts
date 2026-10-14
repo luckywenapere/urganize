@@ -29,10 +29,11 @@ const ALL_OFF: ShellFlags = {
 };
 
 describe('shell nav', () => {
-  it('always offers the five areas in the strategy order (Pitching lives inside each rollout)', () => {
+  it('always offers the six areas in the strategy order (UrgAns after Home; Pitching lives inside each rollout)', () => {
     for (const flags of [ALL_ON, ALL_OFF]) {
       expect(buildShellAreas(flags).map((a) => a.key)).toEqual([
         'home',
+        'urgans',
         'catalogue',
         'relationships',
         'opportunities',
@@ -46,6 +47,7 @@ describe('shell nav', () => {
     const live = Object.fromEntries(areas.map((a) => [a.key, a.live]));
     expect(live).toEqual({
       home: true,
+      urgans: true,
       catalogue: true,
       relationships: false,
       opportunities: true,
@@ -104,7 +106,7 @@ describe('shell nav', () => {
     expect(at('/dashboard/opportunities')).toBe('opportunities');
     expect(at('/dashboard/audience')).toBe('audience');
     expect(at('/dashboard/shows/e1')).toBe('relationships');
-    expect(at('/dashboard/urgans')).toBeNull();
+    expect(at('/dashboard/urgans')).toBe('urgans');
     expect(at('/dashboard/credits')).toBeNull();
     expect(at('/settings')).toBeNull();
   });

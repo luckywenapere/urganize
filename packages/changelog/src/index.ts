@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.137.0",
+    date: "October 15, 2026",
+    highlights: [
+      "On a computer, UrgAns now has its own tab in the top menu, right after Home. It opens Home's chat across the full width.",
+      "Pressing Home again while you're on Home still widens the chat, and now the UrgAns tab lights up to show you're there. Press Home to bring Home back.",
+    ],
+  },
+  {
     version: "1.136.0",
     date: "October 15, 2026",
     highlights: [
