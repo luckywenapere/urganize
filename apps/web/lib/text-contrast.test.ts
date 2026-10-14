@@ -55,6 +55,10 @@ const THEMES: Array<[string, string]> = [
   ['dark (:root)', ':root'],
   ['dark (data-theme)', "html[data-theme='dark']"],
   ['light', "html[data-theme='light']"],
+  // Palette preview (URG-256): the three candidates the founder is choosing between.
+  ['palette orange', "html[data-palette='orange']"],
+  ['palette green', "html[data-palette='green']"],
+  ['palette forest', "html[data-palette='forest']"],
 ];
 
 describe('text tiers keep 4.5:1 on every ground', () => {
@@ -196,4 +200,17 @@ describe('field borders on the dark-locked pages and the calendar', () => {
     expect(contrast(blend(cream, ink, Number(dark![1])), ink)).toBeGreaterThanOrEqual(3);
     expect(contrast(blend(inkText, cream, Number(light![1])), cream)).toBeGreaterThanOrEqual(3);
   });
+});
+
+describe('palette preview accents (URG-256)', () => {
+  for (const name of ['orange', 'green', 'forest']) {
+    const scope = block(`html[data-palette='${name}']`);
+    it(`the ${name} accent is 4.5:1 on every ground, and its button label is 4.5:1 on it`, () => {
+      const brand = token(scope, 'color-brand');
+      for (const ground of CONTROL_GROUNDS) {
+        expect(contrast(brand, token(scope, ground)), ground).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(contrast(token(scope, 'color-text-inverse'), brand)).toBeGreaterThanOrEqual(4.5);
+    });
+  }
 });

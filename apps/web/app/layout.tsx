@@ -155,6 +155,27 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   root.classList.add(resolved);
                 } catch (_) {}
               })();
+              (function () {
+                // Palette preview (URG-256). ?palette=orange|green|forest turns
+                // one on for this browser; any other value turns it off. With
+                // none set this does nothing. Palettes are dark-only.
+                try {
+                  var key = 'urganize.palette';
+                  var allowed = { orange: 1, green: 1, forest: 1 };
+                  var param = new URLSearchParams(window.location.search).get('palette');
+                  if (param !== null) {
+                    if (allowed[param] === 1) localStorage.setItem(key, param);
+                    else localStorage.removeItem(key);
+                  }
+                  var palette = localStorage.getItem(key);
+                  if (!palette || allowed[palette] !== 1) return;
+                  var root = document.documentElement;
+                  root.dataset.palette = palette;
+                  root.dataset.theme = 'dark';
+                  root.classList.remove('light');
+                  root.classList.add('dark');
+                } catch (_) {}
+              })();
             `,
           }}
         />

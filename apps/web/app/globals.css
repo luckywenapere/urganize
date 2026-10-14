@@ -374,6 +374,186 @@ html[data-theme='light'] {
   --urg-thread-gold-strong: rgb(var(--color-status-warning) / 0.055);
 }
 
+/* ---- Palette preview (URG-256 / URG-257, 2026-10-14) ----------------------
+   Three candidate palettes from the 2026-10-13 design review, for the founder
+   to pick from. Opt-in only: the pre-hydration script in app/layout.tsx sets
+   data-palette on <html> from ?palette=orange|green|forest (kept in
+   localStorage as urganize.palette; any other value clears it). With no
+   palette set nothing below applies, so the default render is unchanged.
+
+   Every palette is dark (the script forces data-theme='dark' while one is
+   on), sits on a plain ground (no grid, no weave, no band tint), and holds
+   the text hierarchy at token level: primary is full strength, secondary
+   (inactive nav, meta, secondary labels) sits near 60% and tertiary near 55%,
+   both still 4.5:1 on every ground. Controls keep 3:1.
+   lib/text-contrast.test.ts holds all three.
+
+   Phase 2, once one is chosen: fold it into :root, delete the other two
+   blocks, the script and the ornament overrides that follow. */
+
+html[data-palette='orange'] {
+  /* (A) near-black base, orange accent */
+  color-scheme: dark;
+  --color-bg-base: 12 12 13;
+  --color-bg-sidebar: 17 17 19;
+  --color-bg-sidebar-active: 32 32 35;
+  --color-bg-surface: 23 23 25;
+  --color-bg-elevated: 27 27 30;
+  --color-bg-overlay: 20 20 22;
+  --color-bg-hover: 32 32 35;
+  --color-bg-active: 32 32 35;
+  --color-brand: 255 140 66;
+  --color-brand-hover: 255 160 98;
+  --color-text-primary: 242 242 240;
+  --color-text-secondary: 146 146 145;
+  --color-text-tertiary: 138 138 137;
+  --color-text-quaternary: 62 62 64;
+  --color-text-inverse: 12 12 13;
+  --color-stroke: 242 242 240;
+  --color-stroke-control: 112 112 112;
+  --color-skeleton-base: 27 27 30;
+  --color-skeleton-highlight: 40 40 44;
+
+  --bg-base: #0c0c0d;
+  --bg-sidebar: #111113;
+  --bg-sidebar-active: #202023;
+  --bg-surface: #171719;
+  --bg-elevated: #1b1b1e;
+  --bg-overlay: #141416;
+  --bg-hover: #202023;
+  --bg-active: #202023;
+
+  --brand-primary: #ff8c42;
+  --brand-primary-hover: #ffa062;
+  --brand-primary-muted: rgba(255, 140, 66, 0.14);
+  --brand-primary-subtle: rgba(255, 140, 66, 0.08);
+
+  --text-primary: #f2f2f0;
+  --text-secondary: rgb(var(--color-text-secondary));
+  --text-tertiary: rgb(var(--color-text-tertiary));
+  --text-quaternary: #3e3e40;
+  --text-inverse: #0c0c0d;
+
+  --border-subtle: rgba(242, 242, 240, 0.04);
+  --border-default: rgba(242, 242, 240, 0.07);
+  --border-strong: rgba(242, 242, 240, 0.11);
+  --border-control: rgb(var(--color-stroke-control));
+  --border-focus: #ff8c42;
+}
+
+html[data-palette='green'] {
+  /* (B) near-black base, green accent */
+  color-scheme: dark;
+  --color-bg-base: 12 12 13;
+  --color-bg-sidebar: 17 17 19;
+  --color-bg-sidebar-active: 32 32 35;
+  --color-bg-surface: 23 23 25;
+  --color-bg-elevated: 27 27 30;
+  --color-bg-overlay: 20 20 22;
+  --color-bg-hover: 32 32 35;
+  --color-bg-active: 32 32 35;
+  --color-brand: 127 217 154;
+  --color-brand-hover: 146 224 170;
+  --color-text-primary: 242 242 240;
+  --color-text-secondary: 146 146 145;
+  --color-text-tertiary: 138 138 137;
+  --color-text-quaternary: 62 62 64;
+  --color-text-inverse: 12 12 13;
+  --color-stroke: 242 242 240;
+  --color-stroke-control: 112 112 112;
+  --color-skeleton-base: 27 27 30;
+  --color-skeleton-highlight: 40 40 44;
+
+  --bg-base: #0c0c0d;
+  --bg-sidebar: #111113;
+  --bg-sidebar-active: #202023;
+  --bg-surface: #171719;
+  --bg-elevated: #1b1b1e;
+  --bg-overlay: #141416;
+  --bg-hover: #202023;
+  --bg-active: #202023;
+
+  --brand-primary: #7fd99a;
+  --brand-primary-hover: #92e0aa;
+  --brand-primary-muted: rgba(127, 217, 154, 0.14);
+  --brand-primary-subtle: rgba(127, 217, 154, 0.08);
+
+  --text-primary: #f2f2f0;
+  --text-secondary: rgb(var(--color-text-secondary));
+  --text-tertiary: rgb(var(--color-text-tertiary));
+  --text-quaternary: #3e3e40;
+  --text-inverse: #0c0c0d;
+
+  --border-subtle: rgba(242, 242, 240, 0.04);
+  --border-default: rgba(242, 242, 240, 0.07);
+  --border-strong: rgba(242, 242, 240, 0.11);
+  --border-control: rgb(var(--color-stroke-control));
+  --border-focus: #7fd99a;
+}
+
+html[data-palette='forest'] {
+  /* (C) dark green base, white accent (the older catalogue-only look) */
+  color-scheme: dark;
+  --color-bg-base: 13 40 28;
+  --color-bg-sidebar: 16 46 32;
+  --color-bg-sidebar-active: 28 64 47;
+  --color-bg-surface: 20 52 37;
+  --color-bg-elevated: 23 57 41;
+  --color-bg-overlay: 18 48 34;
+  --color-bg-hover: 28 64 47;
+  --color-bg-active: 28 64 47;
+  --color-brand: 255 255 255;
+  --color-brand-hover: 226 236 231;
+  --color-text-primary: 255 255 255;
+  --color-text-secondary: 170 180 175;
+  --color-text-tertiary: 158 169 164;
+  --color-text-quaternary: 48 84 66;
+  --color-text-inverse: 13 40 28;
+  --color-stroke: 255 255 255;
+  --color-stroke-control: 122 148 135;
+  --color-skeleton-base: 23 57 41;
+  --color-skeleton-highlight: 34 72 54;
+
+  --bg-base: #0d281c;
+  --bg-sidebar: #102e20;
+  --bg-sidebar-active: #1c402f;
+  --bg-surface: #143425;
+  --bg-elevated: #173929;
+  --bg-overlay: #123022;
+  --bg-hover: #1c402f;
+  --bg-active: #1c402f;
+
+  --brand-primary: #ffffff;
+  --brand-primary-hover: #e2ece7;
+  --brand-primary-muted: rgba(255, 255, 255, 0.14);
+  --brand-primary-subtle: rgba(255, 255, 255, 0.08);
+
+  --text-primary: #ffffff;
+  --text-secondary: rgb(var(--color-text-secondary));
+  --text-tertiary: rgb(var(--color-text-tertiary));
+  --text-quaternary: #305442;
+  --text-inverse: #0d281c;
+
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-default: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.11);
+  --border-control: rgb(var(--color-stroke-control));
+  --border-focus: #ffffff;
+}
+
+/* Plain ground under every palette: no 36px grid, no textile weave, no inset
+   frame, no grounds behind the entrances, no brand tint in the top band. */
+html[data-palette] body::before,
+html[data-palette] body::after,
+html[data-palette] .urg-ground-sunburst,
+html[data-palette] .urg-ground-ikat,
+html[data-palette] .urg-glyph-kuba {
+  display: none;
+}
+html[data-palette] .shell-band::before {
+  background-image: none;
+}
+
 /* The wordmark PNG and the square icon mark (packages/ui/src/Logo.tsx) are
    solid white on transparent — correct on dark's near-black canvas,
    invisible on light's near-white one. Dark is the CSS baseline (:root), so

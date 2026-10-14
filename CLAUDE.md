@@ -14580,6 +14580,18 @@ From `Urganize_Profiles_and_Directory_Spec.docx` (Oct 9, 2026), step 1: three fi
 5. **Guards:** `lib/work-requests-wiring-guard.test.ts` reads the real route sources (comments stripped) and fails if a handler stops going through the rules; `lib/directory-schema-guard.test.ts` holds the status list in step with the CHECK. Nine deliberate breaks (stale boundary inclusive, closed availability allowed, non-waiting rows stale, expiry days changed, waiting in the reply denominator, expired read as waiting, the cap counting stale rows, the answer update ignoring the cutoff, the sweep touching non-waiting rows) were each caught by a named test.
 6. **Not verified:** nothing has run against a real database or a real session. No request has closed for real, the sweep has never run, the migration is unapplied, and `/admin/directory` has not rendered with real data.
 
+## Palette preview: three candidates behind ?palette (2026-10-14, URG-256 / URG-257, no flag)
+
+From Femi's design review (2026-10-13): the 36px grid and textile weave behind the app overload small text, the all-green palette is monotonous, and every item reads at the same strength. Phase 1 lets the founder choose a palette on the live app without changing what anyone else sees.
+
+- **Opt-in per browser.** `?palette=orange|green|forest` on any app URL sets `data-palette` on `<html>` (pre-hydration script in `app/layout.tsx`, stored as `urganize.palette` in localStorage so it survives navigation). Any other value (`?palette=off`) clears it. No palette set means none of the new CSS applies, so the default render is byte-identical.
+- **The palettes** (`html[data-palette=...]` blocks after the light theme in `globals.css`): (A) orange, near-black neutral ground + orange #ff8c42; (B) green, the same ground + spring #7fd99a; (C) forest, dark green ground + white, the older catalogue-only look. All three are dark; the script forces `data-theme='dark'` while one is on. They redefine the EXISTING tokens (rgb triples and the legacy hex set), no new variables.
+- **Plain ground.** Under any palette, `body::before`/`::after` (grid, weave, inset frame), the textile grounds and the top band's brand tint are off.
+- **Hierarchy (URG-257) at token level.** Secondary text (inactive nav, meta, secondary labels) sits near 60% of primary and tertiary near 55%, both still 4.5:1 on every ground; controls 3:1. Because TopNav already uses `content-secondary` for inactive items and `content-primary` for the active one, no shell component was edited (the Sidebar and Header work, URG-254/255, owns those files).
+- **Guards:** `lib/text-contrast.test.ts` runs every existing tier and control check on the three palettes, plus accent 4.5:1 on every ground and the button label 4.5:1 on the accent.
+- **Internal preview, so no changelog entry and no version bump.**
+- **Phase 2, once the founder picks:** fold the chosen block into `:root`, delete the other two, the script, the `html[data-palette]` ornament overrides and the grid/textile rules themselves, then extend the hierarchy app-wide (components that use `content-primary` for meta text).
+
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Vercel — monorepo, TWO projects from this one repo:
   - `Web` → https://app.urganize.app (builds `apps/web`)
