@@ -388,10 +388,14 @@ html[data-theme='light'] {
    both still 4.5:1 on every ground. Controls keep 3:1.
    lib/text-contrast.test.ts holds all three.
 
+   Selector is :root[data-palette] (0,2,0), not html[data-palette] (0,1,1):
+   the html[data-theme='dark'] block further down redeclares every token at
+   (0,1,1) and, coming later, won, so the first ship painted nothing.
+
    Phase 2, once one is chosen: fold it into :root, delete the other two
    blocks, the script and the ornament overrides that follow. */
 
-html[data-palette='orange'] {
+:root[data-palette='orange'] {
   /* (A) near-black base, orange accent */
   color-scheme: dark;
   --color-bg-base: 12 12 13;
@@ -441,7 +445,7 @@ html[data-palette='orange'] {
   --border-focus: #ff8c42;
 }
 
-html[data-palette='green'] {
+:root[data-palette='green'] {
   /* (B) near-black base, green accent */
   color-scheme: dark;
   --color-bg-base: 12 12 13;
@@ -491,7 +495,7 @@ html[data-palette='green'] {
   --border-focus: #7fd99a;
 }
 
-html[data-palette='forest'] {
+:root[data-palette='forest'] {
   /* (C) dark green base, white accent (the older catalogue-only look) */
   color-scheme: dark;
   --color-bg-base: 13 40 28;
