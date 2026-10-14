@@ -74,6 +74,7 @@ const emptyDelta = (): PlannerAiDelta => ({
   role_assignments: [],
   rewrite_why: [],
   focus: [],
+  key: [],
   add_tasks: [],
   warnings: [],
   rationale: '',

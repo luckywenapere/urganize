@@ -7,6 +7,7 @@ import {
   groupItemsByWeek,
   isoForDayOffset,
   itemPosition,
+  narrowTimeline,
   toneForSection,
   weekIndexForDay,
   weekLabel,
@@ -481,5 +482,32 @@ describe('the mobile week list', () => {
     const groups = groupItemsByWeek(timeline!);
     expect(groups).toHaveLength(1);
     expect(groups[0].week.index).toBe(-6);
+  });
+});
+
+describe('narrowTimeline (key tasks, URG-258)', () => {
+  const now = new Date(dueAt(-60));
+  const tasks = [
+    makeTask({ id: 'a', dueDate: dueAt(-50) }),
+    makeTask({ id: 'b', dueDate: dueAt(-49), status: 'done' }),
+    makeTask({ id: 'c', dueDate: dueAt(-10) }),
+    makeTask({ id: 'd', dueDate: dueAt(20) }),
+    makeTask({ id: 'e', dueDate: null }),
+  ];
+  const full = buildReleaseTimeline({ tasks, releaseDate: RELEASE_DATE, now })!;
+
+  it('keeps the whole axis and only the kept activities', () => {
+    const short = narrowTimeline(full, new Set(['a', 'b', 'e']));
+    expect(short.weeks).toEqual(full.weeks);
+    expect(short.phases.flatMap((p) => p.items.map((i) => i.taskId)).sort()).toEqual(['a', 'b']);
+    expect(short.unscheduled.map((i) => i.taskId)).toEqual(['e']);
+    expect(short.placedCount).toBe(2);
+  });
+
+  it('drops empty phases and recounts the ones left', () => {
+    const short = narrowTimeline(full, new Set(['b']));
+    expect(short.phases).toHaveLength(1);
+    expect(short.phases[0].items).toHaveLength(1);
+    expect(short.phases[0].doneCount).toBe(1);
   });
 });

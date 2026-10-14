@@ -11,6 +11,7 @@ import {
   groupItemsByWeek,
   isoForDayOffset,
   itemPosition,
+  narrowTimeline,
   type ReleaseTimeline,
   type TimelineItem,
   type TimelinePhaseGroup,
@@ -18,6 +19,11 @@ import {
   type TimelineWeek,
 } from '@/lib/release-timeline';
 import { getAccessToken } from '@/components/content-calendar/get-access-token';
+import {
+  PlanListControls,
+  PlanShowAllToggle,
+  usePlanList,
+} from '@/components/workspace/PlanListControls';
 
 /**
  * The release Timeline — every activity on one week axis, anchored to release
@@ -141,6 +147,15 @@ export function TimelineScene({
     [tasks, release.releaseDate]
   );
 
+  // The plan opens on its key activities (URG-258); search, filters and
+  // "Show all" decide the rest. The axis is built from every activity so a
+  // bar sits in the same week whichever list is showing.
+  const plan = usePlanList(tasks, release.id);
+  const shown = useMemo(
+    () => (timeline ? narrowTimeline(timeline, new Set(plan.visible.map((task) => task.id))) : null),
+    [timeline, plan.visible]
+  );
+
   const reschedule = useCallback(
     async (taskId: string, newStartDay: number) => {
       if (!release.releaseDate) return;
@@ -204,7 +219,8 @@ export function TimelineScene({
     );
   }
 
-  const { weeks, phases, unscheduled, todayDay } = timeline;
+  const { weeks, todayDay } = timeline;
+  const { phases, unscheduled } = shown ?? timeline;
   const todayPercent = todayDay === null ? null : dayPosition(todayDay, weeks);
   const releasePercent = dayPosition(0, weeks);
 
@@ -227,6 +243,9 @@ export function TimelineScene({
 
   return (
     <div className="tl-scene-container mt-8">
+      <div className="mb-4">
+        <PlanListControls plan={plan} />
+      </div>
       <Legend onFullScreen={onFullScreen} />
 
       {/* ---- Wide: the week grid ---------------------------------------- */}
@@ -325,10 +344,15 @@ export function TimelineScene({
       {/* ---- Narrow: the week-by-week list ------------------------------ */}
       <div className="tl-list-view">
         <TimelineWeekList
-          timeline={timeline}
+          timeline={shown ?? timeline}
+          filtering={plan.filtering}
           onOpenTask={onOpenTask}
           releaseDate={release.releaseDate}
         />
+      </div>
+
+      <div className="mt-4">
+        <PlanShowAllToggle plan={plan} />
       </div>
 
       {unscheduled.length > 0 ? (
@@ -615,16 +639,20 @@ function TimelineRow({
  */
 function TimelineWeekList({
   timeline,
+  filtering = false,
   onOpenTask,
   releaseDate,
 }: {
   timeline: ReleaseTimeline;
+  /** A search or filter is on: an empty list is "no match", said elsewhere. */
+  filtering?: boolean;
   onOpenTask: (taskId: string) => void;
   releaseDate: string;
 }) {
   const groups = useMemo(() => groupItemsByWeek(timeline), [timeline]);
 
   if (groups.length === 0) {
+    if (filtering) return null;
     return (
       <p className="mt-4 text-sm text-content-secondary">
         Nothing is scheduled on this rollout yet.

@@ -427,6 +427,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     status?: string;
     dueDate?: string | null;
     assignedToUserId?: string | null;
+    planKey?: boolean;
   }) => {
     if (!activeTaskId) {
       return;
@@ -501,6 +502,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
                   assignee: fresh.assignee ?? null,
                   groupName: fresh.groupName,
                   groupColor: fresh.groupColor,
+                  planKey: fresh.planKey,
                   updatedAt: fresh.updatedAt,
                 }
               : row

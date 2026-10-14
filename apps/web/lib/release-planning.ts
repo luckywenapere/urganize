@@ -908,6 +908,13 @@ const MAX_TASK_OFFSET = 60;
 export const MAX_AI_ADDED_TASKS = 5;
 /** The most tasks UrgAns may mark as the focus for the goal. */
 export const MAX_DELTA_FOCUS = 5;
+/** The most tasks UrgAns may mark key: the short list a plan opens on
+ *  (URG-258). Aim 5 to 8 for a single; never more than this. */
+export const MAX_DELTA_KEY = 10;
+/** How many key tasks the deterministic rule picks when UrgAns marked none. */
+export const DEFAULT_KEY_TASK_COUNT = 7;
+/** The fewest key tasks a plan opens on when it has that many open tasks. */
+export const MIN_KEY_TASK_COUNT = 5;
 /** An added task's title: short, like the playbook's own. */
 export const MAX_AI_TASK_TITLE_LENGTH = 80;
 export const MIN_AI_TASK_TITLE_LENGTH = 4;
@@ -987,6 +994,10 @@ export type DraftTask = {
   focus?: boolean;
   /** The one-line reason it is a focus task. Null/absent when not focus. */
   focus_reason?: string | null;
+  /** On the plan's short main list (URG-258): UrgAns marked it key (delta
+   *  `key`, at most {@link MAX_DELTA_KEY}), or {@link finalizeKeyTasks} picked
+   *  it. Lands as metadata.planner.key. Optional; absent = not decided yet. */
+  key?: boolean;
 };
 
 /**
@@ -1307,6 +1318,9 @@ export type PlannerAiDelta = {
   rewrite_why: Array<{ id: string; why: string }>;
   /** Tasks to mark as the focus for the goal. Absent parses as empty. */
   focus: PlannerAiFocus[];
+  /** Ids of the tasks the plan should open on (URG-258), most important
+   *  first. Optional so older literals compile; absent parses as empty. */
+  key?: string[];
   /** Tasks to add, tailored to the goal and pain points. Absent parses as empty. */
   add_tasks: PlannerAiAddTask[];
   /** Things worth the manager's attention — a schedule risk, an assumption
@@ -1396,6 +1410,74 @@ function parseFocus(value: unknown): PlannerAiFocus[] {
   return entries;
 }
 
+/**
+ * The plan's short main list (URG-258): which of an approved plan's tasks it
+ * opens on. Pure, and it runs whatever the model did, so a plan built with no
+ * model, or with a model that marked nothing, still opens short.
+ *
+ * Order: UrgAns's focus tasks, then the tasks it listed in `key`, capped at
+ * {@link MAX_DELTA_KEY}. When that leaves fewer open tasks than the target
+ * ({@link MIN_KEY_TASK_COUNT} when UrgAns marked any, otherwise
+ * {@link DEFAULT_KEY_TASK_COUNT}), it tops up with the soonest open required
+ * work, then the soonest optional, so the plan opens on what is next.
+ * A task already done (ready today) never takes a top-up slot.
+ *
+ * `tasks` are the plan's live (not removed) tasks.
+ */
+export function finalizeKeyTasks(
+  tasks: DraftTask[],
+  isDone: (task: DraftTask) => boolean = () => false
+): Set<string> {
+  const keep: string[] = [];
+  const seen = new Set<string>();
+  const push = (task: DraftTask) => {
+    if (seen.has(task.id) || keep.length >= MAX_DELTA_KEY) return;
+    seen.add(task.id);
+    keep.push(task.id);
+  };
+
+  const live = tasks.filter((task) => !task.removed);
+  for (const task of live) if (task.focus) push(task);
+  for (const task of live) if (task.key) push(task);
+
+  const markedAny = keep.length > 0;
+  const target = markedAny ? MIN_KEY_TASK_COUNT : DEFAULT_KEY_TASK_COUNT;
+  let openCount = live.filter((task) => seen.has(task.id) && !isDone(task)).length;
+
+  const candidates = live
+    .map((task, index) => ({ task, index }))
+    .filter(({ task }) => !seen.has(task.id) && !isDone(task))
+    .sort(
+      (a, b) =>
+        Number(a.task.optional) - Number(b.task.optional) ||
+        a.task.offset_days - b.task.offset_days ||
+        a.index - b.index
+    );
+  for (const { task } of candidates) {
+    if (openCount >= target || keep.length >= MAX_DELTA_KEY) break;
+    push(task);
+    openCount += 1;
+  }
+  return new Set(keep);
+}
+
+function parseKeyIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const ids: string[] = [];
+  for (const entry of value) {
+    // Lenient on shape: a bare id or { id }, since a model asked for ids will
+    // sometimes wrap them the way the focus list is wrapped.
+    const id =
+      typeof entry === 'string'
+        ? entry
+        : entry && typeof entry === 'object' && typeof (entry as { id?: unknown }).id === 'string'
+          ? (entry as { id: string }).id
+          : null;
+    if (id && id.trim()) ids.push(id.trim());
+  }
+  return ids;
+}
+
 function parseAddTasks(value: unknown): PlannerAiAddTask[] {
   if (!Array.isArray(value)) return [];
   const entries: PlannerAiAddTask[] = [];
@@ -1481,6 +1563,7 @@ export function parsePlannerAiDelta(raw: string): PlannerAiDelta | null {
     role_assignments: roleAssignments,
     rewrite_why: rewriteWhy,
     focus: parseFocus(record.focus),
+    key: parseKeyIds(record.key),
     add_tasks: parseAddTasks(record.add_tasks),
     warnings,
     rationale: rationale.slice(0, MAX_RATIONALE_LENGTH),
@@ -1726,6 +1809,26 @@ export function sanitizePlannerDelta(
     focus.push(entry);
   }
 
+  const keySeen = new Set<string>();
+  const key: string[] = [];
+  for (const id of delta.key ?? []) {
+    if (!byId.has(id)) {
+      rejected.push(`key references unknown task: ${id}`);
+      continue;
+    }
+    if (droppedIds.has(id)) {
+      rejected.push(`key references a task it also drops: ${id}`);
+      continue;
+    }
+    if (keySeen.has(id)) continue;
+    if (key.length >= MAX_DELTA_KEY) {
+      rejected.push(`key has more than ${MAX_DELTA_KEY} tasks: ${id}`);
+      continue;
+    }
+    keySeen.add(id);
+    key.push(id);
+  }
+
   const minOffset = Math.max(MIN_TASK_OFFSET, window?.min ?? MIN_TASK_OFFSET);
   const maxOffset = Math.min(MAX_TASK_OFFSET, window?.max ?? MAX_TASK_OFFSET);
   const existingTitles = tasks.map((task) => task.title).filter((t): t is string => Boolean(t));
@@ -1789,6 +1892,7 @@ export function sanitizePlannerDelta(
       role_assignments: roleAssignments,
       rewrite_why: rewriteWhy,
       focus,
+      key,
       add_tasks: addTasks,
     },
     rejected,
@@ -1836,6 +1940,7 @@ export function applyDeltaToDraft(
   const offsets = new Map(delta.adjust_offsets.map((a) => [a.id, a]));
   const whys = new Map(delta.rewrite_why.map((r) => [r.id, r.why]));
   const focusReasons = new Map((delta.focus ?? []).map((f) => [f.id, f.reason]));
+  const keyIds = new Set(delta.key ?? []);
   const roleToMember = new Map(delta.role_assignments.map((a) => [a.role, a.member_user_id]));
 
   const tasks = excluded.tasks.map((task) => {
@@ -1869,6 +1974,10 @@ export function applyDeltaToDraft(
     if (focusReason !== undefined && !next.removed) {
       next.focus = true;
       next.focus_reason = focusReason || null;
+    }
+
+    if (keyIds.has(task.id) && !next.removed) {
+      next.key = true;
     }
 
     // The deterministic history/role heuristic (proposeTaskOwners, run before
@@ -2115,6 +2224,7 @@ export function parseDraftDoc(
           : null,
       assignee_basis: readAssigneeBasis(t.assignee_basis),
       edited: t.edited === true,
+      ...(typeof t.key === 'boolean' ? { key: t.key } : {}),
       ...(t.focus === true
         ? {
             focus: true,
@@ -2349,6 +2459,7 @@ const OUTPUT_SCHEMA_BLOCK = [
   '  "role_assignments": [{ "role": "<role>", "member_user_id": "<member user_id>" }],',
   '  "rewrite_why": [{ "id": "<task id>", "why": "<one short line>" }],',
   `  "focus": [{ "id": "<task id>", "reason": "<one short line>" }],`,
+  '  "key": ["<task id>"],',
   `  "add_tasks": [{ "title": "<short, at most ${MAX_AI_TASK_TITLE_LENGTH} chars>", "why": "<one short line>", "offset_days": <integer>, "role": "<role or null>", "tags": ["<${AI_ADD_TASK_TAGS.join('|')}>"] }],`,
   '  "warnings": ["<one short line for the manager, at most 5>"],',
   '  "rationale": "<2-3 sentences for the manager>"',
@@ -2365,6 +2476,7 @@ function buildSystemPrompt(): string {
     "- The manager's answers and notes are instructions, not hints. If they rule something out, the plan must not contain it. If they ask for less of something, keep that work and drop its optional tasks.",
     `- You may ADD at most ${MAX_AI_ADDED_TASKS} tasks in "add_tasks", and only when this rollout's goal, pain points or notes genuinely need work the playbook does not have. Never add something the plan already covers in other words, never per-track busywork, nothing inside a scope that is left out, nothing paid when there is no budget, and nothing dated before today or outside the plan's existing date range. Each needs a short title, a why tied to their goal, an offset_days, a role from the list or null, and tags from the given vocabulary. Zero adds is a fine answer.`,
     `- Mark at most ${MAX_DELTA_FOCUS} tasks in "focus": the few that matter most for what the manager said matters most, each with a one-line reason. Only ids from the list.`,
+    `- List in "key" the tasks the plan should open on: the ones the manager must not miss, most important first. Aim for 5 to 8 on a single (a few more for an EP or album), never more than ${MAX_DELTA_KEY}. Include your focus tasks, release day and the distribution order. Everything else stays in the plan behind "Show all", so leaving a task out of "key" does not remove it.`,
     '- Drop an optional task ("optional": true) whenever this rollout does not need it, with a reason.',
     '- A task whose "optional" is false may be dropped ONLY when the manager plainly asked to leave that kind of work out. The way to do that is "exclude_scopes": name the scope, and the product removes every task in it except release-day and distribution work. Inside a scope you excluded you may also drop single required tasks. Never exclude a scope they did not ask for. "Less", "light" or "small" means keep the scope and drop its optional tasks.',
     SCOPE_VOCABULARY_LINE,
@@ -2630,6 +2742,7 @@ export const PLANNER_DELTA_JSON_SCHEMA = strictObject({
     type: 'array',
     items: strictObject({ id: { type: 'string' }, reason: { type: 'string' } }),
   },
+  key: { type: 'array', items: { type: 'string' } },
   add_tasks: {
     type: 'array',
     items: strictObject({

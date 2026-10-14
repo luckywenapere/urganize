@@ -17,6 +17,7 @@ import {
   type TaskRow,
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
+import { withPlanKey } from '@/lib/plan-focus';
 import { isEditorialPitchTask } from '@/lib/editorial-pitch';
 import { afterResponse } from '@/lib/after-response';
 import { loadPitchBlocker } from '@/lib/editorial-pitch-server';
@@ -128,10 +129,27 @@ export async function PATCH(
       return buildReadOnlyResponse();
     }
 
-    const body = await request.json();
+    let body: unknown = await request.json();
+    // `planKey` (URG-258) pins a task to the rollout's short main list, or
+    // tucks it behind "Show all". It is not a column: it lives at
+    // metadata.planner.key, so it is merged into the row's own metadata here
+    // rather than added to the field map, which would let a caller overwrite
+    // the whole metadata object.
+    let planKey: boolean | undefined;
+    if (body && typeof body === 'object' && 'planKey' in body) {
+      const { planKey: rawPlanKey, ...rest } = body as Record<string, unknown>;
+      if (typeof rawPlanKey !== 'boolean') {
+        return NextResponse.json({ error: 'planKey must be true or false.' }, { status: 400 });
+      }
+      planKey = rawPlanKey;
+      body = rest;
+    }
     const mapped = mapTaskPatchBody(body);
     if ('error' in mapped) {
       return NextResponse.json({ error: mapped.error }, { status: 400 });
+    }
+    if (planKey !== undefined) {
+      mapped.updates.metadata = withPlanKey(access.task.metadata, planKey);
     }
 
     // Validate the assignee belongs to the task's workspace. null is allowed

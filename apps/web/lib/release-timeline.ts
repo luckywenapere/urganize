@@ -406,6 +406,36 @@ export function buildReleaseTimeline(params: {
   return { weeks, phases, unscheduled, todayDay, placedCount: items.length };
 }
 
+/**
+ * The same timeline showing only some activities (URG-258: the plan's key
+ * tasks, or a search). The week axis is kept whole, so a bar sits in the same
+ * place whether the list is short or full; phases left empty drop out, and
+ * each phase's counts and span describe what is still shown.
+ */
+export function narrowTimeline(timeline: ReleaseTimeline, keep: ReadonlySet<string>): ReleaseTimeline {
+  const phases: TimelinePhaseGroup[] = [];
+  let placedCount = 0;
+  for (const phase of timeline.phases) {
+    const items = phase.items.filter((item) => keep.has(item.taskId));
+    if (items.length === 0) continue;
+    placedCount += items.length;
+    phases.push({
+      ...phase,
+      items,
+      startDay: Math.min(...items.map((item) => item.startDay)),
+      endDay: Math.max(...items.map((item) => item.endDay)),
+      doneCount: items.filter((item) => item.tone === 'done').length,
+      attentionCount: items.filter((item) => item.tone === 'overdue' || item.tone === 'blocked').length,
+    });
+  }
+  return {
+    ...timeline,
+    phases,
+    unscheduled: timeline.unscheduled.filter((item) => keep.has(item.taskId)),
+    placedCount,
+  };
+}
+
 /** Chronological, then by severity so the week's problems lead, then stable
  * by title so two activities on one day never swap places between renders. */
 function compareItems(left: TimelineItem, right: TimelineItem): number {

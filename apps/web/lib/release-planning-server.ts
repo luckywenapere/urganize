@@ -17,6 +17,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   activeDraftTasks,
+  finalizeKeyTasks,
   isTaskPreCompletedByReady,
   parseYmd,
   type DraftTask,
@@ -121,6 +122,16 @@ export function buildTaskRowsFromDraft(params: {
 
   const approvedAtIso = new Date(approvedAtMs).toISOString();
   const warnings: string[] = [];
+
+  // The short list the plan opens on (URG-258). Every task gets an explicit
+  // true or false, which is also how the client tells a new plan from one
+  // built before key tasks existed.
+  const keyIds = finalizeKeyTasks(
+    active,
+    (task) =>
+      task.origin === 'template' &&
+      isTaskPreCompletedByReady(task, doc.intake.ready_today, doc.template_id)
+  );
   let reassignedCount = 0;
 
   const rows = active.map((task, index) => {
@@ -174,7 +185,14 @@ export function buildTaskRowsFromDraft(params: {
       auto_generated: true,
       due_date: dueDate,
       dependencies,
-      metadata: buildTaskMetadata({ task, doc, draftId, approvedAtIso, compressedRunway }),
+      metadata: buildTaskMetadata({
+        task,
+        doc,
+        draftId,
+        approvedAtIso,
+        compressedRunway,
+        isKey: keyIds.has(task.id),
+      }),
     } satisfies PlanTaskRow;
   });
 
@@ -195,8 +213,9 @@ function buildTaskMetadata(params: {
   draftId: string;
   approvedAtIso: string;
   compressedRunway: boolean;
+  isKey?: boolean;
 }): Record<string, unknown> {
-  const { task, doc, draftId, approvedAtIso, compressedRunway } = params;
+  const { task, doc, draftId, approvedAtIso, compressedRunway, isKey = false } = params;
 
   // Two readers in lib/tasks-server.ts key off metadata.template
   // (readTaskType, readCompressedRunway), so even a task the manager added by
@@ -229,6 +248,7 @@ function buildTaskMetadata(params: {
       schema_version: doc.schema_version,
       origin: task.origin,
       approved_at: approvedAtIso,
+      key: isKey,
       ...(task.focus ? { focus: true, focus_reason: task.focus_reason ?? null } : {}),
       // An added task has no playbook provenance, so its role and tags live here.
       ...(task.origin === 'ai' ? { role: task.role, tags: task.tags } : {}),

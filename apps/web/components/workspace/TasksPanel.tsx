@@ -26,6 +26,7 @@ import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { resolvePanelBody } from '@/lib/scene-cache';
 import { useSceneOverlay } from './useSceneOverlay';
+import { PlanListControls, PlanShowAllToggle, usePlanList } from './PlanListControls';
 import {
   useRolloutMenuActions,
   type RolloutMenuAction,
@@ -282,9 +283,15 @@ export function TasksPanel({
   // the in-place beat.
   const pendingCompletionIds = useTaskStore((state) => state.pendingCompletionIds);
 
+  // A scoped rollout opens on its key activities, with search, filters and
+  // "Show all" for the rest (URG-258). Unscoped (every rollout at once) keeps
+  // the full list: it is not one plan.
+  const plan = usePlanList(tasks, scopedRelease?.id ?? null);
+  const listTasks = scopedRelease ? plan.visible : tasks;
+
   const sections = useMemo(
-    () => groupTasksIntoSections(tasks, pendingCompletionIds),
-    [tasks, pendingCompletionIds]
+    () => groupTasksIntoSections(listTasks, pendingCompletionIds),
+    [listTasks, pendingCompletionIds]
   );
 
   // Denominator for every group's share bar. Read from `tasks` rather than by
@@ -477,6 +484,7 @@ export function TasksPanel({
         sceneContent
       ) : (
       <div className="space-y-3">
+        {scopedRelease && tasks.length > 0 ? <PlanListControls plan={plan} /> : null}
         {/* Every bucket empty: the buckets below have all suppressed
             themselves, so this stands in for the whole list.
             Actionable rather than a muted line (URG-233) — an empty panel
@@ -484,6 +492,7 @@ export function TasksPanel({
             "nothing to do here" instead of "start here". Skipped when the
             banner already covers both jobs. */}
         {!bannerReplacesEmptyState &&
+        !(scopedRelease && plan.filtering) &&
         sectionOrder.every((sectionKey) => sections[sectionKey].length === 0) ? (
           <div className="px-1 py-6 text-center">
             {/* The mascot only joins the SCOPED wording, and that is the
@@ -514,7 +523,9 @@ export function TasksPanel({
         ) : null}
         {sectionOrder.map((sectionKey) => {
           const sectionTasks = sections[sectionKey];
-          const isOpen = expanded[sectionKey];
+          // A search or filter opens every bucket it matched: the answer to a
+          // question should not sit behind a closed drawer.
+          const isOpen = expanded[sectionKey] || (Boolean(scopedRelease) && plan.filtering);
           const isDoneBucket = sectionKey === 'done';
           // Empty buckets don't render at all (founder call, 2026-07-23,
           // restored 2026-08-15 after a brief spell where the five time
@@ -610,6 +621,7 @@ export function TasksPanel({
             </div>
           );
         })}
+        {scopedRelease && tasks.length > 0 ? <PlanShowAllToggle plan={plan} /> : null}
       </div>
       )}
 

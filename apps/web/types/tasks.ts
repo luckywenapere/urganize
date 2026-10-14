@@ -190,6 +190,13 @@ export interface Task {
   /** Hex color paired with groupName. Presets pin a fixed color; customs get
    * DEFAULT_GROUP_COLOR. Null whenever groupName is null. */
   groupColor: string | null;
+  /** Whether this task is on the rollout's short main list (URG-258), from
+   * metadata.planner.key. true: UrgAns marked it key when the plan was built,
+   * or a person pinned it. false: generated and tucked behind "Show all"
+   * unless the top-up rule in lib/plan-focus.ts brings it forward. null or
+   * absent: a plan from before the flag existed, which lib/plan-focus.ts
+   * shortens by its own rule. Optional so every existing literal compiles. */
+  planKey?: boolean | null;
   createdAt: string;
   updatedAt: string;
 

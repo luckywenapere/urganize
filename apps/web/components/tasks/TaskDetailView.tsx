@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronDown,
   CircleDot,
+  Pin,
   Trash2,
   UserCircle2,
   X,
@@ -99,6 +100,8 @@ export type TaskDetailPatchInput = {
   status?: TaskStatus;
   dueDate?: string | null;
   assignedToUserId?: string | null;
+  /** Pin to the rollout's key activities, or tuck behind "Show all" (URG-258). */
+  planKey?: boolean;
 };
 
 type TaskDetailViewProps = {
@@ -434,6 +437,27 @@ export function TaskDetailView({
           and it sat over the title and its checkbox. The negative top matches
           the body's p-5 / sm:p-6 so the bar sits flush at the very top. */}
       <div className="sticky -top-5 z-10 -mx-5 -mt-5 mb-1 flex items-center justify-end gap-1 bg-bg-surface px-3 py-1.5 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-4">
+        {task?.releaseId ? (
+          // Promote a tucked-away activity onto the plan's short list, or send
+          // one back behind "Show all" (URG-258). An icon beside Delete, like
+          // Delete itself, so the pop-up gains no new line of copy.
+          <button
+            type="button"
+            onClick={() => void onSavePatch({ planKey: task.planKey !== true })}
+            aria-pressed={task.planKey === true}
+            aria-label={task.planKey === true ? 'Remove from key activities' : 'Add to key activities'}
+            title={task.planKey === true ? 'Remove from key activities' : 'Add to key activities'}
+            className={`motion-focus motion-press grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-lg border border-transparent transition-colors hover:bg-bg-hover ${
+              task.planKey === true ? 'text-brand' : 'text-content-tertiary hover:text-content-primary'
+            }`}
+          >
+            <Pin
+              className={`pointer-events-none h-4 w-4 ${task.planKey === true ? 'fill-current' : ''}`}
+              aria-hidden="true"
+            />
+          </button>
+        ) : null}
+
         {task ? (
           <button
             type="button"
