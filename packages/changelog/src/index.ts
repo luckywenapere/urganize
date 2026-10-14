@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.137.1",
+    date: "October 15, 2026",
+    highlights: [
+      "Full screen timeline now keeps the top menu on screen, so you can jump to Home, Rollouts or anywhere else without leaving full screen first. On your phone the bottom bar stays too.",
+      "Exit full screen now sticks. The timeline no longer jumps back into full screen a moment after you leave it, including right after UrgAns builds your plan.",
+    ],
+  },
+  {
     version: "1.137.0",
     date: "October 15, 2026",
     highlights: [

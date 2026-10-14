@@ -101,7 +101,7 @@ export function TopNav({ userName, showHelp = false }: { userName?: string; show
   useArtistFilterSync();
 
   return (
-    <header className="shell-band sticky top-0 z-30 pt-[env(safe-area-inset-top,0px)]">
+    <header data-shell-topbar className="shell-band sticky top-0 z-30 pt-[env(safe-area-inset-top,0px)]">
       <div
         className="mx-auto flex h-0 w-full max-w-[1440px] items-center gap-2 px-3 sm:gap-3 sm:px-5 lg:grid lg:h-[72px] lg:grid-cols-[1fr_auto_1fr] lg:px-8"
       >

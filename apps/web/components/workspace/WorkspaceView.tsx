@@ -1060,21 +1060,30 @@ export function WorkspaceView() {
   // activities opened onto a blank full-screen timeline that hid the planner
   // card, the one thing to do there. It stays inline until activities exist,
   // and opens full screen the moment the plan lands.
+  //
+  // URG-277 / URG-295 (2026-10-15): "Exit full screen" must STICK for the whole
+  // visit. The entry key used to fold the viewport and the plan check into
+  // itself, so anything that briefly flipped either (a forced refetch emptying
+  // the task list for a frame, the window resized across lg) reset the key and
+  // threw the person straight back into full screen right after they left it,
+  // which is the "exit breaks in the plan builder" report. Now the visit is the
+  // rollout plus the timeline being the body, and only leaving THAT resets it;
+  // the viewport and the plan only decide whether the one automatic open has
+  // happened yet.
   const timelineHasPlan = scopedTasks.length > 0;
+  const timelineVisitKey =
+    panelBody === 'timeline' && scopedReleaseSlim?.id ? scopedReleaseSlim.id : null;
   const autoFullKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    const key =
-      panelBody === 'timeline' && scopedReleaseSlim?.id && isDesktopViewport && timelineHasPlan
-        ? scopedReleaseSlim.id
-        : null;
-    if (key === null) {
+    if (timelineVisitKey === null) {
       autoFullKeyRef.current = null;
       return;
     }
-    if (autoFullKeyRef.current === key) return;
-    autoFullKeyRef.current = key;
-    setTimelineFullFor(key);
-  }, [panelBody, scopedReleaseSlim?.id, isDesktopViewport, timelineHasPlan]);
+    if (autoFullKeyRef.current === timelineVisitKey) return;
+    if (!(isDesktopViewport && timelineHasPlan)) return;
+    autoFullKeyRef.current = timelineVisitKey;
+    setTimelineFullFor(timelineVisitKey);
+  }, [timelineVisitKey, isDesktopViewport, timelineHasPlan]);
   const timelineIsFull =
     timelineHasPlan &&
     timelineFullFor !== null &&
