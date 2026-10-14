@@ -7,9 +7,11 @@
 // collected and then discarded).
 
 import {
+  isOnboardingPersona,
   isOnboardingPlanningPreference,
   isOnboardingStage,
   isOnboardingWhereStuck,
+  type OnboardingPersona,
   type OnboardingPlanningPreference,
   type OnboardingStage,
   type OnboardingWhereStuck,
@@ -54,6 +56,10 @@ export const ONBOARDING_STAGE_OPTIONS: Array<{ value: OnboardingStage; label: st
 ];
 
 export interface OnboardingDraft {
+  // URG-262: "Who are you?", the first screen. Kept in the draft so it
+  // survives the Google round trip; PATCHed as onboarding_persona and, for the
+  // new account, turned into profiles.role (lib/onboarding.ts).
+  persona: OnboardingPersona | null;
   releaseType: OnboardingReleaseType | null;
   whereStuck: OnboardingWhereStuck[];
   // "What's already done?" (2026-10-11): the planner's readiness checklist,
@@ -78,6 +84,7 @@ export interface OnboardingDraft {
 }
 
 export const EMPTY_ONBOARDING_DRAFT: OnboardingDraft = {
+  persona: null,
   releaseType: null,
   whereStuck: [],
   readyToday: [],
@@ -108,6 +115,7 @@ export function loadOnboardingDraft(): OnboardingDraft {
     if (!parsed || typeof parsed !== 'object') return EMPTY_ONBOARDING_DRAFT;
 
     return {
+      persona: isOnboardingPersona(parsed.persona) ? parsed.persona : null,
       releaseType: isReleaseType(parsed.releaseType) ? parsed.releaseType : null,
       whereStuck: Array.isArray(parsed.whereStuck)
         ? parsed.whereStuck.filter(isOnboardingWhereStuck)

@@ -20,6 +20,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.121.0",
+    date: "October 14, 2026",
+    highlights: [
+      "Signing up now starts with one question: who are you? Artist manager, label, solo artist, artist team or other. One tap and you're on.",
+      "If you joined before we asked, you'll see the same question once on Home. Answer with a tap or close it.",
+    ],
+  },
+  {
     version: "1.120.4",
     date: "October 13, 2026",
     highlights: [

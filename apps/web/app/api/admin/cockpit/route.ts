@@ -14,6 +14,7 @@ import { internalUserIds, isInternalRow, withoutInternalAccounts } from '@/lib/a
 import { buildRunway } from '@/lib/admin-runway';
 import { readRunwaySettings } from '@/lib/admin-runway-server';
 import { loadDirectoryGrowth } from '@/lib/directory-growth-server';
+import { buildPersonaSplit, type PersonaSplit, type PersonaSplitRow } from '@/lib/admin-persona-split';
 
 // GET /api/admin/cockpit — the founder cockpit at the top of /admin
 // (2026-10-09). The Scoreboard's own reads and definitions, plus which way each
@@ -90,6 +91,23 @@ async function readWaitlist(): Promise<{ entries: WaitlistEntry[] | null; source
   }
 }
 
+/**
+ * Iteration 8 (URG-262, 2026-10-14): the persona split. One read of every
+ * profile's email, role and persona answer; only counts leave this route.
+ * Null when the read fails, so the tile hides instead of showing zeros.
+ */
+async function readPersonaSplit(client: SupabaseClient, internalEmails: Set<string>): Promise<PersonaSplit | null> {
+  const { data, error } = await client
+    .from('profiles')
+    .select('email,role,onboarding_persona')
+    .range(0, 9999);
+  if (error) {
+    console.error('[admin-cockpit] could not read the persona split', error);
+    return null;
+  }
+  return buildPersonaSplit((data ?? []) as PersonaSplitRow[], internalEmails);
+}
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
@@ -112,7 +130,7 @@ export async function GET(request: NextRequest) {
     const input = exclusion.input;
     // After the shared read, so the UrgAns windows end at the same moment as
     // every other number (a cached read keeps the time it was made).
-    const [urgansRows, runwayRead, directoryRead] = await Promise.all([
+    const [urgansRows, runwayRead, directoryRead, personaSplit] = await Promise.all([
       loadUrgansUsageRows(client, input.now),
       readRunwaySettings(client, input.now),
       // Iteration 7 (2026-10-10): the Directory tile. Its own try inside, so a
@@ -121,6 +139,7 @@ export async function GET(request: NextRequest) {
         console.error('[admin-cockpit] could not read the directory numbers', error);
         return null;
       }),
+      readPersonaSplit(client, internalEmails).catch(() => null),
     ]);
     const usageRows = urgansRows.usage?.filter((row) => !isInternalRow(row, exclusion)) ?? null;
     const ledgerRows = urgansRows.ledger?.filter((row) => !isInternalRow(row, exclusion)) ?? null;
@@ -150,6 +169,7 @@ export async function GET(request: NextRequest) {
         }),
         runwayReadable: runwayRead.source.status === 'ok',
         directory: directoryRead ? directoryRead.growth.tile : null,
+        personas: personaSplit,
         ourTeamsLeftOut: exclusion.workspaceIds.size,
         includeTeam,
         sources: [

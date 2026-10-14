@@ -25,6 +25,7 @@ afterEach(() => {
 });
 
 const full: OnboardingDraft = {
+  persona: 'label_ar',
   releaseType: 'single',
   whereStuck: ['marketing_promo'],
   readyToday: ['master', 'artwork', 'distributor'],
@@ -60,6 +61,21 @@ describe('the onboarding draft', () => {
     expect(loadOnboardingDraft().artistName).toBe('');
     map.set('urganize.onboarding.draft', JSON.stringify({ ...full, artistName: 'x'.repeat(500) }));
     expect(loadOnboardingDraft().artistName).toHaveLength(MAX_ONBOARDING_ARTIST_NAME_LENGTH);
+  });
+
+  it('keeps the persona answer across a reload (the Google round trip)', () => {
+    install();
+    saveOnboardingDraft(full);
+    expect(loadOnboardingDraft().persona).toBe('label_ar');
+  });
+
+  it('reads a missing or unknown persona as unanswered', () => {
+    const map = install();
+    const { persona: _persona, ...older } = full;
+    map.set('urganize.onboarding.draft', JSON.stringify(older));
+    expect(loadOnboardingDraft().persona).toBeNull();
+    map.set('urganize.onboarding.draft', JSON.stringify({ ...full, persona: 'astronaut' }));
+    expect(loadOnboardingDraft().persona).toBeNull();
   });
 
   it('uses the same ceiling as the other artist fields', () => {

@@ -28,6 +28,7 @@ import type { FounderCockpit } from '@/lib/founder-cockpit';
 import type { AdminFunnel } from '@/lib/admin-funnel';
 import type { UrgansUsage } from '@/lib/admin-urgans-usage';
 import type { DirectoryTile } from '@/lib/directory-growth';
+import type { PersonaSplit } from '@/lib/admin-persona-split';
 import type { ChurnSummary } from '@/lib/admin-churn';
 import type { Runway } from '@/lib/admin-runway';
 import type { RunwayFormValues } from '@/components/admin/RunwayPanel';
@@ -38,6 +39,7 @@ type CockpitPayload = {
   funnels: AdminFunnel[];
   urgans: UrgansUsage | null;
   directory: DirectoryTile | null;
+  personas: PersonaSplit | null;
   churn: ChurnSummary | null;
   runway: Runway | null;
   runwayReadable: boolean;
@@ -118,6 +120,7 @@ export default function AdminHubClient() {
           funnels: body.funnels ?? [],
           urgans: body.urgans ?? null,
           directory: body.directory ?? null,
+          personas: body.personas ?? null,
           churn: body.churn ?? null,
           runway: body.runway ?? null,
           runwayReadable: body.runwayReadable !== false,
@@ -188,6 +191,7 @@ export default function AdminHubClient() {
           funnels={cockpit.payload.funnels}
           urgans={cockpit.payload.urgans}
           directory={cockpit.payload.directory}
+          personas={cockpit.payload.personas}
           churn={cockpit.payload.churn}
           runway={cockpit.payload.runway}
           runwayReadable={cockpit.payload.runwayReadable}

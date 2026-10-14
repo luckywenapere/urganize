@@ -15,6 +15,7 @@ import { ManagerNewView } from '@/components/home/ManagerNewView';
 import { HomeAskBar } from '@/components/home/HomeAskBar';
 import { HomeDesktopSplit } from '@/components/home/HomeDesktopSplit';
 import { NpsPrompt } from '@/components/home/NpsPrompt';
+import { PersonaAskCard } from '@/components/home/PersonaAskCard';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 
@@ -102,6 +103,9 @@ export default function HomePageClient() {
       {/* Net Promoter Score (2026-10-11): asked on Home, between pieces of
           work, never mid-task. Who and when: lib/nps.ts. */}
       {!isCreateModalOpen ? <NpsPrompt /> : null}
+      {/* "Who are you?" once, for an account that never answered (URG-262).
+          Who: lib/persona-ask.ts. Waits for no other prompt to be open. */}
+      {!isCreateModalOpen ? <PersonaAskCard /> : null}
 
       <RolloutCreateFlow
         open={isCreateModalOpen}

@@ -5,6 +5,10 @@ export type OnboardingPersona =
   | 'music_manager'
   | 'label_ar'
   | 'producer_beatmaker'
+  // URG-262 (2026-10-14): the one-tap "Who are you?" question. Added beside the
+  // older values rather than renaming them, so a stored answer never goes
+  // invalid. producer_beatmaker is no longer offered but still reads.
+  | 'artist_team'
   | 'other';
 export type OnboardingReleaseProcess =
   | 'spreadsheets_or_notes'
@@ -72,6 +76,12 @@ export interface UpdateOnboardingBody {
   onboardingStep?: number;
   onboardingRole?: UserRole | null;
   onboardingPersona?: OnboardingPersona | null;
+  // URG-262: true only from the signup hand-off (a brand-new account), so the
+  // persona answer also sets profiles.role in place of the OAuth fallback. The
+  // one-time ask on Home never sends it: an existing account's role decides
+  // its permissions, and changing that on a survey answer could lock someone
+  // out of their own plans.
+  applyPersonaToRole?: boolean;
   onboardingReleaseProcess?: OnboardingReleaseProcess | null;
   onboardingBiggestHeadache?: OnboardingBiggestHeadache | null;
   onboardingPlanningPreference?: OnboardingPlanningPreference | null;
@@ -118,11 +128,73 @@ export const ONBOARDING_ROLE_LABELS: Record<UserRole, string> = {
 };
 
 export const ONBOARDING_PERSONA_LABELS: Record<OnboardingPersona, string> = {
-  independent_artist: 'Independent Artist',
-  music_manager: 'Music Manager',
-  label_ar: 'Label / A&R',
+  independent_artist: 'Solo artist',
+  music_manager: 'Artist manager',
+  label_ar: 'Label',
   producer_beatmaker: 'Producer / Beatmaker',
+  artist_team: 'Artist team',
   other: 'Other',
+};
+
+/**
+ * URG-262: the answers offered by the "Who are you?" question, in the order
+ * they show. One tap, no helper text (founder: "no extra words"). The same
+ * list serves onboarding and the one-time ask on Home for older accounts.
+ */
+export const ONBOARDING_PERSONA_CHOICES: readonly OnboardingPersona[] = [
+  'music_manager',
+  'label_ar',
+  'independent_artist',
+  'artist_team',
+  'other',
+];
+
+/**
+ * The account roles a persona answer may set or replace. Anything else (an
+ * invited teammate's 'artist-team' or 'team-member', a 'viewer', a 'curator')
+ * was given by an invite and decides what that person may do inside someone
+ * else's team, so a persona answer never touches it.
+ */
+const PERSONA_WRITABLE_PROFILE_ROLES = new Set(['artist', 'manager', 'artist-manager']);
+
+export type PersonaProfileRole = 'artist' | 'manager' | 'artist-manager';
+
+/**
+ * URG-262: the profiles.role a new account gets from its persona answer,
+ * instead of the 'artist-manager' fallback Google sign-in writes.
+ *
+ * profiles_role_check allows no 'label' or 'other' role, and the role decides
+ * permissions (lib/role-permissions.ts), so the mapping is chosen to keep
+ * every self-serve account able to run its own team:
+ *  - Label: 'manager' (manager permissions, and a value no fallback writes, so
+ *    it stays tellable apart).
+ *  - Artist team: 'artist-manager', NOT 'artist-team'. That value is the role
+ *    an invite gives and normalizes to team-member, which cannot create plans.
+ *  - Other (and the retired producer answer): null, the role is left as it is.
+ * onboarding_persona is the source of truth for who someone is; role is only
+ * what they may do.
+ */
+export const profileRoleForPersona = (persona: OnboardingPersona | null): PersonaProfileRole | null => {
+  if (persona === 'independent_artist') return 'artist';
+  if (persona === 'music_manager' || persona === 'artist_team') return 'artist-manager';
+  if (persona === 'label_ar') return 'manager';
+  return null;
+};
+
+/**
+ * The role to write for a persona answer, or null to leave the stored role
+ * alone: when the persona maps to none, when it already matches, or when the
+ * stored role came from an invite (see PERSONA_WRITABLE_PROFILE_ROLES).
+ */
+export const nextProfileRoleForPersona = (
+  currentRole: string | null | undefined,
+  persona: OnboardingPersona | null
+): PersonaProfileRole | null => {
+  const target = profileRoleForPersona(persona);
+  if (!target) return null;
+  const current = String(currentRole || '').trim();
+  if (current && !PERSONA_WRITABLE_PROFILE_ROLES.has(current)) return null;
+  return current === target ? null : target;
 };
 
 export const ONBOARDING_RELEASE_PROCESS_LABELS: Record<OnboardingReleaseProcess, string> = {
@@ -152,6 +224,7 @@ export const isOnboardingPersona = (value: unknown): value is OnboardingPersona 
   value === 'music_manager' ||
   value === 'label_ar' ||
   value === 'producer_beatmaker' ||
+  value === 'artist_team' ||
   value === 'other';
 
 export const isOnboardingReleaseProcess = (value: unknown): value is OnboardingReleaseProcess =>
@@ -204,6 +277,10 @@ export const deriveOnboardingRoleFromPersona = (persona: OnboardingPersona | nul
 
   if (persona === 'label_ar') {
     return 'label';
+  }
+
+  if (persona === 'artist_team') {
+    return 'artist';
   }
 
   if (persona === 'producer_beatmaker' || persona === 'other') {

@@ -4,6 +4,7 @@ import {
   PROFILE_ONBOARDING_SQL,
   deriveOnboardingRoleFromPersona,
   isOnboardingBiggestHeadache,
+  nextProfileRoleForPersona,
   isOnboardingPersona,
   isOnboardingPlanningPreference,
   isOnboardingReleaseProcess,
@@ -429,6 +430,17 @@ export async function PATCH(request: NextRequest) {
     updates.onboarding_persona = body.onboardingPersona;
     if (body.onboardingRole === undefined) {
       updates.onboarding_role = derivedRole;
+    }
+
+    // URG-262: a new account's role comes from its answer, not the
+    // 'artist-manager' fallback Google sign-in writes. Only when the signup
+    // hand-off asks for it, and never over a role an invite gave (see
+    // nextProfileRoleForPersona).
+    if (body.applyPersonaToRole === true) {
+      const nextRole = nextProfileRoleForPersona(profileResult.profile.role, body.onboardingPersona);
+      if (nextRole) {
+        updates.role = nextRole;
+      }
     }
   }
 

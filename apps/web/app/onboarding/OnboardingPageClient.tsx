@@ -2,8 +2,13 @@
 
 // Onboarding flow — Phases 1–3.
 //
-// Seven steps when NEXT_PUBLIC_FEATURE_WORKSPACE is on; six when it's off.
+// Seven steps when NEXT_PUBLIC_FEATURE_WORKSPACE is on; six when it's off,
+// after one screen in front of them all:
 //
+//   -  who are you (URG-262, 2026-10-14): one tap, saved as
+//      onboarding_persona and, for the new account, profiles.role. Rendered
+//      while `personaOpen` is true rather than as a numbered step, so every
+//      step index below (and the URG-251 plan that refers to them) is unchanged.
 //   0  what are you working on
 //   1  where are you stuck
 //   2  where in lifecycle
@@ -75,7 +80,14 @@ import { HOME_PATH } from '@/lib/home-path';
 import { describeNextBlocker } from '@/lib/onboarding-next-hint';
 import { supabase } from '@/lib/supabase/client';
 import { errorMessage } from '@/lib/errors';
-import { ONBOARDING_PLANNING_PREFERENCE_LABELS, type OnboardingPlanningPreference } from '@/lib/onboarding';
+import {
+  ONBOARDING_PERSONA_CHOICES,
+  ONBOARDING_PERSONA_LABELS,
+  ONBOARDING_PLANNING_PREFERENCE_LABELS,
+  profileRoleForPersona,
+  type OnboardingPersona,
+  type OnboardingPlanningPreference,
+} from '@/lib/onboarding';
 import {
   EMPTY_ONBOARDING_DRAFT,
   MAX_ONBOARDING_ARTIST_NAME_LENGTH,
@@ -155,6 +167,8 @@ type StepIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 const LAST_STEP: StepIndex = WORKSPACE_ENABLED ? 6 : 5;
 const TOTAL_STEPS = WORKSPACE_ENABLED ? 7 : 6;
 
+const PERSONA_TITLE = 'Who are you?';
+
 const STEP_TITLES: Record<StepIndex, string> = {
   0: "What are you working on?",
   1: 'Where does a rollout usually fall apart?',
@@ -207,25 +221,18 @@ const PLANNING_PREFERENCE_OPTIONS: Array<{
   },
 ];
 
-// Onboarding role choice. Matches the two values the standalone /auth signup
-// produces. 'artist' fires the ArtistNameGate downstream (AppShell.tsx:59-65)
-// when artist_name is blank, so we always collect artistName when this is
-// chosen. 'artist-manager' is the default — the same hardcoded value the
-// flow used before this picker existed, so unchanged paths behave the same.
-type OnboardingRole = 'artist' | 'artist-manager';
+// The account role, derived from the persona answer (URG-262). It used to be
+// a two-option picker on the account step ("I manage an artist" / "I'm the
+// artist"); the first screen's "Who are you?" asks the same thing earlier and
+// with more answers, so the picker is gone. 'artist' still fires the
+// ArtistNameGate downstream (AppShell) when artist_name is blank, and the
+// artist name is asked of everyone on step 3. 'artist-manager' stays the
+// default for an answer that maps to no role ("Other"), the value the flow
+// always used.
+type OnboardingRole = 'artist' | 'artist-manager' | 'manager';
 const DEFAULT_ONBOARDING_ROLE: OnboardingRole = 'artist-manager';
-const ONBOARDING_ROLE_OPTIONS: Array<{ value: OnboardingRole; label: string; helper: string }> = [
-  {
-    value: 'artist-manager',
-    label: 'I manage an artist',
-    helper: 'You run rollouts on behalf of the artist (manager, label, agency).',
-  },
-  {
-    value: 'artist',
-    label: "I'm the artist",
-    helper: 'You are the artist running your own rollouts.',
-  },
-];
+const roleForPersona = (persona: OnboardingPersona | null): OnboardingRole =>
+  profileRoleForPersona(persona) ?? DEFAULT_ONBOARDING_ROLE;
 
 // Google OAuth round-trip persistence.
 //
@@ -278,7 +285,7 @@ type OnboardingResumeData = {
 };
 
 const isOnboardingRole = (value: unknown): value is OnboardingRole =>
-  value === 'artist' || value === 'artist-manager';
+  value === 'artist' || value === 'artist-manager' || value === 'manager';
 
 function readAndClearResumeMarker(): OnboardingResumeData | null {
   if (typeof window === 'undefined') return null;
@@ -393,11 +400,14 @@ export default function OnboardingPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // Role + artist name. Drives both the auth-store signup call (email/
-  // password path) AND the post-OAuth profile patch (Google path). Default
-  // to 'artist-manager' so anyone hitting the previous code path gets the
-  // same result as before.
-  const [role, setRole] = useState<OnboardingRole>(DEFAULT_ONBOARDING_ROLE);
+  // URG-262: "Who are you?" shows first, until it is answered. True on the
+  // server render so the first screen a slow connection paints is the real
+  // first question; the pre-paint hydration below closes it for a draft that
+  // already has an answer, and for a Google round trip coming back.
+  const [personaOpen, setPersonaOpen] = useState(true);
+  // Role drives both the auth-store signup call (email/password path) AND the
+  // post-OAuth profile patch (Google path). Derived from the persona answer.
+  const role: OnboardingRole = roleForPersona(draft.persona);
   // The artist name lives on the draft since 2026-10-11 (asked on step 3 for
   // everyone, sent with the release). The account step reads it from there.
   const artistName = draft.artistName;
@@ -453,6 +463,7 @@ export default function OnboardingPage() {
     } else {
       setDraft(loaded);
     }
+    if (loaded.persona) setPersonaOpen(false);
     // Read-and-clear the OAuth resume marker. If set, we just got back from
     // a Google round-trip and need to finish the hand-off the email/password
     // path runs synchronously. Apply the captured role + artistName to local
@@ -460,7 +471,7 @@ export default function OnboardingPage() {
     const resume = readAndClearResumeMarker();
     if (resume) {
       setResumeData(resume);
-      setRole(resume.role);
+      setPersonaOpen(false);
       // The draft (sessionStorage) normally survives the Google round trip
       // with the artist in it; the marker's copy only fills a gap.
       if (resume.artistName) {
@@ -636,7 +647,18 @@ export default function OnboardingPage() {
     // After signup we don't allow stepping back — the account already
     // exists and there's nothing meaningful to revise from this side.
     if (accountCreated) return;
+    if (step === 0) {
+      setPersonaOpen(true);
+      return;
+    }
     setStep((current) => (current > 0 ? ((current - 1) as StepIndex) : current));
+  };
+
+  // One tap answers and moves on (URG-262: "one tap, no extra words").
+  const handlePickPersona = (persona: OnboardingPersona) => {
+    setError('');
+    setDraft((current) => ({ ...current, persona }));
+    setPersonaOpen(false);
   };
 
   // "None of it yet" is exclusive of the rest; the stage is derived, not asked.
@@ -686,6 +708,10 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           onboardingCompleted: true,
           onboardingStep: 5,
+          // URG-262: who they are, and for this brand-new account the role
+          // that follows from it (replacing Google's 'artist-manager'
+          // fallback; the server never overwrites a role an invite gave).
+          ...(draft.persona ? { onboardingPersona: draft.persona, applyPersonaToRole: true } : {}),
           onboardingPlanningPreference: draft.planningPreference,
           // URG-192: these two were collected and then thrown away for the
           // whole life of this flow. They go to the server now.
@@ -1162,10 +1188,11 @@ export default function OnboardingPage() {
   // questions (0–4) plus the invite step when the workspace flag is on. The
   // progress bar and the "Step N of M" kicker both read from these so they
   // cannot disagree with the flow the user is actually walking.
-  const visibleTotalSteps = isAuthedSetup ? TOTAL_STEPS - 1 : TOTAL_STEPS;
+  // "Who are you?" (URG-262) is the first slot, so everything counts one on.
+  const visibleTotalSteps = (isAuthedSetup ? TOTAL_STEPS - 1 : TOTAL_STEPS) + 1;
   // Step 6 (invite) sits one slot earlier in authed-setup's counting because
   // step 5 never renders; every question step counts as itself.
-  const visibleStepNumber = isAuthedSetup && step === 6 ? 6 : step + 1;
+  const visibleStepNumber = personaOpen ? 1 : (isAuthedSetup && step === 6 ? 6 : step + 1) + 1;
   const stepKicker = `Step ${visibleStepNumber} of ${visibleTotalSteps}`;
   const inviteLabels = inviteStepButtonLabels(finishing);
 
@@ -1187,7 +1214,7 @@ export default function OnboardingPage() {
             putting him here forced the fix. Both branches now say the same
             true thing; the authed-setup branch already did. */}
         <div className="mb-6 flex items-start gap-4 sm:mb-8">
-          {step === 0 ? <Chappi pose="idle" size={96} className="-mt-2" /> : null}
+          {personaOpen || step === 0 ? <Chappi pose="idle" size={96} className="-mt-2" /> : null}
           <div className="min-w-0">
             <p className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-brand">
               Urganize
@@ -1235,11 +1262,33 @@ export default function OnboardingPage() {
             id="onboarding-step-heading"
             className="mt-1 font-display text-xl font-semibold leading-tight text-content-primary sm:text-2xl"
           >
-            {STEP_TITLES[step]}
+            {personaOpen ? PERSONA_TITLE : STEP_TITLES[step]}
           </h2>
 
+          {/* ----- Who are you? (URG-262) -------------------------------- */}
+          {personaOpen ? (
+            <div role="group" aria-labelledby="onboarding-step-heading" className="mt-5 space-y-2">
+              {ONBOARDING_PERSONA_CHOICES.map((persona) => {
+                const selected = draft.persona === persona;
+                return (
+                  <button
+                    key={persona}
+                    type="button"
+                    onClick={() => handlePickPersona(persona)}
+                    aria-pressed={selected}
+                    className={`motion-focus motion-press flex w-full items-center rounded-xl border bg-bg-elevated px-4 py-3 text-left text-sm text-content-primary transition-colors duration-fast ease-standard ${
+                      selected ? 'border-brand bg-brand/8' : 'border-stroke-default hover:border-stroke-strong'
+                    }`}
+                  >
+                    {ONBOARDING_PERSONA_LABELS[persona]}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
           {/* ----- Step 0: release type --------------------------------- */}
-          {step === 0 ? (
+          {step === 0 && !personaOpen ? (
             <div className="mt-5 space-y-4">
               <p className="text-sm leading-relaxed text-content-secondary">
                 Pick the kind of rollout you are planning first. You can add more artists and more
@@ -1491,45 +1540,6 @@ export default function OnboardingPage() {
                 Create your account to lock in your rollout and pick up this task on the other side.
               </p>
 
-              {/* Role picker — at the top because it changes which fields
-                  render below (artistName only for 'artist'). Same two
-                  values the standalone /auth signup uses, so downstream
-                  gates (ArtistNameGate in AppShell) treat the result
-                  identically. */}
-              <fieldset className="space-y-2">
-                <legend className={labelBase}>Who are you?</legend>
-                <div className="space-y-2">
-                  {ONBOARDING_ROLE_OPTIONS.map((option) => {
-                    const selected = role === option.value;
-                    return (
-                      <label
-                        key={option.value}
-                        className={`flex items-start gap-3 rounded-xl border bg-bg-elevated px-4 py-3 transition-colors duration-fast ease-standard ${
-                          selected
-                            ? 'border-brand bg-brand/8'
-                            : 'border-stroke-default hover:border-stroke-strong'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="onboarding-role"
-                          value={option.value}
-                          checked={selected}
-                          onChange={() => setRole(option.value)}
-                          className="mt-0.5 h-4 w-4 accent-brand"
-                        />
-                        <span className="flex-1">
-                          <span className="block text-sm text-content-primary">{option.label}</span>
-                          <span className="mt-1 block text-xs text-content-tertiary">
-                            {option.helper}
-                          </span>
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </fieldset>
-
               {/* The artist name moved to the rollout step (2026-10-11) and is
                   asked of everyone there, so an 'artist' account already has
                   it by now: signup writes it to the profile, which keeps the
@@ -1726,13 +1736,14 @@ export default function OnboardingPage() {
               ) : null}
             </div>
           ) : null}
-          {nextHintId ? (
+          {nextHintId && !personaOpen ? (
             <p id={nextHintId} className="mt-5 text-sm text-content-secondary">
               {nextHint}
             </p>
           ) : null}
 
-          {/* Footer / nav */}
+          {/* Footer / nav. None on "Who are you?": a tap is the answer. */}
+          {personaOpen ? null : (
           <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
             {step === 6 ? (
               <button
@@ -1743,7 +1754,7 @@ export default function OnboardingPage() {
               >
                 {inviteLabels.skip}
               </button>
-            ) : step > 0 && !accountCreated ? (
+            ) : !accountCreated ? (
               <button
                 type="button"
                 onClick={handleBack}
@@ -1801,6 +1812,7 @@ export default function OnboardingPage() {
               </button>
             )}
           </div>
+          )}
         </section>
 
         {/* Skip-to-dashboard escape hatch on the invite step — duplicated

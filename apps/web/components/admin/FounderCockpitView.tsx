@@ -4,6 +4,8 @@ import { FunnelStrip } from '@/components/admin/FunnelStrip';
 import { UrgansPanel } from '@/components/admin/UrgansPanel';
 import { DirectoryTilePanel } from '@/components/admin/DirectoryTilePanel';
 import type { DirectoryTile } from '@/lib/directory-growth';
+import type { PersonaSplit } from '@/lib/admin-persona-split';
+import { PersonaSplitPanel } from '@/components/admin/PersonaSplitPanel';
 import { ChurnPanel } from '@/components/admin/ChurnPanel';
 import { RunwayPanel, type RunwayFormValues } from '@/components/admin/RunwayPanel';
 import type { Runway } from '@/lib/admin-runway';
@@ -87,6 +89,7 @@ export function FounderCockpitView({
   funnels = [],
   urgans = null,
   directory = null,
+  personas = null,
   churn = null,
   runway = null,
   runwayReadable = true,
@@ -102,6 +105,8 @@ export function FounderCockpitView({
   urgans?: UrgansUsage | null;
   /** The Directory tile. Null hides it. */
   directory?: DirectoryTile | null;
+  /** Who our accounts say they are (URG-262). Null hides it. */
+  personas?: PersonaSplit | null;
   /** Logo churn and gross MRR churn by month. Null hides the panel. */
   churn?: ChurnSummary | null;
   /** Runway and default alive. Null hides the panel. */
@@ -315,6 +320,8 @@ export function FounderCockpitView({
       {urgans ? <UrgansPanel usage={urgans} /> : null}
 
       {directory ? <DirectoryTilePanel tile={directory} /> : null}
+
+      {personas ? <PersonaSplitPanel split={personas} /> : null}
 
       <p className="mt-4 text-xs leading-5 text-content-tertiary">
         Past weeks use today&apos;s paying status and today&apos;s team members, because neither is
