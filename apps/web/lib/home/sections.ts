@@ -7,9 +7,13 @@
  *   Placements, Where the money went (managers who may track spend), then
  *   UrgAns' line for the day.
  *
+ * Above all of them sits the Opportunities card (URG-266, 2026-10-14), drawn by
+ * HomeBlocks outside this list because it loads its own data.
+ *
  * A group with nothing in it is left out entirely: Home never shows an empty
- * state. The one exception is Where the money went, which a manager sees empty
- * so the first spend has a place to be added from. Pure so the order and the drops can be tested.
+ * state. The exceptions are the Opportunities card, and Where the money went,
+ * which a manager sees empty so the first spend has a place to be added from.
+ * Pure so the order and the drops can be tested.
  */
 
 import { SPEND_COPY } from '../release-spend';

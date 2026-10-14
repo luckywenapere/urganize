@@ -13,6 +13,7 @@ import { AttentionStack } from './AttentionStack';
 import { ChappiSpeaksCard } from './ChappiSpeaksCard';
 import { HomeStack } from './HomeStack';
 import { NextShowCard } from './NextShowCard';
+import { OpportunitiesCard } from './OpportunitiesCard';
 import { OnboardingBar } from './OnboardingBar';
 import { PlacementsStack } from './PlacementsStack';
 import { RolloutsStack } from './RolloutsStack';
@@ -129,6 +130,13 @@ export function HomeBlocks({
           goes quiet instead of taking the whole of Home to the crash screen,
           which is what a bad block did before, and "Try again" could not help
           because the same data threw again. ErrorBoundary adds no element. */}
+      {/* Opportunities first (URG-266, 2026-10-14): the newest open grants and
+          deals that fit the team, ahead of every other group. It reads its own
+          data, so it sits outside orderHomeBlocks, and unlike the groups below
+          it shows an empty state. */}
+      <ErrorBoundary name="home-block-opportunities" onError={reportBoundaryError}>
+        <OpportunitiesCard />
+      </ErrorBoundary>
       {blocks.map((key) => (
         <ErrorBoundary key={key} name={`home-block-${key}`} onError={reportBoundaryError}>
           {render(key)}

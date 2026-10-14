@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { describeDate, todayKey } from '@/lib/opportunities';
 import { GRANT_SUGGESTIONS_COPY, type GrantSuggestionView } from '@/lib/grants/suggestions';
 import { useOpportunitiesStore } from '@/stores/useOpportunitiesStore';
+import { loadGrantSuggestions } from './load-grant-suggestions';
 
 // Suggested grants on Opportunities: this week's matches from the curated list.
 // Shown only when NEXT_PUBLIC_FEATURE_GRANT_SUGGESTIONS is on and there is at
@@ -26,18 +27,10 @@ export function GrantSuggestionsStrip() {
 
   useEffect(() => {
     let live = true;
-    void (async () => {
-      const headers = await authHeaders();
-      if (!headers) return;
-      try {
-        const response = await fetch('/api/opportunities/grant-suggestions', { headers, cache: 'no-store' });
-        if (!response.ok || !live) return;
-        const body = (await response.json()) as { suggestions?: GrantSuggestionView[] };
-        if (live) setSuggestions(Array.isArray(body.suggestions) ? body.suggestions : []);
-      } catch {
-        // Offline: the strip simply stays hidden.
-      }
-    })();
+    void loadGrantSuggestions().then((result) => {
+      // Offline or not allowed: the strip simply stays hidden.
+      if (live && result.ok) setSuggestions(result.suggestions);
+    });
     return () => {
       live = false;
     };

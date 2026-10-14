@@ -433,6 +433,20 @@ export interface AnalyticsEventPropertiesMap {
     role: string;
     published: boolean;
   };
+  /**
+   * Home's Opportunities card (URG-266, lib/home/opportunities-card.ts).
+   * Browser-side, one per tap. `target` is what was tapped: an item, See all,
+   * or the empty state's button. For an item, where it came from (a matched
+   * suggestion or the team's own list), its kind and its place on the card.
+   * No titles, funders or names. `shown` is how many items the card had.
+   */
+  home_opportunity_clicked: {
+    target: 'item' | 'see_all' | 'empty';
+    source: 'suggested' | 'saved' | null;
+    kind: string | null;
+    position: number | null;
+    shown: number;
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;
