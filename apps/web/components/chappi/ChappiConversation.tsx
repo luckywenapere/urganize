@@ -64,7 +64,10 @@ import { useShareStore } from '@/stores/useShareStore';
 import { deferFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { actionsForLeftChat, firstShareOffersIn } from '@/lib/chappi/left-chat-actions';
 import { mayAutoFocusComposer, readAutoFocusContext } from '@/lib/composer-focus';
-import { useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { TASKS_CHANGED_EVENT, useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { matchTasksByTitle, parseTaskStatusCommand, type TaskStatusCommand } from '@/lib/chappi/task-status-command';
+import { getTaskStatusLabel } from '@/lib/tasks';
+import type { Task } from '@/types/tasks';
 import { useVoiceInput } from '@/components/chappi/useVoiceInput';
 import { TALK_ENABLED, TalkButton } from '@/components/chappi/voice/TalkButton';
 import { useVoiceCallStore } from '@/stores/useVoiceCallStore';
@@ -985,6 +988,82 @@ export function ChappiConversation({
 
   const runDeterministic = (prompt: string) => handleIntent(resolveIntent(prompt));
 
+  // "Mark the cover shoot as done": changed here, by rule, with no model call
+  // and so no credits (founder, 2026-10-14). Says whether it handled the
+  // message; a loose phrase ("the EP is done") that names no activity is left
+  // for the model, as it always was. See lib/chappi/task-status-command.ts.
+  const runTaskStatusCommand = async (turn: Turn, command: TaskStatusCommand): Promise<boolean> => {
+    const token = await getAccessToken();
+    if (!token) return false;
+    const listResponse = await fetch('/api/tasks', {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    }).catch(() => null);
+    const listPayload = listResponse
+      ? ((await listResponse.json().catch(() => ({}))) as { tasks?: Task[] })
+      : {};
+    if (!listResponse?.ok || !Array.isArray(listPayload.tasks)) {
+      if (command.strength === 'loose') return false;
+      deliverReply(turn, 'I could not load your activities just now, so nothing changed.');
+      return true;
+    }
+    const matches = matchTasksByTitle(command.query, listPayload.tasks, scopedRelease?.id ?? null);
+    const label = getTaskStatusLabel(command.status);
+    if (matches.length === 0) {
+      if (command.strength === 'loose') return false;
+      deliverReply(turn, `I could not find an activity called “${command.query}”. Use its name as it appears in your activities.`);
+      return true;
+    }
+    if (matches.length > 1) {
+      const names = matches
+        .slice(0, 5)
+        .map((task) => `“${task.title}”`)
+        .join(', ');
+      deliverReply(turn, `More than one activity matches “${command.query}”: ${names}. Say the full name and I will change it.`);
+      return true;
+    }
+    const task = matches[0];
+    if (task.status === command.status) {
+      deliverReply(turn, `“${task.title}” is already ${label}.`);
+      return true;
+    }
+    if (command.status === 'done') {
+      // The store's path, so the dependency check and the cascade-unlock run
+      // exactly as they do for the checkbox.
+      const completed = await useTaskStore.getState().completeTask(task.id);
+      if (!completed) {
+        const blocker = useTaskStore.getState().error;
+        deliverReply(turn, blocker || `I could not mark “${task.title}” as Done just now.`);
+        return true;
+      }
+    } else {
+      const patchResponse = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: command.status }),
+      }).catch(() => null);
+      const patchPayload = patchResponse
+        ? ((await patchResponse.json().catch(() => ({}))) as { task?: Task; error?: string })
+        : {};
+      if (!patchResponse?.ok) {
+        deliverReply(turn, patchPayload.error || `I could not change “${task.title}” just now.`);
+        return true;
+      }
+      if (patchPayload.task) {
+        const updated = patchPayload.task;
+        useTaskStore.setState((state) => ({
+          tasks: state.tasks.map((candidate) =>
+            candidate.id === updated.id ? { ...candidate, status: updated.status } : candidate
+          ),
+        }));
+      }
+    }
+    window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
+    void loadCommandCenter({ force: true });
+    deliverReply(turn, `Done. “${task.title}” is now ${label}.`);
+    return true;
+  };
+
   const submitPrompt = async (prompt: string, historyForApi: ChappiMessage[]) => {
     const turn = beginTurn();
     setThinkingEpoch(turn.epoch);
@@ -1002,6 +1081,11 @@ export function ChappiConversation({
       runDeterministic(prompt);
     };
     try {
+      // A status change is answered here, by rule, before any model call.
+      if (!sentAttachments) {
+        const command = parseTaskStatusCommand(prompt);
+        if (command && (await runTaskStatusCommand(turn, command))) return;
+      }
       const token = await getAccessToken();
       if (!token) {
         fallBackToRouter();

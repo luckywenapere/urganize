@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.133.0",
+    date: "October 14, 2026",
+    highlights: [
+      "Tell UrgAns \"mark the cover shoot as done\" or \"move the pitch to in progress\" and it changes the activity's status right away, with no credits used.",
+    ],
+  },
+  {
     version: "1.132.4",
     date: "October 14, 2026",
     highlights: [
