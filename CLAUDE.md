@@ -402,6 +402,8 @@ Current schedules, both daily and both approximate — Hobby precision is ±59 m
 
 ## Conventions
 
+**Releases, tags and Linear (2026-10-14, founder decision).** Work ships straight to `main` (no branches or PRs, to save Vercel deploys). Every push that changes the product bumps the root `package.json` version and adds a `packages/changelog` entry, as before. `.github/workflows/release.yml` then runs on GitHub Actions (not Vercel, and it never commits back): when `v<version>` is not yet tagged it creates the tag and a GitHub Release from that changelog entry, and comments "Shipped in vX.Y.Z" on every Linear issue the pushed commits name. So **every commit message names its Linear issue**: `Fixes URG-123` (Linear's GitHub integration moves it to Done when it reaches `main`) or just `URG-123` to link without closing. Linear projects are ongoing product areas with no version numbers in their names (Onboarding & Growth, Navigation & Views, UrgAns (AI), Releases, Tasks & Teams, Directory & Opportunities, Video Pre-production, Partnerships & Outreach); file every new issue under one. The version lives in git tags, GitHub Releases and the changelog, never in a project name. The workflow needs the `LINEAR_API_KEY` repo secret; without it the tag and Release still happen and the Linear comments are skipped.
+
 **TypeScript:** strict mode everywhere. Use the existing `packages/config/typescript/base.json` config.
 
 **Linting:** `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`. Two intentional overrides:
