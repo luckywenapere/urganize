@@ -9,6 +9,7 @@ import type { DistributionIssue } from '@/lib/distribution-rules';
 import type { Release } from '@/types/releases';
 import { DistributionRejectionList } from './DistributionIssueList';
 import { FanPaymentsCard } from './FanPaymentsCard';
+import { PartnerLogo } from './PartnerLogo';
 import { distributionAuthHeaders, useDistributionStatus } from './useDistributionStatus';
 
 type DistributionSectionProps = {
@@ -128,52 +129,41 @@ export function DistributionSection({ release }: DistributionSectionProps) {
     <div className="mt-8 space-y-6">
       {data.rejections.length > 0 ? <DistributionRejectionList rejections={data.rejections} /> : null}
 
-      {/* The two partners side by side (founder, 2026-10-14: the store check that
-          sat between them "should stop appearing"). A swipe row on a phone, two
-          columns from sm up. The check still runs on the server when the team
-          signs up, and its result stays on the rollout's status. */}
-      <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0">
-      <div className="w-[85%] shrink-0 snap-start sm:w-auto">
-      <section className="flex h-full flex-col border border-stroke-default bg-bg-surface p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-          Default distributor
-        </p>
-        <h3 className="mt-1 text-base font-semibold text-content-primary">
-          {DISTRIBUTION_PARTNER.name}
-        </h3>
-        <p className="mt-2 text-sm text-content-secondary">
-          They put your music on Spotify, Apple Music, YouTube Music, Audiomack, Boomplay and more.
-          Sign up with the button below, then finish setting up your account on their site. You pay
-          them there, and they pay your royalties. Urganize takes no share of them.
-        </p>
-        <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-4">
-          <button type="button" onClick={() => void order(true)} className={PRIMARY_BUTTON}>
-            {`Sign up with ${DISTRIBUTION_PARTNER.name}`}
-            <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          </button>
-          <a
-            href={DISTRIBUTION_PARTNER.termsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="motion-focus text-xs font-medium text-content-secondary underline underline-offset-4 hover:text-content-primary"
-          >
-            Their terms
-          </a>
-        </div>
-        {data.lastHandoffAt ? (
-          <p className="mt-3 text-xs text-content-tertiary" role="status">
-            Someone on your team opened their sign-up on {formatDay(data.lastHandoffAt)}.
+      {/* The two partners (founder, 2026-10-14): the logo, the eyebrow and the
+          button, with no long paragraphs ("just put their logos"). Stacked on
+          a phone so neither card is clipped, side by side from sm up. The store
+          check still runs on the server when the team signs up. */}
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+        <section
+          aria-label={DISTRIBUTION_PARTNER.name}
+          className="flex h-full flex-col border border-stroke-default bg-bg-surface p-4"
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
+            Default distributor
           </p>
-        ) : null}
-        <p className="mt-3 text-xs text-content-tertiary">
-          Free ISRC and UPC codes come with their sign-up, so you do not need your own.
-        </p>
-      </section>
-      </div>
-      <div className="w-[85%] shrink-0 snap-start sm:w-auto">
-      {/* A separate partner, not a distributor: shown whatever the check says. */}
-      <FanPaymentsCard />
-      </div>
+          <PartnerLogo src="/partners/therealmusic.png" alt={DISTRIBUTION_PARTNER.name} logoClassName="h-12" />
+          <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-4">
+            <button type="button" onClick={() => void order(true)} className={PRIMARY_BUTTON}>
+              {`Sign up with ${DISTRIBUTION_PARTNER.name}`}
+              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <a
+              href={DISTRIBUTION_PARTNER.termsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="motion-focus text-xs font-medium text-content-secondary underline underline-offset-4 hover:text-content-primary"
+            >
+              Their terms
+            </a>
+          </div>
+          {data.lastHandoffAt ? (
+            <p className="mt-3 text-xs text-content-tertiary" role="status">
+              Someone on your team opened their sign-up on {formatDay(data.lastHandoffAt)}.
+            </p>
+          ) : null}
+        </section>
+        {/* A separate partner, not a distributor: shown whatever the check says. */}
+        <FanPaymentsCard />
       </div>
     </div>
   );

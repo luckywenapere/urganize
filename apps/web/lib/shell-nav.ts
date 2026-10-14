@@ -76,6 +76,7 @@ export const HOME_HREF = '/dashboard/home';
 export const URGANS_HREF = '/dashboard/urgans';
 export const CATALOGUE_HREF = '/dashboard';
 export const DISTRIBUTE_HREF = '/dashboard/distribute';
+export const ARTISTS_HREF = '/dashboard/artists';
 
 export function buildShellAreas(flags: ShellFlags): ShellArea[] {
   const catalogueTabs: ShellSubTab[] = [
@@ -90,8 +91,8 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
     catalogueTabs.push({
       key: 'artists',
       label: 'Artists',
-      href: '/dashboard/artists',
-      isActive: (p) => startsWithPath(p, '/dashboard/artists'),
+      href: ARTISTS_HREF,
+      isActive: (p) => startsWithPath(p, ARTISTS_HREF),
     });
   }
   // Distribute took Press kits' place in the tab row (founder call,

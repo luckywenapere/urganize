@@ -26,6 +26,9 @@ export const SUBNAV_SLOT_END = 'subnav-slot-end';
 /** A list page's search and filters (ListToolbar), right-aligned before the
  *  primary action (founder mock, 2026-10-11). */
 export const SUBNAV_SLOT_TOOLS = 'subnav-slot-tools';
+/** The phone tab row's right end, for the page's primary action as a compact
+ *  icon button (Add rollout on Rollouts, founder 2026-10-14). Phones only. */
+export const SUBNAV_SLOT_PHONE_END = 'subnav-slot-phone-end';
 
 export function SubNav() {
   const pathname = usePathname() ?? '/dashboard';
@@ -62,6 +65,7 @@ export function SubNav() {
         })}
         {tip.panel}
       </div>
+      <div id={SUBNAV_SLOT_PHONE_END} className="flex shrink-0 items-center empty:hidden" />
       </div>
     </nav>
   );

@@ -3,12 +3,14 @@
 import { ExternalLink } from '@/components/icons';
 import { openExternalUrl } from '@/lib/external-link';
 import { FAN_PAYMENTS_PARTNER } from '@/lib/fan-payments';
+import { PartnerLogo } from './PartnerLogo';
 
 const SECONDARY_BUTTON =
   'motion-focus motion-press inline-flex h-10 items-center gap-2 border border-stroke-control px-4 text-sm font-semibold text-content-secondary transition-colors hover:border-content-secondary hover:text-content-primary';
 
 /**
  * Fan payments: a second partner, beside distribution, never instead of it.
+ * Logo, eyebrow and button only (founder, 2026-10-14: "just put their logos").
  * Fanlly is not a distributor, so this card does not depend on the check before
  * distribution and shows whatever that check says. The button opens our
  * referral link to their creator sign-up; see lib/fan-payments.ts. Nothing is
@@ -17,21 +19,13 @@ const SECONDARY_BUTTON =
 export function FanPaymentsCard() {
   return (
     <section
-      aria-labelledby="fan-payments-heading"
+      aria-label={FAN_PAYMENTS_PARTNER.name}
       className="flex h-full flex-col border border-stroke-default bg-bg-surface p-4"
     >
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
         Fan payments
       </p>
-      <h3 id="fan-payments-heading" className="mt-1 text-base font-semibold text-content-primary">
-        Get paid by fans directly
-      </h3>
-      <p className="mt-2 text-sm text-content-secondary">
-        With {FAN_PAYMENTS_PARTNER.name}, upload a track and share one link. Fans tip you by bank
-        transfer or card, with no account needed. You get paid in naira and keep{' '}
-        {FAN_PAYMENTS_PARTNER.creatorSharePercent}% of every tip. It does not put your music in
-        stores, so use it alongside your distributor.
-      </p>
+      <PartnerLogo src="/partners/fanlly.svg" alt={FAN_PAYMENTS_PARTNER.name} />
       <div className="mt-auto pt-4">
         <button
           type="button"

@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Newspaper } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
-// Back goes to the Rollouts tab, not the Artists list (founder, 2026-10-14).
-import { CATALOGUE_HREF } from '@/lib/shell-nav';
+// Back goes to the Artists tab, the list of artists (founder, 2026-10-14).
+import { ARTISTS_HREF } from '@/lib/shell-nav';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { bucketReleases, bucketShows } from '@/lib/artist-overview';
 import { epkHref, formatCalendarDate, isArtistPageEnabled, releaseHref } from '@/lib/artist-page';
@@ -103,8 +103,13 @@ export default function ArtistPageClient() {
     const waiting = authLoading || !rosterLoaded;
     return (
       <div className="mx-auto w-full max-w-3xl">
-        <Link href={CATALOGUE_HREF} className="inline-flex items-center gap-1 text-sm text-content-secondary hover:underline">
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Rollouts
+        <Link
+          href={ARTISTS_HREF}
+          aria-label="Artists"
+          title="Artists"
+          className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
         </Link>
         {waiting ? (
           <div className="mt-6 h-32 animate-pulse rounded-xl border border-stroke-default bg-bg-surface" aria-busy="true" />
@@ -142,11 +147,16 @@ export default function ArtistPageClient() {
     </li>
   );
 
+  // A lone group needs no heading ("Planned" over the only list is noise);
+  // headings come back only when they separate planned, out now and past.
+  const groupsShown = [buckets.planned, buckets.live, buckets.past].filter((list) => list.length > 0).length;
   const group = (label: string, list: typeof releases) =>
     list.length === 0 ? null : (
       <div key={label} className="mt-4 first:mt-0">
-        <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">{label}</h3>
-        <ul className="mt-2 space-y-2">{list.map(releaseRow)}</ul>
+        {groupsShown > 1 ? (
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">{label}</h3>
+        ) : null}
+        <ul className="space-y-2">{list.map(releaseRow)}</ul>
       </div>
     );
 
@@ -174,25 +184,36 @@ export default function ArtistPageClient() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
-      <Link href={CATALOGUE_HREF} className="inline-flex items-center gap-1 text-sm text-content-secondary hover:underline">
-        <ArrowLeft className="h-4 w-4" aria-hidden /> Rollouts
+      <Link
+        href={ARTISTS_HREF}
+        aria-label="Artists"
+        title="Artists"
+        className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
       </Link>
 
-      <header className="flex items-start gap-4">
+      {/* Golden-ratio header: on a phone the 128px photo takes ~1 part of the
+          width and the name ~1.618 parts; the name sits on the photo's upper
+          golden line (about 38% down), not floating at its middle. */}
+      <header className="grid grid-cols-[8rem_minmax(0,1fr)] items-start gap-5">
         <ProfilePhotoPicker
           name={artist.name}
           photoUrl={artist.photoUrl}
-          size={72}
+          size={128}
           square
           signUrl={artistPhotoUrl(artist.id)}
           save={(path) => saveArtistPhoto(artist.id, path)}
           onChange={(url) => setArtistPhoto(artist.id, url)}
           surface="artist_photo"
-          showActions
+          // The camera badge already says "add a photo"; the text row only
+          // returns once there is a photo to change or remove.
+          showActions={Boolean(artist.photoUrl)}
         />
-        <div className="min-w-0 pt-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">Artist</p>
-          <h1 className="mt-2 truncate font-display text-2xl font-semibold text-content-primary">{artist.name}</h1>
+        <div className="min-w-0 pt-8">
+          <h1 className="line-clamp-2 break-words font-display text-3xl font-semibold leading-tight text-content-primary sm:text-4xl">
+            {artist.name}
+          </h1>
         </div>
       </header>
 

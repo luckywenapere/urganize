@@ -22,6 +22,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.138.0",
+    date: "October 15, 2026",
+    highlights: [
+      "Distribute now shows each partner's logo and sign-up button, with no long paragraphs, and the two cards stack on your phone.",
+      "Add rollout now sits at the right end of the top row on Rollouts, and the rollouts list is shorter, with no count above it and no next activity under each one.",
+      "An artist's page is calmer: a round back arrow returns you to Artists, a bigger photo and name fill the top, and the extra Artist, Add photo and Planned labels are gone.",
+    ],
+  },
+  {
     version: "1.137.1",
     date: "October 15, 2026",
     highlights: [

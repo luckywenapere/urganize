@@ -1,14 +1,14 @@
 'use client';
 
 import { PullReveal } from '@/components/shared/PullReveal';
-import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { Plus, X } from '@/components/icons';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ListToolbar } from '@/components/shell/ListToolbar';
-import { SUBNAV_SLOT_END, SUBNAV_SLOT_START } from '@/components/shell/SubNav';
+import { SUBNAV_SLOT_END, SUBNAV_SLOT_PHONE_END } from '@/components/shell/SubNav';
 import {
   SORT_OPTIONS,
   STATUS_FILTERS,
@@ -114,23 +114,11 @@ function ProgressBar({ row }: { row: CatalogueRow }) {
   );
 }
 
-function nextUpLabel(row: CatalogueRow): ReactNode {
-  if (row.tasksTotal === 0) return <span className="text-content-tertiary">No activities yet</span>;
-  if (!row.nextTask) return <span className="text-status-success">All done</span>;
-  const due = formatDate(row.nextTask.dueDate);
-  return (
-    <span className="block min-w-0">
-      <span className="block truncate text-sm text-content-primary">{row.nextTask.title}</span>
-      {due ? <span className="block text-xs text-content-tertiary">{due}</span> : null}
-    </span>
-  );
-}
-
 /** The search and filter bar appears only above this many rollouts. */
 const FILTER_BAR_MIN_ROWS = 20;
 
 const COLUMNS =
-  'md:grid-cols-[minmax(240px,2.4fr)_130px_130px_minmax(150px,1fr)_minmax(180px,1.6fr)]';
+  'md:grid-cols-[minmax(240px,2.4fr)_130px_130px_minmax(150px,1fr)]';
 
 /**
  * The Catalogue at rest (design overhaul, 2026-10-04): Deel's People table with
@@ -141,7 +129,7 @@ const COLUMNS =
  * Dorian's rollouts without a second control here; a small chip says so and lets
  * you clear it from here too.
  *
- * Below `md` the rows become cards (cover, title, status, progress, next up),
+ * Below `md` the rows become cards (cover, title, status, date, progress),
  * because a six-column table on a phone is a horizontal scroll nobody wants. At
  * `md` and up a toggle swaps the table for the cover-art grid.
  *
@@ -175,29 +163,41 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
     [rows, query, selectedArtistId]
   );
 
-  const renderAddButton = (tour = true) => (
+  const addButton = (
     <button
       type="button"
       onClick={onCreate}
       disabled={testRelease?.isStarting}
-      data-tour={tour ? 'new-rollout' : undefined}
+      data-tour="new-rollout"
       className="motion-focus motion-press inline-flex h-10 items-center justify-center gap-2 rounded-full bg-content-primary px-4 text-sm font-semibold text-content-inverse hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <Plus className="h-4 w-4" aria-hidden="true" />
       Add rollout
     </button>
   );
-  const addButton = renderAddButton();
 
-  // On desktop the count and Add rollout sit in the top bar (founder mock,
-  // 2026-10-11, in the tab row then; the top bar since URG-255, 2026-10-14,
-  // whose slots are desktop only). Below `lg` they stay on the card.
-  const [slots, setSlots] = useState<{ start: HTMLElement | null; end: HTMLElement | null }>({ start: null, end: null });
+  // Add rollout sits at the right end of the top row, never on the list card
+  // (founder, 2026-10-14): the page bar on a computer, the tab row on a phone,
+  // where it is the icon alone so the tabs never have to scroll. The count
+  // that sat beside it is gone, so the list starts with the first rollout.
+  const [slots, setSlots] = useState<{ end: HTMLElement | null; phoneEnd: HTMLElement | null }>({ end: null, phoneEnd: null });
   useEffect(() => {
-    setSlots({ start: document.getElementById(SUBNAV_SLOT_START), end: document.getElementById(SUBNAV_SLOT_END) });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSlots({ end: document.getElementById(SUBNAV_SLOT_END), phoneEnd: document.getElementById(SUBNAV_SLOT_PHONE_END) });
   }, []);
-  const totalLabel = `Total ${visible.length} ${visible.length === 1 ? 'rollout' : 'rollouts'}`;
-  const inSubNav = Boolean(slots.start && slots.end);
+  const phoneAddButton = (
+    <button
+      type="button"
+      onClick={onCreate}
+      disabled={testRelease?.isStarting}
+      data-tour="new-rollout"
+      aria-label="Add rollout"
+      title="Add rollout"
+      className="motion-focus motion-press inline-flex h-9 w-9 items-center justify-center rounded-full bg-content-primary text-content-inverse hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <Plus className="h-4 w-4" aria-hidden="true" />
+    </button>
+  );
 
   const open = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -316,22 +316,11 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
       ) : null}
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-        <div className={`flex items-center justify-between gap-3 px-4 py-3 sm:px-5 ${inSubNav ? 'lg:hidden' : ''}`}>
-          <p className="text-sm text-content-secondary" aria-live="polite">
-            {totalLabel}
-          </p>
-          {renderAddButton(!inSubNav)}
-        </div>
-        {inSubNav && slots.start
-          ? createPortal(
-              <p className="hidden whitespace-nowrap text-sm text-content-secondary lg:block">{totalLabel}</p>,
-              slots.start
-            )
-          : null}
-        {inSubNav && slots.end ? createPortal(<div className="hidden lg:block">{addButton}</div>, slots.end) : null}
+        {slots.end ? createPortal(<div className="hidden lg:block">{addButton}</div>, slots.end) : null}
+        {slots.phoneEnd ? createPortal(<div className="lg:hidden">{phoneAddButton}</div>, slots.phoneEnd) : null}
 
         {visible.length === 0 ? (
-          <div className={`border-t border-stroke-subtle px-5 py-10 ${inSubNav ? 'lg:border-t-0' : ''}`}>
+          <div className="px-5 py-10">
             <EmptyState
               title="No rollouts match that"
               description="Try a different word or filter, or clear them to see everything."
@@ -350,7 +339,7 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
             />
           </div>
         ) : view === 'cards' ? (
-          <div className={`hidden grid-cols-2 gap-4 border-stroke-subtle p-4 md:grid border-t ${inSubNav ? 'lg:border-t-0' : ''} xl:grid-cols-3 2xl:grid-cols-4`}>
+          <div className="hidden grid-cols-2 gap-4 p-4 md:grid xl:grid-cols-3 2xl:grid-cols-4">
             {visible.map((row) => (
               <WorkspaceReleaseCard
                 key={row.id}
@@ -376,13 +365,12 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
           <div className={view === 'cards' ? 'md:hidden' : ''}>
             <div
               role="row"
-              className={`hidden ${inSubNav ? 'border-y lg:border-t-0' : 'border-y'} border-stroke-subtle px-5 py-3 text-xs font-medium text-content-tertiary md:grid md:gap-4 ${COLUMNS}`}
+              className={`hidden border-b border-stroke-subtle px-5 py-3 text-xs font-medium text-content-tertiary md:grid md:gap-4 ${COLUMNS}`}
             >
               <span role="columnheader">Rollout</span>
               <span role="columnheader">Status</span>
               <span role="columnheader">Release date</span>
               <span role="columnheader">Progress</span>
-              <span role="columnheader">Next up</span>
             </div>
             <ul role="rowgroup" className="divide-y divide-stroke-subtle">
               {visible.map((row, rowIndex) => {
@@ -420,9 +408,6 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
                       </span>
                       <span role="cell">
                         <ProgressBar row={row} />
-                      </span>
-                      <span role="cell" className="min-w-0">
-                        {nextUpLabel(row)}
                       </span>
                     </a>
                   </li>
