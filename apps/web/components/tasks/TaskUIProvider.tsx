@@ -20,6 +20,7 @@ import { CoverArtPromptSheet } from '@/components/tasks/CoverArtPromptSheet';
 import { UndoCompletionToast } from '@/components/tasks/UndoCompletionToast';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type WorkspaceMember } from '@/lib/tasks';
+import type { RolloutPhase } from '@/types/tasks';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
@@ -428,6 +429,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
     dueDate?: string | null;
     assignedToUserId?: string | null;
     planKey?: boolean;
+    phase?: RolloutPhase | null;
   }) => {
     if (!activeTaskId) {
       return;
@@ -503,6 +505,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
                   groupName: fresh.groupName,
                   groupColor: fresh.groupColor,
                   planKey: fresh.planKey,
+                  phase: fresh.phase,
                   updatedAt: fresh.updatedAt,
                 }
               : row

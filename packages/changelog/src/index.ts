@@ -22,6 +22,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.135.0",
+    date: "October 15, 2026",
+    highlights: [
+      "Every rollout is now split into three phases: Pre-release, Release and Post-release. Each shows its dates, how much is done, and which phase you are in now.",
+      "The timeline groups activities under the three phases, with a phase summary at the top.",
+      "The activity list groups by phase too. Tap Group by Status to get the old view back.",
+      "Move an activity to a different phase from its detail. Activities from before this get a phase from their date.",
+    ],
+  },
+  {
     version: "1.134.1",
     date: "October 15, 2026",
     highlights: [

@@ -18,6 +18,7 @@ import {
 } from '@/lib/tasks-server';
 import { TaskService } from '@/lib/services/task-service';
 import { withPlanKey } from '@/lib/plan-focus';
+import { isRolloutPhase, withTaskPhase, type RolloutPhase } from '@/lib/rollout-phases';
 import { isEditorialPitchTask } from '@/lib/editorial-pitch';
 import { afterResponse } from '@/lib/after-response';
 import { loadPitchBlocker } from '@/lib/editorial-pitch-server';
@@ -144,12 +145,29 @@ export async function PATCH(
       planKey = rawPlanKey;
       body = rest;
     }
+    // `phase` (URG-292) is the same shape: it lives at metadata.phase, and
+    // null clears it so the task's phase follows its date again.
+    let phase: RolloutPhase | null | undefined;
+    if (body && typeof body === 'object' && 'phase' in body) {
+      const { phase: rawPhase, ...rest } = body as Record<string, unknown>;
+      if (rawPhase !== null && !isRolloutPhase(rawPhase)) {
+        return NextResponse.json(
+          { error: 'phase must be pre_release, release, post_release or null.' },
+          { status: 400 }
+        );
+      }
+      phase = rawPhase;
+      body = rest;
+    }
     const mapped = mapTaskPatchBody(body);
     if ('error' in mapped) {
       return NextResponse.json({ error: mapped.error }, { status: 400 });
     }
     if (planKey !== undefined) {
       mapped.updates.metadata = withPlanKey(access.task.metadata, planKey);
+    }
+    if (phase !== undefined) {
+      mapped.updates.metadata = withTaskPhase(mapped.updates.metadata ?? access.task.metadata, phase);
     }
 
     // Validate the assignee belongs to the task's workspace. null is allowed

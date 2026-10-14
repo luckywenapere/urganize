@@ -61,7 +61,12 @@
  * the user is standing.
  */
 
-import { derivePlanPhase, PLAN_PHASE_LABELS, PLAN_PHASE_ORDER, type PlanPhase } from './release-planning';
+import {
+  ROLLOUT_PHASE_LABELS,
+  ROLLOUT_PHASE_ORDER,
+  resolveTaskPhase,
+  type RolloutPhase,
+} from './rollout-phases';
 import { getTaskSectionKey } from './tasks';
 import type { Task, TaskSectionKey } from '@/types/tasks';
 
@@ -232,10 +237,12 @@ export type TimelineItem = {
   section: TaskSectionKey;
   /** Null when the playbooks did not generate this activity. */
   durationDays: number | null;
+  /** The rollout phase it is grouped under (URG-292). */
+  phase: RolloutPhase;
 };
 
 export type TimelinePhaseGroup = {
-  phase: PlanPhase;
+  phase: RolloutPhase;
   label: string;
   items: TimelineItem[];
   /** Span across every item in the phase, for the collapsed summary bar. */
@@ -315,6 +322,7 @@ export function buildReleaseTimeline(params: {
       tone,
       section,
       durationDays: task.durationDays,
+      phase: resolveTaskPhase(task, releaseDate),
     });
   }
 
@@ -359,21 +367,20 @@ export function buildReleaseTimeline(params: {
   }
 
   // ---- Phases ---------------------------------------------------------------
-  // derivePlanPhase is the single definition of these boundaries (setup /
-  // pre-release / release week / post-release) and is already what the plan
-  // review scene groups by, so the two surfaces cannot disagree about which
-  // phase an activity belongs to. Keyed on the START of the work: a 7-day run
-  // belongs to the phase it opens in.
-  const byPhase = new Map<PlanPhase, TimelineItem[]>();
+  // Pre-release, Release and Post-release (URG-292). lib/rollout-phases.ts is
+  // the one definition: a phase stored on the task wins, otherwise the date
+  // relative to release day decides, with derivePlanPhase's boundaries. The
+  // activity list groups through the same function, so the two views cannot
+  // disagree about which phase an activity belongs to.
+  const byPhase = new Map<RolloutPhase, TimelineItem[]>();
   for (const item of items) {
-    const phase = derivePlanPhase(item.startDay);
-    const bucket = byPhase.get(phase);
+    const bucket = byPhase.get(item.phase);
     if (bucket) bucket.push(item);
-    else byPhase.set(phase, [item]);
+    else byPhase.set(item.phase, [item]);
   }
 
   const phases: TimelinePhaseGroup[] = [];
-  for (const phase of PLAN_PHASE_ORDER) {
+  for (const phase of ROLLOUT_PHASE_ORDER) {
     const phaseItems = byPhase.get(phase);
     if (!phaseItems || phaseItems.length === 0) continue;
 
@@ -392,7 +399,7 @@ export function buildReleaseTimeline(params: {
 
     phases.push({
       phase,
-      label: PLAN_PHASE_LABELS[phase],
+      label: ROLLOUT_PHASE_LABELS[phase],
       items: phaseItems,
       startDay: phaseStart,
       endDay: phaseEnd,

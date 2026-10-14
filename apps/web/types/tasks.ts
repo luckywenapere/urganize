@@ -124,6 +124,16 @@ export interface TaskRequirement {
   satisfied: boolean;
 }
 
+/**
+ * The three phases a rollout's work is grouped under (URG-292): everything
+ * before the release week, the release week itself, and everything after.
+ * Stored per task at `metadata.phase`; a task with nothing stored takes its
+ * phase from its date relative to release day. See lib/rollout-phases.ts.
+ */
+export const ROLLOUT_PHASE_OPTIONS = ['pre_release', 'release', 'post_release'] as const;
+
+export type RolloutPhase = (typeof ROLLOUT_PHASE_OPTIONS)[number];
+
 export interface TaskReleaseSummary {
   id: string;
   title: string;
@@ -197,6 +207,12 @@ export interface Task {
    * absent: a plan from before the flag existed, which lib/plan-focus.ts
    * shortens by its own rule. Optional so every existing literal compiles. */
   planKey?: boolean | null;
+  /** The rollout phase set on this task (URG-292), from metadata.phase.
+   * Templates and approved plans write it; a person can change it in the task
+   * detail. null or absent: nothing stored, so the phase follows the task's
+   * date relative to release day (lib/rollout-phases.ts resolveTaskPhase).
+   * Optional so every existing literal compiles. */
+  phase?: RolloutPhase | null;
   createdAt: string;
   updatedAt: string;
 

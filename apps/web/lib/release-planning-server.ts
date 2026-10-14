@@ -14,6 +14,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { rolloutPhaseForOffset } from './rollout-phases';
 
 import {
   activeDraftTasks,
@@ -242,6 +243,10 @@ function buildTaskMetadata(params: {
 
   return {
     template,
+    // The rollout phase (URG-292). The draft's four plan phases fold into
+    // three (by offset, their one definition), so an approved plan groups
+    // exactly as it was reviewed.
+    phase: rolloutPhaseForOffset(task.offset_days),
     planner: {
       draft_id: draftId,
       draft_task_id: task.id,

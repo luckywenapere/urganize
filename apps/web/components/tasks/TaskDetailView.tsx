@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronDown,
   CircleDot,
+  Layers,
   Pin,
   Trash2,
   UserCircle2,
@@ -36,6 +37,13 @@ import {
   type WorkspaceMember,
 } from '@/lib/tasks';
 import { TASK_OUTCOME_LABELS } from '@/lib/task-outcomes';
+import {
+  ROLLOUT_PHASE_LABELS,
+  ROLLOUT_PHASE_ORDER,
+  isRolloutPhase,
+  resolveTaskPhase,
+  type RolloutPhase,
+} from '@/lib/rollout-phases';
 import { buildTaskDetailSubtitle } from '@/lib/task-detail-summary';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { isNativePlatform } from '@/lib/platform';
@@ -103,6 +111,8 @@ export type TaskDetailPatchInput = {
   assignedToUserId?: string | null;
   /** Pin to the rollout's key activities, or tuck behind "Show all" (URG-258). */
   planKey?: boolean;
+  /** Pre-release, Release or Post-release (URG-292); null follows the date. */
+  phase?: RolloutPhase | null;
 };
 
 type TaskDetailViewProps = {
@@ -207,6 +217,12 @@ export function TaskDetailView({
     task?.release?.title ??
     (task?.releaseId ? storeReleases.find((r) => r.id === task.releaseId)?.title : null) ??
     null;
+  // The phase this activity shows under when nothing is stored (URG-292), for
+  // the "From its date" option's label.
+  const releaseDateForPhase = task?.releaseId
+    ? storeReleases.find((r) => r.id === task.releaseId)?.releaseDate ?? null
+    : null;
+  const datePhase = task ? resolveTaskPhase({ dueDate: task.dueDate }, releaseDateForPhase) : null;
 
   // Title is a textarea (so long titles WRAP on narrow screens instead of
   // cropping inside a single-line input) that auto-grows to fit its content.
@@ -638,6 +654,37 @@ export function TaskDetailView({
                 className={`${PROPERTY_CONTROL_CLASS} ${DETAIL_FIELD_CLASS} [&::-webkit-calendar-picker-indicator]:opacity-0 group-hover:[&::-webkit-calendar-picker-indicator]:opacity-100 group-focus-within:[&::-webkit-calendar-picker-indicator]:opacity-100`}
               />
             </label>
+            {/* Phase (URG-292). Only on a rollout's activity: a phase is
+                relative to a release day. "From its date" stores nothing, so
+                the activity moves phase when its date does. */}
+            {task.releaseId ? (
+              <label className={DETAIL_ROW_CLASS}>
+                <Layers className={DETAIL_ICON_CLASS} aria-hidden="true" />
+                <span className="sr-only">Phase</span>
+                <span className={`relative ${DETAIL_FIELD_CLASS}`}>
+                  <select
+                    value={task.phase ?? ''}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      void onSavePatch({ phase: isRolloutPhase(value) ? value : null });
+                    }}
+                    className={`${PROPERTY_CONTROL_CLASS} pr-8`}
+                  >
+                    <option value="" className="bg-bg-elevated text-content-primary">
+                      {datePhase && releaseDateForPhase
+                        ? `${ROLLOUT_PHASE_LABELS[datePhase]} (from its date)`
+                        : 'Phase from its date'}
+                    </option>
+                    {ROLLOUT_PHASE_ORDER.map((phase) => (
+                      <option key={phase} value={phase} className="bg-bg-elevated text-content-primary">
+                        {ROLLOUT_PHASE_LABELS[phase]}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" aria-hidden="true" />
+                </span>
+              </label>
+            ) : null}
           </div>
 
           {/* "Find someone" for an open activity that needs a person

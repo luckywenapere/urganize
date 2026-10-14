@@ -18,6 +18,7 @@ import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Template, TemplateTask } from './types';
+import { rolloutPhaseForOffset } from '../rollout-phases';
 
 // ---------------------------------------------------------------------------
 // Error
@@ -317,6 +318,9 @@ export function buildTaskRow(params: BuildTaskRowParams) {
         // and route to real "Overdue" if/when they slip later.
         compressed_runway: compressedRunway,
       },
+      // The rollout phase (URG-292), from the playbook offset: the week a
+      // step was written for is the phase it belongs to.
+      phase: rolloutPhaseForOffset(task.offset_days),
     },
   };
 }

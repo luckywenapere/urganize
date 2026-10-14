@@ -275,7 +275,7 @@ describe('the axis', () => {
 describe('phases', () => {
   const now = new Date(dueAt(-60));
 
-  it('groups by the same boundaries the plan review scene uses', () => {
+  it('groups into Pre-release, Release and Post-release (URG-292)', () => {
     const timeline = buildReleaseTimeline({
       tasks: [
         makeTask({ id: 'a', dueDate: dueAt(-56), title: 'Setup work' }),
@@ -288,10 +288,26 @@ describe('phases', () => {
     });
 
     expect(timeline!.phases.map((phase) => phase.phase)).toEqual([
-      'setup',
       'pre_release',
-      'release_week',
+      'release',
       'post_release',
+    ]);
+    expect(timeline!.phases[0].items.map((item) => item.taskId)).toEqual(['a', 'b']);
+  });
+
+  it('puts a task under its stored phase whatever its date', () => {
+    const timeline = buildReleaseTimeline({
+      tasks: [
+        makeTask({ id: 'a', dueDate: dueAt(-56), phase: 'post_release' }),
+        makeTask({ id: 'b', dueDate: dueAt(-56) }),
+      ],
+      releaseDate: RELEASE_DATE,
+      now,
+    });
+
+    expect(timeline!.phases.map((phase) => [phase.phase, phase.items.map((item) => item.taskId)])).toEqual([
+      ['pre_release', ['b']],
+      ['post_release', ['a']],
     ]);
   });
 
@@ -303,7 +319,7 @@ describe('phases', () => {
     });
 
     expect(timeline!.phases).toHaveLength(1);
-    expect(timeline!.phases[0].phase).toBe('setup');
+    expect(timeline!.phases[0].phase).toBe('pre_release');
   });
 
   it('spans a phase across all its items', () => {

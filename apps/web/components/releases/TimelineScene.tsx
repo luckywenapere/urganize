@@ -25,6 +25,8 @@ import {
   PlanShowAllToggle,
   usePlanList,
 } from '@/components/workspace/PlanListControls';
+import { RolloutPhaseStrip } from '@/components/workspace/RolloutPhases';
+import { formatPhaseDates, summarizeRolloutPhases } from '@/lib/rollout-phases';
 
 /**
  * The release Timeline — every activity on one week axis, anchored to release
@@ -148,6 +150,18 @@ export function TimelineScene({
     [tasks, release.releaseDate]
   );
 
+  // Pre-release, Release and Post-release with dates and progress (URG-292),
+  // from every activity rather than the short list: the strip answers "where
+  // does this release stand", which is a question about the whole plan.
+  const phaseSummaries = useMemo(
+    () => summarizeRolloutPhases(tasks, release.releaseDate ?? null),
+    [tasks, release.releaseDate]
+  );
+  const phaseDates = useMemo(
+    () => Object.fromEntries(phaseSummaries.map((summary) => [summary.phase, formatPhaseDates(summary)])),
+    [phaseSummaries]
+  );
+
   // The plan opens on its key activities (URG-258); search, filters and
   // "Show all" decide the rest. The axis is built from every activity so a
   // bar sits in the same week whichever list is showing.
@@ -251,6 +265,10 @@ export function TimelineScene({
         <PlanListControls plan={plan} trailing={<TimelineChrome onFullScreen={onFullScreen} />} />
       </div>
 
+      <div className="mb-5">
+        <RolloutPhaseStrip phases={phaseSummaries} />
+      </div>
+
       {/* ---- Wide: the week grid ---------------------------------------- */}
       <div className="tl-grid-view">
         <div className="flex items-stretch">
@@ -262,6 +280,7 @@ export function TimelineScene({
               <PhaseLabels
                 key={phase.phase}
                 phase={phase}
+                dates={phaseDates[phase.phase] ?? ''}
                 isCollapsed={collapsed[phase.phase] ?? false}
                 onToggle={() =>
                   setCollapsed((current) => ({
@@ -398,11 +417,14 @@ export function TimelineScene({
  */
 function PhaseLabels({
   phase,
+  dates,
   isCollapsed,
   onToggle,
   onOpenTask,
 }: {
   phase: TimelinePhaseGroup;
+  /** The phase's dates, "4 Sep – 12 Oct" (URG-292). */
+  dates: string;
   isCollapsed: boolean;
   onToggle: () => void;
   onOpenTask: (taskId: string) => void;
@@ -413,6 +435,7 @@ function PhaseLabels({
         type="button"
         onClick={onToggle}
         aria-expanded={!isCollapsed}
+        title={dates ? `${phase.label}: ${dates}` : phase.label}
         className={`motion-focus flex ${ROW_CLASS} w-full items-center gap-1.5 rounded-md pr-1 text-left hover:bg-bg-hover`}
       >
         <ChevronDown

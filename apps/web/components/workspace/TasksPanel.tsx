@@ -27,6 +27,13 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { resolvePanelBody } from '@/lib/scene-cache';
 import { useSceneOverlay } from './useSceneOverlay';
 import { PlanListControls, PlanShowAllToggle, usePlanList } from './PlanListControls';
+import { RolloutPhaseHeader } from './RolloutPhases';
+import {
+  ROLLOUT_PHASE_ORDER,
+  groupTasksByRolloutPhase,
+  summarizeRolloutPhases,
+  type RolloutPhase,
+} from '@/lib/rollout-phases';
 import {
   useRolloutMenuActions,
   type RolloutMenuAction,
@@ -150,11 +157,43 @@ const isPersistedExpanded = (value: unknown): value is Partial<Record<TaskSectio
   value !== null &&
   Object.values(value).every((entry) => typeof entry === 'boolean');
 
+// How a scoped rollout's list is grouped (URG-292). 'phase' is the default:
+// Pre-release, Release and Post-release, each with its dates and progress.
+// 'status' is the bucket list that came before it, kept one tap away.
+type ListGrouping = 'phase' | 'status';
+const GROUPING_STORAGE_KEY = 'urganize.workspace.list-grouping';
+const GROUPING_STORAGE_VERSION = 1;
+const isListGrouping = (value: unknown): value is ListGrouping => value === 'phase' || value === 'status';
+
+const PHASE_COLLAPSED_STORAGE_KEY = 'urganize.workspace.phase-collapsed';
+const PHASE_COLLAPSED_STORAGE_VERSION = 1;
+const isPhaseCollapsed = (value: unknown): value is Partial<Record<RolloutPhase, boolean>> =>
+  typeof value === 'object' &&
+  value !== null &&
+  Object.values(value).every((entry) => typeof entry === 'boolean');
+
+/** Inside a phase: open work by date (undated last), then done, then
+ * cancelled, so the phase reads in the order it will be worked. */
+function phaseRowRank(task: Task): number {
+  if (task.status === 'cancelled') return 2;
+  if (task.status === 'done') return 1;
+  return 0;
+}
+function comparePhaseRows(left: Task, right: Task): number {
+  const rank = phaseRowRank(left) - phaseRowRank(right);
+  if (rank !== 0) return rank;
+  const leftDue = left.dueDate ? Date.parse(left.dueDate) : Number.POSITIVE_INFINITY;
+  const rightDue = right.dueDate ? Date.parse(right.dueDate) : Number.POSITIVE_INFINITY;
+  if (leftDue !== rightDue) return leftDue - rightDue;
+  return (left.position ?? 0) - (right.position ?? 0);
+}
+
 type TasksPanelProps = {
   /** Tasks already filtered by `?release=` scope (handled in parent). */
   tasks: Task[];
-  /** Scoped release context (links, empty copy); null when unscoped. */
-  scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'> | null;
+  /** Scoped release context (links, empty copy); null when unscoped. The
+   * release date anchors the phase headers (URG-292). */
+  scopedRelease: (Pick<Release, 'id' | 'title' | 'artistName'> & Partial<Pick<Release, 'releaseDate'>>) | null;
   /** Optional DOM id, used by the parent to smooth-scroll into view when the
    * layout is stacked (below lg) and a release card is tapped. */
   id?: string;
@@ -315,6 +354,44 @@ export function TasksPanel({
       setExpanded({ ...DEFAULT_EXPANDED, ...persisted });
     }
   }, []);
+
+  // ---- Phases (URG-292) ------------------------------------------------------
+  // A scoped rollout's list groups under Pre-release, Release and Post-release
+  // by default. The headers count the WHOLE phase (`tasks`), not just the rows
+  // the short list shows, because "how far along is this phase" is a question
+  // about the plan, not about the filter.
+  const [grouping, setGrouping] = useState<ListGrouping>('phase');
+  const [phaseCollapsed, setPhaseCollapsed] = useState<Partial<Record<RolloutPhase, boolean>>>({});
+  useEffect(() => {
+    const persistedGrouping = readPersistedState(GROUPING_STORAGE_KEY, GROUPING_STORAGE_VERSION, isListGrouping);
+    if (persistedGrouping) setGrouping(persistedGrouping);
+    const persistedCollapsed = readPersistedState(
+      PHASE_COLLAPSED_STORAGE_KEY,
+      PHASE_COLLAPSED_STORAGE_VERSION,
+      isPhaseCollapsed
+    );
+    if (persistedCollapsed) setPhaseCollapsed(persistedCollapsed);
+  }, []);
+  const chooseGrouping = (next: ListGrouping) => {
+    setGrouping(next);
+    writePersistedState(GROUPING_STORAGE_KEY, GROUPING_STORAGE_VERSION, next);
+  };
+  const togglePhase = (phase: RolloutPhase) => {
+    const next = { ...phaseCollapsed, [phase]: !phaseCollapsed[phase] };
+    setPhaseCollapsed(next);
+    writePersistedState(PHASE_COLLAPSED_STORAGE_KEY, PHASE_COLLAPSED_STORAGE_VERSION, next);
+  };
+  const showPhases = Boolean(scopedRelease) && grouping === 'phase';
+  const scopedReleaseDate = scopedRelease?.releaseDate ?? null;
+  const phaseSummaries = useMemo(
+    () => summarizeRolloutPhases(tasks, scopedReleaseDate),
+    [tasks, scopedReleaseDate]
+  );
+  const phaseRows = useMemo(() => {
+    const grouped = groupTasksByRolloutPhase(listTasks, scopedReleaseDate);
+    for (const phase of ROLLOUT_PHASE_ORDER) grouped[phase].sort(comparePhaseRows);
+    return grouped;
+  }, [listTasks, scopedReleaseDate]);
 
   // No auto-expand on scope changes: bucket state is user-owned. Scoping a
   // release updates the header counts; which buckets are open stays exactly
@@ -485,6 +562,30 @@ export function TasksPanel({
       ) : (
       <div className="space-y-3">
         {scopedRelease && tasks.length > 0 ? <PlanListControls plan={plan} /> : null}
+        {scopedRelease && tasks.length > 0 ? (
+          <div
+            className="flex items-center gap-1 text-xs"
+            role="group"
+            aria-label="Group activities by"
+          >
+            <span className="mr-1 text-content-tertiary">Group by</span>
+            {(['phase', 'status'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => chooseGrouping(option)}
+                aria-pressed={grouping === option}
+                className={`motion-focus rounded-full px-2.5 py-1 font-semibold transition-colors ${
+                  grouping === option
+                    ? 'bg-brand/10 text-content-primary'
+                    : 'text-content-secondary hover:bg-bg-hover'
+                }`}
+              >
+                {option === 'phase' ? 'Phase' : 'Status'}
+              </button>
+            ))}
+          </div>
+        ) : null}
         {/* Every bucket empty: the buckets below have all suppressed
             themselves, so this stands in for the whole list.
             Actionable rather than a muted line (URG-233) — an empty panel
@@ -521,7 +622,41 @@ export function TasksPanel({
             </button>
           </div>
         ) : null}
-        {sectionOrder.map((sectionKey) => {
+        {showPhases && tasks.length > 0
+          ? phaseSummaries.map((summary) => {
+              const rows = phaseRows[summary.phase];
+              // A search or filter shows only the phases it matched.
+              if (plan.filtering && rows.length === 0) return null;
+              const isOpen = !phaseCollapsed[summary.phase] || plan.filtering;
+              return (
+                <RolloutPhaseHeader
+                  key={summary.phase}
+                  summary={summary}
+                  isOpen={isOpen}
+                  onToggle={() => togglePhase(summary.phase)}
+                  controlsId={`workspace-phase-${summary.phase}`}
+                >
+                  {rows.length === 0 ? (
+                    <p className="px-4 py-3 text-xs text-content-tertiary">
+                      {summary.total > 0
+                        ? 'Not on the short list. Show all to see them.'
+                        : 'Nothing planned for this phase yet.'}
+                    </p>
+                  ) : (
+                    rows.map((task) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        density="compact"
+                        onClick={(t) => openTask(t.id)}
+                      />
+                    ))
+                  )}
+                </RolloutPhaseHeader>
+              );
+            })
+          : null}
+        {showPhases ? null : sectionOrder.map((sectionKey) => {
           const sectionTasks = sections[sectionKey];
           // A search or filter opens every bucket it matched: the answer to a
           // question should not sit behind a closed drawer.

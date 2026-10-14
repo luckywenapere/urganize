@@ -20,7 +20,7 @@ type WorkspaceDesktopFocusedProps = {
   /** Tasks already filtered to the scoped release. */
   scopedTasks: Task[];
   /** Slim release shape for the panel's scope copy. */
-  scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'> & Partial<Pick<Release, 'artistId'>>;
+  scopedRelease: Pick<Release, 'id' | 'title' | 'artistName'> & Partial<Pick<Release, 'artistId' | 'releaseDate'>>;
   /** The focused rollout's card: cover, status, date, and who it is by. */
   card: ReleaseCardData;
   /** The "Catalogue" crumb's action. Owned entirely by WorkspaceView's
