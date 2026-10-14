@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { ArrowUp, MessageCircle } from '@/components/icons';
+import { SEND_ARROW_CLASS, SEND_BUTTON_CLASS } from '@/components/chappi/send-button';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
@@ -234,9 +235,9 @@ function NewSessionBox({ onStarted }: { onStarted: () => void }) {
         type="submit"
         aria-label="Start session"
         disabled={!canSend}
-        className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
+        className={SEND_BUTTON_CLASS}
       >
-        <ArrowUp className="h-4 w-4" aria-hidden="true" />
+        <ArrowUp className={SEND_ARROW_CLASS} aria-hidden="true" />
       </button>
     </form>
   );

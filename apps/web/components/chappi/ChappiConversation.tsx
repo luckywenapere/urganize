@@ -24,6 +24,7 @@ import {
   Volume2,
   type LucideIcon,
 } from '@/components/icons';
+import { SEND_ARROW_CLASS, SEND_BUTTON_CLASS } from './send-button';
 import { TeamBriefNudge } from './TeamBriefNudge';
 import { BriefAttribution } from './BriefAttribution';
 import { ReplyText } from './ReplyText';
@@ -1469,12 +1470,12 @@ export function ChappiConversation({
             isRecording ||
             isTranscribing
           }
-          className="motion-press grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
+          className={SEND_BUTTON_CLASS}
         >
           {isThinking ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
-            <ArrowUp className="h-4 w-4" aria-hidden="true" />
+            <ArrowUp className={SEND_ARROW_CLASS} aria-hidden="true" />
           )}
         </button>
       </div>

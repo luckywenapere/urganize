@@ -13,6 +13,7 @@ import {
 } from '@/lib/home-chat-glide';
 import { COMPOSER_FOCUS_EVENT } from '@/lib/composer-focus';
 import { ArrowUp, Loader2, Mic } from '@/components/icons';
+import { SEND_ARROW_CLASS, SEND_BUTTON_DOCK_CLASS } from '@/components/chappi/send-button';
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray } from '@/components/chappi/ChappiAttachments';
 import { useAttachments } from '@/components/chappi/useAttachments';
@@ -231,9 +232,9 @@ export function HomeAskBar() {
             type="submit"
             aria-label="Send to UrgAns"
             disabled={!canSend}
-            className="motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand text-content-inverse transition-opacity hover:opacity-90 disabled:opacity-40"
+            className={SEND_BUTTON_DOCK_CLASS}
           >
-            <ArrowUp className="h-5 w-5" aria-hidden="true" />
+            <ArrowUp className={SEND_ARROW_CLASS} aria-hidden="true" />
           </button>
         </div>
         {voice.error ? (

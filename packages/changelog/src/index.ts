@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.134.1",
+    date: "October 15, 2026",
+    highlights: [
+      "Home's send arrow is fixed. With nothing typed it's now a quiet grey circle instead of a faded green one that looked broken, and it turns green once you can send.",
+      "The arrow is bolder and easier to tap: a full thumb-size button on your phone, on Home and in the UrgAns chat.",
+    ],
+  },
+  {
     version: "1.134.0",
     date: "October 15, 2026",
     highlights: [
