@@ -35,7 +35,9 @@ export type HelpMenuItem = { label: string; icon: ReactNode; onClick: () => void
  * The help entries, as groups (URG-255, 2026-10-14). The `?` button that used
  * to open them in the top bar is gone: they are rows in the account menu at the
  * foot of the side menu now (WorkspaceMenu), one place for "me, my team, and
- * help". Same entries, same order, same gating.
+ * help". Same entries, same order, same gating. The phone's More sheet
+ * (BottomBar) shows the same rows from this same list since 2026-10-14, so
+ * the two can never drift apart.
  */
 export function useHelpMenuGroups(): HelpMenuItem[][] {
   const openReportIssue = useReportIssueStore((state) => state.openReportIssue);

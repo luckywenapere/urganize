@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.133.1",
+    date: "October 14, 2026",
+    highlights: [
+      "On your phone, More now has Report an issue, Docs, Contact us and Community at the bottom, the same help you find in the account menu on a computer.",
+      "Notifications on your phone now have a close button in the corner.",
+    ],
+  },
+  {
     version: "1.133.0",
     date: "October 14, 2026",
     highlights: [

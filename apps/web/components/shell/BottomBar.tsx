@@ -37,6 +37,7 @@ import {
 } from '@/lib/shell-nav';
 import { tuckedMoreItems } from '@/lib/role-views';
 import { useShellAreas } from './useShellAreas';
+import { useHelpMenuGroups } from '@/components/app/HelpMenu';
 import { NAV_TIP_TOUCH_CLASS, useNavTip } from './useNavTip';
 
 type IconComponent = ComponentType<LucideProps>;
@@ -72,10 +73,15 @@ const TAB_ICON: Record<string, IconComponent> = {
  * Areas with nothing built
  * yet are listed like any other, and their page explains what is coming.
  *
+ * Since 2026-10-14 the sheet ends with the same help rows as the desktop
+ * account menu (Report an issue, Docs, Contact us, Community, and the rollout
+ * replay when there is one), read from the one list in HelpMenu.tsx and behind
+ * the same showHelpMenu gate AppShell hands WorkspaceMenu.
+ *
  * Labels stay visible. Icon-only tabs were tried here before (v1.10.3) and cost
  * the people who most need the bar the words that tell them what each tab does.
  */
-export function BottomBar() {
+export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();
   const tabs = useMemo(() => buildMobileTabs(), []);
@@ -150,6 +156,7 @@ export function BottomBar() {
               tabIndex={collapsed ? -1 : 0}
               {...tip.bind('more')}
               onClick={() => setMoreOpen(true)}
+              data-shell-more
               aria-haspopup="dialog"
               aria-expanded={moreOpen}
               className={`motion-focus flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${NAV_TIP_TOUCH_CLASS} ${
@@ -174,7 +181,7 @@ export function BottomBar() {
         </ul>
       </nav>
       {tip.panel}
-      {moreOpen ? <MoreSheet areas={areas} onClose={() => setMoreOpen(false)} /> : null}
+      {moreOpen ? <MoreSheet areas={areas} showHelp={showHelp} onClose={() => setMoreOpen(false)} /> : null}
     </>
   );
 }
@@ -233,9 +240,11 @@ function useBarCollapsedOnScroll(pathname: string): boolean {
 
 function MoreSheet({
   areas,
+  showHelp,
   onClose,
 }: {
   areas: ShellArea[];
+  showHelp: boolean;
   onClose: () => void;
 }) {
   const openSettings = useSettingsLinkClick();
@@ -246,6 +255,9 @@ function MoreSheet({
   const notifications = useNotificationsDoorStore();
   const openCommand = useShellStore((state) => state.openCommand);
   const { options: artistOptions, select: selectArtist } = useArtistFilterOptions();
+  // The desktop account menu's help rows, from the same list and gate.
+  const helpGroups = useHelpMenuGroups();
+  const helpItems = showHelp ? helpGroups.flat() : [];
   if (typeof document === 'undefined') return null;
 
   // Portalled: AppShell's fade-in transform would otherwise anchor this fixed
@@ -359,6 +371,29 @@ function MoreSheet({
             </Link>
           </li>
         </ul>
+        {helpItems.length > 0 ? (
+          <div role="group" aria-label="Help" className="border-t border-stroke-subtle">
+            <ul className="divide-y divide-stroke-subtle">
+              {helpItems.map((item) => (
+                <li key={item.label}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // The sheet closes first so whatever the row opens (the
+                      // report form, a new tab) is not under it.
+                      onClose();
+                      item.onClick();
+                    }}
+                    className="motion-focus flex min-h-14 w-full items-center gap-2.5 text-left text-base text-content-primary [&_svg]:h-5 [&_svg]:w-5 [&_svg]:text-content-tertiary"
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {artistOptions.length > 0 ? (
           <div role="group" aria-label="Showing" className="mt-2 border-t border-stroke-subtle pt-3">
             <p className="pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">Showing</p>

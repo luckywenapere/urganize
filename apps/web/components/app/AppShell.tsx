@@ -580,7 +580,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <ErrorBoundary name="command-bar" onError={reportBoundaryError}>
             <CommandBar />
           </ErrorBoundary>
-          <BottomBar />
+          <BottomBar showHelp={showHelpMenu} />
         </>
       ) : null}
       {/* Gated on the same showHelpMenu the account menu's help rows use —

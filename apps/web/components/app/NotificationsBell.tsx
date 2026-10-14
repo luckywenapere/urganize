@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, ChevronDown } from '@/components/icons';
+import { Bell, ChevronDown, X } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
 import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
@@ -304,6 +304,20 @@ export function NotificationsBell() {
     return () => window.removeEventListener('mousedown', handler);
   }, [isOpen]);
 
+  // Closing on purpose (Esc, or the phone's Close button) hands focus back to
+  // the bell. Below lg the bell is hidden (the panel opens from More), so a
+  // focus() on it lands nowhere; there the bottom bar's More button stands in,
+  // since that is the door the person came through.
+  const closeAndReturnFocus = useCallback(() => {
+    setIsOpen(false);
+    requestAnimationFrame(() => {
+      const trigger = triggerRef.current;
+      trigger?.focus();
+      if (trigger && document.activeElement === trigger) return;
+      document.querySelector<HTMLElement>('[data-shell-more]')?.focus();
+    });
+  }, []);
+
   // Esc close — stopPropagation so this beats any page-level Esc handlers
   // (create-release modal, drawers) when the bell is the active surface.
   useEffect(() => {
@@ -311,13 +325,12 @@ export function NotificationsBell() {
     const handler = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
-        setIsOpen(false);
-        requestAnimationFrame(() => triggerRef.current?.focus());
+        closeAndReturnFocus();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isOpen]);
+  }, [isOpen, closeAndReturnFocus]);
 
   // The phone's door (2026-10-11): the button below is desktop only, so the
   // bottom bar's More sheet shows the unread count and asks the panel to open
@@ -523,6 +536,17 @@ export function NotificationsBell() {
                   Clear
                 </button>
               ) : null}
+              {/* Phones only: the panel covers the width of the screen there,
+                  so outside taps are a small target. Same button as the
+                  house sheets' close (the Filters sheet in ListToolbar). */}
+              <button
+                type="button"
+                onClick={closeAndReturnFocus}
+                aria-label="Close"
+                className="motion-focus grid h-11 w-11 place-items-center rounded-full text-content-tertiary hover:bg-bg-hover lg:hidden"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
             </div>
           </div>
 
