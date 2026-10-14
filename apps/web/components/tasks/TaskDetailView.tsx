@@ -43,6 +43,7 @@ import { openExternalUrl } from '@/lib/external-link';
 import { ThreadMessageList } from '@/components/threads/ThreadMessageList';
 import { ThreadComposer } from '@/components/threads/ThreadComposer';
 import type { ThreadMessage } from '@/types/thread';
+import { useNextMovesStore } from '@/stores/useNextMovesStore';
 
 // Feature flag (URG-203): task attachments stay dark until
 // NEXT_PUBLIC_FEATURE_TASK_ATTACHMENTS is 'true' (URG-182 precedent — same
@@ -319,6 +320,7 @@ export function TaskDetailView({
         throw new Error(payload.error || 'Could not invite teammate.');
       }
 
+      useNextMovesStore.getState().markHasTeam();
       setInviteEmail('');
       if (payload.inviteUrl) {
         setInviteUrl(payload.inviteUrl);

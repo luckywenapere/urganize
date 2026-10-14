@@ -22,6 +22,7 @@ export function useNextMoves(input: {
   const userId = useAuthStore((state) => state.user?.id ?? null);
   const dismissed = useNextMovesStore((state) => state.dismissed);
   const pitches = useNextMovesStore((state) => state.pitches);
+  const hasTeam = useNextMovesStore((state) => state.hasTeam);
   const load = useNextMovesStore((state) => state.load);
   const dismissKey = useNextMovesStore((state) => state.dismiss);
   const { surface, rollouts, releaseId } = input;
@@ -41,8 +42,9 @@ export function useNextMoves(input: {
       now: new Date(),
       flags: NEXT_MOVE_FLAGS,
       surface,
+      hasTeam,
     });
-  }, [userId, rollouts, pitches, dismissed, surface]);
+  }, [userId, rollouts, pitches, dismissed, surface, hasTeam]);
 
   return {
     moves,

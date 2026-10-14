@@ -48,6 +48,12 @@ type NextMovesState = {
   userId: string | null;
   dismissed: ReadonlySet<string>;
   pitches: Record<string, RolloutPitchFacts>;
+  /** Whether they already have a team. Null until the server says, and the
+   *  Invite move waits for a plain false, so it never flashes up for someone
+   *  who invited people long ago. */
+  hasTeam: boolean | null;
+  /** Called after an invite goes out, so the Invite move goes at once. */
+  markHasTeam: () => void;
   /** Requests already made this session, so two mounts ask once. */
   requested: Record<string, true>;
   load: (userId: string, releaseId?: string | null) => void;
@@ -60,13 +66,16 @@ export const useNextMovesStore = create<NextMovesState>((set, get) => ({
   userId: null,
   dismissed: new Set(),
   pitches: {},
+  hasTeam: null,
   requested: {},
+
+  markHasTeam: () => set({ hasTeam: true }),
 
   load: (userId, releaseId) => {
     if (!userId) return;
     // Another person signed in on this tab: start clean.
     if (get().userId !== userId) {
-      set({ userId, dismissed: new Set(readLocal(userId)), pitches: {}, requested: {} });
+      set({ userId, dismissed: new Set(readLocal(userId)), pitches: {}, hasTeam: null, requested: {} });
     }
     const key = requestKey(releaseId);
     if (get().requested[key]) return;
@@ -79,12 +88,15 @@ export const useNextMovesStore = create<NextMovesState>((set, get) => ({
         const query = releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : '';
         const response = await fetch(`/api/next-moves${query}`, { headers, cache: 'no-store' });
         if (!response.ok) return;
-        const body = (await response.json()) as { dismissed?: unknown; pitches?: RolloutPitchFacts };
+        const body = (await response.json()) as { dismissed?: unknown; pitches?: RolloutPitchFacts; hasTeam?: unknown };
         if (get().userId !== userId) return;
         const server = isKeyList(body.dismissed) ? body.dismissed : [];
         set((state) => ({
           dismissed: new Set([...state.dismissed, ...server]),
           pitches: releaseId ? { ...state.pitches, [releaseId]: body.pitches ?? null } : state.pitches,
+          // Once true it stays true this session (an invite sent here wins
+          // over an older read).
+          hasTeam: state.hasTeam === true ? true : typeof body.hasTeam === 'boolean' ? body.hasTeam : state.hasTeam,
         }));
       } catch {
         // Offline: the local copy is what there is.

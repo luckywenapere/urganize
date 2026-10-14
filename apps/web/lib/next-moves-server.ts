@@ -69,3 +69,25 @@ export async function readRolloutPitchFacts(
     lastSentDaysAgo: Number.isNaN(sent) ? null : Math.max(0, Math.floor((now.getTime() - sent) / 86_400_000)),
   };
 }
+
+/**
+ * Whether this person already has a team: anyone invited to or active in the
+ * workspace they own, the owner aside (the same count activation uses). The
+ * Invite your team move hides once this is true (founder, 2026-10-14: "if a
+ * user has invited their team before it should not be popping up"). Null when
+ * the read fails, which the client treats as "don't ask".
+ */
+export async function readHasTeam(adminClient: SupabaseClient, userId: string): Promise<boolean | null> {
+  const workspace = await adminClient.from('workspaces').select('id').eq('owner_id', userId).maybeSingle();
+  if (workspace.error) return null;
+  const workspaceId = (workspace.data as { id?: string } | null)?.id;
+  if (!workspaceId) return false;
+  const { count, error } = await adminClient
+    .from('workspace_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('workspace_id', workspaceId)
+    .neq('role', 'owner')
+    .neq('status', 'removed');
+  if (error || count === null) return null;
+  return count > 0;
+}

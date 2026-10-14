@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthenticatedAdmin } from '@/app/api/_shared/auth';
 import { ensureReleaseVisible, isPitchingFeatureEnabled } from '@/app/api/pitching/_shared';
-import { dismissNextMove, readNextMoveDismissals, readRolloutPitchFacts } from '@/lib/next-moves-server';
+import { dismissNextMove, readHasTeam, readNextMoveDismissals, readRolloutPitchFacts } from '@/lib/next-moves-server';
 
 // Next moves (URG-259). GET: the moves this person dismissed, plus a rollout's
-// pitch facts when ?releaseId= names one they can see. POST { key }: dismiss
+// pitch facts when ?releaseId= names one they can see, and whether they
+// already have a team (hides Invite your team). POST { key }: dismiss
 // one move for good. No flag (live at merge) and no model call.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,6 +20,7 @@ export async function GET(request: NextRequest) {
   }
 
   const dismissedPromise = readNextMoveDismissals(auth.adminClient, auth.user.id);
+  const hasTeamPromise = readHasTeam(auth.adminClient, auth.user.id).catch(() => null);
   let pitches: Awaited<ReturnType<typeof readRolloutPitchFacts>> = null;
   if (releaseId && isPitchingFeatureEnabled()) {
     const visible = await ensureReleaseVisible(auth.adminClient, releaseId, auth.user);
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
     pitches = await readRolloutPitchFacts(auth.adminClient, releaseId);
   }
 
-  return NextResponse.json({ dismissed: await dismissedPromise, pitches });
+  return NextResponse.json({ dismissed: await dismissedPromise, pitches, hasTeam: await hasTeamPromise });
 }
 
 export async function POST(request: NextRequest) {

@@ -286,6 +286,13 @@ export function pickNextMoves(input: {
   flags: NextMoveFlags;
   surface: NextMoveSurface;
   limit?: number;
+  /**
+   * Whether this person already has a team (anyone invited or active in the
+   * workspace they own). Invite your team shows only on a plain false: a team
+   * means they have invited before, and unknown means don't ask (founder,
+   * 2026-10-14: the card was "too persistent").
+   */
+  hasTeam?: boolean | null;
 }): NextMove[] {
   const limit = input.limit ?? NEXT_MOVES_LIMIT;
   const soonness = new Map<string, number>();
@@ -294,9 +301,15 @@ export function pickNextMoves(input: {
     soonness.set(rollout.id, days === null || days < 0 ? Number.MAX_SAFE_INTEGER : days);
   }
 
+  // Invite is one team-wide ask, so "Not now" on any rollout's Invite card
+  // puts it away on every rollout, not just that one.
+  const inviteDismissed = [...input.dismissed].some((key) => key.startsWith('invite:'));
+  const askInvite = input.hasTeam === false && !inviteDismissed;
+
   const all = input.rollouts
     .flatMap((rollout) => movesForRollout(rollout, input))
     .filter((move) => !input.dismissed.has(move.key))
+    .filter((move) => move.rule !== 'invite' || askInvite)
     .sort(
       (a, b) =>
         NEXT_MOVE_PRIORITY[a.rule] - NEXT_MOVE_PRIORITY[b.rule] ||

@@ -22,6 +22,7 @@ import {
   TEAMMATE_INVITED_EVENT,
   type InviteGateAnswer,
 } from '@/lib/invite-gate';
+import { useNextMovesStore } from '@/stores/useNextMovesStore';
 
 // InviteGate (founder request, 2026-10-11). Mounted once by AppShell.
 //
@@ -326,6 +327,7 @@ function InviteGateDialog({
         return;
       }
       if (!response.ok) throw new Error(payload.error || 'Could not send the invite.');
+      useNextMovesStore.getState().markHasTeam();
       setSent({ email: trimmed, emailSent: payload.emailSent === true, inviteUrl: payload.inviteUrl ?? null });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not send the invite.');

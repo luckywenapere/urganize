@@ -19599,3 +19599,7 @@ Founder asked to declutter the desktop rollout view (the timeline started ~80% d
 - **Distribution checklist** (`DistributionChecklist.tsx`) is one row folded: status icon, title, the next open item, "N of M done", a chevron, and the next item's Fix. Opening it shows the bar and every item with ticks. It still stays on the rollout until handoff.
 - **Timeline toolbar** is one row: `PlanListControls` now always uses the Filter popover (no inline selects) and takes a `trailing` slot; the timeline puts its legend behind an Info button (hint "Drag to move · tap to open" inside) and Full screen as an icon there. The timeline has bottom padding so the UrgAns button does not cover its last rows.
 - Not done: amber instead of red Overdue on untitled drafts (left as is; it is semantic).
+
+## Next moves: Invite your team only for a solo account (2026-10-14, v1.128.1)
+
+Founder: the Invite card was "too persistent; if a user has invited their team before it should not be popping up". `GET /api/next-moves` now also returns `hasTeam` (`readHasTeam` in lib/next-moves-server.ts: anyone invited or active in the workspace the viewer owns, owner and removed excluded; null on a failed read). `pickNextMoves` shows Invite only when `hasTeam === false` (unknown means don't ask, so it never flashes), and a "Not now" on any rollout's Invite hides it on all of them (any dismissed `invite:` key). The three invite senders (TeammatesSection, InviteGate, TaskDetailView) call `useNextMovesStore.getState().markHasTeam()` on success so it goes at once.

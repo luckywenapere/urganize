@@ -12,6 +12,7 @@ import {
 } from '@/components/loading/SettingsPageSkeleton';
 import { getAccessToken } from './getAccessToken';
 import { panelClass } from './panelClass';
+import { useNextMovesStore } from '@/stores/useNextMovesStore';
 
 type TeammatesSectionProps = {
   teammates: WorkspaceMember[];
@@ -166,6 +167,7 @@ function TeammatesSectionView({
         throw new Error(payload.error || 'Could not invite teammate.');
       }
 
+      useNextMovesStore.getState().markHasTeam();
       setInviteEmail('');
       setInviteRole('viewer');
       if (payload.inviteUrl) {

@@ -184,8 +184,34 @@ describe('picking what to show', () => {
   });
 
   it('shows at most three, most important first', () => {
-    const picked = pickNextMoves({ rollouts: [busy], dismissed: new Set(), now: NOW, flags: FLAGS, surface: 'rollout' });
+    const picked = pickNextMoves({
+      rollouts: [busy],
+      dismissed: new Set(),
+      now: NOW,
+      flags: FLAGS,
+      surface: 'rollout',
+      hasTeam: false,
+    });
     expect(picked.map((m) => m.rule)).toEqual(['distribute', 'pitch_more', 'invite']);
+  });
+
+  it('never asks to invite someone who already has a team, or before that is known', () => {
+    const base = { rollouts: [busy], dismissed: new Set<string>(), now: NOW, flags: FLAGS, surface: 'rollout' as const };
+    expect(pickNextMoves({ ...base, hasTeam: true }).map((m) => m.rule)).not.toContain('invite');
+    expect(pickNextMoves({ ...base, hasTeam: null }).map((m) => m.rule)).not.toContain('invite');
+    expect(pickNextMoves(base).map((m) => m.rule)).not.toContain('invite');
+  });
+
+  it('puts Invite away on every rollout once it is dismissed on one', () => {
+    const picked = pickNextMoves({
+      rollouts: [busy],
+      dismissed: new Set([nextMoveKey('invite', RID2)]),
+      now: NOW,
+      flags: FLAGS,
+      surface: 'rollout',
+      hasTeam: false,
+    });
+    expect(picked.map((m) => m.rule)).not.toContain('invite');
   });
 
   it('never shows a dismissed move again', () => {
@@ -201,7 +227,14 @@ describe('picking what to show', () => {
 
   it('puts the sooner rollout first and asks to invite once across rollouts', () => {
     const later = rollout({ id: RID2, title: 'Later', releaseDate: addDays('2026-10-14', 12), tasks: [task({ id: 'b' })] });
-    const picked = pickNextMoves({ rollouts: [later, busy], dismissed: new Set(), now: NOW, flags: FLAGS, surface: 'home' });
+    const picked = pickNextMoves({
+      rollouts: [later, busy],
+      dismissed: new Set(),
+      now: NOW,
+      flags: FLAGS,
+      surface: 'home',
+      hasTeam: false,
+    });
     expect(picked[0].releaseId).toBe(RID);
     expect(picked[1].releaseId).toBe(RID2);
     expect(picked.filter((m) => m.rule === 'invite').length).toBeLessThanOrEqual(1);
