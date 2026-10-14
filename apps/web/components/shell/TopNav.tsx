@@ -131,10 +131,10 @@ export function TopNav({ userName, showHelp = false }: { userName?: string; show
                 aria-expanded={area.key === 'home' && pathname === area.href ? !listCollapsed : undefined}
                 aria-controls={area.key === 'home' && pathname === area.href ? 'home-list-column' : undefined}
                 data-tour={area.key === 'catalogue' ? 'nav-catalog' : `shell-${area.key}`}
-                className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium transition-colors xl:px-3.5 ${
+                className={`motion-focus motion-press inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-2.5 text-sm font-medium transition-[color,background-color,opacity] xl:px-3.5 ${
                   isActive
                     ? 'bg-bg-surface text-content-primary shadow-sm ring-1 ring-stroke-default'
-                    : 'text-content-secondary hover:bg-bg-hover/70 hover:text-content-primary'
+                    : 'text-content-secondary opacity-[0.55] hover:bg-bg-hover/70 hover:text-content-primary hover:opacity-100 focus-visible:opacity-100'
                 }`}
               >
                 {area.label}

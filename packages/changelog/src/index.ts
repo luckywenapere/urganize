@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.133.2",
+    date: "October 14, 2026",
+    highlights: [
+      "On a computer, the top menu tabs you're not on are now dimmer, so the one you're on stands out. They brighten when you point at them.",
+    ],
+  },
+  {
     version: "1.133.1",
     date: "October 14, 2026",
     highlights: [
