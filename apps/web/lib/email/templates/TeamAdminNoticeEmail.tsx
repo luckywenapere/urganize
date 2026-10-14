@@ -3,7 +3,13 @@ import { FootnoteText, Paragraph, PrimaryButton } from './components';
 import { firstNameFrom, formatDueDateForEmail } from '../format';
 import { APP_URL } from '../links';
 
-export type TeamAdminNoticeKind = 'comped' | 'trial_extended';
+/** 'pause_ending' / 'pause_ended' are the cancel flow's pause emails
+ *  (2026-10-14, lib/cancel-flow-server.ts runPauseSweep): a few days before the
+ *  plan comes back, and on the day it does. */
+export type TeamAdminNoticeKind = 'comped' | 'trial_extended' | 'pause_ending' | 'pause_ended';
+
+/** Where a pause email's button goes: Settings > Billing, one tap to resume. */
+export const PAUSE_EMAIL_PATH = '/dashboard?settings=billing';
 
 export type TeamAdminNoticeEmailProps = {
   recipientName: string;
@@ -15,15 +21,18 @@ export type TeamAdminNoticeEmailProps = {
   /** When the trial still has time left, the date it now runs until. Null
    *  drops the date line. */
   trialEndsAt: string | null;
+  /** Pause emails only: the day the plan comes back. */
+  resumeAt?: string | null;
 };
 
 // Tells the owner of a team that the founder gave the team free access, or
 // extended its free trial. Sent for every such change, including the ones made
 // before this email existed (the backfill), so the copy says when it happened.
-export function TeamAdminNoticeEmail({ recipientName, kind, when, trialEndsAt }: TeamAdminNoticeEmailProps) {
+export function TeamAdminNoticeEmail({ recipientName, kind, when, trialEndsAt, resumeAt }: TeamAdminNoticeEmailProps) {
   const firstName = firstNameFrom(recipientName);
   const greeting = firstName ? `Hey ${firstName},` : 'Hey,';
-  const { lead, body } = copyFor(kind, when, trialEndsAt);
+  const isPause = kind === 'pause_ending' || kind === 'pause_ended';
+  const { lead, body } = isPause ? pauseCopyFor(kind, resumeAt ?? null) : copyFor(kind, when, trialEndsAt);
 
   return (
     <EmailLayout preview={lead}>
@@ -31,7 +40,11 @@ export function TeamAdminNoticeEmail({ recipientName, kind, when, trialEndsAt }:
       <Paragraph>{lead}</Paragraph>
       <Paragraph>{body}</Paragraph>
       <Paragraph>
-        <PrimaryButton href={`${APP_URL}/dashboard`}>Open Urganize</PrimaryButton>
+        {isPause ? (
+          <PrimaryButton href={`${APP_URL}${PAUSE_EMAIL_PATH}`}>Resume my plan</PrimaryButton>
+        ) : (
+          <PrimaryButton href={`${APP_URL}/dashboard`}>Open Urganize</PrimaryButton>
+        )}
       </Paragraph>
       <FootnoteText>You are getting this because you own the team on Urganize.</FootnoteText>
     </EmailLayout>
@@ -66,7 +79,23 @@ function copyFor(
     : { lead: 'We extended your free trial.', body };
 }
 
+function pauseCopyFor(kind: 'pause_ending' | 'pause_ended', resumeAt: string | null): { lead: string; body: string } {
+  const day = formatDueDateForEmail(resumeAt);
+  if (kind === 'pause_ending') {
+    return {
+      lead: day ? `Your Urganize pause ends on ${day}.` : 'Your Urganize pause ends soon.',
+      body: 'Resume your plan to keep working. Nothing is charged until you do.',
+    };
+  }
+  return {
+    lead: 'Your Urganize pause has ended.',
+    body: 'Everything is still there to read. Resume your plan to start working again.',
+  };
+}
+
 export function teamAdminNoticeSubject(kind: TeamAdminNoticeKind, when: 'now' | 'earlier'): string {
+  if (kind === 'pause_ending') return 'Your Urganize pause ends soon';
+  if (kind === 'pause_ended') return 'Your Urganize pause has ended';
   if (kind === 'comped') {
     return when === 'now'
       ? 'Your team has free access to Urganize'

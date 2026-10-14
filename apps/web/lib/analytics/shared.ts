@@ -418,6 +418,18 @@ export interface AnalyticsEventPropertiesMap {
     team_state: string;
   };
   /**
+   * The cancel flow (2026-10-14, lib/cancel-flow.ts). Server-side, from
+   * /api/billing/cancel-flow, one per recorded step: which screen or offer,
+   * the reason and budget band picked. Never the free text people type.
+   */
+  cancel_flow_event: {
+    event: string;
+    offer: string | null;
+    reason: string | null;
+    budget_band: string | null;
+    kind: 'trial' | 'paid' | null;
+  };
+  /**
    * The profile growth loop (2026-10-11): credit link, credit, claim, publish,
    * a public page read, its call to action, the person sharing their own page,
    * and a sign-up that came from it. Every payload is built from an allowlist

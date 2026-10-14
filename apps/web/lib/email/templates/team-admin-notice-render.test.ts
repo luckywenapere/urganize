@@ -40,6 +40,27 @@ describe('TeamAdminNoticeEmail', () => {
     expect(text).not.toContain('runs until');
   });
 
+  it('warns a paused team before the plan comes back, with a resume button', async () => {
+    const { text } = await renderEmail(
+      TeamAdminNoticeEmail({ recipientName: 'Ada', kind: 'pause_ending', when: 'now', trialEndsAt: null, resumeAt: future })
+    );
+    expect(text).toContain('Your Urganize pause ends on');
+    expect(text).toContain('Nothing is charged until you do.');
+    expect(text).toContain('Resume my plan');
+    expect(text).toContain('settings=billing');
+    expect(text).not.toContain('—');
+    expect(teamAdminNoticeSubject('pause_ending', 'now')).toBe('Your Urganize pause ends soon');
+  });
+
+  it('tells a paused team on the day it ends that everything is still there', async () => {
+    const { text } = await renderEmail(
+      TeamAdminNoticeEmail({ recipientName: '', kind: 'pause_ended', when: 'now', trialEndsAt: null, resumeAt: null })
+    );
+    expect(text).toContain('Your Urganize pause has ended.');
+    expect(text).toContain('Everything is still there to read.');
+    expect(teamAdminNoticeSubject('pause_ended', 'now')).toBe('Your Urganize pause has ended');
+  });
+
   it('never uses an em dash, and never says workspace', async () => {
     const { text } = await renderEmail(
       TeamAdminNoticeEmail({ recipientName: '', kind: 'comped', when: 'now', trialEndsAt: null })

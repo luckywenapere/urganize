@@ -544,3 +544,38 @@ describe('summarizeBilling — a pending plan change', () => {
     expect(result.details.some((line) => line.includes('Moving to'))).toBe(false);
   });
 });
+
+describe('summarizeBilling — the cancel flow (2026-10-14)', () => {
+  it('a paused paid plan says when it comes back', () => {
+    const result = summarizeBilling(
+      snapshot({ accountStatus: 'paid', plan: 'manager', rawStatus: 'cancelled', expiresAt: '2026-10-31T12:00:00.000Z' }),
+      { pausedUntil: '2026-11-30T12:00:00.000Z' }
+    );
+    expect(result.details[0]).toMatch(/^Paused until /);
+    expect(result.details.join(' ')).not.toContain('Cancelled.');
+  });
+
+  it('a pause that outlived the paid period still reads as paused, not ended', () => {
+    const result = summarizeBilling(
+      snapshot({ accountStatus: 'expired', plan: 'manager', rawStatus: 'cancelled', expiresAt: '2026-10-01T12:00:00.000Z' }),
+      { pausedUntil: '2026-11-30T12:00:00.000Z' }
+    );
+    expect(result.title).toBe('Manager plan paused');
+    expect(result.details[0]).toMatch(/^Paused until /);
+  });
+
+  it('a cancelled trial in read-only says trial, not plan', () => {
+    const result = summarizeBilling(snapshot(), {
+      team: {
+        state: 'read_only',
+        reason: 'trial_cancelled',
+        trialDaysLeft: 0,
+        trialEndsAt: null,
+        isOwnerOrAdmin: true,
+        teamName: null,
+      },
+    });
+    expect(result.title).toBe('Trial ended');
+    expect(result.cta).toBe('reactivate');
+  });
+});

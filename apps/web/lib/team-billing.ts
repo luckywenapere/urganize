@@ -80,6 +80,12 @@ export type WorkspaceBillingFields = {
    *  the share reward writes it (lib/share-reward.ts). Optional, and absent
    *  means 0, so every reader that predates the column behaves as before. */
   paidBonusDays?: number | null;
+  /** When the owner cancelled the team's trial through the cancel flow
+   *  (workspaces.trial_cancelled_at, 20261014150000_cancel_flow.sql). Founder
+   *  call, 2026-10-14: a team that cancelled its trial lands in read-only, not
+   *  at the wall, once the trial is over. Absent means "never cancelled", which
+   *  keeps every never-cancelled unpaid trial exactly as it was (the wall). */
+  trialCancelledAt?: string | null;
 };
 
 export type TeamAccessState =
@@ -113,6 +119,9 @@ export type TeamAccessReason =
   | 'trial_expired'
   /** Paid before, lapsed since. The read-only state. */
   | 'payment_failed'
+  /** The owner cancelled the trial, and the trial is over. Also read-only
+   *  (founder call, 2026-10-14), so what they built stays readable. */
+  | 'trial_cancelled'
   /** No plan, credits in the balance. The credits-only state. */
   | 'credits_funded'
   /** trial_ends_at was never stamped. Fails OPEN — see resolveTeamAccess. */
@@ -184,8 +193,10 @@ export function paidBonusEndsAt(
  * succeeded (the first credit and each renewal) and DELIBERATELY WITHHELD by the
  * card-verification path, whose own comment says so: "NOT is_subscribed /
  * paid_at: nothing has been bought yet". So a lapsed trial has no paid_at and
- * keeps the wall, whether it was a plain 28-day trial, a card-backed one that
- * never converted, or one the user cancelled.
+ * keeps the wall, whether it was a plain 28-day trial or a card-backed one that
+ * never converted. (A trial the owner CANCELLED through the cancel flow is
+ * read-only since 2026-10-14, but through workspaces.trial_cancelled_at in
+ * resolveTeamAccess, never through this predicate.)
  *
  * DO NOT widen this to a status check. `subscriptions.status = 'cancelled'` is
  * worn by a cancelled card-trial that never paid a penny, so reading the status
@@ -373,6 +384,21 @@ export function resolveTeamAccess(input: {
       hasAccess: true,
       canWrite: false,
       reason: 'payment_failed',
+      trialEndsAt,
+      trialDaysLeft: 0,
+      inGrace: false,
+    };
+  }
+
+  // A cancelled trial is read-only rather than walled (founder call,
+  // 2026-10-14). Below the paid lapse so a team that both paid and cancelled
+  // keeps the payment reason, and below credits for the same reason as above.
+  if (input.team.trialCancelledAt) {
+    return {
+      state: 'read_only',
+      hasAccess: true,
+      canWrite: false,
+      reason: 'trial_cancelled',
       trialEndsAt,
       trialDaysLeft: 0,
       inGrace: false,

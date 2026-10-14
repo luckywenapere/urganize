@@ -14,6 +14,8 @@ import {
 import { errorMessage } from '@/lib/errors';
 import { isCardTrialEnabled } from '@/lib/trial-card';
 import { isCreditsEnabled } from '@/lib/credits/config';
+import { isCancelFlowEnabled } from '@/lib/cancel-flow';
+import { READ_ONLY_REACTIVATE_HREF } from '@/lib/team-billing';
 import { feedbackErrorClass } from './feedback';
 import { getAccessToken } from './getAccessToken';
 import { panelClass } from './panelClass';
@@ -78,6 +80,16 @@ export function BillingSection() {
     isOwnerOrAdmin: boolean;
     teamName: string | null;
   } | null>(null);
+  // The cancel flow (2026-10-14): what the owner can do from here. Null means
+  // "no flow" (not the owner, nothing to cancel, the flag off, or the
+  // migration not applied yet), and the old card-trial control stays.
+  const [cancelFlow, setCancelFlow] = useState<{
+    kind: 'trial' | 'paid';
+    state: 'active' | 'cancelled' | 'paused';
+    pauseUntil: string | null;
+    canResumeInPlace: boolean;
+  } | null>(null);
+  const [isResuming, setIsResuming] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
@@ -140,6 +152,27 @@ export function BillingSection() {
       );
       setIsConfirmingCancel(false);
       setCancelError('');
+
+      if (isCancelFlowEnabled()) {
+        const flowResponse = await fetch('/api/billing/cancel-flow', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        }).catch(() => null);
+        const flow = flowResponse
+          ? ((await flowResponse.json().catch(() => ({}))) as Record<string, unknown>)
+          : {};
+        const pause = flow.pause as { until?: unknown } | null | undefined;
+        setCancelFlow(
+          flow.available === true && (flow.kind === 'trial' || flow.kind === 'paid')
+            ? {
+                kind: flow.kind,
+                state: flow.state === 'paused' || flow.state === 'cancelled' ? flow.state : 'active',
+                pauseUntil: pause && typeof pause.until === 'string' ? pause.until : null,
+                canResumeInPlace: flow.canResumeInPlace === true,
+              }
+            : null
+        );
+      }
     } catch (caught) {
       setError(errorMessage(caught, 'Could not load your billing details.'));
     } finally {
@@ -174,6 +207,33 @@ export function BillingSection() {
     }
   }, [load]);
 
+  // One tap back: re-enables the plan while the period still runs, otherwise
+  // goes to the checkout (the app never charges on its own).
+  const handleResume = useCallback(async () => {
+    setCancelError('');
+    setIsResuming(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Sign in again and retry.');
+      const response = await fetch('/api/billing/cancel-flow', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'resume' }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; resumed?: boolean; href?: string };
+      if (!response.ok) throw new Error(payload.error || 'Could not resume right now.');
+      if (payload.resumed) {
+        await load();
+      } else {
+        router.push(payload.href || READ_ONLY_REACTIVATE_HREF);
+      }
+    } catch (caught) {
+      setCancelError(errorMessage(caught, 'Could not resume right now.'));
+    } finally {
+      setIsResuming(false);
+    }
+  }, [load, router]);
+
   const heading = (
     <h2 className="mb-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
       Billing
@@ -207,10 +267,13 @@ export function BillingSection() {
 
   if (!snapshot) return null;
 
-  const { title, details, cta, secondaryCta } = summarizeBilling(snapshot, {
+  const { title, details, cta, secondaryCta: summaryCta } = summarizeBilling(snapshot, {
     cardTrialEnabled: isCardTrialEnabled(),
     ...(team ? { team } : {}),
+    pausedUntil: cancelFlow?.state === 'paused' ? cancelFlow.pauseUntil : null,
   });
+  // The cancel flow replaces the inline card-trial cancel whenever it is there.
+  const secondaryCta = cancelFlow ? null : summaryCta;
   const ctaClass =
     'shrink-0 rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:bg-bg-hover';
   const accessUntil = formatBillingDate(snapshot.trialEndsAt) || formatBillingDate(snapshot.expiresAt);
@@ -270,6 +333,29 @@ export function BillingSection() {
             See your UrgAns credit history
           </Link>
         </p>
+      ) : null}
+
+      {cancelFlow && cancelFlow.state === 'active' ? (
+        // The cancel flow (2026-10-14): offers, a pause, two questions, then
+        // the cancel. Quiet link, the old control's weight.
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard/cancel')}
+            className="text-sm text-content-tertiary underline hover:text-content-secondary"
+          >
+            {cancelFlow.kind === 'trial' ? 'Cancel trial' : 'Cancel plan'}
+          </button>
+        </div>
+      ) : null}
+
+      {cancelFlow && (cancelFlow.state === 'paused' || (cancelFlow.state === 'cancelled' && cancelFlow.canResumeInPlace)) ? (
+        <div className="mt-4">
+          <button type="button" disabled={isResuming} onClick={() => void handleResume()} className={ctaClass}>
+            {isResuming ? 'Resuming…' : cancelFlow.state === 'paused' ? 'Resume now' : 'Resume my plan'}
+          </button>
+          {cancelError ? <div role="alert" className={`${feedbackErrorClass} mt-2`}>{cancelError}</div> : null}
+        </div>
       ) : null}
 
       {secondaryCta === 'cancelTrial' ? (

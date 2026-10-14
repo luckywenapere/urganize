@@ -21,7 +21,15 @@ export type FounderAlertKind =
   | 'payment_failed'
   /** A team hit the daily cap on UrgAns actions run inside a product function.
    *  At most one per team per 24h so a busy team cannot spam the inbox. */
-  | 'urgans_guard_tripped';
+  | 'urgans_guard_tripped'
+  /** The cancel flow (2026-10-14): a team cancelled. FYI, with the reason. */
+  | 'subscription_cancelled'
+  /** The cancel flow: a team paused instead of cancelling. FYI. */
+  | 'subscription_paused'
+  /** The cancel flow: a team took a 3-month budget price. An ACTION: swap their
+   *  Paystack subscription onto the retention Plan named in the note before the
+   *  next renewal, and back to full price after 3 months. */
+  | 'retention_offer_accepted';
 
 export type FounderAlertContext = {
   teamName: string | null;
@@ -53,6 +61,9 @@ const SUBJECT_PREFIX: Record<FounderAlertKind, string> = {
   plan_change_requested: 'SWAP NEEDED',
   payment_failed: 'CARD FAILED',
   urgans_guard_tripped: 'UrgAns usage cap',
+  subscription_cancelled: 'Cancelled',
+  subscription_paused: 'Paused',
+  retention_offer_accepted: 'SWAP NEEDED (retention price)',
 };
 
 export const FOUNDER_ALERT_HEADLINE: Record<FounderAlertKind, string> = {
@@ -68,6 +79,12 @@ export const FOUNDER_ALERT_HEADLINE: Record<FounderAlertKind, string> = {
     'A renewal charge failed for this team. They still have access while Paystack retries, and they drop to read only if the period ends unpaid.',
   urgans_guard_tripped:
     'This team hit the daily cap on UrgAns actions run inside the product. If this is real usage, raise the cap. If it does not look right, take a look.',
+  subscription_cancelled:
+    'This team cancelled. Their access runs to the end of what they paid for (or their trial), then the app is read only for them.',
+  subscription_paused:
+    'This team paused their plan instead of cancelling. Nothing is charged while paused; they come back with a normal checkout.',
+  retention_offer_accepted:
+    'This team took a lower price to stay. Their Paystack subscription needs moving to the retention Plan in the note by hand before the next renewal, and back to full price after 3 months.',
 };
 
 const formatCount = (value: number | null): string => (value === null ? 'unknown' : String(value));

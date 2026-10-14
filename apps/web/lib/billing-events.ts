@@ -19,6 +19,22 @@ export const BILLING_EVENT_TYPES = [
   'trial_started',
   /** An admin added days. */
   'trial_extended',
+  /** The cancel flow (2026-10-14, lib/cancel-flow.ts). The owner took the
+   *  "10% off" offer: 3 days on the trial or as paid bonus days. Once per team. */
+  'cancel_discount_taken',
+  /** The cancel flow: a trial team invited one more teammate for 7 more days. */
+  'trial_invite_extension',
+  /** The cancel flow: the owner paused the plan. Metadata carries the window. */
+  'subscription_paused',
+  /** The cancel flow: a cancel or pause was undone while the period still ran. */
+  'subscription_resumed',
+  /** The cancel flow: the owner took a budget-band price for 3 months. A
+   *  Paystack swap is owed by hand before the next renewal (the plan-change
+   *  precedent), so this also emails the founder. */
+  'retention_offer_accepted',
+  /** The cancel flow: the owner cancelled (trial or paid). Metadata carries
+   *  the reason they picked, if any. */
+  'subscription_cancelled',
   /** The daily sweep saw a team enter its last 3 days. */
   'trial_ending_soon',
   /** Someone on this team saw the wall for the first time. */

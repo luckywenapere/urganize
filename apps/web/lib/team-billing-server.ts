@@ -149,6 +149,34 @@ export async function readPaidBonusDays(
   return out;
 }
 
+/**
+ * workspaces.trial_cancelled_at for these teams (the cancel flow,
+ * 20261014150000_cancel_flow.sql), as a map of the ones that cancelled. Read on
+ * its own for the readPaidBonusDays reason: before the migration the column does
+ * not exist, and an error here reads as "never cancelled", which is exactly the
+ * behaviour before the cancel flow existed (the wall for an ended trial).
+ */
+export async function readTrialCancelledAt(
+  client: SupabaseClient,
+  workspaceIds: string[]
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (workspaceIds.length === 0) return out;
+  try {
+    const { data, error } = await client
+      .from(WORKSPACES_TABLE)
+      .select('id, trial_cancelled_at')
+      .in('id', workspaceIds);
+    if (error || !Array.isArray(data)) return out;
+    for (const row of data as Array<{ id: string; trial_cancelled_at: string | null }>) {
+      if (row.trial_cancelled_at) out.set(row.id, row.trial_cancelled_at);
+    }
+  } catch {
+    // An empty map is the safe answer.
+  }
+  return out;
+}
+
 /** The answer when we cannot tell. Access granted, never cached. */
 const openSnapshot = (): TeamAccessSnapshot => ({
   hasAccess: true,
@@ -378,10 +406,15 @@ export async function getTeamAccessForUser(
     const needsBonus = workspaces.some(
       (row) => !row.owner_id || !ownerAccess.get(row.owner_id)?.hasAccess
     );
+    const trialCancelled = new Map<string, string>();
     if (needsBonus) {
-      for (const [id, days] of await readPaidBonusDays(client, workspaces.map((row) => row.id))) {
-        bonusDays.set(id, days);
-      }
+      const ids = workspaces.map((row) => row.id);
+      const [bonus, cancelled] = await Promise.all([
+        readPaidBonusDays(client, ids),
+        readTrialCancelledAt(client, ids),
+      ]);
+      for (const [id, days] of bonus) bonusDays.set(id, days);
+      for (const [id, when] of cancelled) trialCancelled.set(id, when);
     }
 
     const accessInput = (row: WorkspaceRow, creditsFunded: boolean) => {
@@ -393,7 +426,11 @@ export async function getTeamAccessForUser(
           ownerHasAccess: Boolean(owner?.hasAccess),
           ownerPaidAt: owner?.paidAt ?? null,
         }),
-        team: { ...toBillingFields(row), paidBonusDays: bonusDays.get(row.id) ?? 0 },
+        team: {
+          ...toBillingFields(row),
+          paidBonusDays: bonusDays.get(row.id) ?? 0,
+          trialCancelledAt: trialCancelled.get(row.id) ?? null,
+        },
         graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
         creditsFunded,
         ownerPaidThrough: owner?.paidThrough ?? null,
@@ -570,16 +607,18 @@ export async function getWorkspaceAccess(
     if (isAllowlistedEmail(ownerEmail)) return { state: 'allowlisted', tier: 'label' };
 
     const snapshot = await getSubscriptionSnapshot(row.owner_id);
-    const paidBonusDays = snapshot.hasAccess
-      ? 0
-      : ((await readPaidBonusDays(client, [row.id])).get(row.id) ?? 0);
+    const [bonusMap, cancelledMap] = snapshot.hasAccess
+      ? [new Map<string, number>(), new Map<string, string>()]
+      : await Promise.all([readPaidBonusDays(client, [row.id]), readTrialCancelledAt(client, [row.id])]);
+    const paidBonusDays = bonusMap.get(row.id) ?? 0;
+    const trialCancelledAt = cancelledMap.get(row.id) ?? null;
     const baseInput = {
       ownerHasAccess: snapshot.hasAccess,
       ownerLapsedFromPayment: lapsedFromPayment({
         ownerHasAccess: snapshot.hasAccess,
         ownerPaidAt: snapshot.paidAt,
       }),
-      team: { ...toBillingFields(row), paidBonusDays },
+      team: { ...toBillingFields(row), paidBonusDays, trialCancelledAt },
       graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
       ownerPaidThrough: snapshot.expiresAt,
     };

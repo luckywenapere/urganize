@@ -802,3 +802,82 @@ describe('credits-only access (2026-10-02)', () => {
     ).toMatchObject({ hasAccess: true, canWrite: true });
   });
 });
+
+describe('resolveTeamAccess — a cancelled trial lands in read-only (2026-10-14)', () => {
+  const ended: WorkspaceBillingFields = {
+    trialStartedAt: at(-5 * DAY),
+    trialEndsAt: at(-1 * DAY),
+    compedAt: null,
+    billingPlan: null,
+    billingLockedAmount: null,
+  };
+
+  it('a team that cancelled its trial is read-only, not walled, once the trial ends', () => {
+    const result = resolveTeamAccess({
+      ownerHasAccess: false,
+      team: { ...ended, trialCancelledAt: at(-2 * DAY) },
+      now: NOW,
+    });
+    expect(result.state).toBe('read_only');
+    expect(result.reason).toBe('trial_cancelled');
+    expect(result.hasAccess).toBe(true);
+    expect(result.canWrite).toBe(false);
+  });
+
+  it('a never-cancelled unpaid trial still meets the wall', () => {
+    const result = resolveTeamAccess({ ownerHasAccess: false, team: ended, now: NOW });
+    expect(result.state).toBe('walled');
+    expect(result.reason).toBe('trial_expired');
+  });
+
+  it('cancelling never cuts a running trial short', () => {
+    const result = resolveTeamAccess({
+      ownerHasAccess: false,
+      team: { ...ended, trialEndsAt: at(2 * DAY), trialCancelledAt: at(-1 * DAY) },
+      now: NOW,
+    });
+    expect(result.state).toBe('trial');
+    expect(result.canWrite).toBe(true);
+  });
+
+  it('keeps the server grace window ahead of read-only', () => {
+    const result = resolveTeamAccess({
+      ownerHasAccess: false,
+      team: { ...ended, trialEndsAt: at(-60 * 1000), trialCancelledAt: at(-1 * DAY) },
+      now: NOW,
+      graceMs: TEAM_TRIAL_EXPIRY_GRACE_MS,
+    });
+    expect(result.state).toBe('grace');
+  });
+
+  it('a paid lapse keeps its own reason even when a trial was also cancelled', () => {
+    const result = resolveTeamAccess({
+      ownerHasAccess: false,
+      ownerLapsedFromPayment: true,
+      team: { ...ended, trialCancelledAt: at(-2 * DAY) },
+      now: NOW,
+    });
+    expect(result.state).toBe('read_only');
+    expect(result.reason).toBe('payment_failed');
+  });
+
+  it('credits still outrank read-only for a cancelled trial', () => {
+    const result = resolveTeamAccess({
+      ownerHasAccess: false,
+      creditsFunded: true,
+      team: { ...ended, trialCancelledAt: at(-2 * DAY) },
+      now: NOW,
+    });
+    expect(result.state).toBe('credits_only');
+  });
+
+  it('a paused paid team (subscription disabled, period over) is read-only', () => {
+    const result = resolveTeamAccess({
+      ownerHasAccess: false,
+      ownerLapsedFromPayment: lapsedFromPayment({ ownerHasAccess: false, ownerPaidAt: at(-40 * DAY) }),
+      team: ended,
+      now: NOW,
+    });
+    expect(result.state).toBe('read_only');
+  });
+});

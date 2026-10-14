@@ -66,7 +66,13 @@ export type BillingSummaryOptions = {
     trialEndsAt: string | null;
     isOwnerOrAdmin: boolean;
     teamName: string | null;
+    /** TeamAccessReason, when the payload carries it. Only 'trial_cancelled'
+     *  changes a word today (a cancelled trial's read-only copy). */
+    reason?: string | null;
   };
+  /** The cancel flow's pause (2026-10-14): when the owner's paused plan comes
+   *  back. Present only while a pause is in force. */
+  pausedUntil?: string | null;
 };
 
 /**
@@ -235,7 +241,7 @@ export function summarizeBilling(
   // fix.
   if (team && team.state === 'read_only' && snapshot.accountStatus !== 'expired') {
     return {
-      title: 'Plan ended',
+      title: team.reason === 'trial_cancelled' ? 'Trial ended' : 'Plan ended',
       details: [
         'Your team can still see everything, and nothing has been removed.',
         team.isOwnerOrAdmin
@@ -316,7 +322,12 @@ export function summarizeBilling(
     // (covers both a cancelled card-trial — which reads as paid via snapshot
     // path 1 — and an ordinarily cancelled subscriber running out the period
     // they paid for).
-    if (expires) {
+    const pausedUntil = formatBillingDate(options.pausedUntil ?? null);
+    if (pausedUntil) {
+      // A pause is a cancel with a return date: say the return date.
+      details.push(`Paused until ${pausedUntil}.`);
+      if (expires) details.push(`You can keep working until ${expires}.`);
+    } else if (expires) {
       details.push(
         snapshot.rawStatus === 'cancelled'
           ? `Cancelled. Access until ${expires}.`
@@ -341,6 +352,15 @@ export function summarizeBilling(
   if (snapshot.accountStatus === 'expired') {
     const isReadOnlyTeam = team?.state === 'read_only';
     const details: string[] = [];
+    const pausedUntil = formatBillingDate(options.pausedUntil ?? null);
+    if (pausedUntil) {
+      return {
+        title: planName ? `${planName} plan paused` : 'Plan paused',
+        details: [`Paused until ${pausedUntil}.`, 'Everything is still here to read.'],
+        cta: null,
+        secondaryCta: null,
+      };
+    }
     if (expires) details.push(`Ended ${expires}.`);
     // Under read-only mode an expired plan no longer means the wall, so say what
     // is actually true: they can see everything and nothing was removed.

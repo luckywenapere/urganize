@@ -22,6 +22,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.130.0",
+    date: "October 14, 2026",
+    highlights: [
+      "You can now cancel your plan or trial yourself, in Settings under Billing.",
+      "Need a break instead? Pause your plan for 2 weeks up to 3 months. You pay nothing while it's paused.",
+      "If you cancel, everything you made stays here for you to read.",
+    ],
+  },
+  {
     version: "1.129.0",
     date: "October 14, 2026",
     highlights: [

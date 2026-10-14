@@ -3013,3 +3013,40 @@ html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/h
     opacity: 0.6;
   }
 }
+
+/* ============================================================================
+   The cancel flow's last button (2026-10-14): "Drop the mic". On hover the mic
+   tilts like it is about to go; on press it drops. Brand ground, ink text.
+   Reduced motion: no tilt, no drop, the button just works.
+   ============================================================================ */
+.cancel-mic-button .cancel-mic {
+  transform-origin: 50% 85%;
+  transition: transform var(--motion-fast, 160ms) var(--ease-spring, ease-out);
+}
+
+.cancel-mic-button:hover .cancel-mic,
+.cancel-mic-button:focus-visible .cancel-mic {
+  transform: rotate(-14deg);
+}
+
+.cancel-mic-button[data-dropping='true'] .cancel-mic {
+  animation: cancel-mic-drop 520ms cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+}
+
+@keyframes cancel-mic-drop {
+  0% { transform: rotate(-14deg) translateY(0); opacity: 1; }
+  60% { transform: rotate(28deg) translateY(14px); opacity: 1; }
+  100% { transform: rotate(40deg) translateY(22px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cancel-mic-button .cancel-mic,
+  .cancel-mic-button:hover .cancel-mic,
+  .cancel-mic-button:focus-visible .cancel-mic,
+  .cancel-mic-button[data-dropping='true'] .cancel-mic {
+    transition: none;
+    animation: none !important;
+    transform: none;
+    opacity: 1;
+  }
+}
