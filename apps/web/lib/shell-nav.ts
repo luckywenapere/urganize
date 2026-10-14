@@ -74,6 +74,7 @@ export function readShellFlags(): ShellFlags {
 
 export const HOME_HREF = '/dashboard/home';
 export const CATALOGUE_HREF = '/dashboard';
+export const DISTRIBUTE_HREF = '/dashboard/distribute';
 
 export function buildShellAreas(flags: ShellFlags): ShellArea[] {
   const catalogueTabs: ShellSubTab[] = [
@@ -92,14 +93,15 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, '/dashboard/artists'),
     });
   }
-  if (flags.pressKits) {
-    catalogueTabs.push({
-      key: 'press-kits',
-      label: 'Press kits',
-      href: '/dashboard/press-kits',
-      isActive: (p) => startsWithPath(p, '/dashboard/press-kits'),
-    });
-  }
+  // Distribute took Press kits' place in the tab row (founder call,
+  // 2026-10-14). Press kits are still reached from each artist and Settings,
+  // and their pages still sit under Catalogue.
+  catalogueTabs.push({
+    key: 'distribute',
+    label: 'Distribute',
+    href: DISTRIBUTE_HREF,
+    isActive: (p) => startsWithPath(p, DISTRIBUTE_HREF),
+  });
   if (flags.notes) {
     catalogueTabs.push({
       key: 'notes',
@@ -168,6 +170,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
         startsWithPath(p, '/dashboard/releases') ||
         startsWithPath(p, '/dashboard/artists') ||
         startsWithPath(p, '/dashboard/press-kits') ||
+        startsWithPath(p, DISTRIBUTE_HREF) ||
         startsWithPath(p, '/dashboard/notes'),
     },
     // Pitching is third on the desktop top bar (founder, 2026-10-11).

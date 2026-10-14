@@ -19,7 +19,7 @@ import { useNavTip } from './useNavTip';
  *
  * Founder call (2026-10-14, after two other cuts): the areas STAY across the
  * top, centred, exactly as the top bar had them. The side menu is one level
- * down: the open area's pages (Catalogue: Rollouts, Artists, Press kits,
+ * down: the open area's pages (Catalogue: Rollouts, Artists, Distribute,
  * Notes) as its parent rows, and the pages inside a page nested under their
  * parent. Today that is a rollout: with one open, its menu (See the timeline,
  * Work the plan, Talk to the team...) folds open under Rollouts. The rollout

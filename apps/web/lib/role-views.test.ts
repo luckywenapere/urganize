@@ -96,7 +96,7 @@ describe('the defaults every view keeps', () => {
       }
       const shown = destinations(view(v).filter((area) => area.key !== 'more'));
       expect(shown).toEqual(
-        expect.arrayContaining(['home', 'catalogue/releases', 'catalogue/press-kits', 'catalogue/notes', 'pitching/pitching'])
+        expect.arrayContaining(['home', 'catalogue/releases', 'catalogue/distribute', 'catalogue/notes', 'pitching/pitching'])
       );
     }
   });
@@ -138,7 +138,7 @@ describe('the nav filter, per view', () => {
     const list = view('solo_artist');
     expect(more(list)).toEqual(['artists', 'people', 'directory']);
     const catalogue = list.find((a) => a.key === 'catalogue')!;
-    expect(catalogue.subTabs.map((t) => t.key)).toEqual(['releases', 'press-kits', 'notes']);
+    expect(catalogue.subTabs.map((t) => t.key)).toEqual(['releases', 'distribute', 'notes']);
     const relationships = list.find((a) => a.key === 'relationships')!;
     expect(relationships.subTabs.map((t) => t.key)).toEqual(['shows']);
     // Its pill now goes to the first tab it still has.

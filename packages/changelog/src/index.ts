@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.131.0",
+    date: "October 14, 2026",
+    highlights: [
+      "Distribute now has its own tab in Catalogue, next to Rollouts and Artists. Pick a rollout and go straight to sending it to stores.",
+      "Press kits left the Catalogue tabs. Find each one on its artist's page or in Settings.",
+    ],
+  },
+  {
     version: "1.130.4",
     date: "October 14, 2026",
     highlights: [

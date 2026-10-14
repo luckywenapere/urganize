@@ -27,7 +27,8 @@ const lit = (path: string, flags: ShellFlags = ALL_ON) =>
 
 describe('the desktop side menu: the open area\u2019s pages (URG-254, founder call 2026-10-14)', () => {
   it('lists the Catalogue\u2019s pages as parents, the one on screen lit', () => {
-    expect(labels('/dashboard')).toEqual(['Rollouts', 'Artists', 'Press kits', 'Notes']);
+    expect(labels('/dashboard')).toEqual(['Rollouts', 'Artists', 'Distribute', 'Notes']);
+    expect(lit('/dashboard/distribute')).toEqual(['distribute']);
     expect(lit('/dashboard')).toEqual(['releases']);
     expect(lit('/dashboard/artists')).toEqual(['artists']);
     expect(lit('/dashboard/notes')).toEqual(['notes']);
@@ -51,8 +52,8 @@ describe('the desktop side menu: the open area\u2019s pages (URG-254, founder ca
     }
   });
 
-  it('keeps the Catalogue\u2019s menu even with Rollouts as its only page, for a rollout\u2019s menu', () => {
-    expect(labels('/dashboard', ALL_OFF)).toEqual(['Rollouts']);
+  it('keeps the Catalogue\u2019s menu with every flag off: Rollouts and Distribute', () => {
+    expect(labels('/dashboard', ALL_OFF)).toEqual(['Rollouts', 'Distribute']);
   });
 
   it('follows the flags, with no hardcoded list', () => {
@@ -69,7 +70,8 @@ describe('the desktop page bar title', () => {
     expect(shellPageTitle(on, '/dashboard/notes')).toBe('Notes');
     expect(shellPageTitle(on, '/dashboard')).toBe('Rollouts');
     expect(shellPageTitle(on, '/dashboard/pitching')).toBe('Pitching');
-    expect(shellPageTitle(buildShellAreas(ALL_OFF), '/dashboard')).toBe('Catalogue');
+    expect(shellPageTitle(buildShellAreas(ALL_OFF), '/dashboard')).toBe('Rollouts');
+    expect(shellPageTitle(on, '/dashboard/distribute')).toBe('Distribute');
     expect(shellPageTitle(on, '/dashboard/urgans')).toBeNull();
   });
 });
