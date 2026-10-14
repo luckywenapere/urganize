@@ -14,6 +14,8 @@ export type Release = {
 // (apps/homepage) changes, however visible on the site, never earn an
 // entry or a version bump. Marketing entries were purged retroactively on
 // 2026-07-18; removed numbers stay retired, so the sequence has gaps.
+// 1.124.2 (internal admin scoreboard table, URG-267) was pulled on
+// 2026-10-14 by founder call: internal admin work gets no entry.
 //
 // Versions before v0.10.0 are reconstructed milestones — the product was
 // informally versioned until then. From v0.10.0 on, every release increments
@@ -26,13 +28,6 @@ export const changelog: Release[] = [
       "Rollout plans are shorter now. You see the handful of tasks that matter most, and Show all brings back the rest.",
       "Search a plan by task name, or filter it by status, who it's on, or when it's due.",
       "Open any task and pin it to keep it in your short list.",
-    ],
-  },
-  {
-    version: "1.124.2",
-    date: "October 14, 2026",
-    highlights: [
-      "Admin scoreboard: a new table shows how many people come back in each of the four weeks after they sign up, grouped by the week they joined.",
     ],
   },
   {
