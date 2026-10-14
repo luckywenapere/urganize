@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.128.2",
+    date: "October 14, 2026",
+    highlights: [
+      "Your menu now always follows the account type you chose when you joined.",
+    ],
+  },
+  {
     version: "1.128.1",
     date: "October 14, 2026",
     highlights: [

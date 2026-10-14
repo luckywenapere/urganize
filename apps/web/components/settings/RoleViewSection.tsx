@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuthStore } from '@/lib/auth-store';
+import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import {
   ROLE_VIEWS,
   ROLE_VIEW_LABELS,
@@ -18,7 +19,8 @@ import { panelClass } from './panelClass';
 // Role-based views (URG-260). The menu leads with what the account's "Who are
 // you?" answer needs; this is where a person picks a different view. Saved on
 // their own profile (profiles.role_view), so it follows them to every device.
-// "Automatic" clears the override. Hidden when the flag is off, so it never
+// "Automatic" clears the override. Admins only (founder, 2026-10-14): everyone
+// else gets the view their account implies. Hidden when the flag is off, so it never
 // offers a choice the menu would ignore.
 
 const AUTOMATIC = 'automatic';
@@ -26,10 +28,11 @@ const AUTOMATIC = 'automatic';
 export function RoleViewSection() {
   const user = useAuthStore((state) => state.user);
   const updateRoleView = useAuthStore((state) => state.updateRoleView);
+  const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState('');
 
-  if (!readRoleViewsFlag() || !user || user.role === 'curator') return null;
+  if (!readRoleViewsFlag() || !isAdmin || !user || user.role === 'curator') return null;
 
   const override = isRoleView(user.role_view) ? user.role_view : null;
   const automatic = automaticRoleView(user);
