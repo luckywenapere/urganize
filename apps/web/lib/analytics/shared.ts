@@ -344,6 +344,10 @@ export interface AnalyticsEventPropertiesMap {
     done: number;
     total: number;
   };
+  /** The first steps on a new rollout (URG-293, 2026-10-15). `clicked` names
+   *  the step tapped; `dismissed` is the card hidden before every step was done. */
+  rollout_first_step_clicked: { release_id: string; step: string; done: number; total: number };
+  rollout_first_steps_dismissed: { release_id: string; done: number; total: number };
   /** A face was added or swapped on the roster or a directory record (2026-10-11). */
   profile_photo_saved: {
     surface: 'workspace_logo' | 'curator_photo' | 'artist_photo' | 'person_photo';

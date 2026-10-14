@@ -31,6 +31,7 @@ import { TestReleaseBanner } from './TestReleaseBanner';
 import { PostPlanKitPrompt } from '@/components/press-kits/PostPlanKitPrompt';
 import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
 import { DistributionStatusStrip } from './DistributionStatusStrip';
+import { RolloutFirstSteps } from './RolloutFirstSteps';
 import { RolloutNextMoves } from '@/components/next-moves/RolloutNextMoves';
 import { requestEditorialPitchBackfill } from '@/lib/editorial-pitch-client';
 import { daysToRelease, isEditorialPitchTask, pitchWindowState } from '@/lib/editorial-pitch';
@@ -558,6 +559,7 @@ export function WorkspaceView() {
         | 'status'
         | 'ownerUserId'
         | 'metadata'
+        | 'createdAt'
       > & { isTest: boolean })
     | null
   >(() => {
@@ -585,6 +587,8 @@ export function WorkspaceView() {
       // PlanBuiltBanner's readPlannedByUrgans reads this raw, the same way
       // isTest below does.
       metadata: found.metadata,
+      // The first steps (URG-293) only show while a rollout is new.
+      createdAt: found.createdAt,
       // Derived, not stored on Release: the metadata jsonb already reaches
       // this component raw, nothing server-side reads the marker back after
       // creation, and folding the flag in here means the banner goes dark on
@@ -1181,9 +1185,20 @@ export function WorkspaceView() {
   // Next moves (URG-259): up to three one-tap cards on the main view, worked
   // out from this rollout and its activities. Mounted ONCE: in the full-screen
   // timeline while that is up, otherwise in the one layout branch on screen.
+  //
+  // First steps (URG-293): on a NEW rollout the owner gets one obvious next
+  // action (add the song, the cover art, invite the team) with a short
+  // checklist, and it stands in for the next moves until every step is done or
+  // it is hidden, so a fresh rollout offers one thing to do rather than four.
   const nextMovesBanner =
     bodyIsMainView && scopedReleaseSlim && !scopedReleaseSlim.isTest ? (
-      <RolloutNextMoves release={scopedReleaseSlim} tasks={scopedTasks} isOwner={scopedReleaseIsOwn} />
+      <RolloutFirstSteps
+        release={scopedReleaseSlim}
+        isOwner={scopedReleaseIsOwn}
+        fallback={
+          <RolloutNextMoves release={scopedReleaseSlim} tasks={scopedTasks} isOwner={scopedReleaseIsOwn} />
+        }
+      />
     ) : null;
 
   const handleSelect = (releaseId: string) => {
