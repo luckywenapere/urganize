@@ -165,7 +165,7 @@ const GROUPING_STORAGE_KEY = 'urganize.workspace.list-grouping';
 const GROUPING_STORAGE_VERSION = 1;
 const isListGrouping = (value: unknown): value is ListGrouping => value === 'phase' || value === 'status';
 
-const PHASE_COLLAPSED_STORAGE_KEY = 'urganize.workspace.phase-collapsed';
+const PHASE_COLLAPSED_STORAGE_KEY = 'urganize.tasks.phase-collapsed';
 const PHASE_COLLAPSED_STORAGE_VERSION = 1;
 const isPhaseCollapsed = (value: unknown): value is Partial<Record<RolloutPhase, boolean>> =>
   typeof value === 'object' &&
