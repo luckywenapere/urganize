@@ -29,6 +29,7 @@ describe('the desktop side menu: the open area\u2019s pages (URG-254, founder ca
   it('lists the Catalogue\u2019s pages as parents, the one on screen lit', () => {
     expect(labels('/dashboard')).toEqual(['Rollouts', 'Artists', 'Distribute', 'Notes']);
     expect(lit('/dashboard/distribute')).toEqual(['distribute']);
+    expect(lit('/dashboard/distribute/abc')).toEqual(['distribute']);
     expect(lit('/dashboard')).toEqual(['releases']);
     expect(lit('/dashboard/artists')).toEqual(['artists']);
     expect(lit('/dashboard/notes')).toEqual(['notes']);

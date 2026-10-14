@@ -5,19 +5,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Send } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
-import { DISTRIBUTION_PARTNER } from '@/lib/distribution';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 
 /**
  * Distribute, a Catalogue tab (founder call, 2026-10-14: it took Press kits'
  * place in the tab row). One job: pick a rollout and land on its Distribute
- * step, where the check and the partner sign-up live. Nothing is decided
- * here; this is a door, so it stays a plain list with as few words as it can.
+ * step, which opens inside this tab ([releaseId]/) so the tab stays lit
+ * (founder, same day: "it still looks like it is under catalogue"). No
+ * partner is named here: there will be more than one.
  */
 
-const distributeHref = (releaseId: string) =>
-  `/dashboard?release=${encodeURIComponent(releaseId)}&scene=distribute`;
+const distributeHref = (releaseId: string) => `/dashboard/distribute/${encodeURIComponent(releaseId)}`;
 
 function formatDate(value: string | null): string | null {
   if (!value) return null;
@@ -85,7 +84,7 @@ export default function DistributePageClient() {
     <div>
       <div className="pt-5 sm:pt-6" />
       <p className="mb-4 text-sm text-content-secondary">
-        Pick a rollout to send to stores with {DISTRIBUTION_PARTNER.name}.
+        Pick a rollout to send to stores.
       </p>
 
       {loading ? (
