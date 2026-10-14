@@ -22,7 +22,7 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
-    version: "1.131.1",
+    version: "1.132.1",
     date: "October 14, 2026",
     highlights: [
       "Tapping a rollout in Distribute now opens its distribution step right there, so you stay in the Distribute tab.",
