@@ -42,7 +42,7 @@ const TONE_BAR_CLASS: Record<TimelineTone, string> = {
   catch_up: 'bg-status-warning',
   blocked: 'bg-status-warning',
   in_progress: 'bg-brand',
-  scheduled: 'bg-stroke-strong',
+  scheduled: 'bg-stroke-control',
 };
 
 const TONE_DOT_CLASS: Record<TimelineTone, string> = {
@@ -52,8 +52,16 @@ const TONE_DOT_CLASS: Record<TimelineTone, string> = {
   catch_up: 'bg-status-warning border-status-warning',
   blocked: 'bg-status-warning border-status-warning',
   in_progress: 'bg-brand border-brand',
-  scheduled: 'bg-bg-surface border-stroke-strong',
+  scheduled: 'bg-bg-surface border-stroke-control',
 };
+
+/** A milestone still ahead reads as the legend's filled diamond, not as a
+ * quiet scheduled dot: it is the date the plan is steering for. */
+function dotClass(item: { isMilestone?: boolean; tone: TimelineTone }): string {
+  return item.isMilestone && item.tone === 'scheduled'
+    ? 'bg-brand border-brand'
+    : TONE_DOT_CLASS[item.tone];
+}
 
 const TONE_LABEL: Record<TimelineTone, string> = {
   done: 'Done',
@@ -586,7 +594,7 @@ function TimelineRow({
           <span
             className={`block h-2.5 w-2.5 border ${
               item.isMilestone ? 'rotate-45' : 'rounded-full'
-            } ${TONE_DOT_CLASS[item.tone]} ${isDragging ? 'ring-2 ring-brand' : ''}`}
+            } ${dotClass(item)} ${isDragging ? 'ring-2 ring-brand' : ''}`}
           />
         )}
       </button>
@@ -658,7 +666,7 @@ function TimelineWeekList({
                   <span
                     className={`h-2.5 w-2.5 shrink-0 border ${
                       item.isMilestone ? 'rotate-45' : 'rounded-full'
-                    } ${TONE_DOT_CLASS[item.tone]}`}
+                    } ${dotClass(item)}`}
                     aria-hidden="true"
                   />
                   <span className="min-w-0 flex-1 truncate text-xs text-content-primary">
@@ -687,11 +695,11 @@ function Legend({ onFullScreen }: { onFullScreen?: () => void }) {
   return (
     <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-content-tertiary">
       <span className="inline-flex items-center gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-full border border-stroke-strong bg-bg-surface" />
+        <span className="h-2.5 w-2.5 rounded-full border border-stroke-control bg-bg-surface" />
         One day
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <span className="h-2 w-6 rounded-full bg-stroke-strong" />
+        <span className="h-2 w-6 rounded-full bg-stroke-control" />
         Runs several days
       </span>
       <span className="inline-flex items-center gap-1.5">
