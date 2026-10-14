@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
-import { Sparkles } from '@/components/icons';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { useChappiStore } from '@/stores/useChappiStore';
@@ -17,7 +16,12 @@ const ChappiSidePanel = dynamic(
 );
 
 /**
- * UrgAns on every screen (strategy doc: "UrgAns has an entry point on every
+ * 2026-10-15 (founder): the round bottom-right button is gone now that UrgAns
+ * has its own pill in the desktop top bar (TopNav). The drawer stays: "Ask
+ * UrgAns" in the search bar still opens it over the page (lib/ask-urgans.ts),
+ * and it closes from its own header.
+ *
+ * Originally: UrgAns on every screen (strategy doc: "UrgAns has an entry point on every
  * screen"). A round button at the bottom right opens the chat in a drawer over
  * the page, so asking never costs the manager the screen they were on.
  *
@@ -36,14 +40,13 @@ const ChappiSidePanel = dynamic(
 export function FloatingUrgAns() {
   const pathname = usePathname() ?? '';
   const open = useChappiStore((state) => state.railOpen);
-  const setOpen = useChappiStore((state) => state.setRailOpen);
   const openCreate = useShellStore((state) => state.openCreate);
   // Keeps the chat mounted after its first open so a closed drawer does not
   // lose the transcript's scroll, an upload card or a reply still on its way.
   const [everOpened, setEverOpened] = useState(false);
   if (open && !everOpened) setEverOpened(true);
 
-  // Home has its own ask bar, so the button would be a second door to the same room.
+  // Home and the assistant's own page are the chat already.
   if (pathname === '/dashboard/urgans' || pathname === '/dashboard/home') return null;
 
   return (
@@ -54,7 +57,7 @@ export function FloatingUrgAns() {
             aria-label="UrgAns assistant"
             aria-hidden={!open}
             inert={!open}
-            className={`fixed bottom-24 right-6 top-[88px] z-[60] flex w-[min(440px,calc(100vw-3rem))] flex-col transition-[opacity,transform] duration-slow ease-standard ${
+            className={`fixed bottom-6 right-6 top-[88px] z-[60] flex w-[min(440px,calc(100vw-3rem))] flex-col transition-[opacity,transform] duration-slow ease-standard ${
               open ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
             }`}
           >
@@ -64,16 +67,6 @@ export function FloatingUrgAns() {
           </aside>
         </ErrorBoundary>
       ) : null}
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-label={open ? 'Close UrgAns' : 'Ask UrgAns'}
-        aria-expanded={open}
-        data-tour="nav-urgans"
-        className="motion-focus motion-press fixed bottom-6 right-6 z-[60] grid h-14 w-14 place-items-center rounded-full bg-brand text-content-inverse shadow-lg ring-1 ring-black/10 transition-transform hover:scale-105"
-      >
-        <Sparkles className="h-6 w-6" aria-hidden="true" />
-      </button>
     </div>
   );
 }

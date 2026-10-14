@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.138.1",
+    date: "October 15, 2026",
+    highlights: [
+      "On a computer, the round UrgAns button in the bottom corner is gone. Use the UrgAns tab in the top menu instead.",
+    ],
+  },
+  {
     version: "1.138.0",
     date: "October 15, 2026",
     highlights: [
