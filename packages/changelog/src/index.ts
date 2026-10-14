@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.139.0",
+    date: "October 15, 2026",
+    highlights: [
+      "Home now shows your team: everyone who has joined, with a green dot when they're online now and when the rest were last active.",
+    ],
+  },
+  {
     version: "1.138.1",
     date: "October 15, 2026",
     highlights: [

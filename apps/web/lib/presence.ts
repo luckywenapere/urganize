@@ -2,7 +2,8 @@
 //
 // The browser (components/app/PresenceBeacon.tsx) pings POST /api/presence
 // every PING_INTERVAL_MS while a tab is visible. The route records one row per
-// person per Lagos calendar day in user_presence_days. /admin/metrics reads it:
+// person per Lagos calendar day in user_presence_days. /admin/metrics and Home's
+// "Your team" card (URG-250, lib/home/team-presence.ts) read it:
 // someone is "online now" when their last ping is within ONLINE_WINDOW_MS.
 //
 // Pure and client-safe: no imports at all, so the beacon and the route can both

@@ -19,6 +19,7 @@ import { PlacementsStack } from './PlacementsStack';
 import { RolloutsStack } from './RolloutsStack';
 import { SpendCard } from './SpendCard';
 import { TasksStack } from './TasksStack';
+import { TeamPresenceCard } from './TeamPresenceCard';
 import { UpNextCard } from './UpNextCard';
 import { WaitingStack } from './WaitingStack';
 import { useHomeFocusData } from './useHomeFocusData';
@@ -142,6 +143,12 @@ export function HomeBlocks({
           {render(key)}
         </ErrorBoundary>
       ))}
+      {/* Your team (URG-250, 2026-10-15): when each teammate was last in the
+          app. Reads its own data, so it sits outside orderHomeBlocks, last,
+          and draws nothing until someone else has joined the team. */}
+      <ErrorBoundary name="home-block-team" onError={reportBoundaryError}>
+        <TeamPresenceCard />
+      </ErrorBoundary>
     </>
   );
 }

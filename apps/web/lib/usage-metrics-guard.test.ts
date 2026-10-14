@@ -76,6 +76,9 @@ describe('who may touch the presence table', () => {
       // NPS eligibility (2026-10-11): counts the asking person's OWN days only,
       // never returns them, to decide "used Urganize on 5+ days". lib/nps.ts.
       'app/api/nps/route.ts',
+      // Home's "Your team" card (URG-250, 2026-10-15): teammates' newest ping
+      // time only, scoped to members of the viewer's own team. lib/home/team-presence.ts.
+      'app/api/home/team/route.ts',
     ]);
     const touching = walk(ROOT)
       .map((file) => posix(relative(ROOT, file)))

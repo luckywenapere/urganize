@@ -4,8 +4,9 @@ import { PRESENCE_TABLE, parseSurface, presenceDay } from '@/lib/presence';
 
 // The "last seen" ping (2026-10-07). The browser sends it every couple of
 // minutes while a tab is visible (components/app/PresenceBeacon.tsx), and it
-// upserts one row per person per Lagos day in user_presence_days. Read only by
-// /admin/metrics.
+// upserts one row per person per Lagos day in user_presence_days. Read by
+// /admin/metrics and, since 2026-10-15 (URG-250), by Home's "Your team" card
+// through GET /api/home/team (teammates' newest ping time only).
 //
 // OPEN ROUTE, ON PURPOSE: getAuthenticatedUser and never the paywall wrapper. A
 // team on the wall or in read-only mode still opens the app, and those are the
