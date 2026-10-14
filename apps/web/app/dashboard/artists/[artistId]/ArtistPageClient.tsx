@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Newspaper } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { bucketReleases, bucketShows } from '@/lib/artist-overview';
-import { artistTeamUrl, epkHref, formatCalendarDate, isArtistPageEnabled, releaseHref } from '@/lib/artist-page';
-import { supabase } from '@/lib/supabase/client';
+import { epkHref, formatCalendarDate, isArtistPageEnabled, releaseHref } from '@/lib/artist-page';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useEventsStore } from '@/stores/useEventsStore';
 import { usePressKitsStore } from '@/stores/usePressKitsStore';
@@ -18,46 +17,7 @@ import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 
-type TeamPerson = { id: string; name: string; role: string; status: string };
-type Team = { scoped: TeamPerson[]; everyone: TeamPerson[] };
-
 const KIT_COPY = { incomplete: 'Not finished', ready: 'Ready', published: 'Live' } as const;
-
-/** Who works on this artist. Fails quietly to "no list": the page is useful
- *  without it and a team list that errors should never block the rest. */
-function useArtistTeam(artistId: string): Team | null | 'error' {
-  const [team, setTeam] = useState<Team | null | 'error'>(null);
-
-  useEffect(() => {
-    if (!ARTIST_PAGE_ENABLED || !artistId) return;
-    let active = true;
-    (async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        const token = data.session?.access_token ?? '';
-        if (!token) return;
-        const response = await fetch(artistTeamUrl(artistId), {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-        if (!active) return;
-        if (!response.ok) {
-          setTeam('error');
-          return;
-        }
-        const body = (await response.json().catch(() => null)) as Team | null;
-        setTeam(body && Array.isArray(body.scoped) ? body : 'error');
-      } catch {
-        if (active) setTeam('error');
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [artistId]);
-
-  return team;
-}
 
 function SectionCard({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
@@ -91,7 +51,6 @@ export default function ArtistPageClient() {
   const loadEvents = useEventsStore((state) => state.load);
   const kits = usePressKitsStore((state) => state.entries);
   const loadKits = usePressKitsStore((state) => state.load);
-  const team = useArtistTeam(artistId);
 
   useEffect(() => {
     if (!ARTIST_PAGE_ENABLED) {
@@ -253,7 +212,6 @@ export default function ArtistPageClient() {
               <Newspaper className="h-4 w-4" aria-hidden /> {KIT_COPY[kit.state]}
             </span>
             {kit.state === 'published' ? <span>urganize.app/k/{kit.slug}</span> : null}
-            <span>One kit for the artist. Each rollout reads it and adds its own story.</span>
           </div>
         ) : (
           <Empty>This artist has no press kit yet. Set one up and every rollout can use it.</Empty>
@@ -290,47 +248,6 @@ export default function ArtistPageClient() {
               </div>
             ) : null}
           </>
-        )}
-      </SectionCard>
-
-      <SectionCard title="Team">
-        {team === null ? (
-          <div className="h-10 animate-pulse rounded-lg bg-bg-elevated" aria-busy="true" />
-        ) : team === 'error' ? (
-          <Empty>We could not load the team right now.</Empty>
-        ) : (
-          <div className="space-y-3 text-sm">
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">
-                Only see this artist
-              </h3>
-              {team.scoped.length === 0 ? (
-                <Empty>Nobody is limited to this artist.</Empty>
-              ) : (
-                <ul className="mt-1 space-y-1">
-                  {team.scoped.map((person) => (
-                    <li key={person.id} className="text-content-primary">
-                      {person.name}
-                      <span className="text-content-secondary"> · {person.role}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">
-                See every artist
-              </h3>
-              <ul className="mt-1 space-y-1">
-                {team.everyone.map((person) => (
-                  <li key={person.id} className="text-content-primary">
-                    {person.name}
-                    <span className="text-content-secondary"> · {person.role}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
         )}
       </SectionCard>
     </div>

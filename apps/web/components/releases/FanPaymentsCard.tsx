@@ -18,7 +18,7 @@ export function FanPaymentsCard() {
   return (
     <section
       aria-labelledby="fan-payments-heading"
-      className="border border-stroke-default bg-bg-surface p-4"
+      className="flex h-full flex-col border border-stroke-default bg-bg-surface p-4"
     >
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
         Fan payments
@@ -32,7 +32,7 @@ export function FanPaymentsCard() {
         {FAN_PAYMENTS_PARTNER.creatorSharePercent}% of every tip. It does not put your music in
         stores, so use it alongside your distributor.
       </p>
-      <div className="mt-4">
+      <div className="mt-auto pt-4">
         <button
           type="button"
           onClick={() => void openExternalUrl(FAN_PAYMENTS_PARTNER.signupUrl)}

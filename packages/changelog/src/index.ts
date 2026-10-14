@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.132.2",
+    date: "October 14, 2026",
+    highlights: [
+      "Distribute shows Therealmusic Distro and fan payments side by side, without the store checks in between.",
+      "The artist page drops the Team list and the press kit explainer line.",
+    ],
+  },
+  {
     version: "1.132.1",
     date: "October 14, 2026",
     highlights: [

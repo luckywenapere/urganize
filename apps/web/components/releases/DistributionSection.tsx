@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback } from 'react';
-import { Check, ExternalLink } from '@/components/icons';
+import { ExternalLink } from '@/components/icons';
 import { openExternalUrl } from '@/lib/external-link';
 import { DISTRIBUTION_PARTNER } from '@/lib/distribution';
 import type { DistributionPayload } from '@/lib/distribution-server';
 import type { DistributionIssue } from '@/lib/distribution-rules';
 import type { Release } from '@/types/releases';
-import { DistributionIssueList, DistributionRejectionList } from './DistributionIssueList';
+import { DistributionRejectionList } from './DistributionIssueList';
 import { FanPaymentsCard } from './FanPaymentsCard';
 import { distributionAuthHeaders, useDistributionStatus } from './useDistributionStatus';
 
@@ -50,7 +50,7 @@ const formatDay = (iso: string): string => {
  * Below the check sits Fanlly, the fan payments partner (2026-10-11). It is not
  * a distributor and is never gated by the check; see lib/fan-payments.ts.
  */
-export function DistributionSection({ release, onOpenDetails, onChangeArtist }: DistributionSectionProps) {
+export function DistributionSection({ release }: DistributionSectionProps) {
   const { data, setData, loadError, reload } = useDistributionStatus(release.id);
 
   const order = useCallback(
@@ -124,15 +124,17 @@ export function DistributionSection({ release, onOpenDetails, onChangeArtist }: 
     );
   }
 
-  const hasErrors = data.errors.length > 0;
-  const hasWarnings = data.warnings.length > 0;
-  const isClean = !hasErrors && !hasWarnings;
-
   return (
     <div className="mt-8 space-y-6">
       {data.rejections.length > 0 ? <DistributionRejectionList rejections={data.rejections} /> : null}
 
-      <section className="border border-stroke-default bg-bg-surface p-4">
+      {/* The two partners side by side (founder, 2026-10-14: the store check that
+          sat between them "should stop appearing"). A swipe row on a phone, two
+          columns from sm up. The check still runs on the server when the team
+          signs up, and its result stays on the rollout's status. */}
+      <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0">
+      <div className="w-[85%] shrink-0 snap-start sm:w-auto">
+      <section className="flex h-full flex-col border border-stroke-default bg-bg-surface p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-content-tertiary">
           Default distributor
         </p>
@@ -144,20 +146,11 @@ export function DistributionSection({ release, onOpenDetails, onChangeArtist }: 
           Sign up with the button below, then finish setting up your account on their site. You pay
           them there, and they pay your royalties. Urganize takes no share of them.
         </p>
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-          {/* No errors: there is something to press. Errors: there is not, and
-              the list below says why. The label follows the list: a clean rollout
-              signs up, one with warnings is ordered anyway. */}
-          {!hasErrors ? (
-            <button
-              type="button"
-              onClick={() => void order(hasWarnings)}
-              className={PRIMARY_BUTTON}
-            >
-              {hasWarnings ? 'Order anyway' : `Sign up with ${DISTRIBUTION_PARTNER.name}`}
-              <ExternalLink className="h-4 w-4" aria-hidden="true" />
-            </button>
-          ) : null}
+        <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-4">
+          <button type="button" onClick={() => void order(true)} className={PRIMARY_BUTTON}>
+            {`Sign up with ${DISTRIBUTION_PARTNER.name}`}
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+          </button>
           <a
             href={DISTRIBUTION_PARTNER.termsUrl}
             target="_blank"
@@ -172,31 +165,16 @@ export function DistributionSection({ release, onOpenDetails, onChangeArtist }: 
             Someone on your team opened their sign-up on {formatDay(data.lastHandoffAt)}.
           </p>
         ) : null}
-      </section>
-
-      <section aria-label="Check before distribution">
-        {isClean ? (
-          <p className="flex items-center gap-2 text-sm text-brand" role="status">
-            <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Everything the stores ask for is here.
-          </p>
-        ) : (
-          <DistributionIssueList
-            releaseId={release.id}
-            errors={data.errors}
-            warnings={data.warnings}
-            onOpenDetails={onOpenDetails}
-            onChangeArtist={onChangeArtist}
-          />
-        )}
-
-        <p className="mt-4 text-xs text-content-tertiary">
+        <p className="mt-3 text-xs text-content-tertiary">
           Free ISRC and UPC codes come with their sign-up, so you do not need your own.
         </p>
       </section>
-
+      </div>
+      <div className="w-[85%] shrink-0 snap-start sm:w-auto">
       {/* A separate partner, not a distributor: shown whatever the check says. */}
       <FanPaymentsCard />
+      </div>
+      </div>
     </div>
   );
 }
