@@ -1,6 +1,8 @@
 import type { Scoreboard, SecondReleaseSummary } from '@/lib/scoreboard';
 import { formatNaira, formatRate } from '@/lib/scoreboard-format';
 import type { ScoreboardSource } from '@/lib/scoreboard-server';
+import type { SignupReturnTable } from '@/lib/admin-signup-return';
+import { formatReturnCell } from '@/lib/admin-signup-return-format';
 
 // The scoreboard's numbers, laid out. Display only: it fetches nothing and
 // holds no state, so /admin/scoreboard owns the loading and the gate, and the
@@ -62,11 +64,14 @@ export function ScoreboardView({
   board,
   sources,
   ourTeamsLeftOut = 0,
+  signupReturn = null,
 }: {
   board: Scoreboard;
   sources: ScoreboardSource[];
   /** Teams owned by our own people, left out of every number (2026-10-10). */
   ourTeamsLeftOut?: number;
+  /** Weekly return rate by signup week (URG-267). Absent: the table is not shown. */
+  signupReturn?: SignupReturnTable | null;
 }) {
   const problems = sources.filter((source) => source.status !== 'ok' || source.truncated);
   const latestCohort = board.retention[0] ?? null;
@@ -186,6 +191,58 @@ export function ScoreboardView({
           </table>
         </div>
       </section>
+
+      {signupReturn ? (
+        <section aria-labelledby="signup-return" className="mt-8">
+          <h2 id="signup-return" className="font-display text-lg font-semibold text-content-primary">
+            Weekly return rate by signup week
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-content-secondary">
+            People, by the week their account was made (weeks start Monday, Lagos time). Each
+            column is the share who did something that many weeks after signing up: week 1 is
+            days 7 to 13, week 4 days 28 to 34. Blank means that week is not over yet.
+          </p>
+          <div className="mt-3 overflow-x-auto rounded-xl border border-stroke-default">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-stroke-default bg-bg-elevated text-xs text-content-tertiary">
+                  <th className="px-3 py-2 font-medium">Signed up week of</th>
+                  <th className="px-3 py-2 font-medium">People</th>
+                  <th className="px-3 py-2 font-medium">Week 1</th>
+                  <th className="px-3 py-2 font-medium">Week 2</th>
+                  <th className="px-3 py-2 font-medium">Week 3</th>
+                  <th className="px-3 py-2 font-medium">Week 4</th>
+                </tr>
+              </thead>
+              <tbody>
+                {signupReturn.cohorts.map((cohort) => (
+                  <tr key={cohort.weekStart} className="border-b border-stroke-subtle last:border-0">
+                    <td className="whitespace-nowrap px-3 py-2 text-content-primary">
+                      {cohort.weekStart}
+                      {cohort.size > 0 && cohort.beforeTaskEdits ? (
+                        <span className="text-content-tertiary" title="Task edits were not recorded before 2 October 2026">
+                          {' '}*
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2 text-content-primary">{number.format(cohort.size)}</td>
+                    {cohort.weeks.map((cell, index) => (
+                      <td key={index} className="whitespace-nowrap px-3 py-2 text-content-secondary">
+                        {formatReturnCell(cell)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 max-w-2xl text-xs leading-5 text-content-tertiary">
+            {signupReturn.anyBeforeTaskEdits ? '* ' : ''}Task edits were only recorded from 2 October
+            2026, so return in weeks before then is lower than the truth. Our own accounts are left
+            out. The team &quot;Week 4 retention&quot; above uses days 21 to 27, which is week 3 here.
+          </p>
+        </section>
+      ) : null}
 
       <section aria-labelledby="teams" className="mt-8">
         <h2 id="teams" className="font-display text-lg font-semibold text-content-primary">

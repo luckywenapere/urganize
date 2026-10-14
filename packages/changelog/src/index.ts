@@ -20,6 +20,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.124.2",
+    date: "October 14, 2026",
+    highlights: [
+      "Admin scoreboard: a new table shows how many people come back in each of the four weeks after they sign up, grouped by the week they joined.",
+    ],
+  },
+  {
     version: "1.124.1",
     date: "October 14, 2026",
     highlights: [

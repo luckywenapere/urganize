@@ -20,6 +20,8 @@ import type { ScoreboardInput } from './scoreboard';
 //    so one of us helping a customer team never makes it "2 people active".
 //  - Our people's own subscriptions (MRR counts every subscription, Solo
 //    included, so a test payment of ours would otherwise be revenue).
+//  - Our people's own accounts from the signup list (URG-267's weekly return
+//    table on the Scoreboard), so we are never a cohort member.
 //
 // The email for each user id comes from the profiles the Scoreboard's read
 // already loads (every workspace owner, which is every account, since each
@@ -67,6 +69,7 @@ export function withoutInternalAccounts(input: ScoreboardInput, userIds: Set<str
       releases: input.releases.filter((release) => !workspaceIds.has(release.workspaceId)),
       subscriptions: input.subscriptions.filter((sub) => !userIds.has(sub.userId)),
       activity,
+      users: input.users?.filter((user) => !userIds.has(user.userId)),
       referrals: input.referrals
         ? {
             fromTeams: input.referrals.fromTeams.filter(keepReferral),

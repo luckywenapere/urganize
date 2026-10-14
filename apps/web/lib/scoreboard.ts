@@ -111,6 +111,11 @@ export type ScoreboardInput = {
   activity: Map<string, number[]>;
   /** True when the activity read hit its row cap, so the numbers are a floor. */
   activityTruncated: boolean;
+  /** Every account and when it was made (profiles.created_at), for the weekly
+   *  return table by signup week (lib/admin-signup-return.ts, URG-267). No
+   *  number on this board reads it. Optional so older callers and tests that
+   *  build an input by hand need not supply it. */
+  users?: { userId: string; signedUpAt: string | null }[];
   /** Teams that came in through a referral link. Null or absent when the tables
    *  could not be read (not migrated yet), so the board shows "not tracked" and
    *  never a misleading zero. */

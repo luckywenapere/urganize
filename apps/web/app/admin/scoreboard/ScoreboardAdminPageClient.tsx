@@ -10,13 +10,20 @@ import { ScoreboardView } from '@/components/admin/ScoreboardView';
 import { formatScoreboardForTeamGroup } from '@/lib/scoreboard-format';
 import type { Scoreboard } from '@/lib/scoreboard';
 import type { ScoreboardSource } from '@/lib/scoreboard-server';
+import type { SignupReturnTable } from '@/lib/admin-signup-return';
 
 // /admin/scoreboard — the scoreboard from the strategy doc
 // (docs/strategy/company-strategy.md, sections 2 and 7), worked out from the
 // database each time it loads. Read-only. Follows the /admin/urgans gate:
 // authLoading -> no user -> /auth; the backing GET's 401/403 is the real gate.
 
-type Payload = { scoreboard: Scoreboard; sources: ScoreboardSource[]; ourTeamsLeftOut?: number };
+type Payload = {
+  scoreboard: Scoreboard;
+  sources: ScoreboardSource[];
+  ourTeamsLeftOut?: number;
+  /** Weekly return rate by signup week (URG-267). */
+  signupReturn?: SignupReturnTable | null;
+};
 
 export default function ScoreboardAdminPageClient() {
   const router = useRouter();
@@ -61,7 +68,12 @@ export default function ScoreboardAdminPageClient() {
           setChecked(true);
           return;
         }
-        setPayload({ scoreboard: body.scoreboard, sources: body.sources || [], ourTeamsLeftOut: body.ourTeamsLeftOut ?? 0 });
+        setPayload({
+          scoreboard: body.scoreboard,
+          sources: body.sources || [],
+          ourTeamsLeftOut: body.ourTeamsLeftOut ?? 0,
+          signupReturn: body.signupReturn ?? null,
+        });
         setChecked(true);
       } catch {
         setError('Could not load the scoreboard.');
@@ -162,7 +174,14 @@ export default function ScoreboardAdminPageClient() {
         </p>
       ) : null}
 
-      {board ? <ScoreboardView board={board} sources={payload?.sources ?? []} ourTeamsLeftOut={payload?.ourTeamsLeftOut ?? 0} /> : null}
+      {board ? (
+        <ScoreboardView
+          board={board}
+          sources={payload?.sources ?? []}
+          ourTeamsLeftOut={payload?.ourTeamsLeftOut ?? 0}
+          signupReturn={payload?.signupReturn ?? null}
+        />
+      ) : null}
     </div>
   );
 }

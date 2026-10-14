@@ -198,6 +198,9 @@ describe('loadScoreboardInput', () => {
       ownerPaidAt: '2026-09-01T00:00:00.000Z',
     });
     expect(input.teams[0].subscription?.plan).toBe('manager');
+    // URG-267: every account and when it was made, for the return-by-signup-week table.
+    expect(input.users).toEqual([{ userId: 'boss', signedUpAt: input.teams[0].ownerSignedUpAt }]);
+    expect(input.users?.[0].signedUpAt).toBeTruthy();
   });
 
   it('reads the two referral tables into the input', async () => {

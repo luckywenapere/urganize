@@ -361,6 +361,10 @@ export async function loadScoreboardInput(
       subscriptions: subscriptionRows,
       activity: activity.activity,
       activityTruncated: activity.truncated,
+      // Every account and when it was made, for the weekly return table by
+      // signup week (URG-267). From the profiles read above: each workspace's
+      // owner, which is every account, since each account is given a workspace.
+      users: profileRows.map((row) => ({ userId: String(row.id), signedUpAt: str(row.created_at) })),
       // Both tables must have been read: a half-read answer would show a zero for
       // one source that is really "not tracked yet".
       referrals:

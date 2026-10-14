@@ -129,6 +129,17 @@ describe('withoutInternalAccounts', () => {
     expect(JSON.stringify({ ...original, activity: [...original.activity] })).toBe(snapshot);
   });
 
+  it('drops our people from the signup list (URG-267) and leaves a missing list missing', () => {
+    const withUsers: ScoreboardInput = {
+      ...fixture(),
+      users: [...emails.keys()].map((userId) => ({ userId, signedUpAt: daysAgo(30) })),
+    };
+    const kept = withoutInternalAccounts(withUsers, ids).input.users?.map((u) => u.userId) ?? [];
+    expect(kept.some((id) => ids.has(id))).toBe(false);
+    expect(kept.length).toBe(emails.size - ids.size);
+    expect(withoutInternalAccounts(fixture(), ids).input.users).toBeUndefined();
+  });
+
   it('returns the same input when nobody is left out', () => {
     const original = fixture();
     expect(withoutInternalAccounts(original, new Set()).input).toBe(original);

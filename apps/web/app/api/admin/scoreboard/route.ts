@@ -4,6 +4,7 @@ import { internalAccountEmails, verifyAdmin } from '../_shared';
 import { buildScoreboard } from '@/lib/scoreboard';
 import { scoreboardReadCache } from '@/lib/scoreboard-cache-server';
 import { internalUserIds, withoutInternalAccounts } from '@/lib/admin-internal-accounts';
+import { weeklyReturnBySignupWeek } from '@/lib/admin-signup-return';
 
 // GET /api/admin/scoreboard — the company scoreboard from the strategy doc
 // (docs/strategy/company-strategy.md, sections 2 and 7), worked out from the
@@ -22,6 +23,9 @@ import { internalUserIds, withoutInternalAccounts } from '@/lib/admin-internal-a
 // are left out here exactly as on the cockpit (lib/admin-internal-accounts.ts,
 // ADMIN_EMAILS + METRICS_INTERNAL_EMAILS, the /admin/metrics list), so the two
 // pages still agree; `?team=1` puts them back.
+// Since 2026-10-14 (URG-267) it also sends `signupReturn`: weekly return rate
+// by signup week (lib/admin-signup-return.ts), built from the same read with
+// the Scoreboard's own activity rule. buildScoreboard is unchanged.
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -43,6 +47,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         scoreboard: buildScoreboard(exclusion.input),
+        signupReturn: weeklyReturnBySignupWeek(
+          exclusion.input.users ?? [],
+          exclusion.input.activity,
+          exclusion.input.now
+        ),
         sources,
         ourTeamsLeftOut: exclusion.workspaceIds.size,
         includeTeam,
