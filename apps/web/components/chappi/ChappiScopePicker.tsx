@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Check, ChevronDown, Disc3 } from '@/components/icons';
 import type { ExecutionRelease } from '@/lib/execution-types';
+import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
 
 type ChappiScopePickerProps = {
   releases: ExecutionRelease[];
@@ -50,6 +51,8 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useKeepInViewport(panelRef, open);
   const panelId = useId();
 
   const scoped = scopedReleaseId
@@ -136,13 +139,14 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
           id={panelId}
           role="group"
           aria-label="Scope this conversation to a rollout"
+          ref={panelRef}
           className="absolute bottom-full left-0 z-50 mb-2 max-h-72 w-64 max-w-[calc(100vw-3rem)] overflow-y-auto overscroll-contain rounded-xl border border-stroke-default bg-bg-surface py-1 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           <button
             type="button"
             aria-current={!scoped ? 'true' : undefined}
             onClick={() => choose(null)}
-            className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-bg-hover ${
+            className={`motion-focus flex min-h-10 w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-bg-hover ${
               !scoped ? 'text-content-primary' : 'text-content-secondary'
             }`}
           >
@@ -158,7 +162,7 @@ export function ChappiScopePicker({ releases, scopedReleaseId, onSelect }: Chapp
                 type="button"
                 aria-current={selected ? 'true' : undefined}
                 onClick={() => choose(release.id)}
-                className={`motion-focus flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-bg-hover ${
+                className={`motion-focus flex min-h-10 w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-bg-hover ${
                   selected ? 'text-content-primary' : 'text-content-secondary'
                 }`}
               >

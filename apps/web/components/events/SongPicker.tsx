@@ -124,7 +124,7 @@ export function SongPicker({ catalog, inSetIds, busy, onPick, onCreate }: SongPi
           id={listId}
           role="listbox"
           aria-label="Songs"
-          className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-lg border border-stroke-default bg-bg-surface p-1 shadow-lg"
+          className="absolute inset-x-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-lg border border-stroke-default bg-bg-surface p-1 shadow-lg"
         >
           {options.map((option, index) => {
             const active = index === highlight;
@@ -140,8 +140,8 @@ export function SongPicker({ catalog, inSetIds, busy, onPick, onCreate }: SongPi
                   void choose(option);
                 }}
                 onMouseEnter={() => setHighlight(index)}
-                className={`flex cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-sm ${
-                  active ? 'bg-bg-base text-content-primary' : 'text-content-secondary'
+                className={`flex min-h-10 cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-sm ${
+                  active ? 'bg-bg-hover text-content-primary' : 'text-content-secondary'
                 }`}
               >
                 {option.kind === 'song' ? (

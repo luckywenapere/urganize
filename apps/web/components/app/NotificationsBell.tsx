@@ -499,7 +499,7 @@ export function NotificationsBell() {
           // trigger-anchored dropdown.
           className="animate-menu-down fixed inset-x-4 top-[calc(env(safe-area-inset-top,0px)+1rem)] z-50 origin-top-right rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:max-w-[calc(100vw-2rem)]"
         >
-          <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle px-3 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-stroke-subtle min-h-12 px-3 py-1 sm:min-h-0 sm:py-3">
             {/* No Beta pill here (founder call, 2026-07-23). The Settings row
                 carried one until 2026-08-16, when every Beta stamp in the app
                 was dropped; this panel never had one either way. */}
@@ -509,7 +509,7 @@ export function NotificationsBell() {
                 <button
                   type="button"
                   onClick={() => void markRead('all')}
-                  className="motion-focus text-xs text-content-secondary transition-colors hover:text-content-primary"
+                  className="motion-focus min-h-10 px-1 text-xs text-content-secondary transition-colors hover:text-content-primary sm:min-h-0 sm:px-0"
                 >
                   Mark all read
                 </button>
@@ -518,7 +518,7 @@ export function NotificationsBell() {
                 <button
                   type="button"
                   onClick={() => void clearAll()}
-                  className="motion-focus text-xs text-content-secondary transition-colors hover:text-content-primary"
+                  className="motion-focus min-h-10 px-1 text-xs text-content-secondary transition-colors hover:text-content-primary sm:min-h-0 sm:px-0"
                 >
                   Clear
                 </button>

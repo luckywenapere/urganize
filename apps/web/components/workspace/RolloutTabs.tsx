@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, MoreHorizontal } from '@/components/icons';
 import { sceneRowTarget } from '@/lib/nav-stall';
 import { watchNavigationStall } from '@/lib/nav-stall-watch';
 import { groupRolloutMenu } from '@/lib/release-menu';
+import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
 import {
   useRolloutMenuActions,
   type RolloutMenuAction,
@@ -256,6 +257,9 @@ function SideRow({ action }: { action: RolloutMenuAction }) {
 function OverflowMenu({ actions }: { actions: RolloutMenuAction[] }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useKeepInViewport(panelRef, open);
 
   useEffect(() => {
     if (!open) return;
@@ -263,7 +267,10 @@ function OverflowMenu({ actions }: { actions: RolloutMenuAction[] }) {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
     document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
@@ -275,18 +282,24 @@ function OverflowMenu({ actions }: { actions: RolloutMenuAction[] }) {
 
   return (
     <div ref={rootRef} className="relative shrink-0">
+      {/* A disclosure, not a role="menu": these rows are buttons reached with
+          Tab, and a menu promises arrow-key movement they never had. */}
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        aria-haspopup="true"
         aria-label="More for this rollout"
         className="motion-focus motion-press grid h-10 w-10 place-items-center rounded-lg text-content-tertiary hover:bg-bg-hover hover:text-content-primary"
       >
         <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
       </button>
       {open ? (
-        <div className="absolute right-0 top-full z-40 mt-2 w-56 rounded-2xl border border-stroke-default bg-bg-surface p-1.5 shadow-lg">
+        <div
+          ref={panelRef}
+          role="group"
+          aria-label="More for this rollout"
+          className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-stroke-default bg-bg-surface p-1.5 shadow-lg">
           {actions.map((action) => {
             const Icon = action.icon;
             return (

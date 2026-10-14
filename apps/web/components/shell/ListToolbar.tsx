@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Search, SlidersHorizontal, X } from '@/components/icons';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+import { placeUnderAnchor } from '@/lib/menu-position';
 import {
   activeFilterCount,
   filtersButtonLabel,
@@ -363,7 +364,7 @@ function SelectField({ control, phone }: { control: ToolbarSelect; phone: boolea
   );
 }
 
-function FilterSheet({
+export function FilterSheet({
   title,
   controls,
   count,
@@ -432,14 +433,17 @@ function FilterSheet({
 }
 
 /** The computer's version of the sheet: a small panel under the button, used
- *  only on screens too narrow for every pill beside the tabs. */
-function FilterPopover({
+ *  only on screens too narrow for every pill beside the tabs, and by the
+ *  rollout plan's Filters button. Placed under its button and held inside the
+ *  screen (lib/menu-position.ts), following the button when the page scrolls. */
+export function FilterPopover({
   anchor,
   title,
   controls,
   count,
   onClear,
   onClose,
+  align = 'end',
 }: {
   anchor: React.RefObject<HTMLButtonElement | null>;
   title: string;
@@ -447,15 +451,28 @@ function FilterPopover({
   count: number;
   onClear: () => void;
   onClose: () => void;
+  /** Which edge of the button the panel lines up with. */
+  align?: 'start' | 'end';
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  const place = useCallback(() => {
+    const rect = anchor.current?.getBoundingClientRect();
+    const panel = panelRef.current;
+    if (!rect || !panel) return;
+    const placed = placeUnderAnchor({
+      anchor: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+      panel: { width: panel.offsetWidth, height: panel.offsetHeight },
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      align,
+    });
+    setPosition((prev) => (prev && prev.top === placed.top && prev.left === placed.left ? prev : placed));
+  }, [anchor, align]);
 
   useLayoutEffect(() => {
-    const rect = anchor.current?.getBoundingClientRect();
-    if (!rect) return;
-    setPosition({ top: rect.bottom + 8, right: Math.max(8, window.innerWidth - rect.right) });
-  }, [anchor]);
+    place();
+  }, [place]);
 
   useEffect(() => {
     const onPointer = (event: PointerEvent) => {
@@ -464,26 +481,33 @@ function FilterPopover({
       onClose();
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') {
+        onClose();
+        anchor.current?.focus();
+      }
     };
     window.addEventListener('pointerdown', onPointer);
     window.addEventListener('keydown', onKey);
     window.addEventListener('resize', onClose);
+    // Capture phase: scroll does not bubble, and the list may scroll inside a panel.
+    window.addEventListener('scroll', place, true);
     return () => {
       window.removeEventListener('pointerdown', onPointer);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onClose);
+      window.removeEventListener('scroll', place, true);
     };
-  }, [anchor, onClose]);
+  }, [anchor, onClose, place]);
 
-  if (typeof document === 'undefined' || !position) return null;
+  if (typeof document === 'undefined') return null;
   return createPortal(
     <div
       ref={panelRef}
       role="dialog"
       aria-label={title}
-      style={{ top: position.top, right: position.right }}
-      className="fixed z-[160] hidden w-72 rounded-2xl border border-stroke-default bg-bg-surface p-4 shadow-xl lg:block"
+      // Drawn hidden for the one frame before it is measured and placed.
+      style={{ top: position?.top ?? 0, left: position?.left ?? 0, visibility: position ? 'visible' : 'hidden' }}
+      className="fixed z-[160] hidden max-h-[calc(100dvh-1rem)] w-72 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-2xl border border-stroke-default bg-bg-surface p-4 shadow-xl lg:block"
     >
       <Fields controls={controls} phone={false} />
       <div className="mt-4 flex items-center justify-end gap-2">

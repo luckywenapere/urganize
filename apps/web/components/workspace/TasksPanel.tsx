@@ -728,8 +728,9 @@ export function TasksPanel({
                 <button
                   type="button"
                   onClick={() => toggleMobilePanel('menu')}
+                  aria-haspopup="dialog"
                   aria-expanded={openMobilePanel === 'menu'}
-                  aria-controls={moreMenuListId}
+                  aria-controls={openMobilePanel === 'menu' ? moreMenuListId : undefined}
                   // "More" was right while this was an overflow list. Since
                   // 2026-08-31 it holds every release surface, so it is the
                   // release menu and says so.

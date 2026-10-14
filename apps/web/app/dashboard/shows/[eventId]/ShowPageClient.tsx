@@ -33,6 +33,7 @@ import { EditShowSheet } from '@/components/events/EditShowSheet';
 import { ConfirmDialog } from '@/components/events/ConfirmDialog';
 import type { BuilderItem } from '@/components/events/SetRowEditor';
 import type { RunOfShowItem, Setlist, ShowEvent } from '@/types/events';
+import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
 
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 
@@ -72,7 +73,11 @@ function Menu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
+  // The header wraps on a phone, so a right-aligned menu can land at the left
+  // of the screen and run off it; this pulls it back (lib/menu-position.ts).
+  useKeepInViewport(panelRef, open);
 
   useEffect(() => {
     if (!open) return;
@@ -104,16 +109,17 @@ function Menu({
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((current) => !current)}
-        className="motion-focus inline-flex h-9 items-center gap-1.5 rounded-lg border border-stroke-default px-3 text-sm font-semibold text-content-secondary hover:border-stroke-strong hover:text-content-primary"
+        className="motion-focus inline-flex h-10 items-center gap-1.5 rounded-lg border border-stroke-default px-3 text-sm font-semibold text-content-secondary hover:border-stroke-strong hover:text-content-primary sm:h-9"
       >
         {trigger}
       </button>
       {open ? (
         <div
+          ref={panelRef}
           id={panelId}
           role="group"
           aria-label={label}
-          className={`absolute top-full z-30 mt-1 min-w-[12rem] rounded-xl border border-stroke-default bg-bg-surface p-1 shadow-lg ${
+          className={`absolute top-full z-50 mt-1 min-w-[12rem] rounded-xl border border-stroke-default bg-bg-surface p-1 shadow-lg ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
         >
@@ -147,8 +153,8 @@ function MenuItem({
       aria-current={checked ? 'true' : undefined}
       disabled={disabled}
       onClick={onSelect}
-      className={`flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm disabled:cursor-not-allowed ${
-        tone === 'danger' ? 'text-status-error hover:bg-status-error/10' : 'text-content-primary hover:bg-bg-base'
+      className={`motion-focus flex min-h-10 w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm disabled:cursor-not-allowed ${
+        tone === 'danger' ? 'text-status-error hover:bg-status-error/10' : 'text-content-primary hover:bg-bg-hover'
       } disabled:opacity-60 disabled:hover:bg-transparent`}
     >
       <span className="w-4 shrink-0 pt-0.5">{checked ? <Check className="h-4 w-4 text-brand" aria-hidden /> : null}</span>

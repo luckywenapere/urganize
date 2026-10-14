@@ -18,10 +18,9 @@ import {
   X,
   type LucideProps,
 } from '@/components/icons';
-import { Check, Search, UserCircle2, Users } from '@/components/icons';
+import { Bell, Check, Search, UserCircle2, Users } from '@/components/icons';
 import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
 import { useShellStore } from '@/stores/useShellStore';
-import { SignalIcon } from '@/components/app/BrandIcons';
 import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
 import { ProfileFace } from '@/components/shared/ProfileFace';
 import { useArtistFilterOptions } from './useArtistFilter';
@@ -324,7 +323,8 @@ function MoreSheet({
                 }}
                 className="motion-focus flex min-h-14 w-full items-center gap-2.5 text-left text-base text-content-primary"
               >
-                <SignalIcon className="h-5 w-5 text-content-tertiary" />
+                {/* The same plain bell as the computer's top bar (URG-255). */}
+                <Bell className="h-5 w-5 text-content-tertiary" aria-hidden="true" />
                 Notifications
                 {notifications.unread > 0 ? (
                   <span className="ml-auto grid min-h-6 min-w-6 place-items-center rounded-full bg-brand px-1.5 text-xs font-semibold text-content-inverse">

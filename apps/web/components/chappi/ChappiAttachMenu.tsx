@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type ChangeEvent } from 'react';
 import { Camera, FileText, ImageIcon, Plus } from '@/components/icons';
+import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
 
 type ChappiAttachMenuProps = {
   disabled?: boolean;
@@ -39,6 +40,8 @@ export function ChappiAttachMenu({ disabled, onFiles }: ChappiAttachMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useKeepInViewport(panelRef, open);
   const cameraRef = useRef<HTMLInputElement>(null);
   const pictureRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -103,6 +106,7 @@ export function ChappiAttachMenu({ disabled, onFiles }: ChappiAttachMenuProps) {
           id={panelId}
           role="group"
           aria-label="Attach to your message"
+          ref={panelRef}
           className="absolute bottom-full left-0 z-50 mb-2 w-56 max-w-[calc(100vw-3rem)] overflow-hidden rounded-xl border border-stroke-default bg-bg-surface py-1 shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
         >
           {touchCamera ? (

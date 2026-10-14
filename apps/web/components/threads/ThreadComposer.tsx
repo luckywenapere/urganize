@@ -120,7 +120,7 @@ export function ThreadComposer({ onSend, placeholder, mentionPeople, currentUser
             id={listId}
             role="listbox"
             aria-label="People to tag"
-            className="absolute bottom-full left-0 z-20 mb-2 max-h-56 w-full max-w-xs overflow-y-auto rounded-lg border border-stroke-default bg-bg-surface p-1 shadow-lg"
+            className="absolute bottom-full left-0 z-50 mb-2 max-h-56 w-full max-w-xs overflow-y-auto rounded-lg border border-stroke-default bg-bg-surface p-1 shadow-lg"
           >
             {options.map((option, index) => {
               const active = index === safeIndex;

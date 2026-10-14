@@ -12,6 +12,7 @@ import { useArtistFilterOptions } from '@/components/shell/useArtistFilter';
 import { Check, Sparkles, Users } from '@/components/icons';
 import { useUrgansUsage } from '@/components/app/useUrgansUsage';
 import { useHelpMenuGroups } from '@/components/app/HelpMenu';
+import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
 
 type WorkspaceMenuProps = {
   /** Display name shown in the menu's identity header. The trigger itself
@@ -77,6 +78,9 @@ export function WorkspaceMenu({ userName, className, showHelp = false }: Workspa
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // With several artists and the help rows the menu can be taller than a
+  // laptop screen; this caps it with its own scroll (lib/menu-position.ts).
+  useKeepInViewport(menuRef, open);
   const itemRefs = useRef<Array<HTMLButtonElement | HTMLAnchorElement | null>>([]);
 
   const closeMenu = useCallback((returnFocus = false) => {

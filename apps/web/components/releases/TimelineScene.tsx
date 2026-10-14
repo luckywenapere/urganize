@@ -19,6 +19,7 @@ import {
   type TimelineWeek,
 } from '@/lib/release-timeline';
 import { getAccessToken } from '@/components/content-calendar/get-access-token';
+import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
 import {
   PlanListControls,
   PlanShowAllToggle,
@@ -724,6 +725,8 @@ function TimelineWeekList({
 function TimelineChrome({ onFullScreen }: { onFullScreen?: () => void }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const legendRef = useRef<HTMLDivElement | null>(null);
+  useKeepInViewport(legendRef, open);
 
   useEffect(() => {
     if (!open) return;
@@ -742,7 +745,7 @@ function TimelineChrome({ onFullScreen }: { onFullScreen?: () => void }) {
   }, [open]);
 
   const iconButton =
-    'motion-focus motion-press grid h-9 w-9 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary';
+    'motion-focus motion-press grid h-10 w-10 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary sm:h-9 sm:w-9';
 
   return (
     <>
@@ -758,7 +761,7 @@ function TimelineChrome({ onFullScreen }: { onFullScreen?: () => void }) {
           <Info className="h-4 w-4" aria-hidden="true" />
         </button>
         {open ? (
-          <div className="absolute right-0 top-11 z-20 flex w-52 flex-col gap-2.5 rounded-xl border border-stroke-default bg-bg-surface p-3 text-xs text-content-secondary shadow-lg">
+          <div ref={legendRef} className="absolute right-0 top-[calc(100%+0.5rem)] z-50 flex w-52 flex-col gap-2.5 rounded-xl border border-stroke-default bg-bg-surface p-3 text-xs text-content-secondary shadow-lg">
             <span className="inline-flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full border border-stroke-control bg-bg-surface" />
               One day

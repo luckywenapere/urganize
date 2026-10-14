@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, MoreHorizontal } from '@/components/icons';
 import { getAccessToken } from './get-access-token';
+import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
 import type { ContentCalendar } from '@/types/content-calendar';
 
 /**
@@ -26,6 +27,7 @@ export function CalendarOverflowMenu({ releaseId, calendar, onRenamed, onDeleted
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  useKeepInViewport(menuRef, isOpen);
   const [mode, setMode] = useState<'menu' | 'rename'>('menu');
   const [name, setName] = useState(calendar.name);
   const [isSaving, setIsSaving] = useState(false);
@@ -138,7 +140,7 @@ export function CalendarOverflowMenu({ releaseId, calendar, onRenamed, onDeleted
         aria-label="Calendar options"
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        className="flex h-9 w-9 items-center justify-center border border-[var(--cc-border)] text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
+        className="flex h-10 w-10 items-center justify-center border border-[var(--cc-border)] text-[var(--cc-text-muted)] hover:text-[var(--cc-text)]"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
@@ -148,10 +150,10 @@ export function CalendarOverflowMenu({ releaseId, calendar, onRenamed, onDeleted
           role="menu"
           ref={menuRef}
           onKeyDown={handleMenuKeyDown}
-          // z-40: must clear MobileNavBar's z-30, or the rename/delete menu
-          // renders UNDER the bottom bar when the header is low on a phone
-          // screen (2026-08-10 fix).
-          className="absolute right-0 top-full z-40 mt-1.5 w-56 border border-[var(--cc-border)] bg-[var(--cc-ground)] p-1 text-sm shadow-lg"
+          // z-50: must clear the phone's bottom bar (z-40 since the floating
+          // pill), or the rename/delete menu renders UNDER it when the header
+          // is low on a phone screen (2026-08-10 fix, raised 2026-10-14).
+          className="absolute right-0 top-full z-50 mt-1.5 w-56 border border-[var(--cc-border)] bg-[var(--cc-ground)] p-1 text-sm shadow-lg"
         >
           {mode === 'menu' ? (
             <>
@@ -168,7 +170,7 @@ export function CalendarOverflowMenu({ releaseId, calendar, onRenamed, onDeleted
                   setName(calendar.name);
                   setMode('rename');
                 }}
-                className="block w-full px-3 py-2 text-left text-[var(--cc-text)] hover:bg-[var(--cc-text)]/5"
+                className="block min-h-10 w-full px-3 py-2 text-left text-[var(--cc-text)] hover:bg-[var(--cc-text)]/5"
               >
                 Rename
               </button>
@@ -177,7 +179,7 @@ export function CalendarOverflowMenu({ releaseId, calendar, onRenamed, onDeleted
                 role="menuitem"
                 onClick={() => void handleDelete()}
                 disabled={isDeleting}
-                className="block w-full px-3 py-2 text-left text-[var(--cc-text-muted)] hover:bg-[var(--cc-text)]/5 hover:text-[var(--cc-text)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="block min-h-10 w-full px-3 py-2 text-left text-[var(--cc-text-muted)] hover:bg-[var(--cc-text)]/5 hover:text-[var(--cc-text)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isDeleting ? 'Deleting…' : 'Delete calendar'}
               </button>

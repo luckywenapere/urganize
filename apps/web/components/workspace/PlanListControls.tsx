@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Search, SlidersHorizontal, X } from '@/components/icons';
+import { FilterPopover, FilterSheet } from '@/components/shell/ListToolbar';
 import { useAuthStore } from '@/lib/auth-store';
+import { activeFilterCount as countActiveFilters, type ToolbarControl } from '@/lib/list-toolbar';
 import {
   EMPTY_PLAN_FILTERS,
   PLAN_STATUS_FILTERS,
@@ -80,83 +82,93 @@ export function usePlanList(tasks: Task[], rolloutId: string | null) {
 
 export type PlanListState = ReturnType<typeof usePlanList>;
 
-const SELECT_CLASS =
-  'motion-focus h-9 shrink-0 cursor-pointer appearance-none rounded-lg border border-stroke-control bg-bg-surface px-3 text-xs font-medium text-content-primary transition-colors hover:bg-bg-hover';
-
-function FilterSelects({ plan }: { plan: PlanListState }) {
+/** The three filters, as the shared toolbar's controls, so the plan's Filters
+ *  button opens the same sheet (phone) and panel (computer) as every list page. */
+function planFilterControls(plan: PlanListState): ToolbarControl[] {
   const { filters, setFilters, assignees } = plan;
-  return (
-    <>
-      <select
-        aria-label="Status"
-        value={filters.status}
-        onChange={(event) =>
-          setFilters({ ...filters, status: event.target.value as PlanStatusFilter })
-        }
-        className={SELECT_CLASS}
-      >
-        {PLAN_STATUS_FILTERS.map((value) => (
-          <option key={value} value={value}>
-            {PLAN_STATUS_LABELS[value]}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label="Assignee"
-        value={filters.assignee}
-        onChange={(event) => setFilters({ ...filters, assignee: event.target.value })}
-        className={SELECT_CLASS}
-      >
-        <option value="all">Anyone</option>
-        {assignees.hasMe ? <option value="me">Me</option> : null}
-        {assignees.people.map((person) => (
-          <option key={person.id} value={person.id}>
-            {person.name}
-          </option>
-        ))}
-        {assignees.hasUnassigned ? <option value="unassigned">Unassigned</option> : null}
-      </select>
-      <select
-        aria-label="Date"
-        value={filters.when}
-        onChange={(event) =>
-          setFilters({ ...filters, when: event.target.value as PlanWhenFilter })
-        }
-        className={SELECT_CLASS}
-      >
-        {PLAN_WHEN_FILTERS.map((value) => (
-          <option key={value} value={value}>
-            {PLAN_WHEN_LABELS[value]}
-          </option>
-        ))}
-      </select>
-    </>
-  );
+  const assigneeOptions = [
+    { value: 'all', label: 'Anyone' },
+    ...(assignees.hasMe ? [{ value: 'me', label: 'Me' }] : []),
+    ...assignees.people.map((person) => ({ value: person.id, label: person.name })),
+    ...(assignees.hasUnassigned ? [{ value: 'unassigned', label: 'Unassigned' }] : []),
+  ];
+  return [
+    {
+      kind: 'filter',
+      key: 'status',
+      label: 'Status',
+      value: filters.status,
+      defaultValue: 'all',
+      options: PLAN_STATUS_FILTERS.map((value) => ({ value, label: PLAN_STATUS_LABELS[value] })),
+      onChange: (value) => setFilters({ ...filters, status: value as PlanStatusFilter }),
+    },
+    {
+      kind: 'filter',
+      key: 'assignee',
+      label: 'Assignee',
+      value: filters.assignee,
+      defaultValue: 'all',
+      options: assigneeOptions,
+      onChange: (value) => setFilters({ ...filters, assignee: value }),
+    },
+    {
+      kind: 'filter',
+      key: 'when',
+      label: 'Date',
+      value: filters.when,
+      defaultValue: 'any',
+      options: PLAN_WHEN_FILTERS.map((value) => ({ value, label: PLAN_WHEN_LABELS[value] })),
+      onChange: (value) => setFilters({ ...filters, when: value as PlanWhenFilter }),
+    },
+  ];
 }
 
+/** The width from which the Filters button opens a panel instead of a sheet:
+ *  Tailwind's `lg`, the same line ListToolbar's sheet and panel switch at. */
+const PANEL_QUERY = '(min-width: 1024px)';
+
 /**
- * One row: a search field and three filters. On a phone the three filters sit
- * behind one button so the row still fits a 375px screen without wrapping.
+ * One row: a search field and one Filters button.
+ *
+ * The button opens the house filter surfaces (menu audit, 2026-10-14): a
+ * bottom sheet on a phone or tablet and a small panel under the button on a
+ * computer, both from ListToolbar. Until then it opened a 192px box aligned to
+ * the button's LEFT edge; the button sits near the right of a phone screen, so
+ * the box ran off the side with "Any status" cut off, and it floated over the
+ * list at z-20.
  */
 export function PlanListControls({ plan, trailing }: { plan: PlanListState; trailing?: ReactNode }) {
   const { filters, setFilters } = plan;
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const popoverRef = useRef<HTMLDivElement | null>(null);
-  const activeFilterCount =
-    Number(filters.status !== 'all') +
-    Number(filters.assignee !== 'all') +
-    Number(filters.when !== 'any');
+  const [open, setOpen] = useState<'sheet' | 'panel' | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const controls = planFilterControls(plan);
+  const activeFilterCount = countActiveFilters(controls);
+  const close = useCallback(() => setOpen(null), []);
+  const clearFilters = useCallback(
+    () => setFilters({ ...EMPTY_PLAN_FILTERS, query: filters.query }),
+    [filters.query, setFilters]
+  );
 
+  // The sheet is a phone surface: if the window grows past the line while it
+  // is open, close it rather than leave a hidden sheet holding the scroll lock.
   useEffect(() => {
-    if (!filtersOpen) return;
-    const close = (event: PointerEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setFiltersOpen(false);
-      }
+    if (open !== 'sheet' || typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(PANEL_QUERY);
+    const onChange = () => {
+      if (query.matches) setOpen(null);
     };
-    window.addEventListener('pointerdown', close);
-    return () => window.removeEventListener('pointerdown', close);
-  }, [filtersOpen]);
+    query.addEventListener?.('change', onChange);
+    return () => query.removeEventListener?.('change', onChange);
+  }, [open]);
+
+  const toggle = () => {
+    if (open) {
+      setOpen(null);
+      return;
+    }
+    const wide = typeof window.matchMedia === 'function' && window.matchMedia(PANEL_QUERY).matches;
+    setOpen(wide ? 'panel' : 'sheet');
+  };
 
   return (
     <div className="flex items-center gap-2" role="search" aria-label="Search this plan">
@@ -171,33 +183,48 @@ export function PlanListControls({ plan, trailing }: { plan: PlanListState; trai
           value={filters.query}
           onChange={(event) => setFilters({ ...filters, query: event.target.value })}
           placeholder="Search activities"
-          className="motion-focus h-9 w-full rounded-lg border border-stroke-control bg-bg-surface pl-8 pr-3 text-xs text-content-primary placeholder:text-content-tertiary [&::-webkit-search-cancel-button]:appearance-none"
+          className="motion-focus h-10 w-full rounded-lg border border-stroke-control bg-bg-surface pl-8 pr-3 text-xs text-content-primary placeholder:text-content-tertiary sm:h-9 [&::-webkit-search-cancel-button]:appearance-none"
         />
       </label>
 
       {/* One Filter button at every width (2026-10-14 declutter): three
           dropdowns in a row were the loudest thing above the timeline. */}
-      <div ref={popoverRef} className="relative">
-        <button
-          type="button"
-          onClick={() => setFiltersOpen((open) => !open)}
-          aria-expanded={filtersOpen}
-          aria-label={activeFilterCount ? `Filters, ${activeFilterCount} on` : 'Filters'}
-          className="motion-focus motion-press relative grid h-9 w-9 place-items-center rounded-lg border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover"
-        >
-          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-          {activeFilterCount ? (
-            <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-semibold text-content-inverse">
-              {activeFilterCount}
-            </span>
-          ) : null}
-        </button>
-        {filtersOpen ? (
-          <div className="absolute left-0 top-11 z-20 flex w-48 flex-col gap-2 rounded-xl border border-stroke-default bg-bg-surface p-2 shadow-lg [&>select]:w-full">
-            <FilterSelects plan={plan} />
-          </div>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={toggle}
+        aria-haspopup="dialog"
+        aria-expanded={open !== null}
+        aria-label={activeFilterCount ? `Filters, ${activeFilterCount} on` : 'Filters'}
+        className="motion-focus motion-press relative grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover sm:h-9 sm:w-9"
+      >
+        <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+        {activeFilterCount ? (
+          <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-semibold text-content-inverse">
+            {activeFilterCount}
+          </span>
         ) : null}
-      </div>
+      </button>
+      {open === 'sheet' ? (
+        <FilterSheet
+          title="Filters"
+          controls={controls}
+          count={activeFilterCount}
+          onClear={clearFilters}
+          onClose={close}
+        />
+      ) : null}
+      {open === 'panel' ? (
+        <FilterPopover
+          anchor={buttonRef}
+          title="Filters"
+          controls={controls}
+          count={activeFilterCount}
+          onClear={clearFilters}
+          onClose={close}
+          align="start"
+        />
+      ) : null}
 
       {hasActivePlanFilters(filters) ? (
         <button
@@ -205,7 +232,7 @@ export function PlanListControls({ plan, trailing }: { plan: PlanListState; trai
           onClick={() => setFilters(EMPTY_PLAN_FILTERS)}
           aria-label="Clear search and filters"
           title="Clear"
-          className="motion-focus motion-press grid h-9 w-9 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary sm:h-9 sm:w-9"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
