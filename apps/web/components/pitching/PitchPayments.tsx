@@ -24,7 +24,8 @@ import { formatNaira } from '@/lib/pitch-payments';
 import { loadPitchReceipts } from '@/lib/pitch-payments-client';
 import type { PitchReceipt } from '@/types/pitch-payments';
 
-export function PitchPayments() {
+/** With `releaseId`, only that rollout's receipts (a rollout's Pitch tab). */
+export function PitchPayments({ releaseId }: { releaseId?: string } = {}) {
   const [receipts, setReceipts] = useState<PitchReceipt[] | null>(null);
   const [error, setError] = useState('');
 
@@ -36,8 +37,10 @@ export function PitchPayments() {
       return;
     }
     setError('');
-    setReceipts(result.data.receipts);
-  }, []);
+    setReceipts(
+      releaseId ? result.data.receipts.filter((receipt) => receipt.releaseId === releaseId) : result.data.receipts
+    );
+  }, [releaseId]);
 
   useEffect(() => {
     void load();

@@ -29,12 +29,11 @@ const ALL_OFF: ShellFlags = {
 };
 
 describe('shell nav', () => {
-  it('always offers the six areas in the strategy order', () => {
+  it('always offers the five areas in the strategy order (Pitching lives inside each rollout)', () => {
     for (const flags of [ALL_ON, ALL_OFF]) {
       expect(buildShellAreas(flags).map((a) => a.key)).toEqual([
         'home',
         'catalogue',
-        'pitching',
         'relationships',
         'opportunities',
         'audience',
@@ -51,7 +50,6 @@ describe('shell nav', () => {
       relationships: false,
       opportunities: true,
       audience: false,
-      pitching: false,
     });
   });
 
@@ -100,7 +98,8 @@ describe('shell nav', () => {
     expect(at('/dashboard/distribute')).toBe('catalogue');
     expect(at('/dashboard/notes')).toBe('catalogue');
     expect(at('/dashboard/directory')).toBe('relationships');
-    expect(at('/dashboard/pitching')).toBe('pitching');
+    // A bridge into a rollout's Pitch tab, in no area of its own.
+    expect(at('/dashboard/pitching')).toBeNull();
     expect(at('/dashboard/relationships/p1')).toBe('relationships');
     expect(at('/dashboard/opportunities')).toBe('opportunities');
     expect(at('/dashboard/audience')).toBe('audience');
@@ -124,8 +123,8 @@ describe('shell nav', () => {
     expect(lit('/dashboard/notes')).toEqual(['notes']);
   });
 
-  it('phone bottom bar is Home, Catalogue, UrgAns, Pitching; More holds the rest', () => {
-    expect(buildMobileTabs().map((t) => t.key)).toEqual(['home', 'catalogue', 'urgans', 'pitching']);
+  it('phone bottom bar is Home, Catalogue, UrgAns; More holds the rest', () => {
+    expect(buildMobileTabs().map((t) => t.key)).toEqual(['home', 'catalogue', 'urgans']);
     expect(buildMoreItems(buildShellAreas(ALL_ON)).map((i) => i.key)).toEqual([
       'relationships',
       'opportunities',
@@ -144,7 +143,6 @@ describe('shell nav', () => {
     const areas = buildShellAreas(ALL_ON);
     expect(activeMobileTab(areas, '/dashboard/home')).toBe('home');
     expect(activeMobileTab(areas, '/dashboard/artists')).toBe('catalogue');
-    expect(activeMobileTab(areas, '/dashboard/pitching')).toBe('pitching');
     expect(activeMobileTab(areas, '/dashboard/shows')).toBe('more');
     expect(activeMobileTab(areas, '/dashboard/urgans')).toBe('urgans');
     expect(activeMobileTab(areas, '/dashboard/directory')).toBe('more');

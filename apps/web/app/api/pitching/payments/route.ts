@@ -134,6 +134,7 @@ export async function GET(request: NextRequest) {
     ...toArtistQuoteView(row as Parameters<typeof toArtistQuoteView>[0], statusByPitch),
     songTitle: songByQuote.get(String(row.id)) || '',
     releaseTitle: releases.get(String(row.release_id || ''))?.title || null,
+    releaseId: releases.has(String(row.release_id || '')) ? String(row.release_id) : null,
   }));
 
   return NextResponse.json({ receipts, truncated: rows.length >= RECEIPT_LIMIT });

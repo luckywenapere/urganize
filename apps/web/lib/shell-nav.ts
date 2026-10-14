@@ -16,7 +16,6 @@ export type ShellAreaKey =
   | 'relationships'
   | 'opportunities'
   | 'audience'
-  | 'pitching'
   // The role-view "More" group (URG-260, lib/role-views.ts). Never built here;
   // applyRoleView appends it when a view tucks something.
   | 'more';
@@ -128,8 +127,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, '/dashboard/directory'),
     });
   }
-  // Shows sits with Relationships and Pitching has its own pill (founder call,
-  // 2026-10-11: the two swapped places on desktop and on the phone).
+  // Shows sits with Relationships (founder call, 2026-10-11).
   if (flags.events) {
     relationshipTabs.push({
       key: 'shows',
@@ -138,17 +136,6 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, '/dashboard/shows'),
     });
   }
-
-  const pitchingTabs: ShellSubTab[] = flags.pitching
-    ? [
-        {
-          key: 'pitching',
-          label: 'Pitching',
-          href: '/dashboard/pitching',
-          isActive: (p) => startsWithPath(p, '/dashboard/pitching'),
-        },
-      ]
-    : [];
 
   return [
     {
@@ -173,15 +160,8 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
         startsWithPath(p, DISTRIBUTE_HREF) ||
         startsWithPath(p, '/dashboard/notes'),
     },
-    // Pitching is third on the desktop top bar (founder, 2026-10-11).
-    {
-      key: 'pitching',
-      label: 'Pitching',
-      href: pitchingTabs[0]?.href ?? '/dashboard/pitching',
-      live: pitchingTabs.length > 0,
-      subTabs: pitchingTabs,
-      isActive: (p) => startsWithPath(p, '/dashboard/pitching'),
-    },
+    // Pitching left the top bar and the phone's bottom bar (founder,
+    // 2026-10-15): it lives fully inside each rollout, as its Pitch tab.
     {
       key: 'relationships',
       label: 'Relationships',
@@ -234,7 +214,6 @@ export function buildMobileTabs(): MobileTab[] {
     { key: 'home', label: 'Home', href: HOME_HREF, area: 'home' },
     { key: 'catalogue', label: 'Catalogue', href: CATALOGUE_HREF, area: 'catalogue' },
     { key: 'urgans', label: 'UrgAns', href: '/dashboard/urgans', area: 'urgans' },
-    { key: 'pitching', label: 'Pitching', href: '/dashboard/pitching', area: 'pitching' },
   ];
 }
 
@@ -253,7 +232,7 @@ export function activeMobileTab(areas: ShellArea[], pathname: string): string {
   if (startsWithPath(pathname, '/dashboard/urgans')) return 'urgans';
   const area = activeShellArea(areas, pathname);
   if (!area) return 'more';
-  if (area.key === 'home' || area.key === 'catalogue' || area.key === 'pitching') return area.key;
+  if (area.key === 'home' || area.key === 'catalogue') return area.key;
   return 'more';
 }
 

@@ -13,7 +13,6 @@ import {
   MoreHorizontal,
   Spotlight,
   Sparkles,
-  Send,
   Wallet2,
   X,
   type LucideProps,
@@ -53,11 +52,11 @@ const TAB_ICON: Record<string, IconComponent> = {
   home: Home,
   catalogue: Disc3,
   urgans: Sparkles,
-  pitching: Send,
 };
 
 /**
- * The phone's bottom bar: Home, Catalogue, UrgAns, Pitching and More. Thumb
+ * The phone's bottom bar: Home, Catalogue, UrgAns and More (Pitching left it
+ * on 2026-10-15 and lives inside each rollout). Thumb
  * reachable, and the same destinations as the desktop pills, because both read
  * lib/shell-nav.ts.
  *

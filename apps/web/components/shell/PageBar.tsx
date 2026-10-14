@@ -38,7 +38,7 @@ export function PageBar() {
   const areas = useShellAreas();
   const title = shellPageTitle(areas, pathname);
   // With a side menu the bar always shows (it holds the fold button). Without
-  // one (Home, Pitching) it shows only when the page put tools in it, so Home
+  // one (Home) it shows only when the page put tools in it, so Home
   // does not gain an empty line with its own name on it.
   const always = shellSideMenu(areas, pathname) !== null;
 

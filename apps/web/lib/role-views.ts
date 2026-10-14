@@ -169,7 +169,6 @@ const TAB_FEATURE: Record<string, RoleViewFeature> = {
  *  empty Relationships (its flags off) counts as People, its first tab. */
 const AREA_FEATURE: Partial<Record<ShellAreaKey, RoleViewFeature>> = {
   home: 'home',
-  pitching: 'pitching',
   relationships: 'people',
   opportunities: 'opportunities',
   audience: 'audience',

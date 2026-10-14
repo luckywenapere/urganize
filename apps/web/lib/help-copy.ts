@@ -326,10 +326,6 @@ export const HELP_COPY = {
     label: 'Directory',
     text: 'Find producers, designers and engineers by the work they have done.',
   },
-  'nav.pitching': {
-    label: 'Pitching',
-    text: 'Songs you sent to playlist curators, and what they said back.',
-  },
 
   // --------------------------------------------------------------- workspace
   'workspace.testRelease': {

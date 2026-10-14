@@ -27,7 +27,7 @@ import { useNavTip } from './useNavTip';
  * (RolloutTabs, variant "side"), so the menu keeps every action and dialog it
  * had and this file needs to know nothing about rollouts.
  *
- * An area with one page (Home, Pitching) has no side menu at all; the page
+ * An area with one page (Home) has no side menu at all; the page
  * takes the full width (shellSideMenu). Catalogue always has one, because a
  * rollout's menu needs a home even when Rollouts is its only page.
  *

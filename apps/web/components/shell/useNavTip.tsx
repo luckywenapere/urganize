@@ -52,7 +52,6 @@ export const NAV_TIP_KEYS: Record<string, HelpKey> = {
   notes: 'nav.notes',
   people: 'nav.people',
   directory: 'nav.directory',
-  pitching: 'nav.pitching',
 };
 
 /** Stops a long press opening the phone's own link menu or text selection. */

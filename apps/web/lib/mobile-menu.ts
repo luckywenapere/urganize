@@ -107,9 +107,8 @@ export function buildMobileMenu(audience: MobileMenuAudience): MobileMenuGroup[]
   if (flags.events) {
     work.push({ key: 'shows', label: 'Shows', href: '/dashboard/shows', icon: 'shows' });
   }
-  if (flags.pitching) {
-    work.push({ key: 'pitching', label: 'Pitching', href: '/dashboard/pitching', icon: 'pitching' });
-  }
+  // Pitching left the menus (founder, 2026-10-15): it lives inside each
+  // rollout, as its Pitch tab.
   if (flags.artists) {
     work.push({ key: 'artists', label: 'Artists', href: '/dashboard/artists', icon: 'artists' });
   }

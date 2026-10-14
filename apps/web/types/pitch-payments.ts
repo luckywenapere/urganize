@@ -74,4 +74,7 @@ export type PitchReceipt = ArtistQuoteView & {
   songTitle: string;
   /** The rollout it was for, or null when that rollout was deleted. */
   releaseTitle: string | null;
+  /** That rollout's id, or null when it was deleted. Lets a rollout's own
+   *  Pitch tab show just its receipts. */
+  releaseId: string | null;
 };

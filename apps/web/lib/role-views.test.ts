@@ -96,7 +96,7 @@ describe('the defaults every view keeps', () => {
       }
       const shown = destinations(view(v).filter((area) => area.key !== 'more'));
       expect(shown).toEqual(
-        expect.arrayContaining(['home', 'catalogue/releases', 'catalogue/distribute', 'catalogue/notes', 'pitching/pitching'])
+        expect.arrayContaining(['home', 'catalogue/releases', 'catalogue/distribute', 'catalogue/notes'])
       );
     }
   });
@@ -120,7 +120,7 @@ describe('the nav filter, per view', () => {
 
   it('Artist manager tucks Audience', () => {
     const list = view('artist_manager');
-    expect(list.map((a) => a.key)).toEqual(['home', 'catalogue', 'pitching', 'relationships', 'opportunities', 'more']);
+    expect(list.map((a) => a.key)).toEqual(['home', 'catalogue', 'relationships', 'opportunities', 'more']);
     expect(more(list)).toEqual(['audience']);
     expect(destinations(list)).toContain('catalogue/artists');
     expect(destinations(list)).toContain('relationships/people');
@@ -128,7 +128,7 @@ describe('the nav filter, per view', () => {
 
   it('Label tucks Shows and Opportunities', () => {
     const list = view('label');
-    expect(list.map((a) => a.key)).toEqual(['home', 'catalogue', 'pitching', 'relationships', 'audience', 'more']);
+    expect(list.map((a) => a.key)).toEqual(['home', 'catalogue', 'relationships', 'audience', 'more']);
     expect(more(list)).toEqual(['shows', 'opportunities']);
     const relationships = list.find((a) => a.key === 'relationships')!;
     expect(relationships.subTabs.map((t) => t.key)).toEqual(['people', 'directory']);
@@ -147,7 +147,7 @@ describe('the nav filter, per view', () => {
 
   it('Artist team tucks Artists, People, Directory, Opportunities and Audience', () => {
     const list = view('artist_team');
-    expect(list.map((a) => a.key)).toEqual(['home', 'catalogue', 'pitching', 'relationships', 'more']);
+    expect(list.map((a) => a.key)).toEqual(['home', 'catalogue', 'relationships', 'more']);
     expect(more(list)).toEqual(['artists', 'people', 'directory', 'opportunities', 'audience']);
   });
 

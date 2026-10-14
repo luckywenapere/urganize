@@ -76,11 +76,8 @@ export function buildPrefetchRoutes({ hasCuratorProfile }: PrefetchAudience): st
   if (ARTIST_PAGE_ENABLED) routes.push('/dashboard/artists');
   if (NOTES_ENABLED) routes.push('/dashboard/notes');
   if (EVENTS_ENABLED) routes.push('/dashboard/shows');
-  // The team side of pitching, in the nav for every team account since
-  // 2026-09-09. Press kits left this list the same day: it is no longer a nav
-  // destination, and /settings — the one route that now reaches it — is
-  // already a base route.
-  if (PITCHING_ENABLED) routes.push('/dashboard/pitching');
+  // Pitching left the nav (founder, 2026-10-15) and lives inside each
+  // rollout, so /dashboard/pitching (now a bridge) is no longer prefetched.
   if (DIRECTORY_ENABLED) routes.push('/dashboard/directory');
   if (RELATIONSHIPS_ENABLED) routes.push('/dashboard/relationships');
   routes.push('/dashboard/opportunities');

@@ -87,6 +87,8 @@ export function sortEditorialRows(rows: readonly EditorialRow[]): EditorialRow[]
 export const EDITORIAL_SECTION_TITLE = 'Editorial pitches';
 export const EDITORIAL_EMPTY_COPY =
   'No editorial pitches yet. Each rollout with a plan gets one step for Spotify and Apple Music.';
+export const EDITORIAL_EMPTY_COPY_ROLLOUT =
+  'No editorial pitch yet. Make a plan and this rollout gets one step for Spotify and Apple Music.';
 export const EDITORIAL_OPEN_LABEL = 'Open pitch details';
 
 export function editorialStateCopy(row: EditorialRow): string {

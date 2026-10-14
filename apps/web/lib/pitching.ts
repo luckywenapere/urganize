@@ -299,3 +299,18 @@ export function describeSentPitchScope(count: number, truncated: boolean): strin
   if (truncated) return `Showing the newest ${count} pitches`;
   return count === 1 ? '1 pitch sent' : `${count} pitches sent`;
 }
+
+/**
+ * A rollout's Pitch tab, where pitching lives since it left the top menu
+ * (founder, 2026-10-15). `curator` narrows the composer to one curator (from
+ * her public page); `payment` carries Paystack's cancelled flag.
+ */
+export function rolloutPitchPath(
+  releaseId: string,
+  extra: { curator?: string; payment?: string } = {}
+): string {
+  const params = new URLSearchParams({ release: releaseId, scene: 'pitch' });
+  if (extra.curator) params.set('curator', extra.curator);
+  if (extra.payment) params.set('payment', extra.payment);
+  return `/dashboard?${params.toString()}`;
+}

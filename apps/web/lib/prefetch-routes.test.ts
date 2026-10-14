@@ -49,7 +49,6 @@ describe('buildPrefetchRoutes', () => {
       '/dashboard/home',
       '/dashboard/notes',
       '/dashboard/shows',
-      '/dashboard/pitching',
       '/dashboard/opportunities',
       '/curator',
     ]);
@@ -68,13 +67,13 @@ describe('buildPrefetchRoutes', () => {
     expect(buildPrefetchRoutes({ hasCuratorProfile: false })).toContain('/dashboard/home');
   });
 
-  // The team side of pitching needs only the flag, unlike the crossing below
-  // it. A team account with no playlists of its own still has this nav entry,
-  // so leaving it cold would be the bug this module exists to prevent.
-  it('warms the team pitching page for an account that owns no playlists', async () => {
+  // Pitching left the nav (2026-10-15) and lives inside each rollout, so its
+  // old page (now a bridge) is never warmed, and an account with no playlists
+  // gets no curator crossing either.
+  it('never warms the old pitching page, now a bridge into a rollout', async () => {
     const { buildPrefetchRoutes } = await loadRoutes(ALL_ON);
     const routes = buildPrefetchRoutes({ hasCuratorProfile: false });
-    expect(routes).toContain('/dashboard/pitching');
+    expect(routes).not.toContain('/dashboard/pitching');
     expect(routes).not.toContain('/curator');
   });
 

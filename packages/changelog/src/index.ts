@@ -22,6 +22,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.134.0",
+    date: "October 15, 2026",
+    highlights: [
+      "Pitching left the top menu and the phone's bottom bar. It now lives inside each rollout: open a rollout and tap Pitch this!",
+      "Pitch this! now has everything the old Pitching page had: curators, answers, its Spotify and Apple Music editorial pitch, its payment receipts, and your curator inbox link.",
+      "Old pitching links, from emails, notifications and curator pages, now open the right rollout's Pitch this! page.",
+    ],
+  },
+  {
     version: "1.133.3",
     date: "October 15, 2026",
     highlights: [
