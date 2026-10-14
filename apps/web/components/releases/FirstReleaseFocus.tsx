@@ -19,6 +19,7 @@ import { selectLiveTurnCount, useChappiStore } from '@/stores/useChappiStore';
 import { useShellStore } from '@/stores/useShellStore';
 import { useTourStore } from '@/stores/useTourStore';
 import { useFirstReleaseRequired } from './useFirstReleaseRequired';
+import { markNavigationBlocked } from '@/lib/nav-stall-watch';
 
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 
@@ -121,6 +122,9 @@ export function FirstReleaseFocus() {
       const anchor = target?.closest<HTMLAnchorElement>('a[href]');
       if (!anchor) return;
       if (!isLockedHref(anchor.getAttribute('href'), window.location.origin)) return;
+      // Tell the stall watchdog this link was refused on purpose, or it loads
+      // the locked page itself seven seconds later.
+      markNavigationBlocked(event);
       event.preventDefault();
       event.stopPropagation();
       const rect = anchor.getBoundingClientRect();

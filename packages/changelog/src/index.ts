@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.125.2",
+    date: "October 14, 2026",
+    highlights: [
+      "Before your first rollout, tapping a locked page now just shows why it's locked. It no longer opens the page by itself a few seconds later.",
+    ],
+  },
+  {
     version: "1.125.1",
     date: "October 14, 2026",
     highlights: [

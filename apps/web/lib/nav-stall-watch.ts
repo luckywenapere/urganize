@@ -57,6 +57,20 @@ function setPending(next: PendingNav | null): void {
   }
 }
 
+// Clicks another handler deliberately stopped (a link locked until the first
+// rollout exists). The watchdog runs first, so it waits one tick and asks.
+const blockedClicks = new WeakSet<Event>();
+
+/**
+ * Call from any capture-phase handler that cancels an in-app link on purpose.
+ * Without this the watchdog saw an address that never changed and, seven
+ * seconds later, loaded the very page the handler had refused: the "it
+ * refreshed on its own" report, and a lock that did not hold (2026-10-14).
+ */
+export function markNavigationBlocked(event: Event): void {
+  blockedClicks.add(event);
+}
+
 /** Is an in-app navigation from a tap still loading? Drives the top bar. */
 export function subscribeNavPending(fn: (isPending: boolean) => void): () => void {
   pendingListeners.add(fn);
@@ -227,7 +241,12 @@ export function installLinkStallWatchdog(): () => void {
         return;
       }
       const path = target.split(/[?#]/)[0] || '/';
-      watchNavigationStall(`link:${path}`, target);
+      // Later capture listeners (FirstReleaseFocus) may still cancel this click
+      // on purpose; decide once the event has finished dispatching.
+      window.setTimeout(() => {
+        if (blockedClicks.has(event)) return;
+        watchNavigationStall(`link:${path}`, target);
+      }, 0);
     } catch {
       // A watchdog must never break a link.
     }
