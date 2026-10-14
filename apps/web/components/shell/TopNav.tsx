@@ -1,7 +1,6 @@
 'use client';
 
 import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
-import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from '@urganize/ui';
@@ -9,7 +8,8 @@ import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
-import { activeShellArea, buildShellAreas, readShellFlags } from '@/lib/shell-nav';
+import { activeShellArea } from '@/lib/shell-nav';
+import { useShellAreas } from './useShellAreas';
 import { useShellStore } from '@/stores/useShellStore';
 import { useHomeChatStore } from '@/stores/useHomeChatStore';
 import { useArtistFilterSync } from './useArtistFilter';
@@ -79,7 +79,7 @@ import { useNavTip } from './useNavTip';
  */
 export function TopNav({ userName, showHelp = false }: { userName?: string; showHelp?: boolean }) {
   const pathname = usePathname() ?? '/dashboard';
-  const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
+  const areas = useShellAreas();
   const active = activeShellArea(areas, pathname);
   const openCommand = useShellStore((state) => state.openCommand);
   const tip = useNavTip();

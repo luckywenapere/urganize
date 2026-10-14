@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { NAV_TIP_TOUCH_CLASS, useNavTip } from './useNavTip';
-import { activeShellArea, buildShellAreas, readShellFlags, visibleSubTabs } from '@/lib/shell-nav';
+import { activeShellArea, visibleSubTabs } from '@/lib/shell-nav';
+import { useShellAreas } from './useShellAreas';
 
 /**
  * The row of tabs for the area you are in (Deel's "People, Org chart, Time
@@ -29,7 +29,7 @@ export const SUBNAV_SLOT_TOOLS = 'subnav-slot-tools';
 
 export function SubNav() {
   const pathname = usePathname() ?? '/dashboard';
-  const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
+  const areas = useShellAreas();
   const tabs = visibleSubTabs(activeShellArea(areas, pathname));
   const tip = useNavTip();
   if (tabs.length === 0) return null;

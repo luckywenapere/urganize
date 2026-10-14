@@ -61,6 +61,9 @@ export type Profile = {
    * (lib/motivation-server.ts). Default true; undefined (pre-migration
    * rows) counts as on. */
   motivational_nudges?: boolean;
+  /** The Settings view override (URG-260, lib/role-views.ts). Null or missing
+   * (rows before the column existed) = automatic, from the persona and role. */
+  role_view?: 'artist_manager' | 'label' | 'solo_artist' | 'artist_team' | 'other' | null;
   created_at: string;
   updated_at: string;
   is_subscribed?: boolean; 

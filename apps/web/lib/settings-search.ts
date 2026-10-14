@@ -38,6 +38,12 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   { segment: 'general', section: 'theme', label: 'Theme', keywords: ['appearance', 'dark', 'light', 'mode', 'look'] },
   {
     segment: 'general',
+    section: 'view',
+    label: 'View',
+    keywords: ['menu', 'role', 'persona', 'who are you', 'more', 'tucked', 'hidden'],
+  },
+  {
+    segment: 'general',
     section: 'help',
     label: 'Help and feedback',
     keywords: ['support', 'report', 'bug', 'issue', 'request', 'feedback', 'tour', 'tours', 'guide', 'replay'],

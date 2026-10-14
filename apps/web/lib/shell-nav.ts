@@ -16,7 +16,10 @@ export type ShellAreaKey =
   | 'relationships'
   | 'opportunities'
   | 'audience'
-  | 'pitching';
+  | 'pitching'
+  // The role-view "More" group (URG-260, lib/role-views.ts). Never built here;
+  // applyRoleView appends it when a view tucks something.
+  | 'more';
 
 export type ShellFlags = {
   notes: boolean;

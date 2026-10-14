@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { ProfileSection } from '../ProfileSection';
 import { ArtistProfileSection } from '../ArtistProfileSection';
 import { AppearanceSection } from '../AppearanceSection';
+import { RoleViewSection } from '../RoleViewSection';
 import { ReportIssueSection } from '../ReportIssueSection';
 import { GuidedToursSection } from '../GuidedToursSection';
 
@@ -36,6 +37,7 @@ function GeneralSegmentView() {
       <ProfileSection />
       <ArtistProfileSection />
       <AppearanceSection />
+      <RoleViewSection />
       {HELP_ENABLED ? (
         <div id="help" className="scroll-mt-4 divide-y divide-stroke-subtle">
           <ReportIssueSection />

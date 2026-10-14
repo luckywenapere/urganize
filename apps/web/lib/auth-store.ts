@@ -440,6 +440,8 @@ interface AuthState {
   updateProfileName: (name: string) => Promise<void>;
   updateAskAfterTasks: (enabled: boolean) => Promise<void>;
   updateMotivationalNudges: (enabled: boolean) => Promise<void>;
+  /** URG-260: the Settings view override; null goes back to automatic. */
+  updateRoleView: (view: Profile['role_view']) => Promise<void>;
   updateRole: (role: Profile['role']) => Promise<void>;
   setNeedsOnboarding: (needsOnboarding: boolean) => void;
   logout: () => Promise<void>;
@@ -990,6 +992,27 @@ export const useAuthStore = create<AuthState>()(
         const { data: updatedProfile, error } = await supabase
           .from('profiles')
           .update({ motivational_nudges: enabled, updated_at: new Date().toISOString() })
+          .eq('id', currentUser.id)
+          .select('*')
+          .single();
+
+        if (error) {
+          throw new Error(handleSupabaseError(error));
+        }
+
+        set({ user: updatedProfile, error: null });
+      },
+
+      // Role-based views (URG-260): the per-user override Settings saves, on
+      // the user's own profiles row. Same direct-update shape as
+      // updateAskAfterTasks (user-writable under the existing profiles RLS).
+      updateRoleView: async (view: Profile['role_view']) => {
+        const currentUser = get().user;
+        if (!currentUser) throw new Error('User not found');
+
+        const { data: updatedProfile, error } = await supabase
+          .from('profiles')
+          .update({ role_view: view ?? null, updated_at: new Date().toISOString() })
           .eq('id', currentUser.id)
           .select('*')
           .single();

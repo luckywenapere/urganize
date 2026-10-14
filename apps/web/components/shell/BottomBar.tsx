@@ -34,9 +34,10 @@ import {
   activeMobileTab,
   buildMobileTabs,
   buildMoreItems,
-  buildShellAreas,
-  readShellFlags,
+  type ShellArea,
 } from '@/lib/shell-nav';
+import { tuckedMoreItems } from '@/lib/role-views';
+import { useShellAreas } from './useShellAreas';
 import { NAV_TIP_TOUCH_CLASS, useNavTip } from './useNavTip';
 
 type IconComponent = ComponentType<LucideProps>;
@@ -77,7 +78,7 @@ const TAB_ICON: Record<string, IconComponent> = {
  */
 export function BottomBar() {
   const pathname = usePathname() ?? '/dashboard';
-  const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
+  const areas = useShellAreas();
   const tabs = useMemo(() => buildMobileTabs(), []);
   const active = activeMobileTab(areas, pathname);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -235,12 +236,14 @@ function MoreSheet({
   areas,
   onClose,
 }: {
-  areas: ReturnType<typeof buildShellAreas>;
+  areas: ShellArea[];
   onClose: () => void;
 }) {
   const openSettings = useSettingsLinkClick();
   const tip = useNavTip({ overSheet: true });
-  const items = buildMoreItems(areas);
+  // What the role view tucked (URG-260) follows the areas the bar does not
+  // carry; empty when nothing is tucked.
+  const items = [...buildMoreItems(areas), ...tuckedMoreItems(areas)];
   const notifications = useNotificationsDoorStore();
   const openCommand = useShellStore((state) => state.openCommand);
   const { options: artistOptions, select: selectArtist } = useArtistFilterOptions();

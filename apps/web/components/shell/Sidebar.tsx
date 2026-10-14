@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PanelLeftClose, PanelLeftOpen } from '@/components/icons';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { readPersistedState } from '@/lib/persisted-state';
-import { buildShellAreas, readShellFlags, shellSideMenu } from '@/lib/shell-nav';
+import { shellSideMenu } from '@/lib/shell-nav';
+import { useShellAreas } from './useShellAreas';
 import { SIDEBAR_COLLAPSED_KEY, SIDEBAR_COLLAPSED_VERSION } from '@/lib/sidebar-width';
 import { useSidebarStore } from '@/stores/useSidebarStore';
 import { useNavTip } from './useNavTip';
@@ -48,7 +49,7 @@ const isBoolean = (value: unknown): value is boolean => typeof value === 'boolea
  *  one, and not folded away. */
 export function useSidebarShown(): boolean {
   const pathname = usePathname() ?? '/dashboard';
-  const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
+  const areas = useShellAreas();
   const collapsed = useSidebarStore((state) => state.collapsed);
   return shellSideMenu(areas, pathname) !== null && !collapsed;
 }
@@ -71,7 +72,7 @@ export function useSidebarSlot(id: string): HTMLElement | null {
  *  in the same place in both states. Draws nothing on a page with no menu. */
 export function SidebarToggle() {
   const pathname = usePathname() ?? '/dashboard';
-  const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
+  const areas = useShellAreas();
   const collapsed = useSidebarStore((state) => state.collapsed);
   const setCollapsed = useSidebarStore((state) => state.setCollapsed);
   if (shellSideMenu(areas, pathname) === null) return null;
@@ -95,7 +96,7 @@ export function SidebarToggle() {
 
 export function Sidebar() {
   const pathname = usePathname() ?? '/dashboard';
-  const areas = useMemo(() => buildShellAreas(readShellFlags()), []);
+  const areas = useShellAreas();
   const menu = shellSideMenu(areas, pathname);
   const collapsed = useSidebarStore((state) => state.collapsed);
   const hydrateCollapsed = useSidebarStore((state) => state.hydrateCollapsed);
