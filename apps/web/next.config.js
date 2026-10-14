@@ -56,6 +56,15 @@ const nextConfig = {
   // dashboard — this line alone does nothing. Undefined outside Vercel (local,
   // CI), where Next simply omits the stamp, so it is safe everywhere.
   deploymentId: process.env.VERCEL_DEPLOYMENT_ID,
+  // Keep a warmed page for an hour, not Next's 5 minutes (2026-10-14).
+  // AppShell warms every nav destination once per load; after 5 minutes the
+  // warmed copy expired, so a later tap on Home went back to the network, and
+  // on 3g (PostHog: ~300ms round trips) that was the 1.5-7s "stuck" tap.
+  // Safe: every page payload is a static client shell with no server data, and
+  // deploymentId above routes an old tab's requests to its own build.
+  experimental: {
+    staleTimes: { static: 3600 },
+  },
   // Stamped at BUILD time and read at request time by /api/version, so the
   // deployed app can say when it was built. Evaluated once per build, which
   // is the point: a request-time `new Date()` would just report now.
