@@ -19534,3 +19534,14 @@ From a prospect walkthrough: the planner's "Help me pick" filled in one date wit
 - **Behaviour:** Help me pick toggles the list; opening it with no date chosen selects the best fit (or the first). The cards are a radio group (arrow keys via `onRadioGroupKeyDown`). Picking sets `dateSuggested: true`, so `date_mode` analytics still read "suggested".
 - **Known limit:** the date question comes before "What's already done?", so readiness changes the options only when it was prefilled (onboarding hands it over). Moving the question order is a separate call.
 - **Checked on a throwaway page with made-up rollouts** (375px, light and dark), **not with a real session.**
+
+## Next moves: one-tap "what to do next" cards (2026-10-14, v1.122.0, URG-259, no flag)
+
+From Femi's design review (Oct 13): after something happens on a rollout, suggest the next move, Spotify/Netflix style, with minimal words. **Rules only, no model, 0 credits** (founder OK, Oct 14). `lib/next-moves-guard.test.ts` fails if a model import creeps in; if one is ever added to rank or phrase, meter it through credits + `ai_usage_events`.
+
+- **Rules** in `lib/next-moves.ts` (pure, `next-moves.test.ts`). Triggers are STATES, not events, so a move shows on any device and goes away once done: no activities → Build the plan (Home only; the rollout page has the planner card); 1 to 14 days out → Run the distribution check (`scene=distribute`); open `editorial_pitch` task while the window is open → Pitch Spotify editorial (opens that task); a phase all done with the next open → "Start: {first open task}" (phases from `derivePlanPhase`); 1 or 2 pitches with the newest within 14 days → Pitch N more curators (`scene=pitch`, pitching flag); owner with at most one person assigned → Invite your team (settings team). Priority in `NEXT_MOVE_PRIORITY`, max 3, sooner rollout first, invite once across rollouts.
+- **Where:** Home's new "Next moves" stack, straight after Tasks/Up next (`lib/home/sections.ts`), and above the rollout's main view (`RolloutNextMoves` in `WorkspaceView`, mounted once: desktop branch, phone branch or the full-screen timeline). Not on test rollouts.
+- **Dismiss sticks:** `next_move_dismissals` (user_id, move_key) tombstones, per person, service-role writes via `GET/POST /api/next-moves`, plus a localStorage copy (`useNextMovesStore`) so it holds offline and before the migration runs. Keys are `rule:releaseId[:phase]`, validated by `isValidNextMoveKey` and a DB check.
+- **Facts:** Home reads activities from `useTaskStore` and pitches from Home's placements; the rollout page gets its pitch facts from `GET /api/next-moves?releaseId=`. No other new request.
+- **Migration:** `supabase/migrations/20261014120000_next_move_dismissals.sql` must be applied; until then dismissals live only on the device.
+- **Checked** on a throwaway page with made-up rollouts (390px, light), **not with a real session.**

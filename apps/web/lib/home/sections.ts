@@ -3,7 +3,7 @@
  * same order on a phone and a desktop:
  *
  *   Getting started (only while a team is setting up), Tasks (or Up next when
- *   there are none), For you today, Waiting on others, Next show, Rollouts,
+ *   there are none), Next moves (URG-259), For you today, Waiting on others, Next show, Rollouts,
  *   Placements, Where the money went (managers who may track spend), then
  *   UrgAns' line for the day.
  *
@@ -18,6 +18,7 @@ export type HomeBlockKey =
   | 'onboarding'
   | 'tasks'
   | 'up-next'
+  | 'next-moves'
   | 'attention'
   | 'waiting'
   | 'next-show'
@@ -32,6 +33,8 @@ export type HomeBlocksInput = {
   taskCount: number;
   /** What the Up next card would point at, or null when it should not show. */
   upNext: 'show' | 'release' | 'start' | null;
+  /** One-tap next moves (lib/next-moves.ts, URG-259). Optional: 0 when absent. */
+  nextMoveCount?: number;
   attentionCount: number;
   waitingCount: number;
   hasNextShow: boolean;
@@ -52,6 +55,7 @@ export type HomeBlocksInput = {
 export const HOME_BLOCK_LABELS = {
   tasks: 'Tasks',
   'up-next': 'Up next',
+  'next-moves': 'Next moves',
   attention: 'For you today',
   waiting: 'Waiting on others',
   'next-show': 'Next show',
@@ -67,6 +71,9 @@ export function orderHomeBlocks(input: HomeBlocksInput): HomeBlockKey[] {
   const showUpNext = input.taskCount === 0 && input.upNext !== null;
   if (input.taskCount > 0) blocks.push('tasks');
   else if (showUpNext) blocks.push('up-next');
+
+  // What to do next, straight after the work already on the person's plate.
+  if ((input.nextMoveCount ?? 0) > 0) blocks.push('next-moves');
 
   if (input.attentionCount > 0) blocks.push('attention');
   if (input.waitingCount > 0) blocks.push('waiting');
