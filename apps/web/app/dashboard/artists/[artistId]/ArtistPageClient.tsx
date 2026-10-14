@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Newspaper } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
+// Back goes to the Rollouts tab, not the Artists list (founder, 2026-10-14).
+import { CATALOGUE_HREF } from '@/lib/shell-nav';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { bucketReleases, bucketShows } from '@/lib/artist-overview';
 import { epkHref, formatCalendarDate, isArtistPageEnabled, releaseHref } from '@/lib/artist-page';
@@ -101,8 +103,8 @@ export default function ArtistPageClient() {
     const waiting = authLoading || !rosterLoaded;
     return (
       <div className="mx-auto w-full max-w-3xl">
-        <Link href="/dashboard/artists" className="inline-flex items-center gap-1 text-sm text-content-secondary hover:underline">
-          <ArrowLeft className="h-4 w-4" aria-hidden /> All artists
+        <Link href={CATALOGUE_HREF} className="inline-flex items-center gap-1 text-sm text-content-secondary hover:underline">
+          <ArrowLeft className="h-4 w-4" aria-hidden /> Rollouts
         </Link>
         {waiting ? (
           <div className="mt-6 h-32 animate-pulse rounded-xl border border-stroke-default bg-bg-surface" aria-busy="true" />
@@ -172,8 +174,8 @@ export default function ArtistPageClient() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
-      <Link href="/dashboard/artists" className="inline-flex items-center gap-1 text-sm text-content-secondary hover:underline">
-        <ArrowLeft className="h-4 w-4" aria-hidden /> All artists
+      <Link href={CATALOGUE_HREF} className="inline-flex items-center gap-1 text-sm text-content-secondary hover:underline">
+        <ArrowLeft className="h-4 w-4" aria-hidden /> Rollouts
       </Link>
 
       <header className="flex items-start gap-4">
