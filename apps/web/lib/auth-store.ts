@@ -64,6 +64,8 @@ const SAFE_AUTH_PATHS = [
   '/redeem',
   '/payment',
   '/start-trial',
+  // Closed sign-up's invite link page (/start/<code>), 2026-10-15.
+  '/start',
 ];
 
 const isOnSafeAuthPath = (): boolean => {
@@ -99,13 +101,9 @@ const ensureActiveAccessOrRedirect = async (
   accessToken: string,
   email: string | null | undefined
 ): Promise<void> => {
-  if (
-    !PAYWALL_LOGIN_BOUNCE_ENABLED &&
-    !CARD_TRIAL_BOUNCE_ENABLED &&
-    !HARD_PAYWALL_BOUNCE_ENABLED
-  ) {
-    return;
-  }
+  // No early return on the three switches any more: closed sign-up
+  // (2026-10-15) is always on, so every login asks the server whether this
+  // account has been let in.
   if (typeof window === 'undefined') return;
   if (isOnSafeAuthPath()) return;
   // Fast path — allowlisted emails never see the locked page. The server
@@ -129,7 +127,15 @@ const ensureActiveAccessOrRedirect = async (
       cardTrialRequired?: boolean;
       onboardingCompleted?: boolean | null;
       teamAccess?: { hasAccess?: boolean } | null;
+      accessApproved?: boolean;
     };
+
+    // Closed sign-up first: an account nobody has let in is held, whatever its
+    // billing state. Only an explicit false bounces (a stale server omits it).
+    if (payload.accessApproved === false) {
+      window.location.replace('/locked?reason=not_approved');
+      return;
+    }
 
     // Card gate first — it targets exactly the accounts the /locked bounce
     // would call 'unpaid', and /start-trial (not /locked) is where a

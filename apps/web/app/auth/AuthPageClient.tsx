@@ -14,6 +14,9 @@ import { LogoIcon } from '@urganize/ui';
 import { LoadingScreen } from '@urganize/ui';
 import { Mail, Lock } from '@/components/icons';
 import { errorMessage } from "@/lib/errors";
+import { supabase } from '@/lib/supabase/client';
+import { InviteOnlyNotice } from '@/components/access/InviteOnlyNotice';
+import { checkEmailAccess, hasPendingAccessIntent, redeemPendingAccess } from '@/lib/access-intent';
 
 // /auth is the single front door for BOTH sides of the account line, in the
 // stacked-pill layout: logo, heading, "Continue with Google", "Continue with
@@ -166,6 +169,9 @@ export default function AuthPage() {
   // the registered/unregistered branch was decided per-email.
   const [checkedEmail, setCheckedEmail] = useState('');
   const [accountHint, setAccountHint] = useState<'google-only' | 'unknown' | null>(null);
+  // Closed sign-up (2026-10-15): an email with no account and no invite reads
+  // "Urganize is invite-only for now" here instead of starting the wizard.
+  const [inviteOnly, setInviteOnly] = useState(false);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
@@ -312,6 +318,15 @@ export default function AuthPage() {
     const account = await lookupEmailAccount(normalized);
 
     if (account === 'none') {
+      // Closed sign-up: stop an invite-less email before the wizard. The real
+      // gate is server-side after sign-up; this only saves a wasted wizard.
+      // An invite this browser holds, a pending team invite or a founder
+      // invite for this email all pass (POST /api/access/check).
+      if (!(await checkEmailAccess(normalized))) {
+        setIsCheckingEmail(false);
+        setInviteOnly(true);
+        return;
+      }
       // Best-effort convenience write — must not block the hand-off if
       // storage throws (restricted webview context).
       try {
@@ -341,6 +356,12 @@ export default function AuthPage() {
 
     try {
       await login(email, password);
+      // Closed sign-up: an invite link opened before signing in is redeemed
+      // for this account now (best-effort; the gate re-checks on its own).
+      if (hasPendingAccessIntent()) {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.access_token) await redeemPendingAccess(data.session.access_token);
+      }
       // Best-effort convenience write — must not turn a successful login
       // into a reported failure if storage throws (restricted webview
       // context).
@@ -458,6 +479,16 @@ export default function AuthPage() {
             </p>
           )}
 
+          {inviteOnly ? (
+            <InviteOnlyNotice
+              className="mt-12"
+              onSignIn={() => {
+                setInviteOnly(false);
+                setError('');
+                setEmailStage('collect');
+              }}
+            />
+          ) : (
           <div className="mt-16 w-full space-y-4">
             {/* Google */}
             <button
@@ -606,6 +637,7 @@ export default function AuthPage() {
               <p role="alert" className="text-center text-sm text-status-error">{error || callbackError}</p>
             )}
           </div>
+          )}
         </div>
 
         <p className="pt-10 text-center text-base text-content-secondary">

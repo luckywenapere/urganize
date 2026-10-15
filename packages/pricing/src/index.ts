@@ -308,7 +308,11 @@ export type TierLimits = {
   seats: number | null;
   /** Releases still being worked — not archived, not released. */
   activeReleases: number | null;
-  /** UrgAns actions per billing period. */
+  /** UrgAns actions per billing period. Declared for entitlements; read by no
+   *  check and NOT shown on the pricing page, because UrgAns is metered in
+   *  credits (see urgansMonthlyCredits). The page quoted this as "40 / 150
+   *  UrgAns actions a month" until 2026-10-15, which matched nothing the app
+   *  charges. */
   urgansMonthlyActions: number | null;
 };
 
@@ -317,6 +321,11 @@ export type PricingTierDefinition = {
   label: string;
   /** One line on who this is for — the pricing card's subtitle. */
   audience: string;
+  /** UrgAns credits the plan gives each billing window, as the pricing card
+   *  prints them. apps/web/lib/credits/allowance.test.ts holds this equal to
+   *  ALLOWANCE_CREDITS, so the published number is the granted one. Group's is its default; the
+   *  founder tops it up per deal. */
+  urgansMonthlyCredits: number;
   /** The tier's NGN price PER MONTH — the only price a tier declares.
    *
    *  THE SHAPE IS STILL THE ENFORCEMENT, pointed the other way. From 2026-09-08
@@ -399,6 +408,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     audience: 'For an independent artist.',
     // Monthly only. The yearly price is ten months of this — see monthlyPrice.
     monthlyPrice: tierPrice(5_000),
+    urgansMonthlyCredits: 150,
     // ONE seat since 2026-10-02 (strategy doc, section 8: "Solo ... One seat").
     // The owner holds it, so a Solo account can invite nobody; working with a
     // team is what Manager is for. It was 2 (the owner plus one collaborator)
@@ -418,6 +428,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     audience: 'For a manager running two or more artists.',
     // Monthly only. The yearly price is ten months of this — see monthlyPrice.
     monthlyPrice: tierPrice(22_000),
+    urgansMonthlyCredits: 660,
     limits: { artists: 5, seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
     perks: [],
   },
@@ -457,10 +468,10 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     audience: 'For small labels and management teams.',
     // Monthly only. The yearly price is ten months of this — see monthlyPrice.
     monthlyPrice: tierPrice(50_000),
+    urgansMonthlyCredits: 1500,
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
       'Everything in Manager',
-      'Save your own rollout templates',
       'We set your roster up with you',
       'WhatsApp support, answered same day',
     ],
@@ -486,6 +497,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     id: 'enterprise',
     label: 'Group',
     audience: 'For distributors and multi-label groups.',
+    urgansMonthlyCredits: 1500,
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
       'Everything in Label',
@@ -576,7 +588,7 @@ export function annualSavingCopy(id: PricingTierId): string | null {
 const UNIVERSAL_HIGHLIGHTS: readonly string[] = ['Distribution through our partner'] as const;
 
 export function tierHighlights(id: PricingTierId): string[] {
-  const { limits, perks } = PRICING_TIERS[id];
+  const { limits, perks, urgansMonthlyCredits, contactSales } = PRICING_TIERS[id];
   const lines: string[] = [];
 
   // Roster size leads, because it is the question a manager answers about
@@ -602,10 +614,12 @@ export function tierHighlights(id: PricingTierId): string[] {
       ? 'Unlimited rollouts at a time'
       : `${limits.activeReleases} ${limits.activeReleases === 1 ? 'rollout' : 'rollouts'} at a time`
   );
+  // Credits, the unit the app actually meters (lib/credits/allowance.ts reads
+  // the same field). Group's amount is agreed per deal, so it names no number.
   lines.push(
-    limits.urgansMonthlyActions === null
-      ? 'Unlimited UrgAns'
-      : `${limits.urgansMonthlyActions} UrgAns actions a month`
+    contactSales
+      ? 'UrgAns credits to fit your deal'
+      : `${urgansMonthlyCredits.toLocaleString('en-US')} UrgAns credits a month`
   );
 
   return [...lines, ...UNIVERSAL_HIGHLIGHTS, ...perks];

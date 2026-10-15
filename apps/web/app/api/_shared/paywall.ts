@@ -9,6 +9,8 @@ import {
   isReadOnlySafeMethod,
 } from '@/lib/team-billing';
 import { getTeamAccessForUser } from '@/lib/team-billing-server';
+import { getAppAccess } from '@/lib/access-gate-server';
+import { NOT_APPROVED_REASON } from '@/lib/access-gate';
 
 // 402 Payment Required is the right code for NO ACCESS. The frontend interceptor
 // at apps/web/lib/access-redirect.ts catches it and routes to /locked.
@@ -19,7 +21,35 @@ import { getTeamAccessForUser } from '@/lib/team-billing-server';
 export const ACCESS_REQUIRED_STATUS = 402;
 export const ACCESS_REQUIRED_CODE = 'ACCESS_REQUIRED';
 
-type LockReason = 'unpaid' | 'trial_expired' | 'expired' | 'team_trial_expired';
+type LockReason = 'unpaid' | 'trial_expired' | 'expired' | 'team_trial_expired' | 'not_approved';
+
+/**
+ * CLOSED SIGN-UP (2026-10-15). The body an unapproved account gets from every
+ * gated route. A 402, so the fetch interceptor (lib/access-redirect.ts) takes
+ * the browser to /locked?reason=not_approved, the "You're on the list" screen.
+ */
+export function notApprovedResponse() {
+  return NextResponse.json(
+    {
+      error: "You're on the list. We'll let you in soon.",
+      code: ACCESS_REQUIRED_CODE,
+      redirect: '/locked',
+      reason: NOT_APPROVED_REASON satisfies LockReason,
+    },
+    { status: ACCESS_REQUIRED_STATUS }
+  );
+}
+
+/**
+ * Null when the account may use the app, else the 402 above. Runs before the
+ * billing gate and regardless of whether billing is on: an unapproved account
+ * is held whatever its team or trial state (it should have neither, since
+ * ensureOwnedWorkspace refuses to make one). See lib/access-gate-server.ts.
+ */
+export async function requireApprovedAccount(userId: string, email?: string | null) {
+  const access = await getAppAccess(userId, email);
+  return access.allowed ? null : notApprovedResponse();
+}
 
 const reasonForStatus = (status: AccountStatus, trialUsed: boolean): LockReason => {
   if (status === 'expired') {
@@ -47,6 +77,12 @@ export async function requireActiveAccount(
   email?: string | null,
   method?: string | null
 ) {
+  // ── CLOSED SIGN-UP (2026-10-15) ─────────────────────────────────────────
+  // Invite-only: an account nobody let in is held here, on every gated route,
+  // before any billing question is asked.
+  const held = await requireApprovedAccount(userId, email);
+  if (held) return held;
+
   // ── TEAM TRIAL + HARD PAYWALL (NEXT_PUBLIC_FEATURE_HARD_PAYWALL) ────────
   // When on, access is a TEAM question, not a per-user one: a team gets 14
   // days from creation, then the wall, and every member inherits the owner's

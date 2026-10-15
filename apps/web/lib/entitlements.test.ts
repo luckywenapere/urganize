@@ -800,14 +800,23 @@ describe('tierHighlights', () => {
     // tier moves the test with the product instead of breaking it.
     expect(lines.some((line) => line.includes(String(managerLimits.seats)))).toBe(true);
     expect(lines.some((line) => line.includes(String(managerLimits.activeReleases)))).toBe(true);
+    // UrgAns is quoted in credits, the unit the app meters (2026-10-15), from
+    // the same field lib/credits/allowance.ts grants.
     expect(
-      lines.some((line) => line.includes(String(managerLimits.urgansMonthlyActions)))
+      lines.some((line) =>
+        line.includes(PRICING_TIERS.manager.urgansMonthlyCredits.toLocaleString('en-US'))
+      )
     ).toBe(true);
   });
 
   it('says unlimited where there is no ceiling, and quotes no number', () => {
     const lines = tierHighlights('label');
-    const ceilingLines = lines.slice(0, 4);
+    // The UrgAns line is a credit grant, not a ceiling, so it carries a number.
+    const ceilingLines = lines.slice(0, 4).filter((line) => !line.includes('UrgAns credits'));
+    expect(ceilingLines.length).toBe(3);
+    expect(lines).toContain(
+      `${PRICING_TIERS.label.urgansMonthlyCredits.toLocaleString('en-US')} UrgAns credits a month`
+    );
     for (const line of ceilingLines) {
       expect(line.toLowerCase()).toContain('unlimited');
       expect(line).not.toMatch(/\d/);

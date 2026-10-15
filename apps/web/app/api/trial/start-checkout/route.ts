@@ -10,6 +10,8 @@ import {
   resolveTrialVerificationKobo,
 } from '@/lib/trial-card';
 import { fetchPaystackInit } from '@/lib/paystack-init';
+import { notApprovedResponse } from '@/app/api/_shared/paywall';
+import { isAppAccessAllowed } from '@/lib/access-gate-server';
 
 // POST /api/trial/start-checkout — card-before-trial (NEXT_PUBLIC_FEATURE_CARD_TRIAL).
 //
@@ -67,6 +69,12 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = auth.user.id;
+
+  // Closed sign-up (2026-10-15): no trial for an account nobody let in.
+  if (!(await isAppAccessAllowed(userId, auth.user.email))) {
+    return notApprovedResponse();
+  }
+
   const userEmail = String(auth.user.email || '').trim().toLowerCase();
   if (!userEmail) {
     return NextResponse.json(

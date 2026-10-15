@@ -22,6 +22,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.0",
+    date: "October 15, 2026",
+    highlights: [
+      "Urganize is invite-only for now. New sign-ups need an invite; without one you can join the waitlist and we'll reach out. Teammates you invite still join as before.",
+      "Signed up without an invite? You'll see \"You're on the list\" and get in as soon as we let you in.",
+      "Invite links: open the link you were sent and sign up with any email or Google, and you're in.",
+      "New admin invite tools: let someone in from the waitlist or by email and send them a single-use link on WhatsApp, and let in anyone who is waiting with one tap.",
+    ],
+  },
+  {
     version: "1.146.1",
     date: "October 15, 2026",
     highlights: [

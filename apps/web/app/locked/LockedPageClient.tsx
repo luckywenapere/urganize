@@ -24,6 +24,8 @@ import { openExternalUrl } from '@/lib/external-link';
 import { isCardTrialEnabled } from '@/lib/trial-card';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
 import { TeamWall } from '@/components/billing/TeamWall';
+import { HeldAccountScreen } from '@/components/access/HeldAccountScreen';
+import { NOT_APPROVED_REASON } from '@/lib/access-gate';
 
 // Recurring billing /locked page.
 //
@@ -71,6 +73,12 @@ const REASON_COPY: Record<string, string> = {
 };
 
 export default function LockedPage() {
+  const searchParams = useSearchParams();
+  // Closed sign-up (2026-10-15): an account nobody has let in yet sees the
+  // "You're on the list" screen, never a paywall.
+  if (searchParams.get('reason') === NOT_APPROVED_REASON) {
+    return <HeldAccountScreen />;
+  }
   if (HARD_PAYWALL_ENABLED) {
     return <TeamWall />;
   }

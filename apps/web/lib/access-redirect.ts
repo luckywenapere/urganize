@@ -17,6 +17,8 @@ const SAFE_PATHS = new Set([
   '/invite',
   '/redeem',
   '/start-trial',
+  // Closed sign-up's invite link page (/start/<code>), 2026-10-15.
+  '/start',
 ]);
 
 const isSafePath = (pathname: string): boolean => {

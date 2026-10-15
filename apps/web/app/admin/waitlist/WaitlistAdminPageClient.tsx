@@ -19,6 +19,7 @@ import { Loader2, Search } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
+import { LetInPanel, createLetInInvite, type LetInResult } from '@/components/admin/LetInPanel';
 
 type Tally = { label: string | null; count: string };
 
@@ -154,6 +155,37 @@ export default function WaitlistAdminPageClient() {
   const [busyRowId, setBusyRowId] = useState<number | null>(null);
   const [editingNotesId, setEditingNotesId] = useState<number | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
+  // Closed sign-up (2026-10-15): the latest invite made here, shown in the
+  // "Let people in" panel with its copy and WhatsApp buttons.
+  const [letInResult, setLetInResult] = useState<LetInResult | null>(null);
+  const [lettingInId, setLettingInId] = useState<number | null>(null);
+
+  const handleLetIn = async (row: WaitlistRow) => {
+    setLettingInId(row.id);
+    try {
+      const created = await createLetInInvite({
+        email: row.email,
+        name: row.name || undefined,
+        phone: row.phone || undefined,
+        waitlistId: row.id,
+      });
+      setLetInResult(created);
+      setError('');
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              rows: prev.rows.map((r) => (r.id === row.id ? { ...r, contactStatus: 'converted' } : r)),
+            }
+          : prev
+      );
+      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create the invite.');
+    } finally {
+      setLettingInId(null);
+    }
+  };
 
   const loadWaitlist = useCallback(
     async (q: string, f: FilterValue, opts?: { asGate?: boolean }) => {
@@ -266,7 +298,7 @@ export default function WaitlistAdminPageClient() {
         titleWidth="w-32"
         statCards={{ count: 2, gridClassName: 'grid-cols-1 sm:grid-cols-2' }}
         tallyRows={[5, FILTER_OPTIONS.length]}
-        table={{ columns: 12, rows: 6 }}
+        table={{ columns: 13, rows: 6 }}
       />
     );
   }
@@ -305,6 +337,8 @@ export default function WaitlistAdminPageClient() {
           {error}
         </p>
       ) : null}
+
+      <LetInPanel result={letInResult} onResult={setLetInResult} />
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-lg border border-stroke-default bg-bg-surface p-5">
@@ -390,9 +424,10 @@ export default function WaitlistAdminPageClient() {
       </form>
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-stroke-default">
-        <table className="w-full min-w-[1280px] text-left text-sm">
+        <table className="w-full min-w-[1380px] text-left text-sm">
           <thead className="bg-bg-elevated font-mono text-[11px] uppercase tracking-[0.12em] text-content-tertiary">
             <tr>
+              <th className="px-4 py-3 font-bold">Access</th>
               <th className="px-4 py-3 font-bold">Signed up</th>
               <th className="px-4 py-3 font-bold">Name</th>
               <th className="px-4 py-3 font-bold">Email</th>
@@ -410,7 +445,7 @@ export default function WaitlistAdminPageClient() {
           <tbody className="divide-y divide-stroke-subtle bg-bg-surface">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-4 py-8 text-center text-content-tertiary">
+                <td colSpan={13} className="px-4 py-8 text-center text-content-tertiary">
                   {query.trim() || filter !== 'all' ? 'No matches.' : 'No signups yet.'}
                 </td>
               </tr>
@@ -420,6 +455,17 @@ export default function WaitlistAdminPageClient() {
                 const isEditingNotes = editingNotesId === row.id;
                 return (
                   <tr key={row.id}>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <button
+                        type="button"
+                        disabled={lettingInId === row.id}
+                        onClick={() => void handleLetIn(row)}
+                        className="motion-focus inline-flex items-center gap-1 rounded-full bg-brand px-3 py-1 text-xs font-semibold text-content-inverse hover:bg-brand-hover disabled:opacity-60"
+                      >
+                        {lettingInId === row.id ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : null}
+                        Let in
+                      </button>
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-content-tertiary">
                       {formatDate(row.createdAt)}
                     </td>

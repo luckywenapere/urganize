@@ -6,12 +6,15 @@ import { NextRequest, NextResponse } from 'next/server';
 // check, the curator block) must still happen, and a request with no pass, a pass
 // for someone else or an expired one must still meet the paywall.
 
-const gate = vi.hoisted(() => ({ calls: 0, answer: null as unknown }));
+const gate = vi.hoisted(() => ({ calls: 0, answer: null as unknown, held: null as unknown }));
 vi.mock('@/app/api/_shared/paywall', () => ({
   requireActiveAccount: async () => {
     gate.calls += 1;
     return gate.answer;
   },
+  // Closed sign-up (2026-10-15): the pass skips billing, never the invite-only
+  // gate, so a pass request still asks this.
+  requireApprovedAccount: async () => gate.held,
 }));
 
 const roles = vi.hoisted(() => ({ role: 'artist-manager' as string | null }));
@@ -40,6 +43,7 @@ beforeEach(() => {
   vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service-key');
   gate.calls = 0;
   gate.answer = walled();
+  gate.held = null;
   roles.role = 'artist-manager';
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -65,6 +69,13 @@ describe('with a live pass for this user', () => {
     expect(gate.calls).toBe(0);
     expect(result).toMatchObject({ user: { id: 'user-1' }, supabaseUrl: 'https://supabase.test' });
     expect('error' in result && result.error).toBeFalsy();
+  });
+
+  it('does not skip the invite-only gate: a held account is still held', async () => {
+    gate.held = NextResponse.json({ reason: 'not_approved' }, { status: 402 });
+    const result = await requireActiveAuthenticatedUser(request({ [URGANS_PASS_HEADER]: mintPassForUser('user-1') }));
+    expect(gate.calls).toBe(0);
+    expect('error' in result && result.error?.status).toBe(402);
   });
 
   it('works for a read-only team on a write too, which is the point', async () => {

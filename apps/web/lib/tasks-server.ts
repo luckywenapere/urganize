@@ -50,6 +50,7 @@ import {
   priorityLabelForEmail,
 } from '@/lib/email/format';
 import { claimPendingWorkspaceInvite } from '@/lib/invite-claims-server';
+import { isAppAccessAllowed } from '@/lib/access-gate-server';
 import { isEditorialPitchTask, isPitchReminderType } from '@/lib/editorial-pitch';
 
 export const WORKSPACES_TABLE = 'workspaces';
@@ -725,6 +726,17 @@ export class CuratorAccountError extends Error {
   }
 }
 
+/**
+ * Thrown when an account nobody has let in yet (closed sign-up, 2026-10-15)
+ * reaches a team-provisioning path. No team, no trial clock.
+ */
+export class AccessNotApprovedError extends Error {
+  constructor() {
+    super("You're on the list. We'll let you in soon.");
+    this.name = 'AccessNotApprovedError';
+  }
+}
+
 export async function ensureOwnedWorkspace(
   adminClient: SupabaseClient,
   owner: DatabaseUser
@@ -741,6 +753,15 @@ export async function ensureOwnedWorkspace(
   // stray API call is not.
   if ((await loadAccountRole(adminClient, owner.id)) === 'curator') {
     throw new CuratorAccountError();
+  }
+
+  // Closed sign-up (2026-10-15): an unapproved account gets no team and no
+  // trial, whichever route asks. Same reasoning as the curator guard above:
+  // this function is called directly by several routes, so the guard lives at
+  // the provisioning step itself. Fails open on a read error (see
+  // lib/access-gate-server.ts), so a database blip never strands a real team.
+  if (!(await isAppAccessAllowed(owner.id, owner.email, adminClient))) {
+    throw new AccessNotApprovedError();
   }
 
   const workspaceResult = await adminClient
@@ -1202,6 +1223,12 @@ export async function loadWorkspaceAccessContext(
     try {
       await ensureOwnedWorkspace(adminClient, user);
     } catch (error) {
+      // A held account (closed sign-up) reads as one with no team of its own:
+      // the gated routes 402 it before here, and an open route that reads a
+      // context must not 500 on it.
+      if (error instanceof AccessNotApprovedError) {
+        return resolved.context;
+      }
       if (!isTaskSchemaMissingError(error)) {
         throw error;
       }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { LoadingScreen } from '@urganize/ui';
 import { supabase } from '@/lib/supabase/client';
 import { useAuthStore } from '@/lib/auth-store';
+import { hasPendingAccessIntent, redeemPendingAccess } from '@/lib/access-intent';
 import { HOME_PATH, resolveHomePath } from '@/lib/home-path';
 import { ONBOARDING_SETUP_PATH, isCardTrialEnabled } from '@/lib/trial-card';
 import type { Profile } from '@/lib/supabase/client';
@@ -160,6 +161,16 @@ export default function AuthCallbackPage() {
           if (!isAbortError(error)) {
             throw error;
           }
+        }
+
+        // Closed sign-up (2026-10-15): a /start/<code> invite or a founder
+        // /welcome link this browser kept across the Google round trip is
+        // redeemed now, before anything asks the server for access. Nothing
+        // routes on the answer here: an invited teammate is let in by the
+        // invite accept that runs next, and a held account is taken to the
+        // "You're on the list" screen by the gate itself.
+        if (hasPendingAccessIntent()) {
+          await redeemPendingAccess(session.access_token);
         }
 
         if (url.searchParams.get('reauth') === '1') {

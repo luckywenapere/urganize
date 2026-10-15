@@ -136,6 +136,8 @@ import {
 import { resolvePostSignupDestination, takePitchIntent } from '@/lib/pitch-intent';
 import { takeClaimIntent } from '@/lib/claim-intent';
 import { readWelcomeIntent } from '@/lib/welcome-intent';
+import { InviteOnlyNotice } from '@/components/access/InviteOnlyNotice';
+import { checkEmailAccess, redeemPendingAccess } from '@/lib/access-intent';
 import { captureReferralFromSearch, reportReferralCode } from '@/lib/referral-intent';
 import { captureSignupSourceFromSearch, reportSignupSource } from '@/lib/signup-source-intent';
 import {
@@ -443,6 +445,9 @@ export default function OnboardingPage() {
   const [draft, setDraft] = useState<OnboardingDraft>(EMPTY_ONBOARDING_DRAFT);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [step, setStep] = useState<StepIndex>(0);
+  // Closed sign-up (2026-10-15): set when a signed-out visitor's email is not
+  // let in, and the wizard is replaced by "Urganize is invite-only for now".
+  const [inviteOnly, setInviteOnly] = useState(false);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -556,6 +561,12 @@ export default function OnboardingPage() {
     const handoffEmail = normalizeHandoffEmail(window.location.search);
     if (handoffEmail) {
       setEmail((current) => current || handoffEmail);
+      // Closed sign-up: stop an invite-less email at step 1, not after the
+      // wizard. Signed-in visitors (authed-setup) never arrive with ?email=.
+      // Fails open, and an invite this browser holds always passes.
+      void checkEmailAccess(handoffEmail).then((allowed) => {
+        if (!allowed) setInviteOnly(true);
+      });
     }
     // Authed-setup marker. Read here (pre-paint, imperatively — same reason as
     // the email hand-off above) so the redirect-suppression below has it on
@@ -881,6 +892,16 @@ export default function OnboardingPage() {
   // Caller is responsible for setting accountCreated=true and providing a
   // valid access token (already in the supabase session).
   const runPostSignupHandoff = async (accessToken: string) => {
+    // 0. Closed sign-up (2026-10-15): redeem any invite this browser holds (a
+    // /start link, a founder /welcome link) and ask whether this account is
+    // let in. A held account goes to "You're on the list" instead of a
+    // rollout POST the server would refuse. Fails open (the server decides).
+    const access = await redeemPendingAccess(accessToken);
+    if (!access.approved) {
+      router.replace('/locked?reason=not_approved');
+      return;
+    }
+
     // 1. Start the 28-day trial so the next call passes the paywall.
     // 400/409 are tolerable: a trial was already used / paid status, in
     // which case we let /api/releases be the arbiter.
@@ -1065,6 +1086,16 @@ export default function OnboardingPage() {
     setProgressMessage(onboardingProgressMessage('account', draft.title));
 
     try {
+      // Closed sign-up: the same check /auth makes, for someone who reached
+      // the account step without one (no ?email=). A no ends the wizard here,
+      // before an account exists.
+      if (!(await checkEmailAccess(email.trim().toLowerCase()))) {
+        setProgressMessage('');
+        setIsSubmitting(false);
+        handoffRunningRef.current = false;
+        setInviteOnly(true);
+        return;
+      }
       // Pass the chosen role + artistName so the signup result matches
       // what standalone /auth signup would produce. The auth-store handler
       // already updates artist_name when role='artist' (auth-store.ts:423).
@@ -1381,6 +1412,19 @@ export default function OnboardingPage() {
   const ownsItsScreen = !personaOpen && (step === ONBOARDING_STEP.paywall || step === ONBOARDING_STEP.welcome);
   const authedSetupFinishStep = lastQuestionStep(sequence);
   const inviteLabels = inviteStepButtonLabels(finishing);
+
+  // Closed sign-up (2026-10-15): an email that is not let in reads this
+  // instead of the wizard.
+  if (inviteOnly) {
+    return (
+      <main className="relative flex min-h-screen items-center justify-center px-6 py-12 text-content-primary">
+        <div className="urg-ground-ikat" aria-hidden="true" />
+        <div className="urg-above w-full max-w-sm">
+          <InviteOnlyNotice signInHref="/auth" />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="relative min-h-screen text-content-primary">

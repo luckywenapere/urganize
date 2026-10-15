@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { flagOffResponse, isPitchingFeatureEnabled, requireCuratorUser } from '../_shared';
+import { notApprovedResponse } from '@/app/api/_shared/paywall';
+import { isAppAccessAllowed } from '@/lib/access-gate-server';
 
 // A playlist owner asking for the team product too.
 //
@@ -21,6 +23,12 @@ export async function POST(request: NextRequest) {
 
   const auth = await requireCuratorUser(request);
   if ('error' in auth) return auth.error;
+
+  // Closed sign-up (2026-10-15): a playlist owner gets the team side only once
+  // they are let in, like anybody else.
+  if (!(await isAppAccessAllowed(auth.user.id, auth.user.email, auth.adminClient))) {
+    return notApprovedResponse();
+  }
 
   // Conditional on role='curator', which makes this idempotent and stops a
   // dual account's real team role being overwritten by a second tap.

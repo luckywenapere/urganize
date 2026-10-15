@@ -1,3 +1,4 @@
+import { PRICING_TIERS } from '@urganize/pricing';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -17,6 +18,14 @@ describe('the founder rules in numbers', () => {
   it('give a trial 50 credits and the plans 150, 660 and 1,500, Group the same as Label', () => {
     expect(TRIAL_CREDITS).toBe(50);
     expect(ALLOWANCE_CREDITS).toEqual({ solo: 150, manager: 660, label: 1500, enterprise: 1500 });
+    // The pricing card prints urgansMonthlyCredits (2026-10-15). This file may
+    // import only its siblings (credits-guard), so the two are held equal here.
+    expect(ALLOWANCE_CREDITS).toEqual({
+      solo: PRICING_TIERS.solo.urgansMonthlyCredits,
+      manager: PRICING_TIERS.manager.urgansMonthlyCredits,
+      label: PRICING_TIERS.label.urgansMonthlyCredits,
+      enterprise: PRICING_TIERS.enterprise.urgansMonthlyCredits,
+    });
   });
 
   it('tag credits with exactly three sources', () => {

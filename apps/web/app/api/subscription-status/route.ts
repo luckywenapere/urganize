@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '../releases/_shared';
+import { getAppAccess } from '@/lib/access-gate-server';
 import { createAdminClient } from '@/app/api/_shared/auth';
 import {
   calculateTrialDaysLeft,
@@ -160,8 +161,13 @@ export async function GET(request: NextRequest) {
       allowlisted: true,
       cardTrialRequired: false,
       onboardingCompleted: null,
+      accessApproved: true,
     });
   }
+
+  // Closed sign-up (2026-10-15): the login bounce reads this to hold an
+  // account nobody has let in (lib/auth-store.ts ensureActiveAccessOrRedirect).
+  const accessApproved = (await getAppAccess(auth.user.id, auth.user.email)).allowed;
 
   const snapshot = await getSubscriptionSnapshot(auth.user.id);
   const cardTrialFacts = await computeCardTrialRequired(
@@ -205,6 +211,7 @@ export async function GET(request: NextRequest) {
     cardTrialRequired: cardTrialFacts.required,
     onboardingCompleted: cardTrialFacts.onboardingCompleted,
     onboardingSetupRequired,
+    accessApproved,
     ...(teamAccess ? { teamAccess } : {}),
     // Which tiers this deployment can actually charge. The wall renders exactly
     // these, so it can never offer a tier whose Paystack Plan has not been

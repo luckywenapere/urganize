@@ -6,6 +6,8 @@ import {
 } from '@/lib/subscription-access';
 import { TRIAL_DAYS, isCardTrialEnabled } from '@/lib/trial-card';
 import { isHardPaywallEnabled } from '@/lib/team-billing';
+import { notApprovedResponse } from '@/app/api/_shared/paywall';
+import { isAppAccessAllowed } from '@/lib/access-gate-server';
 
 // POST /api/trial/start
 // Starts the one-time 28-day trial for the logged-in user.
@@ -57,6 +59,11 @@ export async function POST(request: NextRequest) {
       { error: 'Server environment is not configured' },
       { status: 500 }
     );
+  }
+
+  // Closed sign-up (2026-10-15): no trial for an account nobody let in.
+  if (!(await isAppAccessAllowed(userId, auth.user.email, admin))) {
+    return notApprovedResponse();
   }
 
   // Re-read profile via admin client so the trial_used check isn't bypassable

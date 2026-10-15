@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { requireActiveAccount } from '@/app/api/_shared/paywall';
+import { requireActiveAccount, requireApprovedAccount } from '@/app/api/_shared/paywall';
 import { getMcpConfig, isMcpConnectEnabled, verifyMcpAccessKey } from '@/lib/mcp/config';
 import { extractBearerToken } from '@/lib/mcp/oauth';
 import { resolveMcpToken } from '@/lib/mcp/tokens-server';
@@ -69,6 +69,10 @@ export async function requireActiveAuthenticatedUser(request: NextRequest) {
   if (!requestHasUrgansPass(request, auth.user.id)) {
     const block = await requireActiveAccount(auth.user.id, auth.user.email, request.method);
     if (block) return { error: block };
+  } else {
+    // The pass skips BILLING, never the invite-only gate (2026-10-15).
+    const held = await requireApprovedAccount(auth.user.id, auth.user.email);
+    if (held) return { error: held };
   }
   return auth;
 }

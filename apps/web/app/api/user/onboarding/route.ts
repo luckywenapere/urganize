@@ -16,6 +16,8 @@ import {
   type UpdateOnboardingBody,
 } from '@/lib/onboarding';
 import { isEmailConfigured, sendEmail } from '@/lib/email';
+import { notApprovedResponse } from '@/app/api/_shared/paywall';
+import { isAppAccessAllowed } from '@/lib/access-gate-server';
 import { isOnboardingSequenceEnabled } from '@/lib/email/onboarding-sequence';
 import { startOnboardingSequence } from '@/lib/email/sequence-server';
 
@@ -366,6 +368,13 @@ export async function PATCH(request: NextRequest) {
   const auth = await getAuthenticatedRequestUser(request);
   if ('error' in auth) {
     return auth.error;
+  }
+
+  // Closed sign-up (2026-10-15): onboarding writes (and the welcome sequence
+  // they start) wait until the account is let in. GET stays open: the auth
+  // store reads it for every signed-in account, held ones included.
+  if (!(await isAppAccessAllowed(auth.user.id, auth.user.email, auth.adminClient))) {
+    return notApprovedResponse();
   }
 
   const profileResult = await ensureProfileRecord(auth.adminClient, auth.user);

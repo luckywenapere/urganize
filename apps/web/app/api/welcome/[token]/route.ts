@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getAuthenticatedUser } from '@/app/api/_shared/auth';
 import { parseClaimBody } from '@/lib/seeding';
 import { claimProfile, openClaimLink } from '@/lib/seeding-server';
+import { approveUser } from '@/lib/access-gate-server';
 
 // The invited manager's side of a seeding link.
 //
@@ -43,7 +44,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ to
   if (!client) return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
 
   const { token } = await context.params;
+  // Read before the claim uses the link up: a founder seeding link (no
+  // Directory referrer) also lets the account in (closed sign-up, 2026-10-15).
+  const view = await openClaimLink(client, token).catch(() => null);
   const result = await claimProfile(client, { token, userId: auth.user.id, body: parsed });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+  if (view && view.state === 'ok' && !view.invitedBy) {
+    await approveUser(client, auth.user.id, 'founder_seed');
+  }
   return NextResponse.json({ ok: true, published: result.published, slug: result.slug });
 }
