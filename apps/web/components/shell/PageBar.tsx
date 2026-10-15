@@ -33,6 +33,17 @@ export function usePageBarCrumbSlot(enabled: boolean): HTMLElement | null {
   return slot;
 }
 
+/** The page bar's right-end slot (the page's primary action), once it is in
+ *  the document; null on a phone, where the bar is hidden. */
+export function usePageBarEndSlot(enabled: boolean): HTMLElement | null {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSlot(enabled ? document.getElementById(SUBNAV_SLOT_END) : null);
+  }, [enabled]);
+  return slot;
+}
+
 export function PageBar() {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();

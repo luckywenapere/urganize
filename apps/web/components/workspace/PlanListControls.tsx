@@ -137,7 +137,22 @@ const PANEL_QUERY = '(min-width: 1024px)';
  * the box ran off the side with "Any status" cut off, and it floated over the
  * list at z-20.
  */
-export function PlanListControls({ plan, trailing }: { plan: PlanListState; trailing?: ReactNode }) {
+/**
+ * `phoneSearchOnly`: on a computer the top bar's search is already on screen
+ * and finds activities too, so a second search field in the page read as two
+ * searches (founder, 2026-10-15). With it set, the field shows below lg only;
+ * the Filter button stays at every width. Full screen covers the top bar, so
+ * it keeps its field.
+ */
+export function PlanListControls({
+  plan,
+  trailing,
+  phoneSearchOnly = false,
+}: {
+  plan: PlanListState;
+  trailing?: ReactNode;
+  phoneSearchOnly?: boolean;
+}) {
   const { filters, setFilters } = plan;
   const [open, setOpen] = useState<'sheet' | 'panel' | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -172,7 +187,7 @@ export function PlanListControls({ plan, trailing }: { plan: PlanListState; trai
 
   return (
     <div className="flex items-center gap-2" role="search" aria-label="Search this plan">
-      <label className="relative min-w-0 flex-1 sm:max-w-xs">
+      <label className={`relative min-w-0 flex-1 sm:max-w-xs ${phoneSearchOnly ? 'lg:hidden' : ''}`}>
         <span className="sr-only">Search activities</span>
         <Search
           className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-tertiary"

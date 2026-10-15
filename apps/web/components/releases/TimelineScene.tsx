@@ -262,7 +262,11 @@ export function TimelineScene({
           and at the end the legend behind a small button and Full screen as
           an icon. It was two rows of controls before the first bar. */}
       <div className="mb-4">
-        <PlanListControls plan={plan} trailing={<TimelineChrome onFullScreen={onFullScreen} />} />
+        <PlanListControls
+          plan={plan}
+          phoneSearchOnly={Boolean(onFullScreen)}
+          trailing={<TimelineChrome onFullScreen={onFullScreen} />}
+        />
       </div>
 
       <div className="mb-5">

@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.142.2",
+    date: "October 15, 2026",
+    highlights: [
+      "A rollout's top line now carries everything: Rollouts > its name, the artist, its status, how much is done and New activity. The big header under it is gone, so the plan starts higher.",
+      "One search on a computer: the top bar's. The rollout's own search field now shows on phones and in full screen only; Filter stays everywhere.",
+    ],
+  },
+  {
     version: "1.142.1",
     date: "October 15, 2026",
     highlights: [

@@ -561,7 +561,7 @@ export function TasksPanel({
         sceneContent
       ) : (
       <div className="space-y-3">
-        {scopedRelease && tasks.length > 0 ? <PlanListControls plan={plan} /> : null}
+        {scopedRelease && tasks.length > 0 ? <PlanListControls plan={plan} phoneSearchOnly /> : null}
         {scopedRelease && tasks.length > 0 ? (
           <div
             className="flex items-center gap-1 text-xs"

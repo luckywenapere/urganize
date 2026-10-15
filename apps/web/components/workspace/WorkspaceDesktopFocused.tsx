@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { SIDEBAR_SLOT_ROLLOUT, useSidebarSlot } from '@/components/shell/Sidebar';
-import { usePageBarCrumbSlot } from '@/components/shell/PageBar';
-import Image from 'next/image';
+import { usePageBarCrumbSlot, usePageBarEndSlot } from '@/components/shell/PageBar';
 import { ChevronRight, Plus } from '@/components/icons';
 import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
 import type { Release } from '@/types/releases';
@@ -12,7 +11,6 @@ import type { Task } from '@/lib/tasks';
 import { TasksPanel } from './TasksPanel';
 import { RolloutTabs } from './RolloutTabs';
 import type { ReleaseCardData } from './catalogue-types';
-import { ArtistFace } from '@/components/shared/ArtistFace';
 import type { RolloutMenuDialogInput } from './useRolloutMenuActions';
 import { displayStatus, statusGroup } from '@/lib/catalogue-table';
 
@@ -68,16 +66,9 @@ const STATUS_TONE: Record<ReturnType<typeof statusGroup>, string> = {
   archived: 'bg-bg-hover text-content-tertiary',
 };
 
-function formatDate(value: string | null): string | null {
-  if (!value) return null;
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(parsed);
-}
-
 /**
- * Desktop-only focused rollout (design overhaul, 2026-10-04): a Deel-style page
- * header (crumb, cover, title, status, date, progress, one primary action), the
+ * Desktop-only focused rollout (design overhaul, 2026-10-04): a page bar line
+ * (crumb, artist, status, progress, one primary action; trimmed 2026-10-15), the
  * rollout's places as a row of tabs, then the panel those tabs open into.
  *
  * It used to be a viewport-locked column beside a vertical menu and the UrgAns
@@ -106,11 +97,9 @@ export function WorkspaceDesktopFocused({
 }: WorkspaceDesktopFocusedProps) {
   const tasksTotal = scopedTasks.length;
   const tasksDone = scopedTasks.filter((t) => t.status === 'done').length;
-  const [failedCover, setFailedCover] = useState<string | null>(null);
   const rolloutMenuSlot = useSidebarSlot(SIDEBAR_SLOT_ROLLOUT);
   const crumbSlot = usePageBarCrumbSlot(true);
-  const showCover = Boolean(card.coverArtUrl) && card.coverArtUrl !== failedCover;
-  const date = formatDate(card.release.releaseDate);
+  const endSlot = usePageBarEndSlot(true);
   // The same derived status the Catalogue row shows, so opening a rollout
   // that read Released there does not say Draft here.
   const status = displayStatus({
@@ -120,6 +109,60 @@ export function WorkspaceDesktopFocused({
     tasksTotal,
   });
 
+  const crumb = (
+    <div className="flex min-w-0 items-center gap-3">
+      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[15px] text-content-secondary">
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={closeLabel ?? 'Back to Catalogue'}
+            className="motion-focus shrink-0 rounded-md hover:text-content-primary"
+          >
+            Rollouts
+          </button>
+        ) : (
+          <span className="shrink-0">Rollouts</span>
+        )}
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
+        <span className="min-w-0 truncate font-semibold text-content-primary">{card.release.title}</span>
+      </nav>
+      <span className="h-4 w-px shrink-0 bg-stroke-subtle" aria-hidden="true" />
+      <span className="min-w-0 max-w-[14rem] truncate text-sm text-content-secondary">
+        {scopedRelease.artistName || 'Unassigned artist'}
+      </span>
+      <span
+        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[statusGroup(status)]}`}
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+        {STATUS_LABEL[status] ?? status.replace(/_/g, ' ')}
+      </span>
+    </div>
+  );
+
+  const actions = (
+    <div className="flex shrink-0 items-center gap-3">
+      {/* One plain count (2026-10-14 declutter), worded like the
+          distribution checklist's. */}
+      <div className="hidden items-center gap-2 xl:flex">
+        <span className="text-sm tabular-nums text-content-secondary">
+          {tasksDone} of {tasksTotal} done
+        </span>
+        <ReleaseDeliveredMark total={tasksTotal} done={tasksDone} />
+      </div>
+      {onNewActivity ? (
+        <button
+          type="button"
+          onClick={onNewActivity}
+          className="motion-focus motion-press inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-stroke-control px-4 text-sm font-medium text-content-primary transition-colors hover:bg-bg-hover"
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          New activity
+        </button>
+      ) : null}
+    </div>
+  );
+
   // Viewport-locked, as it has always been: the page never scrolls here; long
   // lists scroll inside the panel so the header and tabs never leave view. The
   // 10.5rem is the shell around it: top bar 4.5rem + section row 3.5rem + main's
@@ -128,89 +171,21 @@ export function WorkspaceDesktopFocused({
   return (
     <div className="workspace-mode-enter flex h-[calc(100dvh-10.5rem)] min-h-[30rem] flex-col gap-4">
       <div className="shrink-0">
-        {/* Where you are, said once (2026-10-14 declutter): the breadcrumb
-            takes the page bar's title slot, so the page bar, a breadcrumb row
-            and the heading no longer all say Rollouts. */}
-        {crumbSlot
-          ? createPortal(
-              <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[15px] text-content-secondary">
-                {onClose ? (
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    aria-label={closeLabel ?? 'Back to Catalogue'}
-                    className="motion-focus rounded-md hover:text-content-primary"
-                  >
-                    Rollouts
-                  </button>
-                ) : (
-                  <span>Rollouts</span>
-                )}
-                <ChevronRight className="h-3.5 w-3.5 text-content-tertiary" aria-hidden="true" />
-                <span className="min-w-0 truncate font-semibold text-content-primary">{card.release.title}</span>
-              </nav>,
-              crumbSlot
-            )
-          : null}
-
-        <div className="flex items-center gap-4 pt-1">
-          {/* The cover only when there is one (2026-10-14 declutter): an
-              empty tile with the mark in it said nothing, and Add cover art
-              is in the menu. */}
-          {showCover ? (
-            <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-bg-elevated" aria-hidden="true">
-              <Image
-                src={card.coverArtUrl as string}
-                alt=""
-                fill
-                sizes="56px"
-                unoptimized
-                className="object-cover"
-                onError={() => setFailedCover(card.coverArtUrl ?? null)}
-              />
-            </span>
-          ) : null}
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-              <h1 className="truncate font-display text-2xl font-semibold leading-tight text-content-primary">
-                {card.release.title}
-              </h1>
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_TONE[statusGroup(status)]}`}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-                {STATUS_LABEL[status] ?? status.replace(/_/g, ' ')}
-              </span>
-            </div>
-            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-content-secondary">
-              <ArtistFace artistId={scopedRelease.artistId} name={scopedRelease.artistName} size={20} />
-              <span className="truncate">
-                {scopedRelease.artistName || 'Unassigned artist'}
-                {date ? <span className="text-content-tertiary"> · {date}</span> : null}
-              </span>
-            </p>
+        {/* One line at the top (founder call, 2026-10-15): the page bar holds
+            where you are (Rollouts > name), who it is by and its status on
+            the left, the count and New activity on the right, all on the
+            breadcrumb's line. The cover, the big title and the date that sat
+            in a header under it are gone: the crumb already names the
+            rollout, and the cover and date live in their own scenes. */}
+        {crumbSlot ? createPortal(crumb, crumbSlot) : null}
+        {endSlot ? createPortal(actions, endSlot) : null}
+        {!crumbSlot || !endSlot ? (
+          <div className="flex h-14 items-center gap-3">
+            {crumbSlot ? null : crumb}
+            <div className="flex-1" />
+            {endSlot ? null : actions}
           </div>
-
-          {/* One plain count instead of a bar and a mono fraction (2026-10-14
-              declutter), worded like the distribution checklist's. */}
-          <div className="hidden items-center gap-2 xl:flex">
-            <span className="text-sm tabular-nums text-content-secondary">
-              {tasksDone} of {tasksTotal} done
-            </span>
-            <ReleaseDeliveredMark total={tasksTotal} done={tasksDone} />
-          </div>
-
-          {onNewActivity ? (
-            <button
-              type="button"
-              onClick={onNewActivity}
-              className="motion-focus motion-press inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-stroke-control px-4 text-sm font-medium text-content-primary transition-colors hover:bg-bg-hover"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              New activity
-            </button>
-          ) : null}
-        </div>
+        ) : null}
 
         {/* The rollout's menu (URG-254, founder call 2026-10-14): nested
             under Rollouts in the desktop side menu when it is on screen, and
