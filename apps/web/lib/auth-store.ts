@@ -259,12 +259,31 @@ const isNonFatalProfileAccessError = (error: unknown): boolean => {
   );
 };
 
-const getOrCreateProfile = async (authUser: User): Promise<Profile> => {
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', authUser.id)
-    .single();
+/**
+ * The profile row read. With an access token it sends that token itself, so
+ * it skips supabase.auth.getSession() and its lock (lib/supabase/client.ts):
+ * checkAuth starts it alongside getUser() instead of after it (URG-314).
+ */
+const readProfileRow = (userId: string, accessToken?: string) => {
+  const query = supabase.from('profiles').select('*').eq('id', userId);
+  if (accessToken) query.setHeader('Authorization', `Bearer ${accessToken}`);
+  return query.single();
+};
+type ProfileRowRead = Awaited<ReturnType<typeof readProfileRow>>;
+
+/** Start a profile read now (PostgREST builders are lazy until awaited). */
+const startProfileRead = (userId: string, accessToken: string): Promise<ProfileRowRead> => {
+  const started = Promise.resolve(readProfileRow(userId, accessToken));
+  // Whoever uses it awaits it; this only keeps an unused one quiet.
+  started.catch(() => undefined);
+  return started;
+};
+
+const getOrCreateProfile = async (
+  authUser: User,
+  firstRead?: Promise<ProfileRowRead>
+): Promise<Profile> => {
+  const { data: profile, error: profileError } = await (firstRead ?? readProfileRow(authUser.id));
 
   if (!profileError && profile) {
     return profile;
@@ -527,6 +546,16 @@ export const useAuthStore = create<AuthState>()(
               return;
             }
 
+            // The profile read needs only the user id and token already on
+            // the session, so it starts now and overlaps the getUser() round
+            // trip below instead of queueing behind it (URG-314). It is a
+            // plain read with its own token header, so it takes no auth lock
+            // (see the SEQUENTIAL note above). Anything that WRITES — creating
+            // a missing profile — still waits for getUser() inside
+            // getOrCreateProfile, and the read is only used if getUser()
+            // confirms the same user.
+            const profileRead = startProfileRead(session.user.id, session.access_token);
+
             // Advisory only. Its one unique contribution is the server-fresh
             // scheduled-deletion check below; everything else we need is
             // already on the signed, unexpired JWT payload in session.user. So
@@ -565,7 +594,10 @@ export const useAuthStore = create<AuthState>()(
               // everyone who reloaded during it.
               let profile: Profile;
               try {
-                profile = await getOrCreateProfile(user);
+                profile = await getOrCreateProfile(
+                  user,
+                  user.id === session.user.id ? profileRead : undefined
+                );
               } catch (profileError) {
                 const cached = get().user;
                 // The id check is essential: never hand account A's cached

@@ -118,7 +118,12 @@ async function loadRoleFacts(adminClient: SupabaseClient, user: User, access: Wo
   readErr('profile read', profileResult.error);
   const profileRow = (profileResult.data || null) as { name?: string | null; role?: string | null } | null;
 
-  const ownerSnapshot = teamSnapshot.ownerUserId ? await getSubscriptionSnapshot(teamSnapshot.ownerUserId) : null;
+  // The owner's plan and the roster depend only on the team snapshot, not on
+  // each other, so they share one round trip (URG-314).
+  const [ownerSnapshot, rosterArtists] = await Promise.all([
+    teamSnapshot.ownerUserId ? getSubscriptionSnapshot(teamSnapshot.ownerUserId) : null,
+    teamSnapshot.primaryWorkspaceId ? listWorkspaceArtists(adminClient, teamSnapshot.primaryWorkspaceId) : [],
+  ]);
 
   const isArtistScopedOnPrimary = Boolean(
     access.primaryWorkspaceId && access.artistScopeByWorkspaceId[access.primaryWorkspaceId]
@@ -133,12 +138,10 @@ async function loadRoleFacts(adminClient: SupabaseClient, user: User, access: Wo
   });
 
   const primaryOwnerId = teamSnapshot.ownerUserId || user.id;
-  const roster = teamSnapshot.primaryWorkspaceId
-    ? (await listWorkspaceArtists(adminClient, teamSnapshot.primaryWorkspaceId)).map((artist) => ({
-        id: artist.id,
-        name: artist.name,
-      }))
-    : [];
+  const roster = rosterArtists.map((artist) => ({
+    id: artist.id,
+    name: artist.name,
+  }));
 
   return { role, teamName: teamSnapshot.teamName, primaryOwnerId, roster, viewerName: profileRow?.name ?? null };
 }
@@ -461,6 +464,24 @@ async function loadTeamPitches(
  * the catalog right after Home costs no second fetch (the approved plan's
  * "one load, not two"). `home` is the derived, Home-only payload.
  */
+/** The next show's first setlist, as the items its duration is read from. */
+async function loadNextShowSetlistItems(
+  adminClient: SupabaseClient,
+  showId: string
+): Promise<Awaited<ReturnType<typeof loadSetlistItemsForDuration>> | null> {
+  const firstSetlist = await adminClient
+    .from(SETLISTS_TABLE)
+    .select('id')
+    .eq('event_id', showId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  readErr('next show setlist', firstSetlist.error);
+
+  const setlistId = (firstSetlist.data as { id: string } | null)?.id ?? null;
+  return setlistId ? loadSetlistItemsForDuration(adminClient, setlistId) : null;
+}
+
 export type HomeLoadResult = {
   commandCenter: CommandCenterData;
   home: HomePayload;
@@ -490,11 +511,34 @@ export async function loadHomeData(
   // query, so the query starts now and waits for the releases at that point.
   const releasesPromise = commandCenterPromise.then((data) => data.releases);
 
-  const [commandCenter, roleFacts, visibleShows, pitches] = await Promise.all([
+  const roleFactsPromise = step('home_role', () => loadRoleFacts(adminClient, user, access));
+  const visibleShowsPromise = step('home_shows', () => loadVisibleShows(adminClient, user, access, now));
+
+  // The show side (DJ-link waits, the next show's setlist) needs only the
+  // shows and the role's primary owner, never the catalog, so it runs
+  // alongside the catalog load instead of after it (URG-314). It used to add
+  // up to three serial round trips after everything else had landed.
+  const showSidePromise = Promise.all([roleFactsPromise, visibleShowsPromise]).then(
+    async ([roleFacts, visibleShows]) => {
+      const nextShowRow = selectNextShow(
+        visibleShows.map((show) => ({ ...show })) as Array<ShowRow & SchedulableShow>,
+        now
+      );
+      const [packWaits, setlistItems] = await Promise.all([
+        step('home_packs', () =>
+          loadShowPackWaits(adminClient, visibleShows, roleFacts.primaryOwnerId, now)
+        ),
+        nextShowRow ? step('home_next_show', () => loadNextShowSetlistItems(adminClient, nextShowRow.id)) : null,
+      ]);
+      return { packWaits, nextShowRow, setlistItems };
+    }
+  );
+
+  const [commandCenter, roleFacts, pitches, showSide] = await Promise.all([
     commandCenterPromise,
-    step('home_role', () => loadRoleFacts(adminClient, user, access)),
-    step('home_shows', () => loadVisibleShows(adminClient, user, access, now)),
+    roleFactsPromise,
     step('home_pitches', () => loadTeamPitches(adminClient, user, access, releasesPromise)),
+    showSidePromise,
   ]);
   const { releases, tasks } = commandCenter;
 
@@ -548,28 +592,10 @@ export async function loadHomeData(
     now
   );
 
-  const packWaits = await step('home_packs', () =>
-    loadShowPackWaits(adminClient, visibleShows, primaryOwnerId, now)
-  );
-
-  const nextShowRow = selectNextShow(
-    visibleShows.map((show) => ({ ...show })) as Array<ShowRow & SchedulableShow>,
-    now
-  );
+  const { packWaits, nextShowRow, setlistItems } = showSide;
 
   let nextShow: HomePayload['nextShow'] = null;
   if (nextShowRow) {
-    const firstSetlist = await adminClient
-      .from(SETLISTS_TABLE)
-      .select('id')
-      .eq('event_id', nextShowRow.id)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    readErr('next show setlist', firstSetlist.error);
-
-    const setlistId = (firstSetlist.data as { id: string } | null)?.id ?? null;
-    const setlistItems = setlistId ? await loadSetlistItemsForDuration(adminClient, setlistId) : null;
     const djStats = packWaits.openedByShowId.get(nextShowRow.id) ?? null;
 
     nextShow = buildNextShow(

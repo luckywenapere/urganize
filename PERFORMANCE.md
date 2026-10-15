@@ -2,21 +2,24 @@
 
 How app.urganize.app stays fast on a mid-range Android phone on a slow
 Nigerian mobile connection, and the budget every change is held to. Written
-2026-10-15 during the perf pass (Linear URG-314, v1.147.5 to v1.147.7).
+2026-10-15 during the perf pass (Linear URG-314, v1.147.5 to v1.147.8).
 
 ## Budget
 
 Measured from a local `next build` of `apps/web`: for each route, sum the gzip
 size of every `/_next/static/*.js` file that `.next/server/app/<route>.html`
-references, i.e. what a cold visit downloads before the page works.
+references, i.e. what a cold visit downloads before the page works. That
+total includes Next's legacy polyfills chunk (~39 KB gzip), which carries
+`noModule` and is skipped by every modern browser; `measure.py` reports both
+("js gz" and "modern gz"). The budget is held against the full figure.
 
-| What | Budget | 2026-10-15 before | after v1.147.6 |
-| --- | --- | --- | --- |
-| Shared first-load JS, gzip (`/auth`, `/`, `/locked`) | **< 250 KB** | 400-414 KB | 350-362 KB |
-| `/dashboard` first-load JS, gzip | < 350 KB | 524 KB | 444 KB |
-| Other `/dashboard/*` first-load JS, gzip | < 300 KB | 419-475 KB | 372-438 KB |
-| Lighthouse mobile (slow 4G, simulated), `/auth` | >= 80 | 47 (LCP 6.1 s, TBT 2.57 s) | 49-65 (LCP 3.4-5.2 s, TBT 1.8-1.9 s) |
-| Fonts preloaded on `/auth` | 2 | 2 | 2 |
+| What | Budget | 2026-10-15 before | after v1.147.6 | after v1.147.8 |
+| --- | --- | --- | --- | --- |
+| Shared first-load JS, gzip (`/auth`, `/`, `/locked`) | **< 250 KB** | 400-414 KB | 350-362 KB | 321-333 KB (modern browsers 283-295 KB) |
+| `/dashboard` first-load JS, gzip | < 350 KB | 524 KB | 444 KB | 416 KB |
+| Other `/dashboard/*` first-load JS, gzip | < 300 KB | 419-475 KB | 372-438 KB | 343-409 KB |
+| Lighthouse mobile (slow 4G, simulated), `/auth` | >= 80 | 47 (LCP 6.1 s, TBT 2.57 s) | 49-65 (LCP 3.4-5.2 s, TBT 1.8-1.9 s) | see URG-314 |
+| Fonts preloaded on `/auth` | 2 | 2 | 2 | 2 |
 
 We are still over budget. The table is the target, not a description of today.
 A change that grows shared first-load JS by more than 5 KB gzip needs a reason
@@ -65,6 +68,35 @@ for `dub1` in `x-vercel-id`.
 components and functions. Do not add top-level side effects there (CSS imports,
 global listeners) without removing the flag.
 
+**Browser Supabase client is auth + PostgREST only** (v1.147.8,
+`lib/supabase/client.ts`). The browser uses Supabase for auth and a few
+profile reads; data goes through `/api`. So `supabase` is a hand-built
+`AuthClient` (`@supabase/auth-js`) plus a bare `PostgrestClient`
+(`@supabase/postgrest-js`) behind the same `supabase.auth` / `supabase.from`
+call sites. Realtime (only the notifications bell) loads on demand through
+`getSupabaseRealtime()`. Storage and Functions are never used in the browser.
+Rules: never value-import `@supabase/supabase-js` on the shared chain (types
+are fine); keep the auth options and storage key identical to `createClient()`
+(a different key signs everyone out); keep `@supabase/auth-js` and
+`@supabase/postgrest-js` pinned to the installed supabase-js version.
+`lib/supabase/client.test.ts` pins all three. Saved ~29 KB gzip on every route.
+
+**Signed-in round trips.** `checkAuth` reads the profile alongside `getUser()`
+(the read carries its own token header, so it takes no auth lock; anything that
+writes still waits). Every protected API route runs the curator check and the
+team-access read in parallel (`app/api/_shared/auth.ts`), and
+`getTeamAccessForUser` dedupes concurrent calls and reads owner profiles and
+subscription snapshots together. `/api/home` runs the show side (DJ-link waits,
+next show's setlist) alongside the catalog load instead of after it, and the
+role facts read the roster and the owner's plan together.
+
+**Tried and dropped (v1.147.8): splitting the workspace chrome into its own
+chunk.** Moving TopNav, side menu, page bar and bottom bar behind
+`next/dynamic` cut `/auth` by ~18 KB but grew `/dashboard` by ~35 KB (modules
+duplicated across the new chunk boundary), and without its chunk preloaded it
+delayed hydration of the page inside it. Net loss, reverted. The attempt is
+kept outside the repo. Revisit only with a split that does not wrap `children`.
+
 ## Service worker (`public/sw-offline.js`)
 
 Live in production (`NEXT_PUBLIC_FEATURE_OFFLINE=true`). Since v1.147.7:
@@ -109,6 +141,10 @@ Live in production (`NEXT_PUBLIC_FEATURE_OFFLINE=true`). Since v1.147.7:
   (`WKAppBoundDomains` listing app.urganize.app) and a new native build before
   WKWebView will run the service worker on iOS. Android WebView already
   supports it.
-- **Supabase client** (~170 KB minified incl. realtime and storage) is still in
-  the shared bundle. Realtime is unused client-side, so a slimmer client
-  (auth + postgrest, storage loaded on demand) is the next biggest saving.
+- **Next shared-bundle targets** (from source-map attribution of `/auth`,
+  minified bytes): `react-dom` ~198 KB and the Next router are fixed costs;
+  `@supabase/auth-js` ~88 KB is needed. App code reaching every route through
+  `lib/auth-store.ts`'s sign-out resets (`useChappiHistoryStore` ~11 KB, the
+  events, relationships, press-kit, notes and scene stores) could move to a
+  reset registry so a store that never loaded is never shipped; the stores that
+  wipe browser storage on sign-out must keep doing so.

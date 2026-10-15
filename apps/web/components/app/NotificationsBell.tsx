@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Bell, ChevronDown, X } from '@/components/icons';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseRealtime, supabase } from '@/lib/supabase/client';
+import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { useAuthStore } from '@/lib/auth-store';
 import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
@@ -235,7 +236,16 @@ export function NotificationsBell() {
       pushToast(burst.message);
     };
 
-    const channel = supabase
+    // Realtime lives in the lazily loaded data client (lib/supabase/client),
+    // so it never weighs on first paint. Subscribe once it has loaded, unless
+    // the effect was torn down first.
+    let cancelled = false;
+    let client: SupabaseClient | null = null;
+    let channel: RealtimeChannel | null = null;
+    const subscribe = (loaded: SupabaseClient) => {
+      if (cancelled) return;
+      client = loaded;
+      channel = loaded
       .channel(`notifications:${userId}`)
       .on(
         'postgres_changes',
@@ -280,12 +290,19 @@ export function NotificationsBell() {
         }
       )
       .subscribe();
+    };
+    getSupabaseRealtime().then(subscribe, (error: unknown) => {
+      // The bell still works without live updates: the list refetches when
+      // opened. Just note it.
+      console.warn('[notifications] realtime unavailable', error);
+    });
 
     return () => {
+      cancelled = true;
       if (burstTimer !== null) clearTimeout(burstTimer);
       // removeChannel returns a promise but we don't await — teardown is
       // fire-and-forget; the channel will be GC'd by the supabase client.
-      void supabase.removeChannel(channel);
+      if (client && channel) void client.removeChannel(channel);
     };
   }, [isAuthenticated, userId, fetchNotifications, pushToast]);
 

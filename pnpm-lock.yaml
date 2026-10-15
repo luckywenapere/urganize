@@ -172,6 +172,12 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.0.2
         version: 1.1.0
+      '@supabase/auth-js':
+        specifier: 2.101.0
+        version: 2.101.0
+      '@supabase/postgrest-js':
+        specifier: 2.101.0
+        version: 2.101.0
       '@supabase/supabase-js':
         specifier: ^2.90.1
         version: 2.101.0

@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.8",
+    date: "October 15, 2026",
+    highlights: [
+      "The app opens faster on a slow connection: the sign-in page and every screen download noticeably less before they work, and signing in shows your workspace one round trip sooner.",
+    ],
+  },
+  {
     version: "1.147.7",
     date: "October 15, 2026",
     highlights: [

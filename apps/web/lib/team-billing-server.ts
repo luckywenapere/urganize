@@ -212,8 +212,18 @@ const CACHE_TTL_MS = 30_000;
 const CACHE_MAX_ENTRIES = 1_000;
 const accessCache = new Map<string, { snapshot: TeamAccessSnapshot; expiresAt: number }>();
 
+// One resolution per user at a time (URG-314). The gate in
+// app/api/_shared/auth.ts starts this read alongside the curator check, and
+// requireActiveAccount asks again a moment later; both share one set of reads
+// instead of racing two. Settled entries are removed straight away, so this is
+// never a cache of its own — the TTL cache above stays the only one.
+const accessInFlight = new Map<string, Promise<TeamAccessSnapshot>>();
+
 export function invalidateTeamAccess(userId: string): void {
-  if (userId) accessCache.delete(userId);
+  if (userId) {
+    accessCache.delete(userId);
+    accessInFlight.delete(userId);
+  }
 }
 
 /** Clear everything. Used by admin actions that change a team's state for
@@ -221,6 +231,7 @@ export function invalidateTeamAccess(userId: string): void {
  * is one 30s cache on one instance, and correctness beats precision here. */
 export function invalidateAllTeamAccess(): void {
   accessCache.clear();
+  accessInFlight.clear();
 }
 
 function readCache(userId: string): TeamAccessSnapshot | null {
@@ -286,6 +297,22 @@ export async function getTeamAccessForUser(
   const cached = readCache(userId);
   if (cached) return cached;
 
+  const pending = accessInFlight.get(userId);
+  if (pending) return pending;
+
+  const run = resolveTeamAccessForUser(userId, email);
+  accessInFlight.set(userId, run);
+  try {
+    return await run;
+  } finally {
+    if (accessInFlight.get(userId) === run) accessInFlight.delete(userId);
+  }
+}
+
+async function resolveTeamAccessForUser(
+  userId: string,
+  email?: string | null
+): Promise<TeamAccessSnapshot> {
   try {
     const client = createReadClient();
     if (!client) return openSnapshot();
@@ -339,10 +366,25 @@ export async function getTeamAccessForUser(
       new Set(workspaces.map((row) => row.owner_id).filter((id): id is string => Boolean(id)))
     );
 
-    const ownerProfilesResult = await client
-      .from(PROFILES_TABLE)
-      .select('id, name, email, artist_name')
-      .in('id', ownerIds);
+    // The owner profile read and the owners' subscription snapshots used to
+    // run one after the other; they are independent, so they now share one
+    // round trip (URG-314). A snapshot is skipped only when the caller's own
+    // verified email already allowlists them; an owner allowlisted by the
+    // email on their profile costs one extra (30s-cached) snapshot read that
+    // is then ignored, which is cheaper than waiting for the profile first.
+    const selfAllowlisted = isAllowlistedEmail(email ?? null);
+    const [ownerProfilesResult, snapshotEntries] = await Promise.all([
+      client.from(PROFILES_TABLE).select('id, name, email, artist_name').in('id', ownerIds),
+      Promise.all(
+        ownerIds.map(async (ownerId) =>
+          [
+            ownerId,
+            ownerId === userId && selfAllowlisted ? null : await getSubscriptionSnapshot(ownerId),
+          ] as const
+        )
+      ),
+    ]);
+    const snapshotByOwner = new Map(snapshotEntries);
 
     const ownerProfiles = new Map(
       ((ownerProfilesResult.data || []) as Array<{
@@ -369,32 +411,29 @@ export async function getTeamAccessForUser(
         paidThrough: string | null;
       }
     >();
-    await Promise.all(
-      ownerIds.map(async (ownerId) => {
-        const ownerEmail =
-          ownerId === userId ? (email ?? ownerProfiles.get(ownerId)?.email ?? null)
-                             : (ownerProfiles.get(ownerId)?.email ?? null);
-        const allowlisted = isAllowlistedEmail(ownerEmail);
-        if (allowlisted) {
-          ownerAccess.set(ownerId, {
-            hasAccess: true,
-            allowlisted: true,
-            plan: null,
-            paidAt: null,
-            paidThrough: null,
-          });
-          return;
-        }
-        const snapshot = await getSubscriptionSnapshot(ownerId);
+    for (const ownerId of ownerIds) {
+      const ownerEmail =
+        ownerId === userId ? (email ?? ownerProfiles.get(ownerId)?.email ?? null)
+                           : (ownerProfiles.get(ownerId)?.email ?? null);
+      const snapshot = snapshotByOwner.get(ownerId) ?? null;
+      if (isAllowlistedEmail(ownerEmail) || !snapshot) {
         ownerAccess.set(ownerId, {
-          hasAccess: snapshot.hasAccess,
-          allowlisted: false,
-          plan: snapshot.plan,
-          paidAt: snapshot.paidAt,
-          paidThrough: snapshot.expiresAt,
+          hasAccess: true,
+          allowlisted: true,
+          plan: null,
+          paidAt: null,
+          paidThrough: null,
         });
-      })
-    );
+        continue;
+      }
+      ownerAccess.set(ownerId, {
+        hasAccess: snapshot.hasAccess,
+        allowlisted: false,
+        plan: snapshot.plan,
+        paidAt: snapshot.paidAt,
+        paidThrough: snapshot.expiresAt,
+      });
+    }
 
     // The share reward's bonus days (lib/share-reward.ts). Read ONLY when some
     // owner has no access of their own, since that is the only case they can

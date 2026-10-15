@@ -5,6 +5,9 @@ import { getMcpConfig, isMcpConnectEnabled, verifyMcpAccessKey } from '@/lib/mcp
 import { extractBearerToken } from '@/lib/mcp/oauth';
 import { resolveMcpToken } from '@/lib/mcp/tokens-server';
 import { requestHasUrgansPass } from '@/lib/urgans-pass-server';
+import { isHardPaywallEnabled } from '@/lib/team-billing';
+import { isAllowlistedEmail } from '@/lib/paywall-allowlist';
+import { getTeamAccessForUser } from '@/lib/team-billing-server';
 
 // Single source of truth for API route auth. This replaces the per-domain
 // copies that used to live in releases/_shared.ts, tasks-server.ts,
@@ -58,7 +61,21 @@ export async function getAuthenticatedUser(request: NextRequest) {
 export async function requireActiveAuthenticatedUser(request: NextRequest) {
   const auth = await getAuthenticatedUser(request);
   if ('error' in auth) return auth;
-  const curatorBlock = await blockCuratorAccount(auth.user.id, auth.supabaseUrl);
+  // The curator check and the team-access read are independent reads, so they
+  // share one round trip instead of two (URG-314). The team read only warms
+  // getTeamAccessForUser (its in-flight entry, then its 30s cache), which
+  // requireActiveAccount below picks up; it never writes and never decides
+  // anything on its own, and the curator block still answers first. Skipped
+  // when the paywall is off, for an allowlisted email or for an UrgAns pass,
+  // since nothing would use it.
+  const [curatorBlock] = await Promise.all([
+    blockCuratorAccount(auth.user.id, auth.supabaseUrl),
+    isHardPaywallEnabled() &&
+    !isAllowlistedEmail(auth.user.email) &&
+    !requestHasUrgansPass(request, auth.user.id)
+      ? getTeamAccessForUser(auth.user.id, auth.user.email)
+      : null,
+  ]);
   if (curatorBlock) return { error: curatorBlock };
   // THE UrgAns PASS (2026-10-02). A walled or read-only team that holds credits
   // may use UrgAns, changes included, and UrgAns's tools act by calling these

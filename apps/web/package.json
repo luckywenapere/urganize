@@ -1,7 +1,7 @@
 {
   "name": "@urganize/web",
   "description": "Urganize is where music teams do everything after the music is made.",
-  "version": "1.147.7",
+  "version": "1.147.8",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
+    "@supabase/auth-js": "2.101.0",
+    "@supabase/postgrest-js": "2.101.0",
     "@supabase/supabase-js": "^2.90.1",
     "@urganize/changelog": "workspace:*",
     "@urganize/db": "workspace:*",
