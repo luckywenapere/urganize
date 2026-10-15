@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.9",
+    date: "October 15, 2026",
+    highlights: [
+      "In full-screen timeline on a computer, the legend button now sits in the top bar beside Exit full screen, so the phases start higher.",
+    ],
+  },
+  {
     version: "1.147.8",
     date: "October 15, 2026",
     highlights: [
