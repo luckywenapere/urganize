@@ -1,0 +1,150 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Urganize",
+  "description": "Help for Urganize, where music teams do everything after the music is made.",
+  "colors": {
+    "primary": "#14643A",
+    "light": "#7FD99A",
+    "dark": "#14643A"
+  },
+  "background": {
+    "color": {
+      "light": "#F5F0E6",
+      "dark": "#0D120E"
+    }
+  },
+  "appearance": {
+    "default": "dark"
+  },
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png",
+    "href": "https://urganize.app"
+  },
+  "favicon": "/favicon.png",
+  "navbar": {
+    "links": [
+      {
+        "label": "Contact us",
+        "href": "mailto:contact@urganize.app"
+      },
+      {
+        "label": "Community",
+        "href": "https://chat.whatsapp.com/DGUGyC2GK3d5v6KPGw5aft"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Open Urganize",
+      "href": "https://app.urganize.app"
+    }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": [
+          "introduction",
+          "quickstart",
+          "finding-your-way",
+          "home",
+          "roles-and-permissions"
+        ]
+      },
+      {
+        "group": "Rollouts",
+        "pages": [
+          "releases/overview",
+          "releases/create",
+          "releases/playbook",
+          "releases/tracks",
+          "releases/details",
+          "releases/distribute",
+          "releases/chat-content-spend"
+        ]
+      },
+      {
+        "group": "Activities",
+        "pages": [
+          "tasks/overview",
+          "tasks/manage"
+        ]
+      },
+      {
+        "group": "Credits",
+        "pages": [
+          "credits/overview",
+          "credits/collect",
+          "credits/contributor-form",
+          "credits/claim-your-page"
+        ]
+      },
+      {
+        "group": "Promote",
+        "pages": [
+          "promote/pitch",
+          "promote/pitch-kit",
+          "promote/press-kits",
+          "promote/find-promo",
+          "promote/share",
+          "promote/fan-emails"
+        ]
+      },
+      {
+        "group": "UrgAns",
+        "pages": [
+          "urgans/overview",
+          "urgans/credits"
+        ]
+      },
+      {
+        "group": "Artists and people",
+        "pages": [
+          "artists",
+          "relationships/people",
+          "relationships/directory",
+          "relationships/shows",
+          "opportunities"
+        ]
+      },
+      {
+        "group": "Account and billing",
+        "pages": [
+          "account/settings",
+          "account/team",
+          "account/subscription",
+          "account/trial",
+          "account/cancel"
+        ]
+      }
+    ]
+  },
+  "redirects": [
+    {
+      "source": "/pre-save/overview",
+      "destination": "/promote/fan-emails"
+    },
+    {
+      "source": "/pre-save/create",
+      "destination": "/promote/fan-emails"
+    },
+    {
+      "source": "/pre-save/sharing",
+      "destination": "/promote/fan-emails"
+    },
+    {
+      "source": "/docs/pre-save/:slug*",
+      "destination": "/promote/fan-emails"
+    },
+    {
+      "source": "/docs/:slug*",
+      "destination": "/:slug*"
+    }
+  ],
+  "footer": {
+    "socials": {
+      "website": "https://urganize.app"
+    }
+  }
+}
