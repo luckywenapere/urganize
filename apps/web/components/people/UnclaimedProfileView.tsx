@@ -1,70 +1,67 @@
 import type { PublicUnclaimed } from '@/lib/person-unclaimed-server';
 import { UNCLAIMED_COPY } from '@/lib/claim-copy';
+import { profileInitials } from '@/components/shared/ProfileFace';
 import { RemovalForm } from './RemovalForm';
 import { ProfileGrowthFooter } from './ProfileGrowthFooter';
+import { UnclaimedActions } from './UnclaimedActions';
 
-// The public page for somebody who has not claimed their profile: a name, an
-// "Unclaimed" label and the credits a team collected. Nothing the person did
-// not give a team on a credits form. Server component; the one interactive
-// piece is the removal form.
+// The public page for somebody who has not claimed their profile (URG-304):
+// a dashed monogram, the name with an "Unclaimed" pill, the role they were
+// credited for, Claim this profile, Invite <name>, and a small Request removal.
 //
-// Same dark-locked palette as the claimed page (.kit-island), reused rather
-// than copied.
+// Public business facts only: the name on a credit and the credited role.
+// Nothing the person did not give a team on a credits form, and nothing that
+// reads as them endorsing Urganize. Bare-minimum text: no explainer.
+//
+// Same dark-locked palette as the claimed page (.kit-island).
 
 const GROUND = 'var(--kit-ground)';
-const SURFACE = 'var(--kit-surface)';
-const STROKE = 'var(--kit-border)';
 const CREAM = 'var(--kit-text)';
 const MUTED = 'var(--kit-text-muted)';
-const FAINT = 'var(--kit-text-faint)';
-const ACCENT = 'var(--kit-accent)';
+const STROKE = 'var(--kit-border)';
 
 export function UnclaimedProfileView({ person }: { person: PublicUnclaimed }) {
   return (
     <div className="kit-island min-h-screen" style={{ backgroundColor: GROUND, color: CREAM }}>
-      <main className="mx-auto w-full max-w-2xl px-6 py-16 sm:py-24">
-        <header>
-          <h1 className="font-display text-4xl leading-tight sm:text-5xl">{person.displayName}</h1>
-          <p
-            className="mt-4 inline-flex rounded-full px-3 py-1 font-mono text-[11px] uppercase tracking-[0.16em]"
-            style={{ border: `1px solid ${STROKE}`, color: ACCENT }}
+      <main className="mx-auto w-full max-w-md pb-16">
+        <div aria-hidden className="h-[110px]" style={{ backgroundColor: '#111' }} />
+        <header className="-mt-[50px] px-[22px]">
+          <div
+            aria-hidden
+            className="flex h-[104px] w-[104px] items-center justify-center rounded-full text-4xl font-extrabold"
+            style={{
+              backgroundColor: '#161616',
+              border: '2px dashed rgba(255,255,255,.3)',
+              outline: `4px solid ${GROUND}`,
+              color: 'rgba(255,255,255,.7)',
+            }}
           >
-            {UNCLAIMED_COPY.badge}
-          </p>
-          <p className="mt-4 text-sm" style={{ color: MUTED }}>
-            {UNCLAIMED_COPY.explain}
-          </p>
+            {profileInitials(person.displayName)}
+          </div>
+          <h1 className="mt-3.5 flex flex-wrap items-center gap-x-2 font-display text-[30px] leading-tight">
+            <span>{person.displayName}</span>
+            <span
+              className="rounded-full px-2 py-0.5 font-sans text-xs font-bold"
+              style={{ border: `1px solid ${STROKE}`, color: MUTED }}
+            >
+              {UNCLAIMED_COPY.badge}
+            </span>
+          </h1>
+          {person.roleLabel ? (
+            <p className="mt-1.5 font-mono text-[15px]" style={{ color: MUTED }}>
+              {person.roleLabel}
+            </p>
+          ) : null}
         </header>
 
-        <section className="mt-12">
-          <h2 className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
-            {UNCLAIMED_COPY.creditsHeading}
-          </h2>
-          {person.credits.length === 0 ? (
-            <p className="mt-3 text-sm" style={{ color: MUTED }}>
-              {UNCLAIMED_COPY.noCredits}
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-2">
-              {person.credits.map((credit, index) => (
-                <li
-                  key={`${credit.releaseTitle}-${index}`}
-                  className="flex items-baseline justify-between gap-4 rounded-xl px-4 py-3"
-                  style={{ backgroundColor: SURFACE, border: `1px solid ${STROKE}` }}
-                >
-                  <span className="text-base">{credit.releaseTitle}</span>
-                  <span className="text-right text-sm" style={{ color: MUTED }}>
-                    {[credit.roles.join(', '), credit.releaseYear].filter(Boolean).join(' · ')}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <div className="px-[22px]">
+          <UnclaimedActions slug={person.slug} displayName={person.displayName} />
+          <RemovalForm slug={person.slug} />
+        </div>
 
-        <RemovalForm slug={person.slug} />
-
-        <ProfileGrowthFooter slug={person.slug} />
+        <div className="mt-16 px-[22px]">
+          <ProfileGrowthFooter slug={person.slug} />
+        </div>
       </main>
     </div>
   );

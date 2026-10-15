@@ -5,31 +5,24 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { Loader2 } from '@/components/icons';
-import { ListToolbar } from '@/components/shell/ListToolbar';
 import { supabase } from '@/lib/supabase/client';
 import {
   applyDirectoryFilters,
-  availableCities,
   fallbackCounts,
   type DirectoryEntry,
   type DirectoryFilters,
 } from '@/lib/directory-search';
 import { DIRECTORY_ROLES, DIRECTORY_ROLE_LABELS, type DirectoryRole } from '@/lib/directory-roles';
-import {
-  DIRECTORY_SETTINGS_ANCHOR,
-  PERSON_AVAILABILITIES,
-  PERSON_AVAILABILITY_COPY,
-} from '@/lib/person-profile';
+import { DIRECTORY_CHIPS, activeChip, chipFilters, isVouched, rowMeta } from '@/lib/directory-chips';
+import type { ListedUnclaimed } from '@/lib/directory-unclaimed-server';
+import { DIRECTORY_SETTINGS_ANCHOR, PERSON_AVAILABILITIES } from '@/lib/person-profile';
 import type { PersonAvailability } from '@/types/directory';
 import { DirectoryEmptyState } from '@/components/directory/DirectoryEmptyState';
 import { WorkRequestSheet } from '@/components/directory/WorkRequestSheet';
 import { canReceiveRequests } from '@/lib/work-requests';
 import {
-  PROFILE_TYPES,
-  PROFILE_TYPE_LABELS,
   canShowMessageButton,
   isProfileType,
-  openToLabel,
   orderForViewer,
   type ProfileType,
 } from '@/lib/directory-profile-type';
@@ -38,7 +31,7 @@ import { DirectoryInvites } from '@/components/directory/DirectoryInvites';
 import type { ShelfPerson } from '@/lib/featured-shelves-server';
 
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
-import { ProfileFace } from '@/components/shared/ProfileFace';
+import { ProfileFace, profileInitials } from '@/components/shared/ProfileFace';
 import { bucketResultCount, type DirectoryDemandSource } from '@/lib/directory-demand';
 
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
@@ -86,14 +79,9 @@ export function DirectoryPageClient() {
 function DirectoryFrame() {
   return (
     <div className="mx-auto w-full max-w-3xl">
-      {/* Title + subtitle hidden on desktop (founder call, 2026-10-11): the
-          Directory tab above already names the page. Phones keep them. */}
-      <header className="mb-6 lg:mb-0">
-        <h1 className="font-display text-2xl text-content-primary lg:sr-only">Directory</h1>
-        <p className="mt-1 text-sm text-content-secondary lg:hidden">
-          Find people who have delivered the work your rollout needs.
-        </p>
-      </header>
+      {/* The Directory tab above names the page (URG-304: no title, no
+          subtitle on any width). */}
+      <h1 className="sr-only">Directory</h1>
     </div>
   );
 }
@@ -136,7 +124,7 @@ function DirectoryBody() {
   });
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
-  const [truncated, setTruncated] = useState(false);
+  const [unclaimed, setUnclaimed] = useState<ListedUnclaimed[]>([]);
   // Who is reading. Decides who comes first and who gets a Message button.
   const [viewerType, setViewerType] = useState<ProfileType>('manager');
   // The two shelves. Fetched with the list so they arrive together and never
@@ -183,7 +171,7 @@ function DirectoryBody() {
           featured: Array.isArray(shelvesBody?.featured) ? shelvesBody.featured : [],
           onTheRise: Array.isArray(shelvesBody?.onTheRise) ? shelvesBody.onTheRise : [],
         });
-        setTruncated(Boolean(body.truncated));
+        setUnclaimed(Array.isArray(body.unclaimed) ? body.unclaimed : []);
         if (isProfileType(body.viewerType)) setViewerType(body.viewerType);
       } catch {
         if (!cancelled) setError('Could not open the directory. Check your connection.');
@@ -241,8 +229,7 @@ function DirectoryBody() {
 
   const counts = useMemo(() => fallbackCounts(people, filters), [people, filters]);
   const isDefaultView =
-    !filters.query.trim() && !filters.role && !filters.city && !filters.availability;
-  const cities = useMemo(() => availableCities(people), [people]);
+    !filters.query.trim() && !filters.role && !filters.city && !filters.availability && !filters.profileType;
 
   const patch = useCallback(
     (next: Partial<DirectoryFilters>) => setFilters((current) => ({ ...current, ...next })),
@@ -251,105 +238,85 @@ function DirectoryBody() {
 
   if (!DIRECTORY_ENABLED) return null;
 
+  const chip = activeChip(filters);
+  // Unclaimed pages ride along only in the plain views: All, or a typed name.
+  // Their role is a credit, not a delivery record, so no role, type, city or
+  // availability filter ever matches one.
+  const unclaimedShown =
+    !filters.role && !filters.profileType && !filters.city && !filters.availability
+      ? unclaimedMatching(unclaimed, filters.query)
+      : [];
+
   return (
     <div className="mx-auto w-full max-w-3xl">
-      {/* Title + subtitle hidden on desktop (founder call, 2026-10-11): the
-          Directory tab above already names the page. Phones keep them. */}
-      <header className="mb-6 lg:mb-0">
-        <h1 className="font-display text-2xl text-content-primary lg:sr-only">Directory</h1>
-        <p className="mt-1 text-sm text-content-secondary lg:hidden">
-          Find people who have delivered the work your rollout needs.
-        </p>
-      </header>
+      <h1 className="sr-only">Directory</h1>
 
       {!loaded ? (
         <div className="flex items-center gap-2 text-sm text-content-secondary">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          Opening the directory
+          <span className="sr-only">Opening the directory</span>
         </div>
       ) : error ? (
         <p role="alert" className="text-sm text-status-error">{error}</p>
       ) : (
         <>
-          {/* Invite your producers, engineers and directors (#834). Draws
-              nothing until the server says invites are ready. */}
-          <DirectoryInvites />
-
-          {/* Search and filters: in the tab row on a computer, one compact
-              row with a Filters sheet on a phone (founder mock, 2026-10-11). */}
-          <ListToolbar
-            className="mb-5"
-            search={{
-              value: filters.query,
-              onChange: (query) => patch({ query }),
-              placeholder: 'Search by name',
-            }}
-            controls={[
-              {
-                kind: 'filter',
-                key: 'role',
-                label: 'Role',
-                value: filters.role ?? '',
-                options: [
-                  { value: '', label: 'Any role' },
-                  ...DIRECTORY_ROLES.map((role) => ({ value: role, label: DIRECTORY_ROLE_LABELS[role] })),
-                ],
-                onChange: (value) => patch({ role: (value || null) as DirectoryRole | null }),
-              },
-              {
-                kind: 'filter',
-                key: 'type',
-                label: 'Profile type',
-                value: filters.profileType ?? '',
-                options: [
-                  { value: '', label: 'Any type' },
-                  ...PROFILE_TYPES.map((type) => ({ value: type, label: PROFILE_TYPE_LABELS[type] })),
-                ],
-                onChange: (value) => patch({ profileType: (value || null) as ProfileType | null }),
-              },
-              {
-                kind: 'filter',
-                key: 'city',
-                label: 'City',
-                value: filters.city ?? '',
-                options: [{ value: '', label: 'Anywhere' }, ...cities.map((city) => ({ value: city, label: city }))],
-                onChange: (value) => patch({ city: value || null }),
-              },
-              {
-                kind: 'filter',
-                key: 'availability',
-                label: 'Open to',
-                value: filters.availability ?? '',
-                options: [
-                  { value: '', label: 'Open to: any' },
-                  ...PERSON_AVAILABILITIES.map((value) => ({ value, label: PERSON_AVAILABILITY_COPY[value].label })),
-                ],
-                onChange: (value) => patch({ availability: (value || null) as PersonAvailability | null }),
-              },
-            ]}
+          <input
+            type="search"
+            value={filters.query}
+            onChange={(event) => patch({ query: event.target.value })}
+            placeholder="Search"
+            aria-label="Search"
+            className="motion-focus h-[46px] w-full rounded-[14px] border border-stroke-default bg-bg-surface px-4 text-[15px] text-content-primary placeholder:text-content-tertiary"
           />
 
-          {/* Shelves are for browsing, so they step aside the moment somebody
-              searches or filters. Search results are never ranked or mixed
-              with them. */}
-          {isDefaultView ? (
-            <DirectoryShelves
-              featured={shelves.featured}
-              onTheRise={shelves.onTheRise}
-              renderCard={(person) => (
-                <PersonCard
-                  person={person}
-                  onAsk={
-                    REQUESTS_ENABLED && canReceiveRequests(person.availability)
-                      ? () => setAsking(person)
-                      : null
+          <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Role">
+            {DIRECTORY_CHIPS.map((entry) => {
+              const on = chip === entry.key;
+              return (
+                <button
+                  key={entry.key}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() =>
+                    patch(
+                      entry.key === 'all'
+                        ? { ...chipFilters('all'), city: null, availability: null }
+                        : chipFilters(entry.key)
+                    )
                   }
-                />
-              )}
-            />
-          ) : null}
+                  className={`motion-focus rounded-full border px-3.5 py-2 text-[13px] font-bold ${
+                    on
+                      ? 'border-transparent bg-content-primary text-content-inverse'
+                      : 'border-stroke-default text-content-secondary hover:text-content-primary'
+                  }`}
+                >
+                  {entry.label}
+                </button>
+              );
+            })}
+            {/* A role a link brought in (the role gaps panel) that no chip
+                names: shown so it can be seen and cleared. */}
+            {chip === null && filters.role ? (
+              <button
+                type="button"
+                aria-pressed
+                onClick={() => patch(chipFilters('all'))}
+                className="motion-focus rounded-full border border-transparent bg-content-primary px-3.5 py-2 text-[13px] font-bold text-content-inverse"
+              >
+                {DIRECTORY_ROLE_LABELS[filters.role]} ×
+              </button>
+            ) : null}
+          </div>
 
-          {results.length === 0 ? (
+          {/* The Rising shelf is for browsing, so it steps aside the moment
+              somebody searches or filters. Results are never ranked by it. */}
+          <div className="mt-5">
+            {isDefaultView ? (
+              <DirectoryShelves featured={shelves.featured} onTheRise={shelves.onTheRise} />
+            ) : null}
+          </div>
+
+          {results.length === 0 && unclaimedShown.length === 0 ? (
             <DirectoryEmptyState
               nobodyListed={people.length === 0}
               counts={counts}
@@ -365,17 +332,15 @@ function DirectoryBody() {
               }
             />
           ) : (
-            <ul className="space-y-3">
+            <ul className="-mx-1">
               {results.map((person) => (
                 <li key={person.userId}>
-                  <PersonCard
+                  <PersonRow
                     person={person}
                     // Somebody who is "Not taking work" is listed and findable
                     // but cannot be asked, and the server refuses it too. The
-                    // button is the courtesy; the route is the rule.
-                    // The Message button also follows the type rule: an artist is
-                    // offered managers who are taking artists, a manager is
-                    // offered people who are open to hire.
+                    // row is the courtesy; the route is the rule. The type rule
+                    // decides it too (canShowMessageButton).
                     onAsk={
                       REQUESTS_ENABLED &&
                       canReceiveRequests(person.availability) &&
@@ -390,6 +355,11 @@ function DirectoryBody() {
                   />
                 </li>
               ))}
+              {unclaimedShown.map((person) => (
+                <li key={person.personId}>
+                  <UnclaimedRow person={person} />
+                </li>
+              ))}
             </ul>
           )}
 
@@ -399,11 +369,11 @@ function DirectoryBody() {
             </p>
           ) : null}
 
-          {truncated ? (
-            <p className="mt-4 text-xs text-content-tertiary">
-              Showing the most recently updated profiles. Narrow the filters to see others.
-            </p>
-          ) : null}
+          {/* Invite your producers, engineers and directors (#834). Draws
+              nothing until the server says invites are ready. */}
+          <div className="mt-6">
+            <DirectoryInvites />
+          </div>
         </>
       )}
 
@@ -421,6 +391,15 @@ function DirectoryBody() {
       ) : null}
     </div>
   );
+}
+
+function unclaimedMatching(list: ListedUnclaimed[], query: string): ListedUnclaimed[] {
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return list;
+  return list.filter((person) => {
+    const name = person.displayName.toLowerCase();
+    return terms.every((term) => name.includes(term));
+  });
 }
 
 /** Fire and forget, deliberately. This is a beacon on somebody else's
@@ -446,96 +425,84 @@ async function reportRoleDemand(demand: {
   }
 }
 
-function PersonCard({ person, onAsk }: { person: Person; onAsk: (() => void) | null }) {
-  const delivered = person.roles.filter((entry) => entry.delivered > 0);
-  const claimed = person.roles.filter((entry) => entry.delivered === 0);
+const ROW = 'flex w-full items-center gap-3.5 rounded-xl px-1 py-3 text-left';
 
+function Tick() {
+  return (
+    <span
+      aria-label="Verified"
+      className="ml-1.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand text-[9px] font-black text-black"
+    >
+      ✓
+    </span>
+  );
+}
+
+/** A compact row: face, name + tick, role · city (URG-304). */
+function PersonRow({ person, onAsk }: { person: Person; onAsk: (() => void) | null }) {
+  const role = person.roles.find((entry) => entry.delivered > 0)?.role ?? person.roles[0]?.role ?? null;
+  const meta = rowMeta(person);
   const body = (
-    <div className="rounded-xl border border-stroke-default p-4 transition-colors hover:border-brand">
-      {/* Face first (2026-10-11): hiring is person to person, and a list of
-          faces is scanned faster than a list of names. No photo is initials
-          on a gradient, never a grey silhouette. */}
-      <div className="flex items-start gap-3">
-        <ProfileFace name={person.displayName} photoUrl={person.avatarUrl} size={48} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-            <span className="truncate text-base font-semibold text-content-primary">{person.displayName}</span>
-            <span className="text-xs text-content-tertiary">
-              {openToLabel(person.profileType ?? null, person.availability)}
-              {person.city ? ` · ${person.city}` : ''}
-            </span>
-          </div>
-
-          {person.profileType ? (
-            <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-content-tertiary">
-              {PROFILE_TYPE_LABELS[person.profileType]}
-            </p>
-          ) : null}
-        </div>
-      </div>
-
-      {/* What this type leads with. Empty for a creative, whose lead is the
-          delivered credits just below, and never a zero. */}
-      {person.lead ? (
-        <p className="mt-2 text-sm text-content-primary">{person.lead}</p>
-      ) : null}
-
-      {/* Delivered and claimed are kept apart here exactly as they are on the
-          profile and in Settings. A count is something the product vouches for;
-          a bare role is the person's own word. */}
-      {delivered.length > 0 ? (
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {delivered.map((entry) => (
-            <li
-              key={entry.role}
-              className="rounded-full border border-stroke-default px-3 py-1 text-sm text-content-primary"
-            >
-              {DIRECTORY_ROLE_LABELS[entry.role]}
-              <span className="ml-1.5 text-brand">{entry.delivered} delivered</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {claimed.length > 0 ? (
-        <p className="mt-2 text-xs text-content-tertiary">
-          Also works as {claimed.map((entry) => DIRECTORY_ROLE_LABELS[entry.role]).join(', ')}
-        </p>
-      ) : null}
-    </div>
+    <>
+      <ProfileFace name={person.displayName} photoUrl={person.avatarUrl} size={52} />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center">
+          <span className="truncate font-display text-base text-content-primary">{person.displayName}</span>
+          {isVouched(person) ? <Tick /> : null}
+        </span>
+        {meta ? (
+          <span className="mt-0.5 block truncate font-mono text-[13px] text-content-secondary">{meta}</span>
+        ) : null}
+      </span>
+    </>
   );
 
-  // The Ask button is a SIBLING of the card, never inside it. The card body is
-  // wrapped in a Link for a public profile, and a button inside an anchor is
-  // invalid markup whose click would navigate instead of opening the sheet.
-  return (
-    <div>
-      {person.isPublic && person.slug ? (
-        <Link
-          href={`/p/${person.slug}`}
-          className="motion-focus block"
-          onClick={() =>
-            captureAnalyticsEvent({
-              name: 'directory_profile_opened',
-              properties: { role: delivered[0]?.role ?? claimed[0]?.role ?? null },
-            })
-          }
-        >
-          {body}
-        </Link>
-      ) : (
-        body
-      )}
+  // A public profile opens its page. Otherwise, somebody who can be asked
+  // opens the request sheet; anyone else is a plain row.
+  if (person.isPublic && person.slug) {
+    return (
+      <Link
+        href={`/p/${person.slug}`}
+        className={`motion-focus ${ROW} hover:bg-bg-hover`}
+        onClick={() =>
+          captureAnalyticsEvent({ name: 'directory_profile_opened', properties: { role } })
+        }
+      >
+        {body}
+      </Link>
+    );
+  }
+  if (onAsk) {
+    return (
+      <button type="button" onClick={onAsk} className={`motion-focus ${ROW} hover:bg-bg-hover`}>
+        {body}
+      </button>
+    );
+  }
+  return <div className={ROW}>{body}</div>;
+}
 
-      {onAsk ? (
-        <button
-          type="button"
-          onClick={onAsk}
-          className="motion-focus mt-2 h-10 w-full rounded-lg border border-stroke-default text-sm font-medium text-content-primary hover:border-brand"
-        >
-          Ask {person.displayName.split(' ')[0] || 'them'} about work
-        </button>
-      ) : null}
-    </div>
+/** An unclaimed page: dashed monogram, name + Unclaimed, credited role. */
+function UnclaimedRow({ person }: { person: ListedUnclaimed }) {
+  return (
+    <Link href={`/p/${person.slug}`} className={`motion-focus ${ROW} hover:bg-bg-hover`}>
+      <span
+        aria-hidden
+        className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-dashed border-white/25 text-[17px] font-extrabold text-white/60"
+      >
+        {profileInitials(person.displayName)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center">
+          <span className="truncate font-display text-base text-content-primary">{person.displayName}</span>
+          <span className="ml-1.5 shrink-0 rounded-full border border-stroke-default px-2 py-0.5 text-[11px] font-bold text-content-secondary">
+            Unclaimed
+          </span>
+        </span>
+        {person.roleLabel ? (
+          <span className="mt-0.5 block truncate font-mono text-[13px] text-content-secondary">{person.roleLabel}</span>
+        ) : null}
+      </span>
+    </Link>
   );
 }

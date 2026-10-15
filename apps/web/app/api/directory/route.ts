@@ -12,6 +12,7 @@ import {
 } from '@/lib/directory-profile-type';
 import { loadLeadStats } from '@/lib/profile-lead-stats-server';
 import { loadPersonPhotoUrls } from '@/lib/profile-photo-server';
+import { loadListedUnclaimed } from '@/lib/directory-unclaimed-server';
 import {
   DELIVERY_RECORDS_TABLE,
   PERSON_PROFILES_TABLE,
@@ -172,7 +173,13 @@ export async function GET(request: NextRequest) {
   // What kind of reader this is, so the page can put the right people first and
   // decide who gets a Message button. Their own profile type wins; without a
   // profile their account role decides (lib/directory-profile-type.ts).
-  const viewerType = await readViewerType(adminClient, auth.user.id);
+  // Unclaimed pages /p already serves, credited on a rollout (URG-304). Their
+  // own list, so nothing about them is mixed into a listed person's card and
+  // the filters never treat a credit as a delivery record.
+  const [viewerType, unclaimed] = await Promise.all([
+    readViewerType(adminClient, auth.user.id),
+    loadListedUnclaimed(adminClient),
+  ]);
 
-  return NextResponse.json({ people: entries, truncated, viewerType });
+  return NextResponse.json({ people: entries, unclaimed, truncated, viewerType });
 }

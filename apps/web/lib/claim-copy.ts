@@ -31,7 +31,7 @@ export const CLAIM_COPY = {
 } as const;
 
 export const REMOVAL_COPY = {
-  link: 'Remove this profile',
+  link: 'Request removal',
   heading: 'Remove this profile',
   intro: 'Tell us how to reach you. We will take the page down within 3 days.',
   contactLabel: 'Your email or phone',

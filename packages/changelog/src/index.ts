@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.145.0",
+    date: "October 15, 2026",
+    highlights: [
+      "A new Directory: search, four quick filters (All, Managers, A&R, PR), a Rising row of faces, and compact rows with each person's face, name, role and city. A tick means Urganize has seen their delivered work.",
+      "People credited on a released rollout who have not claimed their page now show in the Directory as Unclaimed. Their page has Claim this profile, a button to invite them, and Request removal.",
+    ],
+  },
+  {
     version: "1.144.0",
     date: "October 15, 2026",
     highlights: [

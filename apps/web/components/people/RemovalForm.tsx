@@ -56,13 +56,13 @@ export function RemovalForm({ slug }: { slug: string }) {
   }
 
   return (
-    <div className="mt-12">
+    <div className="mt-5">
       {!open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="min-h-11 text-sm underline underline-offset-4"
-          style={{ color: MUTED }}
+          className="mx-auto block min-h-11 text-xs"
+          style={{ color: FAINT }}
         >
           {REMOVAL_COPY.link}
         </button>

@@ -81,7 +81,7 @@ describe('the first email', () => {
 
   it('says why they got it and how to take the page down', () => {
     expect(content.footnote).toContain("Wizkid's team put this email on the credits for Morayo");
-    expect(content.footnote).toContain('Remove this profile');
+    expect(content.footnote).toContain('Request removal');
   });
 
   it('has a plain subject with no artist', () => {

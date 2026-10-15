@@ -37,7 +37,7 @@ export function ClaimInviteEmail({ recipientName, ownerName, releaseTitle, claim
       </Paragraph>
       <FootnoteText>
         You are getting this because {owner} has your email from the credits form. If this is not
-        you, you can ignore it. To take the page down, use the Remove this profile link on it.
+        you, you can ignore it. To take the page down, use the Request removal link on it.
       </FootnoteText>
     </EmailLayout>
   );

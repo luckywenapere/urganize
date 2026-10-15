@@ -146,14 +146,14 @@ describe('featured shelves: the page', () => {
     expect(source).not.toMatch(/shelves\.(featured|onTheRise)[\s\S]{0,40}results/);
   });
 
-  it('draws a shelf, heading and all, only when it has somebody on it', () => {
+  it('draws the Rising shelf only when it has somebody on it', () => {
     const source = stripTsComments(read('components/directory/DirectoryShelves.tsx'));
-    expect(source).toContain('shelf.people.length > 0');
-    expect(source).toContain('if (shelves.length === 0) return null');
+    expect(source).toContain('if (people.length === 0) return null');
   });
 
-  it('puts the featured shelf before the rising one', () => {
+  it('puts featured people before rising ones, each once (URG-304: one Rising shelf)', () => {
     const source = stripTsComments(read('components/directory/DirectoryShelves.tsx'));
-    expect(source.indexOf("title: 'Featured'")).toBeLessThan(source.indexOf("title: 'On the rise this month'"));
+    expect(source).toContain('risingShelf(featured, onTheRise)');
+    expect(stripTsComments(read('lib/directory-chips.ts'))).toContain('[...featured, ...onTheRise]');
   });
 });

@@ -20,6 +20,8 @@ import { loadPersonCredits } from './claim-server';
 export type PublicUnclaimed = {
   displayName: string;
   slug: string;
+  /** The first credited role as a word ("Producer"), or empty. URG-304. */
+  roleLabel: string;
   credits: Array<{
     releaseTitle: string;
     releaseYear: number | null;
@@ -55,14 +57,16 @@ export async function loadUnclaimedPerson(slug: string): Promise<PublicUnclaimed
     if (row.status !== 'unclaimed' || row.removal_requested_at || row.removed_at) return null;
 
     const credits = await loadPersonCredits(admin, String(row.id), { onlyVisible: true });
+    const shaped = credits.map((credit) => ({
+      releaseTitle: credit.releaseTitle,
+      releaseYear: credit.releaseYear,
+      roles: credit.roles.map(roleWord).filter(Boolean),
+    }));
     return {
       displayName: String(row.display_name || ''),
       slug: handle,
-      credits: credits.map((credit) => ({
-        releaseTitle: credit.releaseTitle,
-        releaseYear: credit.releaseYear,
-        roles: credit.roles.map(roleWord).filter(Boolean),
-      })),
+      roleLabel: shaped.find((credit) => credit.roles.length > 0)?.roles[0] ?? '',
+      credits: shaped,
     };
   } catch {
     return null;

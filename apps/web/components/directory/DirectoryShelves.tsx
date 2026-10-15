@@ -1,72 +1,62 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { HelpTip } from '@/components/shared/HelpTip';
-import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
-import type { HelpKey } from '@/lib/help-copy';
+import Link from 'next/link';
+import { ProfileFace } from '@/components/shared/ProfileFace';
+import { risingShelf, shelfName } from '@/lib/directory-chips';
 import type { ShelfPerson } from '@/lib/featured-shelves-server';
 
 /**
- * Two shelves at the top of the directory: Featured, and On the rise this month.
+ * The Rising shelf at the top of the directory (URG-304): one row of faces.
  *
- * Why shelves and not a ranking: search results stay in the order they came,
- * because a list that quietly puts somebody first is a list people stop
- * trusting. A shelf is different. It says out loud why a person is there (we
- * picked them, or their recent work earned it), and a new person scanning the
- * directory on a phone gets a place to start that is not a blank search box.
+ * Featured people come first, then On the rise this month, each person once
+ * (risingShelf). Search results are never ranked by it, and it is drawn only in
+ * the default view (the page holds that rule). With nobody on it, nothing is
+ * drawn at all.
  *
- * A shelf with nobody on it is not drawn at all, heading included. Until
- * thirty days of activity exist On the rise is empty, and an empty heading would
- * read as a broken page rather than a young one.
- *
- * Each row scrolls sideways with a snap, so the next card peeks in from the
- * edge and tells a thumb there is more.
+ * No heading and no helper text (bare-minimum rule). A tile is a face and a
+ * short name; it opens the person's page when that page is public.
  */
-
-type Shelf = { title: string; helpKey: HelpKey; people: ShelfPerson[] };
 
 export function DirectoryShelves({
   featured,
   onTheRise,
-  renderCard,
 }: {
   featured: ShelfPerson[];
   onTheRise: ShelfPerson[];
-  renderCard: (person: ShelfPerson) => ReactNode;
 }) {
-  const all: Shelf[] = [
-    { title: 'Featured', helpKey: 'directory.featured', people: featured },
-    { title: 'On the rise this month', helpKey: 'directory.rising', people: onTheRise },
-  ];
-  const shelves = all.filter((shelf) => shelf.people.length > 0);
-
-  if (shelves.length === 0) return null;
+  const people = risingShelf(featured, onTheRise);
+  if (people.length === 0) return null;
 
   return (
-    <div className="mb-6 space-y-6">
-      {shelves.map((shelf) => (
-        <section key={shelf.title} aria-labelledby={`shelf-${shelf.helpKey}`}>
-          <div className="mb-2 flex items-center gap-1">
-            <h2 id={`shelf-${shelf.helpKey}`} className="font-display text-lg text-content-primary">
-              {shelf.title}
-            </h2>
-            <HelpTip helpKey={shelf.helpKey} />
-          </div>
-          <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
-            {shelf.people.map((person) => (
-              <li
-                key={`${person.userId}-${person.shelfRole}`}
-                className="w-64 shrink-0 snap-start"
-              >
-                <p className="mb-1.5 text-xs font-medium text-brand">
-                  {DIRECTORY_ROLE_LABELS[person.shelfRole]}
-                </p>
-                {renderCard(person)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
+    <section aria-label="Rising" className="mb-2">
+      <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+        {people.map((person) => {
+          const tile = (
+            <div className="relative h-[170px] w-[130px] overflow-hidden rounded-[18px] bg-bg-surface">
+              <ProfileFace name={person.displayName} photoUrl={person.avatarUrl} size="fill" />
+              <div
+                aria-hidden
+                className="absolute inset-0"
+                style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(0,0,0,.85))' }}
+              />
+              <span className="absolute bottom-2.5 left-3 right-2 truncate font-display text-[15px] text-white">
+                {shelfName(person.displayName)}
+              </span>
+            </div>
+          );
+          return (
+            <li key={person.userId} className="shrink-0 snap-start">
+              {person.isPublic && person.slug ? (
+                <Link href={`/p/${person.slug}`} className="motion-focus block rounded-[18px]" aria-label={person.displayName}>
+                  {tile}
+                </Link>
+              ) : (
+                tile
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

@@ -106,7 +106,7 @@ export function claimEmailContent(kind: ClaimEmailKind, facts: ClaimEmailFacts):
   const greeting = name ? `Hey ${name},` : 'Hey,';
   const release = title(facts.releaseTitle);
   const by = creditedBy(facts.artistName);
-  const footnote = `You are getting this because ${by} put this email on the credits for ${release}. Not you? You can ignore this. To take the page down, use Remove this profile on it.`;
+  const footnote = `You are getting this because ${by} put this email on the credits for ${release}. Not you? You can ignore this. To take the page down, use Request removal on it.`;
 
   if (kind === 'reminder') {
     return {
