@@ -5,6 +5,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { getAccessToken } from '@/components/settings/getAccessToken';
 import { publicProfileUrl } from '@/lib/profile-growth';
 import { ShareProfileLink } from './ShareProfileLink';
+import { ShareStoryButton } from './ShareStoryButton';
 
 // "This is my page. Let me send it." (2026-10-11)
 //
@@ -51,8 +52,11 @@ export function OwnProfileShare({ slug }: { slug: string }) {
 
   if (!url) return null;
   return (
-    <div className="mt-12 rounded-xl px-4 py-2" style={{ border: '1px solid var(--kit-border)' }}>
-      <ShareProfileLink url={url} surface="own_page" tone="kit" />
+    <div className="mt-6">
+      <ShareStoryButton slug={slug} surface="own_page" />
+      <div className="mt-3 rounded-xl px-4 py-2" style={{ border: '1px solid var(--kit-border)' }}>
+        <ShareProfileLink url={url} surface="own_page" tone="kit" />
+      </div>
     </div>
   );
 }

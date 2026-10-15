@@ -32,7 +32,7 @@ export const SIGNUP_SOURCES = ['profile', 'claim'] as const;
 export type SignupSource = (typeof SIGNUP_SOURCES)[number];
 
 /** Ways a person shared their own page. */
-export const PROFILE_SHARE_METHODS = ['copy', 'share', 'whatsapp'] as const;
+export const PROFILE_SHARE_METHODS = ['copy', 'share', 'whatsapp', 'story'] as const;
 export type ProfileShareMethod = (typeof PROFILE_SHARE_METHODS)[number];
 
 /** Where they shared it from. */

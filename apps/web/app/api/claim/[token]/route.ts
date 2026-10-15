@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getAuthenticatedUser } from '@/app/api/_shared/auth';
 import { isValidClaimToken } from '@/lib/claim';
 import { loadClaimPreview, redeemClaim } from '@/lib/claim-server';
+import { readClaimCodeSecret, verifyClaimCode } from '@/lib/claim-code';
 import { createPostHogEvent } from '@/lib/analytics/shared';
 import { claimCompletedProperties } from '@/lib/profile-growth';
 import { captureProfileGrowthEvent } from '@/lib/profile-growth-server';
@@ -51,12 +52,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ to
   if (!admin) return NextResponse.json({ error: 'Server environment is not configured' }, { status: 500 });
 
   const typedContact = typeof body.contact === 'string' ? body.contact : '';
+  // A typed email proves it only with the code we emailed to it (URG-305).
+  const secret = readClaimCodeSecret();
   const result = await redeemClaim(admin, {
     token,
     userId: auth.user.id,
     accountEmail: auth.user.email ?? null,
     accountEmailConfirmed: Boolean(auth.user.email_confirmed_at),
     typedContact,
+    codeCheck: (email) => (secret ? verifyClaimCode({ secret, token, email, code: body.code }) : false),
   });
   if (result.ok) {
     // Profile growth funnel: the page is theirs now. Server-side, after the
@@ -74,6 +78,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ to
       )
     );
   }
-  const status = result.ok ? 200 : result.reason === 'no_match' ? 422 : result.reason === 'error' ? 500 : 409;
+  const status = result.ok ? 200 : result.reason === 'no_match' || result.reason === 'bad_code' ? 422 : result.reason === 'error' ? 500 : 409;
   return NextResponse.json(result, { status, headers: { 'cache-control': 'no-store' } });
 }

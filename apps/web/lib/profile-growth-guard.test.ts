@@ -135,8 +135,9 @@ describe('sign-up attribution', () => {
 describe('sharing your own page', () => {
   it('the claim success step offers it', () => {
     const wizard = read('components/people/ClaimWizard.tsx');
-    const done = wizard.slice(wizard.indexOf("if (step === 'done')"), wizard.indexOf('// Step 1: confirm it is you.'));
-    expect(done).toContain('<ShareProfileLink');
+    // URG-305: the last step is "You're verified" with Share to Story (the 9:16 card).
+    const done = wizard.slice(wizard.indexOf("if (step === 'done')"), wizard.indexOf("if (step === 'yours')"));
+    expect(done).toContain('<ShareStoryButton');
     expect(done).toContain('surface="claim_done"');
   });
 

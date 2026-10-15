@@ -81,6 +81,8 @@ const nextConfig = {
     // loader, and the same rule applies: a route missing from this map ships
     // without its fonts and fails every image with ENOENT.
     '/api/releases/[releaseId]/share-card': ['./assets/fonts/*.ttf'],
+    // The person share card (URG-305), same loader, same rule.
+    '/p/[slug]/card': ['./assets/fonts/*.ttf'],
   },
   // /.well-known/* CANNOT be an app/ directory: Next's router ignores
   // dot-prefixed path segments, so app/.well-known/oauth-.../route.ts never

@@ -2,6 +2,7 @@
 // site. These are TYPE-ONLY imports: erased at build, so this file (and anything
 // importing it) never pulls react-email at runtime.
 import type { WelcomeEmailProps } from './WelcomeEmail';
+import type { ClaimCodeEmailProps } from './ClaimCodeEmail';
 import type { WorkspaceInviteEmailProps } from './WorkspaceInviteEmail';
 import type { CreditSubmissionEmailProps } from './CreditSubmissionEmail';
 import type { TaskAssignedEmailProps } from './TaskAssignedEmail';
@@ -43,6 +44,7 @@ export type EmailTemplateProps = {
   claim_invite: ClaimInviteEmailProps;
   claim_auto_invite: ClaimPageEmailProps;
   claim_reminder: ClaimPageEmailProps;
+  claim_code: ClaimCodeEmailProps;
   directory_invite: DirectoryInviteEmailProps;
 };
 

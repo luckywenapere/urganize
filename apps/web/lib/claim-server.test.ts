@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  checkClaimContact,
   createClaimInvite,
   loadClaimPreview,
   redeemClaim,
@@ -256,6 +257,24 @@ describe('loadClaimPreview', () => {
 });
 
 describe('redeemClaim', () => {
+  it('with a code check, a typed email needs the right code (URG-305)', async () => {
+    const personId = seedPerson();
+    const { token } = await invite(personId);
+    expect(await redeem(token, { codeCheck: () => false })).toMatchObject({ ok: false, reason: 'bad_code', attemptsLeft: 4 });
+    expect(db.tables.person_profiles[0].status).toBe('unclaimed');
+    expect((await redeem(token, { codeCheck: (email) => email === 'tobi@example.com' })).ok).toBe(true);
+  });
+  it('a code check does not touch the confirmed account email', async () => {
+    const personId = seedPerson();
+    const { token } = await invite(personId);
+    const result = await redeem(token, {
+      typedContact: '',
+      accountEmail: 'tobi@example.com',
+      accountEmailConfirmed: true,
+      codeCheck: () => false,
+    });
+    expect(result.ok).toBe(true);
+  });
   it('claims the profile when the typed email is on the credit', async () => {
     const personId = seedPerson();
     const { token } = await invite(personId);
@@ -391,3 +410,24 @@ describe('setCreditHidden', () => {
 });
 
 void FUTURE;
+
+describe('checkClaimContact (URG-305)', () => {
+  const check = (token: string, typedContact: string, over: Partial<Parameters<typeof checkClaimContact>[1]> = {}) =>
+    checkClaimContact(client, { token, accountEmail: null, accountEmailConfirmed: false, typedContact, ...over });
+  it('answers how it was proved, and changes nothing', async () => {
+    const personId = seedPerson();
+    const { token } = await invite(personId);
+    expect(await check(token, 'TOBI@example.com')).toMatchObject({ ok: true, via: 'typed_email', email: 'tobi@example.com' });
+    expect(await check(token, '', { accountEmail: 'tobi@example.com', accountEmailConfirmed: true })).toMatchObject({
+      ok: true,
+      via: 'account_email',
+    });
+    expect(db.tables.person_profiles[0].status).toBe('unclaimed');
+  });
+  it('counts a wrong address against the link', async () => {
+    const personId = seedPerson();
+    const { token } = await invite(personId);
+    expect(await check(token, 'wrong@example.com')).toMatchObject({ ok: false, reason: 'no_match', attemptsLeft: 4 });
+    expect(db.tables.person_claim_invites[0].failed_attempts).toBe(1);
+  });
+});

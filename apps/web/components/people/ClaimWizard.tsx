@@ -1,40 +1,66 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button } from '@urganize/ui';
 import { useAuthStore } from '@/lib/auth-store';
 import { getAccessToken } from '@/components/settings/getAccessToken';
 import { CLAIM_COPY } from '@/lib/claim-copy';
 import { markClaimIntent } from '@/lib/claim-intent';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { createPostHogEvent } from '@/lib/analytics/shared';
-import { claimPageViewedProperties, publicProfileUrl } from '@/lib/profile-growth';
+import { claimPageViewedProperties } from '@/lib/profile-growth';
 import { markSignupSource } from '@/lib/signup-source-intent';
-import { ShareProfileLink } from './ShareProfileLink';
-import { PERSON_AVAILABILITIES, PERSON_AVAILABILITY_COPY, PERSON_BIO_MAX_CHARS } from '@/lib/person-profile';
-import { onRadioGroupKeyDown } from '@/lib/radio-group-keys';
+import { HYPE_LINE_MAX_CHARS, shareCardPath } from '@/lib/person-page';
+import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
+import { PERSON_PHOTO_SIGN_URL } from '@/lib/profile-photo-client';
+import { ShareStoryButton } from './ShareStoryButton';
 import type { ClaimCredit } from '@/lib/claim-server';
-import type { PersonAvailability } from '@/types/directory';
 
-// The claim page's three steps, after the one before them (are you signed in):
+// The claim, in four screens (URG-305, founder-approved mock claim.html):
 //
-//   1. Confirm it is you, with the email or phone on the credit.
-//   2. Review your credits and hide any that are not yours.
-//   3. Add a bio, say if you are open to work, and choose who sees the page.
+//   1. Prove it's you: the work email on the credit (or the phone, when that is
+//      what the credit holds).
+//   2. Enter code: six digits emailed to that address. Skipped when their own
+//      confirmed sign-in email is the one on the credit, or for a phone.
+//   3. Make it yours: photo, one hype line, the artists they manage.
+//   4. You're verified: their 9:16 card, Share to Story, View profile.
 //
-// Then a prompt to start a rollout or bring a team in. Every step talks to
-// open routes (no paywall): this is somebody's first minute.
+// Signed out, screen 1 asks them to sign up or log in first and comes back.
+// Bare minimum text on every screen. Every call is an open route (no paywall)
+// except the photo and roster, which are the app's own and need a team.
+//
+// Instagram and X are not offered: the proof rule is an email or phone already
+// on the credit (CLAUDE.md, Lane A), and no credit carries a handle to match.
 
 export type ClaimPreviewProps =
   | { ok: true; displayName: string; hint: string; credits: ClaimCredit[] }
   | { ok: false; reason: string };
 
-type Step = 'confirm' | 'credits' | 'about' | 'done';
+type Step = 'prove' | 'contact' | 'code' | 'yours' | 'done';
+type Artist = { id: string; name: string; photoUrl: string | null };
 
-const FIELD =
-  'h-11 w-full rounded-lg border border-stroke-control px-3 text-base text-content-primary hover:border-content-secondary focus:border-brand focus:outline-none';
+const GROUND = '#0c0c0d';
+const SURFACE = '#171719';
+const LINE = '#202023';
+const MUTED = '#929291';
+const ACCENT = '#7fd99a';
+
+const PALETTE = {
+  '--kit-ground': GROUND,
+  '--kit-surface': SURFACE,
+  '--kit-border': LINE,
+  '--kit-text': '#f2f2f0',
+  '--kit-text-muted': MUTED,
+  '--kit-text-faint': MUTED,
+  '--kit-accent': ACCENT,
+  backgroundColor: GROUND,
+  color: '#f2f2f0',
+} as React.CSSProperties;
+
+const ROW = 'flex min-h-[62px] w-full items-center gap-3.5 rounded-2xl px-[18px] text-base font-bold';
+const PRIMARY = 'motion-focus flex h-[52px] w-full items-center justify-center rounded-2xl text-base font-extrabold text-black disabled:opacity-60';
+const SECONDARY = 'motion-focus flex h-[52px] w-full items-center justify-center rounded-2xl text-base font-extrabold';
 
 const closedText = (reason: string): string =>
   (CLAIM_COPY.closed as Record<string, string>)[reason] ?? CLAIM_COPY.closed.unavailable;
@@ -47,21 +73,24 @@ async function call(path: string, init?: RequestInit) {
   });
 }
 
+const tries = (left: unknown) => (typeof left === 'number' ? ` ${left} tries left.` : '');
+
 export function ClaimWizard({ token, preview }: { token: string; preview: ClaimPreviewProps }) {
   const router = useRouter();
-  const fieldId = useId();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const user = useAuthStore((state) => state.user);
   const [mounted, setMounted] = useState(false);
-  const [step, setStep] = useState<Step>('confirm');
+  const [step, setStep] = useState<Step>('prove');
   const [contact, setContact] = useState('');
+  const [sentTo, setSentTo] = useState('');
+  const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [credits, setCredits] = useState<ClaimCredit[]>(preview.ok ? preview.credits : []);
   const [slug, setSlug] = useState<string | null>(null);
-  const [bio, setBio] = useState('');
-  const [availability, setAvailability] = useState<PersonAvailability>('selective');
-  const [published, setPublished] = useState(true);
+  const [hype, setHype] = useState('');
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [addingArtist, setAddingArtist] = useState(false);
+  const [artistName, setArtistName] = useState('');
 
   useEffect(() => setMounted(true), []);
 
@@ -87,45 +116,83 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
 
+  // The roster, once they reach "Make it yours". A failure leaves it empty.
+  useEffect(() => {
+    if (step !== 'yours') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await call('/api/workspace/artists');
+        if (!response.ok) return;
+        const body = (await response.json()) as { artists?: Artist[] };
+        if (!cancelled) setArtists(body.artists ?? []);
+      } catch {
+        // Nothing to show; Add still works.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step]);
+
   if (!preview.ok) {
     return (
       <Shell>
-        <h1 className="font-display text-3xl">{CLAIM_COPY.heading}</h1>
-        <p role="status" className="mt-4 text-content-secondary">
+        <h1 className="mt-7 font-display text-[30px] leading-tight">Prove it&apos;s you</h1>
+        <p role="status" className="mt-2 font-mono text-[15px]" style={{ color: MUTED }}>
           {closedText(preview.reason)}
         </p>
-        <Link href="/auth" className="mt-6 inline-flex min-h-11 items-center text-brand underline underline-offset-4">
-          Log in
-        </Link>
       </Shell>
     );
   }
 
   const signedIn = mounted && isAuthenticated;
+  const hintIsPhone = preview.hint.startsWith('+');
 
-  async function claim() {
+  async function finishClaim(body: Record<string, unknown>) {
+    const response = await call(`/api/claim/${token}`, { method: 'POST', body: JSON.stringify(body) });
+    const result = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      slug?: string | null;
+      reason?: string;
+      attemptsLeft?: number;
+    };
+    if (!response.ok || !result.ok) {
+      if (result.reason === 'bad_code') setError(`Wrong code.${tries(result.attemptsLeft)}`);
+      else if (result.reason === 'no_match') setError(`${CLAIM_COPY.wrongContact}${tries(result.attemptsLeft)}`);
+      else setError(closedText(result.reason || 'unavailable'));
+      return;
+    }
+    setSlug(result.slug ?? null);
+    setError(null);
+    setStep('yours');
+  }
+
+  async function sendCode() {
     setBusy(true);
     setError(null);
     try {
-      const response = await call(`/api/claim/${token}`, { method: 'POST', body: JSON.stringify({ contact }) });
-      const body = (await response.json().catch(() => ({}))) as { ok?: boolean; slug?: string | null; reason?: string; attemptsLeft?: number };
+      const response = await call(`/api/claim/${token}/code`, { method: 'POST', body: JSON.stringify({ contact }) });
+      const body = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        skip?: boolean;
+        sentTo?: string;
+        reason?: string;
+        attemptsLeft?: number;
+      };
       if (!response.ok || !body.ok) {
-        if (body.reason === 'no_match') {
-          setError(
-            `${CLAIM_COPY.wrongContact}${typeof body.attemptsLeft === 'number' ? ` ${body.attemptsLeft} tries left.` : ''}`
-          );
-        } else {
-          setError(closedText(body.reason || 'unavailable'));
-        }
+        if (body.reason === 'no_match') setError(`${CLAIM_COPY.wrongContact}${tries(body.attemptsLeft)}`);
+        else if (body.reason === 'not_sent' || body.reason === 'error') setError('Could not send the code. Try again.');
+        else setError(closedText(body.reason || 'unavailable'));
         return;
       }
-      setSlug(body.slug ?? null);
-      const mine = await call('/api/claim-profile');
-      if (mine.ok) {
-        const data = (await mine.json()) as { credits?: ClaimCredit[] };
-        setCredits(data.credits ?? []);
+      if (body.skip) {
+        await finishClaim({ contact });
+        return;
       }
-      setStep('credits');
+      setSentTo(body.sentTo || contact.trim());
+      setCode('');
+      setStep('code');
     } catch {
       setError('Could not reach us. Check your connection and try again.');
     } finally {
@@ -133,26 +200,47 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
     }
   }
 
-  async function hideCredit(submissionId: string, hidden: boolean) {
-    setCredits((list) => list.map((c) => (c.submissionId === submissionId ? { ...c, hidden } : c)));
-    const response = await call('/api/claim-profile', {
-      method: 'PATCH',
-      body: JSON.stringify({ hideCredit: { submissionId, hidden } }),
-    });
-    if (!response.ok) {
-      setCredits((list) => list.map((c) => (c.submissionId === submissionId ? { ...c, hidden: !hidden } : c)));
-      setError('Could not change that credit. Try again.');
-    }
-  }
-
-  async function save() {
+  async function verify() {
     setBusy(true);
     setError(null);
     try {
-      const response = await call('/api/claim-profile', {
-        method: 'PATCH',
-        body: JSON.stringify({ bio, availability, published }),
-      });
+      await finishClaim({ contact, code });
+    } catch {
+      setError('Could not reach us. Check your connection and try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addArtist() {
+    const name = artistName.trim();
+    if (!name) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await call('/api/workspace/artists', { method: 'POST', body: JSON.stringify({ name }) });
+      const body = (await response.json().catch(() => ({}))) as { artist?: Artist; error?: string };
+      if (!response.ok || !body.artist) {
+        setError(body.error || 'Could not add that artist.');
+        return;
+      }
+      setArtists((list) => [...list, { ...body.artist!, photoUrl: body.artist!.photoUrl ?? null }]);
+      setArtistName('');
+      setAddingArtist(false);
+    } catch {
+      setError('Could not reach us. Check your connection and try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function done() {
+    setBusy(true);
+    setError(null);
+    try {
+      const patch: Record<string, unknown> = { published: true };
+      if (hype.trim()) patch.bio = hype.trim();
+      const response = await call('/api/claim-profile', { method: 'PATCH', body: JSON.stringify(patch) });
       const body = (await response.json().catch(() => ({}))) as { error?: string; slug?: string | null };
       if (!response.ok) {
         setError(body.error || 'Could not save. Try again.');
@@ -167,158 +255,203 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
     }
   }
 
-  if (step === 'credits') {
-    return (
-      <Shell>
-        <h1 className="font-display text-3xl">{CLAIM_COPY.creditsHeading}</h1>
-        <p className="mt-2 text-content-secondary">{CLAIM_COPY.creditsHint}</p>
-        <ul className="mt-6 space-y-2">
-          {credits.map((credit) => (
-            <li
-              key={credit.submissionId}
-              className="flex items-center justify-between gap-3 rounded-xl border border-stroke-default bg-bg-surface px-4 py-3"
-            >
-              <span className={credit.hidden ? 'text-content-tertiary line-through' : ''}>
-                {credit.releaseTitle}
-                {credit.releaseYear ? ` (${credit.releaseYear})` : ''}
-              </span>
-              <button
-                type="button"
-                aria-pressed={credit.hidden}
-                onClick={() => void hideCredit(credit.submissionId, !credit.hidden)}
-                className="min-h-11 shrink-0 rounded-full border border-stroke-control px-4 text-sm hover:border-content-secondary"
-              >
-                {credit.hidden ? 'Hidden. Show it' : 'Not mine'}
-              </button>
-            </li>
-          ))}
-        </ul>
-        <Notice message={error} />
-        <Button className="mt-6 min-h-11" onClick={() => { setError(null); setStep('about'); }}>
-          Next
-        </Button>
-      </Shell>
-    );
-  }
-
-  if (step === 'about') {
-    return (
-      <Shell>
-        <h1 className="font-display text-3xl">{CLAIM_COPY.aboutHeading}</h1>
-        <div className="mt-6 space-y-6">
-          <div>
-            <label htmlFor={`${fieldId}-bio`} className="block text-sm font-medium">
-              {CLAIM_COPY.bioLabel}
-            </label>
-            <textarea
-              id={`${fieldId}-bio`}
-              value={bio}
-              onChange={(event) => setBio(event.target.value)}
-              maxLength={PERSON_BIO_MAX_CHARS}
-              rows={4}
-              className="mt-1 w-full rounded-lg border border-stroke-control px-3 py-2 text-base text-content-primary hover:border-content-secondary focus:border-brand focus:outline-none"
-            />
-            <p className="mt-1 text-xs text-content-tertiary">
-              {bio.length} of {PERSON_BIO_MAX_CHARS}
-            </p>
-          </div>
-          <fieldset>
-            <legend className="text-sm font-medium">{CLAIM_COPY.openToLabel}</legend>
-            <div
-              role="radiogroup"
-              aria-label={CLAIM_COPY.openToLabel}
-              onKeyDown={(event) =>
-                onRadioGroupKeyDown(event, PERSON_AVAILABILITIES.indexOf(availability), (index) =>
-                  setAvailability(PERSON_AVAILABILITIES[index])
-                )
-              }
-              className="mt-2 flex flex-wrap gap-2"
-            >
-              {PERSON_AVAILABILITIES.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={availability === value}
-                  tabIndex={availability === value ? 0 : -1}
-                  onClick={() => setAvailability(value)}
-                  className={`min-h-11 rounded-full border px-4 text-sm ${
-                    availability === value
-                      ? 'border-brand bg-brand/10 text-content-primary'
-                      : 'border-stroke-control text-content-secondary hover:border-content-secondary'
-                  }`}
-                >
-                  {availability === value ? '✓ ' : ''}
-                  {PERSON_AVAILABILITY_COPY[value].label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          <label className="flex min-h-11 items-center gap-3 text-sm">
-            <input
-              type="checkbox"
-              checked={published}
-              onChange={(event) => setPublished(event.target.checked)}
-              className="h-5 w-5"
-            />
-            {CLAIM_COPY.publishLabel}
-          </label>
-        </div>
-        <Notice message={error} />
-        <Button className="mt-6 min-h-11" onClick={() => void save()} isLoading={busy}>
-          {CLAIM_COPY.publishButton}
-        </Button>
-      </Shell>
-    );
-  }
+  const savePhoto = async (photoPath: string | null): Promise<string | null> => {
+    const response = await call('/api/directory/profile', { method: 'PATCH', body: JSON.stringify({ photoPath }) });
+    const body = (await response.json().catch(() => ({}))) as { error?: string; profile?: { avatarUrl?: string | null } };
+    if (!response.ok) throw new Error(body.error || 'Could not save your photo.');
+    return body.profile?.avatarUrl ?? null;
+  };
 
   if (step === 'done') {
-    const shareUrl = published && slug && mounted ? publicProfileUrl(window.location.origin, slug) : null;
     return (
       <Shell>
-        <h1 className="font-display text-3xl">{CLAIM_COPY.nextHeading}</h1>
-        {/* The moment to share it: right now, before they close the tab.
-            Only for a page they chose to show; a private page has no link. */}
-        {shareUrl ? <ShareProfileLink url={shareUrl} surface="claim_done" /> : null}
-        {published && slug ? (
-          <Link href={`/p/${slug}`} className="mt-2 inline-flex min-h-11 items-center text-brand underline underline-offset-4">
-            See your page
-          </Link>
+        {slug ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={shareCardPath(slug)}
+            alt=""
+            className="mx-auto mt-[34px] h-[320px] w-[180px] rounded-[18px] object-cover"
+            style={{ backgroundColor: SURFACE }}
+          />
         ) : null}
-        <p className="mt-8 text-content-secondary">{CLAIM_COPY.nextText}</p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Button className="min-h-11" onClick={() => router.push('/dashboard')}>
-            {CLAIM_COPY.startRollout}
-          </Button>
-          <Button className="min-h-11" variant="secondary" onClick={() => router.push('/dashboard?settings=team')}>
-            {CLAIM_COPY.inviteTeam}
-          </Button>
-        </div>
+        <h1 className="mt-[30px] text-center font-display text-[30px] leading-tight">
+          You&apos;re verified
+          <span
+            role="img"
+            aria-label="verified"
+            className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full align-[4px] text-xs font-black text-black"
+            style={{ backgroundColor: ACCENT, fontFamily: 'system-ui, sans-serif' }}
+          >
+            ✓
+          </span>
+        </h1>
+        <div className="flex-1" />
+        {slug ? <ShareStoryButton slug={slug} surface="claim_done" /> : null}
+        {slug ? (
+          <Link
+            href={`/p/${slug}`}
+            className={`${SECONDARY} mt-2.5`}
+            style={{ backgroundColor: SURFACE, border: `1px solid ${LINE}` }}
+          >
+            View profile
+          </Link>
+        ) : (
+          <button type="button" className={PRIMARY} style={{ backgroundColor: ACCENT }} onClick={() => router.push('/dashboard')}>
+            Done
+          </button>
+        )}
       </Shell>
     );
   }
 
-  // Step 1: confirm it is you.
+  if (step === 'yours') {
+    return (
+      <Shell>
+        <h1 className="mt-7 font-display text-[30px] leading-tight">Make it yours</h1>
+        <div className={`${ROW} mt-7 justify-between`} style={{ backgroundColor: SURFACE, border: `1px solid ${LINE}` }}>
+          <span>Photo</span>
+          <ProfilePhotoPicker
+            name={preview.displayName}
+            photoUrl={photoUrl}
+            size={36}
+            signUrl={PERSON_PHOTO_SIGN_URL}
+            save={savePhoto}
+            onChange={setPhotoUrl}
+            surface="person_photo"
+          />
+        </div>
+        <input
+          aria-label="Hype line"
+          placeholder="Hype line"
+          value={hype}
+          maxLength={HYPE_LINE_MAX_CHARS}
+          onChange={(event) => setHype(event.target.value)}
+          className={`${ROW} mt-3 bg-transparent placeholder:text-[#929291] focus:outline-none`}
+          style={{ backgroundColor: SURFACE, border: `1px solid ${LINE}` }}
+        />
+        <div className="mt-3 rounded-2xl px-[18px]" style={{ backgroundColor: SURFACE, border: `1px solid ${LINE}` }}>
+          <div className="flex min-h-[62px] items-center justify-between text-base font-bold">
+            <span>Artists you manage</span>
+            {!addingArtist ? (
+              <button type="button" className="min-h-11 px-1" style={{ color: ACCENT }} onClick={() => setAddingArtist(true)}>
+                Add
+              </button>
+            ) : null}
+          </div>
+          {artists.length > 0 ? (
+            <ul className="flex flex-wrap gap-2 pb-4">
+              {artists.map((artist) => (
+                <li key={artist.id} className="rounded-full px-3 py-1.5 text-sm" style={{ border: `1px solid ${LINE}` }}>
+                  {artist.name}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {addingArtist ? (
+            <form
+              className="flex gap-2 pb-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void addArtist();
+              }}
+            >
+              <input
+                autoFocus
+                aria-label="Artist name"
+                value={artistName}
+                onChange={(event) => setArtistName(event.target.value)}
+                className="h-11 flex-1 rounded-xl bg-transparent px-3 text-base focus:outline-none"
+                style={{ border: `1px solid ${LINE}` }}
+              />
+              <button
+                type="submit"
+                disabled={busy || !artistName.trim()}
+                className="h-11 rounded-xl px-4 text-sm font-extrabold text-black disabled:opacity-60"
+                style={{ backgroundColor: ACCENT }}
+              >
+                Add
+              </button>
+            </form>
+          ) : null}
+        </div>
+        <Notice message={error} />
+        <div className="flex-1" />
+        <button type="button" className={PRIMARY} style={{ backgroundColor: ACCENT }} disabled={busy} onClick={() => void done()}>
+          Done
+        </button>
+      </Shell>
+    );
+  }
+
+  if (step === 'code') {
+    return (
+      <Shell onBack={() => { setError(null); setStep('contact'); }}>
+        <h1 className="mt-7 font-display text-[30px] leading-tight">Enter code</h1>
+        <p className="mt-2 font-mono text-[15px]" style={{ color: MUTED }}>
+          Sent to {sentTo}
+        </p>
+        <CodeBoxes value={code} onChange={setCode} onComplete={() => void verify()} />
+        <Notice message={error} />
+        <div className="flex-1" />
+        <button
+          type="button"
+          className={PRIMARY}
+          style={{ backgroundColor: ACCENT }}
+          disabled={busy || code.length !== 6}
+          onClick={() => void verify()}
+        >
+          Verify
+        </button>
+      </Shell>
+    );
+  }
+
+  if (step === 'contact') {
+    return (
+      <Shell onBack={() => { setError(null); setStep('prove'); }}>
+        <h1 className="mt-7 font-display text-[30px] leading-tight">{hintIsPhone ? 'Phone' : 'Work email'}</h1>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void sendCode();
+          }}
+          className="flex flex-1 flex-col"
+        >
+          <input
+            autoFocus
+            aria-label={hintIsPhone ? 'Phone' : 'Work email'}
+            placeholder={preview.hint}
+            type={hintIsPhone ? 'tel' : 'email'}
+            autoComplete={hintIsPhone ? 'tel' : 'email'}
+            value={contact}
+            onChange={(event) => setContact(event.target.value)}
+            className={`${ROW} mt-7 bg-transparent font-normal placeholder:text-[#929291] focus:outline-none`}
+            style={{ backgroundColor: SURFACE, border: `1px solid ${LINE}` }}
+          />
+          <Notice message={error} />
+          <div className="flex-1" />
+          <button type="submit" className={PRIMARY} style={{ backgroundColor: ACCENT }} disabled={busy || !contact.trim()}>
+            {hintIsPhone ? 'Verify' : 'Send code'}
+          </button>
+        </form>
+      </Shell>
+    );
+  }
+
+  // Step 1: prove it's you.
   return (
     <Shell>
-      <h1 className="font-display text-3xl">{CLAIM_COPY.heading}</h1>
-      <p className="mt-3 text-lg">{preview.displayName}</p>
-      <p className="mt-2 text-content-secondary">{CLAIM_COPY.intro}</p>
-      {preview.credits.length > 0 ? (
-        <ul className="mt-6 space-y-1 text-sm text-content-secondary">
-          {preview.credits.map((credit) => (
-            <li key={credit.submissionId}>
-              {credit.releaseTitle}
-              {credit.releaseYear ? ` (${credit.releaseYear})` : ''}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
+      <h1 className="mt-7 font-display text-[30px] leading-tight">Prove it&apos;s you</h1>
+      <p className="mt-2 font-mono text-[15px]" style={{ color: MUTED }}>
+        {preview.displayName}
+      </p>
       {!signedIn ? (
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Button
-            className="min-h-11"
+        <>
+          <div className="flex-1" />
+          <button
+            type="button"
+            className={PRIMARY}
+            style={{ backgroundColor: ACCENT }}
             onClick={() => {
               markClaimIntent(token);
               // A sign-up that came from a claim link (signup_from_profile).
@@ -326,47 +459,101 @@ export function ClaimWizard({ token, preview }: { token: string; preview: ClaimP
               router.push('/onboarding');
             }}
           >
-            Sign up to claim
-          </Button>
+            Sign up
+          </button>
           <Link
             href={`/auth?next=${encodeURIComponent(`/claim/${token}`)}`}
-            className="inline-flex min-h-11 items-center rounded-full border border-stroke-control px-5 text-sm hover:border-content-secondary"
+            className={`${SECONDARY} mt-2.5`}
+            style={{ backgroundColor: SURFACE, border: `1px solid ${LINE}` }}
           >
             Log in
           </Link>
-        </div>
+        </>
       ) : (
-        <div className="mt-8">
-          <h2 className="text-sm font-medium">{CLAIM_COPY.confirmHeading}</h2>
-          <label htmlFor={`${fieldId}-contact`} className="mt-3 block text-sm text-content-secondary">
-            {CLAIM_COPY.confirmLabel}
-            {preview.hint ? ` (for example ${preview.hint})` : ''}
-          </label>
-          <input
-            id={`${fieldId}-contact`}
-            value={contact}
-            onChange={(event) => setContact(event.target.value)}
-            autoComplete="email"
-            className={`mt-1 ${FIELD}`}
-          />
-          <p className="mt-2 text-xs text-content-tertiary">
-            Signed in as {user?.email}. {CLAIM_COPY.confirmHint}
-          </p>
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setStep('contact');
+            }}
+            className={`${ROW} mt-7 text-left`}
+            style={{ backgroundColor: SURFACE, border: `1px solid ${LINE}` }}
+          >
+            <span
+              aria-hidden="true"
+              className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] text-sm font-black text-black"
+              style={{ backgroundColor: '#fff' }}
+            >
+              {hintIsPhone ? '#' : '@'}
+            </span>
+            {hintIsPhone ? 'Phone' : 'Work email'}
+          </button>
           <Notice message={error} />
-          <Button className="mt-4 min-h-11" onClick={() => void claim()} isLoading={busy}>
-            {CLAIM_COPY.confirmButton}
-          </Button>
-        </div>
+        </>
       )}
     </Shell>
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function CodeBoxes({
+  value,
+  onChange,
+  onComplete,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onComplete: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl px-6 py-16 text-content-primary sm:py-24">
-      {children}
-    </main>
+    <label className="relative mt-[30px] flex gap-2.5" onClick={() => inputRef.current?.focus()}>
+      <span className="sr-only">Code</span>
+      <input
+        ref={inputRef}
+        autoFocus
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={6}
+        value={value}
+        onChange={(event) => {
+          const digits = event.target.value.replace(/\D/g, '').slice(0, 6);
+          onChange(digits);
+          if (digits.length === 6) onComplete();
+        }}
+        className="absolute inset-0 opacity-0"
+      />
+      {Array.from({ length: 6 }, (_, index) => (
+        <span
+          key={index}
+          aria-hidden="true"
+          className="flex h-16 flex-1 items-center justify-center rounded-[14px] text-[28px] font-extrabold"
+          style={{
+            backgroundColor: SURFACE,
+            border: `1px solid ${index === Math.min(value.length, 5) ? ACCENT : LINE}`,
+          }}
+        >
+          {value[index] ?? ''}
+        </span>
+      ))}
+    </label>
+  );
+}
+
+function Shell({ children, onBack }: { children: React.ReactNode; onBack?: () => void }) {
+  return (
+    <div className="kit-island min-h-screen" style={PALETTE}>
+      <main className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-[22px] pb-6 pt-[34px]">
+        {onBack ? (
+          <button type="button" onClick={onBack} aria-label="Back" className="h-11 w-11 -ml-2 text-[22px]" style={{ color: MUTED }}>
+            ‹
+          </button>
+        ) : (
+          <div className="h-11" />
+        )}
+        {children}
+      </main>
+    </div>
   );
 }
 

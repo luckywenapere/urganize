@@ -241,13 +241,75 @@ export async function loadClaimPreview(admin: SupabaseClient, token: string): Pr
   }
 }
 
+// ---- Proving before redeeming (URG-305) --------------------------------------
+
+export type ContactCheck =
+  | { ok: true; via: 'account_email' | 'typed_email' | 'typed_phone'; email: string | null; displayName: string }
+  | {
+      ok: false;
+      reason: 'unavailable' | 'used' | 'revoked' | 'expired' | 'locked' | 'no_match' | 'nothing_to_check' | 'error';
+      attemptsLeft?: number;
+    };
+
+/**
+ * Step one of the claim: is this the address (or phone) on the credit? Answers
+ * how it was proved so the route knows whether a code is owed (a typed email)
+ * or the claim can go straight through (the confirmed account email, a typed
+ * phone). A wrong answer counts against the invite, like a wrong redeem.
+ * Changes nothing else; the redeem re-checks everything.
+ */
+export async function checkClaimContact(
+  admin: SupabaseClient,
+  input: { token: string; accountEmail: string | null; accountEmailConfirmed: boolean; typedContact: string }
+): Promise<ContactCheck> {
+  try {
+    const found = await lookupInvite(admin, input.token);
+    if (!found) return { ok: false, reason: 'unavailable' };
+    const { invite, profile } = found;
+    if (profile.removed_at || profile.removal_requested_at) return { ok: false, reason: 'unavailable' };
+    if (invite.state !== 'open') return { ok: false, reason: invite.state };
+    if (profile.status !== 'unclaimed') return { ok: false, reason: 'used' };
+
+    const identifiers = await loadIdentifiers(admin, invite.personId);
+    const proof = proveContact({
+      typed: input.typedContact,
+      accountEmail: input.accountEmail,
+      accountEmailConfirmed: input.accountEmailConfirmed,
+      identifiers,
+    });
+    if (!proof.ok) {
+      if (proof.reason === 'nothing_to_check') return { ok: false, reason: 'nothing_to_check' };
+      const failed = invite.failedAttempts + 1;
+      await admin.from(INVITES).update({ failed_attempts: failed }).eq('id', invite.id);
+      return { ok: false, reason: 'no_match', attemptsLeft: Math.max(0, MAX_ATTEMPTS - failed) };
+    }
+    return {
+      ok: true,
+      via: proof.via,
+      email: proof.identifier.kind === 'email' ? proof.identifier.value : null,
+      displayName: text(profile.display_name),
+    };
+  } catch {
+    return { ok: false, reason: 'error' };
+  }
+}
+
 // ---- Redeeming --------------------------------------------------------------
 
 export type RedeemResult =
   | { ok: true; personId: string; slug: string | null; merged: boolean }
   | {
       ok: false;
-      reason: 'unavailable' | 'used' | 'revoked' | 'expired' | 'locked' | 'no_match' | 'nothing_to_check' | 'error';
+      reason:
+        | 'unavailable'
+        | 'used'
+        | 'revoked'
+        | 'expired'
+        | 'locked'
+        | 'no_match'
+        | 'bad_code'
+        | 'nothing_to_check'
+        | 'error';
       attemptsLeft?: number;
     };
 
@@ -273,6 +335,12 @@ export async function redeemClaim(
     accountEmail: string | null;
     accountEmailConfirmed: boolean;
     typedContact: string;
+    /**
+     * When set, a TYPED email only proves it together with the code emailed to
+     * it (lib/claim-code.ts, URG-305). A wrong code counts as a wrong try. The
+     * confirmed account email and a typed phone are unchanged.
+     */
+    codeCheck?: (email: string) => boolean;
   }
 ): Promise<RedeemResult> {
   try {
@@ -295,6 +363,11 @@ export async function redeemClaim(
       const failed = invite.failedAttempts + 1;
       await admin.from(INVITES).update({ failed_attempts: failed }).eq('id', invite.id);
       return { ok: false, reason: 'no_match', attemptsLeft: Math.max(0, MAX_ATTEMPTS - failed) };
+    }
+    if (input.codeCheck && proof.via === 'typed_email' && !input.codeCheck(proof.identifier.value)) {
+      const failed = invite.failedAttempts + 1;
+      await admin.from(INVITES).update({ failed_attempts: failed }).eq('id', invite.id);
+      return { ok: false, reason: 'bad_code', attemptsLeft: Math.max(0, MAX_ATTEMPTS - failed) };
     }
 
     const now = new Date().toISOString();

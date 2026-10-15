@@ -54,6 +54,13 @@ const LOADERS: LoaderMap = {
       subject: (p) => m.claimInviteSubject(p.ownerName, p.releaseTitle),
     };
   },
+  claim_code: async () => {
+    const m = await import('./ClaimCodeEmail');
+    return {
+      element: (p) => createElement(m.ClaimCodeEmail, p),
+      subject: (p) => m.claimCodeSubject(p.code),
+    };
+  },
   claim_auto_invite: async () => {
     const m = await import('./ClaimPageEmail');
     return {

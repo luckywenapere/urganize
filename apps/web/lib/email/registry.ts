@@ -84,6 +84,13 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description: 'Sent when a rollout owner invites a credited collaborator to claim their unclaimed profile.',
     placeholderCopy: false,
   },
+  claim_code: {
+    id: 'claim_code',
+    category: 'transactional',
+    name: 'Claim code',
+    description: 'The six-digit code that proves a claim, sent to the email already on the credit (URG-305).',
+    placeholderCopy: false,
+  },
   claim_auto_invite: {
     id: 'claim_auto_invite',
     category: 'claim',

@@ -22,6 +22,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.146.0",
+    date: "October 15, 2026",
+    highlights: [
+      "A new look for your public page: your photo, name and tick, what you do and where, one line about you, the artists you manage, your releases and their cover art, with Reach and Save for anyone who wants to work with you.",
+      "Share to Story: your page as a tall card with your face, name, artists and link, ready for Instagram or a WhatsApp status.",
+      "Claiming your page takes four quick screens: prove it's you with a code sent to your work email, add a photo, a line about you and your artists, then share it.",
+    ],
+  },
+  {
     version: "1.145.0",
     date: "October 15, 2026",
     highlights: [
