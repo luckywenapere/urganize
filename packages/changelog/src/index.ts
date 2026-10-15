@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.142.1",
+    date: "October 15, 2026",
+    highlights: [
+      "The remove-photo button on an artist's page now sits in the photo's bottom-right corner, appears when you hover over the photo, and turns red under your pointer.",
+    ],
+  },
+  {
     version: "1.142.0",
     date: "October 15, 2026",
     highlights: [
