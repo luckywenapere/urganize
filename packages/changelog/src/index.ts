@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.142.4",
+    date: "October 15, 2026",
+    highlights: [
+      "The plan's tools (Filter, Group by, Legend and Full screen) now sit on a rollout's top line beside its name, artist and status, so the plan starts right under the tabs.",
+      "That line is spaced on one golden-ratio scale, with 34px controls and 8, 13 and 21px gaps, so everything on it lines up.",
+    ],
+  },
+  {
     version: "1.142.3",
     date: "October 15, 2026",
     highlights: [

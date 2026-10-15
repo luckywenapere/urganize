@@ -110,7 +110,7 @@ export function WorkspaceDesktopFocused({
   });
 
   const crumb = (
-    <div className="flex min-w-0 items-center gap-3">
+    <div className="flex min-w-0 items-center gap-[13px]">
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[15px] text-content-secondary">
         {onClose ? (
           <button
@@ -127,12 +127,12 @@ export function WorkspaceDesktopFocused({
         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-content-tertiary" aria-hidden="true" />
         <span className="min-w-0 truncate font-semibold text-content-primary">{card.release.title}</span>
       </nav>
-      <span className="h-4 w-px shrink-0 bg-stroke-subtle" aria-hidden="true" />
+      <span className="h-[21px] w-px shrink-0 bg-stroke-subtle" aria-hidden="true" />
       <span className="min-w-0 max-w-[14rem] truncate text-sm text-content-secondary">
         {scopedRelease.artistName || 'Unassigned artist'}
       </span>
       <span
-        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[statusGroup(status)]}`}
+        className={`inline-flex shrink-0 items-center gap-1.5 h-[21px] rounded-full px-2 text-xs font-medium ${STATUS_TONE[statusGroup(status)]}`}
       >
         <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
         {STATUS_LABEL[status] ?? status.replace(/_/g, ' ')}
@@ -141,7 +141,14 @@ export function WorkspaceDesktopFocused({
   );
 
   const actions = (
-    <div className="flex shrink-0 items-center gap-3">
+    <div className="flex shrink-0 items-center gap-[13px]">
+      {/* A hairline between the plan's tools and the page's own, shown only
+          when the tools are on the line: 13 + 1 + 13 sits on the line's
+          golden-ratio scale (8 / 13 / 21 / 34). */}
+      <span
+        className="hidden h-[21px] w-px bg-stroke-subtle group-has-[#subnav-slot-tools:not(:empty)]/pagebar:block"
+        aria-hidden="true"
+      />
       {/* One plain count (2026-10-14 declutter), worded like the
           distribution checklist's. */}
       <div className="hidden items-center gap-2 xl:flex">
@@ -154,7 +161,7 @@ export function WorkspaceDesktopFocused({
         <button
           type="button"
           onClick={onNewActivity}
-          className="motion-focus motion-press inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border border-stroke-control px-4 text-sm font-medium text-content-primary transition-colors hover:bg-bg-hover"
+          className="motion-focus motion-press inline-flex h-[34px] shrink-0 items-center justify-center gap-2 rounded-full border border-stroke-control px-[13px] text-[13px] font-medium text-content-primary transition-colors hover:bg-bg-hover"
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
           New activity

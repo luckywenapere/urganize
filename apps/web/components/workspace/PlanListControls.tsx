@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { usePageBarToolsSlot } from '@/components/shell/PageBar';
 import { Search, SlidersHorizontal, X } from '@/components/icons';
 import { FilterPopover, FilterSheet } from '@/components/shell/ListToolbar';
 import { useAuthStore } from '@/lib/auth-store';
@@ -138,20 +140,62 @@ const PANEL_QUERY = '(min-width: 1024px)';
  * list at z-20.
  */
 /**
+ * The plan's controls row.
+ *
  * `phoneSearchOnly`: on a computer the top bar's search is already on screen
  * and finds activities too, so a second search field in the page read as two
- * searches (founder, 2026-10-15). With it set, the field shows below lg only;
- * the Filter button stays at every width. Full screen covers the top bar, so
- * it keeps its field.
+ * searches (founder, 2026-10-15). With it set, the field shows below lg only.
+ *
+ * `inPageBar` (founder, 2026-10-15): on a computer the row's buttons (Filter,
+ * `extra` such as Group by, and `trailing` such as Legend and Full screen)
+ * move up onto the page bar line, beside the breadcrumb, sized and spaced on
+ * the line's golden-ratio scale (34px controls, 8 / 13 / 21px gaps). Below lg
+ * the row stays in the page as it was. Full screen covers the page bar, so it
+ * never passes this.
  */
 export function PlanListControls({
   plan,
   trailing,
+  extra,
   phoneSearchOnly = false,
+  inPageBar = false,
 }: {
   plan: PlanListState;
   trailing?: ReactNode;
+  extra?: ReactNode;
   phoneSearchOnly?: boolean;
+  inPageBar?: boolean;
+}) {
+  const toolsSlot = usePageBarToolsSlot(inPageBar);
+  if (!toolsSlot) {
+    return <PlanListRow plan={plan} trailing={trailing} search={phoneSearchOnly ? 'phone' : 'always'} />;
+  }
+  return (
+    <>
+      <div className="lg:hidden">
+        <PlanListRow plan={plan} trailing={trailing} search="always" />
+      </div>
+      {createPortal(
+        <div className="flex items-center gap-[13px]" role="toolbar" aria-label="Plan tools">
+          {extra}
+          <PlanListRow plan={plan} trailing={trailing} search="never" bar />
+        </div>,
+        toolsSlot
+      )}
+    </>
+  );
+}
+
+function PlanListRow({
+  plan,
+  trailing,
+  search,
+  bar = false,
+}: {
+  plan: PlanListState;
+  trailing?: ReactNode;
+  search: 'always' | 'phone' | 'never';
+  bar?: boolean;
 }) {
   const { filters, setFilters } = plan;
   const [open, setOpen] = useState<'sheet' | 'panel' | null>(null);
@@ -186,8 +230,9 @@ export function PlanListControls({
   };
 
   return (
-    <div className="flex items-center gap-2" role="search" aria-label="Search this plan">
-      <label className={`relative min-w-0 flex-1 sm:max-w-xs ${phoneSearchOnly ? 'lg:hidden' : ''}`}>
+    <div className={`flex items-center ${bar ? 'gap-2 [&>button]:!h-[34px] [&>button]:!w-[34px]' : 'gap-2'}`} role={bar ? undefined : 'search'} aria-label={bar ? undefined : 'Search this plan'}>
+      {search === 'never' ? null : (
+      <label className={`relative min-w-0 flex-1 sm:max-w-xs ${search === 'phone' ? 'lg:hidden' : ''}`}>
         <span className="sr-only">Search activities</span>
         <Search
           className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-content-tertiary"
@@ -201,6 +246,7 @@ export function PlanListControls({
           className="motion-focus h-10 w-full rounded-lg border border-stroke-control bg-bg-surface pl-8 pr-3 text-xs text-content-primary placeholder:text-content-tertiary sm:h-9 [&::-webkit-search-cancel-button]:appearance-none"
         />
       </label>
+      )}
 
       {/* One Filter button at every width (2026-10-14 declutter): three
           dropdowns in a row were the loudest thing above the timeline. */}
@@ -237,7 +283,7 @@ export function PlanListControls({
           count={activeFilterCount}
           onClear={clearFilters}
           onClose={close}
-          align="start"
+          align={bar ? 'end' : 'start'}
         />
       ) : null}
 
@@ -252,7 +298,9 @@ export function PlanListControls({
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
       ) : null}
-      {trailing ? <div className="ml-auto flex shrink-0 items-center gap-1">{trailing}</div> : null}
+      {trailing ? (
+        <div className={`flex shrink-0 items-center ${bar ? 'gap-2 [&>*>button]:!h-[34px] [&>*>button]:!w-[34px]' : 'ml-auto gap-1'}`}>{trailing}</div>
+      ) : null}
     </div>
   );
 }

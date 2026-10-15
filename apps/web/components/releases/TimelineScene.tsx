@@ -265,6 +265,7 @@ export function TimelineScene({
         <PlanListControls
           plan={plan}
           phoneSearchOnly={Boolean(onFullScreen)}
+          inPageBar={Boolean(onFullScreen)}
           trailing={<TimelineChrome onFullScreen={onFullScreen} />}
         />
       </div>

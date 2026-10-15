@@ -479,6 +479,26 @@ export function TasksPanel({
     closeMobilePanels();
   };
 
+
+  const groupByControl = (bar: boolean) => (
+    <div className={`flex items-center gap-1 ${bar ? 'text-[13px]' : 'text-xs'}`} role="group" aria-label="Group activities by">
+      <span className="mr-1 text-content-tertiary">Group by</span>
+      {(['phase', 'status'] as const).map((option) => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => chooseGrouping(option)}
+          aria-pressed={grouping === option}
+          className={`motion-focus rounded-full px-2.5 font-semibold transition-colors ${bar ? 'h-[34px]' : 'py-1'} ${
+            grouping === option ? 'bg-brand/10 text-content-primary' : 'text-content-secondary hover:bg-bg-hover'
+          }`}
+        >
+          {option === 'phase' ? 'Phase' : 'Status'}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     // `min-w-0` here is defensive: the panel is rendered both inside the
     // desktop two-pane grid (where the grid item carries min-w-0) AND as a
@@ -561,31 +581,12 @@ export function TasksPanel({
         sceneContent
       ) : (
       <div className="space-y-3">
-        {scopedRelease && tasks.length > 0 ? <PlanListControls plan={plan} phoneSearchOnly /> : null}
         {scopedRelease && tasks.length > 0 ? (
-          <div
-            className="flex items-center gap-1 text-xs"
-            role="group"
-            aria-label="Group activities by"
-          >
-            <span className="mr-1 text-content-tertiary">Group by</span>
-            {(['phase', 'status'] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => chooseGrouping(option)}
-                aria-pressed={grouping === option}
-                className={`motion-focus rounded-full px-2.5 py-1 font-semibold transition-colors ${
-                  grouping === option
-                    ? 'bg-brand/10 text-content-primary'
-                    : 'text-content-secondary hover:bg-bg-hover'
-                }`}
-              >
-                {option === 'phase' ? 'Phase' : 'Status'}
-              </button>
-            ))}
-          </div>
+          <PlanListControls plan={plan} phoneSearchOnly inPageBar extra={groupByControl(true)} />
         ) : null}
+        {/* Below lg Group by keeps its own row; on a computer it is on the
+            page bar line with the other plan tools (2026-10-15). */}
+        {scopedRelease && tasks.length > 0 ? <div className="lg:hidden">{groupByControl(false)}</div> : null}
         {/* Every bucket empty: the buckets below have all suppressed
             themselves, so this stands in for the whole list.
             Actionable rather than a muted line (URG-233) — an empty panel
