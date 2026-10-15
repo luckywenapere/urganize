@@ -32,6 +32,14 @@ import { useOpportunitiesStore } from '@/stores/useOpportunitiesStore';
 import { GrantProfileCard } from '@/components/opportunities/GrantProfileCard';
 import { GrantSuggestionsStrip } from '@/components/opportunities/GrantSuggestionsStrip';
 import { grantSuggestionsEnabled } from '@/lib/grants/grant-suggestions-flag';
+import Link from 'next/link';
+import { useEventsStore } from '@/stores/useEventsStore';
+import { openGigCalls } from '@/lib/gig-calls';
+import { formatShowDateTime } from '@/lib/events';
+
+// Open gig calls (pencilled-in shows) sit here since Shows left
+// Relationships (URG-303). Same flag the shows API reads.
+const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 
 const FIELD =
   'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary placeholder:text-content-tertiary hover:border-content-secondary';
@@ -122,10 +130,15 @@ export default function OpportunitiesPageClient() {
   const [formError, setFormError] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
 
+  const shows = useEventsStore((state) => state.events);
+  const loadShows = useEventsStore((state) => state.load);
+  const gigs = useMemo(() => (EVENTS_ENABLED ? openGigCalls(shows) : []), [shows]);
+
   useEffect(() => {
     void load();
     void loadArtists();
-  }, [load, loadArtists]);
+    if (EVENTS_ENABLED) void loadShows();
+  }, [load, loadArtists, loadShows]);
 
   const today = todayKey();
   const artistNames = useMemo(() => new Map(artists.map((a) => [a.id, a.name])), [artists]);
@@ -463,6 +476,33 @@ export default function OpportunitiesPageClient() {
             />
           </PullReveal>
         </>
+      ) : null}
+
+      {gigs.length > 0 ? (
+        <section aria-label="Gigs" className="mb-6">
+          <h2 className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-content-tertiary">Gigs</h2>
+          <ul className="space-y-2">
+            {gigs.map((show) => (
+              <li key={show.id}>
+                <Link
+                  href={`/dashboard/shows/${encodeURIComponent(show.id)}`}
+                  className="motion-focus block rounded-xl border border-stroke-default bg-bg-surface p-4 transition-colors hover:border-stroke-strong"
+                >
+                  <p className="truncate text-base font-semibold text-content-primary">{show.title}</p>
+                  <p className="mt-0.5 truncate font-mono text-xs text-content-secondary">
+                    {[
+                      show.artistName,
+                      show.setStartAt ? formatShowDateTime(show.setStartAt, show.timezone) : 'TBC',
+                      [show.venueName, show.city].filter(Boolean).join(', '),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       {rowError ? (

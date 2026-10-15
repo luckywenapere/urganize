@@ -104,9 +104,6 @@ export function buildMobileMenu(audience: MobileMenuAudience): MobileMenuGroup[]
   if (flags.notes) {
     work.push({ key: 'notes', label: 'Notes', href: '/dashboard/notes', icon: 'notes' });
   }
-  if (flags.events) {
-    work.push({ key: 'shows', label: 'Shows', href: '/dashboard/shows', icon: 'shows' });
-  }
   // Pitching left the menus (founder, 2026-10-15): it lives inside each
   // rollout, as its Pitch tab.
   if (flags.artists) {
@@ -122,20 +119,20 @@ export function buildMobileMenu(audience: MobileMenuAudience): MobileMenuGroup[]
   }
 
   const people: MobileMenuItem[] = [];
-  if (flags.relationships) {
-    people.push({
-      key: 'relationships',
-      label: 'Relationships',
-      href: '/dashboard/relationships',
-      icon: 'relationships',
-    });
-  }
   if (flags.directory) {
     people.push({
       key: 'directory',
       label: 'Directory',
       href: '/dashboard/directory',
       icon: 'directory',
+    });
+  }
+  if (flags.relationships) {
+    people.push({
+      key: 'relationships',
+      label: 'My People',
+      href: '/dashboard/relationships',
+      icon: 'relationships',
     });
   }
   if (flags.pitching && hasCuratorProfile === true) {

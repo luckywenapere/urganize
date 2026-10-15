@@ -40,9 +40,9 @@ describe('the desktop side menu: the open area\u2019s pages (URG-254, founder ca
   });
 
   it('lists Relationships\u2019 pages with the labels from shell-nav (no new words)', () => {
-    expect(labels('/dashboard/directory')).toEqual(['People', 'Directory', 'Shows']);
+    expect(labels('/dashboard/directory')).toEqual(['Directory', 'My People']);
     expect(lit('/dashboard/directory')).toEqual(['directory']);
-    expect(lit('/dashboard/shows')).toEqual(['shows']);
+    expect(lit('/dashboard/relationships/p1')).toEqual(['people']);
   });
 
   it('draws no side menu for an area with one page, or a page in no area', () => {

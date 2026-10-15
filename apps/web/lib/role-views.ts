@@ -135,7 +135,7 @@ export type RoleViewFeature =
 /** Tucked per view. Anything not listed is a default. 'other' tucks nothing. */
 const TUCKED: Record<RoleView, readonly RoleViewFeature[]> = {
   artist_manager: ['catalogue', 'credits', 'audience'],
-  label: ['opportunities', 'shows'],
+  label: ['opportunities'],
   solo_artist: ['artists', 'team', 'people', 'directory'],
   artist_team: ['artists', 'catalogue', 'credits', 'opportunities', 'audience', 'people', 'directory'],
   other: [],
@@ -161,7 +161,6 @@ const TAB_FEATURE: Record<string, RoleViewFeature> = {
   notes: 'notes',
   people: 'people',
   directory: 'directory',
-  shows: 'shows',
   pitching: 'pitching',
 };
 

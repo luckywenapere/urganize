@@ -126,29 +126,27 @@ describe('the nav filter, per view', () => {
     expect(destinations(list)).toContain('relationships/people');
   });
 
-  it('Label tucks Shows and Opportunities', () => {
+  it('Label tucks Opportunities', () => {
     const list = view('label');
     expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'relationships', 'audience', 'more']);
-    expect(more(list)).toEqual(['shows', 'opportunities']);
+    expect(more(list)).toEqual(['opportunities']);
     const relationships = list.find((a) => a.key === 'relationships')!;
-    expect(relationships.subTabs.map((t) => t.key)).toEqual(['people', 'directory']);
+    expect(relationships.subTabs.map((t) => t.key)).toEqual(['directory', 'people']);
   });
 
-  it('Solo artist tucks Artists, People and Directory, keeping Shows', () => {
+  it('Solo artist tucks Artists, Directory and People', () => {
     const list = view('solo_artist');
-    expect(more(list)).toEqual(['artists', 'people', 'directory']);
+    expect(more(list)).toEqual(['artists', 'directory', 'people']);
     const catalogue = list.find((a) => a.key === 'catalogue')!;
     expect(catalogue.subTabs.map((t) => t.key)).toEqual(['releases', 'notes']);
-    const relationships = list.find((a) => a.key === 'relationships')!;
-    expect(relationships.subTabs.map((t) => t.key)).toEqual(['shows']);
-    // Its pill now goes to the first tab it still has.
-    expect(relationships.href).toBe('/dashboard/shows');
+    // Relationships lost every tab, so it moved under More whole.
+    expect(list.some((a) => a.key === 'relationships')).toBe(false);
   });
 
   it('Artist team tucks Artists, People, Directory, Opportunities and Audience', () => {
     const list = view('artist_team');
-    expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'relationships', 'more']);
-    expect(more(list)).toEqual(['artists', 'people', 'directory', 'opportunities', 'audience']);
+    expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'more']);
+    expect(more(list)).toEqual(['artists', 'directory', 'people', 'opportunities', 'audience']);
   });
 
   it('removes nothing: every destination is in the menu or under More', () => {
@@ -166,7 +164,7 @@ describe('the nav filter, per view', () => {
     expect(activeShellArea(list, '/dashboard/artists/abc')?.key).toBe('more');
     expect(activeShellArea(list, '/dashboard/directory')?.key).toBe('more');
     expect(activeShellArea(list, '/dashboard')?.key).toBe('catalogue');
-    expect(activeShellArea(list, '/dashboard/shows')?.key).toBe('relationships');
+    expect(activeShellArea(list, '/dashboard/shows')?.key).toBe('catalogue');
     expect(activeMobileTab(list, '/dashboard/artists')).toBe('more');
   });
 
@@ -174,7 +172,6 @@ describe('the nav filter, per view', () => {
     const list = view('label');
     expect(buildMoreItems(list).map((i) => i.key)).toEqual(['relationships', 'audience']);
     expect(tuckedMoreItems(list)).toEqual([
-      { key: 'shows', label: 'Shows', href: '/dashboard/shows', soon: false },
       { key: 'opportunities', label: 'Opportunities', href: '/dashboard/opportunities', soon: false },
     ]);
     // Audience has nothing built yet; tucked, it still says so.
@@ -192,6 +189,6 @@ describe('the nav filter, per view', () => {
 
   it('says what a view tucks in one line', () => {
     expect(describeRoleView('other')).toBe('Everything is in the menu.');
-    expect(describeRoleView('label')).toBe('Opportunities and Shows move under More. Nothing is removed.');
+    expect(describeRoleView('label')).toBe('Opportunities move under More. Nothing is removed.');
   });
 });

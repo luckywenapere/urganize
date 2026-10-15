@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.143.0",
+    date: "October 15, 2026",
+    highlights: [
+      "Relationships now opens on Directory, with My People (formerly People) beside it.",
+      "Shows left Relationships. Pencilled-in gigs appear under Gigs in Opportunities, and booked shows live on each artist's page in Catalogue. Old Shows links still open.",
+    ],
+  },
+  {
     version: "1.142.4",
     date: "October 15, 2026",
     highlights: [

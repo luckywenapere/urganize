@@ -31,7 +31,6 @@
  * route whose feature is off is never prefetched — with the flag off those
  * pages bounce or 404, and warming them would be pure waste. */
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
-const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const ARTIST_PAGE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_ARTIST_PAGE === 'true' &&
@@ -75,7 +74,6 @@ export function buildPrefetchRoutes({ hasCuratorProfile }: PrefetchAudience): st
   if (HOME_ENABLED) routes.push('/dashboard/home');
   if (ARTIST_PAGE_ENABLED) routes.push('/dashboard/artists');
   if (NOTES_ENABLED) routes.push('/dashboard/notes');
-  if (EVENTS_ENABLED) routes.push('/dashboard/shows');
   // Pitching left the nav (founder, 2026-10-15) and lives inside each
   // rollout, so /dashboard/pitching (now a bridge) is no longer prefetched.
   if (DIRECTORY_ENABLED) routes.push('/dashboard/directory');

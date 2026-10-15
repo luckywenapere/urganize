@@ -77,6 +77,7 @@ export const URGANS_HREF = '/dashboard/urgans';
 export const CATALOGUE_HREF = '/dashboard';
 export const DISTRIBUTE_HREF = '/dashboard/distribute';
 export const ARTISTS_HREF = '/dashboard/artists';
+export const SHOWS_HREF = '/dashboard/shows';
 
 export function buildShellAreas(flags: ShellFlags): ShellArea[] {
   const catalogueTabs: ShellSubTab[] = [
@@ -107,15 +108,10 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
     });
   }
 
+  // Directory first and the pill's landing, then My People (URG-303, founder
+  // 2026-10-15). Shows left Relationships the same day: open gig calls sit in
+  // Opportunities, booked shows on each artist's page under Catalogue.
   const relationshipTabs: ShellSubTab[] = [];
-  if (flags.relationships) {
-    relationshipTabs.push({
-      key: 'people',
-      label: 'People',
-      href: '/dashboard/relationships',
-      isActive: (p) => startsWithPath(p, '/dashboard/relationships'),
-    });
-  }
   if (flags.directory) {
     relationshipTabs.push({
       key: 'directory',
@@ -124,13 +120,12 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, '/dashboard/directory'),
     });
   }
-  // Shows sits with Relationships (founder call, 2026-10-11).
-  if (flags.events) {
+  if (flags.relationships) {
     relationshipTabs.push({
-      key: 'shows',
-      label: 'Shows',
-      href: '/dashboard/shows',
-      isActive: (p) => startsWithPath(p, '/dashboard/shows'),
+      key: 'people',
+      label: 'My People',
+      href: '/dashboard/relationships',
+      isActive: (p) => startsWithPath(p, '/dashboard/relationships'),
     });
   }
 
@@ -167,20 +162,20 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
         startsWithPath(p, '/dashboard/artists') ||
         startsWithPath(p, '/dashboard/press-kits') ||
         startsWithPath(p, DISTRIBUTE_HREF) ||
-        startsWithPath(p, '/dashboard/notes'),
+        startsWithPath(p, '/dashboard/notes') ||
+        // Old /dashboard/shows links still open (a show belongs to its artist).
+        startsWithPath(p, SHOWS_HREF),
     },
     // Pitching left the top bar and the phone's bottom bar (founder,
     // 2026-10-15): it lives fully inside each rollout, as its Pitch tab.
     {
       key: 'relationships',
       label: 'Relationships',
-      href: '/dashboard/relationships',
+      href: relationshipTabs[0]?.href ?? '/dashboard/directory',
       live: relationshipTabs.length > 0,
       subTabs: relationshipTabs,
       isActive: (p) =>
-        startsWithPath(p, '/dashboard/relationships') ||
-        startsWithPath(p, '/dashboard/directory') ||
-        startsWithPath(p, '/dashboard/shows'),
+        startsWithPath(p, '/dashboard/relationships') || startsWithPath(p, '/dashboard/directory'),
     },
     {
       key: 'opportunities',
@@ -278,6 +273,7 @@ export function shellSideMenu(areas: ShellArea[], pathname: string): SideMenu | 
 export function shellPageTitle(areas: ShellArea[], pathname: string): string | null {
   const area = activeShellArea(areas, pathname);
   if (!area) return null;
+  if (startsWithPath(pathname, SHOWS_HREF)) return 'Shows';
   // Every tab, not just the visible row: an area down to one page (Catalogue
   // with Rollouts alone, since Distribute left the row) still names it.
   const tab = area.subTabs.find((candidate) => candidate.isActive(pathname));

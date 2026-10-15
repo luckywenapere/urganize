@@ -54,11 +54,10 @@ describe('buildMobileMenu', () => {
     ).toEqual([
       'catalog',
       'notes',
-      'shows',
       'artists',
       'press-kits',
-      'relationships',
       'directory',
+      'relationships',
       'playlist-pitches',
       'settings',
       'billing',
@@ -123,8 +122,8 @@ describe('isMobileMenuItemActive', () => {
       .flatMap((group) => group.items)
       .find((item) => item.key === key)!;
 
-  it('keeps Shows lit on a show page', () => {
-    expect(isMobileMenuItemActive(find('shows'), '/dashboard/shows/abc')).toBe(true);
+  it('keeps My People lit on a person page', () => {
+    expect(isMobileMenuItemActive(find('relationships'), '/dashboard/relationships/abc')).toBe(true);
   });
 
   it('lights Catalog only on the bare catalog', () => {

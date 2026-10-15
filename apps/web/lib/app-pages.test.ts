@@ -100,13 +100,11 @@ describe('buildAppPages — flag gates', () => {
     expect(on.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'notes')).toBe(true);
   });
 
-  it('adds Shows only when the events flag is on', async () => {
-    const off = await loadPages();
-    expect(off.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'shows')).toBe(
-      false
-    );
+  // Shows left Relationships (URG-303): no page of its own in search; gig
+  // words find Opportunities, where open gig calls sit.
+  it('never offers Shows as a page, even with the events flag on', async () => {
     const on = await loadPages({ NEXT_PUBLIC_FEATURE_EVENTS: 'true' });
-    expect(on.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'shows')).toBe(true);
+    expect(on.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'shows')).toBe(false);
   });
 
   // Press kits left the menus on 2026-09-09 (founder call: "only accessible
@@ -211,14 +209,10 @@ describe('appPageHaystack + the shared matcher', () => {
     }
   });
 
-  it('finds Shows by "setlist" and by "dj"', async () => {
-    const { buildAppPages, appPageHaystack } = await loadPages({
-      NEXT_PUBLIC_FEATURE_EVENTS: 'true',
-    });
-    const shows = buildAppPages({ hasCuratorProfile: false }).find((page) => page.key === 'shows');
-    expect(shows).toBeDefined();
-    expect(matchesSearchTerms(appPageHaystack(shows!), parseSearchTerms('setlist'))).toBe(true);
-    expect(matchesSearchTerms(appPageHaystack(shows!), parseSearchTerms('dj'))).toBe(true);
+  it('finds Opportunities by "gig"', async () => {
+    const { buildAppPages, appPageHaystack } = await loadPages();
+    const opps = buildAppPages({ hasCuratorProfile: false }).find((page) => page.key === 'opportunities');
+    expect(matchesSearchTerms(appPageHaystack(opps!), parseSearchTerms('gig'))).toBe(true);
   });
 
   it('finds the assistant by "assistant" as well as by its name', async () => {

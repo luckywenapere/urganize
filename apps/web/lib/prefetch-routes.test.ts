@@ -48,7 +48,6 @@ describe('buildPrefetchRoutes', () => {
       '/dashboard/urgans',
       '/dashboard/home',
       '/dashboard/notes',
-      '/dashboard/shows',
       '/dashboard/opportunities',
       '/curator',
     ]);
@@ -99,7 +98,8 @@ describe('buildPrefetchRoutes', () => {
       pitching: false,
     });
     const routes = buildPrefetchRoutes({ hasCuratorProfile: true });
-    expect(routes).toContain('/dashboard/shows');
+    // Shows left the nav (URG-303); its old link still opens, unwarmed.
+    expect(routes).not.toContain('/dashboard/shows');
     expect(routes).not.toContain('/dashboard/notes');
     expect(routes).not.toContain('/curator');
   });

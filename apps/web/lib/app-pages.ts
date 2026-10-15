@@ -22,7 +22,6 @@
 import { settingsDeepLink } from '@/lib/settings-nav';
 
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
-const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const ARTIST_PAGE_ENABLED =
@@ -125,7 +124,7 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
   if (RELATIONSHIPS_ENABLED) {
     pages.push({
       key: 'relationships',
-      label: 'Relationships',
+      label: 'My People',
       href: '/dashboard/relationships',
       keywords: ['people', 'contacts', 'contact', 'crm', 'network', 'follow up', 'producer', 'dj'],
     });
@@ -135,7 +134,8 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
     key: 'opportunities',
     label: 'Opportunities',
     href: '/dashboard/opportunities',
-    keywords: ['deal', 'grant', 'sync', 'brand', 'partnership', 'sponsor', 'licensing', 'offer'],
+    // Open gig calls sit here since Shows left Relationships (URG-303).
+    keywords: ['deal', 'grant', 'sync', 'brand', 'partnership', 'sponsor', 'licensing', 'offer', 'gig', 'gigs', 'show', 'shows'],
   });
 
   if (NOTES_ENABLED) {
@@ -167,15 +167,6 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
         'videographer',
         'pr',
       ],
-    });
-  }
-
-  if (EVENTS_ENABLED) {
-    pages.push({
-      key: 'shows',
-      label: 'Shows',
-      href: '/dashboard/shows',
-      keywords: ['event', 'events', 'gig', 'setlist', 'set list', 'dj', 'pack', 'venue'],
     });
   }
 

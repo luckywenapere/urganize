@@ -5,6 +5,7 @@ import {
   buildMobileTabs,
   buildMoreItems,
   buildShellAreas,
+  shellPageTitle,
   visibleSubTabs,
   type ShellFlags,
 } from './shell-nav';
@@ -61,16 +62,22 @@ describe('shell nav', () => {
     expect(areas.find((a) => a.key === 'audience')?.live).toBe(false);
   });
 
-  it('relationships always points at its own page, whichever tabs are built', () => {
-    expect(buildShellAreas(ALL_ON).find((a) => a.key === 'relationships')?.href).toBe(
-      '/dashboard/relationships'
-    );
+  it('relationships lands on Directory, then My People, and Shows is not a tab (URG-303)', () => {
+    const rel = buildShellAreas(ALL_ON).find((a) => a.key === 'relationships')!;
+    expect(rel.href).toBe('/dashboard/directory');
+    expect(rel.subTabs.map((t) => t.label)).toEqual(['Directory', 'My People']);
     expect(
-      buildShellAreas({ ...ALL_OFF, pitching: true }).find((a) => a.key === 'relationships')?.href
+      buildShellAreas({ ...ALL_OFF, relationships: true }).find((a) => a.key === 'relationships')?.href
     ).toBe('/dashboard/relationships');
     expect(buildShellAreas(ALL_OFF).find((a) => a.key === 'relationships')?.href).toBe(
-      '/dashboard/relationships'
+      '/dashboard/directory'
     );
+  });
+
+  it('keeps old /dashboard/shows links working, lit as Catalogue and titled Shows', () => {
+    const areas = buildShellAreas(ALL_ON);
+    expect(activeShellArea(areas, '/dashboard/shows')?.key).toBe('catalogue');
+    expect(shellPageTitle(areas, '/dashboard/shows/e1')).toBe('Shows');
   });
 
   it('catalogue always has Rollouts and adds only the tabs whose page opens', () => {
@@ -105,7 +112,7 @@ describe('shell nav', () => {
     expect(at('/dashboard/relationships/p1')).toBe('relationships');
     expect(at('/dashboard/opportunities')).toBe('opportunities');
     expect(at('/dashboard/audience')).toBe('audience');
-    expect(at('/dashboard/shows/e1')).toBe('relationships');
+    expect(at('/dashboard/shows/e1')).toBe('catalogue');
     expect(at('/dashboard/urgans')).toBe('urgans');
     expect(at('/dashboard/credits')).toBeNull();
     expect(at('/settings')).toBeNull();
@@ -145,7 +152,7 @@ describe('shell nav', () => {
     const areas = buildShellAreas(ALL_ON);
     expect(activeMobileTab(areas, '/dashboard/home')).toBe('home');
     expect(activeMobileTab(areas, '/dashboard/artists')).toBe('catalogue');
-    expect(activeMobileTab(areas, '/dashboard/shows')).toBe('more');
+    expect(activeMobileTab(areas, '/dashboard/shows')).toBe('catalogue');
     expect(activeMobileTab(areas, '/dashboard/urgans')).toBe('urgans');
     expect(activeMobileTab(areas, '/dashboard/directory')).toBe('more');
     expect(activeMobileTab(areas, '/dashboard/audience')).toBe('more');
