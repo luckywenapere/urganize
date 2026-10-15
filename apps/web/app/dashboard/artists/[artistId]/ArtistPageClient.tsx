@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Newspaper } from '@/components/icons';
+import { ArrowLeft, ArrowRight, Newspaper, Plus } from '@/components/icons';
+import { CreateShowModal } from '@/components/events/CreateShowModal';
 import { useAuthStore } from '@/lib/auth-store';
 // Back goes to the Artists tab, the list of artists (founder, 2026-10-14).
 import { ARTISTS_HREF } from '@/lib/shell-nav';
@@ -18,6 +19,7 @@ import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
+const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 
 const KIT_COPY = { incomplete: 'Not finished', ready: 'Ready', published: 'Live' } as const;
 
@@ -51,6 +53,8 @@ export default function ArtistPageClient() {
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const events = useEventsStore((state) => state.events);
   const loadEvents = useEventsStore((state) => state.load);
+  const bookableArtistIds = useEventsStore((state) => state.bookableArtistIds);
+  const [isBookOpen, setIsBookOpen] = useState(false);
   const kits = usePressKitsStore((state) => state.entries);
   const loadKits = usePressKitsStore((state) => state.load);
 
@@ -96,8 +100,12 @@ export default function ArtistPageClient() {
 
   if (!ARTIST_PAGE_ENABLED) return null;
 
-  const act = (action: 'open_epk' | 'open_release' | 'open_show') =>
+  const act = (action: 'open_epk' | 'open_release' | 'open_show' | 'book_show') =>
     captureAnalyticsEvent({ name: 'artist_page_action', properties: { artist_id: artistId, action } });
+
+  // Shows must be on and this person allowed to book for this artist (GET
+  // /api/events says who). Otherwise the section stays read-only.
+  const canBook = EVENTS_ENABLED && Boolean(bookableArtistIds?.includes(artistId));
 
   if (!artist) {
     const waiting = authLoading || !rosterLoaded;
@@ -253,9 +261,26 @@ export default function ArtistPageClient() {
         )}
       </SectionCard>
 
-      <SectionCard title="Shows">
+      <SectionCard
+        title="Shows"
+        action={
+          canBook ? (
+            <button
+              type="button"
+              onClick={() => {
+                act('book_show');
+                setIsBookOpen(true);
+              }}
+              className="motion-focus inline-flex min-h-11 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-brand hover:underline"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              Add a show
+            </button>
+          ) : null
+        }
+      >
         {shows.upcoming.length === 0 && shows.past.length === 0 ? (
-          <Empty>No shows for this artist yet.</Empty>
+          <Empty>{canBook ? 'No shows for this artist yet. Add their next one and it lands here and in Shows.' : 'No shows for this artist yet.'}</Empty>
         ) : (
           <>
             {shows.upcoming.length > 0 ? (
@@ -273,6 +298,17 @@ export default function ArtistPageClient() {
           </>
         )}
       </SectionCard>
+
+      {/* The same booking form as Shows, with this artist already chosen
+          (founder, 2026-10-15). One artist means no picker. */}
+      {isBookOpen ? (
+        <CreateShowModal
+          artists={[{ id: artist.id, name: artist.name }]}
+          onClose={() => setIsBookOpen(false)}
+          onCreated={() => setIsBookOpen(false)}
+          onCreatedSeries={() => setIsBookOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

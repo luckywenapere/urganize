@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.141.0",
+    date: "October 15, 2026",
+    highlights: [
+      "Add a show straight from an artist's page: tap Add a show in their Shows section, and the booking form opens with that artist already picked. The new show appears on their page and in Shows.",
+    ],
+  },
+  {
     version: "1.140.0",
     date: "October 15, 2026",
     highlights: [
