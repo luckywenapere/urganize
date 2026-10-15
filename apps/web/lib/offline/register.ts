@@ -15,6 +15,49 @@
 
 const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 
+const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID || '';
+const OFFLINE_CACHE_PREFIX = 'urganize-offline-';
+
+/**
+ * Delete every offline cache this origin holds (2026-10-15, URG-314). Called on
+ * sign-out so nothing one account's session cached is ever shown to the next
+ * account on the same device. Runs from the window (CacheStorage is shared
+ * with the worker) and also tells the worker, in case it is mid-write.
+ * Never throws.
+ */
+export async function clearAppCaches(): Promise<void> {
+  if (typeof window === 'undefined' || !('caches' in window)) return;
+  try {
+    navigator.serviceWorker?.controller?.postMessage({ type: 'clear-all' });
+    const names = await caches.keys();
+    await Promise.all(
+      names.filter((name) => name.startsWith(OFFLINE_CACHE_PREFIX)).map((name) => caches.delete(name))
+    );
+  } catch {
+    // Best effort.
+  }
+}
+
+/**
+ * Drop the cached pages (not the static chunks) before a chunk-recovery
+ * reload, so the reload fetches the current deployment's HTML instead of the
+ * stale shell that named the missing chunk. Never throws.
+ */
+export async function purgePageCaches(): Promise<void> {
+  if (typeof window === 'undefined' || !('caches' in window)) return;
+  try {
+    navigator.serviceWorker?.controller?.postMessage({ type: 'purge-pages' });
+    const names = await caches.keys();
+    await Promise.all(
+      names
+        .filter((name) => name.startsWith(`${OFFLINE_CACHE_PREFIX}html-`) || name.startsWith(`${OFFLINE_CACHE_PREFIX}rsc-`))
+        .map((name) => caches.delete(name))
+    );
+  } catch {
+    // Best effort.
+  }
+}
+
 function isServiceWorkerSupported(): boolean {
   return typeof window !== 'undefined' && 'serviceWorker' in navigator;
 }
@@ -39,7 +82,11 @@ export async function precacheRoutesOffline(paths: string[]): Promise<void> {
  * a silent no-op, same posture as registerPushServiceWorker(). */
 export async function registerAppServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!isServiceWorkerSupported()) return null;
-  const scriptUrl = OFFLINE_ENABLED ? '/sw-offline.js' : '/sw.js';
+  // Versioned per deployment so each deploy installs a fresh worker that
+  // purges the previous build's caches (see public/sw-offline.js).
+  const scriptUrl = OFFLINE_ENABLED
+    ? `/sw-offline.js${BUILD_ID ? `?v=${encodeURIComponent(BUILD_ID)}` : ''}`
+    : '/sw.js';
   try {
     return await navigator.serviceWorker.register(scriptUrl);
   } catch {

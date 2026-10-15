@@ -1414,8 +1414,11 @@ broken image. None of that was offline-specific work — those were bugs today,
 just bugs a stable connection usually hides.
 
 **All three phases are built.** Phase 1 is unflagged and live; phases 2 and 3 sit
-behind `NEXT_PUBLIC_FEATURE_OFFLINE`, **which has never been flipped — there is
-no ledger entry, which by this file's own EPK precedent is what says so.** (This
+behind `NEXT_PUBLIC_FEATURE_OFFLINE`, **which is ON in production (corrected
+2026-10-15, URG-314: this line long said the flag had never been flipped, but
+production registers `sw-offline.js`; the perf pass found it live).** Since
+v1.147.7 the worker is versioned per deployment and serves static signed-in
+pages stale-while-revalidate; see PERFORMANCE.md before changing it. (This
 line said "phase 3 pending" until 2026-09-07, contradicting the table and the
 Phase 3 heading directly below it; corrected in place.)
 

@@ -37,6 +37,7 @@ import {
   type AuthFailureKind,
 } from '@/lib/auth-failure';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
+import { clearAppCaches } from '@/lib/offline/register';
 
 // Custom URL scheme registered by the Expo shell (apps/mobile/app.config.ts,
 // `scheme`) — see docs/mobile/auth-setup.md. Google
@@ -1104,6 +1105,10 @@ if (typeof window !== 'undefined') {
       }
       void useAuthStore.getState().checkAuth();
     } else if (event === 'SIGNED_OUT') {
+      // Nothing one account's session cached may survive into the next
+      // account's on this device (2026-10-15, URG-314): the service worker's
+      // page caches go with the session, whoever initiated the sign-out.
+      void clearAppCaches();
       // Still an unconditional wipe, even when supabase-js decided this on its
       // own: by the time we hear about it _removeSession() has already deleted
       // the token, so keeping isAuthenticated would leave every query running

@@ -111,12 +111,12 @@ function createFakeCacheStorage() {
   return { cacheStorage, stores };
 }
 
-function loadServiceWorker(fetchImpl: typeof fetch) {
+function loadServiceWorker(fetchImpl: typeof fetch, search = '') {
   const listeners: Record<string, Listener[]> = {};
   const { cacheStorage } = createFakeCacheStorage();
 
   const fakeSelf = {
-    location: { origin: 'https://app.urganize.app' },
+    location: { origin: 'https://app.urganize.app', search },
     addEventListener: (type: string, listener: Listener) => {
       listeners[type] = listeners[type] || [];
       listeners[type].push(listener);
@@ -354,6 +354,95 @@ describe('sw-offline.js routing', () => {
     const remaining = await cacheStorage.keys();
     expect(remaining).not.toContain('urganize-offline-html-v0');
     expect(remaining).toContain('urganize-offline-assets-v1');
+    expect(remaining).toContain('some-unrelated-cache');
+  });
+});
+
+describe('sw-offline.js stale-while-revalidate shell (URG-314)', () => {
+  afterEach(() => {
+    const globalScope = globalThis as unknown as Record<string, unknown>;
+    delete globalScope.self;
+    delete globalScope.caches;
+    delete globalScope.importScripts;
+    delete globalScope.fetch;
+    vi.restoreAllMocks();
+  });
+
+  function stamped(body: string, headers: Record<string, string>): FakeResponse & { headers: { get(n: string): string | null } } {
+    const base = fakeResponse(body);
+    const lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]));
+    const withHeaders = {
+      ...base,
+      headers: { get: (name: string) => lower[name.toLowerCase()] ?? null },
+      clone: () => stamped(body, headers),
+    };
+    return withHeaders;
+  }
+  const nav = (path: string) => fakeRequest(`https://app.urganize.app${path}`, { mode: 'navigate' });
+  const STATIC_B1 = { 'x-nextjs-prerender': '1', 'x-urg-build': 'b1' };
+
+  it('answers a static app page from the device and refreshes it in the background', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(stamped('<html>first</html>', STATIC_B1))
+      .mockResolvedValueOnce(stamped('<html>second</html>', STATIC_B1));
+    const { listeners } = loadServiceWorker(fetchImpl as unknown as typeof fetch, '?v=b1');
+
+    const first = await (await dispatchFetch(listeners, nav('/dashboard')))!;
+    expect(await first.text()).toBe('<html>first</html>');
+
+    const second = await (await dispatchFetch(listeners, nav('/dashboard')))!;
+    // Served the cached copy instantly, while the network refresh ran.
+    expect(await second.text()).toBe('<html>first</html>');
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it('never serves a cached page stamped by another build', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(stamped('<html>old build</html>', { 'x-nextjs-prerender': '1', 'x-urg-build': 'b0' }))
+      .mockResolvedValueOnce(stamped('<html>net</html>', STATIC_B1));
+    const { listeners } = loadServiceWorker(fetchImpl as unknown as typeof fetch, '?v=b1');
+    await (await dispatchFetch(listeners, nav('/dashboard')))!;
+    const second = await (await dispatchFetch(listeners, nav('/dashboard')))!;
+    expect(await second.text()).toBe('<html>net</html>');
+  });
+
+  it('keeps dynamic pages and /auth network-first', async () => {
+    const fetchImpl = vi.fn().mockImplementation(async () => stamped('<html>live</html>', { 'x-urg-build': 'b1' }));
+    const { listeners } = loadServiceWorker(fetchImpl as unknown as typeof fetch, '?v=b1');
+    await (await dispatchFetch(listeners, nav('/dashboard/releases/abc')))!;
+    await (await dispatchFetch(listeners, nav('/dashboard/releases/abc')))!;
+    await (await dispatchFetch(listeners, nav('/auth')))!;
+    await (await dispatchFetch(listeners, nav('/auth')))!;
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+  });
+
+  it('never stores a private or no-store response', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(stamped('<html>mine</html>', { ...STATIC_B1, 'cache-control': 'private, no-store' }))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    const { listeners } = loadServiceWorker(fetchImpl as unknown as typeof fetch, '?v=b1');
+    await (await dispatchFetch(listeners, nav('/settings')))!;
+    const offline = await (await dispatchFetch(listeners, nav('/settings')))!;
+    expect(await offline.text()).toContain("You're offline");
+  });
+
+  it('versions its caches by build and clears everything on clear-all', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(stamped('<html>x</html>', STATIC_B1));
+    const { listeners, cacheStorage } = loadServiceWorker(fetchImpl as unknown as typeof fetch, '?v=b1');
+    await (await dispatchFetch(listeners, nav('/dashboard')))!;
+    expect(await cacheStorage.keys()).toContain('urganize-offline-html-b1');
+    await cacheStorage.open('some-unrelated-cache');
+
+    let pending: Promise<unknown> = Promise.resolve();
+    for (const listener of listeners.message || []) {
+      listener({ data: { type: 'clear-all' }, waitUntil: (p: Promise<unknown>) => (pending = p) } as unknown as FakeSwEvent);
+    }
+    await pending;
+    const remaining = await cacheStorage.keys();
+    expect(remaining.filter((n: string) => n.startsWith('urganize-offline-'))).toEqual([]);
     expect(remaining).toContain('some-unrelated-cache');
   });
 });

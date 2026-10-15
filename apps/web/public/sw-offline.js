@@ -19,7 +19,19 @@
 
 importScripts('/sw-push.js');
 
-const CACHE_VERSION = 'v1';
+// Versioned to the deployment (2026-10-15, perf pass URG-314). The page
+// registers this script as /sw-offline.js?v=<build id> (lib/offline/register.ts,
+// NEXT_PUBLIC_BUILD_ID from next.config.js), so every deploy is a new script
+// URL: the browser installs a fresh worker, and activate below deletes every
+// cache an older build left behind. 'v1' only when loaded without a version
+// (local dev, tests).
+const CACHE_VERSION = (() => {
+  try {
+    return new URLSearchParams((self.location && self.location.search) || '').get('v') || 'v1';
+  } catch {
+    return 'v1';
+  }
+})();
 const HTML_CACHE = `urganize-offline-html-${CACHE_VERSION}`;
 const ASSET_CACHE = `urganize-offline-assets-${CACHE_VERSION}`;
 // In-app (client-side) navigations fetch a React Server Component payload
@@ -122,12 +134,96 @@ async function trimCache(cacheName, maxEntries) {
   await Promise.all(keys.slice(0, excess).map((key) => cache.delete(key)));
 }
 
-async function handleNavigation(request) {
+// ---------------------------------------------------------------------------
+// Stale-while-revalidate app shell (2026-10-15, perf pass URG-314).
+//
+// Navigations used to be network-first with a 5s timeout, so every visit on a
+// slow phone waited on the network for HTML the device already had. Now a
+// signed-in app page that is a STATIC prerendered shell (Vercel marks those
+// `x-nextjs-prerender: 1`; they are byte-identical for every account, since
+// all user data loads client-side through /api and Supabase) is answered from
+// the device at once and refreshed in the background for next time.
+//
+// Rules that keep this safe:
+// - Only APP_CHROME_PREFIXES, never PUBLIC_ONLY_PREFIXES (/auth included),
+//   never /api/*, never a dynamic (server-rendered) page: those stay
+//   network-first exactly as before.
+// - Only a copy stamped with THIS worker's build (`x-urg-build`, set by
+//   next.config.js headers()) is served stale. A copy from another build
+//   names chunks that may be gone, so it is dropped instead of served.
+// - When the background refresh sees a NEWER build, nothing new is stored
+//   under this build's cache: the stale entry is deleted, so the next visit
+//   goes to the network, loads the new HTML, registers the new worker and
+//   purges these caches.
+// - Responses marked private / no-store are never stored.
+// - Sign-out clears every cache (lib/offline/register.ts clearAppCaches), and
+//   lib/chunk-recovery's reload purges the page caches first (purge-pages),
+//   so a recovery reload can never be answered by the stale shell it is
+//   recovering from.
+// ---------------------------------------------------------------------------
+
+function header(response, name) {
+  try {
+    return (response && response.headers && response.headers.get(name)) || null;
+  } catch {
+    return null;
+  }
+}
+
+function isStorable(response) {
+  if (!response || !response.ok || response.type !== 'basic') return false;
+  const cacheControl = header(response, 'cache-control') || '';
+  if (/no-store|private/i.test(cacheControl)) return false;
+  // A response stamped by another build must not live in this build's cache.
+  const build = header(response, 'x-urg-build');
+  if (build && CACHE_VERSION !== 'v1' && build !== CACHE_VERSION) return false;
+  return true;
+}
+
+function isServableShell(response) {
+  return (
+    header(response, 'x-nextjs-prerender') === '1' &&
+    (CACHE_VERSION === 'v1' || header(response, 'x-urg-build') === CACHE_VERSION)
+  );
+}
+
+async function revalidateShell(request) {
+  try {
+    const response = await fetch(request);
+    const cache = await caches.open(HTML_CACHE);
+    if (isStorable(response)) {
+      await cache.put(request, response.clone());
+      trimCache(HTML_CACHE, MAX_CACHED_HTML_ENTRIES);
+    } else if (response && response.ok) {
+      // A newer deploy (or a page that stopped being cacheable): drop the
+      // stale copy so the next visit is a real network load.
+      await cache.delete(request);
+    }
+  } catch {
+    // Offline: keep the copy we have.
+  }
+}
+
+async function purgePageCaches() {
+  await Promise.all([caches.delete(HTML_CACHE), caches.delete(RSC_CACHE)]);
+}
+
+async function handleNavigation(request, event) {
   const url = new URL(request.url);
+
+  if (isAppChromePath(url.pathname) && !isPublicOnlyPath(url.pathname)) {
+    const cache = await caches.open(HTML_CACHE);
+    const cached = await cache.match(request);
+    if (cached && isServableShell(cached)) {
+      const refresh = revalidateShell(request);
+      if (event && typeof event.waitUntil === 'function') event.waitUntil(refresh);
+      return cached;
+    }
+  }
 
   try {
     const response = await withTimeout(fetch(request), NAVIGATION_TIMEOUT_MS);
-    if (response && response.ok && response.type === 'basic') {
+    if (isStorable(response)) {
       const cache = await caches.open(HTML_CACHE);
       cache.put(request, response.clone());
       trimCache(HTML_CACHE, MAX_CACHED_HTML_ENTRIES);
@@ -159,7 +255,7 @@ async function handleNavigation(request) {
 async function handleRsc(request) {
   try {
     const response = await fetch(request);
-    if (response && response.ok && response.type === 'basic') {
+    if (isStorable(response)) {
       const cache = await caches.open(RSC_CACHE);
       cache.put(request, response.clone());
       trimCache(RSC_CACHE, MAX_CACHED_RSC_ENTRIES);
@@ -182,7 +278,7 @@ async function precacheRoutes(paths) {
       if (path.startsWith('/api/')) return;
       try {
         const response = await fetch(path, { credentials: 'same-origin' });
-        if (response && response.ok && response.type === 'basic') {
+        if (isStorable(response)) {
           await cache.put(path, response);
         }
       } catch {
@@ -237,7 +333,24 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('message', (event) => {
   const data = event.data;
-  if (!data || data.type !== 'precache-routes' || !Array.isArray(data.paths)) return;
+  if (!data) return;
+  // Sign-out (and any page that wants a clean slate): drop every cache.
+  if (data.type === 'clear-all') {
+    event.waitUntil(
+      caches
+        .keys()
+        .then((names) =>
+          Promise.all(names.filter((name) => name.startsWith(OFFLINE_CACHE_PREFIX)).map((name) => caches.delete(name)))
+        )
+    );
+    return;
+  }
+  // Chunk recovery is about to reload: never answer it with a stale shell.
+  if (data.type === 'purge-pages') {
+    event.waitUntil(purgePageCaches());
+    return;
+  }
+  if (data.type !== 'precache-routes' || !Array.isArray(data.paths)) return;
   event.waitUntil(precacheRoutes(data.paths));
 });
 
@@ -255,7 +368,7 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/')) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(handleNavigation(request));
+    event.respondWith(handleNavigation(request, event));
     return;
   }
 

@@ -11,6 +11,7 @@ import {
   shouldReload,
   type NavigationIntent,
 } from '@/lib/chunk-recovery';
+import { purgePageCaches } from '@/lib/offline/register';
 
 /**
  * Recovers a tab wedged by version skew after a deploy (2026-08-16).
@@ -113,14 +114,27 @@ export function ChunkRecoveryBridge() {
       // the failure was not a link click (a lazy component on this page, or a
       // programmatic router.push we cannot observe).
       const target = resolveRecoveryTarget(window.location.href, intentRef.current, now);
-      if (target) {
-        console.warn('[chunk-recovery] stale build detected — resuming navigation to', target);
-        window.location.assign(target);
-        return;
-      }
-
-      console.warn('[chunk-recovery] stale build detected — reloading to pick up the new one');
-      window.location.reload();
+      // Drop the service worker's cached pages first (2026-10-15, URG-314):
+      // it serves signed-in pages stale-while-revalidate, and the stale copy
+      // is exactly the HTML that named the missing chunk. Bounded, so a slow
+      // CacheStorage can never hold the recovery hostage.
+      const go = () => {
+        if (target) {
+          console.warn('[chunk-recovery] stale build detected — resuming navigation to', target);
+          window.location.assign(target);
+          return;
+        }
+        console.warn('[chunk-recovery] stale build detected — reloading to pick up the new one');
+        window.location.reload();
+      };
+      let done = false;
+      const once = () => {
+        if (done) return;
+        done = true;
+        go();
+      };
+      void purgePageCaches().then(once, once);
+      window.setTimeout(once, 1_000);
     };
 
     const onError = (event: ErrorEvent) => {

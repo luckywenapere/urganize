@@ -35,6 +35,13 @@ const posthogAssetsHost =
     ? 'https://eu-assets.i.posthog.com'
     : 'https://us-assets.i.posthog.com';
 
+// One id per deployment (falls back to the commit, then the build time).
+const BUILD_ID = (
+  process.env.VERCEL_DEPLOYMENT_ID ||
+  (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 12) ||
+  `local-${Date.now().toString(36)}`
+).replace(/[^A-Za-z0-9_-]/g, '');
+
 const nextConfig = {
   transpilePackages: ['@urganize/ui'],
   // Required by the PostHog proxy below: their ingest API is sensitive to the
@@ -70,6 +77,15 @@ const nextConfig = {
   // is the point: a request-time `new Date()` would just report now.
   env: {
     BUILD_TIME: new Date().toISOString(),
+    // The service worker's cache version (2026-10-15, URG-314): one value per
+    // deployment, so each deploy registers a new worker that purges the last
+    // build's caches. See public/sw-offline.js and lib/offline/register.ts.
+    NEXT_PUBLIC_BUILD_ID: BUILD_ID,
+  },
+  // Every response names the build that produced it, so the service worker
+  // only ever serves a cached page from its own build (public/sw-offline.js).
+  async headers() {
+    return [{ source: '/:path*', headers: [{ key: 'x-urg-build', value: BUILD_ID }] }];
   },
   // The recap card renderer reads static font binaries off disk at request
   // time (satori cannot use next/font). Output tracing only follows imports, so

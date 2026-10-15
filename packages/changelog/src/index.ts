@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.7",
+    date: "October 15, 2026",
+    highlights: [
+      "Coming back to the app is faster: pages you have opened before now appear straight from your device while the latest version loads in the background. Signing out clears what was saved on the device.",
+    ],
+  },
+  {
     version: "1.147.6",
     date: "October 15, 2026",
     highlights: [
