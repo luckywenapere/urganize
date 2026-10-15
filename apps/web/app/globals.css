@@ -1003,16 +1003,22 @@ html[data-theme='dark'] body {
    (crisp on retina without the cursor rendering bigger); 88 stays safely
    under the ~128px cap browsers silently ignore custom cursors past. The
    spiral's exact curvature is a faithful-but-interpreted redraw, not a
-   pixel-exact trace — there's no vector source to trace from. */
+   pixel-exact trace — there's no vector source to trace from.
+
+   Oct 15, 2026 (founder call): simplified to a plain arrow cut from the
+   mark's triangle, no spiral. Cream arrow with an ink rim on dark, ink
+   arrow with a cream rim on light, so it reads on any surface. Hotspot is
+   the tip (7,4) for precise clicks. 32x36 with a 64x72 @2x. Source SVG:
+   path M7 4 L7 32 L14.5 25 L28 25 Z, stroke 2, round joins. */
 @media (pointer: fine) {
   body {
-    cursor: image-set(url('/images/chappi-cursor-cream.png') 1x, url('/images/chappi-cursor-cream@2x.png') 2x) 22 2,
-      url('/images/chappi-cursor-cream.png') 22 2, auto;
+    cursor: image-set(url('/images/urganize-cursor-cream.png') 1x, url('/images/urganize-cursor-cream@2x.png') 2x) 7 4,
+      url('/images/urganize-cursor-cream.png') 7 4, auto;
   }
 
   html[data-theme='light'] body {
-    cursor: image-set(url('/images/chappi-cursor-ink.png') 1x, url('/images/chappi-cursor-ink@2x.png') 2x) 22 2,
-      url('/images/chappi-cursor-ink.png') 22 2, auto;
+    cursor: image-set(url('/images/urganize-cursor-ink.png') 1x, url('/images/urganize-cursor-ink@2x.png') 2x) 7 4,
+      url('/images/urganize-cursor-ink.png') 7 4, auto;
   }
 
   a,

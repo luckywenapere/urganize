@@ -350,13 +350,13 @@ html[data-marketing-theme="dark"] .theme-shot-light {
    via image-set() at 1x/2x for crisp rendering on high-DPI displays. */
 @media (pointer: fine) {
   body {
-    cursor: image-set(url('/images/chappi-cursor-cream.png') 1x, url('/images/chappi-cursor-cream@2x.png') 2x) 22 2,
-      url('/images/chappi-cursor-cream.png') 22 2, auto;
+    cursor: image-set(url('/images/urganize-cursor-cream.png') 1x, url('/images/urganize-cursor-cream@2x.png') 2x) 7 4,
+      url('/images/urganize-cursor-cream.png') 7 4, auto;
   }
 
   html[data-marketing-theme='light'] body {
-    cursor: image-set(url('/images/chappi-cursor-ink.png') 1x, url('/images/chappi-cursor-ink@2x.png') 2x) 22 2,
-      url('/images/chappi-cursor-ink.png') 22 2, auto;
+    cursor: image-set(url('/images/urganize-cursor-ink.png') 1x, url('/images/urganize-cursor-ink@2x.png') 2x) 7 4,
+      url('/images/urganize-cursor-ink.png') 7 4, auto;
   }
 
   a,

@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.1",
+    date: "October 15, 2026",
+    highlights: [
+      "A simpler cursor on desktop: a clean arrow in Urganize's colors, and clicks land exactly where it points.",
+    ],
+  },
+  {
     version: "1.147.0",
     date: "October 15, 2026",
     highlights: [
