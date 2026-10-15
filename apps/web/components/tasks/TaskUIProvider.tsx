@@ -13,11 +13,9 @@ import {
   type ReactNode,
 } from 'react';
 import { usePathname } from 'next/navigation';
-import { TaskDetailView, type TaskDetailPatchInput } from '@/components/tasks/TaskDetailView';
-import { type DependencyTaskSummary } from '@/components/tasks/TaskDependenciesSection';
-import { TaskQuickCreateModal } from '@/components/tasks/TaskQuickCreateModal';
-import { TaskOutcomeSheet } from '@/components/tasks/TaskOutcomeSheet';
-import { CoverArtPromptSheet } from '@/components/tasks/CoverArtPromptSheet';
+import dynamic from 'next/dynamic';
+import type { TaskDetailPatchInput } from '@/components/tasks/TaskDetailView';
+import type { DependencyTaskSummary } from '@/components/tasks/TaskDependenciesSection';
 import { UndoCompletionToast } from '@/components/tasks/UndoCompletionToast';
 import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type WorkspaceMember } from '@/lib/tasks';
@@ -29,6 +27,72 @@ import { supabase } from '@/lib/supabase/client';
 import { isNetworkFailure } from '@/lib/offline/network-error';
 import { isBrowserOnline } from '@/lib/offline/status';
 import { enqueue } from '@/lib/offline/queue';
+import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+
+// The four task surfaces below are lazy (2026-10-15, perf pass URG-314).
+// TaskUIProvider is mounted by AppShell for every page, /auth included, so as
+// static imports the detail pop-up (comments, attachments, pitch panel,
+// dependencies), the quick-create modal and the two completion sheets rode in
+// the root layout's render-blocking JavaScript of every route, around 60 KB
+// minified, though none of them is on screen until someone opens a task or
+// ticks one off. Each is now its own chunk, mounted only when it is needed,
+// and warmed on idle (warmTaskSurfaces) on a connection that can afford it, so
+// the first tap still opens instantly. ssr:false: none of them renders
+// anything on the server.
+const loadTaskDetailView = () => import('@/components/tasks/TaskDetailView');
+const loadTaskQuickCreateModal = () => import('@/components/tasks/TaskQuickCreateModal');
+const loadTaskOutcomeSheet = () => import('@/components/tasks/TaskOutcomeSheet');
+const loadCoverArtPromptSheet = () => import('@/components/tasks/CoverArtPromptSheet');
+
+const TaskDetailView = dynamic(() => loadTaskDetailView().then((m) => m.TaskDetailView), {
+  ssr: false,
+  loading: () => <TaskDetailLoading />,
+});
+const TaskQuickCreateModal = dynamic(
+  () => loadTaskQuickCreateModal().then((m) => m.TaskQuickCreateModal),
+  { ssr: false }
+);
+const TaskOutcomeSheet = dynamic(() => loadTaskOutcomeSheet().then((m) => m.TaskOutcomeSheet), {
+  ssr: false,
+});
+const CoverArtPromptSheet = dynamic(
+  () => loadCoverArtPromptSheet().then((m) => m.CoverArtPromptSheet),
+  { ssr: false }
+);
+
+/** Fetch the task surfaces' chunks ahead of the first tap. Idempotent: the
+ * bundler caches each import() promise. */
+function warmTaskSurfaces() {
+  void loadTaskDetailView().catch(() => undefined);
+  void loadTaskQuickCreateModal().catch(() => undefined);
+  void loadTaskOutcomeSheet().catch(() => undefined);
+  void loadCoverArtPromptSheet().catch(() => undefined);
+}
+
+/** Shown for the moment the detail chunk is still downloading on a cold tap. */
+function TaskDetailLoading() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Loading activity">
+      <SkeletonBlock className="h-7 w-2/3 rounded-lg" />
+      <SkeletonBlock className="h-4 w-1/3 rounded" />
+      <SkeletonBlock className="h-24 rounded-xl" />
+    </div>
+  );
+}
+
+/** The completion sheets decide for themselves when to show (they read the
+ * task store). Gating the mount on the same store fields keeps their chunks
+ * from being requested at all until a completion asks for one. */
+function TaskOutcomeSheetGate() {
+  const active = useTaskStore((state) => Boolean(state.outcomePrompt));
+  return active ? <TaskOutcomeSheet /> : null;
+}
+
+function CoverArtPromptSheetGate() {
+  const active = useTaskStore((state) => Boolean(state.coverArtPrompt));
+  return active ? <CoverArtPromptSheet /> : null;
+}
 
 type TaskDetailPayload = {
   task?: TaskDetail;
@@ -207,6 +271,11 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   // augmented sections that aren't in the list-state task.
   const [isTaskLoading, setIsTaskLoading] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  // Latch: the quick-create modal's chunk is only requested once someone
+  // first opens it, then the modal stays mounted so its close transition and
+  // its reset-on-close effects behave exactly as they did before it was lazy.
+  const [hasOpenedQuickCreate, setHasOpenedQuickCreate] = useState(false);
+  if (isQuickCreateOpen && !hasOpenedQuickCreate) setHasOpenedQuickCreate(true);
   const [quickCreateDefaults, setQuickCreateDefaults] = useState<QuickCreateDefaults>({});
   const [quickTitle, setQuickTitle] = useState('');
   const [quickReleaseQuery, setQuickReleaseQuery] = useState('');
@@ -222,6 +291,14 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
 
   const shouldShowTaskShell = pathname?.startsWith('/dashboard') || pathname === '/settings';
+
+  // Warm the lazy task surfaces once someone is inside the app, on idle and
+  // only on a connection that can afford speculative bytes (lib/connection).
+  // /auth and the public pages never pay for them.
+  useEffect(() => {
+    if (!shouldShowTaskShell || !shouldBackgroundPrefetch()) return;
+    return runWhenIdle(warmTaskSurfaces, 5_000);
+  }, [shouldShowTaskShell]);
 
   // Monotonically increasing sequence number for task patches. Each
   // `saveTaskPatch` call claims the next value; when its async response
@@ -842,6 +919,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
       <TaskDetailRenderContext.Provider value={renderValue}>
       {children}
 
+      {hasOpenedQuickCreate ? (
       <TaskQuickCreateModal
         isOpen={isQuickCreateOpen}
         title={quickTitle}
@@ -868,6 +946,7 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         pendingReleaseId={quickCreateDefaults.releaseId || null}
         onSubmit={createQuickTask}
       />
+      ) : null}
 
       {/* Task detail pop-up (2026-07-23, founder call — reverses the earlier
           inline-view decision): a single centered modal mounted here at the
@@ -885,12 +964,12 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
           detail pop-up so a completion triggered from inside that pop-up
           stacks the sheet above it — both live on the z-[170] modal tier. The
           store decides whether this or the undo toast fires; never both. */}
-      <TaskOutcomeSheet />
+      <TaskOutcomeSheetGate />
 
       {/* "Add the cover art", after a cover-art playbook step is ticked. Same
           tier and same either/or: the store picks exactly one bottom surface
           per completion, and this one outranks both of the above. */}
-      <CoverArtPromptSheet />
+      <CoverArtPromptSheetGate />
       </TaskDetailRenderContext.Provider>
     </TaskUIContext.Provider>
   );

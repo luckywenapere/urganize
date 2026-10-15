@@ -29,7 +29,7 @@
  * where the release week starts.
  */
 
-import { derivePlanPhase, type PlanPhase } from './release-planning';
+import { derivePlanPhase, type PlanPhase } from './plan-phase';
 import { ROLLOUT_PHASE_OPTIONS, type RolloutPhase } from '@/types/tasks';
 
 export type { RolloutPhase };

@@ -34,7 +34,7 @@
  */
 
 import { normalizeReadyToday } from './onboarding-readiness';
-import type { ReadyItem } from './release-planning';
+import type { ReadyItem } from './ready-today';
 
 export const FIRST_SESSION_KEY = 'urganize.first-session';
 export const FIRST_SESSION_TAB_KEY = 'urganize.first-session.tab';

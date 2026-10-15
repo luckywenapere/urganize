@@ -23,7 +23,7 @@
 
 import { daysToRelease, isEditorialPitchTask, pitchWindowState, daysUntilWindowCloses } from './editorial-pitch';
 import { dayOffsetFromRelease } from './release-timeline';
-import { derivePlanPhase, PLAN_PHASE_LABELS, PLAN_PHASE_ORDER, type PlanPhase } from './release-planning';
+import { derivePlanPhase, PLAN_PHASE_LABELS, PLAN_PHASE_ORDER, type PlanPhase } from './plan-phase';
 
 export type NextMoveRule = 'plan' | 'distribute' | 'editorial' | 'next_phase' | 'pitch_more' | 'invite';
 

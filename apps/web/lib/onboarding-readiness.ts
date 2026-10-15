@@ -22,7 +22,7 @@
  * Pure, so vitest holds the rules.
  */
 
-import { READY_TODAY_OPTIONS, type ReadyItem } from './release-planning';
+import { READY_TODAY_OPTIONS, type ReadyItem } from './ready-today';
 import type { OnboardingStage } from './onboarding';
 
 /** The planner's own options, in the planner's own order and words. */

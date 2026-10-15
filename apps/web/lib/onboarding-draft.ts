@@ -17,7 +17,7 @@ import {
   type OnboardingWhereStuck,
 } from './onboarding';
 import { deriveOnboardingStage, normalizeReadyToday } from './onboarding-readiness';
-import type { ReadyItem } from './release-planning';
+import type { ReadyItem } from './ready-today';
 
 // Re-exported so existing importers (OnboardingPageClient, onboarding-ai-
 // moment) keep their import site. Canonical declarations live in

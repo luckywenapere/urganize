@@ -3056,3 +3056,12 @@ html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/h
     opacity: 1;
   }
 }
+
+/* Content calendar faces (2026-10-15, perf pass URG-314). The calendar used to
+   declare its own Young Serif and Space Mono through next/font, a second copy
+   of two faces the root layout already self-hosts, so opening it fetched both
+   again under different file names. It now reads the layout's variables. */
+:root {
+  --font-cc-display: var(--font-young-serif);
+  --font-cc-mono: var(--font-space-mono);
+}

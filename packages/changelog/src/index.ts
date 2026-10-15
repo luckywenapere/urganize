@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.6",
+    date: "October 15, 2026",
+    highlights: [
+      "Faster first load: every page now downloads about 40 KB less JavaScript before it can be used, and the dashboard about 80 KB less. Task pop-ups, release scenes and analytics now load in the background once the page is ready.",
+    ],
+  },
+  {
     version: "1.147.5",
     date: "October 15, 2026",
     highlights: [

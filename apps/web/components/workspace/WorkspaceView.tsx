@@ -46,8 +46,8 @@ import { useSceneOverlay } from './useSceneOverlay';
 import { resolveActiveScene, resolvePanelBody } from '@/lib/scene-cache';
 import { useScenePrefetch } from './useScenePrefetch';
 import { useIsDesktopViewport } from './useIsDesktopViewport';
-import { ReleaseScenePanel } from '@/components/releases/ReleaseScenePanel';
-import { TimelineScene } from '@/components/releases/TimelineScene';
+import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { TimelineFullScreen } from '@/components/releases/TimelineFullScreen';
 import { WorkspaceDesktopFocused } from './WorkspaceDesktopFocused';
 import { useReleaseScope } from './useReleaseScope';
@@ -134,6 +134,36 @@ const SOCIAL_SHARE_ENABLED = isSocialShareEnabled();
 // import here defeated that, dragging the ~460-line modal into the /dashboard
 // entry chunk that every user downloads before first paint, for a surface
 // most sessions never open.
+// Release scenes load on demand (2026-10-15, perf pass URG-314). The scene
+// panel pulls in every scene (metadata, assets, songs, cover art, calendar,
+// pitching, promo, distribution, spend, chat) and the timeline, all of which
+// were in /dashboard's first-load JavaScript though none is on screen until a
+// scene is opened. Each is now its own chunk, warmed on idle (below) on a
+// connection that can afford it, so opening a scene stays instant.
+const loadReleaseScenePanel = () => import('@/components/releases/ReleaseScenePanel');
+const loadTimelineScene = () => import('@/components/releases/TimelineScene');
+function SceneLoading() {
+  return (
+    <div className="space-y-4 p-4" aria-busy="true" aria-label="Loading">
+      <SkeletonBlock className="h-7 w-1/2 rounded-lg" />
+      <SkeletonBlock className="h-32 rounded-xl" />
+      <SkeletonBlock className="h-32 rounded-xl" />
+    </div>
+  );
+}
+const ReleaseScenePanel = dynamic(() => loadReleaseScenePanel().then((m) => m.ReleaseScenePanel), {
+  ssr: false,
+  loading: () => <SceneLoading />,
+});
+const TimelineScene = dynamic(() => loadTimelineScene().then((m) => m.TimelineScene), {
+  ssr: false,
+  loading: () => <SceneLoading />,
+});
+function warmReleaseScenes() {
+  void loadReleaseScenePanel().catch(() => undefined);
+  void loadTimelineScene().catch(() => undefined);
+}
+
 const CreateReleaseModal = dynamic(
   () => import('@/components/releases/CreateReleaseModal').then((m) => m.CreateReleaseModal),
   { ssr: false }
@@ -287,6 +317,13 @@ export function WorkspaceView() {
   // re-triggers it — the guide's own visibility is controlled purely by
   // this boolean from then on (dismiss just flips it false, no URL churn).
   const [showNewReleaseGuide, setShowNewReleaseGuide] = useState(false);
+  // Warm the release scenes' chunks once the workspace is up (see
+  // loadReleaseScenePanel above). Skipped on Save-Data / 2G.
+  useEffect(() => {
+    if (!shouldBackgroundPrefetch()) return;
+    return runWhenIdle(warmReleaseScenes, 6_000);
+  }, []);
+
   useEffect(() => {
     if (searchParams.get('new') !== '1' || !scopedReleaseId) return;
     setShowNewReleaseGuide(true);

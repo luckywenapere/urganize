@@ -100,6 +100,31 @@ function resolveFeatureFromPath(pathname: string): string | null {
   return null;
 }
 
+/**
+ * Resolves once the page has finished loading and the main thread is idle
+ * (2026-10-15, perf pass URG-314). PostHog used to start downloading and
+ * initialising (session replay, autocapture) during hydration, competing with
+ * the app's own JavaScript for the network and main thread on slow phones.
+ * Events captured before then are not lost: every capture chains on the same
+ * promise, so they flush in order once the client is up.
+ */
+function afterPageLoad(): Promise<void> {
+  return new Promise((resolve) => {
+    const idle = () => {
+      const w = window as Window & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      };
+      if (typeof w.requestIdleCallback === 'function') {
+        w.requestIdleCallback(() => resolve(), { timeout: 3_000 });
+      } else {
+        window.setTimeout(resolve, 500);
+      }
+    };
+    if (document.readyState === 'complete') idle();
+    else window.addEventListener('load', idle, { once: true });
+  });
+}
+
 function loadBrowserPostHog(): Promise<PostHog | null> {
   if (typeof window === 'undefined') {
     return Promise.resolve(null);
@@ -112,7 +137,8 @@ function loadBrowserPostHog(): Promise<PostHog | null> {
   }
 
   if (!posthogClientPromise) {
-    posthogClientPromise = import('posthog-js')
+    posthogClientPromise = afterPageLoad()
+      .then(() => import('posthog-js'))
       .then((mod) => {
         const client = mod.default;
         // After the import, before init. Exception capture, session replay and
@@ -157,6 +183,9 @@ function loadBrowserPostHog(): Promise<PostHog | null> {
             // catches bugs a user notices AND bothers to report, this catches
             // the ones nobody mentions.
             capture_exceptions: true,
+            // Surveys are unused (2026-10-15, perf pass URG-314). Left on,
+            // the SDK fetched a ~33 KB surveys script on every page view.
+            disable_surveys: true,
             persistence: 'localStorage+cookie',
           } as Parameters<PostHog['init']>[1]
         );

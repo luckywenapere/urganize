@@ -30,7 +30,7 @@
  */
 
 import type { Template, TaskRole } from './release-templates/types';
-import { getTemplateLeadTimeDays } from './release-templates/loader';
+import { getTemplateLeadTimeDays } from './release-templates/metrics';
 import type { ProposedOwner } from './task-owners';
 import { EDITORIAL_PITCH_TASK_ID, isPinnedOffsetTask } from './editorial-pitch';
 
@@ -65,8 +65,9 @@ export const isReleasePlannerEnabled = (): boolean =>
  */
 export type PlanReleaseType = 'single' | 'ep' | 'album';
 
-/** What the manager already has in hand. 'none' is exclusive of the others. */
-export type ReadyItem = 'master' | 'artwork' | 'visualizer' | 'distributor' | 'none';
+export { READY_TODAY_OPTIONS, type ReadyItem } from './ready-today';
+import { READY_TODAY_OPTIONS, type ReadyItem } from './ready-today';
+import { derivePlanPhase, type PlanPhase } from './plan-phase';
 
 /**
  * What matters most this time. Every value is a radio choice in the intake
@@ -127,13 +128,6 @@ export const RELEASE_TYPE_OPTIONS: Array<{ value: PlanReleaseType; label: string
   { value: 'album', label: 'Album' },
 ];
 
-export const READY_TODAY_OPTIONS: Array<{ value: ReadyItem; label: string }> = [
-  { value: 'master', label: 'The music is mixed and mastered' },
-  { value: 'artwork', label: 'Cover art is ready' },
-  { value: 'visualizer', label: 'A video or visualizer is ready' },
-  { value: 'distributor', label: 'The distributor is set up' },
-  { value: 'none', label: 'None of it yet' },
-];
 
 export const GOAL_OPTIONS: Array<{ value: PlanGoal; label: string }> = [
   { value: 'new_listeners', label: 'Reach new listeners' },
@@ -830,44 +824,13 @@ export function buildPlanPreview(params: {
 // Phases
 // ---------------------------------------------------------------------------
 
-export type PlanPhase = 'setup' | 'pre_release' | 'release_week' | 'post_release';
-
-export const PLAN_PHASE_ORDER: PlanPhase[] = [
-  'setup',
-  'pre_release',
-  'release_week',
-  'post_release',
-];
-
-export const PLAN_PHASE_LABELS: Record<PlanPhase, string> = {
-  setup: 'Setup',
-  pre_release: 'Pre-release',
-  release_week: 'Release week',
-  post_release: 'Post-release',
-};
-
-export const PLAN_PHASE_BLURBS: Record<PlanPhase, string> = {
-  setup: 'Weeks out. Lock the music, the art and the paperwork.',
-  pre_release: 'The marketing ramp and final prep.',
-  release_week: 'Release day and the days around it.',
-  post_release: 'Keeping it alive after release day.',
-};
-
-/**
- * Which phase a task belongs to, from its offset alone.
- *
- * Templates carry no phase field: single_v0.3 marks its weeks with comment
- * banners, and only `tags` are machine readable. These boundaries line up with
- * those banners, so the four groups the plan summary and the timeline show are
- * the same weeks the playbook was written in. Any stored phase is recomputed
- * through here, so this is the only definition.
- */
-export function derivePlanPhase(offsetDays: number): PlanPhase {
-  if (offsetDays <= -29) return 'setup';
-  if (offsetDays <= -8) return 'pre_release';
-  if (offsetDays <= 7) return 'release_week';
-  return 'post_release';
-}
+export {
+  PLAN_PHASE_ORDER,
+  PLAN_PHASE_LABELS,
+  PLAN_PHASE_BLURBS,
+  derivePlanPhase,
+  type PlanPhase,
+} from './plan-phase';
 
 // ---------------------------------------------------------------------------
 // The draft document
