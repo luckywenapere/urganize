@@ -373,7 +373,7 @@ export interface AnalyticsEventPropertiesMap {
   };
   artist_page_action: {
     artist_id: string;
-    action: 'open_epk' | 'open_release' | 'open_show' | 'book_show';
+    action: 'open_epk' | 'open_release' | 'open_show' | 'book_show' | 'new_rollout';
   };
   /**
    * The shell's coming-soon screens (design overhaul, 2026-10-04). `viewed`

@@ -73,7 +73,7 @@ describe('first-rollout focus wiring', () => {
   const read = (file: string) => readFileSync(join(root, file), 'utf8');
 
   it('passes the chosen plan through the shell store into the create modal', () => {
-    expect(read('stores/useShellStore.ts')).toContain('openCreate: (plan) => set({ createOpen: true, createPlan: plan ?? null })');
+    expect(read('stores/useShellStore.ts')).toContain('openCreate: (plan) => set({ createOpen: true, createPlan: plan ?? null, createArtistId: null })');
     expect(read('components/app/AppShell.tsx')).toContain('initialPlan={createPlan}');
     expect(read('components/releases/CreateReleaseModal.tsx')).toContain("plan: initialPlan ?? 'template'");
   });

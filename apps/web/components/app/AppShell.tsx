@@ -204,6 +204,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isCreateReleaseOpen = useShellStore((state) => state.createOpen);
   const closeCreateRelease = useShellStore((state) => state.closeCreate);
   const createPlan = useShellStore((state) => state.createPlan);
+  const createArtistId = useShellStore((state) => state.createArtistId);
 
   const isAuthRoute =
     pathname?.startsWith('/auth') ||
@@ -602,6 +603,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         open={isCreateReleaseOpen}
         onClose={closeCreateRelease}
         initialPlan={createPlan}
+        initialArtistId={createArtistId}
         onCreated={(releaseId, _plan, result) => {
           // Stay on whatever page the user was on (no forced redirect); just
           // close and refresh the release store so the new release shows up.

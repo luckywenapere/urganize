@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Camera, Loader2 } from '@/components/icons';
+import { Camera, Loader2, Trash2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
 import { prepareAvatarImage } from '@/lib/downscale-image';
@@ -43,6 +43,9 @@ type Props = {
   surface: UploadSurface;
   /** Show "Change photo · Remove" under the face. Off for compact list rows. */
   showActions?: boolean;
+  /** No text row: tapping the face changes it, and a small trash button on
+   *  the photo's bottom-left corner removes it (artist page, 2026-10-15). */
+  overlayRemove?: boolean;
   className?: string;
 };
 
@@ -56,6 +59,7 @@ export function ProfilePhotoPicker({
   onChange,
   surface,
   showActions = false,
+  overlayRemove = false,
   className = '',
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -162,6 +166,7 @@ export function ProfilePhotoPicker({
 
   return (
     <div className={`inline-flex flex-col items-start ${className}`}>
+      <div className="relative">
       <button
         type="button"
         onClick={(event) => {
@@ -196,6 +201,22 @@ export function ProfilePhotoPicker({
           </span>
         ) : null}
       </button>
+      {overlayRemove && photoUrl && !busy ? (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void remove();
+          }}
+          aria-label={`Remove ${name}'s photo`}
+          title="Remove photo"
+          className="motion-focus motion-press absolute bottom-1.5 left-1.5 grid h-8 w-8 place-items-center rounded-full bg-black/55 text-white/85 backdrop-blur-sm transition-colors hover:bg-black/75 hover:text-white"
+        >
+          <Trash2 className="h-4 w-4" aria-hidden />
+        </button>
+      ) : null}
+      </div>
 
       <input
         ref={inputRef}

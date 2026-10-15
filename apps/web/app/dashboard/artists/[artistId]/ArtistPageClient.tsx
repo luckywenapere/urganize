@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Newspaper, Plus } from '@/components/icons';
+import { ArrowLeft, ArrowRight, Plus } from '@/components/icons';
+import { useShellStore } from '@/stores/useShellStore';
 import { CreateShowModal } from '@/components/events/CreateShowModal';
 import { useAuthStore } from '@/lib/auth-store';
 // Back goes to the Artists tab, the list of artists (founder, 2026-10-14).
@@ -21,7 +22,7 @@ import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 
-const KIT_COPY = { incomplete: 'Not finished', ready: 'Ready', published: 'Live' } as const;
+const KIT_COPY = { incomplete: 'Not finished yet', ready: 'Ready to publish' } as const;
 
 function SectionCard({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
@@ -32,6 +33,22 @@ function SectionCard({ title, children, action }: { title: string; children: Rea
       </div>
       <div className="mt-3">{children}</div>
     </section>
+  );
+}
+
+/** The plus a section header carries to add to it: icon only, quiet until
+ *  hovered, so it blends with the card (founder, 2026-10-15). */
+function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="motion-focus motion-press -my-2 -mr-2 grid h-11 w-11 shrink-0 place-items-center rounded-full text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+    >
+      <Plus className="h-5 w-5" aria-hidden />
+    </button>
   );
 }
 
@@ -55,6 +72,7 @@ export default function ArtistPageClient() {
   const loadEvents = useEventsStore((state) => state.load);
   const bookableArtistIds = useEventsStore((state) => state.bookableArtistIds);
   const [isBookOpen, setIsBookOpen] = useState(false);
+  const openCreateForArtist = useShellStore((state) => state.openCreateForArtist);
   const kits = usePressKitsStore((state) => state.entries);
   const loadKits = usePressKitsStore((state) => state.load);
 
@@ -100,7 +118,7 @@ export default function ArtistPageClient() {
 
   if (!ARTIST_PAGE_ENABLED) return null;
 
-  const act = (action: 'open_epk' | 'open_release' | 'open_show' | 'book_show') =>
+  const act = (action: 'open_epk' | 'open_release' | 'open_show' | 'book_show' | 'new_rollout') =>
     captureAnalyticsEvent({ name: 'artist_page_action', properties: { artist_id: artistId, action } });
 
   // Shows must be on and this person allowed to book for this artist (GET
@@ -216,7 +234,7 @@ export default function ArtistPageClient() {
           surface="artist_photo"
           // The camera badge already says "add a photo"; the text row only
           // returns once there is a photo to change or remove.
-          showActions={Boolean(artist.photoUrl)}
+          overlayRemove
         />
         <div className="min-w-0 pt-8">
           <h1 className="line-clamp-2 break-words font-display text-3xl font-semibold leading-tight text-content-primary sm:text-4xl">
@@ -225,31 +243,38 @@ export default function ArtistPageClient() {
         </div>
       </header>
 
+      {/* The whole bar opens the kit; no state badge, no link text
+          (founder, 2026-10-15). */}
+      <Link
+        href={epkHref(artist.id)}
+        onClick={() => act('open_epk')}
+        className="motion-focus group flex items-center justify-between gap-3 rounded-xl border border-stroke-default bg-bg-surface p-4 transition-colors hover:bg-bg-hover"
+      >
+        <div className="min-w-0">
+          <h2 className="font-display text-base font-semibold text-content-primary">Press kit</h2>
+          <p className="mt-1 truncate text-sm text-content-tertiary">
+            {!kit
+              ? 'Set one up and every rollout can use it.'
+              : kit.state === 'published'
+                ? `urganize.app/k/${kit.slug}`
+                : KIT_COPY[kit.state]}
+          </p>
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0 text-content-tertiary transition-colors group-hover:text-content-primary" aria-hidden />
+      </Link>
+
       <SectionCard
-        title="Press kit"
+        title="Rollouts"
         action={
-          <Link
-            href={epkHref(artist.id)}
-            onClick={() => act('open_epk')}
-            className="motion-focus text-xs font-semibold text-brand hover:underline"
-          >
-            {kit ? 'Open the press kit' : 'Set up the press kit'}
-          </Link>
+          <AddButton
+            label="New rollout"
+            onClick={() => {
+              act('new_rollout');
+              openCreateForArtist(artist.id);
+            }}
+          />
         }
       >
-        {kit ? (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-content-secondary">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-content-primary">
-              <Newspaper className="h-4 w-4" aria-hidden /> {KIT_COPY[kit.state]}
-            </span>
-            {kit.state === 'published' ? <span>urganize.app/k/{kit.slug}</span> : null}
-          </div>
-        ) : (
-          <Empty>This artist has no press kit yet. Set one up and every rollout can use it.</Empty>
-        )}
-      </SectionCard>
-
-      <SectionCard title="Rollouts">
         {releaseCount === 0 ? (
           <Empty>No rollouts for this artist yet.</Empty>
         ) : (
@@ -265,22 +290,18 @@ export default function ArtistPageClient() {
         title="Shows"
         action={
           canBook ? (
-            <button
-              type="button"
+            <AddButton
+              label="Add a show"
               onClick={() => {
                 act('book_show');
                 setIsBookOpen(true);
               }}
-              className="motion-focus inline-flex min-h-11 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-brand hover:underline"
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden />
-              Add a show
-            </button>
+            />
           ) : null
         }
       >
         {shows.upcoming.length === 0 && shows.past.length === 0 ? (
-          <Empty>{canBook ? 'No shows for this artist yet. Add their next one and it lands here and in Shows.' : 'No shows for this artist yet.'}</Empty>
+          <Empty>{canBook ? 'No shows for this artist yet.' : 'No shows for this artist yet.'}</Empty>
         ) : (
           <>
             {shows.upcoming.length > 0 ? (

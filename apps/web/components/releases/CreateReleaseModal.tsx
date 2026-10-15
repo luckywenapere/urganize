@@ -81,6 +81,8 @@ type CreateReleaseModalProps = {
   onClose: () => void;
   /** Starts past the plan chooser with this plan already picked. Only the
    *  first-rollout focus passes it, after asking the manager itself. */
+  /** Start on this artist (opened from an artist's page). */
+  initialArtistId?: string | null;
   initialPlan?: ReleasePlanChoice | null;
   /** `plan` tells the caller HOW the release was created — template
    * creations get the post-create rollout guide (?new=1); blank ones don't
@@ -178,6 +180,7 @@ export function CreateReleaseModal({
   onCreated,
   onStartTestRelease,
   initialPlan = null,
+  initialArtistId = null,
 }: CreateReleaseModalProps) {
   // COPY ONLY. This modal is always dismissible — the wall URG-217 built here
   // (no Escape, no backdrop, no X, no Cancel, a Sign out escape hatch) was
@@ -249,9 +252,9 @@ export function CreateReleaseModal({
       setPlan(initialPlan);
       setReleaseType('single');
       setTypeFirstPicked(!SHOW_TYPE_PICKER);
-      setArtistId('');
+      setArtistId(initialArtistId ?? '');
     }
-  }, [open, initialPlan]);
+  }, [open, initialPlan, initialArtistId]);
 
   // Refresh the roster on open. The store's recency guard makes this free on a
   // reopen, and it never surfaces an error — see the fail-open note above.

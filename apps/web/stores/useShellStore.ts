@@ -28,11 +28,15 @@ type ShellStore = {
    *  'blank' (the manager plans it). null = the modal's own default. Set by
    *  the first-rollout focus (lib/first-release-focus.ts) after its choice. */
   createPlan: 'template' | 'blank' | null;
+  /** The artist the create modal starts on, when opened from an artist's page.
+   *  null = the modal's own default. */
+  createArtistId: string | null;
   setSelectedArtistId: (id: string | null) => void;
   hydrateSelectedArtistId: (id: string | null) => void;
   openCommand: () => void;
   closeCommand: () => void;
   openCreate: (plan?: 'template' | 'blank') => void;
+  openCreateForArtist: (artistId: string) => void;
   closeCreate: () => void;
 };
 
@@ -41,6 +45,7 @@ export const useShellStore = create<ShellStore>((set) => ({
   commandOpen: false,
   createOpen: false,
   createPlan: null,
+  createArtistId: null,
   setSelectedArtistId: (id) => {
     set({ selectedArtistId: id });
     try {
@@ -52,8 +57,9 @@ export const useShellStore = create<ShellStore>((set) => ({
   hydrateSelectedArtistId: (id) => set({ selectedArtistId: id }),
   openCommand: () => set({ commandOpen: true }),
   closeCommand: () => set({ commandOpen: false }),
-  openCreate: (plan) => set({ createOpen: true, createPlan: plan ?? null }),
-  closeCreate: () => set({ createOpen: false, createPlan: null }),
+  openCreate: (plan) => set({ createOpen: true, createPlan: plan ?? null, createArtistId: null }),
+  openCreateForArtist: (artistId) => set({ createOpen: true, createPlan: null, createArtistId: artistId }),
+  closeCreate: () => set({ createOpen: false, createPlan: null, createArtistId: null }),
 }));
 
 /** Reads the saved choice. Returns undefined when there is none, so a stored
