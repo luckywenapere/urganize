@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.142.3",
+    date: "October 15, 2026",
+    highlights: [
+      "See plans in Settings now opens your plans during a free trial, so you can pay early. It used to send you back Home.",
+    ],
+  },
+  {
     version: "1.142.2",
     date: "October 15, 2026",
     highlights: [

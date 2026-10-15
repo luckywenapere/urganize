@@ -57,11 +57,14 @@ const CTA_LABEL = {
 } as const;
 
 /** Where each CTA lands. The intent params are not decoration: /locked bounces
- *  anyone who HAS access back into the app, so both 'change' (a paying team) and
- *  'reactivate' (a read-only team) would be no-op round trips without one.
- *  'plans' is for a team with no access, which the wall renders for unmarked. */
+ *  anyone who HAS access back into the app, so 'change' (a paying team),
+ *  'reactivate' (a read-only team) and 'plans' would all be no-op round trips
+ *  without one. 'plans' carries intent=activate because a TRIALING team has
+ *  access too: a bare /locked sent trial owners clicking "See plans" straight
+ *  back Home (found 2026-10-15). A walled team ignores the param, so it is safe
+ *  for them as well. Same intent the trial strip already uses. */
 const CTA_HREF: Record<'plans' | 'change' | 'reactivate', string> = {
-  plans: '/locked',
+  plans: '/locked?intent=activate',
   change: '/locked?intent=upgrade',
   reactivate: '/locked?intent=reactivate',
 };
