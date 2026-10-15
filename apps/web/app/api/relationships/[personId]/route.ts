@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseRelationshipPatch } from '@/lib/relationships';
-import { getRelationship, removeRelationship, updateRelationship } from '@/lib/relationships-server';
+import { getRelationship, listInteractions, removeRelationship, updateRelationship } from '@/lib/relationships-server';
 import { isUuid, resolveRelationshipsContext } from '../_shared';
 
 // One contact. Every query is scoped to the caller's own team, so another
@@ -18,7 +18,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   const result = await getRelationship(adminClient, workspaceId, personId);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
-  return NextResponse.json({ relationship: result.relationship });
+  // The short log on the person page. Read after the relationship is found, so
+  // another team's person never gets this far.
+  const interactions = await listInteractions(adminClient, workspaceId, personId);
+  return NextResponse.json({ relationship: result.relationship, interactions });
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteContext) {

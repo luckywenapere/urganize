@@ -3,23 +3,25 @@
 import { PullReveal } from '@/components/shared/PullReveal';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Handshake, X } from '@/components/icons';
+import { Handshake, X } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
-import { distinctRoles, distinctTags, filterRelationships } from '@/lib/relationships-filter';
+import { filterRelationships } from '@/lib/relationships-filter';
 import {
-  describeLastContact,
+  isQuiet,
   isRelationshipsPageEnabled,
-  parseTagInput,
+  lastTouch,
   relationshipHref,
+  roleLine,
+  sortByLastContact,
+  timeSince,
 } from '@/lib/relationships-page';
+import { PersonFace } from './PersonFace';
 import { useRelationshipsStore } from '@/stores/useRelationshipsStore';
 import { ComingSoon } from '@/components/shell/ComingSoon';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ListToolbar } from '@/components/shell/ListToolbar';
 
 const PAGE_ENABLED = isRelationshipsPageEnabled();
-
-const STALE_DAYS = 60;
 
 const FIELD =
   'w-full rounded-lg border border-stroke-control bg-bg-base px-3 py-2 text-base text-content-primary placeholder:text-content-tertiary hover:border-content-secondary';
@@ -36,16 +38,14 @@ export default function RelationshipsPageClient() {
   const dismissFlag = useRelationshipsStore((state) => state.dismissFlag);
 
   const [query, setQuery] = useState('');
-  const [role, setRole] = useState('');
-  const [tag, setTag] = useState('');
-  const [staleOnly, setStaleOnly] = useState(false);
+  const [quietOnly, setQuietOnly] = useState(false);
 
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [newRole, setNewRole] = useState('');
+  const [company, setCompany] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [tags, setTags] = useState('');
   const [saving, setSaving] = useState(false);
   const [formMessage, setFormMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -59,23 +59,21 @@ export default function RelationshipsPageClient() {
     void load();
   }, [load]);
 
-  const roles = useMemo(() => distinctRoles(relationships), [relationships]);
-  const allTags = useMemo(() => distinctTags(relationships), [relationships]);
+  // Tags, notes and the fee note are kept on every row but no longer shown or
+  // filtered on (founder call, 2026-10-15).
+  const quietCount = useMemo(() => relationships.filter((person) => isQuiet(person)).length, [relationships]);
   const visible = useMemo(
     () =>
-      filterRelationships(relationships, {
-        query,
-        role: role || undefined,
-        tag: tag || undefined,
-        staleDays: staleOnly ? STALE_DAYS : undefined,
-      }),
-    [relationships, query, role, tag, staleOnly]
+      sortByLastContact(
+        filterRelationships(relationships, { query }).filter((person) => !quietOnly || isQuiet(person))
+      ),
+    [relationships, query, quietOnly]
   );
 
   if (!PAGE_ENABLED) return <ComingSoon area="relationships" />;
 
   const loading = (authLoading || initialLoading) && relationships.length === 0;
-  const filtering = Boolean(query.trim() || role || tag || staleOnly);
+  const filtering = Boolean(query.trim() || quietOnly);
 
   async function handleAdd(event: FormEvent) {
     event.preventDefault();
@@ -85,9 +83,9 @@ export default function RelationshipsPageClient() {
     const result = await create({
       label: name,
       role: newRole,
+      company,
       email,
       phone,
-      tags: parseTagInput(tags),
     });
     setSaving(false);
     if ('error' in result) {
@@ -96,17 +94,11 @@ export default function RelationshipsPageClient() {
     }
     setName('');
     setNewRole('');
+    setCompany('');
     setEmail('');
     setPhone('');
-    setTags('');
     setAdding(false);
-    setFormMessage(
-      result.alreadyKnown
-        ? 'You already had this person, so nothing new was added.'
-        : result.flagged > 0
-          ? 'Added. This looks like somebody already on your list, so check the note below.'
-          : 'Added.'
-    );
+    setFormMessage(result.created ? null : 'Already on your list.');
   }
 
   async function handleDismiss(flagId: string) {
@@ -210,17 +202,29 @@ export default function RelationshipsPageClient() {
               autoComplete="off"
             />
           </label>
-          <label className="block text-xs font-semibold text-content-secondary">
-            What they do
-            <input
-              className={`${FIELD} mt-1`}
-              value={newRole}
-              onChange={(event) => setNewRole(event.target.value)}
-              maxLength={40}
-              placeholder="Producer, DJ, video director"
-              autoComplete="off"
-            />
-          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-semibold text-content-secondary">
+              Role
+              <input
+                className={`${FIELD} mt-1`}
+                value={newRole}
+                onChange={(event) => setNewRole(event.target.value)}
+                maxLength={40}
+                placeholder="A&R"
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-content-secondary">
+              Company
+              <input
+                className={`${FIELD} mt-1`}
+                value={company}
+                onChange={(event) => setCompany(event.target.value)}
+                maxLength={60}
+                autoComplete="off"
+              />
+            </label>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-content-secondary">
               Email
@@ -243,16 +247,6 @@ export default function RelationshipsPageClient() {
               />
             </label>
           </div>
-          <label className="block text-xs font-semibold text-content-secondary">
-            Tags
-            <input
-              className={`${FIELD} mt-1`}
-              value={tags}
-              onChange={(event) => setTags(event.target.value)}
-              placeholder="Mixing, Lagos"
-              autoComplete="off"
-            />
-          </label>
           {formError ? (
             <p role="alert" className="text-xs text-status-error">
               {formError}
@@ -286,50 +280,46 @@ export default function RelationshipsPageClient() {
             search={{
               value: query,
               onChange: setQuery,
-              placeholder: 'Search by name, role or tag',
+              placeholder: 'Search',
               label: 'Search people',
             }}
-            controls={[
-              ...(roles.length > 0
-                ? [
-                    {
-                      kind: 'filter' as const,
-                      key: 'role',
-                      label: 'What they do',
-                      value: role,
-                      options: [{ value: '', label: 'Any role' }, ...roles.map((item) => ({ value: item, label: item }))],
-                      onChange: setRole,
-                    },
-                  ]
-                : []),
-              ...(allTags.length > 0
-                ? [
-                    {
-                      kind: 'filter' as const,
-                      key: 'tag',
-                      label: 'Tag',
-                      value: tag,
-                      options: [{ value: '', label: 'Any tag' }, ...allTags.map((item) => ({ value: item, label: item }))],
-                      onChange: setTag,
-                    },
-                  ]
-                : []),
-              {
-                kind: 'toggle' as const,
-                key: 'stale',
-                label: `Not in touch for ${STALE_DAYS} days`,
-                pressed: staleOnly,
-                onToggle: setStaleOnly,
-              },
-            ]}
           />
         </PullReveal>
+      ) : null}
+
+      {quietCount > 0 || quietOnly ? (
+        <div className="mb-2 flex gap-2" role="group" aria-label="Show">
+          <button
+            type="button"
+            aria-pressed={!quietOnly}
+            onClick={() => setQuietOnly(false)}
+            className={`motion-focus motion-press rounded-full border px-3.5 py-1.5 text-[13px] font-semibold ${
+              quietOnly
+                ? 'border-stroke-default text-content-secondary hover:text-content-primary'
+                : 'border-content-primary bg-content-primary text-content-inverse'
+            }`}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            aria-pressed={quietOnly}
+            onClick={() => setQuietOnly((value) => !value)}
+            className={`motion-focus motion-press rounded-full border px-3.5 py-1.5 text-[13px] font-semibold ${
+              quietOnly
+                ? 'border-brand bg-brand text-content-inverse'
+                : 'border-brand/50 text-brand hover:border-brand'
+            }`}
+          >
+            Quiet {quietCount}
+          </button>
+        </div>
       ) : null}
 
       {loading ? (
         <div className="space-y-3" aria-busy="true">
           {[0, 1, 2].map((key) => (
-            <div key={key} className="h-[72px] animate-pulse rounded-xl border border-stroke-default bg-bg-surface" />
+            <div key={key} className="h-[76px] animate-pulse rounded-xl bg-bg-surface" />
           ))}
         </div>
       ) : loadError && relationships.length === 0 ? (
@@ -347,41 +337,38 @@ export default function RelationshipsPageClient() {
         <div className="rounded-xl border border-dashed border-stroke-default p-8 text-center">
           <Handshake className="mx-auto h-6 w-6 text-content-tertiary" aria-hidden />
           <p className="mt-3 text-sm font-semibold text-content-primary">Nobody here yet</p>
-          <p className="mt-1 text-sm text-content-secondary">
-            Add the producers, DJs and editors you work with, and keep your own notes on each.
-          </p>
         </div>
       ) : visible.length === 0 ? (
         <p className="rounded-xl border border-dashed border-stroke-default p-6 text-center text-sm text-content-secondary">
           {filtering ? 'Nobody matches that.' : 'Nobody here yet.'}
         </p>
       ) : (
-        <ul className="space-y-3">
-          {visible.map((person) => (
-            <li key={person.personId}>
-              <Link
-                href={relationshipHref(person.personId)}
-                className="motion-focus flex items-center justify-between gap-3 rounded-xl border border-stroke-default bg-bg-surface p-4 transition-colors hover:border-stroke-strong"
-              >
-                <div className="min-w-0">
-                  <h2 className="line-clamp-2 break-words font-display text-base font-semibold text-content-primary">
-                    {person.label}
-                  </h2>
-                  <p className="mt-1 text-xs text-content-secondary">
-                    {[person.role || 'No role yet', describeLastContact(person.lastContactAt)].join(' · ')}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  {person.claimed ? (
-                    <span className="rounded-full border border-stroke-default px-2 py-0.5 text-[11px] font-semibold text-content-secondary">
-                      On Urganize
-                    </span>
-                  ) : null}
-                  <ArrowRight className="h-4 w-4 text-content-tertiary" aria-hidden />
-                </div>
-              </Link>
-            </li>
-          ))}
+        <ul className="-mx-2">
+          {visible.map((person) => {
+            const quiet = isQuiet(person);
+            const line = roleLine(person);
+            return (
+              <li key={person.personId}>
+                <Link
+                  href={relationshipHref(person.personId)}
+                  className="motion-focus flex items-center gap-3.5 rounded-xl px-2 py-3 transition-colors hover:bg-bg-surface"
+                >
+                  <PersonFace name={person.label} photoUrl={person.avatarUrl} size={52} />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="truncate font-display text-base text-content-primary">{person.label}</h2>
+                    {line ? (
+                      <p className="mt-0.5 truncate font-mono text-[13px] text-content-secondary">{line}</p>
+                    ) : null}
+                  </div>
+                  <span
+                    className={`shrink-0 font-mono text-[13px] ${quiet ? 'text-brand' : 'text-content-secondary'}`}
+                  >
+                    {timeSince(lastTouch(person))}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildIdentifiers, type PersonIdentifier } from './person-identity';
 import { identifierKey, resolvePerson, type MatchVia } from './person-match';
+import { signPhotoPath } from './profile-photo-server';
 import {
   orderPair,
   type RelationshipCreate,
@@ -23,6 +24,9 @@ const PERSON_PROFILES = 'person_profiles';
 const PERSON_IDENTIFIERS = 'person_identifiers';
 const RELATIONSHIPS = 'team_relationships';
 const DUPLICATE_FLAGS = 'person_duplicate_flags';
+const INTERACTIONS = 'relationship_interactions';
+/** The person page shows a short log, not a history. */
+const INTERACTION_LIMIT = 20;
 
 /** PostgREST puts `in(...)` in the URL, so ids go in small groups. */
 const ID_CHUNK = 150;
@@ -44,7 +48,11 @@ export type RelationshipView = {
   relationshipId: string;
   label: string;
   role: string;
+  /** Where they work, in the team's words. Empty until somebody adds it. */
+  company: string;
+  /** Kept and still editable through the API; the pages no longer show it. */
   tags: string[];
+  /** Kept and still editable through the API; the pages no longer show it. */
   notes: string;
   rateNote: string | null;
   lastContactAt: string | null;
@@ -55,6 +63,8 @@ export type RelationshipView = {
   updatedAt: string;
   /** True once the person has taken over their profile. */
   claimed: boolean;
+  /** Their own photo, only once they have claimed AND listed the profile. */
+  avatarUrl: string | null;
   /** Only present for somebody who has claimed AND chosen to be listed. */
   profile: {
     displayName: string;
@@ -67,10 +77,32 @@ export type RelationshipView = {
 
 type Failure = { ok: false; error: string; status: number };
 
-const RELATIONSHIP_COLUMNS =
+const LEGACY_COLUMNS =
   'id, workspace_id, person_id, label, role, tags, notes, rate_note, last_contact_at, email, phone, source, created_at, updated_at';
+const RELATIONSHIP_COLUMNS = `${LEGACY_COLUMNS}, company`;
 
-function toView(row: Record<string, unknown>, profile: Record<string, unknown> | null): RelationshipView {
+/** Postgres "undefined column". */
+const MISSING_COLUMN = '42703';
+
+/**
+ * Reads relationship rows, falling back to the columns from before the My
+ * People migration (20261015120000) when `company` does not exist yet, so the
+ * list keeps working in the window between this code shipping and that
+ * migration being applied. Every row then reads an empty company.
+ */
+async function selectRelationships<T>(
+  run: (columns: string) => PromiseLike<{ data: T; error: { code?: string } | null }>
+): Promise<{ data: T; error: { code?: string } | null }> {
+  const first = await run(RELATIONSHIP_COLUMNS);
+  if (first.error && first.error.code === MISSING_COLUMN) return run(LEGACY_COLUMNS);
+  return first;
+}
+
+function toView(
+  row: Record<string, unknown>,
+  profile: Record<string, unknown> | null,
+  avatarUrl: string | null = null
+): RelationshipView {
   const claimed = profile ? text(profile.status) === 'claimed' : false;
   const listed = claimed && profile && text(profile.visibility) !== 'private';
   return {
@@ -78,6 +110,7 @@ function toView(row: Record<string, unknown>, profile: Record<string, unknown> |
     relationshipId: text(row.id),
     label: text(row.label),
     role: text(row.role),
+    company: text(row.company),
     tags: Array.isArray(row.tags) ? (row.tags as unknown[]).filter((t): t is string => typeof t === 'string') : [],
     notes: text(row.notes),
     rateNote: row.rate_note ? text(row.rate_note) : null,
@@ -88,6 +121,7 @@ function toView(row: Record<string, unknown>, profile: Record<string, unknown> |
     createdAt: text(row.created_at),
     updatedAt: text(row.updated_at),
     claimed,
+    avatarUrl: listed ? avatarUrl : null,
     profile:
       listed && profile
         ? {
@@ -109,11 +143,35 @@ async function loadProfiles(
   for (const ids of chunk([...new Set(personIds)], ID_CHUNK)) {
     const { data } = await admin
       .from(PERSON_PROFILES)
-      .select('id, status, display_name, city, country, roles, slug, visibility')
+      .select('id, status, display_name, city, country, roles, slug, visibility, avatar_storage_path')
       .in('id', ids);
     for (const row of data || []) map.set(text(asRow(row).id), asRow(row));
   }
   return map;
+}
+
+/**
+ * Faces for the people who claimed AND listed their profile, keyed by person
+ * id. Never throws: a face is decoration, and a signing hiccup shows initials.
+ */
+async function loadAvatars(
+  admin: SupabaseClient,
+  profiles: Map<string, Record<string, unknown>>
+): Promise<Map<string, string>> {
+  const urls = new Map<string, string>();
+  await Promise.all(
+    [...profiles.entries()].map(async ([id, profile]) => {
+      const listed = text(profile.status) === 'claimed' && text(profile.visibility) !== 'private';
+      if (!listed || !profile.avatar_storage_path) return;
+      try {
+        const url = await signPhotoPath(admin, profile.avatar_storage_path);
+        if (url) urls.set(id, url);
+      } catch {
+        // Initials instead.
+      }
+    })
+  );
+  return urls;
 }
 
 /** Every relationship the team has, newest activity first. */
@@ -121,22 +179,28 @@ export async function listRelationships(
   admin: SupabaseClient,
   workspaceId: string
 ): Promise<{ ok: true; relationships: RelationshipView[] } | Failure> {
-  const { data, error } = await admin
-    .from(RELATIONSHIPS)
-    .select(RELATIONSHIP_COLUMNS)
-    .eq('workspace_id', workspaceId)
-    .order('updated_at', { ascending: false })
-    .limit(LIST_LIMIT);
+  const { data, error } = await selectRelationships((columns) =>
+    admin
+      .from(RELATIONSHIPS)
+      .select(columns)
+      .eq('workspace_id', workspaceId)
+      .order('updated_at', { ascending: false })
+      .limit(LIST_LIMIT)
+  );
   if (error) return { ok: false, error: 'Could not load your contacts.', status: 500 };
 
-  const rows = (data || []).map(asRow);
+  const rows = ((data as unknown[]) || []).map(asRow);
   const profiles = await loadProfiles(
     admin,
     rows.map((row) => text(row.person_id))
   );
+  const avatars = await loadAvatars(admin, profiles);
   return {
     ok: true,
-    relationships: rows.map((row) => toView(row, profiles.get(text(row.person_id)) ?? null)),
+    relationships: rows.map((row) => {
+      const personId = text(row.person_id);
+      return toView(row, profiles.get(personId) ?? null, avatars.get(personId) ?? null);
+    }),
   };
 }
 
@@ -145,18 +209,24 @@ export async function getRelationship(
   workspaceId: string,
   personId: string
 ): Promise<{ ok: true; relationship: RelationshipView } | Failure> {
-  const { data, error } = await admin
-    .from(RELATIONSHIPS)
-    .select(RELATIONSHIP_COLUMNS)
-    .eq('workspace_id', workspaceId)
-    .eq('person_id', personId)
-    .maybeSingle();
+  const { data, error } = await selectRelationships((columns) =>
+    admin
+      .from(RELATIONSHIPS)
+      .select(columns)
+      .eq('workspace_id', workspaceId)
+      .eq('person_id', personId)
+      .maybeSingle()
+  );
   if (error) return { ok: false, error: 'Could not load that contact.', status: 500 };
   // Another team's contact and one that does not exist are the same answer.
   if (!data) return { ok: false, error: 'Contact not found.', status: 404 };
 
   const profiles = await loadProfiles(admin, [personId]);
-  return { ok: true, relationship: toView(asRow(data), profiles.get(personId) ?? null) };
+  const avatars = await loadAvatars(admin, profiles);
+  return {
+    ok: true,
+    relationship: toView(asRow(data), profiles.get(personId) ?? null, avatars.get(personId) ?? null),
+  };
 }
 
 type Lookup = Map<string, string>;
@@ -312,6 +382,9 @@ export async function seedRelationship(
         person_id: personId,
         label: data.label,
         role: data.role,
+        // Only sent when there is one, so adding somebody keeps working before
+        // the My People migration adds the column.
+        ...(data.company ? { company: data.company } : {}),
         tags: data.tags,
         notes: data.notes,
         rate_note: data.rateNote,
@@ -373,6 +446,9 @@ export async function seedRelationship(
 const PATCH_COLUMNS: Record<keyof RelationshipPatch, string> = {
   label: 'label',
   role: 'role',
+  company: 'company',
+  email: 'email',
+  phone: 'phone',
   tags: 'tags',
   notes: 'notes',
   rateNote: 'rate_note',
@@ -428,7 +504,87 @@ export async function removeRelationship(
     .delete()
     .eq('workspace_id', workspaceId)
     .or(`person_a.eq.${personId},person_b.eq.${personId}`);
+  // The team's log about them goes with the relationship, as its notes do.
+  await admin.from(INTERACTIONS).delete().eq('workspace_id', workspaceId).eq('person_id', personId);
   return { ok: true };
+}
+
+export type InteractionView = {
+  id: string;
+  body: string;
+  happenedAt: string;
+};
+
+const toInteraction = (row: Record<string, unknown>): InteractionView => ({
+  id: text(row.id),
+  body: text(row.body),
+  happenedAt: text(row.happened_at),
+});
+
+/**
+ * The team's short log about one person, newest first. Reads tolerantly: a
+ * missing table (migration not applied yet) is an empty log, not an error.
+ */
+export async function listInteractions(
+  admin: SupabaseClient,
+  workspaceId: string,
+  personId: string
+): Promise<InteractionView[]> {
+  try {
+    const { data, error } = await admin
+      .from(INTERACTIONS)
+      .select('id, body, happened_at')
+      .eq('workspace_id', workspaceId)
+      .eq('person_id', personId)
+      .order('happened_at', { ascending: false })
+      .limit(INTERACTION_LIMIT);
+    if (error || !data) return [];
+    return data.map((row) => toInteraction(asRow(row)));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Logs one interaction and moves the relationship's last contact to now, which
+ * is what the list sorts by. Only for a person the team already has.
+ */
+export async function logInteraction(
+  admin: SupabaseClient,
+  input: { workspaceId: string; personId: string; actorUserId: string; body: string; now?: Date }
+): Promise<{ ok: true; interaction: InteractionView; lastContactAt: string } | Failure> {
+  const { workspaceId, personId, actorUserId, body } = input;
+  const happenedAt = (input.now ?? new Date()).toISOString();
+
+  const { data: existing, error: existingError } = await admin
+    .from(RELATIONSHIPS)
+    .select('id')
+    .eq('workspace_id', workspaceId)
+    .eq('person_id', personId)
+    .maybeSingle();
+  if (existingError) return { ok: false, error: 'Could not save that.', status: 500 };
+  if (!existing) return { ok: false, error: 'Contact not found.', status: 404 };
+
+  const { data, error } = await admin
+    .from(INTERACTIONS)
+    .insert({
+      workspace_id: workspaceId,
+      person_id: personId,
+      body,
+      happened_at: happenedAt,
+      created_by: actorUserId,
+    })
+    .select('id, body, happened_at')
+    .single();
+  if (error || !data) return { ok: false, error: 'Could not save that.', status: 500 };
+
+  await admin
+    .from(RELATIONSHIPS)
+    .update({ last_contact_at: happenedAt })
+    .eq('workspace_id', workspaceId)
+    .eq('person_id', personId);
+
+  return { ok: true, interaction: toInteraction(asRow(data)), lastContactAt: happenedAt };
 }
 
 export type DuplicateFlagView = {

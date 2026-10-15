@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
-import type { DuplicateFlagView, RelationshipView } from '@/lib/relationships-server';
+import type { DuplicateFlagView, InteractionView, RelationshipView } from '@/lib/relationships-server';
 import type { RelationshipPatch } from '@/lib/relationships';
 
 /**
@@ -22,6 +22,7 @@ import type { RelationshipPatch } from '@/lib/relationships';
 type CreateInput = {
   label: string;
   role?: string;
+  company?: string;
   email?: string;
   phone?: string;
   tags?: string[];
@@ -35,6 +36,8 @@ type CreateResult =
 type RelationshipsStore = {
   relationships: RelationshipView[];
   flags: DuplicateFlagView[];
+  /** The short log on each person's page, keyed by person id, loaded on open. */
+  interactions: Record<string, InteractionView[]>;
   /** True until the first load settles, so a later visit shows rows not a skeleton. */
   isInitialLoading: boolean;
   error: string | null;
@@ -43,6 +46,8 @@ type RelationshipsStore = {
   update: (personId: string, patch: RelationshipPatch) => Promise<{ error: string } | null>;
   remove: (personId: string) => Promise<{ error: string } | null>;
   dismissFlag: (flagId: string) => Promise<{ error: string } | null>;
+  loadInteractions: (personId: string) => Promise<void>;
+  logInteraction: (personId: string, body: string) => Promise<{ error: string } | null>;
 };
 
 const FRESH_MS = 15_000;
@@ -75,6 +80,7 @@ const OFFLINE = 'Could not reach the server. Check your connection.';
 export const useRelationshipsStore = create<RelationshipsStore>((set, get) => ({
   relationships: [],
   flags: [],
+  interactions: {},
   isInitialLoading: true,
   error: null,
 
@@ -194,6 +200,63 @@ export const useRelationshipsStore = create<RelationshipsStore>((set, get) => ({
     }
   },
 
+  loadInteractions: async (personId) => {
+    const startedIn = epoch;
+    const headers = await authHeaders();
+    if (!headers) return;
+    try {
+      const response = await fetch(`/api/relationships/${encodeURIComponent(personId)}`, {
+        headers,
+        cache: 'no-store',
+      });
+      if (!response.ok || startedIn !== epoch) return;
+      const body = (await response.json().catch(() => null)) as {
+        relationship?: RelationshipView;
+        interactions?: InteractionView[];
+      } | null;
+      if (startedIn !== epoch || !body) return;
+      set((state) => ({
+        interactions: {
+          ...state.interactions,
+          [personId]: Array.isArray(body.interactions) ? body.interactions : [],
+        },
+        relationships: body.relationship
+          ? state.relationships.some((item) => item.personId === personId)
+            ? state.relationships.map((item) => (item.personId === personId ? body.relationship! : item))
+            : [...state.relationships, body.relationship]
+          : state.relationships,
+      }));
+    } catch {
+      // The log is a nicety on the page; the person still shows.
+    }
+  },
+
+  logInteraction: async (personId, text) => {
+    const headers = await authHeaders();
+    if (!headers) return { error: SIGNED_OUT };
+    try {
+      const response = await fetch(`/api/relationships/${encodeURIComponent(personId)}/interactions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ body: text }),
+      });
+      if (!response.ok) return { error: await readError(response, 'Could not save that.') };
+      const body = (await response.json()) as { interaction: InteractionView; lastContactAt: string };
+      set((state) => ({
+        interactions: {
+          ...state.interactions,
+          [personId]: [body.interaction, ...(state.interactions[personId] ?? [])],
+        },
+        relationships: state.relationships.map((item) =>
+          item.personId === personId ? { ...item, lastContactAt: body.lastContactAt } : item
+        ),
+      }));
+      return null;
+    } catch {
+      return { error: OFFLINE };
+    }
+  },
+
   dismissFlag: async (flagId) => {
     const headers = await authHeaders();
     if (!headers) return { error: SIGNED_OUT };
@@ -219,6 +282,7 @@ export function resetRelationshipsStore(): void {
   useRelationshipsStore.setState({
     relationships: [],
     flags: [],
+    interactions: {},
     isInitialLoading: true,
     error: null,
   });

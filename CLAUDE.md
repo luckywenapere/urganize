@@ -19649,3 +19649,14 @@ A rollout's activities group under three phases, each header showing its dates a
 - **Who writes it:** playbook instantiation (`release-templates/instantiate.ts`, from `offset_days`) and approved UrgAns plans (`release-planning-server.ts`, from `offset_days`). A person sets or clears it in the task detail's Phase row ("from its date" clears); `PATCH /api/tasks/[id]` accepts `phase` (one of the three or null) and merges it into metadata like `planKey`.
 - **Where it shows:** the timeline groups its rows by these three (it was four plan phases) with a three-card phase strip above the grid at every width; the activity list (scoped rollout) groups by phase by default with a "Group by Phase / Status" toggle that keeps the old status buckets one tap away (choice and per-phase collapse persisted in localStorage). Phase headers count the whole plan, not just the short list.
 - **Not done:** the phone timeline's week list still groups by week (the strip above it carries the phases); AI chat tools that create single tasks write no phase, so those follow their date.
+
+## My People (URG-306, 2026-10-15, v1.144.0)
+
+The team's private list at `/dashboard/relationships` (tab label My People, URG-303), rebuilt to the founder's mock.
+
+- **List:** face, name, role · company, time since last contact (`timeSince`: today, 3d, 2w, 3mo, 1y). Quiet people first, longest silence on top, then the rest most recent first (`sortByLastContact`). Search plus two chips, All and Quiet N. No dots: green dots mean Online now elsewhere, so Quiet is the time in green.
+- **Quiet** is `QUIET_DAYS = 42` in `lib/relationships-page.ts`, the one constant. Somebody never contacted counts from when they were added (`lastTouch`), so a person added today is not Quiet.
+- **Person page:** face, name, role · company, Reach (WhatsApp, Call, Email from the team's own contact details; with none, Reach opens Edit), Log (one line, `POST /api/relationships/[personId]/interactions`, which also sets `last_contact_at`), and the last 20 log lines. Edit holds name, role, company, email, phone and Remove.
+- **Hidden, not deleted (founder call):** tags, notes and the fee note stay in `team_relationships` and in the API; the pages no longer show or filter on them.
+- **Faces:** the person's own photo only once they have claimed AND listed the profile (`loadAvatars`), otherwise a grey monogram.
+- **Migration `20261015120000_my_people.sql`:** `team_relationships.company` and `relationship_interactions` (team select policy, no write policy, like the rest of the private layer). Removing a person removes the team's log about them. The list read falls back to the old columns on Postgres 42703, so the page keeps working if code lands before the migration.

@@ -93,6 +93,15 @@ describe('relationships-server', () => {
     expect(display).not.toContain('PERSON_IDENTIFIERS');
   });
 
+  it('scopes every query on the interaction log to a workspace', () => {
+    const queries = source.split('.from(INTERACTIONS)').slice(1);
+    expect(queries.length).toBeGreaterThan(0);
+    for (const query of queries) {
+      const statement = query.slice(0, query.indexOf(';'));
+      expect(statement, statement).toMatch(/workspace_id/);
+    }
+  });
+
   it('never writes the shared profile when a team edits its layer', () => {
     const update = source.slice(source.indexOf('export async function updateRelationship'), source.indexOf('export async function removeRelationship'));
     expect(update).not.toContain('PERSON_PROFILES');
@@ -116,5 +125,22 @@ describe('relationships migration', () => {
 
   it('keeps an unclaimed profile private', () => {
     expect(sql).toContain("check (status = 'claimed' or visibility = 'private')");
+  });
+});
+
+describe('My People migration (URG-306)', () => {
+  const sql = readFileSync(join(MIGRATION, '..', '20261015120000_my_people.sql'), 'utf8');
+
+  it('keeps the interaction log private: row level security on, select-only policy', () => {
+    expect(sql).toContain('alter table public.relationship_interactions enable row level security');
+    const policies = sql.match(/create policy[\s\S]*?on public\.\w+ for (\w+)/g) || [];
+    expect(policies.length).toBe(1);
+    for (const policy of policies) expect(policy.endsWith(' select')).toBe(true);
+  });
+
+  it('adds and never drops', () => {
+    const statements = sql.replace(/--.*$/gm, '');
+    expect(statements).not.toMatch(/\bdrop\s+(table|column)\b/i);
+    expect(statements).not.toMatch(/\bdelete\s+from\b/i);
   });
 });

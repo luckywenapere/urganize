@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.144.0",
+    date: "October 15, 2026",
+    highlights: [
+      "My People is a compact list sorted by last contact: each face, name, role and company, and how long since you were in touch. Anyone you haven't reached in six weeks shows that time in green, and the Quiet chip lists just them.",
+      "A person's page has Reach (WhatsApp, call or email) and Log. Log a line like \"Sent EP link\" and it joins their short history and resets the clock. Tags and notes are no longer shown; nothing you saved was deleted.",
+    ],
+  },
+  {
     version: "1.143.0",
     date: "October 15, 2026",
     highlights: [

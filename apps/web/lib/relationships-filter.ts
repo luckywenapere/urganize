@@ -8,6 +8,7 @@ export type FilterableRelationship = {
   personId: string;
   label: string;
   role: string;
+  company?: string;
   tags: string[];
   lastContactAt: string | null;
   /** Only present for somebody who claimed a profile and chose to be listed. */
@@ -36,7 +37,7 @@ export function isStale(lastContactAt: string | null, days: number, now: Date = 
 
 const searchText = (item: FilterableRelationship): string =>
   normalizeName(
-    [item.label, item.role, item.tags.join(' '), item.profile?.city ?? '', item.profile?.country ?? ''].join(' ')
+    [item.label, item.role, item.company ?? '', item.tags.join(' '), item.profile?.city ?? '', item.profile?.country ?? ''].join(' ')
   );
 
 export function filterRelationships<T extends FilterableRelationship>(

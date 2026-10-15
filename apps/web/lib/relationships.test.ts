@@ -3,6 +3,7 @@ import {
   MAX_NOTES,
   MAX_TAGS,
   orderPair,
+  parseInteraction,
   parseRelationshipCreate,
   parseRelationshipPatch,
 } from './relationships';
@@ -14,6 +15,7 @@ describe('parseRelationshipCreate', () => {
       value: {
         label: 'Tunde Okafor',
         role: '',
+        company: '',
         email: null,
         phone: null,
         tags: [],
@@ -90,5 +92,24 @@ describe('orderPair', () => {
 
   it('compares ids without regard to case, as the database stores them', () => {
     expect(orderPair('B1', 'a1')).toEqual(['a1', 'b1']);
+  });
+});
+
+describe('My People fields (URG-306)', () => {
+  it('reads a company on create and on edit', () => {
+    const created = parseRelationshipCreate({ label: 'Amaka Obi', company: '  Eko Sound ' });
+    expect('value' in created && created.value.company).toBe('Eko Sound');
+    expect(parseRelationshipPatch({ company: 'x'.repeat(61) })).toHaveProperty('error');
+  });
+
+  it('edits the team’s own email and phone, empty clears, unreadable is an error', () => {
+    expect(parseRelationshipPatch({ email: 'A@B.co', phone: '' })).toEqual({ value: { email: 'a@b.co', phone: null } });
+    expect(parseRelationshipPatch({ email: 'nope' })).toHaveProperty('error');
+  });
+
+  it('takes one short line for the log', () => {
+    expect(parseInteraction({ body: '  Sent   EP link ' })).toEqual({ value: { body: 'Sent EP link' } });
+    expect(parseInteraction({ body: '   ' })).toHaveProperty('error');
+    expect(parseInteraction({ body: 'x'.repeat(201) })).toHaveProperty('error');
   });
 });

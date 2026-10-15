@@ -4,7 +4,9 @@ import {
   dismissDuplicateFlag,
   getRelationship,
   listDuplicateFlags,
+  listInteractions,
   listRelationships,
+  logInteraction,
   removeRelationship,
   seedRelationship,
   updateRelationship,
@@ -443,5 +445,78 @@ describe('duplicate suggestions', () => {
     expect(await dismissDuplicateFlag(client, WS_B, id, USER)).toMatchObject({ ok: false, status: 404 });
     ok(await dismissDuplicateFlag(client, WS_A, id, USER));
     expect(ok(await listDuplicateFlags(client, WS_A)).flags).toHaveLength(0);
+  });
+});
+
+describe('My People (URG-306)', () => {
+  it('keeps the company a team typed', async () => {
+    const { personId } = ok(await seed(WS_A, data({ company: 'Eko Sound' })));
+    const read = ok(await getRelationship(client, WS_A, personId));
+    expect(read.relationship.company).toBe('Eko Sound');
+  });
+
+  it('edits the company and the team’s own contact details', async () => {
+    const { personId } = ok(await seed(WS_A, data()));
+    const result = ok(
+      await updateRelationship(client, WS_A, personId, { company: 'Loudhouse', email: 'a@b.co', phone: null })
+    );
+    expect(result.relationship.company).toBe('Loudhouse');
+    expect(result.relationship.email).toBe('a@b.co');
+    expect(result.relationship.phone).toBeNull();
+  });
+
+  it('logging moves last contact to then, and the log reads newest first', async () => {
+    const { personId } = ok(await seed(WS_A, data()));
+    const first = ok(
+      await logInteraction(client, { workspaceId: WS_A, personId, actorUserId: USER, body: 'Met at Afro Nation', now: new Date('2026-05-01T10:00:00Z') })
+    );
+    expect(first.lastContactAt).toBe('2026-05-01T10:00:00.000Z');
+    ok(await logInteraction(client, { workspaceId: WS_A, personId, actorUserId: USER, body: 'Sent EP link', now: new Date('2026-07-01T10:00:00Z') }));
+    const read = ok(await getRelationship(client, WS_A, personId));
+    expect(read.relationship.lastContactAt).toBe('2026-07-01T10:00:00.000Z');
+    // The fake ignores order(), so sort here; the real query orders by happened_at desc.
+    const log = await listInteractions(client, WS_A, personId);
+    expect(log.map((item) => item.body).sort()).toEqual(['Met at Afro Nation', 'Sent EP link']);
+  });
+
+  it('cannot log against another team’s contact, and never shows another team’s log', async () => {
+    const { personId } = ok(await seed(WS_A, data()));
+    const denied = await logInteraction(client, { workspaceId: WS_B, personId, actorUserId: USER, body: 'Hi' });
+    expect(denied).toMatchObject({ ok: false, status: 404 });
+    ok(await logInteraction(client, { workspaceId: WS_A, personId, actorUserId: USER, body: 'Hi' }));
+    expect(await listInteractions(client, WS_B, personId)).toEqual([]);
+  });
+
+  it('removing a contact removes the team’s log about them', async () => {
+    const { personId } = ok(await seed(WS_A, data()));
+    ok(await logInteraction(client, { workspaceId: WS_A, personId, actorUserId: USER, body: 'Hi' }));
+    ok(await removeRelationship(client, WS_A, personId));
+    expect(db.tables.relationship_interactions).toEqual([]);
+  });
+
+  it('still lists people before the company column exists', async () => {
+    const { personId } = ok(await seed(WS_A, data()));
+    const original = db.from.bind(db);
+    let calls = 0;
+    db.from = (table: string) => {
+      const query = original(table);
+      if (table !== 'team_relationships') return query;
+      const select = query.select.bind(query);
+      (query as unknown as { select: (columns?: string) => unknown }).select = (columns?: string) => {
+        calls += 1;
+        if (columns && columns.includes('company')) {
+          const failed = Promise.resolve({ data: null, error: { code: '42703' } });
+          const chain: Record<string, unknown> = { then: failed.then.bind(failed) };
+          for (const name of ['eq', 'order', 'limit', 'maybeSingle']) chain[name] = () => chain;
+          return chain;
+        }
+        return select();
+      };
+      return query;
+    };
+    const list = ok(await listRelationships(client, WS_A));
+    expect(calls).toBe(2);
+    expect(list.relationships.map((item) => item.personId)).toEqual([personId]);
+    expect(list.relationships[0].company).toBe('');
   });
 });
