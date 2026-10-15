@@ -36,6 +36,9 @@ import type { RunOfShowItem, Setlist, ShowEvent } from '@/types/events';
 import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
 
 const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
+const ARTIST_PAGE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_ARTIST_PAGE === 'true' &&
+  process.env.NEXT_PUBLIC_FEATURE_WORKSPACE === 'true';
 
 async function authHeaders(): Promise<HeadersInit | null> {
   const {
@@ -283,11 +286,11 @@ export default function ShowPageClient() {
     return (
       <div className="mx-auto w-full max-w-3xl">
         <Link
-          href="/dashboard/shows"
+          href={ARTIST_PAGE_ENABLED ? '/dashboard/artists' : '/dashboard/shows'}
           className="motion-focus inline-flex items-center gap-1.5 text-sm text-content-secondary hover:text-content-primary"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          Shows
+          {ARTIST_PAGE_ENABLED ? 'Artists' : 'Shows'}
         </Link>
         <p className="mt-6 rounded-lg border border-stroke-default bg-bg-surface p-6 text-sm text-content-secondary">
           {error || 'This show isn’t here. It may have been deleted.'}
@@ -378,15 +381,21 @@ export default function ShowPageClient() {
         : 'border-stroke-default text-content-secondary hover:text-content-primary'
     }`;
 
+  // Back goes to the artist's page, where their shows live (URG-303).
+  const backHref = ARTIST_PAGE_ENABLED
+    ? `/dashboard/artists/${encodeURIComponent(event.artistId)}`
+    : '/dashboard/shows';
+  const backLabel = ARTIST_PAGE_ENABLED ? event.artistName || 'Artist' : 'Shows';
+
   return (
     <div className="mx-auto w-full max-w-3xl">
       <div className="flex items-center justify-between gap-3">
         <Link
-          href="/dashboard/shows"
+          href={backHref}
           className="motion-focus inline-flex items-center gap-1.5 text-sm text-content-secondary hover:text-content-primary"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          Shows
+          {backLabel}
         </Link>
 
         {/* One show in a festival: step through the others without going back
@@ -752,7 +761,7 @@ export default function ShowPageClient() {
           if (result && 'error' in result) throw new Error(result.error);
           setConfirm(null);
           pushToast(`${event.title} is deleted.`, 'success');
-          router.push('/dashboard/shows');
+          router.push(backHref);
         }}
       />
 
@@ -768,7 +777,7 @@ export default function ShowPageClient() {
           if ('error' in result) throw new Error(result.error);
           setConfirm(null);
           pushToast(`${event.seriesTitle || 'The festival'} is deleted.`, 'success');
-          router.push('/dashboard/shows');
+          router.push(backHref);
         }}
       />
 

@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.146.1",
+    date: "October 15, 2026",
+    highlights: [
+      "The old Shows list now opens Artists, where each artist's shows live. Back on a show takes you to its artist's page.",
+    ],
+  },
+  {
     version: "1.146.0",
     date: "October 15, 2026",
     highlights: [
