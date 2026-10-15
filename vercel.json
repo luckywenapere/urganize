@@ -8,6 +8,9 @@
   },
   "installCommand": "pnpm install",
   "framework": "nextjs",
+  "regions": [
+    "dub1"
+  ],
   "crons": [
     {
       "path": "/api/cron/due-date-notifications",

@@ -1,7 +1,7 @@
 {
   "name": "@urganize/web",
   "description": "Urganize is where music teams do everything after the music is made.",
-  "version": "1.147.4",
+  "version": "1.147.5",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.90.1",
     "@urganize/changelog": "workspace:*",
     "@urganize/db": "workspace:*",
@@ -21,14 +20,12 @@
     "@urganize/pricing": "workspace:*",
     "@urganize/ui": "workspace:*",
     "@vercel/analytics": "^1.6.1",
-    "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.469.0",
     "mammoth": "^1.13.0",
     "next": "^16.1.1",
     "posthog-js": "^1.260.2",
     "posthog-node": "^5.9.0",
-    "prettier": "^3.9.9",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-email": "^6.11.0",

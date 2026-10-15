@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.5",
+    date: "October 15, 2026",
+    highlights: [
+      "Under the hood: the app's servers now run in Europe, next to its database, so every page and action waits less on the network.",
+    ],
+  },
+  {
     version: "1.147.4",
     date: "October 15, 2026",
     highlights: [
