@@ -1,9 +1,21 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Minimize2 } from '@/components/icons';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
+
+/**
+ * The full-screen bar's tools slot (URG-312, 2026-10-15, founder call): on a
+ * desktop the timeline's search and Filter button move up into the bar,
+ * between the title and "Exit full screen", instead of taking a row of their
+ * own above the phases. PlanListControls reads this; null outside full screen.
+ */
+const TimelineFullScreenToolsContext = createContext<HTMLElement | null>(null);
+
+export function useTimelineFullScreenToolsSlot(): HTMLElement | null {
+  return useContext(TimelineFullScreenToolsContext);
+}
 
 type TimelineFullScreenProps = {
   /** Names the dialog for a screen reader and heads the bar. */
@@ -51,6 +63,7 @@ export function TimelineFullScreen({ title, onClose, children }: TimelineFullScr
   const panelRef = useRef<HTMLDivElement>(null);
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [top, setTop] = useState(0);
+  const [toolsSlot, setToolsSlot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     setHost(document.querySelector<HTMLElement>('.app-shell-frame') ?? document.body);
@@ -112,7 +125,9 @@ export function TimelineFullScreen({ title, onClose, children }: TimelineFullScr
       }`}
     >
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-stroke-default px-4 py-3 sm:px-6">
-        <h2 className="min-w-0 truncate font-display text-lg text-content-primary">{title}</h2>
+        <h2 className="min-w-0 shrink truncate font-display text-lg text-content-primary">{title}</h2>
+        {/* Desktop only: the search and Filter button portal in here. */}
+        <div ref={setToolsSlot} className="hidden min-w-0 flex-1 justify-center lg:flex" />
         <button
           type="button"
           onClick={onClose}
@@ -122,7 +137,9 @@ export function TimelineFullScreen({ title, onClose, children }: TimelineFullScr
           Exit full screen
         </button>
       </div>
-      <div className="mobile-nav-clearance min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">{children}</div>
+      <TimelineFullScreenToolsContext.Provider value={toolsSlot}>
+        <div className="mobile-nav-clearance min-h-0 flex-1 overflow-y-auto px-4 sm:px-6">{children}</div>
+      </TimelineFullScreenToolsContext.Provider>
     </div>,
     host
   );

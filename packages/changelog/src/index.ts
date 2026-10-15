@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.3",
+    date: "October 15, 2026",
+    highlights: [
+      "In full-screen timeline on desktop, search and filters now sit in the top bar, next to the title, so the timeline gets more room.",
+    ],
+  },
+  {
     version: "1.147.2",
     date: "October 15, 2026",
     highlights: [

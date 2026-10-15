@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { usePageBarToolsSlot } from '@/components/shell/PageBar';
+import { useTimelineFullScreenToolsSlot } from '@/components/releases/TimelineFullScreen';
 import { Search, SlidersHorizontal, X } from '@/components/icons';
 import { FilterPopover, FilterSheet } from '@/components/shell/ListToolbar';
 import { useAuthStore } from '@/lib/auth-store';
@@ -167,6 +168,26 @@ export function PlanListControls({
   inPageBar?: boolean;
 }) {
   const toolsSlot = usePageBarToolsSlot(inPageBar);
+  const fullScreenSlot = useTimelineFullScreenToolsSlot();
+  // Full screen on a desktop (URG-312): search and Filter go up into the
+  // full-screen bar; the trailing controls (the legend) stay in the page row.
+  // Below lg the bar slot is hidden, so the phone keeps the in-page row.
+  if (!toolsSlot && fullScreenSlot) {
+    return (
+      <>
+        <div className="lg:hidden">
+          <PlanListRow plan={plan} trailing={trailing} search="always" />
+        </div>
+        {trailing ? <div className="hidden justify-end lg:flex">{trailing}</div> : null}
+        {createPortal(
+          <div className="w-full max-w-md">
+            <PlanListRow plan={plan} search="always" />
+          </div>,
+          fullScreenSlot
+        )}
+      </>
+    );
+  }
   if (!toolsSlot) {
     return <PlanListRow plan={plan} trailing={trailing} search={phoneSearchOnly ? 'phone' : 'always'} />;
   }
