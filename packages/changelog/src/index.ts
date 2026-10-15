@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.4",
+    date: "October 15, 2026",
+    highlights: [
+      "Admins can now open the admin dashboards straight from More on a phone, and those pages clear the iPhone notch.",
+    ],
+  },
+  {
     version: "1.147.3",
     date: "October 15, 2026",
     highlights: [

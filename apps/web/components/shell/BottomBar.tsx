@@ -17,7 +17,8 @@ import {
   X,
   type LucideProps,
 } from '@/components/icons';
-import { Bell, Check, Search, UserCircle2, Users } from '@/components/icons';
+import { Bell, Check, Gauge, Search, UserCircle2, Users } from '@/components/icons';
+import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
 import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
 import { useShellStore } from '@/stores/useShellStore';
 import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
@@ -246,6 +247,7 @@ function MoreSheet({
   showHelp: boolean;
   onClose: () => void;
 }) {
+  const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
   const openSettings = useSettingsLinkClick();
   const tip = useNavTip({ overSheet: true });
   // What the role view tucked (URG-260) follows the areas the bar does not
@@ -376,6 +378,21 @@ function MoreSheet({
               Settings
             </Link>
           </li>
+          {/* Admin (2026-10-15, founder call, URG-313): the internal dashboards
+              straight from More on a phone, for the accounts ADMIN_EMAILS
+              names. Settings > Admin still lists them too. */}
+          {isAdmin ? (
+            <li>
+              <Link
+                href="/admin"
+                onClick={onClose}
+                className="motion-focus flex min-h-14 items-center gap-2.5 text-base text-content-primary"
+              >
+                <Gauge className="h-5 w-5 text-content-tertiary" aria-hidden="true" />
+                Admin
+              </Link>
+            </li>
+          ) : null}
         </ul>
         {helpItems.length > 0 ? (
           <div role="group" aria-label="Help" className="border-t border-stroke-subtle">
