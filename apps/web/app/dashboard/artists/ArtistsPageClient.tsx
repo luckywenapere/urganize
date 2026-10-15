@@ -9,14 +9,11 @@ import { artistSummary } from '@/lib/artist-overview';
 import { artistHref, describeArtistCounts, isArtistPageEnabled } from '@/lib/artist-page';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useEventsStore } from '@/stores/useEventsStore';
-import { usePressKitsStore } from '@/stores/usePressKitsStore';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
-
-const KIT_COPY = { incomplete: 'Kit not finished', ready: 'Kit ready', published: 'Kit live' } as const;
 
 export default function ArtistsPageClient() {
   const router = useRouter();
@@ -30,8 +27,6 @@ export default function ArtistsPageClient() {
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const events = useEventsStore((state) => state.events);
   const loadEvents = useEventsStore((state) => state.load);
-  const kits = usePressKitsStore((state) => state.entries);
-  const loadKits = usePressKitsStore((state) => state.load);
 
   useEffect(() => {
     // A direct link followed while the flag is off goes back to the catalogue.
@@ -43,17 +38,15 @@ export default function ArtistsPageClient() {
     void loadRoster();
     void loadCommandCenter();
     void loadEvents();
-    void loadKits();
-  }, [loadRoster, loadCommandCenter, loadEvents, loadKits, router]);
+  }, [loadRoster, loadCommandCenter, loadEvents, router]);
 
   const cards = useMemo(
     () =>
       artists.map((artist) => ({
         artist,
         summary: artistSummary(artist.id, releases, events),
-        kit: kits.find((entry) => entry.artistId === artist.id)?.kit ?? null,
       })),
-    [artists, releases, events, kits]
+    [artists, releases, events]
   );
 
   if (!ARTIST_PAGE_ENABLED) return null;
@@ -78,17 +71,17 @@ export default function ArtistsPageClient() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-          {/* pl matches the rows below, which leave room for the face. */}
-          <div className="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)_2rem] gap-4 border-b border-stroke-subtle py-3 pl-[4.25rem] pr-5 text-xs font-medium text-content-tertiary md:grid">
+          {/* pl matches the rows below, which leave room for the face. Rollouts and
+              shows only: Planned and Press kit left the table (founder call,
+              2026-10-15); the press kit still lives on each artist's page. */}
+          <div className="hidden grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))_2rem] gap-4 border-b border-stroke-subtle py-3 pl-[4.25rem] pr-5 text-xs font-medium text-content-tertiary md:grid">
             <span>Artist</span>
             <span>Rollouts</span>
-            <span>Planned</span>
             <span>Shows coming</span>
-            <span>Press kit</span>
             <span />
           </div>
           <ul className="divide-y divide-stroke-subtle">
-            {cards.map(({ artist, summary, kit }) => (
+            {cards.map(({ artist, summary }) => (
               <li key={artist.id} className="relative">
                 {/* The face is a SIBLING of the row link, laid over it, never
                     inside it: a button inside an anchor is invalid markup and
@@ -105,24 +98,19 @@ export default function ArtistsPageClient() {
                 />
                 <Link
                   href={artistHref(artist.id)}
-                  className="motion-focus grid min-h-16 items-center gap-x-4 gap-y-1 py-3 pl-[4.25rem] pr-5 transition-colors hover:bg-bg-hover/60 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_minmax(0,1.2fr)_2rem]"
+                  className="motion-focus grid min-h-16 items-center gap-x-4 gap-y-1 py-3 pl-[4.25rem] pr-5 transition-colors hover:bg-bg-hover/60 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))_2rem]"
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-display text-base font-semibold text-content-primary">
                       {artist.name}
                     </span>
                     <span className="mt-0.5 block text-xs text-content-secondary md:hidden">
-                      {describeArtistCounts(summary)}
+                      {/* Rollouts and shows only, like the columns (founder call, 2026-10-15). */}
+                      {describeArtistCounts({ ...summary, planned: 0, live: 0 })}
                     </span>
                   </span>
                   <span className="hidden text-sm tabular-nums text-content-primary md:block">{summary.releases}</span>
-                  <span className="hidden text-sm tabular-nums text-content-primary md:block">{summary.planned}</span>
                   <span className="hidden text-sm tabular-nums text-content-primary md:block">{summary.upcomingShows}</span>
-                  <span>
-                    <span className="inline-flex rounded-full border border-stroke-default px-2.5 py-0.5 text-xs font-medium text-content-secondary">
-                      {kit ? KIT_COPY[kit.state] : 'No kit yet'}
-                    </span>
-                  </span>
                   <ArrowRight className="hidden h-4 w-4 text-content-tertiary md:block" aria-hidden />
                 </Link>
               </li>
