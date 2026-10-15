@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.2",
+    date: "October 15, 2026",
+    highlights: [
+      "Urganize now wears a Beta label: next to the logo on desktop, and at the top of More on your phone. We're still early, and your feedback shapes what comes next.",
+    ],
+  },
+  {
     version: "1.147.1",
     date: "October 15, 2026",
     highlights: [

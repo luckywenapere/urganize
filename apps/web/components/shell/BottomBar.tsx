@@ -277,7 +277,14 @@ function MoreSheet({
       >
         <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-stroke-strong" aria-hidden="true" />
         <div className="flex items-center justify-between pb-2">
-          <h2 className="font-display text-xl font-semibold text-content-primary">More</h2>
+          {/* The phone's Beta label (2026-10-15, URG-311): there is no phone top
+              bar to carry the desktop's pill beside the mark, so it sits here. */}
+          <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-content-primary">
+            More
+            <span className="select-none rounded-full bg-brand/15 px-1.5 py-px font-sans text-[10px] font-bold uppercase tracking-wide text-brand">
+              Beta
+            </span>
+          </h2>
           <button
             type="button"
             onClick={onClose}

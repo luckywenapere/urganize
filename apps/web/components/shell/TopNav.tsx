@@ -114,13 +114,22 @@ export function TopNav({ userName, showHelp = false }: { userName?: string; show
             shrink below its own content, so at the narrowest lg widths the
             pills give up a few pixels of centring rather than overlap the mark
             or the icons. */}
-        <Link
-          href="/dashboard/home"
-          aria-label="Urganize home"
-          className="motion-focus hidden shrink-0 justify-self-start rounded-md transition-opacity hover:opacity-80 lg:inline-flex"
-        >
-          <Logo size="sm" priority className="opacity-95" />
-        </Link>
+        {/* Beta label beside the mark (2026-10-15, founder call, URG-311):
+            Urganize stays on 1.x versions, so this pill is what says the
+            product is still early. One app-wide label here, not per-feature
+            stamps (those all went 2026-08-16). Desktop only, like the mark. */}
+        <div className="hidden shrink-0 items-center gap-2 justify-self-start lg:inline-flex">
+          <Link
+            href="/dashboard/home"
+            aria-label="Urganize home"
+            className="motion-focus inline-flex rounded-md transition-opacity hover:opacity-80"
+          >
+            <Logo size="sm" priority className="opacity-95" />
+          </Link>
+          <span className="select-none rounded-full bg-brand/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-brand">
+            Beta
+          </span>
+        </div>
 
         <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex xl:gap-1">
           {areas.map((area) => {
