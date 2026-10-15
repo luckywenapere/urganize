@@ -78,15 +78,15 @@ describe('shell nav', () => {
       buildShellAreas(flags)
         .find((a) => a.key === 'catalogue')!
         .subTabs.map((t) => t.label);
-    expect(labels(ALL_OFF)).toEqual(['Rollouts', 'Distribute']);
-    expect(labels(ALL_ON)).toEqual(['Rollouts', 'Artists', 'Distribute', 'Notes']);
+    expect(labels(ALL_OFF)).toEqual(['Rollouts']);
+    expect(labels(ALL_ON)).toEqual(['Rollouts', 'Artists', 'Notes']);
   });
 
   it('shows the sub-tab row only when there is a choice', () => {
     const areas = buildShellAreas(ALL_OFF);
     expect(visibleSubTabs(activeShellArea(areas, '/dashboard/home'))).toEqual([]);
     const on = buildShellAreas(ALL_ON);
-    expect(visibleSubTabs(activeShellArea(on, '/dashboard')).length).toBe(4);
+    expect(visibleSubTabs(activeShellArea(on, '/dashboard')).length).toBe(3);
     expect(visibleSubTabs(null)).toEqual([]);
   });
 

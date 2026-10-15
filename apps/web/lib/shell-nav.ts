@@ -95,15 +95,9 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, ARTISTS_HREF),
     });
   }
-  // Distribute took Press kits' place in the tab row (founder call,
-  // 2026-10-14). Press kits are still reached from each artist and Settings,
-  // and their pages still sit under Catalogue.
-  catalogueTabs.push({
-    key: 'distribute',
-    label: 'Distribute',
-    href: DISTRIBUTE_HREF,
-    isActive: (p) => startsWithPath(p, DISTRIBUTE_HREF),
-  });
+  // Distribute left the tab row (founder call, 2026-10-15): it is reached from
+  // inside each rollout (its Distribute scene). /dashboard/distribute still
+  // lights Catalogue, so an old link lands somewhere that makes sense.
   if (flags.notes) {
     catalogueTabs.push({
       key: 'notes',
@@ -284,6 +278,8 @@ export function shellSideMenu(areas: ShellArea[], pathname: string): SideMenu | 
 export function shellPageTitle(areas: ShellArea[], pathname: string): string | null {
   const area = activeShellArea(areas, pathname);
   if (!area) return null;
-  const tab = visibleSubTabs(area).find((candidate) => candidate.isActive(pathname));
+  // Every tab, not just the visible row: an area down to one page (Catalogue
+  // with Rollouts alone, since Distribute left the row) still names it.
+  const tab = area.subTabs.find((candidate) => candidate.isActive(pathname));
   return tab?.label ?? area.label;
 }

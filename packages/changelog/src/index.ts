@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.141.1",
+    date: "October 15, 2026",
+    highlights: [
+      "Distribute is no longer in the Catalogue menu. Open a rollout and use its Distribute page instead.",
+    ],
+  },
+  {
     version: "1.141.0",
     date: "October 15, 2026",
     highlights: [
