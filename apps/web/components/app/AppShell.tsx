@@ -12,6 +12,7 @@ import { SubNav } from '@/components/shell/SubNav';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { PageBar } from '@/components/shell/PageBar';
 import { BottomBar } from '@/components/shell/BottomBar';
+import { KeyboardShortcuts } from '@/components/shell/KeyboardShortcuts';
 import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
 import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
 import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
@@ -579,6 +580,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <>
           <ErrorBoundary name="command-bar" onError={reportBoundaryError}>
             <CommandBar />
+          </ErrorBoundary>
+          <ErrorBoundary name="keyboard-shortcuts" onError={reportBoundaryError}>
+            <KeyboardShortcuts />
           </ErrorBoundary>
           <BottomBar showHelp={showHelpMenu} />
         </>

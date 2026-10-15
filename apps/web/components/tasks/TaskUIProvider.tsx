@@ -1,5 +1,6 @@
 'use client';
 
+import { isBareKey } from '@/lib/keyboard-shortcuts';
 import {
   createContext,
   useCallback,
@@ -314,7 +315,9 @@ export function TaskUIProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (event.key.toLowerCase() === 'c') {
+      // A bare C only (URG-92): with ⌘, Ctrl or Alt held it is copy or
+      // another app's shortcut, and must be left alone.
+      if (event.key.toLowerCase() === 'c' && isBareKey(event) && !event.repeat) {
         event.preventDefault();
         setQuickCreateDefaults({});
         setIsQuickCreateOpen(true);

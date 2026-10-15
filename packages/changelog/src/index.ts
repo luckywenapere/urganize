@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.140.0",
+    date: "October 15, 2026",
+    highlights: [
+      "New keyboard shortcuts on a computer: press G then H, U, C, R or O to jump to Home, UrgAns, Catalogue, Relationships or Opportunities, and / to start typing to UrgAns. Search with ⌘K shows each page's shortcut.",
+      "Pressing ⌘C or Ctrl+C to copy text no longer opens a new activity. C on its own still does.",
+    ],
+  },
+  {
     version: "1.139.2",
     date: "October 15, 2026",
     highlights: [

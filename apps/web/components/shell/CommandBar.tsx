@@ -8,6 +8,8 @@ import { DialogPanel } from '@/components/shared/DialogPanel';
 import { appPageHaystack, buildAppPages } from '@/lib/app-pages';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { askUrgansTarget } from '@/lib/ask-urgans';
+import { goHintForArea } from '@/lib/keyboard-shortcuts';
+import { useShellAreas } from './useShellAreas';
 import { requestComposerFocus } from '@/lib/composer-focus';
 import { searchReleases } from '@/lib/release-search';
 import { matchesSearchTerms, parseSearchTerms, searchTasks } from '@/lib/task-search';
@@ -18,7 +20,15 @@ import { useChappiStore } from '@/stores/useChappiStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useShellStore } from '@/stores/useShellStore';
 
-type Result = { key: string; group: 'Ask' | 'Activities' | 'Pages' | 'Rollouts'; label: string; hint?: string; run: () => void };
+type Result = {
+  key: string;
+  group: 'Ask' | 'Activities' | 'Pages' | 'Rollouts';
+  label: string;
+  hint?: string;
+  /** Keys that do the same thing, shown on the right (URG-92). */
+  keys?: string;
+  run: () => void;
+};
 
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const MAX_PER_GROUP = 6;
@@ -71,6 +81,16 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
   const [scopedReleaseId] = useState(() =>
     typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('release')
   );
+  const areas = useShellAreas();
+  // A page that is also a top-bar area shows its G shortcut (URG-92).
+  const goHints = useMemo(() => {
+    const byHref = new Map<string, string>();
+    for (const area of areas) {
+      const hint = goHintForArea(area.key);
+      if (hint) byHref.set(area.href, hint);
+    }
+    return byHref;
+  }, [areas]);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
@@ -123,6 +143,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
         key: `page-${page.key}`,
         group: 'Pages',
         label: page.label,
+        keys: goHints.get(page.href),
         run: () => {
           if (page.leavesRelease) leaveReleaseForCatalog();
           router.push(page.href);
@@ -146,7 +167,7 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
       }
     }
     return out;
-  }, [query, releases, hasCuratorProfile, setInput, setRailOpen, router, scopedReleaseId, tasks, openTask]);
+  }, [query, releases, hasCuratorProfile, setInput, setRailOpen, router, scopedReleaseId, tasks, openTask, goHints]);
 
   useEffect(() => {
     listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
@@ -233,6 +254,18 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
                           <span className="min-w-0 flex-1 truncate">{result.label}</span>
                           {result.hint ? (
                             <span className="shrink-0 text-xs text-content-tertiary">{result.hint}</span>
+                          ) : null}
+                          {result.keys ? (
+                            <span className="hidden shrink-0 gap-1 lg:inline-flex" aria-label={`Shortcut ${result.keys}`}>
+                              {result.keys.split(' ').map((key) => (
+                                <kbd
+                                  key={key}
+                                  className="min-w-[1.25rem] rounded border border-stroke-default px-1 text-center font-sans text-[11px] text-content-tertiary"
+                                >
+                                  {key}
+                                </kbd>
+                              ))}
+                            </span>
                           ) : null}
                         </button>
                       </li>
