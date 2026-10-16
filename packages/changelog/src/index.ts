@@ -22,6 +22,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.150.0",
+    date: "October 16, 2026",
+    highlights: [
+      "After a release, your rollout opens with a review: how many activities got done, how many on time and late, what worked, what slipped, and a short take from UrgAns. If you didn't track much in the app, UrgAns asks what happened first instead of grading the plan.",
+      "Start the next one: pick the artist, add a working title if you have one, and you get a rollout with no release date and a Pre-production phase: book sessions, finish the song, production, mix, master, artwork, shoot the video and the final MP4. Set a date when you have one and UrgAns plans the release around it.",
+      "Between releases, Home shows the review and the button to start pre-production, above Opportunities.",
+    ],
+  },
+  {
     version: "1.149.1",
     date: "October 16, 2026",
     highlights: [

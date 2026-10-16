@@ -129,8 +129,12 @@ export interface TaskRequirement {
  * before the release week, the release week itself, and everything after.
  * Stored per task at `metadata.phase`; a task with nothing stored takes its
  * phase from its date relative to release day. See lib/rollout-phases.ts.
+ *
+ * Pre-production (URG-280, 2026-10-16) comes first: making the song and the
+ * video (sessions, mix, master, artwork, shoot, final MP4). It is only ever a
+ * stored phase, never derived from a date, and it only shows when it has work.
  */
-export const ROLLOUT_PHASE_OPTIONS = ['pre_release', 'release', 'post_release'] as const;
+export const ROLLOUT_PHASE_OPTIONS = ['pre_production', 'pre_release', 'release', 'post_release'] as const;
 
 export type RolloutPhase = (typeof ROLLOUT_PHASE_OPTIONS)[number];
 

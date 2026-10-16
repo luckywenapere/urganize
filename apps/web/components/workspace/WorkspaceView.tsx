@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { ArtistFace } from '@/components/shared/ArtistFace';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -72,6 +72,9 @@ import { ChangeReleaseArtistDialog } from '@/components/workspace/ChangeReleaseA
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { isReleaseActive } from '@/lib/release-activity';
 import { isRecapEligible as isRecapEligibleForRelease } from '@/lib/recap-eligibility';
+import { onlyPreProductionWork } from '@/lib/pre-production';
+import { isReviewDue } from '@/lib/release-review';
+import { ReleaseReview } from '@/components/between-releases/ReleaseReview';
 import { findRoleGaps } from '@/lib/role-gaps';
 import { RoleGapsPanel } from '@/components/directory/RoleGapsPanel';
 import { SentRequestsList } from '@/components/directory/SentRequestsList';
@@ -982,7 +985,9 @@ export function WorkspaceView() {
     ) : null;
 
   const planBanner =
-    PLANNER_ENABLED && scopedReleaseSlim && scopedReleaseIsOwn && scopedTasks.length === 0 ? (
+    // A pre-production rollout (URG-280) still owes its release plan: its
+    // eight seeded activities are not a plan, so the card stays until one is built.
+    PLANNER_ENABLED && scopedReleaseSlim && scopedReleaseIsOwn && onlyPreProductionWork(scopedTasks) ? (
       <PlanReleaseCard
         state={isPlanGenerating ? 'generating' : planBuildError ? 'failed' : 'fresh'}
         failureMessage={planBuildError}
@@ -1051,14 +1056,37 @@ export function WorkspaceView() {
   // it for a new user. Null when there is neither, so the panel renders no gap.
   const otherActivitiesBanner =
     editorialPitchBanner ?? kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner;
+  // The post-release review (URG-253) leads the list once it opens: 28 days
+  // after release day, or every activity done. Checked here from the store
+  // first, so a rollout still in flight never fetches it.
+  const releaseReviewCard =
+    scopedReleaseSlim &&
+    isReviewDue(
+      { releaseDate: scopedReleaseSlim.releaseDate },
+      scopedTasks.map((task) => ({
+        id: task.id,
+        title: task.title,
+        status: task.status,
+        dueDate: task.dueDate,
+        completedAt: task.completedAt,
+      }))
+    ) ? (
+      <ReleaseReview
+        key={scopedReleaseSlim.id}
+        releaseId={scopedReleaseSlim.id}
+        artistId={scopedReleaseSlim.artistId ?? null}
+      />
+    ) : null;
+  const bannerParts = [releaseReviewCard, pinnedConfirmDateCard, otherActivitiesBanner].filter(Boolean);
   const activitiesBannerNode =
-    pinnedConfirmDateCard && otherActivitiesBanner ? (
+    bannerParts.length > 1 ? (
       <div className="space-y-3">
-        {pinnedConfirmDateCard}
-        {otherActivitiesBanner}
+        {bannerParts.map((part, index) => (
+          <Fragment key={index}>{part}</Fragment>
+        ))}
       </div>
     ) : (
-      pinnedConfirmDateCard ?? otherActivitiesBanner
+      (bannerParts[0] ?? null)
     );
 
   // Only a card that explains the empty list AND offers a way to act on it

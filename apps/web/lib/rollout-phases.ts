@@ -36,13 +36,19 @@ export type { RolloutPhase };
 
 export const ROLLOUT_PHASE_ORDER: readonly RolloutPhase[] = ROLLOUT_PHASE_OPTIONS;
 
+/** The three phases a release date places work in (no Pre-production, which
+ * has no window): what a date-driven phase line draws. */
+export const DATED_ROLLOUT_PHASES: readonly RolloutPhase[] = ['pre_release', 'release', 'post_release'];
+
 export const ROLLOUT_PHASE_LABELS: Record<RolloutPhase, string> = {
+  pre_production: 'Pre-production',
   pre_release: 'Pre-release',
   release: 'Release',
   post_release: 'Post-release',
 };
 
 export const ROLLOUT_PHASE_BLURBS: Record<RolloutPhase, string> = {
+  pre_production: 'Making the song and the video.',
   pre_release: 'Getting the music, the art and the marketing ready.',
   release: 'Release day and the week either side of it.',
   post_release: 'Keeping it alive after release day.',
@@ -130,7 +136,7 @@ export function groupTasksByRolloutPhase<T extends PhaseTask>(
   tasks: readonly T[],
   releaseDate: string | null | undefined
 ): Record<RolloutPhase, T[]> {
-  const grouped: Record<RolloutPhase, T[]> = { pre_release: [], release: [], post_release: [] };
+  const grouped: Record<RolloutPhase, T[]> = { pre_production: [], pre_release: [], release: [], post_release: [] };
   for (const task of tasks) grouped[resolveTaskPhase(task, releaseDate)].push(task);
   return grouped;
 }
@@ -169,14 +175,17 @@ type SummaryTask = PhaseTask & { status: string; durationDays?: number | null };
 
 /** The nominal window of a phase, as day offsets (null = open-ended). */
 function nominalWindow(phase: RolloutPhase): { start: number | null; end: number | null } {
+  if (phase === 'pre_production') return { start: null, end: null };
   if (phase === 'pre_release') return { start: null, end: RELEASE_PHASE_FIRST_DAY - 1 };
   if (phase === 'release') return { start: RELEASE_PHASE_FIRST_DAY, end: RELEASE_PHASE_LAST_DAY };
   return { start: RELEASE_PHASE_LAST_DAY + 1, end: null };
 }
 
 /**
- * The three phases of a rollout with dates and progress. Always returns all
- * three, in order, so the headers do not jump around as work moves.
+ * The phases of a rollout with dates and progress. Always returns Pre-release,
+ * Release and Post-release, in order, so the headers do not jump around as
+ * work moves. Pre-production (URG-280) leads only when it has work in it, so a
+ * rollout that never had one looks exactly as it did.
  */
 export function summarizeRolloutPhases(
   tasks: readonly SummaryTask[],
@@ -191,7 +200,10 @@ export function summarizeRolloutPhases(
   const todayPhaseIndex =
     todayOffset === null ? null : ROLLOUT_PHASE_ORDER.indexOf(rolloutPhaseForOffset(todayOffset));
 
-  return ROLLOUT_PHASE_ORDER.map((phase, index) => {
+  return ROLLOUT_PHASE_ORDER.filter(
+    (phase) => phase !== 'pre_production' || grouped.pre_production.some((task) => task.status !== 'cancelled')
+  ).map((phase) => {
+    const index = ROLLOUT_PHASE_ORDER.indexOf(phase);
     const live = grouped[phase].filter((task) => task.status !== 'cancelled');
     const total = live.length;
     const done = live.filter((task) => task.status === 'done').length;
@@ -215,6 +227,10 @@ export function summarizeRolloutPhases(
 
     let state: RolloutPhaseState;
     if (total > 0 && done === total) state = 'done';
+    // Pre-production is the work in hand until the release ramp starts, and
+    // it has no window of its own, so an undated rollout still reads "Now".
+    else if (phase === 'pre_production')
+      state = todayPhaseIndex === null || todayPhaseIndex <= ROLLOUT_PHASE_ORDER.indexOf('pre_release') ? 'current' : 'past';
     else if (todayPhaseIndex === null) state = 'unknown';
     else if (index === todayPhaseIndex) state = 'current';
     else if (index < todayPhaseIndex) state = 'past';

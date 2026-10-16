@@ -16,7 +16,7 @@
 // clock is passed in so the rules can be tested.
 
 import { getRelativeDueLabel } from '@/lib/tasks';
-import { rolloutPhaseForOffset, ROLLOUT_PHASE_ORDER, type RolloutPhase } from '@/lib/rollout-phases';
+import { rolloutPhaseForOffset, DATED_ROLLOUT_PHASES, type RolloutPhase } from '@/lib/rollout-phases';
 import type { NextMove } from '@/lib/next-moves';
 import type { HomeNextShow, HomeReleaseSummary, HomeStateKey, HomeTaskItem, HomeYourTasks } from './types';
 import { pickFocusTask } from './focus';
@@ -75,11 +75,11 @@ export function buildPhaseLine(
 ): PhaseSegment[] | null {
   if (release.daysOut === null) return null;
   const current = rolloutPhaseForOffset(-release.daysOut);
-  const index = ROLLOUT_PHASE_ORDER.indexOf(current);
+  const index = DATED_ROLLOUT_PHASES.indexOf(current);
   const ratio = release.progress.total > 0 ? release.progress.done / release.progress.total : 0;
   // Never draw a lit phase as empty: a sliver says "you are here".
   const fill = Math.max(0.06, Math.min(1, ratio));
-  return ROLLOUT_PHASE_ORDER.map((phase, i) => ({
+  return DATED_ROLLOUT_PHASES.map((phase, i) => ({
     phase,
     active: i === index,
     fill: i < index ? 1 : i === index ? fill : 0,

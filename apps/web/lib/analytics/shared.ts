@@ -498,6 +498,22 @@ export interface AnalyticsEventPropertiesMap {
     kind: 'task' | 'move' | 'show';
     position: number;
   };
+  /** Post-release review (URG-253): seen, answered. No titles or answers. */
+  release_review_viewed: {
+    thin: boolean;
+    total: number;
+    done: number;
+  };
+  release_review_answered: {
+    thin: boolean;
+  };
+  /** "Start the next one" (URG-280): sheet opened, and pre-production started. */
+  start_next_opened: {
+    source: 'review' | 'home';
+  };
+  pre_production_started: {
+    source: 'review' | 'home';
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;

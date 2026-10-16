@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from '@/components/icons';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
@@ -22,6 +23,8 @@ import { OpportunitiesCard } from '../OpportunitiesCard';
 import { ReleaseHeader } from './ReleaseHeader';
 import { OneThing } from './OneThing';
 import { WaitingRow } from './WaitingRow';
+import { ReleaseReviewCard } from '@/components/between-releases/BetweenReleaseCards';
+import { StartNextSheet } from '@/components/between-releases/StartNextSheet';
 
 /** Each block fenced: one that throws goes quiet instead of taking Home down. */
 function Fenced({ name, children }: { name: string; children: React.ReactNode }) {
@@ -94,8 +97,13 @@ function ReleaseHome({ home, viewerId }: { home: HomePayload; viewerId: string }
   );
 }
 
-/** The start-the-next-one card until Between-Release Loop's pre-production card lands (URG-280). */
-function StartNextCard({ onNewRollout }: { onNewRollout: () => void }) {
+/**
+ * Start the next one (URG-280): opens the pre-production sheet (artist and an
+ * optional working title), which makes an undated rollout with the eight
+ * Pre-production activities and opens it.
+ */
+function StartNextCard() {
+  const [open, setOpen] = useState(false);
   return (
     <section className="rounded-[20px] border border-stroke-default bg-bg-surface p-5" data-home-block="start-next">
       <span className="inline-flex h-6 items-center rounded-full border border-stroke-default px-2.5 text-[11px] font-semibold text-content-secondary">
@@ -105,17 +113,21 @@ function StartNextCard({ onNewRollout }: { onNewRollout: () => void }) {
       <p className="mt-1.5 text-sm text-content-secondary">{HOME_FOUR_COPY.startLine}</p>
       <button
         type="button"
-        onClick={onNewRollout}
+        onClick={() => {
+          captureAnalyticsEvent({ name: 'start_next_opened', properties: { source: 'home' } });
+          setOpen(true);
+        }}
         className="motion-focus motion-press mt-4 flex h-12 w-full items-center justify-center rounded-full bg-brand text-[15px] font-semibold text-content-inverse hover:bg-brand-hover"
       >
         {HOME_FOUR_COPY.startAction}
       </button>
+      {open ? <StartNextSheet defaultArtistId={null} source="home" onClose={() => setOpen(false)} /> : null}
     </section>
   );
 }
 
 /** State B: nothing in flight. */
-function BetweenHome({ home, onNewRollout }: { home: HomePayload; onNewRollout: () => void }) {
+function BetweenHome({ home }: { home: HomePayload; onNewRollout: () => void }) {
   return (
     <div className="flex flex-col">
       <header data-home-block="greeting">
@@ -125,11 +137,15 @@ function BetweenHome({ home, onNewRollout }: { home: HomePayload; onNewRollout: 
         </h1>
         <p className="mt-1.5 text-[15px] text-content-secondary">{HOME_FOUR_COPY.noRelease}</p>
       </header>
-      {/* The post-release review (URG-253) drops in here when Between-Release
-          Loop ships it: a card that renders nothing when there is no review. */}
+      {/* The post-release review (URG-253): renders nothing when no review is open. */}
+      <Fenced name="release-review">
+        <div className="mt-6 empty:hidden">
+          <ReleaseReviewCard />
+        </div>
+      </Fenced>
       <div className="mt-6">
         <Fenced name="start-next">
-          <StartNextCard onNewRollout={onNewRollout} />
+          <StartNextCard />
         </Fenced>
       </div>
       <div className="mt-5">

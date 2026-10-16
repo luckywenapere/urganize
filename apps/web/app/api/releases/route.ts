@@ -1,5 +1,6 @@
 import { afterResponse } from '@/lib/after-response';
 import { NextRequest, NextResponse } from 'next/server';
+import { buildPreProductionTaskRows, isPreProductionPlan } from '@/lib/pre-production';
 import type { User } from '@supabase/supabase-js';
 import {
   ARTISTS_TABLE,
@@ -377,8 +378,17 @@ export async function POST(request: NextRequest) {
     // A test release always takes the template plan: a blank one would be an
     // empty activity list under a banner that says "tick activities off", and
     // seeing the full plan is what the test path exists to show.
-    const releasePlan =
-      isTest ? 'template' : trimString(body?.plan) === 'blank' ? 'blank' : 'template';
+    // 'pre_production' (URG-280, 2026-10-16): "Start the next one". No date,
+    // eight undated Pre-production activities, and the planner still owed for
+    // the release plan once a date lands (see lib/pre-production.ts).
+    const planInput = trimString(body?.plan);
+    const releasePlan: 'template' | 'blank' | 'pre_production' = isTest
+      ? 'template'
+      : planInput === 'blank'
+        ? 'blank'
+        : isPreProductionPlan(planInput)
+          ? 'pre_production'
+          : 'template';
 
     // parseOptionalReleaseDate returns { value: null } for empty input — the
     // tolerance it was always written for, previously unreachable because the
@@ -604,7 +614,7 @@ export async function POST(request: NextRequest) {
     // Recorded rather than inferred — see lib/release-template-pending.ts for
     // why it can't be derived, and why it lives in `metadata`.
     const templatePending =
-      !plannerPending && releasePlan !== 'blank' && !releaseDateResult.value;
+      !plannerPending && releasePlan === 'template' && !releaseDateResult.value;
 
     // Active-release ceiling. Separate from the existing count above, which has
     // no status predicate on purpose: that one feeds first-release analytics and
@@ -727,7 +737,7 @@ export async function POST(request: NextRequest) {
     // With the planner on (`plannerPending`), no plan is built here at all.
     // The manager answers the intake, edits the draft UrgAns tailors from this
     // same template, and approval is what writes the task rows.
-    if (releasePlan !== 'blank' && !templatePending && !plannerPending) {
+    if (releasePlan === 'template' && !templatePending && !plannerPending) {
       try {
         // Reuse the workspace id the artist branch already resolved — a normal
         // create used to run the full ensureOwnedWorkspace (upsert + org sync)
@@ -759,6 +769,23 @@ export async function POST(request: NextRequest) {
     // lib/pinned-confirm-date.ts). Only from onboarding: a blank rollout made
     // in the app stays truly blank, as it always has. Best-effort, like the
     // template above: the rollout exists either way.
+    if (releasePlan === 'pre_production') {
+      // Best-effort, like the template above: the rollout exists either way,
+      // and the manager can add the activities by hand.
+      try {
+        const workspaceIdForSeed =
+          workspaceIdForArtist ?? (await ensureOwnedWorkspace(adminClient, auth.user)).id;
+        const { error: seedError } = await adminClient
+          .from('tasks')
+          .insert(buildPreProductionTaskRows({ releaseId, workspaceId: workspaceIdForSeed, createdBy: auth.user.id }));
+        if (seedError) {
+          console.error(`Release ${releaseId} created without its pre-production activities.`, seedError);
+        }
+      } catch (seedError) {
+        console.error(`Release ${releaseId} created without its pre-production activities.`, seedError);
+      }
+    }
+
     if (releasePlan === 'blank' && releaseSource === 'onboarding' && !isTest) {
       try {
         const workspaceIdForSeed =
