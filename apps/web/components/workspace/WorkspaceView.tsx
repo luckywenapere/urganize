@@ -1126,6 +1126,43 @@ export function WorkspaceView() {
     timelineFullFor !== null &&
     timelineFullFor === scopedReleaseSlim?.id &&
     panelBody === 'timeline';
+  // The check before distribution, shown on the rollout itself (brief 2). Only
+  // while the main view is showing: inside a scene
+  // the person is already working, and the Distribute scene carries the same
+  // list. Its Fix buttons for the title, the release day and the artist open the
+  // dialogs this component owns, and only for the owner, because both edits are
+  // owner-only and a Fix button that can only fail is worse than none.
+  //
+  // Not on an empty shell (2026-10-09): a rollout with no release day and no
+  // activities yet has nothing to distribute, and opening one with a red
+  // "Fix these" banner reads as an error before anything was done. The
+  // planner card or the date card is the next step there; the strip shows up
+  // as soon as either a date or an activity exists.
+  //
+  // Not the readiness list on a Released rollout (v1.92.5): "Fix these before
+  // you order distribution" under a header that says Released contradicted
+  // it. The rule is distributionStripMode, which reads the same displayStatus
+  // as the Catalogue row and the focused header, so the three always agree. A
+  // distributor's answer still shows there; archived is unchanged.
+  const distributionMode = scopedReleaseSlim
+    ? distributionStripMode({
+        status: scopedReleaseSlim.status ?? '',
+        releaseDate: scopedReleaseSlim.releaseDate ?? null,
+        tasksDone: scopedTasks.filter((task) => task.status === 'done').length,
+        tasksTotal: scopedTasks.length,
+      })
+    : 'none';
+  const distributionStatusStrip =
+    bodyIsMainView && scopedReleaseSlim && distributionMode !== 'none' ? (
+      <DistributionStatusStrip
+        releaseId={scopedReleaseSlim.id}
+        showReadiness={distributionMode === 'full'}
+        compact={isDesktopViewport && panelBody === 'timeline'}
+        onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}
+        onChangeArtist={changeArtistAction ? changeArtistAction.onClick : undefined}
+      />
+    ) : null;
+
   const timelineScene =
     panelBody === 'timeline' && scopedReleaseSlim ? (
       <TimelineScene
@@ -1135,6 +1172,7 @@ export function WorkspaceView() {
         onToast={(message, tone) => setToast({ message, tone })}
         onRescheduled={() => void loadCommandCenter({ force: true })}
         suppressEmptyState={bannerReplacesEmptyState}
+        statusSlot={isDesktopViewport ? distributionStatusStrip : undefined}
         onFullScreen={
           timelineIsFull || !timelineHasPlan
             ? undefined
@@ -1192,41 +1230,6 @@ export function WorkspaceView() {
       />
     ) : null);
 
-  // The check before distribution, shown on the rollout itself (brief 2). Only
-  // while the main view is showing: inside a scene
-  // the person is already working, and the Distribute scene carries the same
-  // list. Its Fix buttons for the title, the release day and the artist open the
-  // dialogs this component owns, and only for the owner, because both edits are
-  // owner-only and a Fix button that can only fail is worse than none.
-  //
-  // Not on an empty shell (2026-10-09): a rollout with no release day and no
-  // activities yet has nothing to distribute, and opening one with a red
-  // "Fix these" banner reads as an error before anything was done. The
-  // planner card or the date card is the next step there; the strip shows up
-  // as soon as either a date or an activity exists.
-  //
-  // Not the readiness list on a Released rollout (v1.92.5): "Fix these before
-  // you order distribution" under a header that says Released contradicted
-  // it. The rule is distributionStripMode, which reads the same displayStatus
-  // as the Catalogue row and the focused header, so the three always agree. A
-  // distributor's answer still shows there; archived is unchanged.
-  const distributionMode = scopedReleaseSlim
-    ? distributionStripMode({
-        status: scopedReleaseSlim.status ?? '',
-        releaseDate: scopedReleaseSlim.releaseDate ?? null,
-        tasksDone: scopedTasks.filter((task) => task.status === 'done').length,
-        tasksTotal: scopedTasks.length,
-      })
-    : 'none';
-  const distributionStatusStrip =
-    bodyIsMainView && scopedReleaseSlim && distributionMode !== 'none' ? (
-      <DistributionStatusStrip
-        releaseId={scopedReleaseSlim.id}
-        showReadiness={distributionMode === 'full'}
-        onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}
-        onChangeArtist={changeArtistAction ? changeArtistAction.onClick : undefined}
-      />
-    ) : null;
 
   // Next moves (URG-259): up to three one-tap cards on the main view, worked
   // out from this rollout and its activities. Mounted ONCE: in the full-screen
@@ -1597,6 +1600,7 @@ export function WorkspaceView() {
                   changeArtistAction={changeArtistAction}
                   shareAction={shareAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
+                  pageBarTools={false}
                   activitiesBanner={activitiesBannerNode}
                   activitiesFooter={roleGapsFooter}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
@@ -1640,7 +1644,9 @@ export function WorkspaceView() {
                   <>
                     {newReleaseGuideBanner}
                     {isDesktopViewport && !timelineIsFull ? nextMovesBanner : null}
-                    {isDesktopViewport ? distributionStatusStrip : null}
+                    {/* On the timeline the strip sits on the phase row instead
+                        (2026-10-16, founder: one compact line). */}
+                    {isDesktopViewport && panelBody !== 'timeline' ? distributionStatusStrip : null}
                   </>
                 }
                 panelSceneContent={isDesktopViewport ? scenePanel : undefined}

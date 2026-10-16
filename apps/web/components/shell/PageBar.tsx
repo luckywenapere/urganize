@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { shellPageTitle, shellSideMenu } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
-import { SidebarToggle } from './Sidebar';
 import { SUBNAV_SLOT_END, SUBNAV_SLOT_START, SUBNAV_SLOT_TOOLS } from './SubNav';
 
 /**
@@ -59,7 +58,8 @@ export function PageBar() {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();
   const title = shellPageTitle(areas, pathname);
-  // With a side menu the bar always shows (it holds the fold button). Without
+  // With a side menu the bar always shows (its title or breadcrumb; the fold
+  // button moved to the foot of the side menu on 2026-10-16). Without
   // one (Home) it shows only when the page put tools in it, so Home
   // does not gain an empty line with its own name on it.
   const always = shellSideMenu(areas, pathname) !== null;
@@ -70,7 +70,6 @@ export function PageBar() {
         always ? 'lg:flex' : 'lg:has-[>[id^=subnav-slot]:not(:empty)]:flex'
       }`}
     >
-      <SidebarToggle />
       {title ? (
         <p className="min-w-0 shrink-0 truncate text-[15px] font-semibold text-content-primary group-has-[[data-crumb-slot]:not(:empty)]/pagebar:hidden">
           {title}

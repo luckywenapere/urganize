@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CalendarClock, ChevronDown, Flag, Info, Maximize2 } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
@@ -26,6 +26,7 @@ import {
   usePlanList,
 } from '@/components/workspace/PlanListControls';
 import { RolloutPhaseStrip } from '@/components/workspace/RolloutPhases';
+import { useTimelineFullScreenToolsSlot } from '@/components/releases/TimelineFullScreen';
 import { formatPhaseDates, summarizeRolloutPhases } from '@/lib/rollout-phases';
 
 /**
@@ -119,6 +120,12 @@ type TimelineSceneProps = {
   /** Shows a "Full screen" button beside the legend. Left out inside the
    *  full-screen overlay itself, which has its own close control. */
   onFullScreen?: () => void;
+  /**
+   * The check before distribution, drawn on the phase row's line on a
+   * computer instead of as its own banner above the timeline (2026-10-16,
+   * founder: "they can all enter one line and be much more compact").
+   */
+  statusSlot?: ReactNode;
 };
 
 export function TimelineScene({
@@ -129,7 +136,12 @@ export function TimelineScene({
   onRescheduled,
   suppressEmptyState = false,
   onFullScreen,
+  statusSlot,
 }: TimelineSceneProps) {
+  const fullScreenToolsSlot = useTimelineFullScreenToolsSlot();
+  // The plan tools sit in the page bar (or the full-screen bar) on a computer,
+  // so their in-page row is empty there and must not keep its gap.
+  const toolsInBar = Boolean(onFullScreen) || Boolean(fullScreenToolsSlot);
   // Phases default OPEN (`?? false` at the two call sites below). They shipped
   // collapsed in 2026-08, which was defensible while this was a scene you chose
   // to open — and is exactly wrong now that it is what a release lands on: the
@@ -257,11 +269,11 @@ export function TimelineScene({
   };
 
   return (
-    <div className="tl-scene-container mt-6 pb-16">
+    <div className={`tl-scene-container pb-16 ${toolsInBar ? 'mt-3 lg:mt-1' : 'mt-6'}`}>
       {/* One toolbar row (2026-10-14 declutter): search, the Filter button,
           and at the end the legend behind a small button and Full screen as
           an icon. It was two rows of controls before the first bar. */}
-      <div className="mb-4">
+      <div className={toolsInBar ? 'mb-3 lg:mb-0' : 'mb-4'}>
         <PlanListControls
           plan={plan}
           phoneSearchOnly={Boolean(onFullScreen)}
@@ -270,8 +282,13 @@ export function TimelineScene({
         />
       </div>
 
-      <div className="mb-5">
-        <RolloutPhaseStrip phases={phaseSummaries} />
+      {/* One line on a computer (2026-10-16): the three phases as compact
+          chips, and the distribution check beside them when it is up. */}
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
+        <div className="min-w-0 lg:flex-1">
+          <RolloutPhaseStrip phases={phaseSummaries} compact />
+        </div>
+        {statusSlot ? <div className="min-w-0 lg:max-w-[46%] lg:shrink-0 lg:has-[[aria-expanded=true]]:max-w-none lg:has-[[aria-expanded=true]]:basis-full">{statusSlot}</div> : null}
       </div>
 
       {/* ---- Wide: the week grid ---------------------------------------- */}

@@ -16,6 +16,8 @@ type DistributionStatusStripProps = {
    *  distribution" / "Worth a look" list is a before-release check, so only a
    *  distributor's answer can still show. Defaults to true. */
   showReadiness?: boolean;
+  /** One 36px line for the timeline's phase row on a computer (2026-10-16). */
+  compact?: boolean;
 };
 
 /**
@@ -52,6 +54,7 @@ export function DistributionStatusStrip({
   onOpenDetails,
   onChangeArtist,
   showReadiness = true,
+  compact = false,
 }: DistributionStatusStripProps) {
   const { data } = useDistributionStatus(releaseId);
 
@@ -71,7 +74,7 @@ export function DistributionStatusStrip({
   }
 
   return (
-    <section aria-label="Check before distribution" className="mb-3 space-y-2">
+    <section aria-label="Check before distribution" className={compact ? 'space-y-2' : 'mb-3 space-y-2'}>
       {rejections.length > 0 ? <DistributionRejectionList rejections={rejections} /> : null}
 
       {showIssues ? (
@@ -81,6 +84,7 @@ export function DistributionStatusStrip({
           warnings={data.warnings}
           onOpenDetails={onOpenDetails}
           onChangeArtist={onChangeArtist}
+          compact={compact}
         />
       ) : null}
     </section>

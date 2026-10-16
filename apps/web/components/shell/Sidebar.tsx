@@ -68,8 +68,10 @@ export function useSidebarSlot(id: string): HTMLElement | null {
   return slot;
 }
 
-/** Fold the side menu away or bring it back. Lives in the page bar so it is
- *  in the same place in both states. Draws nothing on a page with no menu. */
+/** Fold the side menu away or bring it back. Sits at the foot of the side
+ *  menu, and of the thin rail left when it is folded, so it is in the same
+ *  corner in both states (2026-10-16, founder: "should be at the bottom", the
+ *  usual collapse-button spot). Draws nothing on a page with no menu. */
 export function SidebarToggle() {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();
@@ -83,7 +85,7 @@ export function SidebarToggle() {
       aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
       aria-pressed={collapsed}
       data-tour="shell-sidebar-toggle"
-      className="motion-focus motion-press -ml-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
+      className="motion-focus motion-press grid h-9 w-9 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary"
     >
       {collapsed ? (
         <PanelLeftOpen className="h-[18px] w-[18px]" aria-hidden="true" />
@@ -109,15 +111,28 @@ export function Sidebar() {
     if (stored !== null) hydrateCollapsed(stored);
   }, [hydrateCollapsed]);
 
-  if (!menu || collapsed) return null;
+  if (!menu) return null;
+
+  // Folded: a thin rail holding only the expand button at its foot.
+  if (collapsed) {
+    return (
+      <aside
+        aria-label={`${menu.area.label} menu, folded`}
+        data-sidebar="collapsed"
+        className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] hidden h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] w-14 shrink-0 self-start flex-col items-center justify-end pb-4 lg:flex"
+      >
+        <SidebarToggle />
+      </aside>
+    );
+  }
 
   return (
     <aside
       aria-label={menu.area.label}
       data-sidebar="expanded"
-      className="app-sidebar sticky top-[calc(72px+env(safe-area-inset-top,0px))] hidden max-h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] w-60 shrink-0 self-start overflow-y-auto overflow-x-hidden py-4 pl-4 pr-2 lg:block"
+      className="app-sidebar sticky top-[calc(72px+env(safe-area-inset-top,0px))] hidden h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] w-60 shrink-0 self-start flex-col overflow-x-hidden py-4 pl-4 pr-2 lg:flex"
     >
-      <nav aria-label={menu.area.label}>
+      <nav aria-label={menu.area.label} className="min-h-0 flex-1 overflow-y-auto">
         <ul className="flex flex-col gap-0.5">
           {menu.pages.map((page) => (
             <li key={page.key} className="group/page">
@@ -149,6 +164,9 @@ export function Sidebar() {
         </ul>
         {tip.panel}
       </nav>
+      <div className="shrink-0 pt-2">
+        <SidebarToggle />
+      </div>
     </aside>
   );
 }

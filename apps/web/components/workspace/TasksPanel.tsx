@@ -252,6 +252,13 @@ type TasksPanelProps = {
    * needs its own empty state. Inferring would leave that case blank.
    */
   bannerReplacesEmptyState?: boolean;
+  /**
+   * Lets the plan tools move up into the desktop page bar. False on the
+   * phone-only instance WorkspaceView keeps mounted (hidden) on a computer:
+   * its portal escaped the `lg:hidden` wrapper and put a second Filter and a
+   * stray Group by on the page bar beside the timeline's own (2026-10-16).
+   */
+  pageBarTools?: boolean;
 };
 
 /** One entry in the mobile release menu. Since 2026-08-31 that is EVERY
@@ -280,6 +287,7 @@ export function TasksPanel({
   activitiesBanner,
   activitiesFooter,
   bannerReplacesEmptyState = false,
+  pageBarTools = true,
 }: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
@@ -481,15 +489,15 @@ export function TasksPanel({
 
 
   const groupByControl = (bar: boolean) => (
-    <div className={`flex items-center gap-1 ${bar ? 'text-[13px]' : 'text-xs'}`} role="group" aria-label="Group activities by">
-      <span className="mr-1 text-content-tertiary">Group by</span>
+    <div className={`flex shrink-0 items-center gap-1 ${bar ? 'text-[13px]' : 'text-xs'}`} role="group" aria-label="Group activities by">
+      <span className="mr-1 whitespace-nowrap text-content-tertiary">Group by</span>
       {(['phase', 'status'] as const).map((option) => (
         <button
           key={option}
           type="button"
           onClick={() => chooseGrouping(option)}
           aria-pressed={grouping === option}
-          className={`motion-focus rounded-full px-2.5 font-semibold transition-colors ${bar ? 'h-[34px]' : 'py-1'} ${
+          className={`motion-focus whitespace-nowrap rounded-full px-2.5 font-semibold transition-colors ${bar ? 'h-[34px]' : 'py-1'} ${
             grouping === option ? 'bg-brand/10 text-content-primary' : 'text-content-secondary hover:bg-bg-hover'
           }`}
         >
@@ -582,7 +590,7 @@ export function TasksPanel({
       ) : (
       <div className="space-y-3">
         {scopedRelease && tasks.length > 0 ? (
-          <PlanListControls plan={plan} phoneSearchOnly inPageBar extra={groupByControl(true)} />
+          <PlanListControls plan={plan} phoneSearchOnly inPageBar={pageBarTools} extra={groupByControl(true)} />
         ) : null}
         {/* Below lg Group by keeps its own row; on a computer it is on the
             page bar line with the other plan tools (2026-10-15). */}

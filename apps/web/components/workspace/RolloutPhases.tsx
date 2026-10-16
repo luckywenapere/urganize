@@ -51,30 +51,44 @@ function ProgressBar({ percent }: { percent: number }) {
   );
 }
 
-/** The three phases side by side, for the top of the timeline. */
-export function RolloutPhaseStrip({ phases }: { phases: RolloutPhaseSummary[] }) {
+/**
+ * The three phases side by side, for the top of the timeline.
+ *
+ * `compact` (2026-10-16, founder: "taking up too much space... one line"): on a
+ * computer each phase is a single 36px line (name, dates, bar, count) so the
+ * phases and the distribution check share one row and the week grid starts
+ * higher. Below lg it keeps the three stacked cards, which read better narrow.
+ */
+export function RolloutPhaseStrip({
+  phases,
+  compact = false,
+}: {
+  phases: RolloutPhaseSummary[];
+  compact?: boolean;
+}) {
   return (
     <ol className="grid grid-cols-3 gap-2" aria-label="Rollout phases">
       {phases.map((summary) => {
         const dates = formatPhaseDates(summary);
+        const current = summary.state === 'current';
         return (
           <li
             key={summary.phase}
-            className={`min-w-0 rounded-xl border px-3 py-2 ${
-              summary.state === 'current'
-                ? 'border-brand/50 bg-brand/5'
-                : 'border-stroke-default bg-bg-surface'
+            className={`min-w-0 rounded-xl border px-3 py-2 ${compact ? 'lg:flex lg:h-9 lg:items-center lg:gap-2 lg:rounded-lg lg:py-0' : ''} ${
+              current ? 'border-brand/50 bg-brand/5' : 'border-stroke-default bg-bg-surface'
             }`}
-            aria-current={summary.state === 'current' ? 'step' : undefined}
+            aria-current={current ? 'step' : undefined}
           >
-            <div className="flex items-center gap-1.5">
-              <span className="min-w-0 flex-1 truncate text-xs font-semibold text-content-primary">
+            <div className={`flex items-center gap-1.5 ${compact ? 'lg:shrink-0' : ''}`}>
+              <span className={`min-w-0 flex-1 truncate text-xs font-semibold text-content-primary ${compact ? 'lg:flex-none' : ''}`}>
                 {summary.label}
               </span>
               <StateBadge summary={summary} />
             </div>
-            <p className="mt-0.5 truncate text-[11px] text-content-tertiary">{dates || 'No dates yet'}</p>
-            <div className="mt-1.5 flex items-center gap-2">
+            <p className={`mt-0.5 truncate text-[11px] text-content-tertiary ${compact ? 'lg:mt-0 lg:min-w-0 lg:shrink' : ''}`}>
+              {dates || 'No dates yet'}
+            </p>
+            <div className={`mt-1.5 flex items-center gap-2 ${compact ? 'lg:mt-0 lg:min-w-[3.5rem] lg:flex-1' : ''}`}>
               <ProgressBar percent={summary.percent} />
               <span className="shrink-0 text-[11px] tabular-nums text-content-secondary">
                 {summary.done}/{summary.total}

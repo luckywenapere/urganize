@@ -59,6 +59,8 @@ type DistributionChecklistProps = {
   warnings: DistributionIssue[];
   onOpenDetails?: () => void;
   onChangeArtist?: () => void;
+  /** Folded, a 36px line that fits beside the timeline's phases (2026-10-16). */
+  compact?: boolean;
 };
 
 /**
@@ -77,6 +79,7 @@ export function DistributionChecklist({
   warnings,
   onOpenDetails,
   onChangeArtist,
+  compact = false,
 }: DistributionChecklistProps) {
   const { openScene } = useSceneOverlay();
   const [record, setRecord] = useState<ChecklistRecord>(EMPTY_CHECKLIST_RECORD);
@@ -146,8 +149,8 @@ export function DistributionChecklist({
   // the next thing to do and its Fix button. Opening it shows the bar and
   // every item with its tick, as before.
   return (
-    <div className="overflow-hidden rounded-xl border border-stroke-default bg-bg-surface">
-      <div className="flex min-h-12 items-center gap-3 py-1 pl-4 pr-2">
+    <div className={`overflow-hidden border border-stroke-default bg-bg-surface ${compact ? 'rounded-lg' : 'rounded-xl'}`}>
+      <div className={`flex items-center ${compact ? 'h-9 gap-2 pl-3 pr-1' : 'min-h-12 gap-3 py-1 pl-4 pr-2'}`}>
         {allDone ? (
           <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
         ) : hasOpenErrors ? (
@@ -160,13 +163,19 @@ export function DistributionChecklist({
           onClick={() => setExpanded((open) => !open)}
           aria-expanded={expanded}
           aria-controls={bodyId}
-          className="motion-focus flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-md text-left"
+          className={`motion-focus flex min-w-0 flex-1 items-center gap-2 rounded-md text-left ${compact ? 'h-8' : 'min-h-10'}`}
         >
-          <h3 className="shrink-0 text-sm font-semibold text-content-primary">
-            {allDone ? 'Ready to order distribution' : 'Before you order distribution'}
+          <h3 className={`shrink-0 font-semibold text-content-primary ${compact ? 'text-xs' : 'text-sm'}`}>
+            {compact
+              ? allDone
+                ? 'Ready to distribute'
+                : 'Before distribution'
+              : allDone
+                ? 'Ready to order distribution'
+                : 'Before you order distribution'}
           </h3>
           {!expanded && nextOpen ? (
-            <span className="hidden min-w-0 truncate text-sm text-content-secondary sm:inline">
+            <span className={`hidden min-w-0 truncate text-content-secondary sm:inline ${compact ? 'text-xs' : 'text-sm'}`}>
               <span aria-hidden="true">· </span>
               {nextOpen.message}
             </span>
@@ -182,7 +191,7 @@ export function DistributionChecklist({
             type="button"
             onClick={() => fix(nextOpen.issue as DistributionIssue)}
             aria-label={`Fix: ${nextOpen.message}`}
-            className="motion-focus inline-flex h-11 min-w-14 shrink-0 items-center justify-center rounded-lg px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/10 lg:h-9"
+            className={`motion-focus inline-flex shrink-0 items-center justify-center rounded-md text-xs font-semibold text-brand transition-colors hover:bg-brand/10 ${compact ? 'h-7 px-2.5' : 'h-11 min-w-14 rounded-lg px-3 lg:h-9'}`}
           >
             Fix
           </button>
