@@ -1,6 +1,34 @@
 import { PostHog } from 'posthog-node';
 import { getPostHogProjectKey, type AnalyticsEvent } from './shared';
 import { resolvePostHogIngestHost } from './posthog-proxy';
+import { createClient } from '@supabase/supabase-js';
+import { isInternalAccountEmail } from '@/lib/internal-accounts';
+
+// Our own and test accounts stay out of PostHog on the server too (2026-10-16,
+// founder). The event's distinct id is a user id, so its email is looked up
+// once and remembered; the capture waits for that answer, and
+// shutdownServerAnalytics waits for every pending capture before flushing.
+const INTERNAL_TTL_MS = 60 * 60 * 1000;
+const internalById = new Map<string, { internal: boolean; until: number }>();
+const pendingCaptures = new WeakMap<PostHog, Promise<void>[]>();
+
+async function isInternalUserId(userId: string): Promise<boolean> {
+  const cached = internalById.get(userId);
+  if (cached && cached.until > Date.now()) return cached.internal;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) return false;
+  try {
+    const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data } = await db.from('profiles').select('email').eq('id', userId).maybeSingle();
+    const internal = isInternalAccountEmail((data as { email?: string | null } | null)?.email ?? null);
+    if (internalById.size > 5_000) internalById.clear();
+    internalById.set(userId, { internal, until: Date.now() + INTERNAL_TTL_MS });
+    return internal;
+  } catch {
+    return false;
+  }
+}
 
 let hasWarnedMissingServerConfig = false;
 
@@ -41,11 +69,17 @@ export function captureServerAnalyticsEvent(
     return;
   }
 
-  client.capture({
-    distinctId,
-    event: event.name,
-    properties: event.properties as Record<string, unknown>,
+  const capture = isInternalUserId(distinctId).then((internal) => {
+    if (internal) return;
+    client.capture({
+      distinctId,
+      event: event.name,
+      properties: event.properties as Record<string, unknown>,
+    });
   });
+  const pending = pendingCaptures.get(client) ?? [];
+  pending.push(capture.catch(() => undefined));
+  pendingCaptures.set(client, pending);
 }
 
 export async function shutdownServerAnalytics(client: PostHog | null) {
@@ -54,6 +88,8 @@ export async function shutdownServerAnalytics(client: PostHog | null) {
   }
 
   try {
+    await Promise.all(pendingCaptures.get(client) ?? []);
+    pendingCaptures.delete(client);
     await client.shutdown();
   } catch {
     // Analytics must never break the request lifecycle.
