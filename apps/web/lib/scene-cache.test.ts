@@ -322,10 +322,20 @@ describe('resolveActiveScene', () => {
 
   it('resolves every scene name when its flag is on', async () => {
     const { resolveActiveScene, SCENE_NAMES: names } = await loadResolver(true);
-    // Spend is cut (URG-319) and resolves to no scene; see its own block below.
     for (const scene of names.filter((name) => name !== 'spend')) {
-      expect(resolveActiveScene(scene)).toBe(scene);
+      // Folded into Pitch this! on 2026-10-16: their old links open it.
+      const expected = scene === 'pitchkit' || scene === 'promo' ? 'pitch' : scene;
+      expect(resolveActiveScene(scene)).toBe(expected);
     }
+  });
+
+  it('opens Pitch this! for old pitch kit and promo links (2026-10-16)', async () => {
+    const on = await loadResolver(true);
+    expect(on.resolveActiveScene('pitchkit')).toBe('pitch');
+    expect(on.resolveActiveScene('promo')).toBe('pitch');
+    // With pitching off, promo keeps its own scene and nothing is stranded.
+    const off = await loadResolver(false);
+    expect(off.resolveActiveScene('promo')).toBe('promo');
   });
 
   it('treats the five flag-gated scenes as closed when their flags are off', async () => {
@@ -407,7 +417,8 @@ describe('resolvePanelBody', () => {
   it('resolves every scene name to itself with the flags on', async () => {
     const { resolvePanelBody, SCENE_NAMES: names } = await loadResolver(true);
     for (const scene of names.filter((name) => name !== 'spend')) {
-      expect(resolvePanelBody(scene)).toBe(scene);
+      const expected = scene === 'pitchkit' || scene === 'promo' ? 'pitch' : scene;
+      expect(resolvePanelBody(scene)).toBe(expected);
     }
   });
 

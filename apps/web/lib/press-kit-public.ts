@@ -191,13 +191,32 @@ export function kitDescription(
  * strictly worse than the page they already had.
  */
 export function successorPathForKit(
-  kit: { slug: string | null | undefined; publishedAt: string | null | undefined } | null
+  kit: { slug: string | null | undefined; publishedAt: string | null | undefined } | null,
+  releaseId?: string | null
 ): string | null {
   if (!kit) return null;
   const slug = typeof kit.slug === 'string' ? kit.slug.trim() : '';
   if (!slug) return null;
   if (!isKitLive(kit.publishedAt)) return null;
-  return `/k/${slug}`;
+  return kitLinkPath(slug, releaseId);
+}
+
+/** Release ids are uuids. Anything else in `?r=` is ignored, never queried. */
+const RELEASE_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isReleaseIdShape(value: unknown): value is string {
+  return typeof value === 'string' && RELEASE_ID_SHAPE.test(value.trim());
+}
+
+/**
+ * The ONE kit link (2026-10-16, Pitch this! as one place). The artist's press
+ * kit at /k/{slug}, with `?r=` naming the rollout whose story, credits and
+ * cover sit on top. Without a release it is the plain artist kit, which is
+ * every link handed out before the merge.
+ */
+export function kitLinkPath(slug: string, releaseId?: string | null): string {
+  const clean = slug.trim();
+  return isReleaseIdShape(releaseId) ? `/k/${clean}?r=${releaseId.trim().toLowerCase()}` : `/k/${clean}`;
 }
 
 export type KitLink = { href: string; label: string };

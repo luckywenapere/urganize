@@ -47,6 +47,11 @@ function build(over: Partial<RolloutMenuInput> = {}): RolloutMenuEntry[] {
 
 const keysOf = (entries: RolloutMenuEntry[]) => entries.map((entry) => entry.key);
 
+/** Since 2026-10-16 the pitch kit and promo live inside Pitch this!, so with
+ *  pitching on their own rows are not in the menu. */
+const FOLDED_INTO_PITCH: ReleaseMenuKey[] = ['pitchkit', 'promo'];
+const ALL_ON_ORDER = RELEASE_MENU_ORDER.filter((key) => !FOLDED_INTO_PITCH.includes(key) && key !== 'spend');
+
 /** Which row each feature switch owns. The mapping is the thing being tested,
  *  so it is written out here rather than derived from the module. */
 const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey[]> = {
@@ -54,7 +59,7 @@ const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey[]> = {
   releaseChat: ['chat'],
   contentCalendar: ['calendar'],
   pitching: ['pitch'],
-  pitchKit: ['pitchkit'],
+  pitchKit: [],
   metadata: ['metadata'],
   notes: ['note'],
   coverArt: ['coverart'],
@@ -81,17 +86,14 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'capture',
 ];
 
-/** The ranked rows the menu can still show: Track spend is cut (Oct 16, 2026
- *  brief, URG-319) and never appears, whatever showSpend says. */
-const RANKED = RELEASE_MENU_ORDER.filter((key) => key !== 'spend');
 
 describe('buildRolloutMenu', () => {
   it('holds every ranked row, in the canonical order, when everything is on', () => {
     // Two failures this catches: a key added to RELEASE_MENU_ORDER with no row
     // built for it (so a ranked entry silently never appears), and a row built
     // in an order the ranking does not agree with.
-    expect(keysOf(build())).toEqual([...RANKED]);
-    expect(keysOf(build({ variant: 'phone' }))).toEqual([...RANKED]);
+    expect(keysOf(build())).toEqual([...ALL_ON_ORDER]);
+    expect(keysOf(build({ variant: 'phone' }))).toEqual([...ALL_ON_ORDER]);
   });
 
   it('is empty without a rollout, however much else is passed', () => {
@@ -102,10 +104,26 @@ describe('buildRolloutMenu', () => {
 
   it('drops exactly one row for each feature that is switched off', () => {
     for (const flag of Object.keys(ROW_BY_FLAG) as (keyof RolloutMenuFlags)[]) {
+      if (flag === 'pitching') continue;
       const rows = ROW_BY_FLAG[flag];
       const keys = keysOf(build({ flags: { ...ALL_ON, [flag]: false } }));
-      expect(keys, `${flag} off`).toEqual(RANKED.filter((key) => !rows.includes(key)));
+      expect(keys, `${flag} off`).toEqual(ALL_ON_ORDER.filter((key) => !rows.includes(key)));
     }
+  });
+
+  it('folds the pitch kit and promo into Pitch this! (2026-10-16)', () => {
+    const keys = keysOf(build());
+    expect(keys).toContain('pitch');
+    expect(keys).not.toContain('pitchkit');
+    expect(keys).not.toContain('promo');
+  });
+
+  it('gives the pitch kit and promo their own rows back when pitching is off', () => {
+    const keys = keysOf(build({ flags: { ...ALL_ON, pitching: false } }));
+    expect(keys).not.toContain('pitch');
+    expect(keys).toContain('pitchkit');
+    expect(keys).toContain('promo');
+    expect(keysOf(build({ flags: { ...ALL_ON, pitching: false, pitchKit: false } }))).not.toContain('pitchkit');
   });
 
   it('is only Promo, Distribute and the dialog rows when every feature is off (neither has a switch)', () => {
@@ -139,7 +157,7 @@ describe('buildRolloutMenu', () => {
       for (const absent of [null, undefined]) {
         const keys = keysOf(build({ [input]: absent } as Partial<RolloutMenuInput>));
         expect(keys, `${input}=${String(absent)}`).toEqual(
-          RANKED.filter((key) => key !== row)
+          ALL_ON_ORDER.filter((key) => key !== row)
         );
       }
     }
@@ -171,7 +189,7 @@ describe('which row is lit', () => {
   });
 
   it('lights exactly the open scene’s row, for every scene that has one', () => {
-    for (const scene of SCENE_ROWS) {
+    for (const scene of SCENE_ROWS.filter((key) => !FOLDED_INTO_PITCH.includes(key))) {
       const lit = build({ activeScene: scene as SceneName }).filter((entry) => entry.isActive);
       expect(lit.map((entry) => entry.key), scene).toEqual([scene]);
     }
@@ -246,7 +264,6 @@ describe('what each row does', () => {
       chat: 'Talk to the team',
       calendar: 'Plan content',
       pitch: 'Pitch this!',
-      pitchkit: 'Build your pitch kit',
       metadata: 'Fill in details',
       coverart: 'Add cover art',
       song: 'Upload the song',

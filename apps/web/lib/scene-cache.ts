@@ -165,6 +165,9 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   // Spend is cut (Oct 16, 2026 brief, URG-319): an old ?scene=spend link (the
   // payback email, the Home spend card) lands on the rollout's main view.
   if (scene === 'spend') return null;
+  // Pitch this! holds the kit and promo since 2026-10-16, so their old links
+  // (emails, bookmarks, Plan built's "Find promo") open it.
+  if ((scene === 'pitchkit' || scene === 'promo') && PITCHING_ENABLED) return 'pitch';
   return scene;
 }
 

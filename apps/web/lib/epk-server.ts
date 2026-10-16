@@ -62,7 +62,9 @@ function createServiceClient(): SupabaseClient | null {
  * yesterday, so a database blip costs nobody their page.
  */
 export async function resolveEpkSuccessorPath(token: string): Promise<string | null> {
-  if (!isEpkFeatureEnabled()) return null;
+  // Deliberately NOT behind the EPK flag (2026-10-16): the release EPK is being
+  // retired, and an old link should still find the merged kit whatever that
+  // flag says. Unknown tokens and unpublished kits still answer null.
   const normalizedToken = token.trim();
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(normalizedToken)) return null;
 
@@ -90,8 +92,11 @@ export async function resolveEpkSuccessorPath(token: string): Promise<string | n
       .eq('artist_id', String(release.artist_id))
       .maybeSingle();
 
+    // The release the EPK was for rides along, so the old link lands on the
+    // merged kit with that release's story on top.
     return successorPathForKit(
-      kit ? { slug: String(kit.slug || ''), publishedAt: kit.published_at ? String(kit.published_at) : null } : null
+      kit ? { slug: String(kit.slug || ''), publishedAt: kit.published_at ? String(kit.published_at) : null } : null,
+      String(epk.release_id)
     );
   } catch {
     return null;

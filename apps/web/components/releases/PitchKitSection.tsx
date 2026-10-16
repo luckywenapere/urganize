@@ -6,16 +6,17 @@ import { embeddedCostLine } from '@/lib/credits/copy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowRight,
   Check,
+  ChevronRight,
   Copy,
   ExternalLink,
-  ImageOff,
   Loader2,
   Plus,
   Sparkles,
   Trash2,
 } from '@/components/icons';
+import { absoluteKitUrl, publishReleaseKitLink } from '@/lib/pitch-kit-client';
+import { kitLinkPath } from '@/lib/press-kit-public';
 import { supabase } from '@/lib/supabase/client';
 import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
 import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
@@ -33,9 +34,14 @@ import {
 } from '@/lib/release-epk';
 import type { PitchKitPayload } from '@/lib/release-epk-server';
 
+/** What the rest of Pitch this! needs to know about the kit: the link to
+ *  attach to a pitch once it is live, and whether it is ready to share. */
+export type KitShareState = { url: string | null; ready: boolean; story: string };
+
 type PitchKitSectionProps = {
   releaseId: string;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
+  onShareStateChange?: (state: KitShareState) => void;
 };
 
 const FIELD_CLASS =
@@ -65,66 +71,77 @@ const sameCredits = (a: ReleaseEpkCredit[], b: ReleaseEpkCredit[]): boolean =>
   JSON.stringify(a.map((c) => [c.name.trim(), c.role.trim()])) ===
   JSON.stringify(b.map((c) => [c.name.trim(), c.role.trim()]));
 
-/** One numbered step. The number turns into a check when the step is done. */
-function Step({
-  index,
+/** One row of the kit: a check, a name, one line of what is there, and the
+ *  editor under it while it is open. */
+function KitRow({
   done,
   title,
-  hint,
+  value,
+  open,
+  onToggle,
   children,
 }: {
-  index: number;
   done: boolean;
   title: string;
-  hint: string;
+  value: string;
+  open: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <li className="relative flex gap-4">
-      <span
-        className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-semibold ${
-          done
-            ? 'bg-brand text-content-inverse'
-            : 'border-2 border-stroke-control text-content-secondary'
-        }`}
-        aria-hidden="true"
+    <li className="border-b border-stroke-subtle last:border-b-0">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={onToggle}
+        className="motion-focus flex min-h-14 w-full items-center gap-3 py-3 text-left"
       >
-        {done ? <Check className="h-4 w-4" /> : index}
-      </span>
-      <div className="min-w-0 flex-1 pb-8">
-        <h3 className="font-display text-base font-semibold text-content-primary">
-          {title}
-          <span className="sr-only">{done ? ', done' : ', not done yet'}</span>
-        </h3>
-        <p className="mt-0.5 text-sm text-content-secondary">{hint}</p>
-        <div className="mt-3">{children}</div>
-      </div>
+        <span
+          className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${
+            done ? 'bg-brand text-content-inverse' : 'border-[1.5px] border-content-tertiary/50'
+          }`}
+          aria-hidden="true"
+        >
+          {done ? <Check className="h-3 w-3" /> : null}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-content-primary">
+            {title}
+            <span className="sr-only">{done ? ', done' : ', not done yet'}</span>
+          </span>
+          <span className="block truncate text-[13px] text-content-primary/55">{value}</span>
+        </span>
+        <ChevronRight
+          className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${open ? 'rotate-90' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
+      {open ? <div className="pb-4 pl-8">{children}</div> : null}
     </li>
   );
 }
 
 /**
- * The pitch kit for one rollout: three steps a fifth grader can follow.
+ * The kit block at the top of a rollout's Pitch this! scene.
  *
- * Redesigned 2026-10-11 (founder brief: "look at it from the point of a fifth
- * grader that wants to derive value from that tool. It is too overwhelming").
- * What changed, and why:
+ * 2026-10-16 (founder approved mocks, "Pitch this! as one place"): the
+ * rollout pitch kit and the artist press kit are ONE kit with ONE link. The
+ * release story and who made it sit on top; the artist basics (bio, photos,
+ * contact) come from the artist kit automatically. What changed from the
+ * 2026-10-11 three-step version, and why:
  *
- * - One big "Write it for me" at the top instead of an AI box at the bottom.
- *   The fastest path to a finished kit is the first thing on the screen.
- * - Three numbered steps (story, who made it, share) replace a checklist row,
- *   three bordered cards and paragraphs of explanation. The number becomes a
- *   check when the step is done, so the progress IS the layout.
- * - No Save buttons. The story and the credits save when you click away, the
- *   same autosave the press kit editor already uses.
- * - The artist press kit is no longer a card of statuses. It is step three,
- *   "Share it", and it says exactly one thing to do next.
+ * - Three rows (The story, Who made it, About the artist) instead of three
+ *   numbered steps. Each opens in place; nothing leaves the rollout.
+ * - Step three used to send people out to the press kit editor to publish, and
+ *   no outside manager ever came back with a link. Now the one accent button
+ *   becomes "Copy kit link" as soon as the story is in, and copying publishes
+ *   the kit (making it first when there is none).
+ * - Still one accent action, still no Save buttons (autosave on blur), still
+ *   "Write it for me" first. The fifth-grader wins of 2026-10-11 stay.
  *
- * Data, routes and the UrgAns action are unchanged. Fetches for itself and is
- * not cached: it is edited in place, and a cached copy painted over a live edit
- * is the failure the old plan scene was kept out of the cache for.
+ * Fetches for itself and is not cached: it is edited in place.
  */
-export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
+export function PitchKitSection({ releaseId, onToast, onShareStateChange }: PitchKitSectionProps) {
   const [data, setData] = useState<PitchKitPayload | null>(null);
   const [loadError, setLoadError] = useState('');
   const [story, setStory] = useState('');
@@ -132,15 +149,18 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
   const [savingStory, setSavingStory] = useState(false);
   const [savingCredits, setSavingCredits] = useState(false);
   const [savedAt, setSavedAt] = useState<'story' | 'credits' | null>(null);
+  const [openRow, setOpenRow] = useState<'story' | 'credits' | 'artist' | null>(null);
 
   const [notes, setNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [fillError, setFillError] = useState('');
   const { balance, refresh: refreshBalance } = useCreditBalance();
   const [draft, setDraft] = useState<FillBothDraft | null>(null);
   const [lockedMessage, setLockedMessage] = useState('');
   const [copied, setCopied] = useState(false);
+  const [manualLink, setManualLink] = useState('');
   const savedTimer = useRef<number | null>(null);
 
   const adopt = useCallback((pitchKit: PitchKitPayload) => {
@@ -160,12 +180,12 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
       const response = await fetch(`/api/releases/${releaseId}/pitch-kit`, { headers });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setLoadError(String(body?.error || 'Could not load the pitch kit.'));
+        setLoadError(String(body?.error || 'Check your connection.'));
         return;
       }
       adopt(body.pitchKit as PitchKitPayload);
     } catch {
-      setLoadError('Could not reach the server. Check your connection and try again.');
+      setLoadError('Check your connection.');
     }
   }, [adopt, releaseId]);
 
@@ -179,6 +199,17 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
     },
     []
   );
+
+  const liveUrl = useMemo(() => {
+    if (!data?.kit?.slug || !data.kit.publishedAt) return null;
+    return absoluteKitUrl(kitLinkPath(data.kit.slug, releaseId));
+  }, [data?.kit?.slug, data?.kit?.publishedAt, releaseId]);
+  const savedStory = data?.fields.story.trim() ?? '';
+
+  useEffect(() => {
+    if (!data) return;
+    onShareStateChange?.({ url: liveUrl, ready: Boolean(savedStory), story: savedStory });
+  }, [data, liveUrl, savedStory, onShareStateChange]);
 
   const save = useCallback(
     async (patch: Partial<ReleaseEpkFields>, which: 'story' | 'credits') => {
@@ -266,19 +297,13 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
     void discardRunAction(current.actionId, token);
   }, [draft]);
 
-  const publicUrl = useMemo(() => {
-    if (!data?.kit?.slug) return '';
-    const origin = typeof window === 'undefined' ? '' : window.location.origin;
-    return `${origin}/k/${data.kit.slug}`;
-  }, [data?.kit?.slug]);
-
   if (loadError && !data) {
     return (
-      <div className="mt-8 rounded-xl border border-status-error/30 bg-status-error/5 p-4">
-        <p className="text-sm text-content-primary" role="alert">
-          We could not open this pitch kit.
+      <div className="rounded-2xl border border-status-error/30 bg-status-error/5 p-4">
+        <p className="text-sm font-semibold text-content-primary" role="alert">
+          Couldn’t open your kit.
         </p>
-        <p className="mt-1 text-xs text-content-secondary">{loadError}</p>
+        <p className="mt-1 text-[13px] text-content-primary/55">{loadError}</p>
         <button
           type="button"
           onClick={() => void load()}
@@ -292,9 +317,20 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
 
   if (!data) {
     return (
-      <div className="mt-8 space-y-4" aria-busy="true">
-        <div className="h-32 animate-pulse rounded-xl border border-stroke-default bg-bg-surface" />
-        <div className="h-48 animate-pulse rounded-xl border border-stroke-default bg-bg-surface" />
+      <div className="rounded-2xl bg-bg-surface p-4 sm:p-5" aria-busy="true" aria-label="Loading your kit">
+        <div className="flex items-center gap-4">
+          <div className="h-[68px] w-[68px] shrink-0 animate-pulse rounded-xl bg-bg-elevated" />
+          <div className="flex-1 space-y-2.5">
+            <div className="h-5 w-3/5 animate-pulse rounded-md bg-bg-elevated" />
+            <div className="h-3 w-1/3 animate-pulse rounded-md bg-bg-elevated" />
+          </div>
+        </div>
+        <div className="mt-4 h-11 w-40 animate-pulse rounded-xl bg-bg-elevated" />
+        <div className="mt-6 space-y-5">
+          <div className="h-3.5 w-full animate-pulse rounded-md bg-bg-elevated" />
+          <div className="h-3.5 w-4/5 animate-pulse rounded-md bg-bg-elevated" />
+          <div className="h-3.5 w-2/3 animate-pulse rounded-md bg-bg-elevated" />
+        </div>
       </div>
     );
   }
@@ -303,15 +339,17 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
   const shownCredits = credits ?? data.submittedCredits;
   const kit = data.kit;
   const kitHref = kit ? `/dashboard/press-kits/${kit.artistId}` : '/dashboard/press-kits';
+  const artistName = data.release.artistName || 'the artist';
   const draftEntries = draft
     ? (Object.entries(draft.kit).filter(([, value]) => Boolean(value)) as [string, string][])
     : [];
 
   const storyDone = data.fields.story.trim().length > 0;
   const creditsDone = data.credits.length > 0;
-  const shareDone = Boolean(kit?.publishedAt);
-  const doneCount = [storyDone, creditsDone, shareDone].filter(Boolean).length;
-  const allDone = doneCount === 3;
+  const kitBio = kit ? kit.shortBio.trim() || kit.descriptor.trim() : '';
+  const artistDone = Boolean(kitBio);
+  const left = [storyDone, creditsDone].filter((done) => !done).length;
+  const allDone = storyDone && creditsDone;
 
   const saveStoryIfChanged = () => {
     if (story.trim() !== data.fields.story.trim()) void save({ story }, 'story');
@@ -322,14 +360,35 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
     if (!sameCredits(kept, baseline)) void save({ credits: kept }, 'credits');
   };
 
-  const copyLink = async () => {
+  const copyText = async (url: string) => {
     try {
-      await navigator.clipboard.writeText(publicUrl);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
+      setManualLink('');
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      onToast('Could not copy. Open the kit and copy the address.', 'error');
+      // A browser that drops the copy after the publish round trip still gets
+      // the link, shown where it can be selected by hand.
+      setManualLink(url);
     }
+  };
+
+  const shareKit = async () => {
+    if (liveUrl) {
+      await copyText(liveUrl);
+      return;
+    }
+    setSharing(true);
+    const result = await publishReleaseKitLink(releaseId);
+    setSharing(false);
+    if (!result.ok) {
+      onToast(result.error, 'error');
+      if (result.code === 'no_contact') setOpenRow('artist');
+      return;
+    }
+    await copyText(result.url);
+    onToast('Your kit is live. Link copied.', 'success');
+    void load();
   };
 
   const savedNote = (which: 'story' | 'credits', saving: boolean) =>
@@ -345,144 +404,163 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
       </span>
     ) : null;
 
+  const liveHost = liveUrl ? liveUrl.replace(/^https?:\/\//, '').replace(/\?.*$/, '') : '';
+  const status = liveUrl
+    ? `Live at ${liveHost}`
+    : storyDone
+      ? 'Ready to share'
+      : `${left} ${left === 1 ? 'thing' : 'things'} left`;
+  const storyValue = data.fields.story.trim() || 'Not written yet';
+  const creditsValue = creditsDone
+    ? `${data.credits.length} ${data.credits.length === 1 ? 'person' : 'people'}${
+        automatic && data.submittedCredits.length > 0 ? ' · from your team' : ''
+      }`
+    : 'Not added yet';
+  const artistParts = kit ? [kitBio ? 'Bio' : '', kit.contactCount > 0 ? 'contact' : ''].filter(Boolean) : [];
+  const artistValue = !kit
+    ? 'Added for you when you share'
+    : artistParts.length > 0
+      ? `${artistParts.join(', ')} · added for you`
+      : 'Nothing in the artist kit yet';
+
   return (
-    <div className="mt-6 space-y-6">
-      {/* The hero: the cover, what this is for in one line, how far along it
-          is, and the fastest way to finish. */}
-      <section className="rounded-2xl border border-stroke-default bg-bg-surface p-4 sm:p-6">
-        <div className="flex items-start gap-4">
-          <div className="aspect-square w-20 shrink-0 overflow-hidden rounded-xl border border-stroke-default bg-bg-elevated sm:w-24">
-            {data.coverUrl ? (
-              <img src={data.coverUrl} alt="Cover art" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-content-tertiary">
-                <ImageOff className="h-5 w-5" aria-hidden="true" />
-                <span className="text-[10px]">No cover yet</span>
+    <section aria-label="Your kit" className="rounded-2xl bg-bg-surface p-4 sm:p-5">
+      <div className="flex items-center gap-4">
+        <div className="h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl bg-bg-elevated">
+          {data.coverUrl ? (
+            <img src={data.coverUrl} alt="Cover art" className="h-full w-full object-cover" />
+          ) : (
+            <div className="grid h-full w-full place-items-center text-[10px] text-content-primary/55">No cover</div>
+          )}
+        </div>
+        <div className="min-w-0">
+          <h3 className="font-display text-[22px] leading-tight text-content-primary">
+            {allDone ? 'Your kit is ready' : 'Your kit'}
+          </h3>
+          <p className="mt-1 flex items-center gap-2 text-[13px] text-content-primary/55">
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${liveUrl || storyDone ? 'bg-brand' : 'bg-content-tertiary/40'}`}
+              aria-hidden="true"
+            />
+            <span className="truncate">{status}</span>
+          </p>
+        </div>
+      </div>
+
+      {draft ? (
+        <div className="mt-4 rounded-xl border border-brand/30 bg-brand/5 p-4">
+          <p className="text-sm font-semibold text-content-primary">Here is what we wrote</p>
+          <p className="mt-0.5 text-xs text-content-primary/55">It only fills empty spots.</p>
+          <div className="mt-4 space-y-4">
+            {draft.story ? (
+              <div>
+                <p className="text-xs font-semibold text-content-tertiary">The story</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-content-primary">{draft.story}</p>
               </div>
-            )}
+            ) : null}
+            {draftEntries.map(([key, value]) => (
+              <div key={key}>
+                <p className="text-xs font-semibold text-content-tertiary">{DRAFT_LABELS[key] ?? key}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-content-primary">{value}</p>
+              </div>
+            ))}
           </div>
-          <div className="min-w-0 flex-1">
-            <h2 className="font-display text-xl font-semibold text-content-primary">
-              {allDone ? 'Your pitch kit is ready' : 'Your pitch kit'}
-            </h2>
-            <p className="mt-1 text-sm text-content-secondary">
-              {allDone
-                ? 'Send the link to playlists, blogs and radio.'
-                : 'Everything a playlist or a blog needs to say yes to this song.'}
-            </p>
-            <div className="mt-3 flex items-center gap-3">
-              {/* Three segments, one per step, on a track you can see even at 0 of 3
-                  (live check 2026-10-11: the empty bar vanished into the hero). */}
-              <div
-                className="flex flex-1 gap-1.5"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={3}
-                aria-valuenow={doneCount}
-                aria-label="Steps done"
-              >
-                {[0, 1, 2].map((index) => (
-                  <span
-                    key={index}
-                    className={`h-2 flex-1 rounded-full transition-colors duration-500 ${
-                      index < doneCount ? 'bg-brand' : 'bg-content-tertiary/25'
-                    }`}
-                  />
-                ))}
-              </div>
-              <span className="shrink-0 text-xs font-semibold text-content-secondary">
-                {doneCount} of 3
-              </span>
-            </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" onClick={() => void accept()} disabled={busy} className={PRIMARY_BUTTON}>
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Check className="h-4 w-4" aria-hidden="true" />
+              )}
+              Use it
+            </button>
+            <button type="button" onClick={() => void discard()} disabled={busy} className={QUIET_BUTTON}>
+              No thanks
+            </button>
           </div>
         </div>
-
-        {draft ? (
-          <div className="mt-5 rounded-xl border border-brand/30 bg-brand/5 p-4">
-            <p className="text-sm font-semibold text-content-primary">Here is what we wrote</p>
-            <p className="mt-0.5 text-xs text-content-secondary">
-              It only fills empty spots. Nothing you wrote is changed.
-            </p>
-            <div className="mt-4 space-y-4">
-              {draft.story ? (
-                <div>
-                  <p className="text-xs font-semibold text-content-tertiary">The story</p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-content-primary">{draft.story}</p>
-                </div>
-              ) : null}
-              {draftEntries.map(([key, value]) => (
-                <div key={key}>
-                  <p className="text-xs font-semibold text-content-tertiary">
-                    {DRAFT_LABELS[key] ?? key}
-                  </p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-content-primary">{value}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button type="button" onClick={() => void accept()} disabled={busy} className={PRIMARY_BUTTON}>
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
-                Use it
+      ) : !storyDone ? (
+        <div className="mt-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => void fill()} disabled={busy} className={PRIMARY_BUTTON}>
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+              )}
+              {busy ? 'Writing…' : 'Write it for me'}
+            </button>
+            {!showNotes ? (
+              <button
+                type="button"
+                onClick={() => setShowNotes(true)}
+                className="motion-focus min-h-11 text-sm font-semibold text-content-primary/55 hover:text-content-primary"
+              >
+                Give it a hint
               </button>
-              <button type="button" onClick={() => void discard()} disabled={busy} className={QUIET_BUTTON}>
-                No thanks
-              </button>
-            </div>
-          </div>
-        ) : !allDone ? (
-          <div className="mt-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <button type="button" onClick={() => void fill()} disabled={busy} className={PRIMARY_BUTTON}>
-                {busy ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : (
-                  <Sparkles className="h-4 w-4" aria-hidden="true" />
-                )}
-                {busy ? 'Writing…' : 'Write it for me'}
-              </button>
-              {!showNotes ? (
-                <button
-                  type="button"
-                  onClick={() => setShowNotes(true)}
-                  className="motion-focus text-sm font-semibold text-content-secondary hover:text-content-primary"
-                >
-                  Give it a hint
-                </button>
-              ) : null}
-            </div>
-            {showNotes ? (
-              <textarea
-                aria-label="A hint for UrgAns"
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                rows={2}
-                maxLength={2000}
-                autoFocus
-                placeholder="Like: we made it in one night in Lagos."
-                className={`${FIELD_CLASS} mt-3`}
-              />
-            ) : null}
-            {isCreditsEnabled() ? (
-              <p className="mt-2 text-sm text-content-secondary">
-                {embeddedCostLine('epk.fill_both', balance)}
-              </p>
             ) : null}
           </div>
-        ) : null}
+          {showNotes ? (
+            <textarea
+              aria-label="A hint for UrgAns"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              rows={2}
+              maxLength={2000}
+              autoFocus
+              placeholder="Like: we made it in one night in Lagos."
+              className={`${FIELD_CLASS} mt-3`}
+            />
+          ) : null}
+          {isCreditsEnabled() ? (
+            <p className="mt-2 text-[13px] text-content-primary/55">{embeddedCostLine('epk.fill_both', balance)}</p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => void shareKit()} disabled={sharing} className={PRIMARY_BUTTON}>
+              {sharing ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : copied ? (
+                <Check className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Copy className="h-4 w-4" aria-hidden="true" />
+              )}
+              {copied ? 'Copied' : 'Copy kit link'}
+            </button>
+            {liveUrl ? (
+              <a href={liveUrl} target="_blank" rel="noopener noreferrer" className={QUIET_BUTTON}>
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                See it
+              </a>
+            ) : null}
+          </div>
+          {manualLink ? (
+            <input
+              readOnly
+              aria-label="Kit link"
+              value={manualLink}
+              onFocus={(event) => event.currentTarget.select()}
+              className={`${FIELD_CLASS} mt-3 font-mono text-xs`}
+            />
+          ) : null}
+        </div>
+      )}
 
-        {fillError ? (
-          <p className="mt-3 text-sm text-status-error" role="alert">
-            {fillError}
-          </p>
-        ) : null}
-      </section>
+      {fillError ? (
+        <p className="mt-3 text-sm text-status-error" role="alert">
+          {fillError}
+        </p>
+      ) : null}
 
-      <ol className="px-1" aria-label="Pitch kit steps">
-        <Step
-          index={1}
+      <ul className="mt-4 border-t border-stroke-subtle" aria-label="What is in the kit">
+        <KitRow
           done={storyDone}
-          title="Tell the story"
-          hint="How did this song happen? Why should people listen?"
+          title="The story"
+          value={storyValue}
+          open={openRow === 'story'}
+          onToggle={() => setOpenRow(openRow === 'story' ? null : 'story')}
         >
           <textarea
             id="pitch-kit-story"
@@ -492,7 +570,8 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
             onBlur={saveStoryIfChanged}
             maxLength={MAX_STORY_LENGTH}
             rows={5}
-            placeholder="A few sentences is plenty."
+            autoFocus
+            placeholder="How did this song happen? A few sentences is plenty."
             className={`${FIELD_CLASS} resize-y`}
           />
           <div className="mt-1.5 flex items-center gap-3 empty:hidden">
@@ -501,17 +580,14 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
               <span className="text-xs text-content-tertiary">Written by UrgAns. Change anything.</span>
             ) : null}
           </div>
-        </Step>
+        </KitRow>
 
-        <Step
-          index={2}
+        <KitRow
           done={creditsDone}
           title="Who made it"
-          hint={
-            automatic && data.submittedCredits.length > 0
-              ? 'We added the people your team sent. Fix anything that looks wrong.'
-              : 'Add who wrote it, made the beat and sang on it.'
-          }
+          value={creditsValue}
+          open={openRow === 'credits'}
+          onToggle={() => setOpenRow(openRow === 'credits' ? null : 'credits')}
         >
           {shownCredits.length > 0 ? (
             <ul className="space-y-2">
@@ -522,9 +598,7 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
                     value={credit.name}
                     placeholder="Name"
                     onChange={(event) =>
-                      setCredits(
-                        shownCredits.map((c, i) => (i === index ? { ...c, name: event.target.value } : c))
-                      )
+                      setCredits(shownCredits.map((c, i) => (i === index ? { ...c, name: event.target.value } : c)))
                     }
                     onBlur={() => saveCreditsIfChanged(shownCredits)}
                     className={`${FIELD_CLASS} min-w-0 flex-1`}
@@ -534,9 +608,7 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
                     value={credit.role}
                     placeholder="What they did"
                     onChange={(event) =>
-                      setCredits(
-                        shownCredits.map((c, i) => (i === index ? { ...c, role: event.target.value } : c))
-                      )
+                      setCredits(shownCredits.map((c, i) => (i === index ? { ...c, role: event.target.value } : c)))
                     }
                     onBlur={() => saveCreditsIfChanged(shownCredits)}
                     className={`${FIELD_CLASS} min-w-0 flex-1`}
@@ -562,7 +634,7 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
               type="button"
               onClick={() => setCredits([...shownCredits, { name: '', role: '' }])}
               disabled={shownCredits.length >= MAX_CREDITS}
-              className="motion-focus inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline disabled:opacity-60"
+              className="motion-focus inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand hover:underline disabled:opacity-60"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               Add a person
@@ -579,47 +651,37 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
             ) : null}
             {savedNote('credits', savingCredits)}
           </div>
-        </Step>
+        </KitRow>
 
-        <Step
-          index={3}
-          done={shareDone}
-          title="Share it"
-          hint={
-            shareDone
-              ? 'The artist press kit is live. This is the link to send.'
-              : kit
-                ? 'Finish the artist press kit and turn on its link.'
-                : 'Make the artist press kit. We fill most of it in for you.'
-          }
+        <KitRow
+          done={artistDone}
+          title={`About ${artistName}`}
+          value={artistValue}
+          open={openRow === 'artist'}
+          onToggle={() => setOpenRow(openRow === 'artist' ? null : 'artist')}
         >
-          {shareDone && publicUrl ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => void copyLink()} className={PRIMARY_BUTTON}>
-                {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
-                {copied ? 'Copied' : 'Copy link'}
-              </button>
-              <a href={publicUrl} target="_blank" rel="noopener noreferrer" className={QUIET_BUTTON}>
-                <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                See it
-              </a>
-              <Link href={kitHref} className="motion-focus px-1 text-sm font-semibold text-content-secondary hover:text-content-primary">
-                Edit
-              </Link>
-            </div>
+          {kitBio ? (
+            <p className="line-clamp-4 whitespace-pre-wrap text-sm text-content-primary">{kitBio}</p>
           ) : (
-            <Link href={kitHref} className={kit ? QUIET_BUTTON : PRIMARY_BUTTON}>
-              {kit ? 'Open the press kit' : 'Make the press kit'}
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
+            <p className="text-sm text-content-primary/55">
+              {kit ? 'Add a bio and a contact email.' : 'We fill in the bio, photos and contact when you share.'}
+            </p>
           )}
+          {kit ? (
+            <Link
+              href={kitHref}
+              className="motion-focus mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-content-primary/55 hover:text-content-primary"
+            >
+              Edit {artistName}’s kit
+            </Link>
+          ) : null}
           {data.kitFrozenAt ? (
-            <p className="mt-2 text-xs text-content-tertiary">
-              This rollout is out, so it keeps the kit as it was on that day.
+            <p className="mt-1 text-xs text-content-tertiary">
+              This rollout is out, so it keeps the kit as it was that day.
             </p>
           ) : null}
-        </Step>
-      </ol>
+        </KitRow>
+      </ul>
 
       <UrgansLockedSheet
         open={Boolean(lockedMessage)}
@@ -627,6 +689,6 @@ export function PitchKitSection({ releaseId, onToast }: PitchKitSectionProps) {
         actionType="epk.fill_both"
         onClose={() => setLockedMessage('')}
       />
-    </div>
+    </section>
   );
 }

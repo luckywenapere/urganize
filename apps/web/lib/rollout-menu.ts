@@ -158,11 +158,14 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.timeline ? scene('activities', 'Work the plan') : null,
     flags.releaseChat ? scene('chat', 'Talk to the team') : null,
     flags.contentCalendar ? scene('calendar', 'Plan content') : null,
+    // ONE row since 2026-10-16 (Pitch this! as one place): the pitch kit and
+    // promo channels live inside it, so "Build your pitch kit" and "Find
+    // promo" are gone from the menu. Old ?scene=pitchkit / ?scene=promo links
+    // open this row (resolveActiveScene). With pitching off, the two old rows
+    // come back so neither feature is stranded.
     flags.pitching ? scene('pitch', 'Pitch this!') : null,
-    flags.pitchKit ? scene('pitchkit', 'Build your pitch kit') : null,
-    // No flag: shipped on (GitHub #833). Before its table exists the scene
-    // says "coming soon" instead of erroring.
-    scene('promo', 'Find promo'),
+    !flags.pitching && flags.pitchKit ? scene('pitchkit', 'Build your pitch kit') : null,
+    !flags.pitching ? scene('promo', 'Find promo') : null,
     flags.metadata ? scene('metadata', 'Fill in details') : null,
     scene('distribute', 'Distribute now'),
     // Track spend is cut (Oct 16, 2026 brief, URG-319): no row, whatever

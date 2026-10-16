@@ -22,6 +22,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.152.0",
+    date: "October 16, 2026",
+    highlights: [
+      "Pitch this! is now the one place to pitch a release. Your kit sits on top, then curators, their answers, Spotify and Apple Music editors, and promo. Build your pitch kit and Find promo are folded in, and their old links open Pitch this!",
+      "One kit, one link: the song's story and who made it sit on top of the artist's bio, photos and contact, which come in automatically. Copy kit link puts the kit live for you, no trip to the press kit editor. Old press kit links and old EPK links still work.",
+      "Tap a curator to pitch them: pick the playlist, paste the song link, and the note is already written from your story. Your kit goes with every pitch.",
+      "Promo is a short list now: the five best fits first, all 15 channels one tap away, and + puts one on your plan with a due date.",
+    ],
+  },
+  {
     version: "1.151.0",
     date: "October 16, 2026",
     highlights: [

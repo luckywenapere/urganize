@@ -12,6 +12,8 @@
  * Never throws.
  */
 
+import { isReleaseIdShape } from '@/lib/press-kit-public';
+import { loadPitchKit } from '@/lib/release-epk-server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { loadArtistPhotoUrls } from './profile-photo-server';
 import {
@@ -37,6 +39,9 @@ export type PublicKitPhoto = {
 
 export type PublicPressKit = {
   kitId: string;
+  /** The artist the kit is for. Server-side only: the page uses it to check a
+   *  `?r=` release belongs to this artist, and never renders it. */
+  artistId: string;
   slug: string;
   artistName: string;
   visibility: PressKitVisibility;
@@ -169,6 +174,7 @@ export async function loadPublicPressKit(slug: string): Promise<PublicPressKit |
 
     return {
       kitId,
+      artistId: String(kit.artist_id || ''),
       slug: String(kit.slug || normalized),
       artistName,
       artistPhotoUrl,
@@ -314,5 +320,49 @@ export async function recordPressKitEvent(params: {
     });
   } catch {
     /* a view that went unrecorded is not worth an error page */
+  }
+}
+
+/** What a rollout adds on top of the artist kit at /k/{slug}?r={releaseId}. */
+export type PublicReleaseStory = {
+  title: string;
+  releaseDate: string | null;
+  story: string;
+  credits: Array<{ name: string; role: string }>;
+  coverUrl: string | null;
+};
+
+/**
+ * The release block for the merged kit (2026-10-16). Null unless the release
+ * exists, belongs to the SAME artist as the published kit, and has a story or
+ * credits worth showing: an id lifted from another artist's link, a junk id or
+ * an empty kit all quietly render the plain artist kit instead.
+ */
+export async function loadPublicReleaseStory(
+  kit: Pick<PublicPressKit, 'artistId'>,
+  releaseId: string | null | undefined
+): Promise<PublicReleaseStory | null> {
+  if (!isReleaseIdShape(releaseId) || !kit.artistId) return null;
+  const client = createServiceClient();
+  if (!client) return null;
+  try {
+    const result = await loadPitchKit(client, releaseId.trim().toLowerCase());
+    if ('error' in result) return null;
+    const { pitchKit } = result;
+    if (pitchKit.release.artistId !== kit.artistId) return null;
+    const story = pitchKit.fields.story.trim();
+    const credits = pitchKit.credits
+      .map((credit) => ({ name: credit.name.trim(), role: credit.role.trim() }))
+      .filter((credit) => credit.name);
+    if (!story && credits.length === 0) return null;
+    return {
+      title: pitchKit.release.title,
+      releaseDate: pitchKit.release.releaseDate,
+      story,
+      credits,
+      coverUrl: pitchKit.coverUrl,
+    };
+  } catch {
+    return null;
   }
 }

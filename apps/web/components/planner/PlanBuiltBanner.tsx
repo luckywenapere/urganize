@@ -246,7 +246,7 @@ export function PlanBuiltBanner({
               </p>
               <button
                 type="button"
-                onClick={() => openScene('promo', releaseId)}
+                onClick={() => openScene('pitch', releaseId)}
                 className="motion-focus inline-flex h-9 items-center gap-1.5 rounded-lg border border-brand/40 px-3 text-xs font-semibold text-brand hover:bg-brand/10"
               >
                 <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />

@@ -27,7 +27,10 @@ import type { SentPitch } from '@/types/pitching';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import { MAX_WAITING_PITCHES_PER_RELEASE, countWaitingPitches } from '@/lib/pitching';
 import { CuratorCardListSkeleton } from '@/components/loading/CuratorSkeleton';
-import { PitchComposer } from './PitchComposer';
+import { CuratorPicker } from './CuratorPicker';
+import { PromoList } from './PromoList';
+import { PitchKitSection, type KitShareState } from '@/components/releases/PitchKitSection';
+import type { Task } from '@/types/tasks';
 import { SentPitchRow } from './SentPitchRow';
 import { EditorialPitchSection } from './EditorialPitchSection';
 import { PitchPayments } from './PitchPayments';
@@ -53,12 +56,18 @@ function readSceneParams(): { curatorSlug: string; paymentCancelled: boolean } {
   }
 }
 
+const PITCH_KIT_ON = process.env.NEXT_PUBLIC_FEATURE_PITCH_KIT === 'true';
+
 type PitchSceneProps = {
-  release: Pick<Release, 'id' | 'title' | 'artistName'>;
+  release: Pick<Release, 'id' | 'title' | 'artistName' | 'releaseDate'>;
+  /** The rollout's activities, so Promo can mark what is already planned. */
+  tasks?: Task[];
+  /** A promo channel was put on the plan; re-read the workspace. */
+  onTaskAdded?: () => void;
   onToast: (message: string, tone: 'success' | 'error' | 'warning') => void;
 };
 
-export function PitchScene({ release, onToast }: PitchSceneProps) {
+export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchSceneProps) {
   const loadScene = useSceneDataStore((state) => state.loadScene);
   const getScene = useSceneDataStore((state) => state.getScene);
   const cached = getScene(release.id, 'pitch');
@@ -91,17 +100,21 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
     void refreshPitches();
   }, [refreshPitches]);
 
+  // What the kit block reports, so a pitch can carry the kit link.
+  const [kit, setKit] = useState<KitShareState>({ url: null, ready: false, story: '' });
+
   const waitingCount = useMemo(() => countWaitingPitches(pitches), [pitches]);
   const atLimit = waitingCount >= MAX_WAITING_PITCHES_PER_RELEASE;
 
-  // Curators first, as a picture grid (founder, 2026-10-11). What was already
-  // sent comes after, and only when there is something to show.
+  // 2026-10-16, Pitch this! as one place (founder approved mocks): the kit on
+  // top, then curators, their answers, the editors, and promo. Three tabs
+  // (Pitch this!, Build your pitch kit, Find promo) became this one, so the
+  // kit link a pitch carries is made on the same screen it is sent from. One
+  // accent action on screen at a time: the kit's, until a sheet is open.
   return (
     <div className="mt-6 space-y-10">
       {hasCuratorProfile === true || (paymentsOn && paymentCancelled) ? (
         <div className="space-y-3">
-          {/* A dual account owns playlists as well as releases; its inbox is
-              a separate surface with its own shell. */}
           {hasCuratorProfile === true ? (
             <Link
               href="/curator"
@@ -121,20 +134,23 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
         </div>
       ) : null}
 
-      <section aria-label="Pick a curator" className="space-y-4">
-        <h3 className="font-display text-xl font-semibold text-content-primary">Pick a curator</h3>
-        <PitchComposer
+      {PITCH_KIT_ON ? (
+        <PitchKitSection releaseId={release.id} onToast={onToast} onShareStateChange={setKit} />
+      ) : null}
+
+      <section aria-label="Send to curators">
+        <h3 className="mb-3 font-display text-xl text-content-primary">Send to curators</h3>
+        <CuratorPicker
           releaseId={release.id}
-          curatorSlug={curatorSlug}
-          onClearCurator={() => setCuratorSlug('')}
-          initialSongTitle={release.title || ''}
+          songTitle={release.title || ''}
+          story={kit.story}
+          kitUrl={kit.url}
+          kitReady={kit.ready}
           atLimit={atLimit}
-          // Refetch rather than appending the returned row: this scene reads
-          // through the scene cache, so the cache is what has to learn about
-          // the new pitch. Appending locally would leave the cached copy a
-          // pitch behind for the rest of the session.
+          curatorSlug={curatorSlug}
+          // Refetch rather than appending: this scene reads through the scene
+          // cache, so the cache is what has to learn about the new pitch.
           onSent={() => void refreshPitches(true)}
-          onChanged={() => void refreshPitches(true)}
           onToast={onToast}
         />
       </section>
@@ -142,8 +158,8 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
       {isLoadingPitches ? (
         <CuratorCardListSkeleton rows={1} />
       ) : pitches.length > 0 ? (
-        <section aria-label="Pitches sent" className="space-y-3">
-          <h3 className="font-display text-xl font-semibold text-content-primary">Answers</h3>
+        <section aria-label="Answers" className="space-y-3">
+          <h3 className="font-display text-xl text-content-primary">Answers</h3>
           <ul className="space-y-2">
             {pitches.map((pitch) => (
               <SentPitchRow key={pitch.id} pitch={pitch} onChanged={() => void refreshPitches(true)} />
@@ -153,6 +169,8 @@ export function PitchScene({ release, onToast }: PitchSceneProps) {
       ) : null}
 
       <EditorialPitchSection releaseId={release.id} />
+
+      <PromoList release={release} tasks={tasks} onTaskAdded={onTaskAdded ?? (() => {})} onToast={onToast} />
 
       {paymentsOn ? (
         <section aria-label="Payments" className="space-y-3">

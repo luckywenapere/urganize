@@ -9,7 +9,7 @@ import {
   PUBLIC_SECTION_ORDER,
   resolveKitLink,
 } from '@/lib/press-kit-public';
-import { loadPublicPressKit } from '@/lib/press-kit-public-server';
+import { loadPublicPressKit, loadPublicReleaseStory, type PublicReleaseStory } from '@/lib/press-kit-public-server';
 import { usageRightLabel } from '@/lib/press-photo';
 import { PRESS_KIT_SECTION_LABELS } from '@/lib/press-kits';
 import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-kits';
@@ -42,7 +42,11 @@ const MUTED = 'var(--kit-text-muted)';
 const FAINT = 'var(--kit-text-faint)';
 const ACCENT = 'var(--kit-accent)';
 
-type PageProps = { params: Promise<{ slug: string }> };
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  /** `?r=` names the rollout whose story sits on top (the merged kit). */
+  searchParams?: Promise<{ r?: string | string[] }>;
+};
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -361,10 +365,72 @@ function SectionBody({
   return null;
 }
 
-export default async function PublicPressKitPage({ params }: PageProps) {
+/**
+ * The rollout on top of the artist kit (2026-10-16, Pitch this! as one place):
+ * cover, title, date, the story and who made it. Rendered only when the
+ * release belongs to this artist and has something to say; otherwise the page
+ * is the plain artist kit every older link already points at.
+ */
+function ReleaseBlock({ release, artistName }: { release: PublicReleaseStory; artistName: string }) {
+  const date = formatKitDate(release.releaseDate || '');
+  return (
+    <section aria-label={release.title || 'New release'} className="mb-14 border-b pb-12" style={{ borderColor: STROKE }}>
+      <div className="flex items-center gap-5">
+        {release.coverUrl ? (
+          // Signed with a short life; next/image would cache it past that.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={release.coverUrl}
+            alt={`${release.title} cover art`}
+            className="h-28 w-28 shrink-0 rounded-xl object-cover sm:h-32 sm:w-32"
+            style={{ backgroundColor: SURFACE }}
+          />
+        ) : null}
+        <div className="min-w-0">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
+            {date ? `Out ${date}` : 'New release'}
+          </p>
+          <p
+            className="mt-2 break-words font-display text-3xl sm:text-4xl"
+            style={{ color: CREAM, overflowWrap: 'anywhere', textWrap: 'balance' }}
+          >
+            {release.title}
+          </p>
+          <p className="mt-1 text-[15px]" style={{ color: MUTED }}>
+            {artistName}
+          </p>
+        </div>
+      </div>
+      {release.story ? (
+        <p className="mt-8 whitespace-pre-wrap text-[15px] leading-relaxed" style={{ color: CREAM }}>
+          {release.story}
+        </p>
+      ) : null}
+      {release.credits.length > 0 ? (
+        <div className="mt-8">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
+            Who made it
+          </p>
+          <ul className="mt-3 space-y-1.5">
+            {release.credits.map((credit, index) => (
+              <li key={index} className="text-[15px]" style={{ color: CREAM }}>
+                {credit.name}
+                {credit.role ? <span style={{ color: FAINT }}> · {credit.role}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+export default async function PublicPressKitPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const kit = await loadPublicPressKit(slug);
   if (!kit) notFound();
+  const rawRelease = (await searchParams)?.r;
+  const release = await loadPublicReleaseStory(kit, Array.isArray(rawRelease) ? rawRelease[0] : rawRelease);
 
   const header = kit.byKey.header || {};
   const tagline = kitTagline(header);
@@ -427,6 +493,7 @@ export default async function PublicPressKitPage({ params }: PageProps) {
       <KitViewBeacon slug={kit.slug} />
 
       <main className="mx-auto max-w-2xl px-5 py-16 sm:px-8">
+        {release ? <ReleaseBlock release={release} artistName={kit.artistName} /> : null}
         <header>
           {kit.artistPhotoUrl ? (
             // The artist's roster face. A plain img: the url is signed with a

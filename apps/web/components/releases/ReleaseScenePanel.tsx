@@ -84,7 +84,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   // so it stops reading as a second calendar next to Shows, which used the
   // same icon until that icon became a microphone in the same pass.
   calendar: 'Content',
-  pitch: 'Playlist pitches',
+  pitch: 'Pitch this!',
   capture: 'Fan capture',
   song: 'Song',
   coverart: 'Cover art',
@@ -233,7 +233,14 @@ export function ReleaseScenePanel({
       {scene === 'song' ? <SongSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'coverart' ? <CoverArtSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
-      {scene === 'pitch' ? <PitchScene release={release} onToast={onToast} /> : null}
+      {scene === 'pitch' ? (
+        <PitchScene
+          release={release}
+          tasks={tasks}
+          onTaskAdded={onTaskRescheduled ?? (() => {})}
+          onToast={onToast}
+        />
+      ) : null}
       {scene === 'capture' ? <CaptureSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'chat' ? <ReleaseChatSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitchkit' ? <PitchKitSection releaseId={release.id} onToast={onToast} /> : null}
