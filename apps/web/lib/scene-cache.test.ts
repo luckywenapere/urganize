@@ -322,7 +322,8 @@ describe('resolveActiveScene', () => {
 
   it('resolves every scene name when its flag is on', async () => {
     const { resolveActiveScene, SCENE_NAMES: names } = await loadResolver(true);
-    for (const scene of names) {
+    // Spend is cut (URG-319) and resolves to no scene; see its own block below.
+    for (const scene of names.filter((name) => name !== 'spend')) {
       expect(resolveActiveScene(scene)).toBe(scene);
     }
   });
@@ -405,7 +406,7 @@ describe('resolvePanelBody', () => {
 
   it('resolves every scene name to itself with the flags on', async () => {
     const { resolvePanelBody, SCENE_NAMES: names } = await loadResolver(true);
-    for (const scene of names) {
+    for (const scene of names.filter((name) => name !== 'spend')) {
       expect(resolvePanelBody(scene)).toBe(scene);
     }
   });
@@ -465,10 +466,11 @@ describe('the distribute scene (2026-10-03)', () => {
 });
 
 describe('the spend scene (2026-10-09)', () => {
-  it('always opens: who may SEE it is the server\'s answer, not a feature switch', async () => {
+  it('is cut (Oct 16, 2026, URG-319): an old ?scene=spend link lands on the main view', async () => {
     for (const flagsOn of [true, false]) {
       const mod = await loadResolver(flagsOn);
-      expect(mod.resolveActiveScene('spend'), `flags ${flagsOn}`).toBe('spend');
+      expect(mod.resolveActiveScene('spend'), `flags ${flagsOn}`).toBeNull();
+      expect(mod.resolvePanelBody('spend'), `flags ${flagsOn}`).not.toBe('spend');
     }
   });
 

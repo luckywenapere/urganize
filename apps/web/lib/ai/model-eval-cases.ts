@@ -184,18 +184,6 @@ export const TOOL_CASES: readonly ToolCase[] = [
     note: 'A team question. get_team_workload is the intended tool.',
   },
   {
-    id: 'upcoming-shows',
-    prompt: 'What shows does Dorian have coming up?',
-    expect: { tools: ['list_artists', 'list_shows'] },
-    note: 'A newer family. The prompt says to list artists first for anything about shows.',
-  },
-  {
-    id: 'set-overrun',
-    prompt: "Is Friday's set going to overrun the slot?",
-    expect: { tools: ['list_shows', 'get_show', 'list_artists'] },
-    note: 'Needs a show found before it can be read.',
-  },
-  {
     id: 'press-bio',
     prompt: "Write a short bio for Dorian's press kit.",
     expect: { tools: ['list_artists', 'list_press_kits', 'get_press_kit'], allowNone: true },
@@ -238,12 +226,6 @@ export const TOOL_CASES: readonly ToolCase[] = [
     note: 'Navigation is a tool, not a sentence.',
   },
   {
-    id: 'jot-note',
-    prompt: 'Note to self: call Tunde about the Lagos show tomorrow.',
-    expect: { tools: ['create_note'], requireArgs: { tool: 'create_note', keys: ['body'] } },
-    note: '"Lagos show" matches no rollout, so no rollout should be attached.',
-  },
-  {
     id: 'pitch-playlists',
     prompt: 'Which playlists could I pitch Lagos Nights to?',
     expect: { tools: ['list_pitch_playlists'] },
@@ -277,9 +259,9 @@ export const TOOL_CASES: readonly ToolCase[] = [
     id: 'content-calendar-ideas',
     prompt: 'Draft a two-week content calendar for the Midnight EP announcement.',
     expect: {
-      tools: ['list_content_calendars', 'get_release_context', 'get_release'],
+      tools: ['get_release_context', 'get_release'],
       allowNone: true,
     },
-    note: 'Ideas are talked through before anything is created. Creating the calendar and its posts now is too early.',
+    note: 'Ideas are talked through in prose (the content calendar is cut, URG-319); activities only once the user says yes.',
   },
 ];

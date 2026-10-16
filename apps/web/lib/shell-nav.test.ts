@@ -30,7 +30,7 @@ const ALL_OFF: ShellFlags = {
 };
 
 describe('shell nav', () => {
-  it('always offers the six areas in the strategy order (UrgAns after Home; Pitching lives inside each rollout)', () => {
+  it('always offers the five areas in the strategy order (UrgAns after Home; Pitching lives inside each rollout; Audience cut Oct 16, 2026)', () => {
     for (const flags of [ALL_ON, ALL_OFF]) {
       expect(buildShellAreas(flags).map((a) => a.key)).toEqual([
         'home',
@@ -38,7 +38,6 @@ describe('shell nav', () => {
         'catalogue',
         'relationships',
         'opportunities',
-        'audience',
       ]);
     }
   });
@@ -52,14 +51,13 @@ describe('shell nav', () => {
       catalogue: true,
       relationships: false,
       opportunities: true,
-      audience: false,
     });
   });
 
-  it('opportunities is always live, audience is not built yet', () => {
+  it('opportunities is always live, and Audience is off the nav (URG-319)', () => {
     const areas = buildShellAreas(ALL_ON);
     expect(areas.find((a) => a.key === 'opportunities')?.live).toBe(true);
-    expect(areas.find((a) => a.key === 'audience')?.live).toBe(false);
+    expect(areas.find((a) => a.key === 'audience')).toBeUndefined();
   });
 
   it('relationships lands on Directory, then My People, and Shows is not a tab (URG-303)', () => {
@@ -111,7 +109,7 @@ describe('shell nav', () => {
     expect(at('/dashboard/pitching')).toBeNull();
     expect(at('/dashboard/relationships/p1')).toBe('relationships');
     expect(at('/dashboard/opportunities')).toBe('opportunities');
-    expect(at('/dashboard/audience')).toBe('audience');
+    expect(at('/dashboard/audience')).toBeNull();
     expect(at('/dashboard/shows/e1')).toBe('catalogue');
     expect(at('/dashboard/urgans')).toBe('urgans');
     expect(at('/dashboard/credits')).toBeNull();
@@ -137,7 +135,6 @@ describe('shell nav', () => {
     expect(buildMoreItems(buildShellAreas(ALL_ON)).map((i) => i.key)).toEqual([
       'relationships',
       'opportunities',
-      'audience',
     ]);
   });
 
@@ -145,7 +142,7 @@ describe('shell nav', () => {
     const soon = Object.fromEntries(
       buildMoreItems(buildShellAreas(ALL_ON)).map((i) => [i.key, i.soon])
     );
-    expect(soon).toEqual({ relationships: false, opportunities: false, audience: true });
+    expect(soon).toEqual({ relationships: false, opportunities: false });
   });
 
   it('lights More for an area the bar does not carry, UrgAns for its page', () => {
@@ -155,7 +152,6 @@ describe('shell nav', () => {
     expect(activeMobileTab(areas, '/dashboard/shows')).toBe('catalogue');
     expect(activeMobileTab(areas, '/dashboard/urgans')).toBe('urgans');
     expect(activeMobileTab(areas, '/dashboard/directory')).toBe('more');
-    expect(activeMobileTab(areas, '/dashboard/audience')).toBe('more');
     expect(activeMobileTab(areas, '/settings')).toBe('more');
   });
 });

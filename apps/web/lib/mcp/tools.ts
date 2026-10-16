@@ -62,7 +62,7 @@ export const MCP_TOOL_NAMES_ALLOWED: readonly ChappiToolName[] = [
   // delete_* tool is confirmation-gated and has no card to show here.
   'create_release',
   'create_task',
-  'create_note',
+  // create_note left with the Notes cut (Oct 16, 2026, URG-319).
   'update_task',
   'complete_task',
   'reopen_task',

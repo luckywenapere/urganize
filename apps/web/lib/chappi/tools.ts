@@ -47,27 +47,48 @@ import type { ChappiTool } from './tool-families/shared';
 
 export type { ChappiTool, ChappiToolContext, ChappiConfirmOutcome } from './tool-families/shared';
 
+// Feature cuts (Oct 16, 2026 brief, URG-319): shows, setlists and DJ packs,
+// content calendars, notes and fan capture pages are off the nav, so UrgAns is
+// not offered their tools either (their routes 404 with the flags forced off in
+// next.config.js, and a tool that can only fail is a wrong answer waiting to
+// happen). The song tools stay: a song is part of a rollout, not only a show.
+const KEPT_SHOW_TOOL_NAMES = new Set(['list_songs', 'create_song']);
+const SHOW_TOOLS_KEPT = SHOW_TOOLS.filter((tool) => KEPT_SHOW_TOOL_NAMES.has(tool.name));
+
+/** Tool families that are cut, kept importable so restoring one is a line. */
+export const CUT_CHAPPI_TOOLS: ChappiTool[] = [
+  ...CALENDAR_TOOLS,
+  ...NOTE_TOOLS,
+  ...SHOW_TOOLS.filter((tool) => !KEPT_SHOW_TOOL_NAMES.has(tool.name)),
+  ...CAPTURE_TOOLS,
+  ...CORE_TOOLS.filter((tool) => tool.name === 'create_note'),
+];
+
 export const CHAPPI_TOOLS: ChappiTool[] = [
-  ...CORE_TOOLS,
+  ...CORE_TOOLS.filter((tool) => tool.name !== 'create_note'),
   ...CONTEXT_TOOLS,
   ...INSIGHTS_TOOLS,
   ...RELEASE_TOOLS,
   ...PLANNER_TOOLS,
   ...METADATA_TOOLS,
-  ...CALENDAR_TOOLS,
   ...SONG_TOOLS,
-  ...NOTE_TOOLS,
   ...TEAM_TOOLS,
   ...PROMO_TOOLS,
-  ...SHOW_TOOLS,
+  ...SHOW_TOOLS_KEPT,
   ...PRESS_KIT_TOOLS,
   ...ARTIST_TOOLS,
   ...FILE_TOOLS,
-  ...CAPTURE_TOOLS,
   ...DIRECTORY_TOOLS,
 ];
 
-const TOOLS_BY_NAME = new Map<string, ChappiTool>(CHAPPI_TOOLS.map((tool) => [tool.name, tool]));
+// Cut tools are no longer OFFERED to the model (getChappiToolSchemas reads
+// CHAPPI_TOOLS only) but stay resolvable by name, so a confirmation card that
+// was proposed before the cut, or a stale client's confirmedAction, runs into
+// its route's flag-off 404 and comes back as an ordinary error instead of an
+// unknown-tool failure.
+const TOOLS_BY_NAME = new Map<string, ChappiTool>(
+  [...CHAPPI_TOOLS, ...CUT_CHAPPI_TOOLS].map((tool) => [tool.name, tool])
+);
 
 export function getChappiTool(name: string): ChappiTool | undefined {
   return TOOLS_BY_NAME.get(name);

@@ -1,10 +1,7 @@
-import type { Metadata } from 'next';
-import { ComingSoon } from '@/components/shell/ComingSoon';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Audience',
-};
-
+// Audience left the nav in the Oct 16, 2026 cuts (URG-319): it was a pill that
+// only said "Coming soon". An old link or bookmark lands on Home.
 export default function AudiencePage() {
-  return <ComingSoon area="audience" />;
+  redirect('/dashboard/home');
 }

@@ -75,20 +75,23 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'promo',
   'metadata',
   'distribute',
-  'spend',
   'coverart',
   'song',
   'files',
   'capture',
 ];
 
+/** The ranked rows the menu can still show: Track spend is cut (Oct 16, 2026
+ *  brief, URG-319) and never appears, whatever showSpend says. */
+const RANKED = RELEASE_MENU_ORDER.filter((key) => key !== 'spend');
+
 describe('buildRolloutMenu', () => {
   it('holds every ranked row, in the canonical order, when everything is on', () => {
     // Two failures this catches: a key added to RELEASE_MENU_ORDER with no row
     // built for it (so a ranked entry silently never appears), and a row built
     // in an order the ranking does not agree with.
-    expect(keysOf(build())).toEqual([...RELEASE_MENU_ORDER]);
-    expect(keysOf(build({ variant: 'phone' }))).toEqual([...RELEASE_MENU_ORDER]);
+    expect(keysOf(build())).toEqual([...RANKED]);
+    expect(keysOf(build({ variant: 'phone' }))).toEqual([...RANKED]);
   });
 
   it('is empty without a rollout, however much else is passed', () => {
@@ -101,7 +104,7 @@ describe('buildRolloutMenu', () => {
     for (const flag of Object.keys(ROW_BY_FLAG) as (keyof RolloutMenuFlags)[]) {
       const rows = ROW_BY_FLAG[flag];
       const keys = keysOf(build({ flags: { ...ALL_ON, [flag]: false } }));
-      expect(keys, `${flag} off`).toEqual(RELEASE_MENU_ORDER.filter((key) => !rows.includes(key)));
+      expect(keys, `${flag} off`).toEqual(RANKED.filter((key) => !rows.includes(key)));
     }
   });
 
@@ -118,24 +121,12 @@ describe('buildRolloutMenu', () => {
     ]);
   });
 
-  it('shows the Spend row only once the server has said this person may see the cost, right after Distribute', () => {
-    for (const absent of [false, undefined]) {
-      expect(keysOf(build({ showSpend: absent })), String(absent)).not.toContain('spend');
+  it('never shows the Spend row: the spend tracker is cut (URG-319)', () => {
+    for (const showSpend of [true, false, undefined]) {
+      expect(keysOf(build({ showSpend })), String(showSpend)).not.toContain('spend');
     }
-    const keys = keysOf(build({ showSpend: true }));
-    expect(keys.indexOf('spend')).toBe(keys.indexOf('distribute') + 1);
-    // No feature switch owns it: with every switch off, a person who may see
-    // spend still gets the row.
     const allOff = Object.fromEntries(Object.keys(ALL_ON).map((flag) => [flag, false])) as RolloutMenuFlags;
-    expect(keysOf(build({ flags: allOff, showSpend: true }))).toContain('spend');
-  });
-
-  it('opens the Spend scene and lights its row while it is open', () => {
-    const idle = build({ showSpend: true }).find((entry) => entry.key === 'spend');
-    expect(idle?.target).toEqual({ kind: 'scene', scene: 'spend' });
-    expect(idle?.isActive).toBe(false);
-    const open = build({ showSpend: true, activeScene: 'spend' }).find((entry) => entry.key === 'spend');
-    expect(open?.isActive).toBe(true);
+    expect(keysOf(build({ flags: allOff, showSpend: true }))).not.toContain('spend');
   });
 
   it('shows each dialog row only when its action is passed', () => {
@@ -148,7 +139,7 @@ describe('buildRolloutMenu', () => {
       for (const absent of [null, undefined]) {
         const keys = keysOf(build({ [input]: absent } as Partial<RolloutMenuInput>));
         expect(keys, `${input}=${String(absent)}`).toEqual(
-          RELEASE_MENU_ORDER.filter((key) => key !== row)
+          RANKED.filter((key) => key !== row)
         );
       }
     }

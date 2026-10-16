@@ -22,6 +22,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.149.0",
+    date: "October 16, 2026",
+    highlights: [
+      "Urganize now focuses on getting your next release out. Shows, the content calendar, team chat, fan email pages, spend tracking, Notes and the Audience tab are off the menus. Nothing you made was deleted.",
+      "UrgAns voice and Talk to UrgAns are off for now. Typing to UrgAns works as before.",
+      "Your first rollout no longer stops you to invite a teammate.",
+      "Paid playlist pitches are gone. The free curator list stays in Pitch this!",
+    ],
+  },
+  {
     version: "1.148.0",
     date: "October 16, 2026",
     highlights: [

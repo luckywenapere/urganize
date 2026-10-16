@@ -19,7 +19,6 @@ export const GO_KEYS: Record<string, string> = {
   c: 'catalogue',
   r: 'relationships',
   o: 'opportunities',
-  a: 'audience',
 };
 
 /** How long after G the second key still counts. */

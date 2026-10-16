@@ -7,6 +7,9 @@ import { runKitSnapshotSweep } from '@/lib/release-epk-snapshot-server';
 import { runPitchWindowSweep } from '@/lib/pitch-payments-server';
 import { runEditorialPitchReminderSweep } from '@/lib/editorial-pitch-server';
 import { runPaybackQuestionSweep, runSpendCreditsSweep } from '@/lib/release-spend-sweeps-server';
+
+/** Oct 16, 2026 feature cuts (URG-319). */
+const PAYBACK_QUESTION_CUT = true;
 import { runWorkRequestExpirySweep } from '@/lib/work-request-expiry-server';
 import { runCreditProfileSweepIfEnabled } from '@/lib/claim-sweep-server';
 import { runClaimAutoEmailSweep } from '@/lib/claim-auto-email-server';
@@ -105,7 +108,10 @@ export async function GET(request: NextRequest) {
   // once 30 days after release day. Both ride this cron because both schedule
   // slots are taken, and neither throws.
   const spendCreditsSweep = await runSpendCreditsSweep(adminClient);
-  const paybackSweep = await runPaybackQuestionSweep(adminClient);
+  // The payback question is cut (Oct 16, 2026 brief, URG-319): the spend
+  // tracker it asks about is off the nav. The credits sweep above keeps
+  // writing its automatic lines, so the record stays whole if spend returns.
+  const paybackSweep = PAYBACK_QUESTION_CUT ? { skipped: 'cut' as const } : await runPaybackQuestionSweep(adminClient);
 
   // Directory work requests (2026-10-09): one nobody answered in seven days
   // closes, so the sender's slot is freed and the recipient's inbox stops

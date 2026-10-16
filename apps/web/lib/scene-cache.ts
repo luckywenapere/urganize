@@ -162,6 +162,9 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   if (scene === 'pitch' && !PITCHING_ENABLED) return null;
   if (scene === 'chat' && !RELEASE_CHAT_ENABLED) return null;
   if (scene === 'pitchkit' && !PITCH_KIT_ENABLED) return null;
+  // Spend is cut (Oct 16, 2026 brief, URG-319): an old ?scene=spend link (the
+  // payback email, the Home spend card) lands on the rollout's main view.
+  if (scene === 'spend') return null;
   return scene;
 }
 

@@ -28,6 +28,9 @@
 import { orderReleaseMenu, type ReleaseMenuKey } from './release-menu';
 import type { SceneName } from './scene-cache';
 
+/** The spend tracker is cut (Oct 16, 2026 brief, URG-319). See lib/scene-cache.ts. */
+const SPEND_CUT = true;
+
 /** Where the menu is being drawn. It changes exactly one row: Notes. */
 export type RolloutMenuVariant = 'rail' | 'phone';
 
@@ -162,8 +165,9 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     scene('promo', 'Find promo'),
     flags.metadata ? scene('metadata', 'Fill in details') : null,
     scene('distribute', 'Distribute now'),
-    // TODO(copy): the brief names the section (Spend), not the menu row.
-    input.showSpend ? scene('spend', 'Track spend') : null,
+    // Track spend is cut (Oct 16, 2026 brief, URG-319): no row, whatever
+    // showSpend says. The spend lines stay in release_spend.
+    input.showSpend && !SPEND_CUT ? scene('spend', 'Track spend') : null,
     flags.notes ? note : null,
     flags.coverArt ? scene('coverart', 'Add cover art') : null,
     flags.songUpload ? scene('song', 'Upload the song') : null,

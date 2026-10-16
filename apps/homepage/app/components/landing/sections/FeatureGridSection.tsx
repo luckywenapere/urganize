@@ -22,6 +22,9 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 //     still post them." (NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR)
 //   Fan page — "A fan gives an email and gets your link on the same screen.
 //     The list is yours to export." (NEXT_PUBLIC_FEATURE_CAPTURE)
+//   Shows and DJ packs — "Build a setlist timed to your slot and send the DJ
+//     every track as one link. See when it was opened." (cut Oct 16, 2026,
+//     URG-319; NEXT_PUBLIC_FEATURE_EVENTS)
 // With six tiles the list ran two columns beside the phone; with three it
 // runs one, so no tile sits alone on a half-empty row.
 //
@@ -34,10 +37,6 @@ const TILES = [
   {
     title: "Press kit",
     body: "One link for press, curators and bookers. It updates when the rollout changes.",
-  },
-  {
-    title: "Shows and DJ packs",
-    body: "Build a setlist timed to your slot and send the DJ every track as one link. See when it was opened.",
   },
   {
     title: "Cover art and song files",

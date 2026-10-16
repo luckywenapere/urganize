@@ -42,6 +42,9 @@ const BUILD_ID = (
   `local-${Date.now().toString(36)}`
 ).replace(/[^A-Za-z0-9_-]/g, '');
 
+// The Oct 16, 2026 feature cuts (URG-319). See the `env` block below.
+const CUT_FEATURE_FLAGS = require('./lib/cut-features.json');
+
 const nextConfig = {
   transpilePackages: ['@urganize/ui'],
   // Required by the PostHog proxy below: their ingest API is sensitive to the
@@ -76,6 +79,14 @@ const nextConfig = {
   // deployed app can say when it was built. Evaluated once per build, which
   // is the point: a request-time `new Date()` would just report now.
   env: {
+    // Feature cuts (Oct 16, 2026 brief, URG-319). These features are switched
+    // off HERE rather than in Vercel so the cut is one reviewed list in git and
+    // cannot be undone by an env edit. Next gives `env` precedence over the
+    // process environment, so every literal process.env read of these flags,
+    // client and server, sees 'false'. Data is kept; each gate's own flag-off
+    // path (404s, bounces, hidden rows) does the hiding. To bring one back,
+    // delete its line here (and check lib/cut-features.test.ts).
+    ...CUT_FEATURE_FLAGS,
     BUILD_TIME: new Date().toISOString(),
     // The service worker's cache version (2026-10-15, URG-314): one value per
     // deployment, so each deploy registers a new worker that purges the last

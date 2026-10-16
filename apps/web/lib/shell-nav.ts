@@ -185,14 +185,9 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       subTabs: [],
       isActive: (p) => startsWithPath(p, '/dashboard/opportunities'),
     },
-    {
-      key: 'audience',
-      label: 'Audience',
-      href: '/dashboard/audience',
-      live: false,
-      subTabs: [],
-      isActive: (p) => startsWithPath(p, '/dashboard/audience'),
-    },
+    // Audience left the nav (Oct 16, 2026 cuts, URG-319): a top-bar pill that
+    // only said "Coming soon". It comes back when it exists. /dashboard/audience
+    // forwards to Home.
   ];
 }
 
@@ -225,7 +220,7 @@ export function buildMobileTabs(): MobileTab[] {
 export function buildMoreItems(
   areas: ShellArea[]
 ): Array<{ key: string; label: string; href: string; soon: boolean }> {
-  const keep: ShellAreaKey[] = ['relationships', 'opportunities', 'audience'];
+  const keep: ShellAreaKey[] = ['relationships', 'opportunities'];
   return areas
     .filter((area) => keep.includes(area.key))
     .map((area) => ({ key: area.key, label: area.label, href: area.href, soon: !area.live }));

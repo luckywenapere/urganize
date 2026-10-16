@@ -118,17 +118,16 @@ describe('the nav filter, per view', () => {
     expect(applyRoleView(input, 'other')).toBe(input);
   });
 
-  it('Artist manager tucks Audience', () => {
+  it('Artist manager tucks nothing now that Audience is off the nav (URG-319)', () => {
     const list = view('artist_manager');
-    expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'relationships', 'opportunities', 'more']);
-    expect(more(list)).toEqual(['audience']);
+    expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'relationships', 'opportunities']);
     expect(destinations(list)).toContain('catalogue/artists');
     expect(destinations(list)).toContain('relationships/people');
   });
 
   it('Label tucks Opportunities', () => {
     const list = view('label');
-    expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'relationships', 'audience', 'more']);
+    expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'relationships', 'more']);
     expect(more(list)).toEqual(['opportunities']);
     const relationships = list.find((a) => a.key === 'relationships')!;
     expect(relationships.subTabs.map((t) => t.key)).toEqual(['directory', 'people']);
@@ -143,10 +142,10 @@ describe('the nav filter, per view', () => {
     expect(list.some((a) => a.key === 'relationships')).toBe(false);
   });
 
-  it('Artist team tucks Artists, People, Directory, Opportunities and Audience', () => {
+  it('Artist team tucks Artists, People, Directory and Opportunities', () => {
     const list = view('artist_team');
     expect(list.map((a) => a.key)).toEqual(['home', 'urgans', 'catalogue', 'more']);
-    expect(more(list)).toEqual(['artists', 'directory', 'people', 'opportunities', 'audience']);
+    expect(more(list)).toEqual(['artists', 'directory', 'people', 'opportunities']);
   });
 
   it('removes nothing: every destination is in the menu or under More', () => {
@@ -170,14 +169,11 @@ describe('the nav filter, per view', () => {
 
   it("hands the phone's More sheet the tucked pages after the areas it already lists", () => {
     const list = view('label');
-    expect(buildMoreItems(list).map((i) => i.key)).toEqual(['relationships', 'audience']);
+    expect(buildMoreItems(list).map((i) => i.key)).toEqual(['relationships']);
     expect(tuckedMoreItems(list)).toEqual([
       { key: 'opportunities', label: 'Opportunities', href: '/dashboard/opportunities', soon: false },
     ]);
-    // Audience has nothing built yet; tucked, it still says so.
-    expect(tuckedMoreItems(view('artist_manager'))).toEqual([
-      { key: 'audience', label: 'Audience', href: '/dashboard/audience', soon: true },
-    ]);
+    expect(tuckedMoreItems(view('artist_manager'))).toEqual([]);
     expect(tuckedMoreItems(view('other'))).toEqual([]);
   });
 
