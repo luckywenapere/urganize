@@ -1,0 +1,54 @@
+// Our own and test accounts, left out of analytics (2026-10-16, founder: "i hope
+// any account you are using is excluded from the analytics").
+//
+// Pure and safe on the client: no env reads. The admin pages add ADMIN_EMAILS and
+// METRICS_INTERNAL_EMAILS on top of this list (app/api/admin/_shared.ts).
+//
+// One of us is: an @urganize.app address, an address on this list, or a
+// plus-alias of one (luckydio10+anything@gmail.com is a test inbox of ours).
+
+const INTERNAL_DOMAIN = '@urganize.app';
+
+export const BUILT_IN_INTERNAL_EMAILS: readonly string[] = [
+  'luckydio10@gmail.com',
+  'luckywenapere@gmail.com',
+  'theurganization@gmail.com',
+  // QA accounts Hark signs in with.
+  'luckydio10.paywalltest@gmail.com',
+];
+
+const BUILT_IN = new Set(BUILT_IN_INTERNAL_EMAILS);
+
+export function normalizeEmail(email: string | null | undefined): string {
+  return String(email || '').trim().toLowerCase();
+}
+
+/** One of us, by the built-in list and the extra addresses given. */
+export function isInternalAccountEmail(
+  email: string | null | undefined,
+  extra: ReadonlySet<string> | readonly string[] = []
+): boolean {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return false;
+  if (normalized.endsWith(INTERNAL_DOMAIN)) return true;
+  const listed = (value: string) =>
+    BUILT_IN.has(value) || (Array.isArray(extra) ? extra.includes(value) : (extra as ReadonlySet<string>).has(value));
+  if (listed(normalized)) return true;
+  const at = normalized.indexOf('@');
+  const plus = normalized.indexOf('+');
+  if (plus > 0 && plus < at) return listed(normalized.slice(0, plus) + normalized.slice(at));
+  return false;
+}
+
+/**
+ * A Set of our addresses whose `has` also answers for @urganize.app and
+ * plus-aliases, so every admin page that asks `internalEmails.has(email)`
+ * leaves test inboxes out without each one learning the rule.
+ */
+export class InternalEmailSet extends Set<string> {
+  override has(email: string): boolean {
+    const normalized = normalizeEmail(email);
+    if (super.has(normalized)) return true;
+    return isInternalAccountEmail(normalized, [...this.values()]);
+  }
+}

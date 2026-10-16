@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Button } from '@urganize/ui';
+import { X } from '@/components/icons';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
@@ -77,13 +78,24 @@ export function StartNextSheet({
 
   return createPortal(
     <div className="fixed inset-0 z-[220] flex items-end justify-center bg-black/60 sm:items-center sm:px-4" role="presentation">
-      <button type="button" aria-label="Close" className="absolute inset-0" onClick={() => !busy && onClose()} />
+      <button type="button" aria-hidden="true" tabIndex={-1} className="absolute inset-0" onClick={() => !busy && onClose()} />
       <DialogPanel
         label="Start the next one"
         onClose={() => !busy && onClose()}
         className="relative w-full rounded-t-[20px] border border-stroke-default bg-bg-surface px-4 pb-[calc(1.75rem+env(safe-area-inset-bottom))] pt-5 sm:max-w-[440px] sm:rounded-[20px] sm:p-6"
       >
-        <h2 className="font-display text-xl text-content-primary">Start the next one</h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-display text-xl text-content-primary">Start the next one</h2>
+          <button
+            type="button"
+            aria-label="Close"
+            disabled={busy}
+            onClick={onClose}
+            className="motion-focus -mr-2 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-content-tertiary hover:bg-bg-hover hover:text-content-primary disabled:opacity-50"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
         <p className="mt-1 text-sm text-content-tertiary">From sessions to the final video. No release date needed.</p>
 
         {artists.length > 0 ? (

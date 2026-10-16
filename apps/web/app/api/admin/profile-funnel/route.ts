@@ -30,10 +30,23 @@ async function rows<T>(query: PromiseLike<Rows<T>>): Promise<T[] | null> {
 }
 
 async function internalUserIds(db: SupabaseClient): Promise<Set<string>> {
-  const emails = [...internalAccountEmails()];
-  if (emails.length === 0) return new Set();
-  const found = await rows<{ id: string }>(db.from('profiles').select('id').in('email', emails).limit(500));
-  return new Set((found ?? []).map((row) => row.id));
+  const internal = internalAccountEmails();
+  const emails = [...internal];
+  // Listed addresses, plus any plus-alias or @urganize.app account, which the
+  // set's own rule recognises (lib/internal-accounts.ts).
+  const [listed, aliased] = await Promise.all([
+    emails.length
+      ? rows<{ id: string; email: string | null }>(db.from('profiles').select('id, email').in('email', emails).limit(500))
+      : Promise.resolve([] as { id: string; email: string | null }[]),
+    rows<{ id: string; email: string | null }>(
+      db.from('profiles').select('id, email').or('email.ilike.%+%,email.ilike.%@urganize.app').limit(2000)
+    ),
+  ]);
+  const ids = new Set<string>();
+  for (const row of [...(listed ?? []), ...(aliased ?? [])]) {
+    if (row.email && internal.has(row.email)) ids.add(row.id);
+  }
+  return ids;
 }
 
 export async function GET(req: NextRequest) {

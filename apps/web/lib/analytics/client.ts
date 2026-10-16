@@ -7,6 +7,7 @@ import {
   type StoredAnalyticsEvent,
   getPostHogProjectKey,
 } from './shared';
+import { isInternalAccountEmail } from '@/lib/internal-accounts';
 
 const ANALYTICS_STORAGE_KEY = 'urganize.analytics.events';
 const ANALYTICS_FEATURES_STORAGE_KEY = 'urganize.analytics.discovered-features';
@@ -291,14 +292,22 @@ export function identifyAnalyticsUser(user: AnalyticsIdentity | null | undefined
     return;
   }
 
-  void loadBrowserPostHog().then((client) =>
+  // Our own and test accounts never reach PostHog (2026-10-16).
+  if (isInternalAccountEmail(user.email)) {
+    void loadBrowserPostHog().then((client) => client?.opt_out_capturing());
+    return;
+  }
+
+  void loadBrowserPostHog().then((client) => {
+    // A real account after a test one on the same browser counts again.
+    if (client?.has_opted_out_capturing()) client.opt_in_capturing();
     client?.identify(user.id, {
       email: user.email,
       name: user.name,
       role: user.onboarding_role || user.role,
       created_at: user.created_at,
-    })
-  );
+    });
+  });
 }
 
 export function resetAnalyticsUser() {

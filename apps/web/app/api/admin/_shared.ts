@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { neon } from '@neondatabase/serverless';
+import { BUILT_IN_INTERNAL_EMAILS, InternalEmailSet } from '@/lib/internal-accounts';
 
 // The waitlist + growth dashboards were ported into this hub from
 // apps/homepage (founder request, 2026-07-30) and read the marketing site's
@@ -32,7 +33,7 @@ export const internalAccountEmails = (): Set<string> => {
     .split(',')
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
-  return new Set([...parseAdminEmails(), ...extra]);
+  return new InternalEmailSet([...BUILT_IN_INTERNAL_EMAILS, ...parseAdminEmails(), ...extra]);
 };
 
 // supabaseAdmin is annotated `SupabaseClient` rather than inferred via

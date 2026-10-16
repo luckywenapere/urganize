@@ -227,6 +227,13 @@ export function TimelineScene({
   );
 
   if (!release.releaseDate) {
+    // Pre-production (URG-280): a rollout started before it has a date. Its
+    // activities have no days to sit on, so list them in order instead of an
+    // empty timeline; the week grid takes over once a date is set.
+    const undated = tasks.filter((task) => task.phase === 'pre_production');
+    if (undated.length > 0) {
+      return <UndatedPreProduction tasks={undated} onOpenTask={onOpenTask} />;
+    }
     if (suppressEmptyState) return null;
     return (
       <TimelineEmptyState
@@ -849,5 +856,46 @@ function TimelineEmptyState({ title, body }: { title: string; body: string }) {
       <h3 className="mt-3 font-display text-sm font-semibold text-content-primary">{title}</h3>
       <p className="mx-auto mt-1 max-w-sm text-xs text-content-secondary">{body}</p>
     </div>
+  );
+}
+
+function UndatedPreProduction({ tasks, onOpenTask }: { tasks: Task[]; onOpenTask: (taskId: string) => void }) {
+  const done = tasks.filter((task) => task.status === 'done').length;
+  return (
+    <section aria-label="Pre-production" className="mt-6 pb-16">
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="font-display text-base font-semibold text-content-primary">Pre-production</h3>
+        <span className="text-xs tabular-nums text-content-tertiary">
+          {done}/{tasks.length} done
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-content-secondary">
+        No release date yet. Set one and the whole rollout lays out here week by week.
+      </p>
+      <ol className="mt-3 divide-y divide-stroke-subtle overflow-hidden rounded-xl border border-stroke-subtle bg-bg-surface">
+        {tasks.map((task) => (
+          <li key={task.id}>
+            <button
+              type="button"
+              onClick={() => onOpenTask(task.id)}
+              className="motion-focus flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-bg-hover"
+            >
+              <span
+                aria-hidden="true"
+                className={`h-2 w-2 shrink-0 rounded-full ${task.status === 'done' ? 'bg-brand' : 'border border-stroke-strong'}`}
+              />
+              <span
+                className={`min-w-0 flex-1 truncate text-sm ${
+                  task.status === 'done' ? 'text-content-tertiary line-through' : 'text-content-primary'
+                }`}
+              >
+                {task.title}
+              </span>
+              {task.status === 'done' ? <span className="sr-only">Done</span> : null}
+            </button>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
