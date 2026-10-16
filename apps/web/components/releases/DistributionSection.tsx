@@ -9,6 +9,7 @@ import type { DistributionIssue } from '@/lib/distribution-rules';
 import type { Release } from '@/types/releases';
 import { DistributionRejectionList } from './DistributionIssueList';
 import { FanPaymentsCard } from './FanPaymentsCard';
+import { HandoffSection } from './HandoffSection';
 import { PartnerLogo } from './PartnerLogo';
 import { distributionAuthHeaders, useDistributionStatus } from './useDistributionStatus';
 
@@ -50,8 +51,13 @@ const formatDay = (iso: string): string => {
  *
  * Below the check sits Fanlly, the fan payments partner (2026-10-11). It is not
  * a distributor and is never gated by the check; see lib/fan-payments.ts.
+ *
+ * THE STEP OPENS WITH THE HANDOFF (URG-322, 2026-10-16): the master, the cover
+ * art and the metadata, each with an owner, a due date and a status, above the
+ * partner cards. It loads and fails on its own (HandoffSection), so a slow
+ * handoff never holds the partner cards back, and the other way round.
  */
-export function DistributionSection({ release }: DistributionSectionProps) {
+export function DistributionSection({ release, onOpenDetails, onChangeArtist }: DistributionSectionProps) {
   const { data, setData, loadError, reload } = useDistributionStatus(release.id);
 
   const order = useCallback(
@@ -98,35 +104,43 @@ export function DistributionSection({ release }: DistributionSectionProps) {
     [release.id, setData]
   );
 
+  const handoff = (
+    <HandoffSection releaseId={release.id} onOpenDetails={onOpenDetails} onChangeArtist={onChangeArtist} />
+  );
+
   if (loadError && !data) {
     return (
-      <div className="mt-8 border border-status-error/30 bg-status-error/5 p-4">
-        <p className="text-sm text-content-primary" role="alert">
-          We could not load this step.
-        </p>
-        <p className="mt-1 text-xs text-content-secondary">{loadError}</p>
-        <button
-          type="button"
-          onClick={() => void reload()}
-          className="motion-focus mt-3 text-xs font-semibold text-brand hover:underline"
-        >
-          Try again
-        </button>
+      <div className="mt-8 space-y-6">
+        {handoff}
+        <div className="border border-status-error/30 bg-status-error/5 p-4">
+          <p className="text-sm text-content-primary" role="alert">
+            We could not load this step.
+          </p>
+          <p className="mt-1 text-xs text-content-secondary">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => void reload()}
+            className="motion-focus mt-3 text-xs font-semibold text-brand hover:underline"
+          >
+            Try again
+          </button>
+        </div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="mt-8 space-y-4" aria-busy="true">
-        <div className="h-28 animate-pulse border border-stroke-default bg-bg-surface" />
-        <div className="h-64 animate-pulse border border-stroke-default bg-bg-surface" />
+      <div className="mt-8 space-y-6">
+        {handoff}
+        <div className="h-40 animate-pulse border border-stroke-default bg-bg-surface" aria-busy="true" />
       </div>
     );
   }
 
   return (
     <div className="mt-8 space-y-6">
+      {handoff}
       {data.rejections.length > 0 ? <DistributionRejectionList rejections={data.rejections} /> : null}
 
       {/* The two partners (founder, 2026-10-14): the logo, the eyebrow and the

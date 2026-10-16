@@ -197,6 +197,7 @@ export const toMetadataSnapshot = (row: Record<string, unknown> | null | undefin
     subgenre: String(row.subgenre || ''),
     labelName: String(row.label_name || ''),
     featuredArtists: String(row.featured_artists || ''),
+    lyrics: String(row.lyrics || ''),
     language: String(row.language || ''),
     explicit: row.explicit === null || row.explicit === undefined ? null : Boolean(row.explicit),
     cLine: String(row.c_line || ''),

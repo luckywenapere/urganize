@@ -136,6 +136,7 @@ type MetadataFormState = {
   featuredArtists: string;
   cLine: string;
   pLine: string;
+  lyrics: string;
 };
 
 const EMPTY_FORM: MetadataFormState = {
@@ -150,6 +151,7 @@ const EMPTY_FORM: MetadataFormState = {
   featuredArtists: '',
   cLine: '',
   pLine: '',
+  lyrics: '',
 };
 
 function toFormState(metadata: ReleaseMetadataSnapshot | null): MetadataFormState {
@@ -168,6 +170,7 @@ function toFormState(metadata: ReleaseMetadataSnapshot | null): MetadataFormStat
     featuredArtists: metadata.featuredArtists,
     cLine: metadata.cLine,
     pLine: metadata.pLine,
+    lyrics: metadata.lyrics ?? '',
   };
 }
 
@@ -840,6 +843,10 @@ export function MetadataSection({
                       value={form.cLine}
                       onChange={(v) => editForm((f) => ({ ...f, cLine: v }))}
                     />
+                    <LyricsField
+                      value={form.lyrics}
+                      onChange={(v) => editForm((f) => ({ ...f, lyrics: v }))}
+                    />
                     {/* A Yes/No that starts unanswered, replacing a checkbox that
                         could not say "never asked" and so saved false for
                         everyone. The distribution check refuses a rollout
@@ -1361,6 +1368,29 @@ function SubmissionCard({
           {updatedDate ? ` · updated ${updatedDate}` : ''}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The song's words (URG-322, 2026-10-16). One plain textarea across both
+ * columns: the handoff to the distributor counts the metadata as ready only
+ * once lyrics are in, and its Fix button lands here (`metadata-field-lyrics`).
+ */
+function LyricsField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const inputId = metadataFieldElementId('lyrics');
+  return (
+    <div className="block text-sm sm:col-span-2">
+      <label htmlFor={inputId} className="text-xs text-content-tertiary">
+        Lyrics
+      </label>
+      <textarea
+        id={inputId}
+        value={value}
+        rows={6}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 w-full resize-y border border-stroke-control bg-bg-elevated px-3 py-2 text-sm leading-relaxed text-content-primary outline-none focus:border-brand"
+      />
     </div>
   );
 }

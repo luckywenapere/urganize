@@ -86,7 +86,7 @@ describe('a fix that cannot work for this person is not offered', () => {
 });
 
 describe('the Metadata scene targets', () => {
-  it('knows its six fields and nothing else', () => {
+  it('knows its seven fields and nothing else', () => {
     expect([...METADATA_FIX_FIELDS]).toEqual([
       'genre',
       'language',
@@ -94,6 +94,8 @@ describe('the Metadata scene targets', () => {
       'featured_artists',
       'credits',
       'splits',
+      // The handoff's Metadata row (URG-322).
+      'lyrics',
     ]);
     expect(isMetadataFixField('genre')).toBe(true);
     expect(isMetadataFixField('isrc')).toBe(false);

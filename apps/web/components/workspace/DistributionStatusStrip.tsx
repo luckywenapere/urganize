@@ -3,6 +3,7 @@
 import { DistributionRejectionList } from '@/components/releases/DistributionIssueList';
 import { useDistributionStatus } from '@/components/releases/useDistributionStatus';
 import { DistributionChecklist, hasChecklistRecord } from './DistributionChecklist';
+import { HandoffChip } from './HandoffChip';
 
 type DistributionStatusStripProps = {
   releaseId: string;
@@ -57,6 +58,23 @@ export function DistributionStatusStrip({
   compact = false,
 }: DistributionStatusStripProps) {
   const { data } = useDistributionStatus(releaseId);
+
+  // THE COMPUTER'S LINE IS THE HANDOFF NOW (URG-322, 2026-10-16). The one 36px
+  // line beside the timeline's phases shows the handoff chip ("Handoff · 0 of 3
+  // sent · due Fri 30 Oct") instead of the browser-stored "3 of 8 done"
+  // checklist: the handoff is stored on the server, so every teammate reads the
+  // same line. The checklist still shows everywhere else (the phone, the
+  // non-timeline views); it is hidden here, not removed.
+  if (compact) {
+    const rejections = data ? data.rejections.slice(0, 1) : [];
+    if (!showReadiness && rejections.length === 0) return null;
+    return (
+      <section aria-label="Handoff to distributor" className="flex flex-wrap items-center gap-2">
+        {rejections.length > 0 ? <DistributionRejectionList rejections={rejections} /> : null}
+        {showReadiness ? <HandoffChip releaseId={releaseId} /> : null}
+      </section>
+    );
+  }
 
   // Nothing until the check has answered: a failed or slow read draws no banner
   // rather than a wrong one.

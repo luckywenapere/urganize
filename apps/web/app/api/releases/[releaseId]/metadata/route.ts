@@ -90,6 +90,7 @@ type UpdateMetadataBody = {
   explicit?: unknown;
   labelName?: unknown;
   featuredArtists?: unknown;
+  lyrics?: unknown;
   cLine?: unknown;
   pLine?: unknown;
 };
@@ -98,6 +99,14 @@ const readOptionalString = (value: unknown): string | null => {
   if (value === null || value === undefined) return null;
   const trimmed = String(value).trim();
   return trimmed || null;
+};
+
+/** Lyrics keep their line breaks; only blank-only text reads as none. Capped
+ *  well above any song so a paste cannot grow without bound. */
+const readOptionalLyrics = (value: unknown): string | null => {
+  if (value === null || value === undefined) return null;
+  const text = String(value).replace(/\r\n/g, '\n');
+  return text.trim() ? text.slice(0, 20000) : null;
 };
 
 // Editable half of the metadata hub (URG-108): the release-level
@@ -153,6 +162,9 @@ export async function PATCH(
         featured_artists: readOptionalString(body.featuredArtists),
         c_line: readOptionalString(body.cLine),
         p_line: readOptionalString(body.pLine),
+        // Only when sent: an older caller (UrgAns's metadata tool) saves the
+        // full form without lyrics, and must not wipe them.
+        ...(body.lyrics !== undefined ? { lyrics: readOptionalLyrics(body.lyrics) } : {}),
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'release_id' }

@@ -89,6 +89,11 @@ export type ReleaseMetadataSnapshot = {
    * person here instead, so the field has to exist.
    */
   featuredArtists: string;
+  /**
+   * The song's words, as plain text. Added 2026-10-16 (URG-322): the handoff to
+   * the distributor counts the metadata as ready only once lyrics are in.
+   */
+  lyrics: string;
   language: string;
   explicit: boolean | null;
   /** Copyright line, e.g. "© 2026 Some Label". Added for URG-108 (metadata hub). */

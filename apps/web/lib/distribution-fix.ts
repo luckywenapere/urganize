@@ -38,6 +38,9 @@ export const METADATA_FIX_FIELDS = [
   'featured_artists',
   'credits',
   'splits',
+  // The handoff to the distributor's Metadata row (URG-322) lands here when
+  // the only thing missing is the words.
+  'lyrics',
 ] as const;
 
 export type MetadataFixField = (typeof METADATA_FIX_FIELDS)[number];

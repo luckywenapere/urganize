@@ -22,6 +22,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.151.0",
+    date: "October 16, 2026",
+    highlights: [
+      "The Distribute step now opens with the handoff to your distributor: the final master, the cover art and the metadata, each with an owner, a due date counted back from release day, and where it stands (Missing, Uploaded, Approved, Sent). Upload opens the step that holds it, Approve and Mark sent are one tap, and your whole team sees the same thing.",
+      "Set how early your distributor needs the files (7, 14, 21 or 28 days before release; 14 to start) and every due date moves with it. Each owner gets the usual reminders 7 and 3 days before, and a red line when the files are late.",
+      "Lyrics now have their own box on the Metadata step, and on a computer the rollout's top line shows the handoff: how many of the three are sent and when they're due.",
+    ],
+  },
+  {
     version: "1.150.0",
     date: "October 16, 2026",
     highlights: [
