@@ -74,6 +74,13 @@ export const RELEASE_MENU_ORDER = [
   // the timeline flag either way, because with that flag off the timeline is
   // unavailable AND the buckets are already the default, so neither belongs.
   'activities',
+  // The release brief (URG-281, 2026-10-16): the idea, references, dates,
+  // who's on what and the decisions, on one page the team reads instead of
+  // scrolling WhatsApp. Straight after the two main views because it is the
+  // page a teammate opens to get up to speed before working the plan, and it
+  // takes the slot release chat is leaving (founder requirement: "no net new
+  // tab"). A reasoned placement, not a measured one.
+  'brief',
   // The rollout's own chat thread (Release & Task Chat, Phase 1). Ranked
   // second, ahead of the other promoted tabs, because it is the raw
   // coordination surface the PRD built this feature to replace WhatsApp
@@ -228,6 +235,7 @@ export const ROLLOUT_MENU_GROUPS: { key: RolloutMenuGroupKey; label: string | nu
 const GROUP_BY_KEY: Record<ReleaseMenuKey, RolloutMenuGroupKey> = {
   timeline: 'plan',
   activities: 'plan',
+  brief: 'plan',
   chat: 'plan',
   calendar: 'plan',
   note: 'plan',

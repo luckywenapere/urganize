@@ -55,7 +55,10 @@ export {
   // The usage dashboard (2026-10-07): people using Urganize over time.
   Activity,
   AlignLeft, Archive, ArrowDown, ArrowRight,
-  ArrowUp, BadgeDollarSign,
+  ArrowUp,
+  // The release brief (URG-281): its menu row, and the share button.
+  ArrowUpRight, BookOpen,
+  BadgeDollarSign,
   // The notifications bell (URG-255, 2026-10-14): a plain outline bell.
   Bell,
   Bug, Building2,

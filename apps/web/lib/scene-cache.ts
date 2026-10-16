@@ -51,7 +51,12 @@ export type SceneName =
   // communities and SoundCloud networks a team can add to the plan. Fetches for
   // itself and is not cached: the directory changes as admins approve
   // suggestions, and it is opened a few times a rollout, not tapped around.
-  | 'promo';
+  | 'promo'
+  // The release brief (URG-281, 2026-10-16): the idea, references, dates, who's
+  // on what and decisions on one page. Fetches for itself and is not cached: the
+  // Idea autosaves in place, and a cached copy painted over a live edit is the
+  // failure the pitch kit stays out of the cache for.
+  | 'brief';
 
 export const SCENE_NAMES: readonly SceneName[] = [
   'activities',
@@ -68,6 +73,7 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'distribute',
   'spend',
   'promo',
+  'brief',
 ];
 
 // Inlined at build time, same read every UI gate uses. Both consumers below
@@ -84,6 +90,8 @@ const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 const RELEASE_CHAT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true';
 const PITCH_KIT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCH_KIT === 'true';
+// Ships ON: unset is on, only "false" switches it off (lib/release-brief-flag.ts).
+const RELEASE_BRIEF_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_BRIEF !== 'false';
 
 /** Prefetch order: most-likely-opened first, so a user who taps a pill mid-
  * prefetch is most likely to find their scene already warm.
@@ -168,6 +176,7 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   // Pitch this! holds the kit and promo since 2026-10-16, so their old links
   // (emails, bookmarks, Plan built's "Find promo") open it.
   if ((scene === 'pitchkit' || scene === 'promo') && PITCHING_ENABLED) return 'pitch';
+  if (scene === 'brief' && !RELEASE_BRIEF_ENABLED) return null;
   return scene;
 }
 
@@ -278,7 +287,7 @@ export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
  */
 export type CacheableSceneName = Exclude<
   SceneName,
-  'timeline' | 'activities' | 'pitchkit' | 'distribute' | 'spend' | 'promo'
+  'timeline' | 'activities' | 'pitchkit' | 'distribute' | 'spend' | 'promo' | 'brief'
 >;
 
 export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName =>
@@ -287,7 +296,8 @@ export const isCacheableScene = (scene: SceneName): scene is CacheableSceneName 
   scene !== 'pitchkit' &&
   scene !== 'distribute' &&
   scene !== 'spend' &&
-  scene !== 'promo';
+  scene !== 'promo' &&
+  scene !== 'brief';
 
 /**
  * Which scenes may touch localStorage.
@@ -329,6 +339,7 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   spend: false,
   // Fetches for itself and is not cached (see SceneName).
   promo: false,
+  brief: false,
 };
 
 /** How many releases' scenes to keep on disk. A manager works a couple of

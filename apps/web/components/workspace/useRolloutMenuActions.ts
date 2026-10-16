@@ -4,6 +4,7 @@ import type { ComponentType } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Archive,
+  BookOpen,
   CalendarClock,
   CalendarDays,
   ClipboardList,
@@ -45,6 +46,8 @@ const ICONS: Record<ReleaseMenuKey, ComponentType<LucideProps>> = {
   // slot held a Gantt mark while it pointed at the timeline.
   activities: ListChecks,
   timeline: CalendarClock,
+  // The brief is a page you read: an open book.
+  brief: BookOpen,
   chat: MessageCircle,
   calendar: CalendarDays,
   pitch: Radio,

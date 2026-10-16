@@ -18,6 +18,10 @@ const FEATURE_BY_ACTION: Readonly<Record<string, AiUsageFeature>> = {
   // from facts the product holds), and a new feature label would reach the admin
   // usage panel's shared feature list for no gain.
   'directory.draft_bio': 'press_kit',
+  // The release brief's Idea paragraph (URG-281). Filed with the status update:
+  // the same job (a short paragraph about one rollout from its own facts), on
+  // the same model surface, so no new feature label is needed.
+  'release.draft_brief': 'status',
 };
 
 export function usageFeatureForAction(actionId: string): AiUsageFeature | null {

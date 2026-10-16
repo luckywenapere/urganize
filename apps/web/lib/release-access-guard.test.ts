@@ -67,6 +67,9 @@ const TEAM_ACCESS_GROUPS = [
   // Promo channels (GitHub #833, 2026-10-11): a read of the directory plus the
   // rollout's genre, for any member. Adding one is a plain POST /api/tasks.
   'promo-channels',
+  // The release brief (URG-281, 2026-10-16): any member reads and writes it;
+  // the view-link toggle adds an owner-or-team-admin check on top.
+  'brief',
 ];
 
 const BANNED = /ensureReleaseOwnership|ensureOwnedRelease/;

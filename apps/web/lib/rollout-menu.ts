@@ -44,6 +44,8 @@ export type RolloutMenuFlags = {
    *  views, and with the timeline off there is only one. */
   timeline: boolean;
   releaseChat: boolean;
+  /** The release brief scene (NEXT_PUBLIC_FEATURE_RELEASE_BRIEF, ships on). */
+  releaseBrief: boolean;
   contentCalendar: boolean;
   pitching: boolean;
   /** The release pitch kit scene (NEXT_PUBLIC_FEATURE_PITCH_KIT). */
@@ -156,6 +158,7 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
   const entries: (RolloutMenuEntry | null)[] = [
     flags.timeline ? scene('timeline', 'See the timeline') : null,
     flags.timeline ? scene('activities', 'Work the plan') : null,
+    flags.releaseBrief ? scene('brief', 'Read the brief') : null,
     flags.releaseChat ? scene('chat', 'Talk to the team') : null,
     flags.contentCalendar ? scene('calendar', 'Plan content') : null,
     // ONE row since 2026-10-16 (Pitch this! as one place): the pitch kit and

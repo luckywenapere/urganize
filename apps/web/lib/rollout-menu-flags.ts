@@ -17,6 +17,8 @@ import type { RolloutMenuFlags } from './rollout-menu';
 export const ROLLOUT_MENU_FLAGS: RolloutMenuFlags = {
   timeline: process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true',
   releaseChat: process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true',
+  // Ships ON: unset is on, only "false" switches it off (lib/release-brief-flag.ts).
+  releaseBrief: process.env.NEXT_PUBLIC_FEATURE_RELEASE_BRIEF !== 'false',
   contentCalendar: process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true',
   pitching: process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true',
   pitchKit: process.env.NEXT_PUBLIC_FEATURE_PITCH_KIT === 'true',

@@ -6,6 +6,7 @@
 import { directoryDraftBioAction } from './actions/directory-draft-bio';
 import { epkFillBothAction } from './actions/epk-fill-both';
 import { pressKitDraftSectionAction } from './actions/press-kit-draft-section';
+import { releaseDraftBriefAction } from './actions/release-draft-brief';
 import { releaseDraftPlanAction } from './actions/release-draft-plan';
 import { releaseDraftSpotifyPitchAction } from './actions/release-draft-spotify-pitch';
 import type { UrgansActionDefinition } from './types';
@@ -23,6 +24,7 @@ export const URGANS_ACTIONS: Record<string, UrgansActionDefinition<unknown, unkn
   [epkFillBothAction.id]: epkFillBothAction,
   [releaseDraftSpotifyPitchAction.id]: releaseDraftSpotifyPitchAction,
   [directoryDraftBioAction.id]: directoryDraftBioAction,
+  [releaseDraftBriefAction.id]: releaseDraftBriefAction,
 };
 
 export function getUrgansAction(

@@ -21,6 +21,7 @@ describe('RELEASE_MENU_ORDER', () => {
     expect([...RELEASE_MENU_ORDER]).toEqual([
       'timeline',
       'activities',
+      'brief',
       'chat',
       'calendar',
       'pitch',

@@ -386,6 +386,53 @@ export async function runDraftDirectoryBio(params: {
   }
 }
 
+export type BriefDraftResult =
+  | { ok: true; actionId: string; idea: string }
+  | { ok: false; status: number; error: string; planRequired?: boolean };
+
+/**
+ * Ask UrgAns to draft the Idea of a rollout's brief (URG-281). Nothing is
+ * written until the person keeps it (applyRunAction). `planRequired` comes back
+ * flagged so the caller can show the locked sheet.
+ */
+export async function runDraftBrief(params: { releaseId: string }): Promise<BriefDraftResult> {
+  const token = await getAccessToken();
+  if (!token) return { ok: false, status: 401, error: 'Your session expired. Sign in again.' };
+  try {
+    const response = await postJson('/api/urgans/actions', token, {
+      actionType: 'release.draft_brief',
+      objectId: params.releaseId,
+      input: {},
+    });
+    const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error:
+          response.status === 404 && typeof payload.error !== 'string'
+            ? 'UrgAns can’t draft this yet. Write it yourself for now.'
+            : typeof payload.error === 'string'
+              ? payload.error
+              : 'UrgAns could not write that just now. Try again.',
+        planRequired: payload.reason === 'plan_required',
+      };
+    }
+    const output = (payload.output || {}) as { idea?: unknown };
+    const idea = typeof output.idea === 'string' ? output.idea : '';
+    const actionId = typeof payload.actionId === 'string' ? payload.actionId : '';
+    if (!idea || !actionId) {
+      return { ok: false, status: 502, error: 'UrgAns could not write that just now. Try again.' };
+    }
+    return { ok: true, actionId, idea };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return { ok: false, status: 504, error: 'That took too long. Nothing was changed. Try again.' };
+    }
+    return { ok: false, status: 0, error: 'Could not reach UrgAns. Nothing was changed. Try again.' };
+  }
+}
+
 export type RunActionApplyResult =
   | { ok: true; result: unknown }
   | { ok: false; status: number; error: string };

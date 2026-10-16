@@ -72,6 +72,13 @@ const CHAT_COUNTERPARTS: Record<string, ChatCounterpart> = {
       'In conversation the same words can be written in the transcript and pasted, and the ' +
       'chat has no tool that writes the pitch fields.',
   },
+  'release.draft_brief': {
+    tools: null,
+    because:
+      'It drafts the Idea paragraph of a rollout brief (URG-281) from an empty brief, which is ' +
+      'a button job in the brief scene with Keep or Discard. The chat has no tool that reads or ' +
+      'writes the brief; in conversation the same words can be written in the transcript and pasted.',
+  },
 };
 
 /** The helper every chat tool logs through. Only recordChatActionRun exists

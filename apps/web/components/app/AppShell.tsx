@@ -252,6 +252,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/pitch/') ||
     // A DJ pack link, opened by someone with no account at all.
     pathname?.startsWith('/pack/') ||
+    // A rollout brief's view link (URG-281), opened by someone with no account.
+    pathname?.startsWith('/brief/') ||
     // The OAuth consent screen. Signed-in, but it is a decision about handing a
     // third-party client access — app chrome around it would invite the user to
     // wander off mid-authorization, and the dock floating over a consent prompt

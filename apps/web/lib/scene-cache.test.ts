@@ -294,6 +294,7 @@ const SCENE_FLAGS = [
   'NEXT_PUBLIC_FEATURE_PITCHING',
   'NEXT_PUBLIC_FEATURE_RELEASE_CHAT',
   'NEXT_PUBLIC_FEATURE_PITCH_KIT',
+  'NEXT_PUBLIC_FEATURE_RELEASE_BRIEF',
 ] as const;
 
 async function loadResolver(flagsOn: boolean) {
@@ -490,5 +491,26 @@ describe('the spend scene (2026-10-09)', () => {
     expect(mod.isCacheableScene('spend')).toBe(false);
     expect(mod.SCENE_PERSISTED.spend).toBe(false);
     expect([...mod.SCENE_PREFETCH_ORDER] as string[]).not.toContain('spend');
+  });
+});
+
+describe('the brief scene (URG-281, 2026-10-16)', () => {
+  it('opens when its flag is on and closes only on an explicit "false"', async () => {
+    expect((await loadResolver(true)).resolveActiveScene('brief')).toBe('brief');
+    expect((await loadResolver(false)).resolveActiveScene('brief')).toBeNull();
+  });
+
+  it('ships on: with the flag unset it still opens', async () => {
+    vi.resetModules();
+    vi.stubEnv('NEXT_PUBLIC_FEATURE_RELEASE_BRIEF', '');
+    const mod = await import('./scene-cache');
+    expect(mod.resolveActiveScene('brief')).toBe('brief');
+  });
+
+  it('fetches for itself, so it is never cached or persisted', async () => {
+    const mod = await loadResolver(true);
+    expect(mod.isCacheableScene('brief')).toBe(false);
+    expect(mod.SCENE_PERSISTED.brief).toBe(false);
+    expect([...mod.SCENE_PREFETCH_ORDER] as string[]).not.toContain('brief');
   });
 });

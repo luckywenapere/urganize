@@ -20,6 +20,7 @@ import { ReleaseChatSection } from '@/components/releases/ReleaseChatSection';
 import { PitchKitSection } from '@/components/releases/PitchKitSection';
 import { DistributionSection } from '@/components/releases/DistributionSection';
 import { SpendSection } from '@/components/releases/SpendSection';
+import { ReleaseBriefScene } from '@/components/releases/ReleaseBriefScene';
 import { SPEND_ADD_FIELD } from '@/lib/home/spend-card';
 import { calendarFontVariables } from '@/components/content-calendar/calendar-fonts';
 
@@ -63,6 +64,7 @@ const SECTION_SCENES = [
   'distribute',
   'spend',
   'promo',
+  'brief',
 ] as const;
 
 // No compile-time coverage check beside this list, deliberately. One was
@@ -95,6 +97,7 @@ const SCENE_LABELS: Record<SceneName, string> = {
   // The brief's own section title.
   spend: 'Spend',
   promo: 'Promo',
+  brief: 'Brief',
 };
 
 type ReleaseScenePanelProps = {
@@ -269,6 +272,9 @@ export function ReleaseScenePanel({
           onTaskAdded={onTaskRescheduled ?? (() => {})}
           onToast={onToast}
         />
+      ) : null}
+      {scene === 'brief' ? (
+        <ReleaseBriefScene key={release.id} releaseId={release.id} onToast={onToast} />
       ) : null}
       {scene === 'timeline' ? (
         <TimelineScene

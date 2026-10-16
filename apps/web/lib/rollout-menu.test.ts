@@ -11,6 +11,7 @@ import {
 const ALL_ON: RolloutMenuFlags = {
   timeline: true,
   releaseChat: true,
+  releaseBrief: true,
   contentCalendar: true,
   pitching: true,
   pitchKit: true,
@@ -57,6 +58,7 @@ const ALL_ON_ORDER = RELEASE_MENU_ORDER.filter((key) => !FOLDED_INTO_PITCH.inclu
 const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey[]> = {
   timeline: ['timeline', 'activities'],
   releaseChat: ['chat'],
+  releaseBrief: ['brief'],
   contentCalendar: ['calendar'],
   pitching: ['pitch'],
   pitchKit: [],
@@ -73,6 +75,7 @@ const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey[]> = {
 const SCENE_ROWS: ReleaseMenuKey[] = [
   'timeline',
   'activities',
+  'brief',
   'chat',
   'calendar',
   'pitch',
@@ -313,5 +316,23 @@ describe('purity', () => {
     expect(first).not.toBe(second);
     expect(first).toEqual(second);
     expect(JSON.stringify({ flags, MODALS })).toBe(snapshot);
+  });
+});
+
+describe('the Read the brief row (URG-281)', () => {
+  it('sits right after Work the plan and opens the brief scene', () => {
+    const entries = build();
+    const keys = keysOf(entries);
+    expect(keys.indexOf('brief')).toBe(keys.indexOf('activities') + 1);
+    const row = entries.find((entry) => entry.key === 'brief');
+    expect(row?.label).toBe('Read the brief');
+    expect(row?.target).toEqual({ kind: 'scene', scene: 'brief' });
+    expect(row?.isActive).toBe(false);
+    expect(build({ activeScene: 'brief' }).find((entry) => entry.key === 'brief')?.isActive).toBe(true);
+  });
+
+  it('still shows with the timeline switched off, at the top of the list', () => {
+    const keys = keysOf(build({ flags: { ...ALL_ON, timeline: false } }));
+    expect(keys[0]).toBe('brief');
   });
 });
