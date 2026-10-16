@@ -6,6 +6,9 @@ import { createPortal } from 'react-dom';
 import { ArrowUpRight, Loader2, X } from '@/components/icons';
 import { DialogPanel } from '@/components/shared/DialogPanel';
 import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
+import { useCreditBalance } from '@/components/urgans-actions/useCreditBalance';
+import { isCreditsEnabled } from '@/lib/credits/config';
+import { embeddedCostLine } from '@/lib/credits/copy';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { supabase } from '@/lib/supabase/client';
@@ -645,6 +648,7 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
   const [writing, setWriting] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [drafting, setDrafting] = useState(false);
+  const { balance, refresh: refreshBalance } = useCreditBalance();
   const [settling, setSettling] = useState(false);
   const [locked, setLocked] = useState<string | null>(null);
   const [sheet, setSheet] = useState<'history' | 'share' | null>(null);
@@ -731,6 +735,8 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
     setDrafting(true);
     const result = await runDraftBrief({ releaseId });
     setDrafting(false);
+    // The run has settled, so the balance has moved (a failed run costs nothing).
+    void refreshBalance();
     if (!result.ok) {
       if (result.planRequired) setLocked(result.error);
       else onToast(result.error, 'error');
@@ -894,6 +900,9 @@ export function ReleaseBriefScene({ releaseId, onToast }: Props) {
               BRIEF_COPY.draft
             )}
           </button>
+          {isCreditsEnabled() ? (
+            <p className="mt-2 text-center text-[13px] text-content-primary/55">{embeddedCostLine('release.draft_brief', balance)}</p>
+          ) : null}
           <button
             type="button"
             onClick={writeYourself}
