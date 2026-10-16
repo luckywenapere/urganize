@@ -23,8 +23,6 @@ import { TaskUIProvider } from '@/components/tasks/TaskUIProvider';
 import { NavigationTracker } from '@/components/app/NavigationTracker';
 import { PresenceBeacon } from '@/components/app/PresenceBeacon';
 import { ToastProvider } from '@/components/shared/ToastProvider';
-import { useReleaseStore } from '@/stores/useReleaseStore';
-import { usePlannerStore } from '@/stores/usePlannerStore';
 import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge';
 import { CardTrialGate } from '@/components/providers/CardTrialGate';
@@ -39,11 +37,21 @@ import { OfflineBanner } from '@/components/app/OfflineBanner';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
 import { CURATOR_HOME_PATH, HOME_PATH } from '@/lib/home-path';
-import { isSocialShareEnabled } from '@/lib/social-share';
-import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
+import { isSocialShareEnabled } from '@/lib/social-share-flag';
 import { isChappiEnabled, isUrgansRealtimeEnabled } from '@/lib/chappi/config';
 
 const TALK_ENABLED = isChappiEnabled() && isUrgansRealtimeEnabled();
+
+// The release and planner stores, and the first-rollout share offer, are only
+// touched after something happens (a create, a reconnect), never for first
+// paint. Imported on demand (URG-314 batch 6) so they, and the task and scene
+// stores the release store pulls in, stay out of every route's first load.
+// A chunk that fails to load is the same as a refresh that did not happen.
+function refreshCatalog(options?: { force?: boolean }) {
+  void import('@/stores/useReleaseStore')
+    .then(({ useReleaseStore }) => useReleaseStore.getState().loadCommandCenter(options))
+    .catch(() => undefined);
+}
 
 // The prefetch list moved to lib/prefetch-routes.ts (2026-08-31) so it can be
 // flag- and account-aware and unit-tested. It used to be three hardcoded
@@ -397,7 +405,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         .then(({ flushOfflineQueue }) => flushOfflineQueue())
         .catch(() => undefined)
         .finally(() => {
-          void useReleaseStore.getState().loadCommandCenter({ force: true });
+          refreshCatalog({ force: true });
         });
     };
     syncNow();
@@ -622,41 +630,43 @@ export function AppShell({ children }: { children: ReactNode }) {
           // close and refresh the release store so the new release shows up.
           // loadCommandCenter refreshes quietly when data already exists.
           closeCreateRelease();
-          void useReleaseStore.getState().loadCommandCenter();
+          refreshCatalog();
           // Share to socials (2026-09-23): a first rollout's share offer is
           // saved for the next visit, and the rest runs straight away. See
-          // withFirstShareOffer.
-          withFirstShareOffer({
-            releaseId,
-            firstRelease: result?.firstRelease,
-            then: () => {
-              // One exception to "stay put": a rollout-plan creation continues
-              // straight into the planner intake (mounted right below), the
-              // same settled call the workspace's create flow makes — planning
-              // is the whole point of having chosen a rollout plan. No
-              // navigation here: dismissing the intake leaves the user where
-              // they were, and submitting it navigates to the plan scene
-              // itself. The type picked in the modal rides along so the intake
-              // doesn't ask it again. Closing the intake early discards the
-              // rollout made just now while it is still an untouched shell,
-              // exactly as the Home/workspace create paths do (v1.92.1).
-              if (PLANNER_ENABLED && result?.plannerPending) {
+          // withFirstShareOffer; the same two steps, with the helper loaded on
+          // demand (URG-314 batch 6). Saving the offer never throws and
+          // nothing below waits on it.
+          void import('@/components/share/withFirstShareOffer')
+            .then(({ deferFirstShareOffer }) =>
+              deferFirstShareOffer(releaseId, result?.firstRelease)
+            )
+            .catch(() => undefined);
+          // One exception to "stay put": a rollout-plan creation continues
+          // straight into the planner intake (mounted right below), the
+          // same settled call the workspace's create flow makes — planning
+          // is the whole point of having chosen a rollout plan. No
+          // navigation here: dismissing the intake leaves the user where
+          // they were, and submitting it navigates to the plan scene
+          // itself. The type picked in the modal rides along so the intake
+          // doesn't ask it again. Closing the intake early discards the
+          // rollout made just now while it is still an untouched shell,
+          // exactly as the Home/workspace create paths do (v1.92.1).
+          if (PLANNER_ENABLED && result?.plannerPending) {
+            const { savedTitle, releaseType } = result;
+            void import('@/stores/usePlannerStore')
+              .then(({ usePlannerStore }) =>
                 usePlannerStore.getState().openIntake(
-                  buildCreatedRolloutIntake({
-                    releaseId,
-                    savedTitle: result.savedTitle,
-                    releaseType: result.releaseType,
-                  })
-                );
-              } else if (TYPE_FIRST_CREATE_ENABLED) {
-                // TYPE-FIRST CREATE (2026-09-01): the one create screen was the whole
-                // form, so the release view — where name and date get
-                // prompted — is the destination, wherever the modal was opened
-                // from. Flag off, the stay-put behavior above is unchanged.
-                router.push(`/dashboard?release=${releaseId}`);
-              }
-            },
-          })();
+                  buildCreatedRolloutIntake({ releaseId, savedTitle, releaseType })
+                )
+              )
+              .catch(() => undefined);
+          } else if (TYPE_FIRST_CREATE_ENABLED) {
+            // TYPE-FIRST CREATE (2026-09-01): the one create screen was the whole
+            // form, so the release view — where name and date get
+            // prompted — is the destination, wherever the modal was opened
+            // from. Flag off, the stay-put behavior above is unchanged.
+            router.push(`/dashboard?release=${releaseId}`);
+          }
         }}
       />
       {PLANNER_ENABLED && isAuthenticated && !isAuthLoading && showWorkspaceChrome ? (

@@ -1,6 +1,7 @@
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import type { ShareAnswers } from '@/lib/social-share';
 import { decideDeferredShareOffer } from '@/lib/first-session';
+import { DEFERRED_FIRST_SHARE_KEY } from '@/lib/first-run-storage';
 
 /**
  * When the share sheet opens by itself, and what it remembers between opens.
@@ -104,7 +105,9 @@ export function markFirstShareOffered(userId: string | null | undefined): void {
 
 // ── Deferred to the next visit, per person ─────────────────────────────────
 
-const DEFERRED_KEY = 'urganize.share.deferred-first';
+// The key and clearDeferredFirstShare live in lib/first-run-storage.ts so
+// sign-out can clear them without loading this module (URG-314 batch 6).
+const DEFERRED_KEY = DEFERRED_FIRST_SHARE_KEY;
 const DEFERRED_TAB_KEY = 'urganize.share.deferred-first.tab';
 
 /**
@@ -212,15 +215,7 @@ export function readDeferredFirstShareTabId(): string | null {
   }
 }
 
-/** The offer was made, or is moot (sign-out). Best effort. */
-export function clearDeferredFirstShare(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.removeItem(DEFERRED_KEY);
-  } catch {
-    // Nothing to clear in a store that cannot be written.
-  }
-}
+export { clearDeferredFirstShare } from '@/lib/first-run-storage';
 
 // ── Remembered answers, per person and rollout ──────────────────────────────
 

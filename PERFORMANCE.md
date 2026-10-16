@@ -13,13 +13,13 @@ total includes Next's legacy polyfills chunk (~39 KB gzip), which carries
 `noModule` and is skipped by every modern browser; `measure.py` reports both
 ("js gz" and "modern gz"). The budget is held against the full figure.
 
-| What | Budget | 2026-10-15 before | after v1.147.6 | after v1.147.8 | after v1.153.1 |
-| --- | --- | --- | --- | --- | --- |
-| Shared first-load JS, gzip (`/auth`, `/`, `/locked`) | **< 250 KB** | 400-414 KB | 350-362 KB | 321-333 KB (modern browsers 283-295 KB) | 307-318 KB (modern 268-279 KB) |
-| `/dashboard` first-load JS, gzip | < 350 KB | 524 KB | 444 KB | 416 KB | 417 KB (modern 378 KB) |
-| Other `/dashboard/*` first-load JS, gzip | < 300 KB | 419-475 KB | 372-438 KB | 343-409 KB | 331-402 KB (modern 293-363 KB) |
-| Lighthouse mobile (slow 4G, simulated), `/auth` | >= 80 | 47 (LCP 6.1 s, TBT 2.57 s) | 49-65 (LCP 3.4-5.2 s, TBT 1.8-1.9 s) | 86-93 (LCP 1.3-1.5 s, TBT 320-560 ms) | see URG-314 |
-| Fonts preloaded on `/auth` | 2 | 2 | 2 | 2 | 2 |
+| What | Budget | 2026-10-15 before | after v1.147.6 | after v1.147.8 | after v1.153.1 | after v1.154.6 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Shared first-load JS, gzip (`/auth`, `/`, `/locked`) | **< 250 KB** | 400-414 KB | 350-362 KB | 321-333 KB (modern browsers 283-295 KB) | 307-318 KB (modern 268-279 KB) | 292-303 KB (modern 254-265 KB) |
+| `/dashboard` first-load JS, gzip | < 350 KB | 524 KB | 444 KB | 416 KB | 417 KB (modern 378 KB) | 424 KB (modern 386 KB) |
+| Other `/dashboard/*` first-load JS, gzip | < 300 KB | 419-475 KB | 372-438 KB | 343-409 KB | 331-402 KB (modern 293-363 KB) | 327-406 KB (modern 289-368 KB) |
+| Lighthouse mobile (slow 4G, simulated), `/auth` | >= 80 | 47 (LCP 6.1 s, TBT 2.57 s) | 49-65 (LCP 3.4-5.2 s, TBT 1.8-1.9 s) | 86-93 (LCP 1.3-1.5 s, TBT 320-560 ms) | see URG-314 | see URG-314 |
+| Fonts preloaded on `/auth` | 2 | 2 | 2 | 2 | 2 | 2 |
 
 We are still over budget. The table is the target, not a description of today.
 A change that grows shared first-load JS by more than 5 KB gzip needs a reason
@@ -32,6 +32,8 @@ mounts `TaskUIProvider` and imports `lib/auth-store`. Everything those import
 statically ships to every route, `/auth` included. Before adding a static
 import anywhere on that chain, ask whether the user needs it before first
 paint. If not, use `next/dynamic` or a plain `import()`.
+`lib/shared-chain-guard.test.ts` fails if the stores and helpers taken off
+the chain in v1.154.x (batch 6) come back as static imports.
 
 **Keep heavy data off the auth-store chain.** The release playbooks
 (`lib/release-templates/{single,ep,album}.ts`, ~90 KB minified) used to reach
@@ -128,6 +130,44 @@ unlike prod. Not fixable without a boundary above the layout, so the move was
 reverted. Attempt kept outside the repo. Revisit only if the root
 `loading.tsx` goes or the frame stops being a separate client reference.
 
+**Task UI engine on demand** (batch 6, `components/tasks/TaskUIProvider.tsx` +
+`TaskUIEngine.tsx`). `TaskUIProvider` is now only the context (`openTask`,
+`openQuickCreate`, `closeTask`, `isTaskOpen`). Everything behind it (detail
+pop-up, quick create, completion sheets, undo toast, the C shortcut, and the
+task store and offline queue they use) is `TaskUIEngine`, a `next/dynamic`
+chunk (`ssr:false`) mounted from an effect: on `/dashboard*` and `/settings`
+right after hydration, anywhere else on the first `useTaskUI()` call or when
+the task store asks for a completion surface (`lib/task-ui-demand.ts`, a
+module-scope subscription in `stores/useTaskStore.ts`). Calls made before the
+engine registers are queued and replayed in order. The engine rendered
+nothing on the server before either, so server HTML is unchanged (body markup
+byte-identical to main on `/dashboard`, `/dashboard/tasks`,
+`/dashboard/home`, `/settings`, `/auth`, `/`, `/onboarding`).
+
+**Other batch 6 moves off the shared chain.** AppShell loads
+`useReleaseStore` (which pulls the task and scene stores), `usePlannerStore`
+and the first-rollout share offer with `import()` when a create or a
+reconnect needs them. auth-store reads `isHardPaywallEnabled` from
+`lib/hard-paywall-flag.ts` and clears the first-run records through
+`lib/first-run-storage.ts` (keys and clear functions moved there; the owners
+re-export them), so `team-billing`, `first-session`, `onboarding-readiness`
+and `social-share-offer` left `/auth`. AppShell reads the share flag from
+`lib/social-share-flag.ts`. Dictation runs through `useLazyVoiceInput`
+(`components/chappi/useLazyVoiceInput.tsx` + `VoiceInputDriver.tsx`): the
+real `useVoiceInput` loads only when `NEXT_PUBLIC_FEATURE_URGANS_VOICE` is on,
+and the Talk button and call store only when Talk is on. Both are off since
+the Oct 16 feature cuts, so neither loads. `NextShowCard` needed nothing: it
+is only reachable from `HomeBlocks`, which no route renders since Home v4.
+
+Trade-off: the task, release and scene stores now ship in the dashboard
+routes' own chunks, and Turbopack copies them into each client entry that
+needs them (the page, the SSR'd `CommandBar` chunk, the UrgAns launcher), so
+`/dashboard`, `/dashboard/home` and `/dashboard/urgans` grew ~3-4 KB gzip
+while every other route shrank ~10-13 KB. A shared parent for them (a
+dashboard layout) would remove the copies, but a client reference in a
+layout is what broke streaming in the chrome-move attempts, so it was not
+tried.
+
 ## Known failing tests on main (2026-10-16)
 
 `vitest run` in `apps/web` has 7 failures in 6 files that predate URG-314
@@ -180,17 +220,28 @@ Live in production (`NEXT_PUBLIC_FEATURE_OFFLINE=true`). Since v1.147.7:
   (`WKAppBoundDomains` listing app.urganize.app) and a new native build before
   WKWebView will run the service worker on iOS. Android WebView already
   supports it.
-- **Remaining budget (2026-10-16, after v1.153.1).** About 180 KB gzip of
+- **Remaining budget (2026-10-16, after v1.154.6).** About 180 KB gzip of
   every route is a fixed floor: `react-dom`, the Next router/runtime and
-  `@supabase/auth-js`. Shared first-load is 307-318 KB, so the 250 KB budget
-  needs ~60 KB more out of app code. Next cuts, in order:
-  1. `TaskUIProvider` and the task stores off the root layout (mount from the
-     workspace routes or load on demand): ~25 KB minimum.
-  2. Lazy social-share (`withFirstShareOffer`, share sheet wiring) and the
-     team-billing helpers auth-store imports: ~10 KB.
-  3. Split `components/icons/house.tsx` so the shared chain stops carrying
-     every icon. Pending coordination: the side menu icon work that shipped
-     2026-10-16 lives there.
-  4. Voice imports on `HomeAskBar` / `ChappiConversation` and `NextShowCard`
-     once Feature Cuts has hidden those features (voice and Shows are off as
-     of v1.149.0, so the code can go behind `import()` or be removed).
+  `@supabase/auth-js`. Shared first-load is 292-303 KB, so the 250 KB budget
+  needs ~45-55 KB more out of app code. What is left on `/auth`, largest
+  first (minified, from source maps): `auth-store` 12.6 KB,
+  `components/icons/house.tsx` 11.9 KB, `stores/useChappiHistoryStore` 11.3 KB
+  (+ `lib/chappi/conversation-history` 3.8 KB, through `ChappiHistoryBridge`),
+  `BottomBar` 9.1 KB, `NotificationsBell` 8.3 KB, `Sidebar` 6.3 KB,
+  `WorkspaceMenu` 6.1 KB, `help-copy` 4.8 KB, `lib/tasks` 4.4 KB (bell and
+  shortcuts). Next cuts, in order:
+  1. Split `components/icons/house.tsx` so the shared chain stops carrying
+     every icon (~4 KB gzip). Pending coordination: the side-menu project owns
+     that file.
+  2. Load `ChappiHistoryBridge` on demand (~5 KB gzip). Needs care: it starts
+     from the persisted identity so a recent chat is restored before the
+     UrgAns page leaves its skeleton; a late chunk could flash the greeting
+     first. Prefetch the chunk at shell mount, or start it only on chat
+     surfaces, and check `/dashboard/urgans` and desktop Home.
+  3. `NotificationsBell`: keep the trigger, count and realtime in the shell,
+     load the dropdown panel (rows, digests, `lib/tasks` messages) on first
+     open (~3 KB gzip).
+  4. The workspace chrome itself (TopNav, Sidebar, BottomBar, WorkspaceMenu,
+     PageBar) is ~10 KB gzip that `/auth` never renders. Two attempts to
+     mount it from route layouts failed (see above); it needs the root
+     `loading.tsx` rethought first.

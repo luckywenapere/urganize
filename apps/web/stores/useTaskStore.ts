@@ -1,6 +1,7 @@
 'use client';
 
 import { registerSignOutReset } from '@/lib/sign-out-resets';
+import { requestTaskUiEngine } from '@/lib/task-ui-demand';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import {
@@ -775,3 +776,10 @@ export function resetTaskStore(): void {
 
 // Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
 registerSignOutReset('tasks', resetTaskStore);
+// The undo toast and the two completion sheets live in the lazily loaded task
+// UI engine. On a page that has not loaded it (anything outside /dashboard and
+// /settings), ask TaskUIProvider for it the moment a completion wants one of
+// them; see lib/task-ui-demand.ts.
+useTaskStore.subscribe((state) => {
+  if (state.completionToast || state.outcomePrompt || state.coverArtPrompt) requestTaskUiEngine();
+});

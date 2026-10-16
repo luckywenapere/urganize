@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import {
   GLIDE_MS,
   LEAVING_CLASS,
@@ -17,15 +18,20 @@ import { SEND_ARROW_CLASS, SEND_BUTTON_DOCK_CLASS } from '@/components/chappi/se
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray } from '@/components/chappi/ChappiAttachments';
 import { useAttachments } from '@/components/chappi/useAttachments';
-import { useVoiceInput } from '@/components/chappi/useVoiceInput';
-import { TALK_ENABLED, TalkButton } from '@/components/chappi/voice/TalkButton';
-import { useVoiceCallStore } from '@/stores/useVoiceCallStore';
-import { isUrgansVoiceEnabled } from '@/lib/chappi/config';
+import { useLazyVoiceInput } from '@/components/chappi/useLazyVoiceInput';
+import { isChappiEnabled, isUrgansRealtimeEnabled, isUrgansVoiceEnabled } from '@/lib/chappi/config';
 import { mergeTranscript } from '@/lib/urgans-voice';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 
 const VOICE_ENABLED = isUrgansVoiceEnabled();
+// Voice loads on demand (URG-314 batch 6): dictation through useLazyVoiceInput,
+// the Talk button and the call store only when Talk is switched on. Both are
+// off since the Oct 16 feature cuts, so none of that code is fetched.
+const TalkButton = dynamic(() =>
+  import('@/components/chappi/voice/TalkButton').then((m) => m.TalkButton)
+);
+const TALK_ENABLED = isChappiEnabled() && isUrgansRealtimeEnabled();
 
 // True only in the browser after hydration, false on the server and in the
 // hydration render, so the portal never makes the two disagree.
@@ -122,7 +128,7 @@ export function HomeAskBar() {
   const scopedRelease = scopedReleaseId
     ? releases.find((release) => release.id === scopedReleaseId) ?? null
     : null;
-  const voice = useVoiceInput({
+  const [voice, voiceDriver] = useLazyVoiceInput({
     enabled: VOICE_ENABLED,
     onTranscript: (spoken) => setInput(mergeTranscript(useChappiStore.getState().input, spoken)),
     getHints: () =>
@@ -171,6 +177,7 @@ export function HomeAskBar() {
 
   return createPortal(
     <div ref={dockRef} className="home-dock fixed inset-x-3 z-40 lg:hidden">
+      {voiceDriver}
       <form
         onSubmit={handleSubmit}
         style={
@@ -227,7 +234,15 @@ export function HomeAskBar() {
               )}
             </button>
           ) : null}
-          <TalkButton size="lg" disabled={isRecording || isTranscribing} onClick={() => useVoiceCallStore.getState().openCall(null)} />
+          {TALK_ENABLED ? (
+            <TalkButton
+              size="lg"
+              disabled={isRecording || isTranscribing}
+              onClick={() =>
+                void import('@/stores/useVoiceCallStore').then((m) => m.useVoiceCallStore.getState().openCall(null))
+              }
+            />
+          ) : null}
           <button
             type="submit"
             aria-label="Send to UrgAns"

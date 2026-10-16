@@ -36,8 +36,10 @@
 import { normalizeReadyToday } from './onboarding-readiness';
 import type { ReadyItem } from './ready-today';
 
-export const FIRST_SESSION_KEY = 'urganize.first-session';
-export const FIRST_SESSION_TAB_KEY = 'urganize.first-session.tab';
+// The keys and clearFirstSession live in lib/first-run-storage.ts so sign-out
+// can clear them without loading this module (URG-314 batch 6).
+import { FIRST_SESSION_KEY, FIRST_SESSION_TAB_KEY } from './first-run-storage';
+export { FIRST_SESSION_KEY, FIRST_SESSION_TAB_KEY, clearFirstSession } from './first-run-storage';
 
 /** A tab left open overnight is not still "the first session". */
 export const FIRST_SESSION_MAX_MS = 12 * 60 * 60 * 1000;
@@ -166,17 +168,6 @@ export function clearDeferredShare(): void {
     window.localStorage.setItem(FIRST_SESSION_KEY, JSON.stringify({ ...record, shareReleaseId: null }));
   } catch {
     // Nothing to clear in a store that cannot be written.
-  }
-}
-
-/** Sign-out: another person may use this browser next. */
-export function clearFirstSession(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.removeItem(FIRST_SESSION_KEY);
-    window.sessionStorage.removeItem(FIRST_SESSION_TAB_KEY);
-  } catch {
-    // Best effort.
   }
 }
 

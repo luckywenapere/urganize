@@ -13,9 +13,10 @@ import {
 
 export type VoiceState = 'idle' | 'requesting' | 'recording' | 'transcribing';
 
-type Hints = { releaseTitle?: string | null; artistName?: string | null };
+export type VoiceInputHints = { releaseTitle?: string | null; artistName?: string | null };
+type Hints = VoiceInputHints;
 
-type UseVoiceInput = {
+export type VoiceInputValue = {
   /** false when this browser cannot record — the mic button is not rendered. */
   supported: boolean;
   state: VoiceState;
@@ -44,7 +45,7 @@ export function useVoiceInput(options: {
   enabled: boolean;
   onTranscript: (text: string) => void;
   getHints?: () => Hints;
-}): UseVoiceInput {
+}): VoiceInputValue {
   const { enabled, onTranscript, getHints } = options;
 
   // Feature detection runs once. If any piece is missing, the button is hidden —

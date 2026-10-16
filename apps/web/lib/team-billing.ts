@@ -59,11 +59,8 @@ export const TEAM_TRIAL_EXPIRY_GRACE_MS = 15 * 60 * 1000;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Feature switch. Function form (the isCardTrialEnabled / isEpkFeatureEnabled
- * precedent) so it works inlined into a client bundle and read at request time
- * on the server, and so tests can stub the env. */
-export const isHardPaywallEnabled = (): boolean =>
-  process.env.NEXT_PUBLIC_FEATURE_HARD_PAYWALL === 'true';
+/** Feature switch; lives in lib/hard-paywall-flag.ts (see there). */
+export { isHardPaywallEnabled } from '@/lib/hard-paywall-flag';
 
 /** The billing columns added to `workspaces` by
  * 20260821120000_team_trial_hard_paywall.sql, camelCased at the read boundary. */

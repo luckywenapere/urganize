@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
@@ -69,13 +70,11 @@ import { TASKS_CHANGED_EVENT, useTaskUI } from '@/components/tasks/TaskUIProvide
 import { matchTasksByTitle, parseTaskStatusCommand, type TaskStatusCommand } from '@/lib/chappi/task-status-command';
 import { getTaskStatusLabel } from '@/lib/tasks';
 import type { Task } from '@/types/tasks';
-import { useVoiceInput } from '@/components/chappi/useVoiceInput';
-import { TALK_ENABLED, TalkButton } from '@/components/chappi/voice/TalkButton';
-import { useVoiceCallStore } from '@/stores/useVoiceCallStore';
+import { useLazyVoiceInput } from '@/components/chappi/useLazyVoiceInput';
 import { useAttachments } from '@/components/chappi/useAttachments';
 import { ChappiAttachMenu } from '@/components/chappi/ChappiAttachMenu';
 import { ChappiAttachmentTray, ChappiMessageAttachments } from '@/components/chappi/ChappiAttachments';
-import { isUrgansVoiceEnabled } from '@/lib/chappi/config';
+import { isChappiEnabled, isUrgansRealtimeEnabled, isUrgansVoiceEnabled } from '@/lib/chappi/config';
 import {
   attachmentOnlyContent,
   isAttachmentOnlyContent,
@@ -181,6 +180,13 @@ async function getAccessToken(): Promise<string> {
 // other flag, so Next inlines it.
 const HISTORY_ENABLED = isChappiHistoryEnabled();
 const VOICE_ENABLED = isUrgansVoiceEnabled();
+// Voice loads on demand (URG-314 batch 6): dictation through useLazyVoiceInput,
+// the Talk button and the call store only when Talk is switched on. Both are
+// off since the Oct 16 feature cuts, so none of that code is fetched.
+const TalkButton = dynamic(() =>
+  import('@/components/chappi/voice/TalkButton').then((m) => m.TalkButton)
+);
+const TALK_ENABLED = isChappiEnabled() && isUrgansRealtimeEnabled();
 // Said when a message with a picture or file reaches the fallback (no model, or
 // the monthly limit): the typed-command router cannot read either.
 const ATTACHMENTS_UNAVAILABLE_NOTE =
@@ -367,7 +373,7 @@ export function ChappiConversation({
   // into whatever is typed — never replacing it, never sending. Reading the
   // input from getState avoids a stale closure at transcribe time (a clip can
   // land many seconds after recording started).
-  const voice = useVoiceInput({
+  const [voice, voiceDriver] = useLazyVoiceInput({
     enabled: VOICE_ENABLED,
     onTranscript: (text) => {
       setInput(mergeTranscript(useChappiStore.getState().input, text));
@@ -1376,6 +1382,7 @@ export function ChappiConversation({
       onSubmit={handleSubmit}
       className="w-full"
     >
+      {voiceDriver}
       <ChappiAttachmentTray
         attachments={attach.attachments}
         pending={attach.pending}
@@ -1452,14 +1459,17 @@ export function ChappiConversation({
             )}
           </button>
         ) : null}
-        <TalkButton
-          disabled={isThinking || isRecording || isTranscribing}
-          onClick={() =>
-            useVoiceCallStore
-              .getState()
-              .openCall(scopedRelease ? { id: scopedRelease.id, title: scopedRelease.title, daysToRelease: daysUntil(scopedRelease.releaseDate) } : null)
-          }
-        />
+        {TALK_ENABLED ? (
+          <TalkButton
+            disabled={isThinking || isRecording || isTranscribing}
+            onClick={() => {
+              const scope = scopedRelease
+                ? { id: scopedRelease.id, title: scopedRelease.title, daysToRelease: daysUntil(scopedRelease.releaseDate) }
+                : null;
+              void import('@/stores/useVoiceCallStore').then((m) => m.useVoiceCallStore.getState().openCall(scope));
+            }}
+          />
+        ) : null}
         <button
           type="submit"
           aria-label="Send"

@@ -7,7 +7,7 @@ import { errorMessage } from "@/lib/errors";
 import { installAccessRedirect } from './access-redirect';
 import { isAllowlistedEmail } from './paywall-allowlist';
 import { isCardTrialEnabled, resolveCardTrialDestination } from './trial-card';
-import { isHardPaywallEnabled } from './team-billing';
+import { isHardPaywallEnabled } from './hard-paywall-flag';
 import { isNativePlatform } from './platform';
 import { request as nativeRequest } from './native-bridge';
 import { oauthRedirectToPath } from '@urganize/native-bridge';
@@ -19,8 +19,7 @@ import { SCENE_CACHE_KEY } from '@/lib/scene-cache';
 import { clearChatCache } from '@/lib/chappi/conversation-cache';
 import { resetSceneMemory } from '@/lib/scene-memory';
 import { resetCatalogIntent } from '@/lib/catalog-intent';
-import { clearDeferredFirstShare } from '@/lib/social-share-offer';
-import { clearFirstSession } from '@/lib/first-session';
+import { clearDeferredFirstShare, clearFirstSession } from '@/lib/first-run-storage';
 import { clearLoginCookie, setLoginCookie } from '@/lib/login-cookie';
 import {
   classifyAuthFailure,

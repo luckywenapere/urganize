@@ -30,8 +30,7 @@ import { isDefaultReleaseTitle, type DbReleaseType } from '@/types/releases';
  * where a person's own voice belongs.
  */
 
-export const isSocialShareEnabled = (): boolean =>
-  process.env.NEXT_PUBLIC_FEATURE_SOCIAL_SHARE === 'true';
+export { isSocialShareEnabled } from '@/lib/social-share-flag';
 
 export type ShareVoice = 'artist' | 'team';
 export type ShareDateMode = 'show' | 'secret';
