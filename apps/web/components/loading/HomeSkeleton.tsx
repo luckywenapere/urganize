@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownResumableChat } from './known-counts';
 import { ChappiConversationSkeleton } from './ChappiConversationSkeleton';
-import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
+import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 const HISTORY_ENABLED = isChappiHistoryEnabled();

@@ -65,6 +65,7 @@ import {
 } from '@/lib/chappi/conversation-history';
 import { homeChatIdFor, isHomeChatId } from '@/lib/chappi/home-chat';
 import { clearChatCache, readChatCache, writeChatCache } from '@/lib/chappi/conversation-cache';
+import { takeWarmedHistory } from '@/lib/chappi/history-warm';
 
 const HISTORY_ENABLED = isChappiHistoryEnabled();
 
@@ -486,10 +487,13 @@ async function fetchChat(id: string): Promise<ChatDetail | null> {
   const token = await getAccessToken();
   if (!token || owner !== sessionUserId) return null;
   try {
-    const response = await fetch(`/api/urgans/conversations/${id}`, {
-      headers: { Authorization: `Bearer ${token}`, ...BACKGROUND_HEADERS },
-      cache: 'no-store',
-    });
+    const warmed = owner && id === homeChatIdFor(owner) ? await takeWarmedHistory(owner, 'home') : null;
+    const response =
+      warmed ??
+      (await fetch(`/api/urgans/conversations/${id}`, {
+        headers: { Authorization: `Bearer ${token}`, ...BACKGROUND_HEADERS },
+        cache: 'no-store',
+      }));
     if (owner !== sessionUserId) return null;
     if (response.status === 404) {
       removeSummary(id);
@@ -853,10 +857,13 @@ export const useChappiHistoryStore = create<ChappiHistoryState>((set, get) => ({
         return;
       }
       try {
-        const response = await fetch('/api/urgans/conversations', {
-          headers: { Authorization: `Bearer ${token}`, ...BACKGROUND_HEADERS },
-          cache: 'no-store',
-        });
+        const warmed = owner ? await takeWarmedHistory(owner, 'list') : null;
+        const response =
+          warmed ??
+          (await fetch('/api/urgans/conversations', {
+            headers: { Authorization: `Bearer ${token}`, ...BACKGROUND_HEADERS },
+            cache: 'no-store',
+          }));
         if (owner !== sessionUserId) return;
         if (!response.ok) {
           set({ listStatus: fallbackStatus() });

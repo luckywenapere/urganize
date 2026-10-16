@@ -9,8 +9,10 @@ import {
 } from '@/stores/useChappiHistoryStore';
 
 /**
- * Starts UrgAns chat history for the signed-in user. Mounted app-wide by
- * AppShell only while NEXT_PUBLIC_FEATURE_URGANS_HISTORY is on; renders
+ * Starts UrgAns chat history for the signed-in user. Mounted by the workspace
+ * layout (WorkspaceFrame, URG-314) only while NEXT_PUBLIC_FEATURE_URGANS_HISTORY
+ * is on, so signed-out routes never load the store; AppShell warms the list and
+ * Home chat requests right after sign-in (lib/chappi/history-warm.ts). Renders
  * nothing. Curators never get it — they have no UrgAns.
  *
  * Starts from the PERSISTED identity instead of waiting for auth to resolve,

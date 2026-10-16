@@ -105,4 +105,27 @@ describe('the shared first-load chain stays light', () => {
     expect(frame).toContain('<WorkspacePageErrorBoundary>');
     expect(frame).toContain('<Suspense fallback={<RootShellSkeleton />}>{children}</Suspense>');
   });
+
+  // URG-314 option C (Oyin approved Oct 16, 2026): the chat history store
+  // starts in the workspace layout; AppShell only warms the two history
+  // requests after sign-in, and reads the flag from lib/chappi/history-flag
+  // (importing conversation-history for it put that whole module back on
+  // /auth, ~1.3 KB gzip, measured).
+  it('AppShell warms chat history without the history store', () => {
+    const imports = staticImports('components/app/AppShell.tsx');
+    for (const heavy of [
+      '@/components/chappi/ChappiHistoryBridge',
+      '@/stores/useChappiHistoryStore',
+      '@/lib/chappi/conversation-history',
+    ]) {
+      expect(imports).not.toContain(heavy);
+    }
+    expect(imports).toContain('@/lib/chappi/history-warm');
+    expect(staticImports('lib/chappi/history-warm.ts')).not.toContain('@/stores/useChappiHistoryStore');
+    expect(staticImports('components/app/WorkspaceFrame.tsx')).toContain('@/components/chappi/ChappiHistoryBridge');
+    // auth-store wipes the browser copy on sign-out through the key-only module.
+    const authImports = staticImports('lib/auth-store.ts');
+    expect(authImports).not.toContain('@/lib/chappi/conversation-cache');
+    expect(authImports).toContain('@/lib/chappi/conversation-cache-clear');
+  });
 });

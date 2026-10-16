@@ -19,6 +19,8 @@ import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { HOME_PATH } from '@/lib/home-path';
 import { RootShellSkeleton } from '@/components/loading/RootShellSkeleton';
 import { WorkspacePageErrorBoundary } from '@/components/app/WorkspacePageErrorBoundary';
+import { ChappiHistoryBridge } from '@/components/chappi/ChappiHistoryBridge';
+import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 // One shared copy of the workspace stores (URG-314 batch 7). Every workspace
 // page, its loading fallback, the search bar and the UrgAns launcher import
 // these; each is its own client chunk, and without a copy here each chunk
@@ -62,6 +64,7 @@ const FloatingUrgAns = dynamic(() =>
 
 // UrgAns is a floating button and drawer on every workspace page.
 const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
+const CHAT_HISTORY_ENABLED = isChappiHistoryEnabled();
 
 export function WorkspaceFrame({ children }: { children: ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -94,6 +97,7 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
 
   return (
     <>
+      {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
       {showWorkspaceChrome ? (
         // PAGE WIDTH SOURCE OF TRUTH.
         // The inner mx-auto max-w-[1440px] wrapper below is the ONLY place

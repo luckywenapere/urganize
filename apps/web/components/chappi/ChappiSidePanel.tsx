@@ -6,7 +6,7 @@ import { History, Maximize2, MessageCircle, RotateCcw, X } from '@/components/ic
 import { useChappiStore } from '@/stores/useChappiStore';
 import { useHomeChatStore } from '@/stores/useHomeChatStore';
 import { HOME_PATH } from '@/lib/home-path';
-import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
+import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 import { ChappiConversation } from './ChappiConversation';
 import { ChappiHistoryList } from './ChappiHistoryList';
 

@@ -8,7 +8,7 @@ import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiConversationSkeleton } from '@/components/loading/ChappiConversationSkeleton';
-import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
+import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 import { COMPOSER_FOCUS_EVENT } from '@/lib/composer-focus';
 import { useChappiStore } from '@/stores/useChappiStore';
 import { showHomeChat, useChappiHistoryStore } from '@/stores/useChappiHistoryStore';

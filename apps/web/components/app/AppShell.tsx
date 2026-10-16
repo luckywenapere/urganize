@@ -21,8 +21,8 @@ import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
 import { NativePushBridge } from '@/components/providers/NativePushBridge';
 import { NativeAppearanceBridge } from '@/components/providers/NativeAppearanceBridge';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
-import { ChappiHistoryBridge } from '@/components/chappi/ChappiHistoryBridge';
-import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
+import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
+import { warmChappiHistory } from '@/lib/chappi/history-warm';
 import { precacheRoutesOffline, registerAppServiceWorker } from '@/lib/offline/register';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
@@ -148,8 +148,10 @@ const ShareSheet = dynamic(
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
 // Saved UrgAns chats (NEXT_PUBLIC_FEATURE_URGANS_HISTORY, meaningful only with
-// the assistant flag). Gates the bridge that starts saving; with it off the
-// conversation stays exactly as transient as it always was.
+// the assistant flag). The bridge that saves and restores chats lives in the
+// workspace layout (WorkspaceFrame); here it only gates warming the two
+// history requests right after sign-in (lib/chappi/history-warm.ts), so Home
+// opens on the last chat without loading the history store on /auth.
 const CHAT_HISTORY_ENABLED = isChappiHistoryEnabled();
 
 // In-app issue reporting. Gates the dialog here and the two entry points that
@@ -188,6 +190,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAuthLoading = useAuthStore((state) => state.isLoading);
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
+  const historyWarmUserId = useAuthStore((state) =>
+    CHAT_HISTORY_ENABLED && state.isAuthenticated && state.user && state.user.role !== 'curator' ? state.user.id : null
+  );
+  useEffect(() => {
+    if (historyWarmUserId) warmChappiHistory(historyWarmUserId);
+  }, [historyWarmUserId]);
   const router = useRouter();
   // Lifted here so the universal topbar "New rollout" button opens the same
   // creation modal the page-level buttons use, from any dashboard page,
@@ -425,9 +433,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     {/* Publishes on-screen-keyboard state to CSS — see globals.css's
         keyboard-aware assistant column block. Renders nothing. */}
     <KeyboardViewportBridge />
-    {/* Saves UrgAns chats to the browser and the server, and restores a recent
-        one. Renders nothing — see stores/useChappiHistoryStore.ts. */}
-    {CHAT_HISTORY_ENABLED ? <ChappiHistoryBridge /> : null}
     {/* Records every route change so back affordances (Settings' back
         button) can return to the exact previous page. */}
     <NavigationTracker />

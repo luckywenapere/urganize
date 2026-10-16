@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.9",
+    date: "October 16, 2026",
+    highlights: [
+      "After you sign in, Home opens straight onto your last UrgAns chat, and the sign-in page downloads a little less before it works.",
+    ],
+  },
+  {
     version: "1.154.8",
     date: "October 16, 2026",
     highlights: [

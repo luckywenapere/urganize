@@ -15,11 +15,7 @@
  * gone, resuming fetches the chat from the server instead.
  */
 
-import {
-  clearPersistedState,
-  readPersistedState,
-  writePersistedState,
-} from '@/lib/persisted-state';
+import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { withinPersistBudget } from '@/lib/scene-cache';
 import {
   CHAT_CACHE_SUMMARY_LIMIT,
@@ -27,8 +23,12 @@ import {
   isWithinResumeWindow,
   type ChatCachePayload,
 } from './conversation-history';
+import { CHAT_CACHE_KEY } from './conversation-cache-clear';
 
-export const CHAT_CACHE_KEY = 'urganize.cache.urgans-chats';
+// The key and the sign-out wipe live in ./conversation-cache-clear so
+// auth-store can reach them without this file's imports.
+export { CHAT_CACHE_KEY, clearChatCache } from './conversation-cache-clear';
+
 /** Bump to invalidate every browser copy fleet-wide if the shape changes. */
 export const CHAT_CACHE_VERSION = 1;
 
@@ -65,14 +65,6 @@ export function writeChatCache(payload: ChatCachePayload): void {
   } catch {
     // setItem throws on a full quota and in Safari private mode. The server
     // copy is the durable record; losing the browser one costs a slower paint.
-  }
-}
-
-export function clearChatCache(): void {
-  try {
-    clearPersistedState(CHAT_CACHE_KEY);
-  } catch {
-    // Nothing to undo.
   }
 }
 

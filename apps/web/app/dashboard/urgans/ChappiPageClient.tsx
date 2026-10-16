@@ -16,7 +16,7 @@ import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
 import { useKeyboardOpen } from '@/lib/keyboard-viewport';
 import { ChappiHistoryList } from '@/components/chappi/ChappiHistoryList';
-import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
+import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
 
 // Same flag the shell reads for UrgAns — if a direct link is followed while the

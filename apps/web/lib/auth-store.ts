@@ -16,7 +16,7 @@ import { oauthRedirectToPath } from '@urganize/native-bridge';
 // ships it (URG-314). Browser-storage copies are cleared by key below either way.
 import { runSignOutResets } from '@/lib/sign-out-resets';
 import { SCENE_CACHE_KEY } from '@/lib/scene-cache';
-import { clearChatCache } from '@/lib/chappi/conversation-cache';
+import { clearChatCache } from '@/lib/chappi/conversation-cache-clear';
 import { resetSceneMemory } from '@/lib/scene-memory';
 import { resetCatalogIntent } from '@/lib/catalog-intent';
 import { clearDeferredFirstShare, clearFirstSession } from '@/lib/first-run-storage';

@@ -3,7 +3,7 @@
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownResumableChat } from './known-counts';
 import { ChappiConversationSkeleton } from './ChappiConversationSkeleton';
-import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
+import { isChappiHistoryEnabled } from '@/lib/chappi/history-flag';
 
 // Mirrors ChappiPageClient's own flag reads — keep them in sync (CLAUDE.md's
 // loading-skeleton rule).

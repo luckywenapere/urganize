@@ -1,6 +1,6 @@
 {
   "name": "@urganize/ui",
-  "version": "1.154.8",
+  "version": "1.154.9",
   "private": true,
   "type": "module",
   "sideEffects": false,

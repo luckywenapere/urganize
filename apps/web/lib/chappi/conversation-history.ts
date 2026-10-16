@@ -117,14 +117,9 @@ export type ChatSyncResult = {
   lastMessageAt: string;
 };
 
-/** Chat history is on. Both flags, read at call time so tests can stub them.
- *  Client modules read it at module scope, where Next inlines both values. */
-export function isChappiHistoryEnabled(): boolean {
-  return (
-    process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true' &&
-    process.env.NEXT_PUBLIC_FEATURE_URGANS_HISTORY === 'true'
-  );
-}
+/** Chat history is on (both flags). Lives in ./history-flag so root-chain
+ *  modules can read it without this file; re-exported for everything else. */
+export { isChappiHistoryEnabled } from './history-flag';
 
 const UUID_SHAPE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 

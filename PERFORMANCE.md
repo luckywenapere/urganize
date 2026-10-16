@@ -13,13 +13,13 @@ total includes Next's legacy polyfills chunk (~39 KB gzip), which carries
 `noModule` and is skipped by every modern browser; `measure.py` reports both
 ("js gz" and "modern gz"). The budget is held against the full figure.
 
-| What | Budget | 2026-10-15 before | after v1.147.6 | after v1.147.8 | after v1.153.1 | after v1.154.6 | after v1.154.8 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Shared first-load JS, gzip (`/auth`, `/`, `/locked`) | **< 250 KB** | 400-414 KB | 350-362 KB | 321-333 KB (modern browsers 283-295 KB) | 307-318 KB (modern 268-279 KB) | 292-303 KB (modern 254-265 KB) | 258-283 KB (modern 219-245 KB) |
-| `/dashboard` first-load JS, gzip | < 350 KB | 524 KB | 444 KB | 416 KB | 417 KB (modern 378 KB) | 424 KB (modern 386 KB) | 406 KB (modern 368 KB) |
-| Other `/dashboard/*` first-load JS, gzip | < 300 KB | 419-475 KB | 372-438 KB | 343-409 KB | 331-402 KB (modern 293-363 KB) | 327-406 KB (modern 289-368 KB) | 307-381 KB (modern 269-343 KB) |
-| Lighthouse mobile (slow 4G, simulated), `/auth` | >= 80 | 47 (LCP 6.1 s, TBT 2.57 s) | 49-65 (LCP 3.4-5.2 s, TBT 1.8-1.9 s) | 86-93 (LCP 1.3-1.5 s, TBT 320-560 ms) | see URG-314 | see URG-314 | see URG-314 |
-| Fonts preloaded on `/auth` | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
+| What | Budget | 2026-10-15 before | after v1.147.6 | after v1.147.8 | after v1.153.1 | after v1.154.6 | after v1.154.8 | after v1.154.9 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Shared first-load JS, gzip (`/auth`, `/`, `/locked`) | **< 250 KB** | 400-414 KB | 350-362 KB | 321-333 KB (modern browsers 283-295 KB) | 307-318 KB (modern 268-279 KB) | 292-303 KB (modern 254-265 KB) | 258-283 KB (modern 219-245 KB) | 252-278 KB (modern 214-239 KB) |
+| `/dashboard` first-load JS, gzip | < 350 KB | 524 KB | 444 KB | 416 KB | 417 KB (modern 378 KB) | 424 KB (modern 386 KB) | 406 KB (modern 368 KB) | 408 KB (modern 369 KB) |
+| Other `/dashboard/*` first-load JS, gzip | < 300 KB | 419-475 KB | 372-438 KB | 343-409 KB | 331-402 KB (modern 293-363 KB) | 327-406 KB (modern 289-368 KB) | 307-381 KB (modern 269-343 KB) | 308-383 KB (modern 270-344 KB) |
+| Lighthouse mobile (slow 4G, simulated), `/auth` | >= 80 | 47 (LCP 6.1 s, TBT 2.57 s) | 49-65 (LCP 3.4-5.2 s, TBT 1.8-1.9 s) | 86-93 (LCP 1.3-1.5 s, TBT 320-560 ms) | see URG-314 | see URG-314 | see URG-314 | see URG-314 |
+| Fonts preloaded on `/auth` | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
 
 We are still over budget. The table is the target, not a description of today.
 A change that grows shared first-load JS by more than 5 KB gzip needs a reason
@@ -265,8 +265,8 @@ Live in production (`NEXT_PUBLIC_FEATURE_OFFLINE=true`). Since v1.147.7:
   (`WKAppBoundDomains` listing app.urganize.app) and a new native build before
   WKWebView will run the service worker on iOS. Android WebView already
   supports it.
-- **Remaining budget (2026-10-16, after v1.154.8).** Shared first-load is
-  258-283 KB gzip (modern browsers, without the ~39 KB `noModule` polyfills:
+- **Remaining budget (2026-10-16, after v1.154.8; item 1 done in v1.154.9).** Shared first-load is
+  258-283 KB gzip (252-278 KB after v1.154.9) (modern browsers, without the ~39 KB `noModule` polyfills:
   219-245 KB). The floor on every route, measured on `/auth`, is ~168 KB
   gzip modern: React + react-dom + the Next router/runtime + the Turbopack
   runtime ~142 KB, `@supabase/auth-js` ~25 KB; plus the polyfills for the
@@ -278,12 +278,18 @@ Live in production (`NEXT_PUBLIC_FEATURE_OFFLINE=true`). Since v1.147.7:
   again because nothing on the root chain uses it any more), the root
   `error.tsx` and 404 entries ~7 KB (`next/link` copied into each), analytics
   ~3 KB. Next cuts, in order:
-  1. `ChappiHistoryBridge` out of the root chain (~6-7 KB gzip on every
-     signed-out route). Needs a design decision, not just code: started only
-     from the workspace layout, a sign-in that lands on desktop Home would
-     start restoring the recent chat after the navigation instead of on
-     `/auth`, and could show the greeting first. Needs a designer mock of the
-     restore timing and Oyin's yes before any code.
+  1. Done in v1.154.9 (Oyin approved option C after the timing mock):
+     `ChappiHistoryBridge` is mounted by `WorkspaceFrame`, not AppShell.
+     AppShell only warms the two history requests after sign-in
+     (`lib/chappi/history-warm.ts`; the store takes each response once,
+     within 20 s), so desktop Home and the phone UrgAns tab open on the last
+     chat with no greeting flash (0 of 6 runs each in the local sign-in sim).
+     The flag lives in `lib/chappi/history-flag.ts` and auth-store clears the
+     browser copy through `lib/chappi/conversation-cache-clear.ts`: Turbopack
+     keeps a module whole once a root-chain file imports anything from it,
+     so either import alone put `conversation-history` (+ `lib/notes`) back
+     on `/auth` (~1.3 KB). Net: -5.2 KB gzip on every signed-out route,
+     +1.45 KB on workspace routes (the store's own chunk).
   2. Split `components/icons/house.tsx` (~4 KB gzip on `/auth` and the
      frame). Pending coordination: the side-menu project owns that file.
   3. `next/link` and `next/image` are copied into each sibling client entry

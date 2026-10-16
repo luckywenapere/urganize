@@ -142,7 +142,13 @@ describe('import direction', () => {
   });
 
   it('keeps the pure module and the browser cache free of stores', () => {
-    for (const file of ['conversation-history.ts', 'conversation-cache.ts']) {
+    for (const file of [
+      'conversation-history.ts',
+      'conversation-cache.ts',
+      'conversation-cache-clear.ts',
+      'history-flag.ts',
+      'history-warm.ts',
+    ]) {
       const source = stripComments(read(WEB, 'lib', 'chappi', file));
       expect(source, file).not.toMatch(/@\/stores\//);
     }
