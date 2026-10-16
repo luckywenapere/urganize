@@ -3,7 +3,17 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { PanelLeftClose, PanelLeftOpen } from '@/components/icons';
+import type { ComponentType } from 'react';
+import {
+  Building2,
+  Disc3,
+  Mic,
+  NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Users,
+  type LucideProps,
+} from '@/components/icons';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { readPersistedState } from '@/lib/persisted-state';
 import { shellSideMenu } from '@/lib/shell-nav';
@@ -42,6 +52,17 @@ import { useNavTip } from './useNavTip';
  */
 
 export const SIDEBAR_SLOT_ROLLOUT = 'sidebar-slot-rollout';
+
+/** One mark per side-menu page (2026-10-16, founder: rows need icons, like
+ *  the Spotify for Artists side menu). Same marks the rest of the app uses for
+ *  these things: Disc3 is a rollout everywhere (bottom bar, command bar). */
+const PAGE_ICON: Record<string, ComponentType<LucideProps>> = {
+  releases: Disc3,
+  artists: Mic,
+  notes: NotebookPen,
+  directory: Building2,
+  people: Users,
+};
 
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
@@ -113,15 +134,47 @@ export function Sidebar() {
 
   if (!menu) return null;
 
-  // Folded: a thin rail holding only the expand button at its foot.
+  // Folded: a thin rail of the pages' marks, the expand button at its foot.
   if (collapsed) {
     return (
       <aside
-        aria-label={`${menu.area.label} menu, folded`}
+        aria-label={menu.area.label}
         data-sidebar="collapsed"
-        className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] hidden h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] w-14 shrink-0 self-start flex-col items-center justify-end pb-4 lg:flex"
+        className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] hidden h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] w-16 shrink-0 self-start flex-col items-center py-4 lg:flex"
       >
-        <SidebarToggle />
+        <nav aria-label={menu.area.label} className="min-h-0 flex-1 overflow-y-auto">
+          <ul className="flex flex-col items-center gap-1">
+            {menu.pages.map((page) => {
+              const Icon = PAGE_ICON[page.key];
+              return (
+                <li key={page.key}>
+                  <Link
+                    href={page.href}
+                    {...tip.bind(page.key)}
+                    onClick={page.key === 'releases' ? leaveReleaseForCatalog : undefined}
+                    aria-label={page.label}
+                    aria-current={page.active ? 'page' : undefined}
+                    className={`motion-focus grid h-10 w-10 place-items-center rounded-lg transition-colors ${
+                      page.active
+                        ? 'bg-bg-hover text-content-primary'
+                        : 'text-content-tertiary hover:bg-bg-hover/60 hover:text-content-primary'
+                    }`}
+                  >
+                    {Icon ? (
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    ) : (
+                      <span className="text-sm font-semibold">{page.label.charAt(0)}</span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          {tip.panel}
+        </nav>
+        <div className="shrink-0 pt-2">
+          <SidebarToggle />
+        </div>
       </aside>
     );
   }
@@ -142,7 +195,7 @@ export function Sidebar() {
                 onClick={page.key === 'releases' ? leaveReleaseForCatalog : undefined}
                 aria-current={page.active ? 'page' : undefined}
                 data-active={page.active ? 'true' : undefined}
-                className={`motion-focus flex h-10 items-center rounded-lg px-3 text-sm font-medium transition-[color,background-color,opacity] ${
+                className={`motion-focus flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-[color,background-color,opacity] ${
                   page.active
                     ? // Inside a rollout the lit row is the rollout's page
                       // under this one, so the parent keeps its weight but
@@ -151,6 +204,10 @@ export function Sidebar() {
                     : 'text-content-secondary opacity-60 hover:bg-bg-hover/60 hover:text-content-primary hover:opacity-100'
                 }`}
               >
+                {(() => {
+                  const Icon = PAGE_ICON[page.key];
+                  return Icon ? <Icon className="h-5 w-5 shrink-0" aria-hidden="true" /> : null;
+                })()}
                 <span className="min-w-0 truncate">{page.label}</span>
               </Link>
               {/* A rollout's own menu, nested under Rollouts while one is
@@ -164,7 +221,7 @@ export function Sidebar() {
         </ul>
         {tip.panel}
       </nav>
-      <div className="shrink-0 pt-2">
+      <div className="flex shrink-0 justify-end pt-2">
         <SidebarToggle />
       </div>
     </aside>

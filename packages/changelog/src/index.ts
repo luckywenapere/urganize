@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.147.11",
+    date: "October 16, 2026",
+    highlights: [
+      "Every page in the side menu now has its icon beside its name, and folding the menu leaves a slim rail of those icons so you can still jump between pages.",
+    ],
+  },
+  {
     version: "1.147.10",
     date: "October 16, 2026",
     highlights: [
