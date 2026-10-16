@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.3",
+    date: "October 16, 2026",
+    highlights: [
+      "Behind the scenes: our own test accounts stay out of the numbers.",
+    ],
+  },
+  {
     version: "1.154.2",
     date: "October 16, 2026",
     highlights: [

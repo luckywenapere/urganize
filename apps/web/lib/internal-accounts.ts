@@ -6,8 +6,11 @@
 //
 // One of us is: an @urganize.app address, an address on this list, or a
 // plus-alias of one (luckydio10+anything@gmail.com is a test inbox of ours).
+// Any address whose name part contains "luckydio" is ours too (founder,
+// 2026-10-16: "it should be any email luckydio").
 
 const INTERNAL_DOMAIN = '@urganize.app';
+const INTERNAL_NAME_PART = 'luckydio';
 
 export const BUILT_IN_INTERNAL_EMAILS: readonly string[] = [
   'luckydio10@gmail.com',
@@ -31,10 +34,11 @@ export function isInternalAccountEmail(
   const normalized = normalizeEmail(email);
   if (!normalized) return false;
   if (normalized.endsWith(INTERNAL_DOMAIN)) return true;
+  const at = normalized.indexOf('@');
+  if (at > 0 && normalized.slice(0, at).includes(INTERNAL_NAME_PART)) return true;
   const listed = (value: string) =>
     BUILT_IN.has(value) || (Array.isArray(extra) ? extra.includes(value) : (extra as ReadonlySet<string>).has(value));
   if (listed(normalized)) return true;
-  const at = normalized.indexOf('@');
   const plus = normalized.indexOf('+');
   if (plus > 0 && plus < at) return listed(normalized.slice(0, plus) + normalized.slice(at));
   return false;
