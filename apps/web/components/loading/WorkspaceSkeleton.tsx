@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { TASKS_PILL_DOCK_OFFSET_CLASS } from '@/components/workspace/TasksPanel';
+import { TASKS_PILL_DOCK_OFFSET_CLASS } from '@/components/workspace/tasks-pill-dock';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
 import {

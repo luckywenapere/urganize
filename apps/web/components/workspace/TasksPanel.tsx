@@ -41,6 +41,7 @@ import {
   type RolloutMenuAction,
   type RolloutMenuDialogInput,
 } from './useRolloutMenuActions';
+import { TASKS_PILL_DOCK_OFFSET_CLASS } from './tasks-pill-dock';
 
 // (The per-feature switches for the rollout's surfaces — Metadata, Content,
 // Files, Song, Cover art, Fan capture, Timeline, Chat, Notes, Pitching — used
@@ -50,17 +51,9 @@ import {
 // card at the top of the right-hand column (RolloutMenu); what is left in this
 // file is the phone's release menu, the activity list and the search.)
 
-// Same flag AppShell/MobileNavBar read. Below `lg` the panel shows the dock at
-// the base (search and the release menu — see the 2026-08-16 mobile redesign
-// note), and how far up the dock has to sit depends on which fixed surface
-// already owns the screen's bottom edge — the nav bar when this is on, the
-// floating UrgAns/support launcher when it isn't. Precomputed to a class so the
-// dock's className stays a one-token swap, the same shape AppShell uses for
-// <main>'s bottom padding. Both rules live in globals.css.
-const MOBILE_NAV_ENABLED = process.env.NEXT_PUBLIC_FEATURE_MOBILE_NAV === 'true';
-export const TASKS_PILL_DOCK_OFFSET_CLASS = MOBILE_NAV_ENABLED
-  ? 'tasks-pill-dock-nav'
-  : 'tasks-pill-dock';
+// The dock offset class lives in ./tasks-pill-dock, shared with WorkspaceSkeleton
+// (URG-314 batch 7); re-exported for existing importers.
+export { TASKS_PILL_DOCK_OFFSET_CLASS };
 
 /**
  * The neutral (never-lit) pill treatment, exported as the one source of truth

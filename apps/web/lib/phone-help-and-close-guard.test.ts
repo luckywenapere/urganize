@@ -19,7 +19,9 @@ const read = (...parts: string[]) => strip(readFileSync(join(WEB, ...parts), 'ut
 describe('the More sheet has the account menu’s help rows', () => {
   const bar = read('components', 'shell', 'BottomBar.tsx');
   const menu = read('components', 'app', 'WorkspaceMenu.tsx');
-  const shell = read('components', 'app', 'AppShell.tsx');
+  // The chrome is mounted by the workspace frame (URG-314 batch 7), with the
+  // same showHelpMenu rule AppShell used.
+  const shell = read('components', 'app', 'WorkspaceFrame.tsx');
 
   it('reads the same help list as the desktop account menu', () => {
     expect(menu).toContain('useHelpMenuGroups()');

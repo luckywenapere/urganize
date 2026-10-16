@@ -19,7 +19,12 @@ const stripCss = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '');
 const stripTs = (text: string) =>
   text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
 const css = stripCss(readFileSync(join(WEB, 'app', 'globals.css'), 'utf8'));
-const shell = stripTs(readFileSync(join(WEB, 'components', 'app', 'AppShell.tsx'), 'utf8'));
+// The page wrappers live in AppShell and, since URG-314 batch 7, in the
+// workspace frame the /dashboard and /settings layouts mount.
+const shell = stripTs(
+  readFileSync(join(WEB, 'components', 'app', 'AppShell.tsx'), 'utf8') +
+    readFileSync(join(WEB, 'components', 'app', 'WorkspaceFrame.tsx'), 'utf8')
+);
 
 /** Every declaration block whose selector names the class. */
 function blocksFor(className: string): string[] {

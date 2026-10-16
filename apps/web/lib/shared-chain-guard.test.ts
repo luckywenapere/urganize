@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -59,5 +59,50 @@ describe('the shared first-load chain stays light', () => {
       expect(imports).not.toContain('@/components/chappi/voice/TalkButton');
       expect(imports).not.toContain('@/stores/useVoiceCallStore');
     }
+  });
+
+  // URG-314 batch 7: the workspace chrome is mounted by the /dashboard and
+  // /settings layouts (components/app/WorkspaceFrame.tsx), not by AppShell.
+  it('AppShell carries none of the workspace chrome', () => {
+    const imports = staticImports('components/app/AppShell.tsx');
+    for (const chrome of [
+      '@/components/shell/TopNav',
+      '@/components/shell/SubNav',
+      '@/components/shell/Sidebar',
+      '@/components/shell/PageBar',
+      '@/components/shell/BottomBar',
+      '@/components/shell/KeyboardShortcuts',
+      '@/components/app/TeamTrialStrip',
+      '@/components/app/TeamReadOnlyStrip',
+      '@/components/app/UrgansUsageStrip',
+      '@/components/app/OfflineBanner',
+      '@/components/app/WorkspaceFrame',
+    ]) {
+      expect(imports).not.toContain(chrome);
+    }
+    const shell = code('components/app/AppShell.tsx');
+    expect(shell).not.toContain("import('@/components/shell/CommandBar')");
+    expect(shell).not.toContain("import('@/components/shell/FloatingUrgAns')");
+  });
+
+  it('the workspace layouts mount the chrome', () => {
+    for (const layout of ['app/dashboard/layout.tsx', 'app/settings/layout.tsx']) {
+      expect(staticImports(layout)).toContain('@/components/app/WorkspaceFrame');
+      expect(code(layout)).toContain('<WorkspaceFrame>{children}</WorkspaceFrame>');
+    }
+  });
+
+  it('no Suspense boundary sits above the workspace layouts', () => {
+    // A root loading.tsx wraps every top-level segment, layouts included: the
+    // chrome would be swapped in after a brand-mark fallback instead of being
+    // in the first paint. Segments that need the brand mark carry their own.
+    expect(existsSync(join(APP_ROOT, 'app/loading.tsx'))).toBe(false);
+    // A segment error.tsx here made pages wait on its code during the server
+    // render and fall back to the brand mark; the frame has its own boundary.
+    expect(existsSync(join(APP_ROOT, 'app/dashboard/error.tsx'))).toBe(false);
+    expect(existsSync(join(APP_ROOT, 'app/settings/error.tsx'))).toBe(false);
+    const frame = code('components/app/WorkspaceFrame.tsx');
+    expect(frame).toContain('<WorkspacePageErrorBoundary>');
+    expect(frame).toContain('<Suspense fallback={<RootShellSkeleton />}>{children}</Suspense>');
   });
 });

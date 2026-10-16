@@ -7,15 +7,6 @@ import { Analytics } from '@vercel/analytics/next';
 import { useAuthStore } from '@/lib/auth-store';
 import { useShellStore } from '@/stores/useShellStore';
 import { ArtistNameGate } from '@/components/ArtistNameGate';
-import { TopNav } from '@/components/shell/TopNav';
-import { SubNav } from '@/components/shell/SubNav';
-import { Sidebar } from '@/components/shell/Sidebar';
-import { PageBar } from '@/components/shell/PageBar';
-import { BottomBar } from '@/components/shell/BottomBar';
-import { KeyboardShortcuts } from '@/components/shell/KeyboardShortcuts';
-import { TeamReadOnlyStrip } from '@/components/app/TeamReadOnlyStrip';
-import { TeamTrialStrip } from '@/components/app/TeamTrialStrip';
-import { UrgansUsageStrip } from '@/components/app/UrgansUsageStrip';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { reportBoundaryError } from '@/lib/report-boundary-error';
 import { installLinkStallWatchdog } from '@/lib/nav-stall-watch';
@@ -33,10 +24,9 @@ import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportB
 import { ChappiHistoryBridge } from '@/components/chappi/ChappiHistoryBridge';
 import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
 import { precacheRoutesOffline, registerAppServiceWorker } from '@/lib/offline/register';
-import { OfflineBanner } from '@/components/app/OfflineBanner';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
-import { CURATOR_HOME_PATH, HOME_PATH } from '@/lib/home-path';
+import { CURATOR_HOME_PATH } from '@/lib/home-path';
 import { isSocialShareEnabled } from '@/lib/social-share-flag';
 import { isChappiEnabled, isUrgansRealtimeEnabled } from '@/lib/chappi/config';
 
@@ -69,19 +59,10 @@ function refreshCatalog(options?: { force?: boolean }) {
 // ssr:false is safe: all render nothing on the server today. (HelpMenu moved
 // into the top bar's right cluster 2026-07-23; since 2026-10-14 its rows are
 // in the account menu, useHelpMenuGroups.)
-// The search bar and the floating UrgAns launcher are workspace chrome: /auth
-// and the public pages never render them, yet as static imports their code
-// (and UrgAns's drawer behind it) rode in every route's first-load bundle,
-// /auth included (2026-10-11, PostHog replay of a slow first sign-in).
-// next/dynamic splits each into its own chunk that is only requested where
-// the chrome actually mounts. SSR is kept (no ssr:false) so a signed-in first
-// paint is unchanged.
-const CommandBar = dynamic(() =>
-  import('@/components/shell/CommandBar').then((m) => m.CommandBar)
-);
-const FloatingUrgAns = dynamic(() =>
-  import('@/components/shell/FloatingUrgAns').then((m) => m.FloatingUrgAns)
-);
+// The workspace chrome (top bar, side menu, bottom bar, the search bar and the
+// floating UrgAns launcher) lives in components/app/WorkspaceFrame.tsx, mounted
+// by the /dashboard and /settings route layouts (URG-314 batch 7), so none of
+// it rides in /auth's or a public page's first load.
 // The invite gate only ever opens after its own /api answer arrives, on a
 // signed-in dashboard page, so its code (and the next-moves engine behind it)
 // does not need to ride in every route's first load (URG-314, 2026-10-16).
@@ -166,9 +147,6 @@ const ShareSheet = dynamic(
 // them now (see ReleaseScenePanel), and nothing app-level is involved.
 const shouldLoadVercelAnalytics = process.env.NEXT_PUBLIC_ENABLE_VERCEL_ANALYTICS === 'true';
 
-// UrgAns is a floating button and drawer on every page (components/shell/FloatingUrgAns).
-const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
-
 // Saved UrgAns chats (NEXT_PUBLIC_FEATURE_URGANS_HISTORY, meaningful only with
 // the assistant flag). Gates the bridge that starts saving; with it off the
 // conversation stays exactly as transient as it always was.
@@ -230,11 +208,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/onboarding') ||
     pathname?.startsWith('/invite');
   const isDashboardRoute = pathname?.startsWith('/dashboard');
-  // ChappiDock renders null on this exact route (the page IS the chat), so
-  // the pb-28 every other dashboard page carries to clear the dock's corner
-  // launcher just floats the message box mid-screen here. See the
-  // .chappi-main-padding rule in globals.css.
-  const isChappiRoute = pathname === '/dashboard/urgans';
   const isPreSavePublicRoute = pathname?.startsWith('/p/');
   const isOnboardingRoute = pathname?.startsWith('/onboarding');
   const isInviteRoute = pathname?.startsWith('/invite');
@@ -309,17 +282,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     !isPublicStandaloneRoute &&
     !requiresArtistNameGate &&
     !isCuratorAccount;
-
-  const workspaceUserName = user?.name || user?.artist_name || user?.email || '';
-
-  // The bottom bar is 4rem tall below lg and needs clearing; from lg up there is
-  // none. The assistant's own page has its own sizing (see globals.css), and
-  // Home also clears the UrgAns box pinned above the bar (2026-10-07).
-  const mainPaddingClass = isChappiRoute
-    ? 'chappi-main-padding-nav'
-    : pathname === HOME_PATH
-      ? 'home-main-padding'
-      : 'mobile-nav-clearance';
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -498,79 +460,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     <TaskUIProvider>
       {requiresArtistNameGate ? (
         <ArtistNameGate />
-      ) : showWorkspaceChrome ? (
-        // PAGE WIDTH SOURCE OF TRUTH.
-        // The inner mx-auto max-w-[1440px] wrapper below is the ONLY place
-        // that decides how wide an authenticated page renders. TopNav and
-        // <main> both sit inside it so chrome (topbar nav, scrollbar
-        // alignment) and content edges share one value — navigating between
-        // /dashboard and /settings cannot produce a width jump.
-        //
-        // Pages MUST NOT add their own outer max-width. If a page wants its
-        // content narrower (e.g. Settings constrains forms to ~960px for
-        // readability) it adds an INNER wrapper, not an outer one. See the
-        // long-form rationale at the top of globals.css's `.app-layout`
-        // block — the prior route-keyed system here (.app-layout-fluid vs
-        // .app-layout-centered) was the bug.
-        <div className="app-layout lazy-fade lazy-fade-in">
-          {/* app-shell-frame is a hook, not a style: it lets globals.css drop
-              this floor while the on-screen keyboard is up, so the document
-              cannot be scrolled by the keyboard's height into the empty band
-              underneath. See the keyboard-aware block there.
-              min-h-dvh, NOT min-h-screen: on mobile Safari, min-h-screen's
-              static 100vh is the LARGE viewport (address bar collapsed),
-              which is taller than the actual visible viewport the moment the
-              address bar is showing. That mismatch alone made a "locked,
-              never-scrolls" route (e.g. /dashboard/urgans, sized in dvh)
-              scrollable by exactly the address bar's height — one swipe was
-              enough to shift the whole page and reveal it. 100dvh tracks the
-              real visible viewport instead, so there is no residual slack. */}
-          <div className="app-shell-frame mx-auto flex min-h-dvh w-full max-w-[1440px] flex-col">
-            {/* First stop for a keyboard user on every page: the topbar and the
-                side menu come before the content, so without this every page
-                costs a dozen Tab presses to reach. Hidden until focused. */}
-            <a
-              href="#main-content"
-              className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[300] focus:rounded-full focus:bg-brand focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-content-inverse"
-            >
-              Skip to content
-            </a>
-            {/* Trial indicator, above the topbar rather than in it: the
-                topbar's right cluster has a documented width budget that
-                already overflows a 375px phone, so a countdown there would
-                break phones. Renders nothing outside the last stretch of a
-                trial, and nothing at all while the flag is off. */}
-            <OfflineBanner />
-            <TeamTrialStrip />
-            <TeamReadOnlyStrip />
-            {/* Assistant-usage indicator, same slot and same contract.
-                Renders only for a team inside the last fifth of its monthly
-                UrgAns actions, which today is nobody: no code path can write
-                the capped tier yet. */}
-            <UrgansUsageStrip />
-            {/* The shell (design overhaul, 2026-10-04): a top bar of the six
-                areas, the page, and on a phone a bottom bar.
-                URG-254 (founder call, 2026-10-14): on a computer the second
-                row of tabs is gone. The open area's pages run down a side
-                menu under the top bar (an open rollout's own menu nested
-                under Rollouts), and the page's name and tools sit in a page
-                bar above the page. An area with one page has no side menu.
-                On a phone, the tab row and the bottom bar, unchanged. */}
-            <TopNav userName={workspaceUserName} showHelp={showHelpMenu} />
-            <SubNav />
-            <div className="flex min-w-0 flex-1">
-              <Sidebar />
-              <main
-                id="main-content"
-                tabIndex={-1}
-                className={`min-w-0 flex-1 px-4 focus:outline-none sm:px-5 lg:px-8 ${mainPaddingClass}`}
-              >
-                <PageBar />
-                {children}
-              </main>
-            </div>
-          </div>
-        </div>
+      ) : isDashboardRoute || isSettingsRoute ? (
+        // The workspace chrome (top bar, side menu, page bar, bottom bar,
+        // search bar, UrgAns launcher) is mounted by the /dashboard and
+        // /settings route layouts (components/app/WorkspaceFrame.tsx), so its
+        // code ships only with those routes (URG-314 batch 7). The frame
+        // applies the same signed-in / curator rules showWorkspaceChrome does.
+        children
       ) : (
         // A public token page renders full bleed. `.app-layout` carries a
         // horizontal gutter at lg+, which is chrome padding for an
@@ -589,26 +485,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </div>
       )}
-      {/* The floating UrgAns button and drawer, and the search bar. Wrapped
-          because they sit OUTSIDE app/error.tsx's reach: losing the launcher
-          silently is a real cost, but strictly less than losing the whole
-          application because a floating widget threw. */}
-      {showHelpMenu && CHAPPI_ENABLED && showWorkspaceChrome ? (
-        <ErrorBoundary name="urgans-launcher" onError={reportBoundaryError}>
-          <FloatingUrgAns />
-        </ErrorBoundary>
-      ) : null}
-      {showWorkspaceChrome && !requiresArtistNameGate ? (
-        <>
-          <ErrorBoundary name="command-bar" onError={reportBoundaryError}>
-            <CommandBar />
-          </ErrorBoundary>
-          <ErrorBoundary name="keyboard-shortcuts" onError={reportBoundaryError}>
-            <KeyboardShortcuts />
-          </ErrorBoundary>
-          <BottomBar showHelp={showHelpMenu} />
-        </>
-      ) : null}
       {/* Gated on the same showHelpMenu the account menu's help rows use —
           signed in, not mid-auth, not on a public page, not a curator. It
           opens from those rows and from Settings, both inside that same set. */}
@@ -652,11 +528,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           // rollout made just now while it is still an untouched shell,
           // exactly as the Home/workspace create paths do (v1.92.1).
           if (PLANNER_ENABLED && result?.plannerPending) {
-            const { savedTitle, releaseType } = result;
             void import('@/stores/usePlannerStore')
               .then(({ usePlannerStore }) =>
                 usePlannerStore.getState().openIntake(
-                  buildCreatedRolloutIntake({ releaseId, savedTitle, releaseType })
+                  buildCreatedRolloutIntake({
+                    releaseId,
+                    savedTitle: result.savedTitle,
+                    releaseType: result.releaseType,
+                  })
                 )
               )
               .catch(() => undefined);

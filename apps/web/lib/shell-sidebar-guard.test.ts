@@ -104,13 +104,15 @@ describe('the account menu', () => {
 
 describe('the app shell', () => {
   const shell = read('components', 'app', 'AppShell.tsx');
+  // The chrome itself is the workspace frame's (URG-314 batch 7).
+  const frame = read('components', 'app', 'WorkspaceFrame.tsx');
 
   it('puts the skip link before the shell, so it is still the first Tab', () => {
-    const skip = shell.indexOf('href="#main-content"');
+    const skip = frame.indexOf('href="#main-content"');
     expect(skip).toBeGreaterThan(-1);
-    expect(shell.indexOf('<TopNav ')).toBeGreaterThan(skip);
-    expect(shell.indexOf('<Sidebar />')).toBeGreaterThan(skip);
-    expect(shell).toContain('<TopNav userName={workspaceUserName} showHelp={showHelpMenu} />');
+    expect(frame.indexOf('<TopNav ')).toBeGreaterThan(skip);
+    expect(frame.indexOf('<Sidebar />')).toBeGreaterThan(skip);
+    expect(frame).toContain('<TopNav userName={workspaceUserName} showHelp={showHelpMenu} />');
   });
 
   it('keeps the report dialog on the showHelpMenu gate', () => {

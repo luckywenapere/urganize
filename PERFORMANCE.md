@@ -13,13 +13,13 @@ total includes Next's legacy polyfills chunk (~39 KB gzip), which carries
 `noModule` and is skipped by every modern browser; `measure.py` reports both
 ("js gz" and "modern gz"). The budget is held against the full figure.
 
-| What | Budget | 2026-10-15 before | after v1.147.6 | after v1.147.8 | after v1.153.1 | after v1.154.6 |
-| --- | --- | --- | --- | --- | --- | --- |
-| Shared first-load JS, gzip (`/auth`, `/`, `/locked`) | **< 250 KB** | 400-414 KB | 350-362 KB | 321-333 KB (modern browsers 283-295 KB) | 307-318 KB (modern 268-279 KB) | 292-303 KB (modern 254-265 KB) |
-| `/dashboard` first-load JS, gzip | < 350 KB | 524 KB | 444 KB | 416 KB | 417 KB (modern 378 KB) | 424 KB (modern 386 KB) |
-| Other `/dashboard/*` first-load JS, gzip | < 300 KB | 419-475 KB | 372-438 KB | 343-409 KB | 331-402 KB (modern 293-363 KB) | 327-406 KB (modern 289-368 KB) |
-| Lighthouse mobile (slow 4G, simulated), `/auth` | >= 80 | 47 (LCP 6.1 s, TBT 2.57 s) | 49-65 (LCP 3.4-5.2 s, TBT 1.8-1.9 s) | 86-93 (LCP 1.3-1.5 s, TBT 320-560 ms) | see URG-314 | see URG-314 |
-| Fonts preloaded on `/auth` | 2 | 2 | 2 | 2 | 2 | 2 |
+| What | Budget | 2026-10-15 before | after v1.147.6 | after v1.147.8 | after v1.153.1 | after v1.154.6 | after v1.154.8 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Shared first-load JS, gzip (`/auth`, `/`, `/locked`) | **< 250 KB** | 400-414 KB | 350-362 KB | 321-333 KB (modern browsers 283-295 KB) | 307-318 KB (modern 268-279 KB) | 292-303 KB (modern 254-265 KB) | 258-283 KB (modern 219-245 KB) |
+| `/dashboard` first-load JS, gzip | < 350 KB | 524 KB | 444 KB | 416 KB | 417 KB (modern 378 KB) | 424 KB (modern 386 KB) | 406 KB (modern 368 KB) |
+| Other `/dashboard/*` first-load JS, gzip | < 300 KB | 419-475 KB | 372-438 KB | 343-409 KB | 331-402 KB (modern 293-363 KB) | 327-406 KB (modern 289-368 KB) | 307-381 KB (modern 269-343 KB) |
+| Lighthouse mobile (slow 4G, simulated), `/auth` | >= 80 | 47 (LCP 6.1 s, TBT 2.57 s) | 49-65 (LCP 3.4-5.2 s, TBT 1.8-1.9 s) | 86-93 (LCP 1.3-1.5 s, TBT 320-560 ms) | see URG-314 | see URG-314 | see URG-314 |
+| Fonts preloaded on `/auth` | 2 | 2 | 2 | 2 | 2 | 2 | 2 |
 
 We are still over budget. The table is the target, not a description of today.
 A change that grows shared first-load JS by more than 5 KB gzip needs a reason
@@ -130,6 +130,51 @@ unlike prod. Not fixable without a boundary above the layout, so the move was
 reverted. Attempt kept outside the repo. Revisit only if the root
 `loading.tsx` goes or the frame stops being a separate client reference.
 
+**Workspace chrome lives in the workspace layouts** (batch 7). Done, by taking
+the root `loading.tsx` away. `app/dashboard/layout.tsx` and
+`app/settings/layout.tsx` mount `components/app/WorkspaceFrame.tsx` (top bar,
+side menu, page bar, bottom bar, `CommandBar`, the UrgAns launcher; same
+markup, conditions and order AppShell had), and AppShell hands those routes
+their page untouched. Rules that keep the server HTML identical to before:
+- **No `app/loading.tsx`.** A root loading boundary wraps every top-level
+  segment, layouts included, so anything the frame waits on during prerender
+  (its own code arriving) streamed a brand-mark fallback and swapped the frame
+  in. With no boundary above the layouts, that wait holds the shell, exactly
+  as AppShell's did. The segments that relied on the root fallback (`brief`,
+  `invite`, `join`, `locked`, `oauth`, `onboarding`, `redeem`, `release`,
+  `start`, `start-trial`, `unsubscribe`) each carry the same `RootShellSkeleton`
+  in their own `loading.tsx`. Do not add a root `loading.tsx` back.
+- **The frame's own `<Suspense fallback={<RootShellSkeleton />}>` around the
+  page inside `<main>`.** `/dashboard`'s `WorkspaceSkeleton` reads
+  `useSearchParams`, so it bails out of static rendering itself and the
+  bailout climbs past `dashboard/loading.tsx`; this boundary catches it where
+  the root one used to, inside the chrome.
+- **No `error.tsx` in `app/dashboard` or `app/settings`.** One there made every
+  dashboard page without its own `loading.tsx` wait on that file's code during
+  prerender; the wait showed `WorkspaceSkeleton`, which bails out, and those
+  pages lost their own skeleton from the server HTML. The frame has
+  `WorkspacePageErrorBoundary` instead (Next's root boundary now sits outside
+  the chrome): it shows the same `AppError` inside `<main>`, rethrows Next's
+  redirect / not-found signals, clears on navigation, and loads `AppError`
+  only after a crash.
+- **One copy of the workspace stores.** The frame side-effect-imports
+  `useTaskStore`, `useReleaseStore` and `useSceneDataStore`. A layout's chunk
+  group is the parent of its page, its loading fallback and the frame's own
+  `next/dynamic` chunks, so they share it; before, each carried its own copy
+  (`useTaskStore` three times on `/dashboard`).
+- **`WorkspaceSkeleton` imports the dock offset from
+  `components/workspace/tasks-pill-dock.ts`, not `TasksPanel`.** That one
+  constant pulled the whole tasks panel (search, plan controls, rows, about
+  10 KB gzip) into every dashboard route through the loading boundary, and
+  Turbopack copied part of it again into the page entry.
+Verified on a local build: body markup identical to the previous build on
+every prerendered dashboard, settings, auth, onboarding, locked and public
+page except for one empty Suspense comment pair (`<!--$--><!--/$-->`) that the
+root boundary used to leave on `/`, `/auth*`, `/curator*`, `/payment/callback`
+and the 404 page. `/admin/*` changed for the better: its layout used to be
+streamed in after a root brand-mark fallback and is now in the first paint.
+`lib/shared-chain-guard.test.ts` pins all of the above.
+
 **Task UI engine on demand** (batch 6, `components/tasks/TaskUIProvider.tsx` +
 `TaskUIEngine.tsx`). `TaskUIProvider` is now only the context (`openTask`,
 `openQuickCreate`, `closeTask`, `isTaskOpen`). Everything behind it (detail
@@ -159,14 +204,11 @@ and the Talk button and call store only when Talk is on. Both are off since
 the Oct 16 feature cuts, so neither loads. `NextShowCard` needed nothing: it
 is only reachable from `HomeBlocks`, which no route renders since Home v4.
 
-Trade-off: the task, release and scene stores now ship in the dashboard
-routes' own chunks, and Turbopack copies them into each client entry that
-needs them (the page, the SSR'd `CommandBar` chunk, the UrgAns launcher), so
-`/dashboard`, `/dashboard/home` and `/dashboard/urgans` grew ~3-4 KB gzip
-while every other route shrank ~10-13 KB. A shared parent for them (a
-dashboard layout) would remove the copies, but a client reference in a
-layout is what broke streaming in the chrome-move attempts, so it was not
-tried.
+Trade-off (resolved in batch 7): the task, release and scene stores shipped
+in the dashboard routes' own chunks, and Turbopack copied them into each
+client entry that needed them, so `/dashboard`, `/dashboard/home` and
+`/dashboard/urgans` grew ~3-4 KB gzip. The workspace layout now holds one
+shared copy (see "Workspace chrome lives in the workspace layouts").
 
 ## Known failing tests on main (2026-10-16)
 
@@ -174,7 +216,10 @@ tried.
 batch 5 and come from other work: `editorial-overview-guard`,
 `field-border-guard`, `help-copy`, `profile-bio-guard`,
 `shell-sidebar-guard` (page bar + side menu, 2 tests) and
-`usage-metrics-guard`. A perf change must add none.
+`usage-metrics-guard`. A perf change must add none. (`rollout-create-title-guard` also failed on
+main after v1.154.6, which wrote AppShell's post-create intake call in a shape
+that one guard and `created-rollout-intake` could not both accept; batch 7
+fixed it.)
 
 ## Service worker (`public/sw-offline.js`)
 
@@ -220,28 +265,30 @@ Live in production (`NEXT_PUBLIC_FEATURE_OFFLINE=true`). Since v1.147.7:
   (`WKAppBoundDomains` listing app.urganize.app) and a new native build before
   WKWebView will run the service worker on iOS. Android WebView already
   supports it.
-- **Remaining budget (2026-10-16, after v1.154.6).** About 180 KB gzip of
-  every route is a fixed floor: `react-dom`, the Next router/runtime and
-  `@supabase/auth-js`. Shared first-load is 292-303 KB, so the 250 KB budget
-  needs ~45-55 KB more out of app code. What is left on `/auth`, largest
-  first (minified, from source maps): `auth-store` 12.6 KB,
-  `components/icons/house.tsx` 11.9 KB, `stores/useChappiHistoryStore` 11.3 KB
-  (+ `lib/chappi/conversation-history` 3.8 KB, through `ChappiHistoryBridge`),
-  `BottomBar` 9.1 KB, `NotificationsBell` 8.3 KB, `Sidebar` 6.3 KB,
-  `WorkspaceMenu` 6.1 KB, `help-copy` 4.8 KB, `lib/tasks` 4.4 KB (bell and
-  shortcuts). Next cuts, in order:
-  1. Split `components/icons/house.tsx` so the shared chain stops carrying
-     every icon (~4 KB gzip). Pending coordination: the side-menu project owns
-     that file.
-  2. Load `ChappiHistoryBridge` on demand (~5 KB gzip). Needs care: it starts
-     from the persisted identity so a recent chat is restored before the
-     UrgAns page leaves its skeleton; a late chunk could flash the greeting
-     first. Prefetch the chunk at shell mount, or start it only on chat
-     surfaces, and check `/dashboard/urgans` and desktop Home.
-  3. `NotificationsBell`: keep the trigger, count and realtime in the shell,
-     load the dropdown panel (rows, digests, `lib/tasks` messages) on first
-     open (~3 KB gzip).
-  4. The workspace chrome itself (TopNav, Sidebar, BottomBar, WorkspaceMenu,
-     PageBar) is ~10 KB gzip that `/auth` never renders. Two attempts to
-     mount it from route layouts failed (see above); it needs the root
-     `loading.tsx` rethought first.
+- **Remaining budget (2026-10-16, after v1.154.8).** Shared first-load is
+  258-283 KB gzip (modern browsers, without the ~39 KB `noModule` polyfills:
+  219-245 KB). The floor on every route, measured on `/auth`, is ~168 KB
+  gzip modern: React + react-dom + the Next router/runtime + the Turbopack
+  runtime ~142 KB, `@supabase/auth-js` ~25 KB; plus the polyfills for the
+  full figure (~206 KB). What is left on `/auth` above that, gzip: the chat
+  history chunk ~20 KB (`useChappiHistoryStore` + `conversation-history` +
+  `packages/pricing` + `report-boundary-error`), the auth page ~17 KB (of
+  which `components/icons/house.tsx` 11.9 KB minified), AppShell ~8 KB,
+  auth-store ~8 KB, `/auth`'s loading fallback ~6 KB (`next/image` copied
+  again because nothing on the root chain uses it any more), the root
+  `error.tsx` and 404 entries ~7 KB (`next/link` copied into each), analytics
+  ~3 KB. Next cuts, in order:
+  1. `ChappiHistoryBridge` out of the root chain (~6-7 KB gzip on every
+     signed-out route). Needs a design decision, not just code: started only
+     from the workspace layout, a sign-in that lands on desktop Home would
+     start restoring the recent chat after the navigation instead of on
+     `/auth`, and could show the greeting first. Needs a designer mock of the
+     restore timing and Oyin's yes before any code.
+  2. Split `components/icons/house.tsx` (~4 KB gzip on `/auth` and the
+     frame). Pending coordination: the side-menu project owns that file.
+  3. `next/link` and `next/image` are copied into each sibling client entry
+     (page, loading, `error.tsx`, 404) now that no root-chain module uses
+     them, ~4-6 KB on `/auth`. Fix only with a real root-chain use, not a
+     dummy import.
+  4. `NotificationsBell` dropdown on first open (~1-2 KB, dashboard only now
+     that the bell left `/auth`).
