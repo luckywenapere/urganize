@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.149.1",
+    date: "October 16, 2026",
+    highlights: [
+      "On Home, every card in the next-move swipe is now the same height, so the button sits in the same place as you swipe.",
+    ],
+  },
+  {
     version: "1.149.0",
     date: "October 16, 2026",
     highlights: [

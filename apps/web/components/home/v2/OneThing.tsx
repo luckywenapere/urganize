@@ -58,13 +58,14 @@ function Slide({
     const { task, due } = item;
     const where = [task.releaseTitle, task.artistName].filter(Boolean).join(' · ');
     return (
-      <div className={`${CARD} px-5 pb-5 pt-5`}>
+      <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`}>
         <div className="flex items-center justify-between gap-3">
           <Chip />
           <span className={`font-mono text-xs ${due.late ? 'text-status-error' : 'text-content-primary/55'}`}>{due.label}</span>
         </div>
         <h2 className="mt-3.5 break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">{task.title}</h2>
         {where ? <p className="mt-2 text-sm leading-relaxed text-content-secondary">{where}</p> : null}
+        <span className="flex-1" aria-hidden="true" />
         <button
           type="button"
           className={PRIMARY}
@@ -82,7 +83,7 @@ function Slide({
   if (item.kind === 'move') {
     const { move } = item;
     return (
-      <div className={`${CARD} px-5 pb-5 pt-5`} data-next-move={move.rule}>
+      <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`} data-next-move={move.rule}>
         <div className="flex items-center justify-between gap-3">
           <Chip />
           <button
@@ -97,6 +98,7 @@ function Slide({
         </div>
         <h2 className="mt-2 break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">{move.title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-content-secondary">{move.detail}</p>
+        <span className="flex-1" aria-hidden="true" />
         <button
           type="button"
           className={PRIMARY}
@@ -113,7 +115,7 @@ function Slide({
 
   const { show } = item;
   return (
-    <div className={`${CARD} px-5 pb-5 pt-5`}>
+    <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`}>
       <div className="flex items-center justify-between gap-3">
         <Chip />
         <span className="font-mono text-xs text-content-primary/55">{show.dateLabel}</span>
@@ -125,6 +127,7 @@ function Slide({
       <p className="mt-2 text-sm text-content-secondary">
         {[show.city, show.setTimeLabel].filter(Boolean).join(' · ')}
       </p>
+      <span className="flex-1" aria-hidden="true" />
       <Link href={`/dashboard/shows/${show.id}`} className={PRIMARY} onClick={track}>
         {HOME_FOUR_COPY.openShow}
       </Link>
@@ -179,12 +182,14 @@ export function OneThing({
         {items.map((item, i) => (
           <div
             key={item.key}
-            className="w-full shrink-0 snap-center"
+            className="flex w-full shrink-0 snap-center"
             aria-roledescription="slide"
             aria-label={`${i + 1} of ${items.length}`}
             aria-hidden={i !== index || undefined}
           >
-            <Slide item={item} position={i + 1} onDismissMove={onDismissMove} />
+            <div className="w-full">
+              <Slide item={item} position={i + 1} onDismissMove={onDismissMove} />
+            </div>
           </div>
         ))}
       </div>
