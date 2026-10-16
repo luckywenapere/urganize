@@ -168,7 +168,7 @@ export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchS
         </section>
       ) : null}
 
-      <EditorialPitchSection releaseId={release.id} />
+      <EditorialPitchSection releaseId={release.id} releaseDate={release.releaseDate ?? null} />
 
       <PromoList release={release} tasks={tasks} onTaskAdded={onTaskAdded ?? (() => {})} onToast={onToast} />
 

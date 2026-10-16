@@ -12,8 +12,21 @@ import {
   editorialStateCopy,
   type EditorialRow,
 } from '@/lib/editorial-overview';
-import { EDITORIAL_PLATFORMS } from '@/lib/editorial-pitch';
+import { EDITORIAL_PLATFORMS, PITCH_WINDOW_CLOSES_DAYS } from '@/lib/editorial-pitch';
 import { supabase } from '@/lib/supabase/client';
+import { openExternalUrl } from '@/lib/external-link';
+import { ChevronRight } from '@/components/icons';
+
+const ROLLOUT_EDITORIAL_TITLE = 'Spotify & Apple Music';
+
+/** "Do it at least 7 days before Dec 4", or the rule alone without a date. */
+export function editorialDueLine(releaseDate: string | null | undefined): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(releaseDate || '');
+  if (!match) return `Do it at least ${PITCH_WINDOW_CLOSES_DAYS} days before release day`;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  return `Do it at least ${PITCH_WINDOW_CLOSES_DAYS} days before ${label}`;
+}
 
 const OPEN_BUTTON_CLASS =
   'motion-focus motion-press inline-flex min-h-11 shrink-0 items-center rounded-lg border border-stroke-control px-3 text-sm font-semibold text-content-secondary transition-colors hover:border-content-secondary hover:text-content-primary';
@@ -25,7 +38,10 @@ const OPEN_BUTTON_CLASS =
  * which this opens the way the notification bell does, by going to the
  * rollout first. Without `releaseId` it lists every rollout.
  */
-export function EditorialPitchSection({ releaseId }: { releaseId?: string } = {}) {
+export function EditorialPitchSection({
+  releaseId,
+  releaseDate = null,
+}: { releaseId?: string; releaseDate?: string | null } = {}) {
   const router = useRouter();
   const { openTask } = useTaskUI();
   const [rows, setRows] = useState<EditorialRow[] | null>(null);
@@ -61,6 +77,54 @@ export function EditorialPitchSection({ releaseId }: { releaseId?: string } = {}
   };
 
   const platformNames = EDITORIAL_PLATFORMS.map((platform) => platform.name).join(' and ');
+
+  // Inside a rollout's Pitch this! (2026-10-16, approved mock): one row, no
+  // card and no empty-state box. With the plan's editorial step it opens that
+  // step; before there is one it opens Spotify for Artists, with the one rule
+  // that matters on the line under it.
+  if (releaseId) {
+    const row = rows?.[0] ?? null;
+    const spotify = EDITORIAL_PLATFORMS[0];
+    const due = editorialDueLine(releaseDate);
+    return (
+      <section aria-label={ROLLOUT_EDITORIAL_TITLE}>
+        <h3 className="mb-2 font-display text-xl text-content-primary">{ROLLOUT_EDITORIAL_TITLE}</h3>
+        {error ? (
+          <div role="alert" className="rounded-2xl border border-status-error/30 bg-status-error/5 p-4">
+            <p className="text-sm font-semibold text-content-primary">Couldn’t load this.</p>
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="motion-focus mt-2 min-h-11 text-sm font-semibold text-brand hover:underline"
+            >
+              Try again
+            </button>
+          </div>
+        ) : rows === null ? (
+          <div className="space-y-2 py-3" aria-hidden="true">
+            <SkeletonBlock className="h-3.5 w-1/2" />
+            <SkeletonBlock className="h-3 w-2/3" />
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => (row ? open(row) : void openExternalUrl(spotify.url))}
+            className="motion-focus flex min-h-14 w-full items-center gap-3 py-3 text-left"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-content-primary">
+                {row ? editorialStateCopy(row) : 'Pitch to their editors'}
+              </span>
+              <span className="block truncate text-[13px] text-content-primary/55">
+                {row ? platformNames : due}
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
+          </button>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section aria-label={EDITORIAL_SECTION_TITLE} className={releaseId ? 'space-y-3' : 'mt-10 space-y-4'}>

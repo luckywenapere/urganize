@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.2",
+    date: "October 16, 2026",
+    highlights: [
+      "In Pitch this!, Spotify and Apple Music is one simple row now: where your editorial pitch stands, or, before you have one, the date to pitch by. Tap it to open the pitch.",
+    ],
+  },
+  {
     version: "1.154.1",
     date: "October 16, 2026",
     highlights: [
