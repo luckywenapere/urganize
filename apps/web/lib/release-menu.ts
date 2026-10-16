@@ -94,19 +94,15 @@ export const RELEASE_MENU_ORDER = [
   // wide margin, and the content calendar is where that work gets planned.
   // Promoted to a permanent tab 2026-08-16.
   'calendar',
-  // Marketing again, and named outright: "pitching is frequent enough to earn
-  // a permanent, always-visible spot rather than the folded menu."
-  'pitch',
-  // The release pitch kit (2026-10-01): the story and credits a rollout adds
-  // to the artist's standing press kit. Sits beside Pitch because it is what a
-  // pitch carries, and ahead of Metadata because writing the pitch is the work
-  // that precedes collecting the paperwork.
-  'pitchkit',
-  // Promo channels (GitHub #833, 2026-10-11): radio, blogs, X communities and
-  // SoundCloud networks to add to the plan. Beside Pitch and the pitch kit
-  // because it is the same job (getting the song in front of people), for the
-  // places that are not playlists. No usage data yet; a reasoned placement.
-  'promo',
+  // Release prep in the order the work happens (founder call, 2026-10-16:
+  // user feedback that the song and cover art are the first things to do and
+  // were last). Song and cover art come first because everything after them
+  // depends on them: details describe them, Distribute hands them to the
+  // distributor (its handoff checklist links back here), and the pitch needs
+  // the track delivered, since Spotify for Artists only shows an upcoming
+  // release once the distributor has delivered it.
+  'song',
+  'coverart',
   // Distribution, 11 of 64 — nine release-level fields plus a collect link and
   // the submissions that come back, so it is returned to across the whole
   // rollout rather than filled in once. Also a promoted tab.
@@ -114,11 +110,26 @@ export const RELEASE_MENU_ORDER = [
   // Distribution (2026-10-03). Directly after Metadata because it is where
   // that paperwork pays off: the Distribute step reads the genre, language and
   // explicit flag from it and sends the team there to fix what is missing.
-  // Ranked below the promoted work surfaces and above the assets set once,
-  // since a rollout reaches it late (the playbook's distribution steps sit in
-  // the last weeks) and then returns to it only to check delivery.
+  // After the song and cover art too (2026-10-16), since its handoff
+  // checklist hands those to the distributor.
   'distribute',
-  // Release spend (2026-10-09). Right after Distribute: money goes out all along a
+  // The general file cabinet: everything that is not the cover or the master.
+  'files',
+  // Pitch this! after Distribute: an editorial pitch needs the release
+  // delivered first.
+  // Marketing again, and named outright: "pitching is frequent enough to earn
+  // a permanent, always-visible spot rather than the folded menu."
+  'pitch',
+  // The release pitch kit (2026-10-01): the story and credits a rollout adds
+  // to the artist's standing press kit. Sits beside Pitch because it is what a
+  // pitch carries.
+  'pitchkit',
+  // Promo channels (GitHub #833, 2026-10-11): radio, blogs, X communities and
+  // SoundCloud networks to add to the plan. Beside Pitch and the pitch kit
+  // because it is the same job (getting the song in front of people), for the
+  // places that are not playlists. No usage data yet; a reasoned placement.
+  'promo',
+  // Release spend (2026-10-09). Near Distribute: money goes out all along a
   // rollout (promo, playlists, design, video), but it is recorded in a sitting
   // after the fact and the Distribute step is where the biggest single payment
   // lands, so the two sit together. Ranked below the work surfaces a team returns
@@ -143,13 +154,6 @@ export const RELEASE_MENU_ORDER = [
   // made this menu the phone's home for per-release actions — so it is not
   // read as barring the menu, only as ranking it below what he did promote.
   'note',
-  // Asset production, 9 of 64 between them: a handful of touches each, early,
-  // and then done. Kept adjacent because they are the release's core identity
-  // assets and get set in the same sitting.
-  'coverart',
-  'song',
-  // The general file cabinet — everything that is not the cover or the master.
-  'files',
   // Share to socials (2026-09-23). Outward-facing, so it leads the "send this
   // outward" band below, and ahead of fan capture because every rollout gets
   // announced while only some get a capture page. The founder made it the

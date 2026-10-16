@@ -161,6 +161,12 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.releaseBrief ? scene('brief', 'Read the brief') : null,
     flags.releaseChat ? scene('chat', 'Talk to the team') : null,
     flags.contentCalendar ? scene('calendar', 'Plan content') : null,
+    // Release prep in the order the work happens (2026-10-16).
+    flags.songUpload ? scene('song', 'Upload the song') : null,
+    flags.coverArt ? scene('coverart', 'Add cover art') : null,
+    flags.metadata ? scene('metadata', 'Fill in details') : null,
+    scene('distribute', 'Distribute now'),
+    flags.files ? scene('files', 'Add files') : null,
     // ONE row since 2026-10-16 (Pitch this! as one place): the pitch kit and
     // promo channels live inside it, so "Build your pitch kit" and "Find
     // promo" are gone from the menu. Old ?scene=pitchkit / ?scene=promo links
@@ -169,15 +175,10 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.pitching ? scene('pitch', 'Pitch this!') : null,
     !flags.pitching && flags.pitchKit ? scene('pitchkit', 'Build your pitch kit') : null,
     !flags.pitching ? scene('promo', 'Find promo') : null,
-    flags.metadata ? scene('metadata', 'Fill in details') : null,
-    scene('distribute', 'Distribute now'),
     // Track spend is cut (Oct 16, 2026 brief, URG-319): no row, whatever
     // showSpend says. The spend lines stay in release_spend.
     input.showSpend && !SPEND_CUT ? scene('spend', 'Track spend') : null,
     flags.notes ? note : null,
-    flags.coverArt ? scene('coverart', 'Add cover art') : null,
-    flags.songUpload ? scene('song', 'Upload the song') : null,
-    flags.files ? scene('files', 'Add files') : null,
     input.share ? dialog('share', input.share) : null,
     flags.capture ? scene('capture', 'Collect fan emails') : null,
     input.changeArtist ? dialog('change-artist', input.changeArtist) : null,

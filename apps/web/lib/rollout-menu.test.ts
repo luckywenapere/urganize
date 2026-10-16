@@ -134,8 +134,8 @@ describe('buildRolloutMenu', () => {
       Object.keys(ALL_ON).map((flag) => [flag, false])
     ) as RolloutMenuFlags;
     expect(keysOf(build({ flags: allOff, showSpend: false }))).toEqual([
-      'promo',
       'distribute',
+      'promo',
       'share',
       'change-artist',
       'archive',

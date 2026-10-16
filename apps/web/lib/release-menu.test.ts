@@ -24,16 +24,16 @@ describe('RELEASE_MENU_ORDER', () => {
       'brief',
       'chat',
       'calendar',
+      'song',
+      'coverart',
+      'metadata',
+      'distribute',
+      'files',
       'pitch',
       'pitchkit',
       'promo',
-      'metadata',
-      'distribute',
       'spend',
       'note',
-      'coverart',
-      'song',
-      'files',
       'share',
       'capture',
       'change-artist',
@@ -54,19 +54,16 @@ describe('RELEASE_MENU_ORDER', () => {
     // promoted tab — it is the coordination surface itself, not a place you
     // visit to plan or send something outward.
     expect(position('chat')).toBeLessThan(position('calendar'));
-    // Marketing is the biggest block of a rollout, asset production is a
-    // handful of touches early on.
-    expect(position('calendar')).toBeLessThan(position('coverart'));
-    expect(position('pitch')).toBeLessThan(position('song'));
+    // Release prep runs in the order the work happens (2026-10-16): song and
+    // cover art first, then details, then Distribute, then the pitch, which
+    // needs the release delivered.
+    expect(position('calendar')).toBeLessThan(position('song'));
+    expect(position('song')).toBeLessThan(position('coverart'));
+    expect(position('coverart')).toBeLessThan(position('metadata'));
+    expect(position('metadata')).toBeLessThan(position('distribute'));
+    expect(position('distribute')).toBeLessThan(position('pitch'));
     // Working surfaces before the things you send outward.
     expect(position('metadata')).toBeLessThan(position('capture'));
-    // Capture runs the whole length of a rollout — a note is taken during a
-    // call, not set once like the cover — so it sits in the band you return
-    // to, above the assets. But BELOW the four the founder promoted to tabs,
-    // because he declined to promote notes (2026-08-15, kept off the mobile
-    // pills), and that is the only revealed preference there is for it.
-    expect(position('metadata')).toBeLessThan(position('note'));
-    expect(position('note')).toBeLessThan(position('coverart'));
     // Share to socials is outward, so it sits with capture, after the
     // assets you set once and before the corrective and terminal actions.
     expect(position('files')).toBeLessThan(position('share'));
