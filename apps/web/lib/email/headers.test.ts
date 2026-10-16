@@ -8,23 +8,23 @@ import { composeFromHeader, composeReplyTo, extractAddress } from './headers';
 
 describe('composeFromHeader', () => {
   it('replaces only the display name, keeping the verified address', () => {
-    expect(composeFromHeader('Urganize <team@send.urganize.app>', 'Oyin via Urganize')).toBe(
-      'Oyin via Urganize <team@send.urganize.app>'
+    expect(composeFromHeader('Urganize <team@urganize.app>', 'Oyin via Urganize')).toBe(
+      'Oyin via Urganize <team@urganize.app>'
     );
   });
 
   it('wraps a bare configured address', () => {
-    expect(composeFromHeader('team@send.urganize.app', 'Oyin via Urganize')).toBe(
-      'Oyin via Urganize <team@send.urganize.app>'
+    expect(composeFromHeader('team@urganize.app', 'Oyin via Urganize')).toBe(
+      'Oyin via Urganize <team@urganize.app>'
     );
   });
 
   it('returns the configured value untouched with no usable label', () => {
-    expect(composeFromHeader('Urganize <team@send.urganize.app>')).toBe(
-      'Urganize <team@send.urganize.app>'
+    expect(composeFromHeader('Urganize <team@urganize.app>')).toBe(
+      'Urganize <team@urganize.app>'
     );
-    expect(composeFromHeader('Urganize <team@send.urganize.app>', '   ')).toBe(
-      'Urganize <team@send.urganize.app>'
+    expect(composeFromHeader('Urganize <team@urganize.app>', '   ')).toBe(
+      'Urganize <team@urganize.app>'
     );
   });
 
@@ -33,8 +33,8 @@ describe('composeFromHeader', () => {
     // line breaks must never reach the header — any of them could smuggle a
     // different sending address or an extra header.
     const hostile = 'Evil <attacker@evil.com>\r\nBcc: x@y.z" via Urganize';
-    const composed = composeFromHeader('Urganize <team@send.urganize.app>', hostile);
-    expect(composed.endsWith('<team@send.urganize.app>')).toBe(true);
+    const composed = composeFromHeader('Urganize <team@urganize.app>', hostile);
+    expect(composed.endsWith('<team@urganize.app>')).toBe(true);
     expect(composed).not.toContain('attacker@evil.com>');
     expect(composed).not.toContain('\r');
     expect(composed).not.toContain('\n');
@@ -42,9 +42,9 @@ describe('composeFromHeader', () => {
   });
 
   it('caps an absurdly long label', () => {
-    const composed = composeFromHeader('Urganize <team@send.urganize.app>', 'x'.repeat(300));
+    const composed = composeFromHeader('Urganize <team@urganize.app>', 'x'.repeat(300));
     expect(composed.length).toBeLessThan(120);
-    expect(composed.endsWith('<team@send.urganize.app>')).toBe(true);
+    expect(composed.endsWith('<team@urganize.app>')).toBe(true);
   });
 });
 
@@ -83,10 +83,10 @@ describe('composeReplyTo', () => {
 
 describe('extractAddress', () => {
   it('pulls the bare address out of a full From header', () => {
-    expect(extractAddress('Urganize <team@send.urganize.app>')).toBe('team@send.urganize.app');
+    expect(extractAddress('Urganize <team@urganize.app>')).toBe('team@urganize.app');
   });
 
   it('returns a bare address as-is', () => {
-    expect(extractAddress('team@send.urganize.app')).toBe('team@send.urganize.app');
+    expect(extractAddress('team@urganize.app')).toBe('team@urganize.app');
   });
 });

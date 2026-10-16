@@ -4,6 +4,7 @@ import { parseAnnouncementDraft } from '@/lib/email/announcement';
 import { createBroadcast, listBroadcasts } from '@/lib/email/broadcast-server';
 import { isEmailConfigured } from '@/lib/email';
 import { readEmailConfig } from '@/lib/email/config';
+import { getEmailTemplateMeta, resolveTemplateSender } from '@/lib/email/registry';
 import { budgetPayload, resolveAudienceFromBody } from '../_compose';
 
 /**
@@ -21,6 +22,9 @@ export async function GET(request: NextRequest) {
   if (!admin.ok) return admin.response;
 
   const [list, budget] = await Promise.all([listBroadcasts(admin.supabaseAdmin), budgetPayload(admin.supabaseAdmin)]);
+  // Broadcasts go out as the announcement template, so show ITS sender.
+  const config = readEmailConfig();
+  const sender = config ? resolveTemplateSender(getEmailTemplateMeta('announcement'), config) : null;
   return NextResponse.json({
     broadcasts: list.broadcasts,
     broadcastsError: list.error,
@@ -28,8 +32,8 @@ export async function GET(request: NextRequest) {
     emailConfigured: isEmailConfigured(),
     // Shown on the composer so the founder knows who it comes from and where
     // replies land. It is the verified sender, not a secret.
-    from: readEmailConfig()?.from ?? null,
-    replyTo: readEmailConfig()?.replyTo ?? null,
+    from: sender?.from || null,
+    replyTo: sender?.replyTo ?? null,
   });
 }
 

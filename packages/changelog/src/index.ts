@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.10",
+    date: "October 16, 2026",
+    highlights: [
+      "Emails from Urganize now come from an address that says what they are for, like notifications, sign-in codes or billing, and replying reaches a real inbox.",
+    ],
+  },
+  {
     version: "1.154.9",
     date: "October 16, 2026",
     highlights: [

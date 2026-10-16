@@ -17,13 +17,13 @@ describe('isEmailConfigured', () => {
     vi.stubEnv('RESEND_API_KEY', 're_key');
     expect(isEmailConfigured()).toBe(false);
 
-    vi.stubEnv('EMAIL_FROM', 'Urganize <team@send.urganize.app>');
+    vi.stubEnv('EMAIL_FROM', 'Urganize <team@urganize.app>');
     expect(isEmailConfigured()).toBe(true);
   });
 
   it('treats a whitespace-only value as unset', () => {
     vi.stubEnv('RESEND_API_KEY', '   ');
-    vi.stubEnv('EMAIL_FROM', 'Urganize <team@send.urganize.app>');
+    vi.stubEnv('EMAIL_FROM', 'Urganize <team@urganize.app>');
     expect(isEmailConfigured()).toBe(false);
   });
 });

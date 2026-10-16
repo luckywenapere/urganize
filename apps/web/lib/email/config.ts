@@ -31,12 +31,20 @@ export function isEmailConfigured(): boolean {
 }
 
 /** The only addresses the dashboard may send FROM (PR 3), and the only addresses
- *  a per-template `from` override may resolve to. The address in EMAIL_FROM is
+ *  a per-template `fromAddress` or `replyTo` may name. The address in EMAIL_FROM is
  *  the default and is expected to be one of these. */
 export const SENDER_ALLOWLIST = [
   'hello@urganize.app',
   'lucky@urganize.app',
   'team@urganize.app',
+  // Per-template senders (2026-10-16). All on the root domain, verified in
+  // Resend; no mailbox is needed to send, only to receive replies.
+  'notifications@urganize.app',
+  'verify@urganize.app',
+  'billing@urganize.app',
+  'wenapere@urganize.app',
+  'alerts@urganize.app',
+  'support@urganize.app',
 ] as const;
 
 export type AllowedSender = (typeof SENDER_ALLOWLIST)[number];

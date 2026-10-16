@@ -1,4 +1,5 @@
-import type { AllowedSender } from './config';
+import { isAllowedSender, type AllowedSender, type EmailConfig } from './config';
+import { composeFromHeader } from './headers';
 import type { EmailTemplateId } from './templates/props';
 
 // Template metadata — React-free, so the admin dashboard, callers and the
@@ -36,10 +37,26 @@ export type EmailTemplateMeta = {
    *  is sent to real people (PR 2/3 enforce it). All eight migrated templates
    *  are false: their copy is the approved, shipped wording. */
   placeholderCopy: boolean;
-  /** Send from this address instead of the EMAIL_FROM default. Must be in the
-   *  allowlist. Undefined for every PR-1 template (behaviour preserved). */
+  /** The display name on the From header, e.g. "Urganize Billing". A per-send
+   *  fromLabel ("Oyin via Urganize") still replaces it for that one message. */
+  fromName?: string;
+  /** Send from this address. Must be in SENDER_ALLOWLIST; an address that is
+   *  not falls back to EMAIL_FROM. Unset uses DEFAULT_TEMPLATE_SENDER. */
   fromAddress?: AllowedSender;
+  /** Where replies go. null omits the Reply-To header (founder alerts); unset
+   *  uses DEFAULT_TEMPLATE_SENDER's. A per-send replyTo still wins. */
+  replyTo?: AllowedSender | null;
 };
+
+/** Per-template senders (founder-approved mapping, 2026-10-16). Every address is
+ *  on the ROOT domain urganize.app, which is verified in Resend (production had
+ *  been sending from lucky@urganize.app). A template without its own sender
+ *  goes out from notifications@ with replies to support@. */
+export const DEFAULT_TEMPLATE_SENDER = {
+  fromName: 'Urganize',
+  fromAddress: 'notifications@urganize.app',
+  replyTo: 'support@urganize.app',
+} as const satisfies { fromName: string; fromAddress: AllowedSender; replyTo: AllowedSender };
 
 export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
   welcome: {
@@ -48,6 +65,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Welcome',
     description: 'The founder-note welcome, sent once when a self-signup finishes onboarding.',
     placeholderCopy: false,
+    fromName: 'Oyin at Urganize',
+    fromAddress: 'wenapere@urganize.app',
+    replyTo: 'wenapere@urganize.app',
   },
   workspace_invite: {
     id: 'workspace_invite',
@@ -55,6 +75,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Team invite',
     description: 'Sent when someone is invited to a team, carrying the single-use accept link.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   credit_submission: {
     id: 'credit_submission',
@@ -62,6 +85,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Credits submitted',
     description: 'Tells the release owner a collaborator submitted their credits.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   task_assigned: {
     id: 'task_assigned',
@@ -69,6 +95,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Activity assigned',
     description: 'Tells someone an activity was assigned to them.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   work_request: {
     id: 'work_request',
@@ -76,6 +105,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Directory request',
     description: 'Tells a directory member someone is asking them to work on a release.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   claim_invite: {
     id: 'claim_invite',
@@ -83,6 +115,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Claim your page',
     description: 'Sent when a rollout owner invites a credited collaborator to claim their unclaimed profile.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   claim_code: {
     id: 'claim_code',
@@ -90,6 +125,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Claim code',
     description: 'The six-digit code that proves a claim, sent to the email already on the credit (URG-305).',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'verify@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   claim_auto_invite: {
     id: 'claim_auto_invite',
@@ -98,6 +136,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description:
       'Sent once, on its own, to a credited collaborator with an unclaimed page when the rollout has come out. Behind NEXT_PUBLIC_FEATURE_CLAIM_AUTO_EMAIL. Copy in lib/claim-email-copy.ts.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   claim_reminder: {
     id: 'claim_reminder',
@@ -106,6 +147,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description:
       'The one reminder, 7 days after the automatic claim email, if the page is still unclaimed and nobody sent a newer link. Copy in lib/claim-email-copy.ts.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   directory_invite: {
     id: 'directory_invite',
@@ -114,6 +158,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description:
       'Sent when a manager invites someone they work with into the Directory and types their email. Carries the /welcome link to their private profile.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   work_request_answer: {
     id: 'work_request_answer',
@@ -121,6 +168,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Directory request answer',
     description: 'Tells the asker whether the person is interested, and hands over contact on yes.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   referral_reward: {
     id: 'referral_reward',
@@ -128,6 +178,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Referral reward',
     description: 'Tells a team it earned credits because a team it invited made its first payment.',
     placeholderCopy: false,
+    fromName: 'Urganize Billing',
+    fromAddress: 'billing@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   team_admin_notice: {
     id: 'team_admin_notice',
@@ -135,6 +188,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Team comped or trial extended',
     description: 'Tells a team owner the founder gave the team free access or extended its free trial. Sent for every such change, including earlier ones.',
     placeholderCopy: false,
+    fromName: 'Urganize Billing',
+    fromAddress: 'billing@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   release_payback_question: {
     id: 'release_payback_question',
@@ -144,6 +200,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
       'Asked once, 30 days after release day: what did the rollout pay back. The answer is saved on the rollout. Copy in lib/release-spend.ts.',
     // The question is the brief's; the sentence after it is marked TODO(copy).
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   founder_billing_alert: {
     id: 'founder_billing_alert',
@@ -151,6 +210,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Founder billing alert',
     description: 'Operational billing alerts to the founder.',
     placeholderCopy: false,
+    fromName: 'Urganize Alerts',
+    fromAddress: 'alerts@urganize.app',
+    replyTo: null,
   },
   notify_admin: {
     id: 'notify_admin',
@@ -158,6 +220,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Ask your admin to activate',
     description: 'A walled teammate asking their admin to activate the plan.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   pay_link: {
     id: 'pay_link',
@@ -165,6 +230,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Link to pick a plan',
     description: 'Emailed to the owner on request from the iPhone app, where payment cannot be taken.',
     placeholderCopy: false,
+    fromName: 'Urganize Billing',
+    fromAddress: 'billing@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   pitch_notice: {
     id: 'pitch_notice',
@@ -175,6 +243,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     // The sentences are the spec's own copy (lib/pitch-payment-copy.ts), so not
     // placeholder. The feature is switched off until launch regardless.
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   founder_ops_alert: {
     id: 'founder_ops_alert',
@@ -182,6 +253,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Pitch payments alert',
     description: 'Curator pitch payment problems that need the founder: reviews, mismatches, failed refunds.',
     placeholderCopy: false,
+    fromName: 'Urganize Alerts',
+    fromAddress: 'alerts@urganize.app',
+    replyTo: null,
   },
   onboarding_step: {
     id: 'onboarding_step',
@@ -192,6 +266,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     // Drafted for the founder's approval; it only goes out once
     // EMAIL_ONBOARDING_SEQUENCE=on, which is the approval.
     placeholderCopy: false,
+    fromName: 'Oyin at Urganize',
+    fromAddress: 'wenapere@urganize.app',
+    replyTo: 'wenapere@urganize.app',
   },
   chat_mention: {
     id: 'chat_mention',
@@ -200,6 +277,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     description:
       'Sent when someone tags a teammate with @Name, or the whole team with @everyone, in a rollout chat.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'notifications@urganize.app',
+    replyTo: 'support@urganize.app',
   },
   announcement: {
     id: 'announcement',
@@ -207,6 +287,9 @@ export const EMAIL_TEMPLATES: Record<EmailTemplateId, EmailTemplateMeta> = {
     name: 'Written in the admin',
     description: 'An email the founder wrote and sent from /admin/emails/new.',
     placeholderCopy: false,
+    fromName: 'Urganize',
+    fromAddress: 'hello@urganize.app',
+    replyTo: 'hello@urganize.app',
   },
 };
 
@@ -226,4 +309,44 @@ export function isUnsubscribableCategory(category: EmailCategory): boolean {
 
 export function getEmailTemplateMeta(id: EmailTemplateId): EmailTemplateMeta {
   return EMAIL_TEMPLATES[id];
+}
+
+export type ResolvedSender = {
+  /** Full From header, e.g. "Urganize Billing <billing@urganize.app>". Empty
+   *  only when the template's address is not allowlisted AND EMAIL_FROM is
+   *  unset, which is the not-configured case anyway. */
+  from: string;
+  /** The bare sending address, for the log. */
+  address: string;
+  replyTo: string | null;
+  /** True when the template's own sender was unusable and EMAIL_FROM (with
+   *  EMAIL_REPLY_TO) was used instead. */
+  usedFallback: boolean;
+};
+
+/** Pure: which From and Reply-To a template goes out with. EMAIL_FROM stays
+ *  the on/off switch (sendEmail skips when it is unset) and is the fallback
+ *  when a template's address is not on the allowlist. */
+export function resolveTemplateSender(
+  meta: Pick<EmailTemplateMeta, 'fromName' | 'fromAddress' | 'replyTo'>,
+  config: Pick<EmailConfig, 'from' | 'replyTo'> | null
+): ResolvedSender {
+  const address = meta.fromAddress ?? DEFAULT_TEMPLATE_SENDER.fromAddress;
+  if (!isAllowedSender(address)) {
+    const from = config?.from || '';
+    const match = from.match(/<([^<>]+)>\s*$/);
+    return {
+      from,
+      address: from ? (match ? match[1] : from).trim() : '(unset)',
+      replyTo: config?.replyTo ?? null,
+      usedFallback: true,
+    };
+  }
+  const name = meta.fromName ?? DEFAULT_TEMPLATE_SENDER.fromName;
+  return {
+    from: composeFromHeader(address, name),
+    address,
+    replyTo: meta.replyTo === undefined ? DEFAULT_TEMPLATE_SENDER.replyTo : meta.replyTo,
+    usedFallback: false,
+  };
 }

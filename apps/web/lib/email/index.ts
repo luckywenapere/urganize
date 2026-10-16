@@ -12,9 +12,9 @@
 
 import type { ReactElement } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { isAllowedSender, readEmailConfig } from './config';
-import { composeFromHeader, composeReplyTo, extractAddress } from './headers';
-import { getEmailTemplateMeta } from './registry';
+import { readEmailConfig } from './config';
+import { composeFromHeader, composeReplyTo } from './headers';
+import { getEmailTemplateMeta, resolveTemplateSender } from './registry';
 import { insertPendingEmailLog, insertTerminalEmailLog, markEmailLogFailed, markEmailLogSent } from './log-server';
 import { loadEmailTemplate } from './templates/loaders';
 import { sendViaResend } from './transport';
@@ -103,11 +103,12 @@ export async function sendEmail<Id extends EmailTemplateId>(
   // The catch above returns, so element is set here; this narrows it for TS.
   if (!element) return { ok: false, error: 'template_load_failed' };
 
-  const senderAddress =
-    meta.fromAddress && isAllowedSender(meta.fromAddress) ? meta.fromAddress : null;
-  const baseFrom = senderAddress ? `Urganize <${senderAddress}>` : config?.from || '';
-  const fromAddressForLog = senderAddress || (baseFrom ? extractAddress(baseFrom) : '(unset)');
-  const replyToResolved = composeReplyTo(config?.replyTo ?? null, params.replyTo);
+  // Each template has its own sender and Reply-To (registry). A per-send
+  // fromLabel only swaps the display name; a per-send replyTo wins when valid.
+  const sender = resolveTemplateSender(meta, config);
+  const baseFrom = sender.from;
+  const fromAddressForLog = sender.address;
+  const replyToResolved = composeReplyTo(sender.replyTo, params.replyTo);
 
   const logBase = {
     recipient: params.to,

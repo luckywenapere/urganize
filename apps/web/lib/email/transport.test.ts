@@ -6,7 +6,7 @@ import { sendViaResend } from './transport';
 // the request shape, and that no provider outage or timeout ever throws.
 
 const input = {
-  from: 'Urganize <team@send.urganize.app>',
+  from: 'Urganize <team@urganize.app>',
   to: 'a@b.com',
   subject: 's',
   html: '<p>h</p>',
@@ -35,7 +35,7 @@ describe('sendViaResend', () => {
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers.Authorization).toBe('Bearer re_key');
     const body = JSON.parse((init as RequestInit).body as string);
-    expect(body.from).toBe('Urganize <team@send.urganize.app>');
+    expect(body.from).toBe('Urganize <team@urganize.app>');
     expect(body.to).toEqual(['a@b.com']);
     expect(body.reply_to).toBe('contact@urganize.app');
     expect(body.html).toBe('<p>h</p>');
