@@ -1,4 +1,5 @@
-import { LoadingScreen } from '@urganize/ui';
+// Deep import (URG-314): see AuthPageClient.
+import { LoadingScreen } from '@urganize/ui/LoadingScreen';
 
 export default function AuthLoading() {
   return (

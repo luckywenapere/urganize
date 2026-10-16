@@ -1,5 +1,6 @@
 'use client';
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 
@@ -120,3 +121,6 @@ export function resetArtistRosterStore(): void {
   rosterInFlight = null;
   useArtistRosterStore.setState({ artists: [], loaded: false });
 }
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('artist-roster', resetArtistRosterStore);

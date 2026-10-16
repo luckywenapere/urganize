@@ -1,6 +1,7 @@
 'use client';
 
-import { LoadingMark } from '@urganize/ui';
+// Deep import (URG-314): see app/error.tsx.
+import { LoadingMark } from '@urganize/ui/LoadingScreen';
 
 /**
  * Root-segment Suspense fallback (mounted by `app/loading.tsx`). Catches any

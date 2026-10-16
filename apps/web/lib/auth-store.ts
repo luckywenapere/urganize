@@ -11,24 +11,16 @@ import { isHardPaywallEnabled } from './team-billing';
 import { isNativePlatform } from './platform';
 import { request as nativeRequest } from './native-bridge';
 import { oauthRedirectToPath } from '@urganize/native-bridge';
-import { resetSceneData } from '@/stores/useSceneDataStore';
+// Per-account stores register their own sign-out resets (lib/sign-out-resets.ts)
+// instead of being imported here, so a page that never loads a store never
+// ships it (URG-314). Browser-storage copies are cleared by key below either way.
+import { runSignOutResets } from '@/lib/sign-out-resets';
+import { SCENE_CACHE_KEY } from '@/lib/scene-cache';
+import { clearChatCache } from '@/lib/chappi/conversation-cache';
 import { resetSceneMemory } from '@/lib/scene-memory';
 import { resetCatalogIntent } from '@/lib/catalog-intent';
-import { resetPressKitsStore } from '@/stores/usePressKitsStore';
-import { resetEventsStore } from '@/stores/useEventsStore';
-import { resetArtistRosterStore } from '@/stores/useArtistRosterStore';
-import { resetRelationshipsStore } from '@/stores/useRelationshipsStore';
-import { resetOpportunitiesStore } from '@/stores/useOpportunitiesStore';
-import { resetReleaseStore } from '@/stores/useReleaseStore';
-import { resetTaskStore } from '@/stores/useTaskStore';
-import { resetActivityStore } from '@/stores/useActivityStore';
-import { clearKitDetailCache } from '@/lib/press-kit-detail-cache';
-import { useChappiStore } from '@/stores/useChappiStore';
-import { resetChappiHistory } from '@/stores/useChappiHistoryStore';
-import { resetSpendAccess } from '@/stores/useSpendAccessStore';
 import { clearDeferredFirstShare } from '@/lib/social-share-offer';
 import { clearFirstSession } from '@/lib/first-session';
-import { useHomeStore } from '@/stores/useHomeStore';
 import { clearLoginCookie, setLoginCookie } from '@/lib/login-cookie';
 import {
   classifyAuthFailure,
@@ -1170,67 +1162,42 @@ if (typeof window !== 'undefined') {
       // The marketing site must stop treating this browser as signed in.
       clearLoginCookie();
       invalidateAuthRecency();
-      // Cached release-scene data is per-account. Clearing it here (memory AND
-      // disk) is what stops account B, signing in on the same device, from
-      // seeing a frame of account A's metadata or files.
-      resetSceneData();
-      // Which scene each release was last showing (lib/scene-memory.ts) is
-      // separate from the cached scene DATA above, but the same rule
-      // applies: logging out and back in — even in the same tab, same or
-      // different account — must always start every release at Activities,
-      // never resume whatever was open in the session that just ended.
+      // Every per-account store that loaded in this tab forgets its data
+      // (lib/sign-out-resets.ts lists them and the order they run in). A store
+      // that never loaded holds nothing in memory, so it has nothing to reset.
+      //
+      // Why each one matters: account B signing in on the same tab must never
+      // see a frame of account A's data. Release scenes (metadata, files), the
+      // press kit roster and single-kit payloads (artist names, photos, bios),
+      // shows, the artist roster, relationships, opportunities, spend access,
+      // the UrgAns transcript and its saved chats (history first: it would
+      // otherwise read the transcript reset as leaving a chat and save it
+      // again under the account signing out), the catalog, its tasks and
+      // activity feed (and their recency clocks, so the next load is real),
+      // and Home's role, state and brief. All are module-level stores that a
+      // client-side navigation to /auth never tears down (the UrgAns class of
+      // bug, found 2026-09-25).
+      runSignOutResets();
+      // What lives in browser storage outlives the tab, so it is cleared by
+      // key on every sign-out whether or not its store loaded here.
+      // Cached release-scene data (the disk copy of the scene store above).
+      try {
+        window.localStorage.removeItem(SCENE_CACHE_KEY);
+      } catch {
+        // Blocked storage: memory is already cleared, which is what matters.
+      }
+      // The browser copy of account A's UrgAns chats. Deliberately
+      // unconditional (not behind the history flag): a copy left behind by a
+      // session when the flag was on must still go.
+      clearChatCache();
+      // Which scene each release was last showing (lib/scene-memory.ts):
+      // logging out and back in must always start every release at
+      // Activities, never resume whatever was open in the session that ended.
       resetSceneMemory();
       // Same rule, one level up: a same-tab logout then login is a new
       // arrival, so it gets its one lone-release auto-scope back rather than
       // inheriting "the catalog was asked for" from the session that ended.
       resetCatalogIntent();
-      // The cached press kit roster is artist NAMES, so the resetSceneData
-      // reasoning above applies to it verbatim: its disk copy is keyed by user
-      // id and would miss, but the in-memory copy would survive a same-tab
-      // account switch and show account B a frame of account A's roster.
-      resetPressKitsStore();
-      // And the single-kit payloads behind it — one account's photos and bios,
-      // held in memory, which would otherwise survive a same-tab account
-      // switch exactly as the roster would.
-      clearKitDetailCache();
-      // Shows and the artist roster are the same exposure: account A's
-      // schedule and artist names in module-level stores that survive a
-      // same-tab switch (found 2026-09-25, the UrgAns class of bug).
-      resetEventsStore();
-      resetArtistRosterStore();
-      resetRelationshipsStore();
-      resetOpportunitiesStore();
-      // Whether account A could see a rollout's spend must not carry over to account
-      // B in the same tab: a stale `true` would show B a Spend row for a rollout B
-      // cannot read the cost of. The server asks again either way.
-      resetSpendAccess();
-      // The UrgAns conversation is the same exposure in its sharpest form: a
-      // whole transcript of account A's questions and answers, kept in a
-      // module-level store that a client-side navigation to /auth never
-      // tears down. Before this, signing in as account B in the same tab
-      // showed account A's chat. Resetting also bumps the store's epoch, so a
-      // reply still in flight for account A is dropped when it lands.
-      //
-      // Chat history goes FIRST, and the order matters: the history store
-      // subscribes to the transcript, and would read the reset below as
-      // "leaving a chat" and save it again under the account that is signing
-      // out. It also wipes the browser copy of account A's chats. Deliberately
-      // unconditional (not behind the history flag): a copy left behind by a
-      // session when the flag was on must still go.
-      resetChappiHistory();
-      useChappiStore.getState().resetForSignOut();
-      // The catalog, its tasks and its activity feed are the sharpest version
-      // of this same exposure: the whole workspace, held in three
-      // module-level stores that a client-side navigation to /auth never
-      // tears down. Before this, a same-tab sign-out then sign-in as another
-      // account could paint account A's rollouts, tasks and activity feed
-      // for account B — and within useReleaseStore's 10 second recency
-      // window, loadCommandCenter() would return early and never replace
-      // them. The recency clocks and in-flight promises go too, so the next
-      // load is real.
-      resetReleaseStore();
-      resetTaskStore();
-      resetActivityStore();
       // A first-rollout share offer still waiting for the next visit (share
       // to socials) names account A's rollout. It is keyed to A, so B would
       // never see it, but another person may use this browser next.
@@ -1238,10 +1205,6 @@ if (typeof window !== 'undefined') {
       // Same for the first-session record onboarding leaves (lib/first-session.ts):
       // it names account A's rollout and holds A's deferred share offer.
       clearFirstSession();
-      // Home's role, state and brief are account A's too — a same-tab
-      // sign-out/sign-in must not paint account B's landing screen with the
-      // previous account's "Good morning, Ada" header for a frame.
-      useHomeStore.getState().reset();
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,

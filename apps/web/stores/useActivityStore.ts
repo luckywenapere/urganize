@@ -1,5 +1,6 @@
 'use client';
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import type { ActivityLogEntry } from '@/lib/execution-types';
 
@@ -34,3 +35,6 @@ export const useActivityStore = create<ActivityStore>((set) => ({
 export function resetActivityStore(): void {
   useActivityStore.setState({ activity: [] });
 }
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('activity', resetActivityStore);

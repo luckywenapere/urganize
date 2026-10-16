@@ -3,7 +3,9 @@
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Button } from '@urganize/ui';
+// Deep import (URG-314): the package barrel would pull every ui component into
+// every route's first load, and this boundary is on the shared chain.
+import { Button } from '@urganize/ui/Button';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
 import { errorBackHref } from '@/lib/error-back-link';
 

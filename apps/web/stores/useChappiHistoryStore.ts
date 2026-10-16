@@ -37,6 +37,7 @@
  * back would be a cycle.
  */
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import type { ChappiMessage } from '@/lib/chappi/types';
@@ -1024,3 +1025,6 @@ export function selectChatSaveNotice(
   if (status === 'retrying') return 'retrying';
   return null;
 }
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('chappi-history', resetChappiHistory);

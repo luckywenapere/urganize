@@ -13,13 +13,13 @@ total includes Next's legacy polyfills chunk (~39 KB gzip), which carries
 `noModule` and is skipped by every modern browser; `measure.py` reports both
 ("js gz" and "modern gz"). The budget is held against the full figure.
 
-| What | Budget | 2026-10-15 before | after v1.147.6 | after v1.147.8 |
-| --- | --- | --- | --- | --- |
-| Shared first-load JS, gzip (`/auth`, `/`, `/locked`) | **< 250 KB** | 400-414 KB | 350-362 KB | 321-333 KB (modern browsers 283-295 KB) |
-| `/dashboard` first-load JS, gzip | < 350 KB | 524 KB | 444 KB | 416 KB |
-| Other `/dashboard/*` first-load JS, gzip | < 300 KB | 419-475 KB | 372-438 KB | 343-409 KB |
-| Lighthouse mobile (slow 4G, simulated), `/auth` | >= 80 | 47 (LCP 6.1 s, TBT 2.57 s) | 49-65 (LCP 3.4-5.2 s, TBT 1.8-1.9 s) | see URG-314 |
-| Fonts preloaded on `/auth` | 2 | 2 | 2 | 2 |
+| What | Budget | 2026-10-15 before | after v1.147.6 | after v1.147.8 | after v1.153.1 |
+| --- | --- | --- | --- | --- | --- |
+| Shared first-load JS, gzip (`/auth`, `/`, `/locked`) | **< 250 KB** | 400-414 KB | 350-362 KB | 321-333 KB (modern browsers 283-295 KB) | 307-318 KB (modern 268-279 KB) |
+| `/dashboard` first-load JS, gzip | < 350 KB | 524 KB | 444 KB | 416 KB | 417 KB (modern 378 KB) |
+| Other `/dashboard/*` first-load JS, gzip | < 300 KB | 419-475 KB | 372-438 KB | 343-409 KB | 331-402 KB (modern 293-363 KB) |
+| Lighthouse mobile (slow 4G, simulated), `/auth` | >= 80 | 47 (LCP 6.1 s, TBT 2.57 s) | 49-65 (LCP 3.4-5.2 s, TBT 1.8-1.9 s) | 86-93 (LCP 1.3-1.5 s, TBT 320-560 ms) | see URG-314 |
+| Fonts preloaded on `/auth` | 2 | 2 | 2 | 2 | 2 |
 
 We are still over budget. The table is the target, not a description of today.
 A change that grows shared first-load JS by more than 5 KB gzip needs a reason
@@ -97,6 +97,45 @@ duplicated across the new chunk boundary), and without its chunk preloaded it
 delayed hydration of the page inside it. Net loss, reverted. The attempt is
 kept outside the repo. Revisit only with a split that does not wrap `children`.
 
+**Sign-out reset registry** (v1.153.1, `lib/sign-out-resets.ts`). Each store
+that holds one account's data calls `registerSignOutReset(id, reset)` at module
+scope, and `SIGNED_OUT` in `lib/auth-store.ts` calls `runSignOutResets()`.
+auth-store imports no store, so a page that never loads a store never ships
+it. A store that never loaded in the tab holds nothing in memory. What lives
+in browser storage outlives the tab, so auth-store still clears those keys by
+name on every sign-out (the scene cache key, `clearChatCache()`). Order is
+fixed in `SIGN_OUT_RESET_ORDER` ('chappi-history' before 'chappi'). A new
+per-account store must register itself; `lib/sign-out-resets.test.ts` pins
+the list. Also in v1.153.1: `InviteGate` is `next/dynamic` (ssr:false), the
+offline queue flush is a plain `import()`, and shared-chain files import
+`@urganize/ui` by subpath (`@urganize/ui/Button`, `/LoadingScreen`, `/Input`,
+`/Logo`) instead of the barrel.
+
+**Tried and dropped again (v1.153.1): mounting the workspace chrome from
+route layouts.** Moving TopNav, side menu, page bar, bottom bar, search bar
+and UrgAns launcher from AppShell into a `WorkspaceFrame` mounted by
+`app/dashboard/layout.tsx` and `app/settings/layout.tsx` cut ~25-33 KB gzip
+off `/auth`, `/`, `/locked` and onboarding but added ~4-12 KB to the
+dashboard routes. Two problems with the server HTML: (1) a page that bails out
+of static rendering is caught by `app/loading.tsx`, which now sits OUTSIDE the
+frame, so the chrome vanished from `/dashboard/*` first paint (fixable: a
+`<Suspense fallback={<RootShellSkeleton />}>` around `children` inside
+`<main>` made `/dashboard/tasks`, `/dashboard/home` and `/settings` match prod
+exactly); (2) on `/dashboard` the frame's own client-reference chunk load
+suspended during prerender, so the root loading boundary streamed the brand
+skeleton first and swapped the whole frame in by inline script (`$RC`),
+unlike prod. Not fixable without a boundary above the layout, so the move was
+reverted. Attempt kept outside the repo. Revisit only if the root
+`loading.tsx` goes or the frame stops being a separate client reference.
+
+## Known failing tests on main (2026-10-16)
+
+`vitest run` in `apps/web` has 7 failures in 6 files that predate URG-314
+batch 5 and come from other work: `editorial-overview-guard`,
+`field-border-guard`, `help-copy`, `profile-bio-guard`,
+`shell-sidebar-guard` (page bar + side menu, 2 tests) and
+`usage-metrics-guard`. A perf change must add none.
+
 ## Service worker (`public/sw-offline.js`)
 
 Live in production (`NEXT_PUBLIC_FEATURE_OFFLINE=true`). Since v1.147.7:
@@ -141,10 +180,17 @@ Live in production (`NEXT_PUBLIC_FEATURE_OFFLINE=true`). Since v1.147.7:
   (`WKAppBoundDomains` listing app.urganize.app) and a new native build before
   WKWebView will run the service worker on iOS. Android WebView already
   supports it.
-- **Next shared-bundle targets** (from source-map attribution of `/auth`,
-  minified bytes): `react-dom` ~198 KB and the Next router are fixed costs;
-  `@supabase/auth-js` ~88 KB is needed. App code reaching every route through
-  `lib/auth-store.ts`'s sign-out resets (`useChappiHistoryStore` ~11 KB, the
-  events, relationships, press-kit, notes and scene stores) could move to a
-  reset registry so a store that never loaded is never shipped; the stores that
-  wipe browser storage on sign-out must keep doing so.
+- **Remaining budget (2026-10-16, after v1.153.1).** About 180 KB gzip of
+  every route is a fixed floor: `react-dom`, the Next router/runtime and
+  `@supabase/auth-js`. Shared first-load is 307-318 KB, so the 250 KB budget
+  needs ~60 KB more out of app code. Next cuts, in order:
+  1. `TaskUIProvider` and the task stores off the root layout (mount from the
+     workspace routes or load on demand): ~25 KB minimum.
+  2. Lazy social-share (`withFirstShareOffer`, share sheet wiring) and the
+     team-billing helpers auth-store imports: ~10 KB.
+  3. Split `components/icons/house.tsx` so the shared chain stops carrying
+     every icon. Pending coordination: the side menu icon work that shipped
+     2026-10-16 lives there.
+  4. Voice imports on `HomeAskBar` / `ChappiConversation` and `NextShowCard`
+     once Feature Cuts has hidden those features (voice and Shows are off as
+     of v1.149.0, so the code can go behind `import()` or be removed).

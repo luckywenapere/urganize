@@ -1,5 +1,6 @@
 'use client';
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import type {
   ChappiAttachment,
@@ -251,3 +252,6 @@ export const selectLiveTurnCount = (state: {
   messages: ChappiMessage[];
   restoredCount: number;
 }): number => Math.max(0, state.messages.length - state.restoredCount);
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('chappi', () => useChappiStore.getState().resetForSignOut());

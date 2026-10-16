@@ -136,7 +136,7 @@ describe('import direction', () => {
   });
 
   it('keeps the history store from importing the auth store', () => {
-    // auth-store imports the history store to reset it on sign-out.
+    // auth-store runs the history store's sign-out reset (lib/sign-out-resets.ts).
     const history = stripComments(read(WEB, 'stores', 'useChappiHistoryStore.ts'));
     expect(history).not.toMatch(/auth-store/);
   });

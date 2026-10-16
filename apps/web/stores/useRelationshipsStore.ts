@@ -1,5 +1,6 @@
 'use client';
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import type { DuplicateFlagView, InteractionView, RelationshipView } from '@/lib/relationships-server';
@@ -287,3 +288,6 @@ export function resetRelationshipsStore(): void {
     error: null,
   });
 }
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('relationships', resetRelationshipsStore);

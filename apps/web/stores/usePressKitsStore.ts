@@ -1,5 +1,6 @@
 'use client';
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
@@ -178,3 +179,6 @@ export function resetPressKitsStore() {
     error: null,
   });
 }
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('press-kits', resetPressKitsStore);

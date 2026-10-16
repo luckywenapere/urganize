@@ -1,5 +1,6 @@
 'use client';
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import {
@@ -771,3 +772,6 @@ export function resetTaskStore(): void {
     coverArtPrompt: null,
   });
 }
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('tasks', resetTaskStore);

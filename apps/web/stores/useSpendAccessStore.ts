@@ -1,5 +1,6 @@
 'use client';
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { useEffect } from 'react';
 import { loadSpend } from '@/lib/release-spend-client';
@@ -60,3 +61,6 @@ export function useCanViewSpend(releaseId: string | null): boolean {
 export function resetSpendAccess(): void {
   useSpendAccessStore.getState().reset();
 }
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('spend-access', resetSpendAccess);

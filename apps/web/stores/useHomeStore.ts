@@ -1,5 +1,6 @@
 'use client';
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -116,3 +117,6 @@ export const useHomeStore = create<HomeStore>((set, get) => ({
     set({ data: null, isLoading: true, error: '' });
   },
 }));
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('home', () => useHomeStore.getState().reset());

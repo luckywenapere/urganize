@@ -1,5 +1,6 @@
 'use client';
 
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import type { OpportunityView } from '@/lib/opportunities';
@@ -164,3 +165,6 @@ export function resetOpportunitiesStore(): void {
   inFlight = null;
   useOpportunitiesStore.setState({ opportunities: [], isInitialLoading: true, error: null });
 }
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('opportunities', resetOpportunitiesStore);

@@ -9,9 +9,11 @@ import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 import { captureReferralFromSearch } from '@/lib/referral-intent';
 import { HOME_PATH } from '@/lib/home-path';
 import { openExternalUrl } from '@/lib/external-link';
-import { Input } from '@urganize/ui';
-import { LogoIcon } from '@urganize/ui';
-import { LoadingScreen } from '@urganize/ui';
+// Deep imports (URG-314): the @urganize/ui barrel pulled every ui component
+// (the audio player, UrgAns pieces, the genre picker) into the sign-in page.
+import { Input } from '@urganize/ui/Input';
+import { LogoIcon } from '@urganize/ui/Logo';
+import { LoadingScreen } from '@urganize/ui/LoadingScreen';
 import { Mail, Lock } from '@/components/icons';
 import { errorMessage } from "@/lib/errors";
 import { supabase } from '@/lib/supabase/client';

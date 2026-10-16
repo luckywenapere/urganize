@@ -1,3 +1,4 @@
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase/client';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
@@ -518,3 +519,6 @@ export const useSceneDataStore = create<SceneDataStore>((set, get) => ({
 export function resetSceneData(): void {
   useSceneDataStore.getState().invalidate();
 }
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('scene-data', resetSceneData);

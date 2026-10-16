@@ -1,3 +1,4 @@
+import { registerSignOutReset } from '@/lib/sign-out-resets';
 import type { PressKit, PressKitAsset, PressKitSection } from '@/types/press-kits';
 
 /**
@@ -84,3 +85,6 @@ export function writeCachedKitDetail(
 export function clearKitDetailCache() {
   cache.clear();
 }
+
+// Sign-out: see lib/sign-out-resets.ts (runs from lib/auth-store.ts).
+registerSignOutReset('press-kit-detail', clearKitDetailCache);

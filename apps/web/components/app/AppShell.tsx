@@ -29,7 +29,6 @@ import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { ChunkRecoveryBridge } from '@/components/providers/ChunkRecoveryBridge';
 import { CardTrialGate } from '@/components/providers/CardTrialGate';
 import { HardPaywallGate } from '@/components/providers/HardPaywallGate';
-import { InviteGate } from '@/components/app/InviteGate';
 import { NativePushBridge } from '@/components/providers/NativePushBridge';
 import { NativeAppearanceBridge } from '@/components/providers/NativeAppearanceBridge';
 import { KeyboardViewportBridge } from '@/components/providers/KeyboardViewportBridge';
@@ -37,7 +36,6 @@ import { ChappiHistoryBridge } from '@/components/chappi/ChappiHistoryBridge';
 import { isChappiHistoryEnabled } from '@/lib/chappi/conversation-history';
 import { precacheRoutesOffline, registerAppServiceWorker } from '@/lib/offline/register';
 import { OfflineBanner } from '@/components/app/OfflineBanner';
-import { flushOfflineQueue } from '@/lib/offline/sync';
 import { runWhenIdle, shouldBackgroundPrefetch } from '@/lib/connection';
 import { buildPrefetchRoutes } from '@/lib/prefetch-routes';
 import { CURATOR_HOME_PATH, HOME_PATH } from '@/lib/home-path';
@@ -75,6 +73,13 @@ const CommandBar = dynamic(() =>
 );
 const FloatingUrgAns = dynamic(() =>
   import('@/components/shell/FloatingUrgAns').then((m) => m.FloatingUrgAns)
+);
+// The invite gate only ever opens after its own /api answer arrives, on a
+// signed-in dashboard page, so its code (and the next-moves engine behind it)
+// does not need to ride in every route's first load (URG-314, 2026-10-16).
+const InviteGate = dynamic(
+  () => import('@/components/app/InviteGate').then((m) => m.InviteGate),
+  { ssr: false }
 );
 const FirstReleaseFocus = dynamic(
   () => import('@/components/releases/FirstReleaseFocus').then((m) => m.FirstReleaseFocus),
@@ -384,10 +389,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   // should not have to wait for a fresh online/offline transition to sync.
   useEffect(() => {
     if (!OFFLINE_ENABLED) return;
+    // Imported on demand (URG-314): the queue and the stores it replays into
+    // are not needed for first paint, so they stay out of every route's first
+    // load. A chunk that fails to load is the same as an empty queue here.
     const syncNow = () => {
-      void flushOfflineQueue().finally(() => {
-        void useReleaseStore.getState().loadCommandCenter({ force: true });
-      });
+      void import('@/lib/offline/sync')
+        .then(({ flushOfflineQueue }) => flushOfflineQueue())
+        .catch(() => undefined)
+        .finally(() => {
+          void useReleaseStore.getState().loadCommandCenter({ force: true });
+        });
     };
     syncNow();
     window.addEventListener('online', syncNow);
