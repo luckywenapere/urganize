@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.152.1",
+    date: "October 16, 2026",
+    highlights: [
+      "On the distributor handoff, the Metadata row's button now reads Upload, like the master and cover art rows.",
+    ],
+  },
+  {
     version: "1.152.0",
     date: "October 16, 2026",
     highlights: [

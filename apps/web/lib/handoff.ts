@@ -283,7 +283,7 @@ export function rowActionFor(status: HandoffStatus): HandoffRowAction {
 
 /** The button's words. Files are uploaded; fields are fixed. */
 export function rowActionLabel(item: HandoffItemKey, action: HandoffRowAction): string | null {
-  if (action === 'fix') return item === 'metadata' ? 'Fix' : 'Upload';
+  if (action === 'fix') return 'Upload';
   if (action === 'approve') return 'Approve';
   if (action === 'send') return 'Mark sent';
   return null;

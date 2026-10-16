@@ -174,7 +174,7 @@ describe('status', () => {
     expect(rowActionFor('sent')).toBeNull();
     expect(rowActionLabel('master', 'fix')).toBe('Upload');
     expect(rowActionLabel('cover_art', 'fix')).toBe('Upload');
-    expect(rowActionLabel('metadata', 'fix')).toBe('Fix');
+    expect(rowActionLabel('metadata', 'fix')).toBe('Upload');
     expect(rowActionLabel('master', 'send')).toBe('Mark sent');
   });
 
