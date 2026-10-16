@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.0",
+    date: "October 16, 2026",
+    highlights: [
+      "New AI plans are smaller: 12 to 15 core activities across Pre-release, Release and Post-release, each with an owner and a date, and the first one marked Start here.",
+      "The rest of the playbook waits as suggestions. Open \"N suggested\" in a phase and tap + to add one with its date and owner. Plans you already have stay as they are.",
+    ],
+  },
+  {
     version: "1.153.2",
     date: "October 16, 2026",
     highlights: [

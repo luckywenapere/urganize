@@ -211,6 +211,9 @@ export interface Task {
    * absent: a plan from before the flag existed, which lib/plan-focus.ts
    * shortens by its own rule. Optional so every existing literal compiles. */
   planKey?: boolean | null;
+  /** In a smaller plan (URG-318): its core or a suggestion someone added, from
+   *  metadata.planner.core / .suggested. Absent/false on older plans. */
+  planCore?: boolean;
   /** The rollout phase set on this task (URG-292), from metadata.phase.
    * Templates and approved plans write it; a person can change it in the task
    * detail. null or absent: nothing stored, so the phase follows the task's

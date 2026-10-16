@@ -4,6 +4,7 @@ import { SINGLE_RELEASE_TEMPLATE } from './release-templates/single';
 import {
   DEFAULT_KEY_TASK_COUNT,
   MAX_DELTA_KEY,
+  MAX_SHORT_LIST,
   MIN_KEY_TASK_COUNT,
   applyDeltaToDraft,
   buildDraftFromTemplate,
@@ -141,7 +142,7 @@ describe('the model marks key tasks', () => {
     });
     const system = messages.find((m) => m.role === 'system')?.content ?? '';
     expect(system).toContain('"key"');
-    expect(system).toContain('Show all');
+    expect(system).toContain('suggestion they can add with one tap');
   });
 });
 
@@ -190,7 +191,7 @@ describe('approved plans carry an explicit key flag on every task', () => {
     const keyed = tasks.filter((t) => t.planKey).map((t) => t.id);
     for (const id of keyed) expect(shown.has(id)).toBe(true);
     // done (ready-today) rows keep their flag false and stay behind Show all
-    expect(shown.size).toBeLessThanOrEqual(MAX_DELTA_KEY);
+    expect(shown.size).toBeLessThanOrEqual(MAX_SHORT_LIST);
   });
 });
 
@@ -222,6 +223,6 @@ describe('finalizeKeyTasks', () => {
 
   it('caps at the maximum however many the model marked', () => {
     const tasks = Array.from({ length: 20 }, (_, i) => draftTask({ id: `t${i}`, key: true, focus: i < 3 }));
-    expect(finalizeKeyTasks(tasks).size).toBe(MAX_DELTA_KEY);
+    expect(finalizeKeyTasks(tasks).size).toBe(MAX_SHORT_LIST);
   });
 });

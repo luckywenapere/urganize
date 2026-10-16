@@ -1,5 +1,5 @@
 import type { Timings } from '@/lib/server-timing';
-import { readPlanKey } from '@/lib/plan-focus';
+import { readPlanCore, readPlanKey } from '@/lib/plan-focus';
 import { readTaskPhase } from '@/lib/rollout-phases';
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
@@ -1421,6 +1421,7 @@ function toTask(
     durationDays: readDurationDays(row.metadata),
     compressedRunway: readCompressedRunway(row.metadata),
     planKey: readPlanKey(row.metadata),
+    planCore: readPlanCore(row.metadata),
     phase: readTaskPhase(row.metadata),
     groupName: readNullableString(row.group_name),
     groupColor: readNullableString(row.group_color),

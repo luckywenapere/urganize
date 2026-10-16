@@ -65,6 +65,9 @@ type TaskRowProps = {
    * a single line (checkbox, title, meta pinned right), no status badge / no
    * release pill — the surrounding workspace already shows scope context. */
   density?: 'compact' | 'comfortable';
+  /** The first open task of a smaller plan (URG-318): accent edge and a
+   *  "Start here" label. */
+  startHere?: boolean;
 };
 
 function getAssigneeLabel(task: Task): string {
@@ -75,14 +78,17 @@ function getAssigneeLabel(task: Task): string {
   return task.assignee?.email || 'Unassigned';
 }
 
-export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: TaskRowProps) {
+export function TaskRow({ task, onClick, onBlocker, density = 'comfortable', startHere = false }: TaskRowProps) {
   const due = getRelativeDueLabel(task);
   const isLocked = task.status === 'locked';
   const isMilestone = isEventMilestone(task);
   // Left-border accent: locked (muted gray, "not ready"), event milestones
   // (info blue, "dated point"), neutral otherwise. Priority coloring was
   // removed 2026-07-23 — the priority feature is gone from the UI entirely.
-  const borderClass = isLocked
+  // "Start here" (URG-318): a smaller plan's first open task takes the accent.
+  const borderClass = startHere
+    ? 'border-l-brand'
+    : isLocked
     ? 'border-l-stroke-default'
     : isMilestone
       ? 'border-l-status-info'
@@ -140,6 +146,9 @@ export function TaskRow({ task, onClick, onBlocker, density = 'comfortable' }: T
           {task.title}
         </p>
         <div className="flex shrink-0 items-center gap-2 text-xs text-content-secondary">
+          {startHere ? (
+            <span className="whitespace-nowrap font-mono text-[11px] text-brand">Start here</span>
+          ) : null}
           {task.assignee ? <AssigneeAvatar member={task.assignee} size="sm" /> : null}
           {task.groupName ? (
             <GroupTagPill

@@ -26,6 +26,12 @@ import {
   usePlanList,
 } from '@/components/workspace/PlanListControls';
 import { RolloutPhaseStrip } from '@/components/workspace/RolloutPhases';
+import {
+  PlanSuggestionToast,
+  PlanSuggestionsBlock,
+  usePlanSuggestions,
+} from '@/components/workspace/PlanSuggestions';
+import { pickStartHereTaskId } from '@/lib/plan-core';
 import { useTimelineFullScreenToolsSlot } from '@/components/releases/TimelineFullScreen';
 import { formatPhaseDates, summarizeRolloutPhases } from '@/lib/rollout-phases';
 
@@ -178,6 +184,10 @@ export function TimelineScene({
   // "Show all" decide the rest. The axis is built from every activity so a
   // bar sits in the same week whichever list is showing.
   const plan = usePlanList(tasks, release.id);
+  // A smaller plan (URG-318): Start here on its first open task, and the rest
+  // of the plan's work as one-tap suggestions under the timeline.
+  const suggestions = usePlanSuggestions(release.id, tasks);
+  const startHereId = useMemo(() => pickStartHereTaskId(tasks), [tasks]);
   const shown = useMemo(
     () => (timeline ? narrowTimeline(timeline, new Set(plan.visible.map((task) => task.id))) : null),
     [timeline, plan.visible]
@@ -311,6 +321,7 @@ export function TimelineScene({
                 phase={phase}
                 dates={phaseDates[phase.phase] ?? ''}
                 isCollapsed={collapsed[phase.phase] ?? false}
+                startHereId={startHereId}
                 onToggle={() =>
                   setCollapsed((current) => ({
                     ...current,
@@ -399,8 +410,16 @@ export function TimelineScene({
           filtering={plan.filtering}
           onOpenTask={onOpenTask}
           releaseDate={release.releaseDate}
+          startHereId={startHereId}
         />
       </div>
+
+      {suggestions.length > 0 && !plan.filtering ? (
+        <div className="mt-4">
+          <PlanSuggestionsBlock releaseId={release.id} items={suggestions} />
+        </div>
+      ) : null}
+      <PlanSuggestionToast />
 
       <div className="mt-4">
         <PlanShowAllToggle plan={plan} />
@@ -448,6 +467,7 @@ function PhaseLabels({
   phase,
   dates,
   isCollapsed,
+  startHereId = null,
   onToggle,
   onOpenTask,
 }: {
@@ -455,6 +475,8 @@ function PhaseLabels({
   /** The phase's dates, "4 Sep – 12 Oct" (URG-292). */
   dates: string;
   isCollapsed: boolean;
+  /** A smaller plan's first open task (URG-318). */
+  startHereId?: string | null;
   onToggle: () => void;
   onOpenTask: (taskId: string) => void;
 }) {
@@ -505,7 +527,9 @@ function PhaseLabels({
               <span className="min-w-0 flex-1 truncate text-[11px] text-content-secondary">
                 {item.title}
               </span>
-              {TONE_TAG_CLASS[item.tone] ? (
+              {item.taskId === startHereId ? (
+                <span className="shrink-0 font-mono text-[10px] text-brand">Start here</span>
+              ) : TONE_TAG_CLASS[item.tone] ? (
                 <span className={`shrink-0 text-[11px] font-semibold ${TONE_TAG_CLASS[item.tone]}`}>
                   {TONE_LABEL[item.tone]}
                 </span>
@@ -697,12 +721,15 @@ function TimelineWeekList({
   filtering = false,
   onOpenTask,
   releaseDate,
+  startHereId = null,
 }: {
   timeline: ReleaseTimeline;
   /** A search or filter is on: an empty list is "no match", said elsewhere. */
   filtering?: boolean;
   onOpenTask: (taskId: string) => void;
   releaseDate: string;
+  /** A smaller plan's first open task (URG-318). */
+  startHereId?: string | null;
 }) {
   const groups = useMemo(() => groupItemsByWeek(timeline), [timeline]);
 
@@ -755,7 +782,9 @@ function TimelineWeekList({
                   <span className="min-w-0 flex-1 truncate text-xs text-content-primary">
                     {item.title}
                   </span>
-                  {item.tone === 'overdue' || item.tone === 'blocked' ? (
+                  {item.taskId === startHereId ? (
+                    <span className="shrink-0 font-mono text-[10px] text-brand">Start here</span>
+                  ) : item.tone === 'overdue' || item.tone === 'blocked' ? (
                     <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-status-error">
                       {TONE_LABEL[item.tone]}
                     </span>

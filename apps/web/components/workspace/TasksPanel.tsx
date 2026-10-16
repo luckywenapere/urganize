@@ -28,6 +28,8 @@ import { resolvePanelBody } from '@/lib/scene-cache';
 import { useSceneOverlay } from './useSceneOverlay';
 import { PlanListControls, PlanShowAllToggle, usePlanList } from './PlanListControls';
 import { RolloutPhaseHeader } from './RolloutPhases';
+import { PhaseSuggestions, PlanSuggestionToast, usePlanSuggestions } from './PlanSuggestions';
+import { pickStartHereTaskId } from '@/lib/plan-core';
 import {
   ROLLOUT_PHASE_ORDER,
   groupTasksByRolloutPhase,
@@ -335,6 +337,10 @@ export function TasksPanel({
   // the full list: it is not one plan.
   const plan = usePlanList(tasks, scopedRelease?.id ?? null);
   const listTasks = scopedRelease ? plan.visible : tasks;
+  // A smaller plan (URG-318): its first open task says Start here, and each
+  // phase ends in the work it can add with one tap.
+  const suggestions = usePlanSuggestions(scopedRelease?.id ?? null, scopedRelease ? tasks : []);
+  const startHereId = useMemo(() => (scopedRelease ? pickStartHereTaskId(tasks) : null), [scopedRelease, tasks]);
 
   const sections = useMemo(
     () => groupTasksIntoSections(listTasks, pendingCompletionIds),
@@ -646,21 +652,27 @@ export function TasksPanel({
                   controlsId={`workspace-phase-${summary.phase}`}
                 >
                   {rows.length === 0 ? (
-                    <p className="px-4 py-3 text-xs text-content-tertiary">
-                      {summary.total > 0
-                        ? 'Not on the short list. Show all to see them.'
-                        : 'Nothing planned for this phase yet.'}
-                    </p>
+                    suggestions.some((item) => item.phase === summary.phase) && !plan.filtering ? null : (
+                      <p className="px-4 py-3 text-xs text-content-tertiary">
+                        {summary.total > 0
+                          ? 'Not on the short list. Show all to see them.'
+                          : 'Nothing planned for this phase yet.'}
+                      </p>
+                    )
                   ) : (
                     rows.map((task) => (
                       <TaskRow
                         key={task.id}
                         task={task}
                         density="compact"
+                        startHere={task.id === startHereId}
                         onClick={(t) => openTask(t.id)}
                       />
                     ))
                   )}
+                  {scopedRelease && !plan.filtering ? (
+                    <PhaseSuggestions releaseId={scopedRelease.id} phase={summary.phase} items={suggestions} />
+                  ) : null}
                 </RolloutPhaseHeader>
               );
             })
@@ -908,6 +920,7 @@ export function TasksPanel({
         ) : null}
       </div>
       ) : null}
+      {scopedRelease ? <PlanSuggestionToast /> : null}
     </aside>
   );
 }

@@ -107,7 +107,17 @@ export function buildTaskRowsFromDraft(params: {
   // Chronological order, with the draft's own order breaking ties, so a task
   // the manager added lands beside the work it belongs with rather than at the
   // bottom of the board.
+  // A smaller plan (URG-318) writes only its core, plus anything a "ready
+  // today" answer already finished (it lands done, as before); the rest stay
+  // in the plan record as suggestions (lib/plan-core.ts).
   const active = activeDraftTasks(doc)
+    .filter(
+      (task) =>
+        !doc.core_only ||
+        task.key === true ||
+        (task.origin === 'template' &&
+          isTaskPreCompletedByReady(task, doc.intake.ready_today, doc.template_id))
+    )
     .map((task, index) => ({ task, index }))
     .sort((a, b) => a.task.offset_days - b.task.offset_days || a.index - b.index)
     .map((entry) => entry.task);
@@ -127,12 +137,14 @@ export function buildTaskRowsFromDraft(params: {
   // The short list the plan opens on (URG-258). Every task gets an explicit
   // true or false, which is also how the client tells a new plan from one
   // built before key tasks existed.
-  const keyIds = finalizeKeyTasks(
-    active,
-    (task) =>
-      task.origin === 'template' &&
-      isTaskPreCompletedByReady(task, doc.intake.ready_today, doc.template_id)
-  );
+  const keyIds = doc.core_only
+    ? new Set(active.map((task) => task.id))
+    : finalizeKeyTasks(
+        active,
+        (task) =>
+          task.origin === 'template' &&
+          isTaskPreCompletedByReady(task, doc.intake.ready_today, doc.template_id)
+      );
   let reassignedCount = 0;
 
   const rows = active.map((task, index) => {
@@ -157,6 +169,8 @@ export function buildTaskRowsFromDraft(params: {
       assignee = ownerUserId;
       reassignedCount += 1;
     }
+    // Every core task has an owner (URG-318): nobody named means the manager.
+    if (!assignee && doc.core_only) assignee = ownerUserId;
 
     // A "ready today" answer means the outcome is already finished, so the
     // matching playbook steps land done rather than sitting on the manager's
@@ -193,6 +207,7 @@ export function buildTaskRowsFromDraft(params: {
         approvedAtIso,
         compressedRunway,
         isKey: keyIds.has(task.id),
+        isCore: Boolean(doc.core_only),
       }),
     } satisfies PlanTaskRow;
   });
@@ -215,8 +230,12 @@ function buildTaskMetadata(params: {
   approvedAtIso: string;
   compressedRunway: boolean;
   isKey?: boolean;
+  /** Part of a smaller plan's core (URG-318). */
+  isCore?: boolean;
+  /** Added later from the plan's suggestions with one tap (URG-318). */
+  suggested?: boolean;
 }): Record<string, unknown> {
-  const { task, doc, draftId, approvedAtIso, compressedRunway, isKey = false } = params;
+  const { task, doc, draftId, approvedAtIso, compressedRunway, isKey = false, isCore = false, suggested = false } = params;
 
   // Two readers in lib/tasks-server.ts key off metadata.template
   // (readTaskType, readCompressedRunway), so even a task the manager added by
@@ -254,6 +273,8 @@ function buildTaskMetadata(params: {
       origin: task.origin,
       approved_at: approvedAtIso,
       key: isKey,
+      ...(isCore ? { core: true } : {}),
+      ...(suggested ? { suggested: true } : {}),
       ...(task.focus ? { focus: true, focus_reason: task.focus_reason ?? null } : {}),
       // An added task has no playbook provenance, so its role and tags live here.
       ...(task.origin === 'ai' ? { role: task.role, tags: task.tags } : {}),
@@ -299,5 +320,69 @@ export async function instantiateDraftPlan(params: {
     tasksCreated: inserted.length,
     taskIds: inserted.map((row) => row.id),
     warnings,
+  };
+}
+
+/**
+ * The activity a plan suggestion becomes when the manager adds it (URG-318).
+ * The same row shape as the plan's own activities, dated from the release's
+ * CURRENT date, owned by whoever the plan named (the manager when that person
+ * left the team or nobody was named), and depending only on activities that
+ * are on the board. It lands on the short list: the manager chose it.
+ */
+export function buildSuggestionTaskRow(params: {
+  doc: ReleasePlanDraftDoc;
+  task: DraftTask;
+  draftId: string;
+  releaseId: string;
+  releaseDate: string;
+  workspaceId: string;
+  actorUserId: string;
+  ownerUserId: string;
+  assignableUserIds: Set<string>;
+  /** draft task id → the activity it became, for this rollout. */
+  boardIdsByDraftTaskId: Map<string, string>;
+  position: number;
+  nowMs: number;
+}): PlanTaskRow {
+  const { doc, task, releaseDate, nowMs } = params;
+  const releaseEpoch = parseYmd(releaseDate);
+  if (releaseEpoch === null) {
+    throw new PlanApprovalError('missing_release_date', `Release date could not be parsed: ${releaseDate}`);
+  }
+  const dueDateMs = releaseEpoch + task.offset_days * MS_PER_DAY;
+  const assignee =
+    task.assignee_user_id && params.assignableUserIds.has(task.assignee_user_id)
+      ? task.assignee_user_id
+      : params.ownerUserId;
+  return {
+    id: randomUUID(),
+    release_id: params.releaseId,
+    workspace_id: params.workspaceId,
+    group_id: null,
+    created_by: params.actorUserId,
+    assigned_to_user_id: assignee,
+    assigned_to: null,
+    assigned_collaborator_id: null,
+    title: task.title,
+    description: task.why,
+    status: 'todo',
+    priority: task.focus ? 'high' : 'none',
+    state: 'planning',
+    position: params.position,
+    auto_generated: true,
+    due_date: new Date(dueDateMs).toISOString(),
+    dependencies: task.depends_on
+      .map((depId) => params.boardIdsByDraftTaskId.get(depId))
+      .filter((uuid): uuid is string => Boolean(uuid)),
+    metadata: buildTaskMetadata({
+      task,
+      doc,
+      draftId: params.draftId,
+      approvedAtIso: new Date(nowMs).toISOString(),
+      compressedRunway: dueDateMs < nowMs,
+      isKey: true,
+      suggested: true,
+    }),
   };
 }

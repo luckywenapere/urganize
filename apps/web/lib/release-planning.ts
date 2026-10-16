@@ -68,6 +68,7 @@ export type PlanReleaseType = 'single' | 'ep' | 'album';
 export { READY_TODAY_OPTIONS, type ReadyItem } from './ready-today';
 import { READY_TODAY_OPTIONS, type ReadyItem } from './ready-today';
 import { derivePlanPhase, type PlanPhase } from './plan-phase';
+import { CORE_MIN_TASKS, CORE_PHASE_MIN } from './plan-core';
 
 /**
  * What matters most this time. Every value is a radio choice in the intake
@@ -871,9 +872,12 @@ const MAX_TASK_OFFSET = 60;
 export const MAX_AI_ADDED_TASKS = 5;
 /** The most tasks UrgAns may mark as the focus for the goal. */
 export const MAX_DELTA_FOCUS = 5;
-/** The most tasks UrgAns may mark key: the short list a plan opens on
- *  (URG-258). Aim 5 to 8 for a single; never more than this. */
-export const MAX_DELTA_KEY = 10;
+/** The most tasks UrgAns may mark key. Since URG-318 (2026-10-16) the key
+ *  list IS the plan's core: 12 to 15 tasks become activities, the rest are
+ *  suggestions (lib/plan-core.ts). */
+export const MAX_DELTA_KEY = 15;
+/** The short list an older plan opens on (URG-258): never more than this. */
+export const MAX_SHORT_LIST = 10;
 /** How many key tasks the deterministic rule picks when UrgAns marked none. */
 export const DEFAULT_KEY_TASK_COUNT = 7;
 /** The fewest key tasks a plan opens on when it has that many open tasks. */
@@ -1023,6 +1027,10 @@ export type ReleasePlanDraftDoc = {
    *  manager ticked is never re-attributed to the model. */
   applied_exclusions: AppliedExclusion[];
   tasks: DraftTask[];
+  /** Built as a smaller plan (URG-318): only tasks with `key` true became
+   *  activities, and the other live tasks are offered as suggestions.
+   *  Absent on plans built before 2026-10-16, which stay as they are. */
+  core_only?: boolean;
 };
 
 /** A saved plan document, as read back from `release_plan_drafts`. */
@@ -1379,7 +1387,7 @@ function parseFocus(value: unknown): PlannerAiFocus[] {
  * model, or with a model that marked nothing, still opens short.
  *
  * Order: UrgAns's focus tasks, then the tasks it listed in `key`, capped at
- * {@link MAX_DELTA_KEY}. When that leaves fewer open tasks than the target
+ * {@link MAX_SHORT_LIST}. When that leaves fewer open tasks than the target
  * ({@link MIN_KEY_TASK_COUNT} when UrgAns marked any, otherwise
  * {@link DEFAULT_KEY_TASK_COUNT}), it tops up with the soonest open required
  * work, then the soonest optional, so the plan opens on what is next.
@@ -1394,7 +1402,7 @@ export function finalizeKeyTasks(
   const keep: string[] = [];
   const seen = new Set<string>();
   const push = (task: DraftTask) => {
-    if (seen.has(task.id) || keep.length >= MAX_DELTA_KEY) return;
+    if (seen.has(task.id) || keep.length >= MAX_SHORT_LIST) return;
     seen.add(task.id);
     keep.push(task.id);
   };
@@ -1417,7 +1425,7 @@ export function finalizeKeyTasks(
         a.index - b.index
     );
   for (const { task } of candidates) {
-    if (openCount >= target || keep.length >= MAX_DELTA_KEY) break;
+    if (openCount >= target || keep.length >= MAX_SHORT_LIST) break;
     push(task);
     openCount += 1;
   }
@@ -2261,6 +2269,7 @@ export function parseDraftDoc(
     },
     applied_exclusions: appliedExclusions,
     tasks,
+    ...(record.core_only === true ? { core_only: true } : {}),
   };
 
   return { ok: true, doc };
@@ -2439,7 +2448,8 @@ function buildSystemPrompt(): string {
     "- The manager's answers and notes are instructions, not hints. If they rule something out, the plan must not contain it. If they ask for less of something, keep that work and drop its optional tasks.",
     `- You may ADD at most ${MAX_AI_ADDED_TASKS} tasks in "add_tasks", and only when this rollout's goal, pain points or notes genuinely need work the playbook does not have. Never add something the plan already covers in other words, never per-track busywork, nothing inside a scope that is left out, nothing paid when there is no budget, and nothing dated before today or outside the plan's existing date range. Each needs a short title, a why tied to their goal, an offset_days, a role from the list or null, and tags from the given vocabulary. Zero adds is a fine answer.`,
     `- Mark at most ${MAX_DELTA_FOCUS} tasks in "focus": the few that matter most for what the manager said matters most, each with a one-line reason. Only ids from the list.`,
-    `- List in "key" the tasks the plan should open on: the ones the manager must not miss, most important first. Aim for 5 to 8 on a single (a few more for an EP or album), never more than ${MAX_DELTA_KEY}. Include your focus tasks, release day and the distribution order. Everything else stays in the plan behind "Show all", so leaving a task out of "key" does not remove it.`,
+    `- List in "key" the core of this plan, most important first: ${CORE_MIN_TASKS} to ${MAX_DELTA_KEY} tasks the manager must get done, and only these become activities. Cover all three phases: at least ${CORE_PHASE_MIN.pre_release} before release week, ${CORE_PHASE_MIN.release} in release week (7 days either side of release day) and ${CORE_PHASE_MIN.post_release} after it. Include your focus tasks, release day and getting the music to the distributor. Everything else you keep is offered to the manager as a suggestion they can add with one tap, so leaving a task out of "key" does not remove it.`,
+    '- Spend your words on the core: rewrite the "why" only for tasks you put in "key", and leave the dates of the other tasks alone.',
     '- Drop an optional task ("optional": true) whenever this rollout does not need it, with a reason.',
     '- A task whose "optional" is false may be dropped ONLY when the manager plainly asked to leave that kind of work out. The way to do that is "exclude_scopes": name the scope, and the product removes every task in it except release-day and distribution work. Inside a scope you excluded you may also drop single required tasks. Never exclude a scope they did not ask for. "Less", "light" or "small" means keep the scope and drop its optional tasks.',
     SCOPE_VOCABULARY_LINE,

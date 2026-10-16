@@ -273,6 +273,16 @@ export function readPlanKey(metadata: unknown): boolean | null {
   return typeof key === 'boolean' ? key : null;
 }
 
+/** Part of a smaller plan (URG-318): its core, or a suggestion someone added.
+ *  False for every plan built before 2026-10-16 and for hand-made tasks. */
+export function readPlanCore(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== 'object') return false;
+  const planner = (metadata as { planner?: unknown }).planner;
+  if (!planner || typeof planner !== 'object') return false;
+  const p = planner as { core?: unknown; suggested?: unknown };
+  return p.core === true || p.suggested === true;
+}
+
 /** Metadata with `planner.key` set, everything else kept as it was. */
 export function withPlanKey(metadata: unknown, key: boolean): Record<string, unknown> {
   const base =

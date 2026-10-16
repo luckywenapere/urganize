@@ -55,6 +55,7 @@ import {
   buildPlannerMessages,
   deriveIntakeExclusions,
   deriveScheduleWarnings,
+  isTaskPreCompletedByReady,
   offsetFromTaskYmd,
   parsePlannerAiDelta,
   sanitizePlannerDelta,
@@ -79,6 +80,7 @@ import { generateRoutedStructuredOutput } from './ai/routed';
 import type { FailedCall } from './ai/usage-log';
 import type { RoutingTrace, TeamForRouting } from './ai/model-router';
 import { getTemplate } from './release-templates/loader';
+import { markCoreTasks } from './plan-core';
 import type { Template } from './release-templates/types';
 import { instantiateDraftPlan, PlanApprovalError } from './release-planning-server';
 import { writePlannerPending } from './release-planner-pending';
@@ -601,6 +603,17 @@ export async function createReleasePlan(
     doc = { ...doc, ai: { applied: false, rationale: null, failure } };
     if (decision.warning) warnings.push(decision.warning);
   }
+
+  // --- 6b. The core (URG-318) -------------------------------------------------
+  // 12 to 15 tasks across the three phases become activities; the rest of what
+  // is left stays in this document as one-tap suggestions. Runs whether or not
+  // the model answered, so a plan built without UrgAns is just as small.
+  doc = markCoreTasks(
+    doc,
+    (task) =>
+      task.origin === 'template' &&
+      isTaskPreCompletedByReady(task, doc.intake.ready_today, doc.template_id)
+  );
 
   // --- 7. The plan row: insert it built, or claim a stale draft --------------
 
