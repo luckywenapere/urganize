@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.1",
+    date: "October 16, 2026",
+    highlights: [
+      "The menu is shorter: Show me a rollout again is gone from it. You can still replay the tour from Settings.",
+    ],
+  },
+  {
     version: "1.154.0",
     date: "October 16, 2026",
     highlights: [
