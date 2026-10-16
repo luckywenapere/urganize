@@ -30,7 +30,10 @@ import { useOpportunitiesStore } from '@/stores/useOpportunitiesStore';
  * Unlike Home's other groups this one shows an empty state, so a team with
  * nothing open still sees where grants and deals will land.
  */
-export function OpportunitiesCard() {
+export function OpportunitiesCard({ items: preloaded }: { items?: readonly HomeOpportunityItem[] | null } = {}) {
+  // Home passes its own items since URG-320 (one request for Home); without
+  // them the card reads the two routes itself, as it did before.
+  const hasPreloaded = preloaded !== undefined;
   const headingId = useId();
   const opportunities = useOpportunitiesStore((state) => state.opportunities);
   const opportunitiesLoading = useOpportunitiesStore((state) => state.isInitialLoading);
@@ -39,14 +42,15 @@ export function OpportunitiesCard() {
 
   const suggestionsOn = grantSuggestionsEnabled();
   const [suggestions, setSuggestions] = useState<GrantSuggestionView[]>([]);
-  const [suggestionsSettled, setSuggestionsSettled] = useState(!suggestionsOn);
+  const [suggestionsSettled, setSuggestionsSettled] = useState(!suggestionsOn || hasPreloaded);
 
   useEffect(() => {
+    if (hasPreloaded) return;
     void loadOpportunities();
-  }, [loadOpportunities]);
+  }, [loadOpportunities, hasPreloaded]);
 
   useEffect(() => {
-    if (!suggestionsOn) return;
+    if (!suggestionsOn || hasPreloaded) return;
     let live = true;
     void loadGrantSuggestions().then((result) => {
       if (!live) return;
@@ -56,14 +60,19 @@ export function OpportunitiesCard() {
     return () => {
       live = false;
     };
-  }, [suggestionsOn]);
+  }, [suggestionsOn, hasPreloaded]);
 
-  if (opportunitiesLoading || !suggestionsSettled) {
+  if (!hasPreloaded && (opportunitiesLoading || !suggestionsSettled)) {
     return <OpportunitiesBlockSkeleton />;
   }
 
-  const items = pickHomeOpportunities({ suggestions, opportunities }, todayKey());
-  const view = homeOpportunitiesView({ opportunitiesOk: !opportunitiesError, items });
+  const items = hasPreloaded
+    ? [...(preloaded ?? [])]
+    : pickHomeOpportunities({ suggestions, opportunities }, todayKey());
+  const view = homeOpportunitiesView({
+    opportunitiesOk: hasPreloaded ? preloaded !== null : !opportunitiesError,
+    items,
+  });
   if (view === 'hidden') return null;
 
   const track = (target: 'item' | 'see_all' | 'empty', item?: HomeOpportunityItem, position?: number) =>

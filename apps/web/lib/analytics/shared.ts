@@ -489,6 +489,15 @@ export interface AnalyticsEventPropertiesMap {
     position: number | null;
     shown: number;
   };
+  /**
+   * Home's One Thing card (URG-320, lib/home/home-four.ts): its green button
+   * was tapped. `kind` is what the card held (your task, a plan next move, or a
+   * show coming up); `position` its place in the swipe (1 is the top move).
+   */
+  home_one_thing_clicked: {
+    kind: 'task' | 'move' | 'show';
+    position: number;
+  };
 }
 
 export type AnalyticsEventName = keyof AnalyticsEventPropertiesMap;

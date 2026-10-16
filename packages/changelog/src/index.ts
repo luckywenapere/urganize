@@ -22,6 +22,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.148.0",
+    date: "October 16, 2026",
+    highlights: [
+      "Home is simpler. While a release is in flight it shows the release, how many days to go and which phase you're in, then the one thing to do next with one button. Swipe for two more.",
+      "Waiting on others is now one line that opens when you tap it, and a matched grant shows as a single line.",
+      "With nothing in flight, Home helps you start the next release and shows the opportunities that fit your team.",
+      "Your teammates now appear as small faces at the top of Home, with a green dot when they're online. Spend, the rollouts list, the getting-started bar and the daily line have left Home, and Home now loads in one go.",
+    ],
+  },
+  {
     version: "1.147.11",
     date: "October 16, 2026",
     highlights: [

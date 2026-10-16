@@ -11,6 +11,8 @@
 import type { DbReleaseType } from '@/types/releases';
 import type { TaskPriority, TaskStatus } from '@/types/tasks';
 import type { PitchState } from '@/types/pitching';
+import type { TeamPresenceMember } from './team-presence';
+import type { HomeOpportunityItem } from './opportunities-card';
 
 export type HomeRole = 'manager' | 'artist' | 'label';
 
@@ -190,4 +192,11 @@ export type HomePayload = {
   releases: HomeReleaseSummary[];
   placements: HomePlacements;
   nextShow: HomeNextShow | null;
+  /** Everyone else on the team who has joined, newest first (URG-250). Rides in
+   * this payload since URG-320 so Home is one request. Optional so older
+   * cached payloads still parse. */
+  team?: TeamPresenceMember[];
+  /** Up to three opportunities (URG-266), or null when the viewer may not see
+   * team opportunities or the read failed. */
+  opportunities?: HomeOpportunityItem[] | null;
 };

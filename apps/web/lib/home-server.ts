@@ -18,6 +18,8 @@
 // aggregate queries on top — never touching or modifying the three routes
 // themselves.
 
+import { loadTeamPresenceMembers } from '@/lib/home/team-presence-server';
+import { loadHomeOpportunities } from '@/lib/home/opportunities-server';
 import type { Timings } from '@/lib/server-timing';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
@@ -511,6 +513,21 @@ export async function loadHomeData(
   // query, so the query starts now and waits for the releases at that point.
   const releasesPromise = commandCenterPromise.then((data) => data.releases);
 
+  // Home is one request (URG-320): the team strip and the opportunities ride in
+  // this payload instead of their own fetches after paint. Both start with the
+  // access context and never fail Home.
+  const teamPromise = step('home_team', () =>
+    loadTeamPresenceMembers(adminClient, user, access.primaryWorkspaceId, now)
+  );
+  const opportunitiesPromise = step('home_opportunities', () =>
+    loadHomeOpportunities(
+      adminClient,
+      access.primaryWorkspaceId,
+      Boolean(access.primaryWorkspaceId && access.artistScopeByWorkspaceId[access.primaryWorkspaceId]),
+      now
+    )
+  );
+
   const roleFactsPromise = step('home_role', () => loadRoleFacts(adminClient, user, access));
   const visibleShowsPromise = step('home_shows', () => loadVisibleShows(adminClient, user, access, now));
 
@@ -534,11 +551,13 @@ export async function loadHomeData(
     }
   );
 
-  const [commandCenter, roleFacts, pitches, showSide] = await Promise.all([
+  const [commandCenter, roleFacts, pitches, showSide, team, opportunities] = await Promise.all([
     commandCenterPromise,
     roleFactsPromise,
     step('home_pitches', () => loadTeamPitches(adminClient, user, access, releasesPromise)),
     showSidePromise,
+    teamPromise,
+    opportunitiesPromise,
   ]);
   const { releases, tasks } = commandCenter;
 
@@ -664,6 +683,8 @@ export async function loadHomeData(
       releases: releaseSummaries,
       placements,
       nextShow,
+      team,
+      opportunities,
     },
   };
 }

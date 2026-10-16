@@ -9,9 +9,7 @@ import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
 import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
 import { useIsDesktopViewport } from '@/components/workspace/useIsDesktopViewport';
-import { ManagerMidReleaseView } from '@/components/home/ManagerMidReleaseView';
-import { ManagerQuietView } from '@/components/home/ManagerQuietView';
-import { ManagerNewView } from '@/components/home/ManagerNewView';
+import { HomeFour, HomeLoadError } from '@/components/home/v2/HomeFour';
 import { HomeAskBar } from '@/components/home/HomeAskBar';
 import { HomeDesktopSplit } from '@/components/home/HomeDesktopSplit';
 import { NpsPrompt } from '@/components/home/NpsPrompt';
@@ -40,7 +38,7 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 export default function HomePageClient() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuthStore();
-  const { data: home, isLoading: homeLoading, load: loadHome } = useHomeStore();
+  const { data: home, isLoading: homeLoading, error: homeError, load: loadHome } = useHomeStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const isDesktop = useIsDesktopViewport();
 
@@ -66,20 +64,24 @@ export default function HomePageClient() {
   // AppShell, opens the plan choice), and the rollout tour is offered once a
   // plan exists. See lib/tours.ts.
 
+  // A failed first load used to leave the skeleton up for good (URG-320).
+  if (!authLoading && !homeLoading && !home && homeError) {
+    return (
+      <div className="home-scene-container">
+        <HomeLoadError onRetry={() => void loadHome({ force: true })} />
+      </div>
+    );
+  }
+
   if (authLoading || homeLoading || !home) {
     return <HomeSkeleton />;
   }
 
   const openCreate = () => setIsCreateModalOpen(true);
   const viewerId = user?.id ?? '';
-  const stateView =
-    home.state === 'manager_new' ? (
-      <ManagerNewView home={home} onNewRollout={openCreate} />
-    ) : home.state === 'manager_all_clear' || home.state === 'manager_between' ? (
-      <ManagerQuietView home={home} viewerId={viewerId} onNewRollout={openCreate} />
-    ) : (
-      <ManagerMidReleaseView home={home} viewerId={viewerId} />
-    );
+  // Four blocks, two states (URG-320, 2026-10-16): a rollout in flight, or
+  // nothing in flight. A brand-new account keeps its one-line welcome.
+  const stateView = <HomeFour home={home} viewerId={viewerId} onNewRollout={openCreate} />;
   // Fenced (2026-10-09): if Home's own column cannot draw, the page keeps its
   // chat and a way to the catalogue instead of the full-page crash screen.
   // Each block inside is fenced too (HomeBlocks), so this is the outer net.
@@ -119,13 +121,14 @@ export default function HomePageClient() {
 /** What Home's column shows if it fails to draw: a way to the catalogue. */
 function HomeViewFallback() {
   return (
-    <div className="rounded-2xl border border-stroke-default bg-bg-surface p-5">
-      <p className="text-sm text-content-secondary">Part of Home could not load. Your rollouts are safe.</p>
+    <div className="rounded-[20px] border border-stroke-default bg-bg-surface p-5">
+      <p className="text-base font-semibold text-content-primary">Part of Home didn&apos;t load.</p>
+      <p className="mt-1 text-sm text-content-secondary">Your rollouts are safe.</p>
       <Link
         href="/dashboard"
-        className="motion-focus mt-3 inline-flex items-center rounded-lg border border-stroke-default bg-bg-surface px-4 py-2 text-sm font-medium text-content-primary hover:border-stroke-strong"
+        className="motion-focus mt-4 inline-flex h-11 items-center rounded-full border border-stroke-default px-5 text-sm font-semibold text-content-primary hover:border-stroke-strong"
       >
-        Open your catalog
+        Open Catalogue
       </Link>
     </div>
   );
