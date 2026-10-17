@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.16",
+    date: "October 17, 2026",
+    highlights: [
+      "On Home, the card with your next task no longer shows a Next label or how many days late the task is. It opens straight on the task.",
+    ],
+  },
+  {
     version: "1.154.15",
     date: "October 17, 2026",
     highlights: [

@@ -13,14 +13,6 @@ const CARD = 'relative rounded-[20px] border border-stroke-default bg-bg-surface
 const PRIMARY =
   'motion-focus motion-press mt-5 flex h-12 w-full items-center justify-center rounded-full bg-brand text-[15px] font-semibold text-content-inverse hover:bg-brand-hover';
 
-function Chip() {
-  return (
-    <span className="inline-flex h-6 items-center rounded-full border border-stroke-default px-2.5 text-[11px] font-semibold text-content-primary">
-      {HOME_FOUR_COPY.next}
-    </span>
-  );
-}
-
 function useGoToMove() {
   const router = useRouter();
   const pathname = usePathname();
@@ -55,15 +47,12 @@ function Slide({
     captureAnalyticsEvent({ name: 'home_one_thing_clicked', properties: { kind: item.kind, position } });
 
   if (item.kind === 'task') {
-    const { task, due } = item;
+    // No "Next" chip or due line (Oyin, Oct 17, 2026): the card leads with the task.
+    const { task } = item;
     const where = [task.releaseTitle, task.artistName].filter(Boolean).join(' · ');
     return (
       <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`}>
-        <div className="flex items-center justify-between gap-3">
-          <Chip />
-          <span className={`font-mono text-xs ${due.late ? 'text-status-error' : 'text-content-primary/55'}`}>{due.label}</span>
-        </div>
-        <h2 className="mt-3.5 break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">{task.title}</h2>
+        <h2 className="break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">{task.title}</h2>
         {where ? <p className="mt-2 text-sm leading-relaxed text-content-secondary">{where}</p> : null}
         <span className="flex-1" aria-hidden="true" />
         <button
@@ -84,19 +73,16 @@ function Slide({
     const { move } = item;
     return (
       <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`} data-next-move={move.rule}>
-        <div className="flex items-center justify-between gap-3">
-          <Chip />
-          <button
-            type="button"
-            onClick={() => onDismissMove(move)}
-            aria-label={`${NEXT_MOVE_COPY.dismiss}: ${move.title}`}
-            title={NEXT_MOVE_COPY.dismiss}
-            className="motion-focus -mr-2 grid h-9 w-9 place-items-center rounded-full text-content-primary/55 hover:bg-bg-elevated hover:text-content-primary"
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-        <h2 className="mt-2 break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">{move.title}</h2>
+        <button
+          type="button"
+          onClick={() => onDismissMove(move)}
+          aria-label={`${NEXT_MOVE_COPY.dismiss}: ${move.title}`}
+          title={NEXT_MOVE_COPY.dismiss}
+          className="motion-focus absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-content-primary/55 hover:bg-bg-elevated hover:text-content-primary"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <h2 className="break-words pr-8 font-display text-[1.45rem] leading-[1.25] text-content-primary">{move.title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-content-secondary">{move.detail}</p>
         <span className="flex-1" aria-hidden="true" />
         <button
@@ -116,11 +102,8 @@ function Slide({
   const { show } = item;
   return (
     <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`}>
-      <div className="flex items-center justify-between gap-3">
-        <Chip />
-        <span className="font-mono text-xs text-content-primary/55">{show.dateLabel}</span>
-      </div>
-      <h2 className="mt-3.5 break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">
+      <span className="font-mono text-xs text-content-primary/55">{show.dateLabel}</span>
+      <h2 className="mt-2 break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">
         {show.artistName}
         {show.venueName ? ` at ${show.venueName}` : ''}
       </h2>
@@ -155,8 +138,7 @@ export function OneThing({
   if (items.length === 0) {
     return (
       <section aria-label={HOME_FOUR_COPY.next} className={`${CARD} px-5 py-5`} data-home-block="one-thing">
-        <Chip />
-        <p className="mt-3.5 font-display text-[1.4rem] leading-[1.25] text-content-primary">{HOME_FOUR_COPY.clearTitle}</p>
+        <p className="font-display text-[1.4rem] leading-[1.25] text-content-primary">{HOME_FOUR_COPY.clearTitle}</p>
         {nextUp ? <p className="mt-2 text-sm text-content-secondary">{nextUp}</p> : null}
       </section>
     );
