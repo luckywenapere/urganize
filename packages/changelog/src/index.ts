@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.1",
+    date: "October 17, 2026",
+    highlights: [
+      "On Home, Getting started drops Bring in a teammate once you have one, so the count reads out of 3 instead of showing a ticked, struck-through step.",
+      "The Relationships tab's tooltip now reads \"The people your team works with and the open directory.\"",
+    ],
+  },
+  {
     version: "1.157.0",
     date: "October 17, 2026",
     highlights: [

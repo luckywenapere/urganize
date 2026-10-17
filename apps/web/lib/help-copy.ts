@@ -280,7 +280,7 @@ export const HELP_COPY = {
   },
   'nav.relationships': {
     label: 'Relationships',
-    text: 'The people your team works with, the open directory and your playlist pitches.',
+    text: 'The people your team works with and the open directory.',
   },
   'nav.opportunities': {
     label: 'Opportunities',
