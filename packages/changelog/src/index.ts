@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.6",
+    date: "October 18, 2026",
+    highlights: [
+      "On your phone, Home gives your next task more room: a bigger card with the task in large type, a small \"Next · Due today\" line above it and a green arrow. Tap anywhere on it to open the task.",
+      "Under it, the numbers sit in simple rows: Done shows how many tasks are finished (12 of 40) and opens the rollout, then Waiting on others with how many are late, then any grants that fit your team.",
+    ],
+  },
+  {
     version: "1.157.5",
     date: "October 17, 2026",
     highlights: [

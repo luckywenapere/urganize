@@ -134,6 +134,40 @@ export function buildOneThing(
   return items;
 }
 
+/**
+ * The small line on the task card (2026-10-18, golden layout B): "Next" and the
+ * due label ("Next · Due today"), or just "Next" when the task has no date.
+ */
+export function describeTaskLabel(due: { label: string } | null | undefined): string {
+  const label = due?.label?.trim();
+  if (!label || label === 'No due date') return HOME_FOUR_COPY.next;
+  return `${HOME_FOUR_COPY.next} · ${label}`;
+}
+
+/**
+ * Where the task lives, only when it is not the release the header names
+ * (the header already says which release Home is about).
+ */
+export function describeTaskWhere(
+  task: Pick<HomeTaskItem, 'releaseId' | 'releaseTitle' | 'artistName'>,
+  headerReleaseId: string | null
+): string | null {
+  if (headerReleaseId && task.releaseId === headerReleaseId) return null;
+  const where = [task.releaseTitle, task.artistName].filter(Boolean).join(' · ');
+  return where || null;
+}
+
+// ---------------------------------------------------------------- lower band
+
+/** The Done row's numbers, or null when the rollout has no tasks yet (the row hides). */
+export function describeDone(progress: { done: number; total: number } | null | undefined): {
+  done: number;
+  total: number;
+} | null {
+  if (!progress || !(progress.total > 0)) return null;
+  return { done: Math.max(0, Math.min(progress.done, progress.total)), total: progress.total };
+}
+
 // ---------------------------------------------------------------- waiting row
 
 /** "3 with your team · 1 late", or null when nothing is waiting. */
@@ -152,7 +186,8 @@ export const HOME_FOUR_COPY = {
   openTask: 'Open task',
   clearTitle: "You're clear for today.",
   waiting: 'Waiting on others',
-  withTeam: (n: number) => `${n} with your team`,
+  done: 'Done',
+  of: (total: number) => `of ${total}`,
   late: (n: number) => `${n} late`,
   noRelease: 'No release in flight.',
   startTitle: 'Start the next one early.',

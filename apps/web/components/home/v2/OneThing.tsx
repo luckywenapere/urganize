@@ -2,14 +2,20 @@
 
 import { useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X } from '@/components/icons';
+import { ChevronRight, X } from '@/components/icons';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { NEXT_MOVE_COPY, type NextMove } from '@/lib/next-moves';
-import { HOME_FOUR_COPY, type OneThingItem } from '@/lib/home/home-four';
+import { HOME_FOUR_COPY, describeTaskLabel, describeTaskWhere, type OneThingItem } from '@/lib/home/home-four';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 
 const CARD = 'relative rounded-[20px] border border-stroke-default bg-bg-surface';
+/**
+ * The card is a golden rectangle (2026-10-18, layout B, founder approved): its
+ * width over its height is phi at the full column width. aspect-ratio keeps
+ * min-height:auto, so a long title grows the card instead of clipping it.
+ */
+const GOLDEN = 'aspect-[1.618/1]';
 const PRIMARY =
   'motion-focus motion-press mt-5 flex h-12 w-full items-center justify-center rounded-full bg-brand text-[15px] font-semibold text-content-inverse hover:bg-brand-hover';
 
@@ -41,10 +47,12 @@ function Slide({
   item,
   position,
   onDismissMove,
+  headerReleaseId,
 }: {
   item: OneThingItem;
   position: number;
   onDismissMove: (move: NextMove) => void;
+  headerReleaseId: string | null;
 }) {
   const { openTask } = useTaskUI();
   const goToMove = useGoToMove();
@@ -52,30 +60,47 @@ function Slide({
     captureAnalyticsEvent({ name: 'home_one_thing_clicked', properties: { kind: item.kind, position } });
 
   if (item.kind === 'task') {
-    // No "Next" chip or due line (Oyin, Oct 17, 2026): the card leads with the task.
     // No Open task button (Oyin, Oct 17, 2026): the whole card opens the task.
+    // Layout B (Oct 18, 2026): "Next · Due today", the title, and a green arrow
+    // that is only a picture of the tap, never a second button.
     const { task } = item;
-    const where = [task.releaseTitle, task.artistName].filter(Boolean).join(' · ');
+    const where = describeTaskWhere(task, headerReleaseId);
+    const label = describeTaskLabel(item.due);
     return (
       <button
         type="button"
         aria-label={`${HOME_FOUR_COPY.openTask}: ${task.title}`}
         data-one-thing-card="task"
-        className={`${CARD} motion-focus motion-press flex h-full w-full flex-col px-5 pb-5 pt-5 text-left hover:bg-bg-elevated`}
+        className={`${CARD} ${GOLDEN} motion-focus motion-press flex h-full w-full flex-col px-6 pb-4 pt-6 text-left hover:bg-bg-elevated`}
         onClick={() => {
           track();
           openTask(task.id);
         }}
       >
-        <h2 className="break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">{task.title}</h2>
+        <span
+          className={`block font-mono text-[11px] uppercase tracking-[0.14em] ${
+            item.due?.late ? 'text-status-error' : 'text-content-primary/55'
+          }`}
+        >
+          {label}
+        </span>
+        <h2 className="mt-3 break-words font-display text-[1.875rem] leading-[1.2] text-content-primary">{task.title}</h2>
         {where ? <p className="mt-2 text-sm leading-relaxed text-content-secondary">{where}</p> : null}
+        <span className="min-h-3 flex-1" aria-hidden="true" />
+        <span
+          aria-hidden="true"
+          data-one-thing-arrow
+          className="grid h-9 w-9 shrink-0 place-items-center self-end rounded-full bg-brand text-content-inverse"
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </span>
       </button>
     );
   }
 
   const { move } = item;
   return (
-    <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`} data-next-move={move.rule}>
+    <div className={`${CARD} ${GOLDEN} flex h-full flex-col px-6 pb-5 pt-6`} data-next-move={move.rule}>
       <button
         type="button"
         onClick={() => onDismissMove(move)}
@@ -111,10 +136,13 @@ export function OneThing({
   items,
   nextUp,
   onDismissMove,
+  headerReleaseId = null,
 }: {
   items: readonly OneThingItem[];
   nextUp: string | null;
   onDismissMove: (move: NextMove) => void;
+  /** The release the header names: a task on it drops its "release · artist" line. */
+  headerReleaseId?: string | null;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
@@ -154,13 +182,13 @@ export function OneThing({
             aria-hidden={i !== index || undefined}
           >
             <div className="w-full">
-              <Slide item={item} position={i + 1} onDismissMove={onDismissMove} />
+              <Slide item={item} position={i + 1} onDismissMove={onDismissMove} headerReleaseId={headerReleaseId} />
             </div>
           </div>
         ))}
       </div>
       {items.length > 1 ? (
-        <div className="mt-3 flex justify-center gap-1.5">
+        <div className="mt-2.5 flex justify-center gap-1.5">
           {items.map((item, i) => (
             <button
               key={item.key}

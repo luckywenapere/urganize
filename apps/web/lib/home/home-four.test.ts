@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   buildOneThing,
   buildPhaseLine,
+  describeDone,
   describeDrop,
+  describeTaskLabel,
+  describeTaskWhere,
   describeWaiting,
   pickHeaderRelease,
   pickHomeLayout,
@@ -139,5 +142,27 @@ describe('describeWaiting', () => {
   it('counts late and on time, hides at zero', () => {
     expect(describeWaiting({ lateCount: 1, onTimeCount: 2 })).toEqual({ total: 3, late: 1 });
     expect(describeWaiting({ lateCount: 0, onTimeCount: 0 })).toBeNull();
+  });
+});
+
+describe('golden layout B helpers', () => {
+  it('labels the task card Next and its due day', () => {
+    expect(describeTaskLabel({ label: 'Due today' })).toBe('Next · Due today');
+    expect(describeTaskLabel({ label: 'Due tomorrow' })).toBe('Next · Due tomorrow');
+    expect(describeTaskLabel({ label: 'No due date' })).toBe('Next');
+    expect(describeTaskLabel(null)).toBe('Next');
+  });
+
+  it('names the release only when it is not the header\'s', () => {
+    const task = { releaseId: 'r1', releaseTitle: 'Heaven', artistName: 'Dorian' };
+    expect(describeTaskWhere(task, 'r1')).toBeNull();
+    expect(describeTaskWhere(task, 'r2')).toBe('Heaven · Dorian');
+    expect(describeTaskWhere({ releaseId: null, releaseTitle: null, artistName: null }, 'r1')).toBeNull();
+  });
+
+  it('Done hides at zero tasks', () => {
+    expect(describeDone({ done: 12, total: 40 })).toEqual({ done: 12, total: 40 });
+    expect(describeDone({ done: 0, total: 0 })).toBeNull();
+    expect(describeDone(null)).toBeNull();
   });
 });

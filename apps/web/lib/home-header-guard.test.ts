@@ -71,3 +71,59 @@ describe('Home task card (Oyin, Oct 17, 2026)', () => {
     expect(taskBranch).not.toContain('className={PRIMARY}');
   });
 });
+
+describe('Home golden layout B (Oyin, Oct 18, 2026)', () => {
+  const oneThing = read('components', 'home', 'v2', 'OneThing.tsx');
+  const taskBranch = oneThing.slice(oneThing.indexOf("item.kind === 'task'"), oneThing.indexOf('const { move } = item;'));
+  const moveBranch = oneThing.slice(oneThing.indexOf('const { move } = item;'), oneThing.indexOf('export function OneThing'));
+  const homeFour = read('components', 'home', 'v2', 'HomeFour.tsx');
+  const waiting = read('components', 'home', 'v2', 'WaitingRow.tsx');
+  const rows = read('components', 'home', 'v2', 'HomeRow.tsx');
+
+  it('the task card is a golden rectangle that can still grow', () => {
+    expect(oneThing).toContain("const GOLDEN = 'aspect-[1.618/1]'");
+    expect(taskBranch).toContain('${GOLDEN}');
+    expect(moveBranch).toContain('${GOLDEN}');
+    // A fixed height would clip a long title.
+    expect(taskBranch).not.toMatch(/\bh-\[\d/);
+    expect(taskBranch).not.toMatch(/max-h-/);
+  });
+
+  it('the task card is one button: the arrow is a picture, not a second button', () => {
+    const buttons = taskBranch.match(/<button\b/g) ?? [];
+    expect(buttons).toHaveLength(1);
+    expect(taskBranch).toMatch(/aria-hidden="true"\s+data-one-thing-arrow/);
+    expect(taskBranch).not.toContain('className={PRIMARY}');
+    // Suggestions keep their own action and dismiss.
+    expect(moveBranch).toContain('className={PRIMARY}');
+    expect(moveBranch).toContain('NEXT_MOVE_COPY.dismiss');
+  });
+
+  it('shows "Next · due" and drops release · artist for the header\'s release', () => {
+    expect(taskBranch).toContain('describeTaskLabel(item.due)');
+    expect(taskBranch).toContain('describeTaskWhere(task, headerReleaseId)');
+    expect(homeFour).toContain('headerReleaseId={release.id}');
+  });
+
+  it('Done is a row that hides at 0 tasks and opens the rollout', () => {
+    expect(homeFour).toContain('function DoneRow');
+    expect(homeFour).toMatch(/const done = describeDone\(progress\);\s*if \(!done\) return null;/);
+    expect(homeFour).toContain('href={`/dashboard?release=${encodeURIComponent(releaseId)}`}');
+  });
+
+  it('Waiting on others is a row, not a bordered card', () => {
+    expect(waiting).not.toMatch(/<section[^>]*\bborder\b/);
+    expect(waiting).not.toContain('rounded-[20px]');
+    expect(waiting).toContain('${HOME_ROW}');
+    expect(rows).toContain('h-14');
+    expect(rows).toContain('font-mono');
+  });
+
+  it('the rows sit together with hairlines between them', () => {
+    expect(rows).toContain("HOME_ROWS = 'divide-y divide-stroke-subtle'");
+    const band = homeFour.slice(homeFour.indexOf('data-home-block="rows"'));
+    expect(band.indexOf('<DoneRow')).toBeGreaterThan(-1);
+    expect(band.indexOf('<DoneRow')).toBeLessThan(band.indexOf('<WaitingRow'));
+    expect(band.indexOf('<WaitingRow')).toBeLessThan(band.indexOf('<OpportunityLine'));
+  });
+});

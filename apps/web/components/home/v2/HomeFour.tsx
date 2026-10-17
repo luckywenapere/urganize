@@ -8,6 +8,7 @@ import { reportBoundaryError } from '@/lib/report-boundary-error';
 import {
   HOME_FOUR_COPY,
   buildOneThing,
+  describeDone,
   describeNextUp,
   pickHeaderRelease,
   pickHomeLayout,
@@ -24,6 +25,7 @@ import { ReleaseHeader } from './ReleaseHeader';
 import { HomeBell } from './HomeBell';
 import { OneThing } from './OneThing';
 import { WaitingRow } from './WaitingRow';
+import { HOME_ROW, HOME_ROW_CHEVRON, HOME_ROW_VALUE, HOME_ROWS } from './HomeRow';
 import { ReleaseReviewCard } from '@/components/between-releases/BetweenReleaseCards';
 import { StartNextSheet } from '@/components/between-releases/StartNextSheet';
 
@@ -36,7 +38,7 @@ function Fenced({ name, children }: { name: string; children: React.ReactNode })
   );
 }
 
-/** One line, only when a grant matched the team (URG-266's suggested items). */
+/** One row, only when a grant matched the team (URG-266's suggested items). */
 function OpportunityLine({ count }: { count: number }) {
   if (count === 0) return null;
   return (
@@ -48,12 +50,32 @@ function OpportunityLine({ count }: { count: number }) {
           properties: { target: 'see_all', source: 'suggested', kind: null, position: null, shown: count },
         })
       }
-      className="motion-focus flex min-h-11 items-center gap-2.5 rounded-xl px-1 text-sm text-content-primary hover:text-brand"
+      className={HOME_ROW}
       data-home-block="opportunity-line"
     >
       <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-brand" aria-hidden="true" />
       <span className="min-w-0 flex-1 truncate">{HOME_FOUR_COPY.grantsFit(count)}</span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-content-primary/40" aria-hidden="true" />
+      <ChevronRight className={HOME_ROW_CHEVRON} aria-hidden="true" />
+    </Link>
+  );
+}
+
+/** "Done   12 of 40  >": the rollout's progress; opens the rollout. Hidden at 0 tasks. */
+function DoneRow({ releaseId, progress }: { releaseId: string; progress: { done: number; total: number } }) {
+  const done = describeDone(progress);
+  if (!done) return null;
+  return (
+    <Link
+      href={`/dashboard?release=${encodeURIComponent(releaseId)}`}
+      className={HOME_ROW}
+      data-home-block="done"
+    >
+      <span className="min-w-0 flex-1 truncate">{HOME_FOUR_COPY.done}</span>
+      <span className={HOME_ROW_VALUE}>
+        {done.done}
+        <span className="text-content-primary/55"> {HOME_FOUR_COPY.of(done.total)}</span>
+      </span>
+      <ChevronRight className={HOME_ROW_CHEVRON} aria-hidden="true" />
     </Link>
   );
 }
@@ -69,28 +91,46 @@ function ReleaseHome({ home, viewerId }: { home: HomePayload; viewerId: string }
   const waitingItems = buildWaitingItems(waitingTasks);
   const matched = (home.opportunities ?? []).filter((item) => item.source === 'suggested').length;
 
+  const showDone = describeDone(release.progress) !== null;
+  const showWaiting = waitingItems.length > 0 || live.waitingOnTimeCount > 0;
+  const showBand = showDone || showWaiting || matched > 0;
+
+  // Golden layout B (2026-10-18, founder approved): header band, the One Thing
+  // as a golden card, its dots, then numbers in rows (Done, Waiting on others,
+  // grants). On a short phone the page scrolls above the UrgAns box
+  // (.home-main-padding clears it); nothing is pinned.
   return (
     <div className="flex flex-col">
       <Fenced name="release">
         <ReleaseHeader release={release} team={home.team ?? []} />
       </Fenced>
-      <div className="mt-6">
+      <div className="mt-9">
         <Fenced name="one-thing">
-          <OneThing items={items} nextUp={nextUp} onDismissMove={nextMoves.dismiss} />
+          <OneThing
+            items={items}
+            nextUp={nextUp}
+            onDismissMove={nextMoves.dismiss}
+            headerReleaseId={release.id}
+          />
         </Fenced>
       </div>
-      {waitingItems.length > 0 || live.waitingOnTimeCount > 0 ? (
-        <div className="mt-4">
-          <Fenced name="waiting">
-            <WaitingRow items={waitingItems} onTimeCount={live.waitingOnTimeCount} />
-          </Fenced>
-        </div>
-      ) : null}
-      {matched > 0 ? (
-        <div className="mt-2">
-          <Fenced name="opportunity-line">
-            <OpportunityLine count={matched} />
-          </Fenced>
+      {showBand ? (
+        <div className={`${items.length > 1 ? 'mt-1' : 'mt-4'} ${HOME_ROWS}`} data-home-block="rows">
+          {showDone ? (
+            <Fenced name="done">
+              <DoneRow releaseId={release.id} progress={release.progress} />
+            </Fenced>
+          ) : null}
+          {showWaiting ? (
+            <Fenced name="waiting">
+              <WaitingRow items={waitingItems} onTimeCount={live.waitingOnTimeCount} />
+            </Fenced>
+          ) : null}
+          {matched > 0 ? (
+            <Fenced name="opportunity-line">
+              <OpportunityLine count={matched} />
+            </Fenced>
+          ) : null}
         </div>
       ) : null}
     </div>

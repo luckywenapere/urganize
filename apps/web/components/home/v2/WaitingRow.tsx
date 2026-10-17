@@ -5,6 +5,7 @@ import { ChevronRight } from '@/components/icons';
 import { getPriorityDotClass } from '@/lib/tasks';
 import { HOME_FOUR_COPY, describeWaiting } from '@/lib/home/home-four';
 import type { WaitingItem } from '@/lib/home/stack-items';
+import { HOME_ROW, HOME_ROW_CHEVRON, HOME_ROW_VALUE } from './HomeRow';
 
 /**
  * Waiting on others as one row (URG-320): how many things sit with the team and
@@ -18,37 +19,36 @@ export function WaitingRow({ items, onTimeCount }: { items: readonly WaitingItem
   if (!summary) return null;
   const canOpen = items.length > 0;
 
+  // A row, not a card (2026-10-18, layout B): "Waiting on others   3 · 1 late  >".
   return (
-    <section className="rounded-[20px] border border-stroke-default bg-bg-surface" data-home-block="waiting">
+    <section data-home-block="waiting">
       <button
         type="button"
         onClick={() => canOpen && setOpen((v) => !v)}
         aria-expanded={canOpen ? open : undefined}
         aria-controls={canOpen ? listId : undefined}
         disabled={!canOpen}
-        className="motion-focus flex min-h-14 w-full items-center gap-3 rounded-[20px] px-4 py-3 text-left disabled:cursor-default"
+        className={`${HOME_ROW} disabled:cursor-default disabled:hover:text-content-primary`}
       >
-        <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-content-primary">{HOME_FOUR_COPY.waiting}</span>
-          <span className="mt-0.5 block text-[13px]">
-            <span className="text-content-secondary">{HOME_FOUR_COPY.withTeam(summary.total)}</span>
-            {summary.late > 0 ? (
-              <>
-                <span className="text-content-secondary"> · </span>
-                <span className="text-status-error">{HOME_FOUR_COPY.late(summary.late)}</span>
-              </>
-            ) : null}
-          </span>
+        <span className="min-w-0 flex-1 truncate">{HOME_FOUR_COPY.waiting}</span>
+        <span className={HOME_ROW_VALUE}>
+          {summary.total}
+          {summary.late > 0 ? (
+            <>
+              <span className="text-content-primary/55"> · </span>
+              <span className="text-status-error">{HOME_FOUR_COPY.late(summary.late)}</span>
+            </>
+          ) : null}
         </span>
         {canOpen ? (
           <ChevronRight
             aria-hidden="true"
-            className={`h-4 w-4 shrink-0 text-content-primary/40 motion-safe:transition-transform ${open ? 'rotate-90' : ''}`}
+            className={`${HOME_ROW_CHEVRON} motion-safe:transition-transform ${open ? 'rotate-90' : ''}`}
           />
         ) : null}
       </button>
       {open ? (
-        <ul id={listId} className="divide-y divide-stroke-subtle border-t border-stroke-subtle px-4">
+        <ul id={listId} className="divide-y divide-stroke-subtle border-t border-stroke-subtle px-1 pb-1">
           {items.map((item) => (
             <li key={item.key} className="flex items-start gap-3 py-3">
               <span
