@@ -40,18 +40,20 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // Only name scenes that are ON in production. The 2026-10-16 cut list
 // (shows/setlists, audience, paid curator pitches, capture pages, release
 // chat, content calendar, spend, UrgAns voice, MCP, notes) stays off this page.
+// Copy rewritten 2026-10-17 for a cold visitor (Oyin): titles say what you
+// get done, no feature names or jargon ("handoff", "metadata").
 const ROWS = [
   {
-    title: "Pitch this!",
-    body: "Pitch curators and Spotify and Apple Music editors from the release.",
+    title: "Get your song on playlists",
+    body: "Send it to playlist curators and Spotify and Apple Music editors, right from the release.",
   },
   {
-    title: "Distributor handoff",
-    body: "Master, cover art and metadata, each with an owner and a date.",
+    title: "Get your files to your distributor on time",
+    body: "The master, cover art and song details, each with who's doing it and by when.",
   },
   {
-    title: "Between releases",
-    body: "Opportunities that fit your artists, so the next one starts sooner.",
+    title: "Find your artists' next opportunity",
+    body: "Opportunities that fit your artists, so you're not starting from zero after a release.",
   },
 ] as const;
 
@@ -63,14 +65,14 @@ export function FeatureGridSection() {
         containerClassName={wideContainerClass}
       >
         <div className="mx-auto max-w-[52rem] text-center">
-          <h2 className={centeredHeadlineClass}>Also in Urganize</h2>
+          <h2 className={centeredHeadlineClass}>It also helps you</h2>
         </div>
 
         <ul className="mx-auto mt-12 max-w-[56rem] border-t border-[color:var(--marketing-border)]">
           {ROWS.map((row) => (
             <li
               key={row.title}
-              className="grid gap-1 border-b border-[color:var(--marketing-border)] py-6 sm:grid-cols-[14rem_1fr] sm:items-baseline sm:gap-8"
+              className="grid gap-1 border-b border-[color:var(--marketing-border)] py-6 sm:grid-cols-[18rem_1fr] sm:items-baseline sm:gap-8"
             >
               <h3 className="text-[1.2rem] leading-tight text-[var(--marketing-text)]">
                 {row.title}
