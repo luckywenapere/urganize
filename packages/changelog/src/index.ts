@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.4",
+    date: "October 17, 2026",
+    highlights: [
+      "In Pitch this!, Your kit is now What curators read: three rows with a tick each, one Write the missing parts button with its cost under it, and once everything is in it shrinks to a single Ready row with Copy share link.",
+    ],
+  },
+  {
     version: "1.157.3",
     date: "October 17, 2026",
     highlights: [

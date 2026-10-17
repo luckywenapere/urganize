@@ -2,16 +2,14 @@
 'use client';
 
 import { isCreditsEnabled } from '@/lib/credits/config';
-import { embeddedCostLine } from '@/lib/credits/copy';
+import { embeddedEstimateCredits } from '@/lib/credits/embedded';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
   ChevronRight,
   Copy,
-  ExternalLink,
   Loader2,
   Plus,
-  Sparkles,
   Trash2,
 } from '@/components/icons';
 import { absoluteKitUrl, publishReleaseKitLink } from '@/lib/pitch-kit-client';
@@ -138,6 +136,14 @@ function KitRow({
  * - Still one accent action, still no Save buttons (autosave on blur), still
  *   "Write it for me" first. The fifth-grader wins of 2026-10-11 stay.
  *
+ * 2026-10-17 (founder: "so confusing to me and the users"; approved mocks in
+ * the strategy project's kit-mocks): renamed to "What curators read", the
+ * rows come first with "N of 3 done", one quiet action "Write the missing
+ * parts" with its cost under it, the hint moved to "Try again with a hint" on
+ * the draft, the "Live at…" status line is gone (it read as live while the
+ * story was empty), and once all three rows are done the block shrinks to one
+ * "Ready" row plus "Copy share link".
+ *
  * Fetches for itself and is not cached: it is edited in place.
  */
 export function PitchKitSection({ releaseId, onToast, onShareStateChange }: PitchKitSectionProps) {
@@ -156,6 +162,7 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
 
   const [notes, setNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
+  const [showRows, setShowRows] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [fillError, setFillError] = useState('');
@@ -393,8 +400,6 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
   const kitEmail = kit?.contactEmail?.trim() ?? '';
   const artistDone = Boolean(kitBio) && Boolean(kitEmail);
   const frozen = Boolean(data.kitFrozenAt);
-  const left = [storyDone, creditsDone].filter((done) => !done).length;
-  const allDone = storyDone && creditsDone;
 
   const saveStoryIfChanged = () => {
     if (story.trim() !== data.fields.story.trim()) void save({ story }, 'story');
@@ -435,7 +440,7 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
       return;
     }
     await copyText(result.url);
-    onToast('Your kit is live. Link copied.', 'success');
+    onToast('Link copied.', 'success');
     void load();
   };
 
@@ -452,12 +457,6 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
       </span>
     ) : null;
 
-  const liveHost = liveUrl ? liveUrl.replace(/^https?:\/\//, '').replace(/\?.*$/, '') : '';
-  const status = liveUrl
-    ? `Live at ${liveHost}`
-    : storyDone
-      ? 'Ready to share'
-      : `${left} ${left === 1 ? 'thing' : 'things'} left`;
   const storyValue = data.fields.story.trim() || 'Not written yet';
   const creditsValue = creditsDone
     ? `${data.credits.length} ${data.credits.length === 1 ? 'person' : 'people'}${
@@ -467,34 +466,250 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
   const artistParts = [kitBio ? 'Bio' : '', kitEmail ? 'contact' : ''].filter(Boolean);
   const artistValue = artistParts.length > 0 ? artistParts.join(' · ') : 'Add a bio and who to write to';
 
+  const doneCount = [storyDone, creditsDone, artistDone].filter(Boolean).length;
+  const ready = storyDone && creditsDone && artistDone;
+  // "Write the missing parts" fills the story and the artist bio; who made it
+  // stays a person's job, so it alone never shows the button.
+  const missingWritable = !frozen && (!storyDone || !kitBio);
+  const estimate = embeddedEstimateCredits('epk.fill_both');
+  const writeCostLine =
+    balance === null || !Number.isFinite(balance)
+      ? `${estimate} credits`
+      : `${estimate} credits · you have ${Math.max(0, Math.floor(balance)).toLocaleString('en-US')}`;
+  const shareRow = storyDone ? (
+    <li>
+      <button
+        type="button"
+        onClick={() => void shareKit()}
+        disabled={sharing}
+        className="motion-focus flex min-h-12 w-full items-center gap-3 py-3 text-left disabled:opacity-60"
+      >
+        <span className="min-w-0 flex-1 text-sm font-semibold text-brand">
+          {copied ? 'Copied' : 'Copy share link'}
+        </span>
+        {sharing ? (
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-brand" aria-hidden="true" />
+        ) : copied ? (
+          <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+        ) : (
+          <Copy className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+        )}
+      </button>
+      {manualLink ? (
+        <input
+          readOnly
+          aria-label="Share link"
+          value={manualLink}
+          onFocus={(event) => event.currentTarget.select()}
+          className={`${FIELD_CLASS} mb-3 font-mono text-xs`}
+        />
+      ) : null}
+    </li>
+  ) : null;
+
   return (
-    <section aria-label="Your kit" className="rounded-2xl bg-bg-surface p-4 sm:p-5">
-      <div className="flex items-center gap-4">
-        <div className="h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl bg-bg-elevated">
-          {data.coverUrl ? (
-            <img src={data.coverUrl} alt="Cover art" className="h-full w-full object-cover" />
-          ) : (
-            <div className="grid h-full w-full place-items-center text-[10px] text-content-primary/55">No cover</div>
-          )}
-        </div>
-        <div className="min-w-0">
-          <h3 className="font-display text-[22px] leading-tight text-content-primary">
-            {allDone ? 'Your kit is ready' : 'Your kit'}
-          </h3>
-          <p className="mt-1 flex items-center gap-2 text-[13px] text-content-primary/55">
-            <span
-              className={`h-2 w-2 shrink-0 rounded-full ${liveUrl || storyDone ? 'bg-brand' : 'bg-content-tertiary/40'}`}
-              aria-hidden="true"
-            />
-            <span className="truncate">{status}</span>
-          </p>
-        </div>
+    <section aria-label="What curators read">
+      <h3 className="font-display text-xl text-content-primary">What curators read</h3>
+      <p className="mt-1 text-[13px] text-content-primary/55">
+        Goes with every pitch.{ready ? '' : ` ${doneCount} of 3 done.`}
+      </p>
+
+      <div className="mt-3">
+        {ready && !showRows ? (
+          <ul className="rounded-2xl bg-bg-surface px-4" aria-label="What is in the kit">
+            <li className="border-b border-stroke-subtle">
+              <button
+                type="button"
+                aria-expanded={false}
+                onClick={() => setShowRows(true)}
+                className="motion-focus flex min-h-16 w-full items-center gap-3 py-3 text-left"
+              >
+                <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-bg-elevated">
+                  {data.coverUrl ? <img src={data.coverUrl} alt="" className="h-full w-full object-cover" /> : null}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-content-primary">Ready</span>
+                  <span className="block truncate text-[13px] text-content-primary/55">Story, credits, bio</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden="true" />
+              </button>
+            </li>
+            {shareRow}
+          </ul>
+        ) : (
+          <ul className="rounded-2xl bg-bg-surface px-4" aria-label="What is in the kit">
+            <KitRow
+              done={storyDone}
+              title="The story"
+              value={storyValue}
+              open={openRow === 'story'}
+              onToggle={() => setOpenRow(openRow === 'story' ? null : 'story')}
+            >
+              <textarea
+                id="pitch-kit-story"
+                aria-label="The story behind this song"
+                value={story}
+                onChange={(event) => setStory(event.target.value)}
+                onBlur={saveStoryIfChanged}
+                maxLength={MAX_STORY_LENGTH}
+                rows={5}
+                autoFocus
+                placeholder="How did this song happen? A few sentences is plenty."
+                className={`${FIELD_CLASS} resize-y`}
+              />
+              <div className="mt-1.5 flex items-center gap-3 empty:hidden">
+                {savedNote('story', savingStory)}
+                {!savingStory && savedAt !== 'story' && data.fields.storySource === 'ai' && data.fields.story ? (
+                  <span className="text-xs text-content-tertiary">Written by UrgAns. Change anything.</span>
+                ) : null}
+              </div>
+            </KitRow>
+
+            <KitRow
+              done={creditsDone}
+              title="Who made it"
+              value={creditsValue}
+              open={openRow === 'credits'}
+              onToggle={() => setOpenRow(openRow === 'credits' ? null : 'credits')}
+            >
+              {shownCredits.length > 0 ? (
+                <ul className="space-y-2">
+                  {shownCredits.map((credit, index) => (
+                    <li key={index} className="flex items-center gap-2">
+                      <input
+                        aria-label={`Person ${index + 1} name`}
+                        value={credit.name}
+                        placeholder="Name"
+                        onChange={(event) =>
+                          setCredits(shownCredits.map((c, i) => (i === index ? { ...c, name: event.target.value } : c)))
+                        }
+                        onBlur={() => saveCreditsIfChanged(shownCredits)}
+                        className={`${FIELD_CLASS} min-w-0 flex-1`}
+                      />
+                      <input
+                        aria-label={`Person ${index + 1} role`}
+                        value={credit.role}
+                        placeholder="What they did"
+                        onChange={(event) =>
+                          setCredits(shownCredits.map((c, i) => (i === index ? { ...c, role: event.target.value } : c)))
+                        }
+                        onBlur={() => saveCreditsIfChanged(shownCredits)}
+                        className={`${FIELD_CLASS} min-w-0 flex-1`}
+                      />
+                      <button
+                        type="button"
+                        aria-label={`Remove person ${index + 1}`}
+                        onClick={() => {
+                          const next = shownCredits.filter((_, i) => i !== index);
+                          setCredits(next);
+                          saveCreditsIfChanged(next);
+                        }}
+                        className="motion-focus motion-press inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-content-tertiary hover:bg-bg-hover hover:text-content-primary"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCredits([...shownCredits, { name: '', role: '' }])}
+                  disabled={shownCredits.length >= MAX_CREDITS}
+                  className="motion-focus inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand hover:underline disabled:opacity-60"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Add a person
+                </button>
+                {!automatic && data.submittedCredits.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => void save({ credits: null }, 'credits')}
+                    disabled={savingCredits}
+                    className="motion-focus text-xs text-content-tertiary hover:text-content-primary"
+                  >
+                    Use what my team sent
+                  </button>
+                ) : null}
+                {savedNote('credits', savingCredits)}
+              </div>
+            </KitRow>
+
+            <KitRow
+              done={artistDone}
+              title={`About ${artistName}`}
+              value={artistValue}
+              open={openRow === 'artist'}
+              onToggle={() => setOpenRow(openRow === 'artist' ? null : 'artist')}
+            >
+              {frozen ? (
+                <>
+                  {kitBio ? (
+                    <p className="line-clamp-4 whitespace-pre-wrap text-sm text-content-primary">{kitBio}</p>
+                  ) : null}
+                  {kitEmail ? <p className="mt-1 text-sm text-content-primary">{kitEmail}</p> : null}
+                  <p className="mt-1 text-xs text-content-tertiary">
+                    This rollout is out, so it keeps the kit as it was that day.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <label htmlFor="pitch-kit-bio" className="block text-[13px] font-semibold text-content-primary/55">
+                    Short bio
+                  </label>
+                  <textarea
+                    id="pitch-kit-bio"
+                    value={bio}
+                    onChange={(event) => setBio(event.target.value)}
+                    onBlur={() => {
+                      if (bio.trim() !== kitBio) void saveArtist({ shortBio: bio.trim() });
+                    }}
+                    maxLength={1000}
+                    rows={3}
+                    placeholder={`A line or two about ${artistName}.`}
+                    className={`${FIELD_CLASS} mt-1.5 resize-y`}
+                  />
+                  <label
+                    htmlFor="pitch-kit-contact"
+                    className="mt-4 block text-[13px] font-semibold text-content-primary/55"
+                  >
+                    Who to write to
+                  </label>
+                  <input
+                    id="pitch-kit-contact"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={contactEmail}
+                    onChange={(event) => setContactEmail(event.target.value)}
+                    onBlur={() => {
+                      if (contactEmail.trim() !== kitEmail) void saveArtist({ contactEmail: contactEmail.trim() });
+                    }}
+                    maxLength={254}
+                    placeholder="name@email.com"
+                    className={`${FIELD_CLASS} mt-1.5`}
+                  />
+                  <div className="mt-1.5 flex items-center gap-3 empty:hidden">
+                    {savedNote('artist', savingArtist)}
+                    {artistError ? (
+                      <span className="text-xs text-status-error" role="alert">
+                        {artistError}
+                      </span>
+                    ) : null}
+                  </div>
+                </>
+              )}
+            </KitRow>
+            {shareRow}
+          </ul>
+        )}
       </div>
 
       {draft ? (
-        <div className="mt-4 rounded-xl border border-brand/30 bg-brand/5 p-4">
-          <p className="text-sm font-semibold text-content-primary">Here is what we wrote</p>
-          <p className="mt-0.5 text-xs text-content-primary/55">It only fills empty spots.</p>
+        <div className="mt-3 rounded-xl border border-brand/30 bg-brand/5 p-4">
+          <p className="text-sm font-semibold text-content-primary">Here’s a first draft</p>
+          <p className="mt-0.5 text-xs text-content-primary/55">Change anything after. It only fills empty parts.</p>
           <div className="mt-4 space-y-4">
             {draft.story ? (
               <div>
@@ -521,29 +736,21 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
             <button type="button" onClick={() => void discard()} disabled={busy} className={QUIET_BUTTON}>
               No thanks
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowNotes(true);
+                void discard();
+              }}
+              disabled={busy}
+              className="motion-focus min-h-10 px-2 text-sm font-semibold text-brand hover:underline disabled:opacity-60"
+            >
+              Try again with a hint
+            </button>
           </div>
         </div>
-      ) : !storyDone ? (
-        <div className="mt-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={() => void fill()} disabled={busy} className={PRIMARY_BUTTON}>
-              {busy ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Sparkles className="h-4 w-4" aria-hidden="true" />
-              )}
-              {busy ? 'Writing…' : 'Write it for me'}
-            </button>
-            {!showNotes ? (
-              <button
-                type="button"
-                onClick={() => setShowNotes(true)}
-                className="motion-focus min-h-11 text-sm font-semibold text-content-primary/55 hover:text-content-primary"
-              >
-                Give it a hint
-              </button>
-            ) : null}
-          </div>
+      ) : missingWritable ? (
+        <div className="mt-3">
           {showNotes ? (
             <textarea
               aria-label="A hint for UrgAns"
@@ -553,44 +760,23 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
               maxLength={2000}
               autoFocus
               placeholder="Like: we made it in one night in Lagos."
-              className={`${FIELD_CLASS} mt-3`}
+              className={`${FIELD_CLASS} mb-3`}
             />
           ) : null}
+          <button
+            type="button"
+            onClick={() => void fill()}
+            disabled={busy}
+            className="motion-focus motion-press inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-content-primary/[0.08] px-4 text-[15px] font-semibold text-brand transition-colors hover:bg-content-primary/[0.12] disabled:opacity-60 sm:w-80"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+            {busy ? 'Writing…' : 'Write the missing parts'}
+          </button>
           {isCreditsEnabled() ? (
-            <p className="mt-2 text-[13px] text-content-primary/55">{embeddedCostLine('epk.fill_both', balance)}</p>
+            <p className="mt-2 text-center text-[13px] text-content-primary/55 sm:w-80">{writeCostLine}</p>
           ) : null}
         </div>
-      ) : (
-        <div className="mt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => void shareKit()} disabled={sharing} className={PRIMARY_BUTTON}>
-              {sharing ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : copied ? (
-                <Check className="h-4 w-4" aria-hidden="true" />
-              ) : (
-                <Copy className="h-4 w-4" aria-hidden="true" />
-              )}
-              {copied ? 'Copied' : 'Copy kit link'}
-            </button>
-            {liveUrl ? (
-              <a href={liveUrl} target="_blank" rel="noopener noreferrer" className={QUIET_BUTTON}>
-                <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                See it
-              </a>
-            ) : null}
-          </div>
-          {manualLink ? (
-            <input
-              readOnly
-              aria-label="Kit link"
-              value={manualLink}
-              onFocus={(event) => event.currentTarget.select()}
-              className={`${FIELD_CLASS} mt-3 font-mono text-xs`}
-            />
-          ) : null}
-        </div>
-      )}
+      ) : null}
 
       {fillError ? (
         <p className="mt-3 text-sm text-status-error" role="alert">
@@ -598,171 +784,6 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
         </p>
       ) : null}
 
-      <ul className="mt-4 border-t border-stroke-subtle" aria-label="What is in the kit">
-        <KitRow
-          done={storyDone}
-          title="The story"
-          value={storyValue}
-          open={openRow === 'story'}
-          onToggle={() => setOpenRow(openRow === 'story' ? null : 'story')}
-        >
-          <textarea
-            id="pitch-kit-story"
-            aria-label="The story behind this song"
-            value={story}
-            onChange={(event) => setStory(event.target.value)}
-            onBlur={saveStoryIfChanged}
-            maxLength={MAX_STORY_LENGTH}
-            rows={5}
-            autoFocus
-            placeholder="How did this song happen? A few sentences is plenty."
-            className={`${FIELD_CLASS} resize-y`}
-          />
-          <div className="mt-1.5 flex items-center gap-3 empty:hidden">
-            {savedNote('story', savingStory)}
-            {!savingStory && savedAt !== 'story' && data.fields.storySource === 'ai' && data.fields.story ? (
-              <span className="text-xs text-content-tertiary">Written by UrgAns. Change anything.</span>
-            ) : null}
-          </div>
-        </KitRow>
-
-        <KitRow
-          done={creditsDone}
-          title="Who made it"
-          value={creditsValue}
-          open={openRow === 'credits'}
-          onToggle={() => setOpenRow(openRow === 'credits' ? null : 'credits')}
-        >
-          {shownCredits.length > 0 ? (
-            <ul className="space-y-2">
-              {shownCredits.map((credit, index) => (
-                <li key={index} className="flex items-center gap-2">
-                  <input
-                    aria-label={`Person ${index + 1} name`}
-                    value={credit.name}
-                    placeholder="Name"
-                    onChange={(event) =>
-                      setCredits(shownCredits.map((c, i) => (i === index ? { ...c, name: event.target.value } : c)))
-                    }
-                    onBlur={() => saveCreditsIfChanged(shownCredits)}
-                    className={`${FIELD_CLASS} min-w-0 flex-1`}
-                  />
-                  <input
-                    aria-label={`Person ${index + 1} role`}
-                    value={credit.role}
-                    placeholder="What they did"
-                    onChange={(event) =>
-                      setCredits(shownCredits.map((c, i) => (i === index ? { ...c, role: event.target.value } : c)))
-                    }
-                    onBlur={() => saveCreditsIfChanged(shownCredits)}
-                    className={`${FIELD_CLASS} min-w-0 flex-1`}
-                  />
-                  <button
-                    type="button"
-                    aria-label={`Remove person ${index + 1}`}
-                    onClick={() => {
-                      const next = shownCredits.filter((_, i) => i !== index);
-                      setCredits(next);
-                      saveCreditsIfChanged(next);
-                    }}
-                    className="motion-focus motion-press inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-content-tertiary hover:bg-bg-hover hover:text-content-primary"
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setCredits([...shownCredits, { name: '', role: '' }])}
-              disabled={shownCredits.length >= MAX_CREDITS}
-              className="motion-focus inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand hover:underline disabled:opacity-60"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Add a person
-            </button>
-            {!automatic && data.submittedCredits.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => void save({ credits: null }, 'credits')}
-                disabled={savingCredits}
-                className="motion-focus text-xs text-content-tertiary hover:text-content-primary"
-              >
-                Use what my team sent
-              </button>
-            ) : null}
-            {savedNote('credits', savingCredits)}
-          </div>
-        </KitRow>
-
-        <KitRow
-          done={artistDone}
-          title={`About ${artistName}`}
-          value={artistValue}
-          open={openRow === 'artist'}
-          onToggle={() => setOpenRow(openRow === 'artist' ? null : 'artist')}
-        >
-          {frozen ? (
-            <>
-              {kitBio ? (
-                <p className="line-clamp-4 whitespace-pre-wrap text-sm text-content-primary">{kitBio}</p>
-              ) : null}
-              {kitEmail ? <p className="mt-1 text-sm text-content-primary">{kitEmail}</p> : null}
-              <p className="mt-1 text-xs text-content-tertiary">
-                This rollout is out, so it keeps the kit as it was that day.
-              </p>
-            </>
-          ) : (
-            <>
-              <label htmlFor="pitch-kit-bio" className="block text-[13px] font-semibold text-content-primary/55">
-                Short bio
-              </label>
-              <textarea
-                id="pitch-kit-bio"
-                value={bio}
-                onChange={(event) => setBio(event.target.value)}
-                onBlur={() => {
-                  if (bio.trim() !== kitBio) void saveArtist({ shortBio: bio.trim() });
-                }}
-                maxLength={1000}
-                rows={3}
-                placeholder={`A line or two about ${artistName}.`}
-                className={`${FIELD_CLASS} mt-1.5 resize-y`}
-              />
-              <label
-                htmlFor="pitch-kit-contact"
-                className="mt-4 block text-[13px] font-semibold text-content-primary/55"
-              >
-                Who to write to
-              </label>
-              <input
-                id="pitch-kit-contact"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                value={contactEmail}
-                onChange={(event) => setContactEmail(event.target.value)}
-                onBlur={() => {
-                  if (contactEmail.trim() !== kitEmail) void saveArtist({ contactEmail: contactEmail.trim() });
-                }}
-                maxLength={254}
-                placeholder="name@email.com"
-                className={`${FIELD_CLASS} mt-1.5`}
-              />
-              <div className="mt-1.5 flex items-center gap-3 empty:hidden">
-                {savedNote('artist', savingArtist)}
-                {artistError ? (
-                  <span className="text-xs text-status-error" role="alert">
-                    {artistError}
-                  </span>
-                ) : null}
-              </div>
-            </>
-          )}
-        </KitRow>
-      </ul>
 
       <UrgansLockedSheet
         open={Boolean(lockedMessage)}
