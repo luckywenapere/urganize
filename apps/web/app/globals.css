@@ -2944,6 +2944,36 @@ html[data-auth-session='1'] .auth-form-shell {
 }
 
 /* ------------------------------------------------------------------------- *
+ * The boot frame (2026-10-18, "double load screen"). Every boot-stage loader
+ * (LoadingScreen in packages/ui) draws this one frame, and inside the phone
+ * app it is the native launch screen exactly, so the splash hands over to it
+ * with no jump in colour, size or position.
+ *
+ * --boot-ground and --boot-shift are set before first paint by the shell
+ * script in app/layout.tsx, and only inside the phone app. In a browser the
+ * frame is the page ground and the mark sits dead centre.
+ *
+ * In the phone app the splash is always the dark ground with the cream mark,
+ * whatever the theme, so the frame is too: the light theme's mark invert is
+ * cancelled here (0,3,1 beats html[data-theme='light'] .app-wordmark).
+ * ------------------------------------------------------------------------- */
+.urg-boot-frame {
+  background-color: rgb(var(--color-bg-base));
+}
+
+html[data-native-shell] .urg-boot-frame {
+  background-color: var(--boot-ground, rgb(var(--color-bg-base)));
+}
+
+html[data-native-shell] .urg-boot-frame .app-wordmark {
+  filter: none;
+}
+
+.urg-boot-mark {
+  transform: translateY(calc(-1 * var(--boot-shift, 0px)));
+}
+
+/* ------------------------------------------------------------------------- *
  * The shell's soft band (design overhaul, 2026-10-04).
  *
  * Deel's lavender header, done in the brand colour at a whisper: a solid base

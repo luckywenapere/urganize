@@ -18,8 +18,11 @@ export default function manifest(): MetadataRoute.Manifest {
     // in-app post-auth landing surface (URG-205) via the shared constant.
     start_url: HOME_PATH,
     display: 'standalone',
-    background_color: '#0d120e',
-    theme_color: '#0d120e',
+    // The dark theme's ground (2026-10-18; it was the old ink #0d120e, a shade
+    // greener than the page, so an installed app's launch read as a second
+    // load screen). Same value as themeColor in app/layout.tsx.
+    background_color: '#0c0c0d',
+    theme_color: '#0c0c0d',
     // The real pixel dimensions, not `sizes: "any"`. Chrome's installability
     // check wants a declared raster icon of at least 144px before it will
     // offer an install (and therefore before it fires beforeinstallprompt,

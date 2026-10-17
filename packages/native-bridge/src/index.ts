@@ -105,6 +105,20 @@ export interface ShellInfo {
   shellVersion: string;
   protocol: number;
   capabilities: BridgeRequestType[];
+  /**
+   * The colour the native launch screen is painted in, as #rrggbb (shells
+   * from v1.157.7). The site's first loading frame paints the same colour so
+   * the launch screen hands over to it invisibly. Absent on older shells,
+   * whose launch screen is the old ink, #0d120e.
+   */
+  splashBackground?: string;
+  /**
+   * The safe-area insets the webview sits inside, in points (shells from
+   * v1.157.7). The launch screen centres its mark on the whole screen and the
+   * webview is inset, so the site needs these to put its mark in the same
+   * spot. Absent on older shells, which leaves the site to estimate them.
+   */
+  safeAreaInsets?: { top: number; bottom: number };
 }
 
 export interface BridgeRequestMessage {
@@ -140,17 +154,32 @@ export function isBridgeEventType(value: unknown): value is BridgeEventType {
  */
 export function parseShellInfo(value: unknown): ShellInfo | null {
   if (!isRecord(value)) return null;
-  const { platform, shellVersion, protocol, capabilities } = value;
+  const { platform, shellVersion, protocol, capabilities, splashBackground, safeAreaInsets } = value;
   if (platform !== 'ios' && platform !== 'android') return null;
   if (typeof protocol !== 'number' || !Number.isInteger(protocol) || protocol < 1) return null;
   const caps = Array.isArray(capabilities) ? capabilities.filter(isBridgeRequestType) : [];
-  return {
+  const info: ShellInfo = {
     platform,
     shellVersion: typeof shellVersion === 'string' ? shellVersion : 'unknown',
     protocol,
     capabilities: caps,
   };
+  // Both are optional and cosmetic: a malformed value is dropped, never fatal.
+  if (typeof splashBackground === 'string' && /^#[0-9a-f]{6}$/i.test(splashBackground)) {
+    info.splashBackground = splashBackground.toLowerCase();
+  }
+  if (
+    isRecord(safeAreaInsets) &&
+    isInset(safeAreaInsets.top) &&
+    isInset(safeAreaInsets.bottom)
+  ) {
+    info.safeAreaInsets = { top: safeAreaInsets.top, bottom: safeAreaInsets.bottom };
+  }
+  return info;
 }
+
+const isInset = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 && value < 200;
 
 /**
  * The token the shell appends to its webview's user agent

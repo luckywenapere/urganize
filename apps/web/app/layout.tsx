@@ -102,7 +102,8 @@ export const metadata: Metadata = {
 // `viewportFit: 'cover'` lets content extend under the notch/home-indicator
 // area on iOS so the existing `env(safe-area-inset-*)` CSS in globals.css has
 // something to actually inset against — without it, iOS letterboxes the page
-// instead of extending it. themeColor matches the Brand Bible's ink ground so
+// instead of extending it. themeColor matches the dark theme's ground (#0c0c0d
+// since 2026-10-18, it was the old ink #0d120e) so
 // the native status bar (and the mobile Chrome/Safari UI chrome) doesn't
 // flash white before the app's own dark background paints. No effect on the
 // existing web deploy beyond that same status-bar-color meta tag.
@@ -115,7 +116,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   interactiveWidget: 'resizes-content',
-  themeColor: '#0d120e',
+  themeColor: '#0c0c0d',
 };
 
 // Textile character layer (NEXT_PUBLIC_FEATURE_TEXTILE). Read at module scope
@@ -191,6 +192,66 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   var parsed = JSON.parse(raw);
                   if (parsed && parsed.state && parsed.state.isAuthenticated === true) {
                     document.documentElement.setAttribute('data-auth-session', '1');
+                  }
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
+        {/*
+          Phone app boot frame (2026-10-18, "double load screen"). Inside the
+          Expo shell the native launch screen is up until this page has
+          loaded, and then the page's own LoadingScreen shows. For that handoff
+          to be invisible the first frame has to be the launch screen exactly,
+          which needs two things only the shell knows, so they are set here,
+          before the body paints, as CSS variables the boot frame reads
+          (globals.css, .urg-boot-frame):
+            --boot-ground  the launch screen's colour. Shells from v1.157.7 say
+                           it (splashBackground); older ones use the old ink.
+            --boot-shift   the splash centres the mark on the whole screen but
+                           the webview sits inside the safe area, so the mark
+                           moves up by (top inset - bottom inset) / 2. Newer
+                           shells pass the insets; for older ones on an iPhone
+                           they are estimated from the screen and the webview
+                           heights (the home indicator is 34pt, 20pt on an iPad,
+                           none on a phone with a home button).
+          The shell's description is injected before content loads on iOS; on
+          Android it can land later, so the user agent token is the fallback
+          for "is this the app". Cosmetic only: any failure leaves the frame
+          as it is in a browser.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var n = window.__URGANIZE_NATIVE__;
+                  var ua = navigator.userAgent || '';
+                  var hasInfo = !!n && (n.platform === 'ios' || n.platform === 'android');
+                  if (!hasInfo && ua.indexOf('UrganizeApp/') === -1) return;
+                  var root = document.documentElement;
+                  root.setAttribute('data-native-shell', '1');
+                  var ground = hasInfo && typeof n.splashBackground === 'string' && /^#[0-9a-f]{6}$/i.test(n.splashBackground)
+                    ? n.splashBackground
+                    : '#0d120e';
+                  root.style.setProperty('--boot-ground', ground);
+                  var top = null;
+                  var bottom = null;
+                  var ins = hasInfo ? n.safeAreaInsets : null;
+                  if (ins && typeof ins.top === 'number' && typeof ins.bottom === 'number') {
+                    top = ins.top;
+                    bottom = ins.bottom;
+                  } else {
+                    var ios = hasInfo ? n.platform === 'ios' : /iPhone|iPad|iPod/.test(ua);
+                    var total = window.screen.height - window.innerHeight;
+                    if (ios && total > 0) {
+                      bottom = total >= 40 ? (Math.min(window.screen.width, window.screen.height) >= 744 ? 20 : 34) : 0;
+                      top = total - bottom;
+                    }
+                  }
+                  if (top !== null && bottom !== null) {
+                    var shift = (top - bottom) / 2;
+                    if (isFinite(shift) && shift > 0 && shift < 60) root.style.setProperty('--boot-shift', shift + 'px');
                   }
                 } catch (_) {}
               })();

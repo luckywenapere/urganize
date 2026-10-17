@@ -26,7 +26,10 @@ const hasIosFirebase = existsSync(resolve(__dirname, IOS_FIREBASE_CONFIG));
 const PASTED_EAS_PROJECT_ID = 'a8a43eea-ad82-4288-a324-e301d906cf5a';
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || PASTED_EAS_PROJECT_ID;
 
-const INK = '#0d120e';
+// The launch screen's ground: the site's dark ground, #0c0c0d (v1.157.7; it
+// was #0d120e). Keep it equal to INK in src/OfflineScreen.tsx and to the
+// site's --color-bg-base, or opening the app shows two load screens.
+const INK = '#0c0c0d';
 const NOTIFICATION_ICON = './assets/notification-icon.png';
 const NOTIFICATION_COLOR = '#7fd99a';
 

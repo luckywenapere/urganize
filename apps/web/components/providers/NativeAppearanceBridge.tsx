@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { readPageAppearance } from '@/lib/native-appearance';
+import { BOOT_LOADER_EVENT, readPageAppearance } from '@/lib/native-appearance';
 import { request, shellSupports, whenInShell } from '@/lib/native-bridge';
 
 /**
@@ -32,15 +32,31 @@ export function NativeAppearanceBridge() {
       });
     };
 
+    // A boot loader coming or going (LoadingScreen fires the event from its
+    // effects) changes which ground the bars should take. Read on the next
+    // frame, once React has finished putting the DOM in place.
+    let frame = 0;
+    const reportSoon = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(report);
+    };
+
     const start = () => {
       report();
       const observer = new MutationObserver(report);
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+      // data-auth-session: removing it on /auth hides the pre-hydration loader.
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme', 'class', 'data-auth-session'],
+      });
       const media = window.matchMedia?.('(prefers-color-scheme: dark)');
       media?.addEventListener?.('change', report);
+      window.addEventListener(BOOT_LOADER_EVENT, reportSoon);
       stopWatching = () => {
         observer.disconnect();
         media?.removeEventListener?.('change', report);
+        window.removeEventListener(BOOT_LOADER_EVENT, reportSoon);
+        cancelAnimationFrame(frame);
       };
     };
 

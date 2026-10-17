@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Image from 'next/image';
 
 // Variant / eyebrow are retained for backwards compatibility with existing
@@ -44,36 +45,67 @@ export function LoadingMark({ size = 48 }: { size?: number }) {
   );
 }
 
+/**
+ * Fired on window when a LoadingScreen mounts or unmounts. The site's native
+ * appearance bridge listens, so the phone app's bars take the loading frame's
+ * ground while it is up and the page's ground once it is gone.
+ */
+export const BOOT_LOADER_EVENT = 'urganize:boot-loader';
+
+/**
+ * The mark's width in CSS px: exactly what the phone app's launch screen draws.
+ * The splash (apps/mobile/app.config.ts) draws icon-foreground.png 200pt wide;
+ * that image is 1400px square with the mark 544px wide in its centre, so the
+ * mark is 544 / 1400 * 200 = 77.7pt. It was 62px, which read as a second,
+ * smaller logo after the splash (founder, 2026-10-18).
+ */
+export const BOOT_MARK_WIDTH = 77.7;
+
 export function LoadingScreen({
   title = 'Loading',
   asPage = true,
 }: LoadingScreenProps) {
-  // Just the mark, still, at the size and spot the phone app's splash draws it
-  // (founder, 2026-10-14: the splash logo followed by a pulsing mark and an
-  // "Opening Urganize" line read as two loaders). On the phone the splash hands
-  // straight over to this frame, so it looks like one screen. The title stays
-  // for screen readers only.
+  useEffect(() => {
+    window.dispatchEvent(new Event(BOOT_LOADER_EVENT));
+    return () => {
+      window.dispatchEvent(new Event(BOOT_LOADER_EVENT));
+    };
+  }, []);
+
+  // One frame for every boot-stage loader, and it is the phone app's launch
+  // screen exactly, so the splash hands over to it invisibly (founder,
+  // 2026-10-14 and again 2026-10-18: "double load screen"). Just the mark,
+  // still, the title for screen readers only.
+  //  - Ground: `.urg-boot-frame` (globals.css) paints the page ground, and
+  //    inside the phone app the launch screen's own colour (--boot-ground,
+  //    set before first paint by the shell script in app/layout.tsx).
+  //  - Size: BOOT_MARK_WIDTH, the splash's mark size.
+  //  - Spot: the splash centres the mark on the whole screen, the webview is
+  //    inset by the safe area, so `.urg-boot-mark` moves the mark up by half
+  //    the difference (--boot-shift, same script). 0 in a browser.
   const content = (
     <div
-      className="flex min-h-screen items-center justify-center px-4"
+      className="urg-boot-frame flex min-h-screen items-center justify-center px-4"
       role="status"
       aria-live="polite"
+      data-boot-loader=""
     >
       <Image
         src="/images/urganize-mark.png"
         alt=""
         aria-hidden="true"
-        width={62}
-        height={68}
+        width={78}
+        height={84}
         priority
-        className="app-wordmark h-auto w-[62px]"
+        className="app-wordmark urg-boot-mark h-auto"
+        style={{ width: `${BOOT_MARK_WIDTH}px` }}
       />
       <span className="sr-only">{title}</span>
     </div>
   );
 
   if (asPage) {
-    return <main className="bg-bg-base text-content-primary">{content}</main>;
+    return <main className="text-content-primary">{content}</main>;
   }
-  return <div className="bg-bg-base text-content-primary">{content}</div>;
+  return <div className="text-content-primary">{content}</div>;
 }

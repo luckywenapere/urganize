@@ -10,7 +10,7 @@ import { useNetworkState } from 'expo-network';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { initialWindowMetrics, SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
 import {
@@ -47,6 +47,13 @@ const SHELL_INFO_SCRIPT = buildShellInfoScript({
   shellVersion: SHELL_VERSION,
   protocol: BRIDGE_PROTOCOL_VERSION,
   capabilities: [...BRIDGE_REQUEST_TYPES],
+  // So the site's first loading frame is the launch screen exactly: the same
+  // ground, and the mark on the same spot (the splash centres it on the whole
+  // screen; the webview below sits inside the safe area).
+  splashBackground: INK,
+  safeAreaInsets: initialWindowMetrics
+    ? { top: initialWindowMetrics.insets.top, bottom: initialWindowMetrics.insets.bottom }
+    : undefined,
 });
 
 /** Opens a link that does not belong in the webview. */

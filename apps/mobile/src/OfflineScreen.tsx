@@ -1,8 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-// The Brand Bible's ink ground and cream text, matching the splash, so an
-// offline cold start reads as the app rather than as a broken web page.
-export const INK = '#0d120e';
+// The app's dark ground and cream text, matching the splash, so an offline
+// cold start reads as the app rather than as a broken web page. #0c0c0d since
+// v1.157.7, the same near-black the site's dark theme paints (it was the old
+// ink #0d120e, which made the launch screen a shade greener than the site's
+// first frame: a visible second load screen). app.config.ts uses the same.
+export const INK = '#0c0c0d';
 const CREAM = '#f4eee2';
 const SPRING = '#7fd99a';
 

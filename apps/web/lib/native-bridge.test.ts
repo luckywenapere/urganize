@@ -31,6 +31,15 @@ const SHELL: ShellInfo = {
 };
 
 describe('parseShellInfo', () => {
+  it('passes the launch screen ground and safe-area insets through, dropping malformed ones', () => {
+    expect(
+      parseShellInfo({ ...SHELL, splashBackground: '#0C0C0D', safeAreaInsets: { top: 47, bottom: 34 } })
+    ).toEqual({ ...SHELL, splashBackground: '#0c0c0d', safeAreaInsets: { top: 47, bottom: 34 } });
+    expect(parseShellInfo({ ...SHELL, splashBackground: 'red', safeAreaInsets: { top: -1, bottom: 34 } })).toEqual(SHELL);
+    expect(parseShellInfo({ ...SHELL, safeAreaInsets: 'none' })).toEqual(SHELL);
+  });
+
+
   it('accepts a well-formed description', () => {
     expect(parseShellInfo(SHELL)).toEqual(SHELL);
   });

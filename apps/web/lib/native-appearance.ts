@@ -16,8 +16,12 @@ export const PAGE_GROUND_TOKEN = '--color-bg-base';
 export function resolvePageAppearance(read: {
   token: string | null | undefined;
   computed: string | null | undefined;
+  /** The boot frame's painted ground, when a boot loader is on screen. */
+  bootGround?: string | null;
 }): Appearance | null {
-  const background = (read.token ? cssColorToHex(read.token) : null) ?? (read.computed ? cssColorToHex(read.computed) : null);
+  const background =
+    (read.bootGround ? cssColorToHex(read.bootGround) : null) ??
+    (read.token ? cssColorToHex(read.token) : null) ?? (read.computed ? cssColorToHex(read.computed) : null);
   if (!background) return null;
   return { background, statusBar: statusBarStyleFor(background) };
 }
@@ -27,5 +31,28 @@ export function readPageAppearance(): Appearance | null {
   if (typeof window === 'undefined' || typeof document === 'undefined') return null;
   const token = window.getComputedStyle(document.documentElement).getPropertyValue(PAGE_GROUND_TOKEN);
   const computed = document.body ? window.getComputedStyle(document.body).backgroundColor : null;
-  return resolvePageAppearance({ token, computed });
+  return resolvePageAppearance({ token, computed, bootGround: readBootGround() });
+}
+
+/**
+ * Same string as BOOT_LOADER_EVENT in packages/ui/src/LoadingScreen.tsx (kept
+ * as a literal so the app-wide bridge does not import the loader; a test holds
+ * the two equal). Fired when a boot loader mounts or unmounts.
+ */
+export const BOOT_LOADER_EVENT = 'urganize:boot-loader';
+
+/**
+ * While a boot loader (LoadingScreen) is on screen, the bars report ITS
+ * ground, not the page's: inside the phone app that frame is painted the
+ * launch screen's colour, which can differ from the theme's (older shells),
+ * and bars in another shade would draw two bands across the loading screen.
+ * A loader hidden by CSS (the /auth pre-hydration copy) does not count.
+ */
+function readBootGround(): string | null {
+  const loaders = document.querySelectorAll<HTMLElement>('[data-boot-loader]');
+  for (const loader of Array.from(loaders)) {
+    if (loader.getClientRects().length === 0) continue;
+    return window.getComputedStyle(loader).backgroundColor || null;
+  }
+  return null;
 }

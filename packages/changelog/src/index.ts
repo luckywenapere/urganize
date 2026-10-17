@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.7",
+    date: "October 18, 2026",
+    highlights: [
+      "Opening Urganize on your phone now shows one load screen, not two. The logo stays the same size, in the same spot and on the same background from the moment you tap the app until your workspace appears.",
+    ],
+  },
+  {
     version: "1.157.6",
     date: "October 18, 2026",
     highlights: [
