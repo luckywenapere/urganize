@@ -137,6 +137,11 @@ export const toBrowsablePlaylist = (
     followerCount: typeof row.follower_count === 'number' ? row.follower_count : null,
     url: typeof row.url === 'string' ? row.url : '',
   };
+  // Pitch on credits (URG-345): the tier, only when the column was selected.
+  if ('credit_price' in row) {
+    const credits = Number(row.credit_price);
+    playlist.creditPrice = Number.isFinite(credits) && credits > 0 ? Math.floor(credits) : 0;
+  }
   if (price) {
     playlist.pitchPriceKobo = price.priceKobo;
     playlist.responseWindowHours = price.priceKobo === null ? null : price.responseWindowHours;
@@ -186,9 +191,17 @@ export const toSentPitch = (
   // with pitch payments switched off.
   if ('payment_kind' in row) {
     const paid = row.payment_kind === 'paid';
+    // A pitch paid with credits (URG-345) keeps paymentKind 'free' so none of
+    // the Paystack UI (Pay now, Remove, receipts) ever reaches it; it is told
+    // apart by creditsCharged, and it has a reply deadline like a paid one.
+    const credits = row.payment_kind === 'credits';
     pitch.paymentKind = paid ? 'paid' : 'free';
-    pitch.responseDueAt = paid && typeof row.response_due_at === 'string' ? row.response_due_at : null;
+    pitch.responseDueAt = (paid || credits) && typeof row.response_due_at === 'string' ? row.response_due_at : null;
     pitch.priceKobo = paid ? payment?.priceKobo ?? null : null;
+  }
+  if ('credits_charged' in row) {
+    const charged = Number(row.credits_charged);
+    pitch.creditsCharged = Number.isFinite(charged) && charged > 0 ? Math.floor(charged) : 0;
   }
   return pitch;
 };

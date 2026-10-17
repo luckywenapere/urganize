@@ -127,3 +127,25 @@ describe('a voice call in the history (2026-10-11)', () => {
     expect(entries[0]).toMatchObject({ label: 'Voice call with UrgAns', credits: -6 });
   });
 });
+
+describe('pitches paid with credits (URG-345)', () => {
+  it('folds a pitch drawn from two sources into one line naming the curator', () => {
+    const meta = { reason: 'pitch', pitch_id: 'p1', curator_name: 'Tobi', song_title: 'Midnight Run' };
+    const entries = buildHistory([
+      row({ kind: 'spend', pool: 'trial', credits: -50, dedupe_key: 'spend:pitch:p1:trial', metadata: meta }),
+      row({ kind: 'spend', pool: 'allowance', credits: -50, dedupe_key: 'spend:pitch:p1:allowance', metadata: meta }),
+    ]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ label: 'Pitch to Tobi', detail: 'Midnight Run', credits: -100 });
+  });
+
+  it('folds the refund the same way, as credits back', () => {
+    const meta = { reason: 'pitch', pitch_id: 'p1', curator_name: 'Mo', song_title: 'Midnight Run' };
+    const entries = buildHistory([
+      row({ kind: 'refund', pool: 'allowance', credits: 200, dedupe_key: 'refund:pitch:p1:allowance', metadata: meta }),
+      row({ kind: 'refund', pool: 'topup', credits: 50, dedupe_key: 'refund:pitch:p1:topup', metadata: meta }),
+    ]);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ label: 'Credits back from Mo', credits: 250 });
+  });
+});

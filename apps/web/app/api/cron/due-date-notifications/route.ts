@@ -5,6 +5,7 @@ import { runTrialEndingSweep } from '@/lib/billing-alerts-server';
 import { runDeliveryReconcile } from '@/lib/delivery-records-server';
 import { runKitSnapshotSweep } from '@/lib/release-epk-snapshot-server';
 import { runPitchWindowSweep } from '@/lib/pitch-payments-server';
+import { runCreditPitchSweep } from '@/lib/pitch-credits-server';
 import { runEditorialPitchReminderSweep } from '@/lib/editorial-pitch-server';
 import { runPaybackQuestionSweep, runSpendCreditsSweep } from '@/lib/release-spend-sweeps-server';
 
@@ -92,6 +93,8 @@ export async function GET(request: NextRequest) {
   // it twice is harmless. Not behind the feature flag, for the reason that
   // route gives, and it never throws.
   const pitchSweep = await runPitchWindowSweep(adminClient);
+  // Pitches paid with credits (URG-345), the same backstop.
+  const creditPitchSweep = await runCreditPitchSweep(adminClient);
 
   // Spotify editorial pitch reminders (2026-10-09), at 28, 14 and 8 days before
   // release day. NOT the curator sweep above, despite the similar name: that one
@@ -148,6 +151,7 @@ export async function GET(request: NextRequest) {
     directorySweep,
     kitSnapshotSweep,
     pitchSweep,
+    creditPitchSweep,
     editorialPitchSweep,
     spendCreditsSweep,
     paybackSweep,

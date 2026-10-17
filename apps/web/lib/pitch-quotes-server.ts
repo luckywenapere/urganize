@@ -117,7 +117,7 @@ export async function checkPaidCurators(
  * holding a membership in a team the release owner owns, and so does the owner
  * of any team the payer belongs to.
  */
-async function curatorsOnTheTeam(
+export async function curatorsOnTheTeam(
   admin: SupabaseClient,
   ids: string[],
   input: { payerUserId: string; ownerUserId: string; payerTeamOwnerIds: string[] }

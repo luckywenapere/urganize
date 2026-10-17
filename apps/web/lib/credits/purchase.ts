@@ -126,7 +126,10 @@ export function purchaseDedupeKey(reference: string): string {
  * answers the credits page: this ends up in a URL we hand to Paystack, so it is
  * a fixed list and never something the browser can choose freely.
  */
-export const CREDITS_RETURN_PATHS = ['/dashboard/credits', '/locked/urgans'] as const;
+// '/dashboard/pitching' (Pitch on credits, URG-345): the top-up sheet in Pitch
+// this! comes back through the pitching bridge, which forwards to the rollout's
+// Pitch tab where the waiting pitches send themselves.
+export const CREDITS_RETURN_PATHS = ['/dashboard/credits', '/locked/urgans', '/dashboard/pitching'] as const;
 export type CreditsReturnPath = (typeof CREDITS_RETURN_PATHS)[number];
 
 export function resolveCreditsReturnPath(value: unknown): CreditsReturnPath {

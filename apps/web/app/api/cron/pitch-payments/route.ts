@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/tasks-server';
 import { runPitchDailySweep, runPitchWindowSweep } from '@/lib/pitch-payments-server';
+import { runCreditPitchSweep } from '@/lib/pitch-credits-server';
 
 // Two sweeps, both run by Supabase pg_cron (migration
 // 20260925140000_pitch_payments_cron.sql):
@@ -47,7 +48,10 @@ export async function GET(request: NextRequest) {
   const task = new URL(request.url).searchParams.get('task') || 'windows';
   if (task === 'windows') {
     const result = await runPitchWindowSweep(adminClient);
-    return NextResponse.json({ ok: true, task, result });
+    // Pitches paid with credits (URG-345): credits back and a strike when no
+    // reply landed in 7 days, plus the one-day reminder.
+    const credits = await runCreditPitchSweep(adminClient);
+    return NextResponse.json({ ok: true, task, result, credits });
   }
   if (task === 'daily') {
     const result = await runPitchDailySweep(adminClient);

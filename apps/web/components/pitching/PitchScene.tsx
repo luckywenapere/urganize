@@ -33,28 +33,33 @@ import { PitchKitSection, type KitShareState } from '@/components/releases/Pitch
 import type { Task } from '@/types/tasks';
 import { SentPitchRow } from './SentPitchRow';
 import { EditorialPitchSection } from './EditorialPitchSection';
-import { PitchPayments } from './PitchPayments';
+import { CreditPitchPicker } from './CreditPitchPicker';
+import { CreditAnswers } from './CreditAnswers';
 import { useAuthStore } from '@/lib/auth-store';
 import { isValidCuratorSlug } from '@/lib/curator-public';
-import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
-import { PAYMENT_FAILED } from '@/lib/pitch-payment-copy';
+import { isPitchCreditsEnabled } from '@/lib/pitch-credits';
 import { useIsomorphicLayoutEffect } from '@/lib/use-isomorphic-layout-effect';
 
 /** ?curator= (from a curator's public page) and ?payment=cancelled (Paystack's
  *  cancel link), read once and imperatively: the workspace owns the URL, and a
  *  hook here would only re-read what never changes while the scene is open. */
-function readSceneParams(): { curatorSlug: string; paymentCancelled: boolean } {
+function readSceneParams(): { curatorSlug: string; paymentCancelled: boolean; reference: string } {
   try {
     const params = new URLSearchParams(window.location.search);
     const slug = (params.get('curator') || '').trim().toLowerCase();
     return {
       curatorSlug: isValidCuratorSlug(slug) ? slug : '',
       paymentCancelled: params.get('payment') === 'cancelled',
+      reference: (params.get('reference') || params.get('trxref') || '').trim(),
     };
   } catch {
-    return { curatorSlug: '', paymentCancelled: false };
+    return { curatorSlug: '', paymentCancelled: false, reference: '' };
   }
 }
+
+// Pitch on credits (URG-345, Oct 17, 2026): ships on. Read once; a
+// NEXT_PUBLIC_ flag is inlined at build time.
+const CREDITS_ON = isPitchCreditsEnabled();
 
 const PITCH_KIT_ON = process.env.NEXT_PUBLIC_FEATURE_PITCH_KIT === 'true';
 
@@ -75,13 +80,16 @@ export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchS
   const [pitches, setPitches] = useState<SentPitch[]>(cached?.pitches || []);
   const [isLoadingPitches, setIsLoadingPitches] = useState(!cached);
   const hasCuratorProfile = useAuthStore((state) => state.hasCuratorProfile);
-  const paymentsOn = isPitchPaymentsEnabled();
   const [curatorSlug, setCuratorSlug] = useState('');
   const [paymentCancelled, setPaymentCancelled] = useState(false);
+  const [topUpReference, setTopUpReference] = useState('');
+  const [paramsRead, setParamsRead] = useState(false);
   useIsomorphicLayoutEffect(() => {
     const params = readSceneParams();
     setCuratorSlug(params.curatorSlug);
     setPaymentCancelled(params.paymentCancelled);
+    setTopUpReference(params.reference);
+    setParamsRead(true);
   }, []);
 
   const refreshPitches = useCallback(
@@ -113,24 +121,17 @@ export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchS
   // accent action on screen at a time: the kit's, until a sheet is open.
   return (
     <div className="mt-6 space-y-10">
-      {hasCuratorProfile === true || (paymentsOn && paymentCancelled) ? (
+      {/* The Paystack pitch checkout's cancelled notice and its Payments
+          receipts section were removed here with Pitch on credits (URG-345);
+          the paid-pitch rows and receipts stay in the database. */}
+      {hasCuratorProfile === true ? (
         <div className="space-y-3">
-          {hasCuratorProfile === true ? (
-            <Link
-              href="/curator"
-              className="motion-focus inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand hover:underline"
-            >
-              Your curator inbox
-            </Link>
-          ) : null}
-          {paymentsOn && paymentCancelled ? (
-            <p
-              role="status"
-              className="rounded-lg border border-status-warning/30 bg-status-warning/10 p-4 text-sm text-status-warning"
-            >
-              {PAYMENT_FAILED}
-            </p>
-          ) : null}
+          <Link
+            href="/curator"
+            className="motion-focus inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand hover:underline"
+          >
+            Your curator inbox
+          </Link>
         </div>
       ) : null}
 
@@ -138,6 +139,23 @@ export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchS
         <PitchKitSection releaseId={release.id} onToast={onToast} onShareStateChange={setKit} />
       ) : null}
 
+      {CREDITS_ON ? (
+        paramsRead ? (
+          <CreditPitchPicker
+            releaseId={release.id}
+            songTitle={release.title || ''}
+            story={kit.story}
+            kitUrl={kit.url}
+            kitReady={kit.ready}
+            atLimit={atLimit}
+            curatorSlug={curatorSlug}
+            topUpReference={topUpReference}
+            topUpCancelled={paymentCancelled}
+            onSent={() => void refreshPitches(true)}
+            onToast={onToast}
+          />
+        ) : null
+      ) : (
       <section aria-label="Send to curators">
         <h3 className="mb-3 font-display text-xl text-content-primary">Send to curators</h3>
         <CuratorPicker
@@ -154,9 +172,12 @@ export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchS
           onToast={onToast}
         />
       </section>
+      )}
 
       {isLoadingPitches ? (
         <CuratorCardListSkeleton rows={1} />
+      ) : pitches.length > 0 && CREDITS_ON ? (
+        <CreditAnswers pitches={pitches} />
       ) : pitches.length > 0 ? (
         <section aria-label="Answers" className="space-y-3">
           <h3 className="font-display text-xl text-content-primary">Answers</h3>
@@ -172,12 +193,6 @@ export function PitchScene({ release, tasks = [], onTaskAdded, onToast }: PitchS
 
       <PromoList release={release} tasks={tasks} onTaskAdded={onTaskAdded ?? (() => {})} onToast={onToast} />
 
-      {paymentsOn ? (
-        <section aria-label="Payments" className="space-y-3">
-          <h3 className="font-display text-xl font-semibold text-content-primary">Payments</h3>
-          <PitchPayments releaseId={release.id} />
-        </section>
-      ) : null}
     </div>
   );
 }

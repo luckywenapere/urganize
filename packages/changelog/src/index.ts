@@ -22,6 +22,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.0",
+    date: "October 17, 2026",
+    highlights: [
+      "Pitch this! now runs on your credits. Pick as many curators as you like and send once: each one shows what a pitch costs, or Free, and the bar tells you what you have left, in pitches.",
+      "Every pitch to a paid curator buys a listen and a written reply in 7 days. No reply in time, and your credits come back on their own.",
+      "Short on credits? Top up right there and your pitches send as soon as the payment goes through. Nothing is lost if it doesn't.",
+      "Answers shows each curator once: their reply, the days left, or Credits back. Every pitch and refund is in your Credits history with the curator's name.",
+    ],
+  },
+  {
     version: "1.156.7",
     date: "October 17, 2026",
     highlights: [

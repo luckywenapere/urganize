@@ -43,6 +43,13 @@ import {
   inboxCard,
   replyDueLine,
 } from '@/lib/pitch-payment-copy';
+import {
+  PAID_ON_REPLY,
+  curatorDaysLeft,
+  daysLeft,
+  replyEarningPill,
+  wordCounter,
+} from '@/lib/pitch-credits';
 import type { CuratorPitch, PitchStatus } from '@/types/pitching';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { openExternalUrl } from '@/lib/external-link';
@@ -229,7 +236,7 @@ function PitchCard({ pitch }: { pitch: CuratorPitch }) {
 /** The two statuses a curator sets on a paid pitch before deciding. */
 const PAID_BOOKKEEPING_STATUSES = ['new', 'listened'] as const;
 
-function PaidPitchCard({ pitch }: { pitch: CuratorPitch }) {
+export function PaidPitchCard({ pitch }: { pitch: CuratorPitch }) {
   const setPitchStatus = useCuratorStore((state) => state.setPitchStatus);
   const [feedback, setFeedback] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -294,7 +301,18 @@ function PaidPitchCard({ pitch }: { pitch: CuratorPitch }) {
         </span>
       </div>
 
-      {!decided ? (
+      {!decided && pitch.paidByUrganize && !closed && typeof pitch.shareKobo === 'number' ? (
+        // A pitch the artist paid with credits (URG-345): naira only, the
+        // reply's worth and the days left, one line (approved v2 mocks).
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="rounded-full bg-brand/15 px-3 py-1 text-[13px] font-semibold text-brand">
+            {replyEarningPill(pitch.shareKobo)}
+          </span>
+          <span className="shrink-0 text-[13px] text-content-primary/55">
+            {curatorDaysLeft(daysLeft(pitch.responseDueAt))}
+          </span>
+        </div>
+      ) : !decided ? (
         <p
           className={`mt-3 rounded-lg px-3 py-2 text-sm ${
             closed ? 'bg-bg-elevated text-content-secondary' : 'bg-brand/10 text-content-primary'
@@ -365,12 +383,24 @@ function PaidPitchCard({ pitch }: { pitch: CuratorPitch }) {
               onChange={(event) => setFeedback(event.target.value)}
               className="w-full rounded-xl border border-stroke-control bg-bg-base px-3 py-2 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none"
             />
-            <p
-              aria-live="polite"
-              className={`text-xs ${words >= MIN_PAID_FEEDBACK_WORDS ? 'text-brand' : 'text-content-tertiary'}`}
-            >
-              {feedbackWordCount(words)}
-            </p>
+            {pitch.paidByUrganize ? (
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <p
+                  aria-live="polite"
+                  className={words >= MIN_PAID_FEEDBACK_WORDS ? 'text-brand' : 'text-content-tertiary'}
+                >
+                  {wordCounter(words, MIN_PAID_FEEDBACK_WORDS)}
+                </p>
+                <p className="text-content-tertiary">{PAID_ON_REPLY}</p>
+              </div>
+            ) : (
+              <p
+                aria-live="polite"
+                className={`text-xs ${words >= MIN_PAID_FEEDBACK_WORDS ? 'text-brand' : 'text-content-tertiary'}`}
+              >
+                {feedbackWordCount(words)}
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"

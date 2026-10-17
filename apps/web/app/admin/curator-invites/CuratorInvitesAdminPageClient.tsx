@@ -13,6 +13,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import type { CuratorInvite, CuratorInviteState } from '@/types/pitching';
+import { PITCH_CREDIT_TIERS, PITCH_CREDIT_TIER_LABELS } from '@/lib/pitch-credits';
 
 async function getAccessToken(): Promise<string> {
   const {
@@ -285,6 +286,113 @@ export default function CuratorInvitesAdminPageClient() {
           </table>
         </div>
       )}
+
+      <PlaylistTiers />
     </div>
+  );
+}
+
+type TierRow = { id: string; name: string; platform: string; followerCount: number | null; curatorName: string; creditPrice: number };
+
+/**
+ * Pitch on credits (URG-345): Urganize puts each playlist in a tier, from its
+ * reach. Every playlist starts Free; nothing is charged until a tier is set here.
+ */
+function PlaylistTiers() {
+  const [rows, setRows] = useState<TierRow[] | null>(null);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState('');
+
+  const load = useCallback(async () => {
+    const token = await getAccessToken();
+    const response = await fetch('/api/admin/playlist-tiers', {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    const payload = (await response.json().catch(() => ({}))) as { playlists?: TierRow[]; error?: string };
+    if (!response.ok) {
+      setError(payload.error || 'Could not load the playlists.');
+      setRows([]);
+      return;
+    }
+    setError('');
+    setRows(payload.playlists || []);
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const setTier = async (playlistId: string, creditPrice: number) => {
+    setBusyId(playlistId);
+    try {
+      const token = await getAccessToken();
+      const response = await fetch('/api/admin/playlist-tiers', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistId, creditPrice }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        setError(payload.error || 'Could not save the tier.');
+        return;
+      }
+      setRows((current) => (current || []).map((row) => (row.id === playlistId ? { ...row, creditPrice } : row)));
+    } finally {
+      setBusyId('');
+    }
+  };
+
+  return (
+    <section className="mt-10 space-y-3" aria-labelledby="playlist-tiers-heading">
+      <h2 id="playlist-tiers-heading" className="font-display text-2xl font-semibold">
+        Playlist tiers
+      </h2>
+      <p className="text-sm text-content-secondary">
+        What a pitch costs in credits. Free 0, Standard 100, Top 250. The curator earns ₦10 a credit for a reply in 7 days.
+      </p>
+      {error ? (
+        <p role="alert" className="text-sm text-status-error">
+          {error}
+        </p>
+      ) : null}
+      {rows === null ? (
+        <p className="text-sm text-content-tertiary">Loading…</p>
+      ) : rows.length === 0 ? null : (
+        <ul className="divide-y divide-stroke-default rounded-xl border border-stroke-default">
+          {rows.map((row) => (
+            <li key={row.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-content-primary">{row.name}</p>
+                <p className="truncate text-xs text-content-secondary">
+                  {row.curatorName} · {row.platform}
+                  {typeof row.followerCount === 'number' ? ` · ${row.followerCount.toLocaleString('en')} followers` : ''}
+                </p>
+              </div>
+              <div className="flex gap-1" role="radiogroup" aria-label={`Tier for ${row.name}`}>
+                {PITCH_CREDIT_TIERS.map((tier) => (
+                  <button
+                    key={tier}
+                    type="button"
+                    role="radio"
+                    aria-checked={row.creditPrice === tier}
+                    disabled={busyId === row.id}
+                    onClick={() => void setTier(row.id, tier)}
+                    className={`h-8 rounded-full px-3 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                      row.creditPrice === tier
+                        ? 'bg-brand/15 text-brand'
+                        : 'border border-stroke-default text-content-secondary hover:text-content-primary'
+                    }`}
+                  >
+                    {PITCH_CREDIT_TIER_LABELS[tier]}
+                    {tier > 0 ? ` · ${tier}` : ''}
+                  </button>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

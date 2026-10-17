@@ -21,6 +21,7 @@ import { loadWorkspaceAccessContext } from '@/lib/tasks-server';
 import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
 import { CURATOR_NOW_PAID, CURATOR_UNAVAILABLE, UNPAID_PITCH_EXISTS } from '@/lib/pitch-payment-copy';
 import { PAYMENTS_TABLE, loadCuratorPaymentStates } from '@/lib/pitch-payments-server';
+import { isPitchCreditsEnabled, normalizeCreditPrice } from '@/lib/pitch-credits';
 
 /**
  * Pitches this team has sent, newest first.
@@ -191,6 +192,10 @@ type PitchRead = { data: unknown; error: { code?: string | null; message?: strin
  * there is no SQL to run, so this is not the retired schema-missing pattern.
  */
 async function readWithPaymentColumns(read: (columns: string) => PromiseLike<PitchRead>): Promise<PitchRead> {
+  // Pitch on credits (URG-345) adds credits_charged; a database without that
+  // migration answers 42703 and the list reads what it read before.
+  const withCredits = await read(`${sentPitchColumns(true)},credits_charged`);
+  if (withCredits.error?.code !== '42703') return withCredits;
   const first = await read(sentPitchColumns(true));
   if (first.error?.code === '42703') return read(sentPitchColumns(false));
   return first;
@@ -301,6 +306,27 @@ export async function POST(request: NextRequest) {
 
   const curatorUserId = String(playlist.curator_user_id || '');
   const withPayments = isPitchPaymentsEnabled();
+
+  // Pitch on credits (URG-345): a playlist in a paid tier is pitched through
+  // POST /api/pitching/send, which charges the credits. This free route must
+  // never be a way around that. A database without the migration has no tier
+  // column (42703), so every playlist is Free and nothing changes.
+  if (isPitchCreditsEnabled()) {
+    const { data: tier, error: tierError } = await auth.adminClient
+      .from(CURATOR_PLAYLISTS_TABLE)
+      .select('credit_price')
+      .eq('id', playlistId)
+      .maybeSingle();
+    if (tierError && tierError.code !== '42703') {
+      return NextResponse.json({ error: tierError.message || 'Could not load the playlist.' }, { status: 500 });
+    }
+    if (normalizeCreditPrice((tier as Record<string, unknown> | null)?.credit_price) > 0) {
+      return NextResponse.json(
+        { error: 'This curator takes pitches on credits. Send it from Pitch this!', code: 'curator_credits' },
+        { status: 409 }
+      );
+    }
+  }
 
   if (withPayments) {
     const states = await loadCuratorPaymentStates(auth.adminClient, [curatorUserId]);

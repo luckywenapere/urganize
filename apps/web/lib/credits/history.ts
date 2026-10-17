@@ -12,6 +12,8 @@
  * rows are ours, and the route never selects them.
  */
 
+import { pitchRefundHistoryLabel, pitchSpendHistoryLabel } from '@/lib/pitch-credits';
+
 export type LedgerHistoryRow = {
   id: string;
   kind: string;
@@ -45,6 +47,13 @@ const text = (value: unknown): string => (typeof value === 'string' ? value.trim
 
 /** `spend:<request id>:<source>` shares its middle part across the rows of one turn. */
 function spendGroupKey(row: LedgerHistoryRow): string | null {
+  // A pitch paid with credits (URG-345) is one spend row per source it drew on
+  // (`spend:pitch:<id>:<source>`) and, when the curator missed the window, one
+  // refund row per source (`refund:pitch:<id>:<source>`): one line each.
+  if ((row.kind === 'spend' || row.kind === 'refund') && row.dedupe_key && row.metadata?.reason === 'pitch') {
+    const parts = row.dedupe_key.split(':');
+    if (parts.length === 4 && parts[1] === 'pitch') return `${parts[0]}:pitch:${parts[2]}`;
+  }
   if (row.kind !== 'spend' || !row.dedupe_key) return null;
   // A voice call is charged a minute at a time (`spend:voice:<call>:m<n>:<source>`),
   // and the history shows it as ONE line for the whole call.
@@ -67,6 +76,9 @@ function labelFor(row: LedgerHistoryRow): { label: string; detail: string } {
     case 'topup':
       return { label: 'Credits you bought', detail: '' };
     case 'spend': {
+      if (meta.reason === 'pitch') {
+        return { label: pitchSpendHistoryLabel(text(meta.curator_name)), detail: text(meta.song_title) };
+      }
       if (meta.reason === 'voice_minute') {
         return { label: 'Voice call with UrgAns', detail: '' };
       }
@@ -90,6 +102,9 @@ function labelFor(row: LedgerHistoryRow): { label: string; detail: string } {
       };
     }
     case 'refund':
+      if (meta.reason === 'pitch') {
+        return { label: pitchRefundHistoryLabel(text(meta.curator_name)), detail: 'No reply in 7 days.' };
+      }
       return { label: 'Credits refunded', detail: '' };
     case 'expire':
       return { label: 'Trial credits ended', detail: '' };

@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { CATALOGUE_HREF } from '@/lib/shell-nav';
 import { rolloutPitchPath } from '@/lib/pitching';
+import { pendingCreditSendReleaseId } from '@/lib/pitch-credits-client';
 
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
 
@@ -47,9 +48,14 @@ export default function PitchingPageClient() {
       // this!" lands on a rollout of that artist, where the bio is edited.
       const artist = params.get('artist') || '';
       const forArtist = artist ? releases.find((release) => release.artistId === artist)?.id : undefined;
+      // A credits top-up from Pitch this! (URG-345) returns here with no
+      // ?release=; the rollout it was for is remembered with the waiting send.
+      const pending = pendingCreditSendReleaseId();
       const releaseId = releases.some((release) => release.id === asked)
         ? asked
-        : forArtist || releases[0]?.id || '';
+        : releases.some((release) => release.id === pending)
+          ? pending
+          : forArtist || releases[0]?.id || '';
       if (!releaseId) {
         router.replace(CATALOGUE_HREF);
         return;
@@ -58,6 +64,7 @@ export default function PitchingPageClient() {
         rolloutPitchPath(releaseId, {
           curator: params.get('curator') || undefined,
           payment: params.get('payment') || undefined,
+          reference: params.get('reference') || params.get('trxref') || undefined,
         })
       );
     })();

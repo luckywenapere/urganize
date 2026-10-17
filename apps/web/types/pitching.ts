@@ -70,6 +70,9 @@ export interface BrowsablePlaylist {
   pitchPriceKobo?: number | null;
   /** The reply window for a paid pitch. Present alongside pitchPriceKobo. */
   responseWindowHours?: number | null;
+  /** Credits a pitch to this playlist costs (0 = Free). Pitch on credits,
+   *  URG-345; 0 on a database without that migration. */
+  creditPrice?: number;
 }
 
 /** A pitch in the curator's inbox. */
@@ -92,6 +95,9 @@ export interface CuratorPitch {
   responseDueAt?: string | null;
   /** What the curator earns for replying (their share, before any recovery). */
   shareKobo?: number | null;
+  /** True when Urganize pays the curator for the reply (a pitch the artist
+   *  paid with credits, URG-345). The curator sees naira only. */
+  paidByUrganize?: boolean;
 }
 
 /** A pitch as the sending team sees it, on the release or on the Pitching page. */
@@ -125,6 +131,9 @@ export interface SentPitch {
   responseDueAt?: string | null;
   /** What was paid for this pitch, in kobo, when it was paid. */
   priceKobo?: number | null;
+  /** Credits this pitch cost (Pitch on credits, URG-345). 0 for a Free-tier
+   *  pitch; absent on a database without that migration. */
+  creditsCharged?: number;
 }
 
 /** Body of POST /api/pitching/pitches. */

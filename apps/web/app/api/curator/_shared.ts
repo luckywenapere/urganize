@@ -24,6 +24,7 @@ import type { CuratorPitch, CuratorPlaylist, PitchPlatform } from '@/types/pitch
 export { getAuthenticatedUser, createAdminClient } from '@/app/api/_shared/auth';
 
 import { isValidCuratorSlug } from '@/lib/curator-public';
+import { curatorEarningKobo } from '@/lib/pitch-credits';
 
 export const CURATOR_INVITES_TABLE = 'curator_invites';
 export const CURATOR_PROFILES_TABLE = 'curator_profiles';
@@ -174,10 +175,19 @@ export const toCuratorPitch = (
     updatedAt: String(row.updated_at || ''),
   };
   if ('payment_kind' in row) {
-    const paid = row.payment_kind === 'paid';
+    // A pitch the artist paid with credits (URG-345) is a paid pitch to the
+    // curator: same 15-word reply, once, inside the window. What it earns is
+    // ₦10 a credit, shown in naira; the curator never sees the word credits.
+    const credits = row.payment_kind === 'credits';
+    const paid = row.payment_kind === 'paid' || credits;
     pitch.paymentKind = paid ? 'paid' : 'free';
     pitch.responseDueAt = paid && typeof row.response_due_at === 'string' ? row.response_due_at : null;
-    pitch.shareKobo = paid ? payment?.shareKobo ?? null : null;
+    pitch.shareKobo = credits
+      ? curatorEarningKobo(Number(row.credits_charged) || 0)
+      : paid
+        ? payment?.shareKobo ?? null
+        : null;
+    if (credits) pitch.paidByUrganize = true;
   }
   return pitch;
 };

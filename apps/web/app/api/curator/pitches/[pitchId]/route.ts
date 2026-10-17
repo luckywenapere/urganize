@@ -12,8 +12,8 @@ import {
 } from '../../_shared';
 import { acceptsPitchReply, isPitchStatus } from '@/lib/pitching';
 import { isPitchPaymentsEnabled, validatePaidFeedback } from '@/lib/pitch-payments';
-import { ALREADY_REPLIED, DECIDE_WITH_REPLY, WINDOW_CLOSED } from '@/lib/pitch-payment-copy';
-import { PAYMENTS_TABLE, notifyArtistOfReply } from '@/lib/pitch-payments-server';
+import { ALREADY_REPLIED, DECIDE_WITH_REPLY, WINDOW_CLOSED, acceptedLine, passedLine } from '@/lib/pitch-payment-copy';
+import { PAYMENTS_TABLE, notifyArtistOfReply, notifyUser } from '@/lib/pitch-payments-server';
 import type { PitchStatus } from '@/types/pitching';
 
 /**
@@ -86,7 +86,10 @@ export async function PATCH(
     return NextResponse.json({ error: WINDOW_CLOSED }, { status: 409 });
   }
 
-  if (row.payment_kind === 'paid') {
+  // A pitch paid with credits (URG-345) follows the same rules as one paid
+  // through Paystack: 15+ words, once, inside the window. The curator's ₦10 a
+  // credit is recorded by a database trigger on the same write.
+  if (row.payment_kind === 'paid' || row.payment_kind === 'credits') {
     return updatePaidPitch(auth.adminClient, auth.user.id, pitchId, row, status, payload);
   }
 
@@ -163,7 +166,8 @@ async function updatePaidPitch(
   status: PitchStatus,
   payload: Record<string, unknown>
 ) {
-  const columns = curatorPitchColumns(true);
+  const kind = current.payment_kind === 'credits' ? 'credits' : 'paid';
+  const columns = kind === 'credits' ? `${curatorPitchColumns(true)},credits_charged` : curatorPitchColumns(true);
   const now = new Date();
   const nowIso = now.toISOString();
 
@@ -185,7 +189,7 @@ async function updatePaidPitch(
       .update({ status, curator_reply: feedback.value, responded_at: nowIso })
       .eq('id', pitchId)
       .eq('curator_user_id', curatorUserId)
-      .eq('payment_kind', 'paid')
+      .eq('payment_kind', kind)
       .in('status', ['new', 'listened'])
       .gt('response_due_at', nowIso)
       .select(columns)
@@ -196,6 +200,10 @@ async function updatePaidPitch(
     }
     if (!data) return explainLostRace(admin, curatorUserId, pitchId);
 
+    if (kind === 'credits') {
+      await notifyArtistOfCreditReply(admin, curatorUserId, pitchId);
+      return NextResponse.json({ pitch: toCuratorPitch(data as unknown as Record<string, unknown>) });
+    }
     await notifyArtistOfReply(admin, pitchId);
     const shareKobo = await loadOwnShare(admin, curatorUserId, pitchId);
     return NextResponse.json({ pitch: toCuratorPitch(data as unknown as Record<string, unknown>, { shareKobo }) });
@@ -212,7 +220,7 @@ async function updatePaidPitch(
     .update({ status, curator_reply: null })
     .eq('id', pitchId)
     .eq('curator_user_id', curatorUserId)
-    .eq('payment_kind', 'paid')
+    .eq('payment_kind', kind)
     .in('status', ['new', 'listened'])
     .select(columns)
     .maybeSingle();
@@ -222,6 +230,9 @@ async function updatePaidPitch(
   }
   if (!data) return explainLostRace(admin, curatorUserId, pitchId);
 
+  if (kind === 'credits') {
+    return NextResponse.json({ pitch: toCuratorPitch(data as unknown as Record<string, unknown>) });
+  }
   const shareKobo = await loadOwnShare(admin, curatorUserId, pitchId);
   return NextResponse.json({ pitch: toCuratorPitch(data as unknown as Record<string, unknown>, { shareKobo }) });
 }
@@ -237,4 +248,36 @@ async function explainLostRace(admin: SupabaseClient, curatorUserId: string, pit
   const status = (data as Record<string, unknown> | null)?.status;
   if (isDecided(status)) return NextResponse.json({ error: ALREADY_REPLIED }, { status: 409 });
   return NextResponse.json({ error: WINDOW_CLOSED }, { status: 409 });
+}
+
+/** A curator answered a pitch paid with credits: tell the person who sent it. */
+async function notifyArtistOfCreditReply(admin: SupabaseClient, curatorUserId: string, pitchId: string): Promise<void> {
+  try {
+    const [{ data: pitch }, { data: profile }] = await Promise.all([
+      admin
+        .from(PITCHES_TABLE)
+        .select('created_by,song_title,status,curator_reply,release_id')
+        .eq('id', pitchId)
+        .maybeSingle(),
+      admin.from('curator_profiles').select('display_name').eq('user_id', curatorUserId).maybeSingle(),
+    ]);
+    const row = pitch as Record<string, unknown> | null;
+    if (!row) return;
+    const curator = String((profile as Record<string, unknown> | null)?.display_name || 'The curator');
+    const song = String(row.song_title || 'your song');
+    const accepted = row.status === 'added';
+    const releaseId = row.release_id ? String(row.release_id) : '';
+    await notifyUser(admin, row.created_by ? String(row.created_by) : null, {
+      title: accepted ? 'A curator said yes' : 'A curator replied',
+      body: accepted ? acceptedLine(curator, song) : passedLine(curator, song),
+      path: releaseId ? `/dashboard?release=${releaseId}&scene=pitch` : '/dashboard/pitching',
+      tag: `pitch-reply-${pitchId}`,
+      trigger: 'pitch_replied',
+      ctaLabel: 'Read the reply',
+      quote: typeof row.curator_reply === 'string' ? row.curator_reply : undefined,
+      footnote: 'You are getting this because you pitched a curator on Urganize.',
+    });
+  } catch {
+    // Best effort: the Answers list is the record.
+  }
 }

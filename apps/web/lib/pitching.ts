@@ -307,10 +307,13 @@ export function describeSentPitchScope(count: number, truncated: boolean): strin
  */
 export function rolloutPitchPath(
   releaseId: string,
-  extra: { curator?: string; payment?: string } = {}
+  extra: { curator?: string; payment?: string; reference?: string } = {}
 ): string {
   const params = new URLSearchParams({ release: releaseId, scene: 'pitch' });
   if (extra.curator) params.set('curator', extra.curator);
   if (extra.payment) params.set('payment', extra.payment);
+  // A credits top-up from Pitch this! (URG-345) comes back with Paystack's
+  // reference; the picker verifies it and sends the waiting pitches.
+  if (extra.reference) params.set('reference', extra.reference);
   return `/dashboard?${params.toString()}`;
 }

@@ -979,7 +979,7 @@ async function loadPaymentForPitch(
   };
 }
 
-async function notifyUser(
+export async function notifyUser(
   admin: SupabaseClient,
   userId: string | null,
   notice: {

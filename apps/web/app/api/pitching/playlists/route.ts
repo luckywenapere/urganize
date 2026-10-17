@@ -15,6 +15,7 @@ import { isValidCuratorSlug } from '@/lib/curator-public';
 import { isCuratorPageFeatureEnabled } from '@/lib/curator-public-server';
 import { isPitchPaymentsEnabled } from '@/lib/pitch-payments';
 import { loadCuratorPaymentStates } from '@/lib/pitch-payments-server';
+import { isPitchCreditsEnabled } from '@/lib/pitch-credits';
 
 /**
  * Every playlist a team can pitch to, with optional platform and genre filters.
@@ -71,22 +72,33 @@ export async function GET(request: NextRequest) {
     curatorUserId = String(resolved.user_id);
   }
 
-  let query = auth.adminClient
-    .from(CURATOR_PLAYLISTS_TABLE)
-    .select('id,curator_user_id,name,platform,genres,follower_count,url')
-    // Biggest first, since that is the order a manager scans in. Nulls last so
-    // a playlist with no self-reported number does not lead the list.
-    .order('follower_count', { ascending: false, nullsFirst: false })
-    .limit(BROWSE_LIST_LIMIT);
+  // Pitch on credits (URG-345) adds each playlist's tier. A database without
+  // that migration answers 42703, and the list is read as it always was
+  // (every playlist Free).
+  const withCredits = isPitchCreditsEnabled();
+  const read = (columns: string) => {
+    let query = auth.adminClient
+      .from(CURATOR_PLAYLISTS_TABLE)
+      .select(columns)
+      // Biggest first, since that is the order a manager scans in. Nulls last so
+      // a playlist with no self-reported number does not lead the list.
+      .order('follower_count', { ascending: false, nullsFirst: false })
+      .limit(BROWSE_LIST_LIMIT);
 
-  if (curatorUserId) query = query.eq('curator_user_id', curatorUserId);
-  if (platformParam) query = query.eq('platform', platformParam);
-  if (genreParam) {
-    const [genre] = normalizeGenreTags([genreParam]);
-    if (genre) query = query.contains('genres', [genre]);
+    if (curatorUserId) query = query.eq('curator_user_id', curatorUserId);
+    if (platformParam) query = query.eq('platform', platformParam);
+    if (genreParam) {
+      const [genre] = normalizeGenreTags([genreParam]);
+      if (genre) query = query.contains('genres', [genre]);
+    }
+    return query;
+  };
+
+  const BASE_COLUMNS = 'id,curator_user_id,name,platform,genres,follower_count,url';
+  let { data, error } = await read(withCredits ? `${BASE_COLUMNS},credit_price` : BASE_COLUMNS);
+  if (withCredits && error?.code === '42703') {
+    ({ data, error } = await read(BASE_COLUMNS));
   }
-
-  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json(
@@ -95,7 +107,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const allRows = (data || []) as Array<Record<string, unknown>>;
+  const allRows = (data || []) as unknown as Array<Record<string, unknown>>;
   const withPayments = isPitchPaymentsEnabled();
   const states = withPayments
     ? await loadCuratorPaymentStates(
@@ -103,9 +115,22 @@ export async function GET(request: NextRequest) {
         allRows.map((row) => String(row.curator_user_id || ''))
       )
     : null;
-  const rows = states
+  let rows = states
     ? allRows.filter((row) => !states.get(String(row.curator_user_id || ''))?.paused)
     : allRows;
+
+  // With credits on, a curator whose inbox is paused (3 missed windows in 90
+  // days) takes no new pitches, so they are left out of the browse too.
+  if (withCredits && !states && rows.length) {
+    const ids = Array.from(new Set(rows.map((row) => String(row.curator_user_id || ''))));
+    const { data: paused } = await auth.adminClient
+      .from(CURATOR_PROFILES_TABLE)
+      .select('user_id,inbox_paused_at')
+      .in('user_id', ids)
+      .not('inbox_paused_at', 'is', null);
+    const pausedIds = new Set(((paused || []) as Array<Record<string, unknown>>).map((row) => String(row.user_id || '')));
+    if (pausedIds.size) rows = rows.filter((row) => !pausedIds.has(String(row.curator_user_id || '')));
+  }
 
   const curatorIds = rows.map((row) => String(row.curator_user_id || ''));
   const [names, photos] = await Promise.all([

@@ -45,7 +45,12 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(CURATOR_PITCH_LIST_LIMIT);
 
-  let { data, error } = await read(curatorPitchColumns(true));
+  // credits_charged (Pitch on credits, URG-345) first; a database without that
+  // migration answers 42703 and the read drops back a step.
+  let { data, error } = await read(`${curatorPitchColumns(true)},credits_charged`);
+  if (error && isUndefinedColumn(error)) {
+    ({ data, error } = await read(curatorPitchColumns(true)));
+  }
 
   // The one database this can meet without the payment columns is one the
   // payments migration has not reached yet: Postgres answers "undefined
