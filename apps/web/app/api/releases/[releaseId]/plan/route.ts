@@ -1,9 +1,7 @@
-import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
   createAdminClient,
-  getPlannerTemplate,
   isReleasePlannerEnabled,
   loadCreatedPlan,
   loadOwnedRelease,
@@ -13,16 +11,9 @@ import {
   todayYmd,
 } from './_shared';
 import { parseReleasePlanIntake } from '@/lib/release-planning';
-import { PLANNER_DEADLINE_MS, createReleasePlan } from '@/lib/release-planning-actions-server';
-import { resolvePlannerReasoningEffort } from '@/lib/ai/planner-model';
-import { loadTeamForRouting } from '@/lib/ai/routing-team-server';
-import { resolvePlannerModel } from '@/lib/ai/planner-model';
-import { getTeamAccessForUser } from '@/lib/team-billing-server';
-import { beginEmbeddedRun, settleEmbeddedRun, type EmbeddedRunGate } from '@/lib/credits/embedded-server';
-import { isFirstPlanFreeForTeam } from '@/lib/credits/first-plan-server';
-import { isCreditsEnabled } from '@/lib/credits/config';
-import { createUsageCollector } from '@/lib/credits/embedded';
-import { recordRequestUsage } from '@/lib/ai/usage-log-server';
+import { buildRolloutPlan } from '@/lib/release-plan-build-server';
+import { finishPlannerAuto, isAutoBuildInFlight } from '@/lib/planner-auto-server';
+import { readPlannerAuto } from '@/lib/planner-auto';
 
 /**
  * The rollout plan: build it (POST) or read back what was built (GET).
@@ -85,6 +76,8 @@ export async function GET(
     plan: planResult.plan ? toPlanResponse(planResult.plan) : null,
     intake: savedIntake.ok ? savedIntake.intake : null,
     releaseDate: loaded.release.release_date,
+    // The auto build's state (2026-10-17): what the landing rollout polls.
+    auto: readPlannerAuto(loaded.release.metadata),
   });
 }
 
@@ -142,87 +135,42 @@ export async function POST(
   if ('error' in loaded) return loaded.error;
   const release = loaded.release;
 
-  const { template, fallbackToSingle } = getPlannerTemplate(intake.release_type);
-
-  // Credits, when switched on. THIS ROUTE IS THE DOOR the chat assistant and the
-  // ungated fallback both use to build a plan, and the plan's model call is the
-  // expensive one, so it is metered here exactly as release.draft_plan is (hold
-  // before, real cost after, never above the hold; credits/embedded.ts). Without
-  // this a plan asked for in chat would be free. 429 and not 402, which the
-  // browser turns into a redirect to the paywall.
-  const ownerTeam = await getTeamAccessForUser(auth.user.id, auth.user.email);
-  // A team's first plan is free (credits/first-plan.ts), through this door too,
-  // or the chat path would charge for what the planner gives away.
-  // Read whether credits are on or not: a first plan is also never refused
-  // over a model failure (createReleasePlan's firstPlan).
-  const firstPlan = await isFirstPlanFreeForTeam(adminClient, 'release.draft_plan', ownerTeam.ownerUserId);
-  const firstPlanFree = isCreditsEnabled() && firstPlan;
-  const gate: EmbeddedRunGate = firstPlanFree
-    ? { metered: false }
-    : await beginEmbeddedRun(adminClient, {
-        workspaceId: ownerTeam.primaryWorkspaceId,
-        ownerUserId: ownerTeam.ownerUserId,
-        team: ownerTeam,
-      });
-  if (gate.metered && !gate.ok) {
-    return NextResponse.json({ error: gate.message, code: 'out_of_credits' }, { status: 429 });
+  // An auto build at the end of onboarding claimed this rollout moments ago
+  // and is still running (lib/planner-auto-server.ts). Same answer as two
+  // builds racing for the plan row: the client keeps waiting for that one.
+  if (isAutoBuildInFlight(release.metadata)) {
+    return NextResponse.json(
+      { error: 'This plan is already being created.', code: 'plan_in_progress' },
+      { status: 409 }
+    );
   }
-  const collector = createUsageCollector(resolvePlannerModel() ?? null);
-  // One id for the run: the ledger's charge and the usage log's rows both carry it.
-  const runRequestId = `embedded:${randomUUID()}`;
-  const logUsage = (creditsCharged: number) =>
-    recordRequestUsage(adminClient, {
-      context: {
-        requestId: runRequestId,
-        feature: 'plan',
-        workspaceId: ownerTeam.primaryWorkspaceId,
-        ownerUserId: ownerTeam.ownerUserId,
-        actorUserId: auth.user.id,
-        releaseId,
-      },
-      calls: collector.calls,
-      failures: collector.failures,
-      creditsCharged,
-    });
 
-  const result = await createReleasePlan(adminClient, {
+  // The one implementation, shared with the auto build (2026-10-17).
+  const result = await buildRolloutPlan(adminClient, {
     release,
     actor: auth.user,
     intake,
     todayYmd: todayYmd(),
-    template,
-    fallbackToSingle,
+    startedAt,
     loadTeam: () => loadPlannerTeam(adminClient, releaseId, auth.user),
-    // Undefined unless the model router is on (or in shadow): the plan ceiling is
-    // the only thing it is for, and the model itself is chosen inside.
-    routingTeam: await loadTeamForRouting('planner', auth.user),
-    reasoningEffort: resolvePlannerReasoningEffort(),
-    deadlineMs: startedAt + PLANNER_DEADLINE_MS,
-    onUsage: collector.onUsage,
-    onFailure: collector.onFailure,
-    firstPlan,
   });
 
   if (!result.ok) {
-    // Not charged, but the calls it made before it failed were billed to us.
-    await logUsage(0);
+    // A retry of an auto build that failed again stays failed, with its reason.
+    if (result.code !== 'plan_in_progress') {
+      await finishPlannerAuto(adminClient, releaseId, {
+        state: result.code === 'tasks_exist' ? 'done' : 'failed',
+        code: result.code ?? `status_${result.status}`,
+      });
+    }
     return NextResponse.json(
       { error: result.error, ...(result.code ? { code: result.code } : {}) },
       { status: result.status }
     );
   }
 
-  // Charged only now: a plan that could not be built costs nothing.
-  const charge = await settleEmbeddedRun(adminClient, {
-    gate,
-    workspaceId: ownerTeam.primaryWorkspaceId,
-    ownerUserId: ownerTeam.ownerUserId,
-    actorUserId: auth.user.id,
-    requestId: runRequestId,
-    actionId: 'release.draft_plan',
-    calls: collector.calls,
-  });
-  await logUsage(gate.metered && gate.ok ? charge.credits : 0);
+  // "Try again" on an auto-planned rollout: it is planned now.
+  await finishPlannerAuto(adminClient, releaseId, { state: 'done' });
 
   return NextResponse.json({ plan: result.plan }, { status: 201 });
 }

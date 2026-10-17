@@ -22,6 +22,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.156.0",
+    date: "October 17, 2026",
+    highlights: [
+      "When you finish signing up, UrgAns now builds your first rollout plan by itself. It starts while you finish the last screens, so you land on a rollout with its plan ready instead of more questions. It plans for new listeners with no budget, and you can change anything after.",
+      "If the plan doesn't build, the rollout says so, with one Try again button. Nothing you entered is lost.",
+      "Fixed the model problem that made new rollout plans skip UrgAns's tailoring and follow the standard playbook since October 11.",
+    ],
+  },
+  {
     version: "1.155.0",
     date: "October 17, 2026",
     highlights: [

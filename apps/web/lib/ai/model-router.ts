@@ -7,6 +7,7 @@ import {
   lowerTier,
   maxTier,
   readLadder,
+  STRUCTURED_OUTPUT_RUNGS,
   tierIndex,
   type Ladder,
   type LadderRung,
@@ -175,6 +176,16 @@ export function legacyModelFor(surface: RouteSurface, env: EnvLike = process.env
  */
 function ladderFor(surface: RouteSurface, env: EnvLike): Ladder {
   const ladder = readLadder(env);
+  // Structured surfaces skip GPT-6 on the rungs that carry it (2026-10-17, see
+  // STRUCTURED_OUTPUT_RUNGS), unless that rung was set explicitly by env.
+  if (!isChatSurface(surface)) {
+    for (const tier of MODEL_TIERS) {
+      const models = STRUCTURED_OUTPUT_RUNGS[tier];
+      if (models && !String(env[`AI_LADDER_${tier.toUpperCase()}`] ?? '').trim()) {
+        ladder[tier] = { ...ladder[tier], models: [...models] };
+      }
+    }
+  }
   if (isChatSurface(surface) && !String(env.AI_LADDER_QUICK ?? '').trim()) {
     const current = String(env.CHAPPI_MODEL ?? '').trim();
     if (current) {

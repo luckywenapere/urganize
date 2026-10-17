@@ -110,6 +110,16 @@ export const PLANNER_MAX_RETRIES = 2;
 export const PLANNER_DEADLINE_MS = 52_000;
 
 /**
+ * The planner's output cap (2026-10-17). Without one, RodiumAi caps every
+ * answer at 2,048 tokens, and on a reasoning model the hidden reasoning counts
+ * against that too: every gpt-5 plan Oct 11 to 16 came back cut off at exactly
+ * 2,048 and failed to parse, so each first plan fell back to the playbook.
+ * 4,096 covers low-effort reasoning plus the delta (gpt-5.4 wrote 1,713 in all
+ * on a real plan, Oct 10) and still streams inside one 40s attempt.
+ */
+export const PLANNER_MAX_OUTPUT_TOKENS = 4_096;
+
+/**
  * The playbook a plan is built from, chosen by the intake's release type.
  *
  * EP and album have their own playbooks, but they sit behind
@@ -551,6 +561,7 @@ export async function createReleasePlan(
         parse: parsePlannerAiDelta,
         invalidFormatMessage: 'The response was not the expected JSON.',
         jsonSchema: { name: 'planner_delta', schema: PLANNER_DELTA_JSON_SCHEMA },
+        maxOutputTokens: PLANNER_MAX_OUTPUT_TOKENS,
         reasoningEffort,
         deadlineMs,
         onUsage,

@@ -64,6 +64,9 @@ import { usePlannerStore } from '@/stores/usePlannerStore';
 import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
 import { PlanBuiltBanner } from '@/components/planner/PlanBuiltBanner';
+import { AutoPlanCard } from '@/components/planner/AutoPlanCard';
+import { useAutoPlan } from '@/components/planner/useAutoPlan';
+import { readPlannerAuto } from '@/lib/planner-auto';
 import { markPlanBuiltSeen, usePlanBuiltSeen } from '@/components/planner/usePlanBuiltSeen';
 import { readPlannedByUrgans } from '@/lib/release-planned-by-urgans';
 import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
@@ -834,6 +837,8 @@ export function WorkspaceView() {
     if (usePlannerStore.getState().intake) return;
     const handoff = takeOnboardingPlannerHandoff(scopedReleaseId);
     if (!handoff) return;
+    // Auto-planned (2026-10-17): the plan is building by itself; no questions.
+    if (readPlannerAuto(scopedReleaseSlim.metadata)) return;
     // Already planned (another tab, or a plan built some other way): the
     // marker is spent and there is nothing to ask.
     if (scopedTasks.length > 0) return;
@@ -984,7 +989,32 @@ export function WorkspaceView() {
       />
     ) : null;
 
+  // Auto-plan (2026-10-17): the rollout onboarding made builds its plan on
+  // its own, so instead of the questions it shows the build, then the plan.
+  const autoPlan = useAutoPlan({
+    releaseId: PLANNER_ENABLED && scopedReleaseSlim && scopedReleaseIsOwn ? scopedReleaseSlim.id : null,
+    metadata: scopedReleaseSlim?.metadata,
+    release: scopedReleaseSlim
+      ? {
+          releaseType: scopedReleaseSlim.releaseType,
+          artistName: scopedReleaseSlim.artistName,
+          releaseDate: scopedReleaseSlim.releaseDate,
+        }
+      : null,
+    hasActivities: !onlyPreProductionWork(scopedTasks),
+    onLanded: () => void loadCommandCenter({ force: true }),
+  });
+
   const planBanner =
+    PLANNER_ENABLED && scopedReleaseSlim && scopedReleaseIsOwn && autoPlan.view ? (
+      <AutoPlanCard
+        state={autoPlan.view}
+        startedAt={autoPlan.startedAt}
+        retrying={autoPlan.retrying}
+        onRetry={autoPlan.retry}
+        onAddActivity={() => openQuickCreate({ releaseId: scopedReleaseSlim.id, source: 'inline' })}
+      />
+    ) :
     // A pre-production rollout (URG-280) still owes its release plan: its
     // eight seeded activities are not a plan, so the card stays until one is built.
     PLANNER_ENABLED && scopedReleaseSlim && scopedReleaseIsOwn && onlyPreProductionWork(scopedTasks) ? (
@@ -1011,6 +1041,7 @@ export function WorkspaceView() {
     !planBuiltSeen ? (
       <PlanBuiltBanner
         releaseId={scopedReleaseSlim.id}
+        compact={Boolean(readPlannerAuto(scopedReleaseSlim.metadata))}
         onDismiss={() => markPlanBuiltSeen(scopedReleaseSlim.id)}
       />
     ) : null;

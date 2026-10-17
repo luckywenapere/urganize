@@ -16,10 +16,12 @@ import { isRodiumGateway, REASONING_EFFORTS, type ReasoningEffort } from './prov
  * the other two gateways serve different catalogues, and naming a model they
  * do not carry would turn every plan into a 4xx.
  */
-// GPT-6.1 Sol since 2026-10-11 (founder call: plans on the Sol tier). It was
-// gpt-5.4; 6.1 Sol is priced lower (1,507.1 / 7,535.4 RODI per 1M against
-// 1,883.9 / 11,303.1) and takes structured outputs with reasoning effort.
-export const RODIUM_PLANNER_MODEL = 'openai/gpt-6.1-sol';
+// Back to gpt-5.4 on 2026-10-17. GPT-6.1 Sol (from 2026-10-11) does not
+// honour structured outputs on RodiumAi: every plan call on it failed with a
+// 5xx or unparseable text Oct 11 to 16, so every first plan fell back to the
+// playbook. See STRUCTURED_OUTPUT_RUNGS in model-ladder.ts, whose pro rung
+// leads with the same model so the router on and off agree.
+export const RODIUM_PLANNER_MODEL = 'openai/gpt-5.4';
 
 export function resolvePlannerModel(): string | undefined {
   const override = String(process.env.AI_PLANNER_MODEL || '').trim();

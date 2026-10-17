@@ -189,6 +189,8 @@ export async function generateRoutedStructuredOutput<T>(
     timeoutMs?: number;
     maxRetries?: number;
     temperature?: number;
+    /** See generateStructuredAiOutput's maxOutputTokens: the same cap on every model tried. */
+    maxOutputTokens?: number;
   }
 ): Promise<T> {
   const { surface, team, env, deadlineMs, onUsage, onFailure, onTrace, reasoningEffort, parse, ...rest } = params;

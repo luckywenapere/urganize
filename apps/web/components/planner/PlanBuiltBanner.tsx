@@ -143,14 +143,30 @@ export function summarizePlanForBanner(
   };
 }
 
+/** "14 activities · New listeners · No budget": the compact banner's one line. Exported for tests. */
+export function compactPlanLine(doc: ReleasePlanDraftDoc, count: number): string {
+  const goal =
+    doc.intake.goal_text?.trim() || GOAL_OPTIONS.find((option) => option.value === doc.intake.goal)?.label || null;
+  const budget = BUDGET_OPTIONS.find((option) => option.value === doc.intake.budget)?.label ?? null;
+  const goalShort = goal === 'Reach new listeners' ? 'New listeners' : goal;
+  return [`${count} ${count === 1 ? 'activity' : 'activities'}`, goalShort, budget]
+    .filter((part): part is string => Boolean(part))
+    .join(' · ');
+}
+
 export function PlanBuiltBanner({
   releaseId,
   onDismiss,
+  compact = false,
 }: {
   releaseId: string;
   onDismiss: () => void;
+  /** The auto-planned rollout from onboarding (2026-10-17): "Your plan is
+   *  ready." and one line of what it was built for, nothing else. */
+  compact?: boolean;
 }) {
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [compactLine, setCompactLine] = useState<string | null>(null);
   // Promo channels that fit this rollout (GitHub #833). Deterministic, from the
   // same rule the Promo scene's "Good fits" uses, so the plan names a few and
   // the scene is one tap away. Empty (and the line hidden) on any failure,
@@ -194,6 +210,7 @@ export function PlanBuiltBanner({
           .catch(() => undefined);
         const approvedAt = plan.approvedAt ? Date.parse(plan.approvedAt) : NaN;
         if (Number.isFinite(approvedAt) && Date.now() - approvedAt > SHOW_FOR_MS) return;
+        setCompactLine(compactPlanLine(plan.doc, plan.approvedTaskCount ?? plan.doc.tasks.filter((task) => !task.removed).length));
         setSummary(
           summarizePlanForBanner(
             plan.doc,
@@ -215,6 +232,30 @@ export function PlanBuiltBanner({
   }, [releaseId]);
 
   if (!summary) return null;
+
+  if (compact) {
+    return (
+      <section
+        aria-label="Your plan is ready"
+        className="mb-4 rounded-2xl border border-brand/30 bg-gradient-to-b from-brand/[0.06] to-transparent p-6 sm:p-7"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-brand">UrgAns</p>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="motion-focus -mt-1 text-sm text-content-secondary underline decoration-stroke-strong underline-offset-4 hover:text-content-primary"
+          >
+            Got it
+          </button>
+        </div>
+        <h3 className="mt-3 font-display text-2xl font-semibold leading-tight text-content-primary">
+          Your plan is ready.
+        </h3>
+        {compactLine ? <p className="mt-2 text-sm text-content-secondary">{compactLine}</p> : null}
+      </section>
+    );
+  }
 
   return (
     <section

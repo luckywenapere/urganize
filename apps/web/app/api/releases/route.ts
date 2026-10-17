@@ -25,6 +25,17 @@ import { isSocialShareEnabled } from '@/lib/social-share';
 import { FIRST_RELEASE_TEST_SCAN, decideFirstRelease } from '@/lib/social-share-offer';
 import { enqueueReleaseReminders } from '@/lib/release-reminders-server';
 import { captureActivationIfReached } from '@/lib/activation-server';
+import { isPlannerAutoEnabled } from '@/lib/planner-auto';
+import { runOnboardingAutoPlan } from '@/lib/planner-auto-server';
+import { toPlannerOnboardingContext } from '@/lib/release-planning-actions-server';
+import { normalizeReadyToday } from '@/lib/onboarding-readiness';
+import { loadPlannerTeam } from './[releaseId]/plan/_shared';
+
+// The onboarding rollout builds its plan after the reply (2026-10-17, auto
+// plan): after() keeps this invocation alive for the plan's model call, whose
+// deadline counts from the request start (PLANNER_DEADLINE_MS, 52 s), so the
+// function needs the same 60 s ceiling as POST /api/releases/[id]/plan.
+export const maxDuration = 60;
 
 type ReleaseSelectorListResponse = { releases: ReleaseOption[] };
 
@@ -98,6 +109,10 @@ type CreateReleaseBody = {
    * and skips the release reminders. Refused with a 400 when the flag is off
    * and when no release date is supplied — see the isTest block below. */
   isTest?: unknown;
+  /** Onboarding's answers for the auto build (2026-10-17): "What's already
+   * done?" and "Where does a rollout usually fall apart?". Only read for an
+   * onboarding rollout on the template path. */
+  autoPlan?: { readyToday?: unknown; whereStuck?: unknown } | null;
 };
 
 function toSelectorRelease(
@@ -297,6 +312,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const requestStartedAt = Date.now();
   const posthogServer = createServerPostHogClient();
 
   try {
@@ -660,9 +676,14 @@ export async function POST(request: NextRequest) {
         // false above, and a dateless isTest is refused with a 400, so
         // templatePending (which requires no date) cannot coexist with it
         // either. Three spreads onto one key are only safe while that holds.
-        ...(templatePending ? { metadata: writeTemplatePending(null, true) } : {}),
-        ...(plannerPending ? { metadata: writePlannerPending(null, true) } : {}),
-        ...(isTest ? { metadata: writeTestRelease(null, true) } : {}),
+        // Where the rollout was made (2026-10-17), so onboarding against later
+        // is measurable in SQL; it rides on whichever flag applies.
+        metadata: {
+          ...(templatePending ? writeTemplatePending(null, true) : {}),
+          ...(plannerPending ? writePlannerPending(null, true) : {}),
+          ...(isTest ? writeTestRelease(null, true) : {}),
+          created_source: releaseSource,
+        },
         updated_at: now,
       })
       .select('id,status,artist_name,title,release_date,created_at,updated_at')
@@ -884,6 +905,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Auto-plan (2026-10-17, approved mocks in mocks/auto-plan): the rollout
+    // onboarding makes on the "UrgAns recommendations" path builds its plan on
+    // the server, after this reply, while the manager is still on the
+    // paywall, welcome and invite screens. Same build as POST /plan, with
+    // onboarding's answers plus goal "new listeners" and no budget.
+    const planAuto =
+      isPlannerAutoEnabled() &&
+      releaseSource === 'onboarding' &&
+      plannerPending &&
+      releasePlan === 'template' &&
+      !isTest &&
+      Boolean(releaseDateResult.value);
+    if (planAuto) {
+      const autoUser = { id: auth.user.id, email: auth.user.email ?? null };
+      const readyToday = normalizeReadyToday(
+        Array.isArray(body?.autoPlan?.readyToday) ? (body.autoPlan.readyToday as unknown[]) : []
+      );
+      const whereStuck = Array.isArray(body?.autoPlan?.whereStuck)
+        ? (body.autoPlan.whereStuck as unknown[]).filter((value): value is string => typeof value === 'string')
+        : [];
+      afterResponse('onboarding auto plan', () =>
+        runOnboardingAutoPlan(adminClient, {
+          releaseId,
+          user: autoUser,
+          readyToday,
+          onboarding: toPlannerOnboardingContext({
+            onboarding_where_stuck: whereStuck,
+            onboarding_planning_preference: 'ai_recommendations',
+          }),
+          requestStartedAt,
+          loadTeam: () => loadPlannerTeam(adminClient, releaseId, autoUser),
+        })
+      );
+    }
+
     if (releaseSource === 'onboarding') {
       captureServerAnalyticsEvent(
         posthogServer,
@@ -925,6 +981,9 @@ export async function POST(request: NextRequest) {
       // use it to route the manager into the planner instead of showing a
       // "your release is set up" guide that would not be true yet.
       plannerPending,
+      // True when the plan is building on its own (auto-plan): the caller
+      // must not open the planning questions for this rollout.
+      planAuto,
       // The person's first real rollout: the create flows open the share
       // sheet once off the back of it. Always false with the feature off.
       firstRelease,

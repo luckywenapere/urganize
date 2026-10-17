@@ -124,6 +124,16 @@ type GenerateStructuredAiOutputOptions<T> = {
    */
   reasoningEffort?: ReasoningEffort;
   /**
+   * An explicit output cap, sent as `max_completion_tokens` on the reasoning
+   * models (GPT-5/6, o-series) and `max_tokens` elsewhere. Absent = no cap
+   * sent, as before. Exists because RodiumAi applies its OWN 2,048-token
+   * default when none is sent (measured 2026-10-17: an uncapped gpt-4o-mini
+   * answer stopped at exactly 2,048 with finish_reason "length"), and on a
+   * reasoning model that 2,048 also has to hold the hidden reasoning, so the
+   * planner's JSON was cut off mid-object on every gpt-5 call Oct 11 to 16.
+   */
+  maxOutputTokens?: number;
+  /**
    * An absolute time (ms since epoch) by which the call must have returned.
    * Each attempt's timeout is cut to what the deadline leaves minus a small
    * guard, and no retry starts with under MIN_RETRY_BUDGET_MS remaining: a
@@ -373,6 +383,8 @@ export function buildOpenAiRequestBody(params: {
   format: 'json' | 'text';
   jsonSchema?: AiJsonSchema;
   reasoningEffort?: ReasoningEffort;
+  /** See GenerateStructuredAiOutputOptions.maxOutputTokens. */
+  maxOutputTokens?: number;
 }): Record<string, unknown> {
   const effort =
     params.reasoningEffort && supportsReasoningEffort(params.model) ? params.reasoningEffort : undefined;
@@ -391,6 +403,11 @@ export function buildOpenAiRequestBody(params: {
     stream: false,
     ...(responseFormat ? { response_format: responseFormat } : {}),
     ...(effort ? { reasoning_effort: effort } : {}),
+    ...(params.maxOutputTokens && params.maxOutputTokens > 0
+      ? supportsReasoningEffort(params.model)
+        ? { max_completion_tokens: Math.round(params.maxOutputTokens) }
+        : { max_tokens: Math.round(params.maxOutputTokens) }
+      : {}),
   };
 }
 
@@ -402,6 +419,7 @@ const requestAiGateway = async ({
   onUsage,
   jsonSchema,
   reasoningEffort,
+  maxOutputTokens,
 }: {
   messages: AiMessage[];
   timeoutMs: number;
@@ -417,6 +435,7 @@ const requestAiGateway = async ({
   jsonSchema?: AiJsonSchema;
   /** Sent only when the resolved model accepts it; see supportsReasoningEffort. */
   reasoningEffort?: ReasoningEffort;
+  maxOutputTokens?: number;
 }): Promise<string> => {
   const config = getAiGatewayConfig();
   if (!config) {
@@ -443,7 +462,7 @@ const requestAiGateway = async ({
         'x-api-key': config.apiKey,
       };
   const body = config.usesOpenAiProtocol
-    ? buildOpenAiRequestBody({ model: resolvedModel, messages, format, jsonSchema, reasoningEffort })
+    ? buildOpenAiRequestBody({ model: resolvedModel, messages, format, jsonSchema, reasoningEffort, maxOutputTokens })
     : {
         model: resolvedModel,
         messages,
@@ -518,6 +537,7 @@ export async function generateStructuredAiOutput<T>({
   jsonSchema,
   reasoningEffort,
   deadlineMs,
+  maxOutputTokens,
 }: GenerateStructuredAiOutputOptions<T>): Promise<T> {
   const config = getAiGatewayConfig();
   if (!config) {
@@ -565,6 +585,7 @@ export async function generateStructuredAiOutput<T>({
         onUsage,
         jsonSchema: useSchema ? jsonSchema : undefined,
         reasoningEffort: useEffort ? reasoningEffort : undefined,
+        maxOutputTokens,
       });
       const parsed = parse(raw);
       if (!parsed) {

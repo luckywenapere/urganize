@@ -27,7 +27,7 @@ const SHORT_BY_DESIGN: Record<string, string> = {
 };
 
 const MODEL_CALLERS =
-  /\b(?:runUrgansAction|runChappiAgent|createReleasePlan|generateStructuredAiOutput|generatePlainTextAiOutput|generateRoutedStructuredOutput|generateRoutedPlainText)\b/;
+  /\b(?:runUrgansAction|runChappiAgent|createReleasePlan|buildRolloutPlan|runOnboardingAutoPlan|generateStructuredAiOutput|generatePlainTextAiOutput|generateRoutedStructuredOutput|generateRoutedPlainText)\b/;
 
 function routeFiles(dir: string): string[] {
   const out: string[] = [];
@@ -57,6 +57,8 @@ describe('routes that wait on a model', () => {
     expect(paths).toContain('app/api/urgans/route.ts');
     expect(paths).toContain('app/api/urgans/actions/route.ts');
     expect(paths).toContain('app/api/releases/[releaseId]/plan/route.ts');
+    // The rollout create route builds the onboarding plan after its reply (2026-10-17).
+    expect(paths).toContain('app/api/releases/route.ts');
   });
 
   it('declares maxDuration on each, unless it is short by design', () => {

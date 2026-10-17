@@ -104,9 +104,9 @@ describe('both doors onto the planner honour the rule, server-side', () => {
     expect(source).toMatch(/firstPlanFree\s*\?\s*\{ metered: false \}\s*:\s*await beginEmbeddedRun/);
   });
 
-  it('the plan route skips the hold for a free first plan', () => {
-    const source = code('app/api/releases/[releaseId]/plan/route.ts');
-    expect(source).toMatch(/isFirstPlanFreeForTeam\(adminClient, 'release\.draft_plan', ownerTeam\.ownerUserId\)/);
+  it('the plan build (route and auto build) skips the hold for a free first plan', () => {
+    const source = code('lib/release-plan-build-server.ts');
+    expect(source).toMatch(/isFirstPlanFreeForTeam\(admin, 'release\.draft_plan', ownerTeam\.ownerUserId\)/);
     expect(source).toMatch(/firstPlanFree\s*\?\s*\{ metered: false \}\s*:\s*await beginEmbeddedRun/);
   });
 

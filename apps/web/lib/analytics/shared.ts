@@ -204,6 +204,13 @@ export interface AnalyticsEventPropertiesMap {
   planner_intake_opened: { source: 'empty_state' | 'note' | 'chip' | 'onboarding'; has_release: boolean };
   planner_intake_step: { step: number };
   planner_intake_dismissed: { step: number };
+  // Auto-plan at the end of onboarding (2026-10-17): the build the server
+  // starts on its own, how long it took from the rollout's create request,
+  // and why it failed when it did.
+  plan_auto_started: { release_id: string };
+  plan_auto_ready: { release_id: string; ms: number; ai_applied: boolean; task_count: number };
+  plan_auto_failed: { release_id: string; code: string };
+  plan_auto_retry: { release_id: string };
   planner_plan_created: {
     source: 'empty_state' | 'note' | 'chip' | 'onboarding';
     release_type: 'single' | 'ep' | 'album';

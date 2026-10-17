@@ -154,6 +154,27 @@ export const DEFAULT_LADDER: Ladder = {
   },
 };
 
+/**
+ * The pro and max rungs for the single-shot STRUCTURED surfaces (the planner,
+ * press kit, status, outcome): everything but chat (2026-10-17).
+ *
+ * GPT-6 on RodiumAi does not honour structured outputs. Asked for a strict
+ * json_schema it answers plain text ("a=1" for a one-field schema, measured
+ * 2026-10-17), and on the planner's full prompt every gpt-6.1-sol and
+ * gpt-6-sol call Oct 11 to 16 failed with a 5xx (24 of 24) or came back
+ * unparseable. With GPT-6 leading pro, every first plan burned two dead hops
+ * before reaching gpt-5, which was then cut off at the gateway's 2,048-token
+ * default (see PLANNER_MAX_OUTPUT_TOKENS). So structured surfaces lead with
+ * gpt-5.4, the planner's model before Oct 11 (a real plan on Oct 10 parsed
+ * first time), keep gpt-5.5 as the same-tier sibling and gpt-5 as the
+ * older-pool last resort. Chat keeps DEFAULT_LADDER. AI_LADDER_PRO /
+ * AI_LADDER_MAX still override both, as before.
+ */
+export const STRUCTURED_OUTPUT_RUNGS: Partial<Record<ModelTier, string[]>> = {
+  pro: ['openai/gpt-5.4', 'openai/gpt-5.5', 'openai/gpt-5'],
+  max: ['openai/gpt-5.5', 'openai/gpt-5.4', 'openai/gpt-5.2'],
+};
+
 type EnvLike = Record<string, string | undefined>;
 
 /**

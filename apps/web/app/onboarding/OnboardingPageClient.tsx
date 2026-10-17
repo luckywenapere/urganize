@@ -503,7 +503,7 @@ export default function OnboardingPage() {
   // The rollout the hand-off created, kept in a ref so finishToDashboard can
   // read it in the same tick it was set (the workspace-off path calls it
   // straight from the hand-off, before any re-render).
-  const createdReleaseRef = useRef<{ id: string; plannerPending: boolean; firstRelease: boolean } | null>(
+  const createdReleaseRef = useRef<{ id: string; plannerPending: boolean; planAuto: boolean; firstRelease: boolean } | null>(
     null
   );
   // Guards the create step against a second tap or a resumed effect running
@@ -857,7 +857,9 @@ export default function OnboardingPage() {
         releaseId: created.id,
         shareReleaseId: isSocialShareEnabled() && created.firstRelease ? created.id : null,
       });
-      if (created.plannerPending) {
+      // An auto-planned rollout (2026-10-17) is already building its plan on
+      // the server, so the planning questions must not open on landing.
+      if (created.plannerPending && !created.planAuto) {
         const type = draft.releaseType;
         markOnboardingPlannerHandoff({
           releaseId: created.id,
@@ -953,6 +955,9 @@ export default function OnboardingPage() {
         artistName: draft.artistName.trim().slice(0, MAX_ONBOARDING_ARTIST_NAME_LENGTH),
         source: 'onboarding',
         plan: draft.planningPreference === 'start_from_scratch' ? 'blank' : 'template',
+        // The plan builds on the server from here (auto-plan, 2026-10-17):
+        // the two answers it needs that the rollout row does not carry.
+        autoPlan: { readyToday: draft.readyToday, whereStuck: draft.whereStuck },
       }),
     });
     const releasePayload = (await releaseResponse.json().catch(() => ({}))) as {
@@ -960,6 +965,7 @@ export default function OnboardingPage() {
       releaseId?: string;
       firstRelease?: boolean;
       plannerPending?: boolean;
+      planAuto?: boolean;
       error?: string;
     };
     if (almostThereTimerRef.current) {
@@ -981,6 +987,7 @@ export default function OnboardingPage() {
       ? {
           id: createdReleaseId,
           plannerPending: releasePayload.plannerPending === true,
+          planAuto: releasePayload.planAuto === true,
           firstRelease: releasePayload.firstRelease === true,
         }
       : null;
@@ -1932,7 +1939,11 @@ export default function OnboardingPage() {
 
           {/* ----- Step 9: welcome (once) ------------------------------ */}
           {step === ONBOARDING_STEP.welcome ? (
-            <OnboardingWelcome busy={postAccountBusy} onGo={handleWelcomeGo} />
+            <OnboardingWelcome
+              busy={postAccountBusy}
+              onGo={handleWelcomeGo}
+              planBuilding={createdReleaseRef.current?.planAuto === true}
+            />
           ) : null}
 
           {/* ----- Step 10: invite (workspace flag; skippable, URG-274) -- */}

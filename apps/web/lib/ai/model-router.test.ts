@@ -85,7 +85,7 @@ describe('legacyModelFor (what each surface used before the router)', () => {
   });
 
   it('gives the planner its RodiumAi default, and nothing elsewhere', () => {
-    expect(legacyModelFor('planner', { AI_API_BASE: 'https://api.rodiumai.io' })).toBe('openai/gpt-6.1-sol');
+    expect(legacyModelFor('planner', { AI_API_BASE: 'https://api.rodiumai.io' })).toBe('openai/gpt-5.4');
     expect(legacyModelFor('planner', { AI_API_BASE: 'https://openrouter.ai/api/v1' })).toBeUndefined();
     expect(legacyModelFor('planner', { AI_PLANNER_MODEL: 'openai/gpt-5.4-mini', AI_API_BASE: 'https://api.rodiumai.io' })).toBe(
       'openai/gpt-5.4-mini'
@@ -290,6 +290,22 @@ describe('routeModel: UrgAns chat', () => {
   });
 });
 
+describe('structured surfaces skip GPT-6 (2026-10-17)', () => {
+  it('gives the planner and press kit the structured pro and max rungs, and chat the default', () => {
+    const planner = decisionForTier({ surface: 'planner', tier: 'pro', ceiling: 'max', env: {} });
+    expect(planner.models).toEqual(['openai/gpt-5.4', 'openai/gpt-5.5', 'openai/gpt-5']);
+    const pressMax = decisionForTier({ surface: 'press_kit', tier: 'max', ceiling: 'max', env: {} });
+    expect(pressMax.models.some((model) => /gpt-6/.test(model))).toBe(false);
+    const chat = decisionForTier({ surface: 'chat', tier: 'pro', ceiling: 'max', env: {} });
+    expect(chat.model).toBe('openai/gpt-6.1-sol');
+  });
+
+  it('still lets AI_LADDER_PRO override the structured rung', () => {
+    const planner = decisionForTier({ surface: 'planner', tier: 'pro', ceiling: 'max', env: { AI_LADDER_PRO: 'openai/gpt-6-sol' } });
+    expect(planner.model).toBe('openai/gpt-6-sol');
+  });
+});
+
 describe('routeModel: the other surfaces', () => {
   it('always closes out on the quick rung, however hard the conversation was', () => {
     const d = routeModel({ surface: 'chat_closeout', chat: turn(HEAVY, 4), team: paid('label'), env: {} });
@@ -299,7 +315,8 @@ describe('routeModel: the other surfaces', () => {
   it('holds the planner at pro for every plan: a floor beats a ceiling', () => {
     const solo = routeModel({ surface: 'planner', team: paid('solo'), env: {} });
     expect(solo.tier).toBe('pro');
-    expect(solo.model).toBe('openai/gpt-6.1-sol');
+    // Structured surfaces skip GPT-6 (2026-10-17, STRUCTURED_OUTPUT_RUNGS).
+    expect(solo.model).toBe('openai/gpt-5.4');
     expect(solo.floor).toBe('pro');
     // The ceiling is lifted to the floor rather than left contradicting it.
     expect(solo.ceiling).toBe('pro');
@@ -367,8 +384,9 @@ describe('nextAfterFailure', () => {
 
     it('falls to the older-generation sibling when both newer ones are down (2026-10-11 outage)', () => {
       const planner = decisionForTier({ surface: 'planner', tier: 'pro', ceiling: 'pro', env: {} });
+      // The planner's pro rung is the structured one (2026-10-17): 5.4, 5.5, then gpt-5.
       const first = next(planner, 'server');
-      expect(first?.model).toBe('openai/gpt-6-sol');
+      expect(first?.model).toBe('openai/gpt-5.5');
       const second = first ? next(first, 'server') : null;
       expect(second).toMatchObject({ tier: 'pro', model: 'openai/gpt-5', hops: 2 });
     });
@@ -381,7 +399,7 @@ describe('nextAfterFailure', () => {
 
     it('never steps below the surface floor, so a plan is never built on a weaker model', () => {
       const planner = decisionForTier({ surface: 'planner', tier: 'pro', ceiling: 'pro', env: {} });
-      const exhausted = { ...planner, tried: ['openai/gpt-6.1-sol', 'openai/gpt-6-sol', 'openai/gpt-5'], hops: 1 };
+      const exhausted = { ...planner, tried: ['openai/gpt-5.4', 'openai/gpt-5.5', 'openai/gpt-5'], hops: 1 };
       expect(next(exhausted, 'rate_limited')).toBeNull();
     });
 

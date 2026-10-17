@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { SALES_WHATSAPP_URL } from '@urganize/pricing';
-import { Sparkles } from '@/components/icons';
+import { Loader2, Sparkles } from '@/components/icons';
 import { ContactIcon } from '@/components/app/BrandIcons';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { openExternalUrl } from '@/lib/external-link';
@@ -19,7 +19,16 @@ import { WELCOME_CTA, WELCOME_LINE, WELCOME_ROWS, WELCOME_TITLE } from '@/lib/on
  * starts after this screen, and nothing here touches the share sheet, tours
  * or the install card.
  */
-export function OnboardingWelcome({ busy, onGo }: { busy: boolean; onGo: () => void }) {
+export function OnboardingWelcome({
+  busy,
+  onGo,
+  planBuilding = false,
+}: {
+  busy: boolean;
+  onGo: () => void;
+  /** The rollout's plan is building on the server (auto-plan, 2026-10-17). */
+  planBuilding?: boolean;
+}) {
   useEffect(() => {
     captureAnalyticsEvent({ name: 'onboarding_welcome_viewed', properties: {} });
   }, []);
@@ -31,6 +40,15 @@ export function OnboardingWelcome({ busy, onGo }: { busy: boolean; onGo: () => v
         <img src="/images/urganize-mark.png" alt="Urganize" width={56} height={56} className="h-14 w-14" />
         <h3 className="font-display text-2xl font-semibold leading-tight text-content-primary">{WELCOME_TITLE}</h3>
         <p className="text-sm leading-relaxed text-content-secondary">{WELCOME_LINE}</p>
+        {planBuilding ? (
+          <p
+            role="status"
+            className="inline-flex items-center gap-2.5 rounded-full border border-stroke-default bg-bg-elevated px-4 py-2 text-sm text-content-primary"
+          >
+            <Loader2 className="h-4 w-4 animate-spin text-brand" aria-hidden="true" />
+            Building your plan
+          </p>
+        ) : null}
       </div>
 
       <div>
