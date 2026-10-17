@@ -29,7 +29,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   },
   {
     question: "Is it for one artist or a roster?",
-    answer: `Both. Solo covers one artist, Manager up to ${managerArtists ?? "five"} and Label has no limit.`,
+    answer: `Both. Solo covers one artist, Manager up to ${managerArtists ?? "three"} and Label has no limit.`,
   },
   {
     question: "Do I pay per person?",

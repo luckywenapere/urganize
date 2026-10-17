@@ -134,8 +134,11 @@ export function TierPlanPicker({
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold text-content-primary">
                 {tier.label}
+                {/* Its own line on a phone, inline from sm: beside the wider
+                    ₦25,000 price at 390px the inline badge split into "Most /
+                    Teams" once it moved to Manager (2026-10-17). */}
                 {tier.recommended ? (
-                  <span className="ml-2 rounded-full bg-brand/12 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
+                  <span className="mt-1 block w-fit whitespace-nowrap rounded-full sm:ml-2 sm:mt-0 sm:inline-block bg-brand/12 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-brand">
                     Most teams
                   </span>
                 ) : null}

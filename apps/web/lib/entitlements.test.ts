@@ -73,19 +73,22 @@ describe('data_export is ungated on every tier, forever', () => {
 });
 
 describe('the tier table matches what is published', () => {
-  it('caps Manager at exactly 4 seats, 3 active releases and 150 assistant actions', () => {
+  it('caps Manager at exactly 3 artists, 5 seats, 3 active releases and 150 assistant actions', () => {
+    // 3 artists / 5 seats since 2026-10-17 (founder-approved reprice); it was
+    // 5 artists / 4 seats.
     const manager = resolveEntitlements('manager');
-    expect(manager.seats).toBe(4);
+    expect(manager.artists).toBe(3);
+    expect(manager.seats).toBe(5);
     expect(manager.active_releases).toBe(3);
     expect(manager.urgans_monthly_actions).toBe(150);
   });
 
-  it('caps Solo at exactly 1 artist, 1 seat, 1 active release and 40 assistant actions', () => {
-    // One seat since 2026-10-02 (strategy doc, section 8: "Solo ... One seat").
-    // The owner holds it, so a Solo account cannot invite anyone.
+  it('caps Solo at exactly 1 artist, 2 seats, 1 active release and 40 assistant actions', () => {
+    // Two seats since 2026-10-17 (founder-approved reprice: the artist and
+    // their manager). It was one seat from 2026-10-02.
     const solo = resolveEntitlements('solo');
     expect(solo.artists).toBe(1);
-    expect(solo.seats).toBe(1);
+    expect(solo.seats).toBe(2);
     expect(solo.active_releases).toBe(1);
     expect(solo.urgans_monthly_actions).toBe(40);
   });
@@ -219,21 +222,23 @@ describe('tier prices and the sales-led tier', () => {
   // repo has five times advertised one price and charged another. If this fails,
   // the arithmetic moved: mint the Plans and repoint the vars BEFORE shipping it.
   it('resolves the yearly prices to the figures the Plans must be minted at', () => {
-    expect(getTierPrice('solo', 'annual')?.amount).toBe(50_000);
-    expect(getTierPrice('manager', 'annual')?.amount).toBe(350_000);
-    expect(getTierPrice('label', 'annual')?.amount).toBe(500_000);
+    // 2026-10-17 reprice: the ₦75,000 / ₦250,000 / ₦600,000 yearly Plans are
+    // minted (PLN_4z12z6ruske767p, PLN_2kzoyuywqp01vvv, PLN_g1n3kunp71hhu9k).
+    expect(getTierPrice('solo', 'annual')?.amount).toBe(75_000);
+    expect(getTierPrice('manager', 'annual')?.amount).toBe(250_000);
+    expect(getTierPrice('label', 'annual')?.amount).toBe(600_000);
   });
 
   it('labels each price by its interval, spelled out', () => {
     // "/month" and "/year" rather than "/mo" and "/yr": the founder's copy rules
     // ask for fifth-grade readable, and an abbreviation is one more thing to
     // decode. The no-argument call takes the default, which is monthly.
-    expect(formatTierPrice('solo')).toBe('₦5,000/month');
-    expect(formatTierPrice('manager')).toBe('₦35,000/month');
-    expect(formatTierPrice('label')).toBe('₦50,000/month');
-    expect(formatTierPrice('solo', 'annual')).toBe('₦50,000/year');
-    expect(formatTierPrice('manager', 'annual')).toBe('₦350,000/year');
-    expect(formatTierPrice('label', 'annual')).toBe('₦500,000/year');
+    expect(formatTierPrice('solo')).toBe('₦7,500/month');
+    expect(formatTierPrice('manager')).toBe('₦25,000/month');
+    expect(formatTierPrice('label')).toBe('₦60,000/month');
+    expect(formatTierPrice('solo', 'annual')).toBe('₦75,000/year');
+    expect(formatTierPrice('manager', 'annual')).toBe('₦250,000/year');
+    expect(formatTierPrice('label', 'annual')).toBe('₦600,000/year');
   });
 
   it('phrases the yearly saving in months and never as a percentage', () => {
@@ -295,13 +300,12 @@ describe('tier prices and the sales-led tier', () => {
   });
 
   it('recommends exactly one tier, and it is the one we sell', () => {
-    // ON SOLO since 2026-09-09 (founder call), moved from Manager. It sat on
-    // Manager from 2026-08-30, back when Manager was the cheapest self-serve
-    // tier; Solo has been the actual entry tier since that same day, so the
-    // marker now sits on the plan it was always meant to describe.
+    // ON MANAGER since 2026-10-17 (founder-approved reprice: Manager "becomes
+    // the RECOMMENDED plan"). It sat on Solo from 2026-09-09 and on Manager
+    // from 2026-08-30 before that.
     const recommended = TIERS.filter((tier) => PRICING_TIERS[tier].recommended);
-    expect(recommended).toEqual(['solo']);
-    expect(PRICING_TIERS.solo.contactSales).toBeUndefined();
+    expect(recommended).toEqual(['manager']);
+    expect(PRICING_TIERS.manager.contactSales).toBeUndefined();
   });
 
   it('orders the cards cheapest first and ends on the one conversation', () => {
@@ -476,10 +480,10 @@ describe('checkLimit', () => {
     if (verdict.allowed) expect(verdict.remaining).toBeNull();
   });
 
-  // The boundary: 3 of 4 may add one more, 4 of 4 may not.
+  // The boundary: 4 of 5 may add one more, 5 of 5 may not (5 seats since 2026-10-17).
   it('blocks the addition that would exceed the ceiling, not the one that reaches it', () => {
-    expect(checkLimit({ tier: 'manager', key: 'seats', current: 3 }).allowed).toBe(true);
-    expect(checkLimit({ tier: 'manager', key: 'seats', current: 4 }).allowed).toBe(false);
+    expect(checkLimit({ tier: 'manager', key: 'seats', current: 4 }).allowed).toBe(true);
+    expect(checkLimit({ tier: 'manager', key: 'seats', current: 5 }).allowed).toBe(false);
   });
 
   it('reports headroom while allowed', () => {
@@ -617,16 +621,17 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
   // The artists ceiling became enforceable on 2026-08-30, when rosters shipped.
   // Until then nothing in the product could add a second artist, so the number
   // was published and gated nothing.
-  it('caps a paying Manager team at its fifth artist', () => {
+  // 3 artists since the 2026-10-17 reprice (was 5): the fourth is refused.
+  it('caps a paying Manager team at its third artist', () => {
     const tier = resolveTeamTier({ state: 'paid', ownerPlan: 'manager' });
-    expect(checkLimit({ tier, key: 'artists', current: 4 }).allowed).toBe(true);
-    const blocked = checkLimit({ tier, key: 'artists', current: 5 });
+    expect(checkLimit({ tier, key: 'artists', current: 2 }).allowed).toBe(true);
+    const blocked = checkLimit({ tier, key: 'artists', current: 3 });
     expect(blocked.allowed).toBe(false);
     if (blocked.allowed) throw new Error('expected blocked');
-    expect(blocked.message).toContain('5');
+    expect(blocked.message).toContain('3');
     // The published line and the refusal have to agree, or a manager reads one
     // number on the pricing page and meets another in the product.
-    expect(tierHighlights('manager')[0]).toContain('5');
+    expect(tierHighlights('manager')[0]).toContain('3');
   });
 
   it('never caps artists on the tiers that advertise unlimited', () => {
@@ -635,17 +640,17 @@ describe('the seat cap is reachable, and only for a team that bought Manager', (
     expect(checkLimit({ tier, key: 'artists', current: 999 }).allowed).toBe(true);
   });
 
-  it('caps a paying Manager team at its fourth seat, so the fifth invite is refused', () => {
+  it('caps a paying Manager team at its fifth seat, so the sixth invite is refused', () => {
     const tier = resolveTeamTier({ state: 'paid', ownerPlan: 'manager' });
     expect(tier).toBe('manager');
-    // Three seats used, inviting a fourth: fine. Four used, inviting a fifth:
-    // refused. `current` is the count BEFORE the new seat, and both invite
-    // routes call it that way.
-    expect(checkLimit({ tier, key: 'seats', current: 3 }).allowed).toBe(true);
-    const blocked = checkLimit({ tier, key: 'seats', current: 4 });
+    // Five seats since the 2026-10-17 reprice (was four). Four used, inviting a
+    // fifth: fine. Five used, inviting a sixth: refused. `current` is the count
+    // BEFORE the new seat, and both invite routes call it that way.
+    expect(checkLimit({ tier, key: 'seats', current: 4 }).allowed).toBe(true);
+    const blocked = checkLimit({ tier, key: 'seats', current: 5 });
     expect(blocked.allowed).toBe(false);
     if (blocked.allowed) throw new Error('expected blocked');
-    expect(blocked.message).toContain('4');
+    expect(blocked.message).toContain('5');
   });
 
   // The half that protects everyone who already pays us. Switching the flag on
@@ -892,11 +897,13 @@ describe('directory search', () => {
 });
 
 describe('limit copy reads correctly at a limit of one', () => {
-  it('says one person, not one people', () => {
-    const verdict = checkLimit({ tier: 'solo', key: 'seats', current: 1 });
+  // No tier has a one-seat ceiling since 2026-10-17 (Solo went to two seats),
+  // so the seat line is checked at Solo's two: plural, and never "2 persons".
+  it("says Solo's two seats as people", () => {
+    const verdict = checkLimit({ tier: 'solo', key: 'seats', current: 2 });
     if (verdict.allowed) throw new Error('expected blocked');
-    expect(verdict.message).toContain('1 person');
-    expect(verdict.message).not.toContain('1 people');
+    expect(verdict.message).toContain('2 people');
+    expect(verdict.message).not.toContain('person');
   });
 
   it('says one rollout, not one rollouts', () => {
@@ -906,10 +913,10 @@ describe('limit copy reads correctly at a limit of one', () => {
   });
 
   it('keeps the plural above one', () => {
-    const seats = checkLimit({ tier: 'manager', key: 'seats', current: 4 });
+    const seats = checkLimit({ tier: 'manager', key: 'seats', current: 5 });
     const releases = checkLimit({ tier: 'manager', key: 'active_releases', current: 3 });
     if (seats.allowed || releases.allowed) throw new Error('expected blocked');
-    expect(seats.message).toContain('4 people');
+    expect(seats.message).toContain('5 people');
     expect(releases.message).toContain('3 rollouts at a time');
   });
 });

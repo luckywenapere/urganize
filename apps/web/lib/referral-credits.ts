@@ -11,7 +11,7 @@
  *   - It is paid on the invited team's FIRST PAYMENT, not on signup. A signup
  *     costs nothing to fake with a throwaway email; a payment does, and a team
  *     that pays has already covered the reward many times over (100 credits cost
- *     us a few cents; the cheapest plan is ₦5,000 a year).
+ *     us a few cents; the cheapest plan is ₦7,500 a month since 2026-10-17).
  *   - A team can earn at most REFERRAL_REWARD_CAP rewards, so one link cannot
  *     turn into unlimited credits if something is gamed.
  *   - The invited team gets no bonus of its own. Add one here if wanted.

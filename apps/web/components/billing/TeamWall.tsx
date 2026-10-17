@@ -89,12 +89,12 @@ const WALL_TIERS: readonly PricingTierId[] = PRICING_TIER_ORDER.filter(
   (tier) => !getTier(tier).contactSales
 );
 
-/** Which tier a returning owner lands on. Solo, because it is the tier that
- *  carries `recommended` on the public page (moved here from Manager
- *  2026-09-09) — pre-selecting anything else would open the wall on a
- *  different plan than the one the pricing page just told them to pick. It
- *  must stay a member of WALL_TIERS, or the wall opens with nothing selected. */
-const DEFAULT_TIER: PricingTierId = 'solo';
+/** Which tier a returning owner lands on. Manager since 2026-10-17, because it
+ *  is the tier that carries `recommended` again (founder-approved reprice; it
+ *  was Solo from 2026-09-09) — pre-selecting anything else would open the wall
+ *  on a different plan than the badge points at. It must stay a member of
+ *  WALL_TIERS, or the wall opens with nothing selected. */
+const DEFAULT_TIER: PricingTierId = 'manager';
 
 export function TeamWall() {
   const router = useRouter();

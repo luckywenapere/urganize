@@ -230,17 +230,18 @@ describe('budget bands', () => {
     expect(labels(22_000)).toEqual(['Under ₦10,000', '₦10,000–₦15,000', '₦15,000–₦20,000']);
   });
 
-  it('Manager at ₦35,000 (since 2026-10-17) rounds to ₦5,000 steps', () => {
-    expect(labels(35_000)).toEqual(['Under ₦15,000', '₦15,000–₦25,000', '₦25,000–₦30,000']);
+  it('Manager at ₦25,000 (since the 2026-10-17 reprice) rounds to ₦1,000 steps', () => {
+    expect(labels(25_000)).toEqual(['Under ₦11,000', '₦11,000–₦17,000', '₦17,000–₦23,000']);
   });
 
   it('Solo and Label follow the same shape', () => {
-    expect(labels(5_000)).toEqual(['Under ₦2,500', '₦2,500–₦3,500', '₦3,500–₦4,500']);
-    expect(labels(50_000)).toEqual(['Under ₦25,000', '₦25,000–₦35,000', '₦35,000–₦45,000']);
+    // Solo ₦7,500 and Label ₦60,000 since 2026-10-17.
+    expect(labels(7_500)).toEqual(['Under ₦3,500', '₦3,500–₦5,000', '₦5,000–₦7,000']);
+    expect(labels(60_000)).toEqual(['Under ₦25,000', '₦25,000–₦40,000', '₦40,000–₦55,000']);
   });
 
   it('every band sits under the plan price and climbs', () => {
-    for (const price of [5_000, 22_000, 35_000, 50_000]) {
+    for (const price of [5_000, 7_500, 22_000, 25_000, 35_000, 50_000, 60_000]) {
       const bands = budgetBands(price);
       expect(bands[0].max).toBeLessThan(bands[1].max);
       expect(bands[1].max).toBeLessThan(bands[2].max);
@@ -254,20 +255,20 @@ describe('budget bands', () => {
 });
 
 describe('matchBudgetOffer', () => {
-  const codes = { PAYSTACK_PLAN_MANAGER_RETENTION_25000: 'PLN_m25', PAYSTACK_PLAN_MANAGER_RETENTION_30000: 'PLN_m30' };
+  const codes = { PAYSTACK_PLAN_MANAGER_RETENTION_17000: 'PLN_m17', PAYSTACK_PLAN_MANAGER_RETENTION_23000: 'PLN_m23' };
 
   it('the lowest band offers the dearest cheaper plan that fits', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'low', planCodes: {} })).toEqual({
       kind: 'switch_plan',
       tier: 'solo',
-      price: 5_000,
+      price: 7_500,
     });
-    // Manager (₦35,000 since 2026-10-17) no longer fits under Label's lowest
-    // band (₦25,000), so the dearest cheaper plan that fits is Solo.
+    // Manager at ₦25,000 (2026-10-17 reprice) sits exactly on Label's lowest
+    // band ceiling (₦25,000), so it is the dearest cheaper plan that fits again.
     expect(matchBudgetOffer({ tier: 'label', band: 'low', planCodes: {} })).toEqual({
       kind: 'switch_plan',
-      tier: 'solo',
-      price: 5_000,
+      tier: 'manager',
+      price: 25_000,
     });
     expect(matchBudgetOffer({ tier: 'solo', band: 'low', planCodes: {} })).toBeNull();
   });
@@ -276,32 +277,32 @@ describe('matchBudgetOffer', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'mid', planCodes: codes })).toEqual({
       kind: 'discounted_plan',
       tier: 'manager',
-      price: 25_000,
+      price: 17_000,
       months: RETENTION_OFFER_MONTHS,
-      planCode: 'PLN_m25',
+      planCode: 'PLN_m17',
     });
-    expect(matchBudgetOffer({ tier: 'manager', band: 'high', planCodes: codes })?.price).toBe(30_000);
+    expect(matchBudgetOffer({ tier: 'manager', band: 'high', planCodes: codes })?.price).toBe(23_000);
   });
 
   it('hides a discounted offer whose Paystack plan is not configured', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'mid', planCodes: {} })).toBeNull();
-    expect(matchBudgetOffer({ tier: 'label', band: 'high', planCodes: { PAYSTACK_PLAN_LABEL_RETENTION_45000: '  ' } })).toBeNull();
+    expect(matchBudgetOffer({ tier: 'label', band: 'high', planCodes: { PAYSTACK_PLAN_LABEL_RETENTION_55000: '  ' } })).toBeNull();
   });
 
   it('names the env vars the setup needs', () => {
     expect(retentionPlanEnvVar('manager', 15000)).toBe('PAYSTACK_PLAN_MANAGER_RETENTION_15000');
     expect(allRetentionPlanEnvVars().map((row) => row.envVar)).toEqual([
-      'PAYSTACK_PLAN_SOLO_RETENTION_3500',
-      'PAYSTACK_PLAN_SOLO_RETENTION_4500',
-      'PAYSTACK_PLAN_MANAGER_RETENTION_25000',
-      'PAYSTACK_PLAN_MANAGER_RETENTION_30000',
-      'PAYSTACK_PLAN_LABEL_RETENTION_35000',
-      'PAYSTACK_PLAN_LABEL_RETENTION_45000',
+      'PAYSTACK_PLAN_SOLO_RETENTION_5000',
+      'PAYSTACK_PLAN_SOLO_RETENTION_7000',
+      'PAYSTACK_PLAN_MANAGER_RETENTION_17000',
+      'PAYSTACK_PLAN_MANAGER_RETENTION_23000',
+      'PAYSTACK_PLAN_LABEL_RETENTION_40000',
+      'PAYSTACK_PLAN_LABEL_RETENTION_55000',
     ]);
   });
 
   it('words the offers plainly', () => {
-    expect(retentionOfferLabel({ kind: 'switch_plan', tier: 'solo', price: 5000 })).toBe('Switch to Solo for ₦5,000/month');
+    expect(retentionOfferLabel({ kind: 'switch_plan', tier: 'solo', price: 7500 })).toBe('Switch to Solo for ₦7,500/month');
     expect(
       retentionOfferLabel({ kind: 'discounted_plan', tier: 'manager', price: 15000, months: 3, planCode: 'x' })
     ).toBe('Keep Manager for ₦15,000/month for 3 months');

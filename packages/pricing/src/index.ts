@@ -378,7 +378,9 @@ export type PricingTierDefinition = {
    *  separate call. Exactly one tier may set this, and entitlements.test.ts
    *  pins which one, so this stays in the data rather than being deleted.
    *
-   *  ON SOLO since 2026-09-09 (founder call), moved from Manager. It was on
+   *  ON MANAGER since 2026-10-17 (founder-approved reprice), moved back from
+   *  Solo now that Manager is the plan we recommend. Before that it was
+   *  ON SOLO from 2026-09-09 (founder call), moved from Manager. It was on
    *  Manager because Manager used to be the cheapest self-serve tier and the
    *  one to point a visitor at; Solo has been the entry tier since 2026-08-30,
    *  so the marker now sits on the tier it was always meant to describe —
@@ -392,6 +394,12 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   // ladder starts at a price a single manager can say yes to on their own, and
   // Manager becomes the step up rather than the front door.
   //
+  // ⚠️ STALE BELOW, corrected 2026-10-17: Solo HAS been purchasable since
+  // 2026-09-01 — it is in `SelfServeTierId`, `subscriptions_plan_check` permits
+  // 'solo', and PAYSTACK_PLAN_SOLO_PER_MONTH_NGN / _PER_YEAR_NGN are set in
+  // Production (repointed to the ₦7,500 / ₦75,000 Plans on 2026-10-17). The
+  // paragraph that follows describes the 2026-08-30 staging only.
+  //
   // NOT PURCHASABLE YET, and that is deliberate rather than an oversight — the
   // same staging Manager itself shipped in. `solo` is absent from
   // `SelfServeTierId` in apps/web, has no Paystack Plan object, and is not in
@@ -402,35 +410,47 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
   solo: {
     id: 'solo',
     label: 'Solo',
-    // "Independent artists" since 2026-10-02 (strategy doc, section 8). It read
-    // "For a manager running one artist." until Solo became one seat the same
-    // day; a single seat is somebody working on their own.
-    audience: 'For an independent artist.',
-    // Monthly only. The yearly price is ten months of this — see monthlyPrice.
-    monthlyPrice: tierPrice(5_000),
+    // "For an artist and their manager." since 2026-10-17 (founder-approved
+    // reprice, strategy doc section 8), when Solo went to two seats. It read
+    // "For an independent artist." from 2026-10-02 while Solo was one seat.
+    audience: 'For an artist and their manager.',
+    // ₦7,500 since 2026-10-17 (founder approved the reprice that day; it was
+    // ₦5,000 from 2026-09-10). Monthly only — the yearly price is ten months of
+    // this, see monthlyPrice. New Paystack Plans were minted at ₦7,500 /
+    // ₦75,000 and the _PER_MONTH_ / _PER_YEAR_ vars repointed before this
+    // shipped; the ₦5,000 Plans stay in Paystack untouched.
+    monthlyPrice: tierPrice(7_500),
     urgansMonthlyCredits: 150,
-    // ONE seat since 2026-10-02 (strategy doc, section 8: "Solo ... One seat").
-    // The owner holds it, so a Solo account can invite nobody; working with a
-    // team is what Manager is for. It was 2 (the owner plus one collaborator)
-    // from 2026-08-30. Lowering it removes nobody: a team already over the new
-    // ceiling keeps its members and is only refused new ones.
-    limits: { artists: 1, seats: 1, activeReleases: 1, urgansMonthlyActions: 40 },
+    // TWO seats since 2026-10-17 (founder-approved reprice: "artist +
+    // manager"). The owner holds one, so a Solo account can invite one person.
+    // It was 1 from 2026-10-02 and 2 from 2026-08-30 before that. Raising it
+    // removes nobody and refuses nobody who was allowed before.
+    limits: { artists: 1, seats: 2, activeReleases: 1, urgansMonthlyActions: 40 },
     perks: [],
-    // Moved here from Manager 2026-09-09 (founder call). Manager carried this
-    // from 2026-08-30, back when it was the cheapest self-serve tier; Solo has
-    // been the actual entry tier since that same day, so "most teams choose
-    // this" now sits on the plan it always described.
-    recommended: true,
+    // `recommended` moved to Manager on 2026-10-17 (founder-approved reprice).
+    // It sat here from 2026-09-09.
   },
   manager: {
     id: 'manager',
     label: 'Manager',
-    audience: 'For a manager running two or more artists.',
-    // Monthly only. The yearly price is ten months of this — see monthlyPrice.
-    monthlyPrice: tierPrice(35_000),
+    audience: 'For a manager running more than one artist.',
+    // ₦25,000 since 2026-10-17 (founder approved the reprice that day; it was
+    // ₦35,000 earlier the same day and ₦22,000 before that). Monthly only — the
+    // yearly price is ten months of this. New ₦25,000 / ₦250,000 Paystack Plans
+    // were minted and the vars repointed before this shipped.
+    monthlyPrice: tierPrice(25_000),
     urgansMonthlyCredits: 660,
-    limits: { artists: 5, seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
+    // 3 artists / 5 seats since 2026-10-17 (was 5 artists / 4 seats). Both are
+    // enforced (the artist ceiling since rosters shipped, 2026-08-30). Lowering
+    // artists removes nobody: a team already over 3 keeps its artists and is
+    // only refused a new one.
+    limits: { artists: 3, seats: 5, activeReleases: 3, urgansMonthlyActions: 150 },
     perks: [],
+    // THE RECOMMENDED PLAN since 2026-10-17 (founder-approved reprice). Manager
+    // is the plan the product is built for — a manager running a roster — and
+    // at ₦25,000 it is the one to point a visitor at. It sat on Solo from
+    // 2026-09-09. Read only by the in-app TierPlanPicker; see `recommended`.
+    recommended: true,
   },
   // SELF-SERVE AGAIN SINCE 2026-09-08 (founder call), at ₦50,000/year. This
   // REVERSES the 2026-08-30 decision that made Label sales-led with no price at
@@ -466,8 +486,11 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     // until 2026-09-11, then "For a team running a roster." while labels were
     // out of the audience.
     audience: 'For small labels and management teams.',
-    // Monthly only. The yearly price is ten months of this — see monthlyPrice.
-    monthlyPrice: tierPrice(50_000),
+    // ₦60,000 since 2026-10-17 (founder approved the reprice that day; it was
+    // ₦50,000 from 2026-09-10). Monthly only — the yearly price is ten months
+    // of this. New ₦60,000 / ₦600,000 Paystack Plans were minted and the vars
+    // repointed before this shipped.
+    monthlyPrice: tierPrice(60_000),
     urgansMonthlyCredits: 1500,
     limits: { artists: null, seats: null, activeReleases: null, urgansMonthlyActions: null },
     perks: [
@@ -657,7 +680,7 @@ export function getTierPrice(
   return interval === 'monthly' ? monthly : tierPrice(annualAmount(monthly.amount));
 }
 
-/** A tier's price as a customer reads it: "₦5,000/month", "₦50,000/year". Null
+/** A tier's price as a customer reads it: "₦7,500/month", "₦75,000/year". Null
  *  for a sales-led tier, which must render "Let's talk" instead.
  *
  *  THE INTERVAL ARGUMENT CAME BACK on 2026-09-10, when both intervals went on

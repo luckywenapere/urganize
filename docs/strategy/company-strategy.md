@@ -10,6 +10,10 @@
 > layout was changed (headings and tables rebuilt as markdown).
 > 2026-10-17: section 1's description and one-line version updated to the new
 > positioning at the founder's request (URG-344); mirror this in the original.
+> 2026-10-17: section 8's pricing table, the seed-bar MRR figures and the
+> scoreboard MRR plan (section 11) updated to the reprice the founder approved
+> on 2026-10-17 (Solo ₦7,500, Manager ₦25,000 recommended, Label ₦60,000);
+> mirror this in the original.
 
 ## How to use this doc
 
@@ -194,11 +198,13 @@ Revenue comes from monthly subscriptions, with pay-as-you-go credits and transac
 
 | Tier | Monthly | Yearly | Credits a month | For |
 |---|---|---|---|---|
-| Solo | ₦5,000 | ₦50,000 | 150 | Independent artists. One seat, UrgAns as chat only |
-| Manager | ₦35,000 | ₦350,000 | 660 | Managers running more than one artist. UrgAns works inside releases |
-| Label | ₦50,000 | ₦500,000 | 1,500 | Labels and management companies |
+| Solo | ₦7,500 | ₦75,000 | 150 | An artist and their manager. 1 artist, 2 seats, 1 active release. UrgAns as chat only |
+| Manager (recommended) | ₦25,000 | ₦250,000 | 660 | Managers running more than one artist. 3 artists, 5 seats, 3 active releases. UrgAns works inside releases |
+| Label | ₦60,000 | ₦600,000 | 1,500 | Labels and management companies. Unlimited artists, seats and releases. We set your roster up with you; WhatsApp support, answered same day |
 | Group | Custom | Custom | Custom | Distributors and multi-label groups |
 | Credits only | None | None | ₦30 a credit | Anyone who wants to pay by use. Solo features |
+
+Repriced 2026-10-17, approved by the founder that day: Solo ₦5,000 → ₦7,500 (1 seat → 2), Manager ₦35,000 → ₦25,000 (5 artists / 4 seats → 3 artists / 5 seats) and now the recommended plan, Label ₦50,000 → ₦60,000. Group unchanged. Credit allowances unchanged. New Paystack Plans carry the new prices; the old Plans stay in place, so anyone already paying keeps their price (there were no paying subscriptions at the time).
 
 Yearly is ten months for twelve. Trials run 3 days and come with 50 credits. The Founding Member cohort (capped at 10, still open) keeps a lifetime price lock.
 
@@ -212,7 +218,7 @@ Yearly is ten months for twelve. Trials run 3 days and come with 50 credits. The
 
 - Value: one credit is worth $0.01, about ₦15. Users pay 3× what the AI provider bills. The markup covers retried and failed calls, Paystack fees, and the dollar cost moving against naira revenue.
 - Chat: charged on the tokens actually used, rounded up to whole credits, with a minimum of 1 credit a turn.
-- Allowance: the monthly credits in the pricing table replace the 40 and 150 monthly actions. Each allowance costs about 15% of its plan price (Manager: about $2.20 of provider cost against about $14.70; Label: about $5 against about $33). Past the allowance, teams buy top-up credits.
+- Allowance: the monthly credits in the pricing table replace the 40 and 150 monthly actions. Each allowance costs about 15% of its plan price or less (Manager: about $2.20 of provider cost against about $16.70; Label: about $5 against about $40, at the 2026-10-17 prices). Past the allowance, teams buy top-up credits.
 - Top-up price: ₦15 a credit on any plan. Credits-only users pay ₦30 a credit, so Solo stays the better deal for regular use.
 - Credits-only use: anyone can use Urganize on credits alone, with Solo features and no monthly fee.
 - Credits don't expire. Unused allowance carries over to the next month. Bought and allowance credits stay usable after a plan ends (the account moves to Solo features until they subscribe again).
@@ -249,9 +255,9 @@ MRR rule: MRR counts subscriptions only, with yearly plans at price ÷ 12. Credi
 
 ### Seed-bar tier mix (set Oct 1, 2026)
 
-The 25 teams in the seed bar are planned as 20 Manager and 5 Label: ₦440,000 + ₦250,000 = ₦690,000 MRR. The buffer over ₦500,000 covers yearly plans and churn. Twenty-five Manager teams all on yearly plans come to about ₦458,000, which misses the bar.
+The 25 teams in the seed bar are planned as 20 Manager and 5 Label: ₦500,000 + ₦300,000 = ₦800,000 MRR (at the 2026-10-17 prices). The buffer over ₦500,000 covers yearly plans and churn. Twenty-five Manager teams all on yearly plans come to about ₦521,000, just over the bar.
 
-12-month target: 65 paying teams, 40 Manager and 25 Label, about ₦2.13M a month. Projected burn at the full plan is ₦1.1M a month (a projection, not measured spend).
+12-month target: 65 paying teams, 40 Manager and 25 Label, about ₦2.5M a month (at the 2026-10-17 prices). Projected burn at the full plan is ₦1.1M a month (a projection, not measured spend).
 
 Spending rule: Oyin approves all spend, and every spend line ties to a scoreboard number.
 
@@ -329,7 +335,7 @@ Urganize is not raising now. The company raises a seed round only when all five 
 |---|---|---|
 | Active paying teams | 25+ (planned as 20 Manager, 5 Label) | 0 paying, 8 active |
 | Second-release rate | 60% within 90 days | Not measured yet |
-| MRR | ₦500,000+ (plan: ₦690,000) | ₦0 |
+| MRR | ₦500,000+ (plan: ₦800,000) | ₦0 |
 | Repeatable acquisition | One channel brings in 3+ paying teams a month for 3 months in a row, at a known cost per team | Not yet |
 | UrgAns operational value | Half of active paying teams use UrgAns inside releases every week, and the ROI re-interviews show fewer coordination hours | Not yet |
 

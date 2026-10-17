@@ -343,9 +343,11 @@ const roundTo = (value: number, step: number): number => Math.max(step, Math.rou
  * Three price bands under a plan's monthly price. Anchored on the founder's
  * Manager example (at the old ₦22,000: under ₦10,000 / ₦10,000–₦15,000 /
  * ₦15,000–₦20,000), which is 5/11, 15/22 and 10/11 of the price, rounded to a
- * step that suits the size of the price. Solo ₦5,000 gives ₦2,500 / ₦3,500 /
- * ₦4,500; Manager ₦35,000 (since 2026-10-17) gives ₦15,000 / ₦25,000 /
- * ₦30,000; Label ₦50,000 gives ₦25,000 / ₦35,000 / ₦45,000.
+ * step that suits the size of the price. Since the 2026-10-17 reprice: Solo
+ * ₦7,500 gives ₦3,500 / ₦5,000 / ₦7,000; Manager ₦25,000 gives ₦11,000 /
+ * ₦17,000 / ₦23,000; Label ₦60,000 gives ₦25,000 / ₦40,000 / ₦55,000. The
+ * retention Plans for those prices (PAYSTACK_PLAN_*_RETENTION_5000/7000,
+ * _17000/_23000, _40000/_55000) were minted and set in Vercel the same day.
  */
 export function budgetBands(monthlyPrice: number): BudgetBand[] {
   const step = bandStep(monthlyPrice);

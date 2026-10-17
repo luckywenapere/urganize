@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.2",
+    date: "October 17, 2026",
+    highlights: [
+      "New prices. Solo is ₦7,500 a month and now has room for 2 people, the artist and their manager. Manager is ₦25,000 a month for up to 3 artists and 5 people, and it is the plan we recommend. Label is ₦60,000 a month.",
+      "Yearly is still 10 months for 12: ₦75,000, ₦250,000 and ₦600,000. If you already pay, your price does not change.",
+    ],
+  },
+  {
     version: "1.157.1",
     date: "October 17, 2026",
     highlights: [

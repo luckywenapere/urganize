@@ -19,9 +19,11 @@ import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pr
  * Plan allowances are sized so a team's whole allowance costs about 15% of what it
  * pays, at the 3x markup (pricing.ts), assuming 1,500 naira to the dollar:
  *
- *   solo      150  (5,000 naira a month)
- *   manager   660  (35,000 since 2026-10-17; sized at 22,000)
- *   label     1,500 (50,000)
+ *   solo      150  (7,500 naira a month since 2026-10-17; sized at 5,000)
+ *   manager   660  (25,000 since 2026-10-17; sized at 22,000)
+ *   label     1,500 (60,000 since 2026-10-17; sized at 50,000)
+ *   (The 2026-10-17 reprice left every allowance unchanged: each still costs
+ *   at most ~15% of the new price.)
  *   enterprise 1,500 (Group: custom price; Label's amount by default, founder
  *              call 2026-10-02, topped up by hand per deal)
  *

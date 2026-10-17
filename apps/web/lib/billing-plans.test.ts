@@ -320,12 +320,13 @@ describe('tier plan codes and prices', () => {
 
   it('prices every self-serve tier at both intervals, in kobo', () => {
     // Monthly is the stored figure; yearly is ten months of it, computed.
-    expect(getTierMinorUnit('solo', 'monthly')).toBe(5_000_00);
-    expect(getTierMinorUnit('manager', 'monthly')).toBe(35_000_00);
-    expect(getTierMinorUnit('label', 'monthly')).toBe(50_000_00);
-    expect(getTierMinorUnit('solo', 'annual')).toBe(50_000_00);
-    expect(getTierMinorUnit('manager', 'annual')).toBe(350_000_00);
-    expect(getTierMinorUnit('label', 'annual')).toBe(500_000_00);
+    // 2026-10-17 reprice: ₦7,500 / ₦25,000 / ₦60,000 a month.
+    expect(getTierMinorUnit('solo', 'monthly')).toBe(7_500_00);
+    expect(getTierMinorUnit('manager', 'monthly')).toBe(25_000_00);
+    expect(getTierMinorUnit('label', 'monthly')).toBe(60_000_00);
+    expect(getTierMinorUnit('solo', 'annual')).toBe(75_000_00);
+    expect(getTierMinorUnit('manager', 'annual')).toBe(250_000_00);
+    expect(getTierMinorUnit('label', 'annual')).toBe(600_000_00);
   });
 });
 
@@ -425,14 +426,14 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'manager',
       planCode: 'PLN_mgr_y',
-      amountMinorUnit: 350_000_00,
+      amountMinorUnit: 250_000_00,
       interval: 'annual',
     });
   });
 
   it('sells Label at its own Plan, never the stale ₦750,000 one', () => {
-    // Label became self-serve again on 2026-09-08, and is ₦50,000/month since
-    // 2026-09-10, so a year of it is ₦500,000. The trap it
+    // Label became self-serve again on 2026-09-08, and is ₦60,000/month since
+    // 2026-10-17, so a year of it is ₦600,000. The trap it
     // has to clear: PAYSTACK_PLAN_LABEL_NGN exists in the dashboard holding a
     // mislabeled ₦750,000 Plan, and it is one word away from the var this tier
     // actually reads. Stubbed here precisely so a regression that reached for it
@@ -450,7 +451,7 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'label',
       planCode: 'PLN_label_y',
-      amountMinorUnit: 500_000_00,
+      amountMinorUnit: 600_000_00,
       interval: 'annual',
     });
   });
@@ -472,7 +473,7 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'manager',
       planCode: 'PLN_mgr_m',
-      amountMinorUnit: 35_000_00,
+      amountMinorUnit: 25_000_00,
       interval: 'monthly',
     });
   });
