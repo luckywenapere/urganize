@@ -23,11 +23,11 @@ const baseUrl = process.env.WAITLIST_SMOKE_URL ?? "http://localhost:3000";
 // It stops before submitting, because POST /api/signup needs the waitlist
 // database and a smoke test must not add rows to it.
 //
-// The hero text is matched lower-cased on the stable core of the founder's
-// line, which both the h1 and the subhead carry, so a copy pass that rewords
+// The hero text is matched lower-cased on the founder's short line (the h1
+// since 2026-10-17, and the footer tagline), so a copy pass that rewords
 // one sentence does not break the test. If the positioning line ever changes,
 // change this string with it.
-const heroText = "everything after the music";
+const heroText = "every release, on plan";
 const smokeEmail = "smoke-test@example.com";
 const viewports = [
   { label: "desktop 1280x900", width: 1280, height: 900, mobile: false },
@@ -345,7 +345,9 @@ function clickTargetExpression(findExpression) {
 // again after that settles.
 const headlineVisibleExpression = `(() => {
   const block = document.getElementById("waitlist");
-  const heading = block && block.querySelector("h2");
+  // h1 since 2026-10-17 (URG-334): #waitlist is the hero form, whose heading
+  // is the page's h1. h2 is kept as the fallback for an older build.
+  const heading = block && (block.querySelector("h1") || block.querySelector("h2"));
   const header = document.querySelector("header");
   if (!heading || !header) return false;
   const rect = heading.getBoundingClientRect();
@@ -359,14 +361,14 @@ const headlineVisibleExpression = `(() => {
 async function assertTrialCtaLandsOnHeadline(client, label) {
   await client.clickExpression(
     clickTargetExpression(`document.querySelector('header a[data-location="header"]')`),
-    `${label}: header "Try Urganize"`,
+    `${label}: header "Join waitlist"`,
   );
   await client.waitFor(headlineVisibleExpression, `${label}: waitlist headline in view after the tap`);
   await sleep(900);
   if (!(await client.evaluate(headlineVisibleExpression))) {
     fail(`${label}: the waitlist headline ended up hidden behind the header or off screen`);
   }
-  console.log(`PASS: ${label}: "Try Urganize" lands on the waitlist headline.`);
+  console.log(`PASS: ${label}: "Join waitlist" lands on the waitlist headline.`);
 }
 
 async function assertFormReachesStepTwo(client, label) {
@@ -382,7 +384,7 @@ async function assertFormReachesStepTwo(client, label) {
   await client.send("Input.insertText", { text: smokeEmail });
   await client.clickExpression(
     clickTargetExpression(
-      `[...document.querySelectorAll('#waitlist button')].find((item) => item.innerText.trim() === "Join now")`,
+      `[...document.querySelectorAll('#waitlist button')].find((item) => ["Join now", "Join the waitlist"].includes(item.innerText.trim()))`,
     ),
     `${label}: "Join now"`,
   );

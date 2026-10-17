@@ -3,7 +3,7 @@ import {
   BRAND_LINE,
   CANONICAL_DESCRIPTION,
   ONE_LINER,
-  SHORT_DESCRIPTION,
+  PROMISE_LINE,
 } from "./positioning";
 
 export const SITE_URL = "https://urganize.app";
@@ -24,22 +24,21 @@ export const SHARE_IMAGE_URL = `${SITE_URL}/opengraph-image.png`;
 // each string. Two hardcoded copies of a search snippet is a drift hazard on
 // the one page brand queries land on.
 //
-// TITLE: the brand line, and nothing else: "Urganize: Everything after the
-// music", the founder's short line after the name (2026-09-24). 36 characters,
+// TITLE: the brand line, and nothing else: "Urganize: Every release, on
+// plan", the founder's short line after the name (2026-10-17; "Everything
+// after the music" from 2026-09-24). 32 characters,
 // well inside the ~60 Google renders whole. Before this it was "Urganize, AI
 // Music Business Manager" (2026-09-09 to 2026-09-24).
 //
-// DESCRIPTION: the founder's long description, verbatim (2026-09-24). A
+// DESCRIPTION: the long description (since 2026-10-17 the short line, the
+// promise and the audience, about 150 characters, so it fits whole; the
+// founder's 2026-09-24 description ran about 230). A
 // description this full is on purpose. A 106-character one that opened with
 // "How" was ignored by Google entirely, which substituted the landing page's
 // old group-chat paragraph, so the result for "urganize" described a group
 // chat rather than the product. A short or weak description invites that.
 //
-// It is about 230 characters, past the ~155 Google shows, so a search result
-// cuts it off partway through the list of what the product does. That was
-// accepted rather than trimmed: the first two sentences, which are the part
-// that says what Urganize is, always survive the cut, and the founder's words
-// stay whole everywhere else this string is used (the JSON-LD and the tags).
+// The same string feeds the JSON-LD and the tags.
 export const LANDING_TITLE = BRAND_LINE;
 export const LANDING_DESCRIPTION = CANONICAL_DESCRIPTION;
 
@@ -58,7 +57,7 @@ export const LANDING_DESCRIPTION = CANONICAL_DESCRIPTION;
 // Bump this string every time public/opengraph-image.png changes so the
 // URL is new to every platform and the very next fetch pulls fresh bytes,
 // instead of depending on a manual re-scrape request or an unknown TTL.
-const SHARE_IMAGE_VERSION = "2026-10-02-music-teams";
+const SHARE_IMAGE_VERSION = "2026-10-17-on-plan";
 
 const SHARE_IMAGE = {
   url: `${SITE_URL}/opengraph-image.png?v=${SHARE_IMAGE_VERSION}`,
@@ -69,17 +68,18 @@ const SHARE_IMAGE = {
   // would leave the two describing different products with nothing to catch
   // it. `apps/web/lib/positioning-guard.test.ts` reads this string for exactly
   // that reason. It composes from ONE_LINER (the short line, the card's
-  // headline) and SHORT_DESCRIPTION (the core line, the card's second line),
+  // headline) and PROMISE_LINE (the card's second line since 2026-10-17),
   // so it follows the positioning automatically; the VERSION above does not
   // and has to be bumped by hand whenever the card is regenerated.
   //
   // The generator is `apps/homepage/scripts/generate-og-image.mjs`.
-  // Regenerated 2026-09-24 for "Everything after the music"; twice on
+  // Regenerated 2026-10-17 for "Every release, on plan." (URG-334); on
+  // 2026-09-24 for "Everything after the music"; twice on
   // 2026-09-11 for the widened category and the audience narrowing; on
   // 2026-09-09 for the release-to-rollout rename and before that for the
   // first category line. Earlier cards used retired taglines, including a
   // banned container metaphor.
-  alt: `${ONE_LINER} ${SHORT_DESCRIPTION}`,
+  alt: `${ONE_LINER} ${PROMISE_LINE}`,
 };
 
 // Shared per-page metadata shape (canonical + OG + Twitter) so every

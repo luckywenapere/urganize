@@ -38,12 +38,13 @@ export type ShotCrop = {
 };
 
 export const PHONE_CROPS = {
-  // The "Upcoming" list of a scoped rollout: header, progress bar, 7 rows.
-  scopedRelease: { from: [1920, 973], x: 824, y: 287, w: 672, h: 479 },
-  // The top of the open activity: its status line, title, assignee, invite and
-  // due date. The description box below is left out.
-  activityDetail: { from: [1920, 973], x: 498, y: 98, w: 680, h: 420 },
-  // The week axis with TODAY and RELEASE marked, and the first rows of bars,
-  // ending between two rows so none is cut in half.
-  timeline: { from: [1920, 973], x: 505, y: 395, w: 975, h: 467 },
+  // Re-measured 2026-10-17 on the retake for the homepage v2 (URG-334).
+  // The plan UrgAns built for the rollout: its title line and the promo row.
+  scopedRelease: { from: [1920, 973], x: 430, y: 365, w: 920, h: 360 },
+  // The top of the open activity: its title, status, assignee, due date and
+  // phase. The description box below is left out.
+  activityDetail: { from: [1920, 973], x: 530, y: 255, w: 880, h: 375 },
+  // The activity labels, the week axis with TODAY marked and the first rows
+  // of markers and bars, ending between two rows so none is cut in half.
+  timeline: { from: [1920, 973], x: 30, y: 440, w: 1000, h: 470 },
 } as const satisfies Record<string, ShotCrop>;

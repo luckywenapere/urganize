@@ -54,11 +54,13 @@ const SPRING = '#7FD99A';
 // is what catches a divergence: change the line here and lib/seo.ts's alt has
 // to change too, and that one is compared against the shared constants.
 //
-// 2026-09-24: the short line as the headline, the core line under it. Both are
-// the founder's words verbatim (SHORT_LINE and CORE_LINE there).
-const MAIN_LINE = 'Everything after the music.';
-const ACCENT = 'after the music';
-const SUB_LINE = 'Urganize is where music teams do everything after the music is made.';
+// 2026-10-17: the short line as the headline, the promise line under it, both
+// founder-approved with the homepage v2 hero (SHORT_LINE and PROMISE_LINE
+// there). From 2026-09-24 it was "Everything after the music." over the core
+// line.
+const MAIN_LINE = 'Every release, on plan.';
+const ACCENT = 'on plan.';
+const SUB_LINE = 'Add a release. Get the plan. Your team knows what to do and when.';
 
 const font = (file) => readFileSync(join(WEB, 'assets', 'fonts', file));
 const logo = readFileSync(join(HOMEPAGE, 'public', 'images', 'urganize-logo.png'));
@@ -107,7 +109,7 @@ const card = h(
         },
       },
       // Satori collapses a leading or trailing space at the edge of a span, so
-      // the space between "Everything" and the accent is a real margin.
+      // the space before the accent is a real margin.
       before.trim() ? h('span', { style: { marginRight: '0.2em' } }, before.trim()) : null,
       accent ? h('span', { style: { color: SPRING } }, accent) : null,
       after ? h('span', null, after) : null,

@@ -105,8 +105,9 @@ export function WatchDemo({ variant = "pill" }: { variant?: "pill" | "link" }) {
           {/* The stop belongs to this control, not to the hero's prose — see
               the header. No aria-label narrowing this further: the accessible
               name has to contain the visible label (WCAG 2.5.3, Label in
-              Name). */}
-          Watch the demo.
+              Name). The stop went on 2026-10-17 (URG-334): the hero link now
+              stands alone under the form, not at the end of a sentence. */}
+          Watch the demo
         </button>
       ) : (
         <button

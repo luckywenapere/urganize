@@ -17,7 +17,7 @@ export function ProofSection() {
   return (
     <ScrollReveal>
       <SectionShell
-        className="py-[80px] lg:py-[100px]"
+        className="py-[72px] lg:py-[96px]"
         containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10"
       >
         <figure className="mx-auto max-w-[52rem] text-center">

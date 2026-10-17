@@ -59,6 +59,7 @@ export { FaqSection } from "./sections/FaqSection";
 export { FeatureGridSection } from "./sections/FeatureGridSection";
 export { FinalCTASection } from "./sections/FinalCTASection";
 export { HeroSection } from "./sections/HeroSection";
+export { PainSection } from "./sections/PainSection";
 export { PricingStripSection } from "./sections/PricingStripSection";
 export { ProofSection } from "./sections/ProofSection";
 export { StorySection } from "./sections/StorySection";

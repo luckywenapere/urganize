@@ -31,11 +31,11 @@ export function FaqSection() {
   return (
     <ScrollReveal>
       <SectionShell
-        className="py-[80px] lg:py-[100px]"
+        className="py-[72px] lg:py-[96px]"
         containerClassName="max-w-[56rem] px-6 sm:px-8 lg:px-10"
       >
         <div className="text-center">
-          <h2 className={centeredHeadlineClass}>Before you start</h2>
+          <h2 className={centeredHeadlineClass}>Questions</h2>
         </div>
 
         <div className="mt-10 border-t border-[color:var(--marketing-border)]">

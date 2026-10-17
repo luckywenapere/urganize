@@ -1,7 +1,5 @@
-import { PRODUCT_SHOTS } from "@/content/product-shots";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
-import { ThemedProductShot } from "../ThemedProductShot";
 import { centeredHeadlineClass, wideContainerClass } from "./shared";
 
 // Everything else a release needs, as tiles (2026-09-02). Each names a
@@ -33,14 +31,27 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // press kit on a phone — the outward-facing link competitors lack — stands
 // for the whole group. That page is dark-locked, so one capture serves both
 // themes.
-const TILES = [
+// HOMEPAGE V2 (2026-10-17, URG-334): three rows, no cards and no screenshot.
+// Each one serves the release or the gap before the next one. The old tiles
+// (Press kit, Cover art and song files, the playlist-pitch and recap
+// footnote and the press-kit phone capture) came off. The per-release EPK was
+// switched off on 2026-10-17 (v1.154.15) and its kit lives inside Pitch this!
+// now, so a "Press kit" tile described a surface that no longer stands alone.
+// Only name scenes that are ON in production. The 2026-10-16 cut list
+// (shows/setlists, audience, paid curator pitches, capture pages, release
+// chat, content calendar, spend, UrgAns voice, MCP, notes) stays off this page.
+const ROWS = [
   {
-    title: "Press kit",
-    body: "One link for press, curators and bookers. It updates when the rollout changes.",
+    title: "Pitch this!",
+    body: "Pitch curators and Spotify and Apple Music editors from the release.",
   },
   {
-    title: "Cover art and song files",
-    body: "Cover art is checked against streaming platforms' rules. Upload the master once and share it from the rollout.",
+    title: "Distributor handoff",
+    body: "Master, cover art and metadata, each with an owner and a date.",
+  },
+  {
+    title: "Between releases",
+    body: "Opportunities that fit your artists, so the next one starts sooner.",
   },
 ] as const;
 
@@ -48,60 +59,28 @@ export function FeatureGridSection() {
   return (
     <ScrollReveal>
       <SectionShell
-        className="py-[80px] lg:py-[100px]"
+        className="py-[72px] lg:py-[96px]"
         containerClassName={wideContainerClass}
       >
         <div className="mx-auto max-w-[52rem] text-center">
-          <h2 className={centeredHeadlineClass}>Everything a rollout needs.</h2>
+          <h2 className={centeredHeadlineClass}>Also in Urganize</h2>
         </div>
 
-        <div className="mx-auto mt-14 grid max-w-[74rem] items-start gap-10 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-14">
-          <div>
-            <ul className="grid gap-4">
-              {TILES.map((tile) => (
-                <li
-                  key={tile.title}
-                  className="rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6"
-                >
-                  <h3 className="text-[1.15rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--marketing-text)]">
-                    {tile.title}
-                  </h3>
-                  <p className="mt-3 text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
-                    {tile.body}
-                  </p>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-8 max-w-[44rem] text-[0.95rem] leading-7 text-[var(--marketing-text-muted)]">
-              Plus playlist pitches you can track as the curator listens, adds
-              or passes. And a recap card to share when the rollout is out.
-            </p>
-          </div>
-
-          {/* The frame is shorter than the capture on purpose (2026-10-10): the
-              bottom of the capture is a footer line that reads "Made with
-              Urganize, the operating system", wording the app dropped when the
-              product was repositioned. aspect-[780/1540] on this
-              overflow-hidden frame cuts the capture just above that line's
-              rule (the capture is 780 wide, the line's rule sits at 1581 and
-              the cut at about 1546) and nothing else moves. The image is top
-              aligned, so it is the bottom that goes. Delete the aspect class
-              when the shot is retaken (notes/needs-lucky.md). */}
-          <div className="mx-auto aspect-[780/1540] w-full max-w-[260px] overflow-hidden rounded-[1.5rem] border border-[color:var(--marketing-border)]">
-            <ThemedProductShot
-              {...PRODUCT_SHOTS.epkPhone}
-              // STALE (2026-09-05): this shot is the retired release-scoped
-              // EPK, and the alt text describes it accurately. The press kit is
-              // per ARTIST now, at /k/[slug], with a bio, photos, credits and
-              // shows on it. Retaking it needs a published kit, which needs
-              // NEXT_PUBLIC_FEATURE_PRESS_KITS on, so it is on that flag's
-              // activation checklist rather than faked here: `pnpm --filter
-              // @urganize/homepage shots`.
-              alt="A press kit made in Urganize, open on a phone: cover art, the artist, the rollout and its date on one public page."
-              sizes="260px"
-            />
-          </div>
-        </div>
+        <ul className="mx-auto mt-12 max-w-[56rem] border-t border-[color:var(--marketing-border)]">
+          {ROWS.map((row) => (
+            <li
+              key={row.title}
+              className="grid gap-1 border-b border-[color:var(--marketing-border)] py-6 sm:grid-cols-[14rem_1fr] sm:items-baseline sm:gap-8"
+            >
+              <h3 className="text-[1.2rem] leading-tight text-[var(--marketing-text)]">
+                {row.title}
+              </h3>
+              <p className="text-[1rem] leading-7 text-[var(--marketing-text-muted)]">
+                {row.body}
+              </p>
+            </li>
+          ))}
+        </ul>
       </SectionShell>
     </ScrollReveal>
   );

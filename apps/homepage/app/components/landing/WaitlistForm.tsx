@@ -47,8 +47,12 @@ const inputClassName =
 const selectClassName =
   "w-full rounded-full border border-[color:var(--marketing-border-strong)] bg-[var(--marketing-surface)] px-4 py-3 text-sm text-[var(--marketing-text)] focus:outline-none focus:ring-2 focus:ring-[var(--marketing-text)]";
 
-const buttonClassName =
-  "relative z-[60] inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] disabled:opacity-60 sm:text-base";
+const buttonBaseClassName =
+  "relative z-[60] inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-full px-7 py-3.5 text-sm font-medium tracking-[-0.02em] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto disabled:opacity-60 sm:text-base";
+
+const buttonClassName = `${buttonBaseClassName} bg-[var(--marketing-primary)] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)]`;
+
+const accentButtonClassName = `${buttonBaseClassName} home-action`;
 
 function collectMetadata(source: string) {
   if (typeof window === "undefined") return { source };
@@ -67,7 +71,22 @@ function collectMetadata(source: string) {
   };
 }
 
-export function WaitlistForm({ source }: { source: string }) {
+// Optional props (2026-10-17, URG-334, homepage v2): the homepage names the
+// button for what happens ("Join the waitlist"), sets its own hint line and
+// fills the button with the accent (`.home-action`, globals.css). Every other
+// page passes only `source` and renders exactly as before.
+export function WaitlistForm({
+  source,
+  buttonLabel = "Join now",
+  hint = "JOIN THE WAITLIST",
+  accent = false,
+}: {
+  source: string;
+  buttonLabel?: string;
+  hint?: string | null;
+  accent?: boolean;
+}) {
+  const actionClassName = accent ? accentButtonClassName : buttonClassName;
   const [step, setStep] = useState<"email" | "details" | "done">("email");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -157,13 +176,15 @@ export function WaitlistForm({ source }: { source: string }) {
             aria-label="Email address"
             className={inputClassName}
           />
-          <button type="submit" className={`${buttonClassName} shrink-0`}>
-            Join now
+          <button type="submit" className={`${actionClassName} shrink-0`}>
+            {buttonLabel}
           </button>
         </div>
-        <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-          JOIN THE WAITLIST
-        </p>
+        {hint ? (
+          <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+            {hint}
+          </p>
+        ) : null}
       </form>
     );
   }
@@ -246,7 +267,7 @@ export function WaitlistForm({ source }: { source: string }) {
       ) : null}
 
       <div className="flex flex-col items-center gap-3">
-        <button type="submit" disabled={isSubmitting} className={buttonClassName}>
+        <button type="submit" disabled={isSubmitting} className={actionClassName}>
           {isSubmitting ? "Joining…" : "Join the waitlist"}
         </button>
         <p className="font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">

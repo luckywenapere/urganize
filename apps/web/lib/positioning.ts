@@ -59,8 +59,19 @@ export const CORE_CLAUSE = 'where music teams do everything after the music is m
 /** The core line. Introduces the product anywhere a whole sentence fits. */
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 
-/** The short line. Page titles, meta titles, tight bios, the share card. */
-export const SHORT_LINE = 'Everything after the music.';
+/**
+ * The short line. Page titles, meta titles, tight bios, the share card.
+ * "Every release, on plan." since 2026-10-17 (founder approved the homepage
+ * v2 hero, URG-334); it was "Everything after the music." from 2026-09-24.
+ */
+export const SHORT_LINE = 'Every release, on plan.';
+
+/**
+ * The promise under the short line: the three steps the homepage then shows
+ * as A, B and C. The share card's second line and the homepage subhead.
+ * Founder-approved with the homepage v2 hero on 2026-10-17 (URG-334).
+ */
+export const PROMISE_LINE = 'Add a release. Get the plan. Your team knows what to do and when.';
 
 /**
  * Who it is for, in the fixed order artists, managers, labels.
@@ -102,9 +113,8 @@ export const SHORT_DESCRIPTION = CORE_LINE;
  * release is the unit).
  */
 export const CANONICAL_DESCRIPTION =
-  'You make the music. Urganize is where music teams do everything after. ' +
-  'Plan the release, assign the work, keep files and metadata in one place, pitch to curators, ' +
-  `book shows and put the release out. For ${AUDIENCE_LINE}.`;
+  'Every release, on plan. Add a release and get the plan, week by week to release day. ' +
+  `Your team knows what to do and when. For ${AUDIENCE_LINE}.`;
 
 /**
  * UrgAns is NOT the product, and this line is the whole of the distinction.

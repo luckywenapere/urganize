@@ -11,6 +11,7 @@ import {
   CORE_CLAUSE,
   CORE_LINE,
   ONE_LINER,
+  PROMISE_LINE,
   SHORT_DESCRIPTION,
   SHORT_LINE,
   URGANS_LINE,
@@ -234,15 +235,19 @@ describe('positioning', () => {
     // are the founder's rather than that the module agrees with itself.
     // Both say "music teams" since 2026-10-02, the strategy doc's wording
     // (founder call); they said "your team" from 2026-09-24.
+    // Since 2026-10-17 (founder approved the homepage v2 hero, URG-334) the
+    // short line, the brand line and the long description say "Every
+    // release, on plan." and the promise line is the hero's subhead. The core
+    // line is unchanged.
     expect(CORE_LINE).toBe('Urganize is where music teams do everything after the music is made.');
-    expect(SHORT_LINE).toBe('Everything after the music.');
+    expect(SHORT_LINE).toBe('Every release, on plan.');
+    expect(PROMISE_LINE).toBe('Add a release. Get the plan. Your team knows what to do and when.');
     expect(CANONICAL_DESCRIPTION).toBe(
-      'You make the music. Urganize is where music teams do everything after. ' +
-        'Plan the release, assign the work, keep files and metadata in one place, pitch to curators, ' +
-        'book shows and put the release out. For artists, managers and labels.',
+      'Every release, on plan. Add a release and get the plan, week by week to release day. ' +
+        'Your team knows what to do and when. For artists, managers and labels.',
     );
     expect(CORE_LINE).toBe(`Urganize is ${CORE_CLAUSE}.`);
-    expect(BRAND_LINE).toBe('Urganize: Everything after the music');
+    expect(BRAND_LINE).toBe('Urganize: Every release, on plan');
     expect(URGANS_LINE).toBe('personal AI for music professionals');
   });
 
@@ -262,11 +267,12 @@ describe('positioning', () => {
     // positioning is the half that gets cut.
     expect(ONE_LINER.length).toBeLessThan(80);
     expect(SHORT_DESCRIPTION.length).toBeLessThan(160);
-    // Every line says the one idea, so no surface can quote a line that
-    // forgot it.
-    for (const line of [CORE_LINE, SHORT_LINE, CANONICAL_DESCRIPTION, BRAND_LINE]) {
-      expect(line.toLowerCase()).toContain('everything after');
+    // Every short-form line says the one idea, so no surface can quote a
+    // line that forgot it. (The core line keeps its own wording.)
+    for (const line of [SHORT_LINE, CANONICAL_DESCRIPTION, BRAND_LINE]) {
+      expect(line.toLowerCase()).toContain('every release, on plan');
     }
+    expect(PROMISE_LINE.length).toBeLessThan(80);
   });
 
   it('uses no em dash in the positioning itself', () => {
@@ -274,6 +280,7 @@ describe('positioning', () => {
       CORE_CLAUSE,
       CORE_LINE,
       SHORT_LINE,
+      PROMISE_LINE,
       AUDIENCE_LINE,
       BRAND_LINE,
       ONE_LINER,
@@ -378,9 +385,9 @@ describe('positioning', () => {
       if (!declared) continue;
       const expression = declared[1];
       const declaresPositioning =
-        /everything after the music/i.test(expression) ||
+        /everything after the music|every release, on plan/i.test(expression) ||
         // Composed from the shared constants rather than written out.
-        /\b(?:CORE_LINE|CORE_CLAUSE|SHORT_LINE|SHORT_DESCRIPTION|CANONICAL_DESCRIPTION|ONE_LINER|LANDING_DESCRIPTION)\b/.test(
+        /\b(?:CORE_LINE|CORE_CLAUSE|SHORT_LINE|PROMISE_LINE|SHORT_DESCRIPTION|CANONICAL_DESCRIPTION|ONE_LINER|LANDING_DESCRIPTION)\b/.test(
           expression,
         );
       if (!declaresPositioning) missing.push(report(path, 'description does not say what Urganize is'));

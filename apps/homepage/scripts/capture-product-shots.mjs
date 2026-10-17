@@ -75,20 +75,22 @@ const ONLY = args.only ? new Set(args.only.split(",").map((s) => s.trim())) : nu
 // ---------------------------------------------------------------------------
 // The demo team. Fictional artists and titles: no real client data may appear
 // on the marketing site. Dates are weeks from today so the catalog always
-// reads as live work; `done` is how many activities to tick off, in due-date
-// order, so the Motion bars differ from card to card.
+// reads as live work; `done` is the share of activities to tick off (0 to 1),
+// in due-date order, so the Motion bars differ from card to card. It was a
+// count until 2026-10-17, when plans got shorter and the counts ticked off
+// whole plans.
 // ---------------------------------------------------------------------------
 const DEMO_TEAM = {
   name: "Northline Music",
   artists: ["Ayo Kanmi", "Zainab Oyelaran", "The Harbour Lights"],
   teammates: ["tunde@example.com", "amara@example.com"],
   releases: [
-    { title: "Golden Hour", artist: "Ayo Kanmi", type: "single", weeksOut: 6, done: 22, ready: ["master", "artwork"], goal: "playlist_adds", budget: "under_100k", colour: "#14643A" },
-    { title: "Night Bus", artist: "Ayo Kanmi", type: "single", weeksOut: 13, done: 5, ready: ["master"], goal: "new_listeners", budget: "none", colour: "#1D3A7A" },
-    { title: "Iyawo Mi", artist: "Zainab Oyelaran", type: "single", weeksOut: 3, done: 41, ready: ["master", "artwork", "distributor"], goal: "fan_moment", budget: "100k_500k", colour: "#7A1D3A" },
-    { title: "Blue Season", artist: "Zainab Oyelaran", type: "ep", weeksOut: 11, done: 30, ready: ["master", "artwork"], goal: "press", budget: "100k_500k", colour: "#5B1D7A" },
-    { title: "Salt and Signal", artist: "The Harbour Lights", type: "album", weeksOut: 18, done: 12, ready: ["none"], goal: "new_listeners", budget: "over_500k", colour: "#7A3E1D" },
-    { title: "Weekend Weather", artist: "The Harbour Lights", type: "single", weeksOut: 1, done: 58, ready: ["master", "artwork", "visualizer", "distributor"], goal: "catalog", budget: "none", colour: "#3A5B1D" },
+    { title: "Golden Hour", artist: "Ayo Kanmi", type: "single", weeksOut: 6, done: 0.55, ready: ["master", "artwork"], goal: "playlist_adds", budget: "under_100k", colour: "#14643A" },
+    { title: "Night Bus", artist: "Ayo Kanmi", type: "single", weeksOut: 13, done: 0.15, ready: ["master"], goal: "new_listeners", budget: "none", colour: "#1D3A7A" },
+    { title: "Iyawo Mi", artist: "Zainab Oyelaran", type: "single", weeksOut: 3, done: 0.75, ready: ["master", "artwork", "distributor"], goal: "fan_moment", budget: "100k_500k", colour: "#7A1D3A" },
+    { title: "Blue Season", artist: "Zainab Oyelaran", type: "ep", weeksOut: 11, done: 0.4, ready: ["master", "artwork"], goal: "press", budget: "100k_500k", colour: "#5B1D7A" },
+    { title: "Salt and Signal", artist: "The Harbour Lights", type: "album", weeksOut: 18, done: 0.1, ready: ["none"], goal: "new_listeners", budget: "over_500k", colour: "#7A3E1D" },
+    { title: "Weekend Weather", artist: "The Harbour Lights", type: "single", weeksOut: 1, done: 0.9, ready: ["master", "artwork", "visualizer", "distributor"], goal: "catalog", budget: "none", colour: "#3A5B1D" },
   ],
 };
 
@@ -116,13 +118,24 @@ const OPEN_BUCKETS = [
   { type: "settle", ms: 400 },
 ];
 
+// The trial's credits banner across the top of the app belongs to the demo
+// account, not to the product, and the activity's Chat block is a cut surface
+// (release chat, 2026-10): neither belongs on the marketing site.
+const HIDE_CREDITS_BANNER = { type: "eval", expression: "[...document.querySelectorAll('div')].filter((e) => /credits left/.test(e.innerText) && e.innerText.length < 160).forEach((e) => e.style.setProperty('display', 'none', 'important')); true" };
+const HIDE_ACTIVITY_CHAT = { type: "eval", expression: "[...document.querySelectorAll('section[aria-label=\"Activity detail\"] h3')].filter((h) => h.innerText.trim() === 'Chat').forEach((h) => h.parentElement.style.setProperty('display', 'none', 'important')); true" };
+// A rollout opens on its full-screen timeline; the scoped-release shot wants
+// the rollout page around it (the plan UrgAns built, the phases).
+const EXIT_FULL_SCREEN = { type: "eval", expression: "(() => { const b = [...document.querySelectorAll('button')].find((el) => /Exit full screen/.test(el.innerText)); if (b) b.click(); return Boolean(b); })()" };
+
 const SHOTS = [
-  { name: "catalog", legacy: "workspace-releases", viewport: "desktop", url: "/dashboard", waitFor: { selector: '[aria-label="Search release"]' } },
-  { name: "catalog-phone", viewport: "phone", url: "/dashboard", waitFor: { selector: '[aria-label="Search release"]' } },
+  // The rollout list has no search box since the 2026-10 redesign, so wait for
+  // the hero release's title instead.
+  { name: "catalog", legacy: "workspace-releases", viewport: "desktop", url: "/dashboard", waitFor: { text: "$HERO_TITLE" }, actions: [{ type: "settle", ms: 800 }, HIDE_CREDITS_BANNER] },
+  { name: "catalog-phone", viewport: "phone", url: "/dashboard", waitFor: { text: "$HERO_TITLE" }, actions: [{ type: "settle", ms: 800 }, HIDE_CREDITS_BANNER] },
   {
     name: "scoped-release", legacy: "workspace-tasks", viewport: "desktop", url: "/dashboard?release=$ID",
-    waitFor: { selector: "aside button[aria-expanded][aria-controls]" },
-    actions: [...OPEN_BUCKETS, { type: "wait", selector: '[data-ph-capture-attribute-section="tasks"]' }, { type: "settle", ms: 500 }],
+    waitFor: { text: "$HERO_TITLE" },
+    actions: [{ type: "wait", selector: '[data-ph-capture-attribute-section="tasks"]' }, { type: "settle", ms: 800 }, EXIT_FULL_SCREEN, { type: "settle", ms: 1200 }, HIDE_CREDITS_BANNER, { type: "settle", ms: 400 }],
   },
   {
     name: "activity-detail", viewport: "desktop", url: "/dashboard?release=$ID",
@@ -133,6 +146,9 @@ const SHOTS = [
       { type: "click", selector: '[data-ph-capture-attribute-section="tasks"]', nth: 1 },
       { type: "wait", selector: 'section[aria-label="Activity detail"]' },
       { type: "settle", ms: 700 },
+      HIDE_ACTIVITY_CHAT,
+      HIDE_CREDITS_BANNER,
+      { type: "settle", ms: 300 },
     ],
   },
   {
@@ -144,18 +160,14 @@ const SHOTS = [
       { type: "settle", ms: 600 },
       { type: "eval", expression: "[...document.querySelectorAll('.tl-scene-container button')].filter((b) => /^(Pre-release|Release week)/.test(b.innerText.trim())).forEach((b) => b.click()); true" },
       { type: "settle", ms: 700 },
+      HIDE_CREDITS_BANNER,
     ],
   },
   {
-    name: "artists-roster", viewport: "desktop", url: "/settings?tab=workspace",
-    waitFor: { text: "Add an artist" },
-    // Scroll the Artists section to the top of the viewport so the roster,
-    // not the workspace-name form above it, is what the shot shows.
-    actions: [
-      { type: "eval", expression: "(() => { const el = [...document.querySelectorAll('main *')].find((e) => /^artists$/i.test((e.textContent || '').trim())); if (!el) return false; el.scrollIntoView({ block: 'start', behavior: 'instant' }); let node = el.parentElement; while (node && node !== document.body) { const style = getComputedStyle(node); if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) { node.scrollTop = Math.max(0, node.scrollTop - 110); return 'scrolled container'; } node = node.parentElement; } window.scrollBy(0, -110); return 'scrolled window'; })()" },
-      { type: "settle", ms: 700 },
-      { type: "log", selector: "main", label: "settings viewport text", chars: 160 },
-    ],
+    // The roster has its own page since the 2026-10 redesign.
+    name: "artists-roster", viewport: "desktop", url: "/dashboard/artists",
+    waitFor: { text: "Ayo Kanmi" },
+    actions: [{ type: "settle", ms: 700 }, HIDE_CREDITS_BANNER],
   },
   // The public press kit needs no session and is dark-locked, so one capture
   // serves both themes. Shot BEFORE the UrgAns page: that page holds a typed
@@ -431,10 +443,12 @@ async function seed(client) {
   for (const plan of seeded) {
     let tasks = (await api("GET", `/api/tasks?release=${plan.id}`)).json?.tasks ?? [];
     if (tasks.length === 0) {
-      // With the planner on, a new release has no activities until its plan is
-      // approved: run the intake, let UrgAns tailor the draft, approve.
-      log(" plan:", plan.title, "(generate → approve)");
-      await api("POST", `/api/releases/${plan.id}/plan/generate`, {
+      // A new release has no activities until its plan is built: POST the
+      // intake answers to /plan and the plan lands straight in activities.
+      // (Until 2026-10 this was /plan/generate then /plan/approve; both are
+      // gone.)
+      log(" plan:", plan.title, "(build from intake)");
+      await api("POST", `/api/releases/${plan.id}/plan`, {
         intake: {
           version: 2,
           release_type: plan.type,
@@ -446,18 +460,20 @@ async function seed(client) {
           budget: plan.budget,
         },
       });
-      await api("POST", `/api/releases/${plan.id}/plan/approve`, {}, { allow: [409] });
       tasks = (await api("GET", `/api/tasks?release=${plan.id}`)).json?.tasks ?? [];
     }
-    const open = tasks
-      .filter((t) => t.status !== "done")
-      .sort((a, b) => String(a.dueDate ?? "").localeCompare(String(b.dueDate ?? "")));
-    const alreadyDone = tasks.length - open.length;
-    const toComplete = Math.max(0, Math.min(plan.done, tasks.length) - alreadyDone);
-    log(` ${plan.title}: ${tasks.length} activities, ${alreadyDone} done, completing ${toComplete}`);
-    for (const task of open.slice(0, toComplete)) {
-      await api("PATCH", `/api/tasks/${task.id}`, { status: "done" }, { allow: [400, 409] });
+    // Tick off the earliest share of the plan and reopen anything later, so a
+    // re-run lands on the same picture whatever state the team was left in.
+    const byDue = [...tasks].sort((a, b) => String(a.dueDate ?? "").localeCompare(String(b.dueDate ?? "")));
+    const target = Math.round(tasks.length * plan.done);
+    let changed = 0;
+    for (const [index, task] of byDue.entries()) {
+      const want = index < target ? "done" : "todo";
+      if ((task.status === "done") === (want === "done")) continue;
+      await api("PATCH", `/api/tasks/${task.id}`, { status: want }, { allow: [400, 409] });
+      changed += 1;
     }
+    log(` ${plan.title}: ${tasks.length} activities, ${target} done (${changed} changed)`);
   }
 
   log("cover art");
@@ -486,8 +502,10 @@ async function seed(client) {
 
   const hero = seeded[0];
   log("press kit link for", hero.title);
-  let epk = (await api("GET", `/api/releases/${hero.id}/epk`)).json?.epk ?? null;
-  if (!epk) epk = (await api("POST", `/api/releases/${hero.id}/epk`)).json?.epk ?? null;
+  // The release-scoped press kit was retired for one standing kit per artist
+  // (/k/{slug}); with the old route gone (404) the epk-phone shot is skipped.
+  let epk = (await api("GET", `/api/releases/${hero.id}/epk`, undefined, { allow: [404] })).json?.epk ?? null;
+  if (!epk) epk = (await api("POST", `/api/releases/${hero.id}/epk`, undefined, { allow: [404, 405] })).json?.epk ?? null;
   const epkToken = epk?.shareToken ?? "";
 
   const context = { base: BASE, releaseId: hero.id, heroTitle: hero.title, epkToken, releases: seeded.map(({ title, id }) => ({ title, id })) };
@@ -752,7 +770,9 @@ async function main() {
     await client.send("Page.navigate", { url: `${BASE}/auth` });
     console.log("\nA Chrome window is open at the sign-in page. Sign in to the DEMO account (email + password).");
     console.log("Waiting for the app to land on /dashboard …\n");
-    await client.waitFor(`location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard?")`, "sign-in", LOGIN_TIMEOUT_MS);
+    // Sign-in lands on /dashboard/home since the Home tab shipped, so any
+    // /dashboard path counts as signed in.
+    await client.waitFor(`location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard/")`, "sign-in", LOGIN_TIMEOUT_MS);
     await sleep(1500);
     await client.evaluate(PAGE_API);
 

@@ -96,9 +96,15 @@ export function MarketingHeader() {
               href={WAITLIST_URL}
               data-track="start_trial_click"
               data-location="header"
-              className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[var(--marketing-primary)] px-4 py-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)] sm:px-5 sm:py-2.5"
+              className="header-cta inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[var(--marketing-primary)] px-4 py-2 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] hover:bg-[var(--marketing-primary-hover)] sm:px-5 sm:py-2.5"
             >
-              Try Urganize
+              {/* "Join waitlist" (2026-10-17, URG-334): it is what the button
+                  does. Every marketing page is a waitlist (founder, 2026-10-16)
+                  and WAITLIST_URL lands on the homepage hero form. Same width
+                  as "Try Urganize" within a few px at 375. On the homepage the
+                  `.home-v2 .header-cta` rule (globals.css) turns it into an
+                  outline so the hero form stays the one filled action. */}
+              Join waitlist
             </a>
             <ThemeToggle />
           </div>

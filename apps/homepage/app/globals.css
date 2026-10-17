@@ -387,3 +387,69 @@ html[data-marketing-theme="dark"] .theme-shot-light {
     cursor: text;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Homepage v2 (2026-10-17, URG-334). Scoped to the `.home-v2` wrapper in
+   app/page.tsx so no other marketing page changes. Dark theme takes the
+   product's own tokens (base #0c0c0d, surface #171719, accent #7fd99a); the
+   light theme keeps its palette and only takes the type and the accent action.
+   One accent-filled action per screen: `.home-action` (the hero and final
+   waitlist forms). Everything else is text, outline or quiet.
+   ------------------------------------------------------------------------ */
+.home-v2 {
+  /* Light theme: the shared #3f7e5c is 4.4:1 on the cream base, just under
+     AA for the small mono label; this is 5.9:1. */
+  --marketing-accent: #2f6b4a;
+  --home-action-bg: #2f6b4a;
+  --home-action-bg-hover: #285c40;
+  --home-action-text: #ffffff;
+}
+
+html[data-marketing-theme="dark"] .home-v2 {
+  --marketing-bg: #0c0c0d;
+  --marketing-bg-muted: #121214;
+  --marketing-surface: #171719;
+  --marketing-surface-muted: #171719;
+  --marketing-border: #242427;
+  --marketing-border-strong: #333337;
+  --marketing-text: #f4f2ee;
+  --marketing-text-muted: #a9a7a2;
+  --marketing-text-subtle: #8c8a86;
+  --marketing-accent: #7fd99a;
+  --marketing-screen-border: #242427;
+  --home-action-bg: #7fd99a;
+  --home-action-bg-hover: #96e3ad;
+  --home-action-text: #0c0c0d;
+}
+
+.home-v2 h1,
+.home-v2 h2,
+.home-v2 h3 {
+  font-family: var(--font-home-display), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+.home-v2 .mono-label,
+.home-v2 .font-mono {
+  font-family: var(--font-home-mono), ui-monospace, monospace;
+}
+
+.home-action {
+  background: var(--home-action-bg);
+  color: var(--home-action-text);
+}
+
+.home-action:hover {
+  background: var(--home-action-bg-hover);
+}
+
+.home-v2 .header-cta {
+  background: transparent;
+  color: var(--marketing-text);
+  box-shadow: inset 0 0 0 1px var(--marketing-border-strong);
+}
+
+.home-v2 .header-cta:hover {
+  background: var(--marketing-surface);
+}

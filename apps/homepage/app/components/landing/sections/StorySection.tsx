@@ -5,6 +5,13 @@ import { SectionShell } from "../SectionShell";
 import { ThemedProductShot } from "../ThemedProductShot";
 import { wideContainerClass } from "./shared";
 
+// HOMEPAGE V2 (2026-10-17, URG-334, mock awaiting founder approval): the steps
+// are A, B and C (the founder's "easy as ABC"), and each carries ONE short line
+// again. That reverses part of the 2026-09-11 call recorded below, on purpose
+// and flagged for the founder. The problem framing that call removed now
+// lives in its own beat right above this one (PainSection), as the note below
+// says to put back first.
+//
 // Three steps, as one beat (2026-09-02). It opened with the problem, and no
 // longer does — see below.
 //
@@ -51,28 +58,32 @@ import { wideContainerClass } from "./shared";
 const STEPS: readonly {
   kicker: string;
   title: string;
+  line: string;
   shot: (typeof PRODUCT_SHOTS)[keyof typeof PRODUCT_SHOTS];
   // The part of the desktop capture a phone shows (content/product-shot-crops.ts).
   phoneCrop: ShotCrop;
   alt: string;
 }[] = [
   {
-    kicker: "01",
-    title: "Create the rollout. Get the plan.",
+    kicker: "A",
+    title: "Add a release. Get the plan.",
+    line: "Week by week, from today to release day. Change anything.",
     shot: PRODUCT_SHOTS.scopedRelease,
     phoneCrop: PHONE_CROPS.scopedRelease,
     alt: "A rollout open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
   },
   {
-    kicker: "02",
-    title: "Put a name on every activity.",
+    kicker: "B",
+    title: "Give every task a name.",
+    line: "Who does it and by when. No chasing.",
     shot: PRODUCT_SHOTS.activityDetail,
     phoneCrop: PHONE_CROPS.activityDetail,
     alt: "An activity opened in Urganize, showing who it is assigned to, its due date and its place in the plan.",
   },
   {
-    kicker: "03",
-    title: "See where every rollout stands.",
+    kicker: "C",
+    title: "See what\u2019s done and what\u2019s late.",
+    line: "One timeline for the whole rollout.",
     shot: PRODUCT_SHOTS.timeline,
     phoneCrop: PHONE_CROPS.timeline,
     alt: "The Timeline view of a rollout in Urganize: every activity on a week axis with today marked.",
@@ -82,7 +93,7 @@ const STEPS: readonly {
 export function StorySection() {
   return (
     <SectionShell
-      className="py-[80px] lg:py-[100px]"
+      className="py-[72px] lg:py-[96px]"
       containerClassName={wideContainerClass}
     >
       <div className="mx-auto max-w-[74rem] space-y-16 lg:space-y-24">
@@ -95,12 +106,19 @@ export function StorySection() {
                 }`}
               >
                 <div className="max-w-[32rem]">
-                  <p className="mono-label text-[var(--marketing-accent)]">
+                  <span
+                    aria-hidden
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--marketing-accent)] font-mono text-[0.85rem] font-bold text-[var(--marketing-accent)]"
+                  >
                     {step.kicker}
-                  </p>
-                  <h2 className="mt-3 text-balance text-[1.75rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--marketing-text)] sm:text-[2.1rem]">
+                  </span>
+                  <h2 className="mt-5 text-balance text-[1.6rem] leading-[1.15] text-[var(--marketing-text)] sm:text-[2rem]">
+                    <span className="sr-only">Step {step.kicker}: </span>
                     {step.title}
                   </h2>
+                  <p className="mt-3 text-[1.02rem] leading-7 text-[var(--marketing-text-muted)]">
+                    {step.line}
+                  </p>
                 </div>
                 <div className="overflow-hidden rounded-xl border border-[color:var(--marketing-border)]">
                   <ThemedProductShot

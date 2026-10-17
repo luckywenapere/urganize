@@ -4,9 +4,9 @@ import {
   PRICING_TIER_ORDER,
   tierHighlights,
 } from "@urganize/pricing";
+import { salesMailto } from "@/lib/sales-mailto";
 import { ScrollReveal } from "../ScrollReveal";
 import { SectionShell } from "../SectionShell";
-import { TrialButton } from "../TrialButton";
 import { centeredHeadlineClass, wideContainerClass } from "./shared";
 
 // Transparent pricing on the homepage (2026-09-02). Self-serve pages that
@@ -31,7 +31,11 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // too from 2026-09-08 to 2026-09-09, and again since 2026-10-02: Group, the
 // fourth card, with "Let's talk" in place of a price.)
 export function PricingStripSection() {
-  const tiers = PRICING_TIER_ORDER.map((id) => {
+  // HOMEPAGE V2 (2026-10-17, URG-334): the three priced tiers only. Group
+  // ("Let's talk") is a text link under the cards, since a fourth equal card is
+  // one more choice on a page where nobody can buy yet. This reverses the
+  // 2026-10-02 four-card call on the homepage only; /pricing keeps all four.
+  const tiers = PRICING_TIER_ORDER.filter((id) => formatTierPrice(id) !== null).map((id) => {
     const tier = getTier(id);
     return {
       id,
@@ -44,7 +48,7 @@ export function PricingStripSection() {
   return (
     <ScrollReveal>
       <SectionShell
-        className="py-[80px] lg:py-[100px]"
+        className="py-[72px] lg:py-[96px]"
         containerClassName={wideContainerClass}
       >
         <div className="mx-auto max-w-[52rem] text-center">
@@ -54,27 +58,27 @@ export function PricingStripSection() {
         {/* FOUR since 2026-10-02 (Group came back as the "Let's talk" card).
             One column on a phone, two from sm, four from xl — the same
             breakpoints /pricing's own cards use. */}
-        <ul className="mx-auto mt-12 grid max-w-[72rem] gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <ul className="mx-auto mt-12 grid max-w-[60rem] gap-4 md:grid-cols-3">
           {tiers.map(({ id, tier, price, highlights }) => (
             <li
               key={id}
-              className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-6"
+              className="flex h-full flex-col rounded-[1.5rem] border border-[var(--marketing-border)] bg-[var(--marketing-surface-muted)] p-5 sm:p-6"
             >
               {/* No badge and no elevation — every card here is identical, and
                   `tier.recommended` is not read on this surface. Both went on
                   2026-09-11 (founder call); the full reasoning, including why
                   the flag is still live for the in-app wall, is in the note in
                   PricingTierCards. */}
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-[var(--marketing-accent)]">
                 {tier.label}
               </p>
               <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)]">
                 {tier.audience}
               </p>
-              <p className="mt-5 text-[1.75rem] font-semibold tracking-[-0.03em] text-[var(--marketing-text)]">
+              <p className="mt-4 text-[1.6rem] font-semibold sm:mt-5 sm:text-[1.75rem] tracking-[-0.03em] text-[var(--marketing-text)]">
                 {price ?? "Let’s talk"}
               </p>
-              <ul className="mt-5 space-y-2">
+              <ul className="mt-4 space-y-1 sm:mt-5 sm:space-y-2">
                 {highlights.map((line) => (
                   <li
                     key={line}
@@ -100,11 +104,16 @@ export function PricingStripSection() {
             /pricing carries the detail. FOUNDING_MEMBER_LINE still exists and
             still renders THERE — see content/founding-member.ts, which is why
             this no longer imports it. */}
-        <div className="mx-auto mt-10 flex max-w-[64rem] flex-wrap items-center justify-center gap-x-6 gap-y-3">
-            <TrialButton location="pricing" />
+        <div className="mx-auto mt-10 flex max-w-[64rem] flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-medium">
+            <a
+              href={salesMailto("Group")}
+              className="text-[var(--marketing-text-muted)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:text-[var(--marketing-text)]"
+            >
+              Bigger team? Let&rsquo;s talk
+            </a>
             <a
               href="/pricing"
-              className="text-sm font-medium text-[var(--marketing-text)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:decoration-[color:var(--marketing-text)]"
+              className="text-[var(--marketing-text)] underline decoration-[color:var(--marketing-text-subtle)] underline-offset-4 transition-colors hover:decoration-[color:var(--marketing-text)]"
             >
               See full pricing →
             </a>

@@ -8,6 +8,10 @@
  * used verbatim: the core line, the short line and the long description.
  * Labels are back in the audience.
  *
+ * 2026-10-17 (URG-334): the founder approved the homepage v2 hero, so the short
+ * line is now "Every release, on plan.", the promise line under it is new, and
+ * the long description leads with both. The core line is unchanged.
+ *
  * THIS IS THE MIRROR. The canonical copy, with the full reasoning, is
  * apps/web/lib/positioning.ts. `apps/homepage` cannot import from `apps/web`
  * (separate Next apps, no shared path alias), and a package for eight strings
@@ -26,7 +30,9 @@ export const CORE_CLAUSE = 'where music teams do everything after the music is m
 
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 
-export const SHORT_LINE = 'Everything after the music.';
+export const SHORT_LINE = 'Every release, on plan.';
+
+export const PROMISE_LINE = 'Add a release. Get the plan. Your team knows what to do and when.';
 
 export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
 
@@ -39,8 +45,7 @@ export const ONE_LINER = SHORT_LINE;
 export const SHORT_DESCRIPTION = CORE_LINE;
 
 export const CANONICAL_DESCRIPTION =
-  'You make the music. Urganize is where music teams do everything after. ' +
-  'Plan the release, assign the work, keep files and metadata in one place, pitch to curators, ' +
-  `book shows and put the release out. For ${AUDIENCE_LINE}.`;
+  'Every release, on plan. Add a release and get the plan, week by week to release day. ' +
+  `Your team knows what to do and when. For ${AUDIENCE_LINE}.`;
 
 export const URGANS_LINE = 'personal AI for music professionals';

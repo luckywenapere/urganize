@@ -11,11 +11,13 @@ import {
   FeatureGridSection,
   FinalCTASection,
   HeroSection,
+  PainSection,
   PricingStripSection,
   ProofSection,
   StorySection,
 } from "./components/landing/Sections";
 import { LOGIN_REDIRECT_SCRIPT } from "@/lib/login-redirect";
+import { homeFontVariables } from "./components/landing/home-fonts";
 import { MarketingFooter } from "./components/marketing/MarketingFooter";
 import { MarketingHeader } from "./components/marketing/MarketingHeader";
 
@@ -49,7 +51,9 @@ const faqSchema = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]">
+    // `home-v2` scopes the product's tokens and type to this page only
+    // (globals.css, 2026-10-17, URG-334).
+    <div className={`home-v2 ${homeFontVariables} min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]`}>
       {/* Signed-in visitors go straight to the app, before anything below is
           painted. Home page only: /pricing, /features and /login stay readable
           (and /login exists for search). See lib/login-redirect.ts. */}
@@ -72,9 +76,15 @@ export default function Home() {
               Removal history lives in components/landing/Sections.tsx. The
               2026-08-25 five-beat page (hero + video, stats, screenshot,
               three features, final form) is in git history under that date. */}
+          {/* HOMEPAGE V2 (2026-10-17, URG-334, mock awaiting founder
+              approval): hook (hero with the waitlist form) -> trust -> pain
+              -> A, B, C -> proof -> extras -> price -> questions -> the ask
+              again. The briefs are in the Urganize Home Page Optimization
+              project (landing-overhaul/01-06). */}
           <HeroSection />
           {/* Affiliations strip directly under the hero (2026-10-07, founder call). */}
           <AffiliationsSection />
+          <PainSection />
           <StorySection />
           <ProofSection />
           <FeatureGridSection />
