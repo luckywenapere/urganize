@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.156.7",
+    date: "October 17, 2026",
+    highlights: [
+      "A new rollout's first steps no longer list Invite your team once you already have a teammate. If nothing is left to do, the first steps card does not show.",
+      "The \"Your rollout is planned / Take the tour\" card no longer appears on a rollout after its plan is built.",
+    ],
+  },
+  {
     version: "1.156.6",
     date: "October 17, 2026",
     highlights: [

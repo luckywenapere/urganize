@@ -6,7 +6,8 @@
  * next action and a short checklist under it: add the cover art, invite your
  * team. ("Add the song" was the first step until song upload was removed
  * everywhere, Oct 17, 2026.) Each item ticks itself off from what the rollout and the
- * team actually hold (never from a click), and the whole card goes away once
+ * team actually hold (never from a click); Invite your team is dropped outright
+ * once there is a teammate (Oct 17, 2026), and the whole card goes away once
  * every item is done, when it is dismissed, or once the rollout is no longer new.
  *
  * Pure: no React, no storage, no environment reads. The caller says which
@@ -71,7 +72,13 @@ export function buildFirstSteps(
     cover: facts.hasCoverArt === true,
     team: facts.hasTeam === true,
   };
-  return FIRST_STEP_ORDER.filter((key) => available[key]).map((key) => ({
+  return FIRST_STEP_ORDER.filter((key) => available[key])
+    // Invite your team never shows once the person has a teammate, not even as
+    // a ticked chip (founder, Oct 17, 2026: "this should not show at all if
+    // user already has a teammate"). If that leaves no steps, the card does not
+    // render (shouldShowFirstSteps), so no empty row.
+    .filter((key) => !(key === 'team' && doneFor.team))
+    .map((key) => ({
     key,
     ...FIRST_STEPS_COPY.steps[key],
     done: doneFor[key],

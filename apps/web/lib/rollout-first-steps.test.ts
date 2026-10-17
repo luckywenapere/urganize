@@ -28,6 +28,33 @@ describe('rollout first steps (URG-293)', () => {
     expect(steps.map((s) => s.key)).toEqual(['cover']);
   });
 
+  it('never shows Invite your team once there is a teammate, not even ticked (Oct 17, 2026)', () => {
+    const steps = buildFirstSteps({ hasCoverArt: false, hasTeam: true }, all);
+    expect(steps.map((s) => s.key)).toEqual(['cover']);
+    expect(steps.some((s) => s.title === 'Invite your team')).toBe(false);
+    // Unknown team still offers the step; only a known teammate hides it.
+    expect(buildFirstSteps({ hasCoverArt: false, hasTeam: null }, all).map((s) => s.key)).toEqual([
+      'cover',
+      'team',
+    ]);
+  });
+
+  it('renders nothing when the teammate rule leaves no steps', () => {
+    const steps = buildFirstSteps({ hasCoverArt: false, hasTeam: true }, { cover: false, team: true });
+    expect(steps).toEqual([]);
+    expect(
+      shouldShowFirstSteps({
+        isOwner: true,
+        isTest: false,
+        createdAt: 'Thu 2026-10-15 12:00 PM WAT (UTC+01:00)',
+        now,
+        dismissed: false,
+        factsKnown: true,
+        steps,
+      })
+    ).toBe(false);
+  });
+
   it('counts a rollout as new for 14 days', () => {
     expect(isRolloutNew('2026-10-15T11:59:00Z', now)).toBe(true);
     expect(isRolloutNew('2026-10-02T12:00:01Z', now)).toBe(true);

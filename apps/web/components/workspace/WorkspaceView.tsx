@@ -23,9 +23,6 @@ import { SetReleaseDateCard } from '@/components/releases/SetReleaseDateCard';
 import { WorkspaceSkeleton } from '@/components/loading/WorkspaceSkeleton';
 import { FirstReleaseWin } from './FirstReleaseWin';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
-import { markTourSeen, ROLLOUT_TOUR_STEPS } from '@/lib/tours';
-import { useTourStore } from '@/stores/useTourStore';
-import { TourOfferCard } from '@/components/tours/TourOfferCard';
 import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { TestReleaseBanner } from './TestReleaseBanner';
 import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
@@ -53,7 +50,6 @@ import { useReleaseScope } from './useReleaseScope';
 import { useReleaseSetupPrompt } from './useReleaseSetupPrompt';
 import { scopedRolloutIntakePrefill } from '@/lib/planner-intake-steps';
 import {
-  isInFirstSession,
   readFirstSessionRecord,
   takeOnboardingPlannerHandoff,
 } from '@/lib/first-session';
@@ -102,7 +98,6 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // until a plan is approved. Supersedes the immediate-apply tailor-plan feature,
 // which mutated real task rows the moment the model answered.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
-const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const DIRECTORY_REQUESTS_ENABLED =
   DIRECTORY_ENABLED && process.env.NEXT_PUBLIC_FEATURE_DIRECTORY_REQUESTS === 'true';
@@ -293,10 +288,6 @@ export function WorkspaceView() {
   // The test release the standing banner's delete button is asking about;
   // null = dialog closed. Only ever set for the SCOPED release, and only when
   // it carries the test marker and the viewer owns it (the banner's own gate).
-  // Tour B is OFFERED after a plan is approved, never auto-run. Held in
-  // component state rather than the tour store: this is a card in the banner
-  // slot, not a running tour.
-  const [rolloutTourOfferFor, setRolloutTourOfferFor] = useState<string | null>(null);
   const [testReleaseToDelete, setTestReleaseToDelete] = useState<Pick<
     Release,
     'id' | 'title'
@@ -501,9 +492,9 @@ export function WorkspaceView() {
     });
     // The post-plan press kit offer left Oct 17, 2026 with the standalone
     // press kit (founder approved "cuts-3"); the kit is Pitch this!'s now.
-    // Not in the first session after onboarding (lib/first-session.ts): that
-    // session belongs to the plan and the invite step, nothing else.
-    if (TOURS_ENABLED && !isInFirstSession()) setRolloutTourOfferFor(lastBuilt.releaseId);
+    // The "Your rollout is planned / Take the tour" offer card that followed
+    // here was removed Oct 17, 2026 (founder: "this is not needed at all").
+    // The tour itself (lib/tours.ts, TourOfferCard, the store) is kept.
   }, [lastBuilt, scopedReleaseId, clearBuilt, loadCommandCenter]);
 
   useEffect(() => {
@@ -695,11 +686,6 @@ export function WorkspaceView() {
       if (changed) void loadCommandCenter({ force: true });
     });
   }, [pitchBackfillReleaseId, loadCommandCenter]);
-
-  // The rollout tour is OFFERED from here after a plan is approved (the
-  // TourOfferCard below). The welcome tour that used to auto-start on this view
-  // was removed on 2026-10-11; see lib/tours.ts.
-  const startTour = useTourStore((state) => state.start);
 
   // The jobs on this release nobody is on yet (the directory's role gaps,
   // 2026-09-05). Owner-only, like the other release-row affordances here:
@@ -1242,31 +1228,16 @@ export function WorkspaceView() {
   // release is set up" and describes a rollout that, for a dateless
   // template release, has not been built yet (URG-230). The date card above
   // is the honest version of the same moment, and stacking both would put
-  // two banners over one empty list.
-  const tourOfferBanner =
-    TOURS_ENABLED && rolloutTourOfferFor && rolloutTourOfferFor === scopedReleaseSlim?.id ? (
-      <TourOfferCard
-        onStart={() => {
-          setRolloutTourOfferFor(null);
-          markTourSeen(user?.id ?? '', 'rollout');
-          startTour('rollout', ROLLOUT_TOUR_STEPS);
-        }}
-        onDismiss={() => {
-          setRolloutTourOfferFor(null);
-          markTourSeen(user?.id ?? '', 'rollout');
-        }}
-      />
-    ) : null;
-
+  // two banners over one empty list. The rollout tour offer card that used to
+  // take this slot first was removed Oct 17, 2026 (founder: "this is not
+  // needed at all"); the tour code is kept.
   const newReleaseGuideBanner =
-    tourOfferBanner ??
-    (showNewReleaseGuide && !setReleaseDateBanner && !planBanner && !planBuiltBanner ? (
+    showNewReleaseGuide && !setReleaseDateBanner && !planBanner && !planBuiltBanner ? (
       <NewReleaseGuide
         onDismiss={() => setShowNewReleaseGuide(false)}
         releaseType={scopedReleaseSlim?.releaseType}
       />
-    ) : null);
-
+    ) : null;
 
   // Next moves (URG-259): up to three one-tap cards on the main view, worked
   // out from this rollout and its activities. Mounted ONCE: in the full-screen

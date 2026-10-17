@@ -79,10 +79,10 @@ describe('onboarding', () => {
 });
 
 describe('the first session stays quiet', () => {
-  it('holds back the install card, the rollout tour offer (the catalog tour is gone) and the deferred share', () => {
-    expect(code('components/workspace/WorkspaceView.tsx')).toMatch(
-      /TOURS_ENABLED && !isInFirstSession\(\)\) setRolloutTourOfferFor/
-    );
+  it('holds back the deferred share, and never offers the rollout tour (card removed Oct 17, 2026)', () => {
+    const workspace = code('components/workspace/WorkspaceView.tsx');
+    expect(workspace).not.toContain('TourOfferCard');
+    expect(workspace).not.toContain('setRolloutTourOfferFor');
     const sheet = code('components/share/ShareSheet.tsx');
     expect(sheet).toContain('isInFirstSession()');
     expect(sheet).toContain('useDeferredFirstShareOffer();');
