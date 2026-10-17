@@ -22,6 +22,13 @@ const CUT = [
   // The release EPK (URG-196), hidden Oct 17, 2026: only internal accounts
   // ever made one. Its rows in release_epks are kept.
   'NEXT_PUBLIC_FEATURE_EPK',
+  // Team logins and the team brief, hidden Oct 17, 2026 (Oyin: "remove team
+  // logins and team briefs"). No outside account had anyone join through a
+  // team login, and one outside team wrote one brief section. Their rows in
+  // workspace_invite_links and team_brief_sections are kept. The ungated
+  // invite-link POST behind Settings > Teammates' "Copy invite link" stays.
+  'NEXT_PUBLIC_FEATURE_TEAM_LOGINS',
+  'NEXT_PUBLIC_FEATURE_TEAM_BRIEF',
 ];
 
 describe('feature cuts (URG-319)', () => {

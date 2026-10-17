@@ -7,6 +7,10 @@ import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { TeamNoticesPanel } from './TeamNoticesPanel';
+import { isTeamBriefEnabled } from '@/lib/team-brief';
+
+// The team brief is hidden (Oct 17, 2026), so its completion column goes too.
+const SHOW_BRIEF = isTeamBriefEnabled();
 
 // /admin/teams — the founder's billing console.
 //
@@ -391,7 +395,7 @@ export default function TeamsAdminPageClient() {
         <table className="w-full min-w-[1100px] text-left text-sm">
           <thead className="bg-bg-elevated text-content-tertiary">
             <tr>
-              {['Team', 'Owner', 'State', 'Walls', 'Deal', 'Brief', 'Notes', 'Actions'].map((heading) => (
+              {['Team', 'Owner', 'State', 'Walls', 'Deal', ...(SHOW_BRIEF ? ['Brief'] : []), 'Notes', 'Actions'].map((heading) => (
                 <th key={heading} className="px-3 py-2 font-medium">
                   {heading}
                 </th>
@@ -485,22 +489,24 @@ export default function TeamsAdminPageClient() {
                     has never been walked through it, and one at 100% got the
                     full fifteen minutes. Percent AND the raw count, because
                     "40%" alone does not say how much is left to ask for. */}
-                <td className="whitespace-nowrap px-3 py-3 text-xs">
-                  <span
-                    className={
-                      (team.briefPercent ?? 0) === 0
-                        ? 'text-content-tertiary'
-                        : (team.briefPercent ?? 0) === 100
-                          ? 'text-brand'
-                          : 'text-content-secondary'
-                    }
-                  >
-                    {team.briefPercent ?? 0}%
-                  </span>
-                  <span className="ml-1.5 text-content-tertiary">
-                    {team.briefFilled ?? 0}/{team.briefTotal ?? 5}
-                  </span>
-                </td>
+                {SHOW_BRIEF ? (
+                  <td className="whitespace-nowrap px-3 py-3 text-xs">
+                    <span
+                      className={
+                        (team.briefPercent ?? 0) === 0
+                          ? 'text-content-tertiary'
+                          : (team.briefPercent ?? 0) === 100
+                            ? 'text-brand'
+                            : 'text-content-secondary'
+                      }
+                    >
+                      {team.briefPercent ?? 0}%
+                    </span>
+                    <span className="ml-1.5 text-content-tertiary">
+                      {team.briefFilled ?? 0}/{team.briefTotal ?? 5}
+                    </span>
+                  </td>
+                ) : null}
                 <td className="max-w-[16rem] px-3 py-3 text-xs text-content-tertiary">
                   {team.billingNotes || '—'}
                 </td>
@@ -557,7 +563,7 @@ export default function TeamsAdminPageClient() {
             ))}
             {teams.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-sm text-content-tertiary">
+                <td colSpan={SHOW_BRIEF ? 8 : 7} className="px-3 py-6 text-center text-sm text-content-tertiary">
                   No teams match that.
                 </td>
               </tr>

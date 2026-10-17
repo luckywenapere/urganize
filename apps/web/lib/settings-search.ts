@@ -62,14 +62,10 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     segment: 'team',
     section: 'teammates',
     label: 'Teammates',
-    keywords: ['invite', 'member', 'members', 'seat', 'seats', 'remove', 'people', 'add someone'],
+    keywords: ['invite', 'member', 'members', 'seat', 'seats', 'remove', 'people', 'add someone', 'invite link', 'link'],
   },
-  {
-    segment: 'team',
-    section: 'team-logins',
-    label: 'Team logins',
-    keywords: ['link', 'links', 'sign in', 'sign-in', 'whatsapp', 'share', 'invite link'],
-  },
+  // "Team logins" left the index with the feature (hidden Oct 17, 2026). The
+  // invite link it shared still lives under Teammates, so its words moved there.
 
   wholeSegment('artists', ['brand', 'roster']),
   {

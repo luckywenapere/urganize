@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.17",
+    date: "October 17, 2026",
+    highlights: [
+      "Team logins are gone. Settings, Team now has your teammates and their invites, and making a rollout goes straight to it with no extra step. Email invites and Copy invite link work as before, and everyone already on your team signs in as usual.",
+      "The team brief is gone too, along with the UrgAns tab in Settings. UrgAns still knows your rollouts, tasks and team.",
+    ],
+  },
+  {
     version: "1.154.16",
     date: "October 17, 2026",
     highlights: [

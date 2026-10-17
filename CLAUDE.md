@@ -2494,6 +2494,17 @@ is touched — every authored page and every collected email is exactly as it wa
 
 ## Team logins (2026-08-16)
 
+**HIDDEN 2026-10-17 (v1.154.17, URG-336).** Founder: "remove team logins and team
+briefs". `NEXT_PUBLIC_FEATURE_TEAM_LOGINS` and `NEXT_PUBLIC_FEATURE_TEAM_BRIEF`
+are forced `false` in `lib/cut-features.json`, so the Settings section, the
+post-create access step, the list/revoke routes, the brief editor (and with it
+the whole Settings > UrgAns segment), the brief's prompt injection, its nudge,
+its chat marker and the admin Brief column are all off. The ungated mint POST
+behind Teammates' "Copy invite link", `/join/<code>`, `/invite/accept` and email
+invites are untouched. Rows in `workspace_invite_links` and
+`team_brief_sections` are kept. At the cut, outside accounts had 8 team-login
+links (all expired, nobody joined through one) and one brief section.
+
 Founder request: after creating a release the next compulsory action should be
 for the app to generate the logins itself, plus a section that generates them
 without limit so one can be pasted to someone on WhatsApp or email, and that

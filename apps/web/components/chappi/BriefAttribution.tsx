@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ChevronRight } from '@/components/icons';
 import {
   TEAM_BRIEF_SECTION_META,
+  isTeamBriefEnabled,
   isTeamBriefSection,
   type TeamBriefSection,
 } from '@/lib/team-brief';
@@ -37,6 +38,9 @@ type BriefAttributionProps = {
 
 export function BriefAttribution({ sections }: BriefAttributionProps) {
   const [open, setOpen] = useState(false);
+  // The team brief is hidden (Oct 17, 2026). Saved chats can still carry
+  // briefSections from before, so the marker checks the flag itself.
+  if (!isTeamBriefEnabled()) return null;
 
   const known: TeamBriefSection[] = sections.filter(isTeamBriefSection);
   if (!known.length) return null;
