@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.8",
+    date: "October 18, 2026",
+    highlights: [
+      "On your phone, tapping a task now slides it up once, smoothly, from the bottom of the screen. It no longer opens and then jumps a second time as the chat loads, and no field looks selected until you tap it.",
+    ],
+  },
+  {
     version: "1.157.7",
     date: "October 18, 2026",
     highlights: [

@@ -20,6 +20,8 @@ import { type ReleaseOption } from '@/lib/release-helpers';
 import { isTypingTarget, type TaskCreateSource, type TaskDetail, type WorkspaceMember } from '@/lib/tasks';
 import type { RolloutPhase } from '@/types/tasks';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useAuthStore } from '@/lib/auth-store';
+import { rememberTaskCanComment, seedTaskCanComment } from '@/lib/task-thread-access-seed';
 import { lockBodyScroll } from '@/lib/body-scroll-lock';
 import { useDialogFocus } from '@/lib/use-dialog-focus';
 import { supabase } from '@/lib/supabase/client';
@@ -328,6 +330,7 @@ export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
           throw new Error('Task not found.');
         }
 
+        rememberTaskCanComment(payload.task, useAuthStore.getState().user?.id);
         setTask(payload.task);
         setDrawerError('');
       } catch (error) {
@@ -425,11 +428,12 @@ export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
         setTask({
           ...storeTask,
           comments: [],
-          // Safe default until the real fetch resolves and tells us for
-          // certain — the composer stays hidden for this one frame rather
-          // than briefly offering to post before hasTaskThreadAccess's real
-          // answer arrives.
-          canComment: false,
+          // Best first-frame guess at hasTaskThreadAccess (assignee, creator,
+          // or the viewer's remembered team-role answer) so the Chat card
+          // opens in its final shape instead of swapping from the read-only
+          // note to the composer when the fetch lands (the "double pop",
+          // 2026-10-18). The server's answer still replaces it.
+          canComment: seedTaskCanComment(storeTask, useAuthStore.getState().user?.id),
           attachments: [],
           activity: [],
           outcome: null,
@@ -958,8 +962,14 @@ export function TaskUIEngine({ bridge }: { bridge: TaskUIEngineBridge }) {
  * Pop-up mechanics, deliberately tuned:
  * - Scrim: same treatment as TaskQuickCreateModal (black/55 + subtle blur),
  *   click-outside closes. z-[170] — the app's modal tier, above ChappiDock.
- * - Entrance: 200ms fade + slight scale/rise (tailwindcss-animate), so the
- *   panel lands rather than snaps.
+ * - Entrance (2026-10-18, the "double pop" fix): on a phone the sheet is a
+ *   FIXED 92dvh tall and slides up once from the bottom edge (280ms ease-out)
+ *   while the scrim fades; its height never follows its content, so the
+ *   detail fetch landing (chat composer, members, attachments) changes what
+ *   scrolls inside it, never where its top edge sits. From sm up it keeps the
+ *   auto-height floating card with a short fade-and-rise. Both are the
+ *   .task-sheet-scrim / .task-sheet-panel rules in globals.css, which drop to
+ *   a plain fade under prefers-reduced-motion.
  * - The panel owns its scroll: max-height caps it inside the viewport and
  *   long bodies (comments, attachments) scroll INSIDE the dialog with
  *   overscroll containment — the page behind never scrolls.
@@ -1018,7 +1028,7 @@ function TaskDetailModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[170] flex items-end justify-center bg-black/55 backdrop-blur-[2px] animate-in fade-in duration-200 sm:items-center sm:p-6"
+      className="task-sheet-scrim fixed inset-0 z-[170] flex items-end justify-center bg-black/55 backdrop-blur-[2px] sm:items-center sm:p-6"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           state.onBack();
@@ -1031,7 +1041,7 @@ function TaskDetailModal() {
         role="dialog"
         aria-modal="true"
         aria-label="Activity detail"
-        className="urg-cartouche flex max-h-[92dvh] focus:outline-none w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface sm:rounded-2xl shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200 sm:max-h-[85dvh] sm:max-w-2xl sm:border"
+        className="task-sheet-panel urg-cartouche flex h-[92dvh] max-h-[92dvh] focus:outline-none w-full flex-col overflow-hidden rounded-t-2xl border-t border-stroke-strong bg-bg-surface sm:h-auto sm:rounded-2xl shadow-[0_28px_80px_-38px_rgb(var(--shadow-ink)/calc(0.68*var(--shadow-alpha-scale)))] sm:max-h-[85dvh] sm:max-w-2xl sm:border"
       >
         <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 [overflow-anchor:none] sm:p-6">
           <TaskDetailView

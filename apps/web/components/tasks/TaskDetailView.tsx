@@ -94,8 +94,13 @@ const DETAIL_FIELD_CLASS = 'min-w-0 flex-1 sm:max-w-[320px]';
 // onto a cream page in light mode. globals.css already sets color-scheme per
 // theme, so dropping it is the fix. (AssetUploadControl keeps that hardcode
 // deliberately for a boxed dark control; this is not that.)
+//
+// Every hover style in this view is wrapped in [@media(hover:hover)]
+// (2026-10-18): on a phone a tap leaves a sticky :hover at its point, so the
+// box and chevron showed on whichever field sat under the finger as the sheet
+// slid up, then moved to the next field when the layout shifted.
 const PROPERTY_CONTROL_CLASS =
-  'motion-focus h-9 w-full appearance-none rounded-lg border border-transparent bg-transparent px-2 text-sm text-content-primary transition-colors hover:border-stroke-default hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated';
+  'motion-focus h-9 w-full appearance-none rounded-lg border border-transparent bg-transparent px-2 text-sm text-content-primary transition-colors [@media(hover:hover)]:hover:border-stroke-default [@media(hover:hover)]:hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated';
 
 // A task's release is set at creation and fixed thereafter — the inline view is
 // the edit surface, and re-homing tasks across releases is intentionally not a
@@ -383,7 +388,7 @@ export function TaskDetailView({
               setInviteUrl(null);
               setInviteMessage('');
             }}
-            className="motion-focus text-[11px] font-medium text-content-tertiary underline-offset-2 hover:text-content-primary hover:underline"
+            className="motion-focus text-[11px] font-medium text-content-tertiary underline-offset-2 [@media(hover:hover)]:hover:text-content-primary [@media(hover:hover)]:hover:underline"
           >
             Invite someone else
           </button>
@@ -410,7 +415,7 @@ export function TaskDetailView({
           <button
             type="submit"
             disabled={isInviting || !inviteEmail.trim()}
-            className="motion-focus motion-press h-9 shrink-0 rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="motion-focus motion-press h-9 shrink-0 rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm font-semibold text-content-primary transition-colors [@media(hover:hover)]:hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isInviting ? 'Inviting…' : 'Invite'}
           </button>
@@ -419,7 +424,7 @@ export function TaskDetailView({
         <button
           type="button"
           onClick={() => setInviteOpen(true)}
-          className="motion-focus flex w-full items-center gap-2.5 rounded-lg px-1 py-1.5 text-left text-sm text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+          className="motion-focus flex w-full items-center gap-2.5 rounded-lg px-1 py-1.5 text-left text-sm text-content-secondary transition-colors [@media(hover:hover)]:hover:bg-bg-hover [@media(hover:hover)]:hover:text-content-primary"
         >
           <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-dashed border-stroke-default text-content-tertiary">
             +
@@ -465,8 +470,8 @@ export function TaskDetailView({
             aria-pressed={task.planKey === true}
             aria-label={task.planKey === true ? 'Remove from key activities' : 'Add to key activities'}
             title={task.planKey === true ? 'Remove from key activities' : 'Add to key activities'}
-            className={`motion-focus motion-press grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-lg border border-transparent transition-colors hover:bg-bg-hover ${
-              task.planKey === true ? 'text-brand' : 'text-content-tertiary hover:text-content-primary'
+            className={`motion-focus motion-press grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-lg border border-transparent transition-colors [@media(hover:hover)]:hover:bg-bg-hover ${
+              task.planKey === true ? 'text-brand' : 'text-content-tertiary [@media(hover:hover)]:hover:text-content-primary'
             }`}
           >
             <Pin
@@ -486,7 +491,7 @@ export function TaskDetailView({
             }}
             aria-label="Delete activity"
             title="Delete activity"
-            className="motion-focus motion-press grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors hover:bg-status-error/10 hover:text-status-error"
+            className="motion-focus motion-press grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors [@media(hover:hover)]:hover:bg-status-error/10 [@media(hover:hover)]:hover:text-status-error"
           >
             <Trash2 className="pointer-events-none h-4 w-4" aria-hidden="true" />
           </button>
@@ -497,7 +502,7 @@ export function TaskDetailView({
           onClick={onBack}
           aria-label="Close activity"
           title="Close"
-          className="motion-focus motion-press grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors hover:border-stroke-default hover:bg-bg-hover hover:text-content-primary"
+          className="motion-focus motion-press grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-lg border border-transparent text-content-tertiary transition-colors [@media(hover:hover)]:hover:border-stroke-default [@media(hover:hover)]:hover:bg-bg-hover [@media(hover:hover)]:hover:text-content-primary"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -610,7 +615,7 @@ export function TaskDetailView({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" aria-hidden="true" />
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary opacity-0 transition-opacity [@media(hover:hover)]:group-hover:opacity-100 group-focus-within:opacity-100" aria-hidden="true" />
               </span>
             </label>
             {statusBlockerMessage ? (
@@ -651,7 +656,7 @@ export function TaskDetailView({
                 type="datetime-local"
                 value={toDateTimeLocalValue(task.dueDate)}
                 onChange={(event) => void onSavePatch({ dueDate: event.target.value || null })}
-                className={`${PROPERTY_CONTROL_CLASS} ${DETAIL_FIELD_CLASS} [&::-webkit-calendar-picker-indicator]:opacity-0 group-hover:[&::-webkit-calendar-picker-indicator]:opacity-100 group-focus-within:[&::-webkit-calendar-picker-indicator]:opacity-100`}
+                className={`${PROPERTY_CONTROL_CLASS} ${DETAIL_FIELD_CLASS} [&::-webkit-calendar-picker-indicator]:opacity-0 [@media(hover:hover)]:group-hover:[&::-webkit-calendar-picker-indicator]:opacity-100 group-focus-within:[&::-webkit-calendar-picker-indicator]:opacity-100`}
               />
             </label>
             {/* Phase (URG-292). Only on a rollout's activity: a phase is
@@ -681,7 +686,7 @@ export function TaskDetailView({
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" aria-hidden="true" />
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-content-tertiary opacity-0 transition-opacity [@media(hover:hover)]:group-hover:opacity-100 group-focus-within:opacity-100" aria-hidden="true" />
                 </span>
               </label>
             ) : null}
@@ -731,7 +736,7 @@ export function TaskDetailView({
                     void onSavePatch({ description: description || null });
                   }
                 }}
-                className="motion-focus min-h-[76px] w-full resize-y rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm leading-relaxed text-content-primary transition-colors placeholder:text-content-tertiary hover:border-stroke-default focus:border-brand focus:bg-bg-elevated"
+                className="motion-focus min-h-[76px] w-full resize-y rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm leading-relaxed text-content-primary transition-colors placeholder:text-content-tertiary [@media(hover:hover)]:hover:border-stroke-default focus:border-brand focus:bg-bg-elevated"
                 placeholder="Add notes, context, links, or markdown-style bullets."
               />
             </label>
@@ -739,7 +744,7 @@ export function TaskDetailView({
             <button
               type="button"
               onClick={() => setNotesOpen(true)}
-              className="motion-focus flex w-full items-center gap-3 rounded-lg py-1.5 text-left text-sm text-content-tertiary transition-colors hover:text-content-primary"
+              className="motion-focus flex w-full items-center gap-3 rounded-lg py-1.5 text-left text-sm text-content-tertiary transition-colors [@media(hover:hover)]:hover:text-content-primary"
             >
               <AlignLeft className={DETAIL_ICON_CLASS} aria-hidden="true" />
               Add notes
@@ -819,7 +824,7 @@ export function TaskDetailView({
                   <h3 className="text-sm font-semibold text-content-primary">Attachments</h3>
                   <p className="mt-1 text-xs text-content-secondary">Upload files for briefs, decks, or assets.</p>
                 </div>
-                <label className="inline-flex min-h-10 items-center rounded-[16px] bg-brand px-3 py-2 text-sm font-semibold text-content-inverse hover:bg-brand-hover">
+                <label className="inline-flex min-h-10 items-center rounded-[16px] bg-brand px-3 py-2 text-sm font-semibold text-content-inverse [@media(hover:hover)]:hover:bg-brand-hover">
                   <input
                     type="file"
                     className="sr-only"
@@ -871,7 +876,7 @@ export function TaskDetailView({
                       <button
                         type="button"
                         onClick={() => void onDeleteAttachment(attachment.id)}
-                        className="rounded-full border border-stroke-default px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-content-secondary hover:bg-bg-hover hover:text-content-primary"
+                        className="rounded-full border border-stroke-default px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-content-secondary [@media(hover:hover)]:hover:bg-bg-hover [@media(hover:hover)]:hover:text-content-primary"
                       >
                         Remove
                       </button>

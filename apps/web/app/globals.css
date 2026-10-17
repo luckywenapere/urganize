@@ -3136,3 +3136,49 @@ html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/h
   --font-cc-display: var(--font-young-serif);
   --font-cc-mono: var(--font-space-mono);
 }
+
+/* ============================================================================
+   Task pop-up entrance (2026-10-18, the "double pop"). TaskDetailModal in
+   components/tasks/TaskUIEngine.tsx. On a phone the panel is a fixed-height
+   bottom sheet that slides up once from off-screen while the scrim fades, so
+   nothing that loads after it opens can move its top edge. From sm up the
+   floating card keeps a short fade-and-rise. Reduced motion: opacity only.
+   ============================================================================ */
+.task-sheet-scrim {
+  animation: task-sheet-scrim-enter 280ms var(--motion-out) both;
+}
+
+.task-sheet-panel {
+  animation: task-sheet-panel-enter 280ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  will-change: transform;
+}
+
+@keyframes task-sheet-scrim-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes task-sheet-panel-enter {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (min-width: 640px) {
+  .task-sheet-panel {
+    animation: task-sheet-card-enter 200ms var(--motion-out) both;
+    will-change: auto;
+  }
+}
+
+@keyframes task-sheet-card-enter {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-sheet-panel,
+  .task-sheet-scrim {
+    animation: task-sheet-scrim-enter 150ms linear both !important;
+    will-change: auto;
+  }
+}

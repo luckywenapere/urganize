@@ -136,7 +136,7 @@ export function TaskMemberSelect({
 
   const triggerClass =
     density === 'compact'
-      ? 'motion-focus flex h-9 w-full items-center gap-2 rounded-lg border border-transparent bg-transparent px-2 text-left text-sm text-content-primary transition-colors hover:border-stroke-default hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated'
+      ? 'motion-focus flex h-9 w-full items-center gap-2 rounded-lg border border-transparent bg-transparent px-2 text-left text-sm text-content-primary transition-colors [@media(hover:hover)]:hover:border-stroke-default [@media(hover:hover)]:hover:bg-bg-elevated focus:border-brand focus:bg-bg-elevated'
       : 'motion-focus input flex h-12 items-center gap-2 rounded-[18px] text-left';
 
   return (
