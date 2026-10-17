@@ -16,7 +16,7 @@ import { TESTIMONIALS } from "@/content/testimonials";
 export const metadata: Metadata = buildPageMetadata({
   title: "Release planning software for artist managers",
   description:
-    "Everything after the music, for artist managers running more than one rollout at once. A plan, owners on every activity and a press kit you send as one link.",
+    "Every release, on plan, for artist managers running more than one artist. Add a release, get the plan and your team knows what to do and when.",
   path: "/for-managers",
 });
 

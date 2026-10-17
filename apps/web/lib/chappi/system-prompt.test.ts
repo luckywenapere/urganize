@@ -66,6 +66,8 @@ describe('the system prompt', () => {
     // RENDERED prompt, which the positioning guard cannot: it scans source,
     // where the quoted lines are only `${...}` holes.
     expect(ROLE).not.toMatch(/Music Business Manager/i);
+    // The 2026-09-24 line, replaced on 2026-10-17 (URG-344).
+    expect(ROLE).not.toMatch(/everything after the music/i);
     // The word is banned everywhere a person reads it. The one place the prompt
     // may name it is the instruction that forbids it.
     expect(URGANS_COPY_RULES).toContain('workspace');

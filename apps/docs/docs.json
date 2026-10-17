@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Urganize",
-  "description": "Help for Urganize, where music teams do everything after the music is made.",
+  "description": "Help for Urganize, where music teams plan every release and deliver it on time.",
   "colors": {
     "primary": "#14643A",
     "light": "#7FD99A",

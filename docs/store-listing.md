@@ -1,9 +1,9 @@
 # App store listings
 
-Paste-ready listing copy for the Urganize mobile app. Rewritten 2026-09-24 for
-the current positioning: you make the music, and Urganize is where your team
-does everything after. The listing written 2026-09-09 and amended twice on
-2026-09-11 introduced the product by a category instead; it is in git history.
+Paste-ready listing copy for the Urganize mobile app. Rewritten 2026-10-17
+(URG-344) for the current positioning: every release, on plan. The 2026-09-24
+listing and the 2026-09-09 one, which introduced the product by a category,
+are in git history.
 
 **Every string here comes from the same place as the product's own copy.** The
 core line, the short line, the long description and the audience order are
@@ -30,26 +30,26 @@ Urganize
 
 8 characters.
 
-The name is the brand alone. The founder's short line ("Everything after the
-music.") is 27 characters by itself, and "Urganize: Everything after the music" is
-36 against a hard 30-character cap that both stores enforce. Rather than cut the
-line to fit, it goes where there is room for it whole: the short description
-here and the subtitle on the App Store. Play shows the app name under the icon,
+The name is the brand alone. "Urganize: Every release, on plan" is 32
+characters against a hard 30-character cap that both stores enforce. Rather
+than cut the founder's short line to fit, it goes where there is room for it
+whole: the subtitle on the App Store, with the core line as the short
+description here. Play shows the app name under the icon,
 where a long name is truncated anyway.
 
 ### Short description (80 characters max)
 
 ```
-Urganize is where music teams do everything after the music is made.
+Urganize is where music teams plan every release and deliver it on time.
 ```
 
-68 characters. This is the core line from `positioning.ts` (`CORE_LINE`),
+72 characters. This is the core line from `positioning.ts` (`CORE_LINE`),
 unchanged.
 
 ### Full description (4000 characters max)
 
 ```
-You make the music. Urganize is where music teams do everything after. Plan the release, assign the work, keep files and metadata in one place, pitch to curators, book shows and put the release out. For artists, managers and labels.
+Every release, on plan. Add a release and get the plan, week by week to release day. Your team knows what to do and when. For artists, managers and labels.
 
 PLAN THE ROLLOUT
 Every release starts with a real plan, not a blank board. Pick what you are putting out and Urganize lays out the whole rollout, sized to the format, with every activity dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.
@@ -58,13 +58,10 @@ GIVE EVERY ACTIVITY AN OWNER
 Put a name and a date on each piece of work. Your team sees what is theirs, what is late and what is coming. Nobody has to ask where things stand.
 
 KEEP THE FILES AND THE DETAILS TOGETHER
-The master, the artwork and the release details live with the release. Collect credits and splits from producers, writers and engineers through one link, and they do not need an account to fill it in.
+The artwork and the release details live with the release. Collect credits and splits from producers, writers and engineers through one link, and they do not need an account to fill it in.
 
 BUILD A PRESS KIT YOU CAN SEND
 Every artist gets one standing page you can send to writers, radio and playlist curators. It stays current as your releases land.
-
-PLAN THE SHOWS TOO
-Book a date, build the set against the slot length so it cannot overrun, and send the tracks to your DJ as one private link.
 
 ASK URGANS
 UrgAns is the personal AI for music professionals inside Urganize. Ask it what is late, have it build your rollout plan, or tell it to create an activity in plain words. It asks before anything that cannot be undone.
@@ -75,9 +72,13 @@ Artists running their own releases. Managers running more than one artist at a t
 Start free for 3 days. No card needed.
 ```
 
-1,695 characters.
+1,461 characters.
 
-Recounted 2026-09-25 at the rebase that finally landed the one-shot plan
+Recounted 2026-10-17 (URG-344): the first paragraph is now the current long
+description, and the shows block and "the master" came out because neither is
+in the product any more.
+
+Earlier recount: 2026-09-25 2026-09-25 at the rebase that finally landed the one-shot plan
 (branched 2026-09-15, merged ten days later after the audience line and other
 marketing copy moved underneath it). "Draft the plan" is "build your rollout
 plan" and the ASK URGANS line no longer promises a review-and-approve step the
@@ -100,8 +101,8 @@ unchanged. Measured off the fenced text above with `wc -m`, not estimated.
 
 Graphics are not covered here. The feature graphic and screenshots are a
 separate design pass; when they are made, the text baked into them uses the
-same lines as the share card: the short line as the headline and the core line
-under it (see `apps/homepage/scripts/generate-og-image.mjs`).
+same lines as the share card: the short line as the headline and the promise
+line under it (see `apps/homepage/scripts/generate-og-image.mjs`).
 
 ---
 
@@ -129,19 +130,19 @@ Same as Play, for the same reason. See the note under the Play app name above.
 ### Subtitle (30 characters max)
 
 ```
-Everything after the music.
+Every release, on plan.
 ```
 
-27 characters. This is the founder's short line (`SHORT_LINE`), unchanged, and
+23 characters. This is the founder's short line (`SHORT_LINE`), unchanged, and
 Apple's subtitle is the one field on either store that holds it whole.
 
 ### Promotional text (170 characters max)
 
 ```
-Urganize is where music teams do everything after the music is made.
+Urganize is where music teams plan every release and deliver it on time.
 ```
 
-68 characters. This is `SHORT_DESCRIPTION` from `positioning.ts`, which is the
+72 characters. This is `SHORT_DESCRIPTION` from `positioning.ts`, which is the
 core line, unchanged.
 
 ### Description
@@ -152,10 +153,10 @@ Apple's 4,000-character limit and carries no Play-specific wording.
 ### Keywords (100 characters max, comma separated)
 
 ```
-music manager,release planning,artist manager,rollout,press kit,setlist,music team
+music manager,release planning,artist manager,rollout,press kit,music team
 ```
 
-82 characters. No spaces after the commas: Apple counts them, and the field is
+74 characters. No spaces after the commas: Apple counts them, and the field is
 tight.
 
 THE TAGS AND KEYWORDS DID NOT MOVE WITH THE 2026-09-24 LINE, and that is the

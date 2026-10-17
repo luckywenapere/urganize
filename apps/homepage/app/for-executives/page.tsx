@@ -16,7 +16,7 @@ import { TESTIMONIALS } from "@/content/testimonials";
 export const metadata: Metadata = buildPageMetadata({
   title: "Release planning for teams running a roster",
   description:
-    "Urganize is everything after the music, for teams running a roster. Every rollout runs on the same plan, every activity has an owner and you see where all of them stand without chasing anyone.",
+    "Every release, on plan, across your whole roster. Each release gets the same plan, every activity has an owner and you see where they all stand without chasing anyone.",
   path: "/for-executives",
 });
 
@@ -35,8 +35,9 @@ export const metadata: Metadata = buildPageMetadata({
 // tailoring and the status generator are both flag-gated off in production,
 // so this page describes the plan, ownership, press kit and status
 // mechanics that work with or without a model. The metadata line above
-// keeps the approved positioning wording ("everything after the music", the
-// 2026-09-24 line) rather than inventing a new AI claim.
+// keeps the approved positioning wording ("Every release, on plan.", the
+// 2026-10-17 line; "everything after the music" before it) rather than
+// inventing a new AI claim.
 //
 // Language rules (2026-09-09): never "workspace", never "ship", no "system
 // of record", fifth-grader readability, no Oxford comma in house copy. The

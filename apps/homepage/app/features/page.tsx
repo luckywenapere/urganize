@@ -12,7 +12,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Music release plan, tasks and press kit",
   description:
-    "Everything after the music: a plan for every rollout, activities your team owns and a press kit you send as one link. Plus UrgAns.",
+    "Every release, on plan. Add a release and get the plan, week by week to release day, with an owner on every activity. Plus UrgAns.",
   path: "/features",
 });
 

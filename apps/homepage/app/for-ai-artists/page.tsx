@@ -15,7 +15,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Release planning for AI artists",
   description:
-    "Making the song got fast. The rollout did not. Urganize is everything after the music: a full rollout plan per drop, an owner on every activity and a press kit you send as one link.",
+    "Making the song got fast. The rollout did not. Every release, on plan: add a drop, get the plan week by week to release day and an owner on every activity.",
   path: "/for-ai-artists",
 });
 

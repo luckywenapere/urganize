@@ -10,7 +10,9 @@
  *
  * 2026-10-17 (URG-334): the founder approved the homepage v2 hero, so the short
  * line is now "Every release, on plan.", the promise line under it is new, and
- * the long description leads with both. The core line is unchanged.
+ * the long description leads with both. The same day (URG-344) the core line
+ * followed: "Urganize is where music teams plan every release and deliver it
+ * on time."
  *
  * THIS IS THE MIRROR. The canonical copy, with the full reasoning, is
  * apps/web/lib/positioning.ts. `apps/homepage` cannot import from `apps/web`
@@ -26,7 +28,7 @@
  * marketing site and the product two different descriptions.
  */
 
-export const CORE_CLAUSE = 'where music teams do everything after the music is made';
+export const CORE_CLAUSE = 'where music teams plan every release and deliver it on time';
 
 export const CORE_LINE = `Urganize is ${CORE_CLAUSE}.`;
 

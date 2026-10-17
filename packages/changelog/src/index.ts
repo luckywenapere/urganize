@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.156.5",
+    date: "October 17, 2026",
+    highlights: [
+      "Urganize now describes itself the same way everywhere: every release, on plan. Emails end with it, and UrgAns says it when you ask what Urganize is.",
+    ],
+  },
+  {
     version: "1.156.4",
     date: "October 17, 2026",
     highlights: [

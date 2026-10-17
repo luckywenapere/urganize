@@ -170,6 +170,12 @@ const ALLOWED = [
   // Two strings the release spend brief wrote with the word release in them,
   // kept as written: the empty state and the total's label.
   /on this release/i,
+  // The founder's positioning (2026-10-17, URG-334 and URG-344), kept as
+  // written: the short line "Every release, on plan." and the core line's
+  // "plan every release and deliver it on time". Both reach the email footer
+  // and UrgAns's prompt.
+  /every release, on plan/i,
+  /plan every release/i,
 ];
 
 const OBJECT_WORD = /(?<![\w\-/?&.${])release(s|'s)?(?![\w\-=_}?]|\.\w)/gi;

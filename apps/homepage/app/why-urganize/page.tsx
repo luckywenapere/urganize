@@ -11,7 +11,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Why Urganize over WhatsApp and Google Drive",
   description:
-    "WhatsApp and Google Drive work for one artist and one rollout. Running more than one? Urganize is everything after the music: a real rollout plan, owners on every activity and status you can see without asking.",
+    "WhatsApp and Google Drive work for one artist and one rollout. Running more than one? Every release, on plan: a real plan, an owner on every activity and status you can see without asking.",
   path: "/why-urganize",
 });
 

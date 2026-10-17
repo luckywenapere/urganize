@@ -9,12 +9,13 @@ import { SectionShell } from "../components/landing/SectionShell";
 import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
+import { CORE_CLAUSE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "A free song pitch inbox for playlist curators",
   description:
-    "One inbox for the songs people pitch you, inside Urganize, where music teams do everything after the music is made. Answer in one tap. Free for curators, and nothing connects to your playlist.",
+    `One inbox for the songs people pitch you, inside Urganize, ${CORE_CLAUSE}. Answer in one tap. Free for curators, and nothing connects to your playlist.`,
   path: "/for-curators",
 });
 

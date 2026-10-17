@@ -20,7 +20,7 @@ import { PricingPageClient } from "./PricingPageClient";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing for artists, managers and labels",
   description:
-    "Everything after the music, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to join the waitlist.",
+    "Every release, on plan, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to join the waitlist.",
   path: "/pricing",
 });
 

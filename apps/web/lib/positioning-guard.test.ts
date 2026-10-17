@@ -20,8 +20,9 @@ import {
 /**
  * The positioning, enforced rather than reviewed.
  *
- * Since 2026-09-24: Urganize is where music teams do everything after the
- * music is made. That brief retired the category the product had been
+ * Since 2026-10-17: Urganize is where music teams plan every release and
+ * deliver it on time ("Every release, on plan."). It said "do everything
+ * after the music is made" from 2026-09-24, and that brief retired the category the product had been
  * introduced by since 2026-09-09 ("AI Music Business Manager"), and every
  * earlier brief retired phrases of its own. They all ask for zero hits in
  * "any user-facing string, meta tag, doc, image or store listing": an
@@ -170,6 +171,9 @@ const RETIRED = [
   // like everything else), so the one-file exemption and the test that
   // guarded it are gone and this is an ordinary retired phrase now.
   /AI Music Business Manager/i,
+  // 2026-10-17 (URG-344): the 2026-09-24 short line and core line, replaced by
+  // "Every release, on plan." and "plan every release and deliver it on time".
+  /everything after the music/i,
 ] as const;
 
 /**
@@ -238,8 +242,9 @@ describe('positioning', () => {
     // Since 2026-10-17 (founder approved the homepage v2 hero, URG-334) the
     // short line, the brand line and the long description say "Every
     // release, on plan." and the promise line is the hero's subhead. The core
-    // line is unchanged.
-    expect(CORE_LINE).toBe('Urganize is where music teams do everything after the music is made.');
+    // line followed the same day (URG-344): "plan every release and deliver it
+    // on time" replaced "do everything after the music is made".
+    expect(CORE_LINE).toBe('Urganize is where music teams plan every release and deliver it on time.');
     expect(SHORT_LINE).toBe('Every release, on plan.');
     expect(PROMISE_LINE).toBe('Add a release. Get the plan. Your team knows what to do and when.');
     expect(CANONICAL_DESCRIPTION).toBe(
@@ -371,8 +376,8 @@ describe('positioning', () => {
       const source = readFileSync(path, 'utf8');
       // A page either builds its own metadata or is a nested route that
       // legitimately inherits it. Only the ones that declare a description are
-      // checked, and a declared one has to carry the positioning: "everything
-      // after the music", in words or through a shared constant.
+      // checked, and a declared one has to carry the positioning: "every
+      // release, on plan", in words or through a shared constant.
       //
       // THE DESCRIPTION'S OWN EXPRESSION IS WHAT IS TESTED, not the file. An
       // earlier version scanned the whole source for a constant name and
@@ -385,7 +390,7 @@ describe('positioning', () => {
       if (!declared) continue;
       const expression = declared[1];
       const declaresPositioning =
-        /everything after the music|every release, on plan/i.test(expression) ||
+        /every release, on plan/i.test(expression) ||
         // Composed from the shared constants rather than written out.
         /\b(?:CORE_LINE|CORE_CLAUSE|SHORT_LINE|PROMISE_LINE|SHORT_DESCRIPTION|CANONICAL_DESCRIPTION|ONE_LINER|LANDING_DESCRIPTION)\b/.test(
           expression,
