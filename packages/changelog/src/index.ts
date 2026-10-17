@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.13",
+    date: "October 17, 2026",
+    highlights: [
+      "On Home, the Chat and Sessions switch now lines up with the chat beneath it, and the profile menu shows its full edge when it opens from the side menu.",
+    ],
+  },
+  {
     version: "1.154.12",
     date: "October 17, 2026",
     highlights: [

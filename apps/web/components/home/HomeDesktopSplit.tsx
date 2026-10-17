@@ -29,6 +29,11 @@ const HISTORY_ENABLED = isChappiHistoryEnabled();
 // conversation once the count has stayed at zero, which only a real leave does.
 let liveSplits = 0;
 
+/** The conversation's column (ChappiConversation's page variant): centred,
+ *  46rem at most, 0.25rem in from each side. The Chat | Sessions switch sits
+ *  in it so it lines up with the chat beneath. */
+const CHAT_COLUMN = 'mx-auto w-full max-w-[46rem] px-1';
+
 const switchButtonClass = (active: boolean) =>
   `motion-focus motion-press inline-flex h-8 items-center rounded-full px-3.5 text-xs font-medium transition-colors ${
     active
@@ -134,7 +139,12 @@ export function HomeDesktopSplit({
         }`}
       >
         {HISTORY_ENABLED ? (
-          <div className="flex shrink-0 justify-end">
+          // Lined up with the conversation's own column (ChappiConversation:
+          // `mx-auto max-w-[46rem] px-1`), not the section's edge, so the
+          // switch's right edge meets the composer's at any width: before,
+          // it hung ~30px past the chat at 1440 and far further with the Home
+          // column folded (UrgAns full width).
+          <div className={`flex shrink-0 justify-end ${CHAT_COLUMN}`}>
             <div role="group" aria-label="Show" className="inline-flex rounded-full bg-bg-elevated p-1">
               <button
                 type="button"
@@ -165,7 +175,7 @@ export function HomeDesktopSplit({
         </div>
 
         {showSessions ? (
-          <div className="flex min-h-0 flex-1 flex-col pt-3">
+          <div className={`flex min-h-0 flex-1 flex-col pt-3 ${CHAT_COLUMN}`}>
             <NewSessionBox
               onStarted={() => {
                 useHomeChatStore.getState().setMode('session');

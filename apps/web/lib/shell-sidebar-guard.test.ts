@@ -62,6 +62,9 @@ describe('the side menu', () => {
     expect(foot.indexOf('<WorkspaceMenu')).toBeLessThan(foot.indexOf('<SidebarToggle />'));
     expect(sidebar).toContain("mode === 'expanded'\n      ? 'app-sidebar w-60");
     expect(sidebar).toContain(": 'w-16 items-center'");
+    // The account menu opens upward past the menu's content box; a clip on
+    // the aside cut off its right border (2026-10-17).
+    expect(sidebar).not.toContain('overflow-x-hidden');
   });
 
   it('glides the icon and the fold button on the user\u2019s own fold only', () => {

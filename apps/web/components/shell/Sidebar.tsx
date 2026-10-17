@@ -173,9 +173,14 @@ export function Sidebar({ userName, showHelp = false }: SidebarProps = {}) {
   // One element in every state, so the account menu and the fold button stay
   // mounted (and can glide) when the menu folds or opens.
   const mode: 'expanded' | 'collapsed' | 'rail' = !menu ? 'rail' : collapsed ? 'collapsed' : 'expanded';
+  // No overflow clip on the aside (2026-10-17, URG fix after v1.154.12): the
+  // account menu opens upward from the foot row and is wider than the menu's
+  // content box, so `overflow-x-hidden` here cut off its right border and
+  // shadow and it read as fading into the page. The page list (nav) scrolls
+  // and clips itself, so nothing else can spill sideways.
   const asideClass =
     mode === 'expanded'
-      ? 'app-sidebar w-60 overflow-x-hidden pl-4 pr-2'
+      ? 'app-sidebar w-60 pl-4 pr-2'
       : 'w-16 items-center';
 
   return (

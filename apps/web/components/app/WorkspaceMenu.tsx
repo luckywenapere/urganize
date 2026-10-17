@@ -43,11 +43,17 @@ type WorkspaceMenuProps = {
 /** Where the open menu sits for each trigger placement. From the side menu it
  *  opens up (the trigger is at the foot of the screen) and is capped to the
  *  screen with its own scroll, since useKeepInViewport leaves an upward menu
- *  to its own placement. */
+ *  to its own placement.
+ *
+ *  From the open side menu's row it is 14rem wide, the side menu's own width
+ *  less its left inset, so it ends at the side menu's edge instead of running
+ *  onto the page's first card (2026-10-17: at 16rem it sat on that card's left
+ *  border). Nothing clips it there any more (Sidebar.tsx dropped its
+ *  overflow-x-hidden), so its border and shadow show all round. */
 const MENU_PLACEMENT: Record<NonNullable<WorkspaceMenuProps['placement']>, string> = {
-  topbar: 'animate-menu-down right-0 top-full mt-2 origin-top-right',
-  row: 'animate-menu-up bottom-full left-0 mb-2 origin-bottom-left max-h-[calc(100dvh-120px)] overflow-y-auto',
-  rail: 'animate-menu-up bottom-0 left-full ml-2 origin-bottom-left max-h-[calc(100dvh-120px)] overflow-y-auto',
+  topbar: 'animate-menu-down right-0 top-full mt-2 w-64 origin-top-right',
+  row: 'animate-menu-up bottom-full left-0 mb-2 w-56 origin-bottom-left max-h-[calc(100dvh-120px)] overflow-y-auto',
+  rail: 'animate-menu-up bottom-0 left-full ml-2 w-64 origin-bottom-left max-h-[calc(100dvh-120px)] overflow-y-auto',
 };
 
 /**
@@ -242,7 +248,7 @@ export function WorkspaceMenu({
           ref={menuRef}
           role="menu"
           aria-label="Team menu"
-          className={`${MENU_PLACEMENT[placement]} absolute z-50 w-64 overflow-hidden rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]`}
+          className={`${MENU_PLACEMENT[placement]} absolute z-50 overflow-hidden rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]`}
           // .animate-menu-up sets its own origin (bottom right); from the
           // side menu the menu grows out of the icon's corner instead.
           style={placement === 'topbar' ? undefined : { transformOrigin: 'bottom left' }}

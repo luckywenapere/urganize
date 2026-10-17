@@ -122,8 +122,9 @@ export function HomeSkeleton() {
           </div>
           <div className="flex min-w-0 flex-1 flex-col border-l border-stroke-subtle pl-6 xl:pl-8">
             {HISTORY_ENABLED ? (
-              <div className="flex shrink-0 justify-end">
-                {/* The Chat | Sessions switch: two h-8 buttons inside p-1. */}
+              <div className="mx-auto flex w-full max-w-[46rem] shrink-0 justify-end px-1">
+                {/* The Chat | Sessions switch: two h-8 buttons inside p-1,
+                    lined up with the chat column as in HomeDesktopSplit. */}
                 <SkeletonBlock className="h-10 w-40 rounded-full" />
               </div>
             ) : null}
