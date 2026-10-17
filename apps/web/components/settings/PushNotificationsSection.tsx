@@ -67,12 +67,12 @@ export function PushNotificationsSection() {
     };
   }, [native]);
 
-  // Hidden entirely (not disabled) when this device can't do push at all —
-  // an inert row would just be noise. Renders nothing until the status probe
-  // resolves so there's no flash of the wrong state. The section around it
-  // still has rows either way (Motivation is unconditional), so this can
-  // vanish without leaving an empty tab.
-  if (status === null || (!native && !isPushSupported())) return null;
+  // Renders nothing until the status probe resolves so there's no flash of
+  // the wrong state. Since 2026-10-17 this is the only row in the
+  // Notifications tab, so a device that can't do push gets the one-line
+  // "not supported" note with no button, instead of an empty tab.
+  if (status === null) return null;
+  const unsupported = !native && !isPushSupported();
 
   const handleToggle = async () => {
     setError('');
@@ -95,7 +95,8 @@ export function PushNotificationsSection() {
   };
 
   const copy = native ? NATIVE_STATUS_COPY : STATUS_COPY;
-  const isEnabled = status === 'enabled';
+  const shownStatus: PushStatus = unsupported ? 'unsupported' : status;
+  const isEnabled = shownStatus === 'enabled';
 
   return (
     <SettingRow
@@ -106,9 +107,9 @@ export function PushNotificationsSection() {
         />
       }
       title="Push notifications"
-      description={copy[status] || 'On for this device.'}
+      description={copy[shownStatus] || 'On for this device.'}
       action={
-        status !== 'blocked' ? (
+        shownStatus !== 'blocked' && shownStatus !== 'unsupported' ? (
           <button
             type="button"
             onClick={() => void handleToggle()}

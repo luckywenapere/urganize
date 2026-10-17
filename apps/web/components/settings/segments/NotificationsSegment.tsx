@@ -4,9 +4,10 @@ import { memo } from 'react';
 import { NotificationsSettingsSection } from '../NotificationsSettingsSection';
 
 /**
- * Everything that can reach out to the person: push, the after-a-task check-in
- * and the weekly nudge. The section always renders (the nudge row is
- * deliberately ungated), so this segment can never open empty.
+ * Push notifications for this device. The after-a-task check-in and weekly
+ * nudge toggles left on 2026-10-17 (both always on). The push row always
+ * renders something once its probe resolves, so this segment never opens
+ * empty.
  */
 function NotificationsSegmentView() {
   return (

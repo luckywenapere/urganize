@@ -212,6 +212,15 @@ describe('the retired EPK', () => {
     expect(source).not.toContain('permanentRedirect');
   });
 
+  it('is a 404 while the EPK flag is off, before any database read (2026-10-17)', () => {
+    // Hidden by founder call: NEXT_PUBLIC_FEATURE_EPK is forced off in
+    // lib/cut-features.json. The page must check it before the successor read.
+    const source = read(EPK_PAGE);
+    const gate = source.indexOf('if (!isEpkFeatureEnabled()) notFound();');
+    expect(gate).toBeGreaterThan(-1);
+    expect(gate).toBeLessThan(source.indexOf('await resolveEpkSuccessorPath('));
+  });
+
   it('keeps its loading state', () => {
     // Not a redirect stub, so this still earns its keep. It exists because of a
     // recorded incident: the public EPK and credits pages had zero loading

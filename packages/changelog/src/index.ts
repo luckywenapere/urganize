@@ -22,6 +22,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.15",
+    date: "October 17, 2026",
+    highlights: [
+      "The old per-release EPK is switched off. Each rollout's press kit and pitch live in Pitch this!, and an old EPK link inside the app now takes you to that rollout.",
+      "Settings, Notifications is simpler: the After tasks and Motivation switches are gone. UrgAns still asks how a finished task went, and the weekly encouragement still comes. Push notifications is the one switch left.",
+      "Searching for pitching in the command bar now opens Pitch this! in your latest rollout.",
+    ],
+  },
+  {
     version: "1.154.14",
     date: "October 17, 2026",
     highlights: [

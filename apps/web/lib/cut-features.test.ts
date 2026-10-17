@@ -19,6 +19,9 @@ const CUT = [
   'NEXT_PUBLIC_FEATURE_SHARE_REWARD',
   'NEXT_PUBLIC_FEATURE_NOTES',
   'NEXT_PUBLIC_FEATURE_PITCH_PAYMENTS',
+  // The release EPK (URG-196), hidden Oct 17, 2026: only internal accounts
+  // ever made one. Its rows in release_epks are kept.
+  'NEXT_PUBLIC_FEATURE_EPK',
 ];
 
 describe('feature cuts (URG-319)', () => {

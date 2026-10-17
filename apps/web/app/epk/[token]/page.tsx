@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { SHORT_LINE } from '@/lib/positioning';
 import { notFound, redirect } from 'next/navigation';
-import { loadPublicEpk, resolveEpkSuccessorPath } from '@/lib/epk-server';
+import { isEpkFeatureEnabled, loadPublicEpk, resolveEpkSuccessorPath } from '@/lib/epk-server';
 
 // The public press kit (URG-196). Server component, no auth: the unguessable
 // share token is the access control, resolved by loadPublicEpk with the
@@ -87,6 +87,12 @@ export default async function PublicEpkPage({ params }: PageProps) {
   // sending a journalist to a page that has gone back to a 404 with nothing we
   // could do about it. Same reasoning the release detail stub records for its
   // own 307.
+  // Hidden 2026-10-17 (founder call): with NEXT_PUBLIC_FEATURE_EPK off (forced
+  // in lib/cut-features.json) every EPK link is a 404 before any database read.
+  // Only internal accounts ever made one, and none of their artists' kits is
+  // published, so no outside reader loses a page. Rows are kept.
+  if (!isEpkFeatureEnabled()) notFound();
+
   const successor = await resolveEpkSuccessorPath(token);
   if (successor) redirect(successor);
 

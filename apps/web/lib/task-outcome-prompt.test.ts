@@ -62,12 +62,12 @@ describe('readAskAfterTasks', () => {
     expect(readAskAfterTasks()).toBe(true);
   });
 
-  it('is false only when the flag is explicitly off', () => {
+  it('ignores a stored false: the check-in is on for everyone (2026-10-17)', () => {
     localStorage.setItem(
       'urganize-auth',
       JSON.stringify({ state: { user: { ask_after_tasks: false } } })
     );
-    expect(readAskAfterTasks()).toBe(false);
+    expect(readAskAfterTasks()).toBe(true);
   });
 
   it('is true when there is no signed-in user', () => {

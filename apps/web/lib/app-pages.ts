@@ -170,19 +170,23 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
     });
   }
 
-  // The team side of pitching: every pitch this team sent, and where a new one
-  // is sent from. The flag alone gates it — unlike the curator crossing below,
-  // which additionally needs the account to own playlists.
+  // The team side of pitching. Since 2026-10-15 it lives in each rollout's
+  // Pitch this! scene; /dashboard/pitching is only a bridge that forwards to
+  // the latest rollout's Pitch this!, so the entry is named for where it lands
+  // (2026-10-17), not for a standalone page that no longer exists. The flag
+  // alone gates it, unlike the curator crossing below, which additionally
+  // needs the account to own playlists.
   if (PITCHING_ENABLED) {
     pages.push({
       key: 'pitching',
-      label: 'Pitching',
+      label: 'Pitch this!',
       href: '/dashboard/pitching',
       // The platforms are here because a manager thinking about this thinks
       // "get on a Spotify playlist" rather than "pitching".
       keywords: [
         'pitch',
         'pitches',
+        'pitching',
         'playlist',
         'playlists',
         'curator',

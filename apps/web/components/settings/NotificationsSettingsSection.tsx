@@ -2,22 +2,19 @@
 
 import { panelClass } from './panelClass';
 import { PushNotificationsSection } from './PushNotificationsSection';
-import { TaskCheckInSection } from './TaskCheckInSection';
-import { MotivationalNudgesSection } from './MotivationalNudgesSection';
 
 /**
  * Every notification preference in one place (2026-08-13).
  *
- * These three toggles used to be three sections: Push notifications sat in a
- * two-column row beside Appearance, then After tasks and Motivation followed as
- * separate full-width bands. Nothing told the user they were one set, and each
- * spent a py-9 band and a mono kicker on a single button.
+ * Since 2026-10-17 (founder call) this is just Push notifications. The After
+ * tasks check-in and the weekly Motivation nudge lost their toggles: no
+ * outside user ever turned either off, so both are simply on for everyone
+ * (lib/task-outcome-prompt.ts, lib/motivation-server.ts). Their profile
+ * columns (ask_after_tasks, motivational_nudges) are kept and ignored; the
+ * old row components stay in this folder, unrendered.
  *
- * Each row keeps its own gate, and the gates are genuinely different — push
- * hides when the device can't do it, After tasks hides behind
- * NEXT_PUBLIC_FEATURE_TASK_OUTCOMES, Motivation is deliberately unconditional.
- * That last one is why this section can render unconditionally: there is always
- * at least one row, so the Notifications tab is never an empty page.
+ * The push row always renders something (a one-line note when the device
+ * can't do push), so the Notifications tab is never an empty page.
  */
 export function NotificationsSettingsSection() {
   return (
@@ -26,8 +23,6 @@ export function NotificationsSettingsSection() {
     <section className={panelClass}>
       <div className="divide-y divide-stroke-subtle">
         <PushNotificationsSection />
-        <TaskCheckInSection />
-        <MotivationalNudgesSection />
       </div>
     </section>
   );

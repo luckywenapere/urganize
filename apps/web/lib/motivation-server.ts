@@ -29,7 +29,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 type ProfileRow = { id: string };
 
-/** Sends the next motivational nudge to every opted-in user who hasn't had
+/** Sends the next motivational nudge to every user who hasn't had
  * one in the last 7 days, up to `limit` per run. Never throws. */
 export async function sendWeeklyMotivationalNudges(
   adminClient: SupabaseClient,
@@ -41,13 +41,13 @@ export async function sendWeeklyMotivationalNudges(
       return { sent: 0 };
     }
 
-    // motivational_nudges is nullable pre-migration; `!= false` treats null
-    // the same as true, matching every other per-user toggle in this app
-    // (ask_after_tasks follows the same "undefined counts as on" rule).
+    // On for everyone since 2026-10-17 (founder call): the Settings toggle
+    // is gone and a stored profiles.motivational_nudges = false is ignored
+    // (no outside user ever set it). The column is kept, no migration. The
+    // only per-person way out is turning push off on their device.
     const profilesResult = await adminClient
       .from('profiles')
       .select('id')
-      .or('motivational_nudges.is.null,motivational_nudges.eq.true')
       .limit(limit);
 
     if (profilesResult.error || !Array.isArray(profilesResult.data)) {
