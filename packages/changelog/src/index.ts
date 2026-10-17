@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.12",
+    date: "October 17, 2026",
+    highlights: [
+      "Your profile icon now sits at the bottom left of the side menu on a computer. Fold the menu and it glides up to sit above the fold button.",
+    ],
+  },
+  {
     version: "1.154.11",
     date: "October 17, 2026",
     highlights: [

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ComponentType } from 'react';
@@ -21,6 +21,8 @@ import { useShellAreas } from './useShellAreas';
 import { SIDEBAR_COLLAPSED_KEY, SIDEBAR_COLLAPSED_VERSION } from '@/lib/sidebar-width';
 import { useSidebarStore } from '@/stores/useSidebarStore';
 import { useNavTip } from './useNavTip';
+import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
+import { useGlide } from '@/lib/use-glide';
 
 /**
  * The desktop side menu (URG-254, 2026-10-14; design review with Femi,
@@ -40,6 +42,9 @@ import { useNavTip } from './useNavTip';
  * An area with one page (Home) has no side menu at all; the page
  * takes the full width (shellSideMenu). Catalogue always has one, because a
  * rollout's menu needs a home even when Rollouts is its only page.
+ *
+ * Since 2026-10-17 the profile icon sits at its foot (see Sidebar below), and
+ * a page with no side menu gets a slim rail holding just that icon.
  *
  * `lg` and up only. Below `lg` nothing here renders, and the phone keeps its
  * bottom bar and its tab row exactly as they were.
@@ -117,13 +122,46 @@ export function SidebarToggle() {
   );
 }
 
-export function Sidebar() {
+type SidebarProps = {
+  /** The account menu's name and help rows, as the top bar used to get them
+   *  (WorkspaceFrame's workspaceUserName and showHelpMenu). */
+  userName?: string;
+  showHelp?: boolean;
+};
+
+/**
+ * The profile icon lives at the foot of the side menu (2026-10-17, founder,
+ * after Apple Music's sidebar: "move the profile icon to the menu at the bottom
+ * left. when the menu is collapsed the profile icon just goes above the
+ * collapse button in a smooth animation").
+ *
+ *   open menu    the icon and the name as the last row, the fold button
+ *                beside it at the right
+ *   folded menu  the icon centred in the rail, directly above the fold button
+ *   no menu      (Home, UrgAns, Opportunities, Settings) a slim 64px rail
+ *                holding only the icon at the foot, so it is in the same
+ *                corner on every desktop page (founder chose this over
+ *                leaving it in the top bar there, 2026-10-17)
+ *
+ * The menu itself snaps between its widths as before; the icon and the fold
+ * button glide to their new spots (lib/use-glide.ts), and nothing moves
+ * under prefers-reduced-motion. The account menu opens upward from the open
+ * menu and to the right from the rail. `lg` and up only, like the rest of
+ * this file: a phone keeps Settings and the help rows in the bottom bar's
+ * More sheet, unchanged.
+ */
+export function Sidebar({ userName, showHelp = false }: SidebarProps = {}) {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();
   const menu = shellSideMenu(areas, pathname);
   const collapsed = useSidebarStore((state) => state.collapsed);
   const hydrateCollapsed = useSidebarStore((state) => state.hydrateCollapsed);
   const tip = useNavTip({ prefer: 'right' });
+  // Glide only on the user's own fold or unfold, never when a stored choice
+  // is applied on load.
+  const toggles = useSidebarStore((state) => state.toggles);
+  const toggleRef = useRef<HTMLDivElement>(null);
+  useGlide(toggleRef, toggles);
 
   // Read once on mount, never during render, so the first paint matches the
   // server's (expanded) and a stored choice applies straight after.
@@ -132,16 +170,22 @@ export function Sidebar() {
     if (stored !== null) hydrateCollapsed(stored);
   }, [hydrateCollapsed]);
 
-  if (!menu) return null;
+  // One element in every state, so the account menu and the fold button stay
+  // mounted (and can glide) when the menu folds or opens.
+  const mode: 'expanded' | 'collapsed' | 'rail' = !menu ? 'rail' : collapsed ? 'collapsed' : 'expanded';
+  const asideClass =
+    mode === 'expanded'
+      ? 'app-sidebar w-60 overflow-x-hidden pl-4 pr-2'
+      : 'w-16 items-center';
 
-  // Folded: a thin rail of the pages' marks, the expand button at its foot.
-  if (collapsed) {
-    return (
-      <aside
-        aria-label={menu.area.label}
-        data-sidebar="collapsed"
-        className="sticky top-[calc(72px+env(safe-area-inset-top,0px))] hidden h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] w-16 shrink-0 self-start flex-col items-center py-4 lg:flex"
-      >
+  return (
+    <aside
+      aria-label={menu ? menu.area.label : 'Account'}
+      data-sidebar={mode}
+      className={`sticky top-[calc(72px+env(safe-area-inset-top,0px))] hidden h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] shrink-0 self-start flex-col py-4 lg:flex ${asideClass}`}
+    >
+      {menu && mode === 'collapsed' ? (
+        // Folded: a thin rail of the pages' marks.
         <nav aria-label={menu.area.label} className="min-h-0 flex-1 overflow-y-auto">
           <ul className="flex flex-col items-center gap-1">
             {menu.pages.map((page) => {
@@ -172,57 +216,67 @@ export function Sidebar() {
           </ul>
           {tip.panel}
         </nav>
-        <div className="shrink-0 pt-2">
-          <SidebarToggle />
-        </div>
-      </aside>
-    );
-  }
-
-  return (
-    <aside
-      aria-label={menu.area.label}
-      data-sidebar="expanded"
-      className="app-sidebar sticky top-[calc(72px+env(safe-area-inset-top,0px))] hidden h-[calc(100dvh-72px-env(safe-area-inset-top,0px))] w-60 shrink-0 self-start flex-col overflow-x-hidden py-4 pl-4 pr-2 lg:flex"
-    >
-      <nav aria-label={menu.area.label} className="min-h-0 flex-1 overflow-y-auto">
-        <ul className="flex flex-col gap-0.5">
-          {menu.pages.map((page) => (
-            <li key={page.key} className="group/page">
-              <Link
-                href={page.href}
-                {...tip.bind(page.key)}
-                onClick={page.key === 'releases' ? leaveReleaseForCatalog : undefined}
-                aria-current={page.active ? 'page' : undefined}
-                data-active={page.active ? 'true' : undefined}
-                className={`motion-focus flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-[color,background-color,opacity] ${
-                  page.active
-                    ? // Inside a rollout the lit row is the rollout's page
-                      // under this one, so the parent keeps its weight but
-                      // drops its fill: one lit row, not two.
-                      'bg-bg-hover text-content-primary group-has-[[data-rollout-slot]:not(:empty)]/page:bg-transparent group-has-[[data-rollout-slot]:not(:empty)]/page:font-semibold'
-                    : 'text-content-secondary opacity-60 hover:bg-bg-hover/60 hover:text-content-primary hover:opacity-100'
-                }`}
-              >
-                {(() => {
-                  const Icon = PAGE_ICON[page.key];
-                  return Icon ? <Icon className="h-5 w-5 shrink-0" aria-hidden="true" /> : null;
-                })()}
-                <span className="min-w-0 truncate">{page.label}</span>
-              </Link>
-              {/* A rollout's own menu, nested under Rollouts while one is
-                  open (RolloutTabs portals it in). Empty, and so hidden,
-                  otherwise. */}
-              {page.key === 'releases' ? (
-                <div id={SIDEBAR_SLOT_ROLLOUT} data-rollout-slot className="mb-1 mt-1 pl-3 empty:hidden" />
-              ) : null}
-            </li>
-          ))}
-        </ul>
-        {tip.panel}
-      </nav>
-      <div className="flex shrink-0 justify-end pt-2">
-        <SidebarToggle />
+      ) : null}
+      {menu && mode === 'expanded' ? (
+        <nav aria-label={menu.area.label} className="min-h-0 flex-1 overflow-y-auto">
+          <ul className="flex flex-col gap-0.5">
+            {menu.pages.map((page) => (
+              <li key={page.key} className="group/page">
+                <Link
+                  href={page.href}
+                  {...tip.bind(page.key)}
+                  onClick={page.key === 'releases' ? leaveReleaseForCatalog : undefined}
+                  aria-current={page.active ? 'page' : undefined}
+                  data-active={page.active ? 'true' : undefined}
+                  className={`motion-focus flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-[color,background-color,opacity] ${
+                    page.active
+                      ? // Inside a rollout the lit row is the rollout's page
+                        // under this one, so the parent keeps its weight but
+                        // drops its fill: one lit row, not two.
+                        'bg-bg-hover text-content-primary group-has-[[data-rollout-slot]:not(:empty)]/page:bg-transparent group-has-[[data-rollout-slot]:not(:empty)]/page:font-semibold'
+                      : 'text-content-secondary opacity-60 hover:bg-bg-hover/60 hover:text-content-primary hover:opacity-100'
+                  }`}
+                >
+                  {(() => {
+                    const Icon = PAGE_ICON[page.key];
+                    return Icon ? <Icon className="h-5 w-5 shrink-0" aria-hidden="true" /> : null;
+                  })()}
+                  <span className="min-w-0 truncate">{page.label}</span>
+                </Link>
+                {/* A rollout's own menu, nested under Rollouts while one is
+                    open (RolloutTabs portals it in). Empty, and so hidden,
+                    otherwise. */}
+                {page.key === 'releases' ? (
+                  <div id={SIDEBAR_SLOT_ROLLOUT} data-rollout-slot className="mb-1 mt-1 pl-3 empty:hidden" />
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          {tip.panel}
+        </nav>
+      ) : null}
+      {!menu ? <div className="flex-1" aria-hidden="true" /> : null}
+      {/* The foot: the profile icon, and the fold button when there is a menu
+          to fold. A row when open, a column (icon above the button) when
+          folded. */}
+      <div
+        data-sidebar-foot
+        className={`flex shrink-0 pt-2 ${
+          mode === 'expanded' ? 'items-center gap-1' : 'flex-col items-center gap-2'
+        }`}
+      >
+        <WorkspaceMenu
+          userName={userName}
+          showHelp={showHelp}
+          placement={mode === 'expanded' ? 'row' : 'rail'}
+          glideKey={toggles}
+          className={mode === 'expanded' ? 'min-w-0 flex-1' : undefined}
+        />
+        {menu ? (
+          <div ref={toggleRef} className="shrink-0">
+            <SidebarToggle />
+          </div>
+        ) : null}
       </div>
     </aside>
   );

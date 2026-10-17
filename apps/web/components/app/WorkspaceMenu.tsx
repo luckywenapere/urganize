@@ -13,6 +13,7 @@ import { Check, Sparkles, Users } from '@/components/icons';
 import { useUrgansUsage } from '@/components/app/useUrgansUsage';
 import { useHelpMenuGroups } from '@/components/app/HelpMenu';
 import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
+import { useGlide } from '@/lib/use-glide';
 
 type WorkspaceMenuProps = {
   /** Display name shown in the menu's identity header. The trigger itself
@@ -26,10 +27,32 @@ type WorkspaceMenuProps = {
    *  that used to sit behind the top bar's `?` button. AppShell's showHelpMenu
    *  gate decides, exactly as it decided the `?` button. */
   showHelp?: boolean;
+  /** Where the trigger sits (2026-10-17, founder: the profile icon moved from
+   *  the top bar to the foot of the side menu, Apple Music style).
+   *  - `row`: the open side menu. The icon and the name, as a side-menu row;
+   *    the menu opens upward.
+   *  - `rail`: the folded side menu, or the slim rail on a page with no side
+   *    menu. The icon alone, centred; the menu opens to its right.
+   *  - `topbar` (default): the round icon on its own, the menu below it. */
+  placement?: 'row' | 'rail' | 'topbar';
+  /** When this changes the icon glides from its old spot to its new one
+   *  (lib/use-glide.ts). The side menu passes its folded state. */
+  glideKey?: unknown;
+};
+
+/** Where the open menu sits for each trigger placement. From the side menu it
+ *  opens up (the trigger is at the foot of the screen) and is capped to the
+ *  screen with its own scroll, since useKeepInViewport leaves an upward menu
+ *  to its own placement. */
+const MENU_PLACEMENT: Record<NonNullable<WorkspaceMenuProps['placement']>, string> = {
+  topbar: 'animate-menu-down right-0 top-full mt-2 origin-top-right',
+  row: 'animate-menu-up bottom-full left-0 mb-2 origin-bottom-left max-h-[calc(100dvh-120px)] overflow-y-auto',
+  rail: 'animate-menu-up bottom-0 left-full ml-2 origin-bottom-left max-h-[calc(100dvh-120px)] overflow-y-auto',
 };
 
 /**
- * The account menu at the right of the desktop top bar. The trigger is the
+ * The account menu at the foot of the desktop side menu (2026-10-17; before
+ * that, at the right of the desktop top bar. The trigger is the
  * person icon (with a warning dot only when credits are low); since URG-255
  * (2026-10-14) the menu holds, top to bottom: who you are and which team, the artist
  * filter (when there is more than one artist), Settings, the credit balance
@@ -51,7 +74,13 @@ type WorkspaceMenuProps = {
  *     handle this — it closes the menu via the outside-click handler)
  *   - Outside click closes
  */
-export function WorkspaceMenu({ userName, className, showHelp = false }: WorkspaceMenuProps) {
+export function WorkspaceMenu({
+  userName,
+  className,
+  showHelp = false,
+  placement = 'topbar',
+  glideKey,
+}: WorkspaceMenuProps) {
   const router = useRouter();
   const openSettings = useOpenSettings();
   const logout = useAuthStore((state) => state.logout);
@@ -78,6 +107,9 @@ export function WorkspaceMenu({ userName, className, showHelp = false }: Workspa
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const faceRef = useRef<HTMLSpanElement>(null);
+  useGlide(faceRef, glideKey);
+  const isRow = placement === 'row';
   // With several artists and the help rows the menu can be taller than a
   // laptop screen; this caps it with its own scroll (lib/menu-position.ts).
   useKeepInViewport(menuRef, open);
@@ -177,19 +209,32 @@ export function WorkspaceMenu({ userName, className, showHelp = false }: Workspa
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={credits?.low ? 'Team menu, credits are low' : 'Team menu'}
-        className="motion-focus motion-press relative grid h-10 w-10 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
+        data-account-trigger={placement}
+        className={
+          isRow
+            ? 'motion-focus group/account flex h-10 w-full min-w-0 items-center gap-3 rounded-lg pl-1 pr-2 text-left text-sm font-medium text-content-secondary transition-colors hover:bg-bg-hover/60 hover:text-content-primary aria-expanded:bg-bg-hover aria-expanded:text-content-primary'
+            : 'motion-focus motion-press group/account grid h-10 w-10 place-items-center rounded-full'
+        }
       >
         {/* Person icon, not initials (founder call, 2026-07-23) — drawn in
             the house style like the rest of the top bar set. The warning dot
-            shows only when credits are low (URG-255). */}
-        <ProfileIcon className="h-[18px] w-[18px]" />
-        {credits?.low ? (
-          <span
-            aria-hidden="true"
-            data-credits-low-dot
-            className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-status-warning ring-2 ring-bg-base"
-          />
-        ) : null}
+            shows only when credits are low (URG-255). The circle is its own
+            element so it can glide between the side menu's two corners. */}
+        <span
+          ref={faceRef}
+          data-account-face
+          className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-elevated text-content-secondary transition-colors group-hover/account:bg-bg-hover group-hover/account:text-content-primary"
+        >
+          <ProfileIcon className="h-[18px] w-[18px]" />
+          {credits?.low ? (
+            <span
+              aria-hidden="true"
+              data-credits-low-dot
+              className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-status-warning ring-2 ring-bg-base"
+            />
+          ) : null}
+        </span>
+        {isRow ? <span className="min-w-0 flex-1 truncate">{displayName}</span> : null}
       </button>
 
       {open ? (
@@ -197,7 +242,10 @@ export function WorkspaceMenu({ userName, className, showHelp = false }: Workspa
           ref={menuRef}
           role="menu"
           aria-label="Team menu"
-          className="animate-menu-down absolute right-0 top-full z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]"
+          className={`${MENU_PLACEMENT[placement]} absolute z-50 w-64 overflow-hidden rounded-xl border border-stroke-default bg-bg-surface shadow-[0_20px_50px_-20px_rgb(var(--shadow-ink)/calc(0.6*var(--shadow-alpha-scale)))]`}
+          // .animate-menu-up sets its own origin (bottom right); from the
+          // side menu the menu grows out of the icon's corner instead.
+          style={placement === 'topbar' ? undefined : { transformOrigin: 'bottom left' }}
         >
           {/* Stage 2: the "Oyin / Workspace" identity used to live in the
               sidebar footer. With the sidebar gone it lives here, as a

@@ -1,6 +1,6 @@
 {
   "name": "@urganize/lib",
-  "version": "1.154.11",
+  "version": "1.154.12",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",

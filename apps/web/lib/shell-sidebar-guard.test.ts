@@ -28,12 +28,13 @@ describe('the top bar', () => {
     expect(nav).toContain("data-tour={area.key === 'catalogue' ? 'nav-catalog' : `shell-${area.key}`}");
   });
 
-  it('carries search, the bell and the account menu, and no credits chip or help button', () => {
+  it('carries search and the bell, and no credits chip, help button or account menu', () => {
     expect(nav).not.toContain('CreditsChip');
     expect(nav).not.toContain('<HelpMenu');
     expect(nav).toContain('data-tour="shell-search"');
     expect(nav).toContain('<NotificationsBell />');
-    expect(nav).toContain('<WorkspaceMenu userName={userName} showHelp={showHelp}');
+    // The profile icon moved to the foot of the side menu (2026-10-17).
+    expect(nav).not.toContain('<WorkspaceMenu');
   });
 
   it('draws a plain bell with a dot for unread', () => {
@@ -47,10 +48,30 @@ describe('the top bar', () => {
 describe('the side menu', () => {
   const sidebar = read('components', 'shell', 'Sidebar.tsx');
 
-  it('is desktop only, reads the pages from shell-nav and draws nothing without them', () => {
-    expect(sidebar).toMatch(/className="app-sidebar[^"]*\bhidden\b[^"]*\blg:block\b/);
+  it('is desktop only and reads the pages from shell-nav', () => {
+    expect(sidebar).toMatch(/className=\{`sticky [^`]*\bhidden\b[^`]*\blg:flex\b/);
     expect(sidebar).toContain('shellSideMenu(areas, pathname)');
-    expect(sidebar).toContain('if (!menu || collapsed) return null;');
+  });
+
+  it('keeps the profile icon at its foot: a row when open, above the fold button when folded, a slim rail with no menu', () => {
+    expect(sidebar).toContain("const mode: 'expanded' | 'collapsed' | 'rail' = !menu ? 'rail' : collapsed ? 'collapsed' : 'expanded';");
+    expect(sidebar).toContain("placement={mode === 'expanded' ? 'row' : 'rail'}");
+    expect(sidebar).toContain("mode === 'expanded' ? 'items-center gap-1' : 'flex-col items-center gap-2'");
+    // The icon comes before the fold button, so folded it sits above it.
+    const foot = sidebar.slice(sidebar.indexOf('data-sidebar-foot'));
+    expect(foot.indexOf('<WorkspaceMenu')).toBeLessThan(foot.indexOf('<SidebarToggle />'));
+    expect(sidebar).toContain("mode === 'expanded'\n      ? 'app-sidebar w-60");
+    expect(sidebar).toContain(": 'w-16 items-center'");
+  });
+
+  it('glides the icon and the fold button on the user\u2019s own fold only', () => {
+    expect(sidebar).toContain('useGlide(toggleRef, toggles)');
+    expect(sidebar).toContain('glideKey={toggles}');
+    expect(read('components', 'app', 'WorkspaceMenu.tsx')).toContain('useGlide(faceRef, glideKey)');
+    const store = read('stores', 'useSidebarStore.ts');
+    expect(store).toContain('toggles: state.toggles + 1');
+    expect(store).toContain('hydrateCollapsed: (collapsed) => set({ collapsed })');
+    expect(read('lib', 'use-glide.ts')).toContain("'(prefers-reduced-motion: reduce)'");
   });
 
   it('keeps the tab behaviours: Rollouts clears the open rollout, aria-current on the page', () => {
@@ -78,8 +99,7 @@ describe('the side menu', () => {
 describe('the page bar', () => {
   const bar = read('components', 'shell', 'PageBar.tsx');
 
-  it('is desktop only and hosts the page slots and the fold button', () => {
-    expect(bar).toContain('<SidebarToggle />');
+  it('is desktop only and hosts the page slots', () => {
     for (const slot of ['SUBNAV_SLOT_START', 'SUBNAV_SLOT_TOOLS', 'SUBNAV_SLOT_END']) {
       expect(bar).toContain(`id={${slot}}`);
     }
@@ -111,8 +131,9 @@ describe('the app shell', () => {
     const skip = frame.indexOf('href="#main-content"');
     expect(skip).toBeGreaterThan(-1);
     expect(frame.indexOf('<TopNav ')).toBeGreaterThan(skip);
-    expect(frame.indexOf('<Sidebar />')).toBeGreaterThan(skip);
-    expect(frame).toContain('<TopNav userName={workspaceUserName} showHelp={showHelpMenu} />');
+    expect(frame.indexOf('<Sidebar ')).toBeGreaterThan(skip);
+    expect(frame).toContain('<TopNav />');
+    expect(frame).toContain('<Sidebar userName={workspaceUserName} showHelp={showHelpMenu} />');
   });
 
   it('keeps the report dialog on the showHelpMenu gate', () => {

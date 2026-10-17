@@ -37,7 +37,7 @@ describe('the More sheet has the account menu’s help rows', () => {
   });
 
   it('sits behind the same showHelpMenu gate AppShell gives WorkspaceMenu', () => {
-    expect(shell).toContain('<TopNav userName={workspaceUserName} showHelp={showHelpMenu} />');
+    expect(shell).toContain('<Sidebar userName={workspaceUserName} showHelp={showHelpMenu} />');
     expect(shell).toContain('<BottomBar showHelp={showHelpMenu} />');
   });
 

@@ -156,10 +156,13 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
                 under Rollouts), and the page's name and tools sit in a page
                 bar above the page. An area with one page has no side menu.
                 On a phone, the tab row and the bottom bar, unchanged. */}
-            <TopNav userName={workspaceUserName} showHelp={showHelpMenu} />
+            <TopNav />
             <SubNav />
             <div className="flex min-w-0 flex-1">
-              <Sidebar />
+              {/* The account menu (profile icon) sits at the foot of the
+                  side menu on a desktop (2026-10-17); on a phone its rows
+                  are in the bottom bar's More sheet. */}
+              <Sidebar userName={workspaceUserName} showHelp={showHelpMenu} />
               <main
                 id="main-content"
                 tabIndex={-1}

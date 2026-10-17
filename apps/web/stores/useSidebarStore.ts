@@ -39,6 +39,11 @@ type SidebarStore = {
    *  chose rather than the default. */
   width: number;
   collapsed: boolean;
+  /** Counts the folds and unfolds the user made in this session (never
+   *  persisted, never touched by hydration). The side menu glides its profile
+   *  icon and fold button when this changes, so a stored choice applied on
+   *  load snaps into place instead of animating (2026-10-17). */
+  toggles: number;
   /** Sets the width AND persists it. Called once when a drag ENDS, never per
    *  pointermove: writePersistedState does not guard setItem, so a per-frame
    *  write would hammer storage and throw on a full quota. */
@@ -54,6 +59,7 @@ type SidebarStore = {
 export const useSidebarStore = create<SidebarStore>((set) => ({
   width: DEFAULT_SIDEBAR_WIDTH,
   collapsed: false,
+  toggles: 0,
   setWidth: (width) => {
     set({ width });
     try {
@@ -66,7 +72,7 @@ export const useSidebarStore = create<SidebarStore>((set) => ({
   },
   hydrateWidth: (width) => set({ width }),
   setCollapsed: (collapsed) => {
-    set({ collapsed });
+    set((state) => ({ collapsed, toggles: state.toggles + 1 }));
     try {
       writePersistedState(SIDEBAR_COLLAPSED_KEY, SIDEBAR_COLLAPSED_VERSION, collapsed);
     } catch {

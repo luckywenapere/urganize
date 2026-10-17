@@ -7,7 +7,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@urganize/ui';
 import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
-import { WorkspaceMenu } from '@/components/app/WorkspaceMenu';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { HOME_HREF, activeShellArea } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
@@ -81,10 +80,14 @@ import { useNavTip } from './useNavTip';
  * Pressing UrgAns anywhere opens that same view (Home, chat full width);
  * pressing Home brings Home's column back.
  *
+ * The account menu left the bar (2026-10-17, founder, after Apple Music): the
+ * profile icon sits at the foot of the side menu now (Sidebar.tsx), on every
+ * desktop page. The right of the bar is search and the bell.
+ *
  * Every destination comes from lib/shell-nav.ts, so what is offered here, in the
  * sub-tab row and on a phone cannot disagree.
  */
-export function TopNav({ userName, showHelp = false }: { userName?: string; showHelp?: boolean }) {
+export function TopNav() {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();
   const active = activeShellArea(areas, pathname);
@@ -201,7 +204,6 @@ export function TopNav({ userName, showHelp = false }: { userName?: string; show
               button before it is desktop only too: on a phone search is the
               first row of More. */}
           <NotificationsBell />
-          <WorkspaceMenu userName={userName} showHelp={showHelp} className="hidden lg:block" />
         </div>
       </div>
     </header>
