@@ -8,6 +8,8 @@
 > the original. If the two ever differ, the founder's document wins, and this
 > file should be refreshed from it rather than edited on its own. Only the
 > layout was changed (headings and tables rebuilt as markdown).
+> 2026-10-17: section 1's description and one-line version updated to the new
+> positioning at the founder's request (URG-344); mirror this in the original.
 
 ## How to use this doc
 
@@ -25,7 +27,7 @@ Labels used below: Current state (true today), Committed (decided), Rule (how we
 
 ## 1. Company strategy
 
-Urganize is the team app for music releases. Once the music is made, everyone on the team comes here to do everything after that. One-line version: Urganize is where music teams do everything after the music is made. "Interaction app" is how we describe it internally, and it stays out of copy.
+Urganize is the team app for music releases. Every release gets a plan, and everyone on the team knows what to do and when. One-line version: Urganize is where music teams plan every release and deliver it on time. "Interaction app" is how we describe it internally, and it stays out of copy.
 
 ### Who we sell to (Committed)
 
