@@ -43,8 +43,17 @@ describe('the More sheet has the account menu’s help rows', () => {
 
   it('uses the sheet’s own row style, tall enough to tap, and closes the sheet first', () => {
     const help = bar.slice(bar.indexOf('aria-label="Help"'));
-    expect(help).toContain('min-h-14');
+    expect(help).toContain('SHEET_ROW');
+    expect(bar).toContain("const SHEET_ROW = 'motion-focus flex min-h-14");
     expect(help.indexOf('onClose();')).toBeLessThan(help.indexOf('item.onClick();'));
+  });
+
+  it('opens the help rows in a Help view inside the sheet, behind one Help row (2026-10-17)', () => {
+    expect(bar).toContain("useState<'more' | 'help'>('more')");
+    expect(bar).toContain("onClick={() => setView('help')}");
+    expect(bar).toContain("onClick={() => setView('more')}");
+    // The Help row only shows when the gate lets the help rows through.
+    expect(bar).toMatch(/\{helpItems\.length > 0 \? \(\s*<li>\s*<button type="button" onClick=\{\(\) => setView\('help'\)\}/);
   });
 });
 

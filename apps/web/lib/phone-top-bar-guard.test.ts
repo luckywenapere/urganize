@@ -36,11 +36,13 @@ describe('the phone has no top bar', () => {
     expect(nav).toContain('<NotificationsBell />');
   });
 
-  it('puts Search first in the More sheet, with the bar button’s action', () => {
+  it('puts Search in the More sheet header, left of Close, with the bar button’s action', () => {
     const bar = read('components', 'shell', 'BottomBar.tsx');
-    const sheet = bar.slice(bar.indexOf('<ul className="divide-y divide-stroke-subtle">'));
+    const sheet = bar.slice(bar.indexOf('function MoreSheet('));
     const search = sheet.indexOf('data-tour="shell-mobile-search"');
     expect(search).toBeGreaterThan(-1);
+    expect(sheet).toContain('aria-label="Search"');
+    expect(search).toBeLessThan(sheet.indexOf('{closeButton}', search));
     expect(search).toBeLessThan(sheet.indexOf('items.map('));
     expect(bar).toContain('if (hasPullReveal()) revealListSearch();');
     expect(bar).toContain('else openCommand();');

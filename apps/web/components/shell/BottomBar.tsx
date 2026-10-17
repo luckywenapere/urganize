@@ -6,19 +6,25 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import {
+  Bell,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  CircleHelp,
   Disc3,
-  Handshake,
+  DoorOpen,
+  HandshakeLine,
   Headphones,
   Home,
   MoreHorizontal,
-  Spotlight,
+  Search,
+  Settings,
   Sparkles,
-  Wallet2,
+  Users,
   X,
   type LucideProps,
 } from '@/components/icons';
-import { Bell, Check, Gauge, Search, UserCircle2, Users } from '@/components/icons';
-import { useWorkspaceIdentityStore } from '@/stores/useWorkspaceIdentityStore';
+import { Logo } from '@urganize/ui';
 import { hasPullReveal, revealListSearch } from '@/components/shared/PullReveal';
 import { useShellStore } from '@/stores/useShellStore';
 import { useNotificationsDoorStore } from '@/stores/useNotificationsDoorStore';
@@ -42,10 +48,14 @@ import { NAV_TIP_TOUCH_CLASS, useNavTip } from './useNavTip';
 
 type IconComponent = ComponentType<LucideProps>;
 
-/** The areas in the More sheet. Each carries a piece of the music trade. */
+/** The areas in the More sheet. Plain lucide marks since 2026-10-17 (founder
+ *  call): the house Handshake read as a magnet here, and a door says
+ *  "Opportunities" faster than a stage light. Phone only; the desktop pills
+ *  draw no icons. */
 const MORE_ICON: Record<string, IconComponent> = {
-  relationships: Handshake,
-  opportunities: Spotlight,
+  relationships: HandshakeLine,
+  opportunities: DoorOpen,
+  // A role view can tuck Audience into More (URG-260).
   audience: Headphones,
 };
 
@@ -77,6 +87,13 @@ const TAB_ICON: Record<string, IconComponent> = {
  * account menu (Report an issue, Docs, Contact us, Community, and the rollout
  * replay when there is one), read from the one list in HelpMenu.tsx and behind
  * the same showHelpMenu gate AppShell hands WorkspaceMenu.
+ *
+ * Since 2026-10-17 (founder call, approved mock) the sheet is five rows:
+ * Relationships, Opportunities, Notifications, Settings and Help. The header
+ * carries the Urganize mark, the Beta chip, and Search as an icon button left
+ * of Close (the Search row went). Credits left the sheet (the UrgAns usage
+ * strip and Settings > Billing reach it), Admin too (Settings > Admin), and
+ * the help rows moved into a Help view inside the same sheet.
  *
  * Labels stay visible. Icon-only tabs were tried here before (v1.10.3) and cost
  * the people who most need the bar the words that tell them what each tab does.
@@ -272,6 +289,11 @@ function useBarCollapsedOnScroll(pathname: string): boolean {
   return folded;
 }
 
+const SHEET_ROW = 'motion-focus flex min-h-14 w-full items-center gap-2.5 text-left text-base text-content-primary';
+const SHEET_ICON = 'h-5 w-5 shrink-0 text-content-tertiary';
+const HEADER_BUTTON =
+  'motion-focus grid h-11 w-11 place-items-center rounded-full text-content-tertiary hover:bg-bg-hover';
+
 function MoreSheet({
   areas,
   showHelp,
@@ -281,7 +303,6 @@ function MoreSheet({
   showHelp: boolean;
   onClose: () => void;
 }) {
-  const isAdmin = useWorkspaceIdentityStore((state) => state.isAdmin);
   const openSettings = useSettingsLinkClick();
   const tip = useNavTip({ overSheet: true });
   // What the role view tucked (URG-260) follows the areas the bar does not
@@ -290,10 +311,18 @@ function MoreSheet({
   const notifications = useNotificationsDoorStore();
   const openCommand = useShellStore((state) => state.openCommand);
   const { options: artistOptions, select: selectArtist } = useArtistFilterOptions();
-  // The desktop account menu's help rows, from the same list and gate.
+  // The desktop account menu's help rows, from the same list and gate. They
+  // live in a Help view inside this sheet (2026-10-17) instead of listing here.
   const helpGroups = useHelpMenuGroups();
   const helpItems = showHelp ? helpGroups.flat() : [];
+  const [view, setView] = useState<'more' | 'help'>('more');
   if (typeof document === 'undefined') return null;
+
+  const closeButton = (
+    <button type="button" onClick={onClose} aria-label="Close" className={HEADER_BUTTON}>
+      <X className="h-5 w-5" aria-hidden="true" />
+    </button>
+  );
 
   // Portalled: AppShell's fade-in transform would otherwise anchor this fixed
   // sheet to the shell instead of the screen.
@@ -307,182 +336,181 @@ function MoreSheet({
         className="absolute inset-0 bg-black/50"
       />
       <DialogPanel
-        label="More"
+        label={view === 'help' ? 'Help' : 'More'}
         onClose={onClose}
         className="absolute inset-x-0 bottom-0 max-h-[calc(100dvh-env(safe-area-inset-top,0px)-1rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-stroke-default bg-bg-surface px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3"
       >
         <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-stroke-strong" aria-hidden="true" />
-        <div className="flex items-center justify-between pb-2">
-          {/* The phone's Beta label (2026-10-15, URG-311): there is no phone top
-              bar to carry the desktop's pill beside the mark, so it sits here. */}
-          <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-content-primary">
-            More
-            <span className="select-none rounded-full bg-brand/15 px-1.5 py-px font-sans text-[10px] font-bold uppercase tracking-wide text-brand">
-              Beta
-            </span>
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="motion-focus grid h-11 w-11 place-items-center rounded-full text-content-tertiary hover:bg-bg-hover"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
-        <ul className="divide-y divide-stroke-subtle">
-          {/* Search first: the phone has no top bar since 2026-10-11, and this
-              is where its search button went. Same action as the desktop
-              button: a page with a folded list search (PullReveal) opens and
-              focuses that, every other page opens the search bar. The sheet
-              closes first so the field it opens is the one left focused. */}
-          <li>
+        {view === 'help' && helpItems.length > 0 ? (
+          <>
             <button
               type="button"
-              data-tour="shell-mobile-search"
-              onClick={() => {
-                onClose();
-                if (hasPullReveal()) revealListSearch();
-                else openCommand();
-              }}
-              className="motion-focus flex min-h-14 w-full items-center gap-2.5 text-left text-base text-content-primary"
+              onClick={() => setView('more')}
+              className="motion-focus -ml-1 flex min-h-11 items-center gap-1 rounded-md pr-2 text-sm text-content-tertiary"
             >
-              <Search className="h-5 w-5 text-content-tertiary" aria-hidden="true" />
-              Search
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              More
             </button>
-          </li>
-          {items.map((item) => (
-            <li key={item.key}>
-              <Link
-                href={item.href}
-                {...tip.bind(item.key)}
-                onClick={onClose}
-                className={`motion-focus flex min-h-14 items-center gap-2.5 text-base text-content-primary ${NAV_TIP_TOUCH_CLASS}`}
-              >
-                {(() => {
-                  const Icon = MORE_ICON[item.key];
-                  return Icon ? <Icon className="h-5 w-5 text-content-tertiary" aria-hidden="true" /> : null;
-                })()}
-                {item.label}
-              </Link>
-            </li>
-          ))}
-          {notifications.available ? (
-            <li>
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  notifications.requestOpen();
-                }}
-                className="motion-focus flex min-h-14 w-full items-center gap-2.5 text-left text-base text-content-primary"
-              >
-                {/* The same plain bell as the computer's top bar (URG-255). */}
-                <Bell className="h-5 w-5 text-content-tertiary" aria-hidden="true" />
-                Notifications
-                {notifications.unread > 0 ? (
-                  <span className="ml-auto grid min-h-6 min-w-6 place-items-center rounded-full bg-brand px-1.5 text-xs font-semibold text-content-inverse">
-                    {notifications.unread > 9 ? '9+' : notifications.unread}
-                    <span className="sr-only"> unread</span>
-                  </span>
-                ) : null}
-              </button>
-            </li>
-          ) : null}
-          <li>
-            <Link
-              href="/dashboard/credits"
-              onClick={onClose}
-              className="motion-focus flex min-h-14 items-center gap-2.5 text-base text-content-primary"
-            >
-              <Wallet2 className="h-5 w-5 text-content-tertiary" aria-hidden="true" />
-              Credits
-            </Link>
-          </li>
-          <li>
-            <Link
-              href={settingsDeepLink()}
-              onClick={(event) => {
-                openSettings(event);
-                onClose();
-              }}
-              className="motion-focus flex min-h-14 items-center gap-2.5 text-base text-content-primary"
-            >
-              <UserCircle2 className="h-5 w-5 text-content-tertiary" aria-hidden="true" />
-              Settings
-            </Link>
-          </li>
-          {/* Admin (2026-10-15, founder call, URG-313): the internal dashboards
-              straight from More on a phone, for the accounts ADMIN_EMAILS
-              names. Settings > Admin still lists them too. */}
-          {isAdmin ? (
-            <li>
-              <Link
-                href="/admin"
-                onClick={onClose}
-                className="motion-focus flex min-h-14 items-center gap-2.5 text-base text-content-primary"
-              >
-                <Gauge className="h-5 w-5 text-content-tertiary" aria-hidden="true" />
-                Admin
-              </Link>
-            </li>
-          ) : null}
-        </ul>
-        {helpItems.length > 0 ? (
-          <div role="group" aria-label="Help" className="border-t border-stroke-subtle">
+            <div className="flex items-center justify-between pb-2">
+              <h2 className="font-display text-2xl text-content-primary">Help</h2>
+              {closeButton}
+            </div>
+            <div role="group" aria-label="Help">
+              <ul className="divide-y divide-stroke-subtle">
+                {helpItems.map((item) => (
+                  <li key={item.label}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // The sheet closes first so whatever the row opens (the
+                        // report form, a new tab) is not under it.
+                        onClose();
+                        item.onClick();
+                      }}
+                      className={`${SHEET_ROW} [&_svg]:h-5 [&_svg]:w-5 [&_svg]:shrink-0 [&_svg]:text-content-tertiary`}
+                    >
+                      {item.icon}
+                      {item.label}
+                      {item.hint ? (
+                        <span className="ml-auto text-sm text-content-tertiary">{item.hint}</span>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between pb-2">
+              {/* The Urganize mark and the phone's Beta label (2026-10-15,
+                  URG-311; the mark replaced the "More" title 2026-10-17):
+                  there is no phone top bar to carry them, so they sit here. */}
+              <h2 className="flex items-center gap-2">
+                <Logo size="sm" className="opacity-95" />
+                <span className="sr-only">More</span>
+                <span className="select-none rounded-full bg-brand/15 px-1.5 py-px font-sans text-[10px] font-bold uppercase tracking-wide text-brand">
+                  Beta
+                </span>
+              </h2>
+              <div className="flex items-center">
+                {/* Search (the phone has no top bar since 2026-10-11): the
+                    same action as the desktop button. A page with a folded
+                    list search (PullReveal) opens and focuses that, every
+                    other page opens the search bar. The sheet closes first so
+                    the field it opens is the one left focused. */}
+                <button
+                  type="button"
+                  aria-label="Search"
+                  data-tour="shell-mobile-search"
+                  onClick={() => {
+                    onClose();
+                    if (hasPullReveal()) revealListSearch();
+                    else openCommand();
+                  }}
+                  className={HEADER_BUTTON}
+                >
+                  <Search className="h-5 w-5" aria-hidden="true" />
+                </button>
+                {closeButton}
+              </div>
+            </div>
             <ul className="divide-y divide-stroke-subtle">
-              {helpItems.map((item) => (
-                <li key={item.label}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // The sheet closes first so whatever the row opens (the
-                      // report form, a new tab) is not under it.
-                      onClose();
-                      item.onClick();
-                    }}
-                    className="motion-focus flex min-h-14 w-full items-center gap-2.5 text-left text-base text-content-primary [&_svg]:h-5 [&_svg]:w-5 [&_svg]:text-content-tertiary"
+              {items.map((item) => (
+                <li key={item.key}>
+                  <Link
+                    href={item.href}
+                    {...tip.bind(item.key)}
+                    onClick={onClose}
+                    className={`${SHEET_ROW} ${NAV_TIP_TOUCH_CLASS}`}
                   >
-                    {item.icon}
+                    {(() => {
+                      const Icon = MORE_ICON[item.key];
+                      return Icon ? <Icon className={SHEET_ICON} aria-hidden="true" /> : null;
+                    })()}
                     {item.label}
-                  </button>
+                  </Link>
                 </li>
               ))}
-            </ul>
-          </div>
-        ) : null}
-        {artistOptions.length > 0 ? (
-          <div role="group" aria-label="Showing" className="mt-2 border-t border-stroke-subtle pt-3">
-            <p className="pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">Showing</p>
-            <ul>
-              {artistOptions.map((artist) => (
-                <li key={artist.id ?? 'all'}>
+              {notifications.available ? (
+                <li>
                   <button
                     type="button"
-                    aria-pressed={artist.active}
                     onClick={() => {
-                      selectArtist(artist.id);
                       onClose();
+                      notifications.requestOpen();
                     }}
-                    className="motion-focus flex min-h-12 w-full items-center justify-between gap-2 text-left text-base text-content-primary"
+                    className={SHEET_ROW}
                   >
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      {artist.id ? (
-                        <ProfileFace name={artist.name} photoUrl={artist.photoUrl} size={32} />
-                      ) : (
-                        <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full border border-stroke-default text-content-tertiary" style={{ width: 32, height: 32 }}>
-                          <Users className="h-3.5 w-3.5" />
-                        </span>
-                      )}
-                      <span className="truncate">{artist.name}</span>
-                    </span>
-                    {artist.active ? <Check className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" /> : null}
+                    {/* The same plain bell as the computer's top bar (URG-255). */}
+                    <Bell className={SHEET_ICON} aria-hidden="true" />
+                    Notifications
+                    {notifications.unread > 0 ? (
+                      <span className="ml-auto grid min-h-6 min-w-6 place-items-center rounded-full bg-brand px-1.5 text-xs font-semibold text-content-inverse">
+                        {notifications.unread > 9 ? '9+' : notifications.unread}
+                        <span className="sr-only"> unread</span>
+                      </span>
+                    ) : null}
                   </button>
                 </li>
-              ))}
+              ) : null}
+              <li>
+                <Link
+                  href={settingsDeepLink()}
+                  onClick={(event) => {
+                    openSettings(event);
+                    onClose();
+                  }}
+                  className={SHEET_ROW}
+                >
+                  <Settings className={SHEET_ICON} aria-hidden="true" />
+                  Settings
+                </Link>
+              </li>
+              {helpItems.length > 0 ? (
+                <li>
+                  <button type="button" onClick={() => setView('help')} className={SHEET_ROW}>
+                    <CircleHelp className={SHEET_ICON} aria-hidden="true" />
+                    Help
+                    <ChevronRight className="ml-auto h-5 w-5 text-content-tertiary" aria-hidden="true" />
+                  </button>
+                </li>
+              ) : null}
             </ul>
-          </div>
-        ) : null}
+            {artistOptions.length > 0 ? (
+              <div role="group" aria-label="Showing" className="mt-2 border-t border-stroke-subtle pt-3">
+                <p className="pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">Showing</p>
+                <ul>
+                  {artistOptions.map((artist) => (
+                    <li key={artist.id ?? 'all'}>
+                      <button
+                        type="button"
+                        aria-pressed={artist.active}
+                        onClick={() => {
+                          selectArtist(artist.id);
+                          onClose();
+                        }}
+                        className="motion-focus flex min-h-12 w-full items-center justify-between gap-2 text-left text-base text-content-primary"
+                      >
+                        <span className="flex min-w-0 items-center gap-2.5">
+                          {artist.id ? (
+                            <ProfileFace name={artist.name} photoUrl={artist.photoUrl} size={32} />
+                          ) : (
+                            <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-full border border-stroke-default text-content-tertiary" style={{ width: 32, height: 32 }}>
+                              <Users className="h-3.5 w-3.5" />
+                            </span>
+                          )}
+                          <span className="truncate">{artist.name}</span>
+                        </span>
+                        {artist.active ? <Check className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" /> : null}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </>
+        )}
         {tip.panel}
       </DialogPanel>
     </div>,

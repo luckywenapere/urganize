@@ -97,4 +97,9 @@ export {
   Volume2,
   // Talk to UrgAns (2026-10-11): the Talk button, mute, hang up, captions.
   AudioWaveform, Captions, MicOff, PhoneOff,
+  // The phone More sheet (2026-10-17, founder call): plain lucide marks for
+  // its rows. The house Handshake read as a magnet at sheet size, so More uses
+  // lucide's under its own name; the house mark keeps its name elsewhere.
+  CircleHelp, DoorOpen, Settings,
+  Handshake as HandshakeLine,
 } from 'lucide-react';

@@ -21,7 +21,9 @@ function openExternalLink(url: string) {
   void openExternalUrl(url);
 }
 
-export type HelpMenuItem = { label: string; icon: ReactNode; onClick: () => void };
+// hint: a muted word at the row's end where the destination is not obvious
+// (the phone More sheet's Help view shows it; the desktop menu does not).
+export type HelpMenuItem = { label: string; icon: ReactNode; onClick: () => void; hint?: string };
 
 /**
  * The help entries, as groups (URG-255, 2026-10-14). The `?` button that used
@@ -67,6 +69,7 @@ export function useHelpMenuGroups(): HelpMenuItem[][] {
           // Renamed from "The Release Room" (2026-07-23) — same WhatsApp
           // community, plainer name.
           label: 'Community',
+          hint: 'WhatsApp',
           icon: <CommunityIcon />,
           onClick: () => openExternalLink('https://chat.whatsapp.com/DGUGyC2GK3d5v6KPGw5aft'),
         },
