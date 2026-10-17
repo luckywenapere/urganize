@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.18",
+    date: "October 17, 2026",
+    highlights: [
+      "On a computer, UrgAns now stays open when you click it. It used to open, then jump back to Home a few seconds later.",
+      "Opening an old UrgAns link on a computer now opens UrgAns full width instead of Home.",
+    ],
+  },
+  {
     version: "1.154.17",
     date: "October 17, 2026",
     highlights: [

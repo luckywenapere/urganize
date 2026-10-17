@@ -8,6 +8,7 @@ import { Logo } from '@urganize/ui';
 import { Search } from '@/components/icons';
 import { NotificationsBell } from '@/components/app/NotificationsBell';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
+import { markNavigationBlocked } from '@/lib/nav-stall-watch';
 import { HOME_HREF, activeShellArea } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
 import { useShellStore } from '@/stores/useShellStore';
@@ -156,6 +157,7 @@ export function TopNav() {
                       // the chat fills the width (UrgAns, which lights and takes
                       // focus); pressing it again brings the column back.
                       event.preventDefault();
+                      markNavigationBlocked(event.nativeEvent);
                       const willCollapse = !listCollapsed;
                       useHomeChatStore.getState().setListCollapsed(willCollapse);
                       if (willCollapse) focusUrgans();
@@ -167,6 +169,15 @@ export function TopNav() {
                   if (area.key === 'urgans' && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
                     // The UrgAns pill opens Home's chat full width.
                     event.preventDefault();
+                    // Already on Home the address never changes, so tell the
+                    // link watchdog (lib/nav-stall-watch.ts) this click was
+                    // handled. Unmarked, it saw a link to /dashboard/urgans
+                    // that "never landed" and hard-loaded that page 7 seconds
+                    // later, which on a computer sends you back to Home with
+                    // the column open: UrgAns opened, then popped back to Home
+                    // (2026-10-17). From another page the push to Home moves
+                    // the address, so the watchdog sees it land.
+                    if (onHome) markNavigationBlocked(event.nativeEvent);
                     useHomeChatStore.getState().setListCollapsed(true);
                     if (!onHome) router.push(HOME_HREF);
                     focusUrgans();

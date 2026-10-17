@@ -8,6 +8,7 @@ import { consumeArrivingFromHome } from '@/lib/home-chat-glide';
 import { useAuthStore } from '@/lib/auth-store';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useChappiStore } from '@/stores/useChappiStore';
+import { useHomeChatStore } from '@/stores/useHomeChatStore';
 import { ChappiConversation } from '@/components/chappi/ChappiConversation';
 import { InviteTeamBanner } from '@/components/chappi/InviteTeamBanner';
 import { ChappiPageSkeleton } from '@/components/loading/ChappiPageSkeleton';
@@ -54,9 +55,18 @@ export default function ChappiPageClient() {
   const [showSessions, setShowSessions] = useState(false);
   const hasConversation = useChappiStore((state) => state.messages.length > 0);
 
-  // A computer has the chat on Home.
+  // A computer has the chat on Home, and UrgAns there is Home's chat full
+  // width (the top bar's UrgAns pill), so a computer that lands here opens
+  // exactly that rather than Home with its column showing (2026-10-17). One
+  // tick later on purpose: leaving Home resets the fold on a zero-delay timer
+  // (HomeDesktopSplit), and this must come after it.
   useEffect(() => {
-    if (CHAPPI_ENABLED && isDesktop) router.replace(HOME_PATH);
+    if (!CHAPPI_ENABLED || !isDesktop) return;
+    const timer = window.setTimeout(() => {
+      useHomeChatStore.getState().setListCollapsed(true);
+      router.replace(HOME_PATH);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [isDesktop, router]);
 
   // iOS scrolls the document to reveal a focused field BEFORE the layout has
