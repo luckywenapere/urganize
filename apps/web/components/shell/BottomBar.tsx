@@ -56,7 +56,7 @@ const TAB_ICON: Record<string, IconComponent> = {
 };
 
 /**
- * The phone's bottom bar: Home, Artist (Catalogue until 2026-10-17), UrgAns and More (Pitching left it
+ * The phone's bottom bar: Home, Artists (Catalogue until 2026-10-17), UrgAns and More (Pitching left it
  * on 2026-10-15 and lives inside each rollout). Thumb
  * reachable, and the same destinations as the desktop pills, because both read
  * lib/shell-nav.ts.

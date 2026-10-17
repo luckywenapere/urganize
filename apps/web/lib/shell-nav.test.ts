@@ -120,10 +120,10 @@ describe('shell nav', () => {
     expect(lit('/dashboard/notes')).toEqual(['notes']);
   });
 
-  it('phone bottom bar is Home, Artist, UrgAns; More holds the rest', () => {
+  it('phone bottom bar is Home, Artists, UrgAns; More holds the rest', () => {
     expect(buildMobileTabs().map((t) => t.key)).toEqual(['home', 'catalogue', 'urgans']);
-    expect(buildMobileTabs().map((t) => t.label)).toEqual(['Home', 'Artist', 'UrgAns']);
-    // The Artist tab lands on Artists when the artist page is on, Rollouts when it is off.
+    expect(buildMobileTabs().map((t) => t.label)).toEqual(['Home', 'Artists', 'UrgAns']);
+    // The Artists tab lands on Artists when the artist page is on, Rollouts when it is off.
     expect(buildMobileTabs(buildShellAreas(ALL_ON))[1].href).toBe('/dashboard/artists');
     expect(buildMobileTabs(buildShellAreas(ALL_OFF))[1].href).toBe('/dashboard');
     expect(buildMoreItems(buildShellAreas(ALL_ON)).map((i) => i.key)).toEqual([

@@ -167,7 +167,7 @@ export const HOME_FOUR_COPY = {
   loadFailed: "Home didn't load.",
   loadFailedLine: 'Your rollouts are safe.',
   tryAgain: 'Try again',
-  openCatalogue: 'Open Catalogue',
+  openCatalogue: 'Open Artists',
 } as const;
 
 /** "Next up: Pre-save campaign, due Mon 19 Oct." for the clear state, or null. */

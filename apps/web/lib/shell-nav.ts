@@ -75,8 +75,9 @@ export const URGANS_HREF = '/dashboard/urgans';
 export const CATALOGUE_HREF = '/dashboard';
 export const DISTRIBUTE_HREF = '/dashboard/distribute';
 export const ARTISTS_HREF = '/dashboard/artists';
-/** The nav word for the 'catalogue' area (Catalogue until 2026-10-17). */
-export const CATALOGUE_LABEL = 'Artist';
+/** The nav word for the 'catalogue' area (Catalogue until 2026-10-17, then
+ * Artist; Artists, plural to match the tab, since later that day). */
+export const CATALOGUE_LABEL = 'Artists';
 
 export function buildShellAreas(flags: ShellFlags): ShellArea[] {
   // Artists first and the section's landing, Rollouts second (founder call,
@@ -153,7 +154,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, URGANS_HREF),
     },
     {
-      // Labelled Artist since 2026-10-17 (founder's word); the key stays
+      // Labelled Artists since 2026-10-17 (founder's word); the key stays
       // 'catalogue' so stored state, tours and analytics keep their names.
       key: 'catalogue',
       label: CATALOGUE_LABEL,
@@ -210,7 +211,7 @@ export type MobileTab = { key: string; label: string; href: string; area: ShellA
  *  drawer on a phone is a full page anyway, and it is the one thing a thumb
  *  should always reach. */
 export function buildMobileTabs(areas?: ShellArea[]): MobileTab[] {
-  // The Artist tab goes where its area's pill goes (Artists, or Rollouts when
+  // The Artists tab goes where its area's pill goes (Artists, or Rollouts when
   // the artist page is off or a role view tucks it).
   const catalogueHref = areas?.find((area) => area.key === 'catalogue')?.href ?? CATALOGUE_HREF;
   return [

@@ -128,7 +128,7 @@ function HomeViewFallback() {
         href="/dashboard"
         className="motion-focus mt-4 inline-flex h-11 items-center rounded-full border border-stroke-default px-5 text-sm font-semibold text-content-primary hover:border-stroke-strong"
       >
-        Open Catalogue
+        Open Artists
       </Link>
     </div>
   );
