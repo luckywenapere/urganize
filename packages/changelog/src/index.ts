@@ -22,6 +22,17 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.5",
+    date: "October 17, 2026",
+    highlights: [
+      "A freshly planned rollout now opens on the plan itself. The \"plan built\" card is gone, so your first steps sit right above the timeline.",
+      "While your first steps are up, the distribution check and the jobs nobody is on yet wait their turn. They come back once the steps are done or hidden.",
+      "On a new account's first rollout, Confirm your release date is now step 1 of your first steps instead of a second card.",
+      "Suggested activities live in Work the plan, not under the timeline. No date yet is one row you tap to open.",
+      "On a phone the phases are one line, and the progress bar shows up once something is done. Only one phase is marked Now at a time.",
+    ],
+  },
+  {
     version: "1.157.4",
     date: "October 17, 2026",
     highlights: [

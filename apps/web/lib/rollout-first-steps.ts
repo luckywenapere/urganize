@@ -15,9 +15,11 @@
  * done; this decides what shows.
  */
 
-export type FirstStepKey = 'cover' | 'team';
+export type FirstStepKey = 'date' | 'cover' | 'team';
 
-export const FIRST_STEP_ORDER: readonly FirstStepKey[] = ['cover', 'team'];
+/** The steps a person can switch on. "Confirm the release date" is not here:
+ *  it is only ever lent by the pinned activity (see buildFirstSteps' `pinned`). */
+export const FIRST_STEP_ORDER: readonly Exclude<FirstStepKey, 'date'>[] = ['cover', 'team'];
 
 export const FIRST_STEPS_COPY = {
   label: 'Your first steps',
@@ -25,6 +27,14 @@ export const FIRST_STEPS_COPY = {
   progress: (done: number, total: number) => `${done} of ${total} done`,
   dismiss: 'Hide first steps',
   steps: {
+    // The pinned "Confirm your release date" (onboarding rollouts) as step 1,
+    // Oct 17, 2026: one checklist owns "what to do now" instead of two cards.
+    // Its title is the activity's own; this is the fallback.
+    date: {
+      title: 'Confirm your release date',
+      detail: 'Every other activity is planned around it.',
+      action: 'Confirm the date',
+    },
     cover: {
       title: 'Add the cover art',
       detail: 'Put the artwork in one place for promo and distribution.',
@@ -66,13 +76,20 @@ export type FirstStep = {
 
 export function buildFirstSteps(
   facts: FirstStepsFacts,
-  available: FirstStepsAvailability
+  available: FirstStepsAvailability,
+  /** The pinned "Confirm your release date" activity, while it is open
+   *  (lib/pinned-confirm-date.ts). It leads the list; null leaves it out. The
+   *  pin only exists while the activity is open, so this step is never done. */
+  pinned: { title: string } | null = null
 ): FirstStep[] {
-  const doneFor: Record<FirstStepKey, boolean> = {
+  const doneFor: Record<Exclude<FirstStepKey, 'date'>, boolean> = {
     cover: facts.hasCoverArt === true,
     team: facts.hasTeam === true,
   };
-  return FIRST_STEP_ORDER.filter((key) => available[key])
+  const dateStep: FirstStep[] = pinned
+    ? [{ key: 'date', ...FIRST_STEPS_COPY.steps.date, title: pinned.title || FIRST_STEPS_COPY.steps.date.title, done: false }]
+    : [];
+  return [...dateStep, ...FIRST_STEP_ORDER.filter((key) => available[key])
     // Invite your team never shows once the person has a teammate, not even as
     // a ticked chip (founder, Oct 17, 2026: "this should not show at all if
     // user already has a teammate"). If that leaves no steps, the card does not
@@ -82,7 +99,7 @@ export function buildFirstSteps(
     key,
     ...FIRST_STEPS_COPY.steps[key],
     done: doneFor[key],
-  }));
+  }))];
 }
 
 /** The one action to put front and centre: the first step not done yet. */

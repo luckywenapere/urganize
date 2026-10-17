@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   formatPhaseDates,
   groupTasksByRolloutPhase,
+  phaseForLine,
+  phasesForStrip,
   readTaskPhase,
   resolveTaskPhase,
   rolloutPhaseForOffset,
@@ -110,5 +112,42 @@ describe('summarizeRolloutPhases', () => {
     expect(
       summarizeRolloutPhases([{ dueDate: at(-40), status: 'done' }], RELEASE, new Date(at(3)))[0].state
     ).toBe('done');
+  });
+
+  it('never marks two phases Now at once (Oct 17, 2026: Pre-production and Pre-release)', () => {
+    const withPre = [...tasks, { dueDate: null, status: 'todo', phase: 'pre_production' as const }];
+    const nowCount = (offset: number) =>
+      summarizeRolloutPhases(withPre, RELEASE, new Date(at(offset))).filter((phase) => phase.state === 'current')
+        .length;
+    expect(nowCount(-20)).toBe(1);
+    expect(nowCount(3)).toBe(1);
+    const [preProduction, preRelease] = summarizeRolloutPhases(withPre, RELEASE, new Date(at(-20)));
+    expect([preProduction.phase, preProduction.state]).toEqual(['pre_production', 'upcoming']);
+    expect(preRelease.state).toBe('current');
+    expect(summarizeRolloutPhases(withPre, RELEASE, new Date(at(3)))[0].state).toBe('past');
+    // Undated: Pre-production is still the work in hand.
+    expect(summarizeRolloutPhases(withPre, null)[0].state).toBe('current');
+  });
+});
+
+describe('the phase strip (Oct 17, 2026 just-planned cuts)', () => {
+  it('drops an undated Pre-production chip and keeps a dated one', () => {
+    const base = { startDate: null, endDate: null };
+    expect(
+      phasesForStrip([
+        { phase: 'pre_production' as const, ...base },
+        { phase: 'pre_release' as const, ...base },
+      ]).map((summary) => summary.phase)
+    ).toEqual(['pre_release']);
+    expect(
+      phasesForStrip([{ phase: 'pre_production' as const, startDate: '2026-10-01', endDate: null }]).length
+    ).toBe(1);
+  });
+
+  it('names the current phase on the phone line, else the first still open', () => {
+    expect(phaseForLine([{ state: 'past' as const }, { state: 'current' as const }])?.state).toBe('current');
+    expect(phaseForLine([{ state: 'done' as const }, { state: 'upcoming' as const }])?.state).toBe('upcoming');
+    expect(phaseForLine([{ state: 'done' as const }])?.state).toBe('done');
+    expect(phaseForLine([])).toBeNull();
   });
 });

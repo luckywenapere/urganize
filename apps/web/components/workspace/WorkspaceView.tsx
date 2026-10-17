@@ -27,7 +27,7 @@ import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { TestReleaseBanner } from './TestReleaseBanner';
 import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
 import { DistributionStatusStrip } from './DistributionStatusStrip';
-import { RolloutFirstSteps } from './RolloutFirstSteps';
+import { RolloutFirstSteps, useRolloutFirstSteps } from './RolloutFirstSteps';
 import { RolloutNextMoves } from '@/components/next-moves/RolloutNextMoves';
 import { requestEditorialPitchBackfill } from '@/lib/editorial-pitch-client';
 import { daysToRelease, isEditorialPitchTask, pitchWindowState } from '@/lib/editorial-pitch';
@@ -58,11 +58,10 @@ import { PinnedConfirmDateCard } from './PinnedConfirmDateCard';
 import { usePlannerStore } from '@/stores/usePlannerStore';
 import { buildCreatedRolloutIntake } from '@/lib/release-draft-discard';
 import { PlanReleaseCard } from '@/components/planner/PlanReleaseCard';
-import { PlanBuiltBanner } from '@/components/planner/PlanBuiltBanner';
 import { AutoPlanCard } from '@/components/planner/AutoPlanCard';
 import { useAutoPlan } from '@/components/planner/useAutoPlan';
 import { readPlannerAuto } from '@/lib/planner-auto';
-import { markPlanBuiltSeen, usePlanBuiltSeen } from '@/components/planner/usePlanBuiltSeen';
+import { usePlanBuiltSeen } from '@/components/planner/usePlanBuiltSeen';
 import { readPlannedByUrgans } from '@/lib/release-planned-by-urgans';
 import { UrgansLockedSheet } from '@/components/urgans-actions/UrgansLockedSheet';
 import { ArchiveReleaseDialog } from '@/components/workspace/ArchiveReleaseDialog';
@@ -713,25 +712,6 @@ export function WorkspaceView() {
     );
   }, [scopedReleaseSlim, scopedReleaseIsOwn, scopedTasks, user?.id]);
 
-  // Renders nothing unless there is genuinely something to say, the
-  // PostPlanKitPrompt rule verbatim.
-  //
-  // Both halves of one loop, in the order they happen: the jobs nobody is on,
-  // then what came back from the people already asked. The second is why the
-  // request row stores its release at all, and each renders nothing when it
-  // has nothing to say, so a release with neither adds no chrome.
-  const roleGapsFooter =
-    scopedReleaseSlim && (roleGaps.length > 0 || DIRECTORY_REQUESTS_ENABLED) ? (
-      <div className="space-y-3">
-        {roleGaps.length > 0 ? (
-          <RoleGapsPanel releaseId={scopedReleaseSlim.id} gaps={roleGaps} />
-        ) : null}
-        {DIRECTORY_REQUESTS_ENABLED && scopedReleaseIsOwn ? (
-          <SentRequestsList releaseId={scopedReleaseSlim.id} variant="release" />
-        ) : null}
-      </div>
-    ) : null;
-
   // The focused release's card. `selectedCard` is null when the URL points
   // at a release that doesn't exist in this user's data (stale link, deleted
   // release) and we fall back to the grid below.
@@ -992,23 +972,20 @@ export function WorkspaceView() {
       />
     ) : null;
 
-  // What the plan built and what is worth a second look (the "left out" list
-  // is hidden since 2026-10-17, founder call; see PlanBuiltBanner's header). Shown
-  // once activities exist for a release the planner built, until dismissed;
-  // `planBanner` above and this are mutually exclusive by construction (one
-  // requires zero activities, the other requires at least one).
+  // The plan-built banner (what the plan built, Worth a look, Promo that fits)
+  // is cut from the rollout page (Oct 17, 2026 just-planned cuts, founder
+  // approved): the timeline already says the count ("0 of 20 done") and where
+  // to start (the "Start here" tag), and desktop full screen never showed it.
+  // Hide only: PlanBuiltBanner, its summary and promo fits, and the "seen"
+  // record all stay. `planBuiltFresh` is the moment it used to cover, kept so
+  // the new-release guide still stays out of that moment.
   const planBuiltSeen = usePlanBuiltSeen(scopedReleaseSlim?.id ?? null);
-  const planBuiltBanner =
+  const planBuiltFresh = Boolean(
     scopedReleaseSlim &&
-    scopedTasks.length > 0 &&
-    readPlannedByUrgans(scopedReleaseSlim.metadata) &&
-    !planBuiltSeen ? (
-      <PlanBuiltBanner
-        releaseId={scopedReleaseSlim.id}
-        compact={Boolean(readPlannerAuto(scopedReleaseSlim.metadata))}
-        onDismiss={() => markPlanBuiltSeen(scopedReleaseSlim.id)}
-      />
-    ) : null;
+      scopedTasks.length > 0 &&
+      readPlannedByUrgans(scopedReleaseSlim.metadata) &&
+      !planBuiltSeen
+  );
 
   // "Confirm your release date" pinned on top of a new user's first plan
   // (URG-251 flow, 2026-10-14): the rollout onboarding made in this browser,
@@ -1022,7 +999,50 @@ export function WorkspaceView() {
     tasks: scopedTasks,
     isNewUserRollout: Boolean(scopedReleaseId && onboardingRolloutId === scopedReleaseId),
   });
-  const pinnedConfirmDateCard = pinnedConfirmDateTask ? (
+  // First steps (URG-293), read once for the page so phone and computer agree
+  // on whether the card is up (Oct 17, 2026 just-planned cuts). While it is up
+  // (or still loading on a new rollout) the pinned date card is its step 1
+  // instead of a second card, and the distribution check and the role gaps
+  // wait until it is done or hidden.
+  const firstSteps = useRolloutFirstSteps({
+    release: scopedReleaseSlim
+      ? {
+          id: scopedReleaseSlim.id,
+          createdAt: scopedReleaseSlim.createdAt ?? null,
+          isTest: Boolean(scopedReleaseSlim.isTest),
+        }
+      : null,
+    isOwner: scopedReleaseIsOwn,
+    pinnedConfirmDate: pinnedConfirmDateTask
+      ? { title: pinnedConfirmDateTask.title, onOpen: () => openTask(pinnedConfirmDateTask.id) }
+      : null,
+  });
+  const firstStepsUp = Boolean(
+    bodyIsMainView && scopedReleaseSlim && !scopedReleaseSlim.isTest && firstSteps.status !== 'hidden'
+  );
+  // Renders nothing unless there is genuinely something to say, the
+  // PostPlanKitPrompt rule verbatim.
+  //
+  // Both halves of one loop, in the order they happen: the jobs nobody is on,
+  // then what came back from the people already asked. The second is why the
+  // request row stores its release at all, and each renders nothing when it
+  // has nothing to say, so a release with neither adds no chrome.
+  //
+  // The role gaps wait while first steps is up (Oct 17, 2026): a people ask
+  // beside step "Invite your team" is the same ask twice. Back next visit.
+  const roleGapsFooter =
+    scopedReleaseSlim && ((roleGaps.length > 0 && !firstStepsUp) || DIRECTORY_REQUESTS_ENABLED) ? (
+      <div className="space-y-3">
+        {roleGaps.length > 0 && !firstStepsUp ? (
+          <RoleGapsPanel releaseId={scopedReleaseSlim.id} gaps={roleGaps} />
+        ) : null}
+        {DIRECTORY_REQUESTS_ENABLED && scopedReleaseIsOwn ? (
+          <SentRequestsList releaseId={scopedReleaseSlim.id} variant="release" />
+        ) : null}
+      </div>
+    ) : null;
+
+  const pinnedConfirmDateCard = pinnedConfirmDateTask && !firstStepsUp ? (
     <PinnedConfirmDateCard
       title={pinnedConfirmDateTask.title}
       dueDate={pinnedConfirmDateTask.dueDate ?? null}
@@ -1050,7 +1070,7 @@ export function WorkspaceView() {
   // The one banner the activity list carries, with the pinned activity above
   // it for a new user. Null when there is neither, so the panel renders no gap.
   const otherActivitiesBanner =
-    editorialPitchBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner;
+    editorialPitchBanner ?? testReleaseBanner ?? planBanner ?? setReleaseDateBanner;
   // The post-release review (URG-253) leads the list once it opens: 28 days
   // after release day, or every activity done. Checked here from the store
   // first, so a rollout still in flight never fetches it.
@@ -1176,7 +1196,9 @@ export function WorkspaceView() {
       })
     : 'none';
   const distributionStatusStrip =
-    bodyIsMainView && scopedReleaseSlim && distributionMode !== 'none' ? (
+    // Waits while first steps is up (Oct 17, 2026): distribution is weeks away
+    // and its top item (cover art) is first step 1, so the page asked twice.
+    bodyIsMainView && scopedReleaseSlim && distributionMode !== 'none' && !firstStepsUp ? (
       <DistributionStatusStrip
         releaseId={scopedReleaseSlim.id}
         showReadiness={distributionMode === 'full'}
@@ -1232,7 +1254,7 @@ export function WorkspaceView() {
   // take this slot first was removed Oct 17, 2026 (founder: "this is not
   // needed at all"); the tour code is kept.
   const newReleaseGuideBanner =
-    showNewReleaseGuide && !setReleaseDateBanner && !planBanner && !planBuiltBanner ? (
+    showNewReleaseGuide && !setReleaseDateBanner && !planBanner && !planBuiltFresh ? (
       <NewReleaseGuide
         onDismiss={() => setShowNewReleaseGuide(false)}
         releaseType={scopedReleaseSlim?.releaseType}
@@ -1250,8 +1272,7 @@ export function WorkspaceView() {
   const nextMovesBanner =
     bodyIsMainView && scopedReleaseSlim && !scopedReleaseSlim.isTest ? (
       <RolloutFirstSteps
-        release={scopedReleaseSlim}
-        isOwner={scopedReleaseIsOwn}
+        state={firstSteps}
         fallback={
           <RolloutNextMoves release={scopedReleaseSlim} tasks={scopedTasks} isOwner={scopedReleaseIsOwn} />
         }
@@ -1567,7 +1588,9 @@ export function WorkspaceView() {
                     the ACTIVITY list, not the scene body that replaced it,
                     and on a phone it was one of ~250px of stacked chrome
                     between the topbar and the scene's own content. */}
-                {!bodyIsMainView ? null : (
+                {/* Not at 0 done either (Oct 17, 2026): an empty bar says
+                    nothing; it comes back with the first tick. */}
+                {!bodyIsMainView || !scopedTasks.some((t) => t.status === 'done') ? null : (
                   <div className="mb-4 flex items-center gap-3">
                     <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
                       Motion

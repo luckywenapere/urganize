@@ -28,56 +28,80 @@ const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 
 const UNKNOWN: FirstStepsFacts = { hasCoverArt: null, hasTeam: null };
 
+/** What the first-steps card is doing on this rollout right now. */
+export type RolloutFirstStepsState = {
+  /**
+   * 'showing': the card is on screen. 'pending': it may show (a new rollout,
+   * not hidden) but the facts are still loading. 'hidden': it will not show.
+   * The page treats pending like showing for what it holds back (the
+   * distribution check, the role gaps, the pinned card), so those never flash
+   * up and vanish while the card loads; at worst they arrive a moment late.
+   */
+  status: 'showing' | 'pending' | 'hidden';
+  steps: FirstStep[];
+  go: (step: FirstStep) => void;
+  dismiss: () => void;
+};
+
 /**
- * The first steps on a new rollout (URG-293; rules in lib/rollout-first-steps.ts).
- * One obvious next action, front and centre, with the short checklist under it.
- * Each item ticks itself off from what the rollout holds, re-read whenever a
- * scene closes or the tab comes back, and the card goes once all are done.
- *
- * While it shows it REPLACES the rollout's next moves (`fallback`), so a brand
- * new rollout offers one thing to do, not four. The moment it goes, the next
- * moves come back.
+ * The first steps on a new rollout (URG-293; rules in lib/rollout-first-steps.ts),
+ * as a hook so the page can ask whether the card is up (Oct 17, 2026 just-
+ * planned cuts: while it shows, the distribution check, the role gaps and the
+ * pinned "Confirm your release date" card stand down, and the pin becomes
+ * step 1). Each item ticks itself off from what the rollout holds, re-read
+ * whenever a scene closes or the tab comes back. Call it once per page and
+ * hand the result to <RolloutFirstSteps>, so phone and computer share it.
  */
-export function RolloutFirstSteps({
+export function useRolloutFirstSteps({
   release,
   isOwner,
-  fallback,
+  pinnedConfirmDate = null,
 }: {
-  release: { id: string; createdAt: string | null; isTest: boolean };
+  release: { id: string; createdAt: string | null; isTest: boolean } | null;
   isOwner: boolean;
-  fallback: ReactNode;
-}) {
+  /** The pinned "Confirm your release date" activity, while open. */
+  pinnedConfirmDate?: { title: string; onOpen: () => void } | null;
+}): RolloutFirstStepsState {
   const user = useAuthStore((state) => state.user);
   const openSettings = useOpenSettings();
   const { activeScene, openScene } = useSceneOverlay();
   const [facts, setFacts] = useState<FirstStepsFacts>(UNKNOWN);
   const [factsKnown, setFactsKnown] = useState(false);
+  // True once a read has finished either way, so an unreachable server ends
+  // 'pending' instead of holding the page's other blocks back.
+  const [factsSettled, setFactsSettled] = useState(false);
   // null until the mount effect has read storage (no render-time storage reads).
   const [dismissed, setDismissed] = useState<boolean | null>(null);
 
+  const releaseId = release?.id ?? null;
+  const releaseIsTest = release?.isTest ?? true;
+  const releaseCreatedAt = release?.createdAt ?? null;
+
   const canInvite = getRolePermissions(user?.role).role === 'manager';
   const isNew = useMemo(
-    () => isOwner && !release.isTest && isRolloutNew(release.createdAt, new Date()),
-    [isOwner, release.isTest, release.createdAt]
+    () => Boolean(releaseId) && isOwner && !releaseIsTest && isRolloutNew(releaseCreatedAt, new Date()),
+    [releaseId, isOwner, releaseIsTest, releaseCreatedAt]
   );
 
   useEffect(() => {
+    if (!releaseId) return;
     const list = readPersistedState(
       FIRST_STEPS_DISMISSED_KEY,
       FIRST_STEPS_DISMISSED_VERSION,
       isDismissedList
     );
-    setDismissed(Boolean(list?.includes(release.id)));
-  }, [release.id]);
+    setDismissed(Boolean(list?.includes(releaseId)));
+  }, [releaseId]);
 
   const load = useCallback(async () => {
+    if (!releaseId) return;
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      const response = await fetch(`/api/releases/${release.id}/first-steps`, {
+      const response = await fetch(`/api/releases/${releaseId}/first-steps`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store',
       });
@@ -88,14 +112,17 @@ export function RolloutFirstSteps({
       setFactsKnown(true);
     } catch {
       // Unreachable server: the card simply does not show.
+    } finally {
+      setFactsSettled(true);
     }
-  }, [release.id]);
+  }, [releaseId]);
 
   // A different rollout starts from unknown, never from the last one's ticks.
   useEffect(() => {
     setFacts(UNKNOWN);
     setFactsKnown(false);
-  }, [release.id]);
+    setFactsSettled(false);
+  }, [releaseId]);
 
   // Read on arrival and every time a scene closes (that is where the cover art
   // gets added), only while the rollout is new and not hidden.
@@ -118,37 +145,50 @@ export function RolloutFirstSteps({
     };
   }, [isNew, dismissed, load]);
 
+  const pinnedTitle = pinnedConfirmDate?.title ?? null;
   const steps = useMemo(
-    () => buildFirstSteps(facts, { cover: COVER_ART_ENABLED, team: canInvite }),
-    [facts, canInvite]
+    () =>
+      buildFirstSteps(
+        facts,
+        { cover: COVER_ART_ENABLED, team: canInvite },
+        pinnedTitle !== null ? { title: pinnedTitle } : null
+      ),
+    [facts, canInvite, pinnedTitle]
   );
   const visible =
+    Boolean(release) &&
     dismissed === false &&
     shouldShowFirstSteps({
       isOwner,
-      isTest: release.isTest,
-      createdAt: release.createdAt,
+      isTest: releaseIsTest,
+      createdAt: releaseCreatedAt,
       now: new Date(),
       dismissed: false,
       factsKnown,
       steps,
     });
+  const status: RolloutFirstStepsState['status'] = visible
+    ? 'showing'
+    : isNew && dismissed !== true && !factsKnown && !factsSettled
+      ? 'pending'
+      : 'hidden';
 
-  if (!visible) return <>{fallback}</>;
-
-  const next = nextFirstStep(steps);
   const doneCount = steps.filter((step) => step.done).length;
+  const onOpenPinned = pinnedConfirmDate?.onOpen;
 
   const go = (step: FirstStep) => {
+    if (!releaseId) return;
     captureAnalyticsEvent({
       name: 'rollout_first_step_clicked',
-      properties: { release_id: release.id, step: step.key, done: doneCount, total: steps.length },
+      properties: { release_id: releaseId, step: step.key, done: doneCount, total: steps.length },
     });
-    if (step.key === 'cover') openScene('coverart', release.id);
+    if (step.key === 'date') onOpenPinned?.();
+    else if (step.key === 'cover') openScene('coverart', releaseId);
     else openSettings({ segment: 'team', section: 'teammates' });
   };
 
   const dismiss = () => {
+    if (!releaseId) return;
     const list = readPersistedState(
       FIRST_STEPS_DISMISSED_KEY,
       FIRST_STEPS_DISMISSED_VERSION,
@@ -157,14 +197,37 @@ export function RolloutFirstSteps({
     writePersistedState(
       FIRST_STEPS_DISMISSED_KEY,
       FIRST_STEPS_DISMISSED_VERSION,
-      withDismissed(list, release.id)
+      withDismissed(list, releaseId)
     );
     setDismissed(true);
     captureAnalyticsEvent({
       name: 'rollout_first_steps_dismissed',
-      properties: { release_id: release.id, done: doneCount, total: steps.length },
+      properties: { release_id: releaseId, done: doneCount, total: steps.length },
     });
   };
+
+  return { status, steps, go, dismiss };
+}
+
+/**
+ * The first steps card. One obvious next action, front and centre, with the
+ * short checklist under it; the card goes once all are done.
+ *
+ * While it shows it REPLACES the rollout's next moves (`fallback`), so a brand
+ * new rollout offers one thing to do, not four. The moment it goes, the next
+ * moves come back.
+ */
+export function RolloutFirstSteps({
+  state,
+  fallback,
+}: {
+  state: RolloutFirstStepsState;
+  fallback: ReactNode;
+}) {
+  if (state.status !== 'showing') return <>{fallback}</>;
+  const { steps, go, dismiss } = state;
+  const next = nextFirstStep(steps);
+  const doneCount = steps.filter((step) => step.done).length;
 
   return (
     <section

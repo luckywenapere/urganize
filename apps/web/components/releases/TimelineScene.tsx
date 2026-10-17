@@ -26,11 +26,7 @@ import {
   usePlanList,
 } from '@/components/workspace/PlanListControls';
 import { RolloutPhaseStrip } from '@/components/workspace/RolloutPhases';
-import {
-  PlanSuggestionToast,
-  PlanSuggestionsBlock,
-  usePlanSuggestions,
-} from '@/components/workspace/PlanSuggestions';
+import { PlanSuggestionToast } from '@/components/workspace/PlanSuggestions';
 import { pickStartHereTaskId } from '@/lib/plan-core';
 import { useTimelineFullScreenToolsSlot } from '@/components/releases/TimelineFullScreen';
 import { formatPhaseDates, summarizeRolloutPhases } from '@/lib/rollout-phases';
@@ -156,6 +152,8 @@ export function TimelineScene({
   // and five counts. Replacing that with four closed drawers would answer
   // nothing. The narrow week list has always rendered everything expanded.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // "No date yet" is one collapsed row until tapped (Oct 17, 2026).
+  const [undatedOpen, setUndatedOpen] = useState(false);
   // Day offsets applied locally while a reschedule is in flight, so the bar
   // stays where the user dropped it instead of snapping back for a round trip
   // and then jumping forward again when the refetch lands.
@@ -184,9 +182,10 @@ export function TimelineScene({
   // "Show all" decide the rest. The axis is built from every activity so a
   // bar sits in the same week whichever list is showing.
   const plan = usePlanList(tasks, release.id);
-  // A smaller plan (URG-318): Start here on its first open task, and the rest
-  // of the plan's work as one-tap suggestions under the timeline.
-  const suggestions = usePlanSuggestions(release.id, tasks);
+  // A smaller plan (URG-318): Start here on its first open task. The rest of
+  // the plan's work as one-tap suggestions left the timeline on Oct 17, 2026
+  // ("52 suggested" under a 12-activity plan read as "your plan is missing 52
+  // things"); they live in Work the plan (TasksPanel's PhaseSuggestions).
   const startHereId = useMemo(() => pickStartHereTaskId(tasks), [tasks]);
   const shown = useMemo(
     () => (timeline ? narrowTimeline(timeline, new Set(plan.visible.map((task) => task.id))) : null),
@@ -303,7 +302,7 @@ export function TimelineScene({
           chips, and the distribution check beside them when it is up. */}
       <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
         <div className="min-w-0 lg:flex-1">
-          <RolloutPhaseStrip phases={phaseSummaries} compact />
+          <RolloutPhaseStrip phases={phaseSummaries} releaseDate={release.releaseDate ?? null} compact />
         </div>
         {statusSlot ? <div className="min-w-0 lg:max-w-[46%] lg:shrink-0 lg:has-[[aria-expanded=true]]:max-w-none lg:has-[[aria-expanded=true]]:basis-full">{statusSlot}</div> : null}
       </div>
@@ -414,38 +413,56 @@ export function TimelineScene({
         />
       </div>
 
-      {suggestions.length > 0 && !plan.filtering ? (
-        <div className="mt-4">
-          <PlanSuggestionsBlock releaseId={release.id} items={suggestions} />
-        </div>
-      ) : null}
       <PlanSuggestionToast />
 
       <div className="mt-4">
         <PlanShowAllToggle plan={plan} />
       </div>
 
+      {/* One collapsed row (Oct 17, 2026 just-planned cuts): these are real
+          jobs, so they stay one tap away, but eight rows plus an explainer
+          pushed the page long. Same row on phone and computer. */}
       {unscheduled.length > 0 ? (
-        <div className="mt-8 border-t border-stroke-subtle pt-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-content-tertiary">
-            No date yet · {unscheduled.length}
-          </h3>
-          <p className="mt-1 text-xs text-content-secondary">
-            These are not on the timeline. Give one a date and it takes its place.
-          </p>
-          <ul className="mt-2 space-y-1">
-            {unscheduled.map((item) => (
-              <li key={item.taskId}>
-                <button
-                  type="button"
-                  onClick={() => onOpenTask(item.taskId)}
-                  className="motion-focus w-full truncate rounded-md px-2 py-1.5 text-left text-xs text-content-primary hover:bg-bg-hover"
-                >
-                  {item.title}
-                </button>
-              </li>
-            ))}
-          </ul>
+        <div className="mt-4 overflow-hidden rounded-xl border border-stroke-subtle bg-bg-surface">
+          <button
+            type="button"
+            onClick={() => setUndatedOpen((open) => !open)}
+            aria-expanded={undatedOpen}
+            aria-controls="timeline-no-date-yet"
+            className="motion-focus flex w-full items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-bg-hover"
+          >
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${undatedOpen ? '' : '-rotate-90'}`}
+              aria-hidden="true"
+            />
+            <span className="shrink-0 text-sm font-medium text-content-primary">No date yet</span>
+            <span className="shrink-0 text-sm tabular-nums text-content-tertiary">· {unscheduled.length}</span>
+            {undatedOpen ? null : (
+              <span className="ml-auto min-w-0 truncate pl-3 text-xs text-content-tertiary">
+                {unscheduled.map((item) => item.title).join(', ')}
+              </span>
+            )}
+          </button>
+          {undatedOpen ? (
+            <div id="timeline-no-date-yet" className="border-t border-stroke-subtle px-2 pb-2 pt-2">
+              <p className="px-2 pb-1 text-xs text-content-secondary">
+                Not on the timeline. Give one a date and it takes its place.
+              </p>
+              <ul className="space-y-1">
+                {unscheduled.map((item) => (
+                  <li key={item.taskId}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenTask(item.taskId)}
+                      className="motion-focus w-full truncate rounded-md px-2 py-1.5 text-left text-xs text-content-primary hover:bg-bg-hover"
+                    >
+                      {item.title}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

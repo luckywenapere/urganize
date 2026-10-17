@@ -20,6 +20,18 @@ describe('rollout first steps (URG-293)', () => {
     expect(nextFirstStep(steps)?.key).toBe('cover');
   });
 
+  it('leads with the pinned Confirm your release date when there is one (Oct 17, 2026)', () => {
+    const steps = buildFirstSteps({ hasCoverArt: true, hasTeam: true }, all, { title: 'Confirm your release date' });
+    expect(steps.map((s) => [s.key, s.done])).toEqual([
+      ['date', false],
+      ['cover', true],
+    ]);
+    expect(nextFirstStep(steps)?.key).toBe('date');
+    expect(steps[0].action).toBe('Confirm the date');
+    // Without a pin there is no date step.
+    expect(buildFirstSteps({ hasCoverArt: false, hasTeam: false }, all).some((s) => s.key === 'date')).toBe(false);
+  });
+
   it('drops steps that do not exist for this person', () => {
     const steps = buildFirstSteps(
       { hasCoverArt: false, hasTeam: false },

@@ -227,10 +227,18 @@ export function summarizeRolloutPhases(
 
     let state: RolloutPhaseState;
     if (total > 0 && done === total) state = 'done';
-    // Pre-production is the work in hand until the release ramp starts, and
-    // it has no window of its own, so an undated rollout still reads "Now".
+    // Pre-production has no window of its own. It reads "Now" only on an
+    // undated rollout, where no dated phase can. Once there is a release date
+    // the dated phase owns "Now" (one Now at a time, Oct 17, 2026: Pre-
+    // production and Pre-release both said NOW): open pre-production work is
+    // "Still open" once the release week has started, and unbadged before.
     else if (phase === 'pre_production')
-      state = todayPhaseIndex === null || todayPhaseIndex <= ROLLOUT_PHASE_ORDER.indexOf('pre_release') ? 'current' : 'past';
+      state =
+        todayPhaseIndex === null
+          ? 'current'
+          : todayPhaseIndex > ROLLOUT_PHASE_ORDER.indexOf('pre_release')
+            ? 'past'
+            : 'upcoming';
     else if (todayPhaseIndex === null) state = 'unknown';
     else if (index === todayPhaseIndex) state = 'current';
     else if (index < todayPhaseIndex) state = 'past';
@@ -264,4 +272,28 @@ export function phaseStateLabel(state: RolloutPhaseState): string | null {
   if (state === 'done') return 'Done';
   if (state === 'past') return 'Still open';
   return null;
+}
+
+/**
+ * The phases the strip at the top of the timeline draws (Oct 17, 2026 just-
+ * planned cuts). Pre-production with no dates is left out: it has no window on
+ * the timeline, and its jobs are already the "No date yet" row under it.
+ */
+export function phasesForStrip<T extends Pick<RolloutPhaseSummary, 'phase' | 'startDate' | 'endDate'>>(
+  phases: readonly T[]
+): T[] {
+  return phases.filter((summary) => summary.phase !== 'pre_production' || Boolean(summary.startDate || summary.endDate));
+}
+
+/**
+ * The one phase the phone's single phase line names (Oct 17, 2026): the one
+ * we are in now, else the first with work still open, else the last.
+ */
+export function phaseForLine<T extends Pick<RolloutPhaseSummary, 'state'>>(phases: readonly T[]): T | null {
+  return (
+    phases.find((summary) => summary.state === 'current') ??
+    phases.find((summary) => summary.state !== 'done') ??
+    phases[phases.length - 1] ??
+    null
+  );
 }
