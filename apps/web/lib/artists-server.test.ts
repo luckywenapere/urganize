@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   countWorkspaceArtists,
+  deleteArtistShows,
   describeArtistDeletionBlock,
   listWorkspaceArtists,
   reassignReleaseArtist,
@@ -203,7 +204,7 @@ describe('reassignReleaseArtist', () => {
 
 describe('describeArtistDeletionBlock', () => {
   it('allows a removal that loses nothing', () => {
-    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 0, shows: 0 })).toBeNull();
+    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 0 })).toBeNull();
   });
 
   // FAILS CLOSED, unlike every other count in this module. Being wrong here
@@ -216,7 +217,7 @@ describe('describeArtistDeletionBlock', () => {
   });
 
   it('names how many releases are in the way, and what to do', () => {
-    const message = describeArtistDeletionBlock({ releases: 3, scopedMembers: 0, shows: 0 }) ?? '';
+    const message = describeArtistDeletionBlock({ releases: 3, scopedMembers: 0 }) ?? '';
     expect(message).toContain('3');
     expect(message).toMatch(/move/i);
   });
@@ -226,43 +227,85 @@ describe('describeArtistDeletionBlock', () => {
   // silent removal promotes a scoped teammate to seeing every release. The copy
   // has to say that, not just refuse.
   it('says what happens to a scoped teammate rather than only refusing', () => {
-    const message = describeArtistDeletionBlock({ releases: 0, scopedMembers: 2, shows: 0 }) ?? '';
+    const message = describeArtistDeletionBlock({ releases: 0, scopedMembers: 2 }) ?? '';
     expect(message).toContain('2');
     expect(message).toMatch(/every rollout/i);
   });
 
   it('covers both blockers in one message when both apply', () => {
-    const message = describeArtistDeletionBlock({ releases: 1, scopedMembers: 1, shows: 0 }) ?? '';
+    const message = describeArtistDeletionBlock({ releases: 1, scopedMembers: 1 }) ?? '';
     expect(message).toMatch(/rollout/i);
     expect(message).toMatch(/access/i);
   });
 
-  // Shows joined the blockers on 2026-09-25. Before that, an artist with a show
-  // hit the database's restrict and read back "This artist has rollouts now" —
-  // wrong, and unfixable from anywhere the message pointed.
-  it('names the shows in the way, and says to delete them', () => {
-    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 0, shows: 1 })).toBe(
-      'This artist has 1 show. Delete the show first.'
-    );
-    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 0, shows: 4 })).toBe(
-      'This artist has 4 shows. Delete the shows first.'
-    );
-  });
-
-  it('lists every blocker in one sentence, without an Oxford comma', () => {
-    expect(describeArtistDeletionBlock({ releases: 2, scopedMembers: 0, shows: 3 })).toBe(
-      'This artist has 2 rollouts and 3 shows. Move or archive the rollouts and delete the shows first.'
-    );
-    expect(describeArtistDeletionBlock({ releases: 1, scopedMembers: 2, shows: 1 })).toBe(
-      'This artist has 1 rollout, 1 show and 2 people who can only see this artist. Move or archive the rollout, delete the show and change that access first.'
-    );
-    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 1, shows: 2 })).toBe(
-      'This artist has 2 shows and 1 person who can only see this artist. Delete the shows and change that access first.'
-    );
+  // Shows were removed from Urganize on 2026-10-17: an artist's leftover shows
+  // go with the artist (deleteArtistShows) instead of blocking the delete.
+  it('never mentions shows', () => {
+    const message = describeArtistDeletionBlock({ releases: 1, scopedMembers: 1 }) ?? '';
+    expect(message).not.toMatch(/show/i);
   });
 
   it('reads naturally for one of each', () => {
-    expect(describeArtistDeletionBlock({ releases: 1, scopedMembers: 0, shows: 0 })).toContain('1 rollout.');
-    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 1, shows: 0 })).toContain('1 person');
+    expect(describeArtistDeletionBlock({ releases: 1, scopedMembers: 0 })).toContain('1 rollout.');
+    expect(describeArtistDeletionBlock({ releases: 0, scopedMembers: 1 })).toContain('1 person');
+  });
+});
+
+describe('deleteArtistShows', () => {
+  /** Records every call in order so the test can pin packs-before-shows. */
+  function stubShowsClient(opts: { eventIds: string[]; packError?: boolean; selectError?: boolean }) {
+    const calls: string[] = [];
+    const from = vi.fn((table: string) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => {
+          calls.push(`select ${table}`);
+          return Promise.resolve(
+            opts.selectError
+              ? { data: null, error: { message: 'nope' } }
+              : { data: opts.eventIds.map((id) => ({ id })), error: null }
+          );
+        }),
+      })),
+      delete: vi.fn(() => {
+        const result = {
+          error: table === 'dj_packs' && opts.packError ? { message: 'nope' } : null,
+        };
+        const chain = {
+          eq: vi.fn(() => chain),
+          in: vi.fn(() => {
+            calls.push(`delete ${table}`);
+            return Promise.resolve(result);
+          }),
+        };
+        return chain;
+      }),
+    }));
+    return { client: { from } as unknown as SupabaseClient, calls };
+  }
+
+  it('does nothing when the artist has no shows', async () => {
+    const stub = stubShowsClient({ eventIds: [] });
+    expect(await deleteArtistShows(stub.client, 'a1')).toEqual({ error: null });
+    expect(stub.calls).toEqual(['select events']);
+  });
+
+  it('removes the DJ packs before the shows (dj_packs.setlist_id is RESTRICT)', async () => {
+    const stub = stubShowsClient({ eventIds: ['e1', 'e2'] });
+    expect(await deleteArtistShows(stub.client, 'a1')).toEqual({ error: null });
+    expect(stub.calls).toEqual(['select events', 'delete dj_packs', 'delete events']);
+  });
+
+  it('stops, and says so, when a step fails', async () => {
+    const failedPack = stubShowsClient({ eventIds: ['e1'], packError: true });
+    expect((await deleteArtistShows(failedPack.client, 'a1')).error).toMatch(/try again/i);
+    expect(failedPack.calls).not.toContain('delete events');
+    const failedRead = stubShowsClient({ eventIds: [], selectError: true });
+    expect((await deleteArtistShows(failedRead.client, 'a1')).error).toMatch(/try again/i);
+  });
+
+  it('is never empty-handed on the artist id', async () => {
+    const stub = stubShowsClient({ eventIds: ['e1'] });
+    expect(await deleteArtistShows(stub.client, '')).toEqual({ error: null });
+    expect(stub.calls).toEqual([]);
   });
 });

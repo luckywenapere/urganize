@@ -1,26 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Plus } from '@/components/icons';
 import { useShellStore } from '@/stores/useShellStore';
-import { CreateShowModal } from '@/components/events/CreateShowModal';
 import { useAuthStore } from '@/lib/auth-store';
 // Back goes to the Artists tab, the list of artists (founder, 2026-10-14).
 import { ARTISTS_HREF } from '@/lib/shell-nav';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
-import { bucketReleases, bucketShows } from '@/lib/artist-overview';
+import { bucketReleases } from '@/lib/artist-overview';
 import { epkHref, formatCalendarDate, isArtistPageEnabled, releaseHref } from '@/lib/artist-page';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
-import { useEventsStore } from '@/stores/useEventsStore';
 import { usePressKitsStore } from '@/stores/usePressKitsStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
-const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 
 const KIT_COPY = { incomplete: 'Not finished yet', ready: 'Ready to publish' } as const;
 
@@ -68,10 +65,6 @@ export default function ArtistPageClient() {
   const setArtistPhoto = useArtistRosterStore((state) => state.setArtistPhoto);
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
-  const events = useEventsStore((state) => state.events);
-  const loadEvents = useEventsStore((state) => state.load);
-  const bookableArtistIds = useEventsStore((state) => state.bookableArtistIds);
-  const [isBookOpen, setIsBookOpen] = useState(false);
   const openCreateForArtist = useShellStore((state) => state.openCreateForArtist);
   const kits = usePressKitsStore((state) => state.entries);
   const loadKits = usePressKitsStore((state) => state.load);
@@ -83,9 +76,8 @@ export default function ArtistPageClient() {
     }
     void loadRoster();
     void loadCommandCenter();
-    void loadEvents();
     void loadKits();
-  }, [loadRoster, loadCommandCenter, loadEvents, loadKits, router]);
+  }, [loadRoster, loadCommandCenter, loadKits, router]);
 
   const artist = artists.find((entry) => entry.id === artistId) ?? null;
   const kit = kits.find((entry) => entry.artistId === artistId)?.kit ?? null;
@@ -93,10 +85,6 @@ export default function ArtistPageClient() {
   const buckets = useMemo(
     () => bucketReleases(releases.filter((release) => release.artistId === artistId)),
     [releases, artistId]
-  );
-  const shows = useMemo(
-    () => bucketShows(events.filter((show) => show.artistId === artistId)),
-    [events, artistId]
   );
 
   const releaseCount = buckets.planned.length + buckets.live.length + buckets.past.length;
@@ -108,7 +96,6 @@ export default function ArtistPageClient() {
       properties: {
         artist_id: artistId,
         releases: releaseCount,
-        upcoming_shows: shows.upcoming.length,
         has_kit: Boolean(kit),
       },
     });
@@ -118,12 +105,9 @@ export default function ArtistPageClient() {
 
   if (!ARTIST_PAGE_ENABLED) return null;
 
-  const act = (action: 'open_epk' | 'open_release' | 'open_show' | 'book_show' | 'new_rollout') =>
+  const act = (action: 'open_epk' | 'open_release' | 'new_rollout') =>
     captureAnalyticsEvent({ name: 'artist_page_action', properties: { artist_id: artistId, action } });
 
-  // Shows must be on and this person allowed to book for this artist (GET
-  // /api/events says who). Otherwise the section stays read-only.
-  const canBook = EVENTS_ENABLED && Boolean(bookableArtistIds?.includes(artistId));
 
   if (!artist) {
     const waiting = authLoading || !rosterLoaded;
@@ -185,28 +169,6 @@ export default function ArtistPageClient() {
         <ul className="space-y-2">{list.map(releaseRow)}</ul>
       </div>
     );
-
-  const showRow = (show: (typeof events)[number]) => (
-    <li key={show.id}>
-      <Link
-        href={`/dashboard/shows/${encodeURIComponent(show.id)}`}
-        onClick={() => act('open_show')}
-        className="motion-focus flex items-center justify-between gap-3 rounded-lg border border-stroke-default p-2.5 transition-colors hover:border-stroke-strong"
-      >
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-content-primary">{show.title}</p>
-          <p className="text-xs text-content-secondary">
-            {[show.venueName, show.city].filter(Boolean).join(', ') || 'Venue to be confirmed'}
-            {' · '}
-            {show.setStartAt
-              ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: show.timezone }).format(new Date(show.setStartAt))
-              : 'Time to be confirmed'}
-          </p>
-        </div>
-        <ArrowRight className="h-4 w-4 shrink-0 text-content-tertiary" aria-hidden />
-      </Link>
-    </li>
-  );
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
@@ -285,51 +247,6 @@ export default function ArtistPageClient() {
           </>
         )}
       </SectionCard>
-
-      <SectionCard
-        title="Shows"
-        action={
-          canBook ? (
-            <AddButton
-              label="Add a show"
-              onClick={() => {
-                act('book_show');
-                setIsBookOpen(true);
-              }}
-            />
-          ) : null
-        }
-      >
-        {shows.upcoming.length === 0 && shows.past.length === 0 ? (
-          <Empty>{canBook ? 'No shows for this artist yet.' : 'No shows for this artist yet.'}</Empty>
-        ) : (
-          <>
-            {shows.upcoming.length > 0 ? (
-              <div>
-                <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">Coming up</h3>
-                <ul className="mt-2 space-y-2">{shows.upcoming.map(showRow)}</ul>
-              </div>
-            ) : null}
-            {shows.past.length > 0 ? (
-              <div className={shows.upcoming.length > 0 ? 'mt-4' : ''}>
-                <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-content-tertiary">Past</h3>
-                <ul className="mt-2 space-y-2">{shows.past.slice(0, 5).map(showRow)}</ul>
-              </div>
-            ) : null}
-          </>
-        )}
-      </SectionCard>
-
-      {/* The same booking form as Shows, with this artist already chosen
-          (founder, 2026-10-15). One artist means no picker. */}
-      {isBookOpen ? (
-        <CreateShowModal
-          artists={[{ id: artist.id, name: artist.name }]}
-          onClose={() => setIsBookOpen(false)}
-          onCreated={() => setIsBookOpen(false)}
-          onCreatedSeries={() => setIsBookOpen(false)}
-        />
-      ) : null}
     </div>
   );
 }

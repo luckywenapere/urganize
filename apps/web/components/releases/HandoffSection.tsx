@@ -28,7 +28,6 @@ import { useHandoff, type HandoffChange } from './useHandoff';
 // only open a step that exists.
 const SCENE_FLAGS = {
   metadata: process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true',
-  song: process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true',
   coverArt: process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true',
 };
 
@@ -86,6 +85,11 @@ const STATUS_WORD: Record<HandoffItemView['status'], string> = {
   sent: 'Sent',
 };
 
+/** The master has no file in the app, so "Uploaded" would be untrue: it is
+ *  Ready (to approve) instead. */
+const statusWord = (item: HandoffItemView): string =>
+  item.key === 'master' && item.status === 'uploaded' ? 'Ready' : STATUS_WORD[item.status];
+
 function statusTone(item: HandoffItemView, late: boolean): string {
   if (late) return 'text-status-error';
   if (item.status === 'missing') return 'text-content-secondary';
@@ -103,11 +107,9 @@ const Dash = () => <span aria-label="missing">—</span>;
 /** The row's second line: what is there, in the fewest words. */
 function Detail({ item }: { item: HandoffItemView }) {
   const detail = item.detail;
-  if (detail.kind === 'master') {
-    if (!detail.format) return <>No file yet</>;
-    if (item.status === 'missing') return <span className="text-status-error">{`${detail.format} · wrong format`}</span>;
-    return <>{detail.format}</>;
-  }
+  // The master is not kept in Urganize (song upload removed Oct 17, 2026):
+  // the team sends it from their own files.
+  if (detail.kind === 'master') return <>Sent from your own files</>;
   if (detail.kind === 'cover_art') {
     const size =
       detail.width && detail.height ? `${Math.round(detail.width)} × ${Math.round(detail.height)}` : null;
@@ -404,7 +406,7 @@ export function HandoffView({
                   >
                     {item.label}
                   </span>
-                  <span className={`${MONO} ${statusTone(item, late)}`}>{STATUS_WORD[item.status]}</span>
+                  <span className={`${MONO} ${statusTone(item, late)}`}>{statusWord(item)}</span>
                 </div>
                 <div className={`${MONO_SMALL} mt-1 text-content-tertiary`}>
                   <Detail item={item} />
@@ -490,7 +492,7 @@ export function HandoffView({
                     : formatHandoffDay(data.dueDate)}
               </span>
               <span role="cell" className={`${MONO} ${statusTone(item, late)}`}>
-                {STATUS_WORD[item.status]}
+                {statusWord(item)}
               </span>
               <span role="cell" className="flex justify-end">
                 {action ? (

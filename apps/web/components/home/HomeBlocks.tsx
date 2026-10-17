@@ -12,7 +12,6 @@ import type { HomePayload } from '@/lib/home/types';
 import { AttentionStack } from './AttentionStack';
 import { ChappiSpeaksCard } from './ChappiSpeaksCard';
 import { HomeStack } from './HomeStack';
-import { NextShowCard } from './NextShowCard';
 import { OpportunitiesCard } from './OpportunitiesCard';
 import { OnboardingBar } from './OnboardingBar';
 import { PlacementsStack } from './PlacementsStack';
@@ -54,14 +53,13 @@ export function HomeBlocks({
   const spendRollouts = useSpendRollouts(releases, isManager);
 
   const taskStack = buildTaskStack(yourTasks);
-  const upNext = pickUpNext(home.nextShow, releases);
+  const upNext = pickUpNext(releases);
   const attention = buildAttentionItems({
     yourTasks,
-    waiting: { tasks: waitingTasks, djLinks: home.waiting.djLinks },
+    waiting: { tasks: waitingTasks },
     placements,
-    nextShow: home.nextShow,
   });
-  const waitingItems = buildWaitingItems(waitingTasks, home.waiting.djLinks);
+  const waitingItems = buildWaitingItems(waitingTasks);
   const placementItems = buildPlacementItems(placements);
   const onboarding = buildOnboardingProgress(live.releases);
   // What to do next on each rollout (URG-259): rules over what Home already
@@ -75,7 +73,6 @@ export function HomeBlocks({
     nextMoveCount: nextMoves.moves.length,
     attentionCount: attention.length,
     waitingCount: waitingItems.length,
-    hasNextShow: home.nextShow !== null,
     rolloutCount: releases.length,
     placementCount: placementItems.length,
     showSpend: spend !== null && (spend.totalKobo > 0 || spendRollouts.length > 0),
@@ -110,8 +107,6 @@ export function HomeBlocks({
         return <AttentionStack items={attention} />;
       case 'waiting':
         return <WaitingStack items={waitingItems} onTimeCount={live.waitingOnTimeCount} />;
-      case 'next-show':
-        return home.nextShow ? <NextShowCard nextShow={home.nextShow} /> : null;
       case 'rollouts':
         return <RolloutsStack rollouts={releases} />;
       case 'placements':

@@ -8,7 +8,7 @@
  * tool does the half a model is good at (resolve the release, say what is
  * already attached, which doubles as the ownership and flag check because the
  * route 404s for a release that is not yours) and hands the BROWSER a picker
- * card. upload_song set this pattern; see its header for the full argument.
+ * card the user clicks.
  *
  * Cover art and release files sit behind two DIFFERENT flags —
  * NEXT_PUBLIC_FEATURE_COVER_ART and NEXT_PUBLIC_FEATURE_FILES — and that split
@@ -126,7 +126,7 @@ export const FILE_TOOLS: ChappiTool[] = [
     name: 'list_release_files',
     kind: 'read',
     description:
-      "What is attached to a rollout — artwork, masters, contracts, split sheets — by category. Read only: you cannot attach a file yourself, and only the song and the cover art have a picker.",
+      "What is attached to a rollout — artwork, masters, contracts, split sheets — by category. Read only: you cannot attach a file yourself, and only the cover art has a picker.",
     inputSchema: {
       type: 'object',
       properties: { releaseId: { type: 'string' } },

@@ -32,7 +32,6 @@ const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDA
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
 const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
-const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 const RELEASE_CHAT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true';
@@ -232,7 +231,6 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
           METADATA_ENABLED ||
           NOTES_ENABLED ||
           COVER_ART_ENABLED ||
-          SONG_UPLOAD_ENABLED ||
           FILES_ENABLED ||
           CAPTURE_ENABLED ||
           RELEASE_CHAT_ENABLED ||

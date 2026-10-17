@@ -40,26 +40,22 @@ import { PLANNER_TOOLS } from './tool-families/planner';
 import { PRESS_KIT_TOOLS } from './tool-families/press-kits';
 import { PROMO_TOOLS } from './tool-families/promo';
 import { RELEASE_TOOLS } from './tool-families/releases';
-import { SHOW_TOOLS } from './tool-families/shows';
-import { SONG_TOOLS } from './tool-families/song';
 import { TEAM_TOOLS } from './tool-families/team';
 import type { ChappiTool } from './tool-families/shared';
 
 export type { ChappiTool, ChappiToolContext, ChappiConfirmOutcome } from './tool-families/shared';
 
-// Feature cuts (Oct 16, 2026 brief, URG-319): shows, setlists and DJ packs,
-// content calendars, notes and fan capture pages are off the nav, so UrgAns is
-// not offered their tools either (their routes 404 with the flags forced off in
-// next.config.js, and a tool that can only fail is a wrong answer waiting to
-// happen). The song tools stay: a song is part of a rollout, not only a show.
-const KEPT_SHOW_TOOL_NAMES = new Set(['list_songs', 'create_song']);
-const SHOW_TOOLS_KEPT = SHOW_TOOLS.filter((tool) => KEPT_SHOW_TOOL_NAMES.has(tool.name));
+// Feature cuts (Oct 16, 2026 brief, URG-319): content calendars, notes and fan
+// capture pages are off the nav, so UrgAns is not offered their tools either
+// (their routes 404 with the flags forced off in next.config.js, and a tool
+// that can only fail is a wrong answer waiting to happen). Shows, setlists, DJ
+// packs and the song catalogue were deleted outright on Oct 17, 2026, and so
+// were the song-upload tools (song upload removed everywhere, same day).
 
 /** Tool families that are cut, kept importable so restoring one is a line. */
 export const CUT_CHAPPI_TOOLS: ChappiTool[] = [
   ...CALENDAR_TOOLS,
   ...NOTE_TOOLS,
-  ...SHOW_TOOLS.filter((tool) => !KEPT_SHOW_TOOL_NAMES.has(tool.name)),
   ...CAPTURE_TOOLS,
   ...CORE_TOOLS.filter((tool) => tool.name === 'create_note'),
 ];
@@ -71,10 +67,8 @@ export const CHAPPI_TOOLS: ChappiTool[] = [
   ...RELEASE_TOOLS,
   ...PLANNER_TOOLS,
   ...METADATA_TOOLS,
-  ...SONG_TOOLS,
   ...TEAM_TOOLS,
   ...PROMO_TOOLS,
-  ...SHOW_TOOLS_KEPT,
   ...PRESS_KIT_TOOLS,
   ...ARTIST_TOOLS,
   ...FILE_TOOLS,

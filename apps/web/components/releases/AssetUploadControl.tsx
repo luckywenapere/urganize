@@ -3,7 +3,7 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { Loader2, Upload } from '@/components/icons';
 import {
-  ASSET_CATEGORIES,
+  UPLOADABLE_ASSET_CATEGORIES,
   ASSET_MIME_ALLOWLIST,
   type AssetCategory,
   categoryLabel,
@@ -244,7 +244,7 @@ export function AssetUploadControl({ releaseId, onUploaded, onToast }: AssetUplo
             disabled={isUploading}
             className="motion-focus h-10 w-full border border-stroke-control bg-bg-elevated px-3 text-sm text-content-primary transition-colors [color-scheme:dark] hover:border-content-secondary focus:border-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {ASSET_CATEGORIES.map((cat) => (
+            {UPLOADABLE_ASSET_CATEGORIES.map((cat) => (
               <option key={cat} value={cat} className="bg-bg-elevated text-content-primary">
                 {categoryLabel(cat)}
               </option>

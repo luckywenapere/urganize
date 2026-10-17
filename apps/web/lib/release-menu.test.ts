@@ -24,7 +24,6 @@ describe('RELEASE_MENU_ORDER', () => {
       'brief',
       'chat',
       'calendar',
-      'song',
       'coverart',
       'metadata',
       'distribute',
@@ -54,11 +53,10 @@ describe('RELEASE_MENU_ORDER', () => {
     // promoted tab — it is the coordination surface itself, not a place you
     // visit to plan or send something outward.
     expect(position('chat')).toBeLessThan(position('calendar'));
-    // Release prep runs in the order the work happens (2026-10-16): song and
-    // cover art first, then details, then Distribute, then the pitch, which
-    // needs the release delivered.
-    expect(position('calendar')).toBeLessThan(position('song'));
-    expect(position('song')).toBeLessThan(position('coverart'));
+    // Release prep runs in the order the work happens (2026-10-16): cover art
+    // first (song upload was removed 2026-10-17), then details, then
+    // Distribute, then the pitch, which needs the release delivered.
+    expect(position('calendar')).toBeLessThan(position('coverart'));
     expect(position('coverart')).toBeLessThan(position('metadata'));
     expect(position('metadata')).toBeLessThan(position('distribute'));
     expect(position('distribute')).toBeLessThan(position('pitch'));
@@ -76,11 +74,11 @@ describe('RELEASE_MENU_ORDER', () => {
 
 describe('orderReleaseMenu', () => {
   it('sorts entries into the canonical order regardless of how they arrive', () => {
-    const scrambled = entriesFor(['archive', 'capture', 'activities', 'song']);
+    const scrambled = entriesFor(['archive', 'capture', 'activities', 'coverart']);
 
     expect(keys(orderReleaseMenu(scrambled))).toEqual([
       'activities',
-      'song',
+      'coverart',
       'capture',
       'archive',
     ]);

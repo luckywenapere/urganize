@@ -24,10 +24,9 @@ import {
 import { supabase } from '@/lib/supabase/client';
 
 // A step only shows when the place it sends you to exists.
-const SONG_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 
-const UNKNOWN: FirstStepsFacts = { hasSong: null, hasCoverArt: null, hasTeam: null };
+const UNKNOWN: FirstStepsFacts = { hasCoverArt: null, hasTeam: null };
 
 /**
  * The first steps on a new rollout (URG-293; rules in lib/rollout-first-steps.ts).
@@ -98,8 +97,8 @@ export function RolloutFirstSteps({
     setFactsKnown(false);
   }, [release.id]);
 
-  // Read on arrival and every time a scene closes (that is where the song and
-  // the cover art get added), only while the rollout is new and not hidden.
+  // Read on arrival and every time a scene closes (that is where the cover art
+  // gets added), only while the rollout is new and not hidden.
   useEffect(() => {
     if (!isNew || dismissed !== false || activeScene) return;
     void load();
@@ -120,7 +119,7 @@ export function RolloutFirstSteps({
   }, [isNew, dismissed, load]);
 
   const steps = useMemo(
-    () => buildFirstSteps(facts, { song: SONG_ENABLED, cover: COVER_ART_ENABLED, team: canInvite }),
+    () => buildFirstSteps(facts, { cover: COVER_ART_ENABLED, team: canInvite }),
     [facts, canInvite]
   );
   const visible =
@@ -145,8 +144,7 @@ export function RolloutFirstSteps({
       name: 'rollout_first_step_clicked',
       properties: { release_id: release.id, step: step.key, done: doneCount, total: steps.length },
     });
-    if (step.key === 'song') openScene('song', release.id);
-    else if (step.key === 'cover') openScene('coverart', release.id);
+    if (step.key === 'cover') openScene('coverart', release.id);
     else openSettings({ segment: 'team', section: 'teammates' });
   };
 

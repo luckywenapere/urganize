@@ -22,6 +22,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.155.0",
+    date: "October 17, 2026",
+    highlights: [
+      "Shows are gone from Urganize: shows, setlists, DJ packs, run of show and the songs list. Old Shows links now open Home.",
+      "Urganize no longer takes the song. Send your master to your distributor from your own files, then mark it sent on the handoff list.",
+      "Deleting an artist now also deletes their old shows and songs, so it no longer asks you to delete the shows first.",
+    ],
+  },
+  {
     version: "1.154.18",
     date: "October 17, 2026",
     highlights: [

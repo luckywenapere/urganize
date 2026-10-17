@@ -104,7 +104,6 @@ describe('buildOneThing', () => {
             target: { kind: 'link', href: '/x' },
           },
         ],
-        nextShow: null,
       },
       now
     );
@@ -126,20 +125,19 @@ describe('buildOneThing', () => {
             target: { kind: 'task', releaseId: 'r1', taskId: 'l1' },
           },
         ],
-        nextShow: null,
       },
       now
     );
     expect(items).toHaveLength(1);
   });
   it('this week alone is not a next move', () => {
-    expect(buildOneThing({ yourTasks: { late: [], today: [], week: [task('w', '2026-10-19')] }, moves: [], nextShow: null }, now)).toEqual([]);
+    expect(buildOneThing({ yourTasks: { late: [], today: [], week: [task('w', '2026-10-19')] }, moves: [] }, now)).toEqual([]);
   });
 });
 
 describe('describeWaiting', () => {
   it('counts late and on time, hides at zero', () => {
-    expect(describeWaiting({ lateCount: 1, onTimeCount: 2, djCount: 0 })).toEqual({ total: 3, late: 1 });
-    expect(describeWaiting({ lateCount: 0, onTimeCount: 0, djCount: 0 })).toBeNull();
+    expect(describeWaiting({ lateCount: 1, onTimeCount: 2 })).toEqual({ total: 3, late: 1 });
+    expect(describeWaiting({ lateCount: 0, onTimeCount: 0 })).toBeNull();
   });
 });

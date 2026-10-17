@@ -77,18 +77,8 @@ export type HomeYourTasks = {
   week: HomeTaskItem[];
 };
 
-export type HomeWaitingDjLink = {
-  showId: string;
-  recipientId: string;
-  recipientName: string;
-  /** "{artistName} · {venueName}" — the show this link belongs to. */
-  showLabel: string;
-  hoursWaiting: number;
-};
-
 export type HomeWaiting = {
   tasks: HomeWaitingTask[];
-  djLinks: HomeWaitingDjLink[];
   /** Open, not late, assigned to someone other than the viewer, on a release
    * the viewer runs. The "N tasks are with your team and on time" line. */
   onTimeCount: number;
@@ -144,38 +134,14 @@ export type HomePlacements = {
   underReview: HomePitchItem[];
 };
 
-export type HomeSetlistFit = 'over' | 'under' | 'on_time';
-
-export type HomeNextShow = {
-  id: string;
-  artistName: string;
-  venueName: string | null;
-  city: string | null;
-  dateLabel: string;
-  setTimeLabel: string;
-  daysUntil: number | null;
-  setlist: {
-    /** Sum of everything that could be measured, in minutes. A FLOOR, not the
-     * real length, when isPartial is true — see lib/setlist.ts's
-     * SetlistSummary, which this is derived from verbatim. */
-    totalMinutes: number;
-    slotMinutes: number;
-    fit: HomeSetlistFit;
-    isPartial: boolean;
-  } | null;
-  djLinks: { opened: number; total: number } | null;
-  /** Artist-role viewers only; deferred to step 4, kept in the type now. */
-  soundcheckLabel: string | null;
-};
-
 /**
  * The whole Home payload the server hands the client in one request.
  * `tasks`/`releases` carry the SAME shape the catalog already loads
  * (ExecutionTask/ExecutionRelease, via the moved command-center loader) so
  * the release store and task store stay the single source of truth; the
  * Home-specific derivations (yourTasks, waiting, releases summaries,
- * placements, nextShow) are computed from that shared data plus the
- * Home-only reads (shows, receipts, pitches).
+ * placements) are computed from that shared data plus the Home-only reads
+ * (role, pitches).
  */
 export type HomePayload = {
   role: HomeRole;
@@ -191,7 +157,6 @@ export type HomePayload = {
   waiting: HomeWaiting;
   releases: HomeReleaseSummary[];
   placements: HomePlacements;
-  nextShow: HomeNextShow | null;
   /** Everyone else on the team who has joined, newest first (URG-250). Rides in
    * this payload since URG-320 so Home is one request. Optional so older
    * cached payloads still parse. */

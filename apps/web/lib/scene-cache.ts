@@ -24,7 +24,6 @@ export type SceneName =
   | 'calendar'
   | 'pitch'
   | 'capture'
-  | 'song'
   | 'coverart'
   | 'timeline'
   // Release chat (Release & Task Chat, Phase 1) — a thread scoped to the
@@ -65,7 +64,6 @@ export const SCENE_NAMES: readonly SceneName[] = [
   'calendar',
   'pitch',
   'capture',
-  'song',
   'coverart',
   'timeline',
   'chat',
@@ -83,7 +81,6 @@ export const SCENE_NAMES: readonly SceneName[] = [
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
 const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
 const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
-const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
 const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
@@ -113,7 +110,6 @@ const RELEASE_BRIEF_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_BRIEF !== 
 export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
   ...(METADATA_ENABLED ? (['metadata'] as const) : []),
   ...(COVER_ART_ENABLED ? (['coverart'] as const) : []),
-  ...(SONG_UPLOAD_ENABLED ? (['song'] as const) : []),
   ...(FILES_ENABLED ? (['files'] as const) : []),
   ...(CONTENT_CALENDAR_ENABLED ? (['calendar'] as const) : []),
   ...(PITCHING_ENABLED ? (['pitch'] as const) : []),
@@ -134,7 +130,7 @@ export const SCENE_PREFETCH_ORDER: readonly CacheableSceneName[] = [
  * (WorkspaceView, which builds the scene body; TasksPanel, which decides
  * which pill is lit; and now WorkspaceSkeleton, which has to reserve the same
  * layout the real view will paint). They drifted once already — TasksPanel's
- * copy was missing 'song' and 'coverart' long after the real gate had them —
+ * copy was missing two scenes long after the real gate had them —
  * and a layout decision computed two ways is the bug class this consolidation
  * exists to end.
  *
@@ -162,7 +158,6 @@ export function resolveActiveScene(rawParam: string | null): SceneName | null {
   const scene = rawParam as SceneName;
   if (scene === 'calendar' && !CONTENT_CALENDAR_ENABLED) return null;
   if (scene === 'capture' && !CAPTURE_ENABLED) return null;
-  if (scene === 'song' && !SONG_UPLOAD_ENABLED) return null;
   if (scene === 'coverart' && !COVER_ART_ENABLED) return null;
   if (scene === 'timeline' && !TIMELINE_ENABLED) return null;
   if (scene === 'metadata' && !METADATA_ENABLED) return null;
@@ -268,10 +263,6 @@ export function shouldRevalidateOnLoad(scene: SceneName): boolean {
  */
 export const SCENE_HARD_EXPIRY_MS: Partial<Record<SceneName, number>> = {
   files: 45 * 60 * 1000,
-  // Same reason as files, one step more visible: the song scene's payload
-  // carries a signed URL that an <audio> element is pointed at, so a stale
-  // paint is a play button that 403s rather than merely a dead download.
-  song: 45 * 60 * 1000,
   // Same reason again: an <img> pointed at an expired signed URL renders a
   // broken-image icon where the cover art should be.
   coverart: 45 * 60 * 1000,
@@ -324,7 +315,6 @@ export const SCENE_PERSISTED: Record<SceneName, boolean> = {
   capture: false,
   // Signed Storage URLs again (see files): a persisted one survives a browser
   // restart and would be guaranteed expired by the next visit.
-  song: false,
   coverart: false,
   // Nothing to persist: the timeline is laid out from the activities the
   // workspace already holds, so it has no payload of its own. See

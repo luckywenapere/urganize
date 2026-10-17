@@ -7,7 +7,6 @@ const full: HomeBlocksInput = {
   upNext: 'release',
   attentionCount: 2,
   waitingCount: 3,
-  hasNextShow: true,
   rolloutCount: 2,
   placementCount: 4,
   showSpend: true,
@@ -21,7 +20,6 @@ describe('orderHomeBlocks', () => {
       'tasks',
       'attention',
       'waiting',
-      'next-show',
       'rollouts',
       'placements',
       'spend',
@@ -44,7 +42,6 @@ describe('orderHomeBlocks', () => {
         onboardingVisible: false,
         attentionCount: 0,
         waitingCount: 0,
-        hasNextShow: false,
         rolloutCount: 0,
         placementCount: 0,
         showSpend: false,
@@ -62,16 +59,6 @@ describe('orderHomeBlocks', () => {
     const blocks = orderHomeBlocks({ ...full, taskCount: 0, upNext: null });
     expect(blocks).not.toContain('tasks');
     expect(blocks).not.toContain('up-next');
-  });
-
-  it('drops the Next show card when Up next already is that show', () => {
-    const blocks = orderHomeBlocks({ ...full, taskCount: 0, upNext: 'show' });
-    expect(blocks).toContain('up-next');
-    expect(blocks).not.toContain('next-show');
-  });
-
-  it('keeps the Next show card when tasks fill the slot', () => {
-    expect(orderHomeBlocks({ ...full, upNext: 'show' })).toContain('next-show');
   });
 
   it('shows Where the money went after Placements and before the daily line, and only when the manager may track spend', () => {

@@ -50,8 +50,7 @@ export type ChappiChipIntent =
   | 'add_task'
   | 'todays_focus'
   | 'generate_status'
-  | 'take_note'
-  | 'upload_song';
+  | 'take_note';
 
 /**
  * `create_note` is intent-only, never a chip: it carries the note's text, so
@@ -62,11 +61,7 @@ export type ChappiChipIntent =
 export type ChappiIntentKind =
   | ChappiChipIntent
   | 'create_note'
-  // Intent-only, like create_note and for a related reason: the chip row is
-  // lg-only and already carries up to six, and "take me to the shows" is a
-  // thing you type when you have one in mind, not a standing button.
-  | 'open_shows'
-  // Intent-only for the same reason: the recap is a once-per-release moment,
+  // Intent-only, like create_note: the recap is a once-per-release moment,
   // not a standing button, and it only means anything on a finished release.
   | 'generate_recap'
   // Intent-only as well. Sharing is a moment after a rollout exists, and every
@@ -203,9 +198,6 @@ export type ChappiToolName =
   | 'get_release_plan'
   | 'preview_release_plan'
   | 'generate_release_plan'
-  // the song itself
-  | 'get_song'
-  | 'upload_song'
   // distribution metadata
   | 'get_release_metadata'
   | 'update_release_metadata'
@@ -217,21 +209,6 @@ export type ChappiToolName =
   | 'create_content_post'
   | 'update_content_post'
   | 'delete_content_post'
-  // shows, sets, the song catalogue and the DJ pack (2026-09-07)
-  | 'list_shows'
-  | 'get_show'
-  | 'list_songs'
-  | 'create_song'
-  | 'create_show'
-  | 'update_show'
-  | 'delete_show'
-  | 'create_setlist'
-  | 'update_setlist'
-  | 'delete_setlist'
-  | 'add_setlist_item'
-  | 'remove_setlist_item'
-  | 'reorder_setlist'
-  | 'send_dj_pack'
   // the standing per-artist press kit (2026-09-07)
   | 'list_press_kits'
   | 'get_press_kit'
@@ -289,22 +266,16 @@ export type ChappiClientAction =
   | { type: 'open_create_release' }
   | { type: 'open_quick_create'; releaseId?: string | null }
   /**
-   * Put a song file picker in the transcript, scoped to this release.
-   *
-   * The one client action that expects a follow-up from the USER rather than
-   * being a fire-and-forget side effect. It has to be: a model turn is text, so
-   * no tool can be handed a file, and `input.click()` only opens a dialog
-   * inside a user gesture — a tool result is a network response, not a gesture.
-   * So the assistant resolves the release and the browser does the upload,
-   * through the same signed-URL flow the workspace scene uses.
+   * Put a cover art picker in the transcript, scoped to this release. It has
+   * to be a card: a model turn is text, so no tool can be handed a file, and
+   * `input.click()` only opens a dialog inside a user gesture.
    */
-  | { type: 'open_song_upload'; releaseId: string }
   | { type: 'open_cover_art_upload'; releaseId: string }
   /**
    * Put the finished recap poster in the transcript, ready to share or save.
    *
-   * The mirror image of `open_song_upload`: that one exists because a tool
-   * cannot be HANDED a file, this one because a tool cannot GIVE you one. The
+   * The mirror image of `open_cover_art_upload`: that one exists because a
+   * tool cannot be HANDED a file, this one because a tool cannot GIVE you one. The
    * recap's output is two PNGs behind short-lived signed URLs, and a paragraph
    * of text cannot hand those over — so the tool builds the card and the
    * browser does the sharing, through the same `shareOrDownloadImage` path the

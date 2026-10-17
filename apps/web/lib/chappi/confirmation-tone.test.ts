@@ -4,7 +4,7 @@ import { confirmationTone } from './confirmation-tone';
 
 describe('confirmationTone', () => {
   it('keeps the danger look for removals', () => {
-    for (const name of ['delete_release', 'delete_task', 'delete_show', 'remove_teammate', 'remove_artist']) {
+    for (const name of ['delete_release', 'delete_task', 'remove_teammate', 'remove_artist']) {
       expect(confirmationTone(name)).toBe('danger');
     }
   });
@@ -12,7 +12,6 @@ describe('confirmationTone', () => {
   it('does not paint outward actions red', () => {
     for (const name of [
       'publish_press_kit',
-      'send_dj_pack',
       'pitch_song',
       'send_work_request',
       'invite_teammate',

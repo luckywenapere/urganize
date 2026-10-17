@@ -17,7 +17,6 @@ type PagesModule = typeof import('./app-pages');
 async function loadPages(env: Record<string, string | undefined> = {}) {
   vi.resetModules();
   vi.stubEnv('NEXT_PUBLIC_FEATURE_NOTES', env.NEXT_PUBLIC_FEATURE_NOTES ?? '');
-  vi.stubEnv('NEXT_PUBLIC_FEATURE_EVENTS', env.NEXT_PUBLIC_FEATURE_EVENTS ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCHING', env.NEXT_PUBLIC_FEATURE_PITCHING ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_PRESS_KITS', env.NEXT_PUBLIC_FEATURE_PRESS_KITS ?? '');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_HOME', env.NEXT_PUBLIC_FEATURE_HOME ?? '');
@@ -28,7 +27,6 @@ async function loadPages(env: Record<string, string | undefined> = {}) {
 
 const ALL_ON = {
   NEXT_PUBLIC_FEATURE_NOTES: 'true',
-  NEXT_PUBLIC_FEATURE_EVENTS: 'true',
   NEXT_PUBLIC_FEATURE_PITCHING: 'true',
   // Kept in the stub set even though no page reads it any more (press kits
   // left the catalog 2026-09-09): a case asserting its ABSENCE has to be able
@@ -100,10 +98,9 @@ describe('buildAppPages — flag gates', () => {
     expect(on.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'notes')).toBe(true);
   });
 
-  // Shows left Relationships (URG-303): no page of its own in search; gig
-  // words find Opportunities, where open gig calls sit.
-  it('never offers Shows as a page, even with the events flag on', async () => {
-    const on = await loadPages({ NEXT_PUBLIC_FEATURE_EVENTS: 'true' });
+  // Shows were deleted (Oct 17, 2026): no page of its own in search.
+  it('never offers Shows as a page', async () => {
+    const on = await loadPages(ALL_ON);
     expect(on.buildAppPages({ hasCuratorProfile: false }).some((p) => p.key === 'shows')).toBe(false);
   });
 

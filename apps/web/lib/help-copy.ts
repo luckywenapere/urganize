@@ -290,10 +290,6 @@ export const HELP_COPY = {
     label: 'Audience',
     text: 'Your fans and what the numbers say. Coming soon.',
   },
-  'nav.shows': {
-    label: 'Shows',
-    text: 'Every date, its running order and the tracks the DJ needs.',
-  },
   'nav.urgans': {
     label: 'UrgAns',
     text: 'Your assistant. Ask it to plan, write or find anything about your music.',

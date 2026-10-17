@@ -53,7 +53,6 @@ export type RolloutMenuFlags = {
   metadata: boolean;
   notes: boolean;
   coverArt: boolean;
-  songUpload: boolean;
   files: boolean;
   capture: boolean;
 };
@@ -162,7 +161,6 @@ export function buildRolloutMenu(input: RolloutMenuInput): RolloutMenuEntry[] {
     flags.releaseChat ? scene('chat', 'Talk to the team') : null,
     flags.contentCalendar ? scene('calendar', 'Plan content') : null,
     // Release prep in the order the work happens (2026-10-16).
-    flags.songUpload ? scene('song', 'Upload the song') : null,
     flags.coverArt ? scene('coverart', 'Add cover art') : null,
     flags.metadata ? scene('metadata', 'Fill in details') : null,
     scene('distribute', 'Distribute now'),

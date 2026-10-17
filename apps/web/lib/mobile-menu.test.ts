@@ -9,7 +9,6 @@ import {
 const ALL_OFF: MobileMenuFlags = {
   home: false,
   notes: false,
-  events: false,
   pitching: false,
   artists: false,
   pressKits: false,

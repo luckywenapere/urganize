@@ -41,10 +41,8 @@ import { CONNECTION_DROPPED_NOTE, readStreamedTurn } from '@/lib/chappi/stream-c
 import { ChappiConfirmationCard } from '@/components/chappi/ChappiConfirmationCard';
 import { ChappiCoverArtUploadCard } from '@/components/chappi/ChappiCoverArtUploadCard';
 import { ChappiRecapCard } from '@/components/chappi/ChappiRecapCard';
-import { ChappiSongUploadCard } from '@/components/chappi/ChappiSongUploadCard';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import type { ReleaseCoverArt } from '@/types/cover-art';
-import type { ReleaseSong } from '@/types/song';
 import { ChappiScopePicker } from '@/components/chappi/ChappiScopePicker';
 import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -391,29 +389,23 @@ export function ChappiConversation({
   // They live in the browser until the message is sent; nothing is stored.
   const attach = useAttachments();
 
-  // The release whose song the transcript is currently offering to upload, or
-  // null. Component state rather than the store, unlike pendingConfirmation:
-  // nothing has been proposed and nothing is waiting on a server round trip —
-  // it is just a file picker sitting in the log, and a reload dropping it costs
-  // the user one re-ask.
+  // The release whose cover art the transcript is currently offering to
+  // upload, or null. Component state rather than the store, unlike
+  // pendingConfirmation: nothing has been proposed and nothing is waiting on a
+  // server round trip — it is just a file picker sitting in the log, and a
+  // reload dropping it costs the user one re-ask.
   //
   // It also survives subsequent turns, which pendingConfirmation deliberately
   // does not. A permission card must never outlive the reply that proposed it;
   // this card is not destructive, and clearing it the moment someone types
   // "which formats do you take?" would take the picker away mid-question.
-  const [songUploadReleaseId, setSongUploadReleaseId] = useState<string | null>(null);
-  const songUploadRelease = songUploadReleaseId
-    ? releases.find((release) => release.id === songUploadReleaseId) ?? null
-    : null;
-  // Cover art gets its own slot rather than sharing the song's: a manager can
-  // reasonably be asked for both on one release, and one slot would silently
-  // replace whichever picker was already open.
+  // (The song picker that used to sit beside it was removed Oct 17, 2026.)
   const [coverArtReleaseId, setCoverArtReleaseId] = useState<string | null>(null);
   const coverArtRelease = coverArtReleaseId
     ? releases.find((release) => release.id === coverArtReleaseId) ?? null
     : null;
   // The recap card is the same slot mechanics for the opposite direction: the
-  // two above hand a file IN, this one hands two PNGs OUT. Its own slot for the
+  // one above hands a file IN, this one hands two PNGs OUT. Its own slot for the
   // same reason — a manager can plausibly be finishing one release while
   // uploading art for another, and one shared slot would swallow whichever
   // card was already there.
@@ -444,7 +436,6 @@ export function ChappiConversation({
     setPrevEpoch(epoch);
     setPrevLastMessageId(lastMessageId);
     setRevealMessageId(null);
-    if (songUploadReleaseId) setSongUploadReleaseId(null);
     if (coverArtReleaseId) setCoverArtReleaseId(null);
     if (recapReleaseId) setRecapReleaseId(null);
   } else if (lastMessageId !== prevLastMessageId) {
@@ -463,8 +454,7 @@ export function ChappiConversation({
   if (messages.length !== prevMessageCount) {
     setPrevMessageCount(messages.length);
     if (messages.length === 0) {
-      if (songUploadReleaseId) setSongUploadReleaseId(null);
-      if (coverArtReleaseId) setCoverArtReleaseId(null);
+        if (coverArtReleaseId) setCoverArtReleaseId(null);
       if (recapReleaseId) setRecapReleaseId(null);
     }
   }
@@ -601,9 +591,9 @@ export function ChappiConversation({
     );
   };
 
-  // A song upload has finished: record it as a turn, drop the card, and drop
-  // the cached Song scene so the workspace shows the new file when it is next
-  // opened rather than the list from before the upload.
+  // A cover art upload has finished: record it as a turn, drop the card, and
+  // drop the cached scene so the workspace shows the new file when it is next
+  // opened rather than the one from before the upload.
   //
   // The card calls these when an upload FINISHES, which can be after its
   // transcript was replaced ("New chat" clears the card slots, unmounting the
@@ -620,19 +610,7 @@ export function ChappiConversation({
     else deliverToChat(cardChatId, text);
   };
 
-  const handleSongUploaded = (song: ReleaseSong) => {
-    setSongUploadReleaseId(null);
-    invalidateScene(song.releaseId, 'song');
-    const releaseTitle = releases.find((item) => item.id === song.releaseId)?.title;
-    reportFromCard(
-      releaseTitle
-        ? `Uploaded "${song.fileName}" to ${releaseTitle}.`
-        : `Uploaded "${song.fileName}".`
-    );
-  };
-
-  // Cover art has landed. Same shape as the song handler, plus one thing it
-  // does not need: the CATALOG has to be refreshed as well, because the
+  // Cover art has landed. The CATALOG has to be refreshed as well, because the
   // release card and the topbar both show the artwork, and a stale card is the
   // one place someone would notice nothing had happened.
   const handleCoverArtUploaded = (coverArt: ReleaseCoverArt) => {
@@ -897,34 +875,9 @@ export function ChappiConversation({
           });
         return;
       }
-      case 'open_shows':
-        // Navigation rather than a tool call, and deliberately so: with no
-        // model configured this router IS the assistant, and the shows page is
-        // where a set is actually built. Nothing to create from here.
-        router.push('/dashboard/shows');
-        appendAssistantReply('Opening your shows.');
-        break;
-
       case 'take_note':
         openBlankNote();
         return;
-      case 'upload_song': {
-        // No model in this path, so the scope picker IS the release context —
-        // the same way add_task already treats it. With nothing scoped there is
-        // no release to attach a file to, and guessing would be worse than
-        // asking.
-        if (!scopedRelease) {
-          appendAssistantReply(
-            'Which rollout is the song for? Pick it below the prompt and ask me again.'
-          );
-          return;
-        }
-        setSongUploadReleaseId(scopedRelease.id);
-        appendAssistantReply(
-          `Choose the song file for ${scopedRelease.title} in the card below.`
-        );
-        return;
-      }
       case 'help':
       default: {
         const helpReply = buildHelpReply();
@@ -977,7 +930,6 @@ export function ChappiConversation({
       else if (action.type === 'open_create_release') onNewRelease();
       else if (action.type === 'open_quick_create')
         openQuickCreate({ releaseId: action.releaseId ?? undefined, source: 'quick_create' });
-      else if (action.type === 'open_song_upload') setSongUploadReleaseId(action.releaseId);
       else if (action.type === 'open_cover_art_upload') setCoverArtReleaseId(action.releaseId);
       else if (action.type === 'open_recap') setRecapReleaseId(action.releaseId);
       else if (action.type === 'refresh') void loadCommandCenter({ force: true });
@@ -1640,13 +1592,6 @@ export function ChappiConversation({
             pendingConfirmation={pendingConfirmation}
             onApproveConfirmation={() => void handleApproveConfirmation()}
             onCancelConfirmation={handleCancelConfirmation}
-            songUpload={
-              songUploadRelease
-                ? { releaseId: songUploadRelease.id, releaseTitle: songUploadRelease.title }
-                : null
-            }
-            onSongUploaded={handleSongUploaded}
-            onDismissSongUpload={() => setSongUploadReleaseId(null)}
             coverArtUpload={
               coverArtRelease
                 ? { releaseId: coverArtRelease.id, releaseTitle: coverArtRelease.title }
@@ -1704,10 +1649,7 @@ type TranscriptProps = {
   pendingConfirmation: ChappiPendingConfirmation | null;
   onApproveConfirmation: () => void;
   onCancelConfirmation: () => void;
-  /** A song file picker the assistant put in the log; null when there isn't one. */
-  songUpload: { releaseId: string; releaseTitle: string } | null;
-  onSongUploaded: (song: ReleaseSong) => void;
-  onDismissSongUpload: () => void;
+  /** A cover art picker the assistant put in the log; null when there isn't one. */
   coverArtUpload: { releaseId: string; releaseTitle: string } | null;
   onCoverArtUploaded: (coverArt: ReleaseCoverArt) => void;
   onDismissCoverArtUpload: () => void;
@@ -1737,9 +1679,6 @@ function Transcript({
   pendingConfirmation,
   onApproveConfirmation,
   onCancelConfirmation,
-  songUpload,
-  onSongUploaded,
-  onDismissSongUpload,
   coverArtUpload,
   onCoverArtUploaded,
   onDismissCoverArtUpload,
@@ -1810,22 +1749,11 @@ function Transcript({
         />
       ) : null}
 
-      {/* The song picker. Below the reply that offered it, like the permission
-          card above — but NOT hidden while a request is in flight: an upload
-          runs entirely in the browser, so the user can keep talking to the
-          assistant while their master goes up. Keyed by release so switching
-          the card to a different one resets its internal upload state instead
-          of carrying the previous release's error across. */}
-      {songUpload ? (
-        <ChappiSongUploadCard
-          key={songUpload.releaseId}
-          releaseId={songUpload.releaseId}
-          releaseTitle={songUpload.releaseTitle}
-          onUploaded={onSongUploaded}
-          onDismiss={onDismissSongUpload}
-        />
-      ) : null}
-
+      {/* The cover art picker. Below the reply that offered it, like the
+          permission card above — but NOT hidden while a request is in flight:
+          an upload runs entirely in the browser, so the user can keep talking
+          while the file goes up. Keyed by release so switching the card to a
+          different one resets its internal upload state. */}
       {coverArtUpload ? (
         <ChappiCoverArtUploadCard
           key={coverArtUpload.releaseId}

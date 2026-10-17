@@ -22,15 +22,14 @@ type ChappiCoverArtUploadCardProps = {
 /**
  * Choosing cover art from inside the conversation.
  *
- * ChappiSongUploadCard's twin, and for the same reason: a model turn is text,
- * so nothing can hand a tool a file, and the picker only opens inside a user
- * gesture. The assistant resolves the release and drops this card; the click
- * on it is the gesture. Read that card's header for the full argument.
+ * A card, because a model turn is text, so nothing can hand a tool a file,
+ * and the picker only opens inside a user gesture. The assistant resolves the
+ * release and drops this card; the click on it is the gesture.
  *
- * TWO THINGS DIFFER FROM THE SONG CARD, both worth keeping:
+ * Two things worth keeping:
  *
- * Uploading REPLACES the current artwork, where a song upload adds a version
- * and destroys nothing. A release has exactly one identity image. So this card
+ * Uploading REPLACES the current artwork. A release has exactly one identity
+ * image. So this card
  * says so plainly rather than leaving it to be discovered.
  *
  * The hook grades the file against what music stores require before it goes

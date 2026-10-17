@@ -1,13 +1,12 @@
-import type { HomeNextShow, HomeReleaseSummary } from './types';
+import type { HomeReleaseSummary } from './types';
 
 /**
  * What Home offers when the manager has no tasks to do. An empty page is a dead
- * end, so it hands over the next move instead: the show that is coming, else the
- * rollout that comes out soonest, else a prompt to plan one. Pure, so the order
- * of those three can be tested.
+ * end, so it hands over the next move instead: the rollout that comes out
+ * soonest, else a prompt to plan one. Pure, so the order can be tested.
  */
 export type UpNext = {
-  kind: 'show' | 'release' | 'start';
+  kind: 'release' | 'start';
   eyebrow: string;
   title: string;
   detail: string;
@@ -18,21 +17,8 @@ export type UpNext = {
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export function pickUpNext(
-  nextShow: HomeNextShow | null,
   releases: readonly Pick<HomeReleaseSummary, 'id' | 'title' | 'artistName' | 'daysOut'>[]
 ): UpNext {
-  if (nextShow) {
-    const place = [nextShow.venueName, nextShow.city].filter(Boolean).join(', ') || 'Venue to confirm';
-    return {
-      kind: 'show',
-      eyebrow: 'Up next',
-      title: `${nextShow.artistName} plays ${place}`,
-      detail: `${nextShow.dateLabel} · ${nextShow.setTimeLabel}`,
-      href: `/dashboard/shows/${nextShow.id}`,
-      action: 'Open the show',
-    };
-  }
-
   const coming = releases
     .filter((release) => release.daysOut !== null && release.daysOut >= 0)
     .sort((a, b) => (a.daysOut as number) - (b.daysOut as number))[0];

@@ -43,7 +43,6 @@ export const NAV_TIP_KEYS: Record<string, HelpKey> = {
   relationships: 'nav.relationships',
   opportunities: 'nav.opportunities',
   audience: 'nav.audience',
-  shows: 'nav.shows',
   urgans: 'nav.urgans',
   more: 'nav.more',
   releases: 'nav.rollouts',

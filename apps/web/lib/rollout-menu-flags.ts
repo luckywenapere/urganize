@@ -25,7 +25,6 @@ export const ROLLOUT_MENU_FLAGS: RolloutMenuFlags = {
   metadata: process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true',
   notes: process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true',
   coverArt: process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true',
-  songUpload: process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true',
   files: process.env.NEXT_PUBLIC_FEATURE_FILES === 'true',
   capture: process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true',
 };

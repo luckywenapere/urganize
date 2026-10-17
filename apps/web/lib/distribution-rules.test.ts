@@ -2,14 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   DISTRIBUTION_RULES,
   PITCH_WINDOW_WARNING_DAYS,
-  audioFormatOf,
   checkDistributionFacts,
-  formatAudioFormats,
   type DistributionCheckContext,
   type DistributionFacts,
   type DistributionIssueCode,
 } from './distribution-rules';
-import { DISTRIBUTION_AUDIO_FORMATS } from './distribution-config';
 
 // 11:00 in Lagos on the 9th, so the pitch window counts Lagos days from here.
 const today = new Date('2026-10-09T10:00:00.000Z');
@@ -21,8 +18,6 @@ const complete: DistributionFacts = {
   genre: 'Afrobeats',
   language: 'English',
   explicit: false,
-  hasSong: true,
-  audio: { mimeType: 'audio/wav', fileName: 'master.wav' },
   artwork: { mimeType: 'image/jpeg', width: 3000, height: 3000 },
   credits: [
     { roles: ['songwriter', 'producer'], songwriterSplit: 50, masterSplit: 100 },
@@ -31,7 +26,7 @@ const complete: DistributionFacts = {
 };
 
 const run = (over: Partial<DistributionFacts> = {}, context: Partial<DistributionCheckContext> = {}) =>
-  checkDistributionFacts({ ...complete, ...over }, { today, audioFormats: [], ...context });
+  checkDistributionFacts({ ...complete, ...over }, { today, ...context });
 
 /** Every issue the check raised for one code, errors and warnings together. */
 const fired = (
@@ -105,11 +100,6 @@ describe('the rules, one at a time (each has a failing case and a passing case)'
     }
   });
 
-  it('missing_audio: no song fails, a song passes', () => {
-    expect(fired('missing_audio', { hasSong: false, audio: null })).toHaveLength(1);
-    expect(fired('missing_audio')).toHaveLength(0);
-  });
-
   it('artwork_missing: none fails, some passes', () => {
     expect(fired('artwork_missing', { artwork: null })).toHaveLength(1);
     expect(fired('artwork_missing')).toHaveLength(0);
@@ -153,35 +143,6 @@ describe('the rules, one at a time (each has a failing case and a passing case)'
     expect(fired('artwork_wrong_format', art('image/gif'))).toHaveLength(1);
     expect(fired('artwork_wrong_format', art(null))).toHaveLength(1);
     expect(fired('artwork_wrong_format', { artwork: null })).toHaveLength(0);
-  });
-
-  it('audio_wrong_format: skipped while the partner list is empty, enforced once it is set', () => {
-    const mp3 = { audio: { mimeType: 'audio/mpeg', fileName: 'master.mp3' } };
-    // Empty list: skipped, whatever the file is.
-    expect(fired('audio_wrong_format', mp3, { audioFormats: [] })).toHaveLength(0);
-    // Set: an MP3 against WAV-only fails, a WAV passes.
-    expect(fired('audio_wrong_format', mp3, { audioFormats: ['wav'] })).toHaveLength(1);
-    expect(fired('audio_wrong_format', {}, { audioFormats: ['wav'] })).toHaveLength(0);
-    expect(fired('audio_wrong_format', mp3, { audioFormats: ['wav', 'mp3'] })).toHaveLength(0);
-    // The file name is the fallback when the browser reported no type.
-    expect(
-      fired('audio_wrong_format', { audio: { mimeType: null, fileName: 'Master.WAV' } }, { audioFormats: ['wav'] })
-    ).toHaveLength(0);
-    // A format that cannot be told fails rather than passing.
-    expect(
-      fired('audio_wrong_format', { audio: { mimeType: null, fileName: 'master' } }, { audioFormats: ['wav'] })
-    ).toHaveLength(1);
-    // No song at all is missing_audio's business, not this rule's.
-    expect(fired('audio_wrong_format', { hasSong: false, audio: null }, { audioFormats: ['wav'] })).toHaveLength(0);
-  });
-
-  it('audio_wrong_format names the accepted formats in plain words', () => {
-    const mp3 = { audio: { mimeType: 'audio/mpeg', fileName: 'x.mp3' } };
-    expect(fired('audio_wrong_format', mp3, { audioFormats: ['wav'] })[0].message).toBe('Upload audio as WAV.');
-    expect(fired('audio_wrong_format', mp3, { audioFormats: ['wav', 'flac'] })[0].message).toBe(
-      'Upload audio as WAV or FLAC.'
-    );
-    expect(formatAudioFormats(['wav', 'flac', 'mp3'])).toBe('WAV, FLAC or MP3');
   });
 
   it('feat_in_title: feat, ft. and featuring warn, other words do not', () => {
@@ -290,7 +251,6 @@ describe('levels, copy and order', () => {
       'artwork_not_square',
       'artwork_too_small',
       'artwork_wrong_format',
-      'audio_wrong_format',
     ];
     const warningCodes: DistributionIssueCode[] = [
       'feat_in_title',
@@ -317,12 +277,9 @@ describe('levels, copy and order', () => {
         genre: null,
         language: null,
         explicit: null,
-        hasSong: false,
-        audio: null,
         artwork: { mimeType: 'image/webp', width: 2000, height: 1000 },
         credits: [],
       },
-      { audioFormats: [] }
     );
     const messages = Object.fromEntries(
       [...worst.errors, ...worst.warnings].map((issue) => [issue.code, issue.message])
@@ -353,12 +310,9 @@ describe('levels, copy and order', () => {
         genre: null,
         language: null,
         explicit: null,
-        hasSong: false,
-        audio: null,
         artwork: { mimeType: 'image/webp', width: 10, height: 20 },
         credits: [{ roles: ['producer'], songwriterSplit: 10, masterSplit: 10 }],
       },
-      { audioFormats: ['wav'] }
     );
     for (const issue of [...worst.errors, ...worst.warnings]) {
       expect(issue.message, issue.message).not.toMatch(/[—–]/);
@@ -380,32 +334,9 @@ describe('levels, copy and order', () => {
       genre: null,
       language: null,
       explicit: null,
-      hasSong: false,
-      audio: null,
       artwork: null,
       credits: [],
     });
     for (const issue of result.errors) expect(issue.fieldPath, issue.code).toBeTruthy();
-  });
-});
-
-describe('the audio format config', () => {
-  it('is empty by default, which is what keeps the audio rule off', () => {
-    expect(DISTRIBUTION_AUDIO_FORMATS).toEqual([]);
-    // With no context passed, the default config is what runs.
-    const result = checkDistributionFacts(
-      { ...complete, audio: { mimeType: 'audio/mpeg', fileName: 'x.mp3' } },
-      { today }
-    );
-    expect(result.errors.map((issue) => issue.code)).not.toContain('audio_wrong_format');
-  });
-
-  it('reads a file type from the reported type first, then the name', () => {
-    expect(audioFormatOf({ mimeType: 'audio/x-wav', fileName: 'a.mp3' })).toBe('wav');
-    expect(audioFormatOf({ mimeType: 'audio/mpeg; charset=binary', fileName: null })).toBe('mp3');
-    expect(audioFormatOf({ mimeType: 'audio/x-flac', fileName: null })).toBe('flac');
-    expect(audioFormatOf({ mimeType: null, fileName: 'Song.FLAC' })).toBe('flac');
-    expect(audioFormatOf({ mimeType: null, fileName: 'noending' })).toBeNull();
-    expect(audioFormatOf({ mimeType: null, fileName: null })).toBeNull();
   });
 });

@@ -31,14 +31,12 @@ const readyFacts: DistributionFacts = {
   genre: 'Afrobeats',
   language: 'English',
   explicit: false,
-  hasSong: true,
-  audio: { mimeType: 'audio/wav', fileName: 'happy-day.wav' },
   artwork: { mimeType: 'image/jpeg', width: 3000, height: 3000 },
   credits: [{ roles: ['songwriter'], songwriterSplit: 100, masterSplit: 100 }],
 };
 
 const check = (facts: Partial<DistributionFacts> = {}) =>
-  checkDistributionFacts({ ...readyFacts, ...facts }, { today: TODAY, audioFormats: [] });
+  checkDistributionFacts({ ...readyFacts, ...facts }, { today: TODAY });
 
 describe('lead time', () => {
   it('defaults to 14 days and only takes the four choices', () => {
@@ -87,7 +85,7 @@ describe('late', () => {
 });
 
 describe('uploaded is derived from the check', () => {
-  const lyrics = { hasAudio: true, hasArtwork: true, lyrics: 'la la la' };
+  const lyrics = { hasArtwork: true, lyrics: 'la la la' };
 
   it('a ready rollout with lyrics has all three uploaded', () => {
     const result = check();
@@ -104,9 +102,8 @@ describe('uploaded is derived from the check', () => {
     expect(isUploaded('cover_art', gone, { ...lyrics, hasArtwork: false })).toBe(false);
   });
 
-  it('the master needs a file', () => {
-    const none = check({ hasSong: false, audio: null });
-    expect(isUploaded('master', none, { ...lyrics, hasAudio: false })).toBe(false);
+  it('the master is sent from the team’s own files, so it is always ready to approve', () => {
+    expect(isUploaded('master', check({ artwork: null, genre: null }), { hasArtwork: false, lyrics: null })).toBe(true);
   });
 
   it('metadata needs no metadata errors and lyrics; ISRC is optional', () => {
@@ -123,7 +120,7 @@ describe('uploaded is derived from the check', () => {
 
   it('a missing row points at the step that fixes it', () => {
     expect(fixFor('cover_art', check({ artwork: null }), lyrics)).toEqual({ fieldPath: 'artwork' });
-    expect(fixFor('master', check({ hasSong: false, audio: null }), lyrics)).toEqual({ fieldPath: 'audio' });
+    expect(fixFor('master', check(), lyrics)).toBeNull();
     expect(fixFor('metadata', check({ genre: null }), lyrics)).toEqual({ fieldPath: 'metadata.genre' });
     expect(fixFor('metadata', check(), { ...lyrics, lyrics: null })).toEqual({ lyrics: true });
   });

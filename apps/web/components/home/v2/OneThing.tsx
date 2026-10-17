@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { X } from '@/components/icons';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
@@ -69,51 +68,31 @@ function Slide({
     );
   }
 
-  if (item.kind === 'move') {
-    const { move } = item;
-    return (
-      <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`} data-next-move={move.rule}>
-        <button
-          type="button"
-          onClick={() => onDismissMove(move)}
-          aria-label={`${NEXT_MOVE_COPY.dismiss}: ${move.title}`}
-          title={NEXT_MOVE_COPY.dismiss}
-          className="motion-focus absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-content-primary/55 hover:bg-bg-elevated hover:text-content-primary"
-        >
-          <X className="h-4 w-4" aria-hidden="true" />
-        </button>
-        <h2 className="break-words pr-8 font-display text-[1.45rem] leading-[1.25] text-content-primary">{move.title}</h2>
-        <p className="mt-2 text-sm leading-relaxed text-content-secondary">{move.detail}</p>
-        <span className="flex-1" aria-hidden="true" />
-        <button
-          type="button"
-          className={PRIMARY}
-          onClick={() => {
-            track();
-            goToMove(move);
-          }}
-        >
-          {move.action}
-        </button>
-      </div>
-    );
-  }
-
-  const { show } = item;
+  const { move } = item;
   return (
-    <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`}>
-      <span className="font-mono text-xs text-content-primary/55">{show.dateLabel}</span>
-      <h2 className="mt-2 break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">
-        {show.artistName}
-        {show.venueName ? ` at ${show.venueName}` : ''}
-      </h2>
-      <p className="mt-2 text-sm text-content-secondary">
-        {[show.city, show.setTimeLabel].filter(Boolean).join(' · ')}
-      </p>
+    <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`} data-next-move={move.rule}>
+      <button
+        type="button"
+        onClick={() => onDismissMove(move)}
+        aria-label={`${NEXT_MOVE_COPY.dismiss}: ${move.title}`}
+        title={NEXT_MOVE_COPY.dismiss}
+        className="motion-focus absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-content-primary/55 hover:bg-bg-elevated hover:text-content-primary"
+      >
+        <X className="h-4 w-4" aria-hidden="true" />
+      </button>
+      <h2 className="break-words pr-8 font-display text-[1.45rem] leading-[1.25] text-content-primary">{move.title}</h2>
+      <p className="mt-2 text-sm leading-relaxed text-content-secondary">{move.detail}</p>
       <span className="flex-1" aria-hidden="true" />
-      <Link href={`/dashboard/shows/${show.id}`} className={PRIMARY} onClick={track}>
-        {HOME_FOUR_COPY.openShow}
-      </Link>
+      <button
+        type="button"
+        className={PRIMARY}
+        onClick={() => {
+          track();
+          goToMove(move);
+        }}
+      >
+        {move.action}
+      </button>
     </div>
   );
 }

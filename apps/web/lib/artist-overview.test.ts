@@ -3,7 +3,6 @@ import {
   LIVE_WINDOW_DAYS,
   artistSummary,
   bucketReleases,
-  bucketShows,
   splitTeamByArtistScope,
 } from './artist-overview';
 
@@ -79,49 +78,14 @@ describe('bucketReleases', () => {
   });
 });
 
-const show = (id: string, setStartAt: string | null, status = 'confirmed', artistId = 'a1') => ({
-  id,
-  artistId,
-  title: id,
-  setStartAt,
-  status,
-});
-
-describe('bucketShows', () => {
-  it('splits upcoming from past by set time', () => {
-    const { upcoming, past } = bucketShows(
-      [show('next', '2026-10-10T20:00:00Z'), show('last', '2026-09-01T20:00:00Z')],
-      NOW
-    );
-    expect(upcoming.map((s) => s.id)).toEqual(['next']);
-    expect(past.map((s) => s.id)).toEqual(['last']);
-  });
-
-  it('keeps a show with no time yet in upcoming, last', () => {
-    const { upcoming } = bucketShows([show('tbc', null), show('dated', '2026-10-10T20:00:00Z')], NOW);
-    expect(upcoming.map((s) => s.id)).toEqual(['dated', 'tbc']);
-  });
-
-  it('drops a cancelled show from both lists', () => {
-    const { upcoming, past } = bucketShows([show('x', '2026-10-10T20:00:00Z', 'cancelled')], NOW);
-    expect(upcoming).toEqual([]);
-    expect(past).toEqual([]);
-  });
-
-  it('counts a show marked done as past even if its time is ahead', () => {
-    expect(bucketShows([show('x', '2026-10-10T20:00:00Z', 'done')], NOW).past.map((s) => s.id)).toEqual(['x']);
-  });
-});
-
 describe('artistSummary', () => {
   it('counts only the artist asked about', () => {
     const summary = artistSummary(
       'a1',
       [rel('mine', '2027-01-01'), rel('theirs', '2027-01-01', 'draft', 'a2'), rel('old', '2020-01-01')],
-      [show('s1', '2026-10-10T20:00:00Z'), show('s2', '2026-10-10T20:00:00Z', 'confirmed', 'a2')],
       NOW
     );
-    expect(summary).toEqual({ releases: 2, planned: 1, live: 0, upcomingShows: 1 });
+    expect(summary).toEqual({ releases: 2, planned: 1, live: 0 });
   });
 });
 

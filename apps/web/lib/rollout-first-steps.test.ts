@@ -7,14 +7,13 @@ import {
   withDismissed,
 } from './rollout-first-steps';
 
-const all = { song: true, cover: true, team: true };
+const all = { cover: true, team: true };
 const now = new Date('2026-10-15T12:00:00Z');
 
 describe('rollout first steps (URG-293)', () => {
-  it('orders song, cover, team and ticks from facts', () => {
-    const steps = buildFirstSteps({ hasSong: true, hasCoverArt: false, hasTeam: null }, all);
+  it('orders cover, team and ticks from facts (no song step since Oct 17, 2026)', () => {
+    const steps = buildFirstSteps({ hasCoverArt: false, hasTeam: null }, all);
     expect(steps.map((s) => [s.key, s.done])).toEqual([
-      ['song', true],
       ['cover', false],
       ['team', false],
     ]);
@@ -23,8 +22,8 @@ describe('rollout first steps (URG-293)', () => {
 
   it('drops steps that do not exist for this person', () => {
     const steps = buildFirstSteps(
-      { hasSong: false, hasCoverArt: false, hasTeam: false },
-      { song: false, cover: true, team: false }
+      { hasCoverArt: false, hasTeam: false },
+      { cover: true, team: false }
     );
     expect(steps.map((s) => s.key)).toEqual(['cover']);
   });
@@ -44,7 +43,7 @@ describe('rollout first steps (URG-293)', () => {
     now,
     dismissed: false,
     factsKnown: true,
-    steps: buildFirstSteps({ hasSong: false, hasCoverArt: false, hasTeam: false }, all),
+    steps: buildFirstSteps({ hasCoverArt: false, hasTeam: false }, all),
   };
 
   it('shows on a new rollout with work left', () => {
@@ -52,7 +51,7 @@ describe('rollout first steps (URG-293)', () => {
   });
 
   it('disappears once every step is done', () => {
-    const steps = buildFirstSteps({ hasSong: true, hasCoverArt: true, hasTeam: true }, all);
+    const steps = buildFirstSteps({ hasCoverArt: true, hasTeam: true }, all);
     expect(shouldShowFirstSteps({ ...base, steps })).toBe(false);
   });
 

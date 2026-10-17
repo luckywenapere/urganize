@@ -12,12 +12,6 @@ export const IN_FLIGHT_GRACE_DAYS = 7;
  * nor past — it simply does not appear in a state that requires one. */
 export const UNDATED_IN_FLIGHT_REQUIRES_OPEN_TASKS = true;
 
-/** How many days ahead a show has to be to appear in "Next show". */
-export const NEXT_SHOW_WINDOW_DAYS = 14;
-
-/** A DJ pack link counts as "waiting" once it has sat unopened this long. */
-export const DJ_LINK_WAITING_HOURS = 48;
-
 /** A roster artist with nothing dated within this window reads as a "gap"
  * (label state). Not consulted by step 2 (Label states ship in step 5) but
  * declared here so the whole set of windows lives in one place. */

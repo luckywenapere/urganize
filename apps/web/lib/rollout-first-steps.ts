@@ -3,8 +3,9 @@
  *
  * In the founder's Oct 14 demo a manager made a rollout and then sat looking at
  * it, not knowing what to do next. So a new rollout now opens with ONE obvious
- * next action and a short checklist under it: add the song, add the cover art,
- * invite your team. Each item ticks itself off from what the rollout and the
+ * next action and a short checklist under it: add the cover art, invite your
+ * team. ("Add the song" was the first step until song upload was removed
+ * everywhere, Oct 17, 2026.) Each item ticks itself off from what the rollout and the
  * team actually hold (never from a click), and the whole card goes away once
  * every item is done, when it is dismissed, or once the rollout is no longer new.
  *
@@ -13,9 +14,9 @@
  * done; this decides what shows.
  */
 
-export type FirstStepKey = 'song' | 'cover' | 'team';
+export type FirstStepKey = 'cover' | 'team';
 
-export const FIRST_STEP_ORDER: readonly FirstStepKey[] = ['song', 'cover', 'team'];
+export const FIRST_STEP_ORDER: readonly FirstStepKey[] = ['cover', 'team'];
 
 export const FIRST_STEPS_COPY = {
   label: 'Your first steps',
@@ -23,11 +24,6 @@ export const FIRST_STEPS_COPY = {
   progress: (done: number, total: number) => `${done} of ${total} done`,
   dismiss: 'Hide first steps',
   steps: {
-    song: {
-      title: 'Add the song',
-      detail: 'Upload the track so everyone works from the same file.',
-      action: 'Add the song',
-    },
     cover: {
       title: 'Add the cover art',
       detail: 'Put the artwork in one place for promo and distribution.',
@@ -47,8 +43,6 @@ export const FIRST_STEPS_WINDOW_DAYS = 14;
 
 /** Which steps exist for this person right now. */
 export type FirstStepsAvailability = {
-  /** The Song scene is switched on. */
-  song: boolean;
   /** The Cover art scene is switched on. */
   cover: boolean;
   /** This person can invite (a manager account; Settings → Team only renders for them). */
@@ -57,7 +51,6 @@ export type FirstStepsAvailability = {
 
 /** What is already done. Null means not read yet. */
 export type FirstStepsFacts = {
-  hasSong: boolean | null;
   hasCoverArt: boolean | null;
   hasTeam: boolean | null;
 };
@@ -75,7 +68,6 @@ export function buildFirstSteps(
   available: FirstStepsAvailability
 ): FirstStep[] {
   const doneFor: Record<FirstStepKey, boolean> = {
-    song: facts.hasSong === true,
     cover: facts.hasCoverArt === true,
     team: facts.hasTeam === true,
   };

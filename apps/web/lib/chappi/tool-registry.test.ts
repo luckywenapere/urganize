@@ -167,7 +167,7 @@ describe('MCP allow-list integrity', () => {
     // protocol.test.ts asserts. What must never be exposed is a tool that does
     // NOTHING BUT return one, because over MCP that is a tool advertising a
     // capability it silently cannot deliver.
-    for (const name of ['navigate', 'upload_song', 'upload_cover_art', 'share_release'] as const) {
+    for (const name of ['navigate', 'upload_cover_art', 'share_release'] as const) {
       expect(getChappiTool(name), `${name} should still exist`).toBeTruthy();
       expect(
         MCP_TOOL_NAMES_ALLOWED.includes(name),

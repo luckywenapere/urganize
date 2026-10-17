@@ -1,6 +1,6 @@
 /**
  * A minimal promise wrapper around IndexedDB — the storage a queued
- * mutation's blob (a cover-art File, a song File) needs, since a 25 MiB
+ * mutation's blob (a cover-art File) needs, since a 25 MiB
  * File cannot live in localStorage (lib/persisted-state.ts's envelope is
  * quota-limited well below that, and every other cache in this codebase is
  * JSON-serializable data for exactly that reason). This is the first use of

@@ -65,8 +65,6 @@ describe('loadDistributionFacts', () => {
       genre: 'Afrobeats',
       language: 'English',
       explicit: false,
-      hasSong: true,
-      audio: { mimeType: 'audio/wav', fileName: 'master.wav' },
       artwork: { mimeType: 'image/jpeg', width: 3000, height: 3000 },
       credits: [{ roles: ['songwriter'], songwriterSplit: 100, masterSplit: 100 }],
     });
@@ -86,26 +84,18 @@ describe('loadDistributionFacts', () => {
     expect(facts).toMatchObject({ genre: null, language: null, explicit: null });
   });
 
-  it('takes the newest audio upload as the song', async () => {
-    const db = completeDb();
-    db.assets.push({
-      id: 'aud-2',
-      release_id: 'rel-1',
-      category: 'audio',
-      mime_type: 'audio/mpeg',
-      file_name: 'radio-edit.mp3',
-      created_at: '2026-10-05T00:00:00Z',
-    });
-    const facts = await loadDistributionFacts(makeClient(db).client, 'rel-1');
-    expect(facts?.audio).toEqual({ mimeType: 'audio/mpeg', fileName: 'radio-edit.mp3' });
+  it('ignores audio uploads: Urganize does not take the song', async () => {
+    const facts = await loadDistributionFacts(makeClient(completeDb()).client, 'rel-1');
+    expect(facts).not.toHaveProperty('audio');
+    expect(facts).not.toHaveProperty('hasSong');
   });
 
-  it('has no song when there is no audio, and no artwork when there is no pointer', async () => {
+  it('has no artwork when there is no pointer', async () => {
     const db = completeDb();
     db.assets = [];
     db.releases[0].artwork_asset_id = null;
     const facts = await loadDistributionFacts(makeClient(db).client, 'rel-1');
-    expect(facts).toMatchObject({ hasSong: false, audio: null, artwork: null });
+    expect(facts).toMatchObject({ artwork: null });
   });
 
   it('reads an artwork uploaded before sizes were recorded as unknown size', async () => {
@@ -170,17 +160,10 @@ describe('checkReleaseForDistribution', () => {
       'missing_language',
       'missing_explicit_flag',
       'missing_songwriter_credits',
-      'missing_audio',
       'artwork_missing',
     ]);
   });
 
-  it('skips the audio-format rule while the partner list is empty, even for an MP3', async () => {
-    const db = completeDb();
-    db.assets[1].mime_type = 'audio/mpeg';
-    const result = await checkReleaseForDistribution(makeClient(db).client, 'rel-1', NOW);
-    expect(result?.errors.map((issue) => issue.code)).not.toContain('audio_wrong_format');
-  });
 });
 
 describe('rejections', () => {

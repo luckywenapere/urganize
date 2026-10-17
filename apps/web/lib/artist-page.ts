@@ -33,14 +33,12 @@ export function describeArtistCounts(summary: {
   releases: number;
   planned: number;
   live: number;
-  upcomingShows: number;
 }): string {
   const parts: string[] = [];
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   if (summary.releases > 0) parts.push(plural(summary.releases, 'release', 'releases'));
   if (summary.planned > 0) parts.push(`${summary.planned} planned`);
   if (summary.live > 0) parts.push(`${summary.live} out now`);
-  if (summary.upcomingShows > 0) parts.push(plural(summary.upcomingShows, 'show coming up', 'shows coming up'));
   return parts.length > 0 ? parts.join(' · ') : 'Nothing yet';
 }
 

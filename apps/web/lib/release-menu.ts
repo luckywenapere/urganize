@@ -95,13 +95,11 @@ export const RELEASE_MENU_ORDER = [
   // Promoted to a permanent tab 2026-08-16.
   'calendar',
   // Release prep in the order the work happens (founder call, 2026-10-16:
-  // user feedback that the song and cover art are the first things to do and
-  // were last). Song and cover art come first because everything after them
-  // depends on them: details describe them, Distribute hands them to the
-  // distributor (its handoff checklist links back here), and the pitch needs
-  // the track delivered, since Spotify for Artists only shows an upcoming
-  // release once the distributor has delivered it.
-  'song',
+  // user feedback that the cover art is among the first things to do and was
+  // last). Cover art comes first because everything after it depends on it:
+  // details describe it, Distribute hands it to the distributor (its handoff
+  // checklist links back here). The song's own step left with song upload
+  // (Oct 17, 2026).
   'coverart',
   // Distribution, 11 of 64 — nine release-level fields plus a collect link and
   // the submissions that come back, so it is returned to across the whole
@@ -110,8 +108,8 @@ export const RELEASE_MENU_ORDER = [
   // Distribution (2026-10-03). Directly after Metadata because it is where
   // that paperwork pays off: the Distribute step reads the genre, language and
   // explicit flag from it and sends the team there to fix what is missing.
-  // After the song and cover art too (2026-10-16), since its handoff
-  // checklist hands those to the distributor.
+  // After the cover art too (2026-10-16), since its handoff checklist hands it
+  // to the distributor.
   'distribute',
   // The general file cabinet: everything that is not the cover or the master.
   'files',
@@ -246,7 +244,6 @@ const GROUP_BY_KEY: Record<ReleaseMenuKey, RolloutMenuGroupKey> = {
   spend: 'plan',
   metadata: 'release',
   coverart: 'release',
-  song: 'release',
   files: 'release',
   distribute: 'release',
   pitch: 'promote',

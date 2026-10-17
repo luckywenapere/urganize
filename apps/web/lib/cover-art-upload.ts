@@ -7,15 +7,13 @@
  * one has nothing to do with resolving a batch, so keeping them apart avoids
  * either growing into a file about two different jobs.
  *
- * Mirrors `lib/song.ts`'s shape closely (constants, validation, the
- * three-step signed-URL flow) rather than sharing code with it — the same
- * "three similar files over a premature abstraction" call this codebase
- * already made between `AssetUploadControl` and `lib/song.ts`. A cover art
- * upload IS otherwise a different shape from a song upload in one load-
- * bearing way: a release has at most ONE current cover art. Uploading a new
+ * Its own constants, validation and three-step signed-URL flow rather than
+ * sharing code with `AssetUploadControl`: the "similar files over a premature
+ * abstraction" call this codebase makes across asset kinds. The load-bearing
+ * difference: a release has at most ONE current cover art. Uploading a new
  * one REPLACES it — the record route deletes whatever `artwork_asset_id`
  * pointed at before pointing it at the new upload — rather than accumulating
- * versions the way songs do.
+ * versions.
  */
 
 import {

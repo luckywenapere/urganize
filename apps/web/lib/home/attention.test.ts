@@ -4,9 +4,8 @@ import { buildAttentionItems, type AttentionInput } from './attention';
 const task = (id: string) => ({ id }) as never;
 const empty: AttentionInput = {
   yourTasks: { late: [], today: [], week: [] },
-  waiting: { tasks: [], djLinks: [] },
+  waiting: { tasks: [] },
   placements: { placed: [], underReview: [] },
-  nextShow: null,
 };
 
 describe('buildAttentionItems', () => {
@@ -18,42 +17,35 @@ describe('buildAttentionItems', () => {
     const items = buildAttentionItems({
       ...empty,
       yourTasks: { late: [task('a')], today: [task('b')], week: [] },
-      waiting: { tasks: [{ id: 'w' } as never], djLinks: [] },
+      waiting: { tasks: [{ id: 'w' } as never] },
     });
     expect(items).toEqual([]);
   });
 
-  it('puts a long set before a DJ who has not opened the tracks before good news', () => {
+  it('says when a playlist added the song', () => {
     const items = buildAttentionItems({
       ...empty,
-      waiting: { tasks: [], djLinks: [{ showId: 's' } as never] },
       placements: { placed: [{ id: 'p' } as never], underReview: [] },
-      nextShow: { id: 's', artistName: 'Dorian', setlist: { fit: 'over' } } as never,
     });
-    expect(items.map((item) => item.key)).toEqual(['setlist-over', 'dj-links', 'placements']);
+    expect(items.map((item) => item.key)).toEqual(['placements']);
     expect(items.every((item) => item.count > 0)).toBe(true);
   });
 
   it('uses the right grammar for one and many', () => {
-    const one = buildAttentionItems({ ...empty, waiting: { tasks: [], djLinks: [{ showId: 's' } as never] } });
-    const many = buildAttentionItems({ ...empty, waiting: { tasks: [], djLinks: [{ showId: 's' } as never, { showId: 't' } as never] } });
-    expect(one[0].title).toBe('1 DJ has not opened the tracks');
-    expect(many[0].title).toBe('2 DJs have not opened the tracks');
-  });
-
-  it('flags a set that runs over its slot, and only then', () => {
-    const show = (fit: 'over' | 'under' | 'on_time') =>
-      ({ id: 's1', artistName: 'Dorian', setlist: { fit, totalMinutes: 40, slotMinutes: 25, isPartial: false } }) as never;
-    expect(buildAttentionItems({ ...empty, nextShow: show('over') }).map((i) => i.key)).toEqual(['setlist-over']);
-    expect(buildAttentionItems({ ...empty, nextShow: show('on_time') })).toEqual([]);
+    const one = buildAttentionItems({ ...empty, placements: { placed: [{ id: 'p' } as never], underReview: [] } });
+    const many = buildAttentionItems({
+      ...empty,
+      placements: { placed: [{ id: 'p' } as never, { id: 'q' } as never], underReview: [] },
+    });
+    expect(one[0].title).toBe('1 playlist added your song');
+    expect(many[0].title).toBe('2 playlists added your song');
   });
 
   it('never uses an em dash or the word workspace in copy', () => {
     const items = buildAttentionItems({
       yourTasks: { late: [task('a')], today: [task('b')], week: [] },
-      waiting: { tasks: [{ id: 'w' } as never], djLinks: [{ showId: 's' } as never] },
+      waiting: { tasks: [{ id: 'w' } as never] },
       placements: { placed: [{ id: 'p' } as never], underReview: [] },
-      nextShow: { id: 's', artistName: 'Dorian', setlist: { fit: 'over' } } as never,
     });
     for (const item of items) {
       expect(`${item.title} ${item.detail} ${item.action}`).not.toMatch(/\u2014|workspace/i);

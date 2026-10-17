@@ -18,9 +18,14 @@
  *                 (lib/distribution-rules.ts), so a file that breaks after it was
  *                 approved or sent reads Missing again.
  *
+ * THE MASTER IS NOT IN URGANIZE. Song upload was removed everywhere (Oct 17,
+ * 2026): the team sends the master to the distributor from their own files, so
+ * the master row is never Missing. It starts ready to approve, and Mark sent is
+ * the team saying it went.
+ *
  * AN APPROVAL IS FOR ONE FILE. It records which upload it approved (the asset
- * id), so replacing the master or the artwork asks for a fresh look rather than
- * carrying an approval across to a file nobody has seen.
+ * id), so replacing the artwork asks for a fresh look rather than carrying an
+ * approval across to a file nobody has seen.
  *
  * DATES ARE CALENDAR DAYS ("YYYY-MM-DD"), never instants: a release day is a
  * day, and "2 days late" counts days on the person's own calendar.
@@ -198,7 +203,6 @@ export const formatDaysLate = (days: number): string => `${days} ${days === 1 ? 
 // Uploaded: derived from the check before distribution
 // ---------------------------------------------------------------------------
 
-const MASTER_CODES = new Set(['missing_audio', 'audio_wrong_format']);
 const isArtworkCode = (code: string) => code.startsWith('artwork_');
 
 /** The errors that hold the metadata row back: the fields a distributor reads.
@@ -216,22 +220,22 @@ const METADATA_FIELD_PATHS = new Set<DistributionFieldPath>([
 
 export function itemErrors(item: HandoffItemKey, check: DistributionCheckResult): DistributionIssue[] {
   return check.errors.filter((issue) => {
-    if (item === 'master') return MASTER_CODES.has(issue.code);
+    if (item === 'master') return false;
     if (item === 'cover_art') return isArtworkCode(issue.code);
     return METADATA_FIELD_PATHS.has(issue.fieldPath);
   });
 }
 
 export type UploadFacts = {
-  hasAudio: boolean;
   hasArtwork: boolean;
   lyrics: string | null;
 };
 
-/** Whether an item is in the app and good enough for a store. Never ticked by hand. */
+/** Whether an item is in the app and good enough for a store. Never ticked by
+ *  hand. The master is never in the app, so it is always ready to approve. */
 export function isUploaded(item: HandoffItemKey, check: DistributionCheckResult, facts: UploadFacts): boolean {
   const errors = itemErrors(item, check);
-  if (item === 'master') return facts.hasAudio && errors.length === 0;
+  if (item === 'master') return true;
   if (item === 'cover_art') return facts.hasArtwork && errors.length === 0;
   return errors.length === 0 && Boolean(facts.lyrics && facts.lyrics.trim());
 }
@@ -401,7 +405,7 @@ export type HandoffMember = {
   isYou: boolean;
 };
 
-export type HandoffMasterDetail = { kind: 'master'; format: string | null };
+export type HandoffMasterDetail = { kind: 'master' };
 export type HandoffArtDetail = {
   kind: 'cover_art';
   width: number | null;
@@ -453,7 +457,7 @@ export function fixFor(
 ): HandoffItemView['fix'] {
   const first = itemErrors(item, check)[0];
   if (first) return { fieldPath: first.fieldPath };
-  if (item === 'master') return { fieldPath: 'audio' };
+  if (item === 'master') return null;
   if (item === 'cover_art') return { fieldPath: 'artwork' };
   return facts.lyrics && facts.lyrics.trim() ? null : { lyrics: true };
 }

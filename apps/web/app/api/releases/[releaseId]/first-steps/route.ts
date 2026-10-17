@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, requireActiveAuthenticatedUser } from '@/app/api/_shared/auth';
 import { ensureReleaseTeamReadAccess } from '@/lib/release-access-server';
 import { readHasTeam } from '@/lib/next-moves-server';
-import { SONG_CATEGORY } from '@/lib/song';
 
 /**
- * What a new rollout's first steps tick off from (URG-293): is the song there,
- * is the cover art there, does the caller's team have anyone in it yet. Read
+ * What a new rollout's first steps tick off from (URG-293): is the cover art
+ * there, does the caller's team have anyone in it yet. Read
  * only, and only what the checklist needs, so it stays cheap enough to re-read
  * every time a scene closes. Any read that fails comes back as null (unknown),
  * which the card treats as not done rather than guessing.
@@ -34,13 +33,8 @@ export async function GET(
   const access = await ensureReleaseTeamReadAccess(admin, releaseId, auth.user);
   if ('error' in access) return access.error;
 
-  const [releaseResult, songResult, hasTeam] = await Promise.all([
+  const [releaseResult, hasTeam] = await Promise.all([
     admin.from('releases').select('artwork_asset_id').eq('id', releaseId).maybeSingle(),
-    admin
-      .from('assets')
-      .select('id', { count: 'exact', head: true })
-      .eq('release_id', releaseId)
-      .eq('category', SONG_CATEGORY),
     readHasTeam(admin, auth.user.id).catch(() => null),
   ]);
 
@@ -57,7 +51,5 @@ export async function GET(
     }
   }
 
-  const hasSong = songResult.error || songResult.count === null ? null : songResult.count > 0;
-
-  return NextResponse.json({ firstSteps: { hasSong, hasCoverArt, hasTeam } });
+  return NextResponse.json({ firstSteps: { hasCoverArt, hasTeam } });
 }

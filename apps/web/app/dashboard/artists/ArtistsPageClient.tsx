@@ -8,7 +8,6 @@ import { useAuthStore } from '@/lib/auth-store';
 import { artistSummary } from '@/lib/artist-overview';
 import { artistHref, describeArtistCounts, isArtistPageEnabled } from '@/lib/artist-page';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
-import { useEventsStore } from '@/stores/useEventsStore';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 import { useReleaseStore } from '@/stores/useReleaseStore';
@@ -25,8 +24,6 @@ export default function ArtistsPageClient() {
   const setArtistPhoto = useArtistRosterStore((state) => state.setArtistPhoto);
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
-  const events = useEventsStore((state) => state.events);
-  const loadEvents = useEventsStore((state) => state.load);
 
   useEffect(() => {
     // A direct link followed while the flag is off goes back to the catalogue.
@@ -37,16 +34,15 @@ export default function ArtistsPageClient() {
     }
     void loadRoster();
     void loadCommandCenter();
-    void loadEvents();
-  }, [loadRoster, loadCommandCenter, loadEvents, router]);
+  }, [loadRoster, loadCommandCenter, router]);
 
   const cards = useMemo(
     () =>
       artists.map((artist) => ({
         artist,
-        summary: artistSummary(artist.id, releases, events),
+        summary: artistSummary(artist.id, releases),
       })),
-    [artists, releases, events]
+    [artists, releases]
   );
 
   if (!ARTIST_PAGE_ENABLED) return null;
@@ -71,13 +67,13 @@ export default function ArtistsPageClient() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-          {/* pl matches the rows below, which leave room for the face. Rollouts and
-              shows only: Planned and Press kit left the table (founder call,
-              2026-10-15); the press kit still lives on each artist's page. */}
-          <div className="hidden grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))_2rem] gap-4 border-b border-stroke-subtle py-3 pl-[4.25rem] pr-5 text-xs font-medium text-content-tertiary md:grid">
+          {/* pl matches the rows below, which leave room for the face. Rollouts
+              only: Planned and Press kit left the table (founder call,
+              2026-10-15), Shows were deleted (Oct 17, 2026); the press kit
+              still lives on each artist's page. */}
+          <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1fr)_2rem] gap-4 border-b border-stroke-subtle py-3 pl-[4.25rem] pr-5 text-xs font-medium text-content-tertiary md:grid">
             <span>Artist</span>
             <span>Rollouts</span>
-            <span>Shows coming</span>
             <span />
           </div>
           <ul className="divide-y divide-stroke-subtle">
@@ -98,19 +94,18 @@ export default function ArtistsPageClient() {
                 />
                 <Link
                   href={artistHref(artist.id)}
-                  className="motion-focus grid min-h-16 items-center gap-x-4 gap-y-1 py-3 pl-[4.25rem] pr-5 transition-colors hover:bg-bg-hover/60 md:grid-cols-[minmax(0,2fr)_repeat(2,minmax(0,1fr))_2rem]"
+                  className="motion-focus grid min-h-16 items-center gap-x-4 gap-y-1 py-3 pl-[4.25rem] pr-5 transition-colors hover:bg-bg-hover/60 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_2rem]"
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-display text-base font-semibold text-content-primary">
                       {artist.name}
                     </span>
                     <span className="mt-0.5 block text-xs text-content-secondary md:hidden">
-                      {/* Rollouts and shows only, like the columns (founder call, 2026-10-15). */}
+                      {/* Rollouts only, like the columns (founder call, 2026-10-15). */}
                       {describeArtistCounts({ ...summary, planned: 0, live: 0 })}
                     </span>
                   </span>
                   <span className="hidden text-sm tabular-nums text-content-primary md:block">{summary.releases}</span>
-                  <span className="hidden text-sm tabular-nums text-content-primary md:block">{summary.upcomingShows}</span>
                   <ArrowRight className="hidden h-4 w-4 text-content-tertiary md:block" aria-hidden />
                 </Link>
               </li>

@@ -39,7 +39,6 @@ const TEAM_ACCESS_GROUPS = [
   'metadata',
   'credits',
   'assets',
-  'song',
   'cover-art',
   'capture',
   'recap',

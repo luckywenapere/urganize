@@ -30,7 +30,7 @@
 //      while POST /api/notes used the plain auth helper. There is a test for it
 //      now.
 //   3. It does not return a `clientAction`, which addresses a React router and
-//      modals that do not exist outside the app (`navigate`, `upload_song`).
+//      modals that do not exist outside the app (`navigate`, `upload_cover_art`).
 
 import { CHAPPI_TOOLS, getChappiTool, type ChappiTool } from '@/lib/chappi/tools';
 import type { ChappiToolName } from '@/lib/chappi/types';

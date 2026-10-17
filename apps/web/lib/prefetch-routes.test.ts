@@ -8,20 +8,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // assertions depend on whoever ran them.
 async function loadRoutes(options: {
   notes: boolean;
-  events: boolean;
   pitching: boolean;
   home?: boolean;
 }) {
   vi.resetModules();
   vi.stubEnv('NEXT_PUBLIC_FEATURE_NOTES', options.notes ? 'true' : 'false');
-  vi.stubEnv('NEXT_PUBLIC_FEATURE_EVENTS', options.events ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCHING', options.pitching ? 'true' : 'false');
   vi.stubEnv('NEXT_PUBLIC_FEATURE_HOME', options.home ? 'true' : 'false');
   return import('./prefetch-routes');
 }
 
-const ALL_ON = { notes: true, events: true, pitching: true, home: true };
-const ALL_OFF = { notes: false, events: false, pitching: false, home: false };
+const ALL_ON = { notes: true, pitching: true, home: true };
+const ALL_OFF = { notes: false, pitching: false, home: false };
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -39,7 +37,7 @@ describe('buildPrefetchRoutes', () => {
   });
 
   // The bug this module exists for: the list sat at three entries while the
-  // nav grew Notes, Shows and the curator crossing, so those were cold on
+  // nav grew Notes and the curator crossing, so those were cold on
   // every load.
   it('warms every nav destination when the flags are on', async () => {
     const { buildPrefetchRoutes } = await loadRoutes(ALL_ON);
@@ -59,7 +57,7 @@ describe('buildPrefetchRoutes', () => {
   it('warms the Home tab when its flag is on, and nothing else has to be', async () => {
     const { buildPrefetchRoutes } = await loadRoutes({
       notes: false,
-      events: false,
+     
       pitching: false,
       home: true,
     });
@@ -82,7 +80,6 @@ describe('buildPrefetchRoutes', () => {
   it('never warms the press kits page, whatever the flags say', async () => {
     vi.resetModules();
     vi.stubEnv('NEXT_PUBLIC_FEATURE_NOTES', 'true');
-    vi.stubEnv('NEXT_PUBLIC_FEATURE_EVENTS', 'true');
     vi.stubEnv('NEXT_PUBLIC_FEATURE_PITCHING', 'true');
     vi.stubEnv('NEXT_PUBLIC_FEATURE_PRESS_KITS', 'true');
     const { buildPrefetchRoutes } = await import('./prefetch-routes');
@@ -94,11 +91,10 @@ describe('buildPrefetchRoutes', () => {
   it('leaves a flagged-off route out — with the flag off it bounces or 404s', async () => {
     const { buildPrefetchRoutes } = await loadRoutes({
       notes: false,
-      events: true,
+     
       pitching: false,
     });
     const routes = buildPrefetchRoutes({ hasCuratorProfile: true });
-    // Shows left the nav (URG-303); its old link still opens, unwarmed.
     expect(routes).not.toContain('/dashboard/shows');
     expect(routes).not.toContain('/dashboard/notes');
     expect(routes).not.toContain('/curator');
@@ -110,7 +106,7 @@ describe('buildPrefetchRoutes', () => {
 
     const { buildPrefetchRoutes: flagOff } = await loadRoutes({
       notes: true,
-      events: true,
+     
       pitching: false,
     });
     expect(flagOff({ hasCuratorProfile: true })).not.toContain('/curator');

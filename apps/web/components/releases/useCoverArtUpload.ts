@@ -13,12 +13,11 @@ const OFFLINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_OFFLINE === 'true';
 
 /**
  * Picking a cover art image and getting it onto a release, as one reusable
- * piece of state. Mirrors `useSongUpload` — same picker/uploading/retry
- * shape, same `input.click()`-needs-a-user-gesture reasoning — kept as a
- * SEPARATE hook rather than a shared generic uploader, matching this
- * codebase's own precedent (`AssetUploadControl` and `useSongUpload` are
- * independent implementations of the same three-step flow rather than one
- * parameterized abstraction).
+ * piece of state. The picker/uploading/retry shape, with the
+ * `input.click()`-needs-a-user-gesture reasoning, kept as a SEPARATE hook
+ * rather than a shared generic uploader, matching this codebase's own
+ * precedent (`AssetUploadControl` is an independent implementation of the
+ * same three-step flow rather than one parameterized abstraction).
  */
 export type CoverArtUploadState = {
   isUploading: boolean;

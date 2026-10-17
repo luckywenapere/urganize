@@ -12,7 +12,7 @@ import {
 
 const everything: FixAvailability = {
   metadata: true,
-  song: true,
+  
   coverArt: true,
   canEditDetails: true,
   canChangeArtist: true,
@@ -20,7 +20,7 @@ const everything: FixAvailability = {
 
 const nothing: FixAvailability = {
   metadata: false,
-  song: false,
+  
   coverArt: false,
   canEditDetails: false,
   canChangeArtist: false,
@@ -38,7 +38,6 @@ describe('every Fix button lands on the right field', () => {
     ['credits', { kind: 'scene', scene: 'metadata', field: 'credits' }],
     ['credits.splits', { kind: 'scene', scene: 'metadata', field: 'splits' }],
     ['artwork', { kind: 'scene', scene: 'coverart', field: null }],
-    ['audio', { kind: 'scene', scene: 'song', field: null }],
   ];
 
   for (const [path, destination] of expected) {
@@ -68,10 +67,8 @@ describe('a fix that cannot work for this person is not offered', () => {
     expect(fixDestinationFor('metadata.genre', noMetadata)).toBeNull();
     expect(fixDestinationFor('credits', noMetadata)).toBeNull();
     expect(fixDestinationFor('artwork', noMetadata)).not.toBeNull();
-    expect(fixDestinationFor('audio', noMetadata)).not.toBeNull();
 
     expect(fixDestinationFor('artwork', { ...everything, coverArt: false })).toBeNull();
-    expect(fixDestinationFor('audio', { ...everything, song: false })).toBeNull();
   });
 
   it('keeps the title, the day and the artist for the people who can change them', () => {

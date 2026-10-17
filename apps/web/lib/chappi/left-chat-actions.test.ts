@@ -40,7 +40,6 @@ describe('actionsForLeftChat', () => {
     const screenOnly: ChappiClientAction[] = [
       { type: 'open_create_release' },
       { type: 'open_quick_create', releaseId: 'r1' },
-      { type: 'open_song_upload', releaseId: 'r1' },
       { type: 'open_cover_art_upload', releaseId: 'r1' },
       { type: 'open_recap', releaseId: 'r1' },
       { type: 'open_share', releaseId: 'r1' },

@@ -9,7 +9,7 @@ import {
   ASSET_SIGNED_URL_TTL_SECONDS,
   RELEASE_ASSETS_BUCKET,
   generateSignedUrl,
-  isAssetCategory,
+  isUploadableAssetCategory,
   validateAssetUpload,
 } from '@/lib/asset-helpers';
 
@@ -162,9 +162,9 @@ export async function POST(
   }
 
   const category = body.category;
-  if (!isAssetCategory(category)) {
+  if (!isUploadableAssetCategory(category)) {
     return NextResponse.json(
-      { error: 'category is required and must be one of the asset_category enum values.' },
+      { error: 'category is required and must be an uploadable asset category (not audio).' },
       { status: 400 }
     );
   }

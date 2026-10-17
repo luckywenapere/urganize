@@ -1,22 +1,20 @@
 // The Home tab's data load. GATHERS data (releases/tasks via the shared
-// command-center loader, plus Home-only reads: role facts, roster, shows,
-// setlists, DJ pack receipts, pitches) and hands it to the pure lib/home/*
+// command-center loader, plus Home-only reads: role facts, roster, pitches)
+// and hands it to the pure lib/home
 // functions to COMPUTE the payload — the same split as everywhere else in
-// this codebase (I/O here, decisions in lib/home/*).
+// this codebase (I/O here, decisions in lib/home).
 //
-// WHY THIS WRITES ITS OWN QUERIES RATHER THAN IMPORTING THE THREE EXISTING
-// ROUTE HANDLERS (pitching/pitches, setlists/[id]/pack, events). Those routes
-// answer "everything about ONE thing" (one release's pitches, one set's pack,
-// one show's detail) behind their own access checks tailored to a single
+// WHY THIS WRITES ITS OWN QUERIES RATHER THAN IMPORTING THE EXISTING ROUTE
+// HANDLERS (pitching/pitches). Those routes answer "everything about ONE
+// thing" (one release's pitches) behind their own access checks tailored to a single
 // row. Home asks a structurally different question — "what, across
 // everything visible, needs attention in the next N days" — and answering it
-// without an N+1 query per release/show needs batched `.in()` reads those
+// without an N+1 query per release needs batched `.in()` reads those
 // single-row handlers don't have a shape for. So this module imports their
 // ALREADY-EXPORTED primitives (table/column constants, row mappers, the pure
-// helpers in lib/dj-pack.ts / lib/setlist.ts / lib/events.ts /
-// lib/pitching.ts) rather than duplicating them, and writes its own
-// aggregate queries on top — never touching or modifying the three routes
-// themselves.
+// helpers in lib/pitching.ts) rather than duplicating them, and writes its
+// own aggregate queries on top — never touching or modifying the routes
+// themselves. (Shows, setlists and DJ packs were deleted Oct 17, 2026.)
 
 import { loadTeamPresenceMembers } from '@/lib/home/team-presence-server';
 import { loadHomeOpportunities } from '@/lib/home/opportunities-server';
@@ -28,8 +26,6 @@ import { getSubscriptionSnapshot } from '@/lib/subscription-access';
 import { listWorkspaceArtists } from '@/lib/artists-server';
 import { decideReleaseAccess } from '@/lib/release-access';
 import { loadCommandCenterData } from '@/lib/command-center-server';
-import type { SchedulableShow } from '@/lib/events';
-import type { SetlistSummaryItem } from '@/lib/setlist';
 import {
   PITCHES_TABLE,
   SENT_PITCH_COLUMNS,
@@ -52,33 +48,13 @@ import { buildArtistChips } from '@/lib/home/artists';
 import { buildYourTasks, buildWaitingOnOthers } from '@/lib/home/tasks';
 import { buildReleaseSummary } from '@/lib/home/releases';
 import { buildPlacements } from '@/lib/home/placements';
-import { buildNextShow, selectNextShow } from '@/lib/home/shows';
 import { LABEL_ROSTER_GAP_DAYS } from '@/lib/home/config';
-import type { HomePayload, HomeWaitingDjLink } from '@/lib/home/types';
+import type { HomePayload } from '@/lib/home/types';
 
 type WorkspaceAccessContext = Awaited<ReturnType<typeof loadWorkspaceAccessContext>>;
 
-const EVENTS_TABLE = 'events';
-const SETLISTS_TABLE = 'setlists';
-const SETLIST_ITEMS_TABLE = 'setlist_items';
-const SONGS_TABLE = 'songs';
-const SONG_VERSIONS_TABLE = 'song_versions';
-const DJ_PACKS_TABLE = 'dj_packs';
-const DJ_PACK_RECIPIENTS_TABLE = 'dj_pack_recipients';
-const DJ_PACK_ACCESS_LOG_TABLE = 'dj_pack_access_log';
 const ARTISTS_TABLE = 'artists';
 const PROFILES_TABLE = 'profiles';
-
-const EVENT_COLUMNS =
-  'id,owner_user_id,artist_id,title,venue_name,city,timezone,set_start_at,set_length_minutes,status';
-
-/** How far ahead Home looks for shows at all — DJ-link waiting can matter for
- * a show further out than the 14-day "next show" window, so this is wider on
- * purpose (see lib/home/config.ts's NEXT_SHOW_WINDOW_DAYS for the narrower
- * window "next show" itself is filtered to). */
-const SHOW_LOOKAHEAD_DAYS = 30;
-
-const isEventsFeatureEnabled = (): boolean => process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 
 function readErr(label: string, error: { message?: string } | null): void {
   // Never throws — every Home-only read degrades to empty data rather than
@@ -87,18 +63,6 @@ function readErr(label: string, error: { message?: string } | null): void {
   // outage is visible in the Vercel runtime log rather than a silently thin
   // Home screen (the command-center activity closure's own precedent).
   if (error) console.error(`[home] ${label} failed:`, error.message);
-}
-
-async function loadArtistNames(adminClient: SupabaseClient, artistIds: string[]): Promise<Map<string, string>> {
-  const ids = Array.from(new Set(artistIds.filter(Boolean)));
-  const names = new Map<string, string>();
-  if (!ids.length) return names;
-  const { data, error } = await adminClient.from(ARTISTS_TABLE).select('id,name').in('id', ids);
-  readErr('artist names', error);
-  for (const row of (data || []) as Array<{ id: string; name: string }>) {
-    names.set(String(row.id), String(row.name || ''));
-  }
-  return names;
 }
 
 // ── Role + team facts ───────────────────────────────────────────────────────
@@ -146,253 +110,6 @@ async function loadRoleFacts(adminClient: SupabaseClient, user: User, access: Wo
   }));
 
   return { role, teamName: teamSnapshot.teamName, primaryOwnerId, roster, viewerName: profileRow?.name ?? null };
-}
-
-// ── Shows: next show + DJ-link waits, batched regardless of show count ─────
-
-type ShowRow = {
-  id: string;
-  ownerUserId: string;
-  artistId: string;
-  artistName: string;
-  title: string;
-  venueName: string | null;
-  city: string | null;
-  timezone: string;
-  setStartAt: string | null;
-  setLengthMinutes: number;
-  status: string;
-};
-
-async function loadVisibleShows(
-  adminClient: SupabaseClient,
-  user: User,
-  access: WorkspaceAccessContext,
-  now: Date
-): Promise<ShowRow[]> {
-  if (!isEventsFeatureEnabled()) return [];
-
-  const windowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-  const windowEnd = new Date(now.getTime() + SHOW_LOOKAHEAD_DAYS * 86_400_000).toISOString();
-
-  // Scoped to this team's owners IN THE QUERY, like GET /api/events and the
-  // pitches read below. It used to read every team's shows in the window and
-  // filter in memory, so the 100-row cap was shared by the whole platform: once
-  // other teams held 100 shows between them in these 30 days, this team's next
-  // show and its waiting DJ links dropped off Home.
-  const ownerIds = access.releaseOwnerIds.length ? access.releaseOwnerIds : [user.id];
-
-  const { data, error } = await adminClient
-    .from(EVENTS_TABLE)
-    .select(EVENT_COLUMNS)
-    .in('owner_user_id', ownerIds)
-    .neq('status', 'cancelled')
-    .gte('set_start_at', windowStart)
-    .lte('set_start_at', windowEnd)
-    .order('set_start_at', { ascending: true })
-    .limit(100);
-
-  readErr('events', error);
-  const rows = (data || []) as Array<Record<string, unknown>>;
-
-  const visible = rows.filter(
-    (row) =>
-      decideReleaseAccess({
-        releaseOwnerId: String(row.owner_user_id || ''),
-        releaseArtistId: String(row.artist_id || ''),
-        userId: user.id,
-        access,
-        write: false,
-      }) === 'allow'
-  );
-
-  const artistNames = await loadArtistNames(adminClient, visible.map((row) => String(row.artist_id || '')));
-
-  return visible.map((row) => ({
-    id: String(row.id || ''),
-    ownerUserId: String(row.owner_user_id || ''),
-    artistId: String(row.artist_id || ''),
-    artistName: artistNames.get(String(row.artist_id || '')) || '',
-    title: String(row.title || ''),
-    venueName: row.venue_name ? String(row.venue_name) : null,
-    city: row.city ? String(row.city) : null,
-    timezone: String(row.timezone || 'Africa/Lagos'),
-    setStartAt: row.set_start_at ? String(row.set_start_at) : null,
-    setLengthMinutes: typeof row.set_length_minutes === 'number' ? row.set_length_minutes : 30,
-    status: String(row.status || 'draft'),
-  }));
-}
-
-type PackWaitInfo = { djLinksWaiting: HomeWaitingDjLink[]; openedByShowId: Map<string, { opened: number; total: number }> };
-
-/**
- * The FIRST setlist per show, the OLDEST pack per setlist, its recipients and
- * access log — all in `.in()` batches, so this costs a fixed handful of
- * queries no matter how many shows are in `shows`. Mirrors the single-show
- * logic in app/api/setlists/[setlistId]/pack/route.ts (oldest pack wins,
- * receipts rolled up per recipient) without importing that route.
- */
-async function loadShowPackWaits(
-  adminClient: SupabaseClient,
-  shows: readonly ShowRow[],
-  primaryOwnerId: string,
-  now: Date
-): Promise<PackWaitInfo> {
-  const empty: PackWaitInfo = { djLinksWaiting: [], openedByShowId: new Map() };
-  if (!shows.length) return empty;
-
-  const showIds = shows.map((show) => show.id);
-  const { data: setlistRows, error: setlistError } = await adminClient
-    .from(SETLISTS_TABLE)
-    .select('id,event_id,created_at')
-    .in('event_id', showIds)
-    .order('created_at', { ascending: true });
-  readErr('setlists', setlistError);
-
-  const firstSetlistByShow = new Map<string, string>();
-  for (const row of (setlistRows || []) as Array<{ id: string; event_id: string }>) {
-    if (!firstSetlistByShow.has(row.event_id)) firstSetlistByShow.set(row.event_id, row.id);
-  }
-  const setlistIds = Array.from(firstSetlistByShow.values());
-  if (!setlistIds.length) return empty;
-
-  const { data: packRows, error: packError } = await adminClient
-    .from(DJ_PACKS_TABLE)
-    .select('id,setlist_id,created_at')
-    .in('setlist_id', setlistIds)
-    .order('created_at', { ascending: true });
-  readErr('dj packs', packError);
-
-  const packBySetlist = new Map<string, string>();
-  for (const row of (packRows || []) as Array<{ id: string; setlist_id: string }>) {
-    if (!packBySetlist.has(row.setlist_id)) packBySetlist.set(row.setlist_id, row.id);
-  }
-  const packIds = Array.from(packBySetlist.values());
-  if (!packIds.length) return empty;
-
-  const showBySetlist = new Map(Array.from(firstSetlistByShow, ([showId, setlistId]) => [setlistId, showId]));
-  const showByPackId = new Map<string, string>();
-  for (const [setlistId, packId] of packBySetlist) {
-    const showId = showBySetlist.get(setlistId);
-    if (showId) showByPackId.set(packId, showId);
-  }
-
-  const [recipientsResult, logResult] = await Promise.all([
-    adminClient
-      .from(DJ_PACK_RECIPIENTS_TABLE)
-      .select('id,pack_id,recipient_name,revoked_at,created_at')
-      .in('pack_id', packIds),
-    adminClient.from(DJ_PACK_ACCESS_LOG_TABLE).select('recipient_id,pack_id,action,created_at').in('pack_id', packIds),
-  ]);
-  readErr('dj pack recipients', recipientsResult.error);
-  readErr('dj pack access log', logResult.error);
-
-  const openedRecipientIds = new Set(
-    ((logResult.data || []) as Array<{ recipient_id: string; action: string }>)
-      .filter((row) => row.action === 'viewed' || String(row.action || '').startsWith('downloaded'))
-      .map((row) => row.recipient_id)
-  );
-
-  const djLinksWaiting: HomeWaitingDjLink[] = [];
-  const openedByShowId = new Map<string, { opened: number; total: number }>();
-  const showById = new Map(shows.map((show) => [show.id, show]));
-
-  const recipients = ((recipientsResult.data || []) as Array<{
-    id: string;
-    pack_id: string;
-    recipient_name: string;
-    revoked_at: string | null;
-    created_at: string;
-  }>).filter((row) => !row.revoked_at);
-
-  const recipientsByShow = new Map<string, typeof recipients>();
-  for (const recipient of recipients) {
-    const showId = showByPackId.get(recipient.pack_id);
-    if (!showId) continue;
-    const list = recipientsByShow.get(showId) ?? [];
-    list.push(recipient);
-    recipientsByShow.set(showId, list);
-  }
-
-  for (const [showId, showRecipients] of recipientsByShow) {
-    const show = showById.get(showId);
-    const opened = showRecipients.filter((r) => openedRecipientIds.has(r.id)).length;
-    openedByShowId.set(showId, { opened, total: showRecipients.length });
-
-    // "Waiting" is scoped to shows you RUN — the same owner-scoping every
-    // other waiting-on-others item uses.
-    if (!show || show.ownerUserId !== primaryOwnerId) continue;
-
-    for (const recipient of showRecipients) {
-      if (openedRecipientIds.has(recipient.id)) continue;
-      const hoursWaiting = (now.getTime() - Date.parse(recipient.created_at)) / (60 * 60 * 1000);
-      if (!Number.isFinite(hoursWaiting) || hoursWaiting < 48) continue;
-      djLinksWaiting.push({
-        showId,
-        recipientId: recipient.id,
-        recipientName: recipient.recipient_name,
-        showLabel: [show.artistName, show.venueName].filter(Boolean).join(' · ') || show.title,
-        hoursWaiting: Math.round(hoursWaiting),
-      });
-    }
-  }
-
-  return { djLinksWaiting, openedByShowId };
-}
-
-async function loadSetlistItemsForDuration(
-  adminClient: SupabaseClient,
-  setlistId: string
-): Promise<SetlistSummaryItem[]> {
-  const { data, error } = await adminClient
-    .from(SETLIST_ITEMS_TABLE)
-    .select('id,item_type,song_id,song_version_id,duration_seconds')
-    .eq('setlist_id', setlistId);
-  readErr('setlist items', error);
-
-  const rows = (data || []) as Array<{
-    item_type: string | null;
-    song_id: string | null;
-    song_version_id: string | null;
-    duration_seconds: number | null;
-  }>;
-  if (!rows.length) return [];
-
-  const songIds = Array.from(new Set(rows.map((row) => row.song_id).filter((id): id is string => Boolean(id))));
-  const versionIds = Array.from(
-    new Set(rows.map((row) => row.song_version_id).filter((id): id is string => Boolean(id)))
-  );
-
-  const [songsResult, versionsResult] = await Promise.all([
-    songIds.length
-      ? adminClient.from(SONGS_TABLE).select('id,duration_seconds').in('id', songIds)
-      : Promise.resolve({ data: [], error: null }),
-    versionIds.length
-      ? adminClient.from(SONG_VERSIONS_TABLE).select('id,duration_seconds').in('id', versionIds)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-  readErr('songs', songsResult.error as { message?: string } | null);
-  readErr('song versions', versionsResult.error as { message?: string } | null);
-
-  const songDuration = new Map(
-    ((songsResult.data || []) as Array<{ id: string; duration_seconds: number | null }>).map((row) => [
-      row.id,
-      row.duration_seconds,
-    ])
-  );
-  const versionDuration = new Map(
-    ((versionsResult.data || []) as Array<{ id: string; duration_seconds: number | null }>).map((row) => [
-      row.id,
-      row.duration_seconds,
-    ])
-  );
-
-  return rows.map((row) => ({
-    itemSeconds: row.duration_seconds,
-    versionSeconds: row.song_version_id ? versionDuration.get(row.song_version_id) ?? null : null,
-    songSeconds: row.song_id ? songDuration.get(row.song_id) ?? null : null,
-    itemType: (row.item_type as SetlistSummaryItem['itemType']) ?? undefined,
-  }));
 }
 
 // ── Placements (pitching) ───────────────────────────────────────────────────
@@ -466,24 +183,6 @@ async function loadTeamPitches(
  * the catalog right after Home costs no second fetch (the approved plan's
  * "one load, not two"). `home` is the derived, Home-only payload.
  */
-/** The next show's first setlist, as the items its duration is read from. */
-async function loadNextShowSetlistItems(
-  adminClient: SupabaseClient,
-  showId: string
-): Promise<Awaited<ReturnType<typeof loadSetlistItemsForDuration>> | null> {
-  const firstSetlist = await adminClient
-    .from(SETLISTS_TABLE)
-    .select('id')
-    .eq('event_id', showId)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  readErr('next show setlist', firstSetlist.error);
-
-  const setlistId = (firstSetlist.data as { id: string } | null)?.id ?? null;
-  return setlistId ? loadSetlistItemsForDuration(adminClient, setlistId) : null;
-}
-
 export type HomeLoadResult = {
   commandCenter: CommandCenterData;
   home: HomePayload;
@@ -500,9 +199,8 @@ export async function loadHomeData(
 
   // Access is resolved ONCE and shared. It used to run twice in parallel (here
   // and again inside loadCommandCenterData), and everything Home adds waited
-  // for the whole catalog load even though role, shows and pitches need only
-  // the access context. Now the catalog load, the role read and the shows read
-  // all start as soon as access lands, so Home costs about the catalog load
+  // for the whole catalog load even though role and pitches need only the
+  // access context. Now the catalog load and the role read all start as soon as access lands, so Home costs about the catalog load
   // plus nothing, instead of the catalog load plus a serial second stage.
   const access = await step('home_access', () => loadWorkspaceAccessContext(adminClient, user));
 
@@ -529,33 +227,10 @@ export async function loadHomeData(
   );
 
   const roleFactsPromise = step('home_role', () => loadRoleFacts(adminClient, user, access));
-  const visibleShowsPromise = step('home_shows', () => loadVisibleShows(adminClient, user, access, now));
-
-  // The show side (DJ-link waits, the next show's setlist) needs only the
-  // shows and the role's primary owner, never the catalog, so it runs
-  // alongside the catalog load instead of after it (URG-314). It used to add
-  // up to three serial round trips after everything else had landed.
-  const showSidePromise = Promise.all([roleFactsPromise, visibleShowsPromise]).then(
-    async ([roleFacts, visibleShows]) => {
-      const nextShowRow = selectNextShow(
-        visibleShows.map((show) => ({ ...show })) as Array<ShowRow & SchedulableShow>,
-        now
-      );
-      const [packWaits, setlistItems] = await Promise.all([
-        step('home_packs', () =>
-          loadShowPackWaits(adminClient, visibleShows, roleFacts.primaryOwnerId, now)
-        ),
-        nextShowRow ? step('home_next_show', () => loadNextShowSetlistItems(adminClient, nextShowRow.id)) : null,
-      ]);
-      return { packWaits, nextShowRow, setlistItems };
-    }
-  );
-
-  const [commandCenter, roleFacts, pitches, showSide, team, opportunities] = await Promise.all([
+  const [commandCenter, roleFacts, pitches, team, opportunities] = await Promise.all([
     commandCenterPromise,
     roleFactsPromise,
     step('home_pitches', () => loadTeamPitches(adminClient, user, access, releasesPromise)),
-    showSidePromise,
     teamPromise,
     opportunitiesPromise,
   ]);
@@ -611,45 +286,19 @@ export async function loadHomeData(
     now
   );
 
-  const { packWaits, nextShowRow, setlistItems } = showSide;
-
-  let nextShow: HomePayload['nextShow'] = null;
-  if (nextShowRow) {
-    const djStats = packWaits.openedByShowId.get(nextShowRow.id) ?? null;
-
-    nextShow = buildNextShow(
-      {
-        id: nextShowRow.id,
-        artistName: nextShowRow.artistName,
-        venueName: nextShowRow.venueName,
-        city: nextShowRow.city,
-        setStartAt: nextShowRow.setStartAt,
-        timezone: nextShowRow.timezone,
-        setLengthMinutes: nextShowRow.setLengthMinutes,
-        setlistItems,
-        djLinksOpened: djStats?.opened ?? null,
-        djLinksTotal: djStats?.total ?? null,
-      },
-      now
-    );
-  }
-
   const waiting: HomePayload['waiting'] = {
     tasks: waitingTasksPart.tasks,
     onTimeCount: waitingTasksPart.onTimeCount,
-    djLinks: packWaits.djLinksWaiting,
   };
 
   // "All clear": nothing actionable is outstanding — no late work (yours or
-  // someone else's on a release you run), no DJ link past its 48h wait, and
-  // no pitch still waiting on a curator's answer. The release progress card
-  // and next-show card stay visible either way (they're informational, not
-  // problems), so their presence never blocks this.
+  // someone else's on a release you run) and no pitch still waiting on a
+  // curator's answer. The release progress card stays visible either way
+  // (it's informational, not a problem), so its presence never blocks this.
   const sectionsAllEmpty =
     yourTasks.late.length === 0 &&
     yourTasks.today.length === 0 &&
     waiting.tasks.length === 0 &&
-    waiting.djLinks.length === 0 &&
     placements.underReview.length === 0;
 
   const state = resolveHomeStateForRole(role, {
@@ -682,7 +331,6 @@ export async function loadHomeData(
       waiting,
       releases: releaseSummaries,
       placements,
-      nextShow,
       team,
       opportunities,
     },

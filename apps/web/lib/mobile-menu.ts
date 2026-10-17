@@ -18,7 +18,6 @@ export type MobileMenuGroupKey = 'work' | 'people' | 'account';
 export type MobileMenuIcon =
   | 'catalog'
   | 'notes'
-  | 'shows'
   | 'pitching'
   | 'artists'
   | 'press-kits'
@@ -51,7 +50,6 @@ export type MobileMenuGroup = {
 export type MobileMenuFlags = {
   home: boolean;
   notes: boolean;
-  events: boolean;
   pitching: boolean;
   /** Artist pages — already includes the workspace flag. */
   artists: boolean;

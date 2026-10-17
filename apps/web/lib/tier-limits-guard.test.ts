@@ -336,18 +336,17 @@ describe('the seat counter counts team membership and nothing else', () => {
 // 4. External contacts are never seat-checked
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// THIS IS THE BLOCK THAT KEEPS THE SHOWS AND PITCHING FEATURES WORKING ON THE
-// TIER THEY WERE SOLD ON. A DJ receiving a pack, a curator receiving a pitch and
+// THIS IS THE BLOCK THAT KEEPS THE PITCHING AND CREDITS FEATURES WORKING ON THE
+// TIER THEY WERE SOLD ON. A curator receiving a pitch and
 // a producer filling in a credits link all interact with the account without
 // logging in and without belonging to it. Charging any of them a seat would mean
-// a Solo team with its one collaborator in place could no longer send a DJ the
-// tracks for tonight's show — which is the whole feature.
+// a Solo team with its one collaborator in place could no longer pitch a song
+// or collect credits, which is the whole feature.
 //
 // Asserted as an absence, which is the honest shape: there is no seat check to
 // find in these files, and the test's job is to notice the day someone adds one.
 
 const EXTERNAL_CONTACT_PATHS: Array<{ what: string; file: string }> = [
-  { what: 'send a DJ pack to a recipient', file: 'app/api/packs/[packId]/recipients/route.ts' },
   { what: 'pitch a song to a curator playlist', file: 'app/api/pitching/pitches/route.ts' },
   { what: 'receive a collaborator credit submission', file: 'app/api/credits/[token]/route.ts' },
 ];
@@ -382,20 +381,13 @@ describe('external contacts never consume a seat', () => {
 
 describe('the product surface is the same on every tier', () => {
   // "Gate seats, not features" (founder, 2026-09-01). A Solo manager keeps
-  // activity assignment, shows, setlists, DJ packs and the assistant; what
+  // activity assignment, the directory and the assistant; what
   // their plan limits is how many people and how much usage. So none of these
   // routes may consult an entitlement at all.
   const UNGATED = [
     // Assignment rides the task create/update routes.
     'app/api/tasks/route.ts',
     'app/api/tasks/[id]/route.ts',
-    // Shows, their setlists, and the pack that goes out to the DJ.
-    'app/api/events/route.ts',
-    'app/api/events/[eventId]/setlists/route.ts',
-    'app/api/setlists/[setlistId]/items/route.ts',
-    'app/api/setlists/[setlistId]/pack/route.ts',
-    // The song catalog the setlist is built from.
-    'app/api/songs/route.ts',
     // Directory search, open to every plan since 2026-10-02 (strategy doc,
     // section 10: "Search is open to every plan, Solo and trials included...
     // The money comes from the take rate on hires, not from charging to

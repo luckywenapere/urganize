@@ -8,7 +8,6 @@ import { describe, expect, it } from 'vitest';
 const require = createRequire(import.meta.url);
 
 const CUT = [
-  'NEXT_PUBLIC_FEATURE_EVENTS',
   'NEXT_PUBLIC_FEATURE_CAPTURE',
   'NEXT_PUBLIC_FEATURE_RELEASE_CHAT',
   'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',

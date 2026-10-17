@@ -13,7 +13,6 @@ import {
   Lock,
   LockOpen,
   RefreshCw,
-  Sparkles,
   Trash2,
 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
@@ -27,10 +26,6 @@ import {
   metadataStepForField,
   type MetadataFixField,
 } from '@/lib/distribution-fix';
-import {
-  GENRE_PREDICTION_ACCEPT_ATTR,
-  validateGenrePredictionUpload,
-} from '@/lib/genre-prediction';
 import { RELEASE_CREDIT_ROLE_LABELS } from '@/types/credits';
 import {
   buildCreditSubmissionsCsv,
@@ -106,14 +101,6 @@ import { useSceneDataStore, type MetadataScenePayload } from '@/stores/useSceneD
 // NEXT_PUBLIC_ prefix so the value is inlined at build time for this client
 // component. The API routes guard the same flag server-side (404 when off).
 const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
-
-// Genre prediction from audio: the Genre field gains a "Predict from audio"
-// action that proxies a local audio file to an external classifier model and
-// prefills the field. Dark until NEXT_PUBLIC_FEATURE_GENRE_PREDICTION is
-// 'true'; the predict-genre route guards the same flag server-side (404 when
-// off). Only reachable when METADATA_ENABLED is on too, since this section
-// renders nothing otherwise.
-const GENRE_PREDICTION_ENABLED = process.env.NEXT_PUBLIC_FEATURE_GENRE_PREDICTION === 'true';
 
 async function getAccessToken(): Promise<string> {
   const {
@@ -256,8 +243,6 @@ export function MetadataSection({
   // --- Release-level fields -------------------------------------------------
   const [form, setForm] = useState<MetadataFormState>(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPredictingGenre, setIsPredictingGenre] = useState(false);
-  const genreFileInputRef = useRef<HTMLInputElement>(null);
   // The form is seeded FROM the cached/fetched snapshot, so a background
   // revalidate landing mid-edit would otherwise silently overwrite whatever
   // the user is typing. Once they touch a field, the server copy stops being
@@ -373,62 +358,6 @@ export function MetadataSection({
       onToast?.(err instanceof Error ? err.message : 'Could not save metadata.', 'error');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handlePredictGenre = async (file: File) => {
-    if (isPredictingGenre) return;
-
-    // Same validation the route runs, so an oversized or non-audio pick fails
-    // instantly instead of spending an upload.
-    const validation = validateGenrePredictionUpload({
-      fileName: file.name,
-      mimeType: file.type,
-      fileSize: file.size,
-    });
-    if (!validation.ok) {
-      onToast?.(validation.error, 'error');
-      return;
-    }
-
-    setIsPredictingGenre(true);
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        onToast?.('Session expired. Please sign in again.', 'error');
-        return;
-      }
-      const body = new FormData();
-      body.append('file', file, file.name);
-      // No Content-Type header — the browser sets the multipart boundary.
-      const res = await fetch(`/api/releases/${releaseId}/metadata/predict-genre`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body,
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        genre?: string;
-        confidence?: number | null;
-        error?: string;
-      };
-      if (!res.ok || !data.genre) {
-        onToast?.(data.error || 'Could not predict a genre from that file.', 'error');
-        return;
-      }
-      // The form has no dirty tracking — "Save details" is always enabled — so
-      // filling the field is all that's needed. Nothing persists until the
-      // user saves, and the audio itself is never stored.
-      const genre = data.genre;
-      editForm((f) => ({ ...f, genre }));
-      const confidenceSuffix =
-        typeof data.confidence === 'number'
-          ? ` (${Math.round(data.confidence * 100)}% confidence)`
-          : '';
-      onToast?.(`Predicted genre: ${genre}${confidenceSuffix}. Review and save.`, 'success');
-    } catch (err) {
-      onToast?.(err instanceof Error ? err.message : 'Could not predict a genre.', 'error');
-    } finally {
-      setIsPredictingGenre(false);
     }
   };
 
@@ -752,37 +681,6 @@ export function MetadataSection({
                       fieldKey="genre"
                       value={form.genre}
                       onChange={(v) => editForm((f) => ({ ...f, genre: v }))}
-                      labelAction={
-                        GENRE_PREDICTION_ENABLED ? (
-                          <>
-                            <input
-                              ref={genreFileInputRef}
-                              type="file"
-                              accept={GENRE_PREDICTION_ACCEPT_ATTR}
-                              className="hidden"
-                              onChange={(event) => {
-                                const file = event.target.files?.[0];
-                                // Reset so picking the same file again still fires.
-                                event.target.value = '';
-                                if (file) void handlePredictGenre(file);
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => genreFileInputRef.current?.click()}
-                              disabled={isPredictingGenre || isSaving}
-                              className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-60"
-                            >
-                              {isPredictingGenre ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Sparkles className="h-3 w-3" />
-                              )}
-                              {isPredictingGenre ? 'Predicting…' : 'Predict from audio'}
-                            </button>
-                          </>
-                        ) : undefined
-                      }
                     />
                     <Field
                       label="Subgenre"

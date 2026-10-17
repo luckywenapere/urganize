@@ -127,7 +127,6 @@ export type RoleViewFeature =
   | 'catalogue'
   | 'credits'
   | 'opportunities'
-  | 'shows'
   | 'audience'
   | 'people'
   | 'directory';
@@ -275,7 +274,6 @@ const FEATURE_WORDS: Partial<Record<RoleViewFeature, string>> = {
   catalogue: 'Catalogue',
   credits: 'Credits',
   opportunities: 'Opportunities',
-  shows: 'Shows',
   audience: 'Audience',
   people: 'People',
   directory: 'Directory',

@@ -14,15 +14,6 @@ const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'tru
 // and the typed shortcut appear only where the feature itself does.
 const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
 
-// Same flag the Song scene, its pill and the /song API routes read. The chip
-// and the typed shortcut appear only where the feature itself does — and they
-// matter more here than most: production runs with no model configured for
-// long stretches, so this router IS the assistant, and "upload the song" has
-// to reach the picker without one.
-const SONG_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true';
-
-// Same flag the Shows page, its nav tab and the /api/events routes read.
-const EVENTS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true';
 const RELEASE_RECAP_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_RECAP === 'true';
 // Same flag the share sheet, the rollout's Share button and the share-card
 // route read.
@@ -31,7 +22,7 @@ const SOCIAL_SHARE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SOCIAL_SHARE === 't
 /**
  * "post it on instagram", "whatsapp status", "share the single", "announce it".
  *
- * Narrow on purpose, the same discipline the show phrases follow. Two words
+ * Narrow on purpose. Two words
  * that look like they belong here are left out because they already mean
  * something else in this product: a bare "status" is the status update ("share
  * a status update with the artist" must still write one), and a bare "dm" is
@@ -66,40 +57,6 @@ const SHARE_THE_MUSIC =
 
 /** "share the single with the team" is about access, not an announcement. */
 const SHARE_WITH_TEAM = /\bwith\s+(the|my|our)\s+team\b/i;
-
-/**
- * "what's the setlist", "send the dj pack", "my shows this month".
- *
- * NEVER the bare word "show", and that is the whole difficulty of this branch:
- * "show me my releases" contains it, and routing that to the Shows page would
- * be worse than not having the branch at all. So every phrase here is one that
- * can only be about a live date.
- */
-const SHOW_PHRASES: readonly RegExp[] = [
-  /\bset\s?list\b/i,
-  /\bdj\s+pack\b/i,
-  /\brun\s+of\s+show\b/i,
-  /\bmy\s+shows\b/i,
-  /\bgigs?\b/i,
-  /\bvenues?\b/i,
-  /\bsoundcheck\b/i,
-];
-
-/**
- * "upload the song", "attach the master", "replace the audio".
- *
- * Keyword-matched in both word orders rather than anchored like the note
- * prefix: this intent carries no content, only a verb and a noun, and the two
- * arrive in either order ("upload the master" / "song upload"). It must be
- * checked BEFORE the release branch below, which already claims 'song' and
- * 'track' for "start a new release" — and AFTER the task branch, so "add a task
- * to upload the master" stays an activity.
- */
-const SONG_NOUNS = 'song|master|audio|track|mp3|wav|flac';
-const SONG_UPLOAD_PHRASES = [
-  new RegExp(`\\b(upload|attach|re-?upload|replace)\\b[\\s\\S]{0,24}\\b(${SONG_NOUNS})\\b`, 'i'),
-  new RegExp(`\\b(${SONG_NOUNS})\\b[\\s\\S]{0,16}\\b(upload|attached?)\\b`, 'i'),
-];
 
 /**
  * "note <text>" — quick capture, the one intent that carries content.
@@ -171,9 +128,6 @@ export const CHAPPI_CHIPS: ChappiChip[] = [
     ask: 'Write a status update I can send to the artist.',
   },
   { id: 'add-task', label: 'Add activity', intent: 'add_task' },
-  ...(SONG_UPLOAD_ENABLED
-    ? [{ id: 'upload-song', label: 'Upload the song', intent: 'upload_song' as const }]
-    : []),
   ...(NOTES_ENABLED
     ? [{ id: 'take-note', label: 'Take a note', intent: 'take_note' as const }]
     : []),
@@ -208,18 +162,6 @@ export function resolveIntent(raw: string): ChappiIntent {
   // asserting every suggestion resolves to something real (2026-09-08).
   if (has('task', 'activity', 'activities', 'to-do', 'todo', 'checklist item')) {
     return { kind: 'add_task' };
-  }
-  // Before the planner/release branches, which already claim 'song' and
-  // 'track' — "upload the song" is not "start a new release".
-  if (SONG_UPLOAD_ENABLED && SONG_UPLOAD_PHRASES.some((pattern) => pattern.test(raw))) {
-    return { kind: 'upload_song' };
-  }
-  // Before the planner AND release branches. "plan the setlist" is about a
-  // set, not a rollout, and the release branch would otherwise claim it via
-  // 'plan'; the release branch also claims 'song' and 'track', which a
-  // conversation about a set is full of.
-  if (EVENTS_ENABLED && SHOW_PHRASES.some((pattern) => pattern.test(raw))) {
-    return { kind: 'open_shows' };
   }
   // Before the planner and release branches, which claim 'rollout', 'single'
   // and 'song' — "share the single" is an announcement, not a new rollout. And
@@ -293,8 +235,6 @@ export function buildHelpReply(): ChappiReply {
       // resolveIntent.
       PLANNER_ENABLED ? 'Plan a rollout' : 'Create a new rollout',
       'Add an activity',
-      ...(SONG_UPLOAD_ENABLED ? ['Upload the song'] : []),
-      ...(EVENTS_ENABLED ? ['My shows'] : []),
       ...(SOCIAL_SHARE_ENABLED ? ['Share to socials'] : []),
       ...(NOTES_ENABLED ? ['Note Call the promoter about Friday'] : []),
     ],

@@ -1264,7 +1264,7 @@ export function WorkspaceView() {
   // timeline while that is up, otherwise in the one layout branch on screen.
   //
   // First steps (URG-293): on a NEW rollout the owner gets one obvious next
-  // action (add the song, the cover art, invite the team) with a short
+  // action (the cover art, the details, invite the team) with a short
   // checklist, and it stands in for the next moves until every step is done or
   // it is hidden, so a fresh rollout offers one thing to do rather than four.
   const nextMovesBanner =

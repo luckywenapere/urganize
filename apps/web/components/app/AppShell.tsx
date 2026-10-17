@@ -244,7 +244,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     // is deciding whether to make one. Chrome here would be the product
     // talking over the person whose page it is.
     pathname?.startsWith('/pitch/') ||
-    // A DJ pack link, opened by someone with no account at all.
+    // An old DJ pack link, opened by someone with no account at all. The page
+    // was deleted (Oct 17, 2026); its not-found screen stays chrome-free.
     pathname?.startsWith('/pack/') ||
     // A rollout brief's view link (URG-281), opened by someone with no account.
     pathname?.startsWith('/brief/') ||

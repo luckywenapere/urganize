@@ -28,6 +28,8 @@ export {
   categoryLabel,
   formatFileSize,
   isAssetCategory,
+  isUploadableAssetCategory,
+  UPLOADABLE_ASSET_CATEGORIES,
   validateAssetUpload,
 } from './asset-constants';
 export type { AssetCategory, AssetUploadAttributes } from './asset-constants';

@@ -8,7 +8,7 @@
  * write-through). Keeping that split is what lets a new queueable kind be
  * added without touching this file's flush loop.
  *
- * Storage is IndexedDB (lib/offline/idb.ts) because a cover-art/song File
+ * Storage is IndexedDB (lib/offline/idb.ts) because a cover-art File
  * has to survive alongside its metadata, and localStorage's quota rules
  * out anything that size.
  */
@@ -18,8 +18,7 @@ import { idbDelete, idbGetAll, idbPut } from './idb';
 export type QueuedMutationKind =
   | 'task_create'
   | 'note_create'
-  | 'cover_art_upload'
-  | 'song_upload';
+  | 'cover_art_upload';
 
 export type TaskCreatePayload = {
   title: string;
@@ -37,10 +36,6 @@ export type NoteCreatePayload = {
 export type CoverArtUploadPayload = {
   releaseId: string;
   dimensions?: { width: number; height: number } | null;
-};
-
-export type SongUploadPayload = {
-  releaseId: string;
 };
 
 type QueuedItemBase = {
@@ -61,8 +56,7 @@ type QueuedItemBase = {
 export type QueuedMutation =
   | (QueuedItemBase & { kind: 'task_create'; payload: TaskCreatePayload })
   | (QueuedItemBase & { kind: 'note_create'; payload: NoteCreatePayload })
-  | (QueuedItemBase & { kind: 'cover_art_upload'; payload: CoverArtUploadPayload; blob: File })
-  | (QueuedItemBase & { kind: 'song_upload'; payload: SongUploadPayload; blob: File });
+  | (QueuedItemBase & { kind: 'cover_art_upload'; payload: CoverArtUploadPayload; blob: File });
 
 function generateId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {

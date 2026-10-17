@@ -29,6 +29,9 @@ type AssetSectionProps = {
   onToast: (message: string, tone: AssetToastTone) => void;
 };
 
+// 'audio' stays in the display order so files uploaded before song upload was
+// removed (Oct 17, 2026) still list. New uploads cannot pick it
+// (UPLOADABLE_ASSET_CATEGORIES in AssetUploadControl and the upload routes).
 const DISPLAY_CATEGORY_ORDER: AssetCategory[] = [
   'cover_art',
   'promo_image',

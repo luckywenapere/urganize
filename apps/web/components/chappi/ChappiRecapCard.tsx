@@ -16,8 +16,8 @@ type ChappiRecapCardProps = {
   /**
    * Says what happened, in the assistant's own voice.
    *
-   * A transcript line rather than a toast, matching how the two upload cards
-   * report (`handleSongUploaded` appends a reply): this component renders in
+   * A transcript line rather than a toast, matching how the cover art card
+   * reports (`handleCoverArtUploaded` appends a reply): this component renders in
    * three surfaces — the page, the dock and the rail — and only two of them
    * sit under a ToastProvider, so a toast would be silent in the third. The
    * conversation is also the right place for it: "Recap saved." is a thing the
@@ -29,7 +29,7 @@ type ChappiRecapCardProps = {
 /**
  * Handing over the finished recap poster from inside the conversation.
  *
- * The mirror image of ChappiSongUploadCard: that card exists because a tool
+ * The mirror image of ChappiCoverArtUploadCard: that card exists because a tool
  * cannot be HANDED a file, this one because a tool cannot GIVE you one. The
  * recap's output is two PNGs, and a paragraph of text cannot hand those over —
  * so `generate_recap` builds them and this card does the sharing, through the

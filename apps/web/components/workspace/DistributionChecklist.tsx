@@ -23,7 +23,6 @@ import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 // appear for a scene that exists.
 const SCENE_FLAGS = {
   metadata: process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true',
-  song: process.env.NEXT_PUBLIC_FEATURE_SONG_UPLOAD === 'true',
   coverArt: process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true',
 };
 

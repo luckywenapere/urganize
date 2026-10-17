@@ -15,7 +15,6 @@ import {
 
 const ALL_ON: ShellFlags = {
   notes: true,
-  events: true,
   pitching: true,
   directory: true,
   artistPage: true,
@@ -163,7 +162,6 @@ describe('the nav filter, per view', () => {
     expect(activeShellArea(list, '/dashboard/artists/abc')?.key).toBe('more');
     expect(activeShellArea(list, '/dashboard/directory')?.key).toBe('more');
     expect(activeShellArea(list, '/dashboard')?.key).toBe('catalogue');
-    expect(activeShellArea(list, '/dashboard/shows')?.key).toBe('catalogue');
     expect(activeMobileTab(list, '/dashboard/artists')).toBe('more');
   });
 

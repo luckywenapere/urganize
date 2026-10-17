@@ -18,7 +18,7 @@
 import { getRelativeDueLabel } from '@/lib/tasks';
 import { rolloutPhaseForOffset, DATED_ROLLOUT_PHASES, type RolloutPhase } from '@/lib/rollout-phases';
 import type { NextMove } from '@/lib/next-moves';
-import type { HomeNextShow, HomeReleaseSummary, HomeStateKey, HomeTaskItem, HomeYourTasks } from './types';
+import type { HomeReleaseSummary, HomeStateKey, HomeTaskItem, HomeYourTasks } from './types';
 import { pickFocusTask } from './focus';
 
 export type HomeLayout = 'new' | 'release' | 'between';
@@ -90,13 +90,9 @@ export function buildPhaseLine(
 
 export type OneThingItem =
   | { kind: 'task'; key: string; task: HomeTaskItem; due: { label: string; late: boolean } }
-  | { kind: 'move'; key: string; move: NextMove }
-  | { kind: 'show'; key: string; show: HomeNextShow };
+  | { kind: 'move'; key: string; move: NextMove };
 
 export const ONE_THING_MAX = 3;
-
-/** How soon a show has to be before it takes a place among the next moves. */
-export const SHOW_SOON_DAYS = 3;
 
 function dueOf(task: HomeTaskItem, now: Date): { label: string; late: boolean } {
   const due = getRelativeDueLabel({ dueDate: task.dueDate, completedAt: null, compressedRunway: false }, now);
@@ -105,8 +101,7 @@ function dueOf(task: HomeTaskItem, now: Date): { label: string; late: boolean } 
 
 /**
  * The next moves, most important first, at most three: your late work, then
- * the plan's own next moves (URG-259), then what is due today, then a show
- * coming up in the next three days. This week's work is not here: with none of
+ * the plan's own next moves (URG-259), then what is due today. This week's work is not here: with none of
  * those, the card says you're clear and names the next thing due. One list replaces the old
  * Tasks, Up next, Next moves and For you today blocks, which all answered the
  * same question four ways.
@@ -115,7 +110,6 @@ export function buildOneThing(
   input: {
     yourTasks: HomeYourTasks;
     moves: readonly NextMove[];
-    nextShow: HomeNextShow | null;
   },
   now: Date = new Date(),
   max: number = ONE_THING_MAX
@@ -141,21 +135,17 @@ export function buildOneThing(
     items.push({ kind: 'move', key: `move-${move.key}`, move });
   }
   pushTasks(input.yourTasks.today.filter((t) => !used.has(t.id)));
-  const show = input.nextShow;
-  if (items.length < max && show && show.daysUntil !== null && show.daysUntil >= 0 && show.daysUntil <= SHOW_SOON_DAYS) {
-    items.push({ kind: 'show', key: `show-${show.id}`, show });
-  }
   return items;
 }
 
 // ---------------------------------------------------------------- waiting row
 
 /** "3 with your team · 1 late", or null when nothing is waiting. */
-export function describeWaiting(input: { lateCount: number; onTimeCount: number; djCount: number }): {
+export function describeWaiting(input: { lateCount: number; onTimeCount: number }): {
   total: number;
   late: number;
 } | null {
-  const late = input.lateCount + input.djCount;
+  const late = input.lateCount;
   const total = late + input.onTimeCount;
   if (total === 0) return null;
   return { total, late };
@@ -164,7 +154,6 @@ export function describeWaiting(input: { lateCount: number; onTimeCount: number;
 export const HOME_FOUR_COPY = {
   next: 'Next',
   openTask: 'Open task',
-  openShow: 'Open show',
   clearTitle: "You're clear for today.",
   waiting: 'Waiting on others',
   withTeam: (n: number) => `${n} with your team`,

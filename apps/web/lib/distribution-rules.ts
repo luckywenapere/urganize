@@ -13,22 +13,25 @@
  * Distribute scene and the status on the rollout all read the same list through
  * checkDistributionFacts, so they cannot disagree.
  *
- * PURE. The facts come from lib/distribution-server.ts; the clock and the
- * partner's audio formats are passed in, so a test pins both.
+ * PURE. The facts come from lib/distribution-server.ts; the clock is passed
+ * in, so a test pins it.
+ *
+ * NO AUDIO. Urganize does not take the song's audio (song upload was removed
+ * everywhere on Oct 17, 2026): the master goes from the team to the
+ * distributor directly, so no rule asks for or grades an audio file.
  *
  * ONE SONG PER ROLLOUT. A rollout holds one song (there is no track list), so
  * "every track" in the brief means the rollout, and `{track}` is its title. A
  * future track model changes the facts and not the rules' shape.
  *
- * COPY. The messages are the brief's, word for word. Three rules carry text the
- * brief does not give (the old checklist's language and song lines, and the old
+ * COPY. The messages are the brief's, word for word. Two rules carry text the
+ * brief does not give (the old checklist's language line and the old
  * delivery-time warning); they keep the wording they already had in the app.
  */
 
 import { DSP_MIME_TYPES, DSP_MIN_EDGE } from './cover-art-dsp';
 import { requiredSplits } from './credit-submissions';
 import { formatSplitValue, splitTotalIsOff, sumSplits } from './credit-split-totals';
-import { DISTRIBUTION_AUDIO_FORMATS } from './distribution-config';
 import { releaseDateWarning } from './distribution';
 import { daysToRelease } from './editorial-pitch';
 import { isDefaultReleaseTitle } from '@/types/releases';
@@ -47,12 +50,10 @@ export type DistributionIssueCode =
   | 'missing_language'
   | 'missing_explicit_flag'
   | 'missing_songwriter_credits'
-  | 'missing_audio'
   | 'artwork_missing'
   | 'artwork_not_square'
   | 'artwork_too_small'
   | 'artwork_wrong_format'
-  | 'audio_wrong_format'
   | 'feat_in_title'
   | 'title_all_caps'
   | 'splits_not_100'
@@ -74,8 +75,7 @@ export type DistributionFieldPath =
   | 'metadata.featured_artists'
   | 'credits'
   | 'credits.splits'
-  | 'artwork'
-  | 'audio';
+  | 'artwork';
 
 export type DistributionIssue = {
   code: DistributionIssueCode;
@@ -103,11 +103,6 @@ export type DistributionFacts = {
   language: string | null;
   /** True, false, or null when never answered. Unset is not "not explicit". */
   explicit: boolean | null;
-  /** At least one audio asset is attached. */
-  hasSong: boolean;
-  /** The newest audio asset, which is what every other surface means by "the
-   *  song". Null when there is none. */
-  audio: { mimeType: string | null; fileName: string | null } | null;
   /** The artwork asset, or null when the rollout has none. Width and height are
    *  null for an upload from before 2026-08-22, when they were not recorded. */
   artwork: {
@@ -126,8 +121,6 @@ export type DistributionFacts = {
 export type DistributionCheckContext = {
   /** Read once by the caller and passed in, so a test can pin it. */
   today: Date;
-  /** The partner's accepted audio formats. Empty skips the audio-format rule. */
-  audioFormats: readonly string[];
 };
 
 type DistributionRule = {
@@ -150,30 +143,6 @@ const edgesKnown = (artwork: NonNullable<DistributionFacts['artwork']>): boolean
   Number.isFinite(artwork.height) &&
   artwork.width > 0 &&
   artwork.height > 0;
-
-/**
- * The file type of an audio upload as a lowercase word ("wav", "mp3", "flac"),
- * or null when it cannot be told. The type the browser reported wins; the file
- * name's ending is the fallback, since a browser sometimes reports nothing for a
- * WAV.
- */
-export function audioFormatOf(audio: { mimeType: string | null; fileName: string | null }): string | null {
-  const mime = (audio.mimeType ?? '').toLowerCase().split(';')[0].trim();
-  if (mime === 'audio/wav' || mime === 'audio/x-wav' || mime === 'audio/wave' || mime === 'audio/vnd.wave') {
-    return 'wav';
-  }
-  if (mime === 'audio/mpeg' || mime === 'audio/mp3') return 'mp3';
-  if (mime === 'audio/flac' || mime === 'audio/x-flac') return 'flac';
-  const ending = /\.([a-z0-9]+)$/i.exec((audio.fileName ?? '').trim());
-  return ending ? ending[1].toLowerCase() : null;
-}
-
-/** "WAV", "WAV or FLAC", "WAV, FLAC or MP3". No Oxford comma (house copy). */
-export function formatAudioFormats(formats: readonly string[]): string {
-  const upper = formats.map((format) => format.toUpperCase());
-  if (upper.length <= 1) return upper.join('');
-  return `${upper.slice(0, -1).join(', ')} or ${upper[upper.length - 1]}`;
-}
 
 // "feat", "ft." and "featuring" as whole words, so "Feature Presentation" and
 // "Left" do not trip it. A warning, never an error: "Ft Lauderdale" is a real
@@ -239,15 +208,6 @@ export const DISTRIBUTION_RULES: readonly DistributionRule[] = [
         : ['Add songwriter credits to every track.'],
   },
   {
-    // Not in the brief, kept from the checklist this replaces. Wording is the
-    // checklist's. The formats named are what Urganize accepts as an upload, not
-    // what the partner requires (see DISTRIBUTION_AUDIO_FORMATS).
-    code: 'missing_audio',
-    level: 'error',
-    fieldPath: 'audio',
-    check: (facts) => (facts.hasSong ? [] : ['Upload the final master as a WAV, MP3 or FLAC.']),
-  },
-  {
     code: 'artwork_missing',
     level: 'error',
     fieldPath: 'artwork',
@@ -290,20 +250,6 @@ export const DISTRIBUTION_RULES: readonly DistributionRule[] = [
       return DSP_MIME_TYPES.includes((artwork.mimeType ?? '').toLowerCase())
         ? []
         : ['Artwork has to be JPG or PNG.'];
-    },
-  },
-  {
-    // Skipped while the partner's formats are unconfirmed (empty config).
-    code: 'audio_wrong_format',
-    level: 'error',
-    fieldPath: 'audio',
-    check: (facts, context) => {
-      if (context.audioFormats.length === 0) return [];
-      if (!facts.audio) return []; // missing_audio already says so
-      const accepted = context.audioFormats.map((format) => format.toLowerCase());
-      const format = audioFormatOf(facts.audio);
-      if (format && accepted.includes(format)) return [];
-      return [`Upload audio as ${formatAudioFormats(accepted)}.`];
     },
   },
 
@@ -394,7 +340,6 @@ export function checkDistributionFacts(
 ): DistributionCheckResult {
   const resolved: DistributionCheckContext = {
     today: context.today ?? new Date(),
-    audioFormats: context.audioFormats ?? DISTRIBUTION_AUDIO_FORMATS,
   };
   const errors: DistributionIssue[] = [];
   const warnings: DistributionIssue[] = [];

@@ -20,7 +20,6 @@ export type SignOutResetId =
   | 'scene-data'
   | 'press-kits'
   | 'press-kit-detail'
-  | 'events'
   | 'artist-roster'
   | 'relationships'
   | 'opportunities'
@@ -42,7 +41,6 @@ export const SIGN_OUT_RESET_ORDER: readonly SignOutResetId[] = [
   'scene-data',
   'press-kits',
   'press-kit-detail',
-  'events',
   'artist-roster',
   'relationships',
   'opportunities',

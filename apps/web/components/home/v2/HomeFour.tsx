@@ -64,9 +64,9 @@ function ReleaseHome({ home, viewerId }: { home: HomePayload; viewerId: string }
   const release = pickHeaderRelease(releases);
   if (!release) return null;
   const others = releases.filter((r) => r.id !== release.id);
-  const items = buildOneThing({ yourTasks, moves: nextMoves.moves, nextShow: home.nextShow });
+  const items = buildOneThing({ yourTasks, moves: nextMoves.moves });
   const nextUp = items.length === 0 ? describeNextUp(yourTasks.week) : null;
-  const waitingItems = buildWaitingItems(waitingTasks, home.waiting.djLinks);
+  const waitingItems = buildWaitingItems(waitingTasks);
   const matched = (home.opportunities ?? []).filter((item) => item.source === 'suggested').length;
 
   return (

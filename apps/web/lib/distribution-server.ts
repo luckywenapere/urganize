@@ -11,9 +11,7 @@
 // treats null as "could not check", never as "all clear".
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { SONG_CATEGORY } from './song';
 import { logBillingEvent } from './billing-events-server';
-import { DISTRIBUTION_AUDIO_FORMATS } from './distribution-config';
 import {
   checkDistributionFacts,
   type DistributionCheckResult,
@@ -70,7 +68,7 @@ export async function loadDistributionFacts(
   admin: SupabaseClient,
   releaseId: string
 ): Promise<DistributionFacts | null> {
-  const [releaseResult, metadataResult, audioResult, creditsResult] = await Promise.all([
+  const [releaseResult, metadataResult, creditsResult] = await Promise.all([
     admin
       .from('releases')
       .select('title,artist_name,release_date,artwork_asset_id')
@@ -81,21 +79,13 @@ export async function loadDistributionFacts(
       .select('genre,language,explicit')
       .eq('release_id', releaseId)
       .maybeSingle(),
-    // The newest audio upload is "the song", as everywhere else.
-    admin
-      .from('assets')
-      .select('mime_type,file_name,created_at')
-      .eq('release_id', releaseId)
-      .eq('category', SONG_CATEGORY)
-      .order('created_at', { ascending: false })
-      .limit(1),
     admin
       .from('release_credit_submissions')
       .select('roles,songwriter_split,master_split')
       .eq('release_id', releaseId),
   ]);
 
-  if (releaseResult.error || metadataResult.error || audioResult.error || creditsResult.error) {
+  if (releaseResult.error || metadataResult.error || creditsResult.error) {
     return null;
   }
   const release = releaseResult.data as Record<string, unknown> | null;
@@ -120,7 +110,6 @@ export async function loadDistributionFacts(
   }
 
   const metadata = (metadataResult.data as Record<string, unknown> | null) ?? null;
-  const audioRow = ((audioResult.data as Array<Record<string, unknown>> | null) ?? [])[0] ?? null;
 
   return {
     title: typeof release.title === 'string' ? release.title : '',
@@ -129,10 +118,6 @@ export async function loadDistributionFacts(
     genre: asText(metadata?.genre),
     language: asText(metadata?.language),
     explicit: typeof metadata?.explicit === 'boolean' ? metadata.explicit : null,
-    hasSong: Boolean(audioRow),
-    audio: audioRow
-      ? { mimeType: asText(audioRow.mime_type), fileName: asText(audioRow.file_name) }
-      : null,
     artwork,
     credits: ((creditsResult.data as Array<Record<string, unknown>> | null) ?? []).map((row) => ({
       roles: Array.isArray(row.roles) ? row.roles.filter((role): role is string => typeof role === 'string') : [],
@@ -157,7 +142,7 @@ export async function checkReleaseForDistribution(
 ): Promise<DistributionCheckResult | null> {
   const facts = await loadDistributionFacts(admin, releaseId);
   if (!facts) return null;
-  return checkDistributionFacts(facts, { today: now, audioFormats: DISTRIBUTION_AUDIO_FORMATS });
+  return checkDistributionFacts(facts, { today: now });
 }
 
 /** What the distributor has sent back for this rollout. A read that fails

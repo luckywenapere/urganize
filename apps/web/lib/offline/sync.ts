@@ -2,7 +2,7 @@
  * The flush orchestrator: connects the generic queue (lib/offline/queue.ts)
  * to the actual replay for each queued kind, and applies a successful
  * replay's result back into the live stores. This is the one place that
- * knows both "how the queue works" and "how a task/cover-art/song actually
+ * knows both "how the queue works" and "how a task/note/cover-art actually
  * gets created" — kept separate from queue.ts so a new queueable kind
  * doesn't require touching the generic flush loop, and separate from each
  * store so the stores don't need to know about IndexedDB or retry
@@ -21,7 +21,6 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
 import { uploadCoverArt } from '@/lib/cover-art-upload';
-import { uploadSong } from '@/lib/song';
 import { useNotesStore } from '@/stores/useNotesStore';
 import type { Note } from '@/types/notes';
 import type { Task } from '@/types/tasks';
@@ -49,10 +48,10 @@ async function getSessionUserId(): Promise<string> {
 
 /** Maps an upload flow's outcome (which reports a step + a boolean
  * `retryable`, not an HTTP status) onto the generic flush classification.
- * `retryable` in both lib/cover-art-upload.ts and lib/song.ts already means
+ * `retryable` in lib/cover-art-upload.ts already means
  * "likely transient — the signed URL or the network, worth restarting the
  * whole 3-step flow" versus "terminal" (a real rejection), which lines up
- * with network_failure vs. client_error respectively; neither upload flow
+ * with network_failure vs. client_error respectively; the upload flow
  * distinguishes a 5xx from a 4xx internally, so server_error is never
  * produced here. A synthetic status accompanies the client_error variant
  * only because the type requires one — nothing reads it for an upload. */
@@ -144,31 +143,19 @@ async function replayCoverArtUpload(
   return classifyUploadOutcome(outcome.retryable);
 }
 
-async function replaySongUpload(
-  item: Extract<QueuedMutation, { kind: 'song_upload' }>,
-  token: string
-): Promise<FlushAttemptResult> {
-  const outcome = await uploadSong({
-    releaseId: item.payload.releaseId,
-    file: item.blob,
-    token,
-  });
-  if (outcome.ok) {
-    return { kind: 'success' };
-  }
-  return classifyUploadOutcome(outcome.retryable);
-}
-
 async function replay(item: QueuedMutation, token: string): Promise<FlushAttemptResult & { data?: unknown }> {
   switch (item.kind) {
     case 'task_create':
       return replayTaskCreate(item, token);
     case 'cover_art_upload':
       return replayCoverArtUpload(item, token);
-    case 'song_upload':
-      return replaySongUpload(item, token);
     case 'note_create':
       return replayNoteCreate(item, token);
+    default:
+      // A kind this build no longer replays, still sitting in a device's
+      // queue: a song upload queued before song upload was removed (Oct 17,
+      // 2026). Dropped like any refused request, never retried.
+      return { kind: 'client_error', status: 410 };
   }
 }
 

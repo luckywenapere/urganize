@@ -17,9 +17,9 @@ import type { HomeArtistChip, HomeReleaseSummary, HomeWaitingTask, HomeYourTasks
  * without a second /api/home round trip (the approved plan's step 2 point 4:
  * "task sections are worked out in the browser").
  *
- * Everything else in HomePayload (role, state, header, placements, nextShow)
+ * Everything else in HomePayload (role, state, header, placements)
  * is deliberately NOT recomputed here — role/state are frozen for the visit
- * by design (see lib/home-server.ts), and placements/nextShow have no
+ * by design (see lib/home-server.ts), and placements have no
  * client-side mutation path to react to.
  *
  * Roster artists are NOT available client-side (only in-flight releases you

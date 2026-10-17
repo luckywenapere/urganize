@@ -10,7 +10,6 @@ import { captureFeatureDiscoveryByName } from '@/lib/analytics';
 import { MetadataSection } from '@/components/releases/MetadataSection';
 import { CaptureSection } from '@/components/releases/CaptureSection';
 import { AssetSection } from '@/components/releases/AssetSection';
-import { SongSection } from '@/components/releases/SongSection';
 import { CoverArtSection } from '@/components/releases/CoverArtSection';
 import { CalendarScene } from '@/components/content-calendar/CalendarScene';
 import { PitchScene } from '@/components/pitching/PitchScene';
@@ -53,7 +52,6 @@ import { calendarFontVariables } from '@/components/content-calendar/calendar-fo
 /** The scenes the generic section below renders a body for. */
 const SECTION_SCENES = [
   'metadata',
-  'song',
   'coverart',
   'files',
   'pitch',
@@ -88,7 +86,6 @@ const SCENE_LABELS: Record<SceneName, string> = {
   calendar: 'Content',
   pitch: 'Pitch this!',
   capture: 'Fan capture',
-  song: 'Song',
   coverart: 'Cover art',
   timeline: 'Timeline',
   chat: 'Chat',
@@ -233,7 +230,6 @@ export function ReleaseScenePanel({
           onToast={onToast}
         />
       ) : null}
-      {scene === 'song' ? <SongSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'coverart' ? <CoverArtSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'files' ? <AssetSection releaseId={release.id} onToast={onToast} /> : null}
       {scene === 'pitch' ? (

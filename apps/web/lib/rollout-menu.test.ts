@@ -18,7 +18,6 @@ const ALL_ON: RolloutMenuFlags = {
   metadata: true,
   notes: true,
   coverArt: true,
-  songUpload: true,
   files: true,
   capture: true,
 };
@@ -65,7 +64,6 @@ const ROW_BY_FLAG: Record<keyof RolloutMenuFlags, ReleaseMenuKey[]> = {
   metadata: ['metadata'],
   notes: ['note'],
   coverArt: ['coverart'],
-  songUpload: ['song'],
   files: ['files'],
   capture: ['capture'],
 };
@@ -84,7 +82,6 @@ const SCENE_ROWS: ReleaseMenuKey[] = [
   'metadata',
   'distribute',
   'coverart',
-  'song',
   'files',
   'capture',
 ];
@@ -269,7 +266,6 @@ describe('what each row does', () => {
       pitch: 'Pitch this!',
       metadata: 'Fill in details',
       coverart: 'Add cover art',
-      song: 'Upload the song',
       files: 'Add files',
       capture: 'Collect fan emails',
     });

@@ -25,7 +25,6 @@ export type HomeBlockKey =
   | 'next-moves'
   | 'attention'
   | 'waiting'
-  | 'next-show'
   | 'rollouts'
   | 'placements'
   | 'spend'
@@ -36,12 +35,11 @@ export type HomeBlocksInput = {
   onboardingVisible: boolean;
   taskCount: number;
   /** What the Up next card would point at, or null when it should not show. */
-  upNext: 'show' | 'release' | 'start' | null;
+  upNext: 'release' | 'start' | null;
   /** One-tap next moves (lib/next-moves.ts, URG-259). Optional: 0 when absent. */
   nextMoveCount?: number;
   attentionCount: number;
   waitingCount: number;
-  hasNextShow: boolean;
   rolloutCount: number;
   placementCount: number;
   /**
@@ -62,7 +60,6 @@ export const HOME_BLOCK_LABELS = {
   'next-moves': 'Next moves',
   attention: 'For you today',
   waiting: 'Waiting on others',
-  'next-show': 'Next show',
   rollouts: 'Rollouts',
   placements: 'Placements',
   spend: SPEND_COPY.homeTitle,
@@ -81,9 +78,6 @@ export function orderHomeBlocks(input: HomeBlocksInput): HomeBlockKey[] {
 
   if (input.attentionCount > 0) blocks.push('attention');
   if (input.waitingCount > 0) blocks.push('waiting');
-  // When Up next is already the coming show, a second card for it says the
-  // same thing twice.
-  if (input.hasNextShow && !(showUpNext && input.upNext === 'show')) blocks.push('next-show');
   if (input.rolloutCount > 0) blocks.push('rollouts');
   if (input.placementCount > 0) blocks.push('placements');
   if (input.showSpend) blocks.push('spend');

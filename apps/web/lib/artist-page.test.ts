@@ -49,16 +49,16 @@ describe('formatCalendarDate', () => {
 
 describe('describeArtistCounts', () => {
   it('never prints a zero', () => {
-    expect(describeArtistCounts({ releases: 3, planned: 0, live: 0, upcomingShows: 0 })).toBe('3 releases');
+    expect(describeArtistCounts({ releases: 3, planned: 0, live: 0 })).toBe('3 releases');
   });
 
   it('puts the rest after the total', () => {
-    expect(describeArtistCounts({ releases: 1, planned: 1, live: 0, upcomingShows: 2 })).toBe(
-      '1 release · 1 planned · 2 shows coming up'
+    expect(describeArtistCounts({ releases: 1, planned: 1, live: 0 })).toBe(
+      '1 release · 1 planned'
     );
   });
 
   it('says so when there is nothing', () => {
-    expect(describeArtistCounts({ releases: 0, planned: 0, live: 0, upcomingShows: 0 })).toBe('Nothing yet');
+    expect(describeArtistCounts({ releases: 0, planned: 0, live: 0 })).toBe('Nothing yet');
   });
 });

@@ -81,7 +81,6 @@ describe('persist policy', () => {
       metadata: 'NEXT_PUBLIC_FEATURE_METADATA',
       calendar: 'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',
       capture: 'NEXT_PUBLIC_FEATURE_CAPTURE',
-      song: 'NEXT_PUBLIC_FEATURE_SONG_UPLOAD',
       coverart: 'NEXT_PUBLIC_FEATURE_COVER_ART',
       files: 'NEXT_PUBLIC_FEATURE_FILES',
       pitch: 'NEXT_PUBLIC_FEATURE_PITCHING',
@@ -286,7 +285,6 @@ describe('withinPersistBudget', () => {
 const SCENE_FLAGS = [
   'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',
   'NEXT_PUBLIC_FEATURE_CAPTURE',
-  'NEXT_PUBLIC_FEATURE_SONG_UPLOAD',
   'NEXT_PUBLIC_FEATURE_COVER_ART',
   'NEXT_PUBLIC_FEATURE_TIMELINE',
   'NEXT_PUBLIC_FEATURE_METADATA',
@@ -339,9 +337,9 @@ describe('resolveActiveScene', () => {
     expect(off.resolveActiveScene('promo')).toBe('promo');
   });
 
-  it('treats the five flag-gated scenes as closed when their flags are off', async () => {
+  it('treats the four flag-gated scenes as closed when their flags are off', async () => {
     const { resolveActiveScene } = await loadResolver(false);
-    for (const scene of ['calendar', 'capture', 'song', 'coverart', 'timeline']) {
+    for (const scene of ['calendar', 'capture', 'coverart', 'timeline']) {
       expect(resolveActiveScene(scene)).toBeNull();
     }
   });

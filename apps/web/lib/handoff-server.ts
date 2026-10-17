@@ -10,11 +10,8 @@
 import { handoffTaskId } from './handoff-task-id';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { checkDistributionFacts } from './distribution-rules';
-import { DISTRIBUTION_AUDIO_FORMATS } from './distribution-config';
-import { audioFormatOf } from './distribution-rules';
 import { loadDistributionFacts } from './distribution-server';
 import { splitTotalIsOff, sumSplits } from './credit-split-totals';
-import { SONG_CATEGORY } from './song';
 import { readTestRelease } from './test-release';
 import { createTaskNotification, loadProfilesByIds, loadWorkspaceMembers } from './tasks-server';
 import {
@@ -197,41 +194,35 @@ export async function loadHandoff(
   viewerId: string,
   options: { sync?: boolean } = {}
 ): Promise<LoadedHandoff | null> {
-  const [releaseResult, metadataResult, audioResult, facts] = await Promise.all([
+  const [releaseResult, metadataResult, facts] = await Promise.all([
     admin
       .from(RELEASES_TABLE)
       .select('id,owner_user_id,artist_id,release_date,status,artwork_asset_id,metadata')
       .eq('id', releaseId)
       .maybeSingle(),
     admin.from('release_metadata').select('isrc,lyrics').eq('release_id', releaseId).maybeSingle(),
-    admin
-      .from('assets')
-      .select('id')
-      .eq('release_id', releaseId)
-      .eq('category', SONG_CATEGORY)
-      .order('created_at', { ascending: false })
-      .limit(1),
     loadDistributionFacts(admin, releaseId),
   ]);
-  if (releaseResult.error || metadataResult.error || audioResult.error || !releaseResult.data || !facts) return null;
+  if (releaseResult.error || metadataResult.error || !releaseResult.data || !facts) return null;
   const release = releaseResult.data as ReleaseRow;
 
   const taskRead = await loadHandoffTasks(admin, releaseId);
   if (!taskRead) return null;
   let tasks = taskRead.byItem;
 
-  const check = checkDistributionFacts(facts, { today: new Date(), audioFormats: DISTRIBUTION_AUDIO_FORMATS });
+  const check = checkDistributionFacts(facts, { today: new Date() });
   const meta = (metadataResult.data as { isrc?: unknown; lyrics?: unknown } | null) ?? null;
   const lyrics = asText(meta?.lyrics);
-  const audioId = asText(((audioResult.data as Array<{ id?: unknown }> | null) ?? [])[0]?.id);
-  const uploadFacts = { hasAudio: facts.hasSong, hasArtwork: Boolean(facts.artwork), lyrics };
+  const uploadFacts = { hasArtwork: Boolean(facts.artwork), lyrics };
 
   const leadDays = readLeadDays(release.metadata);
   const dueDate = handoffDueDate(release.release_date, leadDays);
   const record = readHandoffRecord(release.metadata);
   const workspaceId = await workspaceIdOf(admin, release.owner_user_id);
   const fingerprints: Record<HandoffItemKey, string | null> = {
-    master: audioId,
+    // No file in the app (song upload removed Oct 17, 2026), so an approval
+    // of the master is for the master as such, like the metadata's.
+    master: 'master',
     cover_art: asText(release.artwork_asset_id),
     metadata: 'metadata',
   };
@@ -308,10 +299,7 @@ function detailFor(
   meta: { isrc?: unknown } | null,
   lyrics: string | null
 ): HandoffItemView['detail'] {
-  if (item === 'master') {
-    const format = facts.audio ? audioFormatOf(facts.audio) : null;
-    return { kind: 'master', format: format ? format.toUpperCase() : null };
-  }
+  if (item === 'master') return { kind: 'master' };
   if (item === 'cover_art') {
     const art = facts.artwork;
     const mime = (art?.mimeType ?? '').toLowerCase();

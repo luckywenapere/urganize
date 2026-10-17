@@ -72,60 +72,18 @@ export function bucketReleases<T extends OverviewRelease>(
   return { planned, live, past };
 }
 
-export type OverviewShow = {
-  id: string;
-  artistId: string;
-  setStartAt: string | null;
-  status: string;
-};
-
-/**
- * Upcoming and past shows. A cancelled show is in neither: it is not coming up
- * and it did not happen. A show with no confirmed time stays in upcoming, last,
- * because "time to be confirmed" is a show still ahead of you.
- */
-export function bucketShows<T extends OverviewShow>(
-  shows: T[],
-  now: Date = new Date()
-): { upcoming: T[]; past: T[] } {
-  const nowMs = now.getTime();
-  const upcoming: T[] = [];
-  const past: T[] = [];
-  const timeOf = (show: T): number | null => {
-    if (!show.setStartAt) return null;
-    const ms = new Date(show.setStartAt).getTime();
-    return Number.isNaN(ms) ? null : ms;
-  };
-
-  for (const show of shows) {
-    if (show.status === 'cancelled') continue;
-    const time = timeOf(show);
-    if (show.status === 'done' || (time !== null && time < nowMs)) past.push(show);
-    else upcoming.push(show);
-  }
-
-  upcoming.sort((a, b) => (timeOf(a) ?? Infinity) - (timeOf(b) ?? Infinity));
-  past.sort((a, b) => (timeOf(b) ?? -Infinity) - (timeOf(a) ?? -Infinity));
-  return { upcoming, past };
-}
-
-/** The four numbers on an artist's card in the list. */
+/** The numbers on an artist's card in the list. */
 export function artistSummary(
   artistId: string,
   releases: OverviewRelease[],
-  shows: OverviewShow[],
   now: Date = new Date()
-): { releases: number; planned: number; live: number; upcomingShows: number } {
+): { releases: number; planned: number; live: number } {
   const mine = releases.filter((release) => release.artistId === artistId);
   const buckets = bucketReleases(mine, now);
   return {
     releases: mine.length,
     planned: buckets.planned.length,
     live: buckets.live.length,
-    upcomingShows: bucketShows(
-      shows.filter((show) => show.artistId === artistId),
-      now
-    ).upcoming.length,
   };
 }
 

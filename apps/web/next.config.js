@@ -98,6 +98,15 @@ const nextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: [{ key: 'x-urg-build', value: BUILD_ID }] }];
   },
+  // Shows were deleted (Oct 17, 2026; the rows stay in the database). An old
+  // link to the Shows page or a show lands on the Catalogue, as it did while
+  // the feature was only hidden.
+  async redirects() {
+    return [
+      { source: '/dashboard/shows', destination: '/dashboard', permanent: false },
+      { source: '/dashboard/shows/:path*', destination: '/dashboard', permanent: false },
+    ];
+  },
   // The recap card renderer reads static font binaries off disk at request
   // time (satori cannot use next/font). Output tracing only follows imports, so
   // a bare fs.readFile would leave the .ttf files out of the deployed lambda

@@ -68,7 +68,6 @@ export type FixDestination =
 /** Which scenes exist for this person right now (their feature switches). */
 export type FixAvailability = {
   metadata: boolean;
-  song: boolean;
   coverArt: boolean;
   /** The person may edit the rollout's title and release day (the owner). */
   canEditDetails: boolean;
@@ -103,8 +102,6 @@ export function fixDestinationFor(
       return metadataAt(available, 'splits');
     case 'artwork':
       return available.coverArt ? { kind: 'scene', scene: 'coverart', field: null } : null;
-    case 'audio':
-      return available.song ? { kind: 'scene', scene: 'song', field: null } : null;
     default: {
       // A new field path with no destination here is a compile error, not a
       // button that silently does nothing.

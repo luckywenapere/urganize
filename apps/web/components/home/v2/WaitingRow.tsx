@@ -13,9 +13,8 @@ import type { WaitingItem } from '@/lib/home/stack-items';
 export function WaitingRow({ items, onTimeCount }: { items: readonly WaitingItem[]; onTimeCount: number }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
-  const lateCount = items.filter((item) => item.kind === 'task').length;
-  const djCount = items.length - lateCount;
-  const summary = describeWaiting({ lateCount, djCount, onTimeCount });
+  const lateCount = items.length;
+  const summary = describeWaiting({ lateCount, onTimeCount });
   if (!summary) return null;
   const canOpen = items.length > 0;
 
@@ -52,34 +51,20 @@ export function WaitingRow({ items, onTimeCount }: { items: readonly WaitingItem
         <ul id={listId} className="divide-y divide-stroke-subtle border-t border-stroke-subtle px-4">
           {items.map((item) => (
             <li key={item.key} className="flex items-start gap-3 py-3">
-              {item.kind === 'task' ? (
-                <>
-                  <span
-                    className={`mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${getPriorityDotClass(item.task.priority)}`}
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block break-words text-sm font-medium text-content-primary">{item.task.title}</span>
-                    <span className="mt-0.5 block break-words text-xs text-content-primary/55">
-                      {item.task.assigneeName || 'Someone on your team'}
-                      {' · '}
-                      <span className="text-status-error">
-                        {item.task.daysLate === 1 ? '1 day late' : `${item.task.daysLate} days late`}
-                      </span>
-                    </span>
+              <span
+                className={`mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full ${getPriorityDotClass(item.task.priority)}`}
+                aria-hidden="true"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block break-words text-sm font-medium text-content-primary">{item.task.title}</span>
+                <span className="mt-0.5 block break-words text-xs text-content-primary/55">
+                  {item.task.assigneeName || 'Someone on your team'}
+                  {' · '}
+                  <span className="text-status-error">
+                    {item.task.daysLate === 1 ? '1 day late' : `${item.task.daysLate} days late`}
                   </span>
-                </>
-              ) : (
-                <>
-                  <span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-status-warning" aria-hidden="true" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block break-words text-sm font-medium text-content-primary">{item.link.recipientName}</span>
-                    <span className="mt-0.5 block break-words text-xs text-content-primary/55">
-                      {item.link.showLabel} · DJ link not opened
-                    </span>
-                  </span>
-                </>
-              )}
+                </span>
+              </span>
             </li>
           ))}
         </ul>

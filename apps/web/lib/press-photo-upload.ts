@@ -1,8 +1,8 @@
 /**
  * Uploading a press photo to a kit — the client-safe half.
  *
- * The fourth deliberate copy of the three-step signed-URL flow, after
- * `AssetUploadControl`, `lib/song.ts` and `lib/cover-art-upload.ts`. The rule
+ * A deliberate copy of the three-step signed-URL flow, after
+ * `AssetUploadControl` and `lib/cover-art-upload.ts`. The rule
  * this codebase follows is duplicate across asset KINDS, share across surfaces
  * for the same kind, and a press photo is a new kind: its own ceiling, its own
  * grading, its own table, and a list rather than a replacement.

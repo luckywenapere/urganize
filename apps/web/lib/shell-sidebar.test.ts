@@ -3,7 +3,6 @@ import { buildShellAreas, shellPageTitle, shellSideMenu, type ShellFlags } from 
 
 const ALL_ON: ShellFlags = {
   notes: true,
-  events: true,
   pitching: true,
   directory: true,
   artistPage: true,
@@ -12,7 +11,6 @@ const ALL_ON: ShellFlags = {
 };
 const ALL_OFF: ShellFlags = {
   notes: false,
-  events: false,
   pitching: false,
   directory: false,
   artistPage: false,

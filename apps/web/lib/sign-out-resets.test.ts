@@ -19,7 +19,6 @@ const REGISTRANTS: Record<SignOutResetId, string> = {
   'scene-data': 'stores/useSceneDataStore.ts',
   'press-kits': 'stores/usePressKitsStore.ts',
   'press-kit-detail': 'lib/press-kit-detail-cache.ts',
-  events: 'stores/useEventsStore.ts',
   'artist-roster': 'stores/useArtistRosterStore.ts',
   relationships: 'stores/useRelationshipsStore.ts',
   opportunities: 'stores/useOpportunitiesStore.ts',

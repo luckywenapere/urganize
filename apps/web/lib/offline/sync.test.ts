@@ -12,11 +12,6 @@ vi.mock('@/lib/cover-art-upload', () => ({
   uploadCoverArt: (...args: unknown[]) => uploadCoverArtMock(...args),
 }));
 
-const uploadSongMock = vi.fn();
-vi.mock('@/lib/song', () => ({
-  uploadSong: (...args: unknown[]) => uploadSongMock(...args),
-}));
-
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { useSceneDataStore } from '@/stores/useSceneDataStore';
@@ -93,7 +88,6 @@ describe('flushOfflineQueue', () => {
     __resetIdbForTests();
     getSessionMock.mockReset();
     uploadCoverArtMock.mockReset();
-    uploadSongMock.mockReset();
     useTaskStore.setState({ tasks: [], error: '' });
   });
 
@@ -246,23 +240,20 @@ describe('flushOfflineQueue', () => {
     expect(await listQueued('user-1')).toHaveLength(0);
   });
 
-  it('replays a queued song upload with no write-through of its own', async () => {
+  it('drops a song upload queued before song upload was removed (Oct 17, 2026)', async () => {
     mockSession('user-1');
     const file = new File(['bytes'], 'song.mp3', { type: 'audio/mpeg' });
-    await enqueue<Extract<QueuedMutation, { kind: 'song_upload' }>>({
+    await enqueue({
       kind: 'song_upload',
       userId: 'user-1',
       payload: { releaseId: 'release-1' },
       blob: file,
-    });
-    uploadSongMock.mockResolvedValue({ ok: true, song: { id: 'song-1' } });
+    } as unknown as Parameters<typeof enqueue>[0]);
 
     const outcome = await flushOfflineQueue();
 
-    expect(outcome).toEqual({ synced: 1, dropped: 0 });
-    expect(uploadSongMock).toHaveBeenCalledWith(
-      expect.objectContaining({ releaseId: 'release-1', file, token: 'token-123' })
-    );
+    expect(outcome).toEqual({ synced: 0, dropped: 1 });
+    expect(await listQueued('user-1')).toHaveLength(0);
   });
 
   it('only replays the signed-in user\'s own queued items', async () => {

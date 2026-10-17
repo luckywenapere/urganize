@@ -110,7 +110,6 @@ const GUARDED_FILES = [
   'components/home/WaitingStack.tsx',
   'components/home/AttentionStack.tsx',
   'components/home/PlacementsStack.tsx',
-  'components/home/NextShowCard.tsx',
   'components/releases/RolloutCreateFlow.tsx',
   'lib/home/sections.ts',
   'lib/tours.ts',

@@ -23,7 +23,6 @@ export type ShellAreaKey =
 
 export type ShellFlags = {
   notes: boolean;
-  events: boolean;
   pitching: boolean;
   directory: boolean;
   artistPage: boolean;
@@ -59,7 +58,6 @@ const startsWithPath = (pathname: string, base: string): boolean =>
 export function readShellFlags(): ShellFlags {
   return {
     notes: process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true',
-    events: process.env.NEXT_PUBLIC_FEATURE_EVENTS === 'true',
     pitching: process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true',
     directory: process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true',
     artistPage:
@@ -77,7 +75,6 @@ export const URGANS_HREF = '/dashboard/urgans';
 export const CATALOGUE_HREF = '/dashboard';
 export const DISTRIBUTE_HREF = '/dashboard/distribute';
 export const ARTISTS_HREF = '/dashboard/artists';
-export const SHOWS_HREF = '/dashboard/shows';
 
 export function buildShellAreas(flags: ShellFlags): ShellArea[] {
   const catalogueTabs: ShellSubTab[] = [
@@ -162,9 +159,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
         startsWithPath(p, '/dashboard/artists') ||
         startsWithPath(p, '/dashboard/press-kits') ||
         startsWithPath(p, DISTRIBUTE_HREF) ||
-        startsWithPath(p, '/dashboard/notes') ||
-        // Old /dashboard/shows links still open (a show belongs to its artist).
-        startsWithPath(p, SHOWS_HREF),
+        startsWithPath(p, '/dashboard/notes'),
     },
     // Pitching left the top bar and the phone's bottom bar (founder,
     // 2026-10-15): it lives fully inside each rollout, as its Pitch tab.
@@ -268,7 +263,6 @@ export function shellSideMenu(areas: ShellArea[], pathname: string): SideMenu | 
 export function shellPageTitle(areas: ShellArea[], pathname: string): string | null {
   const area = activeShellArea(areas, pathname);
   if (!area) return null;
-  if (startsWithPath(pathname, SHOWS_HREF)) return 'Shows';
   // Every tab, not just the visible row: an area down to one page (Catalogue
   // with Rollouts alone, since Distribute left the row) still names it.
   const tab = area.subTabs.find((candidate) => candidate.isActive(pathname));

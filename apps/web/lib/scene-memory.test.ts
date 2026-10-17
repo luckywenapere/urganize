@@ -69,8 +69,8 @@ describe('rememberScene / recallScene round trip', () => {
   it('overwrites a release\'s prior memory with its latest scene', () => {
     stubSession('user-1');
     rememberScene('release-1', 'metadata');
-    rememberScene('release-1', 'song');
-    expect(recallScene('release-1')).toBe('song');
+    rememberScene('release-1', 'coverart');
+    expect(recallScene('release-1')).toBe('coverart');
   });
 
   it('remembering null (Activities) clears any existing entry', () => {
@@ -232,7 +232,6 @@ describe('no window (server-side / logged out before hydration)', () => {
 const SCENE_FLAGS = [
   'NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR',
   'NEXT_PUBLIC_FEATURE_CAPTURE',
-  'NEXT_PUBLIC_FEATURE_SONG_UPLOAD',
   'NEXT_PUBLIC_FEATURE_COVER_ART',
   'NEXT_PUBLIC_FEATURE_TIMELINE',
   'NEXT_PUBLIC_FEATURE_METADATA',

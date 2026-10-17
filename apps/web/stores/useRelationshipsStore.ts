@@ -14,8 +14,7 @@ import type { RelationshipPatch } from '@/lib/relationships';
  * the origin and outlives a sign-out on a shared machine. The same call the fan
  * capture scene makes about leads. Memory only, and reset on sign-out.
  *
- * Recency guard, in-flight coalescing and a sign-out epoch follow
- * useEventsStore: a load still on the wire when the account changes checks the
+ * Recency guard, in-flight coalescing and a sign-out epoch: a load still on the wire when the account changes checks the
  * epoch before committing, so one account's contacts can never land under
  * another's.
  */

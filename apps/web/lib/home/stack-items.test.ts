@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildPlacementItems, buildTaskStack, buildWaitingItems } from './stack-items';
-import type { HomePitchItem, HomeTaskItem, HomeWaitingDjLink, HomeWaitingTask } from './types';
+import type { HomePitchItem, HomeTaskItem, HomeWaitingTask } from './types';
 
 function task(id: string, over: Partial<HomeTaskItem> = {}): HomeTaskItem {
   return {
@@ -20,10 +20,6 @@ function task(id: string, over: Partial<HomeTaskItem> = {}): HomeTaskItem {
 
 function waiting(id: string): HomeWaitingTask {
   return { ...task(id), daysLate: 2 };
-}
-
-function dj(showId: string, recipientId: string): HomeWaitingDjLink {
-  return { showId, recipientId, recipientName: 'DJ', showLabel: 'Dorian · Hard Rock', hoursWaiting: 60 };
 }
 
 function pitch(id: string): HomePitchItem {
@@ -62,14 +58,14 @@ describe('buildTaskStack', () => {
 });
 
 describe('buildWaitingItems', () => {
-  it('lists late tasks first, then DJ links, with keys that never collide', () => {
-    const items = buildWaitingItems([waiting('a'), waiting('b')], [dj('s1', 'r1'), dj('s1', 'r2')]);
-    expect(items.map((item) => item.kind)).toEqual(['task', 'task', 'dj', 'dj']);
-    expect(new Set(items.map((item) => item.key)).size).toBe(4);
+  it('lists late tasks with keys that never collide', () => {
+    const items = buildWaitingItems([waiting('a'), waiting('b')]);
+    expect(items.map((item) => item.kind)).toEqual(['task', 'task']);
+    expect(new Set(items.map((item) => item.key)).size).toBe(2);
   });
 
   it('is empty when nothing is waiting', () => {
-    expect(buildWaitingItems([], [])).toEqual([]);
+    expect(buildWaitingItems([])).toEqual([]);
   });
 });
 

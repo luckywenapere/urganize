@@ -3,7 +3,6 @@ import type {
   HomePitchItem,
   HomePlacements,
   HomeTaskItem,
-  HomeWaitingDjLink,
   HomeWaitingTask,
   HomeYourTasks,
 } from './types';
@@ -26,21 +25,11 @@ export function buildTaskStack(yourTasks: HomeYourTasks): TaskStack | null {
   return { top, rest: [...rest.late, ...rest.today, ...rest.week] };
 }
 
-export type WaitingItem =
-  | { kind: 'task'; key: string; task: HomeWaitingTask }
-  | { kind: 'dj'; key: string; link: HomeWaitingDjLink };
+export type WaitingItem = { kind: 'task'; key: string; task: HomeWaitingTask };
 
-/** Late tasks someone else holds, then DJs who have not opened the tracks. */
-export function buildWaitingItems(
-  tasks: readonly HomeWaitingTask[],
-  djLinks: readonly HomeWaitingDjLink[]
-): WaitingItem[] {
-  return [
-    ...tasks.map((task): WaitingItem => ({ kind: 'task', key: `task-${task.id}`, task })),
-    ...djLinks.map(
-      (link): WaitingItem => ({ kind: 'dj', key: `dj-${link.showId}-${link.recipientId}`, link })
-    ),
-  ];
+/** Late tasks someone else holds. */
+export function buildWaitingItems(tasks: readonly HomeWaitingTask[]): WaitingItem[] {
+  return tasks.map((task): WaitingItem => ({ kind: 'task', key: `task-${task.id}`, task }));
 }
 
 export type PlacementItem = {
