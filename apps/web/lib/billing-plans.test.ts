@@ -321,10 +321,10 @@ describe('tier plan codes and prices', () => {
   it('prices every self-serve tier at both intervals, in kobo', () => {
     // Monthly is the stored figure; yearly is ten months of it, computed.
     expect(getTierMinorUnit('solo', 'monthly')).toBe(5_000_00);
-    expect(getTierMinorUnit('manager', 'monthly')).toBe(22_000_00);
+    expect(getTierMinorUnit('manager', 'monthly')).toBe(35_000_00);
     expect(getTierMinorUnit('label', 'monthly')).toBe(50_000_00);
     expect(getTierMinorUnit('solo', 'annual')).toBe(50_000_00);
-    expect(getTierMinorUnit('manager', 'annual')).toBe(220_000_00);
+    expect(getTierMinorUnit('manager', 'annual')).toBe(350_000_00);
     expect(getTierMinorUnit('label', 'annual')).toBe(500_000_00);
   });
 });
@@ -425,7 +425,7 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'manager',
       planCode: 'PLN_mgr_y',
-      amountMinorUnit: 220_000_00,
+      amountMinorUnit: 350_000_00,
       interval: 'annual',
     });
   });
@@ -472,7 +472,7 @@ describe('resolveCheckoutPurchase', () => {
       ok: true,
       planId: 'manager',
       planCode: 'PLN_mgr_m',
-      amountMinorUnit: 22_000_00,
+      amountMinorUnit: 35_000_00,
       interval: 'monthly',
     });
   });

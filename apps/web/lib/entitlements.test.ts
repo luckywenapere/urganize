@@ -220,7 +220,7 @@ describe('tier prices and the sales-led tier', () => {
   // the arithmetic moved: mint the Plans and repoint the vars BEFORE shipping it.
   it('resolves the yearly prices to the figures the Plans must be minted at', () => {
     expect(getTierPrice('solo', 'annual')?.amount).toBe(50_000);
-    expect(getTierPrice('manager', 'annual')?.amount).toBe(220_000);
+    expect(getTierPrice('manager', 'annual')?.amount).toBe(350_000);
     expect(getTierPrice('label', 'annual')?.amount).toBe(500_000);
   });
 
@@ -229,10 +229,10 @@ describe('tier prices and the sales-led tier', () => {
     // ask for fifth-grade readable, and an abbreviation is one more thing to
     // decode. The no-argument call takes the default, which is monthly.
     expect(formatTierPrice('solo')).toBe('₦5,000/month');
-    expect(formatTierPrice('manager')).toBe('₦22,000/month');
+    expect(formatTierPrice('manager')).toBe('₦35,000/month');
     expect(formatTierPrice('label')).toBe('₦50,000/month');
     expect(formatTierPrice('solo', 'annual')).toBe('₦50,000/year');
-    expect(formatTierPrice('manager', 'annual')).toBe('₦220,000/year');
+    expect(formatTierPrice('manager', 'annual')).toBe('₦350,000/year');
     expect(formatTierPrice('label', 'annual')).toBe('₦500,000/year');
   });
 

@@ -427,7 +427,7 @@ export const PRICING_TIERS: Record<PricingTierId, PricingTierDefinition> = {
     label: 'Manager',
     audience: 'For a manager running two or more artists.',
     // Monthly only. The yearly price is ten months of this — see monthlyPrice.
-    monthlyPrice: tierPrice(22_000),
+    monthlyPrice: tierPrice(35_000),
     urgansMonthlyCredits: 660,
     limits: { artists: 5, seats: 4, activeReleases: 3, urgansMonthlyActions: 150 },
     perks: [],

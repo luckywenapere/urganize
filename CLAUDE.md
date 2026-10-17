@@ -4357,8 +4357,8 @@ set on the Vercel `urganize` project:
 |---|---|---|---|
 | `PAYSTACK_PLAN_SOLO_PER_MONTH_NGN` | `PLN_s5gl9tcxqetgu8k` | ₦5,000 | monthly |
 | `PAYSTACK_PLAN_SOLO_PER_YEAR_NGN` | `PLN_62yzge8f7ra4pyv` | ₦50,000 | annually |
-| `PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN` | `PLN_ag8u3p0l9gu9lwr` | ₦22,000 | monthly |
-| `PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN` | `PLN_p0m3un66lb0mzvz` | ₦220,000 | annually |
+| `PAYSTACK_PLAN_MANAGER_PER_MONTH_NGN` | `PLN_ag8u3p0l9gu9lwr` | ₦35,000 (₦22,000 until 2026-10-17, edited in place) | monthly |
+| `PAYSTACK_PLAN_MANAGER_PER_YEAR_NGN` | `PLN_p0m3un66lb0mzvz` | ₦350,000 (₦220,000 until 2026-10-17, edited in place) | annually |
 | `PAYSTACK_PLAN_LABEL_PER_MONTH_NGN` | `PLN_9b8bkya2tjchga2` | ₦50,000 | monthly |
 | `PAYSTACK_PLAN_LABEL_PER_YEAR_NGN` | `PLN_6xj3i1wweis6tka` | ₦500,000 | annually |
 

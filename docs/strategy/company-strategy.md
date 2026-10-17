@@ -193,7 +193,7 @@ Revenue comes from monthly subscriptions, with pay-as-you-go credits and transac
 | Tier | Monthly | Yearly | Credits a month | For |
 |---|---|---|---|---|
 | Solo | ₦5,000 | ₦50,000 | 150 | Independent artists. One seat, UrgAns as chat only |
-| Manager | ₦22,000 | ₦220,000 | 660 | Managers running more than one artist. UrgAns works inside releases |
+| Manager | ₦35,000 | ₦350,000 | 660 | Managers running more than one artist. UrgAns works inside releases |
 | Label | ₦50,000 | ₦500,000 | 1,500 | Labels and management companies |
 | Group | Custom | Custom | Custom | Distributors and multi-label groups |
 | Credits only | None | None | ₦30 a credit | Anyone who wants to pay by use. Solo features |

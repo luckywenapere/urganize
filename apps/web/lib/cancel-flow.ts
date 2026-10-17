@@ -341,10 +341,11 @@ const roundTo = (value: number, step: number): number => Math.max(step, Math.rou
 
 /**
  * Three price bands under a plan's monthly price. Anchored on the founder's
- * Manager example (₦22,000: under ₦10,000 / ₦10,000–₦15,000 /
+ * Manager example (at the old ₦22,000: under ₦10,000 / ₦10,000–₦15,000 /
  * ₦15,000–₦20,000), which is 5/11, 15/22 and 10/11 of the price, rounded to a
  * step that suits the size of the price. Solo ₦5,000 gives ₦2,500 / ₦3,500 /
- * ₦4,500; Label ₦50,000 gives ₦25,000 / ₦35,000 / ₦45,000.
+ * ₦4,500; Manager ₦35,000 (since 2026-10-17) gives ₦15,000 / ₦25,000 /
+ * ₦30,000; Label ₦50,000 gives ₦25,000 / ₦35,000 / ₦45,000.
  */
 export function budgetBands(monthlyPrice: number): BudgetBand[] {
   const step = bandStep(monthlyPrice);

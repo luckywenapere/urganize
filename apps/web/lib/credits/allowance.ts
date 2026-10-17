@@ -20,7 +20,7 @@ import { NAIRA_PER_CREDIT_CREDITS_ONLY, NAIRA_PER_CREDIT_SUBSCRIBER } from './pr
  * pays, at the 3x markup (pricing.ts), assuming 1,500 naira to the dollar:
  *
  *   solo      150  (5,000 naira a month)
- *   manager   660  (22,000)
+ *   manager   660  (35,000 since 2026-10-17; sized at 22,000)
  *   label     1,500 (50,000)
  *   enterprise 1,500 (Group: custom price; Label's amount by default, founder
  *              call 2026-10-02, topped up by hand per deal)

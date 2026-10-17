@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.156.1",
+    date: "October 17, 2026",
+    highlights: [
+      "The Manager plan is now ₦35,000 a month, or ₦350,000 a year. Solo and Label stay the same.",
+    ],
+  },
+  {
     version: "1.156.0",
     date: "October 17, 2026",
     highlights: [

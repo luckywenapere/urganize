@@ -226,7 +226,12 @@ describe('budget bands', () => {
   const labels = (price: number) => budgetBands(price).map((band) => band.label);
 
   it('Manager matches the founder example exactly', () => {
+    // The founder's example was set at the old ₦22,000 price; the shape still holds.
     expect(labels(22_000)).toEqual(['Under ₦10,000', '₦10,000–₦15,000', '₦15,000–₦20,000']);
+  });
+
+  it('Manager at ₦35,000 (since 2026-10-17) rounds to ₦5,000 steps', () => {
+    expect(labels(35_000)).toEqual(['Under ₦15,000', '₦15,000–₦25,000', '₦25,000–₦30,000']);
   });
 
   it('Solo and Label follow the same shape', () => {
@@ -235,7 +240,7 @@ describe('budget bands', () => {
   });
 
   it('every band sits under the plan price and climbs', () => {
-    for (const price of [5_000, 22_000, 50_000]) {
+    for (const price of [5_000, 22_000, 35_000, 50_000]) {
       const bands = budgetBands(price);
       expect(bands[0].max).toBeLessThan(bands[1].max);
       expect(bands[1].max).toBeLessThan(bands[2].max);
@@ -249,7 +254,7 @@ describe('budget bands', () => {
 });
 
 describe('matchBudgetOffer', () => {
-  const codes = { PAYSTACK_PLAN_MANAGER_RETENTION_15000: 'PLN_m15', PAYSTACK_PLAN_MANAGER_RETENTION_20000: 'PLN_m20' };
+  const codes = { PAYSTACK_PLAN_MANAGER_RETENTION_25000: 'PLN_m25', PAYSTACK_PLAN_MANAGER_RETENTION_30000: 'PLN_m30' };
 
   it('the lowest band offers the dearest cheaper plan that fits', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'low', planCodes: {} })).toEqual({
@@ -257,10 +262,12 @@ describe('matchBudgetOffer', () => {
       tier: 'solo',
       price: 5_000,
     });
+    // Manager (₦35,000 since 2026-10-17) no longer fits under Label's lowest
+    // band (₦25,000), so the dearest cheaper plan that fits is Solo.
     expect(matchBudgetOffer({ tier: 'label', band: 'low', planCodes: {} })).toEqual({
       kind: 'switch_plan',
-      tier: 'manager',
-      price: 22_000,
+      tier: 'solo',
+      price: 5_000,
     });
     expect(matchBudgetOffer({ tier: 'solo', band: 'low', planCodes: {} })).toBeNull();
   });
@@ -269,11 +276,11 @@ describe('matchBudgetOffer', () => {
     expect(matchBudgetOffer({ tier: 'manager', band: 'mid', planCodes: codes })).toEqual({
       kind: 'discounted_plan',
       tier: 'manager',
-      price: 15_000,
+      price: 25_000,
       months: RETENTION_OFFER_MONTHS,
-      planCode: 'PLN_m15',
+      planCode: 'PLN_m25',
     });
-    expect(matchBudgetOffer({ tier: 'manager', band: 'high', planCodes: codes })?.price).toBe(20_000);
+    expect(matchBudgetOffer({ tier: 'manager', band: 'high', planCodes: codes })?.price).toBe(30_000);
   });
 
   it('hides a discounted offer whose Paystack plan is not configured', () => {
@@ -286,8 +293,8 @@ describe('matchBudgetOffer', () => {
     expect(allRetentionPlanEnvVars().map((row) => row.envVar)).toEqual([
       'PAYSTACK_PLAN_SOLO_RETENTION_3500',
       'PAYSTACK_PLAN_SOLO_RETENTION_4500',
-      'PAYSTACK_PLAN_MANAGER_RETENTION_15000',
-      'PAYSTACK_PLAN_MANAGER_RETENTION_20000',
+      'PAYSTACK_PLAN_MANAGER_RETENTION_25000',
+      'PAYSTACK_PLAN_MANAGER_RETENTION_30000',
       'PAYSTACK_PLAN_LABEL_RETENTION_35000',
       'PAYSTACK_PLAN_LABEL_RETENTION_45000',
     ]);
