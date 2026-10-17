@@ -25,7 +25,7 @@ const lit = (path: string, flags: ShellFlags = ALL_ON) =>
 
 describe('the desktop side menu: the open area\u2019s pages (URG-254, founder call 2026-10-14)', () => {
   it('lists the Catalogue\u2019s pages as parents, the one on screen lit', () => {
-    expect(labels('/dashboard')).toEqual(['Rollouts', 'Artists', 'Notes']);
+    expect(labels('/dashboard')).toEqual(['Artists', 'Rollouts', 'Notes']);
     // Distribute left the menu (2026-10-15); its old page lights nothing.
     expect(lit('/dashboard/distribute')).toEqual([]);
     expect(lit('/dashboard')).toEqual(['releases']);
@@ -70,7 +70,7 @@ describe('the desktop page bar title', () => {
     expect(shellPageTitle(on, '/dashboard')).toBe('Rollouts');
     expect(shellPageTitle(on, '/dashboard/pitching')).toBeNull();
     expect(shellPageTitle(buildShellAreas(ALL_OFF), '/dashboard')).toBe('Rollouts');
-    expect(shellPageTitle(on, '/dashboard/distribute')).toBe('Catalogue');
+    expect(shellPageTitle(on, '/dashboard/distribute')).toBe('Artist');
     expect(shellPageTitle(on, '/dashboard/urgans')).toBe('UrgAns');
   });
 });

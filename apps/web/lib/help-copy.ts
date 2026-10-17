@@ -275,8 +275,8 @@ export const HELP_COPY = {
     text: 'Your day at a glance: what is late, what is due and what to do first.',
   },
   'nav.catalogue': {
-    label: 'Catalogue',
-    text: 'Every rollout, act and note your team keeps.',
+    label: 'Artist',
+    text: 'Every act on your roster, its rollouts and the notes your team keeps.',
   },
   'nav.relationships': {
     label: 'Relationships',

@@ -56,7 +56,7 @@ const TAB_ICON: Record<string, IconComponent> = {
 };
 
 /**
- * The phone's bottom bar: Home, Catalogue, UrgAns and More (Pitching left it
+ * The phone's bottom bar: Home, Artist (Catalogue until 2026-10-17), UrgAns and More (Pitching left it
  * on 2026-10-15 and lives inside each rollout). Thumb
  * reachable, and the same destinations as the desktop pills, because both read
  * lib/shell-nav.ts.
@@ -84,7 +84,7 @@ const TAB_ICON: Record<string, IconComponent> = {
 export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
   const pathname = usePathname() ?? '/dashboard';
   const areas = useShellAreas();
-  const tabs = useMemo(() => buildMobileTabs(), []);
+  const tabs = useMemo(() => buildMobileTabs(areas), [areas]);
   const active = activeMobileTab(areas, pathname);
   const [moreOpen, setMoreOpen] = useState(false);
   const collapsed = useBarCollapsedOnScroll(pathname);

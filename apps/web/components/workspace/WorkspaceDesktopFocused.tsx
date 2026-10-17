@@ -116,7 +116,7 @@ export function WorkspaceDesktopFocused({
           <button
             type="button"
             onClick={onClose}
-            aria-label={closeLabel ?? 'Back to Catalogue'}
+            aria-label={closeLabel ?? 'Back to all rollouts'}
             className="motion-focus shrink-0 rounded-md hover:text-content-primary"
           >
             Rollouts

@@ -75,16 +75,15 @@ export const URGANS_HREF = '/dashboard/urgans';
 export const CATALOGUE_HREF = '/dashboard';
 export const DISTRIBUTE_HREF = '/dashboard/distribute';
 export const ARTISTS_HREF = '/dashboard/artists';
+/** The nav word for the 'catalogue' area (Catalogue until 2026-10-17). */
+export const CATALOGUE_LABEL = 'Artist';
 
 export function buildShellAreas(flags: ShellFlags): ShellArea[] {
-  const catalogueTabs: ShellSubTab[] = [
-    {
-      key: 'releases',
-      label: 'Rollouts',
-      href: CATALOGUE_HREF,
-      isActive: (p) => p === '/dashboard' || startsWithPath(p, '/dashboard/releases'),
-    },
-  ];
+  // Artists first and the section's landing, Rollouts second (founder call,
+  // 2026-10-17: "change the title from Catalogue to Artist then make the artist
+  // page be the first on the list of menu and first to load"). The routes did
+  // not move: /dashboard is still Rollouts, so every rollout link keeps working.
+  const catalogueTabs: ShellSubTab[] = [];
   if (flags.artistPage) {
     catalogueTabs.push({
       key: 'artists',
@@ -93,6 +92,12 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, ARTISTS_HREF),
     });
   }
+  catalogueTabs.push({
+    key: 'releases',
+    label: 'Rollouts',
+    href: CATALOGUE_HREF,
+    isActive: (p) => p === '/dashboard' || startsWithPath(p, '/dashboard/releases'),
+  });
   // Distribute left the tab row (founder call, 2026-10-15): it is reached from
   // inside each rollout (its Distribute scene). /dashboard/distribute still
   // lights Catalogue, so an old link lands somewhere that makes sense.
@@ -148,9 +153,11 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       isActive: (p) => startsWithPath(p, URGANS_HREF),
     },
     {
+      // Labelled Artist since 2026-10-17 (founder's word); the key stays
+      // 'catalogue' so stored state, tours and analytics keep their names.
       key: 'catalogue',
-      label: 'Catalogue',
-      href: CATALOGUE_HREF,
+      label: CATALOGUE_LABEL,
+      href: catalogueTabs[0].href,
       live: true,
       subTabs: catalogueTabs,
       isActive: (p) =>
@@ -203,10 +210,13 @@ export type MobileTab = { key: string; label: string; href: string; area: ShellA
 /** The phone's bottom bar. UrgAns is a tab here (the full page) because a
  *  drawer on a phone is a full page anyway, and it is the one thing a thumb
  *  should always reach. */
-export function buildMobileTabs(): MobileTab[] {
+export function buildMobileTabs(areas?: ShellArea[]): MobileTab[] {
+  // The Artist tab goes where its area's pill goes (Artists, or Rollouts when
+  // the artist page is off or a role view tucks it).
+  const catalogueHref = areas?.find((area) => area.key === 'catalogue')?.href ?? CATALOGUE_HREF;
   return [
     { key: 'home', label: 'Home', href: HOME_HREF, area: 'home' },
-    { key: 'catalogue', label: 'Catalogue', href: CATALOGUE_HREF, area: 'catalogue' },
+    { key: 'catalogue', label: CATALOGUE_LABEL, href: catalogueHref, area: 'catalogue' },
     { key: 'urgans', label: 'UrgAns', href: '/dashboard/urgans', area: 'urgans' },
   ];
 }
