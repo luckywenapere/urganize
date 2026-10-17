@@ -78,6 +78,11 @@ export const NEXT_MOVE_COPY = {
 
 export type NextMoveTarget =
   | { kind: 'link'; href: string }
+  /**
+   * Open Settings over the page the person is on (2026-10-17), so closing it
+   * returns them there instead of to the rollout behind it.
+   */
+  | { kind: 'settings'; segment: 'team'; section: string }
   /** Open the rollout, then the activity's drawer over it. */
   | { kind: 'task'; releaseId: string; taskId: string };
 
@@ -266,7 +271,7 @@ export function movesForRollout(
         title: NEXT_MOVE_COPY.invite.title,
         detail: NEXT_MOVE_COPY.invite.detail,
         action: NEXT_MOVE_COPY.invite.action,
-        target: { kind: 'link', href: rolloutHref(rollout.id, '&settings=team&section=teammates') },
+        target: { kind: 'settings', segment: 'team', section: 'teammates' },
       });
     }
   }

@@ -6,10 +6,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import {
-  Bell,
   Check,
   ChevronLeft,
-  ChevronRight,
   CircleHelp,
   Disc3,
   DoorOpen,
@@ -88,8 +86,11 @@ const TAB_ICON: Record<string, IconComponent> = {
  * replay when there is one), read from the one list in HelpMenu.tsx and behind
  * the same showHelpMenu gate AppShell hands WorkspaceMenu.
  *
- * Since 2026-10-17 (founder call, approved mock) the sheet is five rows:
- * Relationships, Opportunities, Notifications, Settings and Help. The header
+ * Since 2026-10-17 (founder call, approved mock) the sheet is three rows:
+ * Relationships, Opportunities and Settings, with Help as a quiet footer line
+ * under them (it opens the Help view). Notifications moved to a
+ * bell at the top right of Home (HomeBell), and the unread dot moved from More
+ * to the Home tab with it. The header
  * carries the Urganize mark, the Beta chip, and Search as an icon button left
  * of Close (the Search row went). Credits left the sheet (the UrgAns usage
  * strip and Settings > Billing reach it), Admin too (Settings > Admin), and
@@ -162,8 +163,18 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
                     isActive ? 'bg-bg-hover text-brand' : 'text-content-tertiary'
                   }`}
                 >
-                  <Icon className="pointer-events-none h-[18px] w-[18px]" aria-hidden="true" />
+                  {/* Unread notifications show on Home, where the bell is now
+                      (2026-10-17), and only while you are somewhere else. */}
+                  <span className="pointer-events-none relative">
+                    <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                    {tab.key === 'home' && !isActive && unread > 0 ? (
+                      <span aria-hidden="true" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-brand" />
+                    ) : null}
+                  </span>
                   {tab.label}
+                  {tab.key === 'home' && !isActive && unread > 0 ? (
+                    <span className="sr-only">, unread notifications</span>
+                  ) : null}
                 </Link>
               </li>
             );
@@ -186,14 +197,8 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
                   ellipsis's three 1px circles, not the button. The button
                   always handled it; this just makes the whole 56px cell the
                   target, so taps and their analytics land on the button. */}
-              <span className="pointer-events-none relative">
-                <MoreHorizontal className="h-[18px] w-[18px]" aria-hidden="true" />
-                {unread > 0 ? (
-                  <span aria-hidden="true" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-brand" />
-                ) : null}
-              </span>
+              <MoreHorizontal className="pointer-events-none h-[18px] w-[18px]" aria-hidden="true" />
               More
-              {unread > 0 ? <span className="sr-only">, unread notifications</span> : null}
             </button>
           </li>
         </ul>
@@ -308,7 +313,6 @@ function MoreSheet({
   // What the role view tucked (URG-260) follows the areas the bar does not
   // carry; empty when nothing is tucked.
   const items = [...buildMoreItems(areas), ...tuckedMoreItems(areas)];
-  const notifications = useNotificationsDoorStore();
   const openCommand = useShellStore((state) => state.openCommand);
   const { options: artistOptions, select: selectArtist } = useArtistFilterOptions();
   // The desktop account menu's help rows, from the same list and gate. They
@@ -432,28 +436,6 @@ function MoreSheet({
                   </Link>
                 </li>
               ))}
-              {notifications.available ? (
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      notifications.requestOpen();
-                    }}
-                    className={SHEET_ROW}
-                  >
-                    {/* The same plain bell as the computer's top bar (URG-255). */}
-                    <Bell className={SHEET_ICON} aria-hidden="true" />
-                    Notifications
-                    {notifications.unread > 0 ? (
-                      <span className="ml-auto grid min-h-6 min-w-6 place-items-center rounded-full bg-brand px-1.5 text-xs font-semibold text-content-inverse">
-                        {notifications.unread > 9 ? '9+' : notifications.unread}
-                        <span className="sr-only"> unread</span>
-                      </span>
-                    ) : null}
-                  </button>
-                </li>
-              ) : null}
               <li>
                 <Link
                   href={settingsDeepLink()}
@@ -467,15 +449,6 @@ function MoreSheet({
                   Settings
                 </Link>
               </li>
-              {helpItems.length > 0 ? (
-                <li>
-                  <button type="button" onClick={() => setView('help')} className={SHEET_ROW}>
-                    <CircleHelp className={SHEET_ICON} aria-hidden="true" />
-                    Help
-                    <ChevronRight className="ml-auto h-5 w-5 text-content-tertiary" aria-hidden="true" />
-                  </button>
-                </li>
-              ) : null}
             </ul>
             {artistOptions.length > 0 ? (
               <div role="group" aria-label="Showing" className="mt-2 border-t border-stroke-subtle pt-3">
@@ -507,6 +480,21 @@ function MoreSheet({
                     </li>
                   ))}
                 </ul>
+              </div>
+            ) : null}
+            {/* Help is a quiet footer under the rows (2026-10-17, approved
+                mock): a small muted line, no chevron, no row divider. It
+                still opens the Help view, behind the same showHelp gate. */}
+            {helpItems.length > 0 ? (
+              <div data-more-help-footer className="mt-6 pb-1">
+                <button
+                  type="button"
+                  onClick={() => setView('help')}
+                  className="motion-focus inline-flex min-h-11 items-center gap-2 text-[15px] text-content-primary/55 hover:text-content-primary"
+                >
+                  <CircleHelp className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  Help
+                </button>
               </div>
             ) : null}
           </>

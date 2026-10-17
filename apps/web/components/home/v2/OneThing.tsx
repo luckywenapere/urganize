@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { X } from '@/components/icons';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { NEXT_MOVE_COPY, type NextMove } from '@/lib/next-moves';
 import { HOME_FOUR_COPY, type OneThingItem } from '@/lib/home/home-four';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
@@ -16,9 +17,14 @@ function useGoToMove() {
   const router = useRouter();
   const pathname = usePathname();
   const { openTask } = useTaskUI();
+  const openSettings = useOpenSettings();
   return (move: NextMove) => {
     if (move.target.kind === 'link') {
       router.push(move.target.href);
+      return;
+    }
+    if (move.target.kind === 'settings') {
+      openSettings({ segment: move.target.segment, section: move.target.section });
       return;
     }
     const href = `/dashboard?release=${encodeURIComponent(move.target.releaseId)}`;
@@ -47,24 +53,23 @@ function Slide({
 
   if (item.kind === 'task') {
     // No "Next" chip or due line (Oyin, Oct 17, 2026): the card leads with the task.
+    // No Open task button (Oyin, Oct 17, 2026): the whole card opens the task.
     const { task } = item;
     const where = [task.releaseTitle, task.artistName].filter(Boolean).join(' · ');
     return (
-      <div className={`${CARD} flex h-full flex-col px-5 pb-5 pt-5`}>
+      <button
+        type="button"
+        aria-label={`${HOME_FOUR_COPY.openTask}: ${task.title}`}
+        data-one-thing-card="task"
+        className={`${CARD} motion-focus motion-press flex h-full w-full flex-col px-5 pb-5 pt-5 text-left hover:bg-bg-elevated`}
+        onClick={() => {
+          track();
+          openTask(task.id);
+        }}
+      >
         <h2 className="break-words font-display text-[1.45rem] leading-[1.25] text-content-primary">{task.title}</h2>
         {where ? <p className="mt-2 text-sm leading-relaxed text-content-secondary">{where}</p> : null}
-        <span className="flex-1" aria-hidden="true" />
-        <button
-          type="button"
-          className={PRIMARY}
-          onClick={() => {
-            track();
-            openTask(task.id);
-          }}
-        >
-          {HOME_FOUR_COPY.openTask}
-        </button>
-      </div>
+      </button>
     );
   }
 

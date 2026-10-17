@@ -45,7 +45,7 @@ export function pickHeaderRelease(releases: readonly HomeReleaseSummary[]): Home
 
 const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 
-/** "Drops in 12 days" and "Fri 28 Oct". */
+/** "Drops" and "Fri 28 Oct" (or "Out" once the date has passed). */
 export function describeDrop(release: Pick<HomeReleaseSummary, 'daysOut' | 'releaseDate'>): {
   lead: string;
   date: string;
@@ -55,12 +55,8 @@ export function describeDrop(release: Pick<HomeReleaseSummary, 'daysOut' | 'rele
       ? DATE_FORMAT.format(new Date(`${release.releaseDate.slice(0, 10)}T00:00:00Z`))
       : '';
   const days = release.daysOut;
-  if (days === null) return { lead: 'No release date yet', date: '' };
-  if (days > 1) return { lead: `Drops in ${days} days`, date };
-  if (days === 1) return { lead: 'Drops tomorrow', date };
-  if (days === 0) return { lead: 'Out today', date };
-  if (days === -1) return { lead: 'Out since yesterday', date };
-  return { lead: `Out ${-days} days`, date };
+  if (days === null || !date) return { lead: 'No release date yet', date: '' };
+  return { lead: days > 0 ? 'Drops' : 'Out', date };
 }
 
 export type PhaseSegment = { phase: RolloutPhase; active: boolean; fill: number };
@@ -162,7 +158,6 @@ export const HOME_FOUR_COPY = {
   startTitle: 'Start the next one early.',
   startLine: 'Sessions, songwriting, mix and master.',
   startAction: 'Start the next rollout',
-  moreRollouts: (n: number) => `+${n} rollout${n === 1 ? '' : 's'}`,
   grantsFit: (n: number) => (n === 1 ? '1 new grant fits your team' : `${n} new grants fit your team`),
   loadFailed: "Home didn't load.",
   loadFailedLine: 'Your rollouts are safe.',

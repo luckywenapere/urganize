@@ -32,7 +32,7 @@ describe('the phone has no top bar', () => {
     expect(nav).toMatch(/data-tour="shell-search"[\s\S]*?className="[^"]*\bhidden\b[^"]*\blg:inline-flex\b/);
   });
 
-  it('keeps the bell mounted (its panel is what More opens)', () => {
+  it('keeps the bell mounted (its panel is what Home\'s phone bell opens)', () => {
     expect(nav).toContain('<NotificationsBell />');
   });
 

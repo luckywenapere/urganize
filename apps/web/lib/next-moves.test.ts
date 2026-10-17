@@ -69,6 +69,12 @@ describe('a rollout that was just created', () => {
     expect(rules(rollout())).not.toContain('invite');
     expect(rules(rollout({ isOwner: false, tasks: solo.tasks }))).not.toContain('invite');
   });
+
+  it('opens team settings over the current page, not over the rollout', () => {
+    const solo = rollout({ tasks: [task({ id: 'a' }), task({ id: 'b' })] });
+    const invite = movesForRollout(solo, { now: NOW, flags: FLAGS, surface: 'home' }).find((m) => m.rule === 'invite');
+    expect(invite?.target).toEqual({ kind: 'settings', segment: 'team', section: 'teammates' });
+  });
 });
 
 describe('a release date getting close', () => {

@@ -22,6 +22,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.3",
+    date: "October 17, 2026",
+    highlights: [
+      "On your phone, Home is cleaner up top: the bell now sits beside your team's faces, the line above the title is gone, and the date reads \"Drops Fri 30 Oct\" (or \"Out\" once it is released).",
+      "Tap anywhere on your next task's card to open it. The separate Open task button is gone.",
+      "Manage team and Invite your team open Settings over the page you are on, so closing it takes you back there.",
+      "More is down to Relationships, Opportunities and Settings, with Help as a small line underneath. New notifications show as a dot on Home.",
+    ],
+  },
+  {
     version: "1.157.2",
     date: "October 17, 2026",
     highlights: [

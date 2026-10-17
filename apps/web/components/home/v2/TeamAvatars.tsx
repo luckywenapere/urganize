@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { isOnline } from '@/lib/presence';
+import { useSettingsLinkClick } from '@/components/settings/useOpenSettings';
 import { HOME_TEAM_COPY, HOME_TEAM_HREF, teamPresenceLabel, type TeamPresenceMember } from '@/lib/home/team-presence';
 
 const TINTS = ['bg-[#7fd99a]', 'bg-[#e7c27d]', 'bg-[#9ab8f0]', 'bg-[#e9a3c9]'];
@@ -18,6 +19,10 @@ export function TeamAvatars({ members }: { members: readonly TeamPresenceMember[
   const [now, setNow] = useState(() => new Date());
   const listId = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
+  // Manage team opens Settings over Home itself (2026-10-17). Its plain href was
+  // `/dashboard?settings=team`, which left Home for the Artists page under the
+  // pop-up, so closing Settings landed on Artists instead of back on Home.
+  const openTeam = useSettingsLinkClick({ segment: 'team' }, () => setOpen(false));
 
   useEffect(() => {
     if (!open) return;
@@ -82,6 +87,7 @@ export function TeamAvatars({ members }: { members: readonly TeamPresenceMember[
           </ul>
           <Link
             href={HOME_TEAM_HREF}
+            onClick={openTeam}
             className="motion-focus flex min-h-11 items-center border-t border-stroke-subtle px-4 text-sm font-semibold text-content-secondary hover:text-content-primary"
           >
             {HOME_TEAM_COPY.manage}

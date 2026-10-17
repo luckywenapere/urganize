@@ -21,6 +21,7 @@ import { useHomeNextMoves } from '../useHomeNextMoves';
 import { ManagerNewView } from '../ManagerNewView';
 import { OpportunitiesCard } from '../OpportunitiesCard';
 import { ReleaseHeader } from './ReleaseHeader';
+import { HomeBell } from './HomeBell';
 import { OneThing } from './OneThing';
 import { WaitingRow } from './WaitingRow';
 import { ReleaseReviewCard } from '@/components/between-releases/BetweenReleaseCards';
@@ -63,7 +64,6 @@ function ReleaseHome({ home, viewerId }: { home: HomePayload; viewerId: string }
   const nextMoves = useHomeNextMoves({ releases, viewerId, placements });
   const release = pickHeaderRelease(releases);
   if (!release) return null;
-  const others = releases.filter((r) => r.id !== release.id);
   const items = buildOneThing({ yourTasks, moves: nextMoves.moves });
   const nextUp = items.length === 0 ? describeNextUp(yourTasks.week) : null;
   const waitingItems = buildWaitingItems(waitingTasks);
@@ -72,7 +72,7 @@ function ReleaseHome({ home, viewerId }: { home: HomePayload; viewerId: string }
   return (
     <div className="flex flex-col">
       <Fenced name="release">
-        <ReleaseHeader release={release} others={others} team={home.team ?? []} />
+        <ReleaseHeader release={release} team={home.team ?? []} />
       </Fenced>
       <div className="mt-6">
         <Fenced name="one-thing">
@@ -130,12 +130,18 @@ function StartNextCard() {
 function BetweenHome({ home }: { home: HomePayload; onNewRollout: () => void }) {
   return (
     <div className="flex flex-col">
-      <header data-home-block="greeting">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-primary/55">{home.header.dateLabel}</p>
-        <h1 className="mt-2 font-display text-[1.875rem] leading-[1.15] text-content-primary">
-          {home.header.greeting}, {home.header.firstName}.
-        </h1>
-        <p className="mt-1.5 text-[15px] text-content-secondary">{HOME_FOUR_COPY.noRelease}</p>
+      <header data-home-block="greeting" className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-primary/55">{home.header.dateLabel}</p>
+          <h1 className="mt-2 font-display text-[1.875rem] leading-[1.15] text-content-primary">
+            {home.header.greeting}, {home.header.firstName}.
+          </h1>
+          <p className="mt-1.5 text-[15px] text-content-secondary">{HOME_FOUR_COPY.noRelease}</p>
+        </div>
+        {/* The phone's bell sits top right on Home in every state (2026-10-17). */}
+        <div className="-mr-1 shrink-0">
+          <HomeBell />
+        </div>
       </header>
       {/* The post-release review (URG-253): renders nothing when no review is open. */}
       <Fenced name="release-review">

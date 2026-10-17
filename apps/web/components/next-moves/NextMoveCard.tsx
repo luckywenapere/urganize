@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { ArrowRight, Sparkles, X } from '@/components/icons';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
+import { useOpenSettings } from '@/components/settings/useOpenSettings';
 import { NEXT_MOVE_COPY, type NextMove } from '@/lib/next-moves';
 
 /**
@@ -24,10 +25,15 @@ export function NextMoveCard({
   const router = useRouter();
   const pathname = usePathname();
   const { openTask } = useTaskUI();
+  const openSettings = useOpenSettings();
 
   const go = () => {
     if (move.target.kind === 'link') {
       router.push(move.target.href);
+      return;
+    }
+    if (move.target.kind === 'settings') {
+      openSettings({ segment: move.target.segment, section: move.target.section });
       return;
     }
     const href = `/dashboard?release=${encodeURIComponent(move.target.releaseId)}`;

@@ -48,12 +48,12 @@ describe('the More sheet has the account menu’s help rows', () => {
     expect(help.indexOf('onClose();')).toBeLessThan(help.indexOf('item.onClick();'));
   });
 
-  it('opens the help rows in a Help view inside the sheet, behind one Help row (2026-10-17)', () => {
+  it('opens the help rows in a Help view inside the sheet, behind one quiet Help footer (2026-10-17)', () => {
     expect(bar).toContain("useState<'more' | 'help'>('more')");
     expect(bar).toContain("onClick={() => setView('help')}");
     expect(bar).toContain("onClick={() => setView('more')}");
-    // The Help row only shows when the gate lets the help rows through.
-    expect(bar).toMatch(/\{helpItems\.length > 0 \? \(\s*<li>\s*<button type="button" onClick=\{\(\) => setView\('help'\)\}/);
+    // The Help footer only shows when the gate lets the help rows through.
+    expect(bar).toMatch(/\{helpItems\.length > 0 \? \(\s*<div data-more-help-footer[^>]*>\s*<button\s+type="button"\s+onClick=\{\(\) => setView\('help'\)\}/);
   });
 });
 

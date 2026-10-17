@@ -64,11 +64,11 @@ describe('pickHeaderRelease', () => {
 });
 
 describe('describeDrop', () => {
-  it('says how long to go', () => {
-    expect(describeDrop({ daysOut: 12, releaseDate: '2026-10-28' })).toEqual({ lead: 'Drops in 12 days', date: 'Wed 28 Oct' });
-    expect(describeDrop({ daysOut: 1, releaseDate: '2026-10-17' }).lead).toBe('Drops tomorrow');
-    expect(describeDrop({ daysOut: 0, releaseDate: '2026-10-16' }).lead).toBe('Out today');
-    expect(describeDrop({ daysOut: -5, releaseDate: '2026-10-11' }).lead).toBe('Out 5 days');
+  it('says Drops or Out, then the date', () => {
+    expect(describeDrop({ daysOut: 12, releaseDate: '2026-10-28' })).toEqual({ lead: 'Drops', date: 'Wed 28 Oct' });
+    expect(describeDrop({ daysOut: 1, releaseDate: '2026-10-17' }).lead).toBe('Drops');
+    expect(describeDrop({ daysOut: 0, releaseDate: '2026-10-16' }).lead).toBe('Out');
+    expect(describeDrop({ daysOut: -5, releaseDate: '2026-10-11' }).lead).toBe('Out');
     expect(describeDrop({ daysOut: null, releaseDate: null })).toEqual({ lead: 'No release date yet', date: '' });
   });
 });
