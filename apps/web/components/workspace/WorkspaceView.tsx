@@ -998,8 +998,8 @@ export function WorkspaceView() {
       />
     ) : null;
 
-  // What the plan built said was left out and worth a second look — the ONLY
-  // place a manager learns that (see PlanBuiltBanner's own header). Shown
+  // What the plan built and what is worth a second look (the "left out" list
+  // is hidden since 2026-10-17, founder call; see PlanBuiltBanner's header). Shown
   // once activities exist for a release the planner built, until dismissed;
   // `planBanner` above and this are mutually exclusive by construction (one
   // requires zero activities, the other requires at least one).

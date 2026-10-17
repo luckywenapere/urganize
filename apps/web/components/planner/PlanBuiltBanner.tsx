@@ -18,15 +18,23 @@ import {
 } from '@/lib/release-planning';
 
 /**
- * "Here is the plan UrgAns built, and here is what it left out." Shown at the
- * top of a rollout's activities after a build, until the manager dismisses it.
+ * "Here is the plan UrgAns built." Shown at the top of a rollout's activities
+ * after a build, until the manager dismisses it.
  *
- * THIS IS NOT OPTIONAL CHROME. Until 2026-09-15 the manager reviewed a draft
+ * THE "LEFT OUT" LIST IS HIDDEN (founder call, Oyin, 2026-10-17): "it
+ * shouldn't be showing this left out part so it doesn't clutter the screen."
+ * That overrides the reasoning below, kept as the record of why it was once
+ * shown. Hide only: summarizePlanForBanner still derives `scopes`, `drops`
+ * and `removedCount`, removed tasks stay in the stored plan document, and
+ * UrgAns's own build reply still names what it left out. Restoring the list
+ * is re-adding one block in the render below.
+ *
+ * Former rationale: until 2026-09-15 the manager reviewed a draft
  * before anything was scheduled, so they SAW the model drop a task and why.
  * The plan lands as activities now, and a plan for "a normal release, no
  * marketing" removes around thirty of the playbook's sixty-four — so this is
  * the only place anyone learns what went, and why, and what UrgAns thought
- * was worth a second look. It stays until "Got it" (the dismissal is
+ * was worth a second look. The banner stays until "Got it" (the dismissal is
  * remembered per release, see lib/plan-built-seen.ts) and goes quiet on its
  * own once the plan is more than two weeks old, by which time the activities
  * themselves are the record.
@@ -208,8 +216,6 @@ export function PlanBuiltBanner({
 
   if (!summary) return null;
 
-  const leftOut = summary.scopes.length > 0 || summary.drops.length > 0;
-
   return (
     <section
       aria-label="What UrgAns built"
@@ -268,29 +274,6 @@ export function PlanBuiltBanner({
                       <span className="font-medium text-content-primary">{task.title}</span>
                       {task.why ? `: ${task.why}` : ''}
                     </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {leftOut ? (
-            <div className="mt-4">
-              <p className="text-sm font-medium text-content-primary">Left out ({summary.removedCount})</p>
-              <ul className="mt-1.5 space-y-1.5 text-sm leading-6 text-content-secondary">
-                {summary.scopes.map((scope) => (
-                  <li key={scope.label}>
-                    <span className="font-medium text-content-primary">{scope.label}</span>
-                    {scope.taskCount > 0
-                      ? ` (${scope.taskCount} ${scope.taskCount === 1 ? 'activity' : 'activities'})`
-                      : ''}
-                    : {scope.reason}
-                  </li>
-                ))}
-                {summary.drops.map((drop) => (
-                  <li key={drop.id}>
-                    <span className="font-medium text-content-primary">{drop.title}</span>
-                    {drop.reason ? `: ${drop.reason}` : ''}
                   </li>
                 ))}
               </ul>

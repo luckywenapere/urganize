@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.11",
+    date: "October 17, 2026",
+    highlights: [
+      "The note UrgAns shows after building a plan no longer lists what it left out, so there is less to read above your activities.",
+    ],
+  },
+  {
     version: "1.154.10",
     date: "October 16, 2026",
     highlights: [
