@@ -4,9 +4,13 @@ import { barNeverCollapsesOn, nextBarCollapsed } from './bar-collapse';
 const long = { scrollHeight: 2000, clientHeight: 800 };
 
 describe('nextBarCollapsed', () => {
-  it('folds on a real scroll down and opens on a real scroll up', () => {
+  it('folds on a real scroll down', () => {
     expect(nextBarCollapsed({ top: 300, previous: 200, ...long })).toBe(true);
-    expect(nextBarCollapsed({ top: 200, previous: 300, ...long })).toBe(false);
+  });
+
+  it('stays folded on a scroll up that stops short of the top', () => {
+    expect(nextBarCollapsed({ top: 200, previous: 300, ...long })).toBeNull();
+    expect(nextBarCollapsed({ top: 30, previous: 900, ...long })).toBeNull();
   });
 
   it('ignores a wobble smaller than a step', () => {

@@ -95,7 +95,8 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
   return (
     <>
       {/* A floating glass pill that shrinks to one round button at the left when
-          the page scrolls down and opens again on scroll up or a tap. The fixed
+          the page scrolls down and opens again only at the top of the page or
+          on a tap of that button. The fixed
           4rem strip below it is still reserved by .mobile-nav-clearance, so
           nothing is hidden behind it at the end of a page. */}
       <nav
@@ -194,17 +195,27 @@ function expandBottomBar() {
 }
 
 /**
- * True while the person is scrolling down the page. Any scroll container counts
- * (the capture listener hears panels as well as the window), small movements are
- * ignored so a wobble does not flicker the bar, and the bar is always open at
- * the very top of a page.
+ * True once the person has scrolled down the page, until they are back at the
+ * very top or tap the round button (2026-10-17, founder call; scrolling up
+ * partway no longer opens it). Any scroll container counts (the capture
+ * listener hears panels as well as the window), small movements are ignored so
+ * a wobble does not flicker the bar, and a new page starts with the bar open.
  */
 function useBarCollapsedOnScroll(pathname: string): boolean {
   const [collapsed, setCollapsed] = useState(false);
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (seenPath !== pathname) {
+    // A new page is read from its top, so it opens with the bar open.
+    setSeenPath(pathname);
+    setCollapsed(false);
+  }
   const held = barNeverCollapsesOn(pathname);
   useEffect(() => {
     if (held) return;
-    const lastTop = new WeakMap<EventTarget, number>();
+    // The offset each scroller had when the bar last reacted. Emptied when the
+    // round button is tapped, so the next scroll only takes a fresh reading
+    // instead of measuring from a spot the person has since scrolled back from.
+    let lastTop = new WeakMap<EventTarget, number>();
     const onScroll = (event: Event) => {
       const target = event.target;
       const el =
@@ -215,27 +226,50 @@ function useBarCollapsedOnScroll(pathname: string): boolean {
             : null;
       if (!el) return;
       const key = (target ?? window) as EventTarget;
-      const previous = lastTop.get(key) ?? 0;
+      const previous = lastTop.get(key);
+      if (previous === undefined) {
+        // The first scroll a scroller makes (or the first after a tap) only
+        // takes the reading the next one is measured from.
+        lastTop.set(key, el.scrollTop);
+        return;
+      }
       const next = nextBarCollapsed({
         top: el.scrollTop,
         previous,
         scrollHeight: el.scrollHeight,
         clientHeight: el.clientHeight,
       });
+      // A scroll back up moves the reading with it (the bar stays folded), so
+      // the next scroll down is measured from where the person turned round.
+      if (next !== null || el.scrollTop < previous) lastTop.set(key, el.scrollTop);
       if (next === null) return;
       setCollapsed(next);
-      lastTop.set(key, el.scrollTop);
     };
-    const expand = () => setCollapsed(false);
+    const expand = () => {
+      lastTop = new WeakMap<EventTarget, number>();
+      setCollapsed(false);
+    };
     document.addEventListener('scroll', onScroll, { passive: true, capture: true });
     window.addEventListener(EXPAND_EVENT, expand);
     return () => {
       document.removeEventListener('scroll', onScroll, { capture: true });
       window.removeEventListener(EXPAND_EVENT, expand);
     };
-  }, [held]);
+  }, [held, pathname]);
   // Held pages report open without touching state, so leaving one starts fresh.
-  return held ? false : collapsed;
+  const folded = held ? false : collapsed;
+  // Published on <html> so the page's own floating controls (the rollout's
+  // "Rollout menu" pill, Home's UrgAns box) can drop into the space the bar
+  // frees and rise again when it opens. The rules live in globals.css.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (folded) root.dataset.bottomBar = 'collapsed';
+    else delete root.dataset.bottomBar;
+    return () => {
+      delete root.dataset.bottomBar;
+    };
+  }, [folded]);
+  return folded;
 }
 
 function MoreSheet({

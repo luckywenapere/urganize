@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.154.14",
+    date: "October 17, 2026",
+    highlights: [
+      "On a phone, when the bottom menu folds away as you scroll down, the Rollout menu button slides down to take its place, and so does the Ask UrgAns box on Home. The bottom menu opens again when you scroll back to the top or tap its round button.",
+    ],
+  },
+  {
     version: "1.154.13",
     date: "October 17, 2026",
     highlights: [

@@ -2804,6 +2804,47 @@ body:focus-within .keyboard-hint,
   bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* ── Floating controls follow the folded bottom bar (2026-10-17, founder call)
+   "When the bottom menu closes when the user scrolls down let the second menu
+   go down and take the place of the things that close." BottomBar publishes
+   data-bottom-bar="collapsed" on <html> while the bar is folded to its round
+   button (0.75rem off the bottom edge, 3.5rem tall, at the left). The page's
+   own floating control then slides down into the freed strip, level with that
+   button, and rises again when the bar opens (only at the very top of the page
+   or on a tap of the button, see lib/bar-collapse.ts). Same 300ms standard
+   curve as the bar's own fold; the global prefers-reduced-motion rule clamps
+   it to an instant move. Phone only: the bar does not exist from lg up.
+
+   Rollout menu pill (.tasks-pill-dock-nav): a transform, not `bottom`, so it
+   lands in the same place whether the sticky dock is pinned or resting at the
+   end of the list. Pinned, the dock's bottom is 5rem up and the 2.75rem pill
+   sits on its 0.75rem padding, so the pill's centre is 7.125rem up; the bar's
+   round button's centre is 2.5rem up. 7.125 - 2.5 = 4.625rem down. The pill
+   is centred and at most ~11rem wide, so it clears the 4.25rem button even on
+   a 320px screen.
+
+   Home's UrgAns box (.home-dock): drops to the bar's own line, centred on the
+   round button (its height is --home-dock-height; never lower than the bar's
+   0.75rem), and starts just right of it (0.75 + 3.5 + 0.5rem gap). */
+@media (max-width: 1023px) {
+  .tasks-pill-dock-nav {
+    transition: transform 300ms var(--motion-standard);
+  }
+  :root[data-bottom-bar='collapsed'] .tasks-pill-dock-nav {
+    transform: translateY(4.625rem);
+  }
+
+  .home-dock {
+    transition:
+      bottom 300ms var(--motion-standard),
+      left 300ms var(--motion-standard);
+  }
+  :root[data-bottom-bar='collapsed']:not([data-keyboard-open='true']) .home-dock {
+    bottom: calc(max(0.75rem, 2.5rem - var(--home-dock-height, 3.5rem) / 2) + env(safe-area-inset-bottom, 0px));
+    left: 4.75rem;
+  }
+}
+
 @media (max-width: 768px) {
   :root {
     --text-base: 15px;
