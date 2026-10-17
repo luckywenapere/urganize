@@ -10,16 +10,13 @@ import { useAuthStore } from '@/lib/auth-store';
 import { ARTISTS_HREF } from '@/lib/shell-nav';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import { bucketReleases } from '@/lib/artist-overview';
-import { epkHref, formatCalendarDate, isArtistPageEnabled, releaseHref } from '@/lib/artist-page';
+import { formatCalendarDate, isArtistPageEnabled, releaseHref } from '@/lib/artist-page';
 import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
-import { usePressKitsStore } from '@/stores/usePressKitsStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
-
-const KIT_COPY = { incomplete: 'Not finished yet', ready: 'Ready to publish' } as const;
 
 function SectionCard({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
@@ -66,8 +63,6 @@ export default function ArtistPageClient() {
   const releases = useReleaseStore((state) => state.releases);
   const loadCommandCenter = useReleaseStore((state) => state.loadCommandCenter);
   const openCreateForArtist = useShellStore((state) => state.openCreateForArtist);
-  const kits = usePressKitsStore((state) => state.entries);
-  const loadKits = usePressKitsStore((state) => state.load);
 
   useEffect(() => {
     if (!ARTIST_PAGE_ENABLED) {
@@ -76,11 +71,9 @@ export default function ArtistPageClient() {
     }
     void loadRoster();
     void loadCommandCenter();
-    void loadKits();
-  }, [loadRoster, loadCommandCenter, loadKits, router]);
+  }, [loadRoster, loadCommandCenter, router]);
 
   const artist = artists.find((entry) => entry.id === artistId) ?? null;
-  const kit = kits.find((entry) => entry.artistId === artistId)?.kit ?? null;
 
   const buckets = useMemo(
     () => bucketReleases(releases.filter((release) => release.artistId === artistId)),
@@ -96,7 +89,6 @@ export default function ArtistPageClient() {
       properties: {
         artist_id: artistId,
         releases: releaseCount,
-        has_kit: Boolean(kit),
       },
     });
     // Once per artist opened; the counts are context, not a reason to re-fire.
@@ -105,7 +97,7 @@ export default function ArtistPageClient() {
 
   if (!ARTIST_PAGE_ENABLED) return null;
 
-  const act = (action: 'open_epk' | 'open_release' | 'new_rollout') =>
+  const act = (action: 'open_release' | 'new_rollout') =>
     captureAnalyticsEvent({ name: 'artist_page_action', properties: { artist_id: artistId, action } });
 
 
@@ -205,26 +197,8 @@ export default function ArtistPageClient() {
         </div>
       </header>
 
-      {/* The whole bar opens the kit; no state badge, no link text
-          (founder, 2026-10-15). */}
-      <Link
-        href={epkHref(artist.id)}
-        onClick={() => act('open_epk')}
-        className="motion-focus group flex items-center justify-between gap-3 rounded-xl border border-stroke-default bg-bg-surface p-4 transition-colors hover:bg-bg-hover"
-      >
-        <div className="min-w-0">
-          <h2 className="font-display text-base font-semibold text-content-primary">Press kit</h2>
-          <p className="mt-1 truncate text-sm text-content-tertiary">
-            {!kit
-              ? 'Set one up and every rollout can use it.'
-              : kit.state === 'published'
-                ? `urganize.app/k/${kit.slug}`
-                : KIT_COPY[kit.state]}
-          </p>
-        </div>
-        <ArrowRight className="h-4 w-4 shrink-0 text-content-tertiary transition-colors group-hover:text-content-primary" aria-hidden />
-      </Link>
-
+      {/* The Press kit bar left Oct 17, 2026 (founder approved "cuts-3"):
+          the artist's bio and contact are edited in a rollout's Pitch this!. */}
       <SectionCard
         title="Rollouts"
         action={

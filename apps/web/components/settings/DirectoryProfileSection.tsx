@@ -462,17 +462,19 @@ export function DirectoryProfileSection() {
               published, the bio, place, links and photo the directory shows
               come from that kit, so they are edited there once and never
               twice. A field the kit leaves empty still falls back to the one
-              typed here. */}
+              typed here. Since Oct 17, 2026 the standalone kit editor is
+              hidden, so the link opens a rollout of that artist in Pitch
+              this!, where the bio is edited (About the artist). */}
           {view?.kit && kitFieldNames(view).length > 0 ? (
             <div className="rounded-lg border border-stroke-default bg-bg-elevated px-4 py-3">
               <p className="text-sm text-content-primary">
-                Your page uses {view.kit.artistName}&apos;s press kit for {kitFieldNames(view).join(', ')}.
+                Your page uses {view.kit.artistName}&apos;s kit for {kitFieldNames(view).join(', ')}.
               </p>
               <Link
-                href={`/dashboard/press-kits/${view.kit.artistId}`}
+                href={`/dashboard/pitching?artist=${encodeURIComponent(view.kit.artistId)}`}
                 className="motion-focus mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-brand underline underline-offset-4"
               >
-                Edit it in the press kit
+                Edit it in Pitch this!
               </Link>
               {view.fromKit.bio && view.bio ? (
                 <p className="line-clamp-4 whitespace-pre-line text-sm text-content-secondary">{view.bio}</p>

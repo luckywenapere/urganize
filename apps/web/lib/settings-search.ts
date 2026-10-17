@@ -86,12 +86,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     label: 'Brand colors',
     keywords: ['colors', 'colours', 'share images', 'background', 'accent', 'posters'],
   },
-  {
-    segment: 'artists',
-    section: 'press-kits',
-    label: 'Press kits',
-    keywords: ['press kit', 'epk', 'bio', 'biography', 'media kit', 'one sheet'],
-  },
 
   wholeSegment('urgans', ['assistant', 'ai']),
   {

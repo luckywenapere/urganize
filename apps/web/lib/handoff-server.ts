@@ -16,6 +16,7 @@ import { readTestRelease } from './test-release';
 import { createTaskNotification, loadProfilesByIds, loadWorkspaceMembers } from './tasks-server';
 import {
   HANDOFF_ITEMS,
+  SHOWN_HANDOFF_ITEMS,
   HANDOFF_ITEM_LABELS,
   HANDOFF_TASK_DESCRIPTION,
   HANDOFF_TASK_TAG,
@@ -239,7 +240,7 @@ export async function loadHandoff(
   if (options.sync !== false && taskRead.hasPlan && shouldSyncTasks(release) && taskWorkspaceId) {
     const ops = planHandoffTaskSync({
       dueDate,
-      items: HANDOFF_ITEMS.map((item) => ({
+      items: SHOWN_HANDOFF_ITEMS.map((item) => ({
         item,
         uploaded: uploaded[item],
         sentBeforeTask: Boolean(record[item].sentAt),
@@ -254,7 +255,7 @@ export async function loadHandoff(
   }
 
   const members = await loadHandoffMembers(admin, release, viewerId, workspaceId);
-  const items: HandoffItemView[] = HANDOFF_ITEMS.map((item) => {
+  const items: HandoffItemView[] = SHOWN_HANDOFF_ITEMS.map((item) => {
     const task = tasks.get(item);
     const status = deriveHandoffStatus({
       uploaded: uploaded[item],

@@ -15,10 +15,6 @@ export const releaseHref = (releaseId: string): string =>
 export const artistHref = (artistId: string): string =>
   `/dashboard/artists/${encodeURIComponent(artistId)}`;
 
-/** The EPK editor. It keeps its own route: the artist page links to it. */
-export const epkHref = (artistId: string): string =>
-  `/dashboard/press-kits/${encodeURIComponent(artistId)}`;
-
 /** "Oct 2, 2026" from a date-only string, or null for none or junk. Parsed as a
  *  LOCAL date so a release dated the 2nd never shows as the 1st west of UTC. */
 export function formatCalendarDate(value: string | null | undefined): string | null {

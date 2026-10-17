@@ -93,7 +93,6 @@ describe('shell nav', () => {
     expect(at('/dashboard/home')).toBe('home');
     expect(at('/dashboard')).toBe('catalogue');
     expect(at('/dashboard/artists/abc')).toBe('catalogue');
-    expect(at('/dashboard/press-kits')).toBe('catalogue');
     expect(at('/dashboard/distribute')).toBe('catalogue');
     expect(at('/dashboard/notes')).toBe('catalogue');
     expect(at('/dashboard/directory')).toBe('relationships');

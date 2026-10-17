@@ -118,13 +118,13 @@ describe('visibleSettingsSegments', () => {
     );
   });
 
-  it('keeps Artists & brand while either the roster or press kits exists, and drops it when neither does', () => {
+  it('keeps Artists & brand while the roster exists; press kits alone no longer fill it (Oct 17, 2026)', () => {
     expect(
       visibleSettingsSegments({ role: 'manager' }, { ...ALL_OFF, workspace: true })
     ).toContain('artists');
     expect(
       visibleSettingsSegments({ role: 'manager' }, { ...ALL_OFF, pressKits: true })
-    ).toContain('artists');
+    ).not.toContain('artists');
     expect(visibleSettingsSegments({ role: 'manager' }, ALL_OFF)).not.toContain('artists');
   });
 

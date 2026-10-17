@@ -135,12 +135,14 @@ export function isAssetCategory(value: unknown): value is AssetCategory {
   return typeof value === 'string' && (ASSET_CATEGORIES as string[]).includes(value);
 }
 
-/** Categories a NEW upload may use. Urganize does not take the song (song
- *  upload removed Oct 17, 2026): the team sends the master to the distributor
- *  from their own files. Old `audio` rows still list, download and delete;
- *  the enum value stays because those rows use it. */
+/** Categories a NEW upload may use: cover art only (Oct 17, 2026, founder
+ *  approved "cuts-3"). Urganize does not take the song (song upload removed the
+ *  same day; the team sends the master to the distributor from their own
+ *  files), and no outside account ever uploaded stems, video, documents,
+ *  contracts or split sheets. Old rows of every category still list, download
+ *  and delete; the enum values stay because those rows use them. */
 export const UPLOADABLE_ASSET_CATEGORIES: AssetCategory[] = ASSET_CATEGORIES.filter(
-  (category) => category !== 'audio'
+  (category) => category === 'cover_art'
 );
 
 export function isUploadableAssetCategory(value: unknown): value is AssetCategory {

@@ -306,10 +306,6 @@ export const HELP_COPY = {
     label: 'Artists',
     text: 'Each act on your roster, with their dates and their team.',
   },
-  'nav.pressKits': {
-    label: 'Press kits',
-    text: 'One page about each act that you can send to writers and radio.',
-  },
   'nav.notes': {
     label: 'Notes',
     text: 'Quick thoughts you jot down. Only you can see them.',

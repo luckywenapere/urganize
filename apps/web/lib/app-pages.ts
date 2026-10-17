@@ -116,8 +116,9 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       key: 'artists',
       label: 'Artists',
       href: '/dashboard/artists',
-      // The press kit lives on the artist page now, so those words find it.
-      keywords: ['artist', 'roster', 'act', 'catalogue', 'catalog', 'press kit', 'epk', 'bio'],
+      // The press kit words moved to Pitch this! (Oct 17, 2026), where the
+      // artist's bio and contact are edited now.
+      keywords: ['artist', 'roster', 'act', 'catalogue', 'catalog'],
     });
   }
 
@@ -193,6 +194,12 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
         'spotify',
         'apple music',
         'audiomack',
+        // The standalone press kit is hidden (Oct 17, 2026): the kit link and
+        // the artist's bio and contact live in Pitch this!.
+        'press kit',
+        'epk',
+        'bio',
+        'kit link',
       ],
     });
   }
@@ -214,12 +221,8 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
     href: settingsDeepLink(),
     // The sections Settings contains. Someone hunting for their card details
     // types "billing", and no page in this app is called that.
-    //
-    // The press-kit words are here for exactly that reason, since 2026-09-09:
-    // press kits left the menus (founder call) and are reached from a Settings
-    // row, so Settings is now the honest answer to "press kit" and "bio". This
-    // is Settings being findable by what it holds, not a press kits entry
-    // sneaking back in — the destination is /settings.
+    // (The press-kit words left Oct 17, 2026 with the Settings > Press kits
+    // fold; they find Pitch this! now.)
     keywords: [
       'account',
       'billing',
@@ -238,13 +241,6 @@ export function buildAppPages({ hasCuratorProfile }: AppPageAudience): AppPage[]
       'export',
       'password',
       'delete account',
-      'press kit',
-      'press kits',
-      'epk',
-      'bio',
-      'biography',
-      'media kit',
-      'one sheet',
     ],
   });
 

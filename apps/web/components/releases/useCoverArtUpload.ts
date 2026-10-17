@@ -42,6 +42,8 @@ export type CoverArtUploadState = {
     onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   };
   openPicker: () => void;
+  /** Upload a file that arrived some other way (dropped on the square). */
+  uploadFile: (file: File) => void;
   retry: () => void;
   clearError: () => void;
 };
@@ -175,6 +177,9 @@ export function useCoverArtUpload(params: {
       onChange: handleChange,
     },
     openPicker: () => inputRef.current?.click(),
+    uploadFile: (file: File) => {
+      if (!isUploading) void begin(file);
+    },
     retry: () => {
       if (retryFile) void begin(retryFile);
     },

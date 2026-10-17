@@ -107,14 +107,8 @@ export function buildMobileMenu(audience: MobileMenuAudience): MobileMenuGroup[]
   if (flags.artists) {
     work.push({ key: 'artists', label: 'Artists', href: '/dashboard/artists', icon: 'artists' });
   }
-  if (flags.pressKits) {
-    work.push({
-      key: 'press-kits',
-      label: 'Press kits',
-      href: '/dashboard/press-kits',
-      icon: 'press-kits',
-    });
-  }
+  // Press kits left Oct 17, 2026 (founder approved "cuts-3"). This module has
+  // had no callers since the phone More sheet moved to lib/shell-nav.ts.
 
   const people: MobileMenuItem[] = [];
   if (flags.directory) {

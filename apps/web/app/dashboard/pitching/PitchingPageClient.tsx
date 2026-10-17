@@ -43,7 +43,13 @@ export default function PitchingPageClient() {
       if (cancelled) return;
       const releases = useReleaseStore.getState().releases;
       const asked = params.get('release') || '';
-      const releaseId = releases.some((release) => release.id === asked) ? asked : releases[0]?.id || '';
+      // ?artist= (Oct 17, 2026): the directory profile's "Edit it in Pitch
+      // this!" lands on a rollout of that artist, where the bio is edited.
+      const artist = params.get('artist') || '';
+      const forArtist = artist ? releases.find((release) => release.artistId === artist)?.id : undefined;
+      const releaseId = releases.some((release) => release.id === asked)
+        ? asked
+        : forArtist || releases[0]?.id || '';
       if (!releaseId) {
         router.replace(CATALOGUE_HREF);
         return;

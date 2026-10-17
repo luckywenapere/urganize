@@ -16,7 +16,8 @@ describe('searchSettings', () => {
     expect(searchSettings('invite', ALL)[0]).toMatchObject({ segment: 'team', section: 'teammates' });
     expect(searchSettings('theme', ALL)[0]).toMatchObject({ segment: 'general' });
     expect(searchSettings('claude', ALL)[0]).toMatchObject({ segment: 'connections', section: 'connected-apps' });
-    expect(searchSettings('epk', ALL)[0]).toMatchObject({ segment: 'artists', section: 'press-kits' });
+    // Press kits left Settings Oct 17, 2026; the bio lives in Pitch this!.
+    expect(searchSettings('epk', ALL).some((hit) => hit.section === 'press-kits')).toBe(false);
   });
 
   it('finds a whole segment by its own name', () => {

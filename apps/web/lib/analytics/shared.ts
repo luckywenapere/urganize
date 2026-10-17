@@ -375,10 +375,12 @@ export interface AnalyticsEventPropertiesMap {
   artist_page_viewed: {
     artist_id: string;
     releases: number;
-    has_kit: boolean;
+    /** Dropped Oct 17, 2026 with the artist page's Press kit bar. */
+    has_kit?: boolean;
   };
   artist_page_action: {
     artist_id: string;
+    /** open_epk stopped firing Oct 17, 2026 (Press kit bar removed). */
     action: 'open_epk' | 'open_release' | 'new_rollout';
   };
   /**

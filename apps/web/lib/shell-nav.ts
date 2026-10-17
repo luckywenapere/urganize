@@ -164,7 +164,6 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
         p === '/dashboard' ||
         startsWithPath(p, '/dashboard/releases') ||
         startsWithPath(p, '/dashboard/artists') ||
-        startsWithPath(p, '/dashboard/press-kits') ||
         startsWithPath(p, DISTRIBUTE_HREF) ||
         startsWithPath(p, '/dashboard/notes'),
     },

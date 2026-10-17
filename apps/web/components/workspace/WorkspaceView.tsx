@@ -28,7 +28,6 @@ import { useTourStore } from '@/stores/useTourStore';
 import { TourOfferCard } from '@/components/tours/TourOfferCard';
 import { useStartTestRelease } from '@/components/releases/useStartTestRelease';
 import { TestReleaseBanner } from './TestReleaseBanner';
-import { PostPlanKitPrompt } from '@/components/press-kits/PostPlanKitPrompt';
 import { EditorialPitchClosedBanner } from './EditorialPitchClosedBanner';
 import { DistributionStatusStrip } from './DistributionStatusStrip';
 import { RolloutFirstSteps } from './RolloutFirstSteps';
@@ -104,7 +103,6 @@ const CHAPPI_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CHAPPI === 'true';
 // which mutated real task rows the moment the model answered.
 const PLANNER_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_PLANNER === 'true';
 const TOURS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TOURS === 'true';
-const PRESS_KITS_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PRESS_KITS === 'true';
 const DIRECTORY_ENABLED = process.env.NEXT_PUBLIC_FEATURE_DIRECTORY === 'true';
 const DIRECTORY_REQUESTS_ENABLED =
   DIRECTORY_ENABLED && process.env.NEXT_PUBLIC_FEATURE_DIRECTORY_REQUESTS === 'true';
@@ -295,7 +293,6 @@ export function WorkspaceView() {
   // The test release the standing banner's delete button is asking about;
   // null = dialog closed. Only ever set for the SCOPED release, and only when
   // it carries the test marker and the viewer owns it (the banner's own gate).
-  const [kitPromptFor, setKitPromptFor] = useState<string | null>(null);
   // Tour B is OFFERED after a plan is approved, never auto-run. Held in
   // component state rather than the tour store: this is a card in the banner
   // slot, not a running tour.
@@ -485,7 +482,7 @@ export function WorkspaceView() {
   // `lastBuilt`/`buildError` are global store fields — the intake has already
   // closed and navigated by the time either resolves — so this is where the
   // outcome actually lands: refresh the catalog so the new activities show,
-  // say so, offer the press kit prompt and Tour B, and clear the field so a
+  // say so, offer Tour B, and clear the field so a
   // later scope change (or a second build) can't replay it.
   //
   // Nothing here reacts to a build for a DIFFERENT release than the one
@@ -502,12 +499,8 @@ export function WorkspaceView() {
       }.`,
       tone: 'success',
     });
-    // Approving used to be the moment a manager had the whole release in
-    // front of them; building the plan is that moment now, so it is when the
-    // kit still pointing at the last release is worth mentioning. The prompt
-    // decides for itself whether there is anything to say and renders
-    // nothing when there is not.
-    setKitPromptFor(lastBuilt.releaseId);
+    // The post-plan press kit offer left Oct 17, 2026 with the standalone
+    // press kit (founder approved "cuts-3"); the kit is Pitch this!'s now.
     // Not in the first session after onboarding (lib/first-session.ts): that
     // session belongs to the plan and the invite step, nothing else.
     if (TOURS_ENABLED && !isInFirstSession()) setRolloutTourOfferFor(lastBuilt.releaseId);
@@ -974,21 +967,6 @@ export function WorkspaceView() {
       />
     ) : null;
 
-  // The post-plan press kit offer. Held as the release id it was raised for,
-  // not a boolean, so scoping to a different release clears it by construction
-  // rather than by remembering to.
-  const kitPromptBanner =
-    PRESS_KITS_ENABLED &&
-    scopedReleaseSlim &&
-    kitPromptFor === scopedReleaseSlim.id &&
-    scopedReleaseSlim.artistId ? (
-      <PostPlanKitPrompt
-        artistId={scopedReleaseSlim.artistId}
-        artistName={scopedReleaseSlim.artistName || 'This artist'}
-        onDismiss={() => setKitPromptFor(null)}
-      />
-    ) : null;
-
   // Auto-plan (2026-10-17): the rollout onboarding made builds its plan on
   // its own, so instead of the questions it shows the build, then the plan.
   const autoPlan = useAutoPlan({
@@ -1086,7 +1064,7 @@ export function WorkspaceView() {
   // The one banner the activity list carries, with the pinned activity above
   // it for a new user. Null when there is neither, so the panel renders no gap.
   const otherActivitiesBanner =
-    editorialPitchBanner ?? kitPromptBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner;
+    editorialPitchBanner ?? testReleaseBanner ?? planBanner ?? planBuiltBanner ?? setReleaseDateBanner;
   // The post-release review (URG-253) leads the list once it opens: 28 days
   // after release day, or every activity done. Checked here from the store
   // first, so a rollout still in flight never fetches it.

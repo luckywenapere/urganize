@@ -141,7 +141,8 @@ export function visibleSettingsSegments(
     general: true,
     notifications: true,
     team: isManager,
-    artists: isManager && (flags.workspace || flags.pressKits),
+    // Press kits left this segment Oct 17, 2026, so the roster alone fills it.
+    artists: isManager && flags.workspace,
     urgans: flags.teamBrief,
     directory: flags.directory,
     billing: ownsPlan,

@@ -1,13 +1,7 @@
-import type { Metadata } from 'next';
-import PressKitsPageClient from './PressKitsPageClient';
+import { redirect } from 'next/navigation';
 
-// Thin server wrapper so this route gets a real browser-tab title through the
-// root layout's '%s | Urganize' template — the page itself is a client
-// component and cannot export metadata.
-export const metadata: Metadata = {
-  title: 'Press kits',
-};
-
+// Hidden Oct 17, 2026 (founder approved "cuts-3"). next.config.js redirects
+// first; this is the fallback. PressKitsPageClient is kept, unlinked.
 export default function PressKitsPage() {
-  return <PressKitsPageClient />;
+  redirect('/dashboard/artists');
 }

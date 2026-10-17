@@ -25,6 +25,9 @@ export type KitSnapshot = {
   descriptor: string;
   shortBio: string;
   contactCount: number;
+  /** The first contact's email (2026-10-17, edited inline in Pitch this!).
+   *  Snapshots frozen before that day have none and read ''. */
+  contactEmail?: string;
 };
 
 const clamp = (value: unknown): string =>
@@ -48,6 +51,7 @@ export function readKitSnapshot(raw: unknown): KitSnapshot | null {
     descriptor: clamp(row.descriptor),
     shortBio: clamp(row.shortBio),
     contactCount: count,
+    ...(typeof row.contactEmail === 'string' ? { contactEmail: clamp(row.contactEmail) } : {}),
   };
 }
 

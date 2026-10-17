@@ -1,13 +1,9 @@
-import type { Metadata } from 'next';
-import PressKitPageClient from './PressKitPageClient';
+import { redirect } from 'next/navigation';
 
-// Thin server wrapper for the tab title, the same shape as the shows detail
-// route. The artist's name cannot go in it: this page is a client component
-// and the name is not known until the kit loads.
-export const metadata: Metadata = {
-  title: 'Press kit',
-};
-
-export default function PressKitPage() {
-  return <PressKitPageClient />;
+// Hidden Oct 17, 2026 (founder approved "cuts-3"): the bio and contact are
+// edited in a rollout's Pitch this!. next.config.js redirects first; this is
+// the fallback. PressKitPageClient is kept, unlinked.
+export default async function PressKitPage({ params }: { params: Promise<{ artistId: string }> }) {
+  const { artistId } = await params;
+  redirect(`/dashboard/artists/${encodeURIComponent(artistId)}`);
 }

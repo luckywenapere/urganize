@@ -28,6 +28,11 @@ const CUT = [
   // invite-link POST behind Settings > Teammates' "Copy invite link" stays.
   'NEXT_PUBLIC_FEATURE_TEAM_LOGINS',
   'NEXT_PUBLIC_FEATURE_TEAM_BRIEF',
+  // The general Files scene (9 categories), off in production since Jul 22,
+  // 2026 (URG-182) and made permanent Oct 17, 2026 (founder approved
+  // "cuts-3"): a rollout's only file is its cover art, through the Cover art
+  // scene and its own flag. Old asset rows are kept.
+  'NEXT_PUBLIC_FEATURE_FILES',
 ];
 
 describe('feature cuts (URG-319)', () => {
@@ -46,7 +51,7 @@ describe('feature cuts (URG-319)', () => {
 
   it('never cuts the flags the kept features need', () => {
     const json = require('./cut-features.json') as Record<string, string>;
-    for (const kept of ['NEXT_PUBLIC_FEATURE_PITCHING', 'NEXT_PUBLIC_FEATURE_PITCH_KIT', 'NEXT_PUBLIC_FEATURE_PRESS_KITS', 'NEXT_PUBLIC_FEATURE_METADATA', 'NEXT_PUBLIC_FEATURE_CHAPPI', 'NEXT_PUBLIC_FEATURE_SOCIAL_SHARE']) {
+    for (const kept of ['NEXT_PUBLIC_FEATURE_PITCHING', 'NEXT_PUBLIC_FEATURE_PITCH_KIT', 'NEXT_PUBLIC_FEATURE_PRESS_KITS', 'NEXT_PUBLIC_FEATURE_METADATA', 'NEXT_PUBLIC_FEATURE_CHAPPI', 'NEXT_PUBLIC_FEATURE_SOCIAL_SHARE', 'NEXT_PUBLIC_FEATURE_COVER_ART']) {
       expect(json[kept], kept).toBeUndefined();
     }
   });

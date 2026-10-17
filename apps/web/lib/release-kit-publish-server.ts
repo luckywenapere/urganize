@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { deriveSectionStatus, normalizeKitSlug } from '@/lib/press-kits';
+import { deriveSectionStatus, normalizeKitSlug, shouldCoalesceVersion } from '@/lib/press-kits';
 import { applyAutofill } from '@/lib/press-kit-autofill-server';
 import { kitLinkPath } from '@/lib/press-kit-public';
 import { PRESS_KIT_SECTIONS, type PressKitSection } from '@/types/press-kits';
@@ -159,7 +159,7 @@ export async function publishReleaseKit(admin: SupabaseClient, releaseId: string
       ok: false,
       status: 400,
       code: 'no_contact',
-      error: 'Add a contact email to the artist kit first, so people know who to write to.',
+      error: 'Add who to write to under About the artist first.',
     };
   }
 
@@ -178,4 +178,162 @@ export async function publishReleaseKit(admin: SupabaseClient, releaseId: string
   if (stamp.error) return { ok: false, status: 500, error: 'Could not publish the kit.' };
 
   return { ok: true, slug, path: kitLinkPath(slug, releaseId), created, published: true };
+}
+
+// ---------------------------------------------------------------------------
+// The artist's bio and contact, edited inline in Pitch this! (2026-10-17,
+// founder approved mocks "cuts-3", Option B). The standalone press kit editor
+// is hidden, so the About row is the one place a person types the two things
+// the kit link needs from the artist: a short bio and who to write to.
+//
+// - No kit yet: make it the same way "Copy kit link" does (createKit above).
+// - Writes bios.short and the first contact's email, nothing else, and marks
+//   both sections as typed by a person so autofill leaves them alone.
+// - The kit is already live: these two sections are also copied into
+//   published_content. With the editor gone there is no other Publish, so an
+//   edit made here has to reach the public page. Other sections are left as
+//   they are (the "never re-publish half-typed work" rule still holds for them).
+// ---------------------------------------------------------------------------
+
+export const MAX_INLINE_BIO_LENGTH = 1000;
+export const MAX_INLINE_EMAIL_LENGTH = 254;
+
+export type ArtistKitPatch = { shortBio?: string; contactEmail?: string };
+
+export type SaveArtistKitResult =
+  | { ok: true; created: boolean }
+  | { ok: false; status: number; error: string; code?: 'no_artist' | 'bad_email' };
+
+const looksLikeEmail = (value: string): boolean => /^\S+@\S+\.\S+$/.test(value);
+
+/** Pure: the contact block after setting the first contact's email. An empty
+ *  email drops a contact that carries nothing else, so clearing the box does
+ *  not leave a blank person on the public page. */
+export function withContactEmail(content: unknown, email: string): Record<string, unknown> {
+  const base = { ...asRow(content) };
+  const contacts = Array.isArray(base.contacts) ? base.contacts.map((entry) => ({ ...asRow(entry) })) : [];
+  const trimmed = email.trim();
+  if (contacts.length === 0) {
+    if (trimmed) contacts.push({ name: '', role: '', email: trimmed });
+  } else if (trimmed) {
+    contacts[0] = { ...contacts[0], email: trimmed };
+  } else if (!text(contacts[0].name).trim() && !text(contacts[0].role).trim()) {
+    contacts.shift();
+  } else {
+    contacts[0] = { ...contacts[0], email: '' };
+  }
+  return { ...base, contacts };
+}
+
+/** The email shown in the About row: the first contact's, as stored. */
+export function firstContactEmail(content: unknown): string {
+  const contacts = asRow(content).contacts;
+  if (!Array.isArray(contacts) || contacts.length === 0) return '';
+  return text(asRow(contacts[0]).email);
+}
+
+export async function saveReleaseKitArtist(
+  admin: SupabaseClient,
+  input: { releaseId: string; actorUserId: string; patch: ArtistKitPatch }
+): Promise<SaveArtistKitResult> {
+  const { patch } = input;
+  if (patch.contactEmail !== undefined) {
+    const email = patch.contactEmail.trim();
+    if (email.length > MAX_INLINE_EMAIL_LENGTH || (email && !looksLikeEmail(email))) {
+      return { ok: false, status: 400, code: 'bad_email', error: 'That email doesn’t look right.' };
+    }
+  }
+
+  const release = await admin.from('releases').select('id,artist_id').eq('id', input.releaseId).maybeSingle();
+  if (release.error) return { ok: false, status: 500, error: 'Could not load the rollout.' };
+  const artistId = text(asRow(release.data).artist_id);
+  if (!artistId) {
+    return { ok: false, status: 400, code: 'no_artist', error: 'Pick the artist for this rollout first.' };
+  }
+  const artistResult = await admin
+    .from('artists')
+    .select('id,workspace_id,owner_user_id,name')
+    .eq('id', artistId)
+    .maybeSingle();
+  const artistRow = asRow(artistResult.data);
+  if (artistResult.error || !artistRow.id) {
+    return { ok: false, status: 400, code: 'no_artist', error: 'Pick the artist for this rollout first.' };
+  }
+
+  let created = false;
+  const existing = await admin.from(KITS).select(KIT_COLUMNS).eq('artist_id', artistId).maybeSingle();
+  if (existing.error) return { ok: false, status: 500, error: 'Could not load the kit.' };
+  let kit = existing.data ? asRow(existing.data) : null;
+  if (!kit) {
+    kit = await createKit(admin, {
+      id: artistId,
+      name: text(artistRow.name),
+      workspaceId: text(artistRow.workspace_id),
+      ownerUserId: text(artistRow.owner_user_id),
+    });
+    if (!kit) return { ok: false, status: 500, error: 'Could not make the kit. Try again.' };
+    created = true;
+  }
+  const kitId = text(kit.id);
+  const live = Boolean(kit.published_at);
+
+  const wanted: Array<'bios' | 'contact'> = [];
+  if (patch.shortBio !== undefined) wanted.push('bios');
+  if (patch.contactEmail !== undefined) wanted.push('contact');
+  if (wanted.length === 0) return { ok: true, created };
+
+  const rows = await admin
+    .from(SECTIONS)
+    .select('id,section,content,owner_user_id')
+    .eq('kit_id', kitId)
+    .in('section', wanted);
+  if (rows.error) return { ok: false, status: 500, error: 'Could not read the kit.' };
+
+  for (const name of wanted) {
+    const row = (rows.data || []).map(asRow).find((r) => r.section === name);
+    if (!row) return { ok: false, status: 500, error: 'Could not read the kit.' };
+    const before = asRow(row.content);
+    const content =
+      name === 'bios'
+        ? { ...before, short: (patch.shortBio ?? '').slice(0, MAX_INLINE_BIO_LENGTH) }
+        : withContactEmail(before, patch.contactEmail ?? '');
+    if (JSON.stringify(content) === JSON.stringify(before)) continue;
+
+    // File what is being replaced, the same rule as the section autosave.
+    if (Object.keys(before).length > 0) {
+      const newest = await admin
+        .from('press_kit_section_versions')
+        .select('created_at,saved_by')
+        .eq('section_id', text(row.id))
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const newestRow = newest.data ? asRow(newest.data) : null;
+      const coalesce = shouldCoalesceVersion(
+        newestRow
+          ? { createdAt: text(newestRow.created_at), savedBy: newestRow.saved_by ? text(newestRow.saved_by) : null }
+          : null,
+        input.actorUserId
+      );
+      if (!coalesce) {
+        await admin.from('press_kit_section_versions').insert({
+          owner_user_id: text(row.owner_user_id),
+          section_id: text(row.id),
+          content: before,
+          saved_by: input.actorUserId,
+        });
+      }
+    }
+
+    const update: Record<string, unknown> = {
+      content,
+      status: deriveSectionStatus(name, content, { photoCount: 0 }),
+      source: 'user',
+      updated_by: input.actorUserId,
+    };
+    if (live) update.published_content = content;
+    const { error } = await admin.from(SECTIONS).update(update).eq('id', text(row.id)).eq('kit_id', kitId);
+    if (error) return { ok: false, status: 500, error: 'Could not save that.' };
+  }
+  return { ok: true, created };
 }

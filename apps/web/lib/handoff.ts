@@ -38,6 +38,13 @@ import type { DistributionCheckResult, DistributionFieldPath, DistributionIssue 
 export const HANDOFF_ITEMS = ['master', 'cover_art', 'metadata'] as const;
 export type HandoffItemKey = (typeof HANDOFF_ITEMS)[number];
 
+/** The rows the Distribute handoff shows and keeps tasks for. The master row
+ *  left Oct 17, 2026 (founder approved "cuts-3": files are cover art only):
+ *  the master never lives in Urganize, so its row was only a hand-ticked
+ *  "sent". `master` stays a key so stored records and old tasks still read;
+ *  an old master task is left as an ordinary task, not deleted. */
+export const SHOWN_HANDOFF_ITEMS = ['cover_art', 'metadata'] as const satisfies readonly HandoffItemKey[];
+
 export const isHandoffItemKey = (value: unknown): value is HandoffItemKey =>
   typeof value === 'string' && (HANDOFF_ITEMS as readonly string[]).includes(value);
 

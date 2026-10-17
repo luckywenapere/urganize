@@ -22,6 +22,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.156.3",
+    date: "October 17, 2026",
+    highlights: [
+      "The separate Press kit page is gone. Write the artist's short bio and who to write to under About the artist in Pitch this!, and Copy kit link shares it. Old Press kit links open the artist instead.",
+      "A rollout's only file is now its cover art. The Cover art screen is simpler: one square, one button, then Replace or Remove, and it tells you when the art is ready for stores.",
+      "The handoff to your distributor lists cover art and metadata. Send the master from your own files.",
+    ],
+  },
+  {
     version: "1.156.2",
     date: "October 17, 2026",
     highlights: [

@@ -121,14 +121,15 @@ describe('buildAppPages — flag gates', () => {
   // Findability is preserved through Settings instead, which is where the row
   // now lives. This is the same reasoning "billing" already rests on: the page
   // is named for itself, the keywords name what it holds.
-  it('sends someone hunting a press kit to Settings', async () => {
+  it('sends someone hunting a press kit to Pitch this!, not Settings (Oct 17, 2026)', async () => {
     const { buildAppPages, appPageHaystack } = await loadPages(ALL_ON);
-    const settings = buildAppPages({ hasCuratorProfile: true }).find((p) => p.key === 'settings');
-    expect(settings).toBeDefined();
+    const pages = buildAppPages({ hasCuratorProfile: true });
+    const pitch = pages.find((p) => p.key === 'pitching');
+    const settings = pages.find((p) => p.key === 'settings');
+    expect(pitch).toBeDefined();
     for (const query of ['press kit', 'epk', 'bio']) {
-      expect(
-        matchesSearchTerms(appPageHaystack(settings!), parseSearchTerms(query))
-      ).toBe(true);
+      expect(matchesSearchTerms(appPageHaystack(pitch!), parseSearchTerms(query))).toBe(true);
+      expect(matchesSearchTerms(appPageHaystack(settings!), parseSearchTerms(query))).toBe(false);
     }
   });
 
@@ -256,7 +257,7 @@ describe('buildAppPages — the artist pages', () => {
     });
     const page = buildAppPages({ hasCuratorProfile: false }).find((p) => p.key === 'artists');
     expect(page?.href).toBe('/dashboard/artists');
-    for (const query of ['roster', 'press kit', 'catalogue']) {
+    for (const query of ['roster', 'catalogue']) {
       expect(matchesSearchTerms(appPageHaystack(page!), parseSearchTerms(query))).toBe(true);
     }
   });

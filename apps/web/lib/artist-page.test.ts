@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   artistHref,
   describeArtistCounts,
-  epkHref,
   formatCalendarDate,
   isArtistPageEnabled,
   releaseHref,
@@ -31,7 +30,6 @@ describe('links', () => {
   it('opens a release in the catalogue and an artist on its own page', () => {
     expect(releaseHref('r 1')).toBe('/dashboard?release=r%201');
     expect(artistHref('a/1')).toBe('/dashboard/artists/a%2F1');
-    expect(epkHref('a1')).toBe('/dashboard/press-kits/a1');
   });
 });
 

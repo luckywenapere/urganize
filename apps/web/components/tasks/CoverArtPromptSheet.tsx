@@ -173,7 +173,7 @@ function CoverArtPromptBody({
             <div>
               <h2 className="font-display text-xl text-content-primary">On the rollout.</h2>
               <p className="mt-1 text-sm text-content-secondary">
-                It shows on the rollout card, the press kit and anywhere else the rollout appears.
+                It shows on the rollout card, the kit link and anywhere else the rollout appears.
               </p>
             </div>
           ) : (

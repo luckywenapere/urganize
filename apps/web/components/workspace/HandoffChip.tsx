@@ -28,7 +28,7 @@ export function HandoffChip({ releaseId }: { releaseId: string }) {
       : data.dueDate
         ? `due ${formatHandoffDay(data.dueDate)}`
         : null;
-  const summary = [`${sent} of 3 sent`, tail].filter(Boolean).join(' · ');
+  const summary = [`${sent} of ${data.items.length} sent`, tail].filter(Boolean).join(' · ');
 
   return (
     <button

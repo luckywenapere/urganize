@@ -4,7 +4,6 @@
 import { isCreditsEnabled } from '@/lib/credits/config';
 import { embeddedCostLine } from '@/lib/credits/copy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import {
   Check,
   ChevronRight,
@@ -148,7 +147,11 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
   const [credits, setCredits] = useState<ReleaseEpkCredit[] | null>(null);
   const [savingStory, setSavingStory] = useState(false);
   const [savingCredits, setSavingCredits] = useState(false);
-  const [savedAt, setSavedAt] = useState<'story' | 'credits' | null>(null);
+  const [savedAt, setSavedAt] = useState<'story' | 'credits' | 'artist' | null>(null);
+  const [bio, setBio] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [savingArtist, setSavingArtist] = useState(false);
+  const [artistError, setArtistError] = useState('');
   const [openRow, setOpenRow] = useState<'story' | 'credits' | 'artist' | null>(null);
 
   const [notes, setNotes] = useState('');
@@ -167,6 +170,8 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
     setData(pitchKit);
     setStory(pitchKit.fields.story);
     setCredits(pitchKit.fields.credits);
+    setBio(pitchKit.kit?.shortBio ?? '');
+    setContactEmail(pitchKit.kit?.contactEmail ?? '');
   }, []);
 
   const load = useCallback(async () => {
@@ -243,6 +248,45 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
         onToast('Could not reach the server. Try again.', 'error');
       } finally {
         setSaving(false);
+      }
+    },
+    [onToast, releaseId]
+  );
+
+  // The About row writes to the artist's standing kit (bio + who to write to),
+  // making it on the first edit. Keeps whatever is typed in the other box.
+  const saveArtist = useCallback(
+    async (patch: { shortBio?: string; contactEmail?: string }) => {
+      const headers = await authHeaders();
+      if (!headers) {
+        onToast('Your session expired. Sign in again.', 'error');
+        return;
+      }
+      setSavingArtist(true);
+      setArtistError('');
+      try {
+        const response = await fetch(`/api/releases/${releaseId}/pitch-kit/artist`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(patch),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setArtistError(String(body?.error || 'Could not save that.'));
+          return;
+        }
+        const next = body.pitchKit as PitchKitPayload;
+        setData(next);
+        // A kit made on this save may have autofilled the bio: show it only
+        // when the box is still empty.
+        if (patch.shortBio === undefined) setBio((current) => current || next.kit?.shortBio || '');
+        setSavedAt('artist');
+        if (savedTimer.current) window.clearTimeout(savedTimer.current);
+        savedTimer.current = window.setTimeout(() => setSavedAt(null), 2000);
+      } catch {
+        setArtistError('Could not reach the server. Try again.');
+      } finally {
+        setSavingArtist(false);
       }
     },
     [onToast, releaseId]
@@ -338,7 +382,6 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
   const automatic = credits === null;
   const shownCredits = credits ?? data.submittedCredits;
   const kit = data.kit;
-  const kitHref = kit ? `/dashboard/press-kits/${kit.artistId}` : '/dashboard/press-kits';
   const artistName = data.release.artistName || 'the artist';
   const draftEntries = draft
     ? (Object.entries(draft.kit).filter(([, value]) => Boolean(value)) as [string, string][])
@@ -346,8 +389,10 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
 
   const storyDone = data.fields.story.trim().length > 0;
   const creditsDone = data.credits.length > 0;
-  const kitBio = kit ? kit.shortBio.trim() || kit.descriptor.trim() : '';
-  const artistDone = Boolean(kitBio);
+  const kitBio = kit ? kit.shortBio.trim() : '';
+  const kitEmail = kit?.contactEmail?.trim() ?? '';
+  const artistDone = Boolean(kitBio) && Boolean(kitEmail);
+  const frozen = Boolean(data.kitFrozenAt);
   const left = [storyDone, creditsDone].filter((done) => !done).length;
   const allDone = storyDone && creditsDone;
 
@@ -383,7 +428,10 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
     setSharing(false);
     if (!result.ok) {
       onToast(result.error, 'error');
-      if (result.code === 'no_contact') setOpenRow('artist');
+      if (result.code === 'no_contact') {
+        setOpenRow('artist');
+        window.setTimeout(() => document.getElementById('pitch-kit-contact')?.focus(), 50);
+      }
       return;
     }
     await copyText(result.url);
@@ -391,7 +439,7 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
     void load();
   };
 
-  const savedNote = (which: 'story' | 'credits', saving: boolean) =>
+  const savedNote = (which: 'story' | 'credits' | 'artist', saving: boolean) =>
     saving ? (
       <span className="inline-flex items-center gap-1 text-xs text-content-tertiary">
         <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -416,12 +464,8 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
         automatic && data.submittedCredits.length > 0 ? ' · from your team' : ''
       }`
     : 'Not added yet';
-  const artistParts = kit ? [kitBio ? 'Bio' : '', kit.contactCount > 0 ? 'contact' : ''].filter(Boolean) : [];
-  const artistValue = !kit
-    ? 'Added for you when you share'
-    : artistParts.length > 0
-      ? `${artistParts.join(', ')} · added for you`
-      : 'Nothing in the artist kit yet';
+  const artistParts = [kitBio ? 'Bio' : '', kitEmail ? 'contact' : ''].filter(Boolean);
+  const artistValue = artistParts.length > 0 ? artistParts.join(' · ') : 'Add a bio and who to write to';
 
   return (
     <section aria-label="Your kit" className="rounded-2xl bg-bg-surface p-4 sm:p-5">
@@ -660,26 +704,63 @@ export function PitchKitSection({ releaseId, onToast, onShareStateChange }: Pitc
           open={openRow === 'artist'}
           onToggle={() => setOpenRow(openRow === 'artist' ? null : 'artist')}
         >
-          {kitBio ? (
-            <p className="line-clamp-4 whitespace-pre-wrap text-sm text-content-primary">{kitBio}</p>
+          {frozen ? (
+            <>
+              {kitBio ? (
+                <p className="line-clamp-4 whitespace-pre-wrap text-sm text-content-primary">{kitBio}</p>
+              ) : null}
+              {kitEmail ? <p className="mt-1 text-sm text-content-primary">{kitEmail}</p> : null}
+              <p className="mt-1 text-xs text-content-tertiary">
+                This rollout is out, so it keeps the kit as it was that day.
+              </p>
+            </>
           ) : (
-            <p className="text-sm text-content-primary/55">
-              {kit ? 'Add a bio and a contact email.' : 'We fill in the bio, photos and contact when you share.'}
-            </p>
+            <>
+              <label htmlFor="pitch-kit-bio" className="block text-[13px] font-semibold text-content-primary/55">
+                Short bio
+              </label>
+              <textarea
+                id="pitch-kit-bio"
+                value={bio}
+                onChange={(event) => setBio(event.target.value)}
+                onBlur={() => {
+                  if (bio.trim() !== kitBio) void saveArtist({ shortBio: bio.trim() });
+                }}
+                maxLength={1000}
+                rows={3}
+                placeholder={`A line or two about ${artistName}.`}
+                className={`${FIELD_CLASS} mt-1.5 resize-y`}
+              />
+              <label
+                htmlFor="pitch-kit-contact"
+                className="mt-4 block text-[13px] font-semibold text-content-primary/55"
+              >
+                Who to write to
+              </label>
+              <input
+                id="pitch-kit-contact"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={contactEmail}
+                onChange={(event) => setContactEmail(event.target.value)}
+                onBlur={() => {
+                  if (contactEmail.trim() !== kitEmail) void saveArtist({ contactEmail: contactEmail.trim() });
+                }}
+                maxLength={254}
+                placeholder="name@email.com"
+                className={`${FIELD_CLASS} mt-1.5`}
+              />
+              <div className="mt-1.5 flex items-center gap-3 empty:hidden">
+                {savedNote('artist', savingArtist)}
+                {artistError ? (
+                  <span className="text-xs text-status-error" role="alert">
+                    {artistError}
+                  </span>
+                ) : null}
+              </div>
+            </>
           )}
-          {kit ? (
-            <Link
-              href={kitHref}
-              className="motion-focus mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-content-primary/55 hover:text-content-primary"
-            >
-              Edit {artistName}’s kit
-            </Link>
-          ) : null}
-          {data.kitFrozenAt ? (
-            <p className="mt-1 text-xs text-content-tertiary">
-              This rollout is out, so it keeps the kit as it was that day.
-            </p>
-          ) : null}
         </KitRow>
       </ul>
 

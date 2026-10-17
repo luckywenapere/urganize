@@ -3,7 +3,6 @@
 import { useWorkspaceIdentityStore } from "@/stores/useWorkspaceIdentityStore";
 import { isBrandColorsEnabled } from "@/lib/social-share-colors";
 import { BrandColorsSection } from "../BrandColorsSection";
-import { PressKitsSection } from "../PressKitsSection";
 import { WorkspaceArtistSection } from "../WorkspaceArtistSection";
 import { WorkspaceIdentitySection } from "../WorkspaceIdentitySection";
 import { WorkspaceLogoSection } from "../WorkspaceLogoSection";
@@ -19,7 +18,8 @@ import {
 
 /**
  * How the team is presented: its name and logo, the artists it works with, the
- * colors their share images use, and their press kits.
+ * colors their share images use. (Press kits left Oct 17, 2026: the bio and
+ * contact are edited in a rollout's Pitch this!.)
  *
  * State lives in `useWorkspaceSettings`, called once by the pop-up, because
  * these editors are presentational by design and their fetches must not wait
@@ -42,9 +42,8 @@ export function ArtistsBrandSegment({
 
   return (
     <div className="divide-y divide-stroke-subtle">
-      {/* Three folds instead of one long scroll: who the team is, the artists
-          and their colors, and the press kits. The first two open, because they
-          are the jobs people come here for; press kits is occasional. */}
+      {/* Two folds: who the team is, and the artists and their colors. The
+          Press kits fold left Oct 17, 2026 (founder approved "cuts-3"). */}
       <SettingsGroup title="Your team" defaultOpen>
         {/* Team name and logo share a row: a natural pair, since both only feed
           the team card shown across the app (founder call, 2026-08-05). */}
@@ -109,11 +108,6 @@ export function ArtistsBrandSegment({
         )}
       </SettingsGroup>
 
-      {/* A kit belongs to an artist on the roster, and this is press kits' only
-          entry point (founder call, 2026-09-09). */}
-      <SettingsGroup title="Press kits">
-        <PressKitsSection />
-      </SettingsGroup>
     </div>
   );
 }

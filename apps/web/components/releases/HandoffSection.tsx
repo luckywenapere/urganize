@@ -352,7 +352,7 @@ export function HandoffView({
           >
             {title}
           </h3>
-          <span className={`${MONO} shrink-0 whitespace-nowrap pb-1 text-content-secondary`}>{`${sent} of 3 sent`}</span>
+          <span className={`${MONO} shrink-0 whitespace-nowrap pb-1 text-content-secondary`}>{`${sent} of ${data.items.length} sent`}</span>
         </div>
         <p className={`${MONO} mt-1.5 text-content-tertiary`}>
           {metaParts.filter(Boolean).join(' · ')}

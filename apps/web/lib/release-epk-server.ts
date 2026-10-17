@@ -96,6 +96,7 @@ export async function readKitSummaries(
       descriptor: text(content('header').descriptor),
       shortBio: text(content('bios').short),
       contactCount: Array.isArray(contacts) ? contacts.length : 0,
+      contactEmail: Array.isArray(contacts) && contacts.length > 0 ? text(asRow(contacts[0]).email) : '',
     });
   }
   return summaries;

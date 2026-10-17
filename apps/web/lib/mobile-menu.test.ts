@@ -54,7 +54,6 @@ describe('buildMobileMenu', () => {
       'catalog',
       'notes',
       'artists',
-      'press-kits',
       'directory',
       'relationships',
       'playlist-pitches',

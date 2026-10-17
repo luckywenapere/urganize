@@ -47,7 +47,6 @@ export const NAV_TIP_KEYS: Record<string, HelpKey> = {
   more: 'nav.more',
   releases: 'nav.rollouts',
   artists: 'nav.artists',
-  'press-kits': 'nav.pressKits',
   notes: 'nav.notes',
   people: 'nav.people',
   directory: 'nav.directory',

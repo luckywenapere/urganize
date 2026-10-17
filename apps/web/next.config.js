@@ -105,6 +105,12 @@ const nextConfig = {
     return [
       { source: '/dashboard/shows', destination: '/dashboard', permanent: false },
       { source: '/dashboard/shows/:path*', destination: '/dashboard', permanent: false },
+      // The standalone press kit is hidden (Oct 17, 2026, founder approved
+      // "cuts-3"): the list goes to Artists, an artist's kit to that artist.
+      // The bio and contact are edited in a rollout's Pitch this!. Public
+      // /k links and the press-kit API are untouched.
+      { source: '/dashboard/press-kits', destination: '/dashboard/artists', permanent: false },
+      { source: '/dashboard/press-kits/:artistId', destination: '/dashboard/artists/:artistId', permanent: false },
     ];
   },
   // The recap card renderer reads static font binaries off disk at request
