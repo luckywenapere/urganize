@@ -1,62 +1,44 @@
 import { wideContainerClass } from "./shared";
 
-// The affiliations strip under the hero (2026-10-07, founder call).
+// The affiliations strip under the hero (2026-10-07, founder call; trimmed
+// 2026-10-17, URG-333).
 //
-// THE LINE IS "Built with people from", AND EVERY WORD HAS TO STAY TRUE. Each
-// logo is backed by a real person, not by the company: people from CBA use
-// Urganize (a customer), the founder used to work at The CAP Music, and an
-// artist who used to be signed to Chocolate City has been talking with the
-// team about the app (not a user yet). That is "with", not "built by" or
-// "trusted by"; if all three ever use it, "Built and used by people from" is
-// the stronger true line. The companies themselves
-// have not endorsed Urganize, so do not reword this into a claim they have.
-// The founder confirmed the people involved agree to the names and logos.
+// TWO TRUE LINES, SIDE BY SIDE. "Backed by" is Greylight alone: Urganize is in
+// Greylight's Tangent Cohort 002, a venture-building programme. "Built with
+// people from" is backed by real people, not by the company: people from CBA
+// use Urganize. The company has not endorsed Urganize, so do not reword this
+// into a claim it has. The founder confirmed the people involved agree to the
+// name and logo.
 //
-// ALL ONE COLOUR, on purpose (founder call). The three logos come in three
-// colour schemes, and Chocolate City's is white on a see-through background,
-// so it vanished on the light theme. Each file in /images/affiliations is a
-// black-on-transparent MASK made from the company's own logo; the colour comes
-// from --marketing-text-muted, so it follows the light and dark theme with no
-// second set of files. To add a logo, make the same kind of mask (alpha is the
-// logo, colour does not matter) and add a row below with its pixel size.
-const AFFILIATIONS = [
-  {
-    name: "Creative Business Academy for Africa",
-    src: "/images/affiliations/creative-business-academy-for-africa.png",
-    width: 389,
-    height: 160,
-    // Shown height in px. The three are tuned by eye so they carry similar
-    // weight: the wide wordmark is shorter, the boxed and stacked marks taller.
-    shown: 44,
-  },
-  {
-    name: "Chocolate City",
-    src: "/images/affiliations/chocolate-city.png",
-    width: 841,
-    height: 160,
-    shown: 30,
-  },
-  {
-    name: "The CAP Music",
-    src: "/images/affiliations/the-cap-music.png",
-    width: 278,
-    height: 160,
-    shown: 46,
-  },
-] as const;
-
-// "Backed by" (founder call, 2026-10-13): Urganize is in Greylight's Tangent
-// Cohort 002, a venture-building programme, so "Backed by" is a true line for
-// Greylight alone. Keep it to backers; the people-based logos stay in the
-// "Built with people from" row below. Same mask treatment as above, made from
-// Greylight's own lockup (greylight.co).
+// REMOVED 2026-10-17 (founder call, URG-333): the Chocolate City and The CAP
+// Music logos no longer render. Their mask files stay in
+// /images/affiliations (chocolate-city.png, the-cap-music.png) and are unused.
+// With one logo per line, the two lines sit side by side as one strip (stacked
+// on phones) instead of two thin centred rows.
+//
+// ALL ONE COLOUR, on purpose (founder call). Each file in /images/affiliations
+// is a black-on-transparent MASK made from the company's own logo; the colour
+// comes from --marketing-text-muted, so it follows the light and dark theme
+// with no second set of files. To add a logo, make the same kind of mask
+// (alpha is the logo, colour does not matter) and add a row with its pixel
+// size. Shown heights are tuned by eye so the marks carry similar weight.
 const BACKERS = [
   {
     name: "Greylight",
     src: "/images/affiliations/greylight.png",
     width: 926,
     height: 160,
-    shown: 30,
+    shown: 28,
+  },
+] as const;
+
+const AFFILIATIONS = [
+  {
+    name: "Creative Business Academy for Africa",
+    src: "/images/affiliations/creative-business-academy-for-africa.png",
+    width: 389,
+    height: 160,
+    shown: 40,
   },
 ] as const;
 
@@ -85,33 +67,46 @@ function LogoMark({ logo }: { logo: Logo }) {
   );
 }
 
+function LogoGroup({
+  label,
+  logos,
+  id,
+}: {
+  label: string;
+  logos: readonly Logo[];
+  id?: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <p
+        id={id}
+        className="font-mono text-[0.72rem] uppercase tracking-[0.16em] text-[var(--marketing-text-muted)]"
+      >
+        {label}
+      </p>
+      <ul className="flex h-11 flex-wrap items-center justify-center gap-x-10 gap-y-6">
+        {logos.map((logo) => (
+          <li key={logo.name} className="flex items-center">
+            <LogoMark logo={logo} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function AffiliationsSection() {
   return (
     <section aria-labelledby="affiliations-heading" className="pb-16 sm:pb-20">
       <div className={`mx-auto ${wideContainerClass}`}>
-        <p className="text-balance text-center text-sm leading-6 text-[var(--marketing-text-muted)]">
-          Backed by
-        </p>
-        <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
-          {BACKERS.map((logo) => (
-            <li key={logo.name} className="flex items-center">
-              <LogoMark logo={logo} />
-            </li>
-          ))}
-        </ul>
-        <p
-          id="affiliations-heading"
-          className="mt-12 text-balance text-center text-sm leading-6 text-[var(--marketing-text-muted)]"
-        >
-          Built with people from
-        </p>
-        <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-12 gap-y-8 sm:gap-x-16">
-          {AFFILIATIONS.map((logo) => (
-            <li key={logo.name} className="flex items-center">
-              <LogoMark logo={logo} />
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col items-center justify-center gap-10 sm:flex-row sm:items-start sm:gap-0">
+          <LogoGroup id="affiliations-heading" label="Backed by" logos={BACKERS} />
+          <span
+            aria-hidden="true"
+            className="mx-14 hidden h-16 w-px self-center bg-[var(--marketing-border-strong)] sm:block"
+          />
+          <LogoGroup label="Built with people from" logos={AFFILIATIONS} />
+        </div>
       </div>
     </section>
   );
