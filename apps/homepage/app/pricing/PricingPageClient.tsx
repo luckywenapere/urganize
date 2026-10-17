@@ -6,7 +6,6 @@ import { WaitlistForm } from "../components/landing/WaitlistForm";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { PricingTierCards } from "../components/pricing/PricingTierCards";
-import { FOUNDING_MEMBER_LINE } from "@/content/founding-member";
 import { AUDIENCE_LINE, CORE_LINE } from "@/lib/positioning";
 
 // THE PRICE TABLE IS UNCONDITIONAL. Do not put it back behind a flag.
@@ -101,13 +100,10 @@ export function PricingPageClient() {
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--marketing-text-subtle)]">
                 Built for {AUDIENCE_LINE}.
               </p>
-              {/* The Founding Member line, from content/founding-member.ts.
-                  The homepage pricing strip renders the same constant since
-                  2026-09-02, so the two pages cannot disagree about the offer
-                  again; removing the constant removes both mounts. */}
-              <p className="mt-3 text-sm leading-6 text-[var(--marketing-text-muted)]">
-                {FOUNDING_MEMBER_LINE}
-              </p>
+              {/* The Founding Member line ("Only 10 founding spots. Your price
+                  never goes up.") was removed 2026-10-17: founder call, "no
+                  founding members". Everyone pays the list price, and the
+                  2026-10-17 Manager reprice applies to existing teams too. */}
             </div>
           </div>
         </section>
