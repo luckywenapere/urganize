@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.158.0",
+    date: "October 18, 2026",
+    highlights: [
+      "Ticking an activity now saves the day you ticked it, and unticking it clears that again, so a rollout's review can tell which activities were done on time and which were late.",
+    ],
+  },
+  {
     version: "1.157.18",
     date: "October 18, 2026",
     highlights: [

@@ -8,6 +8,9 @@ import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { RefreshCw } from '@/components/icons';
 import { InfoTip } from '@/components/shared/HelpTip';
 import { MetricsView } from '@/components/admin/MetricsView';
+import { CockpitSlot } from '@/components/admin/CockpitSlot';
+import { FunnelStrip } from '@/components/admin/FunnelStrip';
+import { GrowthPanels } from '@/components/admin/GrowthPanels';
 import type { AdminReadSource } from '@/lib/admin-read-server';
 import type { UsageMetrics } from '@/lib/usage-metrics';
 import { formatClock, timeAgo } from '@/lib/usage-metrics-format';
@@ -197,6 +200,15 @@ export default function MetricsAdminPageClient() {
       ) : null}
 
       {metrics ? <MetricsView metrics={metrics} sources={payload?.sources ?? []} now={now} /> : null}
+
+      {/* Moved from the Overview (URG-369): the sign-up funnel. */}
+      <CockpitSlot label="the sign-up funnel" skeletonClassName="h-32">
+        {(cockpit) => (cockpit.funnels.length > 0 ? <FunnelStrip funnels={cockpit.funnels} /> : null)}
+      </CockpitSlot>
+
+      {/* Merged in from the old Growth page (URG-369): accounts per month and
+          the waitlist per week. /admin/growth redirects here. */}
+      <GrowthPanels />
     </div>
   );
 }

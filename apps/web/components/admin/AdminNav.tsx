@@ -20,75 +20,71 @@ import {
   Smile,
   Sparkles,
   ThumbsUp,
-  TrendingUp,
   Users,
   UserPlus,
   Building2,
   Link2,
   Spotlight,
+  MoreHorizontal,
 } from '@/components/icons';
+import { ADMIN_MORE_SECTIONS, ADMIN_PRIMARY_NAV, activeNavKey } from '@/lib/admin-sections';
 
 // The admin hub's left menu — one place linking every internal dashboard
 // (founder request, 2026-07-30). Visual pattern inherited from the former
-// ReleaseSideNav (deleted URG-200 — the release pages navigate via header
-// links + a back link now; the admin hub keeps a menu because it has six
-// unrelated sections and no equivalent hub header to hang them off):
-// vertical sticky sidebar on lg+, flattening to a horizontal pill row above
-// the content below lg. No feature flags here: every entry is an internal
-// surface, and access is enforced server-side by ADMIN_EMAILS on each
-// page's backing API (this menu is navigation, not the guard).
+// ReleaseSideNav: vertical sticky sidebar on lg+, flattening to a horizontal
+// pill row above the content below lg. No feature flags here: every entry is
+// an internal surface, and access is enforced server-side by ADMIN_EMAILS on
+// each page's backing API (this menu is navigation, not the guard).
+//
+// Slimmed 2026-10-18 (URG-369, founder approved the mock): six rows, Overview,
+// Scoreboard, Metrics, Teams, Emails, More. The order and the More list live in
+// lib/admin-sections.ts (tested there); this file only adds the icons. Every
+// other dashboard sits behind More, which carries their count, and a page
+// behind More lights the More row. Rows are words only, as in the mock; the
+// icons stay on ADMIN_NAV_ITEMS for the Settings admin list.
+
+const NAV_ICONS: Record<string, typeof LayoutDashboard> = {
+  overview: LayoutDashboard,
+  scoreboard: Gauge,
+  metrics: Activity,
+  teams: Building2,
+  emails: Mail,
+  more: MoreHorizontal,
+};
+
+/** Icons for every dashboard, for the menu and the More page. */
+export const ADMIN_SECTION_ICONS: Record<string, typeof LayoutDashboard> = {
+  ...NAV_ICONS,
+  onboarding: ClipboardList,
+  nps: ThumbsUp,
+  'profile-funnel': Share2,
+  notifications: BellRing,
+  'curator-invites': ListMusic,
+  'pitch-payments': PiggyBank,
+  referrals: Link2,
+  'issue-reports': Bug,
+  urgans: Sparkles,
+  directory: UserPlus,
+  claims: UserPlus,
+  seeding: Send,
+  featured: Spotlight,
+  'promo-channels': Megaphone,
+  waitlist: Users,
+  interviews: Mic,
+  chappi: Smile,
+};
+
 export const ADMIN_NAV_ITEMS: Array<{
   key: string;
   label: string;
   icon: typeof LayoutDashboard;
   href: string;
   exact?: boolean;
-}> = [
-  { key: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/admin', exact: true },
-  // Second, under Overview: the strategy doc's numbers, which the Monday review
-  // starts with (docs/strategy/company-strategy.md, section 2).
-  { key: 'scoreboard', label: 'Scoreboard', icon: Gauge, href: '/admin/scoreboard' },
-  // Third: who is using Urganize right now and how (2026-10-07).
-  { key: 'metrics', label: 'Metrics', icon: Activity, href: '/admin/metrics' },
-  { key: 'onboarding', label: 'Onboarding', icon: ClipboardList, href: '/admin/onboarding' },
-  // Net Promoter Score from the in-app ask on Home (2026-10-11).
-  { key: 'nps', label: 'NPS', icon: ThumbsUp, href: '/admin/nps' },
-  // The profile growth loop, credit to sign-up (2026-10-11).
-  { key: 'profile-funnel', label: 'Profile funnel', icon: Share2, href: '/admin/profile-funnel' },
-  { key: 'emails', label: 'Emails', icon: Mail, href: '/admin/emails' },
-  { key: 'notifications', label: 'Notifications', icon: BellRing, href: '/admin/notifications' },
-  {
-    key: 'curator-invites',
-    label: 'Playlist owners',
-    icon: ListMusic,
-    href: '/admin/curator-invites',
-  },
-  {
-    key: 'pitch-payments',
-    label: 'Pitch payments',
-    icon: PiggyBank,
-    href: '/admin/pitch-payments',
-  },
-  { key: 'teams', label: 'Teams', icon: Building2, href: '/admin/teams' },
-  { key: 'referrals', label: 'Referrals', icon: Link2, href: '/admin/referrals' },
-  { key: 'issue-reports', label: 'Reports', icon: Bug, href: '/admin/issue-reports' },
-  { key: 'urgans', label: 'UrgAns actions', icon: Sparkles, href: '/admin/urgans' },
-  { key: 'directory', label: 'Directory', icon: UserPlus, href: '/admin/directory' },
-  { key: 'claims', label: 'Claims', icon: UserPlus, href: '/admin/claims' },
-  { key: 'seeding', label: 'Seeding', icon: Send, href: '/admin/seeding' },
-  { key: 'featured', label: 'Featured', icon: Spotlight, href: '/admin/featured' },
-  // Promo channel directory (GitHub #833): suggested channels wait here.
-  { key: 'promo-channels', label: 'Promo channels', icon: Megaphone, href: '/admin/promo-channels' },
-  { key: 'waitlist', label: 'Waitlist', icon: Users, href: '/admin/waitlist' },
-  { key: 'growth', label: 'Growth', icon: TrendingUp, href: '/admin/growth' },
-  { key: 'interviews', label: 'Interviews', icon: Mic, href: '/admin/interviews' },
-  // The mascot's model sheet, rendered from the shared component. Reads no
-  // data, so unlike its neighbours it has no backing API acting as the guard.
-  { key: 'chappi', label: 'Chappi', icon: Smile, href: '/admin/chappi' },
-];
+}> = ADMIN_PRIMARY_NAV.map((item) => ({ ...item, icon: NAV_ICONS[item.key] ?? LayoutDashboard }));
 
 export function AdminNav() {
   const pathname = usePathname() || '';
+  const activeKey = activeNavKey(pathname);
 
   return (
     <nav
@@ -118,28 +114,32 @@ export function AdminNav() {
         className="motion-focus mb-3 flex h-9 w-fit items-center gap-2.5 rounded-lg px-3 text-sm text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary lg:mb-4"
       >
         <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span className="whitespace-nowrap">Back to catalog</span>
+        <span className="whitespace-nowrap lg:hidden">Catalog</span>
+        <span className="hidden whitespace-nowrap lg:inline">Back to catalog</span>
       </Link>
       <p className="hidden font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary lg:block lg:px-3 lg:pb-3">
         Admin
       </p>
       <ul className="flex w-full gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
         {ADMIN_NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+          const active = activeKey === item.key;
           return (
             <li key={item.key} className="shrink-0 lg:shrink">
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
-                className={`motion-focus flex h-9 items-center gap-2.5 rounded-lg px-3 text-sm transition-colors ${
+                className={`motion-focus flex h-9 items-center gap-2.5 rounded-full px-4 text-sm transition-colors lg:rounded-lg lg:px-3 ${
                   active
                     ? 'bg-brand/10 font-medium text-brand'
                     : 'text-content-secondary hover:bg-bg-hover hover:text-content-primary'
                 }`}
               >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span className="whitespace-nowrap">{item.label}</span>
+                {item.key === 'more' ? (
+                  <span className="ml-auto hidden pl-2 font-mono text-[11px] tabular-nums text-content-tertiary lg:inline">
+                    {ADMIN_MORE_SECTIONS.length}
+                  </span>
+                ) : null}
               </Link>
             </li>
           );

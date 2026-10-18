@@ -15,6 +15,8 @@ import { Download, Loader2 } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
+import { CockpitSlot } from '@/components/admin/CockpitSlot';
+import { PersonaSplitPanel } from '@/components/admin/PersonaSplitPanel';
 
 type Tally = { label: string; count: number };
 
@@ -315,6 +317,11 @@ export default function OnboardingAdminPageClient() {
             </tbody>
           </table>
         </div>
+
+      {/* Moved from the Overview (URG-369): who our accounts say they are. */}
+      <CockpitSlot label="the persona split" skeletonClassName="h-24">
+        {(cockpit) => (cockpit.personas ? <PersonaSplitPanel split={cockpit.personas} /> : null)}
+      </CockpitSlot>
     </div>
   );
 }

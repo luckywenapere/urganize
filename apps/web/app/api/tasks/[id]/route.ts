@@ -29,6 +29,7 @@ import {
   createServerPostHogClient,
   shutdownServerAnalytics,
 } from '@/lib/posthog';
+import { completedAtPatch } from '@/lib/task-completed-at';
 
 // Allowed PATCH body fields → tasks-table column names. The route is the API
 // boundary that translates camelCase client payloads into snake_case columns
@@ -201,6 +202,11 @@ export async function PATCH(
 
     const previousAssigneeUserId = access.task.assigned_to_user_id;
     const previousStatus = access.task.status;
+
+    // When it was ticked (URG-369): stamp completed_at on the way into done and
+    // clear it on undo, so "Activities ticked" can stop guessing from updated_at.
+    const completion = completedAtPatch(previousStatus, mapped.updates.status);
+    if (completion) Object.assign(mapped.updates, completion);
 
     // Activation timing: fire time_to_first_completed_task once per account,
     // on the first transition into 'done' of any task assigned to this user.

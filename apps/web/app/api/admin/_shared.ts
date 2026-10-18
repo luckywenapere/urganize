@@ -27,6 +27,10 @@ export const parseAdminEmails = (): string[] => {
  * 2026-10-07; since 2026-10-10 the founder cockpit and the Scoreboard leave
  * the same people out (founder's answer, lib/admin-internal-accounts.ts). One
  * list for every admin page, so the pages cannot disagree about who is us.
+ *
+ * Since 2026-10-18 (URG-369) the set's `has` also matches the team by pattern
+ * (lib/internal-accounts.ts INTERNAL_NAME_PREFIXES and @urganize.app), so the
+ * env lists are extras on top of the pattern, not the whole rule.
  */
 export const internalAccountEmails = (): Set<string> => {
   const extra = String(process.env.METRICS_INTERNAL_EMAILS ?? '')

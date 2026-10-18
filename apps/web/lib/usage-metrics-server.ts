@@ -30,6 +30,8 @@ import {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TABLE_CAP = 20_000;
+/** All-time app opens: a cut-off read shows as unknown, never as a low count. */
+const VISITS_CAP = 100_000;
 /** The presence rows needed: thirty days of daily counts plus a little slack. */
 const PRESENCE_DAYS = 35;
 
@@ -86,12 +88,18 @@ async function readAuthUsers(
 export async function loadUsageMetrics(
   client: SupabaseClient,
   now: Date,
-  options: { hiddenEmails: Set<string>; waitlistTotal: number | null }
+  options: {
+    hiddenEmails: Set<string>;
+    waitlistTotal: number | null;
+    /** A Scoreboard read already made (the Overview passes the shared cached
+     *  one, so its 60-second refresh never reads the big tables twice). */
+    board?: Awaited<ReturnType<typeof loadScoreboardInput>>;
+  }
 ): Promise<Loaded> {
   const since30 = isoDaysAgo(now, 30);
 
-  const [board, presence, authUsers, profiles, appOpens, drafts, urgansTurns, aiUsage] = await Promise.all([
-    loadScoreboardInput(client, now),
+  const [board, presence, authUsers, profiles, appOpens, drafts, urgansTurns, aiUsage, appOpensAll] = await Promise.all([
+    options.board ? Promise.resolve(options.board) : loadScoreboardInput(client, now),
     readAll(
       PRESENCE_TABLE,
       (from, to) =>
@@ -162,6 +170,19 @@ export async function loadUsageMetrics(
           .range(from, to),
       TABLE_CAP
     ),
+    // Every app open ever (URG-369, the Overview's "Visits all time"). Two
+    // narrow columns; the login-ping started on 2026-07-23.
+    readAll(
+      'scheduled_notifications (all app opens)',
+      (from, to) =>
+        client
+          .from('scheduled_notifications')
+          .select('user_id, created_at')
+          .eq('kind', 'momentum_30m')
+          .order('created_at', { ascending: true })
+          .range(from, to),
+      VISITS_CAP
+    ),
   ]);
 
   const sources: AdminReadSource[] = [
@@ -173,6 +194,7 @@ export async function loadUsageMetrics(
     drafts.source,
     urgansTurns.source,
     aiUsage.source,
+    appOpensAll.source,
   ];
 
   // AI cost: the usage log when it exists, else what the credit ledger
@@ -320,6 +342,12 @@ export async function loadUsageMetrics(
     appOpens: appOpens.rows
       .map((row) => ({ userId: str(row.user_id), at: Date.parse(str(row.created_at) ?? '') }))
       .filter((row): row is { userId: string; at: number } => !!row.userId && Number.isFinite(row.at)),
+    appOpensAll:
+      appOpensAll.source.status === 'ok' && !appOpensAll.source.truncated
+        ? appOpensAll.rows
+            .map((row) => ({ userId: str(row.user_id), at: Date.parse(str(row.created_at) ?? '') }))
+            .filter((row): row is { userId: string; at: number } => !!row.userId && Number.isFinite(row.at))
+        : null,
     releases,
     tasks,
     teams: board.input.teams.map((team) => ({

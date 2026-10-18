@@ -1,10 +1,8 @@
-import type { Metadata } from 'next';
-import GrowthAdminPageClient from './GrowthAdminPageClient';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Growth',
-};
-
+// Growth was merged into Metrics on 2026-10-18 (URG-369, founder approved the
+// slimmed admin): its accounts-per-month and waitlist sections render at the
+// bottom of /admin/metrics. Old links and bookmarks land there.
 export default function GrowthAdminPage() {
-  return <GrowthAdminPageClient />;
+  redirect('/admin/metrics#growth');
 }

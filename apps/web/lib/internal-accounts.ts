@@ -8,9 +8,26 @@
 // plus-alias of one (luckydio10+anything@gmail.com is a test inbox of ours).
 // Any address whose name part contains "luckydio" is ours too (founder,
 // 2026-10-16: "it should be any email luckydio").
+//
+// Since 2026-10-18 (URG-369) the team's other inboxes match by PATTERN, the
+// same rule the read-only SQL checks use (luckydio%, luckywenapere%,
+// %@urganize.app, theurganization%, tedumking%, ugorjigideon%, clebmichael%):
+// a name part that STARTS with one of INTERNAL_NAME_PREFIXES is ours, so a new
+// +alias or a "luckywenapere2@" test inbox is left out without anyone listing
+// it in METRICS_INTERNAL_EMAILS. That env list still adds exact addresses on top.
 
 const INTERNAL_DOMAIN = '@urganize.app';
 const INTERNAL_NAME_PART = 'luckydio';
+
+/** Name parts (before the @) that mark one of us when an address starts with them. */
+export const INTERNAL_NAME_PREFIXES: readonly string[] = [
+  'luckydio',
+  'luckywenapere',
+  'theurganization',
+  'tedumking',
+  'ugorjigideon',
+  'clebmichael',
+];
 
 export const BUILT_IN_INTERNAL_EMAILS: readonly string[] = [
   'luckydio10@gmail.com',
@@ -35,7 +52,11 @@ export function isInternalAccountEmail(
   if (!normalized) return false;
   if (normalized.endsWith(INTERNAL_DOMAIN)) return true;
   const at = normalized.indexOf('@');
-  if (at > 0 && normalized.slice(0, at).includes(INTERNAL_NAME_PART)) return true;
+  if (at > 0) {
+    const name = normalized.slice(0, at);
+    if (name.includes(INTERNAL_NAME_PART)) return true;
+    if (INTERNAL_NAME_PREFIXES.some((prefix) => name.startsWith(prefix))) return true;
+  }
   const listed = (value: string) =>
     BUILT_IN.has(value) || (Array.isArray(extra) ? extra.includes(value) : (extra as ReadonlySet<string>).has(value));
   if (listed(normalized)) return true;

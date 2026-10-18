@@ -1,19 +1,25 @@
-// The "All dashboards" links on the /admin Overview, grouped (iteration 4,
-// 2026-10-09). Every section in the admin side menu (components/admin/
-// AdminNav.tsx, ADMIN_NAV_ITEMS) is listed exactly once, under one of three
-// groups, except the Overview itself, which is the page these links are on.
-// lib/admin-sections.test.ts reads the menu's source and fails when a section
-// is added to one and not the other.
+// Every internal dashboard, and which of them the side menu shows
+// (iteration 4, 2026-10-09; slimmed 2026-10-18, URG-369, founder approved the
+// mock: "Perfect").
 //
-// Groups, in the order they show:
+// THE MENU is six rows, in this order: Overview, Scoreboard, Metrics, Teams,
+// Emails, More (ADMIN_PRIMARY_NAV). Everything else sits behind More, which
+// opens /admin/more: the full list, grouped. The Overview's single
+// "All dashboards" row opens the same page. Nothing was deleted to get here:
+//  - Growth is merged into Metrics (its accounts-per-month and waitlist
+//    sections render at the bottom of /admin/metrics; /admin/growth redirects).
+//  - Chappi left the menu; its route is kept and listed on More.
+// lib/admin-sections.test.ts guards the menu, the More list and the moves.
+//
+// Groups on More, in the order they show:
 //  - Numbers:    pages that answer "how are we doing" (read only).
 //  - Operations: pages where someone acts on a team, a person, money or a
 //                report.
 //  - Content:    what Urganize says to people, and the mascot's model sheet.
 // Inside a group, the most used first.
 //
-// No icons here so the test can import it without the icon set; the hub maps
-// each key to the same icon the menu uses.
+// No icons here so the test can import it without the icon set; the menu and
+// More map each key to an icon.
 
 export type AdminSectionGroup = 'numbers' | 'operations' | 'content';
 
@@ -46,14 +52,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     label: 'Metrics',
     href: '/admin/metrics',
     group: 'numbers',
-    description: 'Who is online, active people, rollouts and AI cost.',
-  },
-  {
-    key: 'growth',
-    label: 'Growth',
-    href: '/admin/growth',
-    group: 'numbers',
-    description: 'New accounts each month, waitlist each week.',
+    description: 'Who is online, active people, sign-ups and the waitlist.',
   },
   {
     key: 'onboarding',
@@ -193,4 +192,42 @@ export const ADMIN_SECTIONS: AdminSection[] = [
 /** The sections of one group, in the order they show. */
 export function sectionsInGroup(group: AdminSectionGroup): AdminSection[] {
   return ADMIN_SECTIONS.filter((section) => section.group === group);
+}
+
+/** The side menu, in order. Overview and More are not dashboards of their own. */
+export type AdminNavEntry = { key: string; label: string; href: string; exact?: boolean };
+
+export const ADMIN_PRIMARY_NAV: AdminNavEntry[] = [
+  { key: 'overview', label: 'Overview', href: '/admin', exact: true },
+  { key: 'scoreboard', label: 'Scoreboard', href: '/admin/scoreboard' },
+  { key: 'metrics', label: 'Metrics', href: '/admin/metrics' },
+  { key: 'teams', label: 'Teams', href: '/admin/teams' },
+  { key: 'emails', label: 'Emails', href: '/admin/emails' },
+  { key: 'more', label: 'More', href: '/admin/more' },
+];
+
+const PRIMARY_KEYS = new Set(ADMIN_PRIMARY_NAV.map((item) => item.key));
+
+/** The dashboards only reachable through More (the count on the More row). */
+export const ADMIN_MORE_SECTIONS: AdminSection[] = ADMIN_SECTIONS.filter((section) => !PRIMARY_KEYS.has(section.key));
+
+/** Old addresses that now live somewhere else. */
+export const ADMIN_REDIRECTS: Record<string, string> = {
+  '/admin/growth': '/admin/metrics#growth',
+};
+
+function under(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Which menu row is lit for a page: its own row, or More for anything behind it. */
+export function activeNavKey(pathname: string): string | null {
+  const path = (pathname || '').split(/[?#]/)[0].replace(/\/+$/, '') || '/admin';
+  if (path === '/admin') return 'overview';
+  for (const item of ADMIN_PRIMARY_NAV) {
+    if (item.exact) continue;
+    if (under(path, item.href)) return item.key;
+  }
+  if (ADMIN_MORE_SECTIONS.some((section) => under(path, section.href))) return 'more';
+  return null;
 }

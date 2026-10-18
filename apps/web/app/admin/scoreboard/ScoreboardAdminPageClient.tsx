@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { Copy, RefreshCw } from '@/components/icons';
 import { ScoreboardView } from '@/components/admin/ScoreboardView';
+import { CockpitSlot } from '@/components/admin/CockpitSlot';
+import { CockpitTrends } from '@/components/admin/CockpitTrends';
 import { formatScoreboardForTeamGroup } from '@/lib/scoreboard-format';
 import type { Scoreboard } from '@/lib/scoreboard';
 import type { ScoreboardSource } from '@/lib/scoreboard-server';
@@ -181,6 +183,20 @@ export default function ScoreboardAdminPageClient() {
           ourTeamsLeftOut={payload?.ourTeamsLeftOut ?? 0}
           signupReturn={payload?.signupReturn ?? null}
         />
+      ) : null}
+
+      {/* Moved from the Overview (URG-369): the weekly-review trends. */}
+      {board ? (
+        <CockpitSlot label="the trends" skeletonClassName="h-64">
+          {(cockpit) => (
+            <CockpitTrends
+              cockpit={cockpit.cockpit}
+              churn={cockpit.churn}
+              ourTeamsLeftOut={cockpit.ourTeamsLeftOut}
+              sources={cockpit.sources}
+            />
+          )}
+        </CockpitSlot>
       ) : null}
     </div>
   );

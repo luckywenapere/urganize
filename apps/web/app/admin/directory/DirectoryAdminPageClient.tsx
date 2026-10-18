@@ -9,6 +9,8 @@ import { DIRECTORY_ROLE_LABELS } from '@/lib/directory-roles';
 import type { DirectorySummary, WorkRequestSummary } from '@/lib/directory-admin-summary';
 import type { DirectoryGrowth } from '@/lib/directory-growth';
 import { DirectoryGrowthPanel } from '@/components/admin/DirectoryGrowthPanel';
+import { CockpitSlot } from '@/components/admin/CockpitSlot';
+import { DirectoryTilePanel } from '@/components/admin/DirectoryTilePanel';
 
 // /admin/directory — supply against demand, one row per role.
 //
@@ -269,6 +271,11 @@ export default function DirectoryAdminPageClient() {
           ) : null}
         </div>
       </section>
+
+      {/* Moved from the Overview (URG-369). */}
+      <CockpitSlot label="the directory tile" skeletonClassName="h-28">
+        {(cockpit) => (cockpit.directory ? <DirectoryTilePanel tile={cockpit.directory} /> : null)}
+      </CockpitSlot>
     </div>
   );
 }

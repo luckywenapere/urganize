@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
+import { CockpitSlot } from '@/components/admin/CockpitSlot';
+import { UrgansPanel } from '@/components/admin/UrgansPanel';
 import { ALL_ACTIONS_BUCKET, type TeamMonthSummary } from '@/lib/urgans-actions/admin-summary';
 
 // /admin/urgans — read-only console for embedded UrgAns actions ("UrgAns in
@@ -288,6 +290,12 @@ export default function UrgansAdminPageClient() {
           </tbody>
         </table>
       </div>
+
+      {/* Moved from the Overview (URG-369): credits, AI cost per team, rollouts
+          live and the second-release rate. */}
+      <CockpitSlot label="the UrgAns panel" skeletonClassName="h-56">
+        {(cockpit) => (cockpit.urgans ? <UrgansPanel usage={cockpit.urgans} /> : null)}
+      </CockpitSlot>
     </div>
   );
 }
