@@ -32,7 +32,7 @@ const members = [
   },
   {
     name: "Tedum King",
-    role: "Co-Founder and AI Engineer",
+    role: "Co-Founder and CTO",
     photo: "/images/team/tedum-king.webp",
     bio: "An artist himself, in both music and visuals, Tedum builds Urganize's AI layer from inside the creative process it serves. Studied Computer Engineering at Afe Babalola University.",
     linkedin: "https://www.linkedin.com/in/tedum-king-kpunee-035556393/",
@@ -46,7 +46,7 @@ const members = [
   },
   {
     name: "Chidera Nnamani",
-    role: "Product Operations",
+    role: "Product Ops Lead",
     photo: "/images/team/chidera-nnamani.webp",
     bio: "Manages artists and has worked across startups, bringing both the operator's and the manager's view to Urganize's product operations. Holds an MBA in Music Management from the Creative Business Academy for Africa, on a foundation of engineering and mathematics.",
     linkedin: "https://www.linkedin.com/in/chidera-nnamani/",
