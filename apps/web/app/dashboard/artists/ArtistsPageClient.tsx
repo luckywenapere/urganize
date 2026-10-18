@@ -51,13 +51,29 @@ export default function ArtistsPageClient() {
 
   return (
     <div>
+      {/* The section's content top: the same spacer CatalogueView draws, and
+          nothing else above the list, so both tabs start 20px under the tab
+          row (tab jump fix, Oct 18, 2026; lib/section-content-top-guard). */}
       <div className="pt-5 sm:pt-6" />
 
       {loading ? (
-        <div className="space-y-2" aria-busy="true">
-          {[0, 1, 2].map((key) => (
-            <div key={key} className="h-16 animate-pulse rounded-2xl border border-stroke-default bg-bg-surface" />
-          ))}
+        // The list's own shape (tab jump fix, Oct 18, 2026): one card, three
+        // 64px rows with the face and the name, so nothing moves when it lands.
+        <div
+          className="overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface"
+          aria-busy="true"
+        >
+          <ul className="divide-y divide-stroke-subtle">
+            {[0, 1, 2].map((key) => (
+              <li key={key} className="flex h-16 items-center gap-4 pl-5 pr-5">
+                <span className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-bg-hover" />
+                <span className="min-w-0 flex-1 space-y-1.5">
+                  <span className="block h-4 w-32 animate-pulse rounded bg-bg-hover" />
+                  <span className="block h-3 w-16 animate-pulse rounded bg-bg-hover md:hidden" />
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : cards.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stroke-default p-8 text-center">
@@ -66,7 +82,7 @@ export default function ArtistsPageClient() {
           <p className="mt-1 text-sm text-content-secondary">Add an artist in Settings and they appear here.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
+        <div className="section-list-enter overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
           {/* pl matches the rows below, which leave room for the face. Rollouts
               only: Planned and Press kit left the table (founder call,
               2026-10-15), Shows were deleted (Oct 17, 2026); the press kit

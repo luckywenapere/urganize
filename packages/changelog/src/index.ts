@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.158.4",
+    date: "October 18, 2026",
+    highlights: [
+      "On your phone, switching between Artists and Rollouts no longer makes the list jump. Both start in the same place, and the same + sits in the same spot: Add artist on Artists, New rollout on Rollouts.",
+    ],
+  },
+  {
     version: "1.158.3",
     date: "October 18, 2026",
     highlights: [

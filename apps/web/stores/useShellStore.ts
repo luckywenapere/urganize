@@ -31,6 +31,12 @@ type ShellStore = {
   /** The artist the create modal starts on, when opened from an artist's page.
    *  null = the modal's own default. */
   createArtistId: string | null;
+  /** A page that mounts its own create modal (WorkspaceView on Rollouts,
+   *  which lands you in the new rollout) registers its opener here, so the
+   *  phone tab row's New rollout opens that one modal and not a second copy.
+   *  null = the shell's modal (openCreate). */
+  createHandler: (() => void) | null;
+  setCreateHandler: (handler: (() => void) | null) => void;
   setSelectedArtistId: (id: string | null) => void;
   hydrateSelectedArtistId: (id: string | null) => void;
   openCommand: () => void;
@@ -46,6 +52,8 @@ export const useShellStore = create<ShellStore>((set) => ({
   createOpen: false,
   createPlan: null,
   createArtistId: null,
+  createHandler: null,
+  setCreateHandler: (handler) => set({ createHandler: handler }),
   setSelectedArtistId: (id) => {
     set({ selectedArtistId: id });
     try {

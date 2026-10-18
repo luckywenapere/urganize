@@ -1451,6 +1451,24 @@ h1, h2, h3, h4 {
   transform: none;
 }
 
+/* The Artists and Rollouts lists fade in when their tab opens (tab jump fix,
+   Oyin approved Oct 18, 2026): 120ms, opacity only, no vertical movement, so
+   a tab switch moves nothing. Motion-allowed only; with reduced motion the
+   list is simply there. Opacity alone never anchors fixed elements. */
+@media (prefers-reduced-motion: no-preference) {
+  .section-list-enter {
+    animation: section-list-fade 120ms var(--motion-out) both;
+  }
+}
+@keyframes section-list-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .skeleton-shimmer {
   position: relative;
   overflow: hidden;

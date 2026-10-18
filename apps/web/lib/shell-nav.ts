@@ -10,6 +10,8 @@
 // both states without stubbing the environment, and `readShellFlags` below is the
 // only place that reads them.
 
+import { buildSettingsUrl } from './settings-nav';
+
 export type ShellAreaKey =
   | 'home'
   | 'urgans'
@@ -30,12 +32,25 @@ export type ShellFlags = {
   pressKits: boolean;
 };
 
+/** A tab's one action, drawn at the right end of the phone tab row (tab jump
+ *  fix, Oyin approved the mocks Oct 18, 2026). It is data, so SubNav draws it
+ *  in the first frame instead of a page portalling a button in after paint.
+ *  `href` is a link; `press` names a shell command SubNav knows how to run.
+ *  null keeps the slot's space with no button, so the row never changes shape
+ *  between tabs. */
+export type ShellSubTabAction =
+  | { label: string; href: string; press?: never }
+  | { label: string; press: 'openCreate'; href?: never };
+
 export type ShellSubTab = {
   key: string;
   label: string;
   href: string;
   /** True when this tab is the one on screen for the given location. */
   isActive: (pathname: string) => boolean;
+  /** The tab's action at the row's right end. null or absent keeps the slot
+   *  empty (its space stays). */
+  action?: ShellSubTabAction | null;
 };
 
 export type ShellArea = {
@@ -75,6 +90,13 @@ export const URGANS_HREF = '/dashboard/urgans';
 export const CATALOGUE_HREF = '/dashboard';
 export const DISTRIBUTE_HREF = '/dashboard/distribute';
 export const ARTISTS_HREF = '/dashboard/artists';
+/** Add artist: the existing add field in Settings -> Artists & brand (v1 of
+ *  the tab action, no sheet of its own), opened over the Artists page so the
+ *  tab under it does not change. */
+export const ADD_ARTIST_HREF = buildSettingsUrl(ARTISTS_HREF, '', {
+  segment: 'artists',
+  section: 'artists',
+});
 /** The nav word for the 'catalogue' area (Catalogue until 2026-10-17, then
  * Artist; Artists, plural to match the tab, since later that day). */
 export const CATALOGUE_LABEL = 'Artists';
@@ -91,6 +113,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       label: 'Artists',
       href: ARTISTS_HREF,
       isActive: (p) => startsWithPath(p, ARTISTS_HREF),
+      action: { label: 'Add artist', href: ADD_ARTIST_HREF },
     });
   }
   catalogueTabs.push({
@@ -98,6 +121,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
     label: 'Rollouts',
     href: CATALOGUE_HREF,
     isActive: (p) => p === '/dashboard' || startsWithPath(p, '/dashboard/releases'),
+    action: { label: 'New rollout', press: 'openCreate' },
   });
   // Distribute left the tab row (founder call, 2026-10-15): it is reached from
   // inside each rollout (its Distribute scene). /dashboard/distribute still
@@ -108,6 +132,8 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       label: 'Notes',
       href: '/dashboard/notes',
       isActive: (p) => startsWithPath(p, '/dashboard/notes'),
+      // Keeps the slot's space, no button: the row stays one shape.
+      action: null,
     });
   }
 
@@ -121,6 +147,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       label: 'Directory',
       href: '/dashboard/directory',
       isActive: (p) => startsWithPath(p, '/dashboard/directory'),
+      action: null,
     });
   }
   if (flags.relationships) {
@@ -129,6 +156,7 @@ export function buildShellAreas(flags: ShellFlags): ShellArea[] {
       label: 'My People',
       href: '/dashboard/relationships',
       isActive: (p) => startsWithPath(p, '/dashboard/relationships'),
+      action: null,
     });
   }
 

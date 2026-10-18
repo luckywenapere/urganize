@@ -8,7 +8,7 @@ import { Plus, X } from '@/components/icons';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ListToolbar } from '@/components/shell/ListToolbar';
-import { SUBNAV_SLOT_END, SUBNAV_SLOT_PHONE_END } from '@/components/shell/SubNav';
+import { SUBNAV_SLOT_END } from '@/components/shell/SubNav';
 import {
   SORT_OPTIONS,
   STATUS_FILTERS,
@@ -176,27 +176,15 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
   );
 
   // Add rollout sits at the right end of the top row, never on the list card
-  // (founder, 2026-10-14): the page bar on a computer, the tab row on a phone,
-  // where it is the icon alone so the tabs never have to scroll. The count
-  // that sat beside it is gone, so the list starts with the first rollout.
-  const [slots, setSlots] = useState<{ end: HTMLElement | null; phoneEnd: HTMLElement | null }>({ end: null, phoneEnd: null });
+  // (founder, 2026-10-14): the page bar on a computer. On a phone the tab row
+  // draws its own New rollout from nav data (SubNav, tab jump fix Oct 18,
+  // 2026), in the first frame and the same on every tab, so nothing is
+  // portalled in here after paint any more.
+  const [slotEnd, setSlotEnd] = useState<HTMLElement | null>(null);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSlots({ end: document.getElementById(SUBNAV_SLOT_END), phoneEnd: document.getElementById(SUBNAV_SLOT_PHONE_END) });
+    setSlotEnd(document.getElementById(SUBNAV_SLOT_END));
   }, []);
-  const phoneAddButton = (
-    <button
-      type="button"
-      onClick={onCreate}
-      disabled={testRelease?.isStarting}
-      data-tour="new-rollout"
-      aria-label="Add rollout"
-      title="Add rollout"
-      className="motion-focus motion-press inline-flex h-9 w-9 items-center justify-center rounded-full bg-content-primary text-content-inverse hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      <Plus className="h-4 w-4" aria-hidden="true" />
-    </button>
-  );
 
   const open = (event: MouseEvent<HTMLAnchorElement>, id: string) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -314,9 +302,13 @@ export function CatalogueView({ rows, onOpen, onCreate, testRelease }: Catalogue
       </PullReveal>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
-        {slots.end ? createPortal(<div className="hidden lg:block">{addButton}</div>, slots.end) : null}
-        {slots.phoneEnd ? createPortal(<div className="lg:hidden">{phoneAddButton}</div>, slots.phoneEnd) : null}
+      {/* mt-4 only when something sits above the card (the "Showing" line or
+          the filter bar). Bare, the list starts at the spacer above, 20px under
+          the tab row, exactly where Artists starts (tab jump fix). */}
+      <div
+        className={`${artistName || showFilters ? 'mt-4 ' : ''}section-list-enter overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface`}
+      >
+        {slotEnd ? createPortal(<div className="hidden lg:block">{addButton}</div>, slotEnd) : null}
 
         {visible.length === 0 ? (
           <div className="px-5 py-10">

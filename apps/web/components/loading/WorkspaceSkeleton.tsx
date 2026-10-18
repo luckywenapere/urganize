@@ -91,7 +91,7 @@ export function WorkspaceSkeleton() {
           byte-identical to WorkspaceView's or the skeleton shifts when data
           resolves. */}
       <div
-        className={`flex min-h-0 min-w-0 flex-1 flex-col pt-6 sm:px-6 lg:block lg:px-0 lg:pt-0 ${isFocused ? 'pb-0 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+        className={`flex min-h-0 min-w-0 flex-1 flex-col ${isFocused ? 'pt-6' : ''} sm:px-6 lg:block lg:px-0 lg:pt-0 ${isFocused ? 'pb-0 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
           {isFocused ? (
             <>
@@ -110,26 +110,34 @@ export function WorkspaceSkeleton() {
   );
 }
 
-/** The Catalogue's shape (design overhaul, 2026-10-04): a page title and one
- * action, the filter row, then rows. Rows on a phone are cards; from md up they
- * are a table, as CatalogueView draws them. */
+/** The Rollouts list's shape (tab jump fix, Oct 18, 2026): the same 20px
+ * spacer CatalogueView draws, then one bordered card of rows, and no title or
+ * filter chips, because the bare list shows neither. Rows on a phone are
+ * cards (cover, title, status and date, progress); from md up they are a
+ * table, as CatalogueView draws them. */
 function CatalogueSkeleton({ count }: { count: number }) {
   return (
-    <div className="space-y-5 pt-6">
-      <div className="flex items-center justify-between gap-4">
-        <SkeletonBlock className="h-9 w-40" />
-        <SkeletonBlock className="h-12 w-36 rounded-full" />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <SkeletonBlock className="h-10 w-full max-w-xs rounded-full" />
-        <SkeletonBlock className="h-10 w-20 rounded-full" />
-        <SkeletonBlock className="h-10 w-24 rounded-full" />
-        <SkeletonBlock className="h-10 w-24 rounded-full" />
-      </div>
-      <div className="space-y-2">
-        {Array.from({ length: count }).map((_, index) => (
-          <SkeletonBlock key={`catalogue-row-${index}`} className="h-20 w-full rounded-2xl md:h-16" />
-        ))}
+    <div>
+      <div className="pt-5 sm:pt-6" />
+      <div className="overflow-hidden rounded-2xl border border-stroke-default bg-bg-surface">
+        <ul className="divide-y divide-stroke-subtle">
+          {Array.from({ length: count }).map((_, index) => (
+            <li key={`catalogue-row-${index}`} className="grid gap-3 px-4 py-4 sm:px-5 md:flex md:items-center md:gap-4">
+              <span className="flex min-w-0 items-center gap-3.5 md:flex-1">
+                <SkeletonBlock className="h-14 w-14 shrink-0 rounded-lg" />
+                <span className="min-w-0 flex-1 space-y-1.5">
+                  <SkeletonBlock className="h-4 w-32" />
+                  <SkeletonBlock className="h-3.5 w-20" />
+                </span>
+              </span>
+              <span className="flex items-center justify-between gap-3 md:hidden">
+                <SkeletonBlock className="h-6 w-16 rounded-full" />
+                <SkeletonBlock className="h-3.5 w-20" />
+              </span>
+              <SkeletonBlock className="h-1.5 w-[120px] rounded-full" />
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

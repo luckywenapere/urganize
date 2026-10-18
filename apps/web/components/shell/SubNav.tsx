@@ -1,10 +1,12 @@
 'use client';
 
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { NAV_TIP_TOUCH_CLASS, useNavTip } from './useNavTip';
-import { activeShellArea, visibleSubTabs } from '@/lib/shell-nav';
+import { activeShellArea, visibleSubTabs, type ShellSubTabAction } from '@/lib/shell-nav';
+import { useShellStore } from '@/stores/useShellStore';
 import { useShellAreas } from './useShellAreas';
 import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 
@@ -27,9 +29,52 @@ export const SUBNAV_SLOT_END = 'subnav-slot-end';
 /** A list page's search and filters (ListToolbar), right-aligned before the
  *  primary action (founder mock, 2026-10-11). */
 export const SUBNAV_SLOT_TOOLS = 'subnav-slot-tools';
-/** The phone tab row's right end, for the page's primary action as a compact
- *  icon button (Add rollout on Rollouts, founder 2026-10-14). Phones only. */
+/** The phone tab row's right end. SubNav draws the tab's own action there
+ *  (lib/shell-nav.ts `action`) since the tab jump fix, Oct 18, 2026: Add
+ *  artist on Artists, New rollout on Rollouts. It is always 36px wide, button
+ *  or not, so the row has one shape on every tab. Pages no longer portal
+ *  into it. Phones only. */
 export const SUBNAV_SLOT_PHONE_END = 'subnav-slot-phone-end';
+
+/** A plain plus. The stamped Plus (components/icons) reads as a crosshair at
+ *  16px (Oyin approved the plain one for this button, Oct 18, 2026). */
+function PlainPlus() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+const ACTION_CLASS =
+  'motion-focus motion-press inline-flex h-9 w-9 items-center justify-center rounded-full border border-stroke-strong bg-bg-surface text-content-primary hover:bg-bg-hover';
+
+/** The quiet 36px circle, the same on every tab; only its label changes. */
+function TabAction({ action }: { action: ShellSubTabAction | null }) {
+  const openCreate = useShellStore((state) => state.openCreate);
+  // A page that owns its own create modal (WorkspaceView on Rollouts) claims
+  // the press, so exactly one modal opens; otherwise the shell's one does.
+  const createHandler = useShellStore((state) => state.createHandler);
+  if (!action) return null;
+  if (action.href) {
+    return (
+      <Link href={action.href} scroll={false} aria-label={action.label} title={action.label} className={ACTION_CLASS}>
+        <PlainPlus />
+      </Link>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => (createHandler ? createHandler() : openCreate())}
+      aria-label={action.label}
+      title={action.label}
+      className={ACTION_CLASS}
+    >
+      <PlainPlus />
+    </button>
+  );
+}
 
 export function SubNav() {
   const pathname = usePathname() ?? '/dashboard';
@@ -41,12 +86,62 @@ export function SubNav() {
   // out, and Artists / Rollouts above a rollout's title read as page chrome.
   // This row is below lg only, so the computer is unchanged.
   const rolloutOpen = useRolloutPhoneChrome((state) => state.rolloutOpen);
+
+  // One highlight that slides between tabs (150ms, --motion-out; instant with
+  // reduced motion), measured from the active tab. Until it is measured (the
+  // server render, the first frame) the active tab draws its own background,
+  // so the highlight is there from the first paint and never slides in from 0.
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const [pill, setPill] = useState<{ left: number; width: number; animate: boolean } | null>(null);
+  const activeKey = tabs.find((tab) => tab.isActive(pathname))?.key ?? null;
+  const measure = useCallback(
+    (animate: boolean) => {
+      const row = rowRef.current;
+      const node = row?.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!row || !node) {
+        setPill(null);
+        return;
+      }
+      setPill((previous) => ({
+        left: node.offsetLeft,
+        width: node.offsetWidth,
+        animate: animate && previous !== null,
+      }));
+    },
+    []
+  );
+  useLayoutEffect(() => {
+    measure(true);
+  }, [measure, activeKey, tabs.length, rolloutOpen]);
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row || typeof ResizeObserver === 'undefined') return;
+    // Font swaps and rotation change tab widths; follow them without sliding.
+    const observer = new ResizeObserver(() => measure(false));
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [measure, tabs.length, rolloutOpen]);
+
   if (tabs.length === 0 || rolloutOpen) return null;
+  const activeTab = tabs.find((tab) => tab.key === activeKey) ?? null;
 
   return (
     <nav aria-label="Section" className="shell-band-sub lg:hidden">
       <div className="mx-auto flex h-14 w-full max-w-[1440px] items-center gap-3 px-3 sm:px-5">
-      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+      <div ref={rowRef} className="relative flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        {pill ? (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-0 top-1/2 h-10 rounded-lg bg-bg-hover motion-reduce:!transition-none"
+            style={{
+              width: pill.width,
+              transform: `translate(${pill.left}px, -50%)`,
+              transition: pill.animate
+                ? 'transform 150ms var(--motion-out), width 150ms var(--motion-out)'
+                : 'none',
+            }}
+          />
+        ) : null}
         {tabs.map((tab) => {
           const isActive = tab.isActive(pathname);
           return (
@@ -59,9 +154,9 @@ export function SubNav() {
               ref={(node) => {
                 if (node && isActive) node.scrollIntoView?.({ block: 'nearest', inline: 'center' });
               }}
-              className={`motion-focus motion-press inline-flex h-10 shrink-0 items-center rounded-lg px-3.5 text-sm font-medium transition-colors ${NAV_TIP_TOUCH_CLASS} ${
+              className={`motion-focus motion-press relative inline-flex h-10 shrink-0 items-center rounded-lg px-3.5 text-sm font-medium transition-colors ${NAV_TIP_TOUCH_CLASS} ${
                 isActive
-                  ? 'bg-bg-hover text-content-primary'
+                  ? `${pill ? '' : 'bg-bg-hover '}text-content-primary`
                   : 'text-content-secondary hover:bg-bg-hover/60 hover:text-content-primary'
               }`}
             >
@@ -71,7 +166,9 @@ export function SubNav() {
         })}
         {tip.panel}
       </div>
-      <div id={SUBNAV_SLOT_PHONE_END} className="flex shrink-0 items-center empty:hidden" />
+      <div id={SUBNAV_SLOT_PHONE_END} className="flex h-9 w-9 shrink-0 items-center justify-center">
+        <TabAction action={activeTab?.action ?? null} />
+      </div>
       </div>
     </nav>
   );

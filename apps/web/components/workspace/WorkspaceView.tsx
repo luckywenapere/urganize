@@ -78,6 +78,7 @@ import { SentRequestsList } from '@/components/directory/SentRequestsList';
 import { withFirstShareOffer } from '@/components/share/withFirstShareOffer';
 import { isSocialShareEnabled } from '@/lib/social-share';
 import { useShareStore } from '@/stores/useShareStore';
+import { useShellStore } from '@/stores/useShellStore';
 
 const TASKS_PANEL_ID = 'workspace-tasks';
 
@@ -787,6 +788,17 @@ export function WorkspaceView() {
     setPhoneRolloutOpen(phoneRolloutOpen);
   }, [phoneRolloutOpen, setPhoneRolloutOpen]);
   useEffect(() => () => setPhoneRolloutOpen(false), [setPhoneRolloutOpen]);
+  // The phone tab row's New rollout (SubNav, tab jump fix Oct 18, 2026) opens
+  // THIS page's create modal, the one the desktop button and the empty state
+  // open, so it lands in the new rollout as before and only one modal opens.
+  const setShellCreateHandler = useShellStore((state) => state.setCreateHandler);
+  useEffect(() => {
+    const openHere = () => setIsCreateModalOpen(true);
+    setShellCreateHandler(openHere);
+    return () => {
+      if (useShellStore.getState().createHandler === openHere) setShellCreateHandler(null);
+    };
+  }, [setShellCreateHandler]);
   useEffect(() => {
     setPhoneSearchOpen(false);
     setPhoneMenuOpen(false);
@@ -1489,7 +1501,9 @@ export function WorkspaceView() {
           URG-224 also carried `lg:-mt-5`, which cancelled that pt-5 too and
           overshot the cards 20px ABOVE the panels (measured on production:
           cards at 65px vs panels at 85px). Removing it lands all three on 85px.
-          Below lg neither panel renders, so the normal pt-6 inset stays. Do NOT
+          Below lg neither panel renders, so the normal pt-6 inset stays for an
+          open rollout. The catalogue drops it (tab jump fix, Oct 18, 2026) so
+          its list starts 20px under the tab row, where Artists' does. Do NOT
           touch AppShell's <main> padding directly — Settings and every other
           chrome page share it, and the panels' sticky offset is derived from
           it. */}
@@ -1507,7 +1521,7 @@ export function WorkspaceView() {
           would only push the dock up off the floor — by 24px on a phone and 96px
           at `sm`, where it would visibly float. The catalog view keeps it. */}
       <div
-        className={`flex min-h-0 min-w-0 flex-1 flex-col pt-6 sm:px-6 lg:block lg:px-0 lg:pt-0 ${isDesktopFocusedMode ? 'pb-0 lg:pb-0' : 'pb-6 sm:pb-24'}`}
+        className={`flex min-h-0 min-w-0 flex-1 flex-col ${showCatalogue ? '' : 'pt-6'} sm:px-6 lg:block lg:px-0 lg:pt-0 ${isDesktopFocusedMode ? 'pb-0 lg:pb-0' : 'pb-6 sm:pb-24'}`}
       >
           {/* Screen-reader-only live region. Polite mode waits for the SR to be
               idle, atomic="true" re-reads the whole message. Mirrors the visible
