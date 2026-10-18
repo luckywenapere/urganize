@@ -36,7 +36,7 @@ import { searchSettings } from '@/lib/settings-search';
 import { useSettingsDirtyStore } from '@/stores/useSettingsDirtyStore';
 import { getAccessToken } from './getAccessToken';
 import { SettingsNav } from './SettingsNav';
-import { useCloseSettings, useOpenSettings } from './useOpenSettings';
+import { useCloseSettings, useOpenSettings, writeSettingsUrl } from './useOpenSettings';
 import { useIsWide } from './useIsWide';
 import { useTeammates } from './useTeammates';
 import { useWorkspaceSettings } from './useWorkspaceSettings';
@@ -189,9 +189,7 @@ function SettingsDialog({
   const leaveTo = useCallback(
     (href: string) => {
       resetDirty();
-      router.replace(closeSettingsUrl(window.location.pathname, window.location.search), {
-        scroll: false,
-      });
+      writeSettingsUrl(closeSettingsUrl(window.location.pathname, window.location.search), 'replace');
       router.push(href);
     },
     [resetDirty, router]

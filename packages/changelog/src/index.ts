@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.12",
+    date: "October 18, 2026",
+    highlights: [
+      "On your phone, Settings answers your first tap. Opening it, picking a section, going back to the list and closing it now happen straight away, instead of waiting on the network and looking like the button did nothing.",
+    ],
+  },
+  {
     version: "1.157.11",
     date: "October 18, 2026",
     highlights: [
