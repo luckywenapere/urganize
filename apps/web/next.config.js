@@ -45,6 +45,13 @@ const BUILD_ID = (
 // The Oct 16, 2026 feature cuts (URG-319). See the `env` block below.
 const CUT_FEATURE_FLAGS = require('./lib/cut-features.json');
 
+// Sentry (URG-372). The app version becomes the Sentry release, and the
+// Vercel environment (production / preview) its environment. VERCEL_ENV is
+// server-only, so it is stamped for the browser here. package.json mirrors
+// the changelog's top entry (CLAUDE.md, Versioning).
+const APP_VERSION = require('./package.json').version;
+const SENTRY_ENVIRONMENT = process.env.VERCEL_ENV || 'development';
+
 const nextConfig = {
   transpilePackages: ['@urganize/ui'],
   // Required by the PostHog proxy below: their ingest API is sensitive to the
@@ -92,6 +99,8 @@ const nextConfig = {
     // deployment, so each deploy registers a new worker that purges the last
     // build's caches. See public/sw-offline.js and lib/offline/register.ts.
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,
+    NEXT_PUBLIC_APP_VERSION: APP_VERSION,
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT: SENTRY_ENVIRONMENT,
   },
   // Every response names the build that produced it, so the service worker
   // only ever serves a cached page from its own build (public/sw-offline.js).
@@ -179,4 +188,32 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Sentry's build wrapper (URG-372). Source maps are NOT uploaded yet: there is
+// no SENTRY_AUTH_TOKEN, and without one the plugin would only warn. Uploading
+// stays off explicitly so the build never depends on the token or on Sentry
+// being reachable. To get readable stack traces later, add SENTRY_AUTH_TOKEN
+// in Vercel and set sourcemaps.disable to false.
+const { withSentryConfig } = require('@sentry/nextjs/config');
+
+module.exports = withSentryConfig(nextConfig, {
+  org: 'theurganization',
+  project: 'urganize-web',
+  sentryUrl: 'https://de.sentry.io/',
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  telemetry: false,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+  release: { create: Boolean(process.env.SENTRY_AUTH_TOKEN), name: `urganize-web@${APP_VERSION}` },
+  // The route manifest names transactions for tracing, which is off. Leaving
+  // it on inlines every route pattern into the shared client bundle.
+  routeManifestInjection: false,
+  // Errors only: strip the SDK's debug logging and the tracing / replay code
+  // paths from the client bundle where the bundler supports it.
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeTracing: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+    excludeReplayWorker: true,
+  },
+});

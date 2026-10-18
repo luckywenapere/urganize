@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
+import { reportErrorToMonitoring } from '@/lib/monitoring/report';
+
 // The product's one support channel: a WhatsApp deep link to the founder.
 // Inlined rather than imported (lib/support-contact.ts was removed along with
 // the recurring "Chat with the founder" UI feature) — this page's own rule 2
@@ -28,15 +31,21 @@ const SUPPORT_WHATSAPP_URL = 'https://wa.me/2347067367057';
 // 2. NO MOVING PARTS. No auth store, no analytics, no storage reads. The
 //    analytics client dynamically imports PostHog and touches localStorage,
 //    either of which could be the thing that brought us here; a boundary that
-//    can throw is not a boundary. That is why this page reports nothing — the
-//    console error React already logged is the record. Only a plain string
-//    constant is imported.
+//    can throw is not a boundary. That is why this page sends nothing to
+//    PostHog. The one exception (URG-372) is lib/monitoring/report.ts, which
+//    imports nothing, touches no storage and swallows its own failures: it
+//    hands the crash to Sentry (queued until the SDK chunk loads). A digest
+//    means the server already reported it, so those are skipped.
 export default function GlobalError({
   error,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    if (!error.digest) reportErrorToMonitoring(error, { boundary: 'global' });
+  }, [error]);
+
   return (
     <html lang="en">
       <body

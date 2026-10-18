@@ -1,7 +1,7 @@
 {
   "name": "@urganize/web",
   "description": "Urganize is where music teams plan every release and deliver it on time.",
-  "version": "1.158.2",
+  "version": "1.158.3",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
+    "@sentry/nextjs": "^11.8.0",
     "@supabase/auth-js": "2.101.0",
     "@supabase/postgrest-js": "2.101.0",
     "@supabase/supabase-js": "^2.90.1",

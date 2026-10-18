@@ -1,4 +1,5 @@
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
+import { reportErrorToMonitoring } from '@/lib/monitoring/report';
 
 /**
  * The reporting side of a component-level `ErrorBoundary`, kept out of the
@@ -22,4 +23,6 @@ export function reportBoundaryError(error: Error, scope: string) {
   } catch {
     // Ignore — the console.error in the boundary is the durable record.
   }
+  // Sentry (URG-372). Never throws, and queues until the SDK has loaded.
+  reportErrorToMonitoring(error, { boundary: scope });
 }

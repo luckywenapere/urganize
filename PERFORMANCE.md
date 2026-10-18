@@ -56,6 +56,16 @@ earlier queue on the same promise. Surveys are off (`disable_surveys: true`),
 which saves a ~33 KB script per page view. The `/urg-relay` first-party proxy
 is unchanged and pinned by its test.
 
+**Sentry after load, errors only (URG-372, v1.158.3).** The SDK (~32 KB
+gzip) is its own chunk, imported by `lib/monitoring/report.ts` once the page
+has loaded and the thread is idle; errors thrown before that are queued and
+sent when it arrives. Only that ~1 KB reporter is on the shared chain:
+measured +0.6 KB gzip on `/auth`, `/`, `/locked` and `/dashboard`. No
+replay, no tracing (`bundleSizeOptimizations` strips them), and
+`routeManifestInjection: false`, because the route manifest otherwise inlines
+every route into the shared bundle. `lib/monitoring/monitoring.test.ts` fails
+if `@sentry/nextjs` becomes a static import on the shared chain.
+
 **Fonts.** Three faces, declared once in `app/layout.tsx`. Space Mono is not
 preloaded. The content calendar reads `--font-cc-display` / `--font-cc-mono`,
 defined in `globals.css` from the layout's variables. Never call

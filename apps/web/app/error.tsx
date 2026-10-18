@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@urganize/ui/Button';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
 import { errorBackHref } from '@/lib/error-back-link';
+import { reportErrorToMonitoring } from '@/lib/monitoring/report';
 
 // The route-level boundary. Catches anything thrown while rendering a page or
 // running its effects, on the client or during a server render, and replaces
@@ -50,6 +51,10 @@ export default function AppError({
         ...(error.digest ? { digest: error.digest } : {}),
       })
     );
+    // Sentry (URG-372). A digest means the error was thrown on the server,
+    // where onRequestError in instrumentation.ts already reported it with the
+    // real stack; the client only holds a redacted copy, so it is skipped.
+    if (!error.digest) reportErrorToMonitoring(error, { boundary: 'route' });
   }, [error, pathname]);
 
   return (
