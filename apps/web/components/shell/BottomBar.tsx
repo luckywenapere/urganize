@@ -98,6 +98,10 @@ const TAB_ICON: Record<string, IconComponent> = {
  *
  * Labels stay visible. Icon-only tabs were tried here before (v1.10.3) and cost
  * the people who most need the bar the words that tell them what each tab does.
+ *
+ * No press-and-hold tips on the bar's tabs since 2026-10-18 (founder call: the
+ * UrgAns tip popping over the composer was distracting on a phone). The labels
+ * already say what each tab is. The More sheet's rows keep their tips.
  */
 export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
   const pathname = usePathname() ?? '/dashboard';
@@ -106,7 +110,6 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
   const active = activeMobileTab(areas, pathname);
   const [moreOpen, setMoreOpen] = useState(false);
   const collapsed = useBarCollapsedOnScroll(pathname);
-  const tip = useNavTip();
   const ActiveIcon = active === 'more' ? MoreHorizontal : (TAB_ICON[active ?? ''] ?? Home);
   const unread = useNotificationsDoorStore((state) => (state.available ? state.unread : 0));
 
@@ -149,7 +152,6 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
                 <Link
                   href={tab.href}
                   tabIndex={collapsed ? -1 : 0}
-                  {...tip.bind(tab.key)}
                   onClick={
                     tab.key === 'catalogue'
                       ? leaveReleaseForCatalog
@@ -183,7 +185,6 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
             <button
               type="button"
               tabIndex={collapsed ? -1 : 0}
-              {...tip.bind('more')}
               onClick={() => setMoreOpen(true)}
               data-shell-more
               aria-haspopup="dialog"
@@ -203,7 +204,6 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
           </li>
         </ul>
       </nav>
-      {tip.panel}
       {moreOpen ? <MoreSheet areas={areas} showHelp={showHelp} onClose={() => setMoreOpen(false)} /> : null}
     </>
   );

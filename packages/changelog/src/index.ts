@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.14",
+    date: "October 18, 2026",
+    highlights: [
+      "On your phone, holding a tab in the bottom bar no longer pops a tip over the page. The tab names already say where each one goes.",
+    ],
+  },
+  {
     version: "1.157.13",
     date: "October 18, 2026",
     highlights: [
