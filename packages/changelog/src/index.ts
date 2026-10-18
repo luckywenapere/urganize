@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.11",
+    date: "October 18, 2026",
+    highlights: [
+      "On your phone, the menu icon at the top of a rollout opens one menu again. A second copy was stacking on top of it.",
+      "Change artist is no longer in the rollout menu on your phone or computer. If a release is filed under the wrong artist, the distribution check still offers the fix right where the problem shows.",
+    ],
+  },
+  {
     version: "1.157.10",
     date: "October 18, 2026",
     highlights: [

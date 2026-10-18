@@ -20,7 +20,6 @@ type RolloutTabsProps = {
    *  Rollouts (URG-254, founder call 2026-10-14). */
   variant?: 'row' | 'side';
   share?: RolloutMenuDialogInput | null;
-  changeArtist?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
 };
 
@@ -31,21 +30,20 @@ type RolloutTabsProps = {
  *
  * What is in it, in what order and which one is lit come from the same builder
  * the phone's menu uses (lib/rollout-menu.ts via useRolloutMenuActions), so the
- * two cannot drift. The scene rows and the Notes link are tabs. The three
- * dialog-shaped actions (Share, Change artist, Archive) are not places, so they
- * sit behind the overflow button at the end instead of reading as tabs.
+ * two cannot drift. The scene rows and the Notes link are tabs. The
+ * dialog-shaped actions (Share, Archive) are not places, so they sit behind
+ * the overflow button at the end instead of reading as tabs.
  *
  * The row scrolls sideways when it is wider than the screen, and keeps the lit
  * tab in view. When tabs hide past an edge, that edge fades and shows an arrow
  * (pitch kit polish, 2026-10-11): a live check found "Add cover art" and the
  * pitch kit sitting off-screen with nothing saying there was more.
  */
-export function RolloutTabs({ releaseId, variant = 'row', share, changeArtist, archive }: RolloutTabsProps) {
+export function RolloutTabs({ releaseId, variant = 'row', share, archive }: RolloutTabsProps) {
   const actions = useRolloutMenuActions({
     releaseId,
     variant: 'rail',
     share,
-    changeArtist,
     archive,
   });
   const places = actions.filter((action) => action.isActive !== undefined || action.href);

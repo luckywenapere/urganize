@@ -188,16 +188,20 @@ type TasksPanelProps = {
    * layout is stacked (below lg) and a release card is tapped. */
   id?: string;
   /**
-   * The three dialog-shaped rows of the PHONE's release menu: shelve a
-   * finished release (or restore an archived one), move it to another artist,
-   * and share it to socials (2026-09-23). Modal-shaped, so they never light up.
-   * Structured (see `TaskPanelAction`) so the menu can draw them and the mobile
-   * search can match on their labels. On a desktop the same three rows are drawn
-   * by the rollout menu in the right-hand column, which WorkspaceView renders
-   * itself, so only the mobile mount of this panel is handed them.
+   * The dialog-shaped rows of the PHONE's release menu: shelve a finished
+   * release (or restore an archived one) and share it to socials (2026-09-23).
+   * Modal-shaped, so they never light up. Structured (see `TaskPanelAction`)
+   * so the menu can draw them and the mobile search can match on their labels.
+   * On a desktop the same rows are drawn by the rollout menu in the right-hand
+   * column, which WorkspaceView renders itself, so only the mobile mount of
+   * this panel is handed them.
+   *
+   * Change artist left the menu on Oct 18, 2026 (founder: "what is that change
+   * artist even for"). It is a fix for a release filed under the wrong artist,
+   * so it is offered only where that problem shows: the distribution issue
+   * list. The dialog and its data are unchanged.
    */
   archiveAction?: TaskPanelAction | null;
-  changeArtistAction?: TaskPanelAction | null;
   shareAction?: TaskPanelAction | null;
   /**
    * When set, replaces the activity buckets with this content. The rollout menu
@@ -249,6 +253,15 @@ type TasksPanelProps = {
    * stray Group by on the page bar beside the timeline's own (2026-10-16).
    */
   pageBarTools?: boolean;
+  /**
+   * Whether this mount owns the phone's Rollout menu sheet. True only on the
+   * phone branch's mount in WorkspaceView. WorkspaceDesktopFocused mounts a
+   * second TasksPanel inside a `hidden lg:block` wrapper, and both read the
+   * shared menuOpen store; the sheet is portalled to <body>, so the hidden
+   * copy's sheet escaped its wrapper and a second menu stacked on the phone
+   * (Oct 18, 2026, v1.157.10). One owner, one sheet.
+   */
+  phoneMenu?: boolean;
 };
 
 /** One entry in the mobile release menu. Since 2026-08-31 that is EVERY
@@ -271,13 +284,13 @@ export function TasksPanel({
   scopedRelease,
   id,
   archiveAction,
-  changeArtistAction,
   shareAction,
   sceneContent,
   activitiesBanner,
   activitiesFooter,
   bannerReplacesEmptyState = false,
   pageBarTools = true,
+  phoneMenu = false,
 }: TasksPanelProps) {
   // openTask opens the global task detail pop-up mounted by TaskUIProvider —
   // this panel stays where it is underneath the modal.
@@ -452,7 +465,6 @@ export function TasksPanel({
     releaseId: scopedRelease?.id ?? null,
     variant: 'phone',
     share: shareAction,
-    changeArtist: changeArtistAction,
     archive: archiveAction,
   });
 
@@ -853,7 +865,7 @@ export function TasksPanel({
           capped at the screen minus the safe areas, and its rows are still
           drawn upside down (orderForThumb) so the most-used sit by the thumb.
           New activity stays on the bottom bar's centre "+". */}
-      {hasMobileMenu && phoneMenuOpen ? (
+      {phoneMenu && hasMobileMenu && phoneMenuOpen ? (
         <RolloutMenuSheet
           id={moreMenuListId}
           actions={orderForThumb(moreMenuActions)}

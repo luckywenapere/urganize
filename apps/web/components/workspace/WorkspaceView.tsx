@@ -1601,10 +1601,13 @@ export function WorkspaceView() {
                   tasks={scopedTasks}
                   scopedRelease={scopedReleaseSlim}
                   archiveAction={archiveAction}
-                  changeArtistAction={changeArtistAction}
                   shareAction={shareAction}
                   sceneContent={isDesktopViewport ? undefined : scenePanel}
                   pageBarTools={false}
+                  // The one mount that owns the phone's Rollout menu sheet.
+                  // The desktop copy is mounted too (hidden), and its portalled
+                  // sheet stacked a second menu on the phone (Oct 18, 2026).
+                  phoneMenu
                   activitiesBanner={activitiesBannerNode}
                   activitiesFooter={roleGapsFooter}
                   bannerReplacesEmptyState={bannerReplacesEmptyState}
@@ -1633,7 +1636,6 @@ export function WorkspaceView() {
                 scopedRelease={scopedReleaseSlim}
                 card={selectedCard}
                 share={shareAction}
-                changeArtist={changeArtistAction}
                 archive={archiveAction}
                 onClose={goBack}
                 closeLabel={backLabel}

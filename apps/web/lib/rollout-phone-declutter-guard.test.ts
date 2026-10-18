@@ -38,7 +38,7 @@ describe('phone rollout declutter', () => {
     expect(header).toContain('aria-label="Search activities"');
     expect(header).toContain('aria-label="Rollout menu"');
     expect(header).toContain("data-tour={tour ? 'rollout-menu' : undefined}");
-    expect(panel).toContain('{hasMobileMenu && phoneMenuOpen ? (');
+    expect(panel).toContain('{phoneMenu && hasMobileMenu && phoneMenuOpen ? (');
     expect(panel).toContain('<RolloutMenuSheet');
   });
 

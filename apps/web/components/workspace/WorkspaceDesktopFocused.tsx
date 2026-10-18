@@ -32,10 +32,10 @@ type WorkspaceDesktopFocusedProps = {
    * what is showing: a scene has taken the panel otherwise, and "add an
    * activity" pointed at nothing on screen is noise. Absent, no button. */
   onNewActivity?: () => void;
-  /** Share, Change artist and Archive: dialogs WorkspaceView owns. They sit
-   * behind the tab row's overflow button. */
+  /** Share and Archive: dialogs WorkspaceView owns. They sit behind the tab
+   * row's overflow button. Change artist left the menu on Oct 18, 2026; it is
+   * offered only in the distribution issue list now. */
   share?: RolloutMenuDialogInput | null;
-  changeArtist?: RolloutMenuDialogInput | null;
   archive?: RolloutMenuDialogInput | null;
   /** Rendered above the TasksPanel inside the centre column: the one-time
    * NewReleaseGuide after a template creation. */
@@ -87,7 +87,6 @@ export function WorkspaceDesktopFocused({
   closeLabel,
   onNewActivity,
   share,
-  changeArtist,
   archive,
   banner,
   panelSceneContent,
@@ -203,7 +202,6 @@ export function WorkspaceDesktopFocused({
               releaseId={scopedRelease.id}
               variant="side"
               share={share}
-              changeArtist={changeArtist}
               archive={archive}
             />,
             rolloutMenuSlot
@@ -213,7 +211,6 @@ export function WorkspaceDesktopFocused({
             <RolloutTabs
               releaseId={scopedRelease.id}
               share={share}
-              changeArtist={changeArtist}
               archive={archive}
             />
           </div>
