@@ -453,3 +453,285 @@ html[data-marketing-theme="dark"] .home-v2 {
 .home-v2 .header-cta:hover {
   background: var(--marketing-surface);
 }
+
+/* ---------------------------------------------------------------------------
+   Release Dawn (2026-10-18, URG-376; founder approved the mock). The dawn arm
+   of the homepage hero A/B. Markup in components/landing/sections/HeroDawn.tsx,
+   assignment in lib/hero-variant.ts. Nothing here shows unless
+   html[data-hero-variant="dawn"], so the flat arm is the hero as it was.
+
+   THE SKY is anchored to the product-shot wrapper: its box starts 1000px
+   above the shot's top edge (S, at 1000px in the box) and ends at the shot's
+   bottom edge, so every stop below is a distance from that edge and the
+   horizon sits on it however the text above wraps. The stops are the mock's
+   (gen.py SKY_A_DARK / SKY_A_LIGHT) converted from percentages of its 1250px
+   (desktop) and 1350px (phone) sky to px from the edge. The mask fades the box
+   out over its last 140px, behind the shot, so the sky always ends at the
+   base colour before the affiliations strip, whatever the glows' radii.
+   Above S - 1000px (off the top of the page at every width) is plain base.
+   The grain (3.5%, overlay) is there to break up 8-bit banding on the dark
+   gradient. CSS only: no image request, no layout (absolute), no animation.
+   ------------------------------------------------------------------------ */
+.hero-sky,
+.hero-cards {
+  display: none;
+}
+
+html[data-hero-variant="dawn"] .hero-sky {
+  display: block;
+}
+
+.hero-sky {
+  position: absolute;
+  z-index: -1;
+  top: -1000px;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 140px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 140px), transparent 100%);
+
+  /* Phone (the 4:5 phone capture); mock p1-A-dawn. */
+  --sky-d0: 338px;
+  --sky-d1: 635px;
+  --sky-d2: 905px;
+  --sky-d3: 1121px;
+  --sky-d4: 1364px;
+  --sky-d5: 1688px;
+  --sky-l1: 743px;
+  --sky-l2: 1080px;
+  --sky-l3: 1418px;
+  --sky-g1-y: 1175px;
+  --sky-g1-r: 351px;
+  --sky-g2-y: 1202px;
+  --sky-g2-r: 621px;
+
+  /* Light (the default theme in this file; dark overrides below). */
+  background:
+    radial-gradient(52% var(--sky-g1-r) at 50% var(--sky-g1-y), rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 70%),
+    linear-gradient(180deg, #b9d9c6 0, #b9d9c6 var(--sky-d0), #cfe5d6 var(--sky-l1), #e6f0e6 var(--sky-l2), var(--marketing-bg) var(--sky-l3));
+}
+
+@media (min-width: 640px) {
+  /* The desktop capture; mock d1-A-dawn / d2-A-dawn-light. */
+  .hero-sky {
+    --sky-d0: 282px;
+    --sky-d1: 557px;
+    --sky-d2: 807px;
+    --sky-d3: 1007px;
+    --sky-d4: 1232px;
+    --sky-d5: 1532px;
+    --sky-l1: 657px;
+    --sky-l2: 970px;
+    --sky-l3: 1282px;
+    --sky-g1-y: 1057px;
+    --sky-g1-r: 325px;
+    --sky-g2-y: 1082px;
+    --sky-g2-r: 575px;
+  }
+}
+
+html[data-marketing-theme="dark"] .hero-sky {
+  background:
+    radial-gradient(52% var(--sky-g1-r) at 50% var(--sky-g1-y), rgba(150, 227, 173, 0.42) 0%, rgba(127, 217, 154, 0.14) 45%, rgba(127, 217, 154, 0) 75%),
+    radial-gradient(90% var(--sky-g2-r) at 50% var(--sky-g2-y), rgba(38, 92, 66, 0.7) 0%, rgba(38, 92, 66, 0) 70%),
+    linear-gradient(180deg, #0c0c0d 0, #0c0c0d var(--sky-d0), #0c0f0e var(--sky-d1), #0f1d17 var(--sky-d2), #17402f var(--sky-d3), #11281e var(--sky-d4), #0c0c0d var(--sky-d5));
+}
+
+.hero-sky-grain {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+}
+
+/* CONTRAST ON THE GLOW (WCAG AA, 4.5:1 for body text). The proof line sits
+   70 to 110px above the horizon, where the dark sky is at its brightest
+   (#285740 measured behind the attribution at 1440). The base muted #a9a7a2
+   reads 3.5:1 there and the subtle #8c8a86 2.4:1; these read 5.3:1 and 4.9:1.
+   Dawn + dark only, hero only: the light sky is pale enough as it is (5.9:1
+   and 4.6:1 measured), and the flat arm keeps its tokens. */
+html[data-hero-variant="dawn"][data-marketing-theme="dark"] .hero-section {
+  --marketing-text-muted: #d2cfc9;
+  --marketing-text-subtle: #c9c6c0;
+}
+
+/* The shot lifts off the sky (mock .shot). */
+html[data-hero-variant="dawn"] .hero-shot-frame {
+  box-shadow: 0 40px 120px -30px rgba(0, 0, 0, 0.7);
+}
+
+/* THE CARDS. Positioned from the centre of the hero text block (#waitlist),
+   so they hold the same distance from the headline at any width: the inner
+   edges sit 426px (front) and 406px (back) from centre, against a headline
+   half-width of ~391px at lg. They need 676px either side of centre plus a
+   margin, so they show from 1400px and never below (1024 and 1280 would put
+   them on the headline or off the screen). Vertical offsets are from the
+   label's top, matched to the mock at 1440. */
+@media (min-width: 1400px) {
+  html[data-hero-variant="dawn"] .hero-cards {
+    display: block;
+  }
+}
+
+.hero-cards {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --hero-card-bg: rgba(255, 255, 255, 0.66);
+  --hero-card-border: rgba(18, 18, 18, 0.07);
+  --hero-card-chip: rgba(18, 18, 18, 0.06);
+}
+
+html[data-marketing-theme="dark"] .hero-cards {
+  --hero-card-bg: rgba(23, 23, 25, 0.62);
+  --hero-card-border: rgba(244, 242, 238, 0.09);
+  --hero-card-chip: rgba(244, 242, 238, 0.08);
+}
+
+.hero-card {
+  position: absolute;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--hero-card-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: inset 0 0 0 1px var(--hero-card-border), 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+  color: var(--marketing-text);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+}
+
+/* No glass, no see-through: an opaque card reads; a 62% one over a
+   gradient without the blur does not. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .hero-card {
+    background: #ffffff;
+  }
+
+  html[data-marketing-theme="dark"] .hero-card {
+    background: #171719;
+  }
+}
+
+.hero-card b {
+  font-weight: 600;
+}
+
+.hero-card-ask {
+  padding: 16px 20px;
+  border-radius: 22px;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.hero-card-back {
+  opacity: 0.82;
+  transform: scale(0.94);
+}
+
+.hero-card-1 {
+  top: 52px;
+  left: calc(50% - 676px);
+  width: 250px;
+}
+
+.hero-card-2 {
+  top: 246px;
+  left: calc(50% - 636px);
+  width: 230px;
+}
+
+.hero-card-3 {
+  top: 66px;
+  left: calc(50% + 426px);
+  width: 250px;
+  gap: 12px;
+}
+
+.hero-card-4 {
+  top: 256px;
+  left: calc(50% + 406px);
+  width: 230px;
+}
+
+.hero-card-row {
+  display: flex;
+  align-items: center;
+}
+
+.hero-card-meta {
+  margin-top: 4px;
+  font-family: var(--font-home-mono), ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--marketing-text-muted);
+}
+
+.hero-card-meta-gap {
+  margin-top: 8px;
+}
+
+.hero-card-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--marketing-accent);
+}
+
+.hero-card-dot-muted {
+  background: var(--marketing-text-muted);
+}
+
+.hero-card-tick {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: rgba(127, 217, 154, 0.16);
+  color: var(--marketing-accent);
+  font-size: 12px;
+}
+
+.hero-card-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  margin-right: 6px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--hero-card-chip);
+  font-weight: 600;
+}
+
+.hero-card-cover {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1d2b4a, #e2446b 70%, #f7b267);
+}
+
+.hero-card-bar {
+  height: 4px;
+  margin-top: 10px;
+  border-radius: 2px;
+  background: rgba(127, 217, 154, 0.15);
+}
+
+.hero-card-bar-fill {
+  width: 64%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--marketing-accent);
+}

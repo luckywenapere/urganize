@@ -1,3 +1,5 @@
+import { readHeroVariant } from "@/lib/hero-variant";
+
 const posthogToken = process.env.NEXT_PUBLIC_POSTHOG_TOKEN;
 
 function initPostHog() {
@@ -11,6 +13,10 @@ function initPostHog() {
         process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
       defaults: "2026-01-30",
     });
+    // The homepage hero A/B arm (URG-376) rides on every event as a super
+    // property, so funnels break down by it without a new event.
+    const heroVariant = readHeroVariant();
+    if (heroVariant) posthog.register({ hero_variant: heroVariant });
   });
 }
 

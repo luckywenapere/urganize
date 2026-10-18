@@ -17,6 +17,7 @@ import {
   StorySection,
 } from "./components/landing/Sections";
 import { LOGIN_REDIRECT_SCRIPT } from "@/lib/login-redirect";
+import { HERO_VARIANT_SCRIPT } from "@/lib/hero-variant";
 import { homeFontVariables } from "./components/landing/home-fonts";
 import { MarketingFooter } from "./components/marketing/MarketingFooter";
 import { MarketingHeader } from "./components/marketing/MarketingHeader";
@@ -58,6 +59,9 @@ export default function Home() {
           painted. Home page only: /pricing, /features and /login stay readable
           (and /login exists for search). See lib/login-redirect.ts. */}
       <script dangerouslySetInnerHTML={{ __html: LOGIN_REDIRECT_SCRIPT }} />
+      {/* Hero A/B arm (URG-376), set on <html> before the hero is parsed so
+          neither arm flashes the other. See lib/hero-variant.ts. */}
+      <script dangerouslySetInnerHTML={{ __html: HERO_VARIANT_SCRIPT }} />
       <div className="relative">
         <MarketingHeader />
 

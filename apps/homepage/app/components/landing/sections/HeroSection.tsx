@@ -5,6 +5,7 @@ import { SectionShell } from "../SectionShell";
 import { WaitlistForm } from "../WaitlistForm";
 import { WatchDemo } from "../WatchDemo";
 import { wideContainerClass } from "./shared";
+import { HeroCards, HeroSky } from "./HeroDawn";
 
 // Homepage v2 hero (2026-10-17, URG-334; founder approved 2026-10-17).
 //
@@ -23,16 +24,23 @@ import { wideContainerClass } from "./shared";
 // here (`/#waitlist`), the one accent action on the first screen is this
 // form, and the same form repeats at the end. scroll-mt-28 keeps the label
 // clear of the fixed header when the anchor is followed.
+//
+// RELEASE DAWN (2026-10-18, URG-376, founder approved the mock). One arm of an
+// A/B: under html[data-hero-variant="dawn"] a CSS sky rises behind the
+// product shot and four cards float in the desktop gutters (HeroDawn.tsx).
+// The other arm, "flat", renders exactly the hero above. `isolate` keeps the
+// sky's z-index:-1 inside this section, above the page background.
 export function HeroSection() {
   return (
     <SectionShell
-      className="pb-16 pt-16 sm:pb-20 sm:pt-24 lg:pb-24 lg:pt-28"
+      className="hero-section isolate pb-16 pt-16 sm:pb-20 sm:pt-24 lg:pb-24 lg:pt-28"
       containerClassName={wideContainerClass}
     >
       <div
         id="waitlist"
-        className="mx-auto flex max-w-[60rem] scroll-mt-28 flex-col items-center text-center"
+        className="relative mx-auto flex max-w-[60rem] scroll-mt-28 flex-col items-center text-center"
       >
+        <HeroCards />
         <p className="hero-fade-in hero-delay-1 mono-label text-[var(--marketing-accent)]">
           For artist managers
         </p>
@@ -66,7 +74,11 @@ export function HeroSection() {
 
       {/* Below `sm` the frame is a 4:5 window onto the top of the phone
           capture; from `sm` the desktop capture renders at its own aspect. */}
-      <div className="mx-auto mt-14 aspect-[4/5] max-w-[84rem] overflow-hidden rounded-xl border border-[color:var(--marketing-border)] sm:mt-16 sm:aspect-auto">
+      {/* The sky is anchored to this wrapper, so its horizon sits on the
+          shot's top edge whatever height the text above it wraps to. */}
+      <div className="relative mx-auto mt-14 max-w-[84rem] sm:mt-16">
+        <HeroSky />
+        <div className="hero-shot-frame aspect-[4/5] overflow-hidden rounded-xl border border-[color:var(--marketing-border)] sm:aspect-auto">
         <ResponsiveProductShot
           desktop={PRODUCT_SHOTS.catalog}
           phone={PRODUCT_SHOTS.catalogPhone}
@@ -74,6 +86,7 @@ export function HeroSection() {
           sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
           className="h-full w-full object-cover object-top sm:h-auto sm:object-contain"
         />
+        </div>
       </div>
     </SectionShell>
   );

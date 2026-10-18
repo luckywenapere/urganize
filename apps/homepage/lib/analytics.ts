@@ -1,3 +1,5 @@
+import { readHeroVariant } from "./hero-variant";
+
 // The marketing site's one analytics seam (2026-09-02). GA4 is loaded
 // site-wide in app/layout.tsx (afterInteractive), so `gtag` is a global that
 // may or may not exist yet when a handler fires — every call is guarded, and
@@ -14,11 +16,27 @@ export type LandingEvent =
   | "waitlist_submit"
   | "faq_open";
 
+//
+// HERO A/B (2026-10-18, URG-376). Each event also carries `hero_variant`
+// ("dawn" | "flat") once the visitor has an arm, and the same four events are
+// mirrored to PostHog (already loaded by instrumentation-client.ts, which
+// registers hero_variant as a super property), so the waitlist conversion the
+// A/B is judged on lives in PostHog too. No new event names. If PostHog has not
+// finished loading (it waits for idle) the mirror is skipped, never queued.
 type Gtag = (command: "event", name: string, params?: Record<string, string>) => void;
 
 export function trackEvent(name: LandingEvent, params?: Record<string, string>) {
   if (typeof window === "undefined") return;
+  const heroVariant = readHeroVariant();
+  const withVariant = heroVariant ? { ...params, hero_variant: heroVariant } : params;
+  if (process.env.NEXT_PUBLIC_POSTHOG_TOKEN) {
+    void import("posthog-js")
+      .then(({ default: posthog }) => {
+        if (posthog.__loaded) posthog.capture(name, withVariant);
+      })
+      .catch(() => {});
+  }
   const gtag = (window as unknown as { gtag?: Gtag }).gtag;
   if (typeof gtag !== "function") return;
-  gtag("event", name, params);
+  gtag("event", name, withVariant);
 }
