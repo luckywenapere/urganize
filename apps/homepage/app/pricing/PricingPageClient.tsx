@@ -70,12 +70,16 @@ export function PricingPageClient() {
         {/* HERO */}
         <section className="relative px-6 pb-16 pt-14 sm:pt-20">
           <PageDawn className="mx-auto max-w-4xl text-center">
-            <div className="hero-fade-in mb-8 inline-flex items-center gap-2 rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]">
-              <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[var(--marketing-accent)]" />
+            {/* The kicker is the shared subpage one (2026-10-19, founder call):
+                the same plain mono-label <p> and the h1's mt-8 that /features,
+                /why-urganize and the persona pages use. It was a pill (accent
+                border and tint, 10px text, an animate-ping dot whose blank
+                left-hand space showed), the only hero kicker of its kind. */}
+            <p className="mono-label text-[var(--marketing-text-subtle)]">
               Pricing
-            </div>
+            </p>
 
-            <h1 className="hero-fade-in hero-delay-1 mb-8 text-[2.25rem] leading-[1.06] sm:text-[3.6rem] md:text-[4.2rem]">
+            <h1 className="hero-fade-in hero-delay-1 mb-8 mt-8 text-[2.25rem] leading-[1.06] sm:text-[3.6rem] md:text-[4.2rem]">
               One price.
               <br />
               <span className="text-[var(--marketing-accent)]">Your whole team.</span>

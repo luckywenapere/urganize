@@ -5,8 +5,13 @@ import { SectionShell } from "../SectionShell";
 import { ThemedProductShot } from "../ThemedProductShot";
 import { wideContainerClass } from "./shared";
 
+// NO A/B/C BADGES (2026-10-19, founder call): the circled A, B and C above
+// each h2 (and their sr-only "Step X:" prefix) are gone, and with them the
+// `kicker` field and the h2's mt-5, so each text block (h2 + line) sits
+// vertically centred against its shot. A step is a title, a line and a shot.
+//
 // HOMEPAGE V2 (2026-10-17, URG-334, mock awaiting founder approval): the steps
-// are A, B and C (the founder's "easy as ABC"), and each carries ONE short line
+// were A, B and C (the founder's "easy as ABC"), and each carries ONE short line
 // again. That reverses part of the 2026-09-11 call recorded below, on purpose
 // and flagged for the founder. The problem framing that call removed now
 // lives in its own beat right above this one (PainSection), as the note below
@@ -56,7 +61,6 @@ import { wideContainerClass } from "./shared";
 // needs that attribute again, and the strong description is only half of that
 // fix.
 const STEPS: readonly {
-  kicker: string;
   title: string;
   line: string;
   shot: (typeof PRODUCT_SHOTS)[keyof typeof PRODUCT_SHOTS];
@@ -65,7 +69,6 @@ const STEPS: readonly {
   alt: string;
 }[] = [
   {
-    kicker: "A",
     title: "Add a release. Get the plan.",
     line: "Week by week, from today to release day. Change anything.",
     shot: PRODUCT_SHOTS.scopedRelease,
@@ -73,7 +76,6 @@ const STEPS: readonly {
     alt: "A rollout open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
   },
   {
-    kicker: "B",
     title: "Give every task a name.",
     line: "Who does it and by when. No chasing.",
     shot: PRODUCT_SHOTS.activityDetail,
@@ -81,7 +83,6 @@ const STEPS: readonly {
     alt: "An activity opened in Urganize, showing who it is assigned to, its due date and its place in the plan.",
   },
   {
-    kicker: "C",
     title: "See what\u2019s done and what\u2019s late.",
     line: "One timeline for the whole rollout.",
     shot: PRODUCT_SHOTS.timeline,
@@ -106,14 +107,7 @@ export function StorySection() {
                 }`}
               >
                 <div className="max-w-[32rem]">
-                  <span
-                    aria-hidden
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--marketing-accent)] font-mono text-[0.85rem] font-bold text-[var(--marketing-accent)]"
-                  >
-                    {step.kicker}
-                  </span>
-                  <h2 className="mt-5 text-balance text-[1.6rem] leading-[1.15] text-[var(--marketing-text)] sm:text-[2rem]">
-                    <span className="sr-only">Step {step.kicker}: </span>
+                  <h2 className="text-balance text-[1.6rem] leading-[1.15] text-[var(--marketing-text)] sm:text-[2rem]">
                     {step.title}
                   </h2>
                   <p className="mt-3 text-[1.02rem] leading-7 text-[var(--marketing-text-muted)]">
