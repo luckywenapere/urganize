@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.10",
+    date: "October 18, 2026",
+    highlights: [
+      "On your phone, the Activities view of a rollout now shows the distribution check as the same Ready to distribute row as the timeline. Tap it to open the checklist and fix what is left; it goes away once everything is done.",
+    ],
+  },
+  {
     version: "1.157.9",
     date: "October 18, 2026",
     highlights: [

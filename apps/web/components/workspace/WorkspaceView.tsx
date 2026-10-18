@@ -1219,7 +1219,12 @@ export function WorkspaceView() {
         releaseId={scopedReleaseSlim.id}
         showReadiness={distributionMode === 'full'}
         compact={isDesktopViewport && panelBody === 'timeline'}
-        row={!isDesktopViewport && panelBody === 'timeline'}
+        // One divider row on BOTH phone views (Timeline since v1.157.9,
+        // Activities since v1.157.10, URG-360, Oct 18, 2026): the old "Before
+        // you order distribution" card is gone from the phone entirely. The
+        // computer keeps its card on Activities and the handoff line on the
+        // timeline.
+        row={!isDesktopViewport}
         onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}
         onChangeArtist={changeArtistAction ? changeArtistAction.onClick : undefined}
       />
@@ -1570,8 +1575,8 @@ export function WorkspaceView() {
                     meta line with the page's one count. The MOTION bar and
                     the phase line's second count are gone from the phone; the
                     phase counts live in Work the plan and on the computer.
-                    The check before distribution is one divider row on the
-                    timeline, right under the meta line. */}
+                    The check before distribution is one divider row right
+                    under the meta line, on the timeline and Activities alike. */}
                 <RolloutPhoneHeader
                   artistId={scopedReleaseSlim.artistId}
                   artistName={scopedReleaseSlim.artistName}

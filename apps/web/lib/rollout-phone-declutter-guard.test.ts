@@ -49,7 +49,7 @@ describe('phone rollout declutter', () => {
   });
 
   it('shows the readiness check as one row that goes when the checklist is complete', () => {
-    expect(view).toContain("row={!isDesktopViewport && panelBody === 'timeline'}");
+    expect(view).toContain('row={!isDesktopViewport}');
     expect(checklist).toMatch(/if \(row\) \{\s*if \(allDone\) return null;/);
     expect(checklist).toContain('Ready to distribute</span>');
     // Empty blocks never render: an empty checklist draws nothing at all.
@@ -80,5 +80,25 @@ describe('phone rollout declutter', () => {
 
   it('keeps word tags for overdue and blocked work beside the dots', () => {
     expect(timeline).toContain("(item.tone === 'overdue' || item.tone === 'blocked') ? TONE_LABEL[item.tone]");
+  });
+
+  // URG-360 (v1.157.10): the Activities view on a phone got the same row, so
+  // neither phone view draws the old "Before you order distribution" card.
+  it('never draws the old distribution card on either phone view (Timeline or Activities)', () => {
+    // Every phone mount of the strip asks for the row, whatever the view.
+    expect(view).not.toMatch(/row=\{[^}]*panelBody/);
+    expect(view.match(/<DistributionStatusStrip\b/g)).toHaveLength(1);
+    // The phone column only ever mounts the strip off the computer, and the
+    // computer mounts it only off the timeline, so the card stays desktop-only.
+    expect(view).toContain('{isDesktopViewport ? null : distributionStatusStrip}');
+    expect(view).toContain("{isDesktopViewport && panelBody !== 'timeline' ? distributionStatusStrip : null}");
+    // The strip hands the row flag to the checklist, and the row branch
+    // returns before the card (its "Before you order distribution" title) is reached.
+    const strip = read('components/workspace/DistributionStatusStrip.tsx');
+    expect(strip).toContain('row={row}');
+    const rowAt = checklist.indexOf('if (row) {');
+    const cardAt = checklist.indexOf("'Before you order distribution'");
+    expect(rowAt).toBeGreaterThan(-1);
+    expect(cardAt).toBeGreaterThan(rowAt);
   });
 });
