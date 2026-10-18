@@ -32,15 +32,17 @@ const asRow = (value: unknown): Row => (value && typeof value === 'object' ? (va
 
 /**
  * Signed URLs for a batch of faces. Every place these batches feed (roster,
- * artist header, directory, press kit) shows the face at 128px or less, so
+ * artist header, directory, press kit, relationships, the Pitch screen's
+ * curators, a person page's managed artists) shows the face at 128px or less, so
  * each one prefers its 384px copy (lib/image-thumb.ts) and falls back to the
  * original for photos uploaded before thumbs existed.
  */
-async function signAll(
+export async function signPhotoPathsPreferThumb(
   admin: SupabaseClient,
   rows: Array<{ key: string; path: string }>
 ): Promise<Map<string, string>> {
   const urls = new Map<string, string>();
+  if (!rows.length) return urls;
   const thumbs = await generateThumbSignedUrls(
     admin,
     RELEASE_ASSETS_BUCKET,
@@ -65,7 +67,7 @@ export async function loadArtistPhotoUrls(admin: SupabaseClient, artistIds: stri
   try {
     const { data, error } = await admin.from('artists').select('id, photo_path').in('id', ids);
     if (error || !data) return new Map();
-    return signAll(
+    return signPhotoPathsPreferThumb(
       admin,
       data
         .map(asRow)
@@ -87,7 +89,7 @@ export async function loadPersonPhotoUrls(admin: SupabaseClient, userIds: string
       .select('user_id, avatar_storage_path')
       .in('user_id', ids);
     if (error || !data) return new Map();
-    return signAll(
+    return signPhotoPathsPreferThumb(
       admin,
       data
         .map(asRow)

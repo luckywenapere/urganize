@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { RELEASE_ASSETS_BUCKET, generateSignedUrl } from './asset-helpers';
+import { RELEASE_ASSETS_BUCKET, generateSignedUrl, generateThumbSignedUrls } from './asset-helpers';
 import { PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS } from './profile-photo';
 import { readTestRelease } from './test-release';
 import { pickCreditTiles, pickManagedFaces, type CreditTile, type ManagedFace } from './person-page';
@@ -44,7 +44,11 @@ async function sign(admin: SupabaseClient, bucket: string, path: string): Promis
   }
 }
 
-async function loadManaged(admin: SupabaseClient, userId: string): Promise<PersonPageExtras['managed']> {
+async function loadManaged(
+  admin: SupabaseClient,
+  userId: string,
+  thumbs: boolean
+): Promise<PersonPageExtras['managed']> {
   try {
     const { data, error } = await admin
       .from('artists')
@@ -58,11 +62,24 @@ async function loadManaged(admin: SupabaseClient, userId: string): Promise<Perso
       photoPath: text(row.photo_path) || null,
     }));
     const picked = pickManagedFaces(rows);
+    // The page draws these at 68px, so it reads the 384px copies
+    // (lib/image-thumb.ts). The share card keeps the originals: its renderer
+    // takes PNG/JPEG, and a thumb may be WebP.
+    const small = thumbs
+      ? await generateThumbSignedUrls(
+          admin,
+          RELEASE_ASSETS_BUCKET,
+          picked.map((row) => row.photoPath || '').filter(Boolean),
+          PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS
+        ).catch(() => new Map<string, string>())
+      : new Map<string, string>();
     const faces = await Promise.all(
       picked.map(async (row) => ({
         id: row.id,
         name: row.name,
-        photoUrl: row.photoPath ? await sign(admin, RELEASE_ASSETS_BUCKET, row.photoPath) : null,
+        photoUrl: row.photoPath
+          ? small.get(row.photoPath) ?? (await sign(admin, RELEASE_ASSETS_BUCKET, row.photoPath))
+          : null,
       }))
     );
     return { count: rows.filter((row) => row.name).length, faces };
@@ -141,9 +158,14 @@ async function loadCredits(
 
 export async function loadPersonPageExtras(
   admin: SupabaseClient,
-  input: { userId: string; personId: string }
+  input: { userId: string; personId: string },
+  /** thumbs: managed faces from their small copies (the page; never the share card). */
+  options: { thumbs?: boolean } = {}
 ): Promise<PersonPageExtras> {
   if (!input.userId) return EMPTY_PERSON_PAGE_EXTRAS;
-  const [managed, credits] = await Promise.all([loadManaged(admin, input.userId), loadCredits(admin, input)]);
+  const [managed, credits] = await Promise.all([
+    loadManaged(admin, input.userId, options.thumbs === true),
+    loadCredits(admin, input),
+  ]);
   return { managed, ...credits };
 }

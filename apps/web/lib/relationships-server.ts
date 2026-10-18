@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildIdentifiers, type PersonIdentifier } from './person-identity';
 import { identifierKey, resolvePerson, type MatchVia } from './person-match';
-import { signPhotoPath } from './profile-photo-server';
+import { signPhotoPathsPreferThumb } from './profile-photo-server';
 import {
   orderPair,
   type RelationshipCreate,
@@ -158,20 +158,20 @@ async function loadAvatars(
   admin: SupabaseClient,
   profiles: Map<string, Record<string, unknown>>
 ): Promise<Map<string, string>> {
-  const urls = new Map<string, string>();
-  await Promise.all(
-    [...profiles.entries()].map(async ([id, profile]) => {
-      const listed = text(profile.status) === 'claimed' && text(profile.visibility) !== 'private';
-      if (!listed || !profile.avatar_storage_path) return;
-      try {
-        const url = await signPhotoPath(admin, profile.avatar_storage_path);
-        if (url) urls.set(id, url);
-      } catch {
-        // Initials instead.
-      }
-    })
-  );
-  return urls;
+  // The 52px list face and the 110px header read the 384px copy
+  // (lib/image-thumb.ts), falling back to the original for older uploads.
+  const rows: Array<{ key: string; path: string }> = [];
+  for (const [id, profile] of profiles.entries()) {
+    const listed = text(profile.status) === 'claimed' && text(profile.visibility) !== 'private';
+    const path = text(profile.avatar_storage_path);
+    if (listed && path) rows.push({ key: id, path });
+  }
+  try {
+    return await signPhotoPathsPreferThumb(admin, rows);
+  } catch {
+    // Initials instead.
+    return new Map();
+  }
 }
 
 /** Every relationship the team has, newest activity first. */

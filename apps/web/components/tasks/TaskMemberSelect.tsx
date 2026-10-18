@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Check, ChevronDown, UserCircle2 } from '@/components/icons';
 import { getInitials, type WorkspaceMember } from '@/lib/tasks';
+import { ThumbImage } from '@/components/shared/ThumbImage';
 
 type TaskMemberSelectProps = {
   members: WorkspaceMember[];
@@ -71,8 +72,7 @@ function MemberAvatar({ member }: { member: WorkspaceMember }) {
   return (
     <span className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-bg-elevated text-[10px] font-semibold text-content-primary">
       {member.avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={member.avatarUrl} alt="" className="h-full w-full object-cover" />
+        <ThumbImage src={member.avatarUrl} width={24} height={24} className="h-full w-full object-cover" />
       ) : (
         getInitials(member.name || member.email)
       )}

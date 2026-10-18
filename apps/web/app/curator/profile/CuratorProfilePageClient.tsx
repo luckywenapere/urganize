@@ -20,6 +20,7 @@ import {
 } from '@/lib/upload-failure-report';
 import { MAX_CURATOR_BIO_LENGTH, MAX_CURATOR_DISPLAY_NAME_LENGTH } from '@/lib/pitching';
 import { prepareAvatarImage } from '@/lib/downscale-image';
+import { uploadThumb } from '@/lib/image-thumb-client';
 
 const inputClass =
   'h-11 w-full rounded-xl border border-stroke-control bg-bg-base px-3 text-sm text-content-primary placeholder:text-content-tertiary focus:border-brand focus:outline-none';
@@ -147,6 +148,7 @@ export function CuratorProfilePageClient() {
       const signPayload = (await signResponse.json().catch(() => null)) as {
         upload_url?: string;
         storage_path?: string;
+        thumb_upload_url?: string | null;
         error?: string;
       } | null;
       if (!signResponse.ok || !signPayload?.upload_url || !signPayload.storage_path) {
@@ -155,6 +157,9 @@ export function CuratorProfilePageClient() {
       }
 
       step = 2;
+      // The 384px display copy for the Pitch screen tiles rides alongside
+      // (lib/image-thumb-client.ts): best effort, never fails the save.
+      const thumbDone = uploadThumb(signPayload.thumb_upload_url, upload);
       const uploadResponse = await fetch(signPayload.upload_url, {
         method: 'PUT',
         headers: { 'Content-Type': upload.type },
@@ -164,6 +169,7 @@ export function CuratorProfilePageClient() {
         status = uploadResponse.status;
         throw new Error('The upload did not finish.');
       }
+      await thumbDone;
 
       step = 3;
       await saveProfile({ photoPath: signPayload.storage_path });

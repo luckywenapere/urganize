@@ -15,6 +15,7 @@ import { createPostHogEvent } from '@/lib/analytics/shared';
 import { isLikelyBot, isPrefetchRequest, publicProfileViewedProperties } from '@/lib/profile-growth';
 import { recordPublicProfileView } from '@/lib/profile-growth-server';
 import { headers } from 'next/headers';
+import { ThumbImage } from '@/components/shared/ThumbImage';
 
 /**
  * A person's public record at /p/{slug}.
@@ -127,7 +128,7 @@ export default async function PersonPage({ params }: PageProps) {
 
   const admin = adminClient();
   const extras = admin
-    ? await loadPersonPageExtras(admin, { userId: profile.userId, personId: profile.id })
+    ? await loadPersonPageExtras(admin, { userId: profile.userId, personId: profile.id }, { thumbs: true })
     : EMPTY_PERSON_PAGE_EXTRAS;
   const role = roleLine({ roles, profileType, city: profile.city || view.location });
   const hype = hypeLine(view.bio);
@@ -179,8 +180,9 @@ export default async function PersonPage({ params }: PageProps) {
                   }}
                 >
                   {face.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={face.photoUrl} alt={face.name} className="h-full w-full object-cover" />
+                    // The 384px copy, hidden until decoded then faded in over
+                    // the surface fill: never half painted.
+                    <ThumbImage src={face.photoUrl} alt={face.name} width={68} height={68} className="h-full w-full object-cover" />
                   ) : (
                     initialsOf(face.name)
                   )}

@@ -10,7 +10,7 @@ import {
   isValidSongUrl,
 } from '@/lib/pitching';
 import type { BrowsablePlaylist, SentPitch } from '@/types/pitching';
-import { generateSignedUrl } from '@/lib/asset-helpers';
+import { generateSignedUrl, generateThumbSignedUrls } from '@/lib/asset-helpers';
 import { ASSET_SIGNED_URL_TTL_SECONDS, RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 
 // Shared helpers for the team side of playlist pitching.
@@ -296,6 +296,9 @@ export async function loadCuratorNames(
  * Only the SIGNED URL leaves this function, never the storage path, the same
  * rule the public curator page follows. A curator with no photo is simply
  * missing from the map and the tile shows her initials.
+ *
+ * Every tile shows her small, so it reads the 384px copy (lib/image-thumb.ts)
+ * in one batched call and falls back to the original for older uploads.
  */
 export async function loadCuratorPhotoUrls(
   adminClient: SupabaseClient,
@@ -311,14 +314,18 @@ export async function loadCuratorPhotoUrls(
   const rows = ((data || []) as Array<Record<string, unknown>>).filter(
     (row) => typeof row.photo_path === 'string' && row.photo_path
   );
+  const thumbs = await generateThumbSignedUrls(
+    adminClient,
+    RELEASE_ASSETS_BUCKET,
+    rows.map((row) => String(row.photo_path)),
+    ASSET_SIGNED_URL_TTL_SECONDS
+  );
   await Promise.all(
     rows.map(async (row) => {
-      const signed = await generateSignedUrl(
-        adminClient,
-        RELEASE_ASSETS_BUCKET,
-        String(row.photo_path),
-        ASSET_SIGNED_URL_TTL_SECONDS
-      );
+      const path = String(row.photo_path);
+      const signed =
+        thumbs.get(path) ??
+        (await generateSignedUrl(adminClient, RELEASE_ASSETS_BUCKET, path, ASSET_SIGNED_URL_TTL_SECONDS));
       if (signed) urls.set(String(row.user_id || ''), signed);
     })
   );

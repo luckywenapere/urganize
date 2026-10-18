@@ -16,6 +16,7 @@ import type { PressKitSectionContent, PressKitSectionKey } from '@/types/press-k
 import { formatKitDate, firstContactEmail, kitTextFile } from '@/lib/press-kit-text';
 import { KitViewBeacon } from './KitViewBeacon';
 import { CopyButton, DownloadKitButton, EmailButton } from './KitActions';
+import { ThumbImage } from '@/components/shared/ThumbImage';
 
 /**
  * The public press kit at /k/{slug}.
@@ -496,15 +497,16 @@ export default async function PublicPressKitPage({ params, searchParams }: PageP
         {release ? <ReleaseBlock release={release} artistName={kit.artistName} /> : null}
         <header>
           {kit.artistPhotoUrl ? (
-            // The artist's roster face. A plain img: the url is signed with a
-            // short life, and next/image would cache it past that.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={kit.artistPhotoUrl}
-              alt=""
-              className="mb-6 h-24 w-24 rounded-full object-cover"
+            // The artist's roster face, from its 384px copy. A plain img (in
+            // ThumbImage): the url is signed with a short life, and next/image
+            // would cache it past that. Hidden until decoded, then faded in
+            // over the surface circle: never half painted.
+            <span
+              className="mb-6 block h-24 w-24 overflow-hidden rounded-full"
               style={{ backgroundColor: SURFACE }}
-            />
+            >
+              <ThumbImage src={kit.artistPhotoUrl} width={96} height={96} className="block h-full w-full object-cover" />
+            </span>
           ) : null}
           <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: FAINT }}>
             Press kit

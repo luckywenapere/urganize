@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.16",
+    date: "October 18, 2026",
+    highlights: [
+      "Profile photos now load from a small copy too: curator faces when you pitch, people in Relationships, and the artists on a public profile show up fast and all at once instead of filling in from the top. Your original photos are unchanged.",
+    ],
+  },
+  {
     version: "1.157.15",
     date: "October 18, 2026",
     highlights: [

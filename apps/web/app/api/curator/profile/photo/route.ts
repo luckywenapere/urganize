@@ -6,6 +6,7 @@ import {
   RELEASE_ASSETS_BUCKET,
   formatFileSize,
   sanitizeFileName,
+  signThumbUploadUrl,
 } from '@/lib/asset-helpers';
 import { MAX_CURATOR_PHOTO_BYTES } from '@/lib/pitching';
 import {
@@ -91,5 +92,8 @@ export async function POST(request: NextRequest) {
     upload_url: data.signedUrl,
     storage_path: storagePath,
     expires_in: ASSET_UPLOAD_URL_TTL_SECONDS,
+    // Where the browser puts the 384px display copy the Pitch screen tiles
+    // read (lib/image-thumb.ts). Optional: no thumb means they show the original.
+    thumb_upload_url: await signThumbUploadUrl(auth.adminClient, RELEASE_ASSETS_BUCKET, storagePath),
   });
 }
