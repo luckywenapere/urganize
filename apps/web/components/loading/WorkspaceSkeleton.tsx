@@ -1,7 +1,6 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { TASKS_PILL_DOCK_OFFSET_CLASS } from '@/components/workspace/tasks-pill-dock';
 import { SkeletonBlock } from './SkeletonBlock';
 import { useKnownReleaseCount } from './known-counts';
 import {
@@ -20,23 +19,8 @@ const SCOPE_PARAM = 'release';
 /** What `resolvePanelBody` answers: a scene, or one of the two main views. */
 type PanelBody = SceneName | ReleaseMainView;
 
-// The feature switches below decide ONE thing now: whether the phone's release
-// menu trigger is reserved at the base of the panel (its rows are every one of
-// these, plus Share). They used to also size a row of placeholder pills at the
-// top of the desktop panel and a footer row under it. Both rows became the
-// rollout menu, a card at the top of the right-hand column (2026-09-30), and
-// that card's placeholder counts its own rows from the real builder — see
-// RolloutMenuSkeleton.tsx.
-const METADATA_ENABLED = process.env.NEXT_PUBLIC_FEATURE_METADATA === 'true';
-const CONTENT_CALENDAR_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CONTENT_CALENDAR === 'true';
-const FILES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_FILES === 'true';
-const CAPTURE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_CAPTURE === 'true';
-const PITCHING_ENABLED = process.env.NEXT_PUBLIC_FEATURE_PITCHING === 'true';
-const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
-const NOTES_ENABLED = process.env.NEXT_PUBLIC_FEATURE_NOTES === 'true';
-const RELEASE_CHAT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_RELEASE_CHAT === 'true';
-const SOCIAL_SHARE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_SOCIAL_SHARE === 'true';
-const TIMELINE_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TIMELINE === 'true';
+// (The feature switches that reserved the phone's Rollout menu pill at the
+// base of the panel went with the pill, Oct 18, 2026.)
 
 // Two pills used to be reserved at the end of the old desktop header row, and
 // BOTH were removed on 2026-09-07 (founder calls): the status update first, then
@@ -217,28 +201,9 @@ function TasksPanelSkeleton({ panelBody }: { panelBody: PanelBody }) {
             2026-09-08 with the "Note this" entry. Recap stays excluded:
             whether it renders depends on release/task data this skeleton
             doesn't have yet. */}
-      <div
-        className={`sticky z-20 -mx-4 flex items-center gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
-      >
-        {/* `mx-auto`, matching the real row's centring (founder call,
-            2026-09-05) — a right-aligned placeholder pair would slide to the
-            middle the instant the real controls arrived. */}
-        <div className="mx-auto flex shrink-0 items-center gap-2">
-          <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
-          {TIMELINE_ENABLED ||
-          CONTENT_CALENDAR_ENABLED ||
-          PITCHING_ENABLED ||
-          METADATA_ENABLED ||
-          NOTES_ENABLED ||
-          COVER_ART_ENABLED ||
-          FILES_ENABLED ||
-          CAPTURE_ENABLED ||
-          RELEASE_CHAT_ENABLED ||
-          SOCIAL_SHARE_ENABLED ? (
-            <SkeletonBlock className="h-8 w-8 shrink-0 rounded-full" />
-          ) : null}
-        </div>
-      </div>
+      {/* (No dock placeholder below lg since the rollout declutter, Oct 18,
+          2026: the floating Rollout menu pill went to the header's menu icon,
+          so there is nothing at the base of the panel to reserve.) */}
     </div>
   );
 }
@@ -257,19 +222,24 @@ function MobileFocusedSkeleton({ panelBody }: { panelBody: PanelBody }) {
     // children of the section) so the panel skeleton's pill dock reserves the
     // viewport floor, exactly where the real one lands.
     <div className="flex min-h-0 flex-1 flex-col space-y-4">
-      <div className="flex items-center gap-3">
-        <SkeletonBlock className="h-10 w-10 shrink-0" />
+      {/* The decluttered phone header (Oct 18, 2026): bare back chevron,
+          artist eyebrow over the title, search and menu icons at the right,
+          then the one meta line with its count and a thin bar. */}
+      <div className="flex items-start gap-2">
+        <SkeletonBlock className="mt-3 h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1 space-y-1.5">
           <SkeletonBlock className="h-2.5 w-24" />
-          <SkeletonBlock className="h-5 w-40" />
+          <SkeletonBlock className="h-7 w-40" />
         </div>
+        <SkeletonBlock className="mt-2 h-6 w-6 shrink-0 rounded-full" />
+        <SkeletonBlock className="mt-2 h-6 w-6 shrink-0" />
       </div>
-      {/* Motion tracker strip (label + bar + count), mirrors the real one
-          (h-1.5, matching the 2026-08-04 contrast fix). */}
-      <div className="flex items-center gap-3">
-        <SkeletonBlock className="h-2.5 w-14" />
-        <SkeletonBlock className="h-1.5 flex-1 rounded-full" />
-        <SkeletonBlock className="h-2.5 w-8" />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <SkeletonBlock className="h-3 w-44" />
+          <SkeletonBlock className="h-3 w-14" />
+        </div>
+        <SkeletonBlock className="h-[3px] w-full rounded-full" />
       </div>
       <TasksPanelSkeleton panelBody={panelBody} />
     </div>

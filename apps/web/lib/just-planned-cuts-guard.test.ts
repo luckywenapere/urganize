@@ -25,8 +25,10 @@ describe('just-planned rollout cuts', () => {
     expect(view).toMatch(/pinnedConfirmDateCard = pinnedConfirmDateTask && !firstStepsUp/);
   });
 
-  it('hides the phone Motion bar at 0 done', () => {
-    expect(view).toMatch(/!bodyIsMainView \|\| !scopedTasks\.some\(\(t\) => t\.status === 'done'\)/);
+  it('hides the phone progress bar at 0 done (the Motion bar became the header meta line, Oct 18, 2026)', () => {
+    const header = read('components/workspace/RolloutPhoneHeader.tsx');
+    expect(view).toContain('showMeta={bodyIsMainView}');
+    expect(header).toContain('{done > 0 ? (');
   });
 
   it('keeps suggestions off the timeline (they live in Work the plan) and folds No date yet', () => {

@@ -160,12 +160,18 @@ export function PlanListControls({
   extra,
   phoneSearchOnly = false,
   inPageBar = false,
+  autoFocusSearch = false,
+  onDone,
 }: {
   plan: PlanListState;
   trailing?: ReactNode;
   extra?: ReactNode;
   phoneSearchOnly?: boolean;
   inPageBar?: boolean;
+  /** Focus the field on mount (the phone timeline's search icon, Oct 18, 2026). */
+  autoFocusSearch?: boolean;
+  /** A "Done" text button at the row's end that closes the search. */
+  onDone?: () => void;
 }) {
   const toolsSlot = usePageBarToolsSlot(inPageBar);
   const fullScreenSlot = useTimelineFullScreenToolsSlot();
@@ -196,7 +202,15 @@ export function PlanListControls({
     );
   }
   if (!toolsSlot) {
-    return <PlanListRow plan={plan} trailing={trailing} search={phoneSearchOnly ? 'phone' : 'always'} />;
+    return (
+      <PlanListRow
+        plan={plan}
+        trailing={trailing}
+        search={phoneSearchOnly ? 'phone' : 'always'}
+        autoFocusSearch={autoFocusSearch}
+        onDone={onDone}
+      />
+    );
   }
   return (
     <>
@@ -219,11 +233,15 @@ function PlanListRow({
   trailing,
   search,
   bar = false,
+  autoFocusSearch = false,
+  onDone,
 }: {
   plan: PlanListState;
   trailing?: ReactNode;
   search: 'always' | 'phone' | 'never';
   bar?: boolean;
+  autoFocusSearch?: boolean;
+  onDone?: () => void;
 }) {
   const { filters, setFilters } = plan;
   const [open, setOpen] = useState<'sheet' | 'panel' | null>(null);
@@ -271,6 +289,7 @@ function PlanListRow({
           value={filters.query}
           onChange={(event) => setFilters({ ...filters, query: event.target.value })}
           placeholder="Search activities"
+          autoFocus={autoFocusSearch}
           className="motion-focus h-10 w-full rounded-lg border border-stroke-control bg-bg-surface pl-8 pr-3 text-xs text-content-primary placeholder:text-content-tertiary sm:h-9 [&::-webkit-search-cancel-button]:appearance-none"
         />
       </label>
@@ -315,7 +334,7 @@ function PlanListRow({
         />
       ) : null}
 
-      {hasActivePlanFilters(filters) ? (
+      {hasActivePlanFilters(filters) && !onDone ? (
         <button
           type="button"
           onClick={() => setFilters(EMPTY_PLAN_FILTERS)}
@@ -324,6 +343,15 @@ function PlanListRow({
           className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-lg text-content-tertiary transition-colors hover:bg-bg-hover hover:text-content-primary sm:h-9 sm:w-9"
         >
           <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      ) : null}
+      {onDone ? (
+        <button
+          type="button"
+          onClick={onDone}
+          className="motion-focus motion-press inline-flex h-10 shrink-0 items-center rounded-lg px-2 text-sm font-medium text-content-primary transition-colors hover:bg-bg-hover"
+        >
+          Done
         </button>
       ) : null}
       {trailing ? (

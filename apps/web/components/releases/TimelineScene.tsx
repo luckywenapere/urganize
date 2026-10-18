@@ -1,14 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { CalendarClock, ChevronDown, Flag, Info, Maximize2 } from '@/components/icons';
+import { CalendarClock, Check, ChevronDown, ChevronRight, Flag, Info, Maximize2 } from '@/components/icons';
 import type { Release } from '@/types/releases';
 import type { Task } from '@/types/tasks';
 import {
   buildReleaseTimeline,
   dayPosition,
   daysForDragDelta,
+  foldPastWeeks,
+  formatCatchUpRange,
   groupItemsByWeek,
+  hoistStartHere,
+  isClosedTone,
+  phoneWeekHeading,
   isoForDayOffset,
   itemPosition,
   narrowTimeline,
@@ -30,6 +35,8 @@ import { PlanSuggestionToast } from '@/components/workspace/PlanSuggestions';
 import { pickStartHereTaskId } from '@/lib/plan-core';
 import { useTimelineFullScreenToolsSlot } from '@/components/releases/TimelineFullScreen';
 import { formatPhaseDates, summarizeRolloutPhases } from '@/lib/rollout-phases';
+import { EMPTY_PLAN_FILTERS } from '@/lib/plan-focus';
+import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 
 /**
  * The release Timeline — every activity on one week axis, anchored to release
@@ -128,6 +135,13 @@ type TimelineSceneProps = {
    * founder: "they can all enter one line and be much more compact").
    */
   statusSlot?: ReactNode;
+  /**
+   * The phone rollout view (rollout declutter, founder approved Oct 18, 2026).
+   * Search, Filter and the colour key hide behind the header's search icon,
+   * the phase line goes (the header's meta line says the phase), and the
+   * week list folds past weeks into Catch up. The computer is unchanged.
+   */
+  phone?: boolean;
 };
 
 export function TimelineScene({
@@ -139,7 +153,10 @@ export function TimelineScene({
   suppressEmptyState = false,
   onFullScreen,
   statusSlot,
+  phone = false,
 }: TimelineSceneProps) {
+  const phoneSearchOpen = useRolloutPhoneChrome((state) => state.searchOpen);
+  const setPhoneSearchOpen = useRolloutPhoneChrome((state) => state.setSearchOpen);
   const fullScreenToolsSlot = useTimelineFullScreenToolsSlot();
   // The plan tools sit in the page bar (or the full-screen bar) on a computer,
   // so their in-page row is empty there and must not keep its gap.
@@ -285,27 +302,49 @@ export function TimelineScene({
   };
 
   return (
-    <div className={`tl-scene-container pb-16 ${toolsInBar ? 'mt-3 lg:mt-1' : 'mt-6'}`}>
-      {/* One toolbar row (2026-10-14 declutter): search, the Filter button,
-          and at the end the legend behind a small button and Full screen as
-          an icon. It was two rows of controls before the first bar. */}
-      <div className={toolsInBar ? 'mb-3 lg:mb-0' : 'mb-4'}>
-        <PlanListControls
-          plan={plan}
-          phoneSearchOnly={Boolean(onFullScreen)}
-          inPageBar={Boolean(onFullScreen)}
-          trailing={<TimelineChrome onFullScreen={onFullScreen} />}
-        />
-      </div>
+    <div className={`tl-scene-container pb-16 ${phone ? 'mt-0' : toolsInBar ? 'mt-3 lg:mt-1' : 'mt-6'}`}>
+      {phone ? (
+        // Phone (Oct 18, 2026): nothing above the list until the header's
+        // search icon is tapped. Then the field, Filter and Done, and the
+        // colour key that replaced the Info popover. Done clears the search
+        // and filters, so a closed search never leaves the list narrowed.
+        phoneSearchOpen ? (
+          <div className="mb-4" data-timeline-phone-search>
+            <PlanListControls
+              plan={plan}
+              autoFocusSearch
+              onDone={() => {
+                plan.setFilters(EMPTY_PLAN_FILTERS);
+                setPhoneSearchOpen(false);
+              }}
+            />
+            <TimelineColourKey timeline={timeline} />
+          </div>
+        ) : null
+      ) : (
+        <>
+          {/* One toolbar row (2026-10-14 declutter): search, the Filter button,
+              and at the end the legend behind a small button and Full screen as
+              an icon. It was two rows of controls before the first bar. */}
+          <div className={toolsInBar ? 'mb-3 lg:mb-0' : 'mb-4'}>
+            <PlanListControls
+              plan={plan}
+              phoneSearchOnly={Boolean(onFullScreen)}
+              inPageBar={Boolean(onFullScreen)}
+              trailing={<TimelineChrome onFullScreen={onFullScreen} />}
+            />
+          </div>
 
-      {/* One line on a computer (2026-10-16): the three phases as compact
-          chips, and the distribution check beside them when it is up. */}
-      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
-        <div className="min-w-0 lg:flex-1">
-          <RolloutPhaseStrip phases={phaseSummaries} releaseDate={release.releaseDate ?? null} compact />
-        </div>
-        {statusSlot ? <div className="min-w-0 lg:max-w-[46%] lg:shrink-0 lg:has-[[aria-expanded=true]]:max-w-none lg:has-[[aria-expanded=true]]:basis-full">{statusSlot}</div> : null}
-      </div>
+          {/* One line on a computer (2026-10-16): the three phases as compact
+              chips, and the distribution check beside them when it is up. */}
+          <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
+            <div className="min-w-0 lg:flex-1">
+              <RolloutPhaseStrip phases={phaseSummaries} releaseDate={release.releaseDate ?? null} compact />
+            </div>
+            {statusSlot ? <div className="min-w-0 lg:max-w-[46%] lg:shrink-0 lg:has-[[aria-expanded=true]]:max-w-none lg:has-[[aria-expanded=true]]:basis-full">{statusSlot}</div> : null}
+          </div>
+        </>
+      )}
 
       {/* ---- Wide: the week grid ---------------------------------------- */}
       <div className="tl-grid-view">
@@ -407,6 +446,7 @@ export function TimelineScene({
         <TimelineWeekList
           timeline={shown ?? timeline}
           filtering={plan.filtering}
+          fold={phone && !plan.filtering}
           onOpenTask={onOpenTask}
           releaseDate={release.releaseDate}
           startHereId={startHereId}
@@ -732,10 +772,21 @@ function TimelineRow({
  * Precision dragging on a 380px screen is a real source of accidental date
  * changes, so there is no gesture here at all: tapping a row opens the detail
  * panel, where the date field is an ordinary input.
+ *
+ * Decluttered Oct 18, 2026 (founder approved the mocks): weeks before this one
+ * fold into one CATCH UP group of what is still open (first five, then "N
+ * more"), what was finished in them moves to a "Done earlier" row at the end,
+ * week headings are Space Mono caps with human dates ("Fri 23 Oct", never an
+ * ISO date), Start here sits on the first actionable row as the one accent on
+ * screen, and done work is a grey check with its title at ~55%. A search or
+ * filter (`fold` off) lists every match in its real week instead.
  */
+const CATCH_UP_PREVIEW = 5;
+
 function TimelineWeekList({
   timeline,
   filtering = false,
+  fold = false,
   onOpenTask,
   releaseDate,
   startHereId = null,
@@ -743,14 +794,22 @@ function TimelineWeekList({
   timeline: ReleaseTimeline;
   /** A search or filter is on: an empty list is "no match", said elsewhere. */
   filtering?: boolean;
+  /** Fold past weeks into Catch up and Done earlier (the phone, no search). */
+  fold?: boolean;
   onOpenTask: (taskId: string) => void;
   releaseDate: string;
   /** A smaller plan's first open task (URG-318). */
   startHereId?: string | null;
 }) {
-  const groups = useMemo(() => groupItemsByWeek(timeline), [timeline]);
+  const [catchUpOpen, setCatchUpOpen] = useState(false);
+  const [doneEarlierOpen, setDoneEarlierOpen] = useState(false);
+  const folded = useMemo(
+    () => (fold ? foldPastWeeks(timeline) : { catchUp: null, weeks: groupItemsByWeek(timeline), doneEarlier: [] }),
+    [fold, timeline]
+  );
+  const { catchUp, weeks, doneEarlier } = folded;
 
-  if (groups.length === 0) {
+  if (!catchUp && weeks.length === 0 && doneEarlier.length === 0) {
     if (filtering) return null;
     return (
       <p className="mt-4 text-sm text-content-secondary">
@@ -759,60 +818,186 @@ function TimelineWeekList({
     );
   }
 
-  return (
-    <ol className="mt-4 space-y-5">
-      {groups.map((group) => (
-        <li key={group.week.index}>
-          <div className="flex items-baseline justify-between gap-2">
-            <h3
-              className={`text-xs font-semibold uppercase tracking-wide ${
-                group.week.isReleaseWeek ? 'text-brand' : 'text-content-primary'
-              }`}
-            >
-              {group.week.longLabel}
-            </h3>
-            {group.week.isCurrentWeek ? (
-              <span className="rounded-full bg-content-primary px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-content-inverse">
-                This week
-              </span>
-            ) : (
-              <span className="text-[10px] tabular-nums text-content-tertiary">
-                {isoForDayOffset(releaseDate, group.week.startDay)}
-              </span>
-            )}
-          </div>
+  const catchUpItems = catchUp ? hoistStartHere(catchUp.items, startHereId) : [];
+  const catchUpShown = catchUpOpen ? catchUpItems : catchUpItems.slice(0, CATCH_UP_PREVIEW);
+  const catchUpHidden = catchUpItems.length - catchUpShown.length;
 
-          <ul className="mt-2 space-y-1">
-            {group.items.map((item) => (
-              <li key={item.taskId}>
-                <button
-                  type="button"
-                  onClick={() => onOpenTask(item.taskId)}
-                  className="motion-focus flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-bg-hover"
-                >
-                  <span
-                    className={`h-2.5 w-2.5 shrink-0 border ${
-                      item.isMilestone ? 'rotate-45' : 'rounded-full'
-                    } ${dotClass(item)}`}
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 flex-1 truncate text-xs text-content-primary">
-                    {item.title}
-                  </span>
-                  {item.taskId === startHereId ? (
-                    <span className="shrink-0 font-mono text-[10px] text-brand">Start here</span>
-                  ) : item.tone === 'overdue' || item.tone === 'blocked' ? (
-                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-status-error">
-                      {TONE_LABEL[item.tone]}
-                    </span>
-                  ) : null}
-                </button>
-              </li>
-            ))}
-          </ul>
+  return (
+    <div className="mt-2">
+      <ol className="space-y-6">
+        {catchUp ? (
+          <li data-timeline-catch-up>
+            <WeekHeading
+              label={`Catch up · ${catchUp.items.length}`}
+              tone="catch_up"
+              dates={formatCatchUpRange(releaseDate, catchUp.startDay, catchUp.endDay)}
+            />
+            <ul className="mt-1">
+              {catchUpShown.map((item) => (
+                <WeekRow key={item.taskId} item={item} startHere={item.taskId === startHereId} onOpenTask={onOpenTask} />
+              ))}
+            </ul>
+            {catchUpHidden > 0 ? (
+              <button
+                type="button"
+                onClick={() => setCatchUpOpen(true)}
+                aria-expanded={false}
+                className="motion-focus ml-7 mt-1 inline-flex min-h-11 items-center gap-1 rounded-md text-sm text-content-tertiary hover:text-content-primary"
+              >
+                {catchUpHidden} more
+                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              </button>
+            ) : null}
+          </li>
+        ) : null}
+
+        {weeks.map((group) => {
+          const heading = phoneWeekHeading(group.week, releaseDate);
+          const items = hoistStartHere(group.items, startHereId);
+          return (
+            <li key={group.week.index}>
+              <WeekHeading label={heading.label} tone={heading.accent ? 'accent' : 'plain'} dates={heading.dates} />
+              <ul className="mt-1">
+                {items.map((item) => (
+                  <WeekRow key={item.taskId} item={item} startHere={item.taskId === startHereId} onOpenTask={onOpenTask} />
+                ))}
+              </ul>
+            </li>
+          );
+        })}
+      </ol>
+
+      {doneEarlier.length > 0 ? (
+        <div data-timeline-done-earlier className="mt-6 border-y border-stroke-subtle">
+          <button
+            type="button"
+            onClick={() => setDoneEarlierOpen((open) => !open)}
+            aria-expanded={doneEarlierOpen}
+            className="motion-focus flex min-h-14 w-full items-center gap-3 text-left"
+          >
+            <span className="min-w-0 flex-1 text-base text-content-tertiary">Done earlier</span>
+            <span className="shrink-0 font-mono text-sm tabular-nums text-content-tertiary">{doneEarlier.length}</span>
+            <ChevronRight
+              className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${doneEarlierOpen ? 'rotate-90' : ''}`}
+              aria-hidden="true"
+            />
+          </button>
+          {doneEarlierOpen ? (
+            <ul className="pb-2">
+              {doneEarlier.map((item) => (
+                <WeekRow key={item.taskId} item={item} startHere={false} onOpenTask={onOpenTask} />
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** A week heading in Space Mono caps, with its human dates at the right. */
+function WeekHeading({ label, tone, dates }: { label: string; tone: 'plain' | 'accent' | 'catch_up'; dates: string }) {
+  const color =
+    tone === 'accent' ? 'text-brand' : tone === 'catch_up' ? 'text-status-warning' : 'text-content-primary';
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <h3 className={`font-mono text-xs font-bold uppercase tracking-[0.2em] ${color}`}>{label}</h3>
+      {dates ? <span className="shrink-0 text-xs tabular-nums text-content-tertiary">{dates}</span> : null}
+    </div>
+  );
+}
+
+/** One activity row in the week list. */
+function WeekRow({
+  item,
+  startHere,
+  onOpenTask,
+}: {
+  item: TimelineItem;
+  startHere: boolean;
+  onOpenTask: (taskId: string) => void;
+}) {
+  const closed = isClosedTone(item.tone);
+  const tag = !startHere && (item.tone === 'overdue' || item.tone === 'blocked') ? TONE_LABEL[item.tone] : null;
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onOpenTask(item.taskId)}
+        className="motion-focus -mx-2 flex min-h-12 w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 text-left hover:bg-bg-hover"
+      >
+        <span className="grid h-4 w-4 shrink-0 place-items-center" aria-hidden="true">
+          {item.tone === 'done' ? (
+            <Check className="h-3.5 w-3.5 text-content-tertiary" />
+          ) : startHere ? (
+            <span className="h-2.5 w-2.5 rounded-full bg-brand" />
+          ) : (
+            <span className={`h-2.5 w-2.5 border ${item.isMilestone ? 'rotate-45' : 'rounded-full'} ${dotClass(item)}`} />
+          )}
+        </span>
+        <span
+          className={`min-w-0 flex-1 truncate text-sm ${
+            startHere
+              ? 'font-semibold text-content-primary'
+              : closed
+                ? `text-content-primary opacity-55 ${item.tone === 'cancelled' ? 'line-through' : ''}`
+                : 'text-content-primary'
+          }`}
+        >
+          {item.title}
+        </span>
+        {closed ? <span className="sr-only">{TONE_LABEL[item.tone]}</span> : null}
+        {startHere ? (
+          <span className="shrink-0 text-xs text-brand">Start here</span>
+        ) : tag ? (
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-status-error">{tag}</span>
+        ) : item.tone === 'catch_up' ? (
+          <span className="sr-only">Catch up</span>
+        ) : null}
+      </button>
+    </li>
+  );
+}
+
+/**
+ * The phone's colour key (Oct 18, 2026), under the search field. It replaces
+ * the Info popover, which listed One day / Several days / Milestone / Overdue
+ * and never explained amber or done. Lists only the states this rollout uses,
+ * in the dots the list draws.
+ */
+function TimelineColourKey({ timeline }: { timeline: ReleaseTimeline }) {
+  const items = timeline.phases.flatMap((phase) => phase.items);
+  const has = (test: (item: TimelineItem) => boolean) => items.some(test);
+  const entries: Array<{ key: string; label: string; mark: ReactNode }> = [];
+  if (has((item) => item.tone === 'catch_up' || item.tone === 'blocked')) {
+    entries.push({
+      key: 'catch_up',
+      label: has((item) => item.tone === 'blocked') ? 'Catch up / blocked' : 'Catch up',
+      mark: <span className="h-2.5 w-2.5 rounded-full border border-status-warning bg-status-warning" />,
+    });
+  }
+  if (has((item) => item.tone === 'overdue')) {
+    entries.push({ key: 'overdue', label: 'Overdue', mark: <span className="h-2.5 w-2.5 rounded-full border border-status-error bg-status-error" /> });
+  }
+  if (has((item) => item.tone === 'in_progress')) {
+    entries.push({ key: 'in_progress', label: 'In progress', mark: <span className="h-2.5 w-2.5 rounded-full border border-brand bg-brand" /> });
+  }
+  entries.push({ key: 'todo', label: 'To do', mark: <span className="h-2.5 w-2.5 rounded-full border border-stroke-control bg-bg-surface" /> });
+  if (has((item) => item.tone === 'done')) {
+    entries.push({ key: 'done', label: 'Done', mark: <Check className="h-3.5 w-3.5 text-content-tertiary" /> });
+  }
+  if (has((item) => item.isMilestone)) {
+    entries.push({ key: 'milestone', label: 'Milestone', mark: <span className="h-2.5 w-2.5 rotate-45 border border-brand bg-brand" /> });
+  }
+  return (
+    <ul aria-label="Colour key" data-timeline-colour-key className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-b border-stroke-subtle pb-3 text-xs text-content-secondary">
+      {entries.map((entry) => (
+        <li key={entry.key} className="inline-flex items-center gap-1.5">
+          <span className="grid h-3.5 w-3.5 place-items-center" aria-hidden="true">{entry.mark}</span>
+          {entry.label}
         </li>
       ))}
-    </ol>
+    </ul>
   );
 }
 

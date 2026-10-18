@@ -4,7 +4,14 @@ import {
   dayOffsetFromRelease,
   dayPosition,
   daysForDragDelta,
+  foldPastWeeks,
+  formatCatchUpRange,
+  formatTimelineDay,
+  formatWeekRange,
   groupItemsByWeek,
+  hoistStartHere,
+  phoneWeekHeading,
+  rolloutMetaLine,
   isoForDayOffset,
   itemPosition,
   narrowTimeline,
@@ -498,6 +505,105 @@ describe('the mobile week list', () => {
     const groups = groupItemsByWeek(timeline!);
     expect(groups).toHaveLength(1);
     expect(groups[0].week.index).toBe(-6);
+  });
+});
+
+describe('the phone list folds past weeks (rollout declutter, Oct 18, 2026)', () => {
+  // Today is day -10, so this week is week -2 (days -14..-8).
+  const now = new Date(dueAt(-10));
+  const tasks = [
+    makeTask({ id: 'a', title: 'Catch up item', dueDate: dueAt(-40), compressedRunway: true }),
+    makeTask({ id: 'b', title: 'Done long ago', dueDate: dueAt(-30), status: 'done', completedAt: dueAt(-30) }),
+    makeTask({ id: 'c', title: 'Overdue item', dueDate: dueAt(-20) }),
+    makeTask({ id: 'd', title: 'This week item', dueDate: dueAt(-12) }),
+    makeTask({ id: 'e', title: 'Done ahead', dueDate: dueAt(-3), status: 'done', completedAt: dueAt(-11) }),
+    makeTask({ id: 'f', title: 'Run into this week', dueDate: dueAt(-16), durationDays: 7 }),
+  ];
+
+  it('puts open work from past weeks in Catch up and finished work in Done earlier', () => {
+    const timeline = buildReleaseTimeline({ tasks, releaseDate: RELEASE_DATE, now })!;
+    const folded = foldPastWeeks(timeline);
+
+    expect(folded.catchUp?.items.map((item) => item.taskId)).toEqual(['a', 'c']);
+    expect(folded.doneEarlier.map((item) => item.taskId)).toEqual(['b']);
+    // From the start of the earliest past week to the day before this week.
+    expect(folded.catchUp?.startDay).toBe(-42);
+    expect(folded.catchUp?.endDay).toBe(-15);
+  });
+
+  it('keeps this week and later in their weeks, done work included', () => {
+    const timeline = buildReleaseTimeline({ tasks, releaseDate: RELEASE_DATE, now })!;
+    const folded = foldPastWeeks(timeline);
+
+    expect(folded.weeks[0].week.index).toBe(-2);
+    expect(folded.weeks[0].week.isCurrentWeek).toBe(true);
+    // A run that reaches into this week is not past.
+    expect(folded.weeks[0].items.map((item) => item.taskId).sort()).toEqual(['d', 'f']);
+    expect(folded.weeks.flatMap((group) => group.items).some((item) => item.taskId === 'e')).toBe(true);
+    expect(folded.weeks.every((group) => group.week.index >= -2)).toBe(true);
+  });
+
+  it('has nothing to fold when no work is behind today', () => {
+    const timeline = buildReleaseTimeline({
+      tasks: [makeTask({ dueDate: dueAt(-5) })],
+      releaseDate: RELEASE_DATE,
+      now,
+    })!;
+    const folded = foldPastWeeks(timeline);
+    expect(folded.catchUp).toBeNull();
+    expect(folded.doneEarlier).toEqual([]);
+    expect(folded.weeks).toHaveLength(1);
+  });
+
+  it('moves Start here to the front of its list', () => {
+    const items = [{ taskId: 'x' }, { taskId: 'y' }, { taskId: 'z' }];
+    expect(hoistStartHere(items, 'z').map((item) => item.taskId)).toEqual(['z', 'x', 'y']);
+    expect(hoistStartHere(items, 'x')).toBe(items);
+    expect(hoistStartHere(items, null)).toBe(items);
+    expect(hoistStartHere(items, 'missing')).toBe(items);
+  });
+});
+
+describe('human dates on the phone list', () => {
+  it('says days and week spans the way people say them', () => {
+    expect(formatTimelineDay(RELEASE_DATE, 0)).toBe('Fri 20 Nov');
+    expect(formatWeekRange(RELEASE_DATE, -1)).toBe('Fri 13 – Thu 19 Nov');
+    expect(formatWeekRange(RELEASE_DATE, -3)).toBe('Fri 30 Oct – Thu 5 Nov');
+    expect(formatCatchUpRange(RELEASE_DATE, -42, -15)).toBe('Oct 9 – Nov 5');
+    expect(formatCatchUpRange(RELEASE_DATE, -14, -8)).toBe('Nov 6 – 12');
+  });
+
+  it('heads weeks as This week, Release week or weeks out, never with an ISO date', () => {
+    const timeline = buildReleaseTimeline({
+      tasks: [-40, -20, -10, -3, 0, 9].map((offset, index) =>
+        makeTask({ id: `t${index}`, dueDate: dueAt(offset) })
+      ),
+      releaseDate: RELEASE_DATE,
+      now: new Date(dueAt(-10)),
+    })!;
+    const headings = timeline.weeks.map((week) => phoneWeekHeading(week, RELEASE_DATE));
+    for (const heading of headings) {
+      expect(heading.dates).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+      expect(heading.label).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    }
+    const current = timeline.weeks.find((week) => week.isCurrentWeek)!;
+    expect(phoneWeekHeading(current, RELEASE_DATE)).toEqual({
+      label: 'This week',
+      accent: false,
+      dates: 'Fri 6 – Thu 12 Nov',
+    });
+    const release = timeline.weeks.find((week) => week.isReleaseWeek)!;
+    expect(phoneWeekHeading(release, RELEASE_DATE)).toEqual({ label: 'Release week', accent: true, dates: 'Fri 20 Nov' });
+    const ahead = timeline.weeks.find((week) => week.index === -1)!;
+    expect(phoneWeekHeading(ahead, RELEASE_DATE)).toEqual({ label: '1 week out', accent: false, dates: 'Fri 13 Nov' });
+  });
+
+  it('writes the header meta line from the phase and the release day', () => {
+    expect(rolloutMetaLine(RELEASE_DATE, new Date(dueAt(-10)))).toBe('Pre-release · drops Fri 20 Nov');
+    expect(rolloutMetaLine(RELEASE_DATE, new Date(dueAt(0)))).toBe('Release · drops today');
+    expect(rolloutMetaLine(RELEASE_DATE, new Date(dueAt(3)))).toBe('Release · dropped Fri 20 Nov');
+    expect(rolloutMetaLine(RELEASE_DATE, new Date(dueAt(30)))).toBe('Post-release · dropped Fri 20 Nov');
+    expect(rolloutMetaLine(null)).toBe('Pre-production · no date yet');
   });
 });
 

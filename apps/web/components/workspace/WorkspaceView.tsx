@@ -1,11 +1,11 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { ArtistFace } from '@/components/shared/ArtistFace';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { AlertCircle, ArrowLeft } from '@/components/icons';
-import { ReleaseDeliveredMark } from './ReleaseDeliveredMark';
+import { AlertCircle } from '@/components/icons';
+import { RolloutPhoneHeader } from './RolloutPhoneHeader';
+import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 import { useAuthStore } from '@/lib/auth-store';
 import { isCatalogRequested, markCatalogRequested } from '@/lib/catalog-intent';
 import { watchNavigationStall } from '@/lib/nav-stall-watch';
@@ -774,6 +774,22 @@ export function WorkspaceView() {
   // The catalogue is what is on screen whenever no rollout is focused.
   const showCatalogue = !(scopedReleaseId && scopedReleaseSlim) && !isDesktopFocusedMode;
 
+  // The phone rollout header's shared state (rollout declutter, Oct 18, 2026):
+  // SubNav hides its Artists / Rollouts tabs while a rollout is open, and the
+  // header's search and menu icons reset when the rollout changes.
+  const setPhoneRolloutOpen = useRolloutPhoneChrome((state) => state.setRolloutOpen);
+  const setPhoneSearchOpen = useRolloutPhoneChrome((state) => state.setSearchOpen);
+  const setPhoneMenuOpen = useRolloutPhoneChrome((state) => state.setMenuOpen);
+  const phoneRolloutOpen = Boolean(scopedReleaseId);
+  useEffect(() => {
+    setPhoneRolloutOpen(phoneRolloutOpen);
+  }, [phoneRolloutOpen, setPhoneRolloutOpen]);
+  useEffect(() => () => setPhoneRolloutOpen(false), [setPhoneRolloutOpen]);
+  useEffect(() => {
+    setPhoneSearchOpen(false);
+    setPhoneMenuOpen(false);
+  }, [scopedReleaseId, panelBody, setPhoneSearchOpen, setPhoneMenuOpen]);
+
   /** Open the planning questions for the scoped release — the ONLY door into
    *  the planner (2026-09-15): finishing them is what builds the plan, so
    *  there is no separate one-tap path here any more. */
@@ -1203,6 +1219,7 @@ export function WorkspaceView() {
         releaseId={scopedReleaseSlim.id}
         showReadiness={distributionMode === 'full'}
         compact={isDesktopViewport && panelBody === 'timeline'}
+        row={!isDesktopViewport && panelBody === 'timeline'}
         onOpenDetails={scopedReleaseIsOwn ? () => setIsDetailsOpen(true) : undefined}
         onChangeArtist={changeArtistAction ? changeArtistAction.onClick : undefined}
       />
@@ -1218,6 +1235,7 @@ export function WorkspaceView() {
         onRescheduled={() => void loadCommandCenter({ force: true })}
         suppressEmptyState={bannerReplacesEmptyState}
         statusSlot={isDesktopViewport ? distributionStatusStrip : undefined}
+        phone={!isDesktopViewport && !timelineIsFull}
         onFullScreen={
           timelineIsFull || !timelineHasPlan
             ? undefined
@@ -1545,84 +1563,34 @@ export function WorkspaceView() {
           <div className="flex min-h-0 flex-1 flex-col lg:hidden">
             {scopedReleaseId && scopedReleaseSlim ? (
               <>
-                <div className="mb-4 flex items-center gap-3">
-                  {/* Always rendered: even with one release, the user must be
-                      able to get out (e.g. to fix a blank "Untitled release" or
-                      start a fresh one). The prior isSingleRelease-gated hide
-                      left single-release workspaces with no way out at all.
-
-                      Same handler as the desktop arrow, deliberately: every
-                      complaint about this button so far ("not working",
-                      "gets stuck", "failing again") arrived as a phone
-                      screenshot, and letting the two diverge is how this file
-                      has drifted before. */}
-                  <button
-                    type="button"
-                    onClick={handleMobileBack}
-                    aria-label={backLabel}
-                    className="motion-focus motion-press grid h-10 w-10 shrink-0 place-items-center rounded-full border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary"
-                  >
-                    <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <p className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-content-tertiary">
-                      <ArtistFace artistId={scopedReleaseSlim.artistId} name={scopedReleaseSlim.artistName} size={16} />
-                      <span className="truncate">{scopedReleaseSlim.artistName || 'Unassigned artist'}</span>
-                    </p>
-                    <h2 className="truncate font-display text-lg font-semibold leading-tight text-content-primary">
-                      {scopedReleaseSlim.title}
-                    </h2>
-                  </div>
-                </div>
-                {/* Motion tracker — same strip the desktop focused view carries
-                    in its top row, so mobile shows release progress too.
-                    Track uses stroke-strong (2026-08-04, founder contrast
-                    fix) — bg-bg-elevated was a materials/layering token, not
-                    a meter-track color, and read as nearly invisible against
-                    the surrounding background in both themes (byte-identical
-                    to bg-surface in light mode). stroke-strong is the theme-
-                    flipped foreground color at 10% opacity, so it scales its
-                    visibility with whatever it sits on instead of matching
-                    it. Bar bumped h-1 -> h-1.5 for perceptual presence.
-                    Hidden while a scene is open (2026-08-10): it describes
-                    the ACTIVITY list, not the scene body that replaced it,
-                    and on a phone it was one of ~250px of stacked chrome
-                    between the topbar and the scene's own content. */}
-                {/* Not at 0 done either (Oct 17, 2026): an empty bar says
-                    nothing; it comes back with the first tick. */}
-                {!bodyIsMainView || !scopedTasks.some((t) => t.status === 'done') ? null : (
-                  <div className="mb-4 flex items-center gap-3">
-                    <span className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-                      Motion
-                    </span>
-                    <div className="h-1.5 min-w-0 flex-1 rounded-full bg-stroke-strong" aria-hidden="true">
-                      <div
-                        className="h-full rounded-full bg-brand transition-[width] duration-300"
-                        style={{
-                          width: `${
-                            scopedTasks.length > 0
-                              ? Math.round(
-                                  (scopedTasks.filter((t) => t.status === 'done').length /
-                                    scopedTasks.length) *
-                                    100
-                                )
-                              : 0
-                          }%`,
-                        }}
-                      />
-                    </div>
-                    <span className="shrink-0 font-mono text-[11px] font-semibold text-content-primary">
-                      {scopedTasks.filter((t) => t.status === 'done').length}/{scopedTasks.length}
-                    </span>
-                    <ReleaseDeliveredMark
-                      total={scopedTasks.length}
-                      done={scopedTasks.filter((t) => t.status === 'done').length}
-                    />
-                  </div>
-                )}
-                {newReleaseGuideBanner}
-                {isDesktopViewport || timelineIsFull ? null : nextMovesBanner}
-                {isDesktopViewport ? null : distributionStatusStrip}
+                {/* The decluttered phone header (rollout declutter, founder
+                    approved Oct 18, 2026): bare back chevron (always
+                    rendered, so even a one-rollout team can get out), artist
+                    eyebrow and serif title, search and menu icons, then ONE
+                    meta line with the page's one count. The MOTION bar and
+                    the phase line's second count are gone from the phone; the
+                    phase counts live in Work the plan and on the computer.
+                    The check before distribution is one divider row on the
+                    timeline, right under the meta line. */}
+                <RolloutPhoneHeader
+                  artistId={scopedReleaseSlim.artistId}
+                  artistName={scopedReleaseSlim.artistName}
+                  title={scopedReleaseSlim.title}
+                  releaseDate={scopedReleaseSlim.releaseDate}
+                  done={scopedTasks.filter((t) => t.status === 'done').length}
+                  total={scopedTasks.length}
+                  backLabel={backLabel}
+                  onBack={handleMobileBack}
+                  showMeta={bodyIsMainView}
+                  showSearch={panelBody === 'timeline' && scopedTasks.length > 0}
+                  below={
+                    <>
+                      {isDesktopViewport ? null : distributionStatusStrip}
+                      {newReleaseGuideBanner}
+                      {isDesktopViewport || timelineIsFull ? null : nextMovesBanner}
+                    </>
+                  }
+                />
                 <TasksPanel
                   id={TASKS_PANEL_ID}
                   tasks={scopedTasks}

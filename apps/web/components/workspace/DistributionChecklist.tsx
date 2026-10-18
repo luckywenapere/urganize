@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, AlertTriangle, Check, ChevronDown } from '@/components/icons';
+import { AlertCircle, AlertTriangle, Check, ChevronDown, ChevronRight } from '@/components/icons';
 import { useSceneOverlay } from '@/components/workspace/useSceneOverlay';
 import { captureAnalyticsEvent } from '@/lib/analytics/client';
 import {
@@ -60,6 +60,10 @@ type DistributionChecklistProps = {
   onChangeArtist?: () => void;
   /** Folded, a 36px line that fits beside the timeline's phases (2026-10-16). */
   compact?: boolean;
+  /** The phone rollout view's one divider row, "Ready to distribute 5/9 ›"
+   *  (rollout declutter, Oct 18, 2026). Tapping it opens the same checklist
+   *  with its Fix buttons. Draws nothing once every item is done. */
+  row?: boolean;
 };
 
 /**
@@ -79,6 +83,7 @@ export function DistributionChecklist({
   onOpenDetails,
   onChangeArtist,
   compact = false,
+  row = false,
 }: DistributionChecklistProps) {
   const { openScene } = useSceneOverlay();
   const [record, setRecord] = useState<ChecklistRecord>(EMPTY_CHECKLIST_RECORD);
@@ -142,6 +147,81 @@ export function DistributionChecklist({
     nextOpen?.issue ? fixDestinationFor(nextOpen.issue.fieldPath, availability) !== null : false;
   const progress = checklistProgressLabel(checklist);
 
+  const checklistBody = (
+        <div id={bodyId} className="border-t border-stroke-subtle">
+          <div
+            role="progressbar"
+            aria-label="Checklist before distribution"
+            aria-valuemin={0}
+            aria-valuemax={checklist.total}
+            aria-valuenow={checklist.doneCount}
+            aria-valuetext={progress}
+            className="mx-4 mt-3 h-1.5 overflow-hidden rounded-full bg-stroke-strong"
+          >
+            <div className="h-full rounded-full bg-brand transition-[width] duration-base" style={{ width: `${percent}%` }} />
+          </div>
+          <ul className="mt-2 divide-y divide-stroke-subtle">
+            {checklist.items.map((item) => {
+              const canFix = item.issue ? fixDestinationFor(item.issue.fieldPath, availability) !== null : false;
+              return (
+                <li key={item.key} className="flex min-h-14 items-center gap-2 py-1 pl-1.5 pr-3">
+                  <TickControl item={item} onTick={() => tick(item)} />
+                  <p
+                    className={`min-w-0 flex-1 text-sm ${
+                      item.done ? 'text-content-tertiary line-through decoration-content-tertiary' : 'text-content-primary'
+                    }`}
+                  >
+                    {item.message}
+                    {!item.done && item.level === 'error' ? (
+                      <span className="sr-only"> Needed before you order. Ticks itself when fixed.</span>
+                    ) : null}
+                  </p>
+                  {!item.done && canFix && item.issue ? (
+                    <button
+                      type="button"
+                      onClick={() => fix(item.issue as DistributionIssue)}
+                      aria-label={`Fix: ${item.message}`}
+                      className="motion-focus inline-flex h-11 min-w-14 shrink-0 items-center justify-center rounded-lg border border-stroke-control px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/10"
+                    >
+                      Fix
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+  );
+
+  // The phone's divider row (rollout declutter, Oct 18, 2026): numbers in a
+  // row, not a card; no icon, no green Fix on the folded line, so Start here
+  // stays the one accent on screen. A finished checklist is not news, so the
+  // row goes (empty blocks never render).
+  if (row) {
+    if (allDone) return null;
+    return (
+      <div data-distribution-row className="mb-4 border-y border-stroke-subtle">
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          aria-expanded={expanded}
+          aria-controls={bodyId}
+          className="motion-focus flex min-h-14 w-full items-center gap-3 text-left"
+        >
+          <span className="min-w-0 flex-1 truncate text-base text-content-primary">Ready to distribute</span>
+          <span className="shrink-0 font-mono text-sm tabular-nums text-content-secondary" aria-label={progress}>
+            {checklist.doneCount}/{checklist.total}
+          </span>
+          <ChevronRight
+            className={`h-4 w-4 shrink-0 text-content-tertiary transition-transform ${expanded ? 'rotate-90' : ''}`}
+            aria-hidden="true"
+          />
+        </button>
+        {expanded ? <div className="pb-2">{checklistBody}</div> : null}
+      </div>
+    );
+  }
+
   // One line until it is opened (2026-10-14 declutter, founder: "you decide
   // the best based on how a user would use it"). It is ticked off over days,
   // so it stays on the rollout, but folded it is one row: where you stand,
@@ -197,51 +277,7 @@ export function DistributionChecklist({
         ) : null}
       </div>
 
-      {expanded ? (
-        <div id={bodyId} className="border-t border-stroke-subtle">
-          <div
-            role="progressbar"
-            aria-label="Checklist before distribution"
-            aria-valuemin={0}
-            aria-valuemax={checklist.total}
-            aria-valuenow={checklist.doneCount}
-            aria-valuetext={progress}
-            className="mx-4 mt-3 h-1.5 overflow-hidden rounded-full bg-stroke-strong"
-          >
-            <div className="h-full rounded-full bg-brand transition-[width] duration-base" style={{ width: `${percent}%` }} />
-          </div>
-          <ul className="mt-2 divide-y divide-stroke-subtle">
-            {checklist.items.map((item) => {
-              const canFix = item.issue ? fixDestinationFor(item.issue.fieldPath, availability) !== null : false;
-              return (
-                <li key={item.key} className="flex min-h-14 items-center gap-2 py-1 pl-1.5 pr-3">
-                  <TickControl item={item} onTick={() => tick(item)} />
-                  <p
-                    className={`min-w-0 flex-1 text-sm ${
-                      item.done ? 'text-content-tertiary line-through decoration-content-tertiary' : 'text-content-primary'
-                    }`}
-                  >
-                    {item.message}
-                    {!item.done && item.level === 'error' ? (
-                      <span className="sr-only"> Needed before you order. Ticks itself when fixed.</span>
-                    ) : null}
-                  </p>
-                  {!item.done && canFix && item.issue ? (
-                    <button
-                      type="button"
-                      onClick={() => fix(item.issue as DistributionIssue)}
-                      aria-label={`Fix: ${item.message}`}
-                      className="motion-focus inline-flex h-11 min-w-14 shrink-0 items-center justify-center rounded-lg border border-stroke-control px-3 text-xs font-semibold text-brand transition-colors hover:bg-brand/10"
-                    >
-                      Fix
-                    </button>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
+      {expanded ? checklistBody : null}
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { DialogPanel } from '@/components/shared/DialogPanel';
 import { Chappi, CHAPPI_MIN_SIZE } from '@urganize/ui';
 import {
   ChevronDown,
-  Menu,
   Plus,
   X,
 } from '@/components/icons';
@@ -42,6 +41,7 @@ import {
   type RolloutMenuDialogInput,
 } from './useRolloutMenuActions';
 import { TASKS_PILL_DOCK_OFFSET_CLASS } from './tasks-pill-dock';
+import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 
 // (The per-feature switches for the rollout's surfaces — Metadata, Content,
 // Files, Song, Cover art, Fan capture, Timeline, Chat, Notes, Pitching — used
@@ -69,11 +69,6 @@ export { TASKS_PILL_DOCK_OFFSET_CLASS };
  */
 export const taskPanelPillClass =
   'motion-focus motion-press inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-3 text-xs font-semibold text-content-primary transition-colors hover:bg-bg-hover';
-
-/** The labelled button at the base of the mobile dock. A word beside the icon,
- *  and 44px tall, so a thumb finds it without guessing what a bare icon does. */
-const MOBILE_DOCK_TRIGGER_CLASS =
-  'motion-focus motion-press inline-flex h-11 shrink-0 touch-manipulation items-center gap-2 whitespace-nowrap rounded-full border border-stroke-default bg-bg-surface px-5 text-sm font-semibold text-content-primary transition-colors hover:bg-bg-hover';
 
 /**
  * An action WorkspaceView owns and the rollout menu places — modal-shaped rather
@@ -418,12 +413,12 @@ export function TasksPanel({
   // exclusive by construction: they occupy the same slot above the trigger
   // row, and two open at once would stack into a full-screen sheet nobody
   // designed.
-  const [openMobilePanel, setOpenMobilePanel] = useState<'menu' | null>(null);
+  // Opened from the phone rollout header's menu icon since the declutter
+  // (Oct 18, 2026); the floating "Rollout menu" pill that used to open it is
+  // gone. The state lives in a store because the header is WorkspaceView's.
+  const phoneMenuOpen = useRolloutPhoneChrome((state) => state.menuOpen);
+  const setPhoneMenuOpen = useRolloutPhoneChrome((state) => state.setMenuOpen);
   const moreMenuListId = useId();
-
-  const toggleMobilePanel = (panel: 'menu') => {
-    setOpenMobilePanel((current) => (current === panel ? null : panel));
-  };
 
   /**
    * The mobile release menu — EVERY release surface on a phone since
@@ -467,10 +462,10 @@ export function TasksPanel({
   // Hidden on the Chat scene (2026-10-11, founder call): the floating pill sat
   // over the chat's pinned composer and its Send button. The chat scene brings
   // its own "Activities" back control, which is the way out to the menu.
-  const hasMobileDockControls = moreMenuActions.length > 0 && urlScene !== 'chat';
+  const hasMobileMenu = moreMenuActions.length > 0;
 
   const closeMobilePanels = () => {
-    setOpenMobilePanel(null);
+    setPhoneMenuOpen(false);
   };
 
   const handleMoreMenuSelect = (action: MoreMenuAction) => {
@@ -789,7 +784,7 @@ export function TasksPanel({
           moment any scene opened, is gone with the pills above: both are rows
           in the rollout menu now and stay there whichever scene is open.) */}
 
-      {/* Mobile base dock (below `lg` ONLY) — redesigned 2026-08-16 (founder
+      {/* HISTORY (the dock was removed Oct 18, 2026; see the note below). Mobile base dock (below `lg` ONLY) — redesigned 2026-08-16 (founder
           request, screenshot reference) from "every pill in one wrapping
           block" into a folded "more" menu, holding everything else this panel
           used to put in the old dock: Cover art, Song, Files, Status update,
@@ -849,69 +844,22 @@ export function TasksPanel({
           The bottom offset still clears whichever fixed surface already
           owns the screen's edge — see TASKS_PILL_DOCK_OFFSET_CLASS. The
           -mx/px bleed still matches <main>'s own gutter at each breakpoint. */}
-      {hasMobileDockControls ? (
-      <div
-        className={`sticky z-20 -mx-4 mt-auto flex flex-col gap-2 px-4 pb-3 pt-3 sm:-mx-5 sm:px-5 md:-mx-6 md:px-6 lg:hidden ${TASKS_PILL_DOCK_OFFSET_CLASS}`}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          {/* CENTRED, not pinned to the right edge (founder call,
-              2026-09-05). This row sits directly above MobileNavBar's centred
-              "+", so a right-aligned pair read as an afterthought tucked into
-              a corner rather than as the panel's own controls. Centred, the
-              pair's midpoint lines up with that button, and on a release with
-              no activities — where the search trigger does not render at all —
-              the hamburger lands dead centre under it.
-
-              `mx-auto` on the GROUP rather than `justify-center` on the row:
-              it keeps the intent with the thing being centred, so the row
-              stays a plain flex container if it ever holds something else. */}
-          {hasMobileDockControls ? (
-            <div className="mx-auto flex shrink-0 items-center gap-2">
-              {/* touch-manipulation on both: disables the browser's own
-                  double-tap-to-zoom gesture on these specific buttons
-                  (independent of the search field's font-size fix below —
-                  this guards against the tap itself zooming the page, not
-                  just a focused field zooming it), while leaving pinch-zoom
-                  available everywhere else for accessibility. */}
-              {moreMenuActions.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => toggleMobilePanel('menu')}
-                  aria-haspopup="dialog"
-                  aria-expanded={openMobilePanel === 'menu'}
-                  aria-controls={openMobilePanel === 'menu' ? moreMenuListId : undefined}
-                  // "More" was right while this was an overflow list. Since
-                  // 2026-08-31 it holds every release surface, so it is the
-                  // release menu and says so.
-                  data-tour="rollout-menu"
-                  className={MOBILE_DOCK_TRIGGER_CLASS}
-                >
-                  <Menu className="h-4 w-4" aria-hidden="true" />
-                  Rollout menu
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-
-        {/* The menu, as a bottom sheet (2026-10-11, founder fix). It opened
-            inline under the pill until then and the bottom tab bar cut off
-            its lower rows, so not every entry could be reached. Now it is
-            portalled to <body> above the bar (z-[170], the More sheet's
-            layer) with a scrim, capped at the screen minus the safe areas,
-            and scrolls on its own when long. Tap the scrim, the close
-            button, or press Escape to dismiss. Rows are still drawn
-            upside down (orderForThumb), so the list opens scrolled to the
-            bottom, where the most-used rows sit by the thumb. */}
-        {openMobilePanel === 'menu' ? (
-          <RolloutMenuSheet
-            id={moreMenuListId}
-            actions={orderForThumb(moreMenuActions)}
-            onSelect={handleMoreMenuSelect}
-            onClose={closeMobilePanels}
-          />
-        ) : null}
-      </div>
+      {/* The floating "Rollout menu" pill (a sticky dock above the bottom
+          bar, 2026-08-16 to 2026-10-18) is gone on phones: the menu is
+          occasional, and the pill sat over list rows on every scroll. The
+          rollout header's menu icon (WorkspaceView) opens the same sheet now
+          (rollout declutter, founder approved Oct 18, 2026). The sheet is
+          still portalled to <body> above the bar (z-[170]) with a scrim,
+          capped at the screen minus the safe areas, and its rows are still
+          drawn upside down (orderForThumb) so the most-used sit by the thumb.
+          New activity stays on the bottom bar's centre "+". */}
+      {hasMobileMenu && phoneMenuOpen ? (
+        <RolloutMenuSheet
+          id={moreMenuListId}
+          actions={orderForThumb(moreMenuActions)}
+          onSelect={handleMoreMenuSelect}
+          onClose={closeMobilePanels}
+        />
       ) : null}
       {scopedRelease ? <PlanSuggestionToast /> : null}
     </aside>

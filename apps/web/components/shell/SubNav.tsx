@@ -6,6 +6,7 @@ import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { NAV_TIP_TOUCH_CLASS, useNavTip } from './useNavTip';
 import { activeShellArea, visibleSubTabs } from '@/lib/shell-nav';
 import { useShellAreas } from './useShellAreas';
+import { useRolloutPhoneChrome } from '@/stores/useRolloutPhoneChrome';
 
 /**
  * The row of tabs for the area you are in (Deel's "People, Org chart, Time
@@ -35,7 +36,12 @@ export function SubNav() {
   const areas = useShellAreas();
   const tabs = visibleSubTabs(activeShellArea(areas, pathname));
   const tip = useNavTip();
-  if (tabs.length === 0) return null;
+  // Not while a rollout is open on a phone (rollout declutter, Oct 18, 2026):
+  // the rollout header's back arrow and the bottom bar's Artists already lead
+  // out, and Artists / Rollouts above a rollout's title read as page chrome.
+  // This row is below lg only, so the computer is unchanged.
+  const rolloutOpen = useRolloutPhoneChrome((state) => state.rolloutOpen);
+  if (tabs.length === 0 || rolloutOpen) return null;
 
   return (
     <nav aria-label="Section" className="shell-band-sub lg:hidden">

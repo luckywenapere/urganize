@@ -65,6 +65,7 @@ import {
   ROLLOUT_PHASE_LABELS,
   ROLLOUT_PHASE_ORDER,
   resolveTaskPhase,
+  rolloutPhaseForOffset,
   type RolloutPhase,
 } from './rollout-phases';
 import { getTaskSectionKey } from './tasks';
@@ -549,4 +550,128 @@ export function groupItemsByWeek(timeline: ReleaseTimeline): TimelineWeekGroup[]
   }
 
   return groups;
+}
+
+// ---------------------------------------------------------------------------
+// Phone list: folded past weeks and human dates (rollout declutter, Oct 18, 2026)
+// ---------------------------------------------------------------------------
+
+/**
+ * Founder approved the phone declutter mocks on Oct 18, 2026 ("Do what's best
+ * for our users"). In production 36% of open activities on upcoming releases
+ * were already past due when this shipped, so most managers opened a rollout
+ * onto weeks that were behind them. The phone list now folds every week
+ * before this one into one Catch up group of what is still open, and moves
+ * what was finished in those weeks to a "Done earlier" row at the end. A
+ * search or filter skips the fold, so an activity is always found in its real
+ * week.
+ */
+export type FoldedWeekList = {
+  /** Open work from the weeks before this one, or null when there is none. */
+  catchUp: { items: TimelineItem[]; startDay: number; endDay: number } | null;
+  /** This week and every week after it that has work. */
+  weeks: TimelineWeekGroup[];
+  /** Done or cancelled work from the weeks before this one. */
+  doneEarlier: TimelineItem[];
+};
+
+const CLOSED_TONES: ReadonlySet<TimelineTone> = new Set(['done', 'cancelled']);
+
+export function isClosedTone(tone: TimelineTone): boolean {
+  return CLOSED_TONES.has(tone);
+}
+
+export function foldPastWeeks(timeline: ReleaseTimeline): FoldedWeekList {
+  const groups = groupItemsByWeek(timeline);
+  if (timeline.todayDay === null) return { catchUp: null, weeks: groups, doneEarlier: [] };
+
+  const currentWeekStart = weekIndexForDay(timeline.todayDay) * 7;
+  const allItems = timeline.phases.flatMap((phase) => phase.items);
+  const past = allItems.filter((item) => item.endDay < currentWeekStart).sort(compareItems);
+  const open = past.filter((item) => !isClosedTone(item.tone));
+  const doneEarlier = past.filter((item) => isClosedTone(item.tone));
+
+  const catchUp =
+    open.length > 0
+      ? {
+          items: open,
+          startDay: weekIndexForDay(Math.min(...open.map((item) => item.startDay))) * 7,
+          endDay: currentWeekStart - 1,
+        }
+      : null;
+
+  const weeks = groups.filter((group) => group.week.startDay >= currentWeekStart);
+  return { catchUp, weeks, doneEarlier };
+}
+
+/** Moves the Start here activity to the front of its list, so it sits on the
+ *  first actionable row. Returns the same array when it is not in it. */
+export function hoistStartHere<T extends { taskId: string }>(items: T[], startHereId: string | null): T[] {
+  if (!startHereId) return items;
+  const index = items.findIndex((item) => item.taskId === startHereId);
+  if (index <= 0) return items;
+  return [items[index], ...items.slice(0, index), ...items.slice(index + 1)];
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function utcParts(releaseDate: string, dayOffset: number) {
+  const releaseEpoch = utcMidnight(releaseDate);
+  if (releaseEpoch === null) return null;
+  const date = new Date(releaseEpoch + dayOffset * MS_PER_DAY);
+  return { weekday: WEEKDAYS[date.getUTCDay()], day: date.getUTCDate(), month: MONTHS[date.getUTCMonth()] };
+}
+
+/** "Fri 23 Oct". UTC, the axis's own frame. */
+export function formatTimelineDay(releaseDate: string, dayOffset: number): string {
+  const parts = utcParts(releaseDate, dayOffset);
+  return parts ? `${parts.weekday} ${parts.day} ${parts.month}` : '';
+}
+
+/** "Fri 16 – Thu 22 Oct", or "Fri 30 Oct – Thu 5 Nov" across a month end. */
+export function formatWeekRange(releaseDate: string, weekIndex: number): string {
+  const start = utcParts(releaseDate, weekIndex * 7);
+  const end = utcParts(releaseDate, weekIndex * 7 + 6);
+  if (!start || !end) return '';
+  return start.month === end.month
+    ? `${start.weekday} ${start.day} – ${end.weekday} ${end.day} ${end.month}`
+    : `${start.weekday} ${start.day} ${start.month} – ${end.weekday} ${end.day} ${end.month}`;
+}
+
+/** The Catch up group's span, "Sep 11 – Oct 15" (the approved mock's form). */
+export function formatCatchUpRange(releaseDate: string, startDay: number, endDay: number): string {
+  const start = utcParts(releaseDate, startDay);
+  const end = utcParts(releaseDate, endDay);
+  if (!start || !end) return '';
+  return start.month === end.month
+    ? `${start.month} ${start.day} – ${end.day}`
+    : `${start.month} ${start.day} – ${end.month} ${end.day}`;
+}
+
+/** A phone week heading: "This week" with the week's dates, or the long label
+ *  ("2 weeks out") with the day the week starts. Release week is the accent. */
+export function phoneWeekHeading(week: TimelineWeek, releaseDate: string): { label: string; accent: boolean; dates: string } {
+  if (week.isReleaseWeek) {
+    return {
+      label: 'Release week',
+      accent: true,
+      dates: week.isCurrentWeek ? formatWeekRange(releaseDate, week.index) : formatTimelineDay(releaseDate, week.startDay),
+    };
+  }
+  if (week.isCurrentWeek) {
+    return { label: 'This week', accent: false, dates: formatWeekRange(releaseDate, week.index) };
+  }
+  return { label: week.longLabel, accent: false, dates: formatTimelineDay(releaseDate, week.startDay) };
+}
+
+/** The phone header's one meta line: "Pre-release · drops Fri 6 Nov". */
+export function rolloutMetaLine(releaseDate: string | null | undefined, now: Date = new Date()): string {
+  if (!releaseDate || utcMidnight(releaseDate) === null) return 'Pre-production · no date yet';
+  const today = dayOffsetFromRelease(toUtcDateString(now), releaseDate) ?? 0;
+  const phase = ROLLOUT_PHASE_LABELS[rolloutPhaseForOffset(today)];
+  const day = formatTimelineDay(releaseDate, 0);
+  if (today < 0) return `${phase} · drops ${day}`;
+  if (today === 0) return `${phase} · drops today`;
+  return `${phase} · dropped ${day}`;
 }

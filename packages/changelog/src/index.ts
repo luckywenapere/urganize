@@ -22,6 +22,16 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.9",
+    date: "October 18, 2026",
+    highlights: [
+      "On your phone, an open rollout is calmer. The top shows the artist and title with a search icon and a menu icon, then one line with the phase, the release day and how much is done.",
+      "Weeks that are already behind you fold into one Catch up group with what is still open, and what you finished in them sits in a Done earlier row at the end. Search still finds everything in its own week.",
+      "Week headings use plain dates like Fri 23 Oct, Start here marks the one task to do first, and the distribution check is one Ready to distribute row you tap to open.",
+      "The floating Rollout menu button is gone, so it no longer covers your list. The menu icon at the top opens the same menu, and tapping search shows the filter and a key to what each dot means.",
+    ],
+  },
+  {
     version: "1.157.8",
     date: "October 18, 2026",
     highlights: [

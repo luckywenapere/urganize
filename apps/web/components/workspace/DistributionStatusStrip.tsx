@@ -19,6 +19,9 @@ type DistributionStatusStripProps = {
   showReadiness?: boolean;
   /** One 36px line for the timeline's phase row on a computer (2026-10-16). */
   compact?: boolean;
+  /** The phone rollout view's divider row, "Ready to distribute 5/9 ›"
+   *  (rollout declutter, Oct 18, 2026). */
+  row?: boolean;
 };
 
 /**
@@ -56,6 +59,7 @@ export function DistributionStatusStrip({
   onChangeArtist,
   showReadiness = true,
   compact = false,
+  row = false,
 }: DistributionStatusStripProps) {
   const { data } = useDistributionStatus(releaseId);
 
@@ -92,7 +96,7 @@ export function DistributionStatusStrip({
   }
 
   return (
-    <section aria-label="Check before distribution" className={compact ? 'space-y-2' : 'mb-3 space-y-2'}>
+    <section aria-label="Check before distribution" className={compact || row ? 'space-y-2' : 'mb-3 space-y-2'}>
       {rejections.length > 0 ? <DistributionRejectionList rejections={rejections} /> : null}
 
       {showIssues ? (
@@ -103,6 +107,7 @@ export function DistributionStatusStrip({
           onOpenDetails={onOpenDetails}
           onChangeArtist={onChangeArtist}
           compact={compact}
+          row={row}
         />
       ) : null}
     </section>
