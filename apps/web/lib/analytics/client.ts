@@ -8,6 +8,7 @@ import {
   getPostHogProjectKey,
 } from './shared';
 import { isInternalAccountEmail } from '@/lib/internal-accounts';
+import { identifyClarityUser } from './clarity';
 
 const ANALYTICS_STORAGE_KEY = 'urganize.analytics.events';
 const ANALYTICS_FEATURES_STORAGE_KEY = 'urganize.analytics.discovered-features';
@@ -291,6 +292,8 @@ export function identifyAnalyticsUser(user: AnalyticsIdentity | null | undefined
   if (!user?.id) {
     return;
   }
+
+  identifyClarityUser({ id: user.id, email: user.email, role: user.onboarding_role || user.role });
 
   // Our own and test accounts never reach PostHog (2026-10-16).
   if (isInternalAccountEmail(user.email)) {
