@@ -93,7 +93,7 @@ const compactFeatures = [
 ] as const;
 
 const headlineClass =
-  "text-balance text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[3.6rem]";
+  "text-balance text-[2rem] leading-[1.1] text-[var(--marketing-text)] sm:text-[2.8rem]";
 
 export default function FeaturesPage() {
   return (
@@ -110,9 +110,9 @@ export default function FeaturesPage() {
             <p className="mono-label text-[var(--marketing-text-subtle)]">
               Features
             </p>
-            <h1 className="mt-8 text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem]">
+            <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
               Everything a rollout needs.{" "}
-              <span className="italic text-[var(--marketing-accent)]">
+              <span className="text-[var(--marketing-accent)]">
                 Nothing it doesn&apos;t.
               </span>
             </h1>

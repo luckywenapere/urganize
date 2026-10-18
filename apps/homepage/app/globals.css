@@ -29,7 +29,10 @@
   --marketing-screen-shell: #ffffff;
   --marketing-screen-border: #ddd3c7;
   --marketing-logo-card-bg: rgba(255, 255, 255, 0.82);
-  --marketing-accent: #3f7e5c;
+  /* The homepage's light accent (.home-v2) on every page since 2026-10-18,
+     URG-383: the old #3f7e5c read 4.4:1 on the cream base, just under AA
+     for the small mono labels; this is 5.8:1. */
+  --marketing-accent: #2f6b4a;
   /* The surface behind the Chappi mascot. Nothing in light — his ink hood
      reads on cream — and the model sheet's stage wash in dark, so the hood
      separates from the canvas. Mirrors CHAPPI_GLOW in
@@ -73,9 +76,11 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Cormorant Garamond", Georgia, serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --font-data: "Roboto Mono", "IBM Plex Mono", ui-monospace, monospace;
+  /* The homepage's type on every page (2026-10-18, URG-383): Young Serif and
+     Space Mono come from components/landing/home-fonts.ts via app/layout.tsx. */
+  --font-display: var(--font-home-display), Georgia, serif;
+  --font-mono: var(--font-home-mono), ui-monospace, monospace;
+  --font-data: var(--font-home-mono), ui-monospace, monospace;
 }
 
 @layer base {
@@ -95,17 +100,24 @@ html[data-marketing-theme="light"] {
   color-scheme: light;
 }
 
+/* Dark base = the homepage's (.home-v2, URG-334) since 2026-10-18, URG-383:
+   the product's own neutral #0c0c0d, not the green-black #090c0b the
+   subpages had. */
 html[data-marketing-theme="dark"] {
   color-scheme: dark;
-  --marketing-bg: #090c0b;
-  --marketing-bg-muted: #101413;
-  --marketing-surface: #141918;
-  --marketing-surface-muted: #191f1d;
-  --marketing-text: #f6f0e6;
-  --marketing-text-muted: #c8bdaf;
-  --marketing-text-subtle: #a89a89;
-  --marketing-border: #252d29;
-  --marketing-border-strong: #38413d;
+  --marketing-bg: #0c0c0d;
+  --marketing-bg-muted: #121214;
+  --marketing-surface: #171719;
+  --marketing-surface-muted: #171719;
+  --marketing-text: #f4f2ee;
+  --marketing-text-muted: #a9a7a2;
+  /* The homepage's subtle is #8c8a86; here it is a step lighter because the
+     dawn sky's tail runs under the first labels below each opening block
+     (brand's "01 · Foundations", the changelog dates), where #8c8a86 falls
+     to 4.0:1. #9e9c97 is 5.0:1 there and 7.1:1 on the base. */
+  --marketing-text-subtle: #9e9c97;
+  --marketing-border: #242427;
+  --marketing-border-strong: #333337;
   --marketing-shadow: rgba(0, 0, 0, 0.34);
   --marketing-shadow-strong: rgba(0, 0, 0, 0.46);
   --marketing-primary: #f6f0e6;
@@ -121,9 +133,9 @@ html[data-marketing-theme="dark"] {
   --marketing-glow-left: rgba(38, 45, 42, 0.72);
   --marketing-glow-right: rgba(18, 23, 21, 0.94);
   --marketing-screen-shell: #131817;
-  --marketing-screen-border: #2a322e;
+  --marketing-screen-border: #242427;
   --marketing-logo-card-bg: #f6f0e6;
-  --marketing-accent: #6ee99b;
+  --marketing-accent: #7fd99a;
   --marketing-chappi-stage: radial-gradient(120% 90% at 50% 28%, #1c2a20 0%, #0f160f 62%, #0b100c 100%);
 }
 
@@ -196,10 +208,21 @@ html[data-marketing-theme="dark"] .theme-shot-light {
   h6 {
     color: var(--marketing-text);
     font-family: var(--font-display);
-    font-weight: 600;
-    line-height: 0.96;
-    letter-spacing: -0.04em;
+    /* Young Serif ships one weight (400) and is wider than the Cormorant it
+       replaced (2026-10-18, URG-383): headings take the homepage's 400 and
+       -0.025em, and never fake a bold or an italic it does not have. */
+    font-weight: 400;
+    font-synthesis: none;
+    line-height: 1.08;
+    letter-spacing: -0.025em;
     margin: 0;
+  }
+
+  /* Young Serif runs wide, so a heading's last word drops to a line of its
+     own more often than Cormorant's did: balance the lines on every page but
+     the homepage, which sets its own (2026-10-18, URG-383). */
+  :is(h1, h2, h3, h4):not(.home-v2 *) {
+    text-wrap: balance;
   }
 
   a {
@@ -896,12 +919,16 @@ html[data-marketing-theme="dark"] .hero-cards {
   --marketing-accent: #2f6b4a;
 }
 
-/* Dark: the subtle #a89a89 reads 4.4:1 where the glow peaks (signup's "We
-   are letting teams in", the waitlist form's label); this reads 5.3:1. The
-   accent keeps the dark theme's own green. */
+/* Dark: on the sky the base's muted #a9a7a2 reads 4.8:1 and its subtle
+   #8c8a86 3.3:1 where the glow peaks (signup's "We are letting teams in", the
+   waitlist form's label), so both lift inside the sky the way the homepage's
+   dawn hero lifts them: 6.3:1 and 5.3:1, muted still above subtle
+   (2026-10-18, URG-383; the warm #bcb0a1 before it belonged to the old
+   palette). The accent is the dark theme's own green. */
 html[data-marketing-theme="dark"] .page-dawn {
-  --marketing-accent: #6ee99b;
-  --marketing-text-subtle: #bcb0a1;
+  --marketing-accent: #7fd99a;
+  --marketing-text-muted: #c4c1bb;
+  --marketing-text-subtle: #b3b0aa;
 }
 
 .page-sky {

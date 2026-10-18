@@ -23,7 +23,7 @@ export default function GuidesPage() {
         <div className="mx-auto max-w-4xl">
           <PageDawn>
             <p className="mono-label text-[var(--marketing-text-subtle)]">Guides</p>
-            <h1 className="mt-6 text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+            <h1 className="mt-6 text-balance text-[2.25rem] leading-[1.08] sm:text-[3rem]">
               Plan a music release, step by step
             </h1>
             <p className="mt-4 max-w-[38rem] text-[var(--marketing-text-muted)]">
@@ -39,7 +39,7 @@ export default function GuidesPage() {
                   href={`/guides/${guide.slug}`}
                   className="group block py-7 transition-colors hover:bg-[var(--marketing-surface)]"
                 >
-                  <h2 className="text-xl font-semibold tracking-[-0.02em] group-hover:underline group-hover:underline-offset-4 sm:text-2xl">
+                  <h2 className="text-xl group-hover:underline group-hover:underline-offset-4 sm:text-2xl">
                     {guide.title}
                   </h2>
                   <p className="mt-2 max-w-[40rem] text-[var(--marketing-text-muted)]">

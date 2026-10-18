@@ -33,7 +33,7 @@ export default function ChangelogPage() {
                 Current version · v{CURRENT_VERSION}
               </span>
             </div>
-            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+            <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
               Updates
             </h1>
             <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
@@ -48,7 +48,7 @@ export default function ChangelogPage() {
             {changelog.map(({ version, date, highlights }) => (
               <div key={version} className="py-8">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h2 className="text-xl font-semibold tracking-[-0.02em]">
+                  <h2 className="text-xl">
                     v{version}
                   </h2>
                   <span className="mono-label text-[var(--marketing-text-subtle)]">

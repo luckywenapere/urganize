@@ -56,7 +56,7 @@ export default async function DownloadPage() {
       <main className="px-6 py-16 sm:py-20">
         <div className="mx-auto max-w-[34rem]">
           <p className="mono-label text-[var(--marketing-text-subtle)]">Android · Private beta</p>
-          <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+          <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
             Urganize for Android
           </h1>
 

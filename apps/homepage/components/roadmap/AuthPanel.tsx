@@ -74,7 +74,7 @@ export function AuthPanel({ onClose }: { onClose?: () => void }) {
   if (checkEmail) {
     return (
       <div className="rounded-2xl border border-[color:var(--marketing-border)] bg-[var(--marketing-surface)] p-6 text-center">
-        <h3 className="text-lg font-semibold text-[var(--marketing-text)]">Check your email</h3>
+        <h3 className="text-lg text-[var(--marketing-text)]">Check your email</h3>
         <p className="mt-2 text-sm text-[var(--marketing-text-muted)]">
           We sent a confirmation link to <strong>{email}</strong>. Confirm it, then come back
           here to sign in and vote.
@@ -85,7 +85,7 @@ export function AuthPanel({ onClose }: { onClose?: () => void }) {
 
   return (
     <div className="rounded-2xl border border-[color:var(--marketing-border)] bg-[var(--marketing-surface)] p-6">
-      <h3 className="text-lg font-semibold text-[var(--marketing-text)]">
+      <h3 className="text-lg text-[var(--marketing-text)]">
         {mode === "sign_in" ? "Sign in to vote" : "Create an account to vote"}
       </h3>
       <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">

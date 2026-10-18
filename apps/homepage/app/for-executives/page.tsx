@@ -93,9 +93,9 @@ export default function ForExecutivesPage() {
             {/* The hero line is the OG card's baked tagline (see
                 SHARE_IMAGE in lib/seo.ts). Same words on the card and on
                 the executive page on purpose. */}
-            <h1 className="mt-8 text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem]">
+            <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
               Every artist. Every rollout.{" "}
-              <span className="italic text-[var(--marketing-accent)]">
+              <span className="text-[var(--marketing-accent)]">
                 On plan.
               </span>
             </h1>

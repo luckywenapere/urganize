@@ -35,7 +35,7 @@ export default function SignupPage() {
             <p className="mono-label text-[var(--marketing-text-subtle)]">
               Sign up
             </p>
-            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+            <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
               Join the waitlist
             </h1>
             <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
@@ -57,7 +57,7 @@ export default function SignupPage() {
           </PageDawn>
 
           <section className="mt-16 border-t border-[color:var(--marketing-border)] py-10 sm:py-12">
-            <h2 className="text-xl font-semibold tracking-[-0.02em]">
+            <h2 className="text-xl">
               Who Urganize is for
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
@@ -83,7 +83,7 @@ export default function SignupPage() {
           </section>
 
           <section className="border-t border-[color:var(--marketing-border)] py-10 sm:py-12">
-            <h2 className="text-xl font-semibold tracking-[-0.02em]">
+            <h2 className="text-xl">
               Joining a team?
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">

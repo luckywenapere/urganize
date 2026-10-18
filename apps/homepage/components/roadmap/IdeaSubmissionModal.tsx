@@ -48,7 +48,7 @@ export function IdeaSubmissionModal({ userId, onClose, onSubmitted }: IdeaSubmis
         className="w-full max-w-md rounded-2xl border border-[color:var(--marketing-border)] bg-[var(--marketing-surface)] p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold text-[var(--marketing-text)]">Suggest an idea</h3>
+        <h3 className="text-lg text-[var(--marketing-text)]">Suggest an idea</h3>
         <p className="mt-1 text-sm text-[var(--marketing-text-muted)]">
           We review every suggestion before it goes on the public board.
         </p>

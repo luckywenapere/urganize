@@ -67,7 +67,7 @@ const compactComparisons = [
 ] as const;
 
 const headlineClass =
-  "text-balance text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[3.6rem]";
+  "text-balance text-[2rem] leading-[1.1] text-[var(--marketing-text)] sm:text-[2.8rem]";
 
 export default function WhyUrganizePage() {
   return (
@@ -84,9 +84,9 @@ export default function WhyUrganizePage() {
             <p className="mono-label text-[var(--marketing-text-subtle)]">
               Why Urganize
             </p>
-            <h1 className="mt-8 text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem]">
+            <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
               WhatsApp and Drive got you here.{" "}
-              <span className="italic text-[var(--marketing-accent)]">
+              <span className="text-[var(--marketing-accent)]">
                 They won&apos;t get you further.
               </span>
             </h1>

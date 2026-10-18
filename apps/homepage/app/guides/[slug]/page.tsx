@@ -99,7 +99,7 @@ export default async function GuidePage({
                 Guides
               </Link>
             </p>
-            <h1 className="mt-6 text-balance text-[2.4rem] font-semibold leading-[1.06] tracking-[-0.05em] sm:text-[3.2rem]">
+            <h1 className="mt-6 text-balance text-[2.1rem] leading-[1.1] sm:text-[2.8rem]">
               {guide.title}
             </h1>
           </PageDawn>
@@ -114,7 +114,7 @@ export default async function GuidePage({
 
           {guide.sections.map((section) => (
             <section key={section.heading} className="mt-14">
-              <h2 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+              <h2 className="text-2xl sm:text-3xl">
                 {section.heading}
               </h2>
               <div className="mt-4 space-y-4">
@@ -123,7 +123,7 @@ export default async function GuidePage({
                     return (
                       <h3
                         key={`${block.text}-${index}`}
-                        className="pt-2 text-base font-semibold text-[var(--marketing-text)]"
+                        className="pt-2 text-base text-[var(--marketing-text)]"
                       >
                         {block.text}
                       </h3>

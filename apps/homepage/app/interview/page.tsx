@@ -30,7 +30,7 @@ export default function InterviewPage() {
         >
           <PageDawn className="mx-auto max-w-[40rem] text-center">
             <p className="mono-label text-[var(--marketing-text-subtle)]">Interview</p>
-            <h1 className="mt-6 text-balance text-[2.4rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[3rem]">
+            <h1 className="mt-6 text-balance text-[2.25rem] leading-[1.08] text-[var(--marketing-text)] sm:text-[3rem]">
               We&apos;d like to talk to you.
             </h1>
             <p className="mx-auto mt-4 max-w-[32rem] text-balance text-base leading-7 text-[var(--marketing-text-muted)]">

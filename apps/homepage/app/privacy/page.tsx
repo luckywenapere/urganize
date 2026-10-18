@@ -41,7 +41,7 @@ export default function PrivacyPolicy() {
             <p className="mono-label text-[var(--marketing-text-subtle)]">
               Privacy Policy
             </p>
-            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+            <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
               How Urganize handles your data
             </h1>
             <p className="mt-5 max-w-[40rem] text-lg leading-8 text-[var(--marketing-text-muted)]">

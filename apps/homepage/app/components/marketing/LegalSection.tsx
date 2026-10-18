@@ -15,7 +15,7 @@ export function LegalSection({
           <p className="mono-label text-[var(--marketing-text-subtle)]">
             {number}
           </p>
-          <h2 className="mt-3 text-[1.6rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[var(--marketing-text)]">
+          <h2 className="mt-3 text-[1.45rem] leading-[1.15] text-[var(--marketing-text)]">
             {title}
           </h2>
         </div>

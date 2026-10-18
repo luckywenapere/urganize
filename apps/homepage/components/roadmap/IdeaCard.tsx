@@ -16,7 +16,7 @@ type IdeaCardProps = {
 export function IdeaCard({ idea, isAdmin, onStatusChange }: IdeaCardProps) {
   return (
     <div className="rounded-xl border border-[color:var(--marketing-border)] bg-[var(--marketing-surface)] p-4">
-      <h4 className="text-sm font-semibold leading-snug text-[var(--marketing-text)]">
+      <h4 className="text-sm leading-snug text-[var(--marketing-text)]">
         {idea.title}
       </h4>
       {idea.description ? (

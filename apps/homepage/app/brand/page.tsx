@@ -124,7 +124,7 @@ export default function BrandPage() {
           <PageDawn>
             {/* Hero */}
             <p className={sectionEyebrow}>Brand</p>
-            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+            <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
               Brand
             </h1>
             <p className={`mt-4 max-w-[38rem] ${bodyText}`}>
@@ -147,7 +147,7 @@ export default function BrandPage() {
 
             <div className="mt-6 space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Mission</h3>
+                <h3 className="text-sm text-[var(--marketing-text)]">Mission</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   The music industry runs on chaos: knowledge stuck in people’s heads, scattered
                   group chats, spreadsheets and one overworked person holding every rollout
@@ -157,7 +157,7 @@ export default function BrandPage() {
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Positioning</h3>
+                <h3 className="text-sm text-[var(--marketing-text)]">Positioning</h3>
                 {/* Composed from the shared constants rather than typed out.
                     This block is the one paragraph on the site whose entire job
                     is to state the positioning, so it is the last place that
@@ -169,7 +169,7 @@ export default function BrandPage() {
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Who it’s for</h3>
+                <h3 className="text-sm text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   Artist managers first, then labels. One rollout is a lot of moving parts; a roster is
                   many calendars, many rollouts at once and a pile of chats holding it
@@ -179,7 +179,7 @@ export default function BrandPage() {
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-[var(--marketing-text)]">
+                <h3 className="text-sm text-[var(--marketing-text)]">
                   What we believe
                 </h3>
                 <ul className={`mt-1.5 list-disc space-y-1 pl-5 ${bodyText}`}>
@@ -197,7 +197,7 @@ export default function BrandPage() {
                   both need it said outright. The facts below are the ones the
                   terms and the footer already state; nothing here is new. */}
               <div>
-                <h3 className="text-sm font-semibold text-[var(--marketing-text)]">The name</h3>
+                <h3 className="text-sm text-[var(--marketing-text)]">The name</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   Urganize is spelled with a G, like organize. It is not urbanize. The company
                   behind it is Urganization, started in December 2025. The product lives at urganize.app.
@@ -239,7 +239,7 @@ export default function BrandPage() {
             <div className="mt-6 grid grid-cols-1 gap-px bg-[color:var(--marketing-border)] md:grid-cols-2">
               {VOICE_PILLARS.map((pillar) => (
                 <div key={pillar.title} className="bg-[var(--marketing-bg)] px-6 py-6">
-                  <h3 className="text-base font-semibold text-[var(--marketing-text)]">
+                  <h3 className="text-base text-[var(--marketing-text)]">
                     {pillar.title}
                   </h3>
                   <p className={`mt-1.5 text-sm ${bodyText}`}>{pillar.body}</p>
@@ -282,7 +282,7 @@ export default function BrandPage() {
             <h2 className={sectionTitle}>How Urganize looks</h2>
 
             {/* Logo */}
-            <h3 className="mt-6 text-sm font-semibold text-[var(--marketing-text)]">Logo</h3>
+            <h3 className="mt-6 text-sm text-[var(--marketing-text)]">Logo</h3>
             <p className={`mt-1.5 max-w-[38rem] text-sm ${bodyText}`}>
               The wordmark is the main logo. The “U” is the icon on its own. Use the dark logo
               on light backgrounds and the light logo on dark ones. Don’t recolor it, stretch it,
@@ -310,7 +310,7 @@ export default function BrandPage() {
             </div>
 
             {/* Color */}
-            <h3 className="mt-10 text-sm font-semibold text-[var(--marketing-text)]">Color</h3>
+            <h3 className="mt-10 text-sm text-[var(--marketing-text)]">Color</h3>
             <div className="mt-4 grid grid-cols-1 gap-px bg-[color:var(--marketing-border)] sm:grid-cols-2 lg:grid-cols-3">
               {COLORS.map((color) => (
                 <div key={color.name} className="bg-[var(--marketing-bg)] px-4 py-4">
@@ -334,7 +334,7 @@ export default function BrandPage() {
             </div>
 
             {/* Typography */}
-            <h3 className="mt-10 text-sm font-semibold text-[var(--marketing-text)]">Typography</h3>
+            <h3 className="mt-10 text-sm text-[var(--marketing-text)]">Typography</h3>
             <div className="mt-4 space-y-px bg-[color:var(--marketing-border)]">
               {FONTS.map((font) => (
                 <div key={font.name} className="bg-[var(--marketing-bg)] px-4 py-4">
@@ -349,7 +349,7 @@ export default function BrandPage() {
             </p>
 
             {/* Motifs */}
-            <h3 className="mt-10 text-sm font-semibold text-[var(--marketing-text)]">Motifs</h3>
+            <h3 className="mt-10 text-sm text-[var(--marketing-text)]">Motifs</h3>
             <p className={`mt-1.5 max-w-[38rem] text-sm ${bodyText}`}>
               Small uppercase labels in the mono font. Thin lines and grids. A warm paper
               background with serif headlines, and emphasis set in green.
@@ -361,7 +361,7 @@ export default function BrandPage() {
             <p className={sectionEyebrow}>04 · Assets</p>
             <h2 className={sectionTitle}>Download</h2>
 
-            <h3 className="mt-6 text-sm font-semibold text-[var(--marketing-text)]">Logos</h3>
+            <h3 className="mt-6 text-sm text-[var(--marketing-text)]">Logos</h3>
             <div className="mt-3 space-y-px bg-[color:var(--marketing-border)]">
               {LOGO_DOWNLOADS.map((asset) => (
                 <a key={asset.href} href={asset.href} download className={downloadRow}>
@@ -373,7 +373,7 @@ export default function BrandPage() {
               ))}
             </div>
 
-            <h3 className="mt-8 text-sm font-semibold text-[var(--marketing-text)]">
+            <h3 className="mt-8 text-sm text-[var(--marketing-text)]">
               Images &amp; screenshots
             </h3>
             <div className="mt-3 space-y-px bg-[color:var(--marketing-border)]">
@@ -387,7 +387,7 @@ export default function BrandPage() {
               ))}
             </div>
 
-            <h3 className="mt-8 text-sm font-semibold text-[var(--marketing-text)]">Media contact</h3>
+            <h3 className="mt-8 text-sm text-[var(--marketing-text)]">Media contact</h3>
             <p className={`mt-1.5 text-sm ${bodyText}`}>
               Press questions:{" "}
               <a

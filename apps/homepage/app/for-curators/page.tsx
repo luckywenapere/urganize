@@ -110,9 +110,9 @@ export default function ForCuratorsPage() {
             <p className="mono-label text-[var(--marketing-text-subtle)]">
               For playlist curators
             </p>
-            <h1 className="mt-8 text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem]">
+            <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
               People pitch you all day.{" "}
-              <span className="italic text-[var(--marketing-accent)]">
+              <span className="text-[var(--marketing-accent)]">
                 Answer in one tap.
               </span>
             </h1>

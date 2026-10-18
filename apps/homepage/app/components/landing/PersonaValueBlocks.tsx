@@ -23,7 +23,7 @@ export interface PersonaValueBlock {
 // `centeredHeadlineClass` (sections/shared.ts): a persona page's blocks are
 // the page, not one beat inside a longer scroll.
 export const PERSONA_HEADLINE_CLASS =
-  "text-balance text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[3.6rem]";
+  "text-balance text-[2rem] leading-[1.1] text-[var(--marketing-text)] sm:text-[2.8rem]";
 
 export function PersonaValueBlocks({
   blocks,

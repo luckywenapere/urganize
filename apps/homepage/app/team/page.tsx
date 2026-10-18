@@ -65,7 +65,7 @@ export default function TeamPage() {
             <p className="mono-label text-[var(--marketing-text-subtle)]">
               The people
             </p>
-            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+            <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
               Team
             </h1>
             <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
@@ -138,7 +138,7 @@ export default function TeamPage() {
           </div>
 
           <section className="mt-16 border-t border-[color:var(--marketing-border)] py-10 sm:py-12">
-            <h2 className="text-xl font-semibold tracking-[-0.02em]">
+            <h2 className="text-xl">
               Want to build this with us?
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">

@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import {
-  Cormorant_Garamond,
-  IBM_Plex_Mono,
-  Instrument_Sans,
-  Roboto_Mono,
-} from "next/font/google";
+import { Instrument_Sans } from "next/font/google";
 import "./globals.css";
 import { LANDING_DESCRIPTION, LANDING_TITLE, ORGANIZATION_ID } from "@/lib/seo";
 import { PRICING_TIER_ORDER, getTierPrice } from "@urganize/pricing";
@@ -14,6 +9,7 @@ import FormbricksProvider from "./formbricks-provider";
 import CursorRefresher from "./components/CursorRefresher";
 import { Analytics } from "@vercel/analytics/next";
 import { LandingAnalytics } from "./components/landing/LandingAnalytics";
+import { homeFontVariables } from "./components/landing/home-fonts";
 
 const SITE_URL = "https://urganize.app";
 const LEGAL_NAME = "Urganization";
@@ -69,29 +65,16 @@ const LANDING_KEYWORDS = [
   "artist management app",
 ] as const;
 
-// Typography
-const cormorantGaramond = Cormorant_Garamond({
-  variable: "--font-urg-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-
+// Typography (2026-10-18, URG-383). Every marketing page wears the
+// homepage's type: Young Serif for display and Space Mono for meta
+// (components/landing/home-fonts.ts, the same instances the homepage uses, so
+// nothing is requested twice), Instrument Sans for body. Cormorant Garamond
+// and IBM Plex Mono left with it, and so did Roboto Mono, which was loaded on
+// every page and used by none.
 const instrumentSans = Instrument_Sans({
   variable: "--font-urg-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-});
-
-const ibmPlexMono = IBM_Plex_Mono({
-  variable: "--font-urg-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-});
-
-const robotoMono = Roboto_Mono({
-  variable: "--font-urg-data",
-  subsets: ["latin"],
-  weight: ["400", "500"],
 });
 
 // JSON-LD Schema Data
@@ -255,7 +238,7 @@ export default function RootLayout({
       lang="en"
       data-marketing-theme="dark"
       suppressHydrationWarning
-      className={`${cormorantGaramond.variable} ${instrumentSans.variable} ${ibmPlexMono.variable} ${robotoMono.variable}`}
+      className={`${instrumentSans.variable} ${homeFontVariables}`}
     >
       <head>
         <meta name="apple-mobile-web-app-title" content="Urganize" />

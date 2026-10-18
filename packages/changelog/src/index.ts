@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.158.9",
+    date: "October 18, 2026",
+    highlights: [
+      "Every page on urganize.app now uses the homepage's type and dark colours, so moving from the homepage to features, pricing or sign-up feels like the same place. Pages also load less font data.",
+    ],
+  },
+  {
     version: "1.158.8",
     date: "October 18, 2026",
     highlights: [

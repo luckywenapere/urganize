@@ -75,7 +75,7 @@ export function PricingPageClient() {
               Pricing
             </div>
 
-            <h1 className="hero-fade-in hero-delay-1 mb-8 text-5xl font-black leading-[0.95] tracking-tighter sm:text-6xl md:text-7xl">
+            <h1 className="hero-fade-in hero-delay-1 mb-8 text-[2.25rem] leading-[1.06] sm:text-[3.6rem] md:text-[4.2rem]">
               One price.
               <br />
               <span className="text-[var(--marketing-accent)]">Your whole team.</span>
@@ -131,7 +131,7 @@ export function PricingPageClient() {
         <section id="waitlist" className="relative scroll-mt-28 px-6 pb-28">
           <div className="mx-auto max-w-3xl text-center">
             <ScrollReveal>
-              <h2 className="text-3xl font-black tracking-tight md:text-4xl">
+              <h2 className="text-3xl md:text-4xl">
                 Not ready to talk yet?
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[var(--marketing-text-muted)]">

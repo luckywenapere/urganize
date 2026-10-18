@@ -33,7 +33,7 @@ export default function LoginPage() {
             <p className="mono-label text-[var(--marketing-text-subtle)]">
               Log in
             </p>
-            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+            <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
               Log in to Urganize
             </h1>
             <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
@@ -59,7 +59,7 @@ export default function LoginPage() {
           </PageDawn>
 
           <section className="mt-16 border-t border-[color:var(--marketing-border)] py-10 sm:py-12">
-            <h2 className="text-xl font-semibold tracking-[-0.02em]">
+            <h2 className="text-xl">
               Signing in with Google
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">
@@ -70,7 +70,7 @@ export default function LoginPage() {
           </section>
 
           <section className="border-t border-[color:var(--marketing-border)] py-10 sm:py-12">
-            <h2 className="text-xl font-semibold tracking-[-0.02em]">
+            <h2 className="text-xl">
               Don&apos;t have an account yet?
             </h2>
             <p className="mt-3 max-w-[42rem] leading-7 text-[var(--marketing-text-muted)]">

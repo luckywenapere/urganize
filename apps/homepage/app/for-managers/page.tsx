@@ -84,9 +84,9 @@ export default function ForManagersPage() {
             <p className="mono-label text-[var(--marketing-text-subtle)]">
               For artist managers
             </p>
-            <h1 className="mt-8 text-balance text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[var(--marketing-text)] sm:text-[4.2rem]">
+            <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
               Every artist&apos;s rollout.{" "}
-              <span className="italic text-[var(--marketing-accent)]">
+              <span className="text-[var(--marketing-accent)]">
                 One screen, not five chats.
               </span>
             </h1>

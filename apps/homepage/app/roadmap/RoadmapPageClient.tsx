@@ -151,7 +151,7 @@ export function RoadmapPageClient() {
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-[36rem]">
               <p className="mono-label text-[var(--marketing-text-subtle)]">Roadmap</p>
-              <h1 className="mt-6 text-[2.4rem] font-semibold leading-[1.05] tracking-[-0.05em] sm:text-[3rem]">
+              <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
                 Help us decide what to build next
               </h1>
               <p className="mt-4 text-[var(--marketing-text-muted)]">

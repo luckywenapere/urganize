@@ -17,7 +17,7 @@ export default function NotFound() {
       <main>
         <SectionShell containerClassName="max-w-[40rem] px-6 text-center sm:px-8">
           <p className="mono-label text-[var(--marketing-text-subtle)]">404</p>
-          <h1 className="mt-6 text-[2.4rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3rem]">
+          <h1 className="mt-6 text-[2.25rem] leading-[1.08] sm:text-[3rem]">
             This page doesn&apos;t exist.
           </h1>
           <p className="mx-auto mt-5 max-w-[30rem] text-lg leading-8 text-[var(--marketing-text-muted)]">
