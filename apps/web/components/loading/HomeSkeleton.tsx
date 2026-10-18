@@ -51,23 +51,63 @@ export function OpportunitiesBlockSkeleton() {
 }
 
 /**
- * The left column's reading order since URG-320: the release header (artist
- * line, title, days to go, the three-part phase line), the One Thing card,
- * then the Waiting row. Same heights as the real blocks, so nothing jumps.
+ * The left column, drawn to Home's golden layout B (URG-356, URG-364): the
+ * release header (title, then "Drops <date>"; no eyebrow), the bell and the
+ * team's faces top right, the three phase bars with their labels, the golden
+ * One Thing card, then 56px rows with hairlines (Done, Waiting, grants). Every
+ * box takes the real block's classes and line boxes (ReleaseHeader, OneThing,
+ * HomeRow), so nothing moves when Home lands. Guarded by
+ * lib/home-skeleton-parity-guard.test.ts.
  */
 function HomeColumnBlocks() {
   return (
-    <div className="flex flex-col">
-      <SkeletonBlock className="h-3 w-32 rounded-md" />
-      <SkeletonBlock className="mt-3 h-8 w-56 rounded-lg" />
-      <SkeletonBlock className="mt-2.5 h-4 w-40 rounded-md" />
-      <div className="mt-4 flex gap-1.5">
-        <SkeletonBlock className="h-1 flex-1 rounded-full" />
-        <SkeletonBlock className="h-1 flex-1 rounded-full" />
-        <SkeletonBlock className="h-1 flex-1 rounded-full" />
+    <div className="flex flex-col" data-skeleton="home-column">
+      <div className="flex items-start justify-between gap-3" data-skeleton="release-header">
+        <div className="min-w-0 flex-1">
+          {/* h1: text-[1.875rem] leading-[1.15] is a 34.5px line. */}
+          <div className="flex h-[2.15625rem] items-center" data-skeleton="title">
+            <SkeletonBlock className="h-7 w-44 rounded-lg" />
+          </div>
+          {/* "Drops Fri 6 Nov": mt-1.5, text-[15px] at body leading 1.5. */}
+          <div className="mt-1.5 flex h-[1.40625rem] items-center" data-skeleton="drop">
+            <SkeletonBlock className="h-4 w-36 rounded-md" />
+          </div>
+        </div>
+        <div className="-mr-1 flex shrink-0 items-center gap-1">
+          {/* The bell is phone only, like HomeBell (lg:hidden). */}
+          <div className="grid h-11 w-11 place-items-center lg:hidden" data-skeleton="bell">
+            <SkeletonBlock className="h-5 w-5 rounded-full" />
+          </div>
+          <div className="flex min-h-11 items-center pl-2" data-skeleton="team">
+            <SkeletonBlock className="h-[30px] w-[30px] rounded-full" />
+          </div>
+        </div>
       </div>
-      <SkeletonBlock className="mt-8 h-[13rem] w-full rounded-[20px]" />
-      <SkeletonBlock className="mt-8 h-14 w-full rounded-[20px]" />
+      <div className="mt-4 flex gap-1.5" data-skeleton="phases">
+        {['w-16', 'w-12', 'w-20'].map((width) => (
+          <div key={width} className="min-w-0 flex-1">
+            <SkeletonBlock className="h-1 w-full rounded-full" />
+            {/* Phase label: mt-1.5, text-[11px] at leading 1.5. */}
+            <div className="mt-1.5 flex h-[1.03125rem] items-center">
+              <SkeletonBlock className={`h-2.5 rounded-sm ${width}`} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-9" data-skeleton="one-thing">
+        <SkeletonBlock className="aspect-[1.618/1] w-full rounded-[20px]" />
+      </div>
+      <div className="mt-4 divide-y divide-stroke-subtle" data-skeleton="rows">
+        {['w-16', 'w-32', 'w-44'].map((width, index) => (
+          <div key={width} className="flex h-14 items-center gap-3 px-1" data-skeleton="row">
+            <div className="min-w-0 flex-1">
+              <SkeletonBlock className={`h-4 rounded-md ${width}`} />
+            </div>
+            {index < 2 ? <SkeletonBlock className="h-4 w-14 shrink-0 rounded-md" /> : null}
+            <SkeletonBlock className="h-4 w-4 shrink-0 rounded-md" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -93,10 +133,10 @@ function PinnedAskBoxPlaceholder() {
 }
 
 /**
- * Home's own loading shape, in the order the page reads (2026-10-07): the
- * greeting, then folded stacks. Used by app/dashboard/home/loading.tsx and by
- * HomePageClient while useHomeStore is still loading. Keep in step with
- * HomeBlocks, HomeStack and HomeDesktopSplit.
+ * Home's own loading shape, in the order the page reads. Used by
+ * app/dashboard/home/loading.tsx and by HomePageClient while Home's data (and
+ * its dismissed next moves) load. Keep in step with HomeFour (ReleaseHome),
+ * ReleaseHeader, OneThing, HomeRow and HomeDesktopSplit.
  *
  * Two shapes, switched by CSS rather than by reading the viewport, so the
  * server's markup is right at every width with nothing to correct after load:

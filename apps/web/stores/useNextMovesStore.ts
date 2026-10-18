@@ -56,11 +56,25 @@ type NextMovesState = {
   markHasTeam: () => void;
   /** Requests already made this session, so two mounts ask once. */
   requested: Record<string, true>;
+  /** Requests that have finished (answered, failed, timed out or had no
+   *  session). Home waits for its own one before painting the One Thing, so a
+   *  move dismissed on another device never shows for a frame (URG-364). */
+  settled: Record<string, true>;
   load: (userId: string, releaseId?: string | null) => void;
   dismiss: (userId: string, key: string) => void;
 };
 
-const requestKey = (releaseId?: string | null) => releaseId || '_home';
+/** Home's request key: Home asks with no rollout id. */
+export const NEXT_MOVES_HOME_KEY = '_home';
+const requestKey = (releaseId?: string | null) => releaseId || NEXT_MOVES_HOME_KEY;
+/** Never hold Home's skeleton longer than this on a slow or hung request. */
+const SETTLE_TIMEOUT_MS = 4000;
+
+/** True once Home's dismissals for this person are known (or given up on). */
+export const selectHomeMovesSettled =
+  (userId: string | null) =>
+  (state: Pick<NextMovesState, 'userId' | 'settled'>): boolean =>
+    Boolean(userId) && state.userId === userId && state.settled[NEXT_MOVES_HOME_KEY] === true;
 
 export const useNextMovesStore = create<NextMovesState>((set, get) => ({
   userId: null,
@@ -68,6 +82,7 @@ export const useNextMovesStore = create<NextMovesState>((set, get) => ({
   pitches: {},
   hasTeam: null,
   requested: {},
+  settled: {},
 
   markHasTeam: () => set({ hasTeam: true }),
 
@@ -75,18 +90,32 @@ export const useNextMovesStore = create<NextMovesState>((set, get) => ({
     if (!userId) return;
     // Another person signed in on this tab: start clean.
     if (get().userId !== userId) {
-      set({ userId, dismissed: new Set(readLocal(userId)), pitches: {}, hasTeam: null, requested: {} });
+      set({ userId, dismissed: new Set(readLocal(userId)), pitches: {}, hasTeam: null, requested: {}, settled: {} });
     }
     const key = requestKey(releaseId);
     if (get().requested[key]) return;
     set((state) => ({ requested: { ...state.requested, [key]: true } }));
+
+    const settle = () => {
+      if (get().userId !== userId || get().settled[key]) return;
+      set((state) => ({ settled: { ...state.settled, [key]: true } }));
+    };
+    const controller = typeof AbortController === 'undefined' ? null : new AbortController();
+    const timer = setTimeout(() => {
+      controller?.abort();
+      settle();
+    }, SETTLE_TIMEOUT_MS);
 
     void (async () => {
       try {
         const headers = await authHeaders();
         if (!headers) return;
         const query = releaseId ? `?releaseId=${encodeURIComponent(releaseId)}` : '';
-        const response = await fetch(`/api/next-moves${query}`, { headers, cache: 'no-store' });
+        const response = await fetch(`/api/next-moves${query}`, {
+          headers,
+          cache: 'no-store',
+          signal: controller?.signal,
+        });
         if (!response.ok) return;
         const body = (await response.json()) as { dismissed?: unknown; pitches?: RolloutPitchFacts; hasTeam?: unknown };
         if (get().userId !== userId) return;
@@ -99,7 +128,10 @@ export const useNextMovesStore = create<NextMovesState>((set, get) => ({
           hasTeam: state.hasTeam === true ? true : typeof body.hasTeam === 'boolean' ? body.hasTeam : state.hasTeam,
         }));
       } catch {
-        // Offline: the local copy is what there is.
+        // Offline or timed out: the local copy is what there is.
+      } finally {
+        clearTimeout(timer);
+        settle();
       }
     })();
   },

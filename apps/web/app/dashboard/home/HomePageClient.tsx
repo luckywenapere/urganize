@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { useHomeStore } from '@/stores/useHomeStore';
+import { selectHomeMovesSettled, useNextMovesStore } from '@/stores/useNextMovesStore';
 import { HomeSkeleton } from '@/components/loading/HomeSkeleton';
 import { RolloutCreateFlow } from '@/components/releases/RolloutCreateFlow';
 import { useFirstReleasePrompt } from '@/components/releases/useFirstReleasePrompt';
@@ -41,10 +42,22 @@ export default function HomePageClient() {
   const { data: home, isLoading: homeLoading, error: homeError, load: loadHome } = useHomeStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const isDesktop = useIsDesktopViewport();
+  const viewerKey = user?.id ?? null;
+  const loadMoves = useNextMovesStore((state) => state.load);
+  const movesSettled = useNextMovesStore(selectHomeMovesSettled(viewerKey));
 
   useEffect(() => {
     void loadHome();
   }, [loadHome]);
+
+  // Dismissed next moves are asked for alongside /api/home, and Home waits for
+  // them (URG-364). Before, the ask went out only once the One Thing mounted,
+  // so a move dismissed on another device (the iPhone app keeps its own local
+  // copy) painted for a frame as the old "Open it" card, then swapped for the
+  // task card when the server's list landed. The store gives up after 4s.
+  useEffect(() => {
+    if (viewerKey) loadMoves(viewerKey);
+  }, [viewerKey, loadMoves]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -73,7 +86,8 @@ export default function HomePageClient() {
     );
   }
 
-  if (authLoading || homeLoading || !home) {
+  // One skeleton, then the finished Home: never an in-between One Thing.
+  if (authLoading || homeLoading || !home || !movesSettled) {
     return <HomeSkeleton />;
   }
 

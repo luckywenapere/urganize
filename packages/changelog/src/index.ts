@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.15",
+    date: "October 18, 2026",
+    highlights: [
+      "On your phone, Home no longer flashes a card you already dismissed while it loads. It waits until it knows what you dismissed on any device, then shows your next task straight away.",
+      "Home's loading shapes now match the real screen: the title and drop date, the bell and your team, the three phase bars, the task card and the rows under it, so nothing jumps when it fills in.",
+    ],
+  },
+  {
     version: "1.157.14",
     date: "October 18, 2026",
     highlights: [
