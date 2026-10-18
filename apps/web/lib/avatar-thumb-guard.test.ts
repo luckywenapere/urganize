@@ -33,6 +33,16 @@ describe('profile photos load from their thumb', () => {
     expect(read('app/p/[slug]/card/route.tsx')).not.toContain('thumbs: true');
   });
 
+  it('the person page credit covers use thumbs and ThumbImage (URG-368)', () => {
+    const extras = read('lib/person-page-extras-server.ts');
+    const credits = extras.slice(extras.indexOf('async function loadCredits'));
+    expect(credits).toContain('generateThumbSignedUrls(');
+    expect(extras).toContain('loadCredits(admin, input, options.thumbs === true)');
+    const page = read('app/p/[slug]/page.tsx');
+    expect(page).toContain('<ThumbImage src={tile.coverUrl}');
+    expect(page).not.toContain('<img src={tile.coverUrl}');
+  });
+
   it('small faces fade in through ThumbImage', () => {
     for (const file of ['app/p/[slug]/page.tsx', 'app/k/[slug]/page.tsx', 'components/tasks/TaskMemberSelect.tsx']) {
       expect(read(file)).toContain('<ThumbImage');

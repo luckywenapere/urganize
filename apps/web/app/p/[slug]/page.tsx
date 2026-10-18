@@ -208,9 +208,11 @@ export default async function PersonPage({ params }: PageProps) {
           <ul className="mx-[22px] mt-6 grid grid-cols-3 gap-[3px] overflow-hidden rounded-[14px]">
             {extras.credits.map((tile) => (
               <li key={tile.id} className="aspect-square" style={{ backgroundColor: SURFACE }}>
-                {/* Cover art only: release titles stay off this page. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={tile.coverUrl} alt="" className="h-full w-full object-cover" />
+                {/* Cover art only: release titles stay off this page. The
+                    384px copy (about 143 CSS px wide at most, so sharp at 2x),
+                    lazy, hidden until decoded then faded in over the surface
+                    fill. 144 is the intrinsic box; CSS sizes the tile. */}
+                <ThumbImage src={tile.coverUrl} width={144} height={144} className="h-full w-full object-cover" />
               </li>
             ))}
           </ul>

@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.17",
+    date: "October 18, 2026",
+    highlights: [
+      "The cover art grid on a public profile now loads from small copies too, so the covers show up fast and all at once instead of filling in from the top. Your original files are unchanged.",
+    ],
+  },
+  {
     version: "1.157.16",
     date: "October 18, 2026",
     highlights: [
