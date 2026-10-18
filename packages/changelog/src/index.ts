@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.18",
+    date: "October 18, 2026",
+    highlights: [
+      "On a rollout, a suggestion you already dismissed on another device no longer flashes up while the page loads. The next moves wait until they know what you dismissed, then appear once, and the rest of the rollout shows straight away.",
+    ],
+  },
+  {
     version: "1.157.17",
     date: "October 18, 2026",
     highlights: [

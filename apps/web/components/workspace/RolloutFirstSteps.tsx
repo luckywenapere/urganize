@@ -27,6 +27,9 @@ import { supabase } from '@/lib/supabase/client';
 const COVER_ART_ENABLED = process.env.NEXT_PUBLIC_FEATURE_COVER_ART === 'true';
 
 const UNKNOWN: FirstStepsFacts = { hasCoverArt: null, hasTeam: null };
+/** Never keep the rollout's next moves waiting on the first-steps read longer
+ *  than this (same fallthrough as the next-moves store, URG-367). */
+const FIRST_STEPS_SETTLE_MS = 4000;
 
 /** What the first-steps card is doing on this rollout right now. */
 export type RolloutFirstStepsState = {
@@ -131,6 +134,14 @@ export function useRolloutFirstSteps({
     void load();
   }, [isNew, dismissed, activeScene, load]);
 
+  // Never hold the rollout's next moves on a hung read: after a few seconds
+  // 'pending' ends and, unless the facts landed, the next moves show.
+  useEffect(() => {
+    if (!isNew || dismissed !== false || factsSettled) return;
+    const timer = setTimeout(() => setFactsSettled(true), FIRST_STEPS_SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [isNew, dismissed, factsSettled, releaseId]);
+
   // Coming back from Settings → Team (or another tab) re-reads the team.
   useEffect(() => {
     if (!isNew || dismissed !== false) return;
@@ -224,6 +235,10 @@ export function RolloutFirstSteps({
   state: RolloutFirstStepsState;
   fallback: ReactNode;
 }) {
+  // While it is still working out whether to show (pending), draw neither: the
+  // next moves used to paint here first and then be swapped out for the first
+  // steps card (URG-367). The hook gives up after FIRST_STEPS_SETTLE_MS.
+  if (state.status === 'pending') return null;
   if (state.status !== 'showing') return <>{fallback}</>;
   const { steps, go, dismiss } = state;
   const next = nextFirstStep(steps);

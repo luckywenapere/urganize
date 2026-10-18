@@ -67,14 +67,20 @@ type NextMovesState = {
 /** Home's request key: Home asks with no rollout id. */
 export const NEXT_MOVES_HOME_KEY = '_home';
 const requestKey = (releaseId?: string | null) => releaseId || NEXT_MOVES_HOME_KEY;
-/** Never hold Home's skeleton longer than this on a slow or hung request. */
+/** Never hold Home's skeleton or a rollout's move cards longer than this on a
+ *  slow or hung request. */
 const SETTLE_TIMEOUT_MS = 4000;
 
-/** True once Home's dismissals for this person are known (or given up on). */
-export const selectHomeMovesSettled =
-  (userId: string | null) =>
+/** True once a surface's dismissals (and, on a rollout, its pitch facts) are
+ *  known for this person, or given up on. Every next-move surface waits for it
+ *  before drawing a card (Home URG-364, rollout page URG-367). */
+export const selectNextMovesSettled =
+  (userId: string | null, releaseId?: string | null) =>
   (state: Pick<NextMovesState, 'userId' | 'settled'>): boolean =>
-    Boolean(userId) && state.userId === userId && state.settled[NEXT_MOVES_HOME_KEY] === true;
+    Boolean(userId) && state.userId === userId && state.settled[requestKey(releaseId)] === true;
+
+/** True once Home's dismissals for this person are known (or given up on). */
+export const selectHomeMovesSettled = (userId: string | null) => selectNextMovesSettled(userId, null);
 
 export const useNextMovesStore = create<NextMovesState>((set, get) => ({
   userId: null,
