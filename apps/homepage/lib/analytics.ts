@@ -14,7 +14,9 @@ export type LandingEvent =
   | "start_trial_click"
   | "demo_video_open"
   | "waitlist_submit"
-  | "faq_open";
+  | "faq_open"
+  // The hero shot's Artists | Rollouts tabs (URG-378), with { tab }.
+  | "hero_tab_switch";
 
 //
 // HERO A/B (2026-10-18, URG-376). Each event also carries `hero_variant`

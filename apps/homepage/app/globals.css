@@ -735,3 +735,137 @@ html[data-marketing-theme="dark"] .hero-cards {
   border-radius: 2px;
   background: var(--marketing-accent);
 }
+
+/* THE HERO SHOT'S TABS (2026-10-18, URG-378; HeroShotTabs.tsx). Transparent
+   buttons laid exactly over the Artists | Rollouts tabs the capture draws,
+   in percentages of the frame, measured from the PNGs:
+   - phone (below sm, 780x1688 capture in a 4:5 frame, so the visible window
+     is 780x975): the tab bar spans y 0-110; Artists pill x 24-159, Rollouts
+     pill x 168-323, both y 16-95. Each button covers its half of the bar
+     (a taller target than the pill), the pill inside it is the visual.
+   - desktop (sm and up, 1920x973 capture at its own aspect): the sidebar rows
+     x 78-366; Artists y 117-170, Rollouts y 173-226.
+   Retaking the captures moves nothing as long as the app's layout holds; if
+   it changes, re-measure here. */
+.hero-shot-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+}
+
+.hero-shot-layer[data-visible="true"] {
+  opacity: 1;
+}
+
+.hero-tablist {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero-tab {
+  position: absolute;
+  pointer-events: auto;
+  top: 0;
+  height: 11.282%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hero-tab[data-tab="artists"] {
+  left: 2.564%;
+  width: 18.462%;
+}
+
+.hero-tab[data-tab="rollouts"] {
+  left: 21.026%;
+  width: 21.026%;
+}
+
+.hero-tab-pill {
+  position: absolute;
+  top: 14.545%;
+  height: 72.727%;
+  border-radius: 0.5rem;
+}
+
+.hero-tab[data-tab="artists"] .hero-tab-pill {
+  left: 2.778%;
+  width: 94.444%;
+}
+
+.hero-tab[data-tab="rollouts"] .hero-tab-pill {
+  left: 2.439%;
+  width: 95.122%;
+}
+
+.hero-tab[aria-selected="true"] {
+  cursor: default;
+}
+
+/* The hover tint is a pseudo-element at low opacity rather than color-mix(),
+   whose compiled fallback for older browsers is the solid text colour. */
+.hero-tab-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--marketing-text);
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+@media (hover: hover) {
+  .hero-tab[aria-selected="false"]:hover .hero-tab-pill::before {
+    opacity: 0.05;
+  }
+}
+
+.hero-tab:focus {
+  outline: none;
+}
+
+.hero-tab:focus-visible .hero-tab-pill {
+  outline: 2px solid var(--marketing-accent);
+  outline-offset: 2px;
+}
+
+@media (min-width: 640px) {
+  .hero-tab {
+    left: 4.063%;
+    width: 15.052%;
+    height: 5.550%;
+  }
+
+  .hero-tab[data-tab="artists"] {
+    left: 4.063%;
+    width: 15.052%;
+    top: 12.025%;
+  }
+
+  .hero-tab[data-tab="rollouts"] {
+    left: 4.063%;
+    width: 15.052%;
+    top: 17.780%;
+  }
+
+  .hero-tab .hero-tab-pill,
+  .hero-tab[data-tab="artists"] .hero-tab-pill,
+  .hero-tab[data-tab="rollouts"] .hero-tab-pill {
+    inset: 0;
+    width: auto;
+    height: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-shot-layer,
+  .hero-tab-pill::before {
+    transition: none;
+  }
+}

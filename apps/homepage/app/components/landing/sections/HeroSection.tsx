@@ -6,6 +6,9 @@ import { WaitlistForm } from "../WaitlistForm";
 import { WatchDemo } from "../WatchDemo";
 import { wideContainerClass } from "./shared";
 import { HeroCards, HeroSky } from "./HeroDawn";
+import { HeroShotTabs } from "../HeroShotTabs";
+
+const HERO_SHOT_SIZES = "(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw";
 
 // Homepage v2 hero (2026-10-17, URG-334; founder approved 2026-10-17).
 //
@@ -78,14 +81,30 @@ export function HeroSection() {
           shot's top edge whatever height the text above it wraps to. */}
       <div className="relative mx-auto mt-14 max-w-[84rem] sm:mt-16">
         <HeroSky />
-        <div className="hero-shot-frame aspect-[4/5] overflow-hidden rounded-xl border border-[color:var(--marketing-border)] sm:aspect-auto">
-        <ResponsiveProductShot
-          desktop={PRODUCT_SHOTS.catalog}
-          phone={PRODUCT_SHOTS.catalogPhone}
-          alt="The Urganize catalog for a manager running several artists: release cards with cover art, the release date and a progress bar counting finished tasks against each plan."
-          sizes="(min-width: 1440px) 1344px, (min-width: 1024px) calc(100vw - 80px), 100vw"
-          className="h-full w-full object-cover object-top sm:h-auto sm:object-contain"
-        />
+        <div className="hero-shot-frame relative aspect-[4/5] overflow-hidden rounded-xl border border-[color:var(--marketing-border)] sm:aspect-auto">
+          {/* The Artists | Rollouts tabs drawn in the capture are tappable
+              (URG-378): Rollouts is the default and stays the LCP image. */}
+          <HeroShotTabs
+            rollouts={
+              <ResponsiveProductShot
+                desktop={PRODUCT_SHOTS.catalog}
+                phone={PRODUCT_SHOTS.catalogPhone}
+                alt="The Urganize catalog for a manager running several artists: release cards with cover art, the release date and a progress bar counting finished tasks against each plan."
+                sizes={HERO_SHOT_SIZES}
+                className="h-full w-full object-cover object-top sm:h-auto sm:object-contain"
+              />
+            }
+            artists={
+              <ResponsiveProductShot
+                desktop={PRODUCT_SHOTS.artistsRoster}
+                phone={PRODUCT_SHOTS.artistsPhone}
+                alt="The Urganize artists roster: every artist the manager runs, with how many releases each has in plan."
+                sizes={HERO_SHOT_SIZES}
+                fetchPriority="low"
+                className="absolute inset-0 h-full w-full object-cover object-top"
+              />
+            }
+          />
         </div>
       </div>
     </SectionShell>

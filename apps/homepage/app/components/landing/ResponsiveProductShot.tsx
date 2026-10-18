@@ -31,9 +31,10 @@ type Props = {
   /**
    * "high" for the first product visual on a page (the homepage hero, where it
    * is the Largest Contentful Paint candidate); "auto" for one further down,
-   * so two captures do not compete with the real above-the-fold assets.
+   * so two captures do not compete with the real above-the-fold assets;
+   * "low" for a capture mounted after load (the hero's Artists tab).
    */
-  fetchPriority?: "high" | "auto";
+  fetchPriority?: "high" | "auto" | "low";
 };
 
 export function ResponsiveProductShot({

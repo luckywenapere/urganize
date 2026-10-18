@@ -12,7 +12,8 @@
 //   pnpm --filter @urganize/homepage shots -- --mode=all   seed, then capture
 //
 // Flags: --base=https://app.urganize.app  --release=<id>  --epk=<token>
-//        --hero-title="Golden Hour"  --login-timeout=900000
+//        --hero-title="Harmattan Gold"  --login-timeout=900000
+//        --refresh-covers[=renamed]  (redraw cover art, all or renamed artists only)
 //        --anonymise="Real Name=Dami Okafor"  (swap the signed-in person's
 //        display name for a fictional one in every capture)
 //
@@ -80,17 +81,31 @@ const ONLY = args.only ? new Set(args.only.split(",").map((s) => s.trim())) : nu
 // count until 2026-10-17, when plans got shorter and the counts ticked off
 // whole plans.
 // ---------------------------------------------------------------------------
+// Names a Nigerian visitor reads as Nigerian (Yoruba, Igbo, Hausa, a Lagos
+// stage name, a band), each checked on 2026-10-18 not to be a real notable
+// artist. `renamed` maps an earlier demo name to its current one, so a re-run
+// renames in place (the app writes the name through to every release) instead
+// of adding a second artist.
 const DEMO_TEAM = {
   name: "Northline Music",
-  artists: ["Ayo Kanmi", "Zainab Oyelaran", "The Harbour Lights"],
+  artists: ["Kanmi Gold", "Hadiza Moon", "Lagoon Theory", "Temi Ivory", "Chi Velvet", "Nasir Sahara", "Yaba Kid"],
+  renamed: { "Ayo Kanmi": "Kanmi Gold", "Hadiza Lawal": "Hadiza Moon", "The Eko Collective": "Lagoon Theory", "Temi Bankole": "Temi Ivory", "Chisom Ezenwa": "Chi Velvet", "Nasir Dauda": "Nasir Sahara" },
+  // Same idea for rollout titles: an earlier title maps to its current one,
+  // so a re-run retitles in place (PATCH /api/releases/:id) instead of
+  // seeding a second rollout.
+  renamedReleases: { "Golden Hour": "Harmattan Gold", "Night Bus": "Danfo at Midnight", "Blue Season": "Rainy Season in Kano", "Salt and Signal": "Lagoon Lights", "Weekend Weather": "Owambe Weather", "Mainland Love": "Love Letters from Yaba" },
   teammates: ["tunde@example.com", "amara@example.com"],
   releases: [
-    { title: "Golden Hour", artist: "Ayo Kanmi", type: "single", weeksOut: 6, done: 0.55, ready: ["master", "artwork"], goal: "playlist_adds", budget: "under_100k", colour: "#14643A" },
-    { title: "Night Bus", artist: "Ayo Kanmi", type: "single", weeksOut: 13, done: 0.15, ready: ["master"], goal: "new_listeners", budget: "none", colour: "#1D3A7A" },
-    { title: "Iyawo Mi", artist: "Zainab Oyelaran", type: "single", weeksOut: 3, done: 0.75, ready: ["master", "artwork", "distributor"], goal: "fan_moment", budget: "100k_500k", colour: "#7A1D3A" },
-    { title: "Blue Season", artist: "Zainab Oyelaran", type: "ep", weeksOut: 11, done: 0.4, ready: ["master", "artwork"], goal: "press", budget: "100k_500k", colour: "#5B1D7A" },
-    { title: "Salt and Signal", artist: "The Harbour Lights", type: "album", weeksOut: 18, done: 0.1, ready: ["none"], goal: "new_listeners", budget: "over_500k", colour: "#7A3E1D" },
-    { title: "Weekend Weather", artist: "The Harbour Lights", type: "single", weeksOut: 1, done: 0.9, ready: ["master", "artwork", "visualizer", "distributor"], goal: "catalog", budget: "none", colour: "#3A5B1D" },
+    { title: "Harmattan Gold", artist: "Kanmi Gold", type: "single", weeksOut: 6, done: 0.55, ready: ["master", "artwork"], goal: "playlist_adds", budget: "under_100k", colour: "#14643A" },
+    { title: "Danfo at Midnight", artist: "Kanmi Gold", type: "single", weeksOut: 13, done: 0.15, ready: ["master"], goal: "new_listeners", budget: "none", colour: "#1D3A7A" },
+    { title: "Iyawo Mi", artist: "Hadiza Moon", type: "single", weeksOut: 3, done: 0.75, ready: ["master", "artwork", "distributor"], goal: "fan_moment", budget: "100k_500k", colour: "#7A1D3A" },
+    { title: "Rainy Season in Kano", artist: "Hadiza Moon", type: "ep", weeksOut: 11, done: 0.4, ready: ["master", "artwork"], goal: "press", budget: "100k_500k", colour: "#5B1D7A" },
+    { title: "Lagoon Lights", artist: "Lagoon Theory", type: "album", weeksOut: 18, done: 0.1, ready: ["none"], goal: "new_listeners", budget: "over_500k", colour: "#7A3E1D" },
+    { title: "Owambe Weather", artist: "Lagoon Theory", type: "single", weeksOut: 1, done: 0.9, ready: ["master", "artwork", "visualizer", "distributor"], goal: "catalog", budget: "none", colour: "#3A5B1D" },
+    { title: "Ife Mi", artist: "Temi Ivory", type: "single", weeksOut: 8, done: 0.3, ready: ["master"], goal: "playlist_adds", budget: "under_100k", colour: "#1D5B6B" },
+    { title: "Nkem", artist: "Chi Velvet", type: "single", weeksOut: 16, done: 0.2, ready: ["master", "artwork"], goal: "new_listeners", budget: "none", colour: "#7A5B1D" },
+    { title: "Sannu Da Zuwa", artist: "Nasir Sahara", type: "ep", weeksOut: 24, done: 0.6, ready: ["master", "artwork"], goal: "press", budget: "100k_500k", colour: "#8A2B2B" },
+    { title: "Love Letters from Yaba", artist: "Yaba Kid", type: "single", weeksOut: 5, done: 0.85, ready: ["master", "artwork", "distributor"], goal: "fan_moment", budget: "under_100k", colour: "#2B2B6B" },
   ],
 };
 
@@ -166,8 +181,15 @@ const SHOTS = [
   {
     // The roster has its own page since the 2026-10 redesign.
     name: "artists-roster", viewport: "desktop", url: "/dashboard/artists",
-    waitFor: { text: "Ayo Kanmi" },
+    waitFor: { text: "Kanmi Gold" },
     actions: [{ type: "settle", ms: 700 }, HIDE_CREDITS_BANNER],
+  },
+  // The phone partner of catalog-phone for the homepage hero's Artists |
+  // Rollouts tabs (URG-378): same viewport, same chrome, Artists selected.
+  {
+    name: "artists-phone", viewport: "phone", url: "/dashboard/artists",
+    waitFor: { text: "Kanmi Gold" },
+    actions: [{ type: "settle", ms: 800 }, HIDE_CREDITS_BANNER],
   },
   // The public press kit needs no session and is dark-locked, so one capture
   // serves both themes. Shot BEFORE the UrgAns page: that page holds a typed
@@ -378,12 +400,27 @@ function escapeXml(text) {
 
 async function coverArtPng(title, artist, colour) {
   // Plain generated artwork: a flat colour, a soft circle, the title and the
-  // artist. No stock photos, no rights to clear.
+  // artist. No stock photos, no rights to clear. A long title ("Rainy Season
+  // in Kano") breaks onto two lines and shrinks so it never runs off the art.
+  const words = title.split(" ");
+  let titleLines = [title];
+  if (title.length > 13 && words.length > 1) {
+    let best = null;
+    for (let cut = 1; cut < words.length; cut += 1) {
+      const a = words.slice(0, cut).join(" "), b = words.slice(cut).join(" ");
+      const worst = Math.max(a.length, b.length);
+      if (!best || worst < best.worst) best = { worst, lines: [a, b] };
+    }
+    titleLines = best.lines;
+  }
+  const longest = Math.max(...titleLines.map((line) => line.length));
+  // Georgia semibold runs ~0.55em a character; keep the line inside 1200px.
+  const titleSize = Math.min(140, Math.floor(1200 / (longest * 0.55)));
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1400" viewBox="0 0 1400 1400">
   <rect width="1400" height="1400" fill="${colour}"/>
   <circle cx="1010" cy="430" r="330" fill="#F5F0E6" fill-opacity="0.14"/>
   <circle cx="1130" cy="330" r="150" fill="#F5F0E6" fill-opacity="0.10"/>
-  <text x="96" y="1150" font-family="Georgia, 'Times New Roman', serif" font-size="140" font-weight="600" fill="#F5F0E6">${escapeXml(title)}</text>
+  ${titleLines.map((line, i) => `<text x="96" y="${1150 - (titleLines.length - 1 - i) * Math.round(titleSize * 1.05)}" font-family="Georgia, 'Times New Roman', serif" font-size="${titleSize}" font-weight="600" fill="#F5F0E6">${escapeXml(line)}</text>`).join("\n  ")}
   <text x="98" y="1250" font-family="Arial, Helvetica, sans-serif" font-size="52" letter-spacing="10" fill="#F5F0E6" fill-opacity="0.82">${escapeXml(artist.toUpperCase())}</text>
 </svg>`;
   return sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toBuffer();
@@ -409,6 +446,13 @@ async function seed(client) {
 
   log("artists");
   let artists = (await api("GET", "/api/workspace/artists")).json?.artists ?? [];
+  for (const [from, to] of Object.entries(DEMO_TEAM.renamed ?? {})) {
+    const old = artists.find((a) => a.name === from);
+    if (!old || artists.some((a) => a.name === to)) continue;
+    await api("PATCH", `/api/workspace/artists/${old.id}`, { name: to });
+    log(" ~", from, "→", to);
+  }
+  artists = (await api("GET", "/api/workspace/artists")).json?.artists ?? [];
   for (const name of DEMO_TEAM.artists) {
     if (artists.some((a) => a.name === name)) continue;
     await api("POST", "/api/workspace/artists", { name });
@@ -419,6 +463,13 @@ async function seed(client) {
 
   log("releases");
   let releases = (await api("GET", "/api/releases")).json?.releases ?? [];
+  for (const [from, to] of Object.entries(DEMO_TEAM.renamedReleases ?? {})) {
+    const old = releases.find((r) => r.title === from);
+    if (!old || releases.some((r) => r.title === to)) continue;
+    await api("PATCH", `/api/releases/${old.id}`, { title: to });
+    log(" ~", from, "→", to);
+  }
+  releases = (await api("GET", "/api/releases")).json?.releases ?? [];
   const seeded = [];
   for (const plan of DEMO_TEAM.releases) {
     let release = releases.find((r) => r.title === plan.title);
@@ -479,7 +530,12 @@ async function seed(client) {
   log("cover art");
   for (const plan of seeded) {
     const current = releases.find((r) => r.id === plan.id);
-    if (current?.coverArtUrl && !/logo/.test(String(current.coverArtUrl))) continue;
+    // The artist's name is drawn into the artwork, so a renamed artist's
+    // releases get fresh covers (--refresh-covers redraws every one).
+    const renamedArtist = Object.values(DEMO_TEAM.renamed ?? {}).includes(plan.artist)
+      || Object.values(DEMO_TEAM.renamedReleases ?? {}).includes(plan.title);
+    const refresh = args["refresh-covers"] === "true" || (args["refresh-covers"] === "renamed" && renamedArtist);
+    if (!refresh && current?.coverArtUrl && !/logo/.test(String(current.coverArtUrl))) continue;
     const png = await coverArtPng(plan.title, plan.artist, plan.colour);
     const fileName = `${plan.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-cover.png`;
     const signed = await api("POST", `/api/releases/${plan.id}/cover-art/upload-url`, { file_name: fileName, mime_type: "image/png", file_size: png.length });
