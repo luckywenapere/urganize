@@ -33,7 +33,6 @@ export const changelog: Release[] = [
     date: "October 18, 2026",
     highlights: [
       "The Why Urganize headline is shorter, so it reads in three lines on a phone instead of four.",
-      "The AI artists page has been taken down. Urganize's pages now speak to artist managers.",
     ],
   },
   {
