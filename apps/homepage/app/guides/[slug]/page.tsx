@@ -12,6 +12,7 @@ import {
   SITE_URL,
   buildPageMetadata,
 } from "@/lib/seo";
+import { PageDawn } from "../../components/marketing/PageDawn";
 
 // Only the guides in content/guides.ts exist. Anything else is a real 404,
 // not a soft one, so a mistyped URL never becomes an indexable empty page.
@@ -90,16 +91,18 @@ export default async function GuidePage({
       />
       <MarketingHeader />
 
-      <main className="px-6 py-16 sm:py-20">
+      <main className="px-6 py-16 sm:py-20 isolate overflow-x-clip">
         <article className="mx-auto max-w-[44rem]">
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
-            <Link href="/guides" className="hover:text-[var(--marketing-text)]">
-              Guides
-            </Link>
-          </p>
-          <h1 className="mt-6 text-balance text-[2.4rem] font-semibold leading-[1.06] tracking-[-0.05em] sm:text-[3.2rem]">
-            {guide.title}
-          </h1>
+          <PageDawn>
+            <p className="mono-label text-[var(--marketing-text-subtle)]">
+              <Link href="/guides" className="hover:text-[var(--marketing-text)]">
+                Guides
+              </Link>
+            </p>
+            <h1 className="mt-6 text-balance text-[2.4rem] font-semibold leading-[1.06] tracking-[-0.05em] sm:text-[3.2rem]">
+              {guide.title}
+            </h1>
+          </PageDawn>
 
           <div className="mt-6 space-y-4">
             {guide.intro.map((paragraph) => (

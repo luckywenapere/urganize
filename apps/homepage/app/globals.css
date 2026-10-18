@@ -869,3 +869,70 @@ html[data-marketing-theme="dark"] .hero-cards {
     transition: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Page Dawn (2026-10-18): the Release Dawn sky, softened, behind the opening
+   block of every other marketing page. Markup in
+   components/marketing/PageDawn.tsx. Shown to everyone (subpages are not in
+   the homepage hero A/B); no cards.
+
+   The box starts 220px above the block (under the fixed header, where it is
+   still base) and ends 260px below it. The stops are px from the BOTTOM of the
+   box (`to top`), so the horizon sits ~40px under the block's last line on
+   every page, whatever its height: the brightest band falls between the
+   block and whatever comes next, never under a paragraph. The mask fades the
+   last 200px, so the sky always lands on the base colour before the next
+   section. About half the homepage's intensity: the dusk peaks at #10231a
+   against the homepage's #17402f, the glow at 0.16 against 0.42. Every
+   colour runs out to var(--marketing-bg), so it meets each page's own base.
+   The grain (shared .hero-sky-grain) breaks up 8-bit banding.
+   ------------------------------------------------------------------------ */
+.page-dawn {
+  position: relative;
+  /* Contrast on the sky (WCAG AA, measured on every page at 390 and 1440).
+     Light: the shared #3f7e5c falls to 4.0:1 on the mint, and the pricing
+     pill to 2.3:1; this is the homepage's own light accent (.home-v2),
+     5.9:1 on cream. */
+  --marketing-accent: #2f6b4a;
+}
+
+/* Dark: the subtle #a89a89 reads 4.4:1 where the glow peaks (signup's "We
+   are letting teams in", the waitlist form's label); this reads 5.3:1. The
+   accent keeps the dark theme's own green. */
+html[data-marketing-theme="dark"] .page-dawn {
+  --marketing-accent: #6ee99b;
+  --marketing-text-subtle: #bcb0a1;
+}
+
+.page-sky {
+  position: absolute;
+  z-index: -1;
+  top: -220px;
+  bottom: -260px;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to top, transparent 0, #000 200px);
+  mask-image: linear-gradient(to top, transparent 0, #000 200px);
+  /* The glow's half-width: a fixed share of the page from sm, wider on a
+     phone so it reads as a horizon, not a spot. */
+  --page-sky-glow-w: 82%;
+
+  /* Light (the default theme): pale mint up top, cream at the horizon. */
+  background:
+    radial-gradient(var(--page-sky-glow-w) 200px at 50% calc(100% - 300px), rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 70%),
+    linear-gradient(to top, var(--marketing-bg) 0, var(--marketing-bg) 200px, #eef2ea 380px, #e2ede3 600px, #d8e9dd 860px);
+}
+
+html[data-marketing-theme="dark"] .page-sky {
+  background:
+    radial-gradient(var(--page-sky-glow-w) 220px at 50% calc(100% - 230px), rgba(127, 217, 154, 0.16) 0%, rgba(127, 217, 154, 0.05) 45%, rgba(127, 217, 154, 0) 75%),
+    linear-gradient(to top, var(--marketing-bg) 0, #0d1512 150px, #10231a 260px, #0e1914 400px, var(--marketing-bg) 640px);
+}
+
+@media (min-width: 640px) {
+  .page-sky {
+    --page-sky-glow-w: 46%;
+  }
+}

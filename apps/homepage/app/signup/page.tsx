@@ -5,6 +5,7 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { APP_LOGIN_URL, WAITLIST_URL } from "@/lib/app-urls";
+import { PageDawn } from "../components/marketing/PageDawn";
 
 // Lives on the marketing domain for the same reason /login does — see the
 // note there. Note the CTA points at /onboarding, not /auth: apps/web's
@@ -28,30 +29,32 @@ export default function SignupPage() {
     <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
       <MarketingHeader />
 
-      <main className="px-6 py-16 sm:py-20">
+      <main className="px-6 py-16 sm:py-20 isolate overflow-x-clip">
         <div className="mx-auto max-w-3xl">
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
-            Sign up
-          </p>
-          <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
-            Join the waitlist
-          </h1>
-          <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-            Add your first rollout and get a plan built from a real playbook,
-            not a blank board you have to fill in yourself.
-          </p>
-
-          <div className="mt-10">
-            <a
-              href={WAITLIST_URL}
-              className="relative z-[60] inline-flex touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] sm:text-base"
-            >
-              Join the waitlist
-            </a>
-            <p className="mt-4 text-sm text-[var(--marketing-text-subtle)]">
-              We are letting teams in from the waitlist.
+          <PageDawn>
+            <p className="mono-label text-[var(--marketing-text-subtle)]">
+              Sign up
             </p>
-          </div>
+            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+              Join the waitlist
+            </h1>
+            <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
+              Add your first rollout and get a plan built from a real playbook,
+              not a blank board you have to fill in yourself.
+            </p>
+
+            <div className="mt-10">
+              <a
+                href={WAITLIST_URL}
+                className="relative z-[60] inline-flex touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] sm:text-base"
+              >
+                Join the waitlist
+              </a>
+              <p className="mt-4 text-sm text-[var(--marketing-text-subtle)]">
+                We are letting teams in from the waitlist.
+              </p>
+            </div>
+          </PageDawn>
 
           <section className="mt-16 border-t border-[color:var(--marketing-border)] py-10 sm:py-12">
             <h2 className="text-xl font-semibold tracking-[-0.02em]">

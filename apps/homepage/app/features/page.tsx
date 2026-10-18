@@ -8,6 +8,7 @@ import { TrialButton } from "../components/landing/TrialButton";
 import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
+import { PageDawn } from "../components/marketing/PageDawn";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Music release plan, tasks and press kit",
@@ -99,13 +100,13 @@ export default function FeaturesPage() {
     <div className="min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]">
       <MarketingHeader />
 
-      <main>
+      <main className="isolate overflow-x-clip">
         {/* HERO */}
         <SectionShell
           className="pb-16 pt-16 sm:pt-20"
           containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10"
         >
-          <div className="mx-auto max-w-[46rem] text-center">
+          <PageDawn className="mx-auto max-w-[46rem] text-center">
             <p className="mono-label text-[var(--marketing-text-subtle)]">
               Features
             </p>
@@ -138,7 +139,7 @@ export default function FeaturesPage() {
                 We are letting teams in from the waitlist.
               </p>
             </div>
-          </div>
+          </PageDawn>
         </SectionShell>
 
         {/* FEATURE BLOCKS */}

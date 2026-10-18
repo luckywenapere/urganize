@@ -4,6 +4,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
+import { PageDawn } from "../components/marketing/PageDawn";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Subprocessors",
@@ -87,21 +88,23 @@ export default function SubprocessorsPage() {
     <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
       <MarketingHeader />
 
-      <main className="px-6 py-16 sm:py-20">
+      <main className="px-6 py-16 sm:py-20 isolate overflow-x-clip">
         <div className="mx-auto max-w-4xl">
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
-            Data processing
-          </p>
-          <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
-            Subprocessors
-          </h1>
-          <p className="mt-5 max-w-[40rem] text-lg leading-8 text-[var(--marketing-text-muted)]">
-            The third-party services that help us run Urganize, and what each
-            one processes. This list reflects what is actually in use today.
-          </p>
-          <p className="mt-6 font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-            LAST UPDATED: {LAST_UPDATED.toUpperCase()}
-          </p>
+          <PageDawn>
+            <p className="mono-label text-[var(--marketing-text-subtle)]">
+              Data processing
+            </p>
+            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+              Subprocessors
+            </h1>
+            <p className="mt-5 max-w-[40rem] text-lg leading-8 text-[var(--marketing-text-muted)]">
+              The third-party services that help us run Urganize, and what each
+              one processes. This list reflects what is actually in use today.
+            </p>
+            <p className="mt-6 font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+              LAST UPDATED: {LAST_UPDATED.toUpperCase()}
+            </p>
+          </PageDawn>
 
           <div className="mt-12 border-y border-[color:var(--marketing-border)]">
             {subprocessors.map((s) => (

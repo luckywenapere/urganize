@@ -5,6 +5,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CANONICAL_DESCRIPTION, CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
+import { PageDawn } from "../components/marketing/PageDawn";
 
 // INDEXED since 2026-09-30 (it was noindex before, to keep the homepage's
 // sitelinks commercial). Reversed on evidence from a brand search: the results
@@ -118,24 +119,26 @@ export default function BrandPage() {
     <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
       <MarketingHeader />
 
-      <main className="px-6 py-16 sm:py-20">
+      <main className="px-6 py-16 sm:py-20 isolate overflow-x-clip">
         <div className="mx-auto max-w-4xl">
-          {/* Hero */}
-          <p className={sectionEyebrow}>Brand</p>
-          <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
-            Brand
-          </h1>
-          <p className={`mt-4 max-w-[38rem] ${bodyText}`}>
-            How Urganize looks, how it speaks and what it stands for, plus the logos and
-            images that represent us. Using anything here? Use it exactly as it is, and{" "}
-            <a
-              href="mailto:contact@urganize.app?subject=Urganize%20-%20Brand"
-              className="text-[var(--marketing-text)] underline underline-offset-2"
-            >
-              ask us
-            </a>{" "}
-            if you’re not sure.
-          </p>
+          <PageDawn>
+            {/* Hero */}
+            <p className={sectionEyebrow}>Brand</p>
+            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+              Brand
+            </h1>
+            <p className={`mt-4 max-w-[38rem] ${bodyText}`}>
+              How Urganize looks, how it speaks and what it stands for, plus the logos and
+              images that represent us. Using anything here? Use it exactly as it is, and{" "}
+              <a
+                href="mailto:contact@urganize.app?subject=Urganize%20-%20Brand"
+                className="text-[var(--marketing-text)] underline underline-offset-2"
+              >
+                ask us
+              </a>{" "}
+              if you’re not sure.
+            </p>
+          </PageDawn>
 
           {/* 1 — Brand foundations */}
           <section id="foundations" className="mt-16">

@@ -4,6 +4,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CORE_CLAUSE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
+import { PageDawn } from "../components/marketing/PageDawn";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Team",
@@ -58,18 +59,20 @@ export default function TeamPage() {
     <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
       <MarketingHeader />
 
-      <main className="px-6 py-16 sm:py-20">
+      <main className="px-6 py-16 sm:py-20 isolate overflow-x-clip">
         <div className="mx-auto max-w-5xl">
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
-            The people
-          </p>
-          <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
-            Team
-          </h1>
-          <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-            Most of us manage artists or make music ourselves. We&apos;re
-            building the tool we needed.
-          </p>
+          <PageDawn>
+            <p className="mono-label text-[var(--marketing-text-subtle)]">
+              The people
+            </p>
+            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+              Team
+            </h1>
+            <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
+              Most of us manage artists or make music ourselves. We&apos;re
+              building the tool we needed.
+            </p>
+          </PageDawn>
 
           <section className="mt-16 border-y border-[color:var(--marketing-border)] py-10 sm:py-12">
             <p className="mono-label text-[var(--marketing-text-subtle)]">

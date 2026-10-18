@@ -7,6 +7,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { PricingTierCards } from "../components/pricing/PricingTierCards";
 import { AUDIENCE_LINE, CORE_LINE } from "@/lib/positioning";
+import { PageDawn } from "../components/marketing/PageDawn";
 
 // THE PRICE TABLE IS UNCONDITIONAL. Do not put it back behind a flag.
 //
@@ -65,10 +66,10 @@ export function PricingPageClient() {
     <div className="relative min-h-screen w-full overflow-x-hidden bg-[var(--marketing-bg)] font-sans text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)]">
       <MarketingHeader />
 
-      <main className="relative z-10">
+      <main className="relative z-10 isolate overflow-x-clip">
         {/* HERO */}
         <section className="relative px-6 pb-16 pt-14 sm:pt-20">
-          <div className="mx-auto max-w-4xl text-center">
+          <PageDawn className="mx-auto max-w-4xl text-center">
             <div className="hero-fade-in mb-8 inline-flex items-center gap-2 rounded-full border border-[var(--marketing-accent)]/30 bg-[var(--marketing-accent)]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--marketing-accent)]">
               <span className="h-1.5 w-1.5 animate-ping rounded-full bg-[var(--marketing-accent)]" />
               Pricing
@@ -105,7 +106,7 @@ export function PricingPageClient() {
                   founding members". Everyone pays the list price, and the
                   2026-10-17 Manager reprice applies to existing teams too. */}
             </div>
-          </div>
+          </PageDawn>
         </section>
 
         <PricingTierCards />

@@ -5,6 +5,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CORE_CLAUSE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
+import { PageDawn } from "../components/marketing/PageDawn";
 
 // noIndex: this page was outranking the homepage for the query "urganize" —
 // a legal document, not the pitch, was the first thing a searcher saw. It
@@ -34,22 +35,24 @@ export default function PrivacyPolicy() {
     <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
       <MarketingHeader />
 
-      <main className="px-6 py-16 sm:py-20">
+      <main className="px-6 py-16 sm:py-20 isolate overflow-x-clip">
         <div className="mx-auto max-w-4xl">
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
-            Privacy Policy
-          </p>
-          <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
-            How Urganize handles your data
-          </h1>
-          <p className="mt-5 max-w-[40rem] text-lg leading-8 text-[var(--marketing-text-muted)]">
-            This policy explains what we collect, why we collect it, who
-            processes it, and the choices you have. We keep it short, specific,
-            and true to how the product works today.
-          </p>
-          <p className="mt-6 font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
-            LAST UPDATED: {LAST_UPDATED.toUpperCase()}
-          </p>
+          <PageDawn>
+            <p className="mono-label text-[var(--marketing-text-subtle)]">
+              Privacy Policy
+            </p>
+            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+              How Urganize handles your data
+            </h1>
+            <p className="mt-5 max-w-[40rem] text-lg leading-8 text-[var(--marketing-text-muted)]">
+              This policy explains what we collect, why we collect it, who
+              processes it, and the choices you have. We keep it short, specific,
+              and true to how the product works today.
+            </p>
+            <p className="mt-6 font-mono text-[0.72rem] tracking-[0.16em] text-[var(--marketing-text-subtle)]">
+              LAST UPDATED: {LAST_UPDATED.toUpperCase()}
+            </p>
+          </PageDawn>
 
           {/* Quick summary */}
           <div className="mt-12 border border-[color:var(--marketing-border)] p-7 sm:p-8">

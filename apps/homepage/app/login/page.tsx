@@ -5,6 +5,7 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CORE_LINE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
 import { APP_LOGIN_URL, APP_PASSWORD_RESET_URL } from "@/lib/app-urls";
+import { PageDawn } from "../components/marketing/PageDawn";
 
 // Why this page exists on the MARKETING domain rather than being a bare
 // redirect to app.urganize.app (founder call, 2026-08-09): people search the
@@ -26,34 +27,36 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[var(--marketing-bg)] text-[var(--marketing-text)]">
       <MarketingHeader />
 
-      <main className="px-6 py-16 sm:py-20">
+      <main className="px-6 py-16 sm:py-20 isolate overflow-x-clip">
         <div className="mx-auto max-w-3xl">
-          <p className="mono-label text-[var(--marketing-text-subtle)]">
-            Log in
-          </p>
-          <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
-            Log in to Urganize
-          </h1>
-          <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
-            Urganize is at app.urganize.app. Sign in there to pick up your
-            rollouts, your activity list and whatever your team moved since
-            you last looked.
-          </p>
+          <PageDawn>
+            <p className="mono-label text-[var(--marketing-text-subtle)]">
+              Log in
+            </p>
+            <h1 className="mt-6 text-[2.8rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[3.6rem]">
+              Log in to Urganize
+            </h1>
+            <p className="mt-4 max-w-[36rem] text-[var(--marketing-text-muted)]">
+              Urganize is at app.urganize.app. Sign in there to pick up your
+              rollouts, your activity list and whatever your team moved since
+              you last looked.
+            </p>
 
-          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
-            <a
-              href={APP_LOGIN_URL}
-              className="relative z-[60] inline-flex touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] sm:text-base"
-            >
-              Continue to log in
-            </a>
-            <a
-              href={APP_PASSWORD_RESET_URL}
-              className="text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] underline underline-offset-4 hover:text-[var(--marketing-text)]"
-            >
-              Forgot your password?
-            </a>
-          </div>
+            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <a
+                href={APP_LOGIN_URL}
+                className="relative z-[60] inline-flex touch-manipulation items-center justify-center rounded-full bg-[var(--marketing-primary)] px-7 py-3.5 text-sm font-medium tracking-[-0.02em] text-[var(--marketing-primary-text)] shadow-[0_20px_45px_var(--marketing-shadow-strong)] pointer-events-auto hover:bg-[var(--marketing-primary-hover)] sm:text-base"
+              >
+                Continue to log in
+              </a>
+              <a
+                href={APP_PASSWORD_RESET_URL}
+                className="text-sm font-medium tracking-[-0.02em] text-[var(--marketing-text-muted)] underline underline-offset-4 hover:text-[var(--marketing-text)]"
+              >
+                Forgot your password?
+              </a>
+            </div>
+          </PageDawn>
 
           <section className="mt-16 border-t border-[color:var(--marketing-border)] py-10 sm:py-12">
             <h2 className="text-xl font-semibold tracking-[-0.02em]">

@@ -11,6 +11,7 @@ import { MarketingFooter } from "../components/marketing/MarketingFooter";
 import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { CORE_CLAUSE } from "@/lib/positioning";
 import { buildPageMetadata } from "@/lib/seo";
+import { PageDawn } from "../components/marketing/PageDawn";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "A free song pitch inbox for playlist curators",
@@ -99,13 +100,13 @@ export default function ForCuratorsPage() {
     <div className="min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]">
       <MarketingHeader />
 
-      <main>
+      <main className="isolate overflow-x-clip">
         {/* HERO */}
         <SectionShell
           className="pb-16 pt-16 sm:pt-20"
           containerClassName="max-w-[64rem] px-6 sm:px-8 lg:px-10"
         >
-          <div className="mx-auto max-w-[46rem] text-center">
+          <PageDawn className="mx-auto max-w-[46rem] text-center">
             <p className="mono-label text-[var(--marketing-text-subtle)]">
               For playlist curators
             </p>
@@ -128,7 +129,7 @@ export default function ForCuratorsPage() {
                 send you a link.
               </p>
             </div>
-          </div>
+          </PageDawn>
         </SectionShell>
 
         {/* VALUE BLOCKS */}
