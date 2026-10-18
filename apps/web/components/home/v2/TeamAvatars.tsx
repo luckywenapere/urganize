@@ -4,6 +4,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { isOnline } from '@/lib/presence';
 import { useSettingsLinkClick } from '@/components/settings/useOpenSettings';
+import { usePresence } from '@/components/motion/usePresence';
+import { MORPH_POP_EXIT_MS } from '@/lib/morph';
 import { HOME_TEAM_COPY, HOME_TEAM_HREF, teamPresenceLabel, type TeamPresenceMember } from '@/lib/home/team-presence';
 
 const TINTS = ['bg-[#7fd99a]', 'bg-[#e7c27d]', 'bg-[#9ab8f0]', 'bg-[#e9a3c9]'];
@@ -16,6 +18,8 @@ const SHOWN = 3;
  */
 export function TeamAvatars({ members }: { members: readonly TeamPresenceMember[] }) {
   const [open, setOpen] = useState(false);
+  // Kept for its 120ms fade out (lib/morph.ts); it used to vanish in a frame.
+  const presence = usePresence(open, MORPH_POP_EXIT_MS);
   const [now, setNow] = useState(() => new Date());
   const listId = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -72,10 +76,11 @@ export function TeamAvatars({ members }: { members: readonly TeamPresenceMember[
           </span>
         ) : null}
       </button>
-      {open ? (
+      {presence.mounted ? (
         <div
           id={listId}
-          className="absolute right-0 top-full z-30 mt-1 w-64 overflow-hidden rounded-2xl border border-stroke-default bg-bg-elevated py-1 shadow-xl"
+          data-state={presence.closing ? 'closed' : 'open'}
+          className="morph-pop absolute right-0 top-full z-30 mt-1 w-64 overflow-hidden rounded-2xl border border-stroke-default bg-bg-elevated py-1 shadow-xl"
         >
           <ul>
             {members.map((member) => (

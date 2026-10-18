@@ -32,6 +32,7 @@ import { DialogPanel } from '@/components/shared/DialogPanel';
 import { useSettingsLinkClick } from '@/components/settings/useOpenSettings';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
 import { primeKeyboard } from '@/lib/keyboard-handoff';
+import { usePresence } from '@/components/motion/usePresence';
 import { settingsDeepLink } from '@/lib/settings-nav';
 import {
   activeMobileTab,
@@ -109,6 +110,7 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
   const tabs = useMemo(() => buildMobileTabs(areas), [areas]);
   const active = activeMobileTab(areas, pathname);
   const [moreOpen, setMoreOpen] = useState(false);
+  const morePresence = usePresence(moreOpen);
   const collapsed = useBarCollapsedOnScroll(pathname);
   const ActiveIcon = active === 'more' ? MoreHorizontal : (TAB_ICON[active ?? ''] ?? Home);
   const unread = useNotificationsDoorStore((state) => (state.available ? state.unread : 0));
@@ -204,7 +206,15 @@ export function BottomBar({ showHelp = false }: { showHelp?: boolean }) {
           </li>
         </ul>
       </nav>
-      {moreOpen ? <MoreSheet areas={areas} showHelp={showHelp} onClose={() => setMoreOpen(false)} /> : null}
+      {/* Kept mounted for its 200ms slide down (usePresence, lib/morph.ts). */}
+      {morePresence.mounted ? (
+        <MoreSheet
+          areas={areas}
+          showHelp={showHelp}
+          closing={morePresence.closing}
+          onClose={() => setMoreOpen(false)}
+        />
+      ) : null}
     </>
   );
 }
@@ -302,10 +312,13 @@ const HEADER_BUTTON =
 function MoreSheet({
   areas,
   showHelp,
+  closing = false,
   onClose,
 }: {
   areas: ShellArea[];
   showHelp: boolean;
+  /** Sliding away: drawn for its exit, click-through (lib/morph.ts). */
+  closing?: boolean;
   onClose: () => void;
 }) {
   const openSettings = useSettingsLinkClick();
@@ -331,18 +344,20 @@ function MoreSheet({
   // Portalled: AppShell's fade-in transform would otherwise anchor this fixed
   // sheet to the shell instead of the screen.
   return createPortal(
-    <div className="fixed inset-0 z-[170] lg:hidden">
+    // Slides up 280ms, down 200ms, the scrim fading with it (morph-sheet in
+    // globals.css): it used to appear and vanish in one frame.
+    <div className="morph-presence fixed inset-0 z-[170] lg:hidden" data-state={closing ? 'closed' : 'open'}>
       <button
         type="button"
         aria-label="Close menu"
         tabIndex={-1}
         onClick={onClose}
-        className="absolute inset-0 bg-black/50"
+        className="morph-sheet-scrim absolute inset-0 bg-black/50"
       />
       <DialogPanel
         label={view === 'help' ? 'Help' : 'More'}
         onClose={onClose}
-        className="absolute inset-x-0 bottom-0 max-h-[calc(100dvh-env(safe-area-inset-top,0px)-1rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-stroke-default bg-bg-surface px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3"
+        className="morph-sheet absolute inset-x-0 bottom-0 max-h-[calc(100dvh-env(safe-area-inset-top,0px)-1rem)] overflow-y-auto overscroll-contain rounded-t-3xl border-t border-stroke-default bg-bg-surface px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3"
       >
         <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-stroke-strong" aria-hidden="true" />
         {view === 'help' && helpItems.length > 0 ? (
@@ -391,7 +406,7 @@ function MoreSheet({
                   URG-311; the mark replaced the "More" title 2026-10-17):
                   there is no phone top bar to carry them, so they sit here. */}
               <h2 className="flex items-center gap-2">
-                <Logo size="sm" className="opacity-95" />
+                <Logo size="sm" className="opacity-95" priority />
                 <span className="sr-only">More</span>
                 <span className="select-none rounded-full bg-brand/15 px-1.5 py-px font-sans text-[10px] font-bold uppercase tracking-wide text-brand">
                   Beta

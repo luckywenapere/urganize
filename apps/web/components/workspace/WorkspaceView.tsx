@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AlertCircle } from '@/components/icons';
@@ -39,6 +39,8 @@ import { distributionStripMode } from '@/lib/distribution-strip-visibility';
 import { useTaskUI } from '@/components/tasks/TaskUIProvider';
 import { TasksPanel } from './TasksPanel';
 import { useSceneOverlay } from './useSceneOverlay';
+import { fadeIn, morphCommitted } from '@/lib/morph';
+import { fadeInScreen } from '@/components/motion/MainMorph';
 import { resolveActiveScene, resolvePanelBody } from '@/lib/scene-cache';
 import { useScenePrefetch } from './useScenePrefetch';
 import { useIsDesktopViewport } from './useIsDesktopViewport';
@@ -205,6 +207,15 @@ export function WorkspaceView() {
     useReleaseStore();
   const tasks = useTaskStore((state) => state.tasks);
   const { scopedReleaseId, setScope } = useReleaseScope();
+  // A rollout opening from the Rollouts list, or closing back to it, is the
+  // same path with a new `?release=`: the page settles in as on any new screen
+  // (lib/morph.ts; MainMorph only sees path changes).
+  const previousScopedReleaseId = useRef(scopedReleaseId);
+  useLayoutEffect(() => {
+    if (previousScopedReleaseId.current === scopedReleaseId) return;
+    previousScopedReleaseId.current = scopedReleaseId;
+    fadeInScreen();
+  }, [scopedReleaseId]);
   // Which release scene (if any) the URL has open. It renders INLINE in the
   // activity slot rather than as an overlay (founder call, 2026-08-05: "like
   // the way UrgAns is on the side but in the place where activity lists
@@ -230,6 +241,16 @@ export function WorkspaceView() {
    * cannot disagree.
    */
   const panelBody = resolvePanelBody(urlScene);
+  // A scene opened or closed (lib/morph.ts): tell the view transition the new
+  // body has drawn, so it crossfades to the finished scene; with no view
+  // transition (an older iPhone) the scene body fades in on its own instead.
+  const previousPanelBody = useRef(panelBody);
+  useLayoutEffect(() => {
+    if (previousPanelBody.current === panelBody) return;
+    previousPanelBody.current = panelBody;
+    morphCommitted();
+    document.querySelectorAll<HTMLElement>('[data-morph-scene]').forEach((node) => fadeIn(node));
+  }, [panelBody]);
   // The rollout the timeline was opened full screen on, or null. See
   // `timelineIsFull` below for how it is read.
   const [timelineFullFor, setTimelineFullFor] = useState<string | null>(null);

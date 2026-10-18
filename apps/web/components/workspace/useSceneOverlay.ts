@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { rememberScene } from '@/lib/scene-memory';
+import { morphUpdate } from '@/lib/morph';
 
 /**
  * URL param naming which release "scene" is open as an overlay window over the
@@ -94,6 +95,44 @@ export type SceneOverlay = {
 const isSceneName = (value: string | null): value is SceneName =>
   Boolean(value) && (SCENE_NAMES as readonly string[]).includes(value as string);
 
+/** The page that hosts the scenes. Its server part is a thin wrapper around a
+ * client page that reads every param itself (app/dashboard/page.tsx). */
+const SCENE_HOST_PATH = '/dashboard';
+
+/**
+ * Write a scene URL (Oct 18, 2026, the morph pass). On the scene host the
+ * param is written with the History API, which Next syncs into useSearchParams
+ * locally, the same way the Settings pop-up writes `?settings=` (URG-362):
+ * router.push/replace fetched the /dashboard server payload for every scene
+ * change, and when that missed the router cache the page dropped to
+ * app/dashboard/loading.tsx in between, so opening Fill in details on a phone
+ * flashed the tab row, a Rollouts-shaped skeleton, then the scene. Null state
+ * on purpose (Next copies its own internals in; a state carrying __NA is
+ * written straight through with no sync). The write runs inside a view
+ * transition (lib/morph.ts) so the rollout header stays still and only the body
+ * crossfades; WorkspaceView calls morphCommitted() once the scene has drawn.
+ * Anywhere else, the router as before.
+ */
+export function writeSceneUrl(
+  router: { push: (href: string, options?: { scroll?: boolean }) => void; replace: (href: string, options?: { scroll?: boolean }) => void },
+  pathname: string | null,
+  url: string,
+  mode: 'push' | 'replace'
+): void {
+  if (pathname === SCENE_HOST_PATH && typeof window !== 'undefined') {
+    morphUpdate(
+      () => {
+        if (mode === 'push') window.history.pushState(null, '', url);
+        else window.history.replaceState(null, '', url);
+      },
+      { awaitCommit: true }
+    );
+    return;
+  }
+  if (mode === 'push') router.push(url, { scroll: false });
+  else router.replace(url, { scroll: false });
+}
+
 export function useSceneOverlay(): SceneOverlay {
   const router = useRouter();
   const pathname = usePathname();
@@ -147,11 +186,7 @@ export function useSceneOverlay(): SceneOverlay {
       // <Link> pills did before this change, so muscle memory is preserved.
       // Switching straight from one open scene to another REPLACES, so Back
       // never makes the user undo scene-switches one at a time.
-      if (wasOpen) {
-        router.replace(url, { scroll: false });
-      } else {
-        router.push(url, { scroll: false });
-      }
+      writeSceneUrl(router, pathname, url, wasOpen ? 'replace' : 'push');
     },
     [pathname, router, searchParams]
   );
@@ -166,7 +201,7 @@ export function useSceneOverlay(): SceneOverlay {
     // scene-open URL the FIRST history entry in a tab; router.back() would
     // then eject the user out of the app entirely on close. replace always
     // leaves them on the workspace, however they arrived.
-    router.replace(`${pathname ?? ''}${query ? `?${query}` : ''}`, { scroll: false });
+    writeSceneUrl(router, pathname, `${pathname ?? ''}${query ? `?${query}` : ''}`, 'replace');
   }, [pathname, router, searchParams]);
 
   return { activeScene, openScene, closeScene };

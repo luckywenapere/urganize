@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.158.5",
+    date: "October 18, 2026",
+    highlights: [
+      "On your phone, moving around the app feels smoother. Menus slide up and away instead of popping, opening a part of a rollout like Fill in details eases into place without a loading flash, new pages settle in gently, and on UrgAns the question and the box glide with the keyboard instead of jumping.",
+    ],
+  },
+  {
     version: "1.158.4",
     date: "October 18, 2026",
     highlights: [

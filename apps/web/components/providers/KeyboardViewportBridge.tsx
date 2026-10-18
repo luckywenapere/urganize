@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
+import { morphUpdate } from '@/lib/morph';
 import { useKeyboardViewport } from '@/lib/keyboard-viewport';
 
 /**
@@ -32,19 +33,42 @@ import { useKeyboardViewport } from '@/lib/keyboard-viewport';
 export function KeyboardViewportBridge() {
   const { open, viewportHeightPx, insetPx, offsetTopPx } = useKeyboardViewport();
 
+  const wasOpen = useRef(false);
+  // The newest reading: a view transition runs its update a frame later, by
+  // which time a newer resize may already have landed.
+  const latest = useRef({ open, viewportHeightPx, insetPx, offsetTopPx });
+  useLayoutEffect(() => {
+    latest.current = { open, viewportHeightPx, insetPx, offsetTopPx };
+  });
   useEffect(() => {
     const root = document.documentElement;
-    if (open && viewportHeightPx > 0) {
-      root.dataset.keyboardOpen = 'true';
-      root.style.setProperty('--app-viewport-height', `${viewportHeightPx}px`);
-      root.style.setProperty('--app-keyboard-inset', `${insetPx}px`);
-      root.style.setProperty('--app-visual-top', `${offsetTopPx}px`);
-    } else {
-      delete root.dataset.keyboardOpen;
-      root.style.removeProperty('--app-viewport-height');
-      root.style.removeProperty('--app-keyboard-inset');
-      root.style.removeProperty('--app-visual-top');
+    const apply = () => {
+      const { open, viewportHeightPx, insetPx, offsetTopPx } = latest.current;
+      if (open && viewportHeightPx > 0) {
+        root.dataset.keyboardOpen = 'true';
+        root.style.setProperty('--app-viewport-height', `${viewportHeightPx}px`);
+        root.style.setProperty('--app-keyboard-inset', `${insetPx}px`);
+        root.style.setProperty('--app-visual-top', `${offsetTopPx}px`);
+      } else {
+        delete root.dataset.keyboardOpen;
+        root.style.removeProperty('--app-viewport-height');
+        root.style.removeProperty('--app-keyboard-inset');
+        root.style.removeProperty('--app-visual-top');
+      }
+    };
+    const nowOpen = open && viewportHeightPx > 0;
+    const toggled = nowOpen !== wasOpen.current;
+    wasOpen.current = nowOpen;
+    // The keyboard coming up or going down on the empty UrgAns page: the
+    // question and the box glide to their new places with it (lib/morph.ts,
+    // Oct 18, 2026) instead of jumping half a screen in one frame while the
+    // keyboard is still sliding. Only the open/closed flip, never the size
+    // updates in between, and only where the morph names exist.
+    if (toggled && document.querySelector('.morph-urgans-hero')) {
+      morphUpdate(apply);
+      return;
     }
+    apply();
   }, [open, viewportHeightPx, insetPx, offsetTopPx]);
 
   // Unmount (sign-out, a route that drops the shell) must not strand the

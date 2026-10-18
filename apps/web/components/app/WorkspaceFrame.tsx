@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { TopNav } from '@/components/shell/TopNav';
 import { SubNav } from '@/components/shell/SubNav';
+import { MainMorph } from '@/components/motion/MainMorph';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { PageBar } from '@/components/shell/PageBar';
 import { BottomBar } from '@/components/shell/BottomBar';
@@ -177,7 +178,9 @@ export function WorkspaceFrame({ children }: { children: ReactNode }) {
                     around the brand mark exactly as it did when AppShell
                     rendered the frame. */}
                 <WorkspacePageErrorBoundary>
-                  <Suspense fallback={<RootShellSkeleton />}>{children}</Suspense>
+                  <Suspense fallback={<RootShellSkeleton />}>
+                    <MainMorph>{children}</MainMorph>
+                  </Suspense>
                 </WorkspacePageErrorBoundary>
               </main>
             </div>

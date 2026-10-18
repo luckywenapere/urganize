@@ -38,7 +38,9 @@ describe('phone rollout declutter', () => {
     expect(header).toContain('aria-label="Search activities"');
     expect(header).toContain('aria-label="Rollout menu"');
     expect(header).toContain("data-tour={tour ? 'rollout-menu' : undefined}");
-    expect(panel).toContain('{phoneMenu && hasMobileMenu && phoneMenuOpen ? (');
+    // Mounted through usePresence for its slide down (morph pass, Oct 18, 2026).
+    expect(panel).toContain('usePresence(phoneMenu && hasMobileMenu && phoneMenuOpen)');
+    expect(panel).toContain('{phoneMenu && hasMobileMenu && menuPresence.mounted ? (');
     expect(panel).toContain('<RolloutMenuSheet');
   });
 

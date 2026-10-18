@@ -19,7 +19,8 @@ const tasksPanelMounts = (source: string) => source.match(/<TasksPanel\b[\s\S]*?
 describe('one Rollout menu sheet on a phone', () => {
   it('draws the sheet only from a mount that owns the phone menu, off by default', () => {
     expect(panel).toContain('phoneMenu = false,');
-    expect(panel).toContain('{phoneMenu && hasMobileMenu && phoneMenuOpen ? (');
+    expect(panel).toContain('usePresence(phoneMenu && hasMobileMenu && phoneMenuOpen)');
+    expect(panel).toContain('{phoneMenu && hasMobileMenu && menuPresence.mounted ? (');
     // The sheet is drawn in exactly one place.
     expect(panel.match(/<RolloutMenuSheet\b/g)).toHaveLength(1);
   });

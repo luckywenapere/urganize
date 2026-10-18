@@ -1538,19 +1538,24 @@ export function ChappiConversation({
             only — the dock and rail keep the question alone, so an empty
             state elsewhere on the screen is never competing with him. */}
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-y-auto lg:flex-none lg:overflow-visible">
-          <Chappi pose="idle" size={96} />
-          {headingLevel === 'h2' ? (
-            <h2 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
-              What do you want to get done today?
-            </h2>
-          ) : (
-            <h1 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
-              What do you want to get done today?
-            </h1>
-          )}
+          {/* One block, so the question glides with the keyboard as one piece
+              instead of snapping half a screen (morph-urgans-hero, globals.css;
+              KeyboardViewportBridge runs the move in a view transition). */}
+          <div className="morph-urgans-hero flex flex-col items-center gap-4">
+            <Chappi pose="idle" size={96} />
+            {headingLevel === 'h2' ? (
+              <h2 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
+                What do you want to get done today?
+              </h2>
+            ) : (
+              <h1 className="font-display text-xl font-semibold tracking-tight text-content-primary sm:text-2xl">
+                What do you want to get done today?
+              </h1>
+            )}
+          </div>
         </div>
         <div className="mt-3 shrink-0 lg:mt-6">
-          <div className="mx-auto w-full max-w-2xl">{inputForm}</div>
+          <div className="morph-urgans-composer mx-auto w-full max-w-2xl">{inputForm}</div>
           {chipsRow}
         </div>
       </div>

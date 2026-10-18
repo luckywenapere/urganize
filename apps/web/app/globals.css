@@ -3258,3 +3258,136 @@ html[data-release-focus='on'] nav a[href^='/dashboard']:not([href^='/dashboard/h
     will-change: auto;
   }
 }
+
+/* ============================================================================
+   Morph, not jump (Oct 18, 2026, founder ask: "I want although subtly it to
+   look like the screen is morphing not jumping"). lib/morph.ts is the system;
+   these are its CSS halves. Calm and short: 180ms crossfades on --motion-out,
+   sheets slide 280ms in and 200ms out, pop-overs 160ms in and 120ms out. A
+   closing surface is click-through so a tap during its exit lands on the page.
+   Reduced motion: everything instant (the global clamp near the top of this
+   file plus the explicit rules here).
+   ============================================================================ */
+
+/* View transitions (a rollout scene opening or closing, the UrgAns column
+   following the keyboard): what did not change stays still, what did
+   crossfades. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: var(--motion-out);
+}
+
+/* UrgAns on a phone: the question and the box glide with the keyboard
+   instead of snapping to their new place (KeyboardViewportBridge). Named only
+   below lg, where the keyboard exists, so the names are unique. */
+@media (max-width: 1023px) {
+  .morph-urgans-hero {
+    view-transition-name: urgans-hero;
+  }
+  .morph-urgans-composer {
+    view-transition-name: urgans-composer;
+  }
+}
+::view-transition-group(urgans-hero),
+::view-transition-group(urgans-composer) {
+  animation-duration: 260ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+/* The same picture before and after, only moved: no crossfade to ghost it. */
+::view-transition-old(urgans-hero),
+::view-transition-old(urgans-composer) {
+  animation: none;
+  opacity: 0;
+}
+::view-transition-new(urgans-hero),
+::view-transition-new(urgans-composer) {
+  animation: none;
+}
+
+/* Bottom sheets (the phone's More sheet, the Rollout menu). */
+.morph-sheet-scrim {
+  animation: morph-fade-in 280ms var(--motion-out) both;
+}
+.morph-sheet {
+  animation: task-sheet-panel-enter 280ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+/* Only on morph surfaces: other libraries use data-state for their own ends. */
+.morph-presence[data-state='closed'] {
+  pointer-events: none;
+}
+.morph-presence[data-state='closed'] > .morph-sheet-scrim {
+  animation: morph-fade-out 200ms var(--motion-standard) both;
+}
+.morph-presence[data-state='closed'] > .morph-sheet {
+  animation: morph-sheet-exit 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* Pop-overs that hang from a control (Home's team faces). */
+.morph-pop {
+  transform-origin: top right;
+  animation: morph-pop-in 160ms var(--motion-out) both;
+}
+.morph-pop[data-state='closed'] {
+  pointer-events: none;
+  animation: morph-pop-out 120ms var(--motion-standard) both;
+}
+
+/* A block that arrives after the page has drawn (the phone's Ready to
+   distribute row) opens its own space instead of shoving the page down. */
+.morph-reveal {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 220ms var(--motion-out),
+    opacity 220ms var(--motion-out);
+}
+.morph-reveal[data-revealed='false'] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.morph-reveal > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@keyframes morph-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes morph-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes morph-sheet-exit {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+@keyframes morph-pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes morph-pop-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-4px) scale(0.97); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .morph-sheet-scrim,
+  .morph-sheet,
+  .morph-pop,
+  .morph-presence[data-state='closed'] > .morph-sheet-scrim,
+  .morph-presence[data-state='closed'] > .morph-sheet,
+  .morph-pop[data-state='closed'] {
+    animation: none !important;
+  }
+  .morph-reveal {
+    transition: none;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

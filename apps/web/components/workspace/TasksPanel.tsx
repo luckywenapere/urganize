@@ -17,6 +17,8 @@ import {
 } from '@/lib/tasks';
 import { sceneRowTarget } from '@/lib/nav-stall';
 import { watchNavigationStall } from '@/lib/nav-stall-watch';
+import { MORPH_EXIT_MS, prefersReducedMotion } from '@/lib/morph';
+import { usePresence } from '@/components/motion/usePresence';
 import type { Release } from '@/types/releases';
 import { readPersistedState, writePersistedState } from '@/lib/persisted-state';
 import { TaskRow } from '@/components/tasks/TaskRow';
@@ -476,6 +478,9 @@ export function TasksPanel({
   // its own "Activities" back control, which is the way out to the menu.
   const hasMobileMenu = moreMenuActions.length > 0;
 
+  // The phone sheet stays mounted for its 200ms slide down (lib/morph.ts).
+  const menuPresence = usePresence(phoneMenu && hasMobileMenu && phoneMenuOpen);
+
   const closeMobilePanels = () => {
     setPhoneMenuOpen(false);
   };
@@ -483,14 +488,24 @@ export function TasksPanel({
   const handleMoreMenuSelect = (action: MoreMenuAction) => {
     // Scene toggles change the address; dialog rows leave isActive undefined.
     // Same rule as the desktop RolloutMenu, so both surfaces report alike.
-    if (action.isActive !== undefined) {
+    const changesScene = action.isActive !== undefined;
+    if (changesScene) {
       watchNavigationStall(
         `rollout_menu:${action.key}`,
         sceneRowTarget(window.location.href, action.key, Boolean(action.isActive))
       );
     }
-    action.onClick();
     closeMobilePanels();
+    // A scene row on a phone: the sheet slides away first, then the page
+    // morphs into the scene (Oct 18, 2026). Opening the scene under the sheet
+    // also left the sheet in the iPhone's Back-swipe picture of this page, so
+    // swiping back showed a menu that was no longer there, then cut to the
+    // real page. Dialog rows open at once, over the sheet's exit.
+    if (changesScene && phoneMenuOpen && !prefersReducedMotion()) {
+      window.setTimeout(() => action.onClick(), MORPH_EXIT_MS);
+      return;
+    }
+    action.onClick();
   };
 
 
@@ -583,7 +598,7 @@ export function TasksPanel({
           activity buckets do; the pills stay put either way — the desktop
           header row above, the mobile rows above and below — so the scene
           switcher never disappears (founder call, 2026-08-05). */}
-      <div className="flex min-h-0 flex-1 flex-col pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+      <div data-morph-scene="" className="flex min-h-0 flex-1 flex-col pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
       {/* Above the body rather than inside the buckets, so it survives the
           timeline taking the main view — see `bodyIsMainView`. Deliberately
           NOT shown over the named scenes: a "Plan the rollout" card on top of
@@ -865,8 +880,9 @@ export function TasksPanel({
           capped at the screen minus the safe areas, and its rows are still
           drawn upside down (orderForThumb) so the most-used sit by the thumb.
           New activity stays on the bottom bar's centre "+". */}
-      {phoneMenu && hasMobileMenu && phoneMenuOpen ? (
+      {phoneMenu && hasMobileMenu && menuPresence.mounted ? (
         <RolloutMenuSheet
+          closing={menuPresence.closing}
           id={moreMenuListId}
           actions={orderForThumb(moreMenuActions)}
           onSelect={handleMoreMenuSelect}
@@ -883,11 +899,14 @@ export function TasksPanel({
  * the card at the top of the right-hand column and never had this clipping.
  */
 function RolloutMenuSheet({
+  closing = false,
   id,
   actions,
   onSelect,
   onClose,
 }: {
+  /** Sliding away: drawn for its exit, click-through (lib/morph.ts). */
+  closing?: boolean;
   id: string;
   actions: readonly RolloutMenuAction[];
   onSelect: (action: RolloutMenuAction) => void;
@@ -900,18 +919,20 @@ function RolloutMenuSheet({
   }, []);
   if (typeof document === 'undefined') return null;
   return createPortal(
-    <div className="fixed inset-0 z-[170] lg:hidden">
+    // Slides up 280ms and down 200ms with the scrim (morph-sheet in
+    // globals.css); it used to appear and vanish in one frame.
+    <div className="morph-presence fixed inset-0 z-[170] lg:hidden" data-state={closing ? 'closed' : 'open'}>
       <button
         type="button"
         aria-label="Close rollout menu"
         tabIndex={-1}
         onClick={onClose}
-        className="absolute inset-0 bg-black/50"
+        className="morph-sheet-scrim absolute inset-0 bg-black/50"
       />
       <DialogPanel
         label="Rollout menu"
         onClose={onClose}
-        className="absolute inset-x-0 bottom-0 flex max-h-[calc(100dvh-env(safe-area-inset-top,0px)-1rem)] flex-col rounded-t-3xl border-t border-stroke-default bg-bg-surface pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3"
+        className="morph-sheet absolute inset-x-0 bottom-0 flex max-h-[calc(100dvh-env(safe-area-inset-top,0px)-1rem)] flex-col rounded-t-3xl border-t border-stroke-default bg-bg-surface pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3"
       >
         <div className="mx-auto mb-1 h-1 w-10 shrink-0 rounded-full bg-stroke-strong" aria-hidden="true" />
         <div className="flex shrink-0 items-center justify-between px-4 pb-1">

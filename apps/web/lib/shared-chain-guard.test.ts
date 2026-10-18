@@ -103,7 +103,9 @@ describe('the shared first-load chain stays light', () => {
     expect(existsSync(join(APP_ROOT, 'app/settings/error.tsx'))).toBe(false);
     const frame = code('components/app/WorkspaceFrame.tsx');
     expect(frame).toContain('<WorkspacePageErrorBoundary>');
-    expect(frame).toContain('<Suspense fallback={<RootShellSkeleton />}>{children}</Suspense>');
+    // The page sits in MainMorph (its 180ms settle-in, lib/morph.ts) inside the
+    // same boundary.
+    expect(frame).toMatch(/<Suspense fallback=\{<RootShellSkeleton \/>\}>\s*<MainMorph>\{children\}<\/MainMorph>\s*<\/Suspense>/);
   });
 
   // URG-314 option C (Oyin approved Oct 16, 2026): the chat history store

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { leaveReleaseForCatalog } from '@/lib/catalog-intent';
@@ -47,7 +47,7 @@ function PlainPlus() {
 }
 
 const ACTION_CLASS =
-  'motion-focus motion-press inline-flex h-9 w-9 items-center justify-center rounded-full border border-stroke-strong bg-bg-surface text-content-primary hover:bg-bg-hover';
+  'motion-focus motion-press inline-flex h-9 w-9 items-center justify-center rounded-full border border-stroke-strong bg-bg-surface text-content-primary [@media(hover:hover)]:hover:bg-bg-hover';
 
 /** The quiet 36px circle, the same on every tab; only its label changes. */
 function TabAction({ action }: { action: ShellSubTabAction | null }) {
@@ -93,11 +93,26 @@ export function SubNav() {
   // so the highlight is there from the first paint and never slides in from 0.
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [pill, setPill] = useState<{ left: number; width: number; animate: boolean } | null>(null);
-  const activeKey = tabs.find((tab) => tab.isActive(pathname))?.key ?? null;
+  const routeKey = tabs.find((tab) => tab.isActive(pathname))?.key ?? null;
+  // The tab just tapped, before its page has arrived (Oct 18, 2026). The
+  // highlight slides to it on the tap itself, instead of the old tab staying
+  // lit for the ~250ms the page takes while the tapped one showed a sticky
+  // hover box: two lit tabs, then a jump. Cleared when the address changes,
+  // and after 3s in case the page never comes.
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+  useEffect(() => {
+    setPendingKey(null);
+  }, [pathname]);
+  useEffect(() => {
+    if (!pendingKey) return;
+    const timer = window.setTimeout(() => setPendingKey(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [pendingKey]);
+  const activeKey = pendingKey ?? routeKey;
   const measure = useCallback(
     (animate: boolean) => {
       const row = rowRef.current;
-      const node = row?.querySelector<HTMLElement>('[aria-current="page"]');
+      const node = row?.querySelector<HTMLElement>('[data-tab-lit="true"]');
       if (!row || !node) {
         setPill(null);
         return;
@@ -144,20 +159,29 @@ export function SubNav() {
         ) : null}
         {tabs.map((tab) => {
           const isActive = tab.isActive(pathname);
+          const isLit = tab.key === activeKey;
+          const onTap = (event: MouseEvent<HTMLAnchorElement>) => {
+            if (tab.key === 'releases') leaveReleaseForCatalog();
+            // A plain tap on another tab: light it now (see pendingKey).
+            if (!isActive && !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+              setPendingKey(tab.key);
+            }
+          };
           return (
             <Link
               key={tab.key}
               href={tab.href}
               {...tip.bind(tab.key)}
-              onClick={tab.key === 'releases' ? leaveReleaseForCatalog : undefined}
+              onClick={onTap}
               aria-current={isActive ? 'page' : undefined}
+              data-tab-lit={isLit ? 'true' : undefined}
               ref={(node) => {
                 if (node && isActive) node.scrollIntoView?.({ block: 'nearest', inline: 'center' });
               }}
               className={`motion-focus motion-press relative inline-flex h-10 shrink-0 items-center rounded-lg px-3.5 text-sm font-medium transition-colors ${NAV_TIP_TOUCH_CLASS} ${
-                isActive
+                isLit
                   ? `${pill ? '' : 'bg-bg-hover '}text-content-primary`
-                  : 'text-content-secondary hover:bg-bg-hover/60 hover:text-content-primary'
+                  : 'text-content-secondary [@media(hover:hover)]:hover:bg-bg-hover/60 [@media(hover:hover)]:hover:text-content-primary'
               }`}
             >
               {tab.label}

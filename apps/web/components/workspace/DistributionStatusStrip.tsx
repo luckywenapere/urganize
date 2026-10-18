@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState, type ReactNode } from 'react';
+import { prefersReducedMotion } from '@/lib/morph';
 import { DistributionRejectionList } from '@/components/releases/DistributionIssueList';
 import { useDistributionStatus } from '@/components/releases/useDistributionStatus';
 import { DistributionChecklist, hasChecklistRecord } from './DistributionChecklist';
@@ -61,7 +63,9 @@ export function DistributionStatusStrip({
   compact = false,
   row = false,
 }: DistributionStatusStripProps) {
-  const { data } = useDistributionStatus(releaseId);
+  // The phone row is seeded from this session's last open answer, so it is
+  // there on the first frame when the person comes back to the rollout.
+  const { data, seeded } = useDistributionStatus(releaseId, { seed: row });
 
   // THE COMPUTER'S LINE IS THE HANDOFF NOW (URG-322, 2026-10-16). The one 36px
   // line beside the timeline's phases shows the handoff chip ("Handoff · 0 of 3
@@ -95,7 +99,7 @@ export function DistributionStatusStrip({
     return null;
   }
 
-  return (
+  const section = (
     <section aria-label="Check before distribution" className={compact || row ? 'space-y-2' : 'mb-3 space-y-2'}>
       {rejections.length > 0 ? <DistributionRejectionList rejections={rejections} /> : null}
 
@@ -111,5 +115,30 @@ export function DistributionStatusStrip({
         />
       ) : null}
     </section>
+  );
+  // A row that arrives after the page has drawn opens its own space instead of
+  // shoving the timeline down (morph-reveal, globals.css).
+  if (row && !seeded) return <ArrivalReveal>{section}</ArrivalReveal>;
+  return section;
+}
+
+/**
+ * Opens from zero height to its own over 220ms the first time it renders,
+ * fading in as it goes (Oct 18, 2026). Instant with reduced motion.
+ */
+function ArrivalReveal({ children }: { children: ReactNode }) {
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    if (prefersReducedMotion()) {
+      setRevealed(true);
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => setRevealed(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+  return (
+    <div className="morph-reveal" data-revealed={revealed ? 'true' : 'false'}>
+      <div>{children}</div>
+    </div>
   );
 }
