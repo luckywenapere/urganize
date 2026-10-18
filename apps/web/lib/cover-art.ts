@@ -3,6 +3,7 @@ import {
   ASSET_SIGNED_URL_TTL_SECONDS,
   RELEASE_ASSETS_BUCKET,
   generateSignedUrl,
+  generateThumbSignedUrls,
 } from '@/lib/asset-helpers';
 
 export type ReleaseCoverInput = { id: string; artwork_asset_id: string | null };
@@ -24,7 +25,32 @@ export async function loadCoverArtUrlMap(
   adminClient: SupabaseClient,
   releases: ReleaseCoverInput[]
 ): Promise<Map<string, string>> {
+  const covers = await loadCoverArtUrls(adminClient, releases, { thumbs: false });
   const coverByReleaseId = new Map<string, string>();
+  covers.forEach((cover, releaseId) => coverByReleaseId.set(releaseId, cover.url));
+  return coverByReleaseId;
+}
+
+export type ResolvedCoverArt = {
+  /** The full upload: for the cover-art view and anything shown large. */
+  url: string;
+  /** The 384px copy (lib/image-thumb.ts) for lists, pickers and tiles; null
+   *  for an upload that has none yet, so callers fall back to `url`. */
+  thumbUrl: string | null;
+};
+
+/**
+ * `loadCoverArtUrlMap` plus each cover's small display copy (2026-10-18:
+ * a 2.9 MB PNG was painting a 40px rollout row). Thumbs are signed in one
+ * batched call next to the originals.
+ */
+export async function loadCoverArtUrls(
+  adminClient: SupabaseClient,
+  releases: ReleaseCoverInput[],
+  options: { thumbs?: boolean } = {}
+): Promise<Map<string, ResolvedCoverArt>> {
+  const wantThumbs = options.thumbs !== false;
+  const coverByReleaseId = new Map<string, ResolvedCoverArt>();
 
   const withArtwork = releases.filter((r) => r.artwork_asset_id);
   const assetIds = Array.from(new Set(withArtwork.map((r) => r.artwork_asset_id as string)));
@@ -53,6 +79,25 @@ export async function loadCoverArtUrlMap(
     }
   }
 
+  // Thumbs, one batched call per bucket (in practice just release-assets).
+  const thumbsByBucket = new Map<string, Map<string, string>>();
+  if (wantThumbs) {
+    const pathsByBucket = new Map<string, string[]>();
+    assetById.forEach(({ bucket, path }) => {
+      const list = pathsByBucket.get(bucket) ?? [];
+      list.push(path);
+      pathsByBucket.set(bucket, list);
+    });
+    await Promise.all(
+      Array.from(pathsByBucket.entries()).map(async ([bucket, paths]) => {
+        thumbsByBucket.set(
+          bucket,
+          await generateThumbSignedUrls(adminClient, bucket, paths, ASSET_SIGNED_URL_TTL_SECONDS)
+        );
+      })
+    );
+  }
+
   await Promise.all(
     withArtwork.map(async (release) => {
       const asset = assetById.get(release.artwork_asset_id as string);
@@ -64,7 +109,10 @@ export async function loadCoverArtUrlMap(
         ASSET_SIGNED_URL_TTL_SECONDS
       );
       if (signedUrl) {
-        coverByReleaseId.set(release.id, signedUrl);
+        coverByReleaseId.set(release.id, {
+          url: signedUrl,
+          thumbUrl: thumbsByBucket.get(asset.bucket)?.get(asset.path) ?? null,
+        });
       }
     })
   );

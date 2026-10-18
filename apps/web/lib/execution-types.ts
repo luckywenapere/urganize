@@ -18,6 +18,9 @@ export type ExecutionRelease = Release & {
    * release_metadata.artwork_url fallback is not surfaced here — it stays
    * exclusive to /api/releases. */
   coverArtUrl?: string | null;
+  /** The 384px display copy of the cover (lib/image-thumb.ts) for rows,
+   *  pickers and tiles. Null or absent: use coverArtUrl. */
+  coverThumbUrl?: string | null;
 };
 
 export type ActivityLogEntry = {

@@ -8,6 +8,8 @@ export type ReleaseCardData = {
   /** Signed Phase 3 cover-art URL; null/undefined surfaces the neutral
    * placeholder. */
   coverArtUrl?: string | null;
+  /** Small display copy of the cover (lib/image-thumb.ts); null: use coverArtUrl. */
+  coverThumbUrl?: string | null;
   /** True when the release carries the `test_release` metadata marker and
    * NEXT_PUBLIC_FEATURE_TEST_RELEASE is on (WorkspaceView folds the flag in
    * when it builds the cards). */

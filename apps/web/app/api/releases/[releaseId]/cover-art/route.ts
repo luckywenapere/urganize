@@ -18,6 +18,7 @@ import {
   generateSignedUrl,
   validateAssetUpload,
 } from '@/lib/asset-helpers';
+import { withThumbPaths } from '@/lib/image-thumb';
 
 /**
  * The cover art on a release: read the current one, record one the browser
@@ -222,7 +223,7 @@ export async function POST(
     .maybeSingle();
 
   if (insertResult.error || !insertResult.data) {
-    const cleanup = await adminClient.storage.from(RELEASE_ASSETS_BUCKET).remove([storagePath]);
+    const cleanup = await adminClient.storage.from(RELEASE_ASSETS_BUCKET).remove(withThumbPaths([storagePath]));
     if (cleanup.error) {
       console.error('[cover-art] failed to clean up orphaned upload:', cleanup.error);
     }
@@ -257,7 +258,7 @@ export async function POST(
       if (previousAsset?.storage_path) {
         const removeResult = await adminClient.storage
           .from(String(previousAsset.storage_bucket || '') || RELEASE_ASSETS_BUCKET)
-          .remove([String(previousAsset.storage_path)]);
+          .remove(withThumbPaths([String(previousAsset.storage_path)]));
         if (removeResult.error) {
           console.error('[cover-art] failed to remove previous storage object:', removeResult.error);
         }
@@ -341,7 +342,7 @@ export async function DELETE(
 
   const { storagePath, id: assetId } = current.coverArt;
   if (storagePath) {
-    const removeResult = await adminClient.storage.from(RELEASE_ASSETS_BUCKET).remove([storagePath]);
+    const removeResult = await adminClient.storage.from(RELEASE_ASSETS_BUCKET).remove(withThumbPaths([storagePath]));
     if (removeResult.error) {
       return NextResponse.json(
         { error: removeResult.error.message || 'Could not delete the cover art file.' },

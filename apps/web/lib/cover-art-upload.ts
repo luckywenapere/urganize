@@ -23,6 +23,7 @@ import {
   type AssetCategory,
 } from './asset-constants';
 import type { ReleaseCoverArt } from '@/types/cover-art';
+import { uploadThumb } from './image-thumb-client';
 
 export const COVER_ART_CATEGORY: AssetCategory = 'cover_art';
 
@@ -74,7 +75,13 @@ export type CoverArtUploadOutcome =
   | { ok: true; coverArt: ReleaseCoverArt }
   | { ok: false; step: 1 | 2 | 3; error: string; retryable: boolean };
 
-type UploadUrlResponse = { upload_url?: string; storage_path?: string; error?: string };
+type UploadUrlResponse = {
+  upload_url?: string;
+  storage_path?: string;
+  /** Where the 384px display copy goes (lib/image-thumb.ts); optional. */
+  thumb_upload_url?: string | null;
+  error?: string;
+};
 type RecordResponse = { coverArt?: ReleaseCoverArt; error?: string };
 
 /**
@@ -114,6 +121,7 @@ export async function uploadCoverArt(params: {
 
   let uploadUrl = '';
   let storagePath = '';
+  let thumbUploadUrl: string | null = null;
   try {
     const response = await doFetch(`/api/releases/${releaseId}/cover-art/upload-url`, {
       method: 'POST',
@@ -135,6 +143,7 @@ export async function uploadCoverArt(params: {
     }
     uploadUrl = data.upload_url;
     storagePath = data.storage_path;
+    thumbUploadUrl = typeof data.thumb_upload_url === 'string' ? data.thumb_upload_url : null;
   } catch (err) {
     return {
       ok: false,
@@ -143,6 +152,12 @@ export async function uploadCoverArt(params: {
       retryable: true,
     };
   }
+
+  // The small display copy, made and sent alongside the master. Best effort
+  // and time boxed (lib/image-thumb-client.ts): it never fails the upload,
+  // and it lands before step 3 so the lists that reload after the save
+  // already read it.
+  const thumbDone = uploadThumb(thumbUploadUrl, file, doFetch);
 
   try {
     const response = await doFetch(uploadUrl, {
@@ -166,6 +181,8 @@ export async function uploadCoverArt(params: {
       retryable: true,
     };
   }
+
+  await thumbDone;
 
   const record = async (): Promise<ReleaseCoverArt> => {
     const response = await doFetch(`/api/releases/${releaseId}/cover-art`, {

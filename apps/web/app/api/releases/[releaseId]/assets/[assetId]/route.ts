@@ -6,6 +6,7 @@ import {
 } from '../../../_shared';
 import { ensureReleaseTeamWriteAccess } from '@/lib/release-access-server';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-helpers';
+import { withThumbPaths } from '@/lib/image-thumb';
 
 const ASSETS_TABLE = 'assets';
 
@@ -75,7 +76,8 @@ export async function DELETE(
   // can finish the job — orphan storage is recoverable; an orphan DB row
   // pointing at nothing is harder to detect.
   if (storagePath) {
-    const removeResult = await adminClient.storage.from(bucket).remove([storagePath]);
+    // withThumbPaths: a cover's small display copy (lib/image-thumb.ts) goes too.
+    const removeResult = await adminClient.storage.from(bucket).remove(withThumbPaths([storagePath]));
     if (removeResult.error) {
       return NextResponse.json(
         { error: removeResult.error.message || 'Could not delete storage object.' },

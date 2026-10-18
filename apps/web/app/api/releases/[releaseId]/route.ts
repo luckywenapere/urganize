@@ -24,6 +24,7 @@ import { isReleaseActive } from '@/lib/release-activity';
 import { decideDraftDiscard, type DraftDiscardDecision } from '@/lib/release-draft-discard';
 import { RELEASE_COLLABORATORS_TABLE } from '@/lib/release-ops';
 import { countReleaseSpendLines } from '@/lib/release-spend-server';
+import { withThumbPaths } from '@/lib/image-thumb';
 
 const TASKS_TABLE = 'tasks';
 const ASSETS_TABLE = 'assets';
@@ -462,7 +463,8 @@ export async function DELETE(
     }
 
     for (const [bucket, paths] of pathsByBucket) {
-      const removeResult = await adminClient!.storage.from(bucket).remove(paths);
+      // withThumbPaths: cover display copies (lib/image-thumb.ts) go too.
+      const removeResult = await adminClient!.storage.from(bucket).remove(withThumbPaths(paths));
       if (removeResult.error) {
         return NextResponse.json(
           { error: removeResult.error.message || 'Could not delete rollout files from storage.' },

@@ -100,6 +100,7 @@ import { InfoTip } from '@/components/shared/HelpTip';
 import { SHARE_REWARD_OFFER, SHARE_REWARD_OFFER_DETAIL } from '@/lib/share-reward';
 import { useShareImages, type ShareImageState } from './useShareImages';
 import { useShareReward, type ShareRewardState } from './useShareReward';
+import { ThumbImage } from '@/components/shared/ThumbImage';
 
 /**
  * Share to socials (founder request, 2026-09-23): the one sheet that turns a
@@ -516,7 +517,7 @@ function ShareDialog({ request }: { request: ShareRequest }) {
               answers={answers}
               todayYmd={todayYmd}
               isFirst={isFirst}
-              coverArtUrl={storeRelease?.coverArtUrl ?? null}
+              coverArtUrl={storeRelease?.coverThumbUrl ?? storeRelease?.coverArtUrl ?? null}
               onDismiss={close}
               onDone={(next) => {
                 // New answers mean new captions; the same answers keep the
@@ -781,9 +782,7 @@ function ReleaseChip({ facts, coverArtUrl }: { facts: ShareReleaseFacts; coverAr
     <div className="mt-4 flex items-center gap-3 rounded-xl border border-stroke-default p-2.5">
       <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-stroke-subtle bg-bg-base">
         {coverArtUrl ? (
-          // Plain img: a short-lived signed URL the optimizer would cache past its expiry.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverArtUrl} alt="" className="h-full w-full object-cover" />
+          <ThumbImage src={coverArtUrl} width={44} height={44} className="h-full w-full object-cover" />
         ) : (
           <Share2 className="h-4 w-4 text-content-tertiary" aria-hidden="true" />
         )}

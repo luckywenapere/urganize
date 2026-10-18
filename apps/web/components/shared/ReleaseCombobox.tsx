@@ -3,6 +3,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { formatReleaseDate, type ReleaseOption } from '@/lib/release-helpers';
+import { ThumbImage } from '@/components/shared/ThumbImage';
 
 type ReleaseComboboxProps = {
   releases: ReleaseOption[];
@@ -358,9 +359,11 @@ export function ReleaseCombobox({
                   >
                     <div className="h-9 w-9 shrink-0 overflow-hidden rounded-[10px] border border-stroke-default bg-bg-overlay">
                       {item.release.coverArtUrl ? (
-                        <img
-                          src={item.release.coverArtUrl}
+                        <ThumbImage
+                          src={item.release.coverThumbUrl ?? item.release.coverArtUrl}
                           alt={`${item.release.title} cover`}
+                          width={36}
+                          height={36}
                           className="h-full w-full object-cover"
                         />
                       ) : (

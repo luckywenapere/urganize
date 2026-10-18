@@ -26,6 +26,7 @@ import { useShellStore } from '@/stores/useShellStore';
 import { WorkspaceReleaseCard } from './WorkspaceReleaseCard';
 import type { TestReleaseEntry } from './catalogue-types';
 import type { Release } from '@/types/releases';
+import { ThumbImage } from '@/components/shared/ThumbImage';
 
 type CatalogueViewProps = {
   rows: CatalogueRow[];
@@ -76,13 +77,11 @@ function Cover({ row, className }: { row: CatalogueRow; className: string }) {
   return (
     <span className={`relative shrink-0 overflow-hidden rounded-lg bg-bg-elevated ${className}`} aria-hidden="true">
       {show ? (
-        <Image
-          src={row.coverArtUrl as string}
-          alt=""
-          fill
-          sizes="56px"
-          unoptimized
-          className="object-cover"
+        <ThumbImage
+          src={row.coverThumbUrl ?? (row.coverArtUrl as string)}
+          width={56}
+          height={56}
+          className="absolute inset-0 h-full w-full object-cover"
           onError={() => setFailed(row.coverArtUrl)}
         />
       ) : (

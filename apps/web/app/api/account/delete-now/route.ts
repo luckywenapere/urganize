@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { RELEASE_ASSETS_BUCKET } from '@/lib/asset-constants';
 import { IN_LIST_CHUNK, inChunks, readAllPages, type PageResult } from '@/lib/paged-rows';
 import { TASK_ATTACHMENTS_BUCKET } from '@/lib/tasks-server';
+import { withThumbPaths } from '@/lib/image-thumb';
 
 // Storage objects don't cascade with the DB rows deleted below, so they are
 // enumerated and removed first. Unlike the per-release DELETE, a storage
@@ -161,7 +162,9 @@ async function removeUserStorageObjects(supabaseAdmin: SupabaseClient, userId: s
   }
 
   for (const [bucket, paths] of pathsByBucket) {
-    const removeResult = await supabaseAdmin.storage.from(bucket).remove([...paths]);
+    // withThumbPaths: the small display copies of covers and photos
+    // (lib/image-thumb.ts) have no row of their own, so they go by path.
+    const removeResult = await supabaseAdmin.storage.from(bucket).remove(withThumbPaths(paths));
     if (removeResult.error) {
       console.error(
         `[account/delete-now] Could not remove ${paths.size} object(s) from ${bucket}:`,

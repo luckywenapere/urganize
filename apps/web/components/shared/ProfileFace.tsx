@@ -7,6 +7,9 @@
 // (founder brief, 2026-10-11). A curator with no photo still gets a tile that
 // looks chosen: a soft gradient picked from her name, the same every time.
 
+import { THUMB_EDGE_PX } from '@/lib/image-thumb';
+import { ThumbImage } from './ThumbImage';
+
 const TILE_HUES = [262, 200, 330, 20, 160, 45, 290, 180];
 
 function hueFor(name: string): number {
@@ -42,15 +45,14 @@ export function ProfileFace({ name, photoUrl, size = 'fill', className = '', squ
   const style = fill ? undefined : { width: size, height: size };
 
   if (photoUrl) {
+    // The server hands over the 384px copy when there is one
+    // (lib/image-thumb.ts). The surface-colour box holds the slot until the
+    // photo is fully decoded, then ThumbImage fades it in: never half painted.
+    const edge = fill ? THUMB_EDGE_PX : (size as number);
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- a short-lived signed URL; the optimizer would cache it past expiry
-      <img
-        src={photoUrl}
-        alt=""
-        loading="lazy"
-        style={style}
-        className={`${box} object-cover ${className}`}
-      />
+      <span className={`${box} bg-bg-surface ${className}`} style={style}>
+        <ThumbImage src={photoUrl} width={edge} height={edge} className="block h-full w-full object-cover" />
+      </span>
     );
   }
 

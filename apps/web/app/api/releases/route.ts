@@ -53,7 +53,7 @@ import {
 } from '@/lib/pinned-confirm-date';
 import { getTemplate } from '@/lib/release-templates/loader';
 import type { ReleaseType } from '@/lib/release-templates/types';
-import { loadCoverArtUrlMap } from '@/lib/cover-art';
+import { loadCoverArtUrls, type ResolvedCoverArt } from '@/lib/cover-art';
 import { loadWorkspaceLogoFallbackUrl } from '@/lib/workspace-logo';
 import {
   checkArtistAllowance,
@@ -117,7 +117,7 @@ type CreateReleaseBody = {
 
 function toSelectorRelease(
   row: ReleaseRow,
-  coverByReleaseId: Map<string, string>,
+  coverByReleaseId: Map<string, ResolvedCoverArt>,
   metadataByReleaseId: Map<string, ReleaseMetadataRow>,
   workspaceLogoUrl: string | null
 ): ReleaseOption {
@@ -128,6 +128,8 @@ function toSelectorRelease(
     title: row.title || '',
     releaseDate: row.release_date || null,
     coverArtUrl: resolveCoverArtUrl(row.id, coverByReleaseId, metadataByReleaseId, workspaceLogoUrl),
+    // Small copy for the picker rows; null falls back to coverArtUrl.
+    coverThumbUrl: coverByReleaseId.get(row.id)?.thumbUrl ?? null,
     createdAt: row.created_at || '',
     updatedAt: row.updated_at || '',
   };
@@ -188,12 +190,12 @@ async function loadReleaseMetadataMap(
  */
 function resolveCoverArtUrl(
   releaseId: string,
-  coverByReleaseId: Map<string, string>,
+  coverByReleaseId: Map<string, ResolvedCoverArt>,
   metadataByReleaseId: Map<string, ReleaseMetadataRow>,
   workspaceLogoUrl: string | null
 ): string | null {
   return (
-    coverByReleaseId.get(releaseId) ||
+    coverByReleaseId.get(releaseId)?.url ||
     metadataByReleaseId.get(releaseId)?.artwork_url ||
     workspaceLogoUrl ||
     null
@@ -299,7 +301,7 @@ export async function GET(request: NextRequest) {
   // Cover art is sourced from releases.artwork_asset_id (Phase 3 source of
   // truth), resolved to a signed URL; falls back to the legacy artwork_url,
   // then to the workspace logo for releases with no artwork at all.
-  const coverByReleaseId = await loadCoverArtUrlMap(adminClient, releases);
+  const coverByReleaseId = await loadCoverArtUrls(adminClient, releases);
   const workspaceLogoUrl = await loadWorkspaceLogoFallbackUrl(adminClient, auth.user.id);
 
   const payload: ReleaseSelectorListResponse = {

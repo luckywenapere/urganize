@@ -5,6 +5,7 @@ import { Camera, Loader2, Trash2 } from '@/components/icons';
 import { supabase } from '@/lib/supabase/client';
 import { captureAnalyticsEvent, createPostHogEvent } from '@/lib/analytics';
 import { prepareAvatarImage } from '@/lib/downscale-image';
+import { uploadThumb } from '@/lib/image-thumb-client';
 import {
   buildUploadFailureReport,
   formatUploadFailureCode,
@@ -109,6 +110,7 @@ export function ProfilePhotoPicker({
       const signed = (await signResponse.json().catch(() => null)) as {
         upload_url?: string;
         storage_path?: string;
+        thumb_upload_url?: string | null;
         error?: string;
       } | null;
       if (!signResponse.ok || !signed?.upload_url || !signed.storage_path) {
@@ -117,6 +119,10 @@ export function ProfilePhotoPicker({
       }
 
       step = 2;
+      // The 384px display copy rides alongside (lib/image-thumb-client.ts):
+      // best effort, never fails the save, and lands before it so the
+      // roster reload reads it.
+      const thumbDone = uploadThumb(signed.thumb_upload_url, body);
       const put = await fetch(signed.upload_url, {
         method: 'PUT',
         headers: { 'Content-Type': body.type },
@@ -127,6 +133,7 @@ export function ProfilePhotoPicker({
         throw new Error('The upload did not finish.');
       }
 
+      await thumbDone;
       step = 3;
       onChange(await save(signed.storage_path));
       captureAnalyticsEvent({ name: 'profile_photo_saved', properties: { surface, replaced: Boolean(photoUrl) } });

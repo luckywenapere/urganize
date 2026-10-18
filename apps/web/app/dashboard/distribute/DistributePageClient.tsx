@@ -7,6 +7,7 @@ import { ArrowRight, Send } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import { useReleaseStore } from '@/stores/useReleaseStore';
+import { ThumbImage } from '@/components/shared/ThumbImage';
 
 /**
  * Distribute, a Catalogue tab (founder call, 2026-10-14: it took Press kits'
@@ -31,13 +32,11 @@ function Cover({ url }: { url: string | null | undefined }) {
   return (
     <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-bg-elevated" aria-hidden="true">
       {show ? (
-        <Image
+        <ThumbImage
           src={url as string}
-          alt=""
-          fill
-          sizes="48px"
-          unoptimized
-          className="object-cover"
+          width={48}
+          height={48}
+          className="absolute inset-0 h-full w-full object-cover"
           onError={() => setFailed(true)}
         />
       ) : (
@@ -109,7 +108,7 @@ export default function DistributePageClient() {
                   href={distributeHref(release.id)}
                   className="motion-focus flex min-h-16 items-center gap-4 px-5 py-3 transition-colors hover:bg-bg-hover/60"
                 >
-                  <Cover url={release.coverArtUrl} />
+                  <Cover url={release.coverThumbUrl ?? release.coverArtUrl} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-display text-base font-semibold text-content-primary">
                       {release.title}

@@ -26,6 +26,8 @@ export type CatalogueRow = {
   tasksDone: number;
   tasksTotal: number;
   coverArtUrl: string | null;
+  /** Small display copy of the cover (lib/image-thumb.ts); null: use coverArtUrl. */
+  coverThumbUrl?: string | null;
   isTest: boolean;
   /** The soonest unfinished activity, or null when nothing is left to do. */
   nextTask: CatalogueNextTask | null;

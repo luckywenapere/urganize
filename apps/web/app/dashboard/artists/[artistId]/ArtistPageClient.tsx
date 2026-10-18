@@ -15,6 +15,7 @@ import { useArtistRosterStore } from '@/stores/useArtistRosterStore';
 import { useReleaseStore } from '@/stores/useReleaseStore';
 import { ProfilePhotoPicker } from '@/components/shared/ProfilePhotoPicker';
 import { artistPhotoUrl, saveArtistPhoto } from '@/lib/profile-photo-client';
+import { ThumbImage } from '@/components/shared/ThumbImage';
 
 const ARTIST_PAGE_ENABLED = isArtistPageEnabled();
 
@@ -131,9 +132,12 @@ export default function ArtistPageClient() {
       >
         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-stroke-default bg-bg-elevated">
           {release.coverArtUrl ? (
-            // Signed URLs expire, so a plain img (the other cover surfaces do the same).
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={release.coverArtUrl} alt="" className="h-full w-full object-cover" />
+            <ThumbImage
+              src={release.coverThumbUrl ?? release.coverArtUrl}
+              width={40}
+              height={40}
+              className="h-full w-full object-cover"
+            />
           ) : null}
         </div>
         <div className="min-w-0 flex-1">

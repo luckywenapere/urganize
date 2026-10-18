@@ -558,6 +558,7 @@ export function WorkspaceView() {
         tasksDone,
         tasksTotal: releaseTasks.length,
         coverArtUrl: release.coverArtUrl ?? null,
+        coverThumbUrl: release.coverThumbUrl ?? null,
         // Derived client-side from the metadata the command-center already
         // ships raw — no new API surface. The flag is folded in so every
         // "Test" tag goes dark on a flip-off, even for rows still carrying
@@ -759,6 +760,7 @@ export function WorkspaceView() {
           tasksDone: card.tasksDone,
           tasksTotal: card.tasksTotal,
           coverArtUrl: card.coverArtUrl ?? null,
+          coverThumbUrl: card.coverThumbUrl ?? null,
           isTest: Boolean(card.isTest),
           nextTask: pickNextTask(
             releaseTasks.map((task) => ({

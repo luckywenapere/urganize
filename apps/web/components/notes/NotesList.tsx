@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { NoteListRow } from './NoteListRow';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import type { Note } from '@/types/notes';
+import { ThumbImage } from '@/components/shared/ThumbImage';
 
 type NotesListProps = {
   pinned: Note[];
@@ -162,9 +163,8 @@ export function NotesList({
             {filterRelease ? (
               <span className="grid h-5 w-5 shrink-0 place-items-center overflow-hidden rounded border border-stroke-subtle bg-bg-elevated">
                 {filterRelease.coverArtUrl ? (
-                  <Image
-                    src={filterRelease.coverArtUrl}
-                    alt=""
+                  <ThumbImage
+                    src={filterRelease.coverThumbUrl ?? filterRelease.coverArtUrl}
                     width={20}
                     height={20}
                     className="h-full w-full object-cover"

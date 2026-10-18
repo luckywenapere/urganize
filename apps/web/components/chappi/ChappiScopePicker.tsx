@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Check, ChevronDown, Disc3 } from '@/components/icons';
 import type { ExecutionRelease } from '@/lib/execution-types';
 import { useKeepInViewport } from '@/lib/use-keep-in-viewport';
+import { ThumbImage } from '@/components/shared/ThumbImage';
 
 type ChappiScopePickerProps = {
   releases: ExecutionRelease[];
@@ -17,9 +18,8 @@ function ScopeThumb({ release }: { release: ExecutionRelease }) {
   return (
     <span className="grid h-5 w-5 shrink-0 place-items-center overflow-hidden rounded border border-stroke-subtle bg-bg-elevated">
       {release.coverArtUrl ? (
-        <Image
-          src={release.coverArtUrl}
-          alt=""
+        <ThumbImage
+          src={release.coverThumbUrl ?? release.coverArtUrl}
           width={20}
           height={20}
           className="h-full w-full object-cover"

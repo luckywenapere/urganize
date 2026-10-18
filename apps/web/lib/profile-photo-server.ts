@@ -6,8 +6,11 @@ import {
   RELEASE_ASSETS_BUCKET,
   formatFileSize,
   generateSignedUrl,
+  generateThumbSignedUrls,
   sanitizeFileName,
+  signThumbUploadUrl,
 } from '@/lib/asset-helpers';
+import { thumbPathFor } from '@/lib/image-thumb';
 import {
   MAX_PROFILE_PHOTO_BYTES,
   PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS,
@@ -27,14 +30,28 @@ import {
 type Row = Record<string, unknown>;
 const asRow = (value: unknown): Row => (value && typeof value === 'object' ? (value as Row) : {});
 
+/**
+ * Signed URLs for a batch of faces. Every place these batches feed (roster,
+ * artist header, directory, press kit) shows the face at 128px or less, so
+ * each one prefers its 384px copy (lib/image-thumb.ts) and falls back to the
+ * original for photos uploaded before thumbs existed.
+ */
 async function signAll(
   admin: SupabaseClient,
   rows: Array<{ key: string; path: string }>
 ): Promise<Map<string, string>> {
   const urls = new Map<string, string>();
+  const thumbs = await generateThumbSignedUrls(
+    admin,
+    RELEASE_ASSETS_BUCKET,
+    rows.map((row) => row.path),
+    PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS
+  );
   await Promise.all(
     rows.map(async ({ key, path }) => {
-      const url = await generateSignedUrl(admin, RELEASE_ASSETS_BUCKET, path, PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS);
+      const url =
+        thumbs.get(path) ??
+        (await generateSignedUrl(admin, RELEASE_ASSETS_BUCKET, path, PROFILE_PHOTO_SIGNED_URL_TTL_SECONDS));
       if (url) urls.set(key, url);
     })
   );
@@ -93,7 +110,8 @@ export async function signPhotoPath(admin: SupabaseClient, path: unknown): Promi
 export async function removePhotoObject(admin: SupabaseClient, path: unknown): Promise<void> {
   if (typeof path !== 'string' || !path) return;
   try {
-    await admin.storage.from(RELEASE_ASSETS_BUCKET).remove([path]);
+    // Its small display copy goes with it (lib/image-thumb.ts).
+    await admin.storage.from(RELEASE_ASSETS_BUCKET).remove([path, thumbPathFor(path)]);
   } catch {
     // Orphaned bytes in a private bucket cost cents; a failed save costs a user.
   }
@@ -141,5 +159,9 @@ export async function signProfilePhotoUpload(
     upload_url: data.signedUrl,
     storage_path: storagePath,
     expires_in: ASSET_UPLOAD_URL_TTL_SECONDS,
+    // Where the browser puts the 384px display copy (lib/image-thumb.ts).
+    // Optional for the client: no thumb just means lists show the original.
+    thumb_upload_url: await signThumbUploadUrl(admin, RELEASE_ASSETS_BUCKET, storagePath),
   });
 }
+

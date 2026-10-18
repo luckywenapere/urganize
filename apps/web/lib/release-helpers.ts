@@ -21,6 +21,9 @@ export interface ReleaseOption {
   releaseType?: DbReleaseType;
   releaseDate: string | null;
   coverArtUrl: string | null;
+  /** The 384px display copy of the cover (lib/image-thumb.ts) for small
+   *  slots. Absent or null: use coverArtUrl. */
+  coverThumbUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }

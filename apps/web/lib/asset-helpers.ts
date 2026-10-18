@@ -16,6 +16,7 @@
 import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AssetCategory } from './asset-constants';
+import { thumbPathFor } from './image-thumb';
 
 export {
   ASSET_CATEGORIES,
@@ -108,6 +109,93 @@ export async function generateSignedUrl(
     return data.signedUrl;
   } catch (err) {
     console.error(`Signed URL generation threw for ${bucket}/${path}:`, err);
+    return null;
+  }
+}
+
+// Thumbs that were looked for and are not there (uploads from before thumbs,
+// or a browser that could not make one). Remembered briefly so a list of old
+// covers does not ask storage again on every load; short enough that a
+// backfilled thumb is picked up within minutes.
+const MISSING_THUMB_TTL_MS = 10 * 60 * 1000;
+const missingThumbUntil = new Map<string, number>();
+
+/**
+ * Signed URLs for the small display copies (lib/image-thumb.ts) of
+ * `originalPaths`, keyed by ORIGINAL path. A path whose thumb does not exist
+ * is simply absent, so callers fall back to the original. One batched storage
+ * call for everything not already cached; never throws.
+ */
+export async function generateThumbSignedUrls(
+  supabaseClient: SupabaseClient,
+  bucket: string,
+  originalPaths: string[],
+  ttlSeconds: number
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  const now = Date.now();
+  const toSign: string[] = [];
+
+  for (const original of Array.from(new Set(originalPaths.filter(Boolean)))) {
+    const thumbPath = thumbPathFor(original);
+    const cacheKey = `${bucket}/${thumbPath}/${ttlSeconds}`;
+    const cached = signedUrlCache.get(cacheKey);
+    if (cached && cached.staleAt > now) {
+      result.set(original, cached.url);
+      continue;
+    }
+    const missingUntil = missingThumbUntil.get(cacheKey);
+    if (missingUntil && missingUntil > now) continue;
+    toSign.push(original);
+  }
+  if (!toSign.length) return result;
+
+  try {
+    const { data, error } = await supabaseClient.storage
+      .from(bucket)
+      .createSignedUrls(toSign.map(thumbPathFor), ttlSeconds);
+    if (error || !Array.isArray(data)) return result;
+
+    const originalByThumb = new Map(toSign.map((original) => [thumbPathFor(original), original]));
+    data.forEach((item, index) => {
+      // Match on the path storage echoes back; fall back to order.
+      const original = (item?.path && originalByThumb.get(item.path)) || toSign[index];
+      if (!original) return;
+      const cacheKey = `${bucket}/${thumbPathFor(original)}/${ttlSeconds}`;
+      if (item?.error || !item?.signedUrl) {
+        if (missingThumbUntil.size >= SIGNED_URL_CACHE_MAX_ENTRIES) missingThumbUntil.clear();
+        missingThumbUntil.set(cacheKey, now + MISSING_THUMB_TTL_MS);
+        return;
+      }
+      if (signedUrlCache.size >= SIGNED_URL_CACHE_MAX_ENTRIES) {
+        const oldestKey = signedUrlCache.keys().next().value;
+        if (oldestKey !== undefined) signedUrlCache.delete(oldestKey);
+      }
+      signedUrlCache.set(cacheKey, { url: item.signedUrl, staleAt: now + ttlSeconds * 1000 * 0.8 });
+      result.set(original, item.signedUrl);
+    });
+  } catch (err) {
+    console.error(`Thumb signed URL generation threw for ${bucket}:`, err);
+  }
+  return result;
+}
+
+/**
+ * A signed PUT URL for the display copy of `storagePath` (`<path>.thumb`,
+ * lib/image-thumb.ts), handed back next to the original's upload URL. Null on
+ * any failure: the thumb is optional and must never fail the upload.
+ */
+export async function signThumbUploadUrl(
+  supabaseClient: SupabaseClient,
+  bucket: string,
+  storagePath: string
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabaseClient.storage
+      .from(bucket)
+      .createSignedUploadUrl(thumbPathFor(storagePath));
+    return error || !data?.signedUrl ? null : data.signedUrl;
+  } catch {
     return null;
   }
 }

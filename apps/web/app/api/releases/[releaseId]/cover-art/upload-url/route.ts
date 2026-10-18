@@ -10,6 +10,7 @@ import {
 import {
   ASSET_UPLOAD_URL_TTL_SECONDS,
   RELEASE_ASSETS_BUCKET,
+  signThumbUploadUrl,
   buildStoragePath,
   validateAssetUpload,
 } from '@/lib/asset-helpers';
@@ -98,5 +99,8 @@ export async function POST(
     upload_url: data.signedUrl,
     storage_path: storagePath,
     expires_in: ASSET_UPLOAD_URL_TTL_SECONDS,
+    // The browser also PUTs a 384px display copy here (lib/image-thumb.ts)
+    // so lists never paint the full master. Null: lists use the original.
+    thumb_upload_url: await signThumbUploadUrl(adminClient, RELEASE_ASSETS_BUCKET, storagePath),
   });
 }

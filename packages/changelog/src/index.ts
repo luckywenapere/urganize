@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.157.13",
+    date: "October 18, 2026",
+    highlights: [
+      "Cover art and artist photos in lists now load from a small copy instead of the full image, so they show up fast and all at once instead of filling in from the top. Your original files are unchanged.",
+    ],
+  },
+  {
     version: "1.157.12",
     date: "October 18, 2026",
     highlights: [

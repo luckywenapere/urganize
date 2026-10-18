@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { normalizePipelineState } from '@/lib/release-execution';
 import { DEFAULT_RELEASE_TITLE, isDbReleaseType, type ReleaseStatus } from '@/types/releases';
-import { loadCoverArtUrlMap, type ReleaseCoverInput } from '@/lib/cover-art';
+import { loadCoverArtUrls, type ReleaseCoverInput } from '@/lib/cover-art';
 import { loadWorkspaceLogoFallbackUrl } from '@/lib/workspace-logo';
 import { readTemplatePending } from '@/lib/release-template-pending';
 
@@ -60,7 +60,7 @@ export class ReleaseService {
     // on every dashboard load, which is the kind of latency that stacks up
     // badly on a slow mobile link.
     const [coverByReleaseId, workspaceLogoUrl] = await Promise.all([
-      loadCoverArtUrlMap(this.adminClient, coverInput),
+      loadCoverArtUrls(this.adminClient, coverInput),
       loadWorkspaceLogoFallbackUrl(this.adminClient, userId),
     ]);
 
@@ -88,7 +88,10 @@ export class ReleaseService {
         createdAt: String(row.created_at || ''),
         updatedAt: String(row.updated_at || ''),
         metadata: row.metadata || {},
-        coverArtUrl: coverByReleaseId.get(id) ?? workspaceLogoUrl,
+        coverArtUrl: coverByReleaseId.get(id)?.url ?? workspaceLogoUrl,
+        // The 384px copy for rows, pickers and tiles; null means "use
+        // coverArtUrl" (an older upload, or the workspace-logo fallback).
+        coverThumbUrl: coverByReleaseId.get(id)?.thumbUrl ?? null,
       };
     });
   }
