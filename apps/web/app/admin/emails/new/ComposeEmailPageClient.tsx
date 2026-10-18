@@ -443,7 +443,7 @@ export default function ComposeEmailPageClient() {
               value={group}
               onChange={(event) => chooseAudience({ group: event.target.value as GroupKey })}
               aria-label="Which group"
-              className="input h-10 max-w-sm rounded-lg border-stroke-control bg-bg-elevated"
+              className="input field-native h-10 max-w-sm rounded-lg border-stroke-control bg-bg-elevated"
             >
               {AUDIENCE_GROUPS.map((key) => (
                 <option key={key} value={key}>

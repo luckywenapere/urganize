@@ -1812,6 +1812,64 @@ input:-webkit-autofill:focus {
   box-shadow: 0 0 0 3px var(--brand-primary-subtle);
 }
 
+/* Native selects and date fields that sit beside text inputs (URG-370,
+   founder's iPhone screenshot of /admin/more, 2026-10-18). Opt in with
+   `field-native` next to the field's own height class (h-10, h-11...).
+
+   iOS Safari draws these controls its own way, so beside a text input:
+   - a select with .input's 12px top and bottom padding inside an h-10 box
+     leaves 14px for 16px text (touch screens force 16px, see above), and
+     the label is cut off at the bottom;
+   - a date field ignores the height it is given, grows taller, centres its
+     text, and keeps an intrinsic min width that pushes it past its card.
+   So: no native appearance, a full-width block that may shrink, the padding
+   worked out from a fixed line height so the text sits in the middle of
+   its h-10 or h-11 box, the date value left aligned, and our own chevron on selects. */
+.field-native {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.25rem;
+  text-align: left;
+}
+
+/* Safari leaves a select's text at the top of its box, so the vertical
+   padding is set per height: (height - 2px border - 20px line) / 2. */
+.field-native.h-10 {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.field-native.h-11 {
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+
+.field-native::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+  min-height: 1.25rem;
+}
+
+.field-native::-webkit-datetime-edit,
+.field-native::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+/* `html` lifts this over `html[data-theme='dark'] .input`, whose
+   background shorthand would otherwise wipe the chevron. */
+html select.field-native {
+  padding-right: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 1rem 1rem;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;

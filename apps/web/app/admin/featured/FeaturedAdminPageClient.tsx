@@ -216,7 +216,7 @@ export default function FeaturedAdminPageClient() {
             <select
               value={role}
               onChange={(event) => setRole(event.target.value as DirectoryRole)}
-              className={`${fieldClass} mt-1 w-full`}
+              className={`${fieldClass} field-native mt-1 w-full`}
             >
               {DIRECTORY_ROLES.map((value) => (
                 <option key={value} value={value}>

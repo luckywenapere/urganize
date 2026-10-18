@@ -189,22 +189,24 @@ export function RunwayPanel({
               Enter cash on hand and what the company spends a month to see runway and whether we are default alive.
             </p>
           ) : null}
+          {/* URG-370: min-w-0 on each label so a field can never widen its grid
+              cell; field-native draws the select and date like the inputs. */}
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <label className="block text-xs font-medium text-content-secondary">
+            <label className="block min-w-0 text-xs font-medium text-content-secondary">
               Currency
               <select
                 value={values.currency}
                 onChange={set('currency')}
-                className="input mt-1 h-10 w-full rounded-lg border-stroke-control bg-bg-elevated"
+                className="input field-native mt-1 h-10 w-full rounded-lg border-stroke-control bg-bg-elevated"
               >
                 <option value="NGN">Naira (₦)</option>
                 <option value="USD">Dollars ($)</option>
               </select>
             </label>
-            <label className="block text-xs font-medium text-content-secondary">
+            <label className="block min-w-0 text-xs font-medium text-content-secondary">
               Cash on hand
               <input
-                inputMode="decimal"
+                inputMode="numeric"
                 required
                 value={values.cash}
                 onChange={set('cash')}
@@ -212,10 +214,10 @@ export function RunwayPanel({
                 className="input mt-1 h-10 w-full rounded-lg border-stroke-control bg-bg-elevated"
               />
             </label>
-            <label className="block text-xs font-medium text-content-secondary">
+            <label className="block min-w-0 text-xs font-medium text-content-secondary">
               Spend a month
               <input
-                inputMode="decimal"
+                inputMode="numeric"
                 required
                 value={values.monthlyBurn}
                 onChange={set('monthlyBurn')}
@@ -223,7 +225,7 @@ export function RunwayPanel({
                 className="input mt-1 h-10 w-full rounded-lg border-stroke-control bg-bg-elevated"
               />
             </label>
-            <label className="block text-xs font-medium text-content-secondary">
+            <label className="block min-w-0 text-xs font-medium text-content-secondary">
               Cash as of
               <input
                 type="date"
@@ -231,10 +233,10 @@ export function RunwayPanel({
                 value={values.asOf}
                 max={todayLocal()}
                 onChange={set('asOf')}
-                className="input mt-1 h-10 w-full rounded-lg border-stroke-control bg-bg-elevated"
+                className="input field-native mt-1 h-10 w-full rounded-lg border-stroke-control bg-bg-elevated"
               />
             </label>
-            <label className="block text-xs font-medium text-content-secondary">
+            <label className="block min-w-0 text-xs font-medium text-content-secondary">
               {values.currency === 'USD' ? 'Naira per dollar' : 'Naira per dollar (optional)'}
               <input
                 inputMode="decimal"

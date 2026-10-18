@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -82,9 +83,61 @@ export const ADMIN_NAV_ITEMS: Array<{
   exact?: boolean;
 }> = ADMIN_PRIMARY_NAV.map((item) => ({ ...item, icon: NAV_ICONS[item.key] ?? LayoutDashboard }));
 
+/** Edge fade for the phone strip: which sides still have tabs past them. */
+export function stripFade(start: boolean, end: boolean): string | undefined {
+  if (!start && !end) return undefined;
+  const from = start ? 'transparent 0, #000 2rem' : '#000 0';
+  const to = end ? '#000 calc(100% - 2rem), transparent 100%' : '#000 100%';
+  return `linear-gradient(to right, ${from}, ${to})`;
+}
+
 export function AdminNav() {
   const pathname = usePathname() || '';
   const activeKey = activeNavKey(pathname);
+
+  // Phone (URG-370, founder's iPhone screenshot, 2026-10-18): below lg the
+  // six tabs are a horizontal strip wider than the screen, so on More (or
+  // Emails) the lit tab sat off the right edge and no tab looked active.
+  // Scroll the active tab into view whenever the page changes, and fade the
+  // edge that still has tabs past it so the strip reads as scrollable. On lg+
+  // the list is a column, never overflows, and neither effect does anything.
+  const stripRef = useRef<HTMLUListElement>(null);
+  const [fade, setFade] = useState<{ start: boolean; end: boolean }>({ start: false, end: false });
+
+  useEffect(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    const measure = () => {
+      const overflow = strip.scrollWidth - strip.clientWidth;
+      const next = { start: overflow > 1 && strip.scrollLeft > 1, end: overflow > 1 && strip.scrollLeft < overflow - 1 };
+      setFade((current) => (current.start === next.start && current.end === next.end ? current : next));
+    };
+    measure();
+    strip.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', measure);
+    return () => {
+      strip.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+
+  useEffect(() => {
+    const strip = stripRef.current;
+    if (!strip || strip.scrollWidth <= strip.clientWidth) return;
+    const tab = strip.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!tab) return;
+    const stripBox = strip.getBoundingClientRect();
+    const tabBox = tab.getBoundingClientRect();
+    // Only this strip moves: scrollIntoView would also scroll the page.
+    const gutter = 32;
+    if (tabBox.left < stripBox.left + gutter) {
+      strip.scrollLeft += tabBox.left - stripBox.left - gutter;
+    } else if (tabBox.right > stripBox.right - gutter) {
+      strip.scrollLeft += tabBox.right - stripBox.right + gutter;
+    }
+  }, [activeKey]);
+
+  const mask = stripFade(fade.start, fade.end);
 
   return (
     <nav
@@ -120,7 +173,11 @@ export function AdminNav() {
       <p className="hidden font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary lg:block lg:px-3 lg:pb-3">
         Admin
       </p>
-      <ul className="flex w-full gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+      <ul
+        ref={stripRef}
+        className="flex w-full gap-1 overflow-x-auto lg:flex-col lg:overflow-visible"
+        style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
+      >
         {ADMIN_NAV_ITEMS.map((item) => {
           const active = activeKey === item.key;
           return (
