@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   PERSONA_HEADLINE_CLASS,
   PersonaValueBlocks,
@@ -13,12 +14,24 @@ import { MarketingHeader } from "../components/marketing/MarketingHeader";
 import { buildPageMetadata } from "@/lib/seo";
 import { PageDawn } from "../components/marketing/PageDawn";
 
-export const metadata: Metadata = buildPageMetadata({
-  title: "Release planning for AI artists",
-  description:
-    "Making the song got fast. The rollout did not. Every release, on plan: add a drop, get the plan week by week to release day and an owner on every activity.",
-  path: "/for-ai-artists",
-});
+export const metadata: Metadata = {
+  ...buildPageMetadata({
+    title: "Release planning for AI artists",
+    description:
+      "Making the song got fast. The rollout did not. Every release, on plan: add a drop, get the plan week by week to release day and an owner on every activity.",
+    path: "/for-ai-artists",
+  }),
+  robots: { index: false, follow: false },
+};
+
+// REMOVED FROM THE SITE 2026-10-18 (founder call, URG-385): hidden, not
+// deleted. The page 404s unless NEXT_PUBLIC_FEATURE_AI_ARTISTS_PAGE is "true"
+// (unset in production; same flag-gate posture as /roadmap), is noindexed,
+// and has no entry point anywhere: not in sitemap.ts, ProductMenu, the
+// footer or any page's links. The code stays so it can come back with a flag
+// flip; delete it only with the founder's OK after 60 days with no asks.
+const AI_ARTISTS_PAGE_ENABLED =
+  process.env.NEXT_PUBLIC_FEATURE_AI_ARTISTS_PAGE === "true";
 
 // POSITIONING NOTE, and it is shorter than it used to be. Under the
 // 2026-08-19 brief this page needed defending: that positioning made
@@ -83,6 +96,10 @@ const compactBlocks = [
 ] as const;
 
 export default function ForAiArtistsPage() {
+  if (!AI_ARTISTS_PAGE_ENABLED) {
+    notFound();
+  }
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--marketing-bg)] text-[var(--marketing-text)] selection:bg-[var(--marketing-selection)] selection:text-[var(--marketing-text)]">
       <MarketingHeader />

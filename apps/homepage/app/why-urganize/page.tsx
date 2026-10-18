@@ -85,9 +85,9 @@ export default function WhyUrganizePage() {
               Why Urganize
             </p>
             <h1 className="mt-8 text-balance text-[2.25rem] leading-[1.06] text-[var(--marketing-text)] sm:text-[3.6rem]">
-              WhatsApp and Drive got you here.{" "}
+              WhatsApp got you here.{" "}
               <span className="text-[var(--marketing-accent)]">
-                They won&apos;t get you further.
+                It won&apos;t get you further.
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-[38rem] text-balance text-lg leading-8 text-[var(--marketing-text-muted)]">

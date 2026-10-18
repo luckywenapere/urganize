@@ -22,6 +22,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.158.10",
+    date: "October 18, 2026",
+    highlights: [
+      "The Why Urganize headline is shorter, so it reads in three lines on a phone instead of four.",
+      "The AI artists page has been taken down. Urganize's pages now speak to artist managers.",
+    ],
+  },
+  {
     version: "1.158.9",
     date: "October 18, 2026",
     highlights: [

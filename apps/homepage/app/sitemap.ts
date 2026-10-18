@@ -15,11 +15,10 @@ const LAST_MODIFIED = {
   signup: "2026-10-07",
   features: "2026-10-17",
   pricing: "2026-10-18",
-  whyUrganize: "2026-10-17",
+  whyUrganize: "2026-10-18",
   forExecutives: "2026-10-17",
   forManagers: "2026-10-17",
   forCurators: "2026-10-17",
-  forAiArtists: "2026-10-17",
   brand: "2026-10-18",
   guides: "2026-10-07",
 } as const;
@@ -67,8 +66,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
-    // The four persona pages (/for-labels left on 2026-09-11, founder call;
-    // its URL redirects to /pricing). Same priority across all of them — the
+    // The three persona pages (/for-labels left on 2026-09-11, founder call;
+    // its URL redirects to /pricing; /for-ai-artists was hidden on 2026-10-18,
+    // URG-385, and 404s, so it must not be listed). Same priority across all of them — the
     // ProductMenu's link order is where the executive-first preference is
     // expressed (that's a sitelink signal we control); sitemap priority is
     // not, and inventing a split here would just be noise.
@@ -87,12 +87,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${SITE_URL}/for-curators`,
       lastModified: LAST_MODIFIED.forCurators,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/for-ai-artists`,
-      lastModified: LAST_MODIFIED.forAiArtists,
       changeFrequency: "monthly",
       priority: 0.8,
     },
