@@ -18,22 +18,12 @@ import { FaChevronDown } from "react-icons/fa6";
 // separate site as far as that block is concerned. Those two pages then hand
 // off to the app (see lib/app-urls.ts).
 const productLinks = [
-  { href: "/login", label: "Log in" },
-  { href: "/signup", label: "Sign up" },
   { href: "/features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
-  // Persona pages, executives first: they are the buyer and the hero in the
-  // locked positioning (founder brief, 2026-08-19), so they lead the group
-  // and get the best sitelink odds of the four. The other three are adjacent
-  // audiences, ordered by how close each is to that buyer. /for-labels sat
-  // second until 2026-09-11 (founder call: the product is not for labels; the
-  // page is gone and its URL redirects to /pricing).
-  { href: "/for-executives", label: "For executives" },
+  // Pruned 2026-10-18 (founder call): artist managers are the audience; the
+  // executives, curators and AI-artist pages stay live but leave the menu.
   { href: "/for-managers", label: "For managers" },
-  { href: "/for-curators", label: "For curators" },
-  { href: "/for-ai-artists", label: "For AI artists" },
   { href: "/why-urganize", label: "Why Urganize" },
-  { href: "/privacy", label: "Privacy" },
 ] as const;
 
 // The "Product" submenu bundles every product page into one top-menu entry

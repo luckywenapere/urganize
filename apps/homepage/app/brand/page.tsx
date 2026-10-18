@@ -25,8 +25,8 @@ export const metadata: Metadata = buildPageMetadata({
 const VOICE_PILLARS = [
   {
     title: "Plain-spoken, no jargon",
-    body: "We say “the plan, the activities and the press kit for your rollout,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
-    say: "One link, and the press kit is live.",
+    body: "We say “the plan, the activities and the files for your rollout,” not “a synergistic platform.” If a sentence needs a decoder, rewrite it.",
+    say: "Every activity has an owner and a date.",
     avoid: "Holistic asset-lifecycle management.",
   },
   {
@@ -57,7 +57,7 @@ const COLORS = [
   { name: "Ink", hex: "#171311", note: "Primary text", border: false },
   { name: "Accent green", hex: "#3f7e5c", note: "Marketing emphasis + links (light)", border: false },
   { name: "Accent green (dark)", hex: "#6ee99b", note: "Same accent on dark surfaces", border: false },
-  { name: "Product green", hex: "#3ecf8e", note: "The app UI accent (app.urganize.app)", border: false },
+  { name: "Product green", hex: "#7fd99a", note: "The app UI accent (app.urganize.app)", border: false },
 ] as const;
 
 const FONTS = [
@@ -168,7 +168,7 @@ export default function BrandPage() {
               <div>
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">Who it’s for</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
-                  Artists, managers and labels. One rollout is a lot of moving parts; a roster is
+                  Artist managers first, then labels. One rollout is a lot of moving parts; a roster is
                   many calendars, many rollouts at once and a pile of chats holding it
                   together. Urganize is what runs that. Teams with a bigger roster get the
                   Label plan, with the founders working alongside them.
@@ -197,8 +197,7 @@ export default function BrandPage() {
                 <h3 className="text-sm font-semibold text-[var(--marketing-text)]">The name</h3>
                 <p className={`mt-1.5 ${bodyText}`}>
                   Urganize is spelled with a G, like organize. It is not urbanize. The company
-                  behind it is The Urganization Ltd, registered in Nigeria and started in December
-                  2025. The product lives at urganize.app.
+                  behind it is Urganization, started in December 2025. The product lives at urganize.app.
                 </p>
               </div>
 
@@ -214,7 +213,7 @@ export default function BrandPage() {
               </div>
 
               <p className={`text-sm ${bodyText}`}>
-                The Urganization Ltd. Started December 2025.{" "}
+                Urganization. Started December 2025.{" "}
                 <Link
                   href="/team"
                   className="text-[var(--marketing-text)] underline underline-offset-2"
