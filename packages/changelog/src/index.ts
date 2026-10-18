@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.158.11",
+    date: "October 19, 2026",
+    highlights: [
+      "The \"from Urganization\" sign-off on the load screen is set in golden proportion to the Urganize mark, with \"from\" sitting closer to the logo.",
+    ],
+  },
+  {
     version: "1.158.10",
     date: "October 18, 2026",
     highlights: [

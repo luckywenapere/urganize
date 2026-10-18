@@ -111,7 +111,7 @@ export function LoadingScreen({
         <img
           src="/images/urganization-logo-stacked.svg"
           alt=""
-          width={124}
+          width={126}
           height={60}
           className="app-wordmark urg-boot-from-logo"
         />

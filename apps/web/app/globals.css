@@ -3061,7 +3061,8 @@ html[data-native-shell] .urg-boot-frame .app-wordmark {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  /* Matches the logo's own mark-to-wordmark gap at this size (founder, 2026-10-19). */
+  gap: 5.5px;
   pointer-events: none;
 }
 
@@ -3077,7 +3078,8 @@ html[data-native-shell] .urg-boot-from-label {
 }
 
 .urg-boot-from-logo {
-  width: 124px;
+  /* Golden ratio to the centre mark: 77.7 x 1.618 (founder pick, 2026-10-19). */
+  width: 125.7px;
   height: auto;
 }
 
