@@ -5,7 +5,7 @@ import { AppShell } from '@/components/app/AppShell';
 import { CursorRefresher } from '@/components/app/CursorRefresher';
 import { NavPendingBar } from '@/components/app/NavPendingBar';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
-import { CANONICAL_DESCRIPTION } from '@/lib/positioning';
+import { BRAND_LINE, CANONICAL_DESCRIPTION } from '@/lib/positioning';
 import './globals.css';
 
 // Self-hosted via next/font (preloaded, no third-party request chain). Per
@@ -38,7 +38,8 @@ const spaceMono = Space_Mono({
 });
 
 const appName = 'Urganize';
-// The founder's long description, verbatim (2026-09-24 positioning).
+// The founder's long description, verbatim (artist-managers-first since
+// 2026-10-18; first written 2026-09-24).
 // Imported rather than typed out so the app, the marketing site and the share
 // card cannot describe a different product; see lib/positioning.
 const appDescription = CANONICAL_DESCRIPTION;
@@ -72,7 +73,9 @@ function getMetadataBase() {
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
   title: {
-    default: appName,
+    // "Urganize: Every release, on plan" since 2026-10-18 (founder approved):
+    // a bare "Urganize" told a search result or a browser tab nothing.
+    default: BRAND_LINE,
     template: `%s | ${appName}`,
   },
   description: appDescription,

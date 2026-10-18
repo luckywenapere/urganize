@@ -18,7 +18,10 @@ import { PricingPageClient } from "./PricingPageClient";
 // Group's goes to an email, so the snippet promised a step the page does not
 // have. Name the step the page does have.
 export const metadata: Metadata = buildPageMetadata({
-  title: "Pricing for artists, managers and labels",
+  // "Pricing for artist managers and their teams" since 2026-10-18 (founder
+  // approved, artist-managers-first); it named artists, managers and labels.
+  // The root template adds " | Urganize".
+  title: "Pricing for artist managers and their teams",
   description:
     "Every release, on plan, at one price for your whole team, from a single manager to a full roster. What each plan includes and how to join the waitlist.",
   path: "/pricing",

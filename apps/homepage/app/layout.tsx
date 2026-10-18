@@ -51,12 +51,22 @@ const LEGAL_NAME = "Urganization";
 // "AI music manager" is still what a searcher types. Labels came back into the
 // audience that day, so the two label terms that left on 2026-09-11 could
 // return by the A&R rule; that is a founder call, not done here.
+//
+// 2026-10-18: ARTIST-MANAGERS-FIRST POSITIONING (founder approved). The
+// description now ends "Built for artist managers.", the pricing title names
+// artist managers and their teams, and the list was rewritten around the
+// buyer rather than kept by the category rule above. "AI music manager" and
+// "music manager app" left (the product is no longer introduced as an AI
+// manager, and the second recruits artists looking for a manager); "music
+// rollout plan" and "artist management app" joined as the words a manager
+// types when looking for a plan. Meta keywords carry little ranking weight;
+// the list is kept so it states the same audience the copy does.
 const LANDING_KEYWORDS = [
-  "AI music manager",
-  "music manager app",
   "artist manager software",
   "music release planning",
   "release rollout plan",
+  "music rollout plan",
+  "artist management app",
 ] as const;
 
 // Typography

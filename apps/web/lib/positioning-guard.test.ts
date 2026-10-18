@@ -159,8 +159,9 @@ const RETIRED = [
   // 2026-09-24: the category and the lines that went with it. "AI Music
   // Manager" is matched CASE-SENSITIVELY on purpose: the title-cased form is
   // how the category was written in copy, while the lowercase search keyword
-  // "AI music manager" is kept in LANDING_KEYWORDS and the store tags, because
-  // nobody's search habits changed when our wording did.
+  // "AI music manager" was kept in LANDING_KEYWORDS (until the 2026-10-18
+  // artist-managers-first list) and the store tags, because nobody's search
+  // habits changed when our wording did.
   /\bAI Music Manager\b/,
   /Music Business AI/i,
   /operating system for music/i,
@@ -247,9 +248,11 @@ describe('positioning', () => {
     expect(CORE_LINE).toBe('Urganize is where music teams plan every release and deliver it on time.');
     expect(SHORT_LINE).toBe('Every release, on plan.');
     expect(PROMISE_LINE).toBe('Add a release. Get the plan. Your team knows what to do and when.');
+    // 2026-10-18 (founder approved): the long description leads with artist
+    // managers, the buyer, and names them as its own last sentence.
     expect(CANONICAL_DESCRIPTION).toBe(
-      'Every release, on plan. Add a release and get the plan, week by week to release day. ' +
-        'Your team knows what to do and when. For artists, managers and labels.',
+      'Every release, on plan. Add a release and get the plan, week by week to release day, ' +
+        'so your team knows what to do and when. Built for artist managers.',
     );
     expect(CORE_LINE).toBe(`Urganize is ${CORE_CLAUSE}.`);
     expect(BRAND_LINE).toBe('Urganize: Every release, on plan');
@@ -263,7 +266,8 @@ describe('positioning', () => {
     // founder's long description; artists led both times.
     expect([...AUDIENCE]).toEqual(['artists', 'managers', 'labels']);
     expect(AUDIENCE_LINE).toBe('artists, managers and labels');
-    expect(CANONICAL_DESCRIPTION.endsWith(`For ${AUDIENCE_LINE}.`)).toBe(true);
+    // The long description stopped composing this list on 2026-10-18: it is
+    // built for artist managers, and says so in its own words.
   });
 
   it('fits the limits other platforms enforce', () => {

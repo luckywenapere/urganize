@@ -49,7 +49,7 @@ unchanged.
 ### Full description (4000 characters max)
 
 ```
-Every release, on plan. Add a release and get the plan, week by week to release day. Your team knows what to do and when. For artists, managers and labels.
+Every release, on plan. Add a release and get the plan, week by week to release day, so your team knows what to do and when. Built for artist managers.
 
 PLAN THE ROLLOUT
 Every release starts with a real plan, not a blank board. Pick what you are putting out and Urganize lays out the whole rollout, sized to the format, with every activity dated around release day. The plans come from playbooks written by working managers, and you can edit or delete anything that does not apply to you.

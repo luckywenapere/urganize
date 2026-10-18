@@ -3,13 +3,32 @@ import { GUIDES } from "@/content/guides";
 
 const SITE_URL = "https://urganize.app";
 
-// lastModified is deliberately omitted: stamping every URL with the build
-// time claims "everything changed" on every deploy, which teaches crawlers
-// (Bing especially) to distrust the sitemap. Omitting it beats lying.
+// lastModified is a REAL per-page date, written by hand (since 2026-10-18,
+// founder approved). It is never the build time: stamping every URL with the
+// build time claims "everything changed" on every deploy, which teaches
+// crawlers (Bing especially) to distrust the sitemap. Each date is the last
+// day that page's own content or metadata changed (taken from git on
+// 2026-10-18). WHEN YOU CHANGE A PAGE, BUMP ITS DATE HERE in the same commit.
+const LAST_MODIFIED = {
+  home: "2026-10-18",
+  login: "2026-10-02",
+  signup: "2026-10-07",
+  features: "2026-10-17",
+  pricing: "2026-10-18",
+  whyUrganize: "2026-10-17",
+  forExecutives: "2026-10-17",
+  forManagers: "2026-10-17",
+  forCurators: "2026-10-17",
+  forAiArtists: "2026-10-17",
+  brand: "2026-10-18",
+  guides: "2026-10-07",
+} as const;
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
       url: SITE_URL,
+      lastModified: LAST_MODIFIED.home,
       changeFrequency: "monthly",
       priority: 1,
     },
@@ -20,26 +39,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // indexable and a subdomain can't be a sitelink of this one.
     {
       url: `${SITE_URL}/login`,
+      lastModified: LAST_MODIFIED.login,
       changeFrequency: "monthly",
       priority: 0.9,
     },
     {
       url: `${SITE_URL}/signup`,
+      lastModified: LAST_MODIFIED.signup,
       changeFrequency: "monthly",
       priority: 0.9,
     },
     {
       url: `${SITE_URL}/features`,
+      lastModified: LAST_MODIFIED.features,
       changeFrequency: "monthly",
       priority: 0.9,
     },
     {
       url: `${SITE_URL}/pricing`,
+      lastModified: LAST_MODIFIED.pricing,
       changeFrequency: "monthly",
       priority: 0.9,
     },
     {
       url: `${SITE_URL}/why-urganize`,
+      lastModified: LAST_MODIFIED.whyUrganize,
       changeFrequency: "monthly",
       priority: 0.8,
     },
@@ -50,21 +74,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // not, and inventing a split here would just be noise.
     {
       url: `${SITE_URL}/for-executives`,
+      lastModified: LAST_MODIFIED.forExecutives,
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/for-managers`,
+      lastModified: LAST_MODIFIED.forManagers,
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/for-curators`,
+      lastModified: LAST_MODIFIED.forCurators,
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/for-ai-artists`,
+      lastModified: LAST_MODIFIED.forAiArtists,
       changeFrequency: "monthly",
       priority: 0.8,
     },
@@ -76,16 +104,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // that resolves somewhere else.
     {
       url: `${SITE_URL}/brand`,
+      lastModified: LAST_MODIFIED.brand,
       changeFrequency: "monthly",
       priority: 0.5,
     },
     // The guides (2026-09-30): plain answers to what a stranger searches before
-    // they know Urganize exists. Unlike the pages above these DO carry a real
-    // lastModified, because each guide has one and it only moves when the
-    // guide's own text does. The "omit it" rule at the top of this file is about
-    // not stamping the build time on everything; this is the opposite case.
+    // they know Urganize exists. Each guide carries its own dateModified, which
+    // only moves when the guide's own text does.
     {
       url: `${SITE_URL}/guides`,
+      lastModified: LAST_MODIFIED.guides,
       changeFrequency: "monthly",
       priority: 0.7,
     },

@@ -31,7 +31,8 @@ export const SHARE_IMAGE_URL = `${SITE_URL}/opengraph-image.png`;
 // Music Business Manager" (2026-09-09 to 2026-09-24).
 //
 // DESCRIPTION: the long description (since 2026-10-17 the short line, the
-// promise and the audience, about 150 characters, so it fits whole; the
+// promise and the audience, about 150 characters, so it fits whole; since
+// 2026-10-18 the audience is "Built for artist managers."; the
 // founder's 2026-09-24 description ran about 230). A
 // description this full is on purpose. A 106-character one that opened with
 // "How" was ignored by Google entirely, which substituted the landing page's

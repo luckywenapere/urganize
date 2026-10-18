@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.158.6",
+    date: "October 18, 2026",
+    highlights: [
+      "Urganize now introduces itself as built for artist managers: the app's title reads \"Urganize: Every release, on plan\" and its description says you add a release and get the plan, week by week to release day, so your team knows what to do and when.",
+    ],
+  },
+  {
     version: "1.158.5",
     date: "October 18, 2026",
     highlights: [

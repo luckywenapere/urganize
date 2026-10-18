@@ -14,8 +14,10 @@
  *  - the long description (`CANONICAL_DESCRIPTION`), wherever there is room.
  *
  * LABELS ARE BACK IN THE AUDIENCE. They were dropped on 2026-09-11, and the
- * long description's own last sentence ("For artists, managers and labels.")
- * puts them back, so the list below has three entries again. "Small labels"
+ * long description's last sentence ("For artists, managers and labels.") put
+ * them back, so the list below has three entries again. Since 2026-10-18 the
+ * long description says "Built for artist managers." instead (founder call,
+ * artist-managers-first); the list still drives the visible pages. "Small labels"
  * and "for labels" are both allowed again (small labels since 2026-10-02, the
  * strategy doc names them among the teams we sell to).
  *
@@ -92,7 +94,7 @@ export const AUDIENCE = ['artists', 'managers', 'labels'] as const;
  * cannot be rewritten in prose without rewriting the list. No Oxford comma. */
 export const AUDIENCE_LINE = `${AUDIENCE.slice(0, -1).join(', ')} and ${AUDIENCE[AUDIENCE.length - 1]}`;
 
-/** The brand line. The homepage title, and nothing else in the app uses it. */
+/** The brand line. The homepage title and, since 2026-10-18, the app's default title. */
 export const BRAND_LINE = `Urganize: ${SHORT_LINE.slice(0, -1)}`;
 
 /**
@@ -111,15 +113,17 @@ export const SHORT_DESCRIPTION = CORE_LINE;
  * The long description, verbatim from the founder. Used where there is room to
  * say what the product actually does rather than only what it is.
  *
- * Written out rather than composed from the parts above, apart from the
- * audience, so the one list the guard pins is the one list the prose uses.
+ * Written out in full since 2026-10-18 (founder approved, artist-managers-first
+ * positioning): it names its own audience, "Built for artist managers.",
+ * instead of composing the three-part AUDIENCE list, which still drives the
+ * visible pages that name artists, managers and labels.
  * "Release" is the founder's word here and it is right: it is the unit that
  * gets planned and put out, which is the vocabulary rule (rollout is the work,
  * release is the unit).
  */
 export const CANONICAL_DESCRIPTION =
-  'Every release, on plan. Add a release and get the plan, week by week to release day. ' +
-  `Your team knows what to do and when. For ${AUDIENCE_LINE}.`;
+  'Every release, on plan. Add a release and get the plan, week by week to release day, ' +
+  'so your team knows what to do and when. Built for artist managers.';
 
 /**
  * UrgAns is NOT the product, and this line is the whole of the distinction.
