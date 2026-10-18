@@ -192,9 +192,6 @@ export default function IssueReportsAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-        Admin
-      </p>
       <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">Reports</h1>
       <p className="mt-2 max-w-2xl text-sm text-content-secondary">
         Bugs and requests filed from inside the app. Each one is saved here first, then pushed to

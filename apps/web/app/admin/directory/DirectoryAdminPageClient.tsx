@@ -114,9 +114,6 @@ export default function DirectoryAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-content-tertiary">
-        Admin
-      </p>
       <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">Directory</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
         Who is listed, who has a record we can vouch for, and what managers went

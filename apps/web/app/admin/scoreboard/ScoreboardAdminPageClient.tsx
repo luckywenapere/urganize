@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase/client';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { Copy, RefreshCw } from '@/components/icons';
 import { ScoreboardView } from '@/components/admin/ScoreboardView';
+import { buttonVariants } from '@/components/admin/ui';
+import { InfoTip } from '@/components/shared/HelpTip';
 import { CockpitSlot } from '@/components/admin/CockpitSlot';
 import { CockpitTrends } from '@/components/admin/CockpitTrends';
 import { formatScoreboardForTeamGroup } from '@/lib/scoreboard-format';
@@ -134,34 +136,37 @@ export default function ScoreboardAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-content-tertiary">Admin</p>
-      <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-        <h1 className="font-display text-2xl font-semibold text-content-primary">Scoreboard</h1>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => void load()}
-            disabled={loading}
-            className="motion-focus inline-flex h-9 items-center gap-2 rounded-lg border border-stroke-default bg-bg-surface px-3 text-sm text-content-secondary transition-colors hover:bg-bg-hover disabled:opacity-60"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
-            {loading ? 'Loading' : 'Refresh'}
-          </button>
-          <button
-            type="button"
-            onClick={() => void copyForTeamGroup()}
-            disabled={!board}
-            className="motion-focus inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-3 text-sm font-medium text-content-inverse transition-colors hover:bg-brand/90 disabled:opacity-60"
-          >
-            <Copy className="h-4 w-4" aria-hidden="true" />
-            Copy for the team group
-          </button>
+      {/* 2026-10-18 (approved mock): the paragraph that sat under the title
+          is in the info icon, Refresh is an icon button, and Copy for the
+          team group is the one accent action. */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
+          <h1 className="font-display text-2xl font-semibold text-content-primary">Scoreboard</h1>
+          <InfoTip
+            label="Scoreboard"
+            text="The numbers from the strategy doc, worked out from the database each time this page loads. KB posts them every Friday and the Monday review starts here."
+          />
         </div>
+        <button
+          type="button"
+          onClick={() => void load()}
+          disabled={loading}
+          aria-label={loading ? 'Loading' : 'Refresh'}
+          title="Refresh"
+          className="motion-focus grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-stroke-default bg-bg-surface text-content-secondary transition-colors hover:bg-bg-hover hover:text-content-primary disabled:opacity-60"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
+        </button>
       </div>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
-        The numbers from the strategy doc, worked out from the database each time this page
-        loads. KB posts them every Friday and the Monday review starts here.
-      </p>
+      <button
+        type="button"
+        onClick={() => void copyForTeamGroup()}
+        disabled={!board}
+        className={buttonVariants({ className: 'mt-4 w-full disabled:opacity-60 sm:w-auto' })}
+      >
+        <Copy className="h-4 w-4" aria-hidden="true" />
+        Copy for the team group
+      </button>
 
       <p role="status" aria-live="polite" className="mt-2 min-h-5 text-sm text-content-secondary">
         {status}

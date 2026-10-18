@@ -313,9 +313,6 @@ export default function TeamsAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-        Admin
-      </p>
       <h1 className="mt-2 font-display text-3xl font-semibold text-content-primary">Teams</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
         Every team, what it is on, and when it walls. Extend a trial, comp a team, record a

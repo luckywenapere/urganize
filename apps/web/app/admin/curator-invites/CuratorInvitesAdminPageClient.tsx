@@ -187,9 +187,6 @@ export default function CuratorInvitesAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-        Admin
-      </p>
       <h1 className="mt-2 font-display text-3xl font-semibold">Playlist owners</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
         Playlist owners can only join through a link you create here. Each link works once

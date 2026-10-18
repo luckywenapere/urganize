@@ -38,7 +38,7 @@ function Section({
   return (
     <section aria-labelledby={id} className="mt-8">
       <div className="flex items-center gap-1.5">
-        <h2 id={id} className="font-display text-lg font-semibold text-content-primary">
+        <h2 id={id} className="scroll-mt-[calc(1.5rem+env(safe-area-inset-top,0px))] font-display text-lg font-semibold text-content-primary">
           {title}
         </h2>
         <InfoTip label={title} text={info} />

@@ -20,9 +20,8 @@
 // a Suspense boundary because it reads the query string.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Loader2, Mail } from '@/components/icons';
+import { Loader2, Mail } from '@/components/icons';
 import { useAuthStore } from '@/lib/auth-store';
 import { AdminPageSkeleton } from '@/components/loading/AdminPageSkeleton';
 import { AUDIENCE_GROUPS, AUDIENCE_GROUP_LABELS, DEFAULT_RECENT_DAYS, isValidEmailAddress } from '@/lib/email/audience';
@@ -370,14 +369,7 @@ export default function ComposeEmailPageClient() {
 
   return (
     <div className="w-full max-w-[720px]">
-      <Link
-        href="/admin/emails"
-        className="motion-focus inline-flex items-center gap-1.5 text-sm text-content-secondary hover:text-content-primary"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Emails
-      </Link>
-      <p className="mt-4 flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
+      <p className="flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
         <Mail className="h-4 w-4" aria-hidden="true" />
         Write an email
       </p>

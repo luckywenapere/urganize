@@ -90,3 +90,16 @@ export function runwayAssumptions(runway: Runway): string {
   );
   return parts.join(' ');
 }
+
+/**
+ * The Runway row on More (2026-10-18): the result once figures are saved,
+ * "12.5 months · alive" (or "· not yet" until MRR is on course to pass spend),
+ * "Not set" before, and "Not read" when the saved figures could not be read.
+ */
+export function runwayRowValue(runway: Runway | null, readable: boolean): string {
+  if (!readable) return 'Not read';
+  if (!runway?.settings) return 'Not set';
+  const months = formatRunwayMonths(runway);
+  const alive = runway.defaultAlive?.status === 'alive' ? 'alive' : runway.defaultAlive ? 'not yet' : null;
+  return alive ? `${months} · ${alive}` : months;
+}

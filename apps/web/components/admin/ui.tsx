@@ -100,14 +100,74 @@ export function buttonVariants({
   );
 }
 
-/** A small mono heading over a block ("TODAY", "THIS WEEK"), with an optional info icon. */
-export function SectionLabel({ children, info, id }: { children: ReactNode; info?: ReactNode; id?: string }) {
+/**
+ * A small mono heading over a block ("TODAY", "THIS WEEK"), with an optional
+ * info icon and an optional quiet link on the right ("Metrics ›").
+ */
+export function SectionLabel({
+  children,
+  info,
+  id,
+  action,
+}: {
+  children: ReactNode;
+  info?: ReactNode;
+  id?: string;
+  action?: ReactNode;
+}) {
   return (
     <div className="mb-3 flex items-center gap-1.5">
       <h2 id={id} className="font-mono text-[11px] uppercase tracking-[0.14em] text-content-tertiary">
         {children}
       </h2>
       {info}
+      {action ? <div className="ml-auto">{action}</div> : null}
+    </div>
+  );
+}
+
+/**
+ * shadcn's ToggleGroup (type="single"): a few options side by side, one on.
+ * Drawn as a segmented control; a radio group to assistive tech.
+ */
+export function ToggleGroup<T extends string>({
+  value,
+  options,
+  onValueChange,
+  label,
+  className,
+}: {
+  value: T;
+  options: Array<{ value: T; label: ReactNode }>;
+  onValueChange: (value: T) => void;
+  /** What the group chooses, for screen readers ("Currency"). */
+  label: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cn('grid auto-cols-fr grid-flow-col gap-1 rounded-xl border border-stroke-default bg-bg-elevated p-1', className)}
+    >
+      {options.map((option) => {
+        const on = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onValueChange(option.value)}
+            className={cn(
+              'motion-focus h-9 rounded-lg text-sm transition-colors',
+              on ? 'bg-bg-hover font-semibold text-content-primary' : 'text-content-secondary hover:text-content-primary'
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

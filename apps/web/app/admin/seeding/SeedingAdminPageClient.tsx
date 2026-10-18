@@ -286,7 +286,6 @@ export default function SeedingAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Admin</p>
       <h1 className="mt-2 flex items-center gap-1 font-display text-3xl font-semibold">
         Seeding
         <InfoTip

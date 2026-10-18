@@ -323,9 +323,6 @@ export default function WaitlistAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-        Admin
-      </p>
       <h1 className="mt-2 font-display text-3xl font-semibold">Waitlist</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
         Marketing-site waitlist signups, straight from the Neon database. Showing

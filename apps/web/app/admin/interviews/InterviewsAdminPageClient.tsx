@@ -83,9 +83,6 @@ export default function InterviewsAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">
-        Admin
-      </p>
       <h1 className="mt-2 font-display text-3xl font-semibold">
         Interviews
         <span className="ml-3 align-middle font-sans text-base font-normal text-content-tertiary">

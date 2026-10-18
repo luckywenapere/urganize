@@ -126,6 +126,19 @@ export default function MetricsAdminPageClient() {
     };
   }, [checked, includeTeam, load]);
 
+  // Deep links from the Overview tiles (#metrics-now, #metrics-active,
+  // #metrics-accounts, 2026-10-18): the sections only exist once the numbers
+  // have loaded, so the browser's own jump finds nothing. Jump once, then.
+  const jumped = useRef(false);
+  const hasMetrics = Boolean(payload?.metrics);
+  useEffect(() => {
+    if (!hasMetrics || jumped.current) return;
+    jumped.current = true;
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    window.requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }));
+  }, [hasMetrics]);
+
   const toggleTeam = () => {
     const next = !includeTeam;
     setIncludeTeam(next);
@@ -150,7 +163,6 @@ export default function MetricsAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-content-tertiary">Admin</p>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-1.5">
           <h1 className="font-display text-2xl font-semibold text-content-primary">Metrics</h1>

@@ -156,9 +156,6 @@ export default function UrgansAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-content-tertiary">
-        Admin
-      </p>
       <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">
         UrgAns actions
       </h1>

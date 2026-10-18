@@ -140,7 +140,6 @@ export default function ClaimsAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-content-tertiary">Admin</p>
       <div className="mt-2 flex items-center gap-2">
         <h1 className="font-display text-2xl font-semibold text-content-primary">Claims</h1>
         <InfoTip

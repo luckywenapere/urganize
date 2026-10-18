@@ -16,7 +16,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { supabase } from '@/lib/supabase/client';
-import { ADMIN_SECTIONS } from '@/lib/admin-sections';
 import { updatedAgo, type AdminOverview } from '@/lib/admin-overview';
 import { AdminOverviewSkeleton, AdminOverviewView } from '@/components/admin/AdminOverviewView';
 import { Card, cn } from '@/components/admin/ui';
@@ -138,7 +137,7 @@ export default function AdminHubClient() {
       {!checked || (!overview && !error) ? (
         <AdminOverviewSkeleton />
       ) : overview ? (
-        <AdminOverviewView overview={overview} dashboards={ADMIN_SECTIONS.length} />
+        <AdminOverviewView overview={overview} />
       ) : (
         <Card role="alert" className="mt-6 p-4 text-sm text-content-secondary">
           {error}

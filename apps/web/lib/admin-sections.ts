@@ -1,11 +1,16 @@
-// Every internal dashboard, and which of them the side menu shows
-// (iteration 4, 2026-10-09; slimmed 2026-10-18, URG-369, founder approved the
-// mock: "Perfect").
+// Every internal dashboard, and which of them the admin menu shows
+// (iteration 4, 2026-10-09; slimmed 2026-10-18, URG-369; bottom bar on phone
+// 2026-10-18, founder approved the mock: "Sure").
 //
-// THE MENU is six rows, in this order: Overview, Scoreboard, Metrics, Teams,
-// Emails, More (ADMIN_PRIMARY_NAV). Everything else sits behind More, which
-// opens /admin/more: the full list, grouped. The Overview's single
-// "All dashboards" row opens the same page. Nothing was deleted to get here:
+// THE MENU is four tabs, in this order: Overview, Teams, Emails, More
+// (ADMIN_PRIMARY_NAV). The phone draws them as a bottom bar with icon and
+// label (AdminNav, like the catalog's BottomBar); the desktop sidebar draws
+// the same list, so the two cannot drift. Everything else sits behind More,
+// which opens /admin/more: the full list, grouped, with Runway on top.
+// Scoreboard and Metrics left the tabs: the Overview's "Today" header opens
+// Metrics and its "This week" header opens Scoreboard, the people tiles open
+// the matching Metrics section, and both are listed on More under Numbers.
+// Nothing was deleted to get here:
 //  - Growth is merged into Metrics (its accounts-per-month and waitlist
 //    sections render at the bottom of /admin/metrics; /admin/growth redirects).
 //  - Chappi left the menu; its route is kept and listed on More.
@@ -194,13 +199,11 @@ export function sectionsInGroup(group: AdminSectionGroup): AdminSection[] {
   return ADMIN_SECTIONS.filter((section) => section.group === group);
 }
 
-/** The side menu, in order. Overview and More are not dashboards of their own. */
+/** The admin menu, in order. Overview and More are not dashboards of their own. */
 export type AdminNavEntry = { key: string; label: string; href: string; exact?: boolean };
 
 export const ADMIN_PRIMARY_NAV: AdminNavEntry[] = [
   { key: 'overview', label: 'Overview', href: '/admin', exact: true },
-  { key: 'scoreboard', label: 'Scoreboard', href: '/admin/scoreboard' },
-  { key: 'metrics', label: 'Metrics', href: '/admin/metrics' },
   { key: 'teams', label: 'Teams', href: '/admin/teams' },
   { key: 'emails', label: 'Emails', href: '/admin/emails' },
   { key: 'more', label: 'More', href: '/admin/more' },
@@ -208,8 +211,29 @@ export const ADMIN_PRIMARY_NAV: AdminNavEntry[] = [
 
 const PRIMARY_KEYS = new Set(ADMIN_PRIMARY_NAV.map((item) => item.key));
 
-/** The dashboards only reachable through More (the count on the More row). */
+/** The dashboards only reachable through More (the rows on More, and its count). */
 export const ADMIN_MORE_SECTIONS: AdminSection[] = ADMIN_SECTIONS.filter((section) => !PRIMARY_KEYS.has(section.key));
+
+/** More's rows of one group, in the order they show. */
+export function moreSectionsInGroup(group: AdminSectionGroup): AdminSection[] {
+  return ADMIN_MORE_SECTIONS.filter((section) => section.group === group);
+}
+
+/** More's search: a row matches on its label or its one-line description. */
+export function matchesSearch(section: Pick<AdminSection, 'label' | 'description'>, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return section.label.toLowerCase().includes(q) || section.description.toLowerCase().includes(q);
+}
+
+/**
+ * Pages that left the tabs but belong to one: their back button names that tab
+ * and the bar lights it. Scoreboard and Metrics are read from the Overview.
+ */
+const PARENT_TAB: Record<string, string> = {
+  scoreboard: 'overview',
+  metrics: 'overview',
+};
 
 /** Old addresses that now live somewhere else. */
 export const ADMIN_REDIRECTS: Record<string, string> = {
@@ -220,14 +244,32 @@ function under(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Which menu row is lit for a page: its own row, or More for anything behind it. */
+function clean(pathname: string): string {
+  return (pathname || '').split(/[?#]/)[0].replace(/\/+$/, '') || '/admin';
+}
+
+/** Which tab is lit for a page: its own tab, its parent's, or More for anything behind it. */
 export function activeNavKey(pathname: string): string | null {
-  const path = (pathname || '').split(/[?#]/)[0].replace(/\/+$/, '') || '/admin';
+  const path = clean(pathname);
   if (path === '/admin') return 'overview';
   for (const item of ADMIN_PRIMARY_NAV) {
     if (item.exact) continue;
     if (under(path, item.href)) return item.key;
   }
-  if (ADMIN_MORE_SECTIONS.some((section) => under(path, section.href))) return 'more';
-  return null;
+  const section = ADMIN_MORE_SECTIONS.find((entry) => under(path, entry.href));
+  if (!section) return null;
+  return PARENT_TAB[section.key] ?? 'more';
+}
+
+/**
+ * Where a page's back button goes: the tab it sits under, by that tab's name.
+ * Null on a tab itself (the bar is the way around) and on pages outside /admin.
+ */
+export function adminBackTarget(pathname: string): { label: string; href: string } | null {
+  const path = clean(pathname);
+  if (ADMIN_PRIMARY_NAV.some((item) => item.href === path)) return null;
+  const key = activeNavKey(path);
+  if (!key) return null;
+  const tab = ADMIN_PRIMARY_NAV.find((item) => item.key === key);
+  return tab ? { label: tab.label, href: tab.href } : null;
 }

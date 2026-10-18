@@ -75,7 +75,6 @@ export default function ProfileFunnelAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-content-tertiary">Admin</p>
       <h1 className="mt-2 font-display text-3xl font-semibold">Profile funnel</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
         The loop from a credit to a sign-up, in the last {data.windowDays} days (since {formatDate(data.since)}). Each

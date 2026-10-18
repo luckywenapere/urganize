@@ -169,7 +169,6 @@ export default function FeaturedAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-content-tertiary">Admin</p>
       <h1 className="mt-2 font-display text-2xl text-content-primary">Featured</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
         The people shown first in the directory. Up to {payload?.perRole ?? 6} per role, one quarter

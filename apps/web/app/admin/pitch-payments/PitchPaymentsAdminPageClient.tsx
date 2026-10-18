@@ -222,7 +222,6 @@ export default function PitchPaymentsAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-content-tertiary">Admin</p>
       <h1 className="mt-2 font-display text-2xl font-semibold text-content-primary">Pitch payments</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-content-secondary">
         Bank accounts to approve, checkouts that need a look, and refunds that did not go through on

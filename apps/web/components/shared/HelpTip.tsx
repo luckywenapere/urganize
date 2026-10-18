@@ -172,9 +172,12 @@ export function HelpTip({
   label: freeLabel,
   prefer = 'bottom',
   className = '',
+  overSheet = false,
 }: TipWords & {
   prefer?: 'right' | 'bottom';
   className?: string;
+  /** The tip sits on something inside a sheet (z-[170]): draw it above. */
+  overSheet?: boolean;
 }) {
   const label = helpKey ? HELP_COPY[helpKey].label : (freeLabel as string);
   const panelId = useId();
@@ -254,6 +257,7 @@ export function HelpTip({
         prefer={prefer}
         id={panelId}
         onDismiss={close}
+        overSheet={overSheet}
       />
     </>
   );
@@ -269,10 +273,13 @@ export function InfoTip({
   label,
   text,
   className = '',
+  overSheet = false,
 }: {
   label: string;
   text: string;
   className?: string;
+  /** The tip sits inside a sheet (z-[170]): draw it above the sheet. */
+  overSheet?: boolean;
 }) {
-  return <HelpTip label={label} text={text} className={className} />;
+  return <HelpTip label={label} text={text} className={className} overSheet={overSheet} />;
 }

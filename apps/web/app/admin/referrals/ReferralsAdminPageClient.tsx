@@ -156,7 +156,6 @@ export default function ReferralsAdminPageClient() {
 
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-content-tertiary">Admin</p>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <h1 className="font-display text-2xl font-semibold text-content-primary">Referrals</h1>
         <button type="button" onClick={() => void load()} disabled={loading} className={BUTTON}>
