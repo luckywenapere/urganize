@@ -85,7 +85,7 @@ export function LoadingScreen({
   //    the difference (--boot-shift, same script). 0 in a browser.
   const content = (
     <div
-      className="urg-boot-frame flex min-h-screen items-center justify-center px-4"
+      className="urg-boot-frame relative flex min-h-screen items-center justify-center px-4"
       role="status"
       aria-live="polite"
       data-boot-loader=""
@@ -101,6 +101,21 @@ export function LoadingScreen({
         style={{ width: `${BOOT_MARK_WIDTH}px` }}
       />
       <span className="sr-only">{title}</span>
+      {/* "from Urganization", the company lockup under the product, the way
+          Meta signs its apps (founder, 2026-10-18: official logo is the
+          original multi-line mark centred over the wordmark). Bottom of the
+          frame, above the home indicator. Decorative: aria-hidden. */}
+      <div className="urg-boot-from" aria-hidden="true" data-boot-from="">
+        <span className="urg-boot-from-label">from</span>
+        {/* eslint-disable-next-line @next/next/no-img-element -- static SVG, no optimizer needed */}
+        <img
+          src="/images/urganization-logo-stacked.svg"
+          alt=""
+          width={124}
+          height={60}
+          className="app-wordmark urg-boot-from-logo"
+        />
+      </div>
     </div>
   );
 

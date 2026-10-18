@@ -22,6 +22,13 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.158.8",
+    date: "October 18, 2026",
+    highlights: [
+      "The app's load screen is now signed \"from Urganization\" along the bottom, with the company's new official logo.",
+    ],
+  },
+  {
     version: "1.158.7",
     date: "October 18, 2026",
     highlights: [
