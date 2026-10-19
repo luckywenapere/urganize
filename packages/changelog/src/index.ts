@@ -41,6 +41,15 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.160.4",
+    tag: "Rollouts",
+    date: "October 19, 2026",
+    listed: false,
+    highlights: [
+      "Cancelling a send-to-distributor task now drops that send: it no longer counts as unsent or late in the handoff, and shows quietly as cancelled on the Distribute step. With every send cancelled, the handoff line goes away.",
+    ],
+  },
+  {
     version: "1.160.3",
     tag: "Account",
     date: "October 19, 2026",

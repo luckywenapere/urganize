@@ -457,6 +457,12 @@ export async function applyHandoffAction(
     return { ok: true };
   }
 
+  // A dropped send (its task cancelled) is undone on the task, not here: Mark
+  // sent or reopen would quietly un-cancel it.
+  if (view.status === 'dropped') {
+    return { ok: false, status: 409, error: 'That send was cancelled. Restore its task first.' };
+  }
+
   if (change.action === 'approve') {
     if (view.status !== 'uploaded' && view.status !== 'approved') {
       return { ok: false, status: 409, error: 'There is nothing to approve yet.' };

@@ -3,7 +3,7 @@
 import { ChevronRight } from '@/components/icons';
 import { useHandoff } from '@/components/releases/useHandoff';
 import { useSceneOverlay } from '@/components/workspace/useSceneOverlay';
-import { daysLate, formatDaysLate, formatHandoffDay, localYmd, sentCount } from '@/lib/handoff';
+import { handoffChipSummary, localYmd } from '@/lib/handoff';
 
 const MONO = 'font-mono text-[11px] uppercase tracking-[0.08em]';
 
@@ -11,24 +11,23 @@ const MONO = 'font-mono text-[11px] uppercase tracking-[0.08em]';
  * The handoff on the rollout line on a computer (URG-322, 2026-10-16): one
  * 36px chip, "Handoff · 0 of 3 sent · due Fri 30 Oct", red once the files are
  * late, opening the Distribute step. Draws nothing until the handoff has
- * answered, so a slow read never puts a wrong chip on the line.
+ * answered, so a slow read never puts a wrong chip on the line, and nothing
+ * when every send was dropped (its task cancelled).
  */
 export function HandoffChip({ releaseId }: { releaseId: string }) {
   const { data } = useHandoff(releaseId);
   const { openScene } = useSceneOverlay();
   if (!data) return null;
 
-  const sent = sentCount(data.items.map((item) => item.status));
-  const allSent = sent === data.items.length;
-  const late = !allSent && data.dueDate ? daysLate(data.dueDate, localYmd()) : 0;
-  const tail = allSent
-    ? null
-    : late > 0
-      ? formatDaysLate(late)
-      : data.dueDate
-        ? `due ${formatHandoffDay(data.dueDate)}`
-        : null;
-  const summary = [`${sent} of ${data.items.length} sent`, tail].filter(Boolean).join(' · ');
+  // A cancelled send was dropped (Oyin, Oct 19, 2026): it leaves both numbers,
+  // never makes the chip late, and with every send dropped there is no chip.
+  const chip = handoffChipSummary(
+    data.items.map((item) => item.status),
+    data.dueDate,
+    localYmd()
+  );
+  if (!chip) return null;
+  const { allSent, late, summary } = chip;
 
   return (
     <button

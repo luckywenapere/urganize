@@ -6,11 +6,13 @@ import { fixDestinationFor, type FixAvailability } from '@/lib/distribution-fix'
 import {
   HANDOFF_ITEM_NOUNS,
   HANDOFF_LEAD_CHOICES,
+  activeCount,
   daysLate,
   formatDaysLate,
   formatHandoffDay,
   handoffDueDate,
   handoffHeader,
+  isRowLate,
   localYmd,
   rowActionFor,
   rowActionLabel,
@@ -70,6 +72,10 @@ type RowTone = { late: boolean };
 
 function StatusDot({ item, late }: { item: HandoffItemView } & RowTone) {
   if (item.status === 'sent') return <SentMark />;
+  // Dropped (its task cancelled): the timeline's cancelled mark, quiet.
+  if (item.status === 'dropped') {
+    return <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full border border-stroke-strong bg-bg-surface" />;
+  }
   if (late) return <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-status-error" />;
   if (item.status === 'missing') {
     return <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full border-[1.5px] border-content-tertiary" />;
@@ -83,6 +89,7 @@ const STATUS_WORD: Record<HandoffItemView['status'], string> = {
   uploaded: 'Uploaded',
   approved: 'Approved',
   sent: 'Sent',
+  dropped: 'Cancelled',
 };
 
 /** The master has no file in the app, so "Uploaded" would be untrue: it is
@@ -92,6 +99,7 @@ const statusWord = (item: HandoffItemView): string =>
 
 function statusTone(item: HandoffItemView, late: boolean): string {
   if (late) return 'text-status-error';
+  if (item.status === 'dropped') return 'text-content-tertiary';
   if (item.status === 'missing') return 'text-content-secondary';
   if (item.status === 'uploaded') return 'text-content-primary';
   return 'text-brand';
@@ -245,6 +253,8 @@ export function HandoffView({
     sentDates: data.items.map((item) => item.sentAt),
   });
   const sent = sentCount(statuses);
+  // Dropped sends (task cancelled) are out of "N of M sent" and never late.
+  const total = activeCount(statuses);
   const lateDays = data.dueDate ? daysLate(data.dueDate, today) : 0;
   const memberById = useMemo(() => new Map(data.members.map((member) => [member.userId, member])), [data.members]);
   const toneById = useMemo(
@@ -289,7 +299,8 @@ export function HandoffView({
     return { label, run: () => void onChange({ action: action === 'approve' ? 'approve' : 'send', item: item.key }) };
   };
 
-  const rowLate = (item: HandoffItemView) => item.status !== 'sent' && lateDays > 0;
+  const rowLate = (item: HandoffItemView) => isRowLate(item.status, data.dueDate, today);
+  const isDropped = (item: HandoffItemView) => item.status === 'dropped';
 
   const openOwner = (item: HandoffItemKey) => {
     ownerAnchorRef.current = ownerAnchors.current[item] ?? null;
@@ -325,13 +336,17 @@ export function HandoffView({
   }
 
   const title =
-    header.kind === 'all_sent'
-      ? 'All sent'
-      : header.kind === 'late'
-        ? formatDaysLate(header.days)
-        : `Due ${formatHandoffDay(header.dueDate)}`;
+    header.kind === 'all_dropped'
+      ? 'Nothing to send'
+      : header.kind === 'all_sent'
+        ? 'All sent'
+        : header.kind === 'late'
+          ? formatDaysLate(header.days)
+          : `Due ${formatHandoffDay(header.dueDate)}`;
   const metaParts =
-    header.kind === 'all_sent'
+    header.kind === 'all_dropped'
+      ? [data.releaseDate ? `Release ${formatHandoffDay(data.releaseDate)}` : null]
+      : header.kind === 'all_sent'
       ? [
           header.sentOn ? `Sent ${formatHandoffDay(header.sentOn)}` : null,
           data.releaseDate ? `Release ${formatHandoffDay(data.releaseDate)}` : null,
@@ -352,7 +367,9 @@ export function HandoffView({
           >
             {title}
           </h3>
-          <span className={`${MONO} shrink-0 whitespace-nowrap pb-1 text-content-secondary`}>{`${sent} of ${data.items.length} sent`}</span>
+          {total > 0 ? (
+            <span className={`${MONO} shrink-0 whitespace-nowrap pb-1 text-content-secondary`}>{`${sent} of ${total} sent`}</span>
+          ) : null}
         </div>
         <p className={`${MONO} mt-1.5 text-content-tertiary`}>
           {metaParts.filter(Boolean).join(' · ')}
@@ -371,16 +388,23 @@ export function HandoffView({
             </>
           ) : null}
         </p>
-        <div
-          className="mt-2.5 h-0.5 bg-stroke-strong"
-          role="progressbar"
-          aria-label="Handoff sent"
-          aria-valuemin={0}
-          aria-valuemax={3}
-          aria-valuenow={sent}
-        >
-          <div className="h-0.5 bg-brand transition-[width] duration-base" style={{ width: `${Math.round((sent / 3) * 100)}%` }} />
-        </div>
+        {total > 0 ? (
+          <div
+            className="mt-2.5 h-0.5 bg-stroke-strong"
+            role="progressbar"
+            aria-label="Handoff sent"
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={sent}
+          >
+            <div
+              className="h-0.5 bg-brand transition-[width] duration-base"
+              style={{ width: `${Math.round((sent / total) * 100)}%` }}
+            />
+          </div>
+        ) : (
+          <div className="mt-2.5 h-0.5 bg-stroke-strong" aria-hidden="true" />
+        )}
         {saveError ? (
           <p className="mt-2 text-xs text-status-error" role="alert">
             {saveError}
@@ -395,14 +419,17 @@ export function HandoffView({
           const owner = memberById.get(item.ownerUserId) ?? null;
           const action = actionFor(item);
           return (
-            <li key={item.key} className="flex gap-3 border-t border-stroke-default p-4 first:border-t-0">
+            <li
+              key={item.key}
+              className={`flex gap-3 border-t border-stroke-default p-4 first:border-t-0 ${isDropped(item) ? 'opacity-55' : ''}`}
+            >
               <span className="flex w-3.5 shrink-0 justify-center pt-1.5">
                 <StatusDot item={item} late={late} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <span
-                    className={`text-[15px] font-semibold ${item.status === 'sent' ? 'text-content-secondary' : 'text-content-primary'}`}
+                    className={`text-[15px] font-semibold ${item.status === 'sent' ? 'text-content-secondary' : 'text-content-primary'} ${isDropped(item) ? 'line-through' : ''}`}
                   >
                     {item.label}
                   </span>
@@ -458,14 +485,14 @@ export function HandoffView({
             <div
               key={item.key}
               role="row"
-              className="grid h-16 grid-cols-[20px_1fr_2.4fr_1fr_1fr_88px_112px] items-center gap-4 border-b border-stroke-default px-5 last:border-b-0"
+              className={`grid h-16 grid-cols-[20px_1fr_2.4fr_1fr_1fr_88px_112px] items-center gap-4 border-b border-stroke-default px-5 last:border-b-0 ${isDropped(item) ? 'opacity-55' : ''}`}
             >
               <span role="cell" className="flex items-center">
                 <StatusDot item={item} late={late} />
               </span>
               <span
                 role="cell"
-                className={`truncate text-[15px] font-semibold ${item.status === 'sent' ? 'text-content-secondary' : 'text-content-primary'}`}
+                className={`truncate text-[15px] font-semibold ${item.status === 'sent' ? 'text-content-secondary' : 'text-content-primary'} ${isDropped(item) ? 'line-through' : ''}`}
               >
                 {item.label}
               </span>
@@ -487,7 +514,9 @@ export function HandoffView({
               <span role="cell" className={`text-sm ${late ? 'text-status-error' : 'text-content-secondary'}`}>
                 {item.status === 'sent'
                   ? formatHandoffDay(item.sentAt)
-                  : late
+                  : item.status === 'dropped'
+                    ? '—'
+                    : late
                     ? formatDaysLate(lateDays)
                     : formatHandoffDay(data.dueDate)}
               </span>
@@ -581,14 +610,14 @@ function OwnerControl({
     <>
       <Face member={owner} tone={tone} />
       <span className="truncate text-content-primary">{name}</span>
-      {caret && item.canAct && item.status !== 'sent' ? (
+      {caret && item.canAct && item.status !== 'sent' && item.status !== 'dropped' ? (
         <span aria-hidden="true" className="text-[10px] text-content-tertiary">
           ▾
         </span>
       ) : null}
     </>
   );
-  if (!item.canAct || item.status === 'sent') {
+  if (!item.canAct || item.status === 'sent' || item.status === 'dropped') {
     return <span className="flex min-w-0 items-center gap-2">{content}</span>;
   }
   return (
@@ -615,6 +644,7 @@ function DueText({
   lateDays: number;
   dueDate: string | null;
 }) {
+  if (item.status === 'dropped') return null;
   const text =
     item.status === 'sent'
       ? item.sentAt

@@ -12,6 +12,10 @@
  *                 and reopening it there is un-sending. A rollout with no plan yet has
  *                 no tasks (an empty rollout is how the app offers the planner), so
  *                 until then the sentAt in the record stands in for the task
+ *   - dropped     the item's task is cancelled (URG-399 follow-up, Oyin Oct 19, 2026):
+ *                 the team dropped that send, so it is neither sent nor owed. It
+ *                 leaves both "N of M sent" numbers, is never late, offers no action,
+ *                 and a handoff whose every row is dropped shows no chip
  *   - owner       the task's assignee, so the ordinary 7d / 3d / due / overdue
  *                 reminders reach them (notifications hang off tasks)
  *   - uploaded    NEVER stored. Derived from the check before distribution
@@ -251,7 +255,10 @@ export function isUploaded(item: HandoffItemKey, check: DistributionCheckResult,
 // Status
 // ---------------------------------------------------------------------------
 
-export type HandoffStatus = 'missing' | 'uploaded' | 'approved' | 'sent';
+export type HandoffStatus = 'missing' | 'uploaded' | 'approved' | 'sent' | 'dropped';
+
+/** A cancelled send task means the team dropped that send (Oyin, Oct 19, 2026). */
+export const isDroppedStatus = (status: HandoffStatus): boolean => status === 'dropped';
 
 export type HandoffTaskState = {
   id: string;
@@ -274,6 +281,8 @@ export function deriveHandoffStatus(input: {
   /** Marked sent before the rollout had a plan, so before there was a task. */
   sentWithoutTask?: boolean;
 }): HandoffStatus {
+  // Dropped first: a cancelled send is not owed, whatever state its file is in.
+  if (input.task?.status === 'cancelled') return 'dropped';
   if (!input.uploaded) return 'missing';
   if (input.task ? input.task.status === 'done' : input.sentWithoutTask) return 'sent';
   if (input.record.approvedAt && input.record.approvedFor && input.record.approvedFor === input.fingerprint) {
@@ -289,6 +298,7 @@ export function rowActionFor(status: HandoffStatus): HandoffRowAction {
   if (status === 'missing') return 'fix';
   if (status === 'uploaded') return 'approve';
   if (status === 'approved') return 'send';
+  // Sent and dropped offer nothing: a dropped send is the team's call, undone on the task.
   return null;
 }
 
@@ -306,6 +316,7 @@ export function rowActionLabel(item: HandoffItemKey, action: HandoffRowAction): 
 
 export type HandoffHeader =
   | { kind: 'no_date' }
+  | { kind: 'all_dropped' }
   | { kind: 'all_sent'; sentOn: string | null }
   | { kind: 'late'; days: number; dueDate: string }
   | { kind: 'due'; dueDate: string };
@@ -316,7 +327,10 @@ export function handoffHeader(input: {
   statuses: readonly HandoffStatus[];
   sentDates: readonly (string | null)[];
 }): HandoffHeader {
-  if (input.statuses.length > 0 && input.statuses.every((status) => status === 'sent')) {
+  // Dropped sends are out of the count: neither sent nor owed.
+  const active = input.statuses.filter((status) => !isDroppedStatus(status));
+  if (input.statuses.length > 0 && active.length === 0) return { kind: 'all_dropped' };
+  if (active.length > 0 && active.every((status) => status === 'sent')) {
     const dates = input.sentDates.filter((value): value is string => Boolean(value)).sort();
     return { kind: 'all_sent', sentOn: dates.length ? dates[dates.length - 1].slice(0, 10) : null };
   }
@@ -327,6 +341,44 @@ export function handoffHeader(input: {
 
 export const sentCount = (statuses: readonly HandoffStatus[]): number =>
   statuses.filter((status) => status === 'sent').length;
+
+/** The rows that still count: every row but the dropped ones. The "M" in "N of M sent". */
+export const activeCount = (statuses: readonly HandoffStatus[]): number =>
+  statuses.filter((status) => !isDroppedStatus(status)).length;
+
+/** Whether one row reads late on `today`: owed (not sent, not dropped) past the due day. */
+export const isRowLate = (status: HandoffStatus, dueDate: string | null, today: string): boolean =>
+  status !== 'sent' && !isDroppedStatus(status) && daysLate(dueDate, today) > 0;
+
+export type HandoffChipSummary = {
+  sent: number;
+  total: number;
+  allSent: boolean;
+  /** Days late, 0 when nothing owed is late. */
+  late: number;
+  /** "Handoff · 1 of 2 sent · 3 days late" without the "Handoff". */
+  summary: string;
+};
+
+/**
+ * What the rollout line's chip says, or null when there is nothing to show:
+ * every send dropped (Oyin, Oct 19, 2026), so no "0 of 0", or no rows at all.
+ * Dropped sends are out of both numbers and never make it late.
+ */
+export function handoffChipSummary(
+  statuses: readonly HandoffStatus[],
+  dueDate: string | null,
+  today: string,
+  formatDay: (ymd: string) => string = formatHandoffDay
+): HandoffChipSummary | null {
+  const total = activeCount(statuses);
+  if (total === 0) return null;
+  const sent = sentCount(statuses);
+  const allSent = sent === total;
+  const late = !allSent && dueDate ? daysLate(dueDate, today) : 0;
+  const tail = allSent ? null : late > 0 ? formatDaysLate(late) : dueDate ? `due ${formatDay(dueDate)}` : null;
+  return { sent, total, allSent, late, summary: [`${sent} of ${total} sent`, tail].filter(Boolean).join(' · ') };
+}
 
 // ---------------------------------------------------------------------------
 // Keeping the three tasks in step
