@@ -44,16 +44,16 @@ import { centeredHeadlineClass, wideContainerClass } from "./shared";
 // get done, no feature names or jargon ("handoff", "metadata").
 const ROWS = [
   {
-    title: "Get your song on playlists",
-    body: "Send it to playlist curators and Spotify and Apple Music editors, right from the release.",
+    title: "Get heard by the people who pick songs.",
+    body: "Pitch curators and Spotify and Apple Music editors right from the release, with your kit already attached.",
   },
   {
-    title: "Get your files to your distributor on time",
-    body: "The master, cover art and song details, each with who's doing it and by when.",
+    title: "Never miss your distributor’s deadline again.",
+    body: "The master, cover art and song details, each with an owner and a date. No last-week hunt for the WAV.",
   },
   {
-    title: "Find your artists' next opportunity",
-    body: "Opportunities that fit your artists, so you're not starting from zero after a release.",
+    title: "Don’t let the hype die after drop day.",
+    body: "Opportunities that fit your artists, so the next move is ready before the buzz fades.",
   },
 ] as const;
 
@@ -65,7 +65,7 @@ export function FeatureGridSection() {
         containerClassName={wideContainerClass}
       >
         <div className="mx-auto max-w-[52rem] text-center">
-          <h2 className={centeredHeadlineClass}>It also helps you</h2>
+          <h2 className={centeredHeadlineClass}>The jobs that usually slip through the cracks.</h2>
         </div>
 
         <ul className="mx-auto mt-12 max-w-[56rem] border-t border-[color:var(--marketing-border)]">
