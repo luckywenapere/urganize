@@ -19,7 +19,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 // Keep this date real — it moves only when the list changes.
-const LAST_UPDATED = "June 11, 2026";
+const LAST_UPDATED = "October 19, 2026";
 
 // Rule: this list reflects services actually in use. Add entries in the same
 // PR that introduces a new provider; remove them when the integration is
@@ -63,8 +63,23 @@ const subprocessors = [
   {
     name: "AI model provider (via our gateway)",
     purpose:
-      "Generating plan tailoring and status updates, only when you use the AI features",
+      "Powering UrgAns, only when you use it",
     data: "Release context (details, task progress). Never your uploaded files, and never used to train models",
+  },
+  {
+    name: "Sentry",
+    purpose: "Error monitoring",
+    data: "Error reports, which may include your account ID and the page you were on",
+  },
+  {
+    name: "Resend",
+    purpose: "Sign-in and account emails",
+    data: "Your email address and the message we send",
+  },
+  {
+    name: "The Real Music Distro",
+    purpose: "Distribution partner: getting releases to stores",
+    data: "Audio, artwork, release metadata and splits, only when you send a release",
   },
   {
     name: "WhatsApp (Meta)",

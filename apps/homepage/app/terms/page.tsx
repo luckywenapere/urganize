@@ -20,7 +20,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 // Real date discipline: moves only when the terms text changes.
-const LAST_UPDATED = "September 10, 2026";
+const LAST_UPDATED = "October 19, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Terms%20question%20-%20Urganize";
@@ -64,9 +64,10 @@ export default function TermsPage() {
             <Section number="02" title="The service">
               <p>
                 Urganize gives you one place to plan and run music releases:
-                a rollout plan generated from our hand-crafted templates, tasks
-                with owners and dependencies, file storage per release, event
-                milestones, and optional AI assistance. We improve the product
+                a release plan built from our templates, tasks with owners and
+                dates, file storage per release, press kits, event milestones,
+                pitching to curators and opportunities, distribution through
+                our partner, and UrgAns, our AI assistant. We improve the product
                 continuously: features may change, and we may add, modify, or
                 retire functionality.
               </p>
@@ -83,8 +84,9 @@ export default function TermsPage() {
 
             <Section number="04" title="Trial, subscriptions, and billing">
               <p>
-                New teams get a 3-day free trial of the full product with no
-                card required. The trial covers the whole team, not each
+                Urganize is in a waitlist beta. When your spot opens, your team
+                gets a 3-day free trial of the full product with no card
+                required. The trial covers the whole team, not each
                 person, so joining an existing team does not start a new one.
                 After the trial, continued use requires a paid subscription,
                 priced per team and paid monthly or once a year through
@@ -142,13 +144,14 @@ export default function TermsPage() {
               </p>
             </Section>
 
-            <Section number="07" title="AI features">
+            <Section number="07" title="UrgAns">
               <p>
-                AI-generated plans and status updates are drafts for you to
-                review and edit, not professional advice, and we don&apos;t
-                guarantee their accuracy or results. The product works without
-                AI. Templates and your own edits always take precedence. How
-                AI handles your data is covered in our{" "}
+                UrgAns can plan, add and update releases and tasks when you
+                ask it to. Check what it does. Its output is a draft for you to
+                review, not professional advice, and we don&apos;t guarantee
+                its accuracy or results. The product works without it. Each
+                plan comes with a monthly allowance of UrgAns credits, and
+                unused credits roll over. How UrgAns handles your data is covered in our{" "}
                 <Link
                   href="/privacy"
                   className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
@@ -159,7 +162,25 @@ export default function TermsPage() {
               </p>
             </Section>
 
-            <Section number="08" title="Ending your account">
+            <Section number="08" title="Distribution, pitching and press kits">
+              <p>
+                When you send a release to distribution, we pass its audio,
+                artwork and metadata to our distribution partner, The Real
+                Music Distro, and the partner&apos;s own terms also apply. You
+                confirm that you hold the rights to the release and that its
+                details (credits, splits, ISRC, UPC) are correct. Stores decide
+                on their own when a release goes live and whether to approve
+                it. Takedowns and changes go through us at your request.
+              </p>
+              <p>
+                Whatever you put in a pitch is shared with the curator or
+                opportunity you send it to. We don&apos;t promise placements,
+                replies or results. Anyone with a press-kit link can view that
+                press kit, so share it on purpose.
+              </p>
+            </Section>
+
+            <Section number="09" title="Ending your account">
               <p>
                 You can delete your account from Settings at any time. It
                 takes effect immediately and removes your data as described in
@@ -168,7 +189,7 @@ export default function TermsPage() {
               </p>
             </Section>
 
-            <Section number="09" title="Disclaimers and liability">
+            <Section number="10" title="Disclaimers and liability">
               <p>
                 Urganize is provided &ldquo;as is&rdquo;. We work hard to keep
                 it fast and available, but we don&apos;t guarantee
@@ -185,7 +206,7 @@ export default function TermsPage() {
               </p>
             </Section>
 
-            <Section number="10" title="Governing law">
+            <Section number="11" title="Governing law">
               <p>
                 These terms are governed by the laws of the Federal Republic of
                 Nigeria, and disputes are subject to the jurisdiction of
@@ -193,7 +214,7 @@ export default function TermsPage() {
               </p>
             </Section>
 
-            <Section number="11" title="Changes to these terms">
+            <Section number="12" title="Changes to these terms">
               <p>
                 We update these terms when the product or our practices
                 actually change. We&apos;ll post the new version here and
@@ -203,7 +224,7 @@ export default function TermsPage() {
               </p>
             </Section>
 
-            <Section number="12" title="Contact">
+            <Section number="13" title="Contact">
               <p>
                 Questions about these terms:{" "}
                 <a

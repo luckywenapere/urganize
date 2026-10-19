@@ -21,7 +21,7 @@ export const metadata: Metadata = buildPageMetadata({
 // Keep this date REAL. It only moves when the policy text actually changes —
 // never wire it to new Date() (the old version did, which made the policy
 // claim it was updated every day).
-const LAST_UPDATED = "September 25, 2026";
+const LAST_UPDATED = "October 19, 2026";
 
 const CONTACT_HREF =
   "mailto:contact@urganize.app?subject=Privacy%20question%20-%20Urganize";
@@ -73,8 +73,8 @@ export default function PrivacyPolicy() {
                 PostHog) to understand product usage.
               </li>
               <li>
-                — AI features send release context to our AI provider only to
-                generate output for you. We do not use your content to train
+                — UrgAns sends the release context it needs to our AI provider,
+                only to do what you asked. We do not use your content to train
                 AI models.
               </li>
               <li>
@@ -177,9 +177,8 @@ export default function PrivacyPolicy() {
             <Section number="04" title="How we use it">
               <p>— To provide and operate Urganize.</p>
               <p>
-                — To generate your release rollout plan and, when AI features
-                are enabled, AI-tailored plans and status updates (see section
-                05).
+                — To build your release plan and, when you use UrgAns, to do
+                what you ask it to (see section 05).
               </p>
               <p>
                 — To improve performance, reliability, and the product itself.
@@ -189,9 +188,17 @@ export default function PrivacyPolicy() {
               </p>
               <p>— To prevent fraud, abuse, and security issues.</p>
               <p>
-                We do not sell your personal data, and we do not share your
-                release data with anyone except the service providers listed
-                on our{" "}
+                We share data outside Urganize only when you act: audio,
+                artwork and release metadata go to our distribution partner
+                when you send a release; what you put in a pitch goes to the
+                curator or opportunity you send it to; and anyone with a
+                press-kit link can see that press kit.
+              </p>
+              <p>
+                We do not sell your personal data, and beyond those, we do not
+                share your release data with anyone except the service
+                providers (including error monitoring and account email)
+                listed on our{" "}
                 <Link
                   href="/subprocessors"
                   className="font-medium text-[var(--marketing-accent)] hover:opacity-80"
@@ -204,12 +211,10 @@ export default function PrivacyPolicy() {
 
             <Section number="05" title="AI processing">
               <p>
-                Urganize has two AI features: tailoring your release plan to
-                your context, and generating a written status update from your
-                release&apos;s current state. When you use them, the relevant
-                release context (release details, task progress, not your
-                uploaded files) is sent through our AI gateway to a third-party
-                AI model provider solely to generate the output you asked for.
+                When you use UrgAns, the release details, tasks and messages it
+                needs are sent through our AI gateway to a third-party AI model
+                provider, solely to do what you asked. Your uploaded files are
+                never sent.
               </p>
               <p>
                 If you talk to UrgAns instead of typing, the voice clip is sent
