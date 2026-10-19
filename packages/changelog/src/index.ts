@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.161.6",
+    tag: "App",
+    date: "October 19, 2026",
+    highlights: [
+      "On your phone, tapping Relationships, Opportunities, Connections, Settings or search in the account menu opens it again.",
+    ],
+  },
+  {
     version: "1.161.5",
     tag: "App",
     date: "October 19, 2026",

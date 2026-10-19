@@ -66,9 +66,13 @@ export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktopViewport();
 
-  // Desktop popover: a click outside or Escape closes it.
+  // Desktop popover: a click outside or Escape closes it. Desktop only: on a
+  // phone the menu is a SwipeSheet portalled to <body>, outside wrapRef, so
+  // this listener would read every tap on a row as "outside" and close the
+  // sheet on pointerdown, before the row's click could fire. The
+  // sheet has its own scrim and close button.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !isDesktop) return;
     const onDown = (event: PointerEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(event.target as Node)) setOpen(false);
     };
@@ -81,7 +85,7 @@ export function AvatarMenu({ showHelp }: { showHelp: boolean }) {
       document.removeEventListener('pointerdown', onDown);
       window.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, isDesktop]);
 
   const close = () => setOpen(false);
   const openConnections = () => {
