@@ -2,8 +2,8 @@
 //
 // Three top tabs you swipe between, Home · UrgAns · Artists, and one avatar
 // menu for everything else. The bottom bar and the More sheet go away while it
-// is on. Built behind a per-person switch (see useSwipeNavStore) so Oyin can
-// see it on phone and desktop before anyone else gets it.
+// is on. On for everyone since v1.160.5; a person can opt out (see
+// useSwipeNavStore).
 //
 // PURE. Everything here is maths and data the components read, so the rules
 // that decide a gesture (direction lock, settle, rubber band) and the spring are
@@ -22,21 +22,22 @@ export const SWIPE_TABS: readonly SwipeTab[] = [
   { key: 'artists', label: 'Artists', href: ARTISTS_HREF },
 ];
 
-/** The user_metadata key that turns the swipe navigation on for one person. */
+/** The user_metadata key a person's own choice is kept in (false = classic). */
 export const SWIPE_NAV_METADATA_KEY = 'swipe_nav';
 
 /** ?nav=swipe turns it on for the signed-in person, ?nav=classic turns it off. */
 export const SWIPE_NAV_QUERY_KEY = 'nav';
 
 /**
- * On for everyone when the build flag says so; otherwise only for a person whose
- * account carries swipe_nav: true. A per-person "false" never beats the build
- * flag: once it is on for everyone, it is on.
+ * On for everyone by default (Oyin, Oct 19, 2026). A person whose account
+ * carries swipe_nav: false (what ?nav=classic writes) keeps the classic nav.
+ * The build flag NEXT_PUBLIC_FEATURE_SWIPE_NAV='false' is the kill switch: off
+ * for everyone, whatever the account says.
  */
-export function resolveSwipeNav(input: { allOn: boolean; metadata: Record<string, unknown> | null | undefined }): boolean {
-  if (input.allOn) return true;
+export function resolveSwipeNav(input: { allOff?: boolean; metadata: Record<string, unknown> | null | undefined }): boolean {
+  if (input.allOff) return false;
   const value = input.metadata?.[SWIPE_NAV_METADATA_KEY];
-  return value === true || value === 'true';
+  return !(value === false || value === 'false');
 }
 
 /** What a ?nav= value asks for: true (on), false (off), or null (nothing). */

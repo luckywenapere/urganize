@@ -14,20 +14,19 @@ import {
 
 // The swipe navigation's switch and its shared state (URG-380).
 //
-// THE SWITCH. On for everyone when NEXT_PUBLIC_FEATURE_SWIPE_NAV is 'true' (a
-// build flag, so a deploy). Otherwise per person, read from the account's own
-// auth user_metadata.swipe_nav, so it can be turned on for one person with no
-// deploy and no migration: Supabase dashboard (Authentication > Users > the
-// user > raw user metadata), or that person opening any app page with
-// ?nav=swipe (?nav=classic turns it back off). Not discoverable; the old nav
-// is untouched for everybody else.
+// THE SWITCH. On for everyone by default (Oyin, Oct 19, 2026). A person opts
+// out with ?nav=classic on any app page (written to their auth
+// user_metadata.swipe_nav as false; ?nav=swipe turns it back on), or by setting
+// swipe_nav: false in the Supabase dashboard. NEXT_PUBLIC_FEATURE_SWIPE_NAV set
+// to 'false' is the kill switch: classic nav for everyone (a build flag, so a
+// deploy).
 //
 // The answer is cached in localStorage per user so a reload draws the right
 // chrome as soon as the browser takes over, then confirmed against the
 // session. The server always renders the old chrome (it cannot know), which is
 // the same frame the auth skeleton already shows.
 
-const ALL_ON = process.env.NEXT_PUBLIC_FEATURE_SWIPE_NAV === 'true';
+const ALL_OFF = process.env.NEXT_PUBLIC_FEATURE_SWIPE_NAV === 'false';
 const CACHE_KEY = 'urganize.swipe-nav.v1';
 
 type Handoff = {
@@ -44,7 +43,7 @@ type Handoff = {
 };
 
 type SwipeNavState = {
-  /** null until the browser has read it. */
+  /** On by default; an opted-out account turns it off once the session is read. */
   enabled: boolean | null;
   /** Open sheets that freeze the pager (sessions, avatar, connections). */
   locks: number;
@@ -59,11 +58,11 @@ type SwipeNavState = {
 };
 
 export const useSwipeNavStore = create<SwipeNavState>((set, get) => ({
-  enabled: ALL_ON ? true : null,
+  enabled: !ALL_OFF,
   locks: 0,
   go: null,
   handoff: null,
-  setEnabled: (value) => set({ enabled: ALL_ON ? true : value }),
+  setEnabled: (value) => set({ enabled: ALL_OFF ? false : value }),
   lock: () => {
     set({ locks: get().locks + 1 });
     let released = false;
@@ -78,7 +77,7 @@ export const useSwipeNavStore = create<SwipeNavState>((set, get) => ({
 }));
 
 registerSignOutReset('swipe-nav', () => {
-  useSwipeNavStore.setState({ enabled: ALL_ON ? true : false, handoff: null });
+  useSwipeNavStore.setState({ enabled: !ALL_OFF, handoff: null });
 });
 
 function readCache(userId: string): boolean | null {
@@ -109,8 +108,8 @@ let started = false;
 export function startSwipeNav(): void {
   if (started || typeof window === 'undefined') return;
   started = true;
-  if (ALL_ON) {
-    useSwipeNavStore.getState().setEnabled(true);
+  if (ALL_OFF) {
+    useSwipeNavStore.getState().setEnabled(false);
     return;
   }
   void (async () => {
@@ -122,7 +121,7 @@ export function startSwipeNav(): void {
     }
     const cached = readCache(user.id);
     if (cached !== null) useSwipeNavStore.getState().setEnabled(cached);
-    let on = resolveSwipeNav({ allOn: ALL_ON, metadata: user.user_metadata });
+    let on = resolveSwipeNav({ allOff: ALL_OFF, metadata: user.user_metadata });
 
     const params = new URLSearchParams(window.location.search);
     const asked = readSwipeNavQuery(params.get(SWIPE_NAV_QUERY_KEY));
@@ -142,7 +141,7 @@ export function startSwipeNav(): void {
   supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT' || !session?.user) return;
     if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-      const on = resolveSwipeNav({ allOn: ALL_ON, metadata: session.user.user_metadata });
+      const on = resolveSwipeNav({ allOff: ALL_OFF, metadata: session.user.user_metadata });
       writeCache(session.user.id, on);
       useSwipeNavStore.getState().setEnabled(on);
     }

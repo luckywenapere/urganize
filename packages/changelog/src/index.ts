@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.160.5",
+    tag: "App",
+    date: "October 19, 2026",
+    highlights: [
+      "Swipe navigation is now on for everyone on phones. Swipe left and right between Home, UrgAns and Artists; your avatar opens your account and connections.",
+    ],
+  },
+  {
     version: "1.160.4",
     tag: "Rollouts",
     date: "October 19, 2026",

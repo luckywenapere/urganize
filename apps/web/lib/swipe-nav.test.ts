@@ -19,13 +19,16 @@ import {
 } from './swipe-nav';
 
 describe('swipe navigation switch', () => {
-  it('is off unless the account or the build turns it on', () => {
-    expect(resolveSwipeNav({ allOn: false, metadata: {} })).toBe(false);
-    expect(resolveSwipeNav({ allOn: false, metadata: null })).toBe(false);
-    expect(resolveSwipeNav({ allOn: false, metadata: { swipe_nav: true } })).toBe(true);
-    expect(resolveSwipeNav({ allOn: false, metadata: { swipe_nav: 'true' } })).toBe(true);
-    expect(resolveSwipeNav({ allOn: false, metadata: { swipe_nav: 'yes' } })).toBe(false);
-    expect(resolveSwipeNav({ allOn: true, metadata: { swipe_nav: false } })).toBe(true);
+  it('is on by default, with swipe_nav: false and the kill switch as the only ways off', () => {
+    expect(resolveSwipeNav({ metadata: {} })).toBe(true);
+    expect(resolveSwipeNav({ metadata: null })).toBe(true);
+    expect(resolveSwipeNav({ metadata: undefined })).toBe(true);
+    expect(resolveSwipeNav({ metadata: { swipe_nav: true } })).toBe(true);
+    expect(resolveSwipeNav({ metadata: { swipe_nav: 'yes' } })).toBe(true);
+    expect(resolveSwipeNav({ metadata: { swipe_nav: false } })).toBe(false);
+    expect(resolveSwipeNav({ metadata: { swipe_nav: 'false' } })).toBe(false);
+    expect(resolveSwipeNav({ allOff: true, metadata: { swipe_nav: true } })).toBe(false);
+    expect(resolveSwipeNav({ allOff: false, metadata: {} })).toBe(true);
   });
 
   it('reads ?nav= as on, off or nothing', () => {
@@ -136,7 +139,11 @@ describe('flag isolation (guard)', () => {
 
   it('styles only under :root[data-swipe-nav] or swipe-only classes', () => {
     const css = readFileSync(join(web, 'app/globals.css'), 'utf8');
-    const block = css.slice(css.indexOf('── Swipe navigation (URG-380)'));
+    const start = css.indexOf('── Swipe navigation (URG-380)');
+    // The block ends where the next section header begins (later sections, like
+    // the email confirmation screens, are not the swipe nav's).
+    const next = css.indexOf('/* ── ', start);
+    const block = css.slice(start, next === -1 ? undefined : next);
     const selectors = block
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .split('{')
