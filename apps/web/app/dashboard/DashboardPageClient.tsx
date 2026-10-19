@@ -113,7 +113,7 @@ function LegacyDashboard() {
   const greeting = user?.name ? `Welcome back, ${user.name.split(' ')[0]}` : 'Welcome back';
 
   const dueSoonTasks = tasks
-    .filter((t) => t.status !== TASK_DONE_STATUS && t.dueDate)
+    .filter((t) => t.status !== TASK_DONE_STATUS && t.status !== 'cancelled' && t.dueDate)
     .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
     .slice(0, 5);
 

@@ -41,6 +41,14 @@ export type Release = {
 // per the policy in CLAUDE.md.
 export const changelog: Release[] = [
   {
+    version: "1.159.1",
+    tag: "Rollouts",
+    date: "October 19, 2026",
+    highlights: [
+      "A cancelled task no longer asks you to find someone for it, and it's never shown as your next task.",
+    ],
+  },
+  {
     version: "1.159.0",
     title: "Cancelled tasks step aside",
     tag: "Rollouts",

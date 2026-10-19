@@ -598,9 +598,12 @@ function PhaseLabels({
         <span className="min-w-0 flex-1 truncate text-xs font-semibold text-content-primary">
           {phase.label}
         </span>
-        <span className="shrink-0 text-[10px] tabular-nums text-content-tertiary">
-          {phase.doneCount}/{phase.liveCount}
-        </span>
+        {/* Only cancelled rows showing (toggle or search): no "0/0" (URG-389). */}
+        {phase.liveCount > 0 ? (
+          <span className="shrink-0 text-[10px] tabular-nums text-content-tertiary">
+            {phase.doneCount}/{phase.liveCount}
+          </span>
+        ) : null}
         {phase.attentionCount > 0 ? (
           <span
             className="shrink-0 rounded-full bg-status-error/15 px-1 text-[10px] font-semibold tabular-nums text-status-error"

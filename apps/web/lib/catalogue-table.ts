@@ -172,7 +172,8 @@ export function pickNextTask(
   let bestTime = Number.POSITIVE_INFINITY;
   let best: CatalogueNextTask | null = null;
   for (const task of tasks) {
-    if (task.status === 'done') continue;
+    // Closed either way (URG-389): a cancelled activity is never "next".
+    if (task.status === 'done' || task.status === 'cancelled') continue;
     const parsed = task.dueDate ? Date.parse(task.dueDate) : Number.POSITIVE_INFINITY;
     const time = Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
     if (best === null || time < bestTime) {

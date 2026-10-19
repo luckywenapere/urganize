@@ -19,6 +19,9 @@ type TaskDependenciesSectionProps = {
   /** Resolved prerequisite tasks (only those we have data for). */
   prerequisites: DependencyTaskSummary[];
   onOpenPrerequisite: (taskId: string) => void;
+  /** This task's own status: a closed (done/cancelled) task gets no
+   *  "finish each prerequisite" hint, it has nothing left to finish (URG-389). */
+  taskStatus?: string;
 };
 
 function formatDueLabel(value: string | null): string {
@@ -38,6 +41,7 @@ export function TaskDependenciesSection({
   dependencyIds,
   prerequisites,
   onOpenPrerequisite,
+  taskStatus,
 }: TaskDependenciesSectionProps) {
   if (dependencyIds.length === 0) {
     return null;
@@ -47,7 +51,10 @@ export function TaskDependenciesSection({
   const byId = new Map(prerequisites.map((task) => [task.id, task]));
   // One line that says where this stands (URG-389): what still has to be
   // finished, or that a cancelled prerequisite no longer holds it up.
-  const hint = dependencyHint(dependencyIds.map((id) => byId.get(id)?.status ?? null));
+  const hint =
+    taskStatus && isDependencySatisfied(taskStatus)
+      ? ''
+      : dependencyHint(dependencyIds.map((id) => byId.get(id)?.status ?? null));
 
   return (
     // De-boxed 2026-09-05: the activity pop-up went boxless, and a bordered
@@ -94,9 +101,12 @@ export function TaskDependenciesSection({
               >
                 <span
                   className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
-                    isDone
+                    isTicked
                       ? 'border-brand/40 bg-brand/15 text-brand'
-                      : 'border-stroke-default bg-bg-elevated text-content-tertiary'
+                      : isDone
+                        ? // Cancelled: a quiet hollow ring, never the done green (URG-389).
+                          'border-stroke-subtle bg-transparent text-content-tertiary'
+                        : 'border-stroke-default bg-bg-elevated text-content-tertiary'
                   }`}
                   aria-hidden
                 >

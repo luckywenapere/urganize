@@ -28,6 +28,8 @@ import { countProgress } from './task-progress';
 import { pitchBlockedBy } from './editorial-pitch-server';
 import { DISTRIBUTION_ORDER_TASK_IDS, EDITORIAL_PITCH_TASK_ID } from './editorial-pitch';
 import { summarizeRolloutPhases } from './rollout-phases';
+import { findRoleGaps } from './role-gaps';
+import { pickNextTask } from './catalogue-table';
 import type { Task } from '@/types/tasks';
 import { isReleaseDelivered } from './delivery-records';
 
@@ -429,5 +431,28 @@ describe('isReleaseDelivered ignores cancelled work', () => {
   });
   it('everything cancelled is not a delivery', () => {
     expect(isReleaseDelivered(release(['cancelled', 'cancelled']), now)).toBe(false);
+  });
+});
+
+describe('cancelled work asks for nobody and is never next (URG-389 prod QA)', () => {
+  const gap = (status: string) => ({
+    id: `t-${status}`,
+    templateTaskId: 'w7_brief_designer',
+    assignedToUserId: 'owner',
+    status,
+    dueDate: '2026-03-01',
+    title: 'Brief designer on cover art',
+  });
+  it('a cancelled step is not a role gap', () => {
+    expect(findRoleGaps([gap('cancelled')], 'owner')).toEqual([]);
+    expect(findRoleGaps([gap('todo')], 'owner')).toHaveLength(1);
+  });
+  it('the catalogue next activity skips cancelled', () => {
+    expect(
+      pickNextTask([
+        { title: 'Dropped', status: 'cancelled', dueDate: '2026-03-01' },
+        { title: 'Real', status: 'todo', dueDate: '2026-03-08' },
+      ])
+    ).toEqual({ title: 'Real', dueDate: '2026-03-08' });
   });
 });

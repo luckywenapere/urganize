@@ -51,6 +51,9 @@ export function findRoleGaps(tasks: GapTask[], ownerUserId: string): RoleGap[] {
     // The work happened. A manager who did their own artwork should not be
     // told they need a designer.
     if (task.status === 'done') continue;
+    // Dropped work needs nobody (URG-389): a cancelled step must not tell the
+    // manager to go and hire for it.
+    if (task.status === 'cancelled') continue;
 
     // Somebody else is on it. Telling the manager to go and hire would be
     // wrong, and this is the rule the whole panel rests on.

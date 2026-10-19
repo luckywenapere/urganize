@@ -709,6 +709,7 @@ export function TaskDetailView({
             dependencyIds={task.dependencies}
             prerequisites={prerequisites}
             onOpenPrerequisite={onOpenPrerequisite}
+            taskStatus={task.status}
           />
 
           {/* The Spotify editorial pitch's form fields (2026-10-09). Only on that
