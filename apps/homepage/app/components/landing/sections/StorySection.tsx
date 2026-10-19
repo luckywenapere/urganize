@@ -70,7 +70,7 @@ const STEPS: readonly {
 }[] = [
   {
     title: "Add a release. Get the plan.",
-    line: "Week by week, from today to release day. Change anything.",
+    line: "Every week mapped till drop day. No last-minute rush.",
     shot: PRODUCT_SHOTS.scopedRelease,
     phoneCrop: PHONE_CROPS.scopedRelease,
     alt: "A rollout open in Urganize: the activity list grouped by when it is due, with a progress bar counting finished activities against the plan.",
